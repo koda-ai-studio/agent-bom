@@ -88,6 +88,7 @@ class FlowFinding:
     source: str = ""
     severity: str = ""
     cwe_ids: list[str] = field(default_factory=list)
+    suppression: str = ""  # reviewer marker text (``nosec B608 - why``) when an inline marker waives it
 
     def __post_init__(self) -> None:
         self.severity = self.severity or flow_severity(self.category)
@@ -179,6 +180,7 @@ class ASTAnalysisResult:
     call_edges: list[CallEdge] = field(default_factory=list)
     cfg_edges: list[ControlFlowEdge] = field(default_factory=list)
     flow_findings: list[FlowFinding] = field(default_factory=list)
+    suppressed_flow_findings: list[FlowFinding] = field(default_factory=list)
     application_entrypoints: list[ApplicationEntrypoint] = field(default_factory=list)
     dependency_symbol_reach: list[DependencySymbolReach] = field(default_factory=list)
     frameworks_detected: list[str] = field(default_factory=list)
@@ -255,6 +257,7 @@ class ASTAnalysisResult:
                 for edge in self.cfg_edges
             ],
             "flow_findings": flow_finding_rows(self.flow_findings),
+            "suppressed_flow_findings": flow_finding_rows(self.suppressed_flow_findings),
             "application_entrypoints": [
                 {
                     "name": entry.name,
@@ -303,6 +306,7 @@ class ASTAnalysisResult:
                 "total_call_edges": len(self.call_edges),
                 "total_cfg_edges": len(self.cfg_edges),
                 "total_flow_findings": len(self.flow_findings),
+                "total_suppressed_flow_findings": len(self.suppressed_flow_findings),
                 "total_application_entrypoints": len(self.application_entrypoints),
                 "total_dependency_symbol_reach": len(self.dependency_symbol_reach),
                 "prompts_with_risks": sum(1 for p in self.prompts if p.risk_flags),

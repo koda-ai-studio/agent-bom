@@ -86,6 +86,14 @@ def _deliver_event(
         return False
 
 
+def _probe(config: "SIEMConfig", url: str, headers: dict[str, str]) -> bool:
+    """Health-check GET through the delivery outbound policy (URL guard plus DNS-pinned connect)."""
+    from agent_bom.delivery import http_probe
+
+    outcome = http_probe(url, headers, 5.0, allow_private_networks=config.allow_private_networks)
+    return outcome.http_status == 200
+
+
 class SIEMConnector(Protocol):
     """Protocol for SIEM integrations."""
 
@@ -140,18 +148,7 @@ class SplunkHEC:
         return sum(1 for e in events if self.send_event(e))
 
     def health_check(self) -> bool:
-        import httpx
-
-        try:
-            resp = httpx.get(
-                f"{self.url}/services/collector/health/1.0",
-                headers={"Authorization": f"Splunk {self.config.token}"},
-                verify=self.config.verify_ssl,
-                timeout=5,
-            )
-            return resp.status_code == 200
-        except Exception:
-            return False
+        return _probe(self.config, f"{self.url}/services/collector/health/1.0", {"Authorization": f"Splunk {self.config.token}"})
 
 
 class DatadogLogs:
@@ -228,21 +225,10 @@ class ElasticsearchConnector:
         return sum(1 for e in events if self.send_event(e))
 
     def health_check(self) -> bool:
-        import httpx
-
         headers: dict[str, str] = {}
         if self.config.token:
             headers["Authorization"] = f"Bearer {self.config.token}"
-        try:
-            resp = httpx.get(
-                f"{self.url}/_cluster/health",
-                headers=headers,
-                verify=self.config.verify_ssl,
-                timeout=5,
-            )
-            return resp.status_code == 200
-        except Exception:
-            return False
+        return _probe(self.config, f"{self.url}/_cluster/health", headers)
 
 
 # ── Registry ────────────────────────────────────────────────────────

@@ -187,9 +187,17 @@ def convert(data: dict[str, Any]) -> dict[str, Any]:
                     }
                 },
                 "results": results,
+                # Reviewer-suppressed findings stay in the JSON report with their
+                # marker text; the alerting surface carries only the count.
+                "properties": {"suppressedFlowFindings": len(_suppressed_rows(data))},
             }
         ],
     }
+
+
+def _suppressed_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
+    rows = data.get("suppressed_flow_findings") or []
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -41,7 +41,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from agent_bom.security import sanitize_log_label
+from agent_bom.security import SecurityError, sanitize_error, sanitize_log_label, validate_url
 
 logger = logging.getLogger(__name__)
 
@@ -71,14 +71,21 @@ def _sanitize_identity_error(error: str) -> str:
 def _fetch_jwks(jwks_uri: str) -> dict | None:
     """Fetch a JWKS document with a 1-hour in-process cache.
 
-    Returns the JWKS dict on success, None on network/parse failure.
-    SSRF-safe: only called with URLs that have already been resolved from
-    trusted policy or OIDC discovery documents.
+    Returns the JWKS dict on success, None on network/parse/policy failure.
+    The URI may come from a discovery document the issuer controls, so it
+    passes the outbound URL guard (HTTPS, no private/metadata targets unless
+    ``AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS`` is set) before any request.
     """
     with _jwks_lock:
         cached = _jwks_cache.get(jwks_uri)
         if cached and time.time() - cached[1] < _JWKS_CACHE_TTL:
             return cached[0]
+
+    try:
+        validate_url(jwks_uri)
+    except SecurityError as exc:
+        logger.warning("JWKS URI refused by outbound URL policy: %s", sanitize_error(exc))
+        return None
 
     try:
         import httpx  # optional dep; graceful if missing
@@ -107,6 +114,11 @@ def _discover_jwks_uri(oidc_issuer: str) -> str | None:
         return None
 
     discovery_url = oidc_issuer.rstrip("/") + "/.well-known/openid-configuration"
+    try:
+        validate_url(discovery_url)
+    except SecurityError as exc:
+        logger.warning("OIDC issuer refused by outbound URL policy: %s", sanitize_error(exc))
+        return None
     try:
         resp = httpx.get(discovery_url, timeout=10.0, follow_redirects=False)
         resp.raise_for_status()

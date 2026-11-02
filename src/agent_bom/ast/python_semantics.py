@@ -132,7 +132,9 @@ _UNSAFE_DESERIALIZATION_CALLS = {
     "pickle.load",
     "pickle.loads",
     "yaml.load",
+    "yaml.load_all",
     "yaml.unsafe_load",
+    "yaml.unsafe_load_all",
     "marshal.loads",
     "dill.loads",
     "jsonpickle.decode",
@@ -458,15 +460,16 @@ def _is_unsafe_deserialization_call_name(call_name: str) -> bool:
     return lower_name in {name.lower() for name in _UNSAFE_DESERIALIZATION_CALLS}
 
 
-def _uses_safe_yaml_loader(call: ast.Call) -> bool:
+def _uses_safe_yaml_loader(call: ast.Call, module_safe_loaders: frozenset[str] = frozenset()) -> bool:
     call_name = _call_name(call.func).lower()
-    if call_name != "yaml.load":
+    if call_name not in {"yaml.load", "yaml.load_all"}:
         return False
     safe_loader_names = {
         "yaml.safeloader",
         "safeloader",
         "yaml.csafeloader",
         "csafeloader",
+        *(name.lower() for name in module_safe_loaders),
     }
     for keyword in call.keywords:
         if keyword.arg != "Loader":

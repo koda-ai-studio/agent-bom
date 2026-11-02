@@ -14,7 +14,7 @@ import httpx
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package
-from agent_bom.security import sanitize_text
+from agent_bom.security import SecurityError, sanitize_error, sanitize_text, validate_url
 
 logger = logging.getLogger(__name__)
 
@@ -163,9 +163,17 @@ def _agents_from_api(api_models: list[dict], host: str) -> list[Agent]:
 
 
 def _discover_via_api(host: str) -> list[dict] | None:
-    """Try to get model list from Ollama HTTP API. Returns None if unreachable."""
+    """Try to get model list from Ollama HTTP API. Returns None if unreachable or refused."""
+    url = f"{host.rstrip('/')}/api/tags"
     try:
-        resp = httpx.get(f"{host}/api/tags", timeout=5.0)
+        # Ollama normally listens on localhost or a private address, so private
+        # targets stay allowed; non-HTTP schemes and cloud metadata are refused.
+        validate_url(url, allowed_schemes=("http", "https"), allow_private=True)
+    except SecurityError as exc:
+        logger.warning("Ollama endpoint refused by outbound URL policy: %s", sanitize_text(sanitize_error(exc)))
+        return None
+    try:
+        resp = httpx.get(url, timeout=5.0)
         if resp.status_code == 200:
             return _api_models(resp)
     except (httpx.HTTPError, OSError, ValueError) as exc:
@@ -175,9 +183,6 @@ def _discover_via_api(host: str) -> list[dict] | None:
     try:
         from agent_bom.http_client import sync_get
 
-        url = f"{host}/api/tags"
-        if not url.startswith(("http://", "https://")):
-            return None
         fallback_resp = sync_get(url, timeout=3)
         if fallback_resp is not None and fallback_resp.status_code == 200:
             return _api_models(fallback_resp)

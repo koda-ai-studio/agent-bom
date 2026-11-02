@@ -5828,6 +5828,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -5846,6 +5847,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -5864,6 +5866,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -5882,6 +5885,7 @@
         "severity": "critical",
         "sink": "pickle.loads",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -5900,6 +5904,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -5918,6 +5923,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -5936,6 +5942,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -5954,6 +5961,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -5972,6 +5980,7 @@
         "severity": "high",
         "sink": "cursor.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -5990,6 +5999,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -6008,6 +6018,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6026,6 +6037,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6044,6 +6056,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6062,6 +6075,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6080,6 +6094,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6098,6 +6113,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6116,6 +6132,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6134,6 +6151,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6152,6 +6170,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6170,6 +6189,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6188,6 +6208,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6206,6 +6227,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6224,6 +6246,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6242,6 +6265,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6260,6 +6284,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6278,6 +6303,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6296,6 +6322,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6314,6 +6341,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6332,6 +6360,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6350,6 +6379,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6368,6 +6398,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6386,6 +6417,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6404,6 +6436,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Shell command is built through string interpolation"
       },
       {
@@ -6422,6 +6455,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6440,6 +6474,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6458,6 +6493,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6476,6 +6512,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6494,6 +6531,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6512,6 +6550,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6530,6 +6569,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6548,6 +6588,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6566,6 +6607,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6584,6 +6626,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6602,6 +6645,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6620,6 +6664,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6638,6 +6683,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6656,6 +6702,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6674,6 +6721,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6692,6 +6740,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6710,6 +6759,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6728,6 +6778,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6746,6 +6797,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6764,6 +6816,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6782,6 +6835,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6800,6 +6854,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6818,6 +6873,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6836,6 +6892,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6854,6 +6911,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6872,6 +6930,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6890,6 +6949,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6908,6 +6968,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6926,6 +6987,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6944,6 +7006,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6962,6 +7025,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6980,6 +7044,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -6998,6 +7063,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7016,6 +7082,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7034,6 +7101,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7052,6 +7120,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7070,6 +7139,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7088,6 +7158,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7106,6 +7177,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7124,6 +7196,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7140,6 +7213,7 @@
         "severity": "high",
         "sink": "open",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reads a credential file"
       },
       {
@@ -7156,6 +7230,7 @@
         "severity": "high",
         "sink": "open",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7174,6 +7249,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7192,6 +7268,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -7210,6 +7287,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Shell command is built through string interpolation"
       },
       {
@@ -7228,6 +7306,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "",
+        "suppression": "",
         "title": "Outbound URL is built through string interpolation"
       },
       {
@@ -7246,6 +7325,7 @@
         "severity": "high",
         "sink": "sqlite3.connect.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -7264,6 +7344,7 @@
         "severity": "critical",
         "sink": "pickle.loads",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -7282,6 +7363,7 @@
         "severity": "critical",
         "sink": "yaml.load",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -7301,6 +7383,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7320,6 +7403,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7339,6 +7423,7 @@
         "severity": "high",
         "sink": "exec",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7358,6 +7443,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7377,6 +7463,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7396,6 +7483,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7415,6 +7503,7 @@
         "severity": "high",
         "sink": "subprocess.call",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7434,6 +7523,7 @@
         "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7453,6 +7543,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -7471,6 +7562,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "query",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7489,6 +7581,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "query",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7507,6 +7600,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "term",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -7525,6 +7619,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -7543,6 +7638,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "url",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -7561,6 +7657,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7579,6 +7676,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7597,6 +7695,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7615,6 +7714,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7633,6 +7733,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7651,6 +7752,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "expr",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -7669,6 +7771,7 @@
         "severity": "high",
         "sink": "cursor.execute",
         "source": "user",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -7687,6 +7790,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "user",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -7705,6 +7809,7 @@
         "severity": "high",
         "sink": "client.chat.completions.create",
         "source": "messages",
+        "suppression": "",
         "title": "Untrusted data reaches an LLM invocation"
       },
       {
@@ -7723,6 +7828,7 @@
         "severity": "high",
         "sink": "render_template_string",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches an HTML rendering sink"
       },
       {
@@ -7741,6 +7847,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7759,6 +7866,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7777,6 +7885,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "built",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7795,6 +7904,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "built",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7813,6 +7923,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "clean",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7831,6 +7942,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "clean",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7849,6 +7961,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "items",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7867,6 +7980,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "items",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7885,6 +7999,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "pair",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7903,6 +8018,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "pair",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7921,6 +8037,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "bag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7939,6 +8056,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "bag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7957,6 +8075,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -7975,6 +8094,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -7993,6 +8113,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8011,6 +8132,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8029,6 +8151,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "spread",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8047,6 +8170,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "spread",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8065,6 +8189,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "joined",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8083,6 +8208,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "joined",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8101,6 +8227,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "compared",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8119,6 +8246,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "compared",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8137,6 +8265,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "ternary",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8155,6 +8284,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "ternary",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8173,6 +8303,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8191,6 +8322,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8209,6 +8341,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "comp",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8227,6 +8360,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "comp",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8245,6 +8379,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "gen",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8263,6 +8398,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "gen",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8281,6 +8417,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "star",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8299,6 +8436,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "star",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8317,6 +8455,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8335,6 +8474,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8353,6 +8493,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8371,6 +8512,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8389,6 +8531,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8407,6 +8550,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8425,6 +8569,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8443,6 +8588,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8461,6 +8607,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8479,6 +8626,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8497,6 +8645,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8515,6 +8664,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8533,6 +8683,7 @@
         "severity": "high",
         "sink": "requests.request",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -8551,6 +8702,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "same",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8569,6 +8721,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "same",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8587,6 +8740,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "wrapped",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8605,6 +8759,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "wrapped",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8624,6 +8779,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8643,6 +8799,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8662,6 +8819,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "url",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -8681,6 +8839,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "record",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -8700,6 +8859,7 @@
         "severity": "high",
         "sink": "render_template_string",
         "source": "markup",
+        "suppression": "",
         "title": "Untrusted data reaches an HTML rendering sink"
       },
       {
@@ -8719,6 +8879,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -8738,6 +8899,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8757,6 +8919,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8775,6 +8938,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8793,6 +8957,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8811,6 +8976,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8829,6 +8995,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8847,6 +9014,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8865,6 +9033,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8883,6 +9052,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "item",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8901,6 +9071,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "item",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8919,6 +9090,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8937,6 +9109,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8955,6 +9128,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -8973,6 +9147,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -8991,6 +9166,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "result",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9009,6 +9185,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "result",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9027,6 +9204,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -9045,6 +9223,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -9063,6 +9242,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9081,6 +9261,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9099,6 +9280,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9117,6 +9299,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9135,6 +9318,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "caught",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9153,6 +9337,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "caught",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9171,6 +9356,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "final",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9189,6 +9375,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "final",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9208,6 +9395,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9227,6 +9415,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9245,6 +9434,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9263,6 +9453,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9282,6 +9473,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9301,6 +9493,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9320,6 +9513,7 @@
         "severity": "critical",
         "sink": "subprocess.call",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9339,6 +9533,7 @@
         "severity": "high",
         "sink": "subprocess.call",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9357,6 +9552,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -9375,6 +9571,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9393,6 +9590,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9411,6 +9609,7 @@
         "severity": "high",
         "sink": "requests.post",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -9429,6 +9628,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "command",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9447,6 +9647,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "command",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9465,6 +9666,7 @@
         "severity": "high",
         "sink": "sqlite3.connect.execute",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -9484,6 +9686,7 @@
         "severity": "critical",
         "sink": "subprocess.check_output",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9503,6 +9706,7 @@
         "severity": "high",
         "sink": "subprocess.check_output",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9522,6 +9726,7 @@
         "severity": "critical",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9541,6 +9746,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9559,6 +9765,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "item_id",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9577,6 +9784,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "item_id",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9595,6 +9803,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "q",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9613,6 +9822,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "q",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9631,6 +9841,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "token",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9649,6 +9860,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "token",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9668,6 +9880,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9687,6 +9900,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9705,6 +9919,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -9723,6 +9938,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9741,6 +9957,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9759,6 +9976,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9777,6 +9995,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9795,6 +10014,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "request",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9813,6 +10033,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "request",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -9831,6 +10052,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -9849,6 +10071,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       }
     ],
@@ -9858,6 +10081,7 @@
     ],
     "guardrails": [],
     "prompts": [],
+    "suppressed_flow_findings": [],
     "tools": [
       {
         "decorators": [],
@@ -16739,6 +16963,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16757,6 +16982,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16775,6 +17001,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -16793,6 +17020,7 @@
         "severity": "critical",
         "sink": "pickle.loads",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -16811,6 +17039,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16829,6 +17058,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16847,6 +17077,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16865,6 +17096,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16883,6 +17115,7 @@
         "severity": "high",
         "sink": "cursor.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -16901,6 +17134,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -16919,6 +17153,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16937,6 +17172,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16955,6 +17191,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16973,6 +17210,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -16991,6 +17229,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17009,6 +17248,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17027,6 +17267,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17045,6 +17286,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17063,6 +17305,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17081,6 +17324,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17099,6 +17343,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17117,6 +17362,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17135,6 +17381,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17153,6 +17400,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17171,6 +17419,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17189,6 +17438,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17207,6 +17457,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17225,6 +17476,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17243,6 +17495,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17261,6 +17514,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17279,6 +17533,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17297,6 +17552,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17315,6 +17571,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Shell command is built through string interpolation"
       },
       {
@@ -17333,6 +17590,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17351,6 +17609,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17369,6 +17628,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17387,6 +17647,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17405,6 +17666,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17423,6 +17685,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17441,6 +17704,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17459,6 +17723,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17477,6 +17742,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17495,6 +17761,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17513,6 +17780,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17531,6 +17799,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17549,6 +17818,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17567,6 +17837,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17585,6 +17856,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17603,6 +17875,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17621,6 +17894,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17639,6 +17913,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17657,6 +17932,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17675,6 +17951,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17693,6 +17970,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17711,6 +17989,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17729,6 +18008,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17747,6 +18027,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17765,6 +18046,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17783,6 +18065,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17801,6 +18084,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17819,6 +18103,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17837,6 +18122,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17855,6 +18141,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17873,6 +18160,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17891,6 +18179,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17909,6 +18198,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17927,6 +18217,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17945,6 +18236,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17963,6 +18255,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17981,6 +18274,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -17999,6 +18293,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -18017,6 +18312,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -18035,6 +18331,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -18051,6 +18348,7 @@
         "severity": "high",
         "sink": "open",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reads a credential file"
       },
       {
@@ -18067,6 +18365,7 @@
         "severity": "high",
         "sink": "open",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -18085,6 +18384,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -18103,6 +18403,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -18121,6 +18422,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Shell command is built through string interpolation"
       },
       {
@@ -18139,6 +18441,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "",
+        "suppression": "",
         "title": "Outbound URL is built through string interpolation"
       },
       {
@@ -18157,6 +18460,7 @@
         "severity": "high",
         "sink": "sqlite3.connect.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -18175,6 +18479,7 @@
         "severity": "critical",
         "sink": "pickle.loads",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -18193,6 +18498,7 @@
         "severity": "critical",
         "sink": "yaml.load",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -18214,6 +18520,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18233,6 +18540,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18252,6 +18560,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18272,6 +18581,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18291,6 +18601,7 @@
         "severity": "high",
         "sink": "exec",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18310,6 +18621,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18329,6 +18641,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18348,6 +18661,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18367,6 +18681,7 @@
         "severity": "high",
         "sink": "subprocess.call",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18387,6 +18702,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18406,6 +18722,7 @@
         "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18425,6 +18742,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -18443,6 +18761,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "query",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18461,6 +18780,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "query",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18482,6 +18802,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18503,6 +18824,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18521,6 +18843,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "term",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -18539,6 +18862,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -18557,6 +18881,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "url",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -18575,6 +18900,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18593,6 +18919,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18611,6 +18938,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18629,6 +18957,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18647,6 +18976,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18665,6 +18995,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "expr",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -18683,6 +19014,7 @@
         "severity": "high",
         "sink": "cursor.execute",
         "source": "user",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -18701,6 +19033,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "user",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -18719,6 +19052,7 @@
         "severity": "high",
         "sink": "client.chat.completions.create",
         "source": "messages",
+        "suppression": "",
         "title": "Untrusted data reaches an LLM invocation"
       },
       {
@@ -18737,6 +19071,7 @@
         "severity": "high",
         "sink": "render_template_string",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches an HTML rendering sink"
       },
       {
@@ -18755,6 +19090,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18773,6 +19109,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18791,6 +19128,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "built",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18809,6 +19147,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "built",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18827,6 +19166,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "clean",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18845,6 +19185,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "clean",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18863,6 +19204,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "items",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18881,6 +19223,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "items",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18899,6 +19242,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "pair",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18917,6 +19261,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "pair",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18935,6 +19280,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "bag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18953,6 +19299,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "bag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -18971,6 +19318,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -18989,6 +19337,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19007,6 +19356,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19025,6 +19375,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19043,6 +19394,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "spread",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19061,6 +19413,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "spread",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19079,6 +19432,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "joined",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19097,6 +19451,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "joined",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19115,6 +19470,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "compared",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19133,6 +19489,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "compared",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19151,6 +19508,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "ternary",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19169,6 +19527,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "ternary",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19187,6 +19546,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19205,6 +19565,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19223,6 +19584,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "comp",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19241,6 +19603,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "comp",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19259,6 +19622,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "gen",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19277,6 +19641,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "gen",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19295,6 +19660,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "star",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19313,6 +19679,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "star",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19331,6 +19698,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19349,6 +19717,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19367,6 +19736,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19385,6 +19755,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19403,6 +19774,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19421,6 +19793,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19439,6 +19812,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19457,6 +19831,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19475,6 +19850,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19493,6 +19869,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19511,6 +19888,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19529,6 +19907,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19547,6 +19926,7 @@
         "severity": "high",
         "sink": "requests.request",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -19565,6 +19945,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "same",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19583,6 +19964,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "same",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19601,6 +19983,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "wrapped",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19619,6 +20002,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "wrapped",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19638,6 +20022,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19657,6 +20042,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19676,6 +20062,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "url",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -19695,6 +20082,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "record",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -19714,6 +20102,7 @@
         "severity": "high",
         "sink": "render_template_string",
         "source": "markup",
+        "suppression": "",
         "title": "Untrusted data reaches an HTML rendering sink"
       },
       {
@@ -19733,6 +20122,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -19753,6 +20143,7 @@
         "severity": "critical",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19773,6 +20164,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19792,6 +20184,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19811,6 +20204,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19829,6 +20223,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19847,6 +20242,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19865,6 +20261,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19883,6 +20280,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19901,6 +20299,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19919,6 +20318,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19937,6 +20337,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "item",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19955,6 +20356,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "item",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -19973,6 +20375,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -19991,6 +20394,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20009,6 +20413,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20027,6 +20432,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20045,6 +20451,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "result",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20063,6 +20470,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "result",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20081,6 +20489,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -20099,6 +20508,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -20117,6 +20527,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20135,6 +20546,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20153,6 +20565,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20171,6 +20584,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20189,6 +20603,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "caught",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20207,6 +20622,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "caught",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20225,6 +20641,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "final",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20243,6 +20660,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "final",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20262,6 +20680,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20281,6 +20700,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20299,6 +20719,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20317,6 +20738,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20336,6 +20758,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20355,6 +20778,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20374,6 +20798,7 @@
         "severity": "critical",
         "sink": "subprocess.call",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20393,6 +20818,7 @@
         "severity": "high",
         "sink": "subprocess.call",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20413,6 +20839,7 @@
         "severity": "critical",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20433,6 +20860,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20451,6 +20879,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -20469,6 +20898,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20487,6 +20917,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20505,6 +20936,7 @@
         "severity": "high",
         "sink": "requests.post",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -20523,6 +20955,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "command",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20541,6 +20974,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "command",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20559,6 +20993,7 @@
         "severity": "high",
         "sink": "sqlite3.connect.execute",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -20578,6 +21013,7 @@
         "severity": "critical",
         "sink": "subprocess.check_output",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20597,6 +21033,7 @@
         "severity": "high",
         "sink": "subprocess.check_output",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20616,6 +21053,7 @@
         "severity": "critical",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20635,6 +21073,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20653,6 +21092,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "item_id",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20671,6 +21111,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "item_id",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20689,6 +21130,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "q",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20707,6 +21149,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "q",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20725,6 +21168,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "token",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20743,6 +21187,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "token",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20762,6 +21207,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20781,6 +21227,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20799,6 +21246,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -20817,6 +21265,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20835,6 +21284,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20853,6 +21303,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20871,6 +21322,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20889,6 +21341,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "request",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20907,6 +21360,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "request",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -20925,6 +21379,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -20943,6 +21398,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       }
     ],
@@ -20952,6 +21408,7 @@
     ],
     "guardrails": [],
     "prompts": [],
+    "suppressed_flow_findings": [],
     "tools": [
       {
         "decorators": [],
@@ -27858,6 +28315,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -27876,6 +28334,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -27894,6 +28353,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -27912,6 +28372,7 @@
         "severity": "critical",
         "sink": "pickle.loads",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -27930,6 +28391,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -27948,6 +28410,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -27966,6 +28429,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -27984,6 +28448,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28002,6 +28467,7 @@
         "severity": "high",
         "sink": "cursor.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -28020,6 +28486,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -28038,6 +28505,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28056,6 +28524,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28074,6 +28543,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28092,6 +28562,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28110,6 +28581,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28128,6 +28600,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28146,6 +28619,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28164,6 +28638,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28182,6 +28657,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28200,6 +28676,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28218,6 +28695,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28236,6 +28714,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28254,6 +28733,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28272,6 +28752,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28290,6 +28771,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28308,6 +28790,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28326,6 +28809,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28344,6 +28828,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28362,6 +28847,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28380,6 +28866,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28398,6 +28885,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28416,6 +28904,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28434,6 +28923,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Shell command is built through string interpolation"
       },
       {
@@ -28452,6 +28942,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28470,6 +28961,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28488,6 +28980,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28506,6 +28999,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28524,6 +29018,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28542,6 +29037,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28560,6 +29056,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28578,6 +29075,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28596,6 +29094,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28614,6 +29113,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28632,6 +29132,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28650,6 +29151,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28668,6 +29170,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28686,6 +29189,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28704,6 +29208,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28722,6 +29227,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28740,6 +29246,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28758,6 +29265,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28776,6 +29284,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28794,6 +29303,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28812,6 +29322,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28830,6 +29341,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28848,6 +29360,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28866,6 +29379,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28884,6 +29398,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28902,6 +29417,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28920,6 +29436,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28938,6 +29455,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28956,6 +29474,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28974,6 +29493,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -28992,6 +29512,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29010,6 +29531,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29028,6 +29550,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29046,6 +29569,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29064,6 +29588,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29082,6 +29607,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29100,6 +29626,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29118,6 +29645,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29136,6 +29664,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29154,6 +29683,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29170,6 +29700,7 @@
         "severity": "high",
         "sink": "open",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reads a credential file"
       },
       {
@@ -29186,6 +29717,7 @@
         "severity": "high",
         "sink": "open",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29204,6 +29736,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29222,6 +29755,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
       },
       {
@@ -29240,6 +29774,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Shell command is built through string interpolation"
       },
       {
@@ -29258,6 +29793,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "",
+        "suppression": "",
         "title": "Outbound URL is built through string interpolation"
       },
       {
@@ -29276,6 +29812,7 @@
         "severity": "high",
         "sink": "sqlite3.connect.execute",
         "source": "",
+        "suppression": "",
         "title": "SQL query is built through string interpolation"
       },
       {
@@ -29294,6 +29831,7 @@
         "severity": "critical",
         "sink": "pickle.loads",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -29312,6 +29850,7 @@
         "severity": "critical",
         "sink": "yaml.load",
         "source": "",
+        "suppression": "",
         "title": "Unsafe deserialization primitive detected"
       },
       {
@@ -29333,6 +29872,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29352,6 +29892,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29376,6 +29917,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29395,6 +29937,7 @@
         "severity": "high",
         "sink": "eval",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29415,6 +29958,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29434,6 +29978,7 @@
         "severity": "high",
         "sink": "exec",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29453,6 +29998,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29472,6 +30018,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29491,6 +30038,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29510,6 +30058,7 @@
         "severity": "high",
         "sink": "subprocess.call",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29530,6 +30079,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29549,6 +30099,7 @@
         "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29568,6 +30119,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "",
+        "suppression": "",
         "title": "Tool helper chain reaches dangerous sink"
       },
       {
@@ -29586,6 +30138,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "query",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -29604,6 +30157,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "query",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -29625,6 +30179,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -29646,6 +30201,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -29664,6 +30220,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "term",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -29682,6 +30239,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -29700,6 +30258,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "url",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -29718,6 +30277,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -29736,6 +30296,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -29754,6 +30315,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -29772,6 +30334,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -29790,6 +30353,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -29808,6 +30372,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "expr",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -29826,6 +30391,7 @@
         "severity": "high",
         "sink": "cursor.execute",
         "source": "user",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -29844,6 +30410,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "user",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -29862,6 +30429,7 @@
         "severity": "high",
         "sink": "client.chat.completions.create",
         "source": "messages",
+        "suppression": "",
         "title": "Untrusted data reaches an LLM invocation"
       },
       {
@@ -29880,6 +30448,7 @@
         "severity": "high",
         "sink": "render_template_string",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches an HTML rendering sink"
       },
       {
@@ -29898,6 +30467,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -29916,6 +30486,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -29934,6 +30505,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "built",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -29952,6 +30524,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "built",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -29970,6 +30543,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "clean",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -29988,6 +30562,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "clean",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30006,6 +30581,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "items",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30024,6 +30600,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "items",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30042,6 +30619,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "pair",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30060,6 +30638,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "pair",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30078,6 +30657,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "bag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30096,6 +30676,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "bag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30114,6 +30695,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30132,6 +30714,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30150,6 +30733,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30168,6 +30752,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "mapping",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30186,6 +30771,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "spread",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30204,6 +30790,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "spread",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30222,6 +30809,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "joined",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30240,6 +30828,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "joined",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30258,6 +30847,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "compared",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30276,6 +30866,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "compared",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30294,6 +30885,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "ternary",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30312,6 +30904,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "ternary",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30330,6 +30923,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30348,6 +30942,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30366,6 +30961,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "comp",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30384,6 +30980,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "comp",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30402,6 +30999,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "gen",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30420,6 +31018,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "gen",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30438,6 +31037,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "star",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30456,6 +31056,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "star",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30474,6 +31075,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30492,6 +31094,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30510,6 +31113,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30528,6 +31132,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30546,6 +31151,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30564,6 +31170,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "a",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30582,6 +31189,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30600,6 +31208,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30618,6 +31227,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30636,6 +31246,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "obj",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30654,6 +31265,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30672,6 +31284,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30690,6 +31303,7 @@
         "severity": "high",
         "sink": "requests.request",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -30708,6 +31322,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "same",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30726,6 +31341,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "same",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30744,6 +31360,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "wrapped",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30762,6 +31379,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "wrapped",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30781,6 +31399,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30800,6 +31419,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30819,6 +31439,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "url",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -30838,6 +31459,7 @@
         "severity": "high",
         "sink": "conn.execute",
         "source": "record",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -30857,6 +31479,7 @@
         "severity": "high",
         "sink": "render_template_string",
         "source": "markup",
+        "suppression": "",
         "title": "Untrusted data reaches an HTML rendering sink"
       },
       {
@@ -30881,6 +31504,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30905,6 +31529,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30924,6 +31549,7 @@
         "severity": "critical",
         "sink": "eval",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches dynamic code execution"
       },
       {
@@ -30944,6 +31570,7 @@
         "severity": "critical",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -30964,6 +31591,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -30983,6 +31611,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31002,6 +31631,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31020,6 +31650,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31038,6 +31669,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31056,6 +31688,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31074,6 +31707,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "third",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31092,6 +31726,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31110,6 +31745,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "name",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31128,6 +31764,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "item",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31146,6 +31783,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "item",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31164,6 +31802,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31182,6 +31821,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31200,6 +31840,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31218,6 +31859,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "flag",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31236,6 +31878,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "result",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31254,6 +31897,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "result",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31272,6 +31916,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -31290,6 +31935,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -31308,6 +31954,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31326,6 +31973,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31344,6 +31992,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31362,6 +32011,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "staged",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31380,6 +32030,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "caught",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31398,6 +32049,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "caught",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31416,6 +32068,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "final",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31434,6 +32087,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "final",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31453,6 +32107,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31472,6 +32127,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31490,6 +32146,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31508,6 +32165,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31527,6 +32185,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31546,6 +32205,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31565,6 +32225,7 @@
         "severity": "critical",
         "sink": "subprocess.call",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31584,6 +32245,7 @@
         "severity": "high",
         "sink": "subprocess.call",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31604,6 +32266,7 @@
         "severity": "critical",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31624,6 +32287,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31642,6 +32306,7 @@
         "severity": "high",
         "sink": "open",
         "source": "path",
+        "suppression": "",
         "title": "Untrusted data reaches a file-system path sink"
       },
       {
@@ -31660,6 +32325,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31678,6 +32344,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31696,6 +32363,7 @@
         "severity": "high",
         "sink": "requests.post",
         "source": "body",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -31714,6 +32382,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "command",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31732,6 +32401,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "command",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31750,6 +32420,7 @@
         "severity": "high",
         "sink": "sqlite3.connect.execute",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches SQL execution"
       },
       {
@@ -31769,6 +32440,7 @@
         "severity": "critical",
         "sink": "subprocess.check_output",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31788,6 +32460,7 @@
         "severity": "high",
         "sink": "subprocess.check_output",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31807,6 +32480,7 @@
         "severity": "critical",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31826,6 +32500,7 @@
         "severity": "high",
         "sink": "os.popen",
         "source": "value",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31844,6 +32519,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "item_id",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31862,6 +32538,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "item_id",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31880,6 +32557,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "q",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31898,6 +32576,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "q",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31916,6 +32595,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "token",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31934,6 +32614,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "token",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31953,6 +32634,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -31972,6 +32654,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -31990,6 +32673,7 @@
         "severity": "high",
         "sink": "requests.get",
         "source": "target",
+        "suppression": "",
         "title": "Untrusted data reaches an outbound URL sink"
       },
       {
@@ -32008,6 +32692,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -32026,6 +32711,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -32044,6 +32730,7 @@
         "severity": "critical",
         "sink": "subprocess.run",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -32062,6 +32749,7 @@
         "severity": "high",
         "sink": "subprocess.run",
         "source": "untrusted input",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -32080,6 +32768,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "request",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -32098,6 +32787,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "request",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       },
       {
@@ -32116,6 +32806,7 @@
         "severity": "critical",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches shell command execution"
       },
       {
@@ -32134,6 +32825,7 @@
         "severity": "high",
         "sink": "os.system",
         "source": "cmd",
+        "suppression": "",
         "title": "Untrusted data reaches a dangerous sink"
       }
     ],
@@ -32143,6 +32835,7 @@
     ],
     "guardrails": [],
     "prompts": [],
+    "suppressed_flow_findings": [],
     "tools": [
       {
         "decorators": [],
