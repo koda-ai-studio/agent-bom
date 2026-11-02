@@ -32,14 +32,16 @@ describe("product view preference", () => {
     for (const [stored, expected] of [["organization", "organization"], ["administrator", "personal"]]) {
       act(() => {
         window.localStorage.setItem(PRODUCT_VIEW_KEY, stored!);
-        window.dispatchEvent(new Event("storage"));
+        const storageEvent = new Event("storage");
+        Object.defineProperty(storageEvent, "key", { value: PRODUCT_VIEW_KEY });
+        window.dispatchEvent(storageEvent);
       });
       expect(screen.getByRole("combobox")).toHaveValue(expected);
     }
     act(() => { setProductView("team"); });
     act(() => {
       window.localStorage.clear();
-      const storageEvent = new StorageEvent("storage");
+      const storageEvent = new Event("storage");
       Object.defineProperty(storageEvent, "key", { value: null });
       window.dispatchEvent(storageEvent);
     });
