@@ -558,5 +558,7 @@ def db_path_cmd(db_path: str | None) -> None:
 
 
 from agent_bom.cli._db_advisory import advisory_group  # noqa: E402
+from agent_bom.cli._db_prune import db_prune_cmd  # noqa: E402
 
 db_cmd.add_command(advisory_group)
+db_cmd.add_command(db_prune_cmd)

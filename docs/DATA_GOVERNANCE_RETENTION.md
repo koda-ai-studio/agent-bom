@@ -36,6 +36,8 @@ launched.
 | Compliance bundle links | `AGENT_BOM_COMPLIANCE_BUNDLE_TTL_SECONDS` | `86400` seconds | `src/agent_bom/api/routes/compliance.py` |
 | Audit HMAC posture | `AGENT_BOM_AUDIT_HMAC_KEY`, `AGENT_BOM_REQUIRE_AUDIT_HMAC`, rotation metadata env vars | self-hosted operator supplied | `src/agent_bom/api/audit_log.py` |
 | ClickHouse analytics TTL | table TTL clauses | 2 years for analytics tables | `src/agent_bom/cloud/clickhouse.py` |
+| Local scan analytics mirror | `AGENT_BOM_ANALYTICS_MAX_EVENTS`, `AGENT_BOM_ANALYTICS_MAX_FINDINGS`, `AGENT_BOM_ANALYTICS_MAX_PACKAGES`, `AGENT_BOM_ANALYTICS_MAX_RUN_AGE_DAYS`, `AGENT_BOM_ANALYTICS_MAX_BYTES` | `50000` runs, `250000` findings, `500000` packages, `90` days, 2 GiB live bytes | `src/agent_bom/config.py`, `src/agent_bom/analytics_retention.py`, `agent-bom report prune --apply --compact` |
+| Current-estate projection cache | `AGENT_BOM_CURRENT_ESTATE_CACHE_MAX_AGE_DAYS` | `14` days unused; newest 8 always kept | `src/agent_bom/config.py`, `src/agent_bom/storage/projection_cache.py`, `agent-bom db prune` |
 
 Backup retention, object lock, legal hold, and immutable evidence archive
 windows are not set by the application. They belong in the operator's database,

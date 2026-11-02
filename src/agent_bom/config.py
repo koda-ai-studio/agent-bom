@@ -286,7 +286,6 @@ ADOPTION_EVENTS_DB = _str("AGENT_BOM_ADOPTION_EVENTS_DB", "")
 # honored); this constant documents the knob and its default.
 CLICKHOUSE_URL = _str("AGENT_BOM_CLICKHOUSE_URL", "")
 
-
 # ── Iceberg Catalog Export ───────────────────────────────────────────────────
 # Optional findings-lake side-write. Disabled unless a REST catalog URL is set.
 # Credentials are deliberately not mirrored here; they stay env/KMS-only and are
@@ -299,7 +298,6 @@ ICEBERG_WAREHOUSE = _str("AGENT_BOM_ICEBERG_WAREHOUSE", "")
 ICEBERG_SCOPE = _str("AGENT_BOM_ICEBERG_SCOPE", "")
 ICEBERG_OAUTH2_SERVER_URI = _str("AGENT_BOM_ICEBERG_OAUTH2_SERVER_URI", "")
 
-
 # ── Secret Scanner: Live AWS Credential Validation (opt-in) ─────────────────
 # When enabled, a discovered AWS access key (paired with a discovered AWS
 # secret key in the same file) is checked with a single read-only
@@ -307,7 +305,6 @@ ICEBERG_OAUTH2_SERVER_URI = _str("AGENT_BOM_ICEBERG_OAUTH2_SERVER_URI", "")
 # one. Off by default: the scanner never makes an outbound call unless an
 # operator explicitly opts in. See agent_bom.scanners.aws_secret_validation.
 SECRET_LIVE_VALIDATION_ENABLED = _bool("AGENT_BOM_SECRET_LIVE_VALIDATION_ENABLED", False)
-
 
 # ── Default Read Window ───────────────────────────────────────────────────
 # Default time-window (days) applied to list / graph / snapshot read surfaces.
@@ -318,7 +315,6 @@ SECRET_LIVE_VALIDATION_ENABLED = _bool("AGENT_BOM_SECRET_LIVE_VALIDATION_ENABLED
 
 RETENTION_DAYS = _int("AGENT_BOM_RETENTION_DAYS", 90)
 
-
 # ── Detective-control Evidence Freshness ──────────────────────────────────
 # How old the newest completed scan may be before DETECTIVE compliance controls
 # ("monitor and scan for vulnerabilities", "maintain a component inventory")
@@ -328,7 +324,6 @@ RETENTION_DAYS = _int("AGENT_BOM_RETENTION_DAYS", 90)
 # See ``agent_bom.evidence.control_modes``.
 
 COMPLIANCE_DETECTIVE_EVIDENCE_MAX_AGE_DAYS = _int("AGENT_BOM_COMPLIANCE_DETECTIVE_EVIDENCE_MAX_AGE_DAYS", 90)
-
 
 # ── Graph Retention ───────────────────────────────────────────────────────
 # Age-based graph snapshot retention for self-hosted graph stores. Per-tenant
@@ -354,7 +349,6 @@ GRAPH_EDGE_FRESHNESS_HOURS = _int("AGENT_BOM_GRAPH_EDGE_FRESHNESS_HOURS", 168)
 
 HUB_OBSERVATIONS_RETENTION_DAYS = _int("AGENT_BOM_HUB_OBSERVATIONS_RETENTION_DAYS", 365)
 
-
 # ── Analytics Retention ───────────────────────────────────────────────────
 # Caps local analytics mirrors and runtime observation tables on write. ClickHouse
 # analytics tables carry their own TTL clauses; this knob bounds SQLite/Postgres
@@ -367,7 +361,19 @@ ANALYTICS_MAX_FINDINGS = _int("AGENT_BOM_ANALYTICS_MAX_FINDINGS", 250_000)
 ANALYTICS_MAX_PACKAGES = _int("AGENT_BOM_ANALYTICS_MAX_PACKAGES", 500_000)
 # Caps imported-trace revision rows per tenant: pruned spans go oldest first, then superseded revisions. ``<= 0`` disables it.
 ANALYTICS_MAX_TRACE_REVISIONS = _int("AGENT_BOM_ANALYTICS_MAX_TRACE_REVISIONS", 250_000)
+# Drops whole scan runs generated more than this many days ago from the local scan mirror;
+# the newest run is always kept. ``<= 0`` disables it.
+ANALYTICS_MAX_RUN_AGE_DAYS = _int("AGENT_BOM_ANALYTICS_MAX_RUN_AGE_DAYS", 90)
+# Caps the local scan mirror's live bytes (pages in use, not freelist): oldest whole runs
+# go first until under the cap. ``<= 0`` disables it.
+ANALYTICS_MAX_BYTES = _int("AGENT_BOM_ANALYTICS_MAX_BYTES", 2 * 1024**3)
 
+# ── Current-estate projection cache ──────────────────────────────────────
+# Rebuildable per-backing-store projections under ``<state dir>/current-estate-cache``: the newest
+# 8 always stay (the lru_cache(maxsize=8) of live stores per process); older ones go once unused
+# this many days. ``<= 0`` disables the age cap.
+CURRENT_ESTATE_CACHE_MAX_AGE_DAYS = _int("AGENT_BOM_CURRENT_ESTATE_CACHE_MAX_AGE_DAYS", 14)
+CURRENT_ESTATE_CACHE_KEEP_LATEST = 8
 
 # ── Graph Backend Selection ───────────────────────────────────────────────
 # SQLite is the local default. Postgres remains selected by AGENT_BOM_POSTGRES_URL.
@@ -408,7 +414,6 @@ GRAPH_ROLLUP_DRILLDOWN_SUBTREE_BUDGET = _int("AGENT_BOM_GRAPH_ROLLUP_DRILLDOWN_S
 EXPERIMENTAL_NEPTUNE_GRAPH = _bool("AGENT_BOM_EXPERIMENTAL_NEPTUNE_GRAPH", False)
 NEPTUNE_ENDPOINT = _str("AGENT_BOM_NEPTUNE_ENDPOINT", "")
 NEPTUNE_TRAVERSAL_SOURCE = _str("AGENT_BOM_NEPTUNE_TRAVERSAL_SOURCE", "g")
-
 
 # ── AI Enrichment ─────────────────────────────────────────────────────────
 # Used by ai_enrich.py for LLM-powered risk narratives.
@@ -457,13 +462,11 @@ AI_MAX_CALLS_PER_RUN = _int("AGENT_BOM_AI_MAX_CALLS", 50)
 AI_MAX_FINDINGS_PER_RUN = _int("AGENT_BOM_AI_MAX_FINDINGS", 100)
 AI_FINDING_BATCH_SIZE = _int("AGENT_BOM_AI_FINDING_BATCH_SIZE", 20)  # findings per triage request; runtime cap 50
 
-
 # ── OIDC discovery shim ──────────────────────────────────────────────────
 # Optional static OIDC discovery metadata JSON served by the gateway for
 # legacy IdPs / MCP clients that need discovery documents but cannot publish
 # them at the normal issuer location. Empty string disables the shim.
 OIDC_DISCOVERY_SHIM_JSON = _str("AGENT_BOM_OIDC_DISCOVERY_SHIM_JSON", "")
-
 
 # ── Demo Estate ──────────────────────────────────────────────────────────
 # Enables curated demo-estate bootstrap on loopback / hosted proof paths. Off
@@ -615,7 +618,6 @@ API_RESULT_PUSH_MAX_BYTES = _int("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES", 256 * 10
 # Pushes are gzip-compressed by default; 0 only for a receiver older than #5193 (2026-09-10).
 PUSH_GZIP = _bool("AGENT_BOM_PUSH_GZIP", True)
 
-
 # ── PostgreSQL Control Plane Tuning ──────────────────────────────────────
 # Operator hint only; never changes the PostgreSQL contract or implies certification.
 POSTGRES_PROVIDER = _str("AGENT_BOM_POSTGRES_PROVIDER", "auto")
@@ -656,7 +658,6 @@ DELTA_STREAM_AUTH_SCHEME = _str("AGENT_BOM_DELTA_STREAM_AUTH_SCHEME", "")
 DELTA_STREAM_AUTH_TOKEN = _str("AGENT_BOM_DELTA_STREAM_AUTH_TOKEN", "")
 DELTA_STREAM_SIGNING_SECRET = _str("AGENT_BOM_DELTA_STREAM_SIGNING_SECRET", "")
 
-
 # ── Rate-limit fingerprint key rotation policy ──────────────────────────
 # Operators rotate AGENT_BOM_RATE_LIMIT_KEY periodically and record the
 # rotation timestamp in AGENT_BOM_RATE_LIMIT_KEY_LAST_ROTATED (ISO-8601
@@ -667,7 +668,6 @@ DELTA_STREAM_SIGNING_SECRET = _str("AGENT_BOM_DELTA_STREAM_SIGNING_SECRET", "")
 RATE_LIMIT_KEY_ROTATION_DAYS = _int("AGENT_BOM_RATE_LIMIT_KEY_ROTATION_DAYS", 30)
 RATE_LIMIT_KEY_MAX_AGE_DAYS = _int("AGENT_BOM_RATE_LIMIT_KEY_MAX_AGE_DAYS", 90)
 RATE_LIMIT_KEY_LAST_ROTATED = _str("AGENT_BOM_RATE_LIMIT_KEY_LAST_ROTATED", "")
-
 
 # ── Deployment / integration env aliases ───────────────────────────────────
 # Canonical AGENT_BOM_* keys below. Legacy names stay honored via resolved_*

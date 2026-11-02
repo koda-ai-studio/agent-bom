@@ -143,11 +143,29 @@ def local_storage_cmd(db_path: Path | None, output_format: str) -> None:
         {"metric": "scan runs", "current": stats["scan_runs"], "limit": stats["limits"]["scan_runs"]},
         {"metric": "findings", "current": stats["findings"], "limit": stats["limits"]["findings"]},
         {"metric": "packages", "current": stats["packages"], "limit": stats["limits"]["packages"]},
+        {"metric": "oldest run age (days)", "current": _age_label(stats["oldest_run_age_days"]), "limit": stats["limits"]["run_age_days"]},
+        {"metric": "live bytes", "current": stats["live_bytes"], "limit": stats["limits"]["bytes"]},
+        {"metric": "free bytes", "current": stats["free_bytes"], "limit": ""},
     ]
     click.echo(f"Local analytics: {stats['db_path']}")
     _echo_rows_as_table(rows)
     if stats["over_limit"]:
         click.echo("Retention limit exceeded; run `agent-bom report prune` to preview cleanup.")
+    _echo_free_page_hint(stats["free_bytes"], stats["bytes"])
+
+
+def _age_label(age_days: float | None) -> str:
+    return "" if age_days is None else f"{age_days:.1f}"
+
+
+def _echo_free_page_hint(free_bytes: int, total_bytes: int) -> None:
+    if total_bytes <= 0 or free_bytes * 4 < total_bytes:
+        return
+    percent = round(100 * free_bytes / total_bytes)
+    click.echo(
+        f"Free pages hold {free_bytes} of {total_bytes} bytes ({percent}%); "
+        "run `agent-bom report prune --apply --compact` to return them to the OS."
+    )
 
 
 @click.command("prune")
@@ -155,6 +173,8 @@ def local_storage_cmd(db_path: Path | None, output_format: str) -> None:
 @click.option("--max-runs", type=click.IntRange(min=0), default=None, help="Override the retained scan-run cap.")
 @click.option("--max-packages", type=click.IntRange(min=0), default=None, help="Override the retained package-row cap.")
 @click.option("--max-findings", type=click.IntRange(min=0), default=None, help="Override the retained finding-row cap.")
+@click.option("--max-age-days", type=click.IntRange(min=0), default=None, help="Override the whole-run age cap in days (0 disables).")
+@click.option("--max-bytes", type=click.IntRange(min=0), default=None, help="Override the live-bytes cap (0 disables).")
 @click.option("--apply", "apply_changes", is_flag=True, help="Apply the previewed whole-run deletions.")
 @click.option("--compact", is_flag=True, help="Run SQLite VACUUM after applying deletions; may require temporary disk space.")
 @click.option("--format", "output_format", type=click.Choice(["table", "json"]), default="table", show_default=True)
@@ -163,6 +183,8 @@ def local_prune_cmd(
     max_runs: int | None,
     max_packages: int | None,
     max_findings: int | None,
+    max_age_days: int | None,
+    max_bytes: int | None,
     apply_changes: bool,
     compact: bool,
     output_format: str,
@@ -177,6 +199,8 @@ def local_prune_cmd(
         max_runs=max_runs,
         max_packages=max_packages,
         max_findings=max_findings,
+        max_age_days=max_age_days,
+        max_bytes=max_bytes,
         apply=apply_changes,
         compact=compact,
     )
@@ -186,8 +210,11 @@ def local_prune_cmd(
     action = "Applied" if apply_changes else "Dry run"
     click.echo(f"{action}: {result['deleted_runs']} old scan run(s) selected from {result['db_path']}")
     click.echo(f"Storage: {result['bytes_before']} -> {result['bytes_after']} bytes")
+    click.echo(f"Free: {result['free_bytes_before']} -> {result['free_bytes_after']} bytes")
     if not apply_changes and result["deleted_runs"]:
         click.echo("Re-run with --apply to delete the selected runs.")
+    if not result["compacted"] and result["free_bytes_after"] > 0:
+        click.echo("Pass --apply --compact to return free pages to the OS.")
 
 
 def _echo_rows_as_table(rows: list[dict[str, Any]]) -> None:
