@@ -9084,5 +9084,932 @@
    "title": "IAM policy with service-wide wildcard action"
   }
  ],
- "terraform/synthetic_all_rules_good.tf": []
+ "terraform/synthetic_all_rules_good.tf": [],
+ "terraform/synthetic_azure_good.tf": [],
+ "terraform/synthetic_azure_misconfig.tf": [
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-3.7",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 11,
+   "message": "Resource 'logs' (azurerm_storage_account) sets allow_blob_public_access = true, which lets anonymous internet clients read blobs in public containers. Public storage is a top cloud breach vector.",
+   "remediation": "Set allow_nested_items_to_be_public = false (allow_blob_public_access on azurerm v3) and keep containers private.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-101",
+   "severity": "critical",
+   "title": "Azure storage allows anonymous public blob access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-3.1",
+    "NIST-SC-8"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 12,
+   "message": "Storage account 'logs' sets enable_https_traffic_only = false, so blob, file, queue and table requests may travel over plaintext HTTP.",
+   "remediation": "Set https_traffic_only_enabled = true (enable_https_traffic_only on azurerm v3).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-102",
+   "severity": "high",
+   "title": "Azure storage account allows unencrypted HTTP traffic"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-3.15",
+    "NIST-SC-8"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 13,
+   "message": "Storage account 'logs' sets min_tls_version = \"TLS1_0\"; TLS 1.0 and 1.1 are deprecated protocols.",
+   "remediation": "Set min_tls_version = \"TLS1_2\".",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-103",
+   "severity": "high",
+   "title": "Azure storage account accepts TLS below 1.2"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-3.7",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 21,
+   "message": "Resource 'v4names' (azurerm_storage_account) sets allow_nested_items_to_be_public = true, which lets anonymous internet clients read blobs in public containers. Public storage is a top cloud breach vector.",
+   "remediation": "Set allow_nested_items_to_be_public = false (allow_blob_public_access on azurerm v3) and keep containers private.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-101",
+   "severity": "critical",
+   "title": "Azure storage allows anonymous public blob access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-3.1",
+    "NIST-SC-8"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 22,
+   "message": "Storage account 'v4names' sets https_traffic_only_enabled = false, so blob, file, queue and table requests may travel over plaintext HTTP.",
+   "remediation": "Set https_traffic_only_enabled = true (enable_https_traffic_only on azurerm v3).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-102",
+   "severity": "high",
+   "title": "Azure storage account allows unencrypted HTTP traffic"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-3.15",
+    "NIST-SC-8"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 23,
+   "message": "Storage account 'v4names' sets min_tls_version = \"TLS1_1\"; TLS 1.0 and 1.1 are deprecated protocols.",
+   "remediation": "Set min_tls_version = \"TLS1_2\".",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-103",
+   "severity": "high",
+   "title": "Azure storage account accepts TLS below 1.2"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-3.7",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 29,
+   "message": "Resource 'public' (azurerm_storage_container) sets container_access_type = \"blob\", which lets anonymous internet clients read blobs in public containers. Public storage is a top cloud breach vector.",
+   "remediation": "Set allow_nested_items_to_be_public = false (allow_blob_public_access on azurerm v3) and keep containers private.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-101",
+   "severity": "critical",
+   "title": "Azure storage allows anonymous public blob access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-6.2",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 32,
+   "message": "NSG rule 'ssh' on 'ssh' allows inbound tcp traffic to port(s) 22 from any source. Management ports and broad allow rules reachable from the internet are a primary intrusion path.",
+   "remediation": "Restrict source_address_prefix(es) to known CIDRs or service tags; use Azure Bastion or JIT access for SSH/RDP.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-104",
+   "severity": "critical",
+   "title": "Azure NSG rule open to the internet"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-6.1",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 51,
+   "message": "NSG rule 'rdp' on 'inline' allows inbound tcp traffic to port(s) 3389, 8080 from any source. Management ports and broad allow rules reachable from the internet are a primary intrusion path.",
+   "remediation": "Restrict source_address_prefix(es) to known CIDRs or service tags; use Azure Bastion or JIT access for SSH/RDP.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-104",
+   "severity": "critical",
+   "title": "Azure NSG rule open to the internet"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-6.1",
+    "CIS-Azure-6.2",
+    "CIS-Azure-6.4",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 63,
+   "message": "NSG rule 'any' on 'inline' allows inbound * traffic to port(s) * from any source. Management ports and broad allow rules reachable from the internet are a primary intrusion path.",
+   "remediation": "Restrict source_address_prefix(es) to known CIDRs or service tags; use Azure Bastion or JIT access for SSH/RDP.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-104",
+   "severity": "critical",
+   "title": "Azure NSG rule open to the internet"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 75,
+   "message": "NSG rule 'web' on 'inline' allows inbound tcp traffic to port(s) 8443 from any source. Management ports and broad allow rules reachable from the internet are a primary intrusion path.",
+   "remediation": "Restrict source_address_prefix(es) to known CIDRs or service tags; use Azure Bastion or JIT access for SSH/RDP.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-104",
+   "severity": "high",
+   "title": "Azure NSG rule open to the internet"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-IA-5",
+    "NIST-SC-28"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 90,
+   "message": "Resource 'db' (azurerm_postgresql_server) sets 'administrator_login_password' to a literal value. The value lands in version control and Terraform state. Pass it from a sensitive variable, random_password, or a secrets manager reference.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-051",
+   "severity": "critical",
+   "title": "Hardcoded secret in Terraform resource"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AC-4",
+    "NIST-SC-7"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 92,
+   "message": "Database server 'db' (azurerm_postgresql_server) sets public_network_access_enabled = true; the endpoint is reachable from the internet subject only to firewall rules.",
+   "remediation": "Set public_network_access_enabled = false and connect through a private endpoint or delegated subnet.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-105",
+   "severity": "high",
+   "title": "Azure database server allows public network access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-4.3.1",
+    "NIST-SC-8"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 91,
+   "message": "Database server 'db' (azurerm_postgresql_server) sets ssl_enforcement_enabled = false, allowing plaintext client connections.",
+   "remediation": "Set ssl_enforcement_enabled = true and the minimum TLS version to \"TLS1_2\" (minimum_tls_version = \"1.2\" on SQL).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-106",
+   "severity": "high",
+   "title": "Azure database server does not enforce TLS 1.2"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AC-4",
+    "NIST-SC-7"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 95,
+   "message": "Database server 'legacy' (azurerm_mysql_server) does not set public_network_access_enabled, which defaults to true; the endpoint is reachable from the internet subject only to firewall rules.",
+   "remediation": "Set public_network_access_enabled = false and connect through a private endpoint or delegated subnet.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-105",
+   "severity": "high",
+   "title": "Azure database server allows public network access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-SC-8"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 98,
+   "message": "Database server 'legacy' (azurerm_mysql_server) sets ssl_minimal_tls_version_enforced = \"TLS1_0\"; TLS below 1.2 is deprecated.",
+   "remediation": "Set ssl_enforcement_enabled = true and the minimum TLS version to \"TLS1_2\" (minimum_tls_version = \"1.2\" on SQL).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-106",
+   "severity": "high",
+   "title": "Azure database server does not enforce TLS 1.2"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-4.1.6",
+    "NIST-AC-4",
+    "NIST-SC-7"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 103,
+   "message": "Database server 'sql' (azurerm_mssql_server) sets public_network_access_enabled = true; the endpoint is reachable from the internet subject only to firewall rules.",
+   "remediation": "Set public_network_access_enabled = false and connect through a private endpoint or delegated subnet.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-105",
+   "severity": "high",
+   "title": "Azure database server allows public network access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-4.1.1",
+    "NIST-AU-12"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 101,
+   "message": "SQL server 'sql' has no azurerm_mssql_server_extended_auditing_policy in this configuration; logins and queries are not audited.",
+   "remediation": "Add an azurerm_mssql_server_extended_auditing_policy targeting the server with a 90+ day retention.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-111",
+   "severity": "medium",
+   "title": "Azure SQL server auditing not configured"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-4.1.6",
+    "NIST-AC-4",
+    "NIST-SC-7"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 106,
+   "message": "Database server 'sql_default_public' (azurerm_mssql_server) does not set public_network_access_enabled, which defaults to true; the endpoint is reachable from the internet subject only to firewall rules.",
+   "remediation": "Set public_network_access_enabled = false and connect through a private endpoint or delegated subnet.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-105",
+   "severity": "high",
+   "title": "Azure database server allows public network access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-4.1.1",
+    "NIST-AU-12"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 106,
+   "message": "SQL server 'sql_default_public' has no azurerm_mssql_server_extended_auditing_policy in this configuration; logins and queries are not audited.",
+   "remediation": "Add an azurerm_mssql_server_extended_auditing_policy targeting the server with a 90+ day retention.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-111",
+   "severity": "medium",
+   "title": "Azure SQL server auditing not configured"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AC-4",
+    "NIST-SC-7"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 112,
+   "message": "Database server 'flex' (azurerm_postgresql_flexible_server) sets public_network_access_enabled = true; the endpoint is reachable from the internet subject only to firewall rules.",
+   "remediation": "Set public_network_access_enabled = false and connect through a private endpoint or delegated subnet.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-105",
+   "severity": "high",
+   "title": "Azure database server allows public network access"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-4.1.2",
+    "NIST-SC-28"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 118,
+   "message": "SQL database 'data' sets transparent_data_encryption_enabled = false; data files and backups are stored unencrypted.",
+   "remediation": "Remove transparent_data_encryption_enabled = false (the default is true).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-112",
+   "severity": "high",
+   "title": "Azure SQL database TDE disabled"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-8.3",
+    "NIST-SC-12"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 125,
+   "message": "Key Vault 'kv' sets purge_protection_enabled = false; a compromised principal can permanently purge keys and secrets during the soft-delete window.",
+   "remediation": "Set purge_protection_enabled = true and soft_delete_retention_days = 90.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-107",
+   "severity": "high",
+   "title": "Azure Key Vault is not purge protected"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-8.3",
+    "NIST-SC-12"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 128,
+   "message": "Key Vault 'kv_default' does not enable purge_protection_enabled; a compromised principal can permanently purge keys and secrets during the soft-delete window.",
+   "remediation": "Set purge_protection_enabled = true and soft_delete_retention_days = 90.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-107",
+   "severity": "high",
+   "title": "Azure Key Vault is not purge protected"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-Azure-7.3",
+    "NIST-SC-28"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 134,
+   "message": "Managed disk 'data' has no disk_encryption_set_id or encryption_settings; data is encrypted only with platform-managed keys.",
+   "remediation": "Reference an azurerm_disk_encryption_set via disk_encryption_set_id to use a customer-managed key.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-108",
+   "severity": "medium",
+   "title": "Azure managed disk relies on platform-managed keys only"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-SC-7",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 147,
+   "message": "Network interface 'vm' attaches a public IP, exposing the VM directly to the internet. Prefer private IPs behind a load balancer, Bastion, or NAT gateway.",
+   "remediation": "Remove public_ip_address_id from ip_configuration; front the VM with a load balancer or Azure Bastion.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-109",
+   "severity": "medium",
+   "title": "Azure VM network interface has a public IP"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AU-12",
+    "NIST-AU-11"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 155,
+   "message": "Network Watcher flow log 'nsg' is disabled (enabled = false); network forensics need at least 90 days of flow records.",
+   "remediation": "Set enabled = true and retention_policy { enabled = true, days >= 90 } (0 keeps logs indefinitely).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-110",
+   "severity": "medium",
+   "title": "Azure NSG flow log disabled or short retention"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AU-12",
+    "NIST-AU-11"
+   ],
+   "file_path": "terraform/synthetic_azure_misconfig.tf",
+   "line_number": 167,
+   "message": "Network Watcher flow log 'short' has retention disabled; network forensics need at least 90 days of flow records.",
+   "remediation": "Set enabled = true and retention_policy { enabled = true, days >= 90 } (0 keeps logs indefinitely).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-110",
+   "severity": "medium",
+   "title": "Azure NSG flow log disabled or short retention"
+  }
+ ],
+ "terraform/synthetic_gcp_good.tf": [],
+ "terraform/synthetic_gcp_misconfig.tf": [
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-5.2",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 8,
+   "message": "Bucket 'logs' sets uniform_bucket_level_access = false; legacy object ACLs can grant access that bucket IAM does not show.",
+   "remediation": "Set uniform_bucket_level_access = true.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-202",
+   "severity": "medium",
+   "title": "GCS bucket allows per-object ACLs"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-5.2",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 11,
+   "message": "Bucket 'default_acls' does not set uniform_bucket_level_access (provider default false); legacy object ACLs can grant access that bucket IAM does not show.",
+   "remediation": "Set uniform_bucket_level_access = true.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-202",
+   "severity": "medium",
+   "title": "GCS bucket allows per-object ACLs"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-5.1",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 19,
+   "message": "'public' grants roles/storage.objectViewer to allUsers, making bucket contents readable by anyone on the internet.",
+   "remediation": "Grant bucket roles to specific principals and set public_access_prevention = \"enforced\" on the bucket.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-201",
+   "severity": "critical",
+   "title": "GCS bucket is publicly accessible"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-5.1",
+    "NIST-AC-3"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 25,
+   "message": "'authenticated' grants roles/storage.objectViewer to allAuthenticatedUsers, making bucket contents readable by anyone on the internet.",
+   "remediation": "Grant bucket roles to specific principals and set public_access_prevention = \"enforced\" on the bucket.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-201",
+   "severity": "critical",
+   "title": "GCS bucket is publicly accessible"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-3.6",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 28,
+   "message": "Firewall 'ssh' allows ingress for tcp on port(s) 22 from 0.0.0.0/0 or ::/0. Internet-reachable management ports and broad allow rules are a primary intrusion path.",
+   "remediation": "Restrict source_ranges to known CIDRs or use source_tags/service accounts; reach VMs via IAP TCP forwarding.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-203",
+   "severity": "critical",
+   "title": "GCP firewall rule open to the internet"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-3.7",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 38,
+   "message": "Firewall 'rdp_range' allows ingress for tcp on port(s) 3380-3390 from 0.0.0.0/0 or ::/0. Internet-reachable management ports and broad allow rules are a primary intrusion path.",
+   "remediation": "Restrict source_ranges to known CIDRs or use source_tags/service accounts; reach VMs via IAP TCP forwarding.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-203",
+   "severity": "critical",
+   "title": "GCP firewall rule open to the internet"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-3.7",
+    "CIS-GCP-3.6",
+    "CIS-GCP-3.8",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 48,
+   "message": "Firewall 'all' allows ingress for all on port(s) * from 0.0.0.0/0 or ::/0. Internet-reachable management ports and broad allow rules are a primary intrusion path.",
+   "remediation": "Restrict source_ranges to known CIDRs or use source_tags/service accounts; reach VMs via IAP TCP forwarding.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-203",
+   "severity": "critical",
+   "title": "GCP firewall rule open to the internet"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 57,
+   "message": "Firewall 'web' allows ingress for tcp on port(s) 8080 from 0.0.0.0/0 or ::/0. Internet-reachable management ports and broad allow rules are a primary intrusion path.",
+   "remediation": "Restrict source_ranges to known CIDRs or use source_tags/service accounts; reach VMs via IAP TCP forwarding.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-203",
+   "severity": "high",
+   "title": "GCP firewall rule open to the internet"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "NIST-IA-5",
+    "NIST-SC-28"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 80,
+   "message": "Resource 'db' (google_sql_database_instance) sets 'root_password' to a literal value. The value lands in version control and Terraform state. Pass it from a sensitive variable, random_password, or a secrets manager reference.",
+   "remediation": "",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-051",
+   "severity": "critical",
+   "title": "Hardcoded secret in Terraform resource"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-6.2",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 73,
+   "message": "Cloud SQL instance 'db' sets ipv4_enabled = true and authorizes 0.0.0.0/0; the database endpoint is reachable from the internet.",
+   "remediation": "Set ipv4_enabled = false and connect over private_network (Private Service Connect / private IP).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-204",
+   "severity": "critical",
+   "title": "Cloud SQL instance has a public IP"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-6.1",
+    "NIST-SC-8"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 74,
+   "message": "Cloud SQL instance 'db' sets require_ssl = false; clients may connect without TLS.",
+   "remediation": "Set ssl_mode = \"ENCRYPTED_ONLY\" (or \"TRUSTED_CLIENT_CERTIFICATE_REQUIRED\").",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-205",
+   "severity": "high",
+   "title": "Cloud SQL instance accepts unencrypted connections"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-6.3",
+    "NIST-CP-9"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 67,
+   "message": "Cloud SQL instance 'db' has no backup_configuration block; data cannot be restored after corruption or deletion.",
+   "remediation": "Add backup_configuration { enabled = true } (and point_in_time_recovery_enabled = true for PostgreSQL).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-206",
+   "severity": "medium",
+   "title": "Cloud SQL instance without automated backups"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-6.2",
+    "NIST-AC-4"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 89,
+   "message": "Cloud SQL instance 'db_v6' sets ipv4_enabled = true; the database endpoint is reachable from the internet.",
+   "remediation": "Set ipv4_enabled = false and connect over private_network (Private Service Connect / private IP).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-204",
+   "severity": "high",
+   "title": "Cloud SQL instance has a public IP"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-6.1",
+    "NIST-SC-8"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 90,
+   "message": "Cloud SQL instance 'db_v6' sets ssl_mode = \"ALLOW_UNENCRYPTED_AND_ENCRYPTED\"; clients may connect without TLS.",
+   "remediation": "Set ssl_mode = \"ENCRYPTED_ONLY\" (or \"TRUSTED_CLIENT_CERTIFICATE_REQUIRED\").",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-205",
+   "severity": "high",
+   "title": "Cloud SQL instance accepts unencrypted connections"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-6.3",
+    "NIST-CP-9"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 93,
+   "message": "Cloud SQL instance 'db_v6' sets backup_configuration.enabled = false; data cannot be restored after corruption or deletion.",
+   "remediation": "Add backup_configuration { enabled = true } (and point_in_time_recovery_enabled = true for PostgreSQL).",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-206",
+   "severity": "medium",
+   "title": "Cloud SQL instance without automated backups"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-4.9",
+    "NIST-SC-7"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 98,
+   "message": "Instance 'vm' declares an access_config block, which assigns an external IP reachable from the internet.",
+   "remediation": "Remove access_config and reach the instance through IAP, a load balancer, or Cloud NAT for egress.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-207",
+   "severity": "medium",
+   "title": "GCE instance has a public IP"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-4.4",
+    "NIST-IA-2"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 109,
+   "message": "Instance metadata on 'vm' sets enable-oslogin = \"false\"; SSH access falls back to metadata-managed keys without IAM control.",
+   "remediation": "Set enable-oslogin = \"true\" in project metadata and remove per-instance overrides.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-208",
+   "severity": "medium",
+   "title": "GCE OS Login disabled"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-4.5",
+    "NIST-AC-17"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 110,
+   "message": "Metadata on 'vm' sets serial-port-enable = \"true\"; the serial console accepts connections from any IP with no network controls.",
+   "remediation": "Remove serial-port-enable or set it to \"false\".",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-209",
+   "severity": "high",
+   "title": "GCE serial port access enabled"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-4.6",
+    "NIST-SC-7"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 102,
+   "message": "Instance 'vm' sets can_ip_forward = true, letting it route packets for other addresses and bypass per-VM firewalling.",
+   "remediation": "Set can_ip_forward = false unless the instance is a dedicated NAT or network appliance.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-211",
+   "severity": "medium",
+   "title": "GCE instance allows IP forwarding"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-4.4",
+    "NIST-IA-2"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 122,
+   "message": "Instance metadata on 'vm_flags' sets enable-oslogin = \"FALSE\"; SSH access falls back to metadata-managed keys without IAM control.",
+   "remediation": "Set enable-oslogin = \"true\" in project metadata and remove per-instance overrides.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-208",
+   "severity": "medium",
+   "title": "GCE OS Login disabled"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-4.5",
+    "NIST-AC-17"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 123,
+   "message": "Metadata on 'vm_flags' sets serial-port-enable = \"1\"; the serial console accepts connections from any IP with no network controls.",
+   "remediation": "Remove serial-port-enable or set it to \"false\".",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-209",
+   "severity": "high",
+   "title": "GCE serial port access enabled"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-4.4",
+    "NIST-IA-2"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 129,
+   "message": "Project metadata on 'project' sets enable-oslogin = \"false\"; SSH access falls back to metadata-managed keys without IAM control.",
+   "remediation": "Set enable-oslogin = \"true\" in project metadata and remove per-instance overrides.",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-208",
+   "severity": "medium",
+   "title": "GCE OS Login disabled"
+  },
+  {
+   "atlas_techniques": [],
+   "attack_techniques": [],
+   "category": "terraform",
+   "compliance": [
+    "CIS-GCP-3.9",
+    "NIST-AU-12"
+   ],
+   "file_path": "terraform/synthetic_gcp_misconfig.tf",
+   "line_number": 133,
+   "message": "Subnetwork 'app' has no log_config block; VPC flow logs are disabled, leaving no network forensics trail.",
+   "remediation": "Add a log_config block (e.g. aggregation_interval = \"INTERVAL_10_MIN\", metadata = \"INCLUDE_ALL_METADATA\").",
+   "repository_relative_path": null,
+   "resource_type": null,
+   "rule_id": "TF-SEC-210",
+   "severity": "medium",
+   "title": "GCP subnetwork without VPC flow logs"
+  }
+ ]
 }

@@ -5,6 +5,9 @@ from __future__ import annotations
 import ast
 from dataclasses import dataclass, field
 
+from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_severity
+from agent_bom.ast.flow_serialize import flow_finding_rows
+
 
 @dataclass
 class ExtractedPrompt:
@@ -72,7 +75,7 @@ class ControlFlowEdge:
 
 @dataclass
 class FlowFinding:
-    """A lightweight control-flow or inter-procedural finding."""
+    """A lightweight control-flow or inter-procedural finding; severity/CWE default from the category."""
 
     category: str
     title: str
@@ -83,6 +86,12 @@ class FlowFinding:
     sink: str
     call_path: list[str] = field(default_factory=list)
     source: str = ""
+    severity: str = ""
+    cwe_ids: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        self.severity = self.severity or flow_severity(self.category)
+        self.cwe_ids = self.cwe_ids or flow_cwe_ids(self.category, self.sink)
 
 
 @dataclass
@@ -245,20 +254,7 @@ class ASTAnalysisResult:
                 }
                 for edge in self.cfg_edges
             ],
-            "flow_findings": [
-                {
-                    "category": finding.category,
-                    "title": finding.title,
-                    "detail": finding.detail,
-                    "file": finding.file_path,
-                    "line": finding.line_number,
-                    "entrypoint": finding.entrypoint,
-                    "sink": finding.sink,
-                    "call_path": finding.call_path,
-                    "source": finding.source,
-                }
-                for finding in self.flow_findings
-            ],
+            "flow_findings": flow_finding_rows(self.flow_findings),
             "application_entrypoints": [
                 {
                     "name": entry.name,

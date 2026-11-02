@@ -1817,10 +1817,14 @@
           "os.popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `shell` in python_agent/app/agent.py calls `os.popen` without an obvious validation or authorization branch.",
         "entrypoint": "shell",
         "file_path": "python_agent/app/agent.py",
         "line_number": 21,
+        "severity": "high",
         "sink": "os.popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -1831,10 +1835,14 @@
           "pickle.loads"
         ],
         "category": "unsafe_deserialization",
+        "cwe_ids": [
+          "CWE-502"
+        ],
         "detail": "python_agent/app/api.py calls `pickle.loads` which can deserialize attacker-controlled content without a safe loader.",
         "entrypoint": "load",
         "file_path": "python_agent/app/api.py",
         "line_number": 19,
+        "severity": "critical",
         "sink": "pickle.loads",
         "source": "",
         "title": "Unsafe deserialization primitive detected"
@@ -1845,10 +1853,14 @@
           "subprocess.check_output"
         ],
         "category": "command_string_construction",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "python_agent/app/api.py builds a shell command dynamically before calling `subprocess.check_output`, which is a common command injection pattern.",
         "entrypoint": "ping",
         "file_path": "python_agent/app/api.py",
         "line_number": 25,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
         "title": "Shell command is built through string interpolation"
@@ -1859,10 +1871,14 @@
           "subprocess.run"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_command` in python_agent/server.py calls `subprocess.run` without an obvious validation or authorization branch.",
         "entrypoint": "run_command",
         "file_path": "python_agent/server.py",
         "line_number": 30,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -1873,10 +1889,14 @@
           "subprocess.check_output"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_quoted` in python_agent/server.py calls `subprocess.check_output` without an obvious validation or authorization branch.",
         "entrypoint": "run_quoted",
         "file_path": "python_agent/server.py",
         "line_number": 36,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -1887,10 +1907,14 @@
           "subprocess.check_output"
         ],
         "category": "command_string_construction",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "python_agent/server.py builds a shell command dynamically before calling `subprocess.check_output`, which is a common command injection pattern.",
         "entrypoint": "run_quoted",
         "file_path": "python_agent/server.py",
         "line_number": 36,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
         "title": "Shell command is built through string interpolation"
@@ -1901,10 +1925,14 @@
           "os.system"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_allowed` in python_agent/server.py calls `os.system` without an obvious validation or authorization branch.",
         "entrypoint": "run_allowed",
         "file_path": "python_agent/server.py",
         "line_number": 43,
+        "severity": "high",
         "sink": "os.system",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -1915,10 +1943,14 @@
           "requests.get"
         ],
         "category": "ssrf_url_construction",
+        "cwe_ids": [
+          "CWE-918"
+        ],
         "detail": "python_agent/server.py builds an outbound URL dynamically before calling `requests.get`, which is a common SSRF pattern.",
         "entrypoint": "fetch_checked",
         "file_path": "python_agent/server.py",
         "line_number": 70,
+        "severity": "high",
         "sink": "requests.get",
         "source": "",
         "title": "Outbound URL is built through string interpolation"
@@ -1929,10 +1961,14 @@
           "conn.execute"
         ],
         "category": "sql_string_construction",
+        "cwe_ids": [
+          "CWE-89"
+        ],
         "detail": "python_agent/server.py builds a SQL query dynamically before calling `conn.execute`, which is a common SQL injection pattern.",
         "entrypoint": "query_user",
         "file_path": "python_agent/server.py",
         "line_number": 78,
+        "severity": "high",
         "sink": "conn.execute",
         "source": "",
         "title": "SQL query is built through string interpolation"
@@ -1943,10 +1979,14 @@
           "eval"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `evaluate` in python_agent/server.py calls `eval` without an obvious validation or authorization branch.",
         "entrypoint": "evaluate",
         "file_path": "python_agent/server.py",
         "line_number": 91,
+        "severity": "high",
         "sink": "eval",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -1957,10 +1997,14 @@
           "yaml.load"
         ],
         "category": "unsafe_deserialization",
+        "cwe_ids": [
+          "CWE-502"
+        ],
         "detail": "python_agent/server.py calls `yaml.load` which can deserialize attacker-controlled content without a safe loader.",
         "entrypoint": "load_config",
         "file_path": "python_agent/server.py",
         "line_number": 96,
+        "severity": "critical",
         "sink": "yaml.load",
         "source": "",
         "title": "Unsafe deserialization primitive detected"
@@ -1971,10 +2015,14 @@
           "subprocess.Popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `loop_commands` in python_agent/server.py calls `subprocess.Popen` without an obvious validation or authorization branch.",
         "entrypoint": "loop_commands",
         "file_path": "python_agent/server.py",
         "line_number": 117,
+        "severity": "high",
         "sink": "subprocess.Popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -1985,10 +2033,14 @@
           "exec"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `tuple_flow` in python_agent/server.py calls `exec` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 128,
+        "severity": "high",
         "sink": "exec",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -1999,10 +2051,14 @@
           "exec"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `tuple_flow` in python_agent/server.py calls `exec` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 129,
+        "severity": "high",
         "sink": "exec",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -2013,10 +2069,14 @@
           "os.popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `tuple_flow` in python_agent/server.py calls `os.popen` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 130,
+        "severity": "high",
         "sink": "os.popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -2027,10 +2087,14 @@
           "subprocess.run"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `guarded_early` in python_agent/server.py calls `subprocess.run` without an obvious validation or authorization branch.",
         "entrypoint": "guarded_early",
         "file_path": "python_agent/server.py",
         "line_number": 138,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -2041,10 +2105,12 @@
           "open"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [],
         "detail": "Tool `with_context` in python_agent/server.py calls `open` without an obvious validation or authorization branch.",
         "entrypoint": "with_context",
         "file_path": "python_agent/server.py",
         "line_number": 143,
+        "severity": "high",
         "sink": "open",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -2055,10 +2121,14 @@
           "os.system"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `with_context` in python_agent/server.py calls `os.system` without an obvious validation or authorization branch.",
         "entrypoint": "with_context",
         "file_path": "python_agent/server.py",
         "line_number": 147,
+        "severity": "high",
         "sink": "os.system",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -2068,10 +2138,14 @@
           "child_process.execSync"
         ],
         "category": "js_ts_dangerous_call",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "multilang/web/legacy.js invokes `child_process.execSync` in code that may be reachable from tool handlers.",
         "entrypoint": "module",
         "file_path": "multilang/web/legacy.js",
         "line_number": 1,
+        "severity": "high",
         "sink": "child_process.execSync",
         "source": "",
         "title": "JS/TS source invokes a dangerous capability"
@@ -2082,10 +2156,14 @@
           "child_process.exec"
         ],
         "category": "js_ts_dangerous_call",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "multilang/web/server.ts invokes `child_process.exec` in code that may be reachable from tool handlers.",
         "entrypoint": "run",
         "file_path": "multilang/web/server.ts",
         "line_number": 2,
+        "severity": "high",
         "sink": "child_process.exec",
         "source": "",
         "title": "JS/TS source invokes a dangerous capability"
@@ -2096,10 +2174,14 @@
           "exec.Command"
         ],
         "category": "go_dangerous_call",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "multilang/go/main.go invokes `exec.Command` in Go source.",
         "entrypoint": "run",
         "file_path": "multilang/go/main.go",
         "line_number": 14,
+        "severity": "high",
         "sink": "exec.Command",
         "source": "",
         "title": "Go source invokes a dangerous capability"
@@ -2111,10 +2193,14 @@
           "subprocess.run"
         ],
         "category": "interprocedural_dangerous_flow",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_command` reaches `subprocess.run` through a bounded helper-call chain in python_agent/app/api.py.",
         "entrypoint": "run_command",
         "file_path": "python_agent/app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool helper chain reaches dangerous sink"
@@ -2126,10 +2212,14 @@
           "subprocess.run"
         ],
         "category": "interprocedural_dangerous_flow",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `guarded_early` reaches `subprocess.run` through a bounded helper-call chain in python_agent/app/api.py.",
         "entrypoint": "guarded_early",
         "file_path": "python_agent/app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool helper chain reaches dangerous sink"
@@ -2140,10 +2230,14 @@
           "os.popen"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.popen` with shell execution in python_agent/app/agent.py.",
         "entrypoint": "shell",
         "file_path": "python_agent/app/agent.py",
         "line_number": 21,
+        "severity": "critical",
         "sink": "os.popen",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -2154,10 +2248,14 @@
           "os.popen"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.popen` in python_agent/app/agent.py.",
         "entrypoint": "shell",
         "file_path": "python_agent/app/agent.py",
         "line_number": 21,
+        "severity": "high",
         "sink": "os.popen",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2168,10 +2266,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `subprocess.run` with shell execution in python_agent/server.py.",
         "entrypoint": "run_command",
         "file_path": "python_agent/server.py",
         "line_number": 30,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -2182,10 +2284,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `subprocess.run` in python_agent/server.py.",
         "entrypoint": "run_command",
         "file_path": "python_agent/server.py",
         "line_number": 30,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2197,10 +2303,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` with shell execution in python_agent/app/api.py.",
         "entrypoint": "run_command",
         "file_path": "python_agent/app/api.py",
         "line_number": 14,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches shell command execution"
@@ -2212,10 +2322,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` in python_agent/app/api.py.",
         "entrypoint": "run_command",
         "file_path": "python_agent/app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2226,10 +2340,14 @@
           "os.system"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.system` with shell execution in python_agent/server.py.",
         "entrypoint": "run_allowed",
         "file_path": "python_agent/server.py",
         "line_number": 43,
+        "severity": "critical",
         "sink": "os.system",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -2240,10 +2358,14 @@
           "os.system"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.system` in python_agent/server.py.",
         "entrypoint": "run_allowed",
         "file_path": "python_agent/server.py",
         "line_number": 43,
+        "severity": "high",
         "sink": "os.system",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2254,10 +2376,14 @@
           "requests.get"
         ],
         "category": "tainted_ssrf_sink",
+        "cwe_ids": [
+          "CWE-918"
+        ],
         "detail": "Untrusted data (url) reaches `requests.get` in python_agent/server.py.",
         "entrypoint": "fetch_url",
         "file_path": "python_agent/server.py",
         "line_number": 63,
+        "severity": "high",
         "sink": "requests.get",
         "source": "url",
         "title": "Untrusted data reaches an outbound URL sink"
@@ -2268,10 +2394,14 @@
           "conn.execute"
         ],
         "category": "tainted_sql_query",
+        "cwe_ids": [
+          "CWE-89"
+        ],
         "detail": "Untrusted data (sql) reaches `conn.execute` in python_agent/server.py.",
         "entrypoint": "query_user",
         "file_path": "python_agent/server.py",
         "line_number": 78,
+        "severity": "high",
         "sink": "conn.execute",
         "source": "sql",
         "title": "Untrusted data reaches SQL execution"
@@ -2283,10 +2413,14 @@
           "urllib.request.urlopen"
         ],
         "category": "tainted_ssrf_sink",
+        "cwe_ids": [
+          "CWE-918"
+        ],
         "detail": "Untrusted data (url) reaches `urllib.request.urlopen` in python_agent/lib/helpers.py.",
         "entrypoint": "delegated_fetch",
         "file_path": "python_agent/lib/helpers.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "urllib.request.urlopen",
         "source": "url",
         "title": "Untrusted data reaches an outbound URL sink"
@@ -2297,10 +2431,14 @@
           "subprocess.Popen"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (item) reaches `subprocess.Popen` with shell execution in python_agent/server.py.",
         "entrypoint": "loop_commands",
         "file_path": "python_agent/server.py",
         "line_number": 117,
+        "severity": "critical",
         "sink": "subprocess.Popen",
         "source": "item",
         "title": "Untrusted data reaches shell command execution"
@@ -2311,10 +2449,14 @@
           "subprocess.Popen"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (item) reaches `subprocess.Popen` in python_agent/server.py.",
         "entrypoint": "loop_commands",
         "file_path": "python_agent/server.py",
         "line_number": 117,
+        "severity": "high",
         "sink": "subprocess.Popen",
         "source": "item",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2325,10 +2467,14 @@
           "exec"
         ],
         "category": "tainted_dynamic_code_execution",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Untrusted data (x) reaches `exec` in python_agent/server.py.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 128,
+        "severity": "critical",
         "sink": "exec",
         "source": "x",
         "title": "Untrusted data reaches dynamic code execution"
@@ -2339,10 +2485,14 @@
           "exec"
         ],
         "category": "tainted_dynamic_code_execution",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Untrusted data (z) reaches `exec` in python_agent/server.py.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 129,
+        "severity": "critical",
         "sink": "exec",
         "source": "z",
         "title": "Untrusted data reaches dynamic code execution"
@@ -2353,10 +2503,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (target) reaches `subprocess.run` in python_agent/server.py.",
         "entrypoint": "guarded_early",
         "file_path": "python_agent/server.py",
         "line_number": 138,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "target",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2368,10 +2522,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` with shell execution in python_agent/app/api.py.",
         "entrypoint": "guarded_early",
         "file_path": "python_agent/app/api.py",
         "line_number": 14,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches shell command execution"
@@ -2383,10 +2541,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` in python_agent/app/api.py.",
         "entrypoint": "guarded_early",
         "file_path": "python_agent/app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2397,10 +2559,14 @@
           "open"
         ],
         "category": "tainted_path_access",
+        "cwe_ids": [
+          "CWE-22"
+        ],
         "detail": "Untrusted data (path) reaches `open` in python_agent/server.py.",
         "entrypoint": "with_context",
         "file_path": "python_agent/server.py",
         "line_number": 143,
+        "severity": "high",
         "sink": "open",
         "source": "path",
         "title": "Untrusted data reaches a file-system path sink"
@@ -2411,10 +2577,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` with shell execution in python_agent/app/api.py.",
         "entrypoint": "run",
         "file_path": "python_agent/app/api.py",
         "line_number": 14,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches shell command execution"
@@ -2425,10 +2595,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` in python_agent/app/api.py.",
         "entrypoint": "run",
         "file_path": "python_agent/app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2439,10 +2613,14 @@
           "subprocess.check_output"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (host) reaches `subprocess.check_output` with shell execution in python_agent/app/api.py.",
         "entrypoint": "ping",
         "file_path": "python_agent/app/api.py",
         "line_number": 25,
+        "severity": "critical",
         "sink": "subprocess.check_output",
         "source": "host",
         "title": "Untrusted data reaches shell command execution"
@@ -2453,10 +2631,14 @@
           "subprocess.check_output"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (host) reaches `subprocess.check_output` in python_agent/app/api.py.",
         "entrypoint": "ping",
         "file_path": "python_agent/app/api.py",
         "line_number": 25,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "host",
         "title": "Untrusted data reaches a dangerous sink"
@@ -2469,10 +2651,14 @@
           "child_process.exec"
         ],
         "category": "js_ts_interprocedural_dangerous_flow",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run` reaches `child_process.exec` through JS/TS code in multilang/web/server.ts.",
         "entrypoint": "run",
         "file_path": "multilang/web/server.ts",
         "line_number": 13,
+        "severity": "high",
         "sink": "child_process.exec",
         "source": "",
         "title": "JS/TS tool reaches dangerous sink through helper flow"
@@ -2485,10 +2671,14 @@
           "child_process.exec"
         ],
         "category": "js_ts_tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run` passes tainted JS/TS input into `child_process.exec` in multilang/web/server.ts.",
         "entrypoint": "run",
         "file_path": "multilang/web/server.ts",
         "line_number": 13,
+        "severity": "critical",
         "sink": "child_process.exec",
         "source": "command",
         "title": "JS/TS tool routes tainted input into command execution"
@@ -2501,10 +2691,14 @@
           "child_process.exec"
         ],
         "category": "js_ts_tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run` passes tainted JS/TS input into `child_process.exec` in multilang/web/server.ts.",
         "entrypoint": "run",
         "file_path": "multilang/web/server.ts",
         "line_number": 13,
+        "severity": "high",
         "sink": "child_process.exec",
         "source": "command",
         "title": "JS/TS tool routes tainted input into a dangerous sink"
@@ -4401,10 +4595,14 @@
           "os.popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `shell` in python_agent/app/agent.py calls `os.popen` without an obvious validation or authorization branch.",
         "entrypoint": "shell",
         "file_path": "python_agent/app/agent.py",
         "line_number": 21,
+        "severity": "high",
         "sink": "os.popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4415,10 +4613,14 @@
           "subprocess.run"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_command` in python_agent/server.py calls `subprocess.run` without an obvious validation or authorization branch.",
         "entrypoint": "run_command",
         "file_path": "python_agent/server.py",
         "line_number": 30,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4429,10 +4631,14 @@
           "subprocess.check_output"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_quoted` in python_agent/server.py calls `subprocess.check_output` without an obvious validation or authorization branch.",
         "entrypoint": "run_quoted",
         "file_path": "python_agent/server.py",
         "line_number": 36,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4443,10 +4649,14 @@
           "subprocess.check_output"
         ],
         "category": "command_string_construction",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "python_agent/server.py builds a shell command dynamically before calling `subprocess.check_output`, which is a common command injection pattern.",
         "entrypoint": "run_quoted",
         "file_path": "python_agent/server.py",
         "line_number": 36,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
         "title": "Shell command is built through string interpolation"
@@ -4457,10 +4667,14 @@
           "os.system"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_allowed` in python_agent/server.py calls `os.system` without an obvious validation or authorization branch.",
         "entrypoint": "run_allowed",
         "file_path": "python_agent/server.py",
         "line_number": 43,
+        "severity": "high",
         "sink": "os.system",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4471,10 +4685,14 @@
           "requests.get"
         ],
         "category": "ssrf_url_construction",
+        "cwe_ids": [
+          "CWE-918"
+        ],
         "detail": "python_agent/server.py builds an outbound URL dynamically before calling `requests.get`, which is a common SSRF pattern.",
         "entrypoint": "fetch_checked",
         "file_path": "python_agent/server.py",
         "line_number": 70,
+        "severity": "high",
         "sink": "requests.get",
         "source": "",
         "title": "Outbound URL is built through string interpolation"
@@ -4485,10 +4703,14 @@
           "conn.execute"
         ],
         "category": "sql_string_construction",
+        "cwe_ids": [
+          "CWE-89"
+        ],
         "detail": "python_agent/server.py builds a SQL query dynamically before calling `conn.execute`, which is a common SQL injection pattern.",
         "entrypoint": "query_user",
         "file_path": "python_agent/server.py",
         "line_number": 78,
+        "severity": "high",
         "sink": "conn.execute",
         "source": "",
         "title": "SQL query is built through string interpolation"
@@ -4499,10 +4721,14 @@
           "eval"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `evaluate` in python_agent/server.py calls `eval` without an obvious validation or authorization branch.",
         "entrypoint": "evaluate",
         "file_path": "python_agent/server.py",
         "line_number": 91,
+        "severity": "high",
         "sink": "eval",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4513,10 +4739,14 @@
           "yaml.load"
         ],
         "category": "unsafe_deserialization",
+        "cwe_ids": [
+          "CWE-502"
+        ],
         "detail": "python_agent/server.py calls `yaml.load` which can deserialize attacker-controlled content without a safe loader.",
         "entrypoint": "load_config",
         "file_path": "python_agent/server.py",
         "line_number": 96,
+        "severity": "critical",
         "sink": "yaml.load",
         "source": "",
         "title": "Unsafe deserialization primitive detected"
@@ -4527,10 +4757,14 @@
           "subprocess.Popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `loop_commands` in python_agent/server.py calls `subprocess.Popen` without an obvious validation or authorization branch.",
         "entrypoint": "loop_commands",
         "file_path": "python_agent/server.py",
         "line_number": 117,
+        "severity": "high",
         "sink": "subprocess.Popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4541,10 +4775,14 @@
           "exec"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `tuple_flow` in python_agent/server.py calls `exec` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 128,
+        "severity": "high",
         "sink": "exec",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4555,10 +4793,14 @@
           "exec"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `tuple_flow` in python_agent/server.py calls `exec` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 129,
+        "severity": "high",
         "sink": "exec",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4569,10 +4811,14 @@
           "os.popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `tuple_flow` in python_agent/server.py calls `os.popen` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 130,
+        "severity": "high",
         "sink": "os.popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4583,10 +4829,14 @@
           "subprocess.run"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `guarded_early` in python_agent/server.py calls `subprocess.run` without an obvious validation or authorization branch.",
         "entrypoint": "guarded_early",
         "file_path": "python_agent/server.py",
         "line_number": 138,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4597,10 +4847,12 @@
           "open"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [],
         "detail": "Tool `with_context` in python_agent/server.py calls `open` without an obvious validation or authorization branch.",
         "entrypoint": "with_context",
         "file_path": "python_agent/server.py",
         "line_number": 143,
+        "severity": "high",
         "sink": "open",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4611,10 +4863,14 @@
           "os.system"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `with_context` in python_agent/server.py calls `os.system` without an obvious validation or authorization branch.",
         "entrypoint": "with_context",
         "file_path": "python_agent/server.py",
         "line_number": 147,
+        "severity": "high",
         "sink": "os.system",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -4625,10 +4881,14 @@
           "exec.Command"
         ],
         "category": "go_dangerous_call",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "multilang/go/main.go invokes `exec.Command` in Go source.",
         "entrypoint": "run",
         "file_path": "multilang/go/main.go",
         "line_number": 14,
+        "severity": "high",
         "sink": "exec.Command",
         "source": "",
         "title": "Go source invokes a dangerous capability"
@@ -4639,10 +4899,14 @@
           "os.popen"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.popen` with shell execution in python_agent/app/agent.py.",
         "entrypoint": "shell",
         "file_path": "python_agent/app/agent.py",
         "line_number": 21,
+        "severity": "critical",
         "sink": "os.popen",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -4653,10 +4917,14 @@
           "os.popen"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.popen` in python_agent/app/agent.py.",
         "entrypoint": "shell",
         "file_path": "python_agent/app/agent.py",
         "line_number": 21,
+        "severity": "high",
         "sink": "os.popen",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -4667,10 +4935,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `subprocess.run` with shell execution in python_agent/server.py.",
         "entrypoint": "run_command",
         "file_path": "python_agent/server.py",
         "line_number": 30,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -4681,10 +4953,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `subprocess.run` in python_agent/server.py.",
         "entrypoint": "run_command",
         "file_path": "python_agent/server.py",
         "line_number": 30,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -4695,10 +4971,14 @@
           "os.system"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.system` with shell execution in python_agent/server.py.",
         "entrypoint": "run_allowed",
         "file_path": "python_agent/server.py",
         "line_number": 43,
+        "severity": "critical",
         "sink": "os.system",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -4709,10 +4989,14 @@
           "os.system"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.system` in python_agent/server.py.",
         "entrypoint": "run_allowed",
         "file_path": "python_agent/server.py",
         "line_number": 43,
+        "severity": "high",
         "sink": "os.system",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -4723,10 +5007,14 @@
           "requests.get"
         ],
         "category": "tainted_ssrf_sink",
+        "cwe_ids": [
+          "CWE-918"
+        ],
         "detail": "Untrusted data (url) reaches `requests.get` in python_agent/server.py.",
         "entrypoint": "fetch_url",
         "file_path": "python_agent/server.py",
         "line_number": 63,
+        "severity": "high",
         "sink": "requests.get",
         "source": "url",
         "title": "Untrusted data reaches an outbound URL sink"
@@ -4737,10 +5025,14 @@
           "conn.execute"
         ],
         "category": "tainted_sql_query",
+        "cwe_ids": [
+          "CWE-89"
+        ],
         "detail": "Untrusted data (sql) reaches `conn.execute` in python_agent/server.py.",
         "entrypoint": "query_user",
         "file_path": "python_agent/server.py",
         "line_number": 78,
+        "severity": "high",
         "sink": "conn.execute",
         "source": "sql",
         "title": "Untrusted data reaches SQL execution"
@@ -4751,10 +5043,14 @@
           "subprocess.Popen"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (item) reaches `subprocess.Popen` with shell execution in python_agent/server.py.",
         "entrypoint": "loop_commands",
         "file_path": "python_agent/server.py",
         "line_number": 117,
+        "severity": "critical",
         "sink": "subprocess.Popen",
         "source": "item",
         "title": "Untrusted data reaches shell command execution"
@@ -4765,10 +5061,14 @@
           "subprocess.Popen"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (item) reaches `subprocess.Popen` in python_agent/server.py.",
         "entrypoint": "loop_commands",
         "file_path": "python_agent/server.py",
         "line_number": 117,
+        "severity": "high",
         "sink": "subprocess.Popen",
         "source": "item",
         "title": "Untrusted data reaches a dangerous sink"
@@ -4779,10 +5079,14 @@
           "exec"
         ],
         "category": "tainted_dynamic_code_execution",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Untrusted data (x) reaches `exec` in python_agent/server.py.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 128,
+        "severity": "critical",
         "sink": "exec",
         "source": "x",
         "title": "Untrusted data reaches dynamic code execution"
@@ -4793,10 +5097,14 @@
           "exec"
         ],
         "category": "tainted_dynamic_code_execution",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Untrusted data (z) reaches `exec` in python_agent/server.py.",
         "entrypoint": "tuple_flow",
         "file_path": "python_agent/server.py",
         "line_number": 129,
+        "severity": "critical",
         "sink": "exec",
         "source": "z",
         "title": "Untrusted data reaches dynamic code execution"
@@ -4807,10 +5115,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (target) reaches `subprocess.run` in python_agent/server.py.",
         "entrypoint": "guarded_early",
         "file_path": "python_agent/server.py",
         "line_number": 138,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "target",
         "title": "Untrusted data reaches a dangerous sink"
@@ -4821,10 +5133,14 @@
           "open"
         ],
         "category": "tainted_path_access",
+        "cwe_ids": [
+          "CWE-22"
+        ],
         "detail": "Untrusted data (path) reaches `open` in python_agent/server.py.",
         "entrypoint": "with_context",
         "file_path": "python_agent/server.py",
         "line_number": 143,
+        "severity": "high",
         "sink": "open",
         "source": "path",
         "title": "Untrusted data reaches a file-system path sink"
@@ -5628,10 +5944,14 @@
           "child_process.execSync"
         ],
         "category": "js_ts_dangerous_call",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "web/legacy.js invokes `child_process.execSync` in code that may be reachable from tool handlers.",
         "entrypoint": "module",
         "file_path": "web/legacy.js",
         "line_number": 1,
+        "severity": "high",
         "sink": "child_process.execSync",
         "source": "",
         "title": "JS/TS source invokes a dangerous capability"
@@ -5642,10 +5962,14 @@
           "child_process.exec"
         ],
         "category": "js_ts_dangerous_call",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "web/server.ts invokes `child_process.exec` in code that may be reachable from tool handlers.",
         "entrypoint": "run",
         "file_path": "web/server.ts",
         "line_number": 2,
+        "severity": "high",
         "sink": "child_process.exec",
         "source": "",
         "title": "JS/TS source invokes a dangerous capability"
@@ -5656,10 +5980,14 @@
           "exec.Command"
         ],
         "category": "go_dangerous_call",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "go/main.go invokes `exec.Command` in Go source.",
         "entrypoint": "run",
         "file_path": "go/main.go",
         "line_number": 14,
+        "severity": "high",
         "sink": "exec.Command",
         "source": "",
         "title": "Go source invokes a dangerous capability"
@@ -5672,10 +6000,14 @@
           "child_process.exec"
         ],
         "category": "js_ts_interprocedural_dangerous_flow",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run` reaches `child_process.exec` through JS/TS code in web/server.ts.",
         "entrypoint": "run",
         "file_path": "web/server.ts",
         "line_number": 13,
+        "severity": "high",
         "sink": "child_process.exec",
         "source": "",
         "title": "JS/TS tool reaches dangerous sink through helper flow"
@@ -5688,10 +6020,14 @@
           "child_process.exec"
         ],
         "category": "js_ts_tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run` passes tainted JS/TS input into `child_process.exec` in web/server.ts.",
         "entrypoint": "run",
         "file_path": "web/server.ts",
         "line_number": 13,
+        "severity": "critical",
         "sink": "child_process.exec",
         "source": "command",
         "title": "JS/TS tool routes tainted input into command execution"
@@ -5704,10 +6040,14 @@
           "child_process.exec"
         ],
         "category": "js_ts_tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run` passes tainted JS/TS input into `child_process.exec` in web/server.ts.",
         "entrypoint": "run",
         "file_path": "web/server.ts",
         "line_number": 13,
+        "severity": "high",
         "sink": "child_process.exec",
         "source": "command",
         "title": "JS/TS tool routes tainted input into a dangerous sink"
@@ -7590,10 +7930,14 @@
           "os.popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `shell` in app/agent.py calls `os.popen` without an obvious validation or authorization branch.",
         "entrypoint": "shell",
         "file_path": "app/agent.py",
         "line_number": 21,
+        "severity": "high",
         "sink": "os.popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7604,10 +7948,14 @@
           "pickle.loads"
         ],
         "category": "unsafe_deserialization",
+        "cwe_ids": [
+          "CWE-502"
+        ],
         "detail": "app/api.py calls `pickle.loads` which can deserialize attacker-controlled content without a safe loader.",
         "entrypoint": "load",
         "file_path": "app/api.py",
         "line_number": 19,
+        "severity": "critical",
         "sink": "pickle.loads",
         "source": "",
         "title": "Unsafe deserialization primitive detected"
@@ -7618,10 +7966,14 @@
           "subprocess.check_output"
         ],
         "category": "command_string_construction",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "app/api.py builds a shell command dynamically before calling `subprocess.check_output`, which is a common command injection pattern.",
         "entrypoint": "ping",
         "file_path": "app/api.py",
         "line_number": 25,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
         "title": "Shell command is built through string interpolation"
@@ -7632,10 +7984,14 @@
           "subprocess.run"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_command` in server.py calls `subprocess.run` without an obvious validation or authorization branch.",
         "entrypoint": "run_command",
         "file_path": "server.py",
         "line_number": 30,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7646,10 +8002,14 @@
           "subprocess.check_output"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_quoted` in server.py calls `subprocess.check_output` without an obvious validation or authorization branch.",
         "entrypoint": "run_quoted",
         "file_path": "server.py",
         "line_number": 36,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7660,10 +8020,14 @@
           "subprocess.check_output"
         ],
         "category": "command_string_construction",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "server.py builds a shell command dynamically before calling `subprocess.check_output`, which is a common command injection pattern.",
         "entrypoint": "run_quoted",
         "file_path": "server.py",
         "line_number": 36,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "",
         "title": "Shell command is built through string interpolation"
@@ -7674,10 +8038,14 @@
           "os.system"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_allowed` in server.py calls `os.system` without an obvious validation or authorization branch.",
         "entrypoint": "run_allowed",
         "file_path": "server.py",
         "line_number": 43,
+        "severity": "high",
         "sink": "os.system",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7688,10 +8056,14 @@
           "requests.get"
         ],
         "category": "ssrf_url_construction",
+        "cwe_ids": [
+          "CWE-918"
+        ],
         "detail": "server.py builds an outbound URL dynamically before calling `requests.get`, which is a common SSRF pattern.",
         "entrypoint": "fetch_checked",
         "file_path": "server.py",
         "line_number": 70,
+        "severity": "high",
         "sink": "requests.get",
         "source": "",
         "title": "Outbound URL is built through string interpolation"
@@ -7702,10 +8074,14 @@
           "conn.execute"
         ],
         "category": "sql_string_construction",
+        "cwe_ids": [
+          "CWE-89"
+        ],
         "detail": "server.py builds a SQL query dynamically before calling `conn.execute`, which is a common SQL injection pattern.",
         "entrypoint": "query_user",
         "file_path": "server.py",
         "line_number": 78,
+        "severity": "high",
         "sink": "conn.execute",
         "source": "",
         "title": "SQL query is built through string interpolation"
@@ -7716,10 +8092,14 @@
           "eval"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `evaluate` in server.py calls `eval` without an obvious validation or authorization branch.",
         "entrypoint": "evaluate",
         "file_path": "server.py",
         "line_number": 91,
+        "severity": "high",
         "sink": "eval",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7730,10 +8110,14 @@
           "yaml.load"
         ],
         "category": "unsafe_deserialization",
+        "cwe_ids": [
+          "CWE-502"
+        ],
         "detail": "server.py calls `yaml.load` which can deserialize attacker-controlled content without a safe loader.",
         "entrypoint": "load_config",
         "file_path": "server.py",
         "line_number": 96,
+        "severity": "critical",
         "sink": "yaml.load",
         "source": "",
         "title": "Unsafe deserialization primitive detected"
@@ -7744,10 +8128,14 @@
           "subprocess.Popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `loop_commands` in server.py calls `subprocess.Popen` without an obvious validation or authorization branch.",
         "entrypoint": "loop_commands",
         "file_path": "server.py",
         "line_number": 117,
+        "severity": "high",
         "sink": "subprocess.Popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7758,10 +8146,14 @@
           "exec"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `tuple_flow` in server.py calls `exec` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "server.py",
         "line_number": 128,
+        "severity": "high",
         "sink": "exec",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7772,10 +8164,14 @@
           "exec"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Tool `tuple_flow` in server.py calls `exec` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "server.py",
         "line_number": 129,
+        "severity": "high",
         "sink": "exec",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7786,10 +8182,14 @@
           "os.popen"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `tuple_flow` in server.py calls `os.popen` without an obvious validation or authorization branch.",
         "entrypoint": "tuple_flow",
         "file_path": "server.py",
         "line_number": 130,
+        "severity": "high",
         "sink": "os.popen",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7800,10 +8200,14 @@
           "subprocess.run"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `guarded_early` in server.py calls `subprocess.run` without an obvious validation or authorization branch.",
         "entrypoint": "guarded_early",
         "file_path": "server.py",
         "line_number": 138,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7814,10 +8218,12 @@
           "open"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [],
         "detail": "Tool `with_context` in server.py calls `open` without an obvious validation or authorization branch.",
         "entrypoint": "with_context",
         "file_path": "server.py",
         "line_number": 143,
+        "severity": "high",
         "sink": "open",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7828,10 +8234,14 @@
           "os.system"
         ],
         "category": "unguarded_tool_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `with_context` in server.py calls `os.system` without an obvious validation or authorization branch.",
         "entrypoint": "with_context",
         "file_path": "server.py",
         "line_number": 147,
+        "severity": "high",
         "sink": "os.system",
         "source": "",
         "title": "Tool entrypoint reaches dangerous sink without validation"
@@ -7843,10 +8253,14 @@
           "subprocess.run"
         ],
         "category": "interprocedural_dangerous_flow",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `run_command` reaches `subprocess.run` through a bounded helper-call chain in app/api.py.",
         "entrypoint": "run_command",
         "file_path": "app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool helper chain reaches dangerous sink"
@@ -7858,10 +8272,14 @@
           "subprocess.run"
         ],
         "category": "interprocedural_dangerous_flow",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Tool `guarded_early` reaches `subprocess.run` through a bounded helper-call chain in app/api.py.",
         "entrypoint": "guarded_early",
         "file_path": "app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "",
         "title": "Tool helper chain reaches dangerous sink"
@@ -7872,10 +8290,14 @@
           "os.popen"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.popen` with shell execution in app/agent.py.",
         "entrypoint": "shell",
         "file_path": "app/agent.py",
         "line_number": 21,
+        "severity": "critical",
         "sink": "os.popen",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -7886,10 +8308,14 @@
           "os.popen"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.popen` in app/agent.py.",
         "entrypoint": "shell",
         "file_path": "app/agent.py",
         "line_number": 21,
+        "severity": "high",
         "sink": "os.popen",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -7900,10 +8326,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `subprocess.run` with shell execution in server.py.",
         "entrypoint": "run_command",
         "file_path": "server.py",
         "line_number": 30,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -7914,10 +8344,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `subprocess.run` in server.py.",
         "entrypoint": "run_command",
         "file_path": "server.py",
         "line_number": 30,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -7929,10 +8363,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` with shell execution in app/api.py.",
         "entrypoint": "run_command",
         "file_path": "app/api.py",
         "line_number": 14,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches shell command execution"
@@ -7944,10 +8382,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` in app/api.py.",
         "entrypoint": "run_command",
         "file_path": "app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches a dangerous sink"
@@ -7958,10 +8400,14 @@
           "os.system"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.system` with shell execution in server.py.",
         "entrypoint": "run_allowed",
         "file_path": "server.py",
         "line_number": 43,
+        "severity": "critical",
         "sink": "os.system",
         "source": "command",
         "title": "Untrusted data reaches shell command execution"
@@ -7972,10 +8418,14 @@
           "os.system"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (command) reaches `os.system` in server.py.",
         "entrypoint": "run_allowed",
         "file_path": "server.py",
         "line_number": 43,
+        "severity": "high",
         "sink": "os.system",
         "source": "command",
         "title": "Untrusted data reaches a dangerous sink"
@@ -7986,10 +8436,14 @@
           "requests.get"
         ],
         "category": "tainted_ssrf_sink",
+        "cwe_ids": [
+          "CWE-918"
+        ],
         "detail": "Untrusted data (url) reaches `requests.get` in server.py.",
         "entrypoint": "fetch_url",
         "file_path": "server.py",
         "line_number": 63,
+        "severity": "high",
         "sink": "requests.get",
         "source": "url",
         "title": "Untrusted data reaches an outbound URL sink"
@@ -8000,10 +8454,14 @@
           "conn.execute"
         ],
         "category": "tainted_sql_query",
+        "cwe_ids": [
+          "CWE-89"
+        ],
         "detail": "Untrusted data (sql) reaches `conn.execute` in server.py.",
         "entrypoint": "query_user",
         "file_path": "server.py",
         "line_number": 78,
+        "severity": "high",
         "sink": "conn.execute",
         "source": "sql",
         "title": "Untrusted data reaches SQL execution"
@@ -8015,10 +8473,14 @@
           "urllib.request.urlopen"
         ],
         "category": "tainted_ssrf_sink",
+        "cwe_ids": [
+          "CWE-918"
+        ],
         "detail": "Untrusted data (url) reaches `urllib.request.urlopen` in lib/helpers.py.",
         "entrypoint": "delegated_fetch",
         "file_path": "lib/helpers.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "urllib.request.urlopen",
         "source": "url",
         "title": "Untrusted data reaches an outbound URL sink"
@@ -8029,10 +8491,14 @@
           "subprocess.Popen"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (item) reaches `subprocess.Popen` with shell execution in server.py.",
         "entrypoint": "loop_commands",
         "file_path": "server.py",
         "line_number": 117,
+        "severity": "critical",
         "sink": "subprocess.Popen",
         "source": "item",
         "title": "Untrusted data reaches shell command execution"
@@ -8043,10 +8509,14 @@
           "subprocess.Popen"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (item) reaches `subprocess.Popen` in server.py.",
         "entrypoint": "loop_commands",
         "file_path": "server.py",
         "line_number": 117,
+        "severity": "high",
         "sink": "subprocess.Popen",
         "source": "item",
         "title": "Untrusted data reaches a dangerous sink"
@@ -8057,10 +8527,14 @@
           "exec"
         ],
         "category": "tainted_dynamic_code_execution",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Untrusted data (x) reaches `exec` in server.py.",
         "entrypoint": "tuple_flow",
         "file_path": "server.py",
         "line_number": 128,
+        "severity": "critical",
         "sink": "exec",
         "source": "x",
         "title": "Untrusted data reaches dynamic code execution"
@@ -8071,10 +8545,14 @@
           "exec"
         ],
         "category": "tainted_dynamic_code_execution",
+        "cwe_ids": [
+          "CWE-95"
+        ],
         "detail": "Untrusted data (z) reaches `exec` in server.py.",
         "entrypoint": "tuple_flow",
         "file_path": "server.py",
         "line_number": 129,
+        "severity": "critical",
         "sink": "exec",
         "source": "z",
         "title": "Untrusted data reaches dynamic code execution"
@@ -8085,10 +8563,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (target) reaches `subprocess.run` in server.py.",
         "entrypoint": "guarded_early",
         "file_path": "server.py",
         "line_number": 138,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "target",
         "title": "Untrusted data reaches a dangerous sink"
@@ -8100,10 +8582,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` with shell execution in app/api.py.",
         "entrypoint": "guarded_early",
         "file_path": "app/api.py",
         "line_number": 14,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches shell command execution"
@@ -8115,10 +8601,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` in app/api.py.",
         "entrypoint": "guarded_early",
         "file_path": "app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches a dangerous sink"
@@ -8129,10 +8619,14 @@
           "open"
         ],
         "category": "tainted_path_access",
+        "cwe_ids": [
+          "CWE-22"
+        ],
         "detail": "Untrusted data (path) reaches `open` in server.py.",
         "entrypoint": "with_context",
         "file_path": "server.py",
         "line_number": 143,
+        "severity": "high",
         "sink": "open",
         "source": "path",
         "title": "Untrusted data reaches a file-system path sink"
@@ -8143,10 +8637,14 @@
           "subprocess.run"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` with shell execution in app/api.py.",
         "entrypoint": "run",
         "file_path": "app/api.py",
         "line_number": 14,
+        "severity": "critical",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches shell command execution"
@@ -8157,10 +8655,14 @@
           "subprocess.run"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (cmd) reaches `subprocess.run` in app/api.py.",
         "entrypoint": "run",
         "file_path": "app/api.py",
         "line_number": 14,
+        "severity": "high",
         "sink": "subprocess.run",
         "source": "cmd",
         "title": "Untrusted data reaches a dangerous sink"
@@ -8171,10 +8673,14 @@
           "subprocess.check_output"
         ],
         "category": "tainted_command_execution",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (host) reaches `subprocess.check_output` with shell execution in app/api.py.",
         "entrypoint": "ping",
         "file_path": "app/api.py",
         "line_number": 25,
+        "severity": "critical",
         "sink": "subprocess.check_output",
         "source": "host",
         "title": "Untrusted data reaches shell command execution"
@@ -8185,10 +8691,14 @@
           "subprocess.check_output"
         ],
         "category": "tainted_dangerous_sink",
+        "cwe_ids": [
+          "CWE-78"
+        ],
         "detail": "Untrusted data (host) reaches `subprocess.check_output` in app/api.py.",
         "entrypoint": "ping",
         "file_path": "app/api.py",
         "line_number": 25,
+        "severity": "high",
         "sink": "subprocess.check_output",
         "source": "host",
         "title": "Untrusted data reaches a dangerous sink"

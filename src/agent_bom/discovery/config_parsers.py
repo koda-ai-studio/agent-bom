@@ -19,6 +19,7 @@ import yaml  # type: ignore[import-untyped]
 from rich.console import Console
 from rich.markup import escape
 
+from agent_bom.discovery.continue_config import continue_legacy_servers
 from agent_bom.discovery.coverage import report_blocked_server
 from agent_bom.discovery.mcp_metadata import connection_metadata
 from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, TransportType
@@ -107,18 +108,15 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
     Supports multiple config formats:
     - Standard (Claude Desktop, Cursor, Windsurf, Cortex Code):
         {"mcpServers": {"name": {"command": ..., "args": [...]}}}
-    - VS Code native MCP (mcp.json):
-        {"servers": {"name": {"type": "stdio", "command": ..., "args": [...]}}}
-        {"servers": {"name": {"type": "http", "uri": "http://..."}}}
+    - VS Code native MCP (mcp.json): {"servers": {"name": {"type": "stdio"|"http", "command"|"uri": ...}}}
     - OpenClaw (openclaw.json — agent config + optional mcpServers):
         {"agent": {...}, "mcpServers": {"name": {"command": ..., "args": [...]}}}
-    - Continue.dev (array format):
-        {"mcpServers": [{"name": "...", "command": ..., "args": [...]}]}
+    - Continue.dev: {"mcpServers": [{"name": ..., "command": ...}]} or legacy experimental.modelContextProtocolServers
     - Zed editor:
         {"context_servers": {"name": {"command": {"path": ..., "args": [...]}}}}
     """
     servers = []
-    raw = config_data.get("mcpServers", config_data.get("servers", {}))
+    raw = config_data.get("mcpServers", config_data.get("servers")) or continue_legacy_servers(config_data)
 
     # Normalize: Continue.dev uses an array instead of an object
     if isinstance(raw, list):

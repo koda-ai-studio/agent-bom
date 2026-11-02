@@ -9,6 +9,8 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
+import yaml  # type: ignore[import-untyped]
+
 from agent_bom.discovery.config_parsers import (
     parse_codex_config,
     parse_mcp_config,
@@ -274,7 +276,12 @@ PROJECT_CONFIG_FILES = [
     ".codex/config.toml",
     ".gemini/settings.json",
     ".junie/mcp/mcp.json",
+    ".continue/config.json",
+    ".continue/config.yaml",
 ]
+
+# Directories whose YAML/JSON files each define MCP servers (Continue block files).
+PROJECT_CONFIG_BLOCK_DIRS = [".continue/mcpServers"]
 
 
 def get_platform() -> str:
@@ -297,18 +304,31 @@ def _project_search_dir(project_dir: Optional[str]) -> Path:
 
 
 def _project_config_candidates(project_dir: Optional[str]) -> list[Path]:
-    """Return explicit project config files to parse."""
+    """Return explicit project config files to parse.
+
+    Continue also reads standalone block files from ``.continue/mcpServers/``
+    (YAML blocks, or MCP JSON copied from another client), so that folder is
+    expanded in place after the fixed list.
+    """
     path = _project_scope_path(project_dir)
     if path.is_file():
         return [path]
-    return [path / config_name for config_name in PROJECT_CONFIG_FILES]
+    candidates = [path / config_name for config_name in PROJECT_CONFIG_FILES]
+    blocks_dir = path / PROJECT_CONFIG_BLOCK_DIRS[0]
+    if blocks_dir.is_dir():
+        candidates.extend(sorted(p for p in blocks_dir.iterdir() if p.is_file() and p.suffix in {".yaml", ".yml", ".json"}))
+    return candidates
 
 
 def _parse_project_config_file(config_path: Path) -> list[MCPServer]:
     """Parse one project-level MCP config file."""
     if config_path.suffix == ".toml":
         return parse_codex_config(str(config_path))
-    config_data = _read_json_config_no_symlink(config_path)
+    if config_path.suffix in {".yaml", ".yml"}:
+        loaded = yaml.safe_load(_read_text_no_symlink(config_path))
+        config_data = loaded if isinstance(loaded, dict) else {}
+    else:
+        config_data = _read_json_config_no_symlink(config_path)
     return parse_mcp_config(config_data, str(config_path))
 
 

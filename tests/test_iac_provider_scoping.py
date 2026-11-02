@@ -106,7 +106,7 @@ def test_azure_administrator_login_password_is_detected(tmp_path):
     path = tmp_path / "main.tf"
     path.write_text('resource "azurerm_mssql_server" "db" {\n  administrator_login_password = "NotARealPassw0rd-demo"\n}\n')
 
-    findings = tf.scan_terraform_security(path)
+    findings = [f for f in tf.scan_terraform_security(path) if f.rule_id == "TF-SEC-051"]
 
     assert [(f.rule_id, f.line_number, f.compliance) for f in findings] == [("TF-SEC-051", 2, ["NIST-IA-5", "NIST-SC-28"])]
 

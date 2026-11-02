@@ -56,7 +56,9 @@ from agent_bom.output.sarif_taxonomy import (
     _build_run_taxonomies,
     _compact_taxa_references,
     _framework_taxa_references,
+    _merge_rule_cwe_tags,
     _taxonomies_as_tool_extensions,
+    _unified_rule_properties,
 )
 from agent_bom.output.source_locations import (
     SourceIndex,
@@ -599,11 +601,7 @@ def _unified_finding_rule(finding: Finding, rule_id: str, level: str, security_s
         "fullDescription": {"text": description},
         "helpUri": _UNIFIED_RULE_HELP_URI,
         "defaultConfiguration": {"level": level},
-        "properties": {
-            "security-severity": security_severity,
-            "source": finding.source.value,
-            "finding_type": finding.finding_type.value,
-        },
+        "properties": _unified_rule_properties(finding, security_severity),
     }
     help_body = advisory_help(
         description,
@@ -712,6 +710,8 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
         level, security_severity = _sarif_severity(finding.severity or "medium")
         if catalog.claim_rule(rule_id):
             catalog.rules.append(_unified_finding_rule(finding, rule_id, level, security_severity))
+        elif finding.cwe_ids:
+            _merge_rule_cwe_tags(catalog.rules, rule_id, finding.cwe_ids)
         catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence))
 
 

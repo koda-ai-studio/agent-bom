@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from agent_bom.cli._common import logger
@@ -12,16 +13,22 @@ from agent_bom.scanners import consume_coverage_warnings
 
 def _detect_model_dirs(opts: ScanOptions, st: ScanState) -> None:
     # ── Step 1i: Model binary file scan ─────────────────────────────
-    # Auto-detect: if no --model-dirs given, check project dir for model files
-    if not opts.skill_only and not opts.no_discover and not opts.model_dirs and opts.project:
-        from pathlib import Path as _MPath
+    # Model files in the project are scanned by default. ``--no-discover`` only
+    # concerns MCP host discovery, so it does not gate this surface; the quick
+    # preset keeps its time budget and says what it skipped instead.
+    if opts.skill_only or opts.model_dirs or not opts.project:
+        return
+    from agent_bom.repo_auto_detect import project_has_model_files
 
-        _project_path = _MPath(opts.project)
-        _model_exts = {".safetensors", ".gguf", ".onnx", ".pt", ".pkl", ".h5", ".keras"}
-        _has_models = any(_project_path.rglob(f"*{ext}") for ext in _model_exts if list(_project_path.rglob(f"*{ext}"))[:1])
-        if _has_models:
-            opts.model_dirs = (opts.project,)
-            st.con.print("  [cyan]>[/cyan] Auto-detected model files in project — scanning...")
+    if not project_has_model_files(Path(opts.project)):
+        return
+    if opts.preset == "quick":
+        st.con.print(
+            f"  [yellow]⚠[/yellow] Model files found but not scanned under the quick preset — run with --model-files {opts.project}"
+        )
+        return
+    opts.model_dirs = (opts.project,)
+    st.con.print("  [cyan]>[/cyan] Auto-detected model files in project — scanning...")
 
 
 def _record_model_coverage_gaps(st: ScanState, mf_results: list[Any], warnings: list[str]) -> None:

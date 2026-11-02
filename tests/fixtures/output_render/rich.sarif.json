@@ -164,7 +164,10 @@
               "properties": {
                 "security-severity": "5.5",
                 "source": "SAST",
-                "finding_type": "SAST"
+                "finding_type": "SAST",
+                "tags": [
+                  "CWE-89"
+                ]
               },
               "help": {
                 "text": "SQL string construction",
