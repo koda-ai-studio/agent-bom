@@ -545,7 +545,7 @@ to your repository's `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/koda-ai-studio/agent-bom
-    rev: v0.112.1
+    rev: v0.113.0
     hooks:
       - id: agent-bom-secrets
       - id: agent-bom-scan
