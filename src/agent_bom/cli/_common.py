@@ -25,6 +25,20 @@ from agent_bom.inventory import coerce_agent_type_for_inventory as _coerce_agent
 from agent_bom.output.brand_tokens import cli_banner_plain
 from agent_bom.security import sanitize_env_vars  # noqa: F401 — re-exported by agent_bom.cli
 
+__all__ = [
+    "BANNER",
+    "LISTEN_PORT_RANGE",
+    "OPTIONAL_PORT_RANGE",
+    "PORT_RANGE",
+    "SEVERITY_ORDER",
+    "_build_agents_from_inventory",
+    "_coerce_agent_type_for_inventory",
+    "logger",
+    "read_json_file_for_cli",
+    "rich_log_handler_during_progress",
+    "sanitize_env_vars",
+]
+
 logger = logging.getLogger(__name__)
 
 # Canonical CLI lockup — product name agent-bom, mark is BOM-with-agent-O.
@@ -164,7 +178,7 @@ def _detect_install_method() -> tuple[str, str]:
     try:
         parts.append(str(Path(__file__).resolve()))
     except OSError:
-        pass
+        pass  # unresolvable path: leave it out of the fingerprint
     argv = getattr(sys, "argv", None)
     if argv:
         parts.append(str(argv[0] or ""))

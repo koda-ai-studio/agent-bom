@@ -45,11 +45,14 @@ if TYPE_CHECKING:
     from agent_bom.ast.js_ts.engine import JSTSAstAnalysis, JSTSFunction, JSTSToolRegistration
 
 _MAX_FILE_SIZE = 512 * 1024  # 512KB
+__all__ = ["_JS_LIST_TOOLS_SELECTOR_RE", "_JS_NAME_KEY_RE", "_JS_OBJECT_KEY_BEFORE_RE", "_JS_OBJECT_KEY_LOOKBEHIND",
+    "_JS_SET_REQUEST_HANDLER_START_RE", "_JS_STRING_ARG_RE", "_JS_TOOLS_ARRAY_START_RE", "_JS_TS_EXTS", "_js_bracket_depths",
+    "_js_first_string_argument", "_js_low_level_tool_declarations", "_js_name_property_at_depth_one",
+    "_js_named_option_argument", "_js_object_key_before", "_js_object_literals_at_depth"]  # fmt: skip
 _JS_TS_EXTS = frozenset({".js", ".jsx", ".ts", ".tsx"})
-# ``registerTool`` is the current registration API of @modelcontextprotocol/sdk;
-# ``tool`` is the earlier one that thousands of published servers still use.
-# Only the call head is matched here -- the name is read from the real source at
-# the same offset, so the scan can run over comment/string-masked text.
+# ``registerTool`` is the current registration API of @modelcontextprotocol/sdk; ``tool`` is the earlier one that thousands of published
+# servers still use. Only the call head is matched here -- the name is read from the real source at the same offset, so the scan can run
+# over comment/string-masked text.
 _JS_TOOL_CALL_START_RE = re.compile(
     r"""\b(?:[A-Za-z_$][\w$]*\.)?(?:registerTool|tool)\s*\(""",
     re.IGNORECASE,
@@ -585,15 +588,13 @@ def scan_js_ts_file(
         )
 
     seen_tool_names: set[tuple[str, int]] = set()
-    # Match on masked source so a registration quoted inside a comment, a string,
-    # or a prompt template is never reported as a live tool. Masking preserves
-    # offsets, so the tool name is still read from the real source.
+    # Match on masked source so a registration quoted inside a comment, a string, or a prompt template is never reported as a live tool.
+    # Masking preserves offsets, so the tool name is still read from the real source.
     masked_source = mask_line_comments_and_strings(source, backtick_strings=True, single_line_quotes=True)
     for match in _JS_TOOL_CALL_START_RE.finditer(masked_source):
         open_paren_index = match.end() - 1
-        # Three name-bearing shapes, most explicit first: the leading string
-        # argument of the MCP SDK, the ``name:`` of a LangChain JS options
-        # object, and finally the ``tools`` map key of the Vercel AI SDK.
+        # Three name-bearing shapes, most explicit first: the leading string argument of the MCP SDK, the ``name:`` of a LangChain JS
+        # options object, and finally the ``tools`` map key of the Vercel AI SDK.
         tool_name = _js_first_string_argument(source, open_paren_index)
         if not tool_name:
             tool_name = _js_named_option_argument(source, masked_source, open_paren_index)
@@ -617,9 +618,8 @@ def scan_js_ts_file(
             )
         )
 
-    # Low-level ``Server`` tools have no per-tool handler function to bind -- the
-    # CallTool handler dispatches on the name -- so they contribute inventory
-    # only, never a tool_registration that would fake a resolved entrypoint.
+    # Low-level ``Server`` tools have no per-tool handler function to bind -- the CallTool handler dispatches on the name -- so they
+    # contribute inventory only, never a tool_registration that would fake a resolved entrypoint.
     for tool_name, line_num in _js_low_level_tool_declarations(source, masked_source):
         dedup_key = (tool_name, line_num)
         if dedup_key in seen_tool_names:

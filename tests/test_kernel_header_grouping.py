@@ -119,7 +119,7 @@ def test_groups_partition_by_distro_and_never_collapse_kev_or_critical() -> None
 
 
 def _capture(fn, *args, **kwargs) -> str:
-    import agent_bom.output as out_mod
+    from agent_bom import output as out_mod
 
     buf = StringIO()
     original = out_mod.console

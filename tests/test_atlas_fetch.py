@@ -228,7 +228,6 @@ def _restore_env(monkeypatch):
 
 
 def test_catalog_reuses_unchanged_bytes_and_refreshes_same_size_replacement(tmp_path, monkeypatch):
-    import json
     import os
     from pathlib import Path
 

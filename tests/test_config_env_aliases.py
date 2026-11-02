@@ -8,7 +8,7 @@ import pytest
 
 
 def _reload_config(monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.config as config_mod
+    from agent_bom import config as config_mod
 
     importlib.reload(config_mod)
 

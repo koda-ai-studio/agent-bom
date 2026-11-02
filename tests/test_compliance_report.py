@@ -195,6 +195,26 @@ def test_list_cis_checks_filters_scan_job_fallback():
     assert body["checks"][0]["remediation"]["priority"] == 1
 
 
+def test_list_cis_checks_logs_analytics_outage_before_scan_job_fallback(caplog):
+    store = InMemoryJobStore()
+    set_job_store(store)
+    store.put(_seed_job_with_cis())
+
+    class _BrokenAnalytics:
+        def query_cis_benchmark_checks(self, **_kwargs):
+            raise RuntimeError("clickhouse down password=hunter2")
+
+    set_analytics_store(_BrokenAnalytics())
+    with caplog.at_level("WARNING", logger="agent_bom.api.routes.compliance_routes.cis"):
+        body = asyncio.run(compliance_routes.list_cis_benchmark_checks(_request("tenant-alpha"), cloud="aws", status="fail"))
+
+    assert body["source"] == "scan_jobs"
+    assert body["checks"][0]["check_id"] == "1.5"
+    messages = [record.getMessage() for record in caplog.records if "Analytics CIS check list failed" in record.getMessage()]
+    assert len(messages) == 1
+    assert "hunter2" not in messages[0]
+
+
 def _seed_cis_scan(job_id: str, completed_at: str, status: str, tenant_id: str = "tenant-alpha") -> ScanJob:
     """A completed scan carrying a single AWS CIS check 1.5 with a given status/time."""
     job = ScanJob(

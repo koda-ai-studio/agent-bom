@@ -57,7 +57,7 @@ async def test_mcp_scan_no_agent_shape_matches_http_scan(monkeypatch):
     # Isolate from the process-global job store singleton so a durable store
     # leaked by an earlier test cannot compaction-strip ``job.result`` (see
     # _RetainingStore) and flip the HTTP surface's empty-scan shape.
-    monkeypatch.setattr("agent_bom.api.pipeline._get_store", lambda: _RetainingStore())
+    monkeypatch.setattr("agent_bom.api.pipeline._get_store", _RetainingStore)
 
     job = ScanJob(
         job_id="contract-no-agents",

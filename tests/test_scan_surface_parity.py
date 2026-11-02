@@ -209,7 +209,7 @@ async def test_mcp_verify_integrity_populates_the_model_verdict(monkeypatch):
     provenance at all — so an MCP caller asking for verification got a scan with
     no verdict in it.
     """
-    import agent_bom.integrity as integrity_mod
+    from agent_bom import integrity as integrity_mod
     from agent_bom.mcp_tools.scanning import scan_impl
 
     agents, brs = _seeded_estate()
@@ -248,7 +248,7 @@ async def test_mcp_verify_integrity_populates_the_model_verdict(monkeypatch):
 @pytest.mark.asyncio
 async def test_verify_packages_fetches_each_identity_once_and_applies_to_every_instance(monkeypatch):
     """One derivation for the whole estate: dedup by identity, apply to all copies."""
-    import agent_bom.integrity as integrity_mod
+    from agent_bom import integrity as integrity_mod
     from agent_bom.integrity import verify_packages
 
     calls: list[str] = []
@@ -288,7 +288,7 @@ async def test_registry_outage_is_not_recorded_as_an_absent_attestation(monkeypa
     to ``bool(False)`` publishes "we asked and the answer was no" — the verdict a
     release gate blocks on — from an outage.
     """
-    import agent_bom.integrity as integrity_mod
+    from agent_bom import integrity as integrity_mod
     from agent_bom.integrity import verify_packages
 
     async def _integrity(_package, _client):
@@ -322,7 +322,7 @@ async def test_registry_outage_is_not_recorded_as_an_absent_attestation(monkeypa
 )
 async def test_provenance_status_maps_to_the_verdict_it_earns(monkeypatch, status, expected_attested):
     """Only an answered question yields a boolean."""
-    import agent_bom.integrity as integrity_mod
+    from agent_bom import integrity as integrity_mod
     from agent_bom.integrity import verify_packages
 
     async def _integrity(_package, _client):

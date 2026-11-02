@@ -108,8 +108,8 @@ def _list_cis_benchmark_checks_impl(
             )
             if rows:
                 return {"checks": [_coerce_cis_row(row) for row in rows], "count": len(rows), "source": "analytics"}
-        except Exception:
-            pass
+        except Exception as exc:  # broad-except: an analytics outage falls back to the scan jobs
+            _logger.warning("Analytics CIS check list failed; using scan jobs: %s", sanitize_text(exc))
 
     return _cis_check_rows_from_jobs(_tenant_jobs(request), cloud_filter, status_filter, priority, safe_limit, safe_offset)
 

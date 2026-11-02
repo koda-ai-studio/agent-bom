@@ -13,7 +13,7 @@ from agent_bom.extensions import ENTRYPOINTS_ENABLED_ENV, ExtensionCapabilities
 
 @pytest.fixture(autouse=True)
 def reset_provider_registry(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    import agent_bom.cloud as cloud_registry
+    from agent_bom import cloud as cloud_registry
 
     monkeypatch.delenv(ENTRYPOINTS_ENABLED_ENV, raising=False)
     cloud_registry._reset_provider_registry_for_tests()
@@ -54,7 +54,7 @@ def test_provider_contracts_describe_builtin_boundaries_without_loading_sdks() -
 
 
 def test_provider_contracts_preserve_scope_zero_plugin_modes() -> None:
-    import agent_bom.cloud as cloud_registry
+    from agent_bom import cloud as cloud_registry
     from agent_bom.cloud.base import CloudProviderRegistration
 
     cloud_registry.register_provider(

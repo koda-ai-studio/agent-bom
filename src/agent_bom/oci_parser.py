@@ -1,8 +1,6 @@
 """Native OCI / Docker-save image layer parser — no external tools required.
 
-Parses OCI image tarballs created by ``docker save <image> -o image.tar``
-or OCI image layout directories (from skopeo/crane) and extracts packages
-without requiring Grype, Syft, or Docker CLI.
+Parses Docker-save tarballs and OCI image layout directories without external scanner or Docker CLI dependencies.
 
 Supported image formats:
 - **Docker save tarball** — ``manifest.json`` + ``<hash>/layer.tar`` inside outer tar.
@@ -10,9 +8,8 @@ Supported image formats:
 - **OCI image layout directory** — same structure, unarchived (for skopeo/crane output).
 
 Package ecosystems extracted from each layer filesystem:
-- Python: ``*.dist-info/METADATA`` (modern wheels) and the legacy
-  ``*.egg-info/PKG-INFO`` / ``*.egg-info/METADATA`` (setuptools/pip on older
-  base images such as Debian buster ship pip/setuptools/wheel this way)
+- Python: ``*.dist-info/METADATA`` and legacy ``*.egg-info/PKG-INFO`` / ``*.egg-info/METADATA``
+  (setuptools/pip on older base images such as Debian buster use the legacy format)
 - Node: ``node_modules/*/package.json``
 - Debian/Ubuntu: ``var/lib/dpkg/status``
 - Alpine Linux: ``lib/apk/db/installed``
@@ -22,9 +19,8 @@ Package ecosystems extracted from each layer filesystem:
 - Ruby: ``**/specifications/*.gemspec`` (regex name/version extraction)
 - .NET: ``**/*.deps.json`` (libraries section, type=package)
 
-Whiteout handling: OCI spec uses ``.wh.`` prefix files to signal deletion.
-The parser tracks whiteout paths from each layer and skips package detection
-on paths that were deleted in subsequent layers.
+Whiteout handling: OCI ``.wh.`` files signal deletion. The parser tracks these paths across layers
+and skips packages deleted in subsequent layers.
 
 CLI usage::
 
@@ -78,6 +74,10 @@ from agent_bom.parsers.oci_types import OCIInputWarning, OCIManifest, OCIParseEr
 
 # Layer stages that record image evidence (not packages); each is a no-op without an active collector.
 _LAYER_EVIDENCE_STAGES = (extract_layer_secrets,)
+__all__ = ["LayerMetadata", "_MAX_LEGACY_RPMDB_BYTES", "_RPMTAG_EPOCH", "_RPMTAG_NAME", "_RPMTAG_RELEASE", "_RPMTAG_VERSION",
+    "_RPM_HDR_MAGIC", "_RPM_TYPE_INT32", "_RPM_TYPE_STRING", "_build_layer_metadata", "_normalize_dockerfile_instruction",
+    "_normalize_layer_id", "_parse_legacy_rpmdb_bytes", "_parse_rfc822_name_version", "_parse_rpm_header_blob",
+    "is_node_package_manifest_path"]  # fmt: skip
 
 
 def _config_ref(manifest: dict) -> str:

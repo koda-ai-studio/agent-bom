@@ -16,6 +16,21 @@ from agent_bom.runtime.proxy_tracing import (
     _stitch_jsonrpc_trace_meta as _stitch_jsonrpc_trace_meta,
 )
 
+__all__ = [
+    "_extract_jsonrpc_trace_meta",
+    "_proxy_request_headers",
+    "_stitch_jsonrpc_trace_meta",
+    "extract_declared_tools",
+    "extract_tool_arguments",
+    "extract_tool_name",
+    "is_tools_call",
+    "is_tools_list_response",
+    "make_error_response",
+    "parse_jsonrpc",
+    "policy_subject_from_message",
+    "undeclared_tool_block_reason",
+]
+
 _MAX_MESSAGE_BYTES = 2 * 1024 * 1024
 
 
@@ -31,7 +46,7 @@ async def _read_bounded_line(reader: asyncio.StreamReader, *, max_bytes: int = _
         try:
             await reader.readuntil(b"\n")
         except (asyncio.IncompleteReadError, asyncio.LimitOverrunError, ValueError):
-            pass
+            pass  # best-effort drain of the oversized line; it is rejected either way
         return None
     except ValueError:
         while True:

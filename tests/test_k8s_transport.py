@@ -333,7 +333,7 @@ def test_kubectl_transport_caps_returned_items() -> None:
 
 
 def test_kubectl_transport_classifies_and_sanitizes_forbidden(monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.k8s_transport as transport_module
+    from agent_bom import k8s_transport as transport_module
 
     monkeypatch.setattr(transport_module.shutil, "which", lambda _command: "/usr/bin/kubectl")
     monkeypatch.setattr(
@@ -356,7 +356,7 @@ def test_kubectl_transport_classifies_and_sanitizes_forbidden(monkeypatch: pytes
 
 
 def test_kubectl_transport_rejects_stdout_above_byte_bound(monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.k8s_transport as transport_module
+    from agent_bom import k8s_transport as transport_module
 
     def oversized_run(*_args, **kwargs):
         kwargs["stdout"].write(b'{"items":["' + (b"x" * 64) + b'"]}')

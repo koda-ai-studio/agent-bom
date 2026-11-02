@@ -136,7 +136,6 @@ def test_revoke_preserves_owner_attribution(store):
 def test_legacy_identity_without_owner_deserializes_to_empty(store):
     # Backward-compat: a persisted row written before owner-binding lacks the
     # keys and must round-trip without error, defaulting owner to "".
-    import json
 
     from agent_bom.api.agent_identity_store import AgentIdentity
 

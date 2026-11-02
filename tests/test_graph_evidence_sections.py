@@ -11,6 +11,7 @@ from dataclasses import asdict
 
 import pytest
 
+import agent_bom.output.json_fmt as json_fmt
 from agent_bom.graph.build_input import GraphBuildInput, GraphEvidenceSections
 from agent_bom.graph.builder import build_unified_graph, build_unified_graph_from_report
 from agent_bom.models import (
@@ -25,7 +26,6 @@ from agent_bom.models import (
     Vulnerability,
 )
 from agent_bom.output.graph_evidence import graph_evidence_sections
-from agent_bom.output.json_fmt import to_json
 
 _CIS = {"checks": [{"check_id": "1.1", "title": "Root MFA", "status": "fail", "severity": "high"}]}
 
@@ -89,7 +89,7 @@ def _report(*, populated: bool) -> AIBOMReport:
 @pytest.mark.parametrize("populated", [False, True])
 def test_graph_evidence_sections_match_serialized_report(populated: bool) -> None:
     report = _report(populated=populated)
-    expected = GraphBuildInput.from_report(to_json(report))
+    expected = GraphBuildInput.from_report(json_fmt.to_json(report))
     actual = GraphBuildInput.from_report(graph_evidence_sections(report))
 
     assert asdict(actual) == asdict(expected)
@@ -107,7 +107,7 @@ def test_graph_evidence_sections_emit_only_graph_keys() -> None:
 
 def test_graph_built_from_sections_matches_serialized_build() -> None:
     report = _report(populated=True)
-    serialized = build_unified_graph_from_report(to_json(report), scan_id="s", tenant_id="t")
+    serialized = build_unified_graph_from_report(json_fmt.to_json(report), scan_id="s", tenant_id="t")
     direct = build_unified_graph(GraphBuildInput.from_report(graph_evidence_sections(report)), scan_id="s", tenant_id="t")
 
     assert sorted(direct.nodes) == sorted(serialized.nodes)
@@ -121,7 +121,6 @@ def test_graph_built_from_sections_matches_serialized_build() -> None:
 
 def test_surface_graph_derived_findings_skips_full_serialization(monkeypatch: pytest.MonkeyPatch) -> None:
     import agent_bom.output as output_pkg
-    import agent_bom.output.json_fmt as json_fmt
     from agent_bom.graph.scan_findings import surface_graph_derived_findings
 
     def _forbidden(_report: AIBOMReport) -> dict:

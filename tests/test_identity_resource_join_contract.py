@@ -11,7 +11,6 @@ import jsonschema
 import pytest
 from pydantic import ValidationError
 
-import agent_bom.identity.join_contract as join_contract_module
 from agent_bom.evidence.semantics import (
     CompletenessEntry,
     EvidenceBasis,
@@ -21,6 +20,7 @@ from agent_bom.evidence.semantics import (
     EvidenceStage,
     EvidenceStatus,
 )
+from agent_bom.identity import join_contract as join_contract_module
 from agent_bom.identity.join_contract import (
     CanonicalIdentityEntity,
     CanonicalIdentityType,

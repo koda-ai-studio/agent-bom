@@ -139,7 +139,7 @@ def test_the_nhi_discovery_client_pins_its_origin_too(monkeypatch: pytest.Monkey
     try:
         client._get("/servicePrincipals")
     except Exception:
-        pass
+        pass  # the call's own failure is not under test; the assertions below check side effects
 
     leaked = [url for url, auth in sent if TOKEN in auth and not url.startswith(GRAPH_BASE_URL)]
     assert leaked == [], f"the NHI client sent the Graph token off-origin to {leaked}"

@@ -57,366 +57,126 @@ from .aws_inventory import is_access_denied_error as is_access_denied_error
 
 # The checks live in ``agent_bom.cloud.azure_cis`` by CIS section; every name is
 # re-exported here so imports and patch targets on this module keep working.
-from .azure_cis._base import (
-    _APPSERVICE_SECTION as _APPSERVICE_SECTION,
-)
-from .azure_cis._base import (
-    _DATABASE_SECTION as _DATABASE_SECTION,
-)
-from .azure_cis._base import (
-    _DEFENDER_SECTION as _DEFENDER_SECTION,
-)
-from .azure_cis._base import (
-    _IAM_SECTION as _IAM_SECTION,
-)
-from .azure_cis._base import (
-    _KEYVAULT_SECTION as _KEYVAULT_SECTION,
-)
-from .azure_cis._base import (
-    _LOGGING_SECTION as _LOGGING_SECTION,
-)
-from .azure_cis._base import (
-    _NETWORK_SECTION as _NETWORK_SECTION,
-)
-from .azure_cis._base import (
-    _STORAGE_SECTION as _STORAGE_SECTION,
-)
-from .azure_cis._base import (
-    _VM_SECTION as _VM_SECTION,
-)
-from .azure_cis._base import (
-    AzureCISReport as AzureCISReport,
-)
-from .azure_cis._base import (
-    _ca_client_app_types as _ca_client_app_types,
-)
-from .azure_cis._base import (
-    _ca_conditions as _ca_conditions,
-)
-from .azure_cis._base import (
-    _ca_enabled as _ca_enabled,
-)
-from .azure_cis._base import (
-    _ca_grant_controls as _ca_grant_controls,
-)
-from .azure_cis._base import (
-    _ca_included_apps as _ca_included_apps,
-)
-from .azure_cis._base import (
-    _ca_included_roles as _ca_included_roles,
-)
-from .azure_cis._base import (
-    _ca_included_users as _ca_included_users,
-)
-from .azure_cis._base import (
-    _ca_sign_in_risk_levels as _ca_sign_in_risk_levels,
-)
-from .azure_cis._base import (
-    _ca_state as _ca_state,
-)
-from .azure_cis._base import (
-    _enum_text as _enum_text,
-)
-from .azure_cis._base import (
-    _mark_unevaluable as _mark_unevaluable,
-)
-from .azure_cis._base import (
-    _pass_or_no_data as _pass_or_no_data,
-)
-from .azure_cis._base import (
-    _resolve_without_conditional_access as _resolve_without_conditional_access,
-)
-from .azure_cis._base import (
-    logger as logger,
-)
-from .azure_cis.appservice import (
-    _check_9_1 as _check_9_1,
-)
-from .azure_cis.appservice import (
-    _check_9_2 as _check_9_2,
-)
-from .azure_cis.appservice import (
-    _check_9_3 as _check_9_3,
-)
-from .azure_cis.appservice import (
-    _check_9_4 as _check_9_4,
-)
-from .azure_cis.appservice import (
-    _check_9_5 as _check_9_5,
-)
-from .azure_cis.appservice import (
-    _check_9_6 as _check_9_6,
-)
-from .azure_cis.database_oss import (
-    _check_4_2_2 as _check_4_2_2,
-)
-from .azure_cis.database_oss import (
-    _check_4_2_3 as _check_4_2_3,
-)
-from .azure_cis.database_oss import (
-    _check_4_3_1 as _check_4_3_1,
-)
-from .azure_cis.database_oss import (
-    _check_4_3_2 as _check_4_3_2,
-)
-from .azure_cis.database_oss import (
-    _check_4_3_3 as _check_4_3_3,
-)
-from .azure_cis.database_oss import (
-    _check_4_3_4 as _check_4_3_4,
-)
-from .azure_cis.database_oss import (
-    _check_4_3_5 as _check_4_3_5,
-)
-from .azure_cis.database_sql import (
-    _check_4_1_1 as _check_4_1_1,
-)
-from .azure_cis.database_sql import (
-    _check_4_1_2 as _check_4_1_2,
-)
-from .azure_cis.database_sql import (
-    _check_4_1_3 as _check_4_1_3,
-)
-from .azure_cis.database_sql import (
-    _check_4_1_4 as _check_4_1_4,
-)
-from .azure_cis.database_sql import (
-    _check_4_1_5 as _check_4_1_5,
-)
-from .azure_cis.database_sql import (
-    _check_4_1_6 as _check_4_1_6,
-)
-from .azure_cis.database_sql import (
-    _check_4_2_1 as _check_4_2_1,
-)
-from .azure_cis.defender import (
-    _check_2_1 as _check_2_1,
-)
-from .azure_cis.defender import (
-    _check_2_2 as _check_2_2,
-)
-from .azure_cis.defender import (
-    _check_2_3 as _check_2_3,
-)
-from .azure_cis.defender import (
-    _check_2_4 as _check_2_4,
-)
-from .azure_cis.defender import (
-    _check_2_5 as _check_2_5,
-)
-from .azure_cis.defender import (
-    _check_2_6 as _check_2_6,
-)
-from .azure_cis.defender import (
-    _check_2_7 as _check_2_7,
-)
-from .azure_cis.defender import (
-    _check_2_8 as _check_2_8,
-)
-from .azure_cis.defender import (
-    _check_2_9 as _check_2_9,
-)
-from .azure_cis.defender import (
-    _check_2_10 as _check_2_10,
-)
-from .azure_cis.defender import (
-    _check_2_11 as _check_2_11,
-)
-from .azure_cis.defender import (
-    _check_2_12 as _check_2_12,
-)
-from .azure_cis.defender import (
-    _check_2_13 as _check_2_13,
-)
-from .azure_cis.iam import (
-    _check_1_1 as _check_1_1,
-)
-from .azure_cis.iam import (
-    _check_1_2 as _check_1_2,
-)
-from .azure_cis.iam import (
-    _check_1_3 as _check_1_3,
-)
-from .azure_cis.iam import (
-    _check_1_4 as _check_1_4,
-)
-from .azure_cis.iam import (
-    _check_1_5 as _check_1_5,
-)
-from .azure_cis.iam import (
-    _check_1_6 as _check_1_6,
-)
-from .azure_cis.iam import (
-    _check_1_7 as _check_1_7,
-)
-from .azure_cis.iam import (
-    _check_1_8 as _check_1_8,
-)
-from .azure_cis.iam import (
-    _check_1_9 as _check_1_9,
-)
-from .azure_cis.iam import (
-    _check_1_10 as _check_1_10,
-)
-from .azure_cis.iam import (
-    _guest_scoped_access_reviews as _guest_scoped_access_reviews,
-)
-from .azure_cis.iam_directory import (
-    _check_1_11 as _check_1_11,
-)
-from .azure_cis.iam_directory import (
-    _check_1_12 as _check_1_12,
-)
-from .azure_cis.iam_directory import (
-    _check_1_13 as _check_1_13,
-)
-from .azure_cis.iam_directory import (
-    _check_1_14 as _check_1_14,
-)
-from .azure_cis.iam_directory import (
-    _check_1_15 as _check_1_15,
-)
-from .azure_cis.iam_directory import (
-    _check_1_16 as _check_1_16,
-)
-from .azure_cis.iam_directory import (
-    _check_1_17 as _check_1_17,
-)
-from .azure_cis.iam_directory import (
-    _check_1_18 as _check_1_18,
-)
-from .azure_cis.iam_directory import (
-    _check_1_19 as _check_1_19,
-)
-from .azure_cis.iam_directory import (
-    _check_1_20 as _check_1_20,
-)
-from .azure_cis.iam_directory import (
-    _check_1_21 as _check_1_21,
-)
-from .azure_cis.iam_directory import (
-    _check_1_22 as _check_1_22,
-)
-from .azure_cis.keyvault import (
-    _check_8_1 as _check_8_1,
-)
-from .azure_cis.keyvault import (
-    _check_8_2 as _check_8_2,
-)
-from .azure_cis.keyvault import (
-    _check_8_3 as _check_8_3,
-)
-from .azure_cis.keyvault import (
-    _check_8_4 as _check_8_4,
-)
-from .azure_cis.keyvault import (
-    _check_8_5 as _check_8_5,
-)
-from .azure_cis.keyvault import (
-    _check_8_6 as _check_8_6,
-)
-from .azure_cis.keyvault import (
-    _check_8_7 as _check_8_7,
-)
-from .azure_cis.logging_checks import (
-    _check_5_1_2 as _check_5_1_2,
-)
-from .azure_cis.logging_checks import (
-    _check_5_1_3 as _check_5_1_3,
-)
-from .azure_cis.logging_checks import (
-    _check_5_1_4 as _check_5_1_4,
-)
-from .azure_cis.logging_checks import (
-    _check_5_1_5 as _check_5_1_5,
-)
-from .azure_cis.logging_checks import (
-    _check_5_1_6 as _check_5_1_6,
-)
-from .azure_cis.logging_checks import (
-    _check_5_2_1 as _check_5_2_1,
-)
-from .azure_cis.logging_checks import (
-    _check_5_2_2 as _check_5_2_2,
-)
-from .azure_cis.logging_checks import (
-    _check_5_2_3 as _check_5_2_3,
-)
-from .azure_cis.logging_checks import (
-    _check_activity_log_alert as _check_activity_log_alert,
-)
-from .azure_cis.networking import (
-    _check_6_1 as _check_6_1,
-)
-from .azure_cis.networking import (
-    _check_6_2 as _check_6_2,
-)
-from .azure_cis.networking import (
-    _check_6_3 as _check_6_3,
-)
-from .azure_cis.networking import (
-    _check_6_4 as _check_6_4,
-)
-from .azure_cis.networking import (
-    _check_6_5 as _check_6_5,
-)
-from .azure_cis.networking import (
-    _check_6_6 as _check_6_6,
-)
-from .azure_cis.networking import (
-    _is_internet_exposed as _is_internet_exposed,
-)
-from .azure_cis.storage import (
-    _check_3_1 as _check_3_1,
-)
-from .azure_cis.storage import (
-    _check_3_3 as _check_3_3,
-)
-from .azure_cis.storage import (
-    _check_3_4 as _check_3_4,
-)
-from .azure_cis.storage import (
-    _check_3_5 as _check_3_5,
-)
-from .azure_cis.storage import (
-    _check_3_6 as _check_3_6,
-)
-from .azure_cis.storage import (
-    _check_3_7 as _check_3_7,
-)
-from .azure_cis.storage import (
-    _check_3_8 as _check_3_8,
-)
-from .azure_cis.storage import (
-    _check_3_9 as _check_3_9,
-)
-from .azure_cis.storage import (
-    _check_3_10 as _check_3_10,
-)
-from .azure_cis.storage import (
-    _check_3_11 as _check_3_11,
-)
-from .azure_cis.storage import (
-    _check_3_12 as _check_3_12,
-)
-from .azure_cis.virtual_machines import (
-    _check_7_1 as _check_7_1,
-)
-from .azure_cis.virtual_machines import (
-    _check_7_2 as _check_7_2,
-)
-from .azure_cis.virtual_machines import (
-    _check_7_3 as _check_7_3,
-)
-from .azure_cis.virtual_machines import (
-    _check_7_4 as _check_7_4,
-)
-from .azure_cis.virtual_machines import (
-    _check_7_5 as _check_7_5,
-)
-from .azure_cis.virtual_machines import (
-    _check_7_6 as _check_7_6,
-)
+from .azure_cis._base import _APPSERVICE_SECTION as _APPSERVICE_SECTION
+from .azure_cis._base import _DATABASE_SECTION as _DATABASE_SECTION
+from .azure_cis._base import _DEFENDER_SECTION as _DEFENDER_SECTION
+from .azure_cis._base import _IAM_SECTION as _IAM_SECTION
+from .azure_cis._base import _KEYVAULT_SECTION as _KEYVAULT_SECTION
+from .azure_cis._base import _LOGGING_SECTION as _LOGGING_SECTION
+from .azure_cis._base import _NETWORK_SECTION as _NETWORK_SECTION
+from .azure_cis._base import _STORAGE_SECTION as _STORAGE_SECTION
+from .azure_cis._base import _VM_SECTION as _VM_SECTION
+from .azure_cis._base import AzureCISReport as AzureCISReport
+from .azure_cis._base import _ca_client_app_types as _ca_client_app_types
+from .azure_cis._base import _ca_conditions as _ca_conditions
+from .azure_cis._base import _ca_enabled as _ca_enabled
+from .azure_cis._base import _ca_grant_controls as _ca_grant_controls
+from .azure_cis._base import _ca_included_apps as _ca_included_apps
+from .azure_cis._base import _ca_included_roles as _ca_included_roles
+from .azure_cis._base import _ca_included_users as _ca_included_users
+from .azure_cis._base import _ca_sign_in_risk_levels as _ca_sign_in_risk_levels
+from .azure_cis._base import _ca_state as _ca_state
+from .azure_cis._base import _enum_text as _enum_text
+from .azure_cis._base import _mark_unevaluable as _mark_unevaluable
+from .azure_cis._base import _pass_or_no_data as _pass_or_no_data
+from .azure_cis._base import _resolve_without_conditional_access as _resolve_without_conditional_access
+from .azure_cis._base import logger as logger
+from .azure_cis.appservice import _check_9_1 as _check_9_1
+from .azure_cis.appservice import _check_9_2 as _check_9_2
+from .azure_cis.appservice import _check_9_3 as _check_9_3
+from .azure_cis.appservice import _check_9_4 as _check_9_4
+from .azure_cis.appservice import _check_9_5 as _check_9_5
+from .azure_cis.appservice import _check_9_6 as _check_9_6
+from .azure_cis.database_oss import _check_4_2_2 as _check_4_2_2
+from .azure_cis.database_oss import _check_4_2_3 as _check_4_2_3
+from .azure_cis.database_oss import _check_4_3_1 as _check_4_3_1
+from .azure_cis.database_oss import _check_4_3_2 as _check_4_3_2
+from .azure_cis.database_oss import _check_4_3_3 as _check_4_3_3
+from .azure_cis.database_oss import _check_4_3_4 as _check_4_3_4
+from .azure_cis.database_oss import _check_4_3_5 as _check_4_3_5
+from .azure_cis.database_sql import _check_4_1_1 as _check_4_1_1
+from .azure_cis.database_sql import _check_4_1_2 as _check_4_1_2
+from .azure_cis.database_sql import _check_4_1_3 as _check_4_1_3
+from .azure_cis.database_sql import _check_4_1_4 as _check_4_1_4
+from .azure_cis.database_sql import _check_4_1_5 as _check_4_1_5
+from .azure_cis.database_sql import _check_4_1_6 as _check_4_1_6
+from .azure_cis.database_sql import _check_4_2_1 as _check_4_2_1
+from .azure_cis.defender import _check_2_1 as _check_2_1
+from .azure_cis.defender import _check_2_2 as _check_2_2
+from .azure_cis.defender import _check_2_3 as _check_2_3
+from .azure_cis.defender import _check_2_4 as _check_2_4
+from .azure_cis.defender import _check_2_5 as _check_2_5
+from .azure_cis.defender import _check_2_6 as _check_2_6
+from .azure_cis.defender import _check_2_7 as _check_2_7
+from .azure_cis.defender import _check_2_8 as _check_2_8
+from .azure_cis.defender import _check_2_9 as _check_2_9
+from .azure_cis.defender import _check_2_10 as _check_2_10
+from .azure_cis.defender import _check_2_11 as _check_2_11
+from .azure_cis.defender import _check_2_12 as _check_2_12
+from .azure_cis.defender import _check_2_13 as _check_2_13
+from .azure_cis.iam import _check_1_1 as _check_1_1
+from .azure_cis.iam import _check_1_2 as _check_1_2
+from .azure_cis.iam import _check_1_3 as _check_1_3
+from .azure_cis.iam import _check_1_4 as _check_1_4
+from .azure_cis.iam import _check_1_5 as _check_1_5
+from .azure_cis.iam import _check_1_6 as _check_1_6
+from .azure_cis.iam import _check_1_7 as _check_1_7
+from .azure_cis.iam import _check_1_8 as _check_1_8
+from .azure_cis.iam import _check_1_9 as _check_1_9
+from .azure_cis.iam import _check_1_10 as _check_1_10
+from .azure_cis.iam import _guest_scoped_access_reviews as _guest_scoped_access_reviews
+from .azure_cis.iam_directory import _check_1_11 as _check_1_11
+from .azure_cis.iam_directory import _check_1_12 as _check_1_12
+from .azure_cis.iam_directory import _check_1_13 as _check_1_13
+from .azure_cis.iam_directory import _check_1_14 as _check_1_14
+from .azure_cis.iam_directory import _check_1_15 as _check_1_15
+from .azure_cis.iam_directory import _check_1_16 as _check_1_16
+from .azure_cis.iam_directory import _check_1_17 as _check_1_17
+from .azure_cis.iam_directory import _check_1_18 as _check_1_18
+from .azure_cis.iam_directory import _check_1_19 as _check_1_19
+from .azure_cis.iam_directory import _check_1_20 as _check_1_20
+from .azure_cis.iam_directory import _check_1_21 as _check_1_21
+from .azure_cis.iam_directory import _check_1_22 as _check_1_22
+from .azure_cis.keyvault import _check_8_1 as _check_8_1
+from .azure_cis.keyvault import _check_8_2 as _check_8_2
+from .azure_cis.keyvault import _check_8_3 as _check_8_3
+from .azure_cis.keyvault import _check_8_4 as _check_8_4
+from .azure_cis.keyvault import _check_8_5 as _check_8_5
+from .azure_cis.keyvault import _check_8_6 as _check_8_6
+from .azure_cis.keyvault import _check_8_7 as _check_8_7
+from .azure_cis.logging_checks import _check_5_1_2 as _check_5_1_2
+from .azure_cis.logging_checks import _check_5_1_3 as _check_5_1_3
+from .azure_cis.logging_checks import _check_5_1_4 as _check_5_1_4
+from .azure_cis.logging_checks import _check_5_1_5 as _check_5_1_5
+from .azure_cis.logging_checks import _check_5_1_6 as _check_5_1_6
+from .azure_cis.logging_checks import _check_5_2_1 as _check_5_2_1
+from .azure_cis.logging_checks import _check_5_2_2 as _check_5_2_2
+from .azure_cis.logging_checks import _check_5_2_3 as _check_5_2_3
+from .azure_cis.logging_checks import _check_activity_log_alert as _check_activity_log_alert
+from .azure_cis.networking import _check_6_1 as _check_6_1
+from .azure_cis.networking import _check_6_2 as _check_6_2
+from .azure_cis.networking import _check_6_3 as _check_6_3
+from .azure_cis.networking import _check_6_4 as _check_6_4
+from .azure_cis.networking import _check_6_5 as _check_6_5
+from .azure_cis.networking import _check_6_6 as _check_6_6
+from .azure_cis.networking import _is_internet_exposed as _is_internet_exposed
+from .azure_cis.storage import _check_3_1 as _check_3_1
+from .azure_cis.storage import _check_3_3 as _check_3_3
+from .azure_cis.storage import _check_3_4 as _check_3_4
+from .azure_cis.storage import _check_3_5 as _check_3_5
+from .azure_cis.storage import _check_3_6 as _check_3_6
+from .azure_cis.storage import _check_3_7 as _check_3_7
+from .azure_cis.storage import _check_3_8 as _check_3_8
+from .azure_cis.storage import _check_3_9 as _check_3_9
+from .azure_cis.storage import _check_3_10 as _check_3_10
+from .azure_cis.storage import _check_3_11 as _check_3_11
+from .azure_cis.storage import _check_3_12 as _check_3_12
+from .azure_cis.virtual_machines import _check_7_1 as _check_7_1
+from .azure_cis.virtual_machines import _check_7_2 as _check_7_2
+from .azure_cis.virtual_machines import _check_7_3 as _check_7_3
+from .azure_cis.virtual_machines import _check_7_4 as _check_7_4
+from .azure_cis.virtual_machines import _check_7_5 as _check_7_5
+from .azure_cis.virtual_machines import _check_7_6 as _check_7_6
 from .base import CloudDiscoveryError
 
 # ---------------------------------------------------------------------------
@@ -425,6 +185,24 @@ from .base import CloudDiscoveryError
 
 
 _SUBSCRIPTION_DIAGNOSTIC_SETTINGS_API_VERSION = "2021-05-01-preview"
+__all__ = ["AzureCISReport", "_APPSERVICE_SECTION", "_DATABASE_SECTION", "_DEFENDER_SECTION", "_IAM_SECTION",
+    "_KEYVAULT_SECTION", "_LOGGING_SECTION", "_NETWORK_SECTION", "_STORAGE_SECTION", "_VM_SECTION", "_ca_client_app_types",
+    "_ca_conditions", "_ca_enabled", "_ca_grant_controls", "_ca_included_apps", "_ca_included_roles", "_ca_included_users",
+    "_ca_sign_in_risk_levels", "_ca_state", "_check_1_1", "_check_1_10", "_check_1_11", "_check_1_12", "_check_1_13",
+    "_check_1_14", "_check_1_15", "_check_1_16", "_check_1_17", "_check_1_18", "_check_1_19", "_check_1_2", "_check_1_20",
+    "_check_1_21", "_check_1_22", "_check_1_3", "_check_1_4", "_check_1_5", "_check_1_6", "_check_1_7", "_check_1_8",
+    "_check_1_9", "_check_2_1", "_check_2_10", "_check_2_11", "_check_2_12", "_check_2_13", "_check_2_2", "_check_2_3",
+    "_check_2_4", "_check_2_5", "_check_2_6", "_check_2_7", "_check_2_8", "_check_2_9", "_check_3_1", "_check_3_10",
+    "_check_3_11", "_check_3_12", "_check_3_3", "_check_3_4", "_check_3_5", "_check_3_6", "_check_3_7", "_check_3_8",
+    "_check_3_9", "_check_4_1_1", "_check_4_1_2", "_check_4_1_3", "_check_4_1_4", "_check_4_1_5", "_check_4_1_6",
+    "_check_4_2_1", "_check_4_2_2", "_check_4_2_3", "_check_4_3_1", "_check_4_3_2", "_check_4_3_3", "_check_4_3_4",
+    "_check_4_3_5", "_check_5_1_2", "_check_5_1_3", "_check_5_1_4", "_check_5_1_5", "_check_5_1_6", "_check_5_2_1",
+    "_check_5_2_2", "_check_5_2_3", "_check_6_1", "_check_6_2", "_check_6_3", "_check_6_4", "_check_6_5", "_check_6_6",
+    "_check_7_1", "_check_7_2", "_check_7_3", "_check_7_4", "_check_7_5", "_check_7_6", "_check_8_1", "_check_8_2",
+    "_check_8_3", "_check_8_4", "_check_8_5", "_check_8_6", "_check_8_7", "_check_9_1", "_check_9_2", "_check_9_3",
+    "_check_9_4", "_check_9_5", "_check_9_6", "_check_activity_log_alert", "_enum_text", "_guest_scoped_access_reviews",
+    "_is_internet_exposed", "_mark_unevaluable", "_pass_or_no_data", "_resolve_without_conditional_access",
+    "finalize_read_coverage", "is_access_denied_error", "logger"]  # fmt: skip
 
 
 def _list_subscription_diagnostic_settings(credential: Any, subscription_id: str) -> list[dict[str, Any]]:
@@ -520,8 +298,7 @@ def run_benchmark(
     if not resolved_sub:
         raise CloudDiscoveryError("Azure subscription ID required. Set AZURE_SUBSCRIPTION_ID env var or pass subscription_id.")
 
-    # azure-identity is only needed to build the default credential; a
-    # caller-supplied credential (including the fail-closed dead-credential
+    # azure-identity is only needed to build the default credential; a caller-supplied credential (including the fail-closed dead-credential
     # path) must not require the optional SDK to be installed.
     if credential is None:
         try:
@@ -587,10 +364,9 @@ def run_benchmark(
 
         return WebSiteManagementClient(credential, resolved_sub)
 
-    # Microsoft Graph reads the Entra directory state (Conditional Access, the
-    # tenant authorization policy, security defaults, access reviews) that the ARM
-    # management APIs do not expose. Built once and reused across the 1.x identity
-    # controls; the credential caches its token internally.
+    # Microsoft Graph reads the Entra directory state (Conditional Access, the tenant authorization policy, security defaults, access
+    # reviews) that the ARM management APIs do not expose. Built once and reused across the 1.x identity controls; the credential caches its
+    # token internally.
     _graph_holder: dict[str, Any] = {}
 
     def _graph_client() -> Any:
@@ -613,17 +389,17 @@ def run_benchmark(
         ("1.7", lambda: _check_1_7(_auth_client(), resolved_sub)),
         ("1.8", lambda: _check_1_8(_graph_client())),
         ("1.9", lambda: _check_1_9(_graph_client())),
-        ("1.10", lambda: _check_1_10()),
+        ("1.10", _check_1_10),
         ("1.11", lambda: _check_1_11(_graph_client())),
         ("1.12", lambda: _check_1_12(_graph_client())),
         ("1.13", lambda: _check_1_13(_graph_client())),
         ("1.14", lambda: _check_1_14(_graph_client())),
         ("1.15", lambda: _check_1_15(_auth_client(), resolved_sub)),
-        ("1.16", lambda: _check_1_16()),
-        ("1.17", lambda: _check_1_17()),
+        ("1.16", _check_1_16),
+        ("1.17", _check_1_17),
         ("1.18", lambda: _check_1_18(_graph_client())),
-        ("1.19", lambda: _check_1_19()),
-        ("1.20", lambda: _check_1_20()),
+        ("1.19", _check_1_19),
+        ("1.20", _check_1_20),
         ("1.21", lambda: _check_1_21(_graph_client())),
         ("1.22", lambda: _check_1_22(_graph_client())),
         # Section 2 — Microsoft Defender for Cloud
@@ -733,9 +509,8 @@ def run_benchmark(
     return report
 
 
-# Bounded concurrency for the multi-subscription fan-out — mirrors the Azure
-# inventory fan-out's thread pool so a tenant-wide CIS run collapses the
-# per-subscription latencies instead of summing them.
+# Bounded concurrency for the multi-subscription fan-out — mirrors the Azure inventory fan-out's thread pool so a tenant-wide CIS run
+# collapses the per-subscription latencies instead of summing them.
 _MAX_CIS_FANOUT_WORKERS = 8
 
 

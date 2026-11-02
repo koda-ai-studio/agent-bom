@@ -19,6 +19,19 @@ from agent_bom.domain.inventory_types import ServerSurface, TransportType
 from agent_bom.domain.package_model import Package
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
+__all__ = [
+    "CredentialIdentityBinding",
+    "MCPPrompt",
+    "MCPResource",
+    "MCPServer",
+    "MCPTool",
+    "PermissionProfile",
+    "SBOM_DECLARED_MCP_SOURCE",
+    "Severity",
+    "normalize_package_name",
+    "parse_debian_source_name",
+]
+
 
 @dataclass
 class MCPTool:
@@ -272,7 +285,7 @@ class MCPServer:
                 if declared.version == 5 and str(declared) == self.imported_canonical_id:
                     return self.imported_canonical_id
             except (ValueError, AttributeError):
-                pass
+                pass  # unparseable input: fall back to the default below
         return canonical_mcp_server_id(
             self.name,
             self.command,

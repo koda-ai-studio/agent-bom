@@ -22,6 +22,10 @@ from agent_bom.identity.credential_policy import max_age_days as max_age_days
 from agent_bom.identity.credential_policy import near_expiry_days as near_expiry_days
 from agent_bom.identity.credential_policy import rotation_interval_days as rotation_interval_days
 
+__all__ = ["DEFAULT_NEAR_EXPIRY_DAYS", "_BLOCKING_STATES", "_STATE_PRIORITY", "_WARNING_STATES", "_days_between", "_env_int",
+    "_parse_timestamp", "classify_credential", "describe_credential_expiry_posture", "evaluate_credentials", "max_age_days",
+    "near_expiry_days", "rotation_interval_days"]  # fmt: skip
+
 
 def _control_plane_records(posture: dict[str, Any]) -> list[dict[str, Any]]:
     """Project configured control-plane secrets into expiry-evaluator records.

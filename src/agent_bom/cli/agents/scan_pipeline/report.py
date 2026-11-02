@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
@@ -31,7 +32,10 @@ from agent_bom.resolver import consume_performance_stats as consume_resolution_p
 from agent_bom.scanners import consume_coverage_warnings, consume_scan_performance
 from agent_bom.scanners.epss_backfill import epss_source_summary
 from agent_bom.scanners.mcp_audit import config_posture_findings
+from agent_bom.security import sanitize_text
 from agent_bom.vuln_freshness import accepted_scan_warnings
+
+_logger = logging.getLogger(__name__)
 
 
 def _collect_scan_sources(opts: ScanOptions, st: ScanState) -> None:
@@ -324,8 +328,8 @@ def _attach_context_data(opts: ScanOptions, st: ScanState) -> None:
                 osv_performance=(st.report.scan_performance_data or {}).get("osv", {}),
                 epss_source=epss_summary.to_dict() if epss_summary is not None else None,
             )
-        except Exception:
-            pass
+        except Exception as exc:  # broad-except: freshness metadata is optional; the scan result stands
+            _logger.debug("Vulnerability-data freshness snapshot unavailable: %s", sanitize_text(exc))
 
     attach_context_evidence(st.report, st.ctx)
 

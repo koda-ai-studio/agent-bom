@@ -4,8 +4,7 @@ Start with:
     agent-bom api                      # default: http://localhost:8422
     agent-bom api --host 0.0.0.0 --port 8422
 
-Core infrastructure: lifespan, middleware, CORS, meta routes (/, /health, /version),
-dashboard mounting. All domain routes live in api/routes/ sub-modules.
+Owns lifespan, middleware, CORS, /, /health, /version and dashboard mounting; domain routes live in api/routes/.
 """
 
 from __future__ import annotations
@@ -27,7 +26,7 @@ from agent_bom.api.audit_log import warn_if_ephemeral_hmac_key
 from agent_bom.api.auth import Role, get_key_store
 from agent_bom.api.dev_auth_state import get_dev_api_key as get_dev_api_key
 from agent_bom.api.dev_auth_state import get_dev_api_role as get_dev_api_role
-from agent_bom.api.dev_auth_state import set_dev_api_key as set_dev_api_key
+from agent_bom.api.dev_auth_state import set_dev_api_key
 from agent_bom.api.docs_ui import configure_docs
 from agent_bom.api.error_envelope import ERROR_RESPONSES, install_error_envelope
 from agent_bom.api.experimental_gate import ExperimentalFeatureHealth, SystemHealthResponse
@@ -64,7 +63,7 @@ from agent_bom.api.routes.enterprise_routes._session_helpers import _maybe_attac
 from agent_bom.api.scan_snapshot_store import expire_jobs_and_snapshots
 from agent_bom.api.storage.analytics import peek_analytics_store
 from agent_bom.api.storage_schema import postgres_deployment_configured
-from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hooks
+from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hooks  # noqa: F401 — legacy store injection hooks
     _get_credential_ref_store,
     _get_schedule_store,
     _get_source_store,
@@ -79,13 +78,11 @@ from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hook
     set_exception_store,
     set_fleet_store,
     set_graph_store,
+    set_job_store,
     set_policy_store,
     set_schedule_store,
     set_source_store,
     set_trend_store,
-)
-from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hooks
-    set_job_store as set_job_store,
 )
 from agent_bom.api.tracing import configure_otel_tracing, get_tracing_health
 from agent_bom.config import API_JOB_TTL_SECONDS as _JOB_TTL_SECONDS
@@ -98,11 +95,17 @@ from agent_bom.storage import state_home as _state_home
 from agent_bom.storage.tiers import preflight_storage_backends
 
 _logger = logging.getLogger(__name__)
+__all__ = ["_analytics_backend_config", "AnalyticsHealth", "PIPELINE_DAG_EDGES", "_api_key", "_dataclass_to_dict",
+    "_get_credential_ref_store", "_load_registry", "_sanitize_api_path", "push_proxy_alert", "set_dev_api_key", "set_job_store",
+    "PIPELINE_DAG_EVENT_SCHEMA", "PostgresPortabilityHealth", "_backend_name", "_get_source_store", "push_proxy_metrics", "PIPELINE_STEPS",
+    "ScanJob", "ScanPipeline", "ScanRequest", "StepStatus", "StorageHealth", "_control_plane_backend", "_executor", "_jobs_get",
+    "_jobs_pop", "_jobs_put", "_postgres_portability_health", "_run_scan_sync", "_sync_scan_agents_to_fleet", "get_executor",
+    "iter_pipeline_dag_event_records", "pipeline_dag_events_jsonl", "set_analytics_store", "set_credential_ref_store",
+    "set_exception_store", "set_fleet_store", "set_graph_store", "set_policy_store", "set_schedule_store", "set_source_store",
+    "set_trend_store"]  # fmt: skip
 
-# Demo estate mode must resolve every default local store under its own data
-# directory. Pin it before anything below lazily opens a store; this covers
-# ``uvicorn agent_bom.api.server:app`` and multi-worker re-imports as well as
-# the CLI, which activates it earlier.
+# Pin every demo-estate default store under its own data directory before lazy store access.
+# This covers ``uvicorn agent_bom.api.server:app``, multi-worker re-imports and the CLI, which activates it earlier.
 _state_home.activate_demo_state_dir()
 # ─── Dependency check ─────────────────────────────────────────────────────────
 
@@ -123,7 +126,6 @@ try:
     from fastapi import FastAPI, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse, RedirectResponse, Response
-    from pydantic import BaseModel  # noqa: F401 — presence check for [api] extra
     from starlette.middleware import Middleware
     from starlette.middleware.gzip import GZipMiddleware
 except ImportError as exc:  # pragma: no cover
@@ -643,9 +645,7 @@ _export_scheduler_task: asyncio.Task | None = None
 _side_scan_scheduler_task: asyncio.Task | None = None
 _advisory_rematch_task: asyncio.Task | None = None
 _auto_correlation_task: asyncio.Task | None = None
-# Flipped to True during graceful shutdown so the /readyz probe goes red
-# and upstream load balancers stop sending new traffic while in-flight
-# requests complete under the drain budget.
+# Set during graceful shutdown: /readyz rejects new traffic while in-flight requests finish under the drain budget.
 _shutting_down: bool = False
 
 

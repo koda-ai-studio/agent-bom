@@ -65,9 +65,7 @@ async def test_mcp_pipeline_keeps_the_repository_secret_inventory(tmp_path: Path
     # Assembled at runtime so no secret-shaped literal is committed.
     (tmp_path / "settings.py").write_text('DB_PASSWORD = "' + "Zq" + "x7Lm9" + "Pw4rT2vK8n" + '"\n')
     (tmp_path / "requirements.txt").write_text("requests==2.19.1\n")
-    _agents, _b, warnings, _s = await run_scan_pipeline(
-        safe_path=lambda v: Path(v), config_path=str(tmp_path), no_discover=True, offline=True
-    )
+    _agents, _b, warnings, _s = await run_scan_pipeline(safe_path=Path, config_path=str(tmp_path), no_discover=True, offline=True)
     inventory = consume_repo_tree_inventory()
     assert inventory is not None
     assert [f["file"] for f in inventory["secrets"]["findings"]] == ["settings.py"]

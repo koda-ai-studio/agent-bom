@@ -310,7 +310,7 @@ def qualify_processes(store, sqlite, seconds, size):
         try:
             results.append(outcomes.get(timeout=seconds))
         except queue.Empty:
-            pass
+            pass  # nothing queued yet; poll again
         stop.set()
         early = bool(results)
         for _ in range(len(workers) - len(results)):

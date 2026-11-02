@@ -71,7 +71,7 @@ def test_audit_mode_allows_with_audit_reason():
 
 
 def test_exported_in_gateway_all():
-    import agent_bom.gateway as gateway
+    from agent_bom import gateway as gateway
 
     assert "evaluate_gateway_policy_bundle" in gateway.__all__
 

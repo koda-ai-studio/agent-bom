@@ -7,13 +7,32 @@ import os
 import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass
-from json import JSONDecodeError
 from typing import Any
 
 from agent_bom.api.scim_errors import SCIM_ERROR_SCHEMA as SCIM_ERROR_SCHEMA
 from agent_bom.api.scim_errors import scim_error_body as scim_error_body
 from agent_bom.core.settings import env_bool
 from agent_bom.platform_invariants import ReservedTenantIdError, validate_customer_tenant_id
+
+__all__ = [
+    "SCIMBearerTokenBinding",
+    "SCIMConfigurationError",
+    "SCIM_ERROR_SCHEMA",
+    "configured_api_replicas",
+    "configured_scim_bearer_token_bindings",
+    "describe_scim_posture",
+    "extract_scim_roles",
+    "normalize_scim_role",
+    "resolve_scim_bearer_token",
+    "revoke_credentials_for_scim_user",
+    "scim_base_path",
+    "scim_default_role",
+    "scim_enabled_from_env",
+    "scim_error_body",
+    "scim_requires_shared_store",
+    "scim_role_attribute",
+    "scim_tenant_id_from_env",
+]
 
 _SCIM_ROLE_VALUES = ("admin", "analyst", "viewer")
 _SCIM_ROLE_ALIASES = {
@@ -98,7 +117,7 @@ def _mapping_scim_bearer_token_bindings() -> list[SCIMBearerTokenBinding]:
         return []
     try:
         payload = json.loads(raw)
-    except JSONDecodeError as exc:
+    except json.JSONDecodeError as exc:
         raise SCIMConfigurationError(f"{_SCIM_TOKEN_MAPPING_ENV} must be a JSON object mapping tenant id to token config") from exc
     if not isinstance(payload, dict):
         raise SCIMConfigurationError(f"{_SCIM_TOKEN_MAPPING_ENV} must be a JSON object mapping tenant id to token config")

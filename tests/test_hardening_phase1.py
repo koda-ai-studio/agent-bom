@@ -125,7 +125,7 @@ class TestConfigOverrides:
     """Verify env var overrides work correctly."""
 
     def test_default_values_without_env(self):
-        import agent_bom.config as cfg
+        from agent_bom import config as cfg
 
         assert cfg.RISK_BASE_CRITICAL == 8.0
         assert cfg.RISK_AGENT_WEIGHT == 0.5
@@ -133,7 +133,7 @@ class TestConfigOverrides:
 
     def test_float_override(self, monkeypatch):
         monkeypatch.setenv("AGENT_BOM_EPSS_CRITICAL_THRESHOLD", "0.9")
-        import agent_bom.config as cfg
+        from agent_bom import config as cfg
 
         importlib.reload(cfg)
         assert cfg.EPSS_CRITICAL_THRESHOLD == 0.9
@@ -143,7 +143,7 @@ class TestConfigOverrides:
 
     def test_invalid_env_var_falls_back(self, monkeypatch):
         monkeypatch.setenv("AGENT_BOM_RISK_BASE_CRITICAL", "not_a_number")
-        import agent_bom.config as cfg
+        from agent_bom import config as cfg
 
         importlib.reload(cfg)
         assert cfg.RISK_BASE_CRITICAL == 8.0  # default

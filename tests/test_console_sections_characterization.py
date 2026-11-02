@@ -20,7 +20,7 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
-import agent_bom.output as output
+from agent_bom import output as output
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
 from agent_bom.models import Agent, AgentType, AIBOMReport, MCPServer, Package
 from agent_bom.output import console_render

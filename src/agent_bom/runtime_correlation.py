@@ -264,7 +264,7 @@ def _compute_amplifier(
         if hours_since <= recency_hours:
             amp += 0.3  # Recency bonus (additive)
     except (ValueError, TypeError):
-        pass
+        pass  # unparseable input: fall back to the default below
 
     if is_kev:
         amp += RISK_AMPLIFIER_KEV_CALLED - RISK_AMPLIFIER_CALLED  # +1.0 bonus for KEV

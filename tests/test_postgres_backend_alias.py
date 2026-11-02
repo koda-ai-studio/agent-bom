@@ -41,7 +41,7 @@ def test_db_alias_selects_existing_postgres_store(monkeypatch, owner, getter, sl
     sentinel = object()
     monkeypatch.setattr(adapter_module, class_name, lambda: sentinel)
     if getter == "_get_graph_store":
-        monkeypatch.setattr(owner_module, "_get_store", lambda: object())
+        monkeypatch.setattr(owner_module, "_get_store", object)
         monkeypatch.setattr("agent_bom.api.current_graph.current_graph_store", lambda graph, jobs: graph)
     assert getattr(owner_module, getter)() is sentinel
 

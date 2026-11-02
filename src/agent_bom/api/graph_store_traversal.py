@@ -5,6 +5,8 @@ from __future__ import annotations
 import sqlite3
 from typing import TYPE_CHECKING, Any
 
+__all__ = ["GraphStoreProtocol", "SQLiteGraphTraversalMixin"]
+
 if TYPE_CHECKING:
     pass
 

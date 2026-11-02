@@ -6,17 +6,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import os
-import tempfile
 import threading
-import time
-from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, cast
-
-from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from agent_bom.advisory_ids import MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE, MATCH_CONFIDENCE_UNVERIFIED_RANGE, upstream_advisory_ids
 from agent_bom.atlas import blast_radius_technique_evidence as atlas_technique_evidence
@@ -52,22 +44,19 @@ from agent_bom.scanners.local_data_freshness import _osv_answered
 from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_if_needed_impl
 from agent_bom.scanners.osv import parse_fixed_version, query_osv_batch_impl
 from agent_bom.scanners.package_coverage import (
-    _check_offline_coverage,
     _detect_coverage_gaps,
-    _flag_remote_lookup_gap,
     _flag_suspicious_packages,
     _query_osv_results,
     _scan_supplemental_advisories,
     _select_osv_targets,
 )
-from agent_bom.scanners.package_matching import ECOSYSTEM_MAP as ECOSYSTEM_MAP
+from agent_bom.scanners.package_matching import ECOSYSTEM_MAP, demote_ambiguous_distro_matches
 from agent_bom.scanners.package_matching import _apply_distro_release_ambiguity as _apply_distro_release_ambiguity
 from agent_bom.scanners.package_matching import _emit_scan_warning as _emit_scan_warning
 from agent_bom.scanners.package_matching import _is_version_affected as _is_version_affected
 from agent_bom.scanners.package_matching import _osv_ecosystems_for_package as _osv_ecosystems_for_package
 from agent_bom.scanners.package_matching import _scanners_patchable as _scanners_patchable
 from agent_bom.scanners.package_matching import _scope_advisory_to_package_release as _scope_advisory_to_package_release
-from agent_bom.scanners.package_matching import demote_ambiguous_distro_matches
 from agent_bom.scanners.package_preparation import (
     _NON_OSV_ECOSYSTEMS,
     _expand_transitive_packages,
@@ -81,8 +70,7 @@ from agent_bom.scanners.package_preparation import (
 from agent_bom.scanners.package_versions import eligible_advisories
 from agent_bom.scanners.package_versions import is_unresolved_package as _is_unresolved_package
 from agent_bom.scanners.risk import osv_cvss_vector, parse_osv_severity
-from agent_bom.scanners.scan_options import IncompleteScanError as IncompleteScanError
-from agent_bom.scanners.scan_options import ScanOptions, _logger, _package_db_key, console
+from agent_bom.scanners.scan_options import IncompleteScanError, ScanOptions, _logger, _package_db_key, console
 from agent_bom.scanners.state import _bump_scan_perf, _get_api_semaphore, peek_coverage_warnings
 from agent_bom.scanners.unverified_range_policy import (
     demote_to_candidates,
@@ -99,6 +87,7 @@ if TYPE_CHECKING:
 
 
 offline_mode: bool = False
+__all__ = ["ECOSYSTEM_MAP", "IncompleteScanError", "compliance_mode", "prefer_local_db"]  # fmt: skip
 
 
 _scan_cache_init_lock = threading.Lock()

@@ -714,7 +714,6 @@ def protect_cmd(
       Response:      {"type": "response", "tool_name": "read_file", "text": "..."}
       Drift check:   {"type": "drift", "tools": ["read_file", "exec_cmd"]}
     """
-    import asyncio
     import signal
 
     from agent_bom.alerts.dispatcher import AlertDispatcher
@@ -810,7 +809,7 @@ def protect_cmd(
         try:
             await task
         except asyncio.CancelledError:
-            pass
+            pass  # expected: the task was just cancelled
         engine.stop()
         stats = engine.status()
         console.print(f"[dim]Tool calls analyzed: {stats['tool_calls_analyzed']}, Alerts: {stats['alerts_generated']}[/dim]")

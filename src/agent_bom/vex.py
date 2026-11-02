@@ -27,6 +27,7 @@ from agent_bom.package_utils import package_purl
 from agent_bom.redaction.log_values import sanitize_log_value
 
 logger = logging.getLogger(__name__)
+__all__ = ["active_blast_radii", "is_vex_suppressed", "vex_suppression_reason"]  # fmt: skip
 
 if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport
@@ -353,13 +354,7 @@ def _parse_csaf_vex(data: dict) -> VexDocument:
                 )
             )
 
-    metadata = {
-        "id": doc_id,
-        "author": author,
-        "timestamp": timestamp,
-        "version": tracking.get("version", 1),
-        "format": "csaf",
-    }
+    metadata = {"id": doc_id, "author": author, "timestamp": timestamp, "version": tracking.get("version", 1), "format": "csaf"}
     return VexDocument(statements=statements, metadata=metadata)
 
 

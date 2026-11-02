@@ -220,7 +220,7 @@ def parse_cyclonedx(data: dict) -> list[Package]:
                 try:
                     cvss_score = float(score)
                 except (TypeError, ValueError):
-                    pass
+                    pass  # unparseable input: fall back to the default below
             break  # use first rating
 
         recommendation = vuln_data.get("recommendation", "")

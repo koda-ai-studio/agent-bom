@@ -41,7 +41,7 @@ async def test_mcp_no_discover_scans_explicit_config_path(project: Path, monkeyp
         return []
 
     monkeypatch.setattr("agent_bom.scanners.scan_agents", _no_vulns)
-    agents, _b, _w, _s = await run_scan_pipeline(safe_path=lambda v: Path(v), config_path=str(project), no_discover=True, offline=True)
+    agents, _b, _w, _s = await run_scan_pipeline(safe_path=Path, config_path=str(project), no_discover=True, offline=True)
     mcp_names = {s.name for a in agents for s in a.mcp_servers if s.name in {"filesystem", "remote-open"}}
     assert mcp_names == {"filesystem", "remote-open"}
     fs = next(s for a in agents for s in a.mcp_servers if s.name == "filesystem")
@@ -80,5 +80,5 @@ async def test_automatic_project_scan_does_not_report_missing_terraform(project:
         return []
 
     monkeypatch.setattr("agent_bom.scanners.scan_agents", _no_vulns)
-    _a, _b, warnings, _s = await run_scan_pipeline(safe_path=lambda v: Path(v), config_path=str(project), no_discover=True, offline=True)
+    _a, _b, warnings, _s = await run_scan_pipeline(safe_path=Path, config_path=str(project), no_discover=True, offline=True)
     assert not [w for w in warnings if ".tf files" in w]

@@ -129,7 +129,7 @@ def test_docker_pull_platform_flag(monkeypatch):
     try:
         _docker_inspect("myapp:latest", platform="linux/arm64")
     except ImageScanError:
-        pass
+        pass  # the raised error is the expected outcome; assertions below check the effects
 
     pull_cmds = [c for c in captured_cmds if "pull" in c]
     assert len(pull_cmds) > 0

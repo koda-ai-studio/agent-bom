@@ -10,65 +10,36 @@ from typing import Any, Optional
 import click
 
 from agent_bom.cli._common import LISTEN_PORT_RANGE
-from agent_bom.cli._server_posture import (
-    _DEV_API_KEY_PREFIX as _DEV_API_KEY_PREFIX,
-)
+from agent_bom.cli._server_posture import _DEV_API_KEY_PREFIX as _DEV_API_KEY_PREFIX
 from agent_bom.cli._server_posture import _api_auth_summary as _api_auth_summary
 from agent_bom.cli._server_posture import _auth_summary as _auth_summary
-from agent_bom.cli._server_posture import (
-    _enforce_auth_defaults as _enforce_auth_defaults,
-)
-from agent_bom.cli._server_posture import (
-    _enforce_control_plane_listener_posture as _enforce_control_plane_listener_posture,
-)
-from agent_bom.cli._server_posture import (
-    _enforce_cors_posture as _enforce_cors_posture,
-)
-from agent_bom.cli._server_posture import (
-    _enforce_database_role_posture as _enforce_database_role_posture,
-)
-from agent_bom.cli._server_posture import (
-    _enforce_remote_mcp_auth_defaults as _enforce_remote_mcp_auth_defaults,
-)
-from agent_bom.cli._server_posture import (
-    _enforce_writable_control_plane_state as _enforce_writable_control_plane_state,
-)
-from agent_bom.cli._server_posture import (
-    _env_truthy as _env_truthy,
-)
-from agent_bom.cli._server_posture import (
-    _fail_missing_optional_dependencies as _fail_missing_optional_dependencies,
-)
-from agent_bom.cli._server_posture import (
-    _generate_dev_api_key as _generate_dev_api_key,
-)
-from agent_bom.cli._server_posture import (
-    _is_loopback_host as _is_loopback_host,
-)
-from agent_bom.cli._server_posture import (
-    _oidc_enabled as _oidc_enabled,
-)
-from agent_bom.cli._server_posture import (
-    _require_optional_dependencies as _require_optional_dependencies,
-)
-from agent_bom.cli._server_posture import (
-    _resolve_allow_unauthenticated as _resolve_allow_unauthenticated,
-)
-from agent_bom.cli._server_posture import (
-    _saml_enabled as _saml_enabled,
-)
-from agent_bom.cli._server_posture import (
-    _scim_bearer_enabled as _scim_bearer_enabled,
-)
-from agent_bom.cli._server_posture import (
-    _should_auto_generate_dev_key as _should_auto_generate_dev_key,
-)
-from agent_bom.cli._server_posture import (
-    _uvicorn_tls_kwargs as _uvicorn_tls_kwargs,
-)
+from agent_bom.cli._server_posture import _enforce_auth_defaults as _enforce_auth_defaults
+from agent_bom.cli._server_posture import _enforce_control_plane_listener_posture as _enforce_control_plane_listener_posture
+from agent_bom.cli._server_posture import _enforce_cors_posture as _enforce_cors_posture
+from agent_bom.cli._server_posture import _enforce_database_role_posture as _enforce_database_role_posture
+from agent_bom.cli._server_posture import _enforce_remote_mcp_auth_defaults as _enforce_remote_mcp_auth_defaults
+from agent_bom.cli._server_posture import _enforce_writable_control_plane_state as _enforce_writable_control_plane_state
+from agent_bom.cli._server_posture import _env_truthy as _env_truthy
+from agent_bom.cli._server_posture import _fail_missing_optional_dependencies as _fail_missing_optional_dependencies
+from agent_bom.cli._server_posture import _generate_dev_api_key as _generate_dev_api_key
+from agent_bom.cli._server_posture import _is_loopback_host as _is_loopback_host
+from agent_bom.cli._server_posture import _oidc_enabled as _oidc_enabled
+from agent_bom.cli._server_posture import _require_optional_dependencies as _require_optional_dependencies
+from agent_bom.cli._server_posture import _resolve_allow_unauthenticated as _resolve_allow_unauthenticated
+from agent_bom.cli._server_posture import _saml_enabled as _saml_enabled
+from agent_bom.cli._server_posture import _scim_bearer_enabled as _scim_bearer_enabled
+from agent_bom.cli._server_posture import _should_auto_generate_dev_key as _should_auto_generate_dev_key
+from agent_bom.cli._server_posture import _uvicorn_tls_kwargs as _uvicorn_tls_kwargs
 from agent_bom.core.settings import env_list, env_raw, env_str
 from agent_bom.storage import state_home
 from agent_bom.storage.state_home import demo_estate_default_persist as _demo_estate_default_persist
+
+__all__ = ["_DEV_API_KEY_PREFIX", "_api_auth_summary", "_auth_summary", "_enforce_auth_defaults",
+    "_enforce_control_plane_listener_posture", "_enforce_cors_posture", "_enforce_database_role_posture",
+    "_enforce_remote_mcp_auth_defaults", "_enforce_writable_control_plane_state", "_env_truthy",
+    "_fail_missing_optional_dependencies", "_generate_dev_api_key", "_is_loopback_host", "_oidc_enabled",
+    "_require_optional_dependencies", "_resolve_allow_unauthenticated", "_saml_enabled", "_scim_bearer_enabled",
+    "_should_auto_generate_dev_key", "_uvicorn_tls_kwargs"]  # fmt: skip
 
 
 def _configure_analytics_backend(
@@ -199,17 +170,15 @@ def _storage_summary(*, persist: str | None) -> str:
     from agent_bom.api import stores
     from agent_bom.api.server import _backend_name
 
-    # Lifespan preserves an injected store; the legacy api command also selects
-    # its Postgres job store before printing this table. Never create a store
-    # merely to describe it, or print a configured connection string.
+    # Lifespan preserves an injected store; the legacy api command also selects its Postgres job store before printing this table. Never
+    # create a store merely to describe it, or print a configured connection string.
     if stores._store is not None:
         backend = _backend_name(stores._store)
         return {"inmemory": "In-memory (ephemeral)", "sqlite": "SQLite", "postgres": "PostgreSQL", "snowflake": "Snowflake"}.get(
             backend, f"Custom ({backend})"
         )
 
-    # Mirror the pending job-store selection in server._lifespan. Neptune's
-    # graph-only branch currently leaves the lazy job store in memory.
+    # Mirror the pending job-store selection in server._lifespan. Neptune's graph-only branch currently leaves the lazy job store in memory.
     if env_raw("SNOWFLAKE_ACCOUNT"):
         return "Snowflake"
     if env_str("AGENT_BOM_GRAPH_BACKEND").lower() == "neptune":
@@ -429,10 +398,8 @@ def serve_cmd(
 
     seeded_connection_key = _maybe_seed_local_connection_key(host=host, allow_insecure_no_auth=allow_insecure_no_auth)
 
-    # Zero-config loopback: when bound to loopback with no auth configured and no
-    # opt-out, mint an ephemeral dev key so the dashboard loads without flags.
-    # Non-loopback binds never reach here unauthenticated (see the gate above),
-    # so this can only ever fire on loopback.
+    # Zero-config loopback: when bound to loopback with no auth configured and no opt-out, mint an ephemeral dev key so the dashboard loads
+    # without flags. Non-loopback binds never reach here unauthenticated (see the gate above), so this can only ever fire on loopback.
     dev_api_key = (
         _generate_dev_api_key()
         if _should_auto_generate_dev_key(host=host, api_key=api_key, allow_insecure_no_auth=allow_insecure_no_auth)
@@ -449,9 +416,8 @@ def serve_cmd(
         listener_host=host,
     )
     if persist_path:
-        # Do not rely only on the server module's first-import environment
-        # selection. Embedded callers and tests can import the app before the
-        # CLI command runs; an explicit flag must still select durable jobs.
+        # Do not rely only on the server module's first-import environment selection. Embedded callers and tests can import the app before
+        # the CLI command runs; an explicit flag must still select durable jobs.
         from agent_bom.api.store import SQLiteJobStore
 
         set_job_store(SQLiteJobStore(db_path=persist_path))
@@ -904,8 +870,7 @@ def mcp_server_cmd(
 
     from agent_bom.mcp_tools.oauth import oauth_configured
 
-    # Stdio uses its parent process boundary; inherited HTTP credentials do not
-    # activate a token verifier for a local session.
+    # Stdio uses its parent process boundary; inherited HTTP credentials do not activate a token verifier for a local session.
     try:
         server = create_mcp_server(
             host=host,

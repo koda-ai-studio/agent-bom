@@ -280,7 +280,7 @@ def test_entry_point_importer_registers_after_builtins(monkeypatch):
         [
             FakeEntryPoint("acme", lambda: _AcmeImporter),
             FakeEntryPoint("shadow", lambda: _ShadowImporter),
-            FakeEntryPoint("broken", lambda: object()),
+            FakeEntryPoint("broken", object),
         ],
     )
 

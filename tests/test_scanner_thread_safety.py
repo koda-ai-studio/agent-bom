@@ -45,7 +45,7 @@ def test_scan_warning_and_perf_state_is_isolated_per_thread():
 
 
 def test_get_scan_cache_initialization_is_singleton_under_race(monkeypatch):
-    import agent_bom.scanners as scanners
+    from agent_bom import scanners as scanners
 
     created: list[object] = []
     create_lock = threading.Lock()

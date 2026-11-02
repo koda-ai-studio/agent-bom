@@ -805,7 +805,7 @@ async def enrich_registry_with_cves(
                         else:
                             severities.append("low")
                     except (ValueError, IndexError):
-                        pass
+                        pass  # unparseable input: fall back to the default below
 
         # Count EPSS high-risk and KEV entries
         critical_count = 0

@@ -56,5 +56,5 @@ def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback:
             try:
                 host = str(ip_address(candidate))
             except ValueError:
-                pass
+                pass  # not an IP literal: keep the socket peer address
     return host

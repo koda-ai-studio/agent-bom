@@ -546,7 +546,7 @@ def test_kubelet_configz_rejects_external_node_metadata_without_requesting_it() 
 
 
 def test_kubelet_configz_caps_node_fanout(monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.k8s as k8s_module
+    from agent_bom import k8s as k8s_module
 
     payloads = _foundation_payloads()
     second_node = {
@@ -575,7 +575,7 @@ def test_kubelet_configz_caps_node_fanout(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_kubelet_configz_honors_overall_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.k8s as k8s_module
+    from agent_bom import k8s as k8s_module
 
     payloads = _foundation_payloads()
     transport = _FixtureTransport(payloads)
@@ -632,7 +632,7 @@ def test_posture_evidence_normalizes_invalid_in_cluster_port(monkeypatch: pytest
 
 
 def test_compatibility_wrapper_fails_closed_on_partial_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.k8s as k8s_module
+    from agent_bom import k8s as k8s_module
 
     transport = _FixtureTransport(
         _foundation_payloads(),

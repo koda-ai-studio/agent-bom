@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import Request
 
 from agent_bom.api import compliance_hub_store, finding_cursor, time_window
-from agent_bom.api import finding_reachability_prewarm as _finding_reachability_prewarm  # noqa: F401 - registers the commit warm-up
+from agent_bom.api import finding_reachability_prewarm as _finding_reachability_prewarm
 from agent_bom.api.finding_facets import _finding_facets_bounded as _finding_facets_bounded
 from agent_bom.api.finding_grouping import _attach_grouping_metadata as _attach_grouping_metadata
 from agent_bom.api.finding_grouping import _collect_group_occurrences as _collect_group_occurrences
@@ -34,6 +34,9 @@ from agent_bom.api.finding_view_filters import redact_emitted_rows, redacts_afte
 from agent_bom.api.scan_request_context import _logger, _tenant_id
 from agent_bom.api.stores import _get_graph_store
 from agent_bom.security import sanitize_error, sanitize_text
+
+# Importing the reader surface registers its bounded graph-commit warm-up.
+__all__ = ["_finding_reachability_prewarm"]
 
 
 def _redact_finding_page(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:

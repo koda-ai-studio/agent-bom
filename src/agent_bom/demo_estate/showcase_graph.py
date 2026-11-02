@@ -66,6 +66,11 @@ if TYPE_CHECKING:
 
 
 _logger = logging.getLogger(__name__)
+__all__ = ["SHOWCASE_AGENTS", "SHOWCASE_BASELINE_CREATED_AT", "SHOWCASE_BASELINE_SCAN_ID", "SHOWCASE_CURRENT_CREATED_AT",
+    "SHOWCASE_ORG_ID", "SHOWCASE_PACKAGES", "SHOWCASE_SCAN_ID", "SHOWCASE_SERVERS", "SHOWCASE_SOURCE", "SHOWCASE_TENANT",
+    "ShowcaseProfile", "_DEMO_IDENTITIES", "_DEMO_JIT_GRANTS", "_SHOWCASE_CURRENT_STAMP", "_SHOWCASE_CURRENT_TARGET",
+    "_SHOWCASE_IMPORT_NOW", "_annotate_demo_identity_risk", "_demo_identity_id", "build_demo_identity_store",
+    "demo_identity_records", "seed_showcase_fleet_and_runtime", "seed_showcase_identities"]  # fmt: skip
 
 
 class _DriftIncident:
@@ -128,9 +133,8 @@ def build_showcase_graph(
 
     seed_showcase_credentials(node, edge)
 
-    # Hero blast-radius chain: the PyYAML RCE on shell-runner-server reaches an
-    # AWS credential AND the run_shell tool → potential RCE. This is the top
-    # exposure path the graph/posture surfaces should headline.
+    # Hero blast-radius chain: the PyYAML RCE on shell-runner-server reaches an AWS credential AND the run_shell tool → potential RCE. This
+    # is the top exposure path the graph/posture surfaces should headline.
     aws_secret = showcase_credential_id("shell-runner-server", "AWS_SECRET_ACCESS_KEY")
     run_shell = showcase_tool_id("shell-runner-server", "run_shell")
     eval_expression = showcase_tool_id("llm-orchestrator-server", "eval_expression")
@@ -275,9 +279,8 @@ def build_showcase_graph(
         node(f"tool:{legacy}:send_message", EntityType.TOOL, "send_message")
         edge(legacy, f"tool:{legacy}:send_message", RelationshipType.PROVIDES_TOOL)
 
-    # Enriched, deterministic NHI estate (owner / last_used / standing scopes) so
-    # the governance overlay projects a real identity story. Shared with the live
-    # identity-store seed via ``demo_identity_records`` so ids/attributes match.
+    # Enriched, deterministic NHI estate (owner / last_used / standing scopes) so the governance overlay projects a real identity story.
+    # Shared with the live identity-store seed via ``demo_identity_records`` so ids/attributes match.
     store = identity_store if identity_store is not None else build_demo_identity_store(tenant_id)
 
     drift = _DriftStore(
@@ -466,26 +469,21 @@ def seed_showcase_graph_if_empty(
         # An ordinary boot never shadows a real scan.
         return False
     if foreign and _showcase_would_displace_real_snapshot(foreign):
-        # Force authorizes refreshing demo evidence, not changing the tenant's
-        # default read owner. An imported or clock-skewed real snapshot can be
-        # older than the deterministic showcase stamp, so adding the showcase
-        # would silently make it the newest graph. Keep the real owner instead.
+        # Force authorizes refreshing demo evidence, not changing the tenant's default read owner. An imported or clock-skewed real snapshot
+        # can be older than the deterministic showcase stamp, so adding the showcase would silently make it the newest graph. Keep the real
+        # owner instead.
         return False
     if not force and snapshots and _showcase_seed_is_current(snapshots):
         return False
     if snapshots and not foreign:
-        # Only showcase snapshots remain. Wipe them so the refreshed seed does
-        # not leave orphaned nodes/edges behind.
+        # Only showcase snapshots remain. Wipe them so the refreshed seed does not leave orphaned nodes/edges behind.
         delete_tenant = getattr(graph_store, "delete_tenant", None)
         if callable(delete_tenant):
             delete_tenant(tenant_id=tenant_id)
-    # With a preserved operator scan present, the showcase snapshots are still
-    # written -- an explicit demo request needs a graph to address -- but they
-    # keep their fixed, older timestamps. The newest-wins read path therefore
-    # still defaults to the operator's scan; only a caller that asks for the
-    # showcase scan id by name is served the estate.
-    # One shared, enriched identity estate feeds both snapshots so the persisted
-    # MANAGED_IDENTITY node ids match the live identity store the API re-projects.
+    # With a preserved operator scan present, the showcase snapshots are still written -- an explicit demo request needs a graph to address
+    # -- but they keep their fixed, older timestamps. The newest-wins read path therefore still defaults to the operator's scan; only a
+    # caller that asks for the showcase scan id by name is served the estate. One shared, enriched identity estate feeds both snapshots so
+    # the persisted MANAGED_IDENTITY node ids match the live identity store the API re-projects.
     identity_records = build_demo_identity_store(tenant_id)
 
     baseline_graph = build_showcase_snapshot(tenant_id=tenant_id, profile="baseline", identity_records=identity_records)
@@ -582,20 +580,17 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
 def _record_showcase_attack_path_analysis(graph: UnifiedGraph, *, count_paths: bool = True) -> None:
     """Record the showcase path analysis as complete (``count_paths=False`` before derivation)."""
 
-    # Persistence keys paths by chain within a scan, so duplicate in-memory
-    # variants collapse to one served path. Report the persisted cardinality
-    # instead of the pre-upsert list length.
+    # Persistence keys paths by chain within a scan, so duplicate in-memory variants collapse to one served path. Report the persisted
+    # cardinality instead of the pre-upsert list length.
     observed: dict[str, int] = {}
     if count_paths:
         from agent_bom.graph.snapshot_paths import path_identity
 
         observed["paths"] = len({path_identity(path) for path in graph.attack_paths})
 
-    # Record that the run completed. Without this the snapshot reads
-    # ``not_recorded`` and the graph header says "Analysis status unavailable"
-    # while sitting on top of the paths this function just derived — the header
-    # is right to distrust a snapshot that never claims one, so the seed has to
-    # make the claim it has actually earned.
+    # Record that the run completed. Without this the snapshot reads ``not_recorded`` and the graph header says "Analysis status
+    # unavailable" while sitting on top of the paths this function just derived — the header is right to distrust a snapshot that never
+    # claims one, so the seed has to make the claim it has actually earned.
     from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 
     graph.analysis_status["attack_path_fusion"] = GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE, observed=observed)

@@ -68,9 +68,7 @@ from agent_bom.api.routes.compliance_routes.evidence import _bucket_for as _buck
 from agent_bom.api.routes.compliance_routes.evidence import _coerce_cis_row as _coerce_cis_row
 from agent_bom.api.routes.compliance_routes.evidence import _narrative_to_dict as _narrative_to_dict
 from agent_bom.api.routes.compliance_routes.evidence import _result_has_runtime_signals as _result_has_runtime_signals
-from agent_bom.api.routes.compliance_routes.reads import get_aisvs_compliance
-from agent_bom.api.routes.compliance_routes.reads import get_compliance_narrative as get_compliance_narrative
-from agent_bom.api.routes.compliance_routes.reads import get_credential_risk_ranking as get_credential_risk_ranking
+from agent_bom.api.routes.compliance_routes.reads import get_aisvs_compliance, get_compliance_narrative, get_credential_risk_ranking
 from agent_bom.api.routes.compliance_routes.reads import get_incident_correlation as get_incident_correlation
 from agent_bom.api.routes.compliance_routes.reads import get_posture_scorecard as get_posture_scorecard
 from agent_bom.api.routes.compliance_routes.scoring import (
@@ -94,6 +92,10 @@ def _dep(permission: str) -> Any:
 
 
 router = APIRouter(dependencies=[_dep("read")])
+__all__ = ["_bucket_for", "_cached_issue_severity_counts", "_coerce_cis_row", "_derive_deployment_context",
+    "_evaluated_control_status", "_narrative_to_dict", "_result_has_runtime_signals", "estate_agent_count",
+    "get_compliance_narrative", "get_credential_risk_ranking", "get_incident_correlation", "get_posture_scorecard",
+    "list_cis_benchmark_checks"]  # fmt: skip
 
 # Cap on audit entries pulled into a single signed evidence bundle. When the
 # window holds more than this the bundle marks itself truncated (honest partial
@@ -843,7 +845,7 @@ async def ingest_compliance_findings(request: Request) -> dict:
         try:
             tmp_path.unlink(missing_ok=True)
         except OSError:
-            pass
+            pass  # best-effort cleanup; failure leaves nothing to undo
 
     if not findings:
         raise HTTPException(

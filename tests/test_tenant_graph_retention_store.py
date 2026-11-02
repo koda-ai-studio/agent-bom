@@ -211,7 +211,7 @@ def test_postgres_session_tenant_gates_rows_even_when_the_argument_names_another
 def test_postgres_maintenance_listing_fails_closed_without_the_maintenance_role(make_store, tenants, request, monkeypatch):
     if "postgres" not in request.node.callspec.id:
         pytest.skip("the maintenance role exists only on Postgres")
-    import agent_bom.api.postgres_common as pc
+    from agent_bom.api import postgres_common as pc
 
     def _unconfigured() -> object:
         raise MaintenanceRoleConfigurationError("maintenance URL not configured")

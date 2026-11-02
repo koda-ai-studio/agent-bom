@@ -23,7 +23,7 @@ def _install_boto_modules(monkeypatch) -> None:
         pass
 
     exceptions.ClientError = ClientError
-    config.Config = MagicMock(side_effect=lambda **kwargs: types.SimpleNamespace(**kwargs))
+    config.Config = MagicMock(side_effect=types.SimpleNamespace)
     monkeypatch.setitem(sys.modules, "boto3", boto3)
     monkeypatch.setitem(sys.modules, "botocore", botocore)
     monkeypatch.setitem(sys.modules, "botocore.config", config)

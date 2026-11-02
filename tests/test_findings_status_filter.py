@@ -248,7 +248,7 @@ def test_postgres_current_severity_breakdown_status_sql(monkeypatch) -> None:
     exec-headline GROUP BY (verified via generated SQL — no live DB)."""
     from contextlib import contextmanager
 
-    import agent_bom.api.postgres_compliance_hub as pgmod
+    from agent_bom.api import postgres_compliance_hub as pgmod
     from agent_bom.api.postgres_compliance_hub import PostgresComplianceHubStore
 
     conn = _RecordingPGConn()

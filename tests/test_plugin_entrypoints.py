@@ -42,7 +42,7 @@ def _patch_entry_points(monkeypatch, entries_by_group: dict[str, list[FakeEntryP
 
 @pytest.fixture(autouse=True)
 def reset_plugin_entrypoint_registry(monkeypatch):
-    import agent_bom.plugin_entrypoints as plugin_entrypoints
+    from agent_bom import plugin_entrypoints as plugin_entrypoints
 
     monkeypatch.delenv(ENTRYPOINTS_ENABLED_ENV, raising=False)
     plugin_entrypoints._reset_plugin_entrypoint_registry_for_tests()
@@ -52,7 +52,7 @@ def reset_plugin_entrypoint_registry(monkeypatch):
 
 
 def test_plugin_entrypoints_are_disabled_by_default(monkeypatch) -> None:
-    import agent_bom.plugin_entrypoints as plugin_entrypoints
+    from agent_bom import plugin_entrypoints as plugin_entrypoints
 
     _patch_entry_points(
         monkeypatch,
@@ -73,7 +73,7 @@ def test_plugin_entrypoints_are_disabled_by_default(monkeypatch) -> None:
 
 
 def test_enabled_plugin_entrypoints_discover_three_groups(monkeypatch) -> None:
-    import agent_bom.plugin_entrypoints as plugin_entrypoints
+    from agent_bom import plugin_entrypoints as plugin_entrypoints
 
     monkeypatch.setenv(ENTRYPOINTS_ENABLED_ENV, "true")
     _patch_entry_points(
@@ -133,7 +133,7 @@ def test_enabled_plugin_entrypoints_discover_three_groups(monkeypatch) -> None:
 
 
 def test_plugin_entrypoint_failures_are_sanitized_and_non_fatal(monkeypatch) -> None:
-    import agent_bom.plugin_entrypoints as plugin_entrypoints
+    from agent_bom import plugin_entrypoints as plugin_entrypoints
 
     monkeypatch.setenv(ENTRYPOINTS_ENABLED_ENV, "1")
 
@@ -164,7 +164,7 @@ def test_plugin_entrypoint_failures_are_sanitized_and_non_fatal(monkeypatch) -> 
 
 
 def test_plugin_entrypoint_loading_is_bounded_per_group(monkeypatch) -> None:
-    import agent_bom.plugin_entrypoints as plugin_entrypoints
+    from agent_bom import plugin_entrypoints as plugin_entrypoints
 
     monkeypatch.setenv(ENTRYPOINTS_ENABLED_ENV, "yes")
     _patch_entry_points(

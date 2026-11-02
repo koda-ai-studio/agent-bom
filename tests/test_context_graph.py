@@ -1017,7 +1017,7 @@ def test_exact_exhaustion_does_not_report_path_sampling():
 
 
 def test_single_high_degree_expansion_obeys_queue_budget(monkeypatch):
-    import agent_bom.context_graph as context
+    from agent_bom import context_graph as context
 
     agents = [_agent(name=f"agent-{i}", servers=[_server(url="https://mcp.example/shared")]) for i in range(20)]
     monkeypatch.setattr(context, "_MAX_QUEUE_SIZE", 3)
@@ -1039,7 +1039,7 @@ def test_mcp_payload_preserves_single_source_sampling(monkeypatch):
     import asyncio
     import json
 
-    import agent_bom.context_graph as context
+    from agent_bom import context_graph as context
     from agent_bom.mcp_tools.analysis import context_graph_impl
     from agent_bom.models import Agent, AgentType, MCPServer, TransportType
 

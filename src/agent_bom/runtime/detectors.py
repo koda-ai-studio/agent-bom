@@ -117,6 +117,7 @@ class DetectorMetrics:
 
 # Global metrics registry — one entry per detector name
 _DETECTOR_METRICS: dict[str, DetectorMetrics] = {}
+__all__ = ["CrossAgentCorrelator"]  # fmt: skip
 
 
 def get_detector_metrics(detector_name: str) -> DetectorMetrics:

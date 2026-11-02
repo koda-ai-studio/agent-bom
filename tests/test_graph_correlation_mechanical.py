@@ -494,9 +494,9 @@ def test_snapshot_membership_and_irrelevant_provenance_are_not_relationship_rece
 
 
 def test_final_fusion_runs_after_runtime_code_ci_and_endpoint_overlays(monkeypatch: Any) -> None:
-    import agent_bom.graph.attack_path_fusion as fusion_module
     import agent_bom.graph.builder as builder
     import agent_bom.graph.endpoint_overlay as endpoint_module
+    from agent_bom.graph import attack_path_fusion as fusion_module
 
     events: list[str] = []
 

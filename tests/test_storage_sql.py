@@ -137,7 +137,7 @@ def test_maintenance_transaction_lists_every_tenant(backend: SqlBackend, prefix:
 def test_postgres_maintenance_requires_the_maintenance_role(backend: SqlBackend, monkeypatch: pytest.MonkeyPatch) -> None:
     if backend.dialect != "postgres":
         pytest.skip("the maintenance role exists only on Postgres")
-    import agent_bom.api.postgres_common as pc
+    from agent_bom.api import postgres_common as pc
 
     def _unconfigured() -> object:
         raise MaintenanceRoleConfigurationError("maintenance URL not configured")

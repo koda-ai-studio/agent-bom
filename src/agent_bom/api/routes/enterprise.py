@@ -1,32 +1,7 @@
-"""Enterprise API routes — auth, audit, exceptions, baselines, trends, SIEM, Jira, FP.
+"""Enterprise API routes for authentication, audit, exceptions, baselines and triage.
 
-Endpoints:
-    POST   /v1/auth/dev-session              bootstrap loopback dev browser session
-    POST   /v1/auth/invitations              create a new tenant + mint its first scoped key (admin)
-    POST   /v1/auth/keys                      create API key
-    POST   /v1/auth/keys/{key_id}/rotate      rotate API key
-    GET    /v1/auth/keys                      list API keys
-    DELETE /v1/auth/keys/{key_id}             revoke API key
-    GET    /v1/auth/saml/metadata             generate SP metadata for IdP setup
-    POST   /v1/auth/saml/relay-state          issue one-time RelayState nonce
-    POST   /v1/auth/saml/login                verify a SAML assertion and mint a short-lived API key
-    GET    /v1/audit                          audit log entries
-    GET    /v1/audit/integrity                verify audit HMAC integrity
-    GET    /v1/audit/export                   export audit evidence packet
-    POST   /v1/audit/export/verify            verify a signed audit export packet
-    POST   /v1/exceptions                     create vuln exception
-    GET    /v1/exceptions                     list exceptions
-    GET    /v1/exceptions/{exception_id}      get exception
-    PUT    /v1/exceptions/{exception_id}/approve  approve exception
-    PUT    /v1/exceptions/{exception_id}/revoke   revoke exception
-    DELETE /v1/exceptions/{exception_id}      delete exception
-    POST   /v1/baseline/compare               compare two scan results
-    GET    /v1/trends                         historical trend data
-    GET    /v1/siem/connectors                list SIEM connector types
-    POST   /v1/siem/test                      test SIEM connectivity
-    POST   /v1/findings/false-positive        mark finding as false positive
-    GET    /v1/findings/false-positives        list false positive entries
-    DELETE /v1/findings/false-positive/{id}   un-mark false positive
+Route registrations below and the generated OpenAPI catalog define the current
+endpoint inventory. Authentication helpers retain their compatibility exports.
 """
 
 from __future__ import annotations
@@ -172,6 +147,33 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.security import sanitize_error, sanitize_text
 
 router = APIRouter()
+__all__ = ["AuditExportVerifyRequest", "BrowserSessionRequest", "FalsePositiveRequest", "ManagedTrialInvitationRequest",
+    "ManagedTrialOIDCStartRequest", "TriageOwnerIndex", "TriageOwnerKey", "TriageStateIndex", "_FEEDBACK_PREFIX",
+    "_LEGACY_FALSE_POSITIVE_PREFIX", "_TRIAGE_PREFIX", "_allowed_post_login_path", "_auth_session_client_identity_posture",
+    "_auth_session_limit", "_auth_session_state", "_check_auth_session_rate_limit", "_clear_browser_session_cookie",
+    "_client_fingerprint", "_configured_runtime_audit_log_path", "_consume_oidc_login_state", "_consume_saml_relay_state",
+    "_consume_saml_response_once", "_consume_snowflake_login_state", "_delete_browser_session_cookies",
+    "_discover_nhi_credentials", "_feedback_reason", "_feedback_response", "_get_issue_mapping_store", "_get_store",
+    "_get_trend_store", "_hosted_invite_url", "_loopback_browser_origin", "_new_invited_tenant_id", "_new_oidc_login_state",
+    "_new_saml_relay_state", "_new_snowflake_login_state", "_oidc_login_nonce", "_parse_feedback_reason",
+    "_parse_triage_reason", "_relay_state_digest", "_request_actor", "_require_managed_trial_operator",
+    "_safe_post_login_path", "_saml_idp_initiated_allowed", "_saml_relay_nonce", "_saml_relay_ttl_seconds",
+    "_saml_response_digest", "_session_cookie_max_age", "_session_cookie_secure", "_set_browser_session_cookie",
+    "_slugify_org", "_snowflake_login_nonce", "_transition_managed_trial_tenant", "_triage_reason", "_triage_response",
+    "_trial_lifecycle_payload", "_validate_triage_decision", "approve_exception", "audit_integrity", "auth_debug", "auth_me",
+    "auth_quota", "auth_scim_config", "auth_scopes", "auth_secret_credential_expiry", "auth_secret_lifecycle",
+    "auth_secret_rotation_plan", "build_tenant_triage_owner_index", "build_tenant_triage_state_index", "compare_baseline",
+    "create_browser_session", "create_exception", "create_finding_feedback", "create_finding_triage", "create_invitation",
+    "create_key", "create_loopback_dev_session", "create_managed_trial_invitation", "delete_browser_session",
+    "delete_exception", "delete_key", "export_audit_entries", "get_exception", "get_managed_trial_tenant", "get_trends",
+    "list_audit_entries", "list_exceptions", "list_false_positives", "list_finding_feedback", "list_finding_triage",
+    "list_keys", "list_siem_connectors", "managed_trial_oidc_start", "managed_trial_oidc_start_form", "mark_false_positive",
+    "oidc_browser_login", "record_finding_triage", "remove_false_positive", "remove_finding_feedback",
+    "require_body_tenant_match", "reset_auth_quota", "resume_managed_trial_tenant", "retry_managed_trial_tenant_cleanup",
+    "revoke_exception", "revoke_managed_trial_tenant", "rotate_key", "saml_login", "saml_metadata", "saml_relay_state",
+    "snowflake_oauth_callback", "snowflake_oauth_login", "suspend_managed_trial_tenant", "test_siem_connection",
+    "triage_owner_for", "triage_state_for", "update_auth_quota", "update_finding_triage_decision",
+    "update_issue_mapping_status", "verify_audit_export"]  # fmt: skip
 _logger = logging.getLogger(__name__)
 
 router.include_router(keys.router)
@@ -622,8 +624,7 @@ def export_finding_triage_vex(
             "algorithm": signature.algorithm,
             "signature_hex": signature.signature_hex,
             "key_id": signature.key_id,
-            # Same disclosure contract as the compliance evidence bundle: an
-            # algorithm name alone hides that the default deployment signs
+            # Same disclosure contract as the compliance evidence bundle: an algorithm name alone hides that the default deployment signs
             # with a per-process key nobody can verify against.
             **describe_signer_disclosure().as_bundle_field(),
         },
@@ -651,8 +652,7 @@ def ingest_finding_triage_vex(request: Request, req: FindingTriageVexIngestReque
         raise HTTPException(status_code=400, detail=f"Invalid VEX document: {sanitize_error(str(parse_err))}") from parse_err
 
     store = _get_exception_store()
-    # Index existing tenant exceptions by (vuln_id, package) so re-ingest updates
-    # in place rather than accumulating duplicates.
+    # Index existing tenant exceptions by (vuln_id, package) so re-ingest updates in place rather than accumulating duplicates.
     existing: dict[tuple[str, str], Any] = {}
     for exc in store.list_all(tenant_id=tenant_id):
         if exc.status == ExceptionStatus.PENDING and not exc.approved_by:

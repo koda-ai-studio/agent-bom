@@ -22,6 +22,8 @@ from agent_bom.runtime.gateway_events import (
 )
 from agent_bom.runtime.profile_resolution import classify_profile_shadow_reason
 
+__all__ = ["ACTION_DATA_FILTER_APPLIED", "ACTION_LLM_CALL", "ACTION_TOOL_CALL_AUTHORIZED", "ACTION_TOOL_CALL_BLOCKED", "_EVENT_TYPES"]
+
 # Action classes for a fused gateway feed event. Kept in sync with the badge
 # vocabulary the UI renders.
 ACTION_TOOL_CALL_AUTHORIZED = "tool_call_authorized"

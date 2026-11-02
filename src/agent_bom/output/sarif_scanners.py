@@ -17,6 +17,8 @@ from agent_bom.output.sarif_common import (
 from agent_bom.output.sarif_iac import iac_rule, iac_rule_id, iac_shared_compliance
 from agent_bom.security import sanitize_url
 
+__all__ = ["_DEDICATED_CIS_PROVIDERS"]
+
 
 def _cis_remediation_text(remediation: Any) -> str:
     """Flatten a CIS remediation dict into one sanitized guidance line."""

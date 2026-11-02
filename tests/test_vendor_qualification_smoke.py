@@ -234,7 +234,7 @@ def test_http_reader_rejects_redirects_and_unbounded_or_invalid_bodies(mode):
             try:
                 self.wfile.write(b"x" * (smoke.MAX_BYTES + 1) if mode == "large" else b"invalid")
             except (BrokenPipeError, ConnectionResetError):
-                pass
+                pass  # the raised error is the expected outcome; assertions below check the effects
 
         def log_message(self, *args):
             pass

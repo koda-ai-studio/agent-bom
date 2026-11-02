@@ -223,8 +223,8 @@ def test_cli_persists_project_and_directory_membership(tmp_path, monkeypatch):
 
     from click.testing import CliRunner
 
-    import agent_bom.cloud.supabase_inventory as module
     from agent_bom.cli._cloud_group import cloud_group
+    from agent_bom.cloud import supabase_inventory as module
 
     def handler(request):
         if "/organizations/" in request.url.path:
@@ -259,8 +259,8 @@ def test_org_cli_reconciles_project_changes_without_changing_directory(tmp_path,
 
     from click.testing import CliRunner
 
-    import agent_bom.cloud.supabase_inventory as module
     from agent_bom.cli._cloud_group import cloud_group
+    from agent_bom.cloud import supabase_inventory as module
     from agent_bom.db.graph_store import load_graph, open_graph_db
     from agent_bom.graph.types import EntityType
 

@@ -17,8 +17,8 @@ from types import SimpleNamespace
 import pytest
 
 import agent_bom.api.pipeline as pipeline
-import agent_bom.graph.builder as builder
 from agent_bom.api.graph_store import SQLiteGraphStore
+from agent_bom.graph import builder as builder
 from agent_bom.graph.builder import build_unified_graph_from_report
 
 _FIXTURES = Path(__file__).parent.parent / "fixtures"

@@ -20,7 +20,7 @@ import json
 import pytest
 from click.testing import CliRunner
 
-import agent_bom.cli._cloud_group as cg
+from agent_bom.cli import _cloud_group as cg
 from agent_bom.cli._cloud_group import (
     _detect_configured_providers,
     _resolve_scan_providers,

@@ -398,7 +398,7 @@ def run(args: argparse.Namespace) -> int:
                     if client.get("/health").status_code == 200:
                         break
                 except httpx.HTTPError:
-                    pass
+                    pass  # endpoint unreachable or malformed reply: report nothing found
                 time.sleep(0.2)
             else:
                 raise TimeoutError("API startup did not finish")

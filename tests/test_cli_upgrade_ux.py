@@ -105,7 +105,7 @@ def test_upgrade_notice_uses_detected_command(monkeypatch, tmp_path):
     """The background update notice reflects the detected install method."""
     import threading
 
-    import agent_bom.cli._common as mod
+    from agent_bom.cli import _common as mod
 
     monkeypatch.setattr(sys, "frozen", False, raising=False)
     _no_dockerenv(monkeypatch)

@@ -68,7 +68,7 @@ def test_timeout_backstop_for_valid_adjacent_repeats():
 
 
 def test_exhausted_request_budget_is_not_a_nonmatch(monkeypatch):
-    import agent_bom.proxy_policy as policy_module
+    from agent_bom import proxy_policy as policy_module
 
     monkeypatch.setattr(policy_module, "POLICY_REGEX_BUDGET", 0.0)
     result = check_policy_detail({"rules": [{"id": "r", "action": "block", "tool_name_pattern": "exec"}]}, "read", {})

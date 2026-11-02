@@ -127,7 +127,6 @@ def test_mcp_server_tool_names():
 
 def test_guided_mcp_profile_exposes_only_workflow_tools():
     """The guided profile keeps the first agent turn focused and bounded."""
-    import json
 
     from agent_bom.mcp_server import _GUIDED_TOOL_NAMES, create_mcp_server
 
@@ -497,7 +496,7 @@ def test_scan_pipeline_builds_inventory_from_npx_package(monkeypatch):
 
     agents, _blast_radii, warnings, scan_sources = _run(
         run_scan_pipeline(
-            safe_path=lambda value: Path(value),
+            safe_path=Path,
             package="npx -y @modelcontextprotocol/server-filesystem",
             offline=True,
         )
@@ -533,7 +532,7 @@ def test_scan_pipeline_no_discover_excludes_ambient_agents(monkeypatch, tmp_path
 
     agents, _blast_radii, _warnings, scan_sources = _run(
         run_scan_pipeline(
-            safe_path=lambda value: Path(value),
+            safe_path=Path,
             config_path=str(tmp_path),
             no_discover=True,
             offline=True,
@@ -552,7 +551,7 @@ def test_scan_pipeline_no_discover_without_target_skips_discovery(monkeypatch):
         raise AssertionError("ambient discovery must be disabled")
 
     monkeypatch.setattr("agent_bom.discovery.discover_all", _unexpected_discovery)
-    agents, _b, _w, _s = _run(run_scan_pipeline(safe_path=lambda value: Path(value), no_discover=True, offline=True))
+    agents, _b, _w, _s = _run(run_scan_pipeline(safe_path=Path, no_discover=True, offline=True))
     assert agents == []
 
 
@@ -1714,7 +1713,7 @@ def test_graph_export_passes_through_pipeline_error_payload(mock_pipeline, local
 
 def test_registry_cache_returns_same_instance():
     """Registry cache should return the same data on repeated calls."""
-    import agent_bom.mcp_server as mod
+    from agent_bom import mcp_server as mod
 
     mod._registry_cache = None  # Reset cache
     data1 = mod._get_registry_data()

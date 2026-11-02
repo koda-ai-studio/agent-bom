@@ -261,7 +261,7 @@ def test_html_report_has_possibly_affected_rows(nvd_db, monkeypatch) -> None:
 def test_terminal_shows_possibly_affected_section(nvd_db, monkeypatch) -> None:
     from rich.console import Console
 
-    import agent_bom.output as output
+    from agent_bom import output as output
     from agent_bom.output.compact import print_compact_graph_findings
 
     report = _scanned_report(nvd_db, monkeypatch)

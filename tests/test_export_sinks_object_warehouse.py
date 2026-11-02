@@ -230,7 +230,7 @@ def test_azure_blob_consumes_a_lazy_generator_without_materializing():
 
 def test_azure_blob_requires_a_container():
     with pytest.raises(ExportDestinationError):
-        AzureBlobObjectStoreDestination("", client_factory=lambda: FakeAzureBlobService())
+        AzureBlobObjectStoreDestination("", client_factory=FakeAzureBlobService)
 
 
 # --------------------------------------------------------------------------
@@ -274,7 +274,7 @@ def test_gcs_consumes_a_lazy_generator_without_materializing():
 
 def test_gcs_requires_a_bucket():
     with pytest.raises(ExportDestinationError):
-        GcsObjectStoreDestination("", client_factory=lambda: FakeGcsClient())
+        GcsObjectStoreDestination("", client_factory=FakeGcsClient)
 
 
 # --------------------------------------------------------------------------

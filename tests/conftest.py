@@ -298,7 +298,7 @@ def _reset_runtime_state() -> None:
         (state_dir / "killswitch.json").unlink(missing_ok=True)
         (state_dir / "killswitch.tmp").unlink(missing_ok=True)
     except Exception:
-        pass
+        pass  # best-effort cleanup of per-test runtime state files
 
 
 def _reset_enrichment_posture_state() -> None:
@@ -314,7 +314,7 @@ def _reset_enrichment_posture_state() -> None:
 
         reset_enrichment_posture_for_tests()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
     # A scan that reaches the live CISA KEV / EPSS / NVD feeds caches them in
     # memory and under the per-process state dir for 24h; every later offline
     # scan on the worker would join that catalog instead of its own fixtures.
@@ -323,7 +323,7 @@ def _reset_enrichment_posture_state() -> None:
 
         reset_enrichment_caches()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _reset_scan_warning_state() -> None:
@@ -337,7 +337,7 @@ def _reset_scan_warning_state() -> None:
 
         reset_scan_warnings()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _reset_resolver_state() -> None:
@@ -354,7 +354,7 @@ def _reset_resolver_state() -> None:
         resolver._NPM_RATE_LIMIT_HITS = 0
         resolver.reset_performance_stats()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _reset_registry_state() -> None:
@@ -363,14 +363,14 @@ def _reset_registry_state() -> None:
 
         reset_registry_cache_for_tests()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     try:
-        import agent_bom.parsers as parsers
+        from agent_bom import parsers as parsers
 
         parsers._registry_cache = None
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     # Cloud provider entry-point registry is process-global. A test that
     # registers a fake entry-point provider (and toggles entrypoints_enabled)
@@ -381,7 +381,7 @@ def _reset_registry_state() -> None:
 
         cloud_registry._reset_provider_registry_for_tests()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _reset_identity_cache_state() -> None:
@@ -395,7 +395,7 @@ def _reset_identity_cache_state() -> None:
         with agent_identity._jwks_lock:
             agent_identity._jwks_cache.clear()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _sync_test_auth_config_from_env() -> None:
@@ -412,7 +412,7 @@ def _sync_test_auth_config_from_env() -> None:
         role = (os.environ.get("AGENT_BOM_NO_AUTH_ROLE") or "admin").strip()
         config.NO_AUTH_ROLE = role
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _reset_api_runtime_state() -> None:
@@ -421,14 +421,14 @@ def _reset_api_runtime_state() -> None:
 
         set_scim_store(None)
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     try:
         from agent_bom.api.finding_reachability import clear_reachability_index_cache
 
         clear_reachability_index_cache()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     # Read-path count caches are process-global and TTL'd, so a count captured
     # against one test's store would otherwise be served to the next test on the
@@ -440,21 +440,21 @@ def _reset_api_runtime_state() -> None:
         job_status_count_cache.reset()
         reset_findings_count_cache()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     try:
         from agent_bom.api.routes.graph_routes import path_count
 
         path_count.clear()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     try:
         from agent_bom.api.read_cache import clear_read_cache
 
         clear_read_cache()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     # Sidebar responses include agent IDs derived from the current test's
     # discovery inputs. Keeping them across tests makes detail reads resolve
@@ -464,7 +464,7 @@ def _reset_api_runtime_state() -> None:
 
         _clear_agents_response_cache_for_tests()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     # Request activity from one test must not defer the next test's background work.
     try:
@@ -472,7 +472,7 @@ def _reset_api_runtime_state() -> None:
 
         foreground_activity.reset()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     # The API key store and the "env keys already seeded" flag are
     # process-global. A test that seeds API keys (or configures auth) would
@@ -489,7 +489,7 @@ def _reset_api_runtime_state() -> None:
         api_server._api_key = None
         api_server.set_dev_api_key(None)
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     _sync_test_auth_config_from_env()
 
@@ -514,7 +514,7 @@ def _reset_api_runtime_state() -> None:
 
         app.dependency_overrides.clear()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     # The in-memory scan-job hot cache (_jobs) is process-global. list_jobs()
     # consults it directly even when the store is mocked, so a job left behind
@@ -529,7 +529,7 @@ def _reset_api_runtime_state() -> None:
             api_stores._jobs.clear()
             api_stores._job_locks.clear()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
     # Local dispatch claims live until the submitted Future completes. Tests
     # commonly replace the submitter with a synchronous recorder, so no Future
@@ -541,7 +541,7 @@ def _reset_api_runtime_state() -> None:
 
         scan_queue.reset_local_dispatches_for_tests()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _drain_scan_executor() -> None:
@@ -560,7 +560,7 @@ def _drain_scan_executor() -> None:
 
         pipeline.shutdown_scan_executor(wait=True, cancel_futures=True)
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _drain_graph_warmups() -> None:
@@ -609,7 +609,7 @@ def _reset_proxy_route_state() -> None:
         proxy_routes._reset_audit_dedupe_for_tests()
         proxy_routes._reset_ws_handshake_rate_limit_for_tests()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _reset_durable_store_singletons() -> None:
@@ -645,31 +645,31 @@ def _reset_durable_store_singletons() -> None:
 
         set_agent_identity_store(None)
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
     try:
         from agent_bom.api.runtime_event_store import set_runtime_event_store
 
         set_runtime_event_store(None)
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
     try:
         from agent_bom.api.gateway_activity_store import set_gateway_activity_store
 
         set_gateway_activity_store(None)
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
     try:
         from agent_bom.api.cost_store import set_cost_store
 
         set_cost_store(None)
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
     try:
         from agent_bom.api.shared_auth_state import reset_auth_state_for_tests
 
         reset_auth_state_for_tests()
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 # Auth-influencing env vars. ``configure_api`` re-derives whether the API key
@@ -884,7 +884,7 @@ def _restore_store_singletons(snapshot: list[tuple[Any, str, Any]]) -> None:
                 value = None
             setattr(mod, name, value)
         except Exception:
-            pass
+            pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 _OUTPUT_CONSOLE_BASELINE: Any = None
@@ -922,7 +922,7 @@ def _restore_output_console(console_obj: Any) -> None:
 
         output_mod.console = console_obj
     except Exception:
-        pass
+        pass  # best-effort isolation reset; the module may be absent in this environment
 
 
 def _snapshot_config_auth() -> dict[str, Any]:
@@ -942,7 +942,7 @@ def _restore_config_auth(snapshot: dict[str, Any]) -> None:
         try:
             setattr(config, name, value)
         except Exception:
-            pass
+            pass  # best-effort restore of state a test may have replaced
 
 
 # Scanner offline/unfixed module globals. Both the `agent_bom.scanners` package
@@ -957,7 +957,6 @@ _SCANNER_GLOBAL_TARGETS = (
 
 
 def _snapshot_scanner_globals() -> list[tuple[Any, str, Any]]:
-    import importlib
 
     snapshot: list[tuple[Any, str, Any]] = []
     for module_name, attr in _SCANNER_GLOBAL_TARGETS:
@@ -975,7 +974,7 @@ def _restore_scanner_globals(snapshot: list[tuple[Any, str, Any]]) -> None:
         try:
             setattr(module, attr, value)
         except Exception:
-            pass
+            pass  # best-effort restore of state a test may have replaced
 
 
 # Optional provider SDKs that tests fake by writing synthetic modules straight

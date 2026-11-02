@@ -194,7 +194,7 @@ def test_expand_project_scan_targets_detects_surfaces_past_probe_budget(tmp_path
 
 
 def test_expand_project_scan_targets_walks_the_tree_once(tmp_path: Path, monkeypatch) -> None:
-    import agent_bom.repo_auto_detect as auto_detect
+    from agent_bom import repo_auto_detect as auto_detect
 
     (tmp_path / "app.py").write_text("print(1)\n", encoding="utf-8")
     (tmp_path / "main.tf").write_text('resource "aws_s3_bucket" "x" {}\n', encoding="utf-8")

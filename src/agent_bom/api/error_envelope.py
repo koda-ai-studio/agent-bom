@@ -29,6 +29,8 @@ from agent_bom.api.error_models import (
 )
 from agent_bom.security import sanitize_error
 
+__all__ = ["ERROR_RESPONSES", "ErrorBody", "ErrorCode", "ErrorEnvelope", "install_error_envelope", "with_middleware_error_envelope"]
+
 
 def _error_code_for_status(status_code: int) -> str:
     return _ERROR_CODE_BY_STATUS.get(status_code, "INTERNAL_ERROR")

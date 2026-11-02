@@ -16,6 +16,21 @@ from agent_bom.db.graph_store import DEFAULT_GRAPH_TENANT_ID
 from agent_bom.graph import EntityType
 from agent_bom.graph.correlation import GraphCorrelationRun
 
+__all__ = [
+    "PostgresGraphStoreBase",
+    "_CORRELATION_RUN_COLUMNS",
+    "_DB_LEASE_ISO",
+    "_DB_NOW_ISO",
+    "_DEFAULT_GRAPH_WRITE_BATCH_SIZE",
+    "_FINDING_ENTITY_TYPES",
+    "_GRAPH_EVIDENCE_EXCLUDED_PRIVATE_FIELDS",
+    "_GRAPH_EVIDENCE_INCLUDED_TABLES",
+    "_GRAPH_RETENTION_PURGE_TABLES",
+    "_GRAPH_STORAGE_SCHEMA_VERSION",
+    "logger",
+    "select_expired_snapshot_ids",
+]
+
 # Keep the historical logger name so log routing and filters are unchanged.
 logger = logging.getLogger("agent_bom.api.postgres_graph")
 _GRAPH_STORAGE_SCHEMA_VERSION = 11
@@ -27,7 +42,7 @@ def select_expired_snapshot_ids(
     rows: Iterable[Sequence[Any]],
     *,
     now: datetime,
-    resolve_days: "Callable[[str], int]",
+    resolve_days: Callable[[str], int],
 ) -> list[tuple[str, str]]:
     """Select ``(scan_id, tenant_id)`` snapshots older than their retention window.
 

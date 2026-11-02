@@ -276,7 +276,7 @@ def test_cli_non_success_outcomes_retain_receipts(tmp_path):
 
 
 def test_collection_budget_retains_unavailable_receipt(tmp_path, monkeypatch):
-    import agent_bom.evidence.package_remediation as verification
+    from agent_bom.evidence import package_remediation as verification
 
     install(tmp_path, "1.0")
     (tmp_path / "another-entry").mkdir()

@@ -90,12 +90,7 @@ from agent_bom.api.gateway_request import _strip_gateway_identity_metadata as _s
 from agent_bom.api.metrics import record_gateway_relay
 from agent_bom.api.oidc_discovery_shim import build_oidc_discovery_shim_router
 from agent_bom.api.tracing import get_tracer
-from agent_bom.firewall import (
-    AgentFirewallPolicy,
-    FirewallDecision,
-    FirewallEvaluation,
-    load_firewall_policy_file,
-)
+from agent_bom.firewall import AgentFirewallPolicy, FirewallDecision, FirewallEvaluation, load_firewall_policy_file
 from agent_bom.firewall import evaluate as evaluate_firewall_policy
 from agent_bom.proxy import parse_jsonrpc
 from agent_bom.proxy_policy import (
@@ -107,11 +102,7 @@ from agent_bom.proxy_policy import (
     summarize_policy_bundle,
 )
 from agent_bom.proxy_scanner import ScanConfig, scan_jsonrpc_response
-from agent_bom.runtime.correlation_facts import (
-    RUNTIME_FACTS_CACHE_INVALIDATING_ERRORS,
-    RuntimeFactsBundleError,
-    RuntimeFactsPoller,
-)
+from agent_bom.runtime.correlation_facts import RUNTIME_FACTS_CACHE_INVALIDATING_ERRORS, RuntimeFactsBundleError, RuntimeFactsPoller
 from agent_bom.runtime.fail_mode import gateway_fail_mode_matrix
 from agent_bom.runtime.gateway_audit import ControlPlaneAuditSink as ControlPlaneAuditSink
 from agent_bom.runtime.gateway_audit import GatewayAuditSinkBase
@@ -142,8 +133,7 @@ _GATEWAY_TRACER = get_tracer("agent_bom.gateway")
 _MAX_GATEWAY_MESSAGE_BYTES = MAX_GATEWAY_RELAY_MESSAGE_BYTES
 
 
-# Lazy singleton so disabled deploys don't pay the import cost of the
-# visual detector (Pillow/pytesseract). Built on first use when
+# Lazy singleton so disabled deploys don't pay the import cost of the visual detector (Pillow/pytesseract). Built on first use when
 # ``enable_visual_leak_detection`` is True.
 _visual_detector_singleton: Any = None
 _visual_detector_lock = threading.Lock()
@@ -189,10 +179,9 @@ async def _emit_policy_interop_event(
     """
     if decision == GatewayDecision.ALLOW:
         return
-    # Only build/emit when a webhook target is configured. The OCSF event is an
-    # interop artifact for SIEM/SOAR; it deliberately does NOT fan into the
-    # audit_sink so the existing audit-event stream (and its counts) are
-    # unchanged when no webhook is set — the default no-op posture.
+    # Only build/emit when a webhook target is configured. The OCSF event is an interop artifact for SIEM/SOAR; it deliberately does NOT fan
+    # into the audit_sink so the existing audit-event stream (and its counts) are unchanged when no webhook is set — the default no-op
+    # posture.
     webhook_url = settings.policy_webhook_url
     if webhook_url is None:
         webhook_url = os.environ.get("AGENT_BOM_POLICY_WEBHOOK_URL", "")
@@ -253,10 +242,8 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
     upstream_caller = settings.upstream_caller or managed_upstream_relay
     assert upstream_caller is not None
     rate_limit_store = _build_gateway_rate_limit_store(settings)
-    # Fail-closed posture resolved once at build time. "closed" makes a
-    # missing/unloadable policy or an evaluation error DENY instead of silently
-    # degrading to default-allow. Explicit "open" remains available for local
-    # development, but production defaults to closed.
+    # Fail-closed posture resolved once at build time. "closed" makes a missing/unloadable policy or an evaluation error DENY instead of
+    # silently degrading to default-allow. Explicit "open" remains available for local development, but production defaults to closed.
     resolved_fail_mode = resolve_fail_mode(settings.fail_mode)
     fail_closed = resolved_fail_mode == "closed"
     if fail_closed:
@@ -269,7 +256,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         ),
         path=lambda: settings.policy_path,
         interval=lambda: settings.policy_reload_interval_seconds,
-        load=lambda path: _load_policy_file(path),
+        load=_load_policy_file,
         logger=logger,
         log_prefix="gateway policy",
         sanitize_log=_sanitize_for_log,
@@ -278,8 +265,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
     policy_lock = policy_reload.lock
     reload_task: asyncio.Task[None] | None = None
 
-    # The firewall rotates independently and invalidates a failed reload;
-    # method policy retains its last successfully loaded version.
+    # The firewall rotates independently and invalidates a failed reload; method policy retains its last successfully loaded version.
     firewall_reload = GatewayPolicyReloader(
         state=GatewayPolicyState(
             policy=AgentFirewallPolicy(),
@@ -288,7 +274,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         ),
         path=lambda: settings.firewall_policy_path,
         interval=lambda: settings.firewall_policy_reload_interval_seconds,
-        load=lambda path: load_firewall_policy_file(path),
+        load=load_firewall_policy_file,
         logger=logger,
         log_prefix="gateway firewall policy",
         sanitize_log=_sanitize_for_log,
@@ -298,9 +284,8 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
     firewall_lock = firewall_reload.lock
     firewall_reload_task: asyncio.Task[None] | None = None
 
-    # Graph-derived reachability facts (consume direction). Static report mode is
-    # retained for compatibility. A signed correlation bundle may be polled when
-    # explicitly configured; the poller keeps the last valid unexpired bundle.
+    # Graph-derived reachability facts (consume direction). Static report mode is retained for compatibility. A signed correlation bundle
+    # may be polled when explicitly configured; the poller keeps the last valid unexpired bundle.
     reachability_map: ReachabilityMap = load_reachability_map(settings.graph_reachability_path)
     if settings.graph_reachability_path is not None:
         logger.info(
@@ -387,7 +372,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
                     try:
                         await task
                     except asyncio.CancelledError:
-                        pass
+                        pass  # expected: the task was just cancelled
             reload_task = None
             firewall_reload_task = None
             runtime_facts_task = None
@@ -488,8 +473,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
             },
             # Honest fail-open/fail-closed posture per enforcement subsystem
             # (docs/RUNTIME_FAIL_MODES.md). Resolved once at app build; the
-            # matrix itself is static documentation-as-data from
-            # agent_bom.runtime.fail_mode.
+            # matrix itself is static documentation-as-data from agent_bom.runtime.fail_mode.
             "fail_mode_runtime": {
                 "policy_fail_mode": resolved_fail_mode,
                 "subsystems": gateway_fail_mode_matrix(resolved_fail_mode),
@@ -540,10 +524,8 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         event is emitted to the configured audit_sink so denies and warns
         flow into the existing /v1/proxy/audit relay.
         """
-        # gateway --bearer-token (or API-key store) must
-        # gate the firewall-check endpoint, not just /mcp/{server}. Otherwise
-        # the policy evaluator is reachable unauthenticated on shared
-        # deployments and leaks every rule via the matched_rule field.
+        # gateway --bearer-token (or API-key store) must gate the firewall-check endpoint, not just /mcp/{server}. Otherwise the policy
+        # evaluator is reachable unauthenticated on shared deployments and leaks every rule via the matched_rule field.
         tenant_id = _configured_gateway_tenant_id()
         auth_method = "none"
         if _gateway_requires_auth(settings):
@@ -643,14 +625,11 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
 
     @app.get("/metrics")
     async def metrics(request: Request) -> Response:
-        # Prometheus text-exposition format must be plain text, not JSON.
-        # Previous JSONResponse wrapped the body in quotes + escaped newlines,
-        # which breaks every Prometheus scraper. Serve as `Response` with the
-        # exposition media type so scrapers parse it.
+        # Prometheus text-exposition format must be plain text, not JSON. Previous JSONResponse wrapped the body in quotes + escaped
+        # newlines, which breaks every Prometheus scraper. Serve as `Response` with the exposition media type so scrapers parse it.
         #
-        # scraping endpoints carry decision counters and
-        # tenant tags — gate them with the same bearer/API-key check that
-        # protects /mcp/{server} when incoming auth is configured.
+        # scraping endpoints carry decision counters and tenant tags — gate them with the same bearer/API-key check that protects
+        # /mcp/{server} when incoming auth is configured.
         if _gateway_requires_auth(settings):
             tenant_id, auth_method = _authenticate_gateway_request(request, settings)
             request.state.tenant_id = tenant_id
@@ -677,7 +656,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         bind_audit_tenant=_bind_authenticated_audit_tenant,
         emit_policy_interop=_emit_policy_interop_event,
         visual_detector=lambda: _get_visual_leak_detector(),
-        response_scanner=lambda message, config: scan_jsonrpc_response(message, config),
+        response_scanner=scan_jsonrpc_response,
         tracer=_GATEWAY_TRACER,
     )
 
@@ -689,11 +668,21 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
     return app
 
 
-__all__ = [
-    "ControlPlaneAuditSink",
-    "GatewayAuditDeliveryUnavailableError",
-    "GatewaySettings",
-    "build_control_plane_audit_sink",
-    "create_gateway_app",
-    "parse_jsonrpc",
-]
+# Re-export the parser for easier test authoring / CLI glue.
+__all__ = ["AuditSink", "ControlPlaneAuditSink", "GatewayAuditDeliveryUnavailableError", "GatewayAuditSender",
+    "GatewayCircuitBreaker", "GatewayCircuitOpenError", "GatewaySettings", "GatewayUpstreamRelay", "LocalGatewayAuditSink",
+    "UpstreamCaller", "_CONDITIONAL_ACCESS_EVAL_FAILED", "_DRIFT_INCIDENT_LOOKUP_CAP", "_DriftLookup",
+    "_MAX_GATEWAY_MESSAGE_BYTES", "_agent_cost_anomaly", "_agent_identity_revoked", "_api_key_allows_gateway_relay",
+    "_authenticate_gateway_request", "_build_gateway_rate_limit_store", "_conditional_access_fail_closed",
+    "_configured_gateway_tenant_id", "_default_upstream_caller", "_emit_gateway_governance_event",
+    "_enforce_gateway_anonymous_agents_posture", "_enforce_gateway_auth_posture", "_env_flag_enabled",
+    "_evaluate_control_plane_bundle", "_extract_request_token", "_fleet_containment_reason",
+    "_gateway_allows_anonymous_agents", "_gateway_configured_replicas", "_gateway_rate_limit_runtime_status",
+    "_gateway_requires_auth", "_gateway_shared_rate_limit_required", "_is_loopback_host", "_load_policy_file",
+    "_message_tool_label", "_open_drift_violates_tool", "_parse_gateway_token_expiry", "_post_upstream_jsonrpc",
+    "_public_gateway_block_reason", "_public_gateway_error", "_rate_limit_bucket_component", "_read_bounded_gateway_body",
+    "_redact_obj_pii", "_request_client_id", "_request_context_attributes", "_request_cost_center", "_request_device_id",
+    "_request_environment", "_request_groups", "_request_has_expected_token", "_request_risk_score", "_request_source_ip",
+    "_role_allows_gateway_relay", "_sanitize_for_log", "_strip_gateway_identity_metadata",
+    "_validate_runtime_profile_posture", "_warn_on_quarantined_agents", "build_control_plane_audit_sink",
+    "build_local_gateway_audit_sink", "create_gateway_app", "parse_jsonrpc"]  # fmt: skip

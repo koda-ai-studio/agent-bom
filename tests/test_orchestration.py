@@ -15,10 +15,10 @@ from agent_bom.orchestration import (
 
 @pytest.fixture(autouse=True)
 def reset_registries(monkeypatch):
-    import agent_bom.components.enricher_registry as enricher_registry
-    import agent_bom.components.matcher_registry as matcher_registry
-    import agent_bom.scanners.registry as scanner_registry
+    from agent_bom.components import enricher_registry as enricher_registry
+    from agent_bom.components import matcher_registry as matcher_registry
     from agent_bom.extensions import ENTRYPOINTS_ENABLED_ENV
+    from agent_bom.scanners import registry as scanner_registry
 
     monkeypatch.delenv(ENTRYPOINTS_ENABLED_ENV, raising=False)
     scanner_registry._reset_scanner_registry_for_tests()

@@ -180,7 +180,7 @@ def build_agent_bom(agent: Agent, *, tenant_id: str = "local", generated_at: dat
         if parsed.utcoffset() is not None:
             observed_at = parsed
     except (ValueError, TypeError):
-        pass
+        pass  # unparseable input: fall back to the default below
     receipt = AgentBomReceipt(
         evidence_id="inventory:agent",
         source=sanitize_text(agent.source or "local-discovery", max_len=200),

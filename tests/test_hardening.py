@@ -462,7 +462,7 @@ def test_scheduler_backoff_on_failure():
         try:
             asyncio.run(scheduler_loop(store, run_fn, interval_seconds=10, max_backoff=300))
         except (asyncio.CancelledError, KeyboardInterrupt):
-            pass
+            pass  # stopping the loop by cancellation is the expected exit
 
     # First failure: 10 * 2^1 = 20, second: 10 * 2^2 = 40
     assert len(sleep_calls) >= 2
@@ -549,7 +549,7 @@ def test_docker_rm_failure_logged(caplog):
         try:
             _scan_with_docker("test:latest")
         except Exception:
-            pass
+            pass  # the call's own failure is not under test; the assertions below check side effects
         # docker rm was called even though export failed (finally block)
         rm_calls = [c for c in mock_run.call_args_list if "rm" in str(c)]
         assert len(rm_calls) >= 1

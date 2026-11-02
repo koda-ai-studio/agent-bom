@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Final
 
+__all__ = ["CONDITIONAL_HOSTS", "DECLARED_HOSTS", "LOOKUP_HOSTS", "USER_NAMED_TARGETS"]
+
 # Hosts reached by the lookup skills (checkup, scan, check, fix, affected,
 # audit-mcp, bom) on a normal run.
 LOOKUP_HOSTS: Final[dict[str, str]] = {

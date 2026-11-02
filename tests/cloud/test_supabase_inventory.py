@@ -156,7 +156,7 @@ def test_graph_persists_native_finding_links_across_restart_and_tenant(tmp_path)
 
 
 def test_response_body_is_bounded(monkeypatch):
-    import agent_bom.cloud.supabase_inventory as module
+    from agent_bom.cloud import supabase_inventory as module
 
     monkeypatch.setattr(module, "MAX_RESPONSE_BYTES", 32)
     report, _ = collect()
@@ -181,8 +181,8 @@ def test_no_redirect_or_error_body_leaks():
 def test_cli_persists_complete_graph_but_partial_run_preserves_previous(tmp_path, monkeypatch):
     from click.testing import CliRunner
 
-    import agent_bom.cloud.supabase_inventory as module
     from agent_bom.cli._cloud_group import cloud_group
+    from agent_bom.cloud import supabase_inventory as module
     from agent_bom.db.graph_store import load_graph, open_graph_db
 
     report, _ = collect()
@@ -245,8 +245,8 @@ def test_normalizer_drops_unexpected_fields_from_imported_inventory():
 def test_cli_rejects_changed_project_scope_without_replacing_snapshot(tmp_path, monkeypatch):
     from click.testing import CliRunner
 
-    import agent_bom.cloud.supabase_inventory as module
     from agent_bom.cli._cloud_group import cloud_group
+    from agent_bom.cloud import supabase_inventory as module
     from agent_bom.db.graph_store import load_graph, open_graph_db
 
     token = tmp_path / "token.json"

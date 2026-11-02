@@ -5,6 +5,8 @@ from __future__ import annotations
 from agent_bom.core.severity import severity_display_label
 from agent_bom.output.finding_views import sanitize_output_text, severity_value
 
+__all__ = ["_PAGE_SIZE", "_PKG_PREVIEW"]
+
 _SEV_COLOR = {
     "critical": "#dc2626",
     "high": "#ea580c",

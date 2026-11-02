@@ -45,7 +45,7 @@ def inventory(
     """Show discovered agents and MCP servers (no vulnerability scan)."""
     con = _make_console(quiet=quiet)
 
-    import agent_bom.output as _out
+    from agent_bom import output as _out
 
     _out.console = con
 

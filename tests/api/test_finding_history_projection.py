@@ -219,7 +219,7 @@ def test_backfill_cli_rejects_non_numeric_receipt_without_disclosing_store_data(
     from agent_bom.api import tenant_worker
     from agent_bom.api.storage import finding_history_cli, job_backends
 
-    monkeypatch.setattr(job_backends, "configured_job_store", lambda: object())
+    monkeypatch.setattr(job_backends, "configured_job_store", object)
     monkeypatch.setattr(tenant_worker, "run_tenant_bound", lambda *args: result)
     assert finding_history_cli.main(["--tenant", "history-tenant"]) == 1
     output = capsys.readouterr()

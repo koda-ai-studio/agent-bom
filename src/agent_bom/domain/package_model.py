@@ -14,6 +14,8 @@ from agent_bom.core.severity import Severity as Severity
 from agent_bom.domain.vulnerability_model import Vulnerability
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
+__all__ = ["Package", "PackageOccurrence", "normalize_package_name", "parse_debian_source_name"]
+
 
 @dataclass
 class PackageOccurrence:

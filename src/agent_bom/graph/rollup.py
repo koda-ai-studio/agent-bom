@@ -848,15 +848,6 @@ def _filters_dict(filters: Optional[RollupFilters]) -> dict[str, Any]:
 
 
 # Re-exported for callers that want the OCSF display name of a rolled-up bucket.
-__all__ = [
-    "ROLLUP_CONTAINMENT_RELATIONSHIPS",
-    "ROLLUP_CONTAINMENT_RELATIONSHIP_TYPES",
-    "ROLLUP_RELATIONSHIPS",
-    "RollupAggregate",
-    "RollupContainer",
-    "RollupFilters",
-    "attack_path_view",
-    "drill_down",
-    "rollup_view",
-    "OCSF_SEVERITY_NAMES",
-]
+__all__ = ["ROLLUP_CONTAINMENT_RELATIONSHIPS", "ROLLUP_CONTAINMENT_RELATIONSHIP_TYPES", "ROLLUP_RELATIONSHIPS",
+    "RollupAggregate", "RollupContainer", "RollupFilters", "attack_path_view", "drill_down", "rollup_view",
+    "OCSF_SEVERITY_NAMES", "ROLLUP_SUBTREE_RELATIONSHIP_TYPES"]  # fmt: skip

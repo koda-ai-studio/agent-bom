@@ -65,4 +65,8 @@ __all__ = [
     "reset_current_tenant",
     "reset_pool",
     "set_current_tenant",
+    "PostgresCostStore",
+    "PostgresSourceStore",
+    "PostgresTenantQuotaStore",
+    "PostgresCredentialRefStore",
 ]

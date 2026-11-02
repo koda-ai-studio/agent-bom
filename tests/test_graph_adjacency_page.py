@@ -471,7 +471,6 @@ def test_incident_page_rejects_nul_identifiers(store, field):
 
 def test_incident_page_rejects_nul_cursor_position(store):
     import base64
-    import json
 
     save_fixture(store, "nul-cursor")
     first = store.incident_edges_page(tenant_id="nul-cursor", scan_id="scan", node_id="hub", limit=1)

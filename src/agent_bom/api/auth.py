@@ -24,6 +24,29 @@ from agent_bom.core.permission_scopes import scopes_allow as scopes_allow
 from agent_bom.core.settings import env_str
 from agent_bom.rbac import Role, role_rank
 
+__all__ = [
+    "ApiKeyPolicy",
+    "KeyStore",
+    "KeyStoreProtocol",
+    "NON_DURABLE_KEY_WARNING",
+    "OPERATOR_KEY_ID_PREFIX",
+    "SCIMRoleResolution",
+    "create_api_key",
+    "create_api_key_record",
+    "get_api_key_policy",
+    "get_key_store",
+    "key_durability_fields",
+    "key_store_is_durable",
+    "normalize_api_key_expiry",
+    "normalize_rotation_overlap_seconds",
+    "register_operator_key_ids",
+    "resolve_scim_subject_binding",
+    "resolve_scim_user_role",
+    "resolve_scim_user_role_async",
+    "scopes_allow",
+    "set_key_store",
+]
+
 
 @dataclass(frozen=True)
 class ApiKeyPolicy:

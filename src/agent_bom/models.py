@@ -24,28 +24,22 @@ from agent_bom.domain.vulnerability_model import Vulnerability
 if TYPE_CHECKING:
     from agent_bom.ai_schemas import AIFindingAssessment
     from agent_bom.domain.agent_model import classify_agent_kind as classify_agent_kind
-    from agent_bom.domain.inventory_types import AgentStatus as AgentStatus
+    from agent_bom.domain.inventory_types import AgentStatus, ServerSurface, TransportType, _utc_now_iso
     from agent_bom.domain.inventory_types import AgentType as AgentType
-    from agent_bom.domain.inventory_types import ServerSurface as ServerSurface
-    from agent_bom.domain.inventory_types import TransportType as TransportType
-    from agent_bom.domain.inventory_types import _utc_now_iso as _utc_now_iso
-    from agent_bom.domain.mcp_model import CredentialIdentityBinding as CredentialIdentityBinding
-    from agent_bom.domain.mcp_model import MCPPrompt as MCPPrompt
-    from agent_bom.domain.mcp_model import MCPResource as MCPResource
+    from agent_bom.domain.mcp_model import CredentialIdentityBinding, MCPPrompt, MCPResource, PermissionProfile
     from agent_bom.domain.mcp_model import MCPServer as MCPServer
     from agent_bom.domain.mcp_model import MCPTool as MCPTool
-    from agent_bom.domain.mcp_model import PermissionProfile as PermissionProfile
     from agent_bom.domain.package_model import Package as Package
     from agent_bom.domain.package_model import PackageOccurrence as PackageOccurrence
     from agent_bom.domain.vulnerability_model import Vulnerability as Vulnerability
-    from agent_bom.domain.vulnerability_model import compute_confidence as compute_confidence
+    from agent_bom.domain.vulnerability_model import compute_confidence
     from agent_bom.finding import Finding
 
-from agent_bom.core.packages import normalize_package_name as normalize_package_name
+from agent_bom.core.packages import normalize_package_name
 from agent_bom.core.severity import Severity as Severity
 from agent_bom.domain.codeowners import apply_codeowners
 from agent_bom.evidence.scan_run import ScanRun
-from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
+from agent_bom.package_utils import parse_debian_source_name  # noqa: F401
 
 
 @dataclass
@@ -838,6 +832,8 @@ _MODEL_EXPORTS = {
     "MCPServer": "agent_bom.domain.mcp_model",
     "classify_agent_kind": "agent_bom.domain.agent_model",
 }
+__all__ = ["AgentStatus", "CredentialIdentityBinding", "MCPPrompt", "MCPResource", "PermissionProfile", "ServerSurface",
+    "TransportType", "_utc_now_iso", "compute_confidence", "normalize_package_name", "parse_debian_source_name"]  # fmt: skip
 
 
 def __getattr__(name: str) -> Any:

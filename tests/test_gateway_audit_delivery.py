@@ -747,7 +747,7 @@ def test_post_forward_result_audit_capacity_failure_returns_completed_result(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import agent_bom.gateway_server as gateway_module
+    from agent_bom import gateway_server as gateway_module
 
     upstream_calls = 0
 

@@ -217,7 +217,7 @@ def _top_level_iac_files(cwd: Path) -> list[str]:
             if "apiVersion:" in head and "kind:" in head:
                 _auto_iac.append(str(f))
         except OSError:
-            pass
+            pass  # unreadable path: skip it and keep the default
     return _auto_iac
 
 

@@ -32,7 +32,7 @@ def _clean_state():
 
 def _run(monkeypatch, *, db_ecosystems: set[str], osv_failed: bool, args: list[str] | None = None):
     """Run `check` with the local DB and the OSV outcome both under control."""
-    import agent_bom.scanners as scanners_mod
+    from agent_bom import scanners as scanners_mod
 
     # package_scan resolves these through ``agent_bom.scanners`` so tests can
     # replace them; patch them where the runtime actually looks them up.

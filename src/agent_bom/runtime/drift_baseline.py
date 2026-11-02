@@ -33,13 +33,13 @@ def persist_baseline(path: Path | None, tools: set[str]) -> None:
             json.dump(sorted(tools), stream)
         tmp.replace(path)
     except OSError:
-        pass
+        pass  # best-effort: the write below reports a real failure
     finally:
         if tmp is not None:
             try:
                 tmp.unlink(missing_ok=True)
             except OSError:
-                pass
+                pass  # best-effort cleanup; failure leaves nothing to undo
 
 
 def restore_baseline(path: Path | None) -> set[str] | None:
@@ -50,7 +50,7 @@ def restore_baseline(path: Path | None) -> set[str] | None:
             if isinstance(tools, list) and all(isinstance(tool, str) for tool in tools):
                 return set(tools)
         except (OSError, UnicodeError, json.JSONDecodeError):
-            pass
+            pass  # unparseable input: fall back to the default below
     return None
 
 

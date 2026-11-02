@@ -195,8 +195,8 @@ def test_normalizer_drops_imported_undeclared_fields():
 def test_cli_persists_complete_scope_and_preserves_on_partial(tmp_path, monkeypatch):
     from click.testing import CliRunner
 
-    import agent_bom.cloud.vercel_inventory as adapter
     from agent_bom.cli._vercel_inventory import vercel_cmd
+    from agent_bom.cloud import vercel_inventory as adapter
     from agent_bom.db.graph_store import load_graph, open_graph_db
 
     token = tmp_path / "token.json"
@@ -236,7 +236,7 @@ def test_cli_rejects_credential_output_collision(tmp_path):
 
 
 def test_response_and_page_limits_are_incomplete(monkeypatch):
-    import agent_bom.cloud.vercel_inventory as adapter
+    from agent_bom.cloud import vercel_inventory as adapter
 
     monkeypatch.setattr(adapter, "MAX_RESPONSE_BYTES", 32)
     report, _ = collect()

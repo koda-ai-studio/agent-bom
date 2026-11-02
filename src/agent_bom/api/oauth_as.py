@@ -50,7 +50,6 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from fastapi import APIRouter
-    from fastapi.responses import Response
 
 logger = logging.getLogger(__name__)
 
@@ -793,11 +792,5 @@ def build_oauth_as_router(server: OAuthAuthorizationServer) -> APIRouter:
     return router
 
 
-__all__ = [
-    "AuthorizationCode",
-    "OAuthAuthorizationServer",
-    "OAuthError",
-    "OAuthSigningKey",
-    "RegisteredClient",
-    "build_oauth_as_router",
-]
+__all__ = ["AuthorizationCode", "OAuthAuthorizationServer", "OAuthError", "OAuthSigningKey", "RegisteredClient",
+    "build_oauth_as_router"]  # fmt: skip

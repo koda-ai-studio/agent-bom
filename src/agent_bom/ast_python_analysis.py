@@ -157,6 +157,7 @@ _TAINT_SINK_TITLES = {
     "tainted_sql_query": "Untrusted data reaches SQL execution",
     "tainted_llm_prompt": "Untrusted data reaches an LLM invocation",
 }
+__all__ = ["_SKIP_FILE_PATTERNS", "_analyze_file"]  # fmt: skip
 
 
 _TaintResult = tuple[bool, list[FlowFinding]]
@@ -338,11 +339,7 @@ class _TaintInterpreter:
         return set()
 
     def analyze_function(
-        self,
-        func: _FunctionAnalysis,
-        tainted_params: set[str],
-        call_path: list[str],
-        visited: set[tuple[str, tuple[str, ...]]],
+        self, func: _FunctionAnalysis, tainted_params: set[str], call_path: list[str], visited: set[tuple[str, tuple[str, ...]]]
     ) -> tuple[list[FlowFinding], bool]:
         # Bounded inter-procedural traversal: the visit-set already prevents
         # cycles, but a long fan-out chain could still explode the work

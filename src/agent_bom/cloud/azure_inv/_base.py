@@ -7,6 +7,15 @@ from typing import Any
 from ..aws_inventory import record_discovery_failure
 from ..normalization import sanitize_discovery_warning
 
+__all__ = [
+    "_AZURE_COMPUTE_PERMISSIONS",
+    "_AZURE_DATA_PERMISSIONS",
+    "_AZURE_IDENTITY_PERMISSIONS",
+    "_AZURE_NETWORK_PERMISSIONS",
+    "_AZURE_STORAGE_PERMISSIONS",
+    "_INTERNET_SOURCES",
+]
+
 # Read-only ARM actions this scanner is allowed to exercise, by resource class.
 # Kept here so the per-run discovery envelope `permissions_used` stays honest.
 _AZURE_STORAGE_PERMISSIONS: tuple[str, ...] = ("Microsoft.Storage/storageAccounts/read",)

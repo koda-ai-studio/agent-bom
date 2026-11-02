@@ -401,7 +401,7 @@ def seed_local_connection_key(directory: Path) -> Path:
         try:
             os.chmod(path, 0o600)
         except OSError:
-            pass
+            pass  # best-effort permission tightening on an existing key file
         return path
     key = Fernet.generate_key()
     try:

@@ -15,7 +15,6 @@ from agent_bom.parsers.python_parsers import parse_pip_compile_inputs
 
 
 def _write_bun(directory: Path, runtime: dict, development: dict) -> None:
-    import json
 
     resolved = {**runtime, **development}
     (directory / "bun.lock").write_text(

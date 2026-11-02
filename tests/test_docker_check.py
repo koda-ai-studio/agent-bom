@@ -31,7 +31,7 @@ def test_docker_mcp_discovery_no_files(monkeypatch, tmp_path):
         lambda p: str(tmp_path / "nonexistent" / "mcp") if ".docker/mcp" in p else p,
     )
     # Patch expanduser at module level in discovery
-    import agent_bom.discovery as disc_mod
+    from agent_bom import discovery as disc_mod
 
     original = disc_mod.os.path.expanduser
     monkeypatch.setattr(disc_mod.os.path, "expanduser", lambda p: str(tmp_path / "nonexistent") if ".docker/mcp" in p else original(p))
@@ -49,7 +49,7 @@ def test_docker_mcp_discovery_empty_registry(tmp_path):
     (mcp_dir / "registry.yaml").write_text("registry: {}\n")
 
     # Directly test the function by patching the path
-    import agent_bom.discovery as disc_mod
+    from agent_bom import discovery as disc_mod
 
     original_expanduser = disc_mod.os.path.expanduser
 
@@ -98,7 +98,7 @@ def test_docker_mcp_discovery_with_servers(tmp_path):
     }
     (catalogs_dir / "docker-mcp.yaml").write_text(yaml.dump(catalog))
 
-    import agent_bom.discovery as disc_mod
+    from agent_bom import discovery as disc_mod
 
     original_expanduser = disc_mod.os.path.expanduser
 

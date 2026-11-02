@@ -1,20 +1,16 @@
 """AI-powered enrichment — LLM-generated risk narratives, executive summaries, and threat chains.
 
 Supports three LLM backends (in priority order):
-
 1. **Ollama (free, local)** — auto-detected at ``http://localhost:11434``.
-   No extra install needed (uses httpx, already a core dependency).
-   Start with: ``ollama serve`` then ``ollama pull llama3.2``
+   Uses the core httpx dependency. Start with: ``ollama serve`` then ``ollama pull llama3.2``
 
 2. **HuggingFace Inference API (free tier)** — open-source models in the cloud.
-   Install with: ``pip install 'agent-bom[huggingface]'``
-   Set ``HF_TOKEN`` env var for gated models.
+   Install ``agent-bom[huggingface]``; set ``HF_TOKEN`` for gated models.
 
 3. **litellm (100+ providers)** — OpenAI, Anthropic, Mistral, Groq, etc.
    Install with: ``pip install 'agent-bom[ai-enrich]'``
 
-All LLM calls are:
-- **Optional**: graceful fallback when no provider is available.
+All LLM calls are optional and gracefully fall back when no provider is available.
 - **Cached**: in-memory dedup by ``sha256(model:prompt)`` within a scan run.
 - **Batched**: grouped by package to minimize API calls.
 - **Structured**: Pydantic schemas + Ollama's ``format`` parameter for reliable JSON."""
@@ -77,6 +73,12 @@ from agent_bom.ai_components.provider_discovery import _has_any_provider, _resol
 from agent_bom.ai_components.providers import _call_llm, _call_llm_structured, _parse_json_response
 
 _DEFAULT_AI_MAX_CALLS = 50  # Hard cap: prevent runaway spend on large monorepos
+__all__ = ["_ASSIGNMENT_PATTERN", "_IDENTIFIER_RE", "_MAX_AI_PROMPT_CHARS", "_MAX_AI_SKILL_FILES",
+    "_MAX_AI_SKILL_FILE_CHARS", "_MAX_AI_SKILL_FINDINGS", "_PROMPT_TRUNCATION_MARKER", "_SECRET_PATTERNS",
+    "_bounded_ai_text", "_bounded_prompt_list", "_bounded_prompt_text", "_build_blast_radius_prompt",
+    "_build_executive_summary_prompt", "_build_finding_assessment_prompt", "_build_mcp_config_analysis_prompt",
+    "_build_skill_analysis_prompt", "_build_threat_chain_prompt", "_canonical_skill_source_path", "_compose_bounded_prompt",
+    "_looks_like_secret_value", "_redact_assignment", "redact_secrets"]  # fmt: skip
 
 
 async def enrich_blast_radii(
@@ -331,8 +333,7 @@ async def _run_ai_enrichment_impl(
 
     console.print(f"\n[bold blue]AI Enrichment[/bold blue]  [dim]model: {model} via {provider}[/dim]\n")
 
-    # Advisory triage is the primary structured surface, so it receives budget
-    # before optional narrative generation on large estates.
+    # Advisory triage is the primary structured surface, so it receives budget before optional narrative generation on large estates.
     triage_resolution = _resolve_ai_provider(triage_model)
     assessments = await assess_report_findings(
         report,
@@ -545,9 +546,8 @@ def _apply_skill_analysis(
         )
 
     if gate_ai_findings:
-        # Explicit opt-in only: false-positive reviews and AI-detected findings
-        # may affect the result, but only high-confidence model judgments can
-        # change the deterministic gate. Missing confidence normalizes to low.
+        # Explicit opt-in only: false-positive reviews and AI-detected findings may affect the result, but only high-confidence model
+        # judgments can change the deterministic gate. Missing confidence normalizes to low.
         def _blocks_gate(finding: SkillFinding) -> bool:
             if finding.ai_detected:
                 return finding.ai_confidence == "high" and finding.severity in ("critical", "high")

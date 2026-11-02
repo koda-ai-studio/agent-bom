@@ -155,7 +155,7 @@ class SharedGatewayAuditSink(GatewayAuditSinkBase):
             try:
                 await asyncio.wait_for(self._wake.wait(), timeout=self.controller.current_backoff_seconds())
             except asyncio.TimeoutError:
-                pass
+                pass  # the timeout only paces this loop
             self._wake.clear()
             # Keep draining while batches deliver and rows remain (a claim is at most one batch).
             while await self.flush_once() and self._backlog > 0:
@@ -174,7 +174,7 @@ class SharedGatewayAuditSink(GatewayAuditSinkBase):
             try:
                 await self._worker
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
             self._worker = None
 
     def health(self) -> dict[str, str | int | bool]:

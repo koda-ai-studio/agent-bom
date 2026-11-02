@@ -15,6 +15,14 @@ from agent_bom.api.graph_generation import pin_generation, verify_generation
 from agent_bom.api.graph_node_alias import resolve_assessment_node_ids
 from agent_bom.graph.compromise import CompromiseAssessment, CompromiseRequest, assess_direct_compromise
 
+__all__ = [
+    "GraphCompromiseRequest",
+    "GraphCompromiseResponse",
+    "GraphConsequenceRequest",
+    "assess_snapshot",
+    "assess_snapshot_consequences",
+]
+
 
 class GraphCompromiseRequest(CompromiseRequest):
     scan_id: str = Field(min_length=1, max_length=1024, pattern=r"^[^\x00]+$")

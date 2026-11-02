@@ -189,7 +189,7 @@ def test_project_file_budget_prioritizes_entrypoints_and_records_partial_coverag
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import agent_bom.ast_analyzer as ast_analyzer
+    from agent_bom import ast_analyzer as ast_analyzer
 
     monkeypatch.setattr(ast_analyzer, "_MAX_FILES", 2)
     for index in range(3):
@@ -227,7 +227,7 @@ def test_project_file_budget_covers_a_repository_of_this_projects_size(tmp_path:
 
     At a 500-file budget the scan of this very repository ended ``partial``.
     """
-    import agent_bom.ast_analyzer as ast_analyzer
+    from agent_bom import ast_analyzer as ast_analyzer
 
     reset_scan_warnings()
     for directory in range(20):

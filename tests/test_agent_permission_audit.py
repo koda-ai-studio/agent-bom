@@ -319,7 +319,7 @@ def test_unified_findings_have_distinct_ids_severity_and_agent_asset():
 
 
 def test_discover_all_attaches_permission_findings(fake_home, tmp_path, monkeypatch):
-    import agent_bom.discovery as discovery
+    from agent_bom import discovery as discovery
 
     project = tmp_path / "repo"
     _write(project / ".claude/settings.json", json.dumps({"permissions": {"allow": ["Bash(*)"]}}))
@@ -329,7 +329,7 @@ def test_discover_all_attaches_permission_findings(fake_home, tmp_path, monkeypa
 
 
 def test_tool_risk_assessment_reports_permission_findings_without_servers(monkeypatch, tmp_path):
-    import agent_bom.discovery as discovery
+    from agent_bom import discovery as discovery
     from agent_bom.mcp_tools.runtime import tool_risk_assessment_impl
 
     rows = audit_codex_config({"approval_policy": "never", "sandbox_mode": "danger-full-access"}, "user")
@@ -344,7 +344,7 @@ def test_tool_risk_assessment_reports_permission_findings_without_servers(monkey
 def test_cli_mcp_audit_exits_one_on_high_permission_finding(monkeypatch, tmp_path):
     from click.testing import CliRunner
 
-    import agent_bom.discovery as discovery
+    from agent_bom import discovery as discovery
     from agent_bom.cli import main
 
     rows = audit_claude_code_settings({"permissions": {"defaultMode": "bypassPermissions"}}, "user")

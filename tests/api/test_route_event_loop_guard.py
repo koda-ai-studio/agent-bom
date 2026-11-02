@@ -27,7 +27,7 @@ from types import SimpleNamespace
 
 import pytest
 
-import agent_bom.api.routes as routes_pkg
+from agent_bom.api import routes as routes_pkg
 from tests._loop_offload import BlockingCall, assert_runs_off_loop
 
 ROUTES_DIR = Path(routes_pkg.__file__).resolve().parent
@@ -415,7 +415,6 @@ async def test_sync_store_route_runs_off_the_event_loop_and_rejects_unbounded_li
 
 
 def test_call_route_awaits_async_handlers_and_offloads_sync_ones():
-    import asyncio
     import threading
 
     from agent_bom.api.route_offload import call_route

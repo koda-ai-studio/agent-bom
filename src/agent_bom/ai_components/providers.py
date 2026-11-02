@@ -335,7 +335,7 @@ def _parse_json_response(response: str) -> dict | None:
         if isinstance(data, dict):
             return data
     except json.JSONDecodeError:
-        pass
+        pass  # unparseable input: fall back to the default below
 
     # Attempt 2: Extract from markdown fencing
     fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL)
@@ -345,7 +345,7 @@ def _parse_json_response(response: str) -> dict | None:
             if isinstance(data, dict):
                 return data
         except json.JSONDecodeError:
-            pass
+            pass  # unparseable input: fall back to the default below
 
     # Attempt 3: Find JSON object embedded in other text
     brace_match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -355,7 +355,7 @@ def _parse_json_response(response: str) -> dict | None:
             if isinstance(data, dict):
                 return data
         except json.JSONDecodeError:
-            pass
+            pass  # unparseable input: fall back to the default below
 
     return None
 

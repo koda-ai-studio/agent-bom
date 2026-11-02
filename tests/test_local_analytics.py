@@ -348,8 +348,8 @@ def test_local_analytics_preserves_pii_and_credential_occurrences(tmp_path):
 
 
 def test_history_save_dual_writes_local_analytics(monkeypatch, tmp_path):
-    import agent_bom.db.local_analytics as local_analytics
     import agent_bom.history as history
+    from agent_bom.db import local_analytics as local_analytics
 
     analytics_path = tmp_path / "analytics.sqlite"
     monkeypatch.setattr(history, "HISTORY_DIR", tmp_path / "history")
@@ -370,8 +370,8 @@ def test_cli_agents_scan_mirrors_to_local_analytics(monkeypatch, tmp_path):
     returned 0 after a CLI scan because the mirror was only wired into
     `history.save_report` (gated on the `--save` flag).
     """
-    import agent_bom.db.local_analytics as local_analytics
     from agent_bom.cli import main
+    from agent_bom.db import local_analytics as local_analytics
 
     db_path = tmp_path / "analytics.sqlite"
     monkeypatch.setattr(local_analytics, "LOCAL_ANALYTICS_DB", str(db_path))

@@ -13,9 +13,7 @@ from agent_bom.graph.analysis import GraphAnalysisStatus, analysis_status_map_fr
 from agent_bom.graph.bottleneck import BottleneckAnalysis, compute_bottlenecks
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.integration_contract import GRAPH_ENVELOPE_VERSION, validate_graph_version
-from agent_bom.graph.legend import ENTITY_LEGEND as ENTITY_LEGEND
-from agent_bom.graph.legend import RELATIONSHIP_LEGEND as RELATIONSHIP_LEGEND
-from agent_bom.graph.legend import LegendEntry as LegendEntry
+from agent_bom.graph.legend import ENTITY_LEGEND, RELATIONSHIP_LEGEND, LegendEntry
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.node_merge import merge_node
 from agent_bom.graph.path_records import AttackPath as AttackPath
@@ -25,8 +23,7 @@ from agent_bom.graph.recorded_time import stamp_edge, stamp_node
 from agent_bom.graph.rekey import rekey_in_memory
 from agent_bom.graph.relationship_contract import ContractRejections, admit_edge, merge_edge_provenance
 from agent_bom.graph.severity_floor import FINDING_ENTITY_TYPES, counts_as_finding
-from agent_bom.graph.technique_mapping import TechniqueMapping as TechniqueMapping
-from agent_bom.graph.technique_mapping import technique_mappings_from_json as technique_mappings_from_json
+from agent_bom.graph.technique_mapping import TechniqueMapping, technique_mappings_from_json
 from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType
 from agent_bom.graph.util import _now_iso
 from agent_bom.graph.view_filters import INVENTORY_RELATIONSHIPS
@@ -157,7 +154,7 @@ class UnifiedGraph:
     # times resolve to it; created_at stays the build/storage time that
     # retention and latest-snapshot selection read.
     observed_at: str = ""
-    completeness: "GraphCompleteness" = field(default_factory=lambda: GraphCompleteness())
+    completeness: "GraphCompleteness" = field(default_factory=GraphCompleteness)
 
     def __post_init__(self) -> None:
         if not self.created_at:
@@ -886,3 +883,4 @@ _DYNAMIC_RELS = {
     RelationshipType.TRACE_STEP,
     RelationshipType.RECORDED_ACTIVITY,
 }
+__all__ = ["ENTITY_LEGEND", "LegendEntry", "RELATIONSHIP_LEGEND", "TechniqueMapping", "technique_mappings_from_json"]  # fmt: skip

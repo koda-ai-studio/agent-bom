@@ -13,13 +13,13 @@ import anyio.to_thread
 from fastapi import HTTPException
 
 from agent_bom.api.auth import get_key_store
-from agent_bom.api.auth_posture import _AUTH_POSTURE as _AUTH_POSTURE
+from agent_bom.api.auth_posture import _AUTH_POSTURE as _AUTH_POSTURE  # noqa: F401 - legacy middleware exports
 from agent_bom.api.auth_posture import _AUTH_RUNTIME_STATUS as _AUTH_RUNTIME_STATUS
 from agent_bom.api.auth_posture import _EMPTY_AUTH_POSTURE as _EMPTY_AUTH_POSTURE
 from agent_bom.api.auth_posture import _TRUSTED_PROXY_SECRET_MIN_BYTES as _TRUSTED_PROXY_SECRET_MIN_BYTES
 from agent_bom.api.auth_posture import AuthPosture as AuthPosture
 from agent_bom.api.auth_posture import AuthPostureError as AuthPostureError
-from agent_bom.api.auth_posture import (  # noqa: F401 - legacy middleware exports
+from agent_bom.api.auth_posture import (
     _env_flag,
     describe_control_plane_direct_listener_posture,
     describe_proxy_control_plane_mtls_posture,
@@ -48,95 +48,37 @@ from agent_bom.api.browser_session import (
     verify_browser_session_token,
     verify_csrf,
 )
-from agent_bom.api.error_envelope import (
-    _with_middleware_error_envelope as _with_middleware_error_envelope,
-)
+from agent_bom.api.error_envelope import _with_middleware_error_envelope as _with_middleware_error_envelope
 from agent_bom.api.error_envelope import install_error_envelope as install_error_envelope
-from agent_bom.api.error_envelope import (
-    with_middleware_error_envelope,
-)
+from agent_bom.api.error_envelope import with_middleware_error_envelope
 from agent_bom.api.host_guard import browser_origin_trusted
-from agent_bom.api.middleware_body import (
-    MaxBodySizeMiddleware as MaxBodySizeMiddleware,
-)
-from agent_bom.api.middleware_headers import (
-    _API_CSP as _API_CSP,
-)
-from agent_bom.api.middleware_headers import (
-    TrustHeadersMiddleware as TrustHeadersMiddleware,
-)
-from agent_bom.api.middleware_headers import (
-    _cache_control as _cache_control,
-)
-from agent_bom.api.middleware_headers import (
-    _content_security_policy as _content_security_policy,
-)
-from agent_bom.api.middleware_headers import (
-    _hsts_max_age_seconds as _hsts_max_age_seconds,
-)
-from agent_bom.api.middleware_headers import (
-    _is_hashed_build_asset as _is_hashed_build_asset,
-)
-from agent_bom.api.middleware_headers import (
-    describe_security_header_posture as describe_security_header_posture,
-)
-from agent_bom.api.middleware_headers import (
-    hsts_header_value as hsts_header_value,
-)
-from agent_bom.api.middleware_limits import (
-    _API_KEY_VERIFIED_AUTH_METHODS as _API_KEY_VERIFIED_AUTH_METHODS,
-)
-from agent_bom.api.middleware_limits import (
-    _RATE_LIMIT_FINGERPRINT_FALLBACK as _RATE_LIMIT_FINGERPRINT_FALLBACK,
-)
-from agent_bom.api.middleware_limits import (
-    _TENANT_SCOPED_AUTH_METHODS as _TENANT_SCOPED_AUTH_METHODS,
-)
-from agent_bom.api.middleware_limits import (
-    DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM as DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM,
-)
-from agent_bom.api.middleware_limits import (
-    DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM as DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM,
-)
-from agent_bom.api.middleware_limits import (
-    DEFAULT_READ_RATE_LIMIT_RPM as DEFAULT_READ_RATE_LIMIT_RPM,
-)
-from agent_bom.api.middleware_limits import (
-    DEFAULT_SCAN_RATE_LIMIT_RPM as DEFAULT_SCAN_RATE_LIMIT_RPM,
-)
-from agent_bom.api.middleware_limits import (
-    MAX_RATE_LIMIT_RPM as MAX_RATE_LIMIT_RPM,
-)
-from agent_bom.api.middleware_limits import (
-    GlobalRateLimitMiddleware as GlobalRateLimitMiddleware,
-)
-from agent_bom.api.middleware_limits import (
-    RateLimitMiddleware as _RateLimitMiddleware,
-)
-from agent_bom.api.middleware_limits import (
-    _build_rate_limit_store as _build_rate_limit_store,
-)
-from agent_bom.api.middleware_limits import (
-    _rate_limit_fingerprint as _rate_limit_fingerprint,
-)
-from agent_bom.api.middleware_limits import (
-    _rate_limit_fingerprint_key as _rate_limit_fingerprint_key,
-)
-from agent_bom.api.middleware_limits import (
-    _shared_rate_limit_required as _shared_rate_limit_required,
-)
-from agent_bom.api.middleware_limits import (
-    _validate_rate_limit as _validate_rate_limit,
-)
-from agent_bom.api.middleware_limits import (
-    get_rate_limit_key_status as get_rate_limit_key_status,
-)
-from agent_bom.api.middleware_limits import (
-    get_rate_limit_runtime_status as get_rate_limit_runtime_status,
-)
-from agent_bom.api.middleware_limits import (
-    global_ip_rate_limit_rpm as global_ip_rate_limit_rpm,
-)
+from agent_bom.api.middleware_body import MaxBodySizeMiddleware as MaxBodySizeMiddleware
+from agent_bom.api.middleware_headers import _API_CSP as _API_CSP
+from agent_bom.api.middleware_headers import TrustHeadersMiddleware as TrustHeadersMiddleware
+from agent_bom.api.middleware_headers import _cache_control as _cache_control
+from agent_bom.api.middleware_headers import _content_security_policy as _content_security_policy
+from agent_bom.api.middleware_headers import _hsts_max_age_seconds as _hsts_max_age_seconds
+from agent_bom.api.middleware_headers import _is_hashed_build_asset as _is_hashed_build_asset
+from agent_bom.api.middleware_headers import describe_security_header_posture as describe_security_header_posture
+from agent_bom.api.middleware_headers import hsts_header_value as hsts_header_value
+from agent_bom.api.middleware_limits import _API_KEY_VERIFIED_AUTH_METHODS as _API_KEY_VERIFIED_AUTH_METHODS
+from agent_bom.api.middleware_limits import _RATE_LIMIT_FINGERPRINT_FALLBACK as _RATE_LIMIT_FINGERPRINT_FALLBACK
+from agent_bom.api.middleware_limits import _TENANT_SCOPED_AUTH_METHODS as _TENANT_SCOPED_AUTH_METHODS
+from agent_bom.api.middleware_limits import DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM as DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM
+from agent_bom.api.middleware_limits import DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM as DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM
+from agent_bom.api.middleware_limits import DEFAULT_READ_RATE_LIMIT_RPM as DEFAULT_READ_RATE_LIMIT_RPM
+from agent_bom.api.middleware_limits import DEFAULT_SCAN_RATE_LIMIT_RPM as DEFAULT_SCAN_RATE_LIMIT_RPM
+from agent_bom.api.middleware_limits import MAX_RATE_LIMIT_RPM as MAX_RATE_LIMIT_RPM
+from agent_bom.api.middleware_limits import GlobalRateLimitMiddleware as GlobalRateLimitMiddleware
+from agent_bom.api.middleware_limits import RateLimitMiddleware as _RateLimitMiddleware
+from agent_bom.api.middleware_limits import _build_rate_limit_store as _build_rate_limit_store
+from agent_bom.api.middleware_limits import _rate_limit_fingerprint as _rate_limit_fingerprint
+from agent_bom.api.middleware_limits import _rate_limit_fingerprint_key as _rate_limit_fingerprint_key
+from agent_bom.api.middleware_limits import _shared_rate_limit_required as _shared_rate_limit_required
+from agent_bom.api.middleware_limits import _validate_rate_limit as _validate_rate_limit
+from agent_bom.api.middleware_limits import get_rate_limit_key_status as get_rate_limit_key_status
+from agent_bom.api.middleware_limits import get_rate_limit_runtime_status as get_rate_limit_runtime_status
+from agent_bom.api.middleware_limits import global_ip_rate_limit_rpm as global_ip_rate_limit_rpm
 from agent_bom.api.rate_limit_store import InMemoryRateLimitStore as InMemoryRateLimitStore
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore as PostgresRateLimitStore
 from agent_bom.api.route_policy import (
@@ -166,6 +108,21 @@ from starlette.types import ASGIApp
 from agent_bom.security import sanitize_text
 
 _logger = logging.getLogger(__name__)
+__all__ = ["Absent", "AuthPosture", "AuthPostureError", "DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM",
+    "DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM", "DEFAULT_READ_RATE_LIMIT_RPM", "DEFAULT_SCAN_RATE_LIMIT_RPM",
+    "GlobalRateLimitMiddleware", "InMemoryRateLimitStore", "Invalid", "MAX_RATE_LIMIT_RPM", "MaxBodySizeMiddleware",
+    "PostgresRateLimitStore", "Resolution", "Resolved", "TrustHeadersMiddleware", "_API_CSP",
+    "_API_KEY_VERIFIED_AUTH_METHODS", "_AUTH_POSTURE", "_AUTH_RUNTIME_STATUS", "_EMPTY_AUTH_POSTURE",
+    "_RATE_LIMIT_FINGERPRINT_FALLBACK", "_TENANT_SCOPED_AUTH_METHODS", "_TRUSTED_PROXY_SECRET_MIN_BYTES",
+    "_build_rate_limit_store", "_cache_control", "_content_security_policy", "_hsts_max_age_seconds",
+    "_is_hashed_build_asset", "_production_or_clustered_control_plane", "_rate_limit_fingerprint",
+    "_rate_limit_fingerprint_key", "_secret_min_bytes", "_shared_rate_limit_required", "_trusted_proxy_secret_is_strong",
+    "_validate_rate_limit", "_with_middleware_error_envelope", "apply_auth_posture", "configure_auth_runtime",
+    "derive_auth_posture", "describe_control_plane_direct_listener_posture", "describe_proxy_control_plane_mtls_posture",
+    "describe_security_header_posture", "get_auth_posture", "get_auth_runtime_status", "get_rate_limit_key_status",
+    "get_rate_limit_runtime_status", "get_trusted_proxy_auth_status", "global_ip_rate_limit_rpm", "hsts_header_value",
+    "install_error_envelope", "require_safe_control_plane_listener", "run_resolver_chain", "trusted_proxy_auth_usable",
+    "validate_auth_posture"]  # fmt: skip
 
 
 def static_api_key_allowed() -> bool:
@@ -203,8 +160,7 @@ def dashboard_spa_routes_from_files(relative_paths: Iterable[str]) -> frozenset[
         elif first_segment.lower().endswith(".html"):
             routes.add(first_segment.rsplit(".", 1)[0])
     if "index" in routes:
-        # ``index.html`` is the SPA shell: it backs both ``/`` and every
-        # client-side route the export did not pre-render as its own file.
+        # ``index.html`` is the SPA shell: it backs both ``/`` and every client-side route the export did not pre-render as its own file.
         routes.add("")
     return frozenset(routes)
 
@@ -279,10 +235,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         )
         if path.lower().endswith(public_suffixes):
             return first_segment in dashboard_routes or ("/" not in normalized and normalized.rsplit(".", 1)[0] in dashboard_routes)
-        # Client-side dashboard routes are served by the SPA fallback. The set
-        # is derived from the shipped dashboard files (see
-        # ``register_dashboard_spa_routes``) so it can neither drift from the
-        # real pages nor allowlist a route the SPA does not serve.
+        # Client-side dashboard routes are served by the SPA fallback. The set is derived from the shipped dashboard files (see
+        # ``register_dashboard_spa_routes``) so it can neither drift from the real pages nor allowlist a route the SPA does not serve.
         return first_segment in dashboard_routes
 
     _ROLE_RULES = ROLE_RULES
@@ -299,14 +253,11 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             raise RuntimeError(static_api_key_rejection_message())
         self._validate_exempt_paths_against_role_rules()
         self._api_key = api_key
-        # When the operator explicitly opts in, a request that presents NO
-        # credential at all is served as the configured NO_AUTH_ROLE (default
-        # viewer) instead of being rejected with 401; a present-but-invalid
-        # credential is still rejected. This is driven solely by the value
-        # ``configure_api`` resolves (explicit flag combined with
-        # AGENT_BOM_ALLOW_UNAUTHENTICATED_API) and passes in — the middleware
-        # deliberately does NOT re-read the env itself, so it fails closed
-        # unless an operator's configured posture explicitly enables it.
+        # When the operator explicitly opts in, a request that presents NO credential at all is served as the configured NO_AUTH_ROLE
+        # (default viewer) instead of being rejected with 401; a present-but-invalid credential is still rejected. This is driven solely by
+        # the value ``configure_api`` resolves (explicit flag combined with AGENT_BOM_ALLOW_UNAUTHENTICATED_API) and passes in — the
+        # middleware deliberately does NOT re-read the env itself, so it fails closed unless an operator's configured posture explicitly
+        # enables it.
         self._allow_unauthenticated = bool(allow_unauthenticated)
         self._trusted_proxy_auth = _env_flag("AGENT_BOM_TRUST_PROXY_AUTH")
         from agent_bom.api.secret_source import resolve_secret
@@ -319,10 +270,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 
     @classmethod
     def _validate_exempt_paths_against_role_rules(cls) -> None:
-        # An exact-path entry in _EXEMPT_PATHS bypasses the entire dispatch chain.
-        # An exact-path entry in _ROLE_RULES (no trailing slash, no broader prefix)
-        # would silently grant unauthenticated access. Fail at startup if both lists
-        # ever name the same exact path.
+        # An exact-path entry in _EXEMPT_PATHS bypasses the entire dispatch chain. An exact-path entry in _ROLE_RULES (no trailing slash, no
+        # broader prefix) would silently grant unauthenticated access. Fail at startup if both lists ever name the same exact path.
         role_paths = {path for _method, path, _role in cls._ROLE_RULES if not path.endswith("/")}
         overlap = sorted(cls._EXEMPT_PATHS & role_paths)
         if overlap:
@@ -384,12 +333,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return True
         if request.headers.get("x-api-key", "").strip():
             return True
-        # Proxy identity headers are credential material only when the trusted
-        # proxy resolver validates its shared attestation.  If that resolver is
-        # disabled or misconfigured, their presence must still be terminal:
-        # silently downgrading a spoofed/wrong-secret proxy identity to the
-        # anonymous NO_AUTH_ROLE would hide a broken auth boundary (and can
-        # unexpectedly elevate it on a local no-auth admin deployment).
+        # Proxy identity headers are credential material only when the trusted proxy resolver validates its shared attestation.  If that
+        # resolver is disabled or misconfigured, their presence must still be terminal: silently downgrading a spoofed/wrong-secret proxy
+        # identity to the anonymous NO_AUTH_ROLE would hide a broken auth boundary (and can unexpectedly elevate it on a local no-auth admin
+        # deployment).
         if any(
             request.headers.get(name, "").strip()
             for name in (
@@ -416,9 +363,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         from agent_bom.rbac import effective_no_auth_role
 
         role = effective_no_auth_role(credentials_configured=bool(self._api_key or get_key_store().has_keys()))
-        # Combined mode: when credentials (a static API key or any stored keys)
-        # are also configured, the anonymous fallback is strictly read-only —
-        # otherwise NO_AUTH_ROLE=admin would hand an unauthenticated caller admin
+        # Combined mode: when credentials (a static API key or any stored keys) are also configured, the anonymous fallback is strictly
+        # read-only — otherwise NO_AUTH_ROLE=admin would hand an unauthenticated caller admin
         # (they could mint admin keys). NO_AUTH_ROLE elevation only applies to a
         # pure no-auth deployment with no credentials configured at all.
         required = Role(self._required_role(request.method, request.url.path))
@@ -522,8 +468,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         return self._classify_terminal(request, await self._try_browser_session_auth(request, call_next, session_token))
 
     async def _resolve_trusted_proxy(self, request: StarletteRequest, call_next: RequestResponseEndpoint, raw_key: str) -> Resolution:
-        # Trusted-proxy headers are consulted only when no API key was presented,
-        # preserving the previous ``if not raw_key`` gate.
+        # Trusted-proxy headers are consulted only when no API key was presented, preserving the previous ``if not raw_key`` gate.
         if raw_key:
             return Absent()
         proxy_response = await self._try_proxy_header_auth(request, call_next)
@@ -570,9 +515,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         from agent_bom.api.shared_auth_state import AuthStateUnavailable
 
         try:
-            # ``verify`` can fetch JWKS over the network (``urlopen`` in
-            # api/oidc.py) on a cache miss or key rotation, so it must not run
-            # on the event loop — this path is reached before authentication.
+            # ``verify`` can fetch JWKS over the network (``urlopen`` in api/oidc.py) on a cache miss or key rotation, so it must not run on
+            # the event loop — this path is reached before authentication.
             _claims, oidc_role = await anyio.to_thread.run_sync(oidc_cfg.verify, raw_key)
             required = self._required_role(request.method, request.url.path)
             from agent_bom.api.auth import Role
@@ -595,8 +539,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 request.state.tenant_id = tenant_id
                 request.state.auth_method = "oidc"
                 request.state.verified_oidc_claims = dict(_claims)
-                # Short issuer suffix helps operators recognize which IdP
-                # resolved the token without leaking the full URL to all
+                # Short issuer suffix helps operators recognize which IdP resolved the token without leaking the full URL to all
                 # request-scoped log fields.
                 issuer = str(_claims.get("iss") or "")
                 request.state.auth_issuer = issuer.rsplit("/", 1)[-1][:64] if issuer else None
@@ -613,19 +556,15 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         except OIDCError as exc:
             record_oidc_decode_failure()
             _logger.debug("OIDC verification failed: %s", sanitize_text(exc))
-            # PR2 decision (#4274): distinguish a presented-but-invalid OIDC
-            # credential from a bearer that simply is not an OIDC token.
+            # PR2 decision (#4274): distinguish a presented-but-invalid OIDC credential from a bearer that simply is not an OIDC token.
             #
-            # A JWT-shaped bearer (header.payload.signature with an ``alg``
-            # header) that fails verification — bad signature, wrong issuer /
-            # audience, expired, unconfigured issuer, replay, malformed claims —
-            # WAS presented as an OIDC token. It is terminal ``Invalid`` (a hard
+            # A JWT-shaped bearer (header.payload.signature with an ``alg`` header) that fails verification — bad signature, wrong issuer /
+            # audience, expired, unconfigured issuer, replay, malformed claims — WAS presented as an OIDC token. It is terminal ``Invalid``
+            # (a hard
             # 401) and must never be silently retried against the API-key store.
             #
-            # A bearer that is not JWT-shaped is not an OIDC token at all (e.g. a
-            # raw opaque API key sent as ``Authorization: Bearer``). It stays
-            # ``Absent`` so the API-key resolver can still authenticate it,
-            # preserving the legitimate key-as-bearer path.
+            # A bearer that is not JWT-shaped is not an OIDC token at all (e.g. a raw opaque API key sent as ``Authorization: Bearer``). It
+            # stays ``Absent`` so the API-key resolver can still authenticate it, preserving the legitimate key-as-bearer path.
             if token_is_jwt_shaped(raw_key):
                 return Invalid(
                     JSONResponse(
@@ -644,9 +583,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         store = get_key_store()
         if not store.has_keys():
             return Absent()
-        # ``store.verify`` runs a ~21ms scrypt derivation (in-memory store) or
-        # a blocking DB read (Postgres store); offload it to a worker thread so
-        # it never stalls the async event loop while unrelated requests wait.
+        # ``store.verify`` runs a ~21ms scrypt derivation (in-memory store) or a blocking DB read (Postgres store); offload it to a worker
+        # thread so it never stalls the async event loop while unrelated requests wait.
         api_key = await anyio.to_thread.run_sync(store.verify, raw_key)
         if not api_key:
             return Absent()
@@ -692,13 +630,11 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         request.state.api_key_scopes = list(api_key.scopes)
         if api_key.scim_subject_id:
             request.state.scim_subject_id = api_key.scim_subject_id
-        # Carry the stable principal binding into the request so authz/tenant
-        # context is keyed to the subject's id, not its display name.
+        # Carry the stable principal binding into the request so authz/tenant context is keyed to the subject's id, not its display name.
         if api_key.principal_id:
             request.state.principal_id = api_key.principal_id
-        # SAML-minted keys are named "saml:<subject>" — surface that
-        # as a distinct auth method so operators can trace who came
-        # in via which IdP path even after the key has been issued.
+        # SAML-minted keys are named "saml:<subject>" — surface that as a distinct auth method so operators can trace who came in via which
+        # IdP path even after the key has been issued.
         request.state.auth_method = "saml" if api_key.name.startswith("saml:") else "api_key"
         return Resolved(await self._call_with_tenant_context(request, call_next))
 
@@ -708,12 +644,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         Reached only after every credential source returned Absent.
         """
         if not raw_key:
-            # No API key, no session cookie, no trusted-proxy attestation. If the
-            # operator opted into anonymous read-only access AND no credential
-            # was presented in any form, serve the request as NO_AUTH_ROLE
-            # instead of 401. A present-but-malformed credential (e.g. an
-            # unsupported Authorization scheme) must NOT silently downgrade to
-            # anonymous — it is treated as a presented credential and rejected.
+            # No API key, no session cookie, no trusted-proxy attestation. If the operator opted into anonymous read-only access AND no
+            # credential was presented in any form, serve the request as NO_AUTH_ROLE instead of 401. A present-but-malformed credential
+            # (e.g. an unsupported Authorization scheme) must NOT silently downgrade to anonymous — it is treated as a presented credential
+            # and rejected.
             if self._allow_unauthenticated and not self._credential_presented(request, auth):
                 return Resolved(await self._serve_anonymous(request, call_next))
             return Invalid(
@@ -875,8 +809,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 status_code=401,
                 content={"detail": "Authentication required — trusted proxy requests must include X-Agent-Bom-Tenant-ID"},
             )
-        # Customer-supplied identifiers must not collide with the agent-bom
-        # reserved tenant namespace (system fallbacks + role/permission
+        # Customer-supplied identifiers must not collide with the agent-bom reserved tenant namespace (system fallbacks + role/permission
         # vocabulary). See docs/IDENTITY_AND_NAMING_CONTRACT.md.
         from agent_bom.platform_invariants import ReservedTenantIdError, validate_customer_tenant_id
 

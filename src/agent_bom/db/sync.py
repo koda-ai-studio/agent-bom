@@ -91,9 +91,8 @@ def sync_osv(
     _validate_sync_url(src, "osv url")
     _logger.info("Downloading OSV bulk export from %s …", src)
 
-    # Stream the (hundreds-of-MB) archive to disk in chunks rather than buffering
-    # the whole payload — and a second BytesIO copy — in RAM, which OOMs on
-    # memory-limited hosts. zipfile reads members lazily from the on-disk path.
+    # Stream the (hundreds-of-MB) archive to disk in chunks rather than buffering the whole payload — and a second BytesIO copy — in RAM,
+    # which OOMs on memory-limited hosts. zipfile reads members lazily from the on-disk path.
     tmp_fd, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="osv-all-")
     os.close(tmp_fd)
     count = 0
@@ -122,7 +121,7 @@ def sync_osv(
         try:
             os.unlink(tmp_path)
         except OSError:
-            pass
+            pass  # best-effort cleanup; failure leaves nothing to undo
 
     conn.commit()
     if max_entries > 0:
@@ -162,9 +161,8 @@ def _ingest_ghsa_advisory(
     if not vuln_id:
         return False
 
-    # The REST listing includes withdrawn advisories (``withdrawn_at`` set).
-    # Retract a copy this source ingested earlier, as the OSV path does, but
-    # leave a record another source owns under the same id.
+    # The REST listing includes withdrawn advisories (``withdrawn_at`` set). Retract a copy this source ingested earlier, as the OSV path
+    # does, but leave a record another source owns under the same id.
     if advisory.get("withdrawn_at"):
         if conn.execute("SELECT 1 FROM vulns WHERE id = ? AND source = 'ghsa'", (vuln_id,)).fetchone():
             conn.execute("DELETE FROM affected WHERE vuln_id = ?", (vuln_id,))
@@ -341,9 +339,8 @@ def sync_ghsa(
             try:
                 advisories = fetch_json(fetch_url, timeout=30, headers=hdrs)
             except Exception as exc:
-                # Don't silently abandon: record that this sync is incomplete so
-                # the metadata reflects degraded coverage and a reader/operator
-                # can see the gap (mirrors the NVD/Alpine sync_failed pattern).
+                # Don't silently abandon: record that this sync is incomplete so the metadata reflects degraded coverage and a
+                # reader/operator can see the gap (mirrors the NVD/Alpine sync_failed pattern).
                 _logger.error("Failed to fetch GHSA page %d for %s: %s", page, ecosystem, exc)
                 sync_failed = True
                 break
@@ -473,9 +470,8 @@ def sync_nvd(
     # Rolling NVD budget (5 or 50 requests / 30s), shared with the window sync when passed in.
     limiter = limiter or NvdRateLimiter.for_key(api_key)
 
-    # Find CVE-backed rows in our DB that are missing CVSS data. Some OSV
-    # distro advisories use IDs such as DEBIAN-CVE-2014-6271 but still map to
-    # the canonical CVE in aliases or in the ID suffix.
+    # Find CVE-backed rows in our DB that are missing CVSS data. Some OSV distro advisories use IDs such as DEBIAN-CVE-2014-6271 but still
+    # map to the canonical CVE in aliases or in the ID suffix.
     total_candidates = conn.execute(
         """
         SELECT COUNT(*) FROM vulns
@@ -628,6 +624,9 @@ def _sync_nvd_source(
 # NVD is a default source: it carries CVEs (and CPE ranges for runtimes such as
 # PHP) that no other feed has yet. Its sync is incremental and newest first.
 DEFAULT_SYNC_SOURCES: tuple[str, ...] = ("osv", "alpine", "debian", "epss", "kev", "nvd")
+__all__ = ["_CVSS_SEVERITY", "_cpe_version_bound", "_cvss_to_severity", "_extract_nvd_cpe_matches",
+    "_extract_nvd_cve_fields", "_is_commit_bound", "_parse_alpine_secfix_tokens", "_parse_debian_tracker_release_entry",
+    "_parse_ghsa_version_range", "_parse_osv_entry", "_window_coverage", "sync_nvd_incremental"]  # fmt: skip
 
 
 def sync_db(
@@ -683,8 +682,7 @@ def sync_db(
     from agent_bom.db.schema import DB_PATH, init_db
 
     db_path = path or DB_PATH
-    # The update rewrites the database, so it is the right place to pay for a
-    # full integrity check — and the only place that still does.
+    # The update rewrites the database, so it is the right place to pay for a full integrity check — and the only place that still does.
     conn = init_db(db_path, verify_integrity=True)
     enabled = set(sources or DEFAULT_SYNC_SOURCES)
     results: dict[str, int] = {}
@@ -722,10 +720,8 @@ def sync_db(
                     total_osv += count
                     notify(label, "complete", count)
                 results["osv"] = total_osv
-                # ``sync_meta`` is source-level, so a multi-ecosystem update
-                # must report the aggregate operation rather than whichever
-                # scoped archive happened to run last. Preserve the coverage
-                # metadata accumulated by ``sync_osv``.
+                # ``sync_meta`` is source-level, so a multi-ecosystem update must report the aggregate operation rather than whichever
+                # scoped archive happened to run last. Preserve the coverage metadata accumulated by ``sync_osv``.
                 _update_sync_meta(conn, "osv", total_osv, _read_sync_metadata(conn, "osv"))
             else:
                 run_source(
@@ -739,9 +735,8 @@ def sync_db(
                 )
         if "alpine" in enabled:
             run_source("alpine", lambda: sync_alpine_secdb(conn))
-        # Debian tracker runs after OSV so its authoritative per-release backports
-        # override OSV's sparser/absent distro rows (and preserve OSV severity via
-        # INSERT OR IGNORE on the shared DEBIAN-CVE-* id).
+        # Debian tracker runs after OSV so its authoritative per-release backports override OSV's sparser/absent distro rows (and preserve
+        # OSV severity via INSERT OR IGNORE on the shared DEBIAN-CVE-* id).
         if "debian" in enabled:
             run_source("debian", lambda: sync_debian_tracker(conn, url=debian_url, elts_url=debian_elts_url))
         if "epss" in enabled:
@@ -764,8 +759,7 @@ def sync_db(
             key = nvd_api_key or os.environ.get("NVD_API_KEY")
             run_source("nvd", lambda: _sync_nvd_source(conn, key, nvd_url, max_nvd_entries, notify, nvd_time_budget))
     finally:
-        # Fold the (potentially large) -wal back into the main DB so concurrent
-        # readers don't race a big write-ahead log right after a sync.
+        # Fold the (potentially large) -wal back into the main DB so concurrent readers don't race a big write-ahead log right after a sync.
         try:
             conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         except sqlite3.Error as exc:

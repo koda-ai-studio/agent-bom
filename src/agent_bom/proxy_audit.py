@@ -442,7 +442,7 @@ class ProxyMetricsServer:
                 writer.write(response.encode())
                 await writer.drain()
             except (asyncio.TimeoutError, ConnectionResetError):
-                pass
+                pass  # client stalled or dropped: close the connection
             finally:
                 writer.close()
 
@@ -650,7 +650,7 @@ def write_audit_record(log_file: "IO[str] | RotatingAuditLog", record: dict) -> 
                 if log_key and not log_key.startswith(("sink:", "fd:")):
                     persist_ephemeral_chain_key(log_key, audit_chain_key())
             except FileExistsError:
-                pass
+                pass  # already present, which is the state we want
             except OSError as exc:  # pragma: no cover — sidecar write failure should not block audit
                 logger.warning("Failed to persist audit chain sidecar for %s: %s", log_key, exc)
         sanitized = _sanitize_audit_record(record)

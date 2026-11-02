@@ -13,6 +13,8 @@ from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part
 
+__all__ = ["project_aws_services", "project_gcp_services", "project_gpu_compute"]
+
 
 def project_aws_services(
     graph: UnifiedGraph,

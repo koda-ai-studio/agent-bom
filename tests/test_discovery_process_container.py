@@ -36,7 +36,7 @@ def test_returns_none_when_psutil_not_installed():
         # Re-import to trigger the ImportError path
         import importlib
 
-        import agent_bom.discovery as disc
+        from agent_bom import discovery as disc
 
         importlib.reload(disc)
         result = disc.discover_running_processes()

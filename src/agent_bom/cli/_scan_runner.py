@@ -81,7 +81,7 @@ def run_default_scan(cfg: ScanConfig, con: "Console") -> ScanResult:
     # ── Offline mode ─────────────────────────────────────────────────
     previous_offline_mode: bool | None = None
     if cfg.offline:
-        import agent_bom.scanners as _scanners
+        from agent_bom import scanners as _scanners
         from agent_bom.scanners import set_offline_mode
 
         previous_offline_mode = _scanners.offline_mode

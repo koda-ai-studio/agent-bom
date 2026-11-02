@@ -158,7 +158,7 @@ def module_key(module_dir: Path) -> str:
 def iter_module_dirs() -> list[Path]:
     """Every directory under deploy/terraform that contains a .tf file."""
     dirs = {f.parent for f in TERRAFORM_ROOT.rglob("*.tf")}
-    return sorted(dirs, key=lambda p: module_key(p))
+    return sorted(dirs, key=module_key)
 
 
 def read_tf(module_dir: Path) -> dict[Path, str]:

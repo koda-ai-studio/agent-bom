@@ -5,7 +5,10 @@ from __future__ import annotations
 import pytest
 from starlette.exceptions import HTTPException
 
-from tests.test_postgres_migrated_graph_parity import migrated_fresh_database, pytestmark  # noqa: F401
+from tests.test_postgres_migrated_graph_parity import migrated_fresh_database  # noqa: F401
+from tests.test_postgres_migrated_graph_parity import pytestmark as _migrated_postgres_pytestmark
+
+pytestmark = _migrated_postgres_pytestmark
 
 TENANT = "assembly-tenant"
 

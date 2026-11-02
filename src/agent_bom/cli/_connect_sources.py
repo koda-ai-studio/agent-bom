@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+__all__ = ["_CONNECT_FIELDS", "_CONNECT_SOURCES"]
+
 
 @dataclass(frozen=True)
 class _ConnectSource:

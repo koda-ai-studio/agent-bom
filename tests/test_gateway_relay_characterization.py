@@ -260,7 +260,7 @@ def test_owner_budget_store_failure_fails_open(monkeypatch) -> None:
 
 
 def test_jit_lookup_failure_denies_out_of_scope_tool(monkeypatch) -> None:
-    import agent_bom.api.agent_identity_store as identity_store
+    from agent_bom.api import agent_identity_store as identity_store
 
     _identity, token = _managed_identity(allowed_tools=["other_tool"])
 

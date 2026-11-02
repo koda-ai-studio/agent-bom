@@ -28,7 +28,7 @@ def _risk(row: Mapping[str, Any]) -> float:
             if math.isfinite(parsed):
                 return round(min(10.0, max(0.0, parsed)), 1)
     except (TypeError, ValueError):
-        pass
+        pass  # unparseable input: fall back to the default below
     return _SEVERITY_SCORE.get(str(row.get("severity") or "").lower(), 0.5)
 
 
@@ -144,7 +144,7 @@ def derive_campaigns(
 
     campaigns: list[dict[str, Any]] = []
     for group_key, rows in groups.items():
-        rows.sort(key=lambda row: _finding_id(row))
+        rows.sort(key=_finding_id)
         campaign_id = _campaign_id(group_key)
         membership_fingerprint = hashlib.sha256("\x1f".join(_finding_id(row) for row in rows).encode()).hexdigest()
         workflow = workflow_by_id.get(campaign_id)

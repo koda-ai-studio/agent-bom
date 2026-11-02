@@ -540,4 +540,5 @@ __all__ = [
     "build_estate_findings",
     "summarize_estate_findings",
     "to_finding_view",
+    "_CATALOG",
 ]

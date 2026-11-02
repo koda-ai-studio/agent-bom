@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-import agent_bom.cli  # noqa: F401  # agent_bom.enrichment cannot be the first agent_bom import (import cycle)
+import agent_bom.cli as _  # noqa: F401 - agent_bom.enrichment cannot be the first agent_bom import (import cycle)
 from agent_bom import enrichment
 from tests.enrichment_cache_reset import reset_enrichment_caches
 

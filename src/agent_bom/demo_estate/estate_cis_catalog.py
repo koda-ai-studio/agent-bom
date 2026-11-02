@@ -576,4 +576,4 @@ def estate_cis_passes(estate: EnterpriseEstate) -> list[tuple[str, dict[str, Any
     return passes
 
 
-__all__ = ["EstateCheck", "EstatePass", "estate_cis_passes"]
+__all__ = ["EstateCheck", "EstatePass", "estate_cis_passes", "_CATALOG_BY_TARGET"]

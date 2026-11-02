@@ -29,6 +29,7 @@ from agent_bom.domain.report_payloads import BenchmarkPayload
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
+__all__ = ["AISVS_CHECK_IDS"]  # fmt: skip
 
 # Default Ollama API port
 _OLLAMA_PORT = 11434
@@ -186,7 +187,7 @@ def _check_ai_4_2(model_ids: list[str] | None = None) -> CISCheckResult:
 
             manifest_root = _MANIFEST_DIR
         except ImportError:
-            pass
+            pass  # optional dependency absent: keep the default
 
         if manifest_root and manifest_root.exists():
             for tag_path in manifest_root.rglob("*"):

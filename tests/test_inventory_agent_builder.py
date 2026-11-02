@@ -102,7 +102,7 @@ def test_inventory_builder_characterization(builder):
 
 
 def test_cli_and_api_share_one_inventory_builder():
-    import agent_bom.cli._common as cli_common
+    from agent_bom.cli import _common as cli_common
     from agent_bom.inventory import build_agents_from_inventory, coerce_agent_type_for_inventory
 
     assert cli_common._build_agents_from_inventory is build_agents_from_inventory

@@ -46,7 +46,7 @@ def TestOneInput(data: bytes) -> None:
         try:
             evaluate_expression(expr, br)
         except (ValueError, TypeError, AttributeError, RecursionError, ZeroDivisionError):
-            pass
+            pass  # rejected input is an expected fuzz outcome
 
     else:
         # Fuzz the policy structure validator with arbitrary dict shapes
@@ -58,7 +58,7 @@ def TestOneInput(data: bytes) -> None:
             if isinstance(data_obj, dict):
                 _validate_policy(data_obj)
         except (json.JSONDecodeError, ValueError, TypeError, KeyError):
-            pass
+            pass  # rejected input is an expected fuzz outcome
 
 
 def main():

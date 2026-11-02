@@ -8,6 +8,8 @@ from agent_bom.api.proxy_runtime_projection import _alert_visible_to_tenant
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.security import sanitize_sensitive_payload
 
+__all__ = ["_MAX_FEED_LOG_LINES"]
+
 
 def _get_configured_log_path() -> _Path | None:
     """Return the server-configured audit log path, if set.
@@ -78,7 +80,7 @@ def _read_alerts_from_log(path: _Path, *, limit: int = _MAX_EVIDENCE_LOG_LINES) 
             except (UnicodeDecodeError, ValueError, KeyError):
                 continue
     except OSError:
-        pass
+        pass  # log unreadable: return what was collected
     return alerts
 
 
@@ -102,5 +104,5 @@ def _read_metrics_from_log(path: _Path, tenant_id: str = "default") -> dict | No
                 except (ValueError, KeyError):
                     continue
     except OSError:
-        pass
+        pass  # log unreadable: return what was collected
     return last_summary

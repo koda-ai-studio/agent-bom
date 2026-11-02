@@ -1,9 +1,9 @@
 """Bounded regex validation shared by policy writes and runtime enforcement."""
 
 import re
+import re._parser as _parser  # type: ignore[import-not-found]  # CPython parser; covered on supported Python versions.
 import time
 from functools import lru_cache
-from re import _parser  # type: ignore[attr-defined]  # CPython parser; covered on supported Python versions.
 from typing import Any
 
 import regex

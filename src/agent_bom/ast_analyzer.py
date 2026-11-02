@@ -88,6 +88,8 @@ from agent_bom.ast_swift import scan_swift_file as _scan_swift_file
 from agent_bom.scanners.repo_ignore import RepositoryIgnore
 from agent_bom.traversal import iter_discovery_files
 
+__all__ = ["_max_taint_depth", "analyze_project", "project_has_analyzable_sources"]
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 _max_taint_depth = _python_max_taint_depth

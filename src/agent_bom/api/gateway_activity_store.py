@@ -22,25 +22,13 @@ from typing import Any
 
 from agent_bom.api.proxy_provenance import GatewaySubmissionProvenance
 from agent_bom.api.storage.gateway_activity_contract import (
-    GatewayActivityAppendResult as GatewayActivityAppendResult,
-)
-from agent_bom.api.storage.gateway_activity_contract import (
-    GatewayActivityConflictError as GatewayActivityConflictError,
-)
-from agent_bom.api.storage.gateway_activity_contract import (
-    GatewayActivityCursorError as GatewayActivityCursorError,
-)
-from agent_bom.api.storage.gateway_activity_contract import (
-    GatewayActivityCursorExpiredError as GatewayActivityCursorExpiredError,
-)
-from agent_bom.api.storage.gateway_activity_contract import (
-    GatewayActivityPage as GatewayActivityPage,
-)
-from agent_bom.api.storage.gateway_activity_contract import (
-    GatewayActivityRecord as GatewayActivityRecord,
-)
-from agent_bom.api.storage.gateway_activity_contract import (
-    GatewayActivityStore as GatewayActivityStore,
+    GatewayActivityAppendResult,
+    GatewayActivityConflictError,
+    GatewayActivityCursorError,
+    GatewayActivityCursorExpiredError,
+    GatewayActivityPage,
+    GatewayActivityRecord,
+    GatewayActivityStore,
 )
 from agent_bom.api.storage.gateway_activity_window import (
     GatewayActivityWindowSummary,

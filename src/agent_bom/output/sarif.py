@@ -70,6 +70,7 @@ from agent_bom.output.source_locations import (
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
 _UNIFIED_RULE_HELP_URI = "https://github.com/koda-ai-studio/agent-bom#readme"
+__all__ = ["_FRAMEWORK_TAXONOMY_META"]  # fmt: skip
 _SARIF_RULE_TOKEN_RE = re.compile(r"[^A-Za-z0-9._-]+")
 
 

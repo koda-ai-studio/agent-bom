@@ -189,11 +189,11 @@ def test_postgres_url_routes_to_postgres_store(durable_state_dir, monkeypatch):
     # When a Postgres URL is configured the selector must pick the shared
     # Postgres-backed store (multi-replica), not the SQLite default. Patch the
     # store class so no real connection is attempted — we only assert routing.
-    import agent_bom.api.agent_identity_store as ais
-    import agent_bom.api.postgres_agent_identity as pai
-    import agent_bom.api.postgres_runtime_event as pre
-    import agent_bom.api.runtime_event_store as res
-    import agent_bom.cloud.runtime_workload_evidence_store as rwes
+    from agent_bom.api import agent_identity_store as ais
+    from agent_bom.api import postgres_agent_identity as pai
+    from agent_bom.api import postgres_runtime_event as pre
+    from agent_bom.api import runtime_event_store as res
+    from agent_bom.cloud import runtime_workload_evidence_store as rwes
 
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://unused/db")
     assert durable_store.select_backend() == "postgres"

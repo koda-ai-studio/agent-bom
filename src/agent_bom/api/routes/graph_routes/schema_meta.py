@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from agent_bom.graph.relationship_specs import RELATIONSHIP_SPECS, RelationshipSpec
 
+__all__ = ["_RELATIONSHIP_SCHEMA_META"]
+
 
 def _meta(spec: RelationshipSpec) -> dict[str, object]:
     return {

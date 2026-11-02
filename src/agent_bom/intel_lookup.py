@@ -13,15 +13,15 @@ from typing import Any
 from urllib.parse import unquote
 
 from agent_bom.db.intel_catalog import CANONICAL_INTEL_SOURCES as CANONICAL_INTEL_SOURCES
-from agent_bom.db.intel_catalog import SYNC_META_SOURCE_LABELS as SYNC_META_SOURCE_LABELS
+from agent_bom.db.intel_catalog import SYNC_META_SOURCE_LABELS, sync_meta_source_label
 from agent_bom.db.intel_catalog import VENDOR_ADVISORY_SOURCE_IDS as VENDOR_ADVISORY_SOURCE_IDS
 from agent_bom.db.intel_catalog import IntelSource as IntelSource
-from agent_bom.db.intel_catalog import sync_meta_source_label as sync_meta_source_label
 from agent_bom.db.lookup import LocalVuln, _current_severity, lookup_package
 from agent_bom.db.schema import DB_PATH, _validated_db_path, init_db, sync_meta_run_status
 from agent_bom.package_utils import normalize_package_name
 
 _CVE_RE = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
+__all__ = ["SYNC_META_SOURCE_LABELS", "sync_meta_source_label"]  # fmt: skip
 _GHSA_RE = re.compile(r"^GHSA-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}$", re.IGNORECASE)
 _CWE_RE = re.compile(r"^CWE-\d+$", re.IGNORECASE)
 

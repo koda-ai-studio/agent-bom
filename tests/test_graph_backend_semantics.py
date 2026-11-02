@@ -528,7 +528,6 @@ class TestSnapshotStatsReadsMaintainedCounts:
     """
 
     def test_sqlite_serves_the_breakdown_from_the_snapshot_row(self, sqlite_store: SQLiteGraphStore) -> None:
-        import sqlite3
 
         conn = sqlite3.connect(sqlite_store._db_path)
         conn.execute(

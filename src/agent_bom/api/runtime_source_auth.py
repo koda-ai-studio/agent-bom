@@ -61,5 +61,5 @@ def runtime_source_principal(request: Any) -> RuntimeSourcePrincipal:
                 expires_at=cast(float, expires),
             )
     except (ValueError, TypeError, OverflowError):
-        pass
+        pass  # malformed credential: rejected by the raise below
     raise SourceAuthenticationError("runtime evidence source authentication failed")

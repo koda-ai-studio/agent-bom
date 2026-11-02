@@ -117,6 +117,19 @@ from agent_bom.finding_scope import FindingClass
 from agent_bom.security import sanitize_error, sanitize_text
 
 router = APIRouter()
+__all__ = ["MergedScanBulkPage", "_BULK_MERGE_CHUNK", "_FACET_DEADLINE_SECONDS", "_FACET_SCAN_BUDGET", "_FACET_SEVERITY_BANDS",
+    "_FINDINGS_VIEW_FILTER_MAX_ROWS", "_FacetCounts", "_FacetScopes", "_TRIAGE_DISPOSITIONS", "_ViewWalk", "_attach_grouping_metadata",
+    "_attach_unified_graph_view", "_bulk_ingested_findings_for_tenant", "_cached_scan_findings", "_canonical_group_key",
+    "_canonical_scope_filters", "_collect_group_occurrences", "_completed_jobs_for_tenant", "_context_graph_payload",
+    "_copy_first_page_metadata", "_count_facet_row", "_current_scan_rows", "_effective_reach_lookup", "_facet_completeness",
+    "_facet_exploit_bucket", "_facet_has_fix", "_facet_reachability_bucket", "_facet_severity_histogram", "_finding_facets",
+    "_finding_facets_bounded", "_finding_from_blast_radius", "_finding_group_identity", "_finding_group_offset", "_finding_identity",
+    "_finding_list_filters", "_finding_sort_key", "_finding_triage_state", "_graph_export_response", "_group_occurrence_rows",
+    "_grouped_severity_counts", "_groups_envelope", "_iter_scan_findings", "_matches_reachability", "_merge_bulk_kwargs",
+    "_merged_scan_bulk_page", "_project_finding_owners_and_suppressions", "_resolve_bulk_findings_total", "_row_asset_key",
+    "_row_matches_scope", "_scan_graph_compute_call", "_view_envelope", "_view_filtered_row", "_view_filters", "_walk_facet_rows",
+    "_walk_view_filtered_findings", "correlation_cohort_id", "current_open_scan_findings", "iter_tenant_scan_spine_findings",
+    "persisted_finding_evidence"]  # fmt: skip
 
 
 @router.post("/scan", response_model=ScanJob, status_code=202, tags=["scan"])
@@ -134,8 +147,7 @@ async def create_scan(request: Request, body: ScanRequest) -> ScanJob:
     the key with a different body is a 409 conflict.
     """
     tenant_id = _tenant_id(request)
-    # Confine local-path targets to the API scan jail before any queueing or
-    # idempotency work — the same gate/helper the dedicated scan endpoints use.
+    # Validate local targets against the API scan jail before queueing or idempotency, using the shared endpoint guard.
     body = _sanitize_scan_request_paths(body, tenant_id=tenant_id)
     idem_key = _request_header(request, "Idempotency-Key")
     idem_source = _request_header(request, "X-Agent-Bom-Source-Id") or "scan"
@@ -478,8 +490,7 @@ async def stream_scan(request: Request, job_id: str) -> Response:
 @router.get("/jobs", **documented(JobsResponse), tags=["scan"])
 async def list_jobs(
     request: Request,
-    # enforce limit/offset caps via Pydantic so callers
-    # cannot pass `?limit=10000` to fan out the in-memory scan-job list.
+    # enforce limit/offset caps via Pydantic so callers cannot pass `?limit=10000` to fan out the in-memory scan-job list.
     limit: Annotated[int, Query(ge=1, le=1000)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     include_details: bool = False,
@@ -553,11 +564,9 @@ def _list_jobs_impl(
         summary = summary[offset : offset + limit]
     count_summary_by_status = getattr(store, "count_summary_by_status", None)
     if callable(count_summary_by_status):
-        # The activity feed polls this route continuously and the aggregate is
-        # unbounded, so repeated polls are served from a short-lived cache. A
-        # job write drops the tenant's entries. Across workers the guarantee is
-        # bounded staleness rather than immediate consistency; seconds is fine
-        # for a progress display and nothing gates on this number.
+        # The activity feed polls this route continuously and the aggregate is unbounded, so repeated polls are served from a short-lived
+        # cache. A job write drops the tenant's entries. Across workers the guarantee is bounded staleness rather than immediate
+        # consistency; seconds is fine for a progress display and nothing gates on this number.
         status_counts = job_status_count_cache.get_counts(tenant_id, query)
         if status_counts is None:
             status_counts = count_summary_by_status(tenant_id=tenant_id, query=query)
@@ -574,8 +583,7 @@ def _list_jobs_impl(
             enriched.append(_job_summary_payload(in_mem))
             continue
 
-        # Lightweight stores may expose only summaries. Detail hydration is
-        # explicit and bounded by the requested page, independent of cache warmth.
+        # Stores may expose summaries only; hydrate details only for the requested page, regardless of cache warmth.
         try:
             get_job = getattr(store, "get", None)
             full_job = get_job(item["job_id"], tenant_id=tenant_id) if callable(get_job) else None
@@ -583,8 +591,7 @@ def _list_jobs_impl(
             full_job = None
         enriched.append(_job_summary_payload(full_job) if isinstance(full_job, ScanJob) else item)
     return {
-        # emit schema_version on terminal list responses
-        # so downstream consumers can pin a contract independent of API path.
+        # emit schema_version on terminal list responses so downstream consumers can pin a contract independent of API path.
         "schema_version": "v1",
         "jobs": enriched,
         "count": len(enriched),
@@ -710,10 +717,9 @@ async def ingest_bulk_findings(request: Request, body: BulkFindingsRequest) -> d
     tenant_id = _tenant_id(request)
     require_body_tenant_match(body.tenant_id, tenant_id)
 
-    # Batch-level replay safety: an identical retry under the same
-    # Idempotency-Key returns the first cached response (same batch_id and
-    # counts); a reused key with a different body is a 409 conflict. This is
-    # additive to the row-level (tenant_id, finding_id) collapse below.
+    # Batch-level replay safety: an identical retry under the same Idempotency-Key returns the first cached response (same batch_id and
+    # counts); a reused key with a different body is a 409 conflict. This is additive to the row-level (tenant_id, finding_id) collapse
+    # below.
     idem_key = _request_header(request, "Idempotency-Key")
     idem_source = _request_header(request, "X-Agent-Bom-Source-Id") or "bulk-ingest"
     request_hash = idempotency_request_fingerprint(body)
@@ -732,10 +738,9 @@ async def ingest_bulk_findings(request: Request, body: BulkFindingsRequest) -> d
             cached["idempotent_replay"] = True
             return cast(dict, cached)
 
-    # Deterministic batch id so a resend of the same body (even without an
-    # Idempotency-Key header) collapses onto one logical batch. Random per-request
-    # ids made ``upsert_current_batch``'s (canonical, batch_id) observation key
-    # miss on every replay, inflating ``scan_count`` (P1-5).
+    # Deterministic batch id so a resend of the same body (even without an Idempotency-Key header) collapses onto one logical batch. Random
+    # per-request ids made ``upsert_current_batch``'s (canonical, batch_id) observation key miss on every replay, inflating ``scan_count``
+    # (P1-5).
     batch_id = deterministic_batch_id(idem_key or request_hash)
     payloads = [
         _normalized_bulk_finding(row, source=body.source, batch_id=batch_id, ordinal=idx) for idx, row in enumerate(body.findings, start=1)
@@ -745,10 +750,9 @@ async def ingest_bulk_findings(request: Request, body: BulkFindingsRequest) -> d
     observed_at = normalize_observed_at(body.observed_at or body.metadata.get("observed_at"))
     hub_store = get_compliance_hub_store()
 
-    # Offload the blocking psycopg write sequence (ledger append + current-state
-    # upsert + reconcile + delta emission) to a worker thread so concurrent bulk
-    # ingest cannot freeze the event loop and unrelated requests (mirrors the
-    # read path). See ``_bulk_ingest_store_writes`` / ``_hub_store_call``.
+    # Offload the blocking psycopg write sequence (ledger append + current-state upsert + reconcile + delta emission) to a worker thread so
+    # concurrent bulk ingest cannot freeze the event loop and unrelated requests (mirrors the read path). See ``_bulk_ingest_store_writes``
+    # / ``_hub_store_call``.
     from agent_bom.api.hub_observations_partition import (
         ObservationPartitionRangeError,
         ObservationPartitionUnavailableError,
@@ -766,8 +770,7 @@ async def ingest_bulk_findings(request: Request, body: BulkFindingsRequest) -> d
             reconcile_absent=body.reconcile_absent,
         )
     except ObservationPartitionRangeError as exc:
-        # observed_at is so far past/future it is almost certainly bad data — a
-        # clean 4xx instead of a raw partition CheckViolation 500.
+        # observed_at is so far past/future it is almost certainly bad data — a clean 4xx instead of a raw partition CheckViolation 500.
         raise HTTPException(status_code=422, detail=sanitize_error(exc)) from exc
     except ObservationPartitionUnavailableError as exc:
         raise HTTPException(
@@ -829,9 +832,8 @@ def list_inventory(
     from agent_bom.api.agent_evidence import agent_evidence
 
     tenant_id = _tenant_id(request)
-    # One canonical agent is one row however many scans observed it; batch
-    # parents are skipped because their children already carry the agents.
-    # The projection is shared with the agent routes and reused until the job revision moves.
+    # One canonical agent is one row however many scans observed it; batch parents are skipped because their children already carry the
+    # agents. The projection is shared with the agent routes and reused until the job revision moves.
     evidence = agent_evidence(_get_store(), tenant_id)
     agents = evidence.estate_agents
     jobs = evidence.inventory_jobs
@@ -844,8 +846,7 @@ def list_inventory(
     packages_page = packages[offset : offset + limit]
     jobs_page = jobs[offset : offset + limit]
     return {
-        # Scope marker so callers never conflate this population with live
-        # local-disk discovery at /v1/agents. This endpoint is the scanned
+        # Scope marker so callers never conflate this population with live local-disk discovery at /v1/agents. This endpoint is the scanned
         # estate: agents/packages aggregated from completed scan jobs.
         "scope": "scanned_estate",
         "source": (
@@ -858,8 +859,7 @@ def list_inventory(
         "total": total,
         "limit": limit,
         "offset": offset,
-        # Honest truncation across the three roll-up arrays that share this
-        # offset/limit window (fleet-style list contract).
+        # Honest truncation across the three roll-up arrays that share this offset/limit window (fleet-style list contract).
         "has_more": offset + len(page) < total or offset + len(packages_page) < package_total or offset + len(jobs_page) < job_total,
         "packages": copy.deepcopy(packages_page),
         "package_count": len(packages_page),

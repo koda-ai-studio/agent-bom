@@ -21,8 +21,7 @@ from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import MCPServer, Package
 from agent_bom.parsers.file_limits import read_json_limited, read_text_limited
 from agent_bom.parsers.lockfile_topology import pnpm_topology, yarn_topology
-from agent_bom.parsers.node_lockfiles import has_node_lock, npm_alias, yarn_descriptor_name
-from agent_bom.parsers.node_lockfiles import parse_bun_packages as parse_bun_packages
+from agent_bom.parsers.node_lockfiles import has_node_lock, npm_alias, parse_bun_packages, yarn_descriptor_name
 from agent_bom.parsers.npm_lock_paths import (
     _npm_entry_edges,
     _npm_introducing_paths,
@@ -34,6 +33,7 @@ from agent_bom.parsers.npm_semver import npm_exact_version
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
+__all__ = ["parse_bun_packages"]  # fmt: skip
 
 _WORKSPACE_PROTOCOL_PREFIXES = ("workspace:", "file:", "link:", "portal:")
 _MAX_WORKSPACE_PACKAGE_JSONS = 500

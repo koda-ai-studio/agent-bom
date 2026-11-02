@@ -120,7 +120,7 @@ class TestEnrichmentNvdStatus:
             mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
 
             # Clear caches to force fresh fetch
-            import agent_bom.enrichment as _enr
+            from agent_bom import enrichment as _enr
             from agent_bom.enrichment import enrich_vulnerabilities
 
             _enr._nvd_file_cache.clear()
@@ -167,7 +167,7 @@ class TestEnrichmentNvdStatus:
             mock_client.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            import agent_bom.enrichment as _enr
+            from agent_bom import enrichment as _enr
             from agent_bom.enrichment import enrich_vulnerabilities
 
             _enr._nvd_file_cache.clear()
@@ -216,7 +216,7 @@ class TestEnrichmentNvdStatus:
             mock_client.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_client.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            import agent_bom.enrichment as _enr
+            from agent_bom import enrichment as _enr
             from agent_bom.enrichment import enrich_vulnerabilities
 
             _enr._nvd_file_cache.clear()

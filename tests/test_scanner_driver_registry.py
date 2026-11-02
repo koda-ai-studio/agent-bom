@@ -43,7 +43,7 @@ def _patch_entry_points(monkeypatch, entries_by_group: dict[str, list[FakeEntryP
 
 @pytest.fixture(autouse=True)
 def reset_scanner_registry(monkeypatch):
-    import agent_bom.scanners.registry as scanner_registry
+    from agent_bom.scanners import registry as scanner_registry
 
     monkeypatch.delenv(ENTRYPOINTS_ENABLED_ENV, raising=False)
     scanner_registry._reset_scanner_registry_for_tests()
@@ -118,7 +118,7 @@ def test_duplicate_scanner_registration_is_rejected() -> None:
 
 
 def test_entry_point_scanner_registration_loads_only_when_enabled(monkeypatch) -> None:
-    import agent_bom.scanners.registry as scanner_registry
+    from agent_bom.scanners import registry as scanner_registry
 
     module_name = "agent_bom.tests.fake_scanner_driver"
     fake_module = types.ModuleType(module_name)

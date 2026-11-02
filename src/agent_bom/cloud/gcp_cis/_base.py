@@ -11,6 +11,18 @@ from typing import Any
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
 from agent_bom.domain.report_payloads import BenchmarkPayload
 
+__all__ = [
+    "GCPCISReport",
+    "_BIGQUERY_SECTION",
+    "_COMPUTE_SECTION",
+    "_IAM_SECTION",
+    "_LOGGING_SECTION",
+    "_NETWORK_SECTION",
+    "_SQL_SECTION",
+    "_STORAGE_SECTION",
+    "logger",
+]
+
 logger = logging.getLogger("agent_bom.cloud.gcp_cis_benchmark")
 
 _FACADE = "agent_bom.cloud.gcp_cis_benchmark"

@@ -369,7 +369,7 @@ def test_backend_selection_prefers_postgres(monkeypatch):
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgres://agent_bom_app@localhost/test")
     monkeypatch.setattr(
         "agent_bom.api.postgres_governance_audit._get_pool",
-        lambda: _FakePool(),
+        _FakePool,
     )
     try:
         log = mod.get_governance_audit_log()

@@ -126,7 +126,7 @@ def test_cli_compact_cis_posture_renders_remediation():
     con = Console(file=buf, force_terminal=False, width=200)
 
     # Patch the module-level console with our capture console.
-    import agent_bom.output as output_mod
+    from agent_bom import output as output_mod
 
     original = output_mod.console
     output_mod.console = con
@@ -149,7 +149,7 @@ def test_provider_verified_command_reaches_cli_html_and_sarif():
     buf = StringIO()
     con = Console(file=buf, force_terminal=False, width=240)
 
-    import agent_bom.output as output_mod
+    from agent_bom import output as output_mod
 
     original = output_mod.console
     output_mod.console = con
@@ -186,7 +186,7 @@ def test_verified_command_cannot_replay_on_a_different_control_or_surface():
         }
     )
 
-    import agent_bom.output as output_mod
+    from agent_bom import output as output_mod
 
     for renderer in (print_compact_cis_posture, print_cis_findings):
         buf = StringIO()
@@ -216,7 +216,7 @@ def test_cli_compact_cis_posture_silent_without_cis_data():
     report = AIBOMReport(tool_version="0.77.1")
     buf = StringIO()
     con = Console(file=buf, force_terminal=False, width=200)
-    import agent_bom.output as output_mod
+    from agent_bom import output as output_mod
 
     original = output_mod.console
     output_mod.console = con
@@ -244,7 +244,7 @@ def test_cli_error_only_cis_is_error_and_surfaces_unevaluable_detail():
     }
     buf = StringIO()
     con = Console(file=buf, force_terminal=False, width=200)
-    import agent_bom.output as output_mod
+    from agent_bom import output as output_mod
 
     original = output_mod.console
     output_mod.console = con

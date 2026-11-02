@@ -31,7 +31,7 @@ def test_package_fixes_keep_severity_and_kev():
 
 
 def test_mcp_remediate_reports_severity_and_kev(monkeypatch):
-    import agent_bom.remediate as remediate
+    from agent_bom import remediate as remediate
     from agent_bom.mcp_tools.sbom import remediate_impl
 
     fixable, unfixable = generate_package_fixes([_item("lodash", "4.18.0", kev=True, severity=Severity.HIGH)])

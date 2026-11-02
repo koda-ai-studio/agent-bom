@@ -96,7 +96,7 @@ async def test_websocket_handshake_verifies_off_the_loop_thread() -> None:
         try:
             await proxy._ws_accept_and_check_auth(_FakeWebSocket())  # type: ignore[arg-type]
         except (asyncio.CancelledError, Exception):
-            pass
+            pass  # the handshake outcome is not under test; the assertion checks the verifier thread
 
     assert seen.get("thread") is not None, "verification was never invoked"
     assert seen["thread"] != loop_thread, "key verification ran on the event loop thread"

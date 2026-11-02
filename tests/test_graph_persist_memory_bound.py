@@ -102,7 +102,7 @@ def test_digest_peak_is_small_fraction_of_full_load_and_stays_bounded(tmp_path: 
 
 def test_production_persist_path_does_not_materialise_full_prior_graph(tmp_path: Path, monkeypatch) -> None:
     import agent_bom.api.pipeline as pipeline
-    import agent_bom.graph.builder as builder
+    from agent_bom.graph import builder as builder
 
     n = 8000
     store = SQLiteGraphStore(tmp_path / "pipe.db")

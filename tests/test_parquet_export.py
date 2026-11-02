@@ -273,7 +273,7 @@ def test_parquet_preserves_scan_provenance_and_workflow_context() -> None:
 
 
 def test_parquet_requires_pyarrow(monkeypatch) -> None:
-    import agent_bom.output.parquet_fmt as parquet_fmt
+    from agent_bom.output import parquet_fmt as parquet_fmt
 
     def _boom():
         raise RuntimeError("Parquet export requires pyarrow. Install with: pip install 'agent-bom[lake]'")

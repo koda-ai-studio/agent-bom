@@ -17,6 +17,8 @@ from .normalization import (
     sanitize_discovery_warning,
 )
 
+__all__ = ["_coerce_int_or_none", "_env_or_value", "_sf_truthy", "logger"]
+
 # Log under the façade's logger so existing log routing and filters keep applying.
 logger = logging.getLogger("agent_bom.cloud.snowflake")
 

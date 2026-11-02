@@ -1,5 +1,7 @@
 """Canonical security capability classes for registered MCP tools."""
 
+__all__ = ["_TOOL_CAPABILITY_CLASSES"]
+
 _TOOL_CAPABILITY_CLASSES = {
     "endpoint_inventory": ["READ", "INTEGRATION"],
     "endpoint_sync": ["WRITE", "NETWORK", "INTEGRATION", "AUDIT"],

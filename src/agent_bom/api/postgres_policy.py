@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from .models import CredentialRefRecord
     from .policy_store import GatewayPolicy, PolicyAuditEntry
 
+__all__ = ["PostgresCredentialRefStore", "PostgresPolicyStore", "PostgresScheduleStore", "PostgresSourceStore"]
+
 
 class PostgresPolicyStore:
     """PostgreSQL-backed gateway policy persistence.

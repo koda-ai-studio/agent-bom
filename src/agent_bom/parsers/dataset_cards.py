@@ -305,7 +305,7 @@ def parse_dvc_file(path: Path) -> DatasetInfo | None:
                     }
                 )
         except OSError:
-            pass
+            pass  # unreadable path: skip it and keep the default
 
     if not info.dvc_md5:
         info.security_flags.append(

@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_bom.mcp_tools.catalog import registered_mcp_tool_decorator_names as registered_mcp_tool_decorator_names
-from agent_bom.mcp_tools.metadata_routes import attach_metadata_routes as attach_metadata_routes
-from agent_bom.mcp_tools.server_payloads import build_health_payload as build_health_payload
-from agent_bom.mcp_tools.server_payloads import build_root_metadata as build_root_metadata
-from agent_bom.mcp_tools.server_payloads import registry_server_count
+from agent_bom.mcp_tools.catalog import registered_mcp_tool_decorator_names
+from agent_bom.mcp_tools.metadata_routes import attach_metadata_routes
+from agent_bom.mcp_tools.server_payloads import build_health_payload, build_root_metadata, registry_server_count
 from agent_bom.mcp_tools.tool_capabilities import _TOOL_CAPABILITY_CLASSES as _TOOL_CAPABILITY_CLASSES
 
 # Immutable release metadata: older releases without this field expose the full catalog.
@@ -22,6 +20,8 @@ _DEFAULT_PROFILE_TOOL_NAMES = [
     "generate_sbom",
     "policy_check",
 ]
+__all__ = ["_DEFAULT_PROFILE_TOOL_NAMES", "attach_metadata_routes", "build_health_payload", "build_root_metadata",
+    "registered_mcp_tool_decorator_names"]  # fmt: skip
 
 _SERVER_CARD_TOOLS = [
     {"name": "endpoint_inventory", "description": "Read scoped endpoint inventory and freshness", "annotations": {"readOnlyHint": True}},

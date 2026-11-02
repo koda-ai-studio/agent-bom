@@ -11,6 +11,11 @@ from agent_bom.core.exploitability import fused_triage_priority
 from agent_bom.core.packages import synthesize_purl
 from agent_bom.core.severity import severity_basis
 from agent_bom.core.versions.prerelease_fix import upgrade_remediation
+from agent_bom.domain.finding_evidence import _evidence_key_looks_like_path as _evidence_key_looks_like_path
+from agent_bom.domain.finding_evidence import _evidence_key_looks_like_url as _evidence_key_looks_like_url
+from agent_bom.domain.finding_evidence import _evidence_key_looks_sensitive as _evidence_key_looks_sensitive
+from agent_bom.domain.finding_evidence import _evidence_payload as _evidence_payload
+from agent_bom.domain.finding_evidence import _sanitized_evidence_value as _sanitized_evidence_value
 from agent_bom.domain.finding_model import Asset as Asset
 from agent_bom.domain.finding_model import Finding as Finding
 from agent_bom.domain.finding_types import _CIS_BENCHMARK_FRAMEWORKS as _CIS_BENCHMARK_FRAMEWORKS
@@ -35,13 +40,8 @@ if TYPE_CHECKING:
 # Provenance label prefix for evidence imported from an external scanner report.
 
 
-from agent_bom.domain.finding_evidence import _evidence_key_looks_like_path as _evidence_key_looks_like_path
-from agent_bom.domain.finding_evidence import _evidence_key_looks_like_url as _evidence_key_looks_like_url
-from agent_bom.domain.finding_evidence import _evidence_key_looks_sensitive as _evidence_key_looks_sensitive
-from agent_bom.domain.finding_evidence import _evidence_payload as _evidence_payload
 from agent_bom.domain.finding_evidence import _package_occurrence_evidence as _package_occurrence_evidence
 from agent_bom.domain.finding_evidence import _sanitized_evidence_field as _sanitized_evidence_field
-from agent_bom.domain.finding_evidence import _sanitized_evidence_value as _sanitized_evidence_value
 
 
 def _source_for_blast_radius(br: object) -> FindingSource:
@@ -155,6 +155,11 @@ def _safe_secret_preview(value: object) -> str:
 
 
 _AST_FLOW_SEVERITIES = frozenset({"critical", "high", "medium", "low"})
+__all__ = ["Asset", "ControlTag", "EXTERNAL_SOURCE_PREFIX", "FINDING_SCHEMA_VERSION", "Finding", "FindingSource",
+    "FindingType", "LEGACY_CONTROL_FIELDS", "_CIS_BENCHMARK_FRAMEWORKS", "_LEGACY_CONTROL_VERSION_BY_FRAMEWORK",
+    "_OCCURRENCE_EVIDENCE_KEYS", "_control_tag_from_compliance_tag", "_dedupe_control_tags", "_evidence_key_looks_like_path",
+    "_evidence_key_looks_like_url", "_evidence_key_looks_sensitive", "_evidence_payload", "_occurrence_evidence_qualifier",
+    "_package_occurrence_evidence", "_sanitized_evidence_field", "_sanitized_evidence_value", "_stable_id", "stable_id"]  # fmt: skip
 
 
 def is_ast_security_flow(raw: dict) -> bool:
@@ -318,18 +323,15 @@ def cloud_cis_check_to_finding(check: dict, provider: str) -> "Finding":
 
     check_id = sanitize_text(str(check.get("check_id", "") or "unknown"), max_len=40)
     title = sanitize_text(str(check.get("title", "") or check_id), max_len=300)
-    # A control that reports no severity is unrated, not medium. Defaulting to a
-    # rated band published a judgement the evidence does not support and folded
-    # unevaluable controls into the medium tile; ``unknown`` normalizes to the
-    # explicit ``unrated`` bucket, still counted and still visible (#4631).
+    # A control that reports no severity is unrated, not medium. Defaulting to a rated band published a judgement the evidence does not
+    # support and folded unevaluable controls into the medium tile; ``unknown`` normalizes to the explicit ``unrated`` bucket, still counted
+    # and still visible (#4631).
     severity = sanitize_text(str(check.get("severity") or "unknown"), max_len=40)
     evidence_text = sanitize_text(str(check.get("evidence", "") or ""), max_len=600)
     recommendation = sanitize_text(str(check.get("recommendation", "") or ""), max_len=600)
-    # A benchmark check carries its fix under "remediation" (a structured block)
-    # while the prose summary lives under "recommendation". The live scanner
-    # emits both; the demo overlay and several vendor payloads emit only the
-    # former, so reading "recommendation" alone left every one of those findings
-    # with no guidance at all and no copy-pasteable command.
+    # A benchmark check carries its fix under "remediation" (a structured block) while the prose summary lives under "recommendation". The
+    # live scanner emits both; the demo overlay and several vendor payloads emit only the former, so reading "recommendation" alone left
+    # every one of those findings with no guidance at all and no copy-pasteable command.
     check_fix = check.get("remediation")
     check_fix = check_fix if isinstance(check_fix, dict) else {}
     if not recommendation:
@@ -353,9 +355,8 @@ def cloud_cis_check_to_finding(check: dict, provider: str) -> "Finding":
         finding_type = FindingType.CIS_ERROR if status == "ERROR" else FindingType.CIS_FAIL
     benchmark_label = "Security best-practice" if is_vendor_best_practice else "CIS benchmark"
 
-    # Explicit scope (issue #3946): the converter already knows the provider and
-    # the resource id/ARN — parse the account/region out of the ARN, prefer an
-    # explicit ``account_id`` on the check, and normalize into one account ref.
+    # Explicit scope (issue #3946): the converter already knows the provider and the resource id/ARN — parse the account/region out of the
+    # ARN, prefer an explicit ``account_id`` on the check, and normalize into one account ref.
     from agent_bom.finding_scope import account_ref_from_arn, normalize_account_ref, region_from_arn
 
     raw_account = str(check.get("account_id") or "").strip() or account_ref_from_arn(primary)
@@ -414,8 +415,7 @@ def cloud_cis_check_to_finding(check: dict, provider: str) -> "Finding":
             "provider": provider,
             "check_id": check_id,
             "control_title": title,
-            # The check's own fix outranks a generic catalog entry keyed only by
-            # check id: it names this resource, in this account.
+            # The check's own fix outranks a generic catalog entry keyed only by check id: it names this resource, in this account.
             **({"remediation_fix": check_fix} if check_fix else {}),
             "status": status,
             "cis_section": cis_section,
@@ -424,19 +424,16 @@ def cloud_cis_check_to_finding(check: dict, provider: str) -> "Finding":
             "benchmark": "Databricks Security Best Practices" if is_vendor_best_practice else "CIS",
         },
     )
-    # Populate applicable_frameworks via the hub selection table, consistent with
-    # every other finding generator (blast_radius/malicious/auth). Previously this
-    # converter set only compliance_tags, leaving applicable_frameworks empty so
-    # the finding was invisible in the hub posture aggregation. CIS providers
-    # resolve to the CIS framework only (no fabricated SOC2/ISO/NIST crosswalk);
+    # Populate applicable_frameworks via the hub selection table, consistent with every other finding generator
+    # (blast_radius/malicious/auth). Previously this converter set only compliance_tags, leaving applicable_frameworks empty so the finding
+    # was invisible in the hub posture aggregation. CIS providers resolve to the CIS framework only (no fabricated SOC2/ISO/NIST crosswalk);
     # vendor best-practice providers keep their source baseline.
     from agent_bom.compliance_hub import apply_hub_classification
 
     apply_hub_classification(finding)
 
-    # Reference pattern for the advisory-remediation foundation: attach the
-    # structured fix + least-privilege-to-apply + runbook artifact. Advisory
-    # only — agent-bom recommends, the user applies.
+    # Reference pattern for the advisory-remediation foundation: attach the structured fix + least-privilege-to-apply + runbook artifact.
+    # Advisory only — agent-bom recommends, the user applies.
     from agent_bom.remediation import build_remediation as _build_remediation
 
     finding.remediation = _build_remediation(finding)
@@ -658,10 +655,8 @@ def blast_radius_to_finding(br: object) -> "Finding":
     }
     agent_server_links, graph_tool_refs, graph_credential_refs = _agent_server_graph_links(br, entity_name)
 
-    # Asset: a real MCP server when the vulnerable package is installed behind
-    # one; otherwise the package itself. Filesystem, SBOM, image, repository,
-    # and AI-inventory wrappers share the server-shaped storage model but must
-    # not be published as MCP server assets.
+    # Asset: a real MCP server when the vulnerable package is installed behind one; otherwise the package itself. Filesystem, SBOM, image,
+    # repository, and AI-inventory wrappers share the server-shaped storage model but must not be published as MCP server assets.
     primary_server = next(
         (server for server in br.affected_servers if getattr(server, "is_mcp_surface", False)),
         None,

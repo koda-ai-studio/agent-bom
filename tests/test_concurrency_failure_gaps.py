@@ -60,7 +60,7 @@ async def test_guard_install_marks_raised_package_scan_failed(monkeypatch):
 
 
 def test_apply_registered_failure_mode_fail_closed(monkeypatch):
-    import agent_bom.scanners.registry as scanner_registry
+    from agent_bom.scanners import registry as scanner_registry
     from agent_bom.scanners.registry import register_scanner
 
     scanner_registry._reset_scanner_registry_for_tests()

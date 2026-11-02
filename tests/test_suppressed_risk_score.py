@@ -115,7 +115,7 @@ def test_shared_helpers_rank_open_before_suppressed() -> None:
 def test_api_row_overlay_keeps_the_score(monkeypatch) -> None:
     from agent_bom.api import finding_suppression
 
-    monkeypatch.setattr(finding_suppression, "_get_exception_store", lambda: _store())
+    monkeypatch.setattr(finding_suppression, "_get_exception_store", _store)
     [row] = finding_suppression.project_current_suppressions(
         [{"vulnerability_id": "CVE-2026-12345", "package_name": "requests", "server_name": "github", "risk_score": 8.4}],
         "tenant-a",

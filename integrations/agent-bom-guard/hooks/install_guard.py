@@ -386,7 +386,7 @@ def main() -> int:
         if out:
             sys.stdout.write(out + "\n")
     except Exception:
-        pass
+        pass  # the guard hook fails open: its own error must never block an install
     return 0
 
 

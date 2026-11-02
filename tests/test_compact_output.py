@@ -32,7 +32,7 @@ def _capture(fn, *args, **kwargs) -> str:
     """Capture compact output as plain text."""
     buf = StringIO()
     con = Console(file=buf, width=120, force_terminal=True, no_color=True)
-    import agent_bom.output as out_mod
+    from agent_bom import output as out_mod
 
     orig = out_mod.console
     out_mod.console = con
@@ -353,7 +353,6 @@ def test_compact_blast_radius_limit():
     report = AIBOMReport(agents=[agent], blast_radii=radii)
     output = _capture(print_compact_blast_radius, report, limit=3)
     # Title rendered via Rule may have ANSI codes between characters — strip them
-    import re
 
     plain = re.sub(r"\x1b\[[0-9;]*m", "", output)
     assert "ANALYZE" in plain
@@ -563,7 +562,7 @@ def test_compact_cis_posture_uses_govern_lane():
 def _capture_width(fn, *args, width=80, **kwargs) -> str:
     buf = StringIO()
     con = Console(file=buf, width=width, force_terminal=True, no_color=True)
-    import agent_bom.output as out_mod
+    from agent_bom import output as out_mod
 
     orig = out_mod.console
     out_mod.console = con

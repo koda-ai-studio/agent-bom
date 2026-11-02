@@ -43,12 +43,10 @@ from agent_bom.api.stores import _get_idempotency_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.runtime.gateway_events import GATEWAY_CANONICAL_EVENT_TYPES, GATEWAY_DENIED_EVENT_TYPES
-from agent_bom.security import sanitize_error, sanitize_sensitive_payload
+from agent_bom.security import sanitize_error, sanitize_sensitive_payload, sanitize_text
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
-
-
-_logger = logging.getLogger("agent_bom.api.routes.proxy")
+_logger = logging.getLogger(__name__)
 
 
 ws_router = APIRouter()
@@ -458,8 +456,8 @@ async def ingest_proxy_audit(request: Request, body: ProxyAuditIngestRequest) ->
     if analytics_events:
         try:
             await anyio.to_thread.run_sync(partial(_get_analytics_store().record_events, analytics_events, tenant_id=tenant_id))
-        except Exception:
-            pass
+        except Exception as exc:  # broad-except: analytics is a secondary copy; the audit ingest above already succeeded
+            _logger.warning("Proxy alert analytics write failed: %s", sanitize_text(exc))
 
     # count both the alerts that crossed the wire and the
     # runtime_alerts surfaced via summary so credential_leak detections always
@@ -724,7 +722,7 @@ async def ws_proxy_metrics(websocket: WebSocket) -> None:
                 return
             await asyncio.sleep(1.0)
     except WebSocketDisconnect:
-        pass
+        pass  # the client disconnected; nothing left to send
     except Exception:  # noqa: BLE001
         # Client disconnected or error — close quietly
         pass
@@ -771,7 +769,7 @@ async def ws_proxy_alerts(websocket: WebSocket) -> None:
                 seen = current
             await asyncio.sleep(0.25)
     except WebSocketDisconnect:
-        pass
+        pass  # the client disconnected; nothing left to send
     except Exception:  # noqa: BLE001
         pass
 

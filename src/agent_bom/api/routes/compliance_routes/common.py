@@ -40,6 +40,18 @@ from agent_bom.domain.framework_evidence import framework_evidence_slugs
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.security import sanitize_text
 
+__all__ = [
+    "SEEDING_GUARD",
+    "_POSTURE_COUNTS_CACHE",
+    "cached_compliance_snapshot",
+    "cached_tenant_read",
+    "estate_agent_count",
+    "evidence_generation",
+    "framework_finding_counts",
+    "framework_posture_with_count",
+    "refuse_unpinned_request_while_seeding",
+]
+
 _logger = logging.getLogger(__name__)
 
 _CLUSTER_SCAN_SOURCES = {"gpu_infra", "k8s"}

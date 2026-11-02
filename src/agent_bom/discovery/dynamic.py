@@ -188,7 +188,7 @@ def _detect_mcp_config(path: Path) -> Optional[Agent]:
             if isinstance(data, dict):
                 return _detect_json_mcp(path, data)
         except (json.JSONDecodeError, ValueError):
-            pass
+            pass  # unparseable input: fall back to the default below
 
     # Try TOML (Codex CLI, Snowflake CLI)
     if path.suffix in (".toml", ""):

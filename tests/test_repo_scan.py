@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-import agent_bom.repo_scan as repo_scan
+from agent_bom import repo_scan as repo_scan
 from agent_bom.repo_scan import RepoScanError, clone_repository, validate_repo_url
 
 

@@ -15,8 +15,8 @@ def test_default_sync_sources_include_nvd() -> None:
 
 
 def test_cli_db_update_without_source_syncs_the_default_sources(monkeypatch) -> None:
-    import agent_bom.db.sync as sync_module
     from agent_bom.cli._db import db_cmd
+    from agent_bom.db import sync as sync_module
     from agent_bom.db.sync import DEFAULT_SYNC_SOURCES
 
     seen: dict[str, Any] = {}

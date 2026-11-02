@@ -86,7 +86,7 @@ def test_disabled_returns_honest_envelope(state_db, monkeypatch) -> None:
         raise SideScanDisabledError("Disk side-scan is opt-in and currently OFF.")
 
     # The impl imports run_provider_side_scan lazily from the targets module.
-    import agent_bom.cloud.side_scan_targets as targets
+    from agent_bom.cloud import side_scan_targets as targets
 
     monkeypatch.setattr(targets, "run_provider_side_scan", _raise)
     result = _run(**_valid())
@@ -101,7 +101,7 @@ def test_unavailable_on_config_error(state_db, monkeypatch) -> None:
     async def _raise(**kwargs):
         raise SideScanConfigError("GCP Persistent Disk side-scan requires the gcp extra.")
 
-    import agent_bom.cloud.side_scan_targets as targets
+    from agent_bom.cloud import side_scan_targets as targets
 
     monkeypatch.setattr(targets, "run_provider_side_scan", _raise)
     result = _run(**_valid())
@@ -143,7 +143,7 @@ def test_success_reads_durable_record(state_db, monkeypatch) -> None:
             )
         ]
 
-    import agent_bom.cloud.side_scan_targets as targets
+    from agent_bom.cloud import side_scan_targets as targets
 
     monkeypatch.setattr(targets, "run_provider_side_scan", _fake)
     result = _run(**_valid())
@@ -185,7 +185,7 @@ def test_result_carries_packages_and_cves_per_vm_like_the_api(state_db, monkeypa
             )
         ]
 
-    import agent_bom.cloud.side_scan_targets as targets
+    from agent_bom.cloud import side_scan_targets as targets
 
     monkeypatch.setattr(targets, "run_provider_side_scan", _fake)
     result = _run(**_valid(target_id="projects/proj/global/images/golden", target_type="image"))

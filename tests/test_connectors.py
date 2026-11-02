@@ -33,7 +33,7 @@ def test_discover_unknown_connector():
 
 
 def test_discover_from_connector_sanitizes_returned_warnings(monkeypatch):
-    import agent_bom.connectors as connector_registry
+    from agent_bom import connectors as connector_registry
 
     module_name = "agent_bom.tests.fake_connector"
     fake_module = types.ModuleType(module_name)

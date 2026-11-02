@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from agent_bom.finding import Finding
 
 logger = logging.getLogger(__name__)
+__all__ = ["INVENTORY_ONLY_MODEL_FLAGS", "_UNSAFE_MODEL_EXTENSIONS", "_looks_like_pickle_header",
+    "evaluate_model_provenance_policy", "summarize_model_supply_chain"]  # fmt: skip
 
 # Extension → metadata mapping
 _MODEL_EXTENSIONS: dict[str, dict] = {
@@ -177,16 +179,13 @@ def scan_model_files(
                 security_flags.append(flag)
                 warnings.append(f"Model file {file_path.name}: {flag['severity']} — {flag['type']}. {flag['description']}")
 
-            # Disassembly-based malicious-pickle detection. This walks the
-            # pickle opcode stream via pickletools.genops WITHOUT ever
-            # deserializing the model (no pickle.load / torch.load / joblib.load),
-            # so the no-execution guarantee is preserved while upgrading the
-            # signal from extension-only to content-aware.
+            # Disassembly-based malicious-pickle detection. This walks the pickle opcode stream via pickletools.genops WITHOUT ever
+            # deserializing the model (no pickle.load / torch.load / joblib.load), so the no-execution guarantee is preserved while
+            # upgrading the signal from extension-only to content-aware.
             #
-            # The SECURITY scan runs on every pickle-bearing file regardless of
-            # size: the ``min_size_mb`` heuristic only classifies whether a
-            # generic binary counts as a "real model file", and must never gate
-            # the scan — otherwise a small malicious pickle disguised as ``.bin``
+            # The SECURITY scan runs on every pickle-bearing file regardless of size: the ``min_size_mb`` heuristic only classifies whether
+            # a generic binary counts as a "real model file", and must never gate the scan — otherwise a small malicious pickle disguised as
+            # ``.bin``
             # (< min_size_mb) would slip through unscanned.
             if ext in PICKLE_BEARING_EXTENSIONS:
                 scanned_for_pickle.add(str(file_path))
@@ -218,9 +217,8 @@ def scan_model_files(
                 }
             )
 
-    # Content-sniff discovery pass. Extension-only discovery (the loop above)
-    # never sees a pickle hidden under a benign extension (``.txt``, ``.dat``)
-    # or under a model extension that is not normally pickle-bearing
+    # Content-sniff discovery pass. Extension-only discovery (the loop above) never sees a pickle hidden under a benign extension (``.txt``,
+    # ``.dat``) or under a model extension that is not normally pickle-bearing
     # (``.safetensors``, ``.onnx``). Sniff every remaining file's header for
     # pickle / torch-zip magic and disassemble the pickle-bearing ones,
     # regardless of extension, so the format cannot be spoofed by renaming.
@@ -249,8 +247,7 @@ def scan_model_files(
             continue
         existing = results_by_path.get(path_str)
         if existing is not None:
-            # File was already inventoried under a (spoofed) model extension;
-            # attach the content findings instead of duplicating the entry.
+            # File was already inventoried under a (spoofed) model extension; attach the content findings instead of duplicating the entry.
             for pflag in pickle_flags:
                 existing["security_flags"].append(pflag)
                 warnings.append(f"Model file {file_path.name}: {pflag['severity']} — {pflag['type']}. {pflag['description']}")
@@ -276,15 +273,12 @@ def scan_model_files(
 
 # ── Model security flag → finding promotion ──────────────────────────────
 #
-# Every ``security_flags`` type the model scanners can attach to a model-file
-# entry MUST appear in exactly one of the two tables below. A flag that is in
-# neither reaches no user-visible surface — the defect class this file has
-# shipped three times (``--require-model-signatures`` silently a no-op, a
-# CRITICAL ``HASH_MISMATCH`` promoted to nothing). ``tests/test_model_files.py``
-# reads the emitters' source and fails when a new type is left unclassified.
+# Every ``security_flags`` type the model scanners can attach to a model-file entry MUST appear in exactly one of the two tables below. A
+# flag that is in neither reaches no user-visible surface — the defect class this file has shipped three times
+# (``--require-model-signatures`` silently a no-op, a CRITICAL ``HASH_MISMATCH`` promoted to nothing). ``tests/test_model_files.py`` reads
+# the emitters' source and fails when a new type is left unclassified.
 #
-# ``severity`` is always taken from the emitted flag; ``default_severity`` is
-# only the fallback used when a flag arrives without one.
+# ``severity`` is always taken from the emitted flag; ``default_severity`` is only the fallback used when a flag arrives without one.
 
 _MALICIOUS_REMEDIATION = (
     "Quarantine the artifact, verify its publisher and digest, and replace it with a trusted "
@@ -407,8 +401,7 @@ MODEL_FLAG_PROMOTIONS: dict[str, dict] = {
             "No Sigstore/cosign signature was found next to the artifact. Publish and verify a signature, or "
             "source the model from a signed distribution."
         ),
-        # Absence of a signature is a policy violation only when the operator
-        # asked for signatures; otherwise it stays inventory metadata.
+        # Absence of a signature is a policy violation only when the operator asked for signatures; otherwise it stays inventory metadata.
         "requires_signature_policy": True,
     },
 }

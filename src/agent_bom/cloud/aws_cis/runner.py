@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from ._base import CheckStatus, CISBenchmarkReport, CISCheckResult
 
+__all__ = ["_MAX_CIS_FANOUT_WORKERS", "_REGIONAL_CIS_CHECK_IDS"]
+
 # Regional checks (EC2/RDS/KMS/logging/network) must run in every enabled region.
 # Global IAM/S3/account checks run once on the home region only.
 _REGIONAL_CIS_CHECK_IDS: frozenset[str] = frozenset(

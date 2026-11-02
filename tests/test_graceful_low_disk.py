@@ -189,7 +189,7 @@ def test_report_write_enospc_pdf_skips_cleanly(monkeypatch, tmp_path):
     """PDF has no stdout representation — skip with a clear message, never crash."""
     out = tmp_path / "report.pdf"
 
-    import agent_bom.cli.agents._output as out_mod
+    from agent_bom.cli.agents import _output as out_mod
 
     def _export_pdf_boom(*_a, **_k):
         raise OSError(errno.ENOSPC, "No space left on device")

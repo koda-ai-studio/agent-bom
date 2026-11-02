@@ -23,6 +23,8 @@ from agent_bom.cli.agents._benchmark_phases import _run_verify_model_hashes_phas
 from agent_bom.cli.agents._benchmark_phases import _safe_error as _safe_error
 from agent_bom.cli.agents._context import ScanContext
 
+__all__ = ["CIS_SHOW_PASSED_META", "_CIS_STATUS_WIDTH", "render_cis_findings_from_context", "run_benchmarks", "run_cloud_discovery"]
+
 # Shared CIS status badges across every provider table. ``not_applicable`` and
 # ``no_data`` are rendered as compact badges so they are never truncated in the
 # width-constrained Status column, and unknown statuses fall back to their raw

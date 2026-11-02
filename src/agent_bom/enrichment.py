@@ -27,9 +27,8 @@ from agent_bom.enrichment_posture import record_enrichment_source
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.models import Vulnerability, compute_confidence
 from agent_bom.scanners import epss_backfill as _epss
-from agent_bom.scanners.enrichment_apply import apply_intel, join_kev_status, vuln_cve_ids
-from agent_bom.scanners.enrichment_apply import calculate_exploitability as calculate_exploitability
-from agent_bom.scanners.epss_backfill import EPSS_API_URL as EPSS_API_URL
+from agent_bom.scanners.enrichment_apply import apply_intel, calculate_exploitability, join_kev_status, vuln_cve_ids
+from agent_bom.scanners.epss_backfill import EPSS_API_URL
 from agent_bom.scanners.state import record_degraded_coverage, record_scan_warning
 from agent_bom.scanners.upstream import upstream_request
 from agent_bom.storage import state_home
@@ -48,6 +47,7 @@ def _finalize_confidence(vulnerabilities: list[Vulnerability]) -> None:
 
 
 console = Console(stderr=True)
+__all__ = ["EPSS_API_URL", "calculate_exploitability"]  # fmt: skip
 _logger = logging.getLogger(__name__)
 
 # API Endpoints

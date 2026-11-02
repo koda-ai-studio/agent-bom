@@ -26,7 +26,7 @@ from typing import Any
 import pytest
 from starlette.testclient import TestClient
 
-import agent_bom.gateway_server as gateway_server
+from agent_bom import gateway_server as gateway_server
 from agent_bom.api.auth import Role
 from agent_bom.api.gateway_activity_store import InMemoryGatewayActivityStore, SQLiteGatewayActivityStore
 from agent_bom.api.routes.proxy import _gateway_activity_record_from_alert
@@ -1289,7 +1289,7 @@ def test_managed_upstream_relay_opens_circuit_after_repeated_failures() -> None:
             try:
                 await relay(upstream, message, {})
             except RuntimeError:
-                pass
+                pass  # the raised error is the expected outcome; assertions below check the effects
         try:
             await relay(upstream, message, {})
         except Exception as exc:  # noqa: BLE001
@@ -1488,7 +1488,7 @@ def test_relay_rejects_oversized_jsonrpc_request() -> None:
 
 
 def test_visual_detector_singleton_init_is_locked(monkeypatch) -> None:
-    import agent_bom.gateway_server as gw
+    from agent_bom import gateway_server as gw
 
     created: list[object] = []
     create_lock = threading.Lock()
@@ -1539,7 +1539,7 @@ class _StubVisualDetector:
 
 def test_visual_leak_detection_off_by_default_no_scan() -> None:
     """Feature flag is opt-in — default deploys must not invoke the detector."""
-    import agent_bom.gateway_server as gw
+    from agent_bom import gateway_server as gw
 
     detector = _StubVisualDetector(alert=None)
     # If the gateway calls _get_visual_leak_detector when the flag is off,
@@ -1569,7 +1569,7 @@ def test_visual_leak_detection_off_by_default_no_scan() -> None:
 
 def test_visual_leak_detection_scans_and_redacts_image_content() -> None:
     """With the flag on and alerts found, the response must be redacted + audited."""
-    import agent_bom.gateway_server as gw
+    from agent_bom import gateway_server as gw
     from agent_bom.runtime.detectors import Alert, AlertSeverity
 
     alert = Alert(
@@ -1630,7 +1630,7 @@ def test_visual_leak_detection_scans_and_redacts_image_content() -> None:
 
 def test_visual_leak_detection_clean_response_passes_through() -> None:
     """Clean scans must not redact the response or emit a leak audit event."""
-    import agent_bom.gateway_server as gw
+    from agent_bom import gateway_server as gw
 
     detector = _StubVisualDetector(alert=None)
     gw._visual_detector_singleton = detector
@@ -1672,7 +1672,7 @@ def test_visual_leak_detection_clean_response_passes_through() -> None:
 
 
 def test_visual_leak_detection_real_timeout_withholds_completed_result(monkeypatch) -> None:
-    import agent_bom.gateway_server as gw
+    from agent_bom import gateway_server as gw
 
     class _SlowDetector:
         enabled = True

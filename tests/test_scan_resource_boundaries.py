@@ -116,7 +116,7 @@ def test_clone_budget_aborts_live_download_and_descendant(tmp_path, monkeypatch)
             try:
                 os.kill(int(receipt.read_text()), signal.SIGKILL)
             except ProcessLookupError:
-                pass
+                pass  # the process already exited
 
 
 def test_symlinked_ignore_file_cannot_hide_source(tmp_path):

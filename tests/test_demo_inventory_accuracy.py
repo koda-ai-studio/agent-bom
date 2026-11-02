@@ -102,7 +102,7 @@ def test_scan_demo_agent_ids_are_stable_across_materializations(
     tmp_path: Path,
 ) -> None:
     """Random temporary inventory paths must not change demo agent identity."""
-    import agent_bom.demo as demo
+    from agent_bom import demo as demo
     from agent_bom.cli.agents._modes import apply_demo_mode
 
     demo_inventory = copy.deepcopy(DEMO_INVENTORY)
@@ -130,7 +130,7 @@ def test_default_scan_demo_agent_ids_are_stable_across_materializations(
     tmp_path: Path,
 ) -> None:
     """The shared SDK/remediation scan path must keep the same demo IDs."""
-    import agent_bom.demo as demo
+    from agent_bom import demo as demo
     from agent_bom.cli._scan_runner import run_default_scan
 
     class CapturedDemoInventoryError(Exception):

@@ -17,6 +17,24 @@ from agent_bom.api.storage.hub_filters import _cvss_value, _severity_rank
 from agent_bom.canonical_ids import canonical_finding_id
 from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 
+__all__ = [
+    "FindingLifecycleMetrics",
+    "_CURRENT_LIFECYCLE_ORIGIN_INDEX_POSTGRES",
+    "_CURRENT_LIFECYCLE_POSTGRES_DDL",
+    "_CURRENT_LIFECYCLE_POSTGRES_OBSERVATIONS_LEGACY_DDL",
+    "_CURRENT_LIFECYCLE_SORT_INDEXES_POSTGRES",
+    "_CURRENT_LIFECYCLE_SORT_INDEXES_SQLITE",
+    "_CURRENT_LIFECYCLE_SQLITE_DDL",
+    "apply_observation_to_current",
+    "collect_present_canonical_ids",
+    "enriched_finding_payload",
+    "lifecycle_metrics",
+    "merge_status_on_observation",
+    "normalize_observed_at",
+    "observation_at_least",
+    "resolve_canonical_id",
+]
+
 FindingLifecycleMetrics = dict[str, Any]
 
 

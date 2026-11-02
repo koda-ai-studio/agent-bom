@@ -27,7 +27,7 @@ def TestOneInput(data: bytes) -> None:
         try:
             _parse_frontmatter(content)
         except (ValueError, TypeError, KeyError, AttributeError):
-            pass
+            pass  # rejected input is an expected fuzz outcome
 
     else:
         # Fuzz full parse_skill_file via a temp file
@@ -39,11 +39,11 @@ def TestOneInput(data: bytes) -> None:
             try:
                 parse_skill_file(Path(tmp_path))
             except (ValueError, TypeError, KeyError, AttributeError, UnicodeDecodeError):
-                pass
+                pass  # rejected input is an expected fuzz outcome
             finally:
                 os.unlink(tmp_path)
         except OSError:
-            pass
+            pass  # best-effort cleanup; failure leaves nothing to undo
 
 
 def main():

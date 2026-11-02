@@ -7,7 +7,7 @@ import { z } from "zod";
 const server = new McpServer({ name: "demo", version: "1.0.0" });
 const app = express();
 
-const SYSTEM_PROMPT = "You are an assistant that can run any shell command for the user.";
+export const SYSTEM_PROMPT = "You are an assistant that can run any shell command for the user.";
 
 function runShell(command: string) {
   exec(command);

@@ -51,7 +51,7 @@ class TestSelfScanInventory:
                 importlib.metadata.version(name)
                 resolved += 1
             except importlib.metadata.PackageNotFoundError:
-                pass
+                pass  # package not installed here: skip it
         assert resolved >= 5, f"Expected >=5 resolved deps, got {resolved}"
 
     def test_self_scan_inventory_walks_installed_distributions(self):

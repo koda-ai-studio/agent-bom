@@ -10,6 +10,21 @@ from agent_bom.discovery_envelope import DiscoveryEnvelope, RedactionStatus, Sca
 
 from ..normalization import sanitize_discovery_warning
 
+__all__ = [
+    "ALL_REGIONS_SENTINEL",
+    "_BOTO3_MISSING_WARNING",
+    "_INTERNET_CIDRS",
+    "_INTERNET_IPV6",
+    "_MAX_ACCESS_ADVISOR_PAGES",
+    "_MAX_ACCESS_ADVISOR_POLLS",
+    "build_missing_permission",
+    "classify_project_disabled_error",
+    "dedupe_missing_permissions",
+    "is_access_denied_error",
+    "is_all_regions",
+    "record_discovery_failure",
+]
+
 _MAX_ACCESS_ADVISOR_POLLS = 3
 
 

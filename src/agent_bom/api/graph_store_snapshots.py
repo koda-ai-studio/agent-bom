@@ -28,6 +28,8 @@ from agent_bom.graph.analysis import GraphAnalysisStatus
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
 from agent_bom.graph.snapshot_paths import SnapshotPath
 
+__all__ = ["GraphStoreProtocol", "SQLiteGraphSnapshotMixin"]
+
 
 class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
     def count_snapshot_nodes(self, *, tenant_id: str, scan_ids: list[str], entity_type: str) -> int:

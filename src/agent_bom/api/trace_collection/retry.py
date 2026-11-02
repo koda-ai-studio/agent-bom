@@ -4,6 +4,8 @@ import random
 
 from agent_bom.core.http_retry import provider_retry_after as provider_retry_after
 
+__all__ = ["provider_retry_after", "retry_delay"]
+
 
 def retry_delay(failures: int, *, retry_after: float = 0, jitter: float | None = None) -> float:
     base = min(3600, 60 * 2 ** min(6, max(0, failures - 1)))

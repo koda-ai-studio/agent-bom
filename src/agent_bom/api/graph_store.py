@@ -12,6 +12,13 @@ import time
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.api.graph_store_support import _node_sort_key as _node_sort_key
+
+__all__ = ["GraphStoreProtocol", "MAX_NODE_PAGE_OFFSET", "_API_GRAPH_TENANT_TABLE_KEYS", "_CREATE_PRESET_TABLE_SQLITE",
+    "_DYNAMIC_RELATIONSHIP_VALUES", "_FINDING_ENTITY_TYPE_VALUES", "_assert_offset_within_cap",
+    "_attach_sibling_relationships", "_drilldown_subtree_budget", "_escape_like_query", "_node_sort_key",
+    "_typed_containment_subtree", "_unsupported_traversal_errors", "decode_graph_cursor", "encode_graph_cursor"]  # fmt: skip
+
 if TYPE_CHECKING:
     pass
 
@@ -27,24 +34,15 @@ from agent_bom.api.graph_store_support import _assert_offset_within_cap as _asse
 from agent_bom.api.graph_store_support import _attach_sibling_relationships as _attach_sibling_relationships
 from agent_bom.api.graph_store_support import _drilldown_subtree_budget as _drilldown_subtree_budget
 from agent_bom.api.graph_store_support import _escape_like_query as _escape_like_query
-from agent_bom.api.graph_store_support import _node_sort_key as _node_sort_key
 from agent_bom.api.graph_store_support import _typed_containment_subtree as _typed_containment_subtree
 from agent_bom.api.graph_store_support import _unsupported_traversal_errors as _unsupported_traversal_errors
 from agent_bom.api.graph_store_support import decode_graph_cursor as decode_graph_cursor
 from agent_bom.api.graph_store_support import encode_graph_cursor as encode_graph_cursor
 from agent_bom.api.storage.sqlite_graph_search import scoped_search_expression
 from agent_bom.db import graph_store as sqlite_graph_store
-from agent_bom.graph import (
-    RelationshipType,
-    UnifiedEdge,
-    UnifiedGraph,
-    UnifiedNode,
-)
+from agent_bom.graph import RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_status_map_to_dict
-from agent_bom.graph.completeness import (
-    COMPLIANCE_NODE_BUDGET,
-    graph_completeness,
-)
+from agent_bom.graph.completeness import COMPLIANCE_NODE_BUDGET, graph_completeness
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
 from agent_bom.graph.severity_floor import FINDING_SEVERITY_SQLITE, severity_floor_sql
 
@@ -120,9 +118,8 @@ def containment_drilldown_graph(
             direction="forward",
             max_depth=budget,
             max_nodes=budget,
-            # Every visited node also matches on the edge that reached it, so the
-            # edge budget must clear the node budget or it, not the node budget,
-            # becomes the binding limit.
+            # Every visited node also matches on the edge that reached it, so the edge budget must clear the node budget or it, not the node
+            # budget, becomes the binding limit.
             max_edges=budget * 4,
             relationship_types=set(ROLLUP_SUBTREE_RELATIONSHIP_TYPES),
             include_roots=True,
@@ -193,10 +190,8 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
 
         def branch(column: str) -> str:
             # nosec B608 - every interpolated fragment is built in this function
-            # and none is caller-supplied: ``column`` is one of two string
-            # literals at the call sites below, and ``placeholders``/
-            # ``shared_sql`` contribute only ``?`` markers. Values travel in
-            # ``params``.
+            # and none is caller-supplied: ``column`` is one of two string literals at the call sites below, and ``placeholders``/
+            # ``shared_sql`` contribute only ``?`` markers. Values travel in ``params``.
             return f"SELECT rowid FROM graph_edges WHERE tenant_id = ? AND scan_id = ? AND {column} IN ({placeholders}){shared_sql}"  # nosec B608
 
         params: list[Any] = [
@@ -296,9 +291,8 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
             current, depth = queue[index]
             index += 1
             if depth >= max_depth:
-                # Frontier node: only a *demonstrably* unwalked neighbour makes
-                # this an incomplete answer. Costs one edge lookup per frontier
-                # node, and only until the first one that leaves work behind.
+                # Frontier node: only a *demonstrably* unwalked neighbour makes this an incomplete answer. Costs one edge lookup per
+                # frontier node, and only until the first one that leaves work behind.
                 if not depth_limited and any(neighbor not in visited for neighbor in _neighbors(current)):
                     depth_limited = True
                 continue
@@ -372,10 +366,8 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
         framework: str = "",
     ) -> dict[str, Any]:
         tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
-        # The same budget Postgres applies. This read used to be unbounded here
-        # and bounded there, so the two backends answered the same leadership
-        # question from different amounts of the estate — and only one of them
-        # said so.
+        # The same budget Postgres applies. This read used to be unbounded here and bounded there, so the two backends answered the same
+        # leadership question from different amounts of the estate — and only one of them said so.
         compliance_node_budget = COMPLIANCE_NODE_BUDGET
         empty = {
             "scan_id": scan_id,
@@ -521,13 +513,10 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                 params.extend(sev_params)
             where_sql = " AND ".join(node_where)
 
-            # Unfiltered node/edge totals AND the entity-type / severity breakdowns
-            # are materialised on the snapshot row at write time. Re-deriving them
-            # here re-scans graph_nodes with two GROUP BYs (1-2s at 500k-1M nodes)
-            # plus a double id-membership edge subquery, so read the stored values
-            # and only fall back to the live queries when the snapshot row is missing
-            # or the cached breakdown was never populated (older snapshots). Any
-            # active entity-type or severity filter narrows the set, so the recompute
+            # Unfiltered node/edge totals AND the entity-type / severity breakdowns are materialised on the snapshot row at write time.
+            # Re-deriving them here re-scans graph_nodes with two GROUP BYs (1-2s at 500k-1M nodes) plus a double id-membership edge
+            # subquery, so read the stored values and only fall back to the live queries when the snapshot row is missing or the cached
+            # breakdown was never populated (older snapshots). Any active entity-type or severity filter narrows the set, so the recompute
             # path still runs.
             filters_active = bool(entity_types) or bool(min_severity_rank)
             stored_node_count: int | None = None
@@ -543,8 +532,7 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                 if snap_row is not None:
                     stored_node_count = snap_row[0] if snap_row[0] is not None else None
                     stored_edge_count = snap_row[1] if snap_row[1] is not None else None
-                    # node_type_counts is NULL for snapshots written before the
-                    # breakdown was materialised — fall back to the live GROUP BY
+                    # node_type_counts is NULL for snapshots written before the breakdown was materialised — fall back to the live GROUP BY
                     # for those. risk_summary already carries the severity counts.
                     if snap_row[3] is not None:
                         cached_node_types = {str(k): int(v) for k, v in json.loads(snap_row[3]).items()}
@@ -921,10 +909,9 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                     row_params.extend(search_rank.search_cursor_params(cursor))
 
                 where_sql = " AND ".join(local_where)
-                # Materialize only ranking keys once. Counting and sorting the
-                # same FTS matches previously repeated every node join; hydrate
-                # full evidence only for the selected page. A LEFT JOIN retains
-                # the exact total even when an offset/cursor exhausts the page.
+                # Materialize only ranking keys once. Counting and sorting the same FTS matches previously repeated every node join; hydrate
+                # full evidence only for the selected page. A LEFT JOIN retains the exact total even when an offset/cursor exhausts the
+                # page.
                 rows = conn_ro.execute(
                     f"""WITH matches AS MATERIALIZED (
                         SELECT gn.rowid AS node_rowid, gn.id, gn.severity_id, gn.risk_score, gn.label,

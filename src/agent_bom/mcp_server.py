@@ -174,6 +174,7 @@ from agent_bom.security import sanitize_error
 from agent_bom.storage.state_home import activate_demo_state_dir, demo_estate_default_persist
 
 logger = logging.getLogger(__name__)
+__all__ = ["_GUIDED_TOOL_NAMES", "_SERVER_CARD_PROMPTS", "_SERVER_CARD_TOOLS", "build_server_card"]  # fmt: skip
 _ToolReturn = TypeVar("_ToolReturn")
 
 # Backward-compatible exports for tests and downstream imports that still

@@ -36,6 +36,19 @@ from agent_bom.mcp_tools.session_result import (
 )
 from agent_bom.mcp_tools.storage import default_graph_store
 
+__all__ = [
+    "_node_ref",
+    "_relationship_refs",
+    "deploy_decision_for_tenant",
+    "deploy_decision_impl",
+    "exposure_paths_for_tenant",
+    "exposure_paths_impl",
+    "graph_correlate_impl",
+    "graph_correlation_status_impl",
+    "guarded_graph_read",
+    "logger",
+]
+
 logger = logging.getLogger(__name__)
 
 _STORAGE_UNAVAILABLE_ERRORS: tuple[type[Exception], ...] = (OSError, sqlite3.OperationalError)

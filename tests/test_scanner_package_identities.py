@@ -226,7 +226,7 @@ async def test_ruby_artifact_identity_is_normalized_or_rejected_before_lookup(mo
     try:
         await scanners.scan_packages([package], options=scanners.ScanOptions(offline=True))
     except scanners.IncompleteScanError:
-        pass
+        pass  # the raised error is the expected outcome; assertions below check the effects
     assert [pkg.version for pkg in called] == ([] if expected is None else [expected])
     if expected is not None:
         assert package.version_evidence == [{"type": "artifact_platform", "raw_version": raw_version, "platform": "x86_64-linux-gnu"}]

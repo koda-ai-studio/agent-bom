@@ -15,6 +15,8 @@ from agent_bom.ast.python_structure import _call_name as _call_name
 from agent_bom.ast.python_structure import _extract_string_value as _extract_string_value
 from agent_bom.ast_models import _PythonToolRegistration
 
+__all__ = ["_MCP_DISPATCH_SEGMENTS"]
+
 
 def _framework_for_imported_call(
     call: ast.Call,

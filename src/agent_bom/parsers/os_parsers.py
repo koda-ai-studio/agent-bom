@@ -50,7 +50,7 @@ def _resolve_debian_source_package(package_name: str) -> Optional[str]:
             if source_package:
                 return source_package
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+        pass  # tool missing or too slow: treated as not detected
 
     try:
         result = subprocess.run(
@@ -66,7 +66,7 @@ def _resolve_debian_source_package(package_name: str) -> Optional[str]:
                     if source_package:
                         return source_package
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+        pass  # tool missing or too slow: treated as not detected
 
     return None
 
@@ -113,7 +113,7 @@ def parse_dpkg_packages(root: Path = Path("/")) -> list[Package]:
             if packages:
                 return packages
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+        pass  # tool missing or too slow: treated as not detected
 
     # Method 2: read status file / status.d directory directly
     status_paths = [
@@ -341,7 +341,7 @@ def parse_apk_packages(root: Path = Path("/")) -> list[Package]:
             if packages:
                 return packages
     except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+        pass  # tool missing or too slow: treated as not detected
 
     # Method 2: read /lib/apk/db/installed directly
     installed_db = root / "lib/apk/db/installed"
@@ -431,7 +431,7 @@ def detect_os_type(root: Path = Path("/")) -> str | None:
                 if os_id in ("alpine", "wolfi", "chainguard"):
                     return "apk"
     except OSError:
-        pass
+        pass  # unreadable path: skip it and keep the default
     return None
 
 

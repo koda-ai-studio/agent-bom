@@ -1,5 +1,7 @@
 """Markup and styles of the interactive standalone graph HTML export."""
 
+__all__ = ["_GRAPH_HTML_TEMPLATE_HEAD"]
+
 _GRAPH_HTML_TEMPLATE_HEAD = """<!DOCTYPE html>
 <html lang="en">
 <head>

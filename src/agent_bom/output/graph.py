@@ -48,6 +48,11 @@ from agent_bom.security import sanitize_launch_command, sanitize_text
 if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport, BlastRadius
 
+__all__ = ["_CDN_FALLBACK_TAGS", "_GRAPH_HTML_TEMPLATE", "_PackageVulnSummary", "_SEVERITY_BADGE", "_VENDOR_JS_FILES",
+    "_graph_overview", "_graph_policy_finding_elements", "_graph_policy_findings", "_graph_priority_summary", "_html_escape",
+    "_json_for_script", "_norm_repo_dir", "_provider_label", "_sanitize_graph_reference_payload", "_summarize_package_vulns",
+    "_to_offline_graph_html", "_vendor_script_tags"]  # fmt: skip
+
 
 def build_graph_elements(
     report: "AIBOMReport",
@@ -884,8 +889,7 @@ def export_graph_html(
     all_findings = findings + policy_findings
     top_risks = _sanitize_graph_reference_payload(_graph_priority_summary(all_findings, collapse_cves=True), graph_id_map)
     top_risks_json = _json_for_script(top_risks)
-    # The severity chips reconcile with the unified stream: CVE findings plus
-    # the graph-derived categories the finding nodes carry.
+    # The severity chips reconcile with the unified stream: CVE findings plus the graph-derived categories the finding nodes carry.
     overview_json = _json_for_script(_graph_overview(all_findings))
     category_findings = _sanitize_graph_reference_payload(
         [

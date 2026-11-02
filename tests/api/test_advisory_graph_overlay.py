@@ -11,7 +11,7 @@ import pytest
 
 pytest.importorskip("fastapi", reason="fastapi not installed")
 
-import agent_bom.api.routes.operator_advisories  # noqa: F401 - registers the graph-input overlay
+import agent_bom.api.routes.operator_advisories as _  # noqa: F401 - registers the graph-input overlay
 from agent_bom.api.advisory_graph_overlay import with_advisory_vulnerabilities
 from agent_bom.api.operator_advisory_store import InMemoryOperatorAdvisoryStore
 from agent_bom.api.stores import set_operator_advisory_store

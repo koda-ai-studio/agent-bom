@@ -157,7 +157,7 @@ def _parse_psirt_bulletin(raw: dict[str, Any]) -> tuple | None:
     try:
         cvss_score = float(cvss_raw) if cvss_raw is not None else None
     except (TypeError, ValueError):
-        pass
+        pass  # unparseable input: fall back to the default below
 
     severity_str = _cvss_to_severity(cvss_score, severity_lbl)
     products = _classify_products(title, description)

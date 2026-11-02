@@ -86,7 +86,7 @@ def test_secret_scan_to_dict_surfaces_a_refused_scan(tmp_path: Path):
 
 def test_secret_scan_to_dict_surfaces_a_file_capped_scan(monkeypatch, tmp_path: Path):
     """A scan that blew the file cap covered part of the tree — say so."""
-    import agent_bom.secret_scanner as secret_scanner
+    from agent_bom import secret_scanner as secret_scanner
 
     monkeypatch.setattr(secret_scanner, "_MAX_FILES", 2)
     for index in range(6):

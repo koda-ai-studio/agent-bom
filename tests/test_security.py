@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import agent_bom.security as security
+from agent_bom import security as security
 from agent_bom.security import (
     SecurityError,
     _is_obfuscated_credential,
@@ -741,8 +741,6 @@ def test_sanitize_sensitive_payload_masks_email_keys():
 
 
 def test_sanitize_sensitive_payload_reuses_repeated_field_redaction(monkeypatch):
-    import agent_bom.security as security
-
     original = security._sanitize_sensitive_string
     calls: list[tuple[str, object]] = []
 

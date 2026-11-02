@@ -275,7 +275,7 @@ def test_db_sync_keeps_ordinary_ecosystem_windows() -> None:
 
 def test_git_bounds_are_not_offered_to_the_version_comparator(monkeypatch: pytest.MonkeyPatch) -> None:
     """Structural guard: nothing may ask 'is 9.0.0 before <sha>?'."""
-    import agent_bom.scanners.package_scan as package_scan
+    from agent_bom.scanners import package_scan as package_scan
 
     seen: list[tuple[str | None, str | None, str | None]] = []
     real = package_scan._version_in_window

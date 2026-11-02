@@ -143,7 +143,6 @@ def test_live_tool_risk_assessment_requires_opt_in_and_operator_approval() -> No
 @pytest.mark.parametrize("name", ["runtime_evidence_ingest", "ingest_external_scan"])
 def test_ingestion_card_annotations_match_live_write_contract(name: str) -> None:
     """Registry cards must not soften the live ingestion write annotations."""
-    import asyncio
 
     from agent_bom.mcp_server import create_mcp_server
 

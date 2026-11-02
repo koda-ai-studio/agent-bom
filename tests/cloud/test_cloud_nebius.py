@@ -274,7 +274,6 @@ def test_infiniband_jobs_no_kubectl():
 
 
 def test_infiniband_jobs_with_rdma_pod():
-    import json
 
     pod_list = {
         "items": [
@@ -310,7 +309,6 @@ def test_infiniband_jobs_with_rdma_pod():
 
 
 def test_infiniband_jobs_skips_non_ib_pods():
-    import json
 
     pod_list = {
         "items": [

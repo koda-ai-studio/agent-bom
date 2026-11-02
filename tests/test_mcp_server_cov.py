@@ -202,7 +202,7 @@ class TestToolMetrics:
 
     @pytest.mark.asyncio
     async def test_execute_tool_sync_async_blocks_destructive_without_operator(self, monkeypatch):
-        import agent_bom.mcp_server as mod
+        from agent_bom import mcp_server as mod
 
         called = False
 
@@ -229,7 +229,7 @@ class TestToolMetrics:
 
     @pytest.mark.asyncio
     async def test_execute_tool_sync_async_allows_authenticated_operator(self, monkeypatch):
-        import agent_bom.mcp_server as mod
+        from agent_bom import mcp_server as mod
 
         monkeypatch.setattr(
             mod,
@@ -290,7 +290,7 @@ class TestToolMetrics:
 
     @pytest.mark.asyncio
     async def test_execute_tool_logs_single_line_caller(self, caplog, monkeypatch):
-        import agent_bom.mcp_server as mod
+        from agent_bom import mcp_server as mod
 
         _caller_rate_windows.clear()
         monkeypatch.setattr(
@@ -379,7 +379,7 @@ class TestToolMetrics:
         assert runtime.check_caller_rate_limit(windows, "caller-2", **kwargs) is not None
 
     def test_check_caller_rate_limit_enforces_window(self, monkeypatch):
-        import agent_bom.mcp_server as mod
+        from agent_bom import mcp_server as mod
 
         _caller_rate_windows.clear()
         monkeypatch.setattr(mod, "_MCP_CALLER_RATE_LIMIT", 2)

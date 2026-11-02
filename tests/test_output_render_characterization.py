@@ -23,7 +23,6 @@ from unittest import mock
 import pytest
 from click.testing import CliRunner
 
-import agent_bom.output.sarif as sarif_module
 from agent_bom.cli import main
 from agent_bom.evidence.scan_run import ScanIssue
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
@@ -38,6 +37,7 @@ from agent_bom.models import (
     Severity,
     Vulnerability,
 )
+from agent_bom.output import sarif as sarif_module
 from agent_bom.output.html import render_graph_script, to_html
 from agent_bom.output.sarif import export_sarif, to_sarif
 

@@ -151,7 +151,7 @@ def test_all_machine_views_agree_on_reachability_verdict() -> None:
         table = to_arrow_table(report)
         assert table.column("symbol_reachability").to_pylist()[0] == FUNCTION_REACHABLE
     except ImportError:
-        pass
+        pass  # optional dependency absent: keep the default
 
 
 def test_transitive_runtime_reach_provenance_is_preserved_across_machine_views() -> None:

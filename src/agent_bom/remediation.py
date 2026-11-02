@@ -41,6 +41,8 @@ from agent_bom.domain.remediation_model import RequiredPrivilege as RequiredPriv
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
 
+__all__ = ["REMEDIATION_SCHEMA_VERSION", "build_remediation"]
+
 
 # ---------------------------------------------------------------------------
 # Least-privilege derivation (CIS reference pattern)

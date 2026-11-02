@@ -90,3 +90,23 @@ def test_scheduled_warm_up_runs_off_thread_and_never_raises(store: SQLiteGraphSt
     assert finding_reachability_prewarm.schedule_reachability_prewarm(broken, tenant_id="t1") is True
     assert finding_reachability_prewarm.schedule_reachability_prewarm(lambda: store, tenant_id="t1") is True
     assert finding_reachability_prewarm.wait_idle(10.0)
+
+
+def test_loading_finding_read_surface_registers_commit_prewarm(tmp_path, monkeypatch):
+    """A clean reader process must retain the import that registers its commit hook."""
+    import subprocess
+    import sys
+
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
+    script = (
+        "import agent_bom.api.finding_page_read; "
+        "from agent_bom.api.graph_commit_hooks import _HOOKS; "
+        "assert 'finding_reachability_prewarm' in _HOOKS, 'commit prewarm hook missing'"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr

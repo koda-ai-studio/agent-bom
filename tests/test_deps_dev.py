@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-import agent_bom.deps_dev as _dd
+from agent_bom import deps_dev as _dd
 from agent_bom.deps_dev import (
     ECOSYSTEM_MAP,
     _encode_package_name,

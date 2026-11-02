@@ -29,6 +29,11 @@ from agent_bom.parsers.gradle_packages import parse_gradle_packages as parse_gra
 
 
 _GO_REPLACE_BLOCK_RE = re.compile(r"^replace[ \t]*\(([^)]*)\)", re.MULTILINE)
+__all__ = ["_CARGO_UNRESOLVED_VERSIONS", "_CHECKSUM_DB_URL", "_CRATES_IO_URL", "_GOPROXY_URL", "_MAVEN_CENTRAL_URL",
+    "_MAVEN_UNRESOLVED_VERSIONS", "_cargo_dep_version", "_cargo_dependency_tables", "_normalize_python_dist_name",
+    "_parse_cargo_toml", "_parse_pom_modules", "_resolve_uv_cached_version", "_uvx_package_from_command",
+    "_validate_https_url", "detect_uvx_package", "parse_cargo_packages", "parse_gradle_packages", "parse_maven_packages",
+    "resolve_cargo_version", "resolve_maven_version"]  # fmt: skip
 _GO_REPLACE_SINGLE_RE = re.compile(r"^replace[ \t]+([^(\s][^\n]*)$", re.MULTILINE)
 _GO_REPLACE_SPEC_RE = re.compile(r"^(\S+)(?:[ \t]+\S+)?[ \t]+=>[ \t]+(\S+)(?:[ \t]+(\S+))?$")
 

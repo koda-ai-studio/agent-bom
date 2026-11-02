@@ -583,7 +583,7 @@ class TestSchedulerLoop:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
 
         asyncio.run(_run())
         assert len(triggered) >= 1
@@ -609,7 +609,7 @@ class TestSchedulerLoop:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
 
         asyncio.run(_run())
         assert len(triggered) >= 1
@@ -644,7 +644,7 @@ class TestSchedulerLoop:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
 
         asyncio.run(_run())
         assert len(triggered) >= 1
@@ -669,7 +669,7 @@ class TestSchedulerLoop:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
 
         asyncio.run(_run())
         assert len(triggered) == 0
@@ -693,7 +693,7 @@ class TestSchedulerLoop:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
 
         asyncio.run(_run())
         updated = store.get("s1", tenant_id="default")
@@ -721,7 +721,7 @@ class TestSchedulerLoop:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
 
         asyncio.run(_run())
         assert store.get("s1", tenant_id="default") is None
@@ -773,7 +773,7 @@ class TestSchedulerLoop:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
 
         with patch("agent_bom.api.postgres_common._get_pool", return_value=_FakePool()):
             asyncio.run(_run())
@@ -821,7 +821,7 @@ class TestSchedulerLoop:
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # expected: the task was just cancelled
 
         with patch("agent_bom.api.postgres_common._get_pool", return_value=_FakePool()):
             asyncio.run(_run())

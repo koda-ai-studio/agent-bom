@@ -84,7 +84,7 @@ def save_report(report_json: dict, label: Optional[str] = None) -> Path:
 
         record_scan_report_best_effort(report_json, source="cli", artifact_path=path)
     except Exception:
-        pass
+        pass  # local analytics is best-effort; the history file written above is the record
     _ingest_clickhouse_best_effort(report_json)
     prune_history()
     return path

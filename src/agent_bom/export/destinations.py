@@ -53,10 +53,13 @@ from agent_bom.export.object_destinations import S3ObjectStoreDestination as S3O
 from agent_bom.export.object_destinations import _object_key as _object_key
 from agent_bom.export.object_destinations import _stream_gzip_ndjson as _stream_gzip_ndjson
 
+__all__ = ["AzureBlobObjectStoreDestination", "ExportDestination", "ExportDestinationError",
+    "ExportPublicationIndeterminateError", "ExportResult", "GcsObjectStoreDestination", "S3ObjectStoreDestination",
+    "_SPOOL_MAX_BYTES", "_object_key", "_stream_gzip_ndjson", "DEFERRED_EXPORT_KINDS", "SUPPORTED_EXPORT_KINDS"]  # fmt: skip
+
 logger = logging.getLogger(__name__)
 
-# Kinds with a shipped adapter. Object stores: s3 / azure-blob / gcs. Warehouses:
-# clickhouse / snowflake / bigquery / databricks.
+# Kinds with a shipped adapter. Object stores: s3 / azure-blob / gcs. Warehouses: clickhouse / snowflake / bigquery / databricks.
 SUPPORTED_EXPORT_KINDS: tuple[str, ...] = (
     "s3",
     "azure-blob",
@@ -70,8 +73,7 @@ SUPPORTED_EXPORT_KINDS: tuple[str, ...] = (
 DEFERRED_EXPORT_KINDS: tuple[str, ...] = ()
 
 
-# ClickHouse insert batch size: rows are flushed every N so we never hold the
-# full feed in memory.
+# ClickHouse insert batch size: rows are flushed every N so we never hold the full feed in memory.
 _CH_BATCH_ROWS = 500
 _RUNS_SUFFIX = "_runs"
 _STAGED_SUFFIX = "_staged"
@@ -99,9 +101,8 @@ def _clickhouse_literal(value: str) -> str:
     )
 
 
-# String columns of the ``findings_feed`` landing table, shared by every
-# warehouse adapter (ClickHouse + Snowflake) so the feed shape is identical
-# across destinations. Mapping stays tolerant of missing keys.
+# String columns of the ``findings_feed`` landing table, shared by every warehouse adapter (ClickHouse + Snowflake) so the feed shape is
+# identical across destinations. Mapping stays tolerant of missing keys.
 _FEED_STRING_FIELDS = (
     "canonical_id",
     "severity",
@@ -235,8 +236,7 @@ class ClickHouseWarehouseDestination:
                 self._client.insert_json(staged_table, batch)
                 row_count += len(batch)
         except Exception:
-            # No publication was attempted: this is a definitive staging
-            # failure. Cleanup is best-effort and must not mask the load error.
+            # No publication was attempted: this is a definitive staging failure. Cleanup is best-effort and must not mask the load error.
             try:
                 self._client.execute(cleanup_attempt)  # nosec B608 - validated table; tenant/run/attempt escaped by _clickhouse_literal
             except Exception:
@@ -255,13 +255,11 @@ class ClickHouseWarehouseDestination:
                 ],
             )
         except Exception:
-            # A publication timeout is ambiguous: the INSERT can still finish
-            # after this process observes no marker. Never delete its immutable
-            # staging rows. A present exact marker is safely reconciled; absent
-            # or unavailable status preserves staging and the primary error.
+            # A publication timeout is ambiguous: the INSERT can still finish after this process observes no marker. Never delete its
+            # immutable staging rows. A present exact marker is safely reconciled; absent or unavailable status preserves staging and the
+            # primary error.
             try:
-                # Table names are constructor-validated; all values are escaped
-                # with the ClickHouse literal encoder above.
+                # Table names are constructor-validated; all values are escaped with the ClickHouse literal encoder above.
                 committed = self._client.execute(
                     f"SELECT count() FROM {runs_table} WHERE tenant_id = '{escaped_tenant}' "  # nosec B608
                     f"AND run_id = '{escaped_run}' AND publication_attempt_id = '{escaped_attempt}' FORMAT TabSeparated"
@@ -350,8 +348,7 @@ class SnowflakeWarehouseDestination:
         try:
             check_cursor = check_conn.cursor()
             try:
-                # The table identifier is quoted from a validated constructor
-                # value; predicates remain connector-bound parameters.
+                # The table identifier is quoted from a validated constructor value; predicates remain connector-bound parameters.
                 check_cursor.execute(
                     f"SELECT 1 FROM {_sf_ident(self._table + _RUNS_SUFFIX)} WHERE "  # nosec B608
                     '"tenant_id" = %s AND "run_id" = %s AND "publication_attempt_id" = %s LIMIT 1',
@@ -381,8 +378,7 @@ class SnowflakeWarehouseDestination:
                 if self._ensure_schema:
                     cursor.execute(self._create_table_sql())
                     cursor.execute(self._create_runs_table_sql())
-                # Stream rows to a gzip NDJSON file: bounded RAM, spills to disk,
-                # so a huge tenant never inflates process memory.
+                # Stream rows to a gzip NDJSON file: bounded RAM, spills to disk, so a huge tenant never inflates process memory.
                 with NamedTemporaryFile(suffix=".ndjson.gz", delete=False) as handle:
                     tmp_path = handle.name
                 row_count = 0
@@ -400,8 +396,7 @@ class SnowflakeWarehouseDestination:
                 )
                 cursor.execute("BEGIN")
                 transaction_started = True
-                # table_ref is quoted from the validated table name; tenant_id
-                # is passed separately through the connector parameter API.
+                # table_ref is quoted from the validated table name; tenant_id is passed separately through the connector parameter API.
                 cursor.execute(
                     f"DELETE FROM {table_ref} WHERE {_sf_ident('tenant_id')} = %s",  # nosec B608
                     (tenant_id,),
@@ -413,8 +408,7 @@ class SnowflakeWarehouseDestination:
                         "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE "
                         "PURGE = TRUE"
                     )
-                # The table/column identifiers are fixed or validated and
-                # quoted; all publication values use bound parameters.
+                # The table/column identifiers are fixed or validated and quoted; all publication values use bound parameters.
                 cursor.execute(
                     f"INSERT INTO {_sf_ident(self._table + _RUNS_SUFFIX)} "  # nosec B608
                     '("tenant_id", "run_id", "publication_attempt_id", "row_count", "committed_at") '
@@ -425,8 +419,7 @@ class SnowflakeWarehouseDestination:
                     cursor.execute("COMMIT")
                     transaction_started = False
                 except Exception:
-                    # The marker and replacement commit atomically. A fresh
-                    # session can therefore reconcile a lost COMMIT response.
+                    # The marker and replacement commit atomically. A fresh session can therefore reconcile a lost COMMIT response.
                     try:
                         committed = self._manifest_exists(tenant_id=tenant_id, run_id=run_id, attempt_id=attempt_id)
                     except Exception:
@@ -531,8 +524,7 @@ class BigQueryWarehouseDestination:
     def _manifest_exists(self, runs_ref: str, *, tenant_id: str, run_id: str, attempt_id: str) -> bool:
         if not self._table_exists(runs_ref):
             return False
-        # runs_ref is assembled exclusively from validated project/dataset/table
-        # identifiers; query values are supplied by named parameters.
+        # runs_ref is assembled exclusively from validated project/dataset/table identifiers; query values are supplied by named parameters.
         rows = self._scope_query(
             f"SELECT 1 FROM `{runs_ref}` WHERE tenant_id = @tenant_id AND run_id = @run_id "  # nosec B608
             "AND publication_attempt_id = @attempt_id LIMIT 1",
@@ -571,8 +563,7 @@ class BigQueryWarehouseDestination:
                 run_id=run_id,
                 attempt_id=attempt_id,
             )
-        # staged_ref is assembled exclusively from validated identifiers; the
-        # row scope is passed through named BigQuery parameters.
+        # staged_ref is assembled exclusively from validated identifiers; the row scope is passed through named BigQuery parameters.
         cleanup_sql = (
             f"DELETE FROM `{staged_ref}` WHERE tenant_id = @tenant_id AND run_id = @run_id AND publication_attempt_id = @attempt_id"  # nosec B608
         )
@@ -592,8 +583,7 @@ class BigQueryWarehouseDestination:
                 self._load(staged_ref, batch)
                 row_count += len(batch)
             publication_started = True
-            # runs_ref is validated identifier composition; row_count is a
-            # locally accumulated integer and all external values are bound.
+            # runs_ref is validated identifier composition; row_count is a locally accumulated integer and all external values are bound.
             self._scope_query(
                 f"INSERT INTO `{runs_ref}` (tenant_id, run_id, publication_attempt_id, row_count, "  # nosec B608
                 "commit_version, committed_at) VALUES "
@@ -613,8 +603,7 @@ class BigQueryWarehouseDestination:
                         )
                 except Exception:
                     logger.warning("BigQuery publication status is indeterminate")
-                # The manifest load may still be running. Preserve staging so a
-                # late commit can only publish a complete immutable attempt.
+                # The manifest load may still be running. Preserve staging so a late commit can only publish a complete immutable attempt.
                 raise ExportPublicationIndeterminateError("BigQuery publication status is indeterminate") from None
             try:
                 if self._table_exists(staged_ref):
@@ -728,8 +717,7 @@ class DatabricksWarehouseDestination:
                     cursor.executemany(insert_sql, batch)
                     row_count += len(batch)
                 publication_started = True
-                # Fully qualified table/column identifiers are backtick-quoted;
-                # publication values are connector-bound parameters.
+                # Fully qualified table/column identifiers are backtick-quoted; publication values are connector-bound parameters.
                 cursor.execute(
                     f"INSERT INTO {self._full_table(_RUNS_SUFFIX)} ("  # nosec B608
                     f"{_dbx_ident('tenant_id')}, {_dbx_ident('run_id')}, {_dbx_ident(_ATTEMPT_COLUMN)}, "
@@ -740,8 +728,7 @@ class DatabricksWarehouseDestination:
             except Exception:
                 if publication_started:
                     try:
-                        # Identifiers are quoted by _dbx_ident/_full_table and
-                        # the lookup scope is connector-bound.
+                        # Identifiers are quoted by _dbx_ident/_full_table and the lookup scope is connector-bound.
                         cursor.execute(
                             f"SELECT 1 FROM {self._full_table(_RUNS_SUFFIX)} WHERE {_dbx_ident('tenant_id')} = ? "  # nosec B608
                             f"AND {_dbx_ident('run_id')} = ? AND {_dbx_ident(_ATTEMPT_COLUMN)} = ? LIMIT 1",
@@ -758,8 +745,7 @@ class DatabricksWarehouseDestination:
                     # Preserve staging: the manifest INSERT can still complete.
                     raise ExportPublicationIndeterminateError("Databricks publication status is indeterminate") from None
                 try:
-                    # Identifiers are quoted by _dbx_ident/_full_table and the
-                    # failed-attempt scope is connector-bound.
+                    # Identifiers are quoted by _dbx_ident/_full_table and the failed-attempt scope is connector-bound.
                     cursor.execute(
                         f"DELETE FROM {self._full_table(_STAGED_SUFFIX)} WHERE {_dbx_ident('tenant_id')} = ? "  # nosec B608
                         f"AND {_dbx_ident('run_id')} = ? AND {_dbx_ident(_ATTEMPT_COLUMN)} = ?",
@@ -778,9 +764,8 @@ class DatabricksWarehouseDestination:
 
 
 # ── Default SDK client factories ─────────────────────────────────────────────
-# Each lazily imports its vendor SDK so the base package stays slim; the import
-# only fires when a real export runs. Module-level (not nested in
-# build_destination) so tests can monkeypatch the SDK boundary without a network.
+# Each lazily imports its vendor SDK so the base package stays slim; the import only fires when a real export runs. Module-level (not nested
+# in build_destination) so tests can monkeypatch the SDK boundary without a network.
 def _default_azure_blob_service(secret: str | None, account_url: str) -> Any:
     try:
         from azure.storage.blob import BlobServiceClient
@@ -968,8 +953,7 @@ def build_destination(kind: str, config: dict[str, Any], secret: str | None = No
         conn_config = {"server_hostname": server_hostname, "http_path": http_path}
 
         def _dbx_factory() -> Any:
-            # Connect-once: the DBAPI connection is opened from the stored,
-            # decrypted access token; no per-run credential is passed.
+            # Connect-once: the DBAPI connection is opened from the stored, decrypted access token; no per-run credential is passed.
             return _default_databricks_connection(conn_config, secret.strip())
 
         return DatabricksWarehouseDestination(_dbx_factory, catalog=catalog, schema=schema, table=table)
