@@ -14,9 +14,13 @@ import pytest
 
 from tests._clock_helpers import approvable_expiry
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def scan_result_store(tmp_path):
+    """Keep local-pipeline assertions independent of prior tests' session scans."""
+    from agent_bom.mcp_tools.result_store import DurableScanResultStore
+
+    return DurableScanResultStore(path=tmp_path / "results.db", tenant_id="default", max_entries=5, ttl_seconds=60)
 
 
 def _trunc(s: str) -> str:
@@ -238,7 +242,7 @@ async def test_blast_radius_invalid_cve():
 
 
 @pytest.mark.asyncio
-async def test_blast_radius_cve_not_found():
+async def test_blast_radius_cve_not_found(scan_result_store):
     from agent_bom.mcp_tools.analysis import blast_radius_impl
 
     async def _pipeline():
@@ -246,6 +250,7 @@ async def test_blast_radius_cve_not_found():
 
     result = await blast_radius_impl(
         cve_id="CVE-2024-9999",
+        _result_store=scan_result_store,
         _validate_cve_id=lambda x: x.upper(),
         _run_scan_pipeline=_pipeline,
         _truncate_response=_trunc,
@@ -258,7 +263,7 @@ async def test_blast_radius_cve_not_found():
 
 
 @pytest.mark.asyncio
-async def test_blast_radius_found():
+async def test_blast_radius_found(scan_result_store):
     from agent_bom.mcp_tools.analysis import blast_radius_impl
 
     br = MagicMock()
@@ -281,6 +286,7 @@ async def test_blast_radius_found():
 
     result = await blast_radius_impl(
         cve_id="CVE-2024-9999",
+        _result_store=scan_result_store,
         _validate_cve_id=lambda x: x.upper(),
         _run_scan_pipeline=_pipeline,
         _truncate_response=_trunc,
@@ -291,7 +297,7 @@ async def test_blast_radius_found():
 
 
 @pytest.mark.asyncio
-async def test_blast_radius_pipeline_exception():
+async def test_blast_radius_pipeline_exception(scan_result_store):
     from agent_bom.mcp_tools.analysis import blast_radius_impl
 
     async def _fail():
@@ -299,6 +305,7 @@ async def test_blast_radius_pipeline_exception():
 
     result = await blast_radius_impl(
         cve_id="CVE-2024-1",
+        _result_store=scan_result_store,
         _validate_cve_id=lambda x: x.upper(),
         _run_scan_pipeline=_fail,
         _truncate_response=_trunc,
