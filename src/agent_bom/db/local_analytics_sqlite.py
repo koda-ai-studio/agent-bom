@@ -24,9 +24,10 @@ def page_stats(conn: sqlite3.Connection) -> dict[str, Any]:
 
 
 def release_free_pages(conn: sqlite3.Connection) -> None:
-    # The pragma yields one row per freed page; draining the cursor frees the whole list.
-    # It is a no-op unless the file is in incremental auto-vacuum mode.
-    conn.execute("PRAGMA incremental_vacuum").fetchall()
+    # executescript steps the pragma to completion; on Python < 3.12, execute() runs a
+    # PRAGMA for a single step and frees only one page. It commits any open transaction
+    # first, and is a no-op unless the file is in incremental auto-vacuum mode.
+    conn.executescript("PRAGMA incremental_vacuum;")
 
 
 def table_exists(conn: sqlite3.Connection, table: str) -> bool:
