@@ -1,6 +1,6 @@
-# Upgrade to 0.112.1
+# Upgrade to 0.113.0
 
-These instructions target 0.112.1 once its patched artifacts are published.
+These instructions target 0.113.0 once its artifacts are published.
 The source version alone does not establish package or image availability.
 
 ## Preserve configuration and evidence
@@ -26,8 +26,8 @@ agent-bom --version
 ```
 
 These commands select the latest published package. Confirm the reported
-version is 0.112.1 or a later release whose upgrade notes you have reviewed;
-if it remains 0.111.0, this upgrade has not been applied.
+version is 0.113.0 or a later release whose upgrade notes you have reviewed;
+if it remains 0.112.1 or older, this upgrade has not been applied.
 
 For a uv-managed CLI installation, use `uv tool upgrade agent-bom` after
 publication and verify the resulting version. Preserve any additional cloud
@@ -40,6 +40,29 @@ MCP stdio and MCP HTTP images have different entrypoints and dependency sets;
 keep the image role aligned with your deployment manifest. Follow the
 [deployment guide](../site-docs/deployment/overview.md) for your selected
 profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
+
+## Changes that affect an upgrade from 0.112.1
+
+- **Compressed pushes.** CLI pushes are gzip-compressed by default. A control
+  plane older than 2026-09-10 rejects them; set `AGENT_BOM_PUSH_GZIP=0` on
+  collectors that still push to one, or upgrade the control plane first.
+- **Push budget.** `POST /v1/results/push` accepts up to 256 MiB decoded
+  (`AGENT_BOM_API_RESULT_PUSH_MAX_BYTES`) and refuses gzip bodies that expand
+  beyond 100:1. Size worker memory for concurrent large pushes.
+- **Postgres selector.** A `postgresql://` or `postgres://` URL in
+  `AGENT_BOM_DB` is accepted as the alias of `AGENT_BOM_POSTGRES_URL`.
+- **Local retention.** The local scan mirror drops whole runs older than
+  `AGENT_BOM_ANALYTICS_MAX_RUN_AGE_DAYS` (90) or beyond
+  `AGENT_BOM_ANALYTICS_MAX_BYTES` (2 GiB live), always keeping the newest run.
+  Raise or disable (`<= 0`) these before upgrading if the mirror holds history
+  you need. Current-estate projection caches are swept automatically; preview
+  the sweep with `agent-bom db prune` and apply it with `--yes`.
+- **Count changes.** npm workspace members are no longer reported as packages
+  and model binaries are scanned by default, so package and finding totals can
+  differ from a 0.112.1 scan of the same project. Compare scopes, not totals.
+
+See [ENV_VARS](operations/ENV_VARS.md) for `AGENT_BOM_EXEC_PREWARM` and the
+other new settings.
 
 ## Verify the upgraded scope
 
