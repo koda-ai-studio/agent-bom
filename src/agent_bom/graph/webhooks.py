@@ -39,13 +39,16 @@ class PriorGraphView(Protocol):
     """
 
     @property
-    def nodes(self) -> Mapping[str, Any]: ...
+    def nodes(self) -> Mapping[str, Any]:
+        """Nodes of the prior graph keyed by node id."""
 
     @property
-    def attack_paths(self) -> Sequence[Any]: ...
+    def attack_paths(self) -> Sequence[Any]:
+        """Attack paths of the prior graph."""
 
     @property
-    def interaction_risks(self) -> Sequence[Any]: ...
+    def interaction_risks(self) -> Sequence[Any]:
+        """Interaction risks of the prior graph."""
 
 
 def _graph_node_ref(

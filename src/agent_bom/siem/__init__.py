@@ -97,9 +97,14 @@ def _probe(config: "SIEMConfig", url: str, headers: dict[str, str]) -> bool:
 class SIEMConnector(Protocol):
     """Protocol for SIEM integrations."""
 
-    def send_event(self, event: dict) -> bool: ...
-    def send_batch(self, events: list[dict]) -> int: ...
-    def health_check(self) -> bool: ...
+    def send_event(self, event: dict) -> bool:
+        """Send one event; return whether it was accepted."""
+
+    def send_batch(self, events: list[dict]) -> int:
+        """Send a batch of events; return how many were accepted."""
+
+    def health_check(self) -> bool:
+        """Return whether the SIEM endpoint is reachable."""
 
 
 @dataclass

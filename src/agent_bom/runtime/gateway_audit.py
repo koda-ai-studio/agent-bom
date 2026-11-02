@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import logging
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
@@ -62,7 +63,85 @@ def _audit_health_has_pending_state(health: dict[str, str | int | bool]) -> bool
     )
 
 
-class ControlPlaneAuditSink:
+class GatewayAuditSinkBase(ABC):
+    """Lifecycle contract and batch framing shared by every gateway audit sink.
+
+    It holds no state of its own, so each concrete sink initializes exactly the
+    attributes its own methods read.
+    """
+
+    _source_id: str
+    _session_id: str
+    _token: str | None
+
+    @abstractmethod
+    async def bind_authenticated_tenant(self, tenant_id: str, token: str | None) -> None:
+        """Bind a verified request credential to this sink or fail closed."""
+
+    @abstractmethod
+    async def __call__(self, event: dict[str, Any]) -> None:
+        """Record a post-decision event; delivery may complete off the request path."""
+
+    @abstractmethod
+    async def admit_before_tool_execution(self, event: dict[str, Any]) -> None:
+        """Durably record an event before the tool runs or raise to fail closed."""
+
+    @abstractmethod
+    async def flush_once(self) -> bool:
+        """Attempt one delivery round; return whether the queue made progress."""
+
+    @abstractmethod
+    async def start(self) -> None:
+        """Start background delivery."""
+
+    @abstractmethod
+    async def aclose(self) -> None:
+        """Stop background delivery."""
+
+    @abstractmethod
+    def health(self) -> dict[str, str | int | bool]:
+        """Report delivery health without blocking the event loop."""
+
+    @staticmethod
+    def _batch_idempotency_key(session_id: str, events: list[dict[str, Any]]) -> str:
+        event_identities = [
+            str(event.get("event_id"))
+            if event.get("event_id")
+            else hashlib.sha256(json.dumps(event, separators=(",", ":"), sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()
+            for event in events
+        ]
+        material = json.dumps([session_id, event_identities], separators=(",", ":"), ensure_ascii=True)
+        return "gateway-audit-" + hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _validate_acknowledgement(events: list[dict[str, Any]], response: dict[str, Any]) -> None:
+        from agent_bom.runtime.gateway_events import GATEWAY_CANONICAL_EVENT_TYPES
+
+        canonical_count = sum(str(event.get("event_type") or "") in GATEWAY_CANONICAL_EVENT_TYPES for event in events)
+        durable_count = int(response.get("durable_accepted_count") or 0) + int(response.get("durable_duplicate_count") or 0)
+        conflict_count = int(response.get("durable_conflict_count") or 0)
+        accepted_count = int(response.get("accepted_alert_count") or 0) + int(response.get("duplicate_alert_count") or 0)
+        if conflict_count or durable_count < canonical_count:
+            raise RuntimeError("control plane did not durably acknowledge canonical gateway activity")
+        if accepted_count < len(events):
+            raise RuntimeError("control plane did not acknowledge the complete gateway audit batch")
+
+    def _payload(self, events: list[dict[str, Any]]) -> dict[str, Any]:
+        return {
+            "source_id": self._source_id,
+            "session_id": self._session_id,
+            "idempotency_key": self._batch_idempotency_key(self._session_id, events),
+            "alerts": events,
+        }
+
+    def _headers(self) -> dict[str, str]:
+        headers = {"Content-Type": "application/json"}
+        if self._token:
+            headers["Authorization"] = f"Bearer {self._token}"
+        return headers
+
+
+class ControlPlaneAuditSink(GatewayAuditSinkBase):
     """Durably queue and retry standalone-gateway audit delivery.
 
     A remote outage is fail-safe while the bounded local backlog accepts the
@@ -131,7 +210,7 @@ class ControlPlaneAuditSink:
                     self._tenant_registry_available = False
                     logger.error("Gateway audit tenant registry unavailable (error_type=%s)", type(exc).__name__)
                     raise GatewayAuditDeliveryUnavailableError("tenant audit routing registry is unavailable") from None
-                sink = build_control_plane_audit_sink(
+                child = build_control_plane_audit_sink(
                     self._base_url,
                     token,
                     tenant_id=normalized_tenant,
@@ -140,6 +219,9 @@ class ControlPlaneAuditSink:
                     tenant_routing_enabled=False,
                     max_tenant_sinks=0,
                 )
+                if not isinstance(child, ControlPlaneAuditSink):
+                    raise GatewayAuditDeliveryUnavailableError("tenant audit routing requires a local delivery queue")
+                sink = child
                 self._tenant_sinks[normalized_tenant] = sink
                 await sink.start()
             else:
@@ -169,6 +251,8 @@ class ControlPlaneAuditSink:
                     tenant_routing_enabled=False,
                     max_tenant_sinks=0,
                 )
+                if not isinstance(sink, ControlPlaneAuditSink):
+                    raise ValueError("tenant audit recovery requires a local delivery queue")
                 child_health = sink._own_health()
                 if not _audit_health_has_pending_state(child_health):
                     self._tenant_registry.unregister(tenant_id)
@@ -189,44 +273,6 @@ class ControlPlaneAuditSink:
         if sink is None:
             raise GatewayAuditDeliveryUnavailableError("no tenant-bound audit credential is available")
         return sink
-
-    @staticmethod
-    def _batch_idempotency_key(session_id: str, events: list[dict[str, Any]]) -> str:
-        event_identities = [
-            str(event.get("event_id"))
-            if event.get("event_id")
-            else hashlib.sha256(json.dumps(event, separators=(",", ":"), sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()
-            for event in events
-        ]
-        material = json.dumps([session_id, event_identities], separators=(",", ":"), ensure_ascii=True)
-        return "gateway-audit-" + hashlib.sha256(material.encode("utf-8")).hexdigest()
-
-    @staticmethod
-    def _validate_acknowledgement(events: list[dict[str, Any]], response: dict[str, Any]) -> None:
-        from agent_bom.runtime.gateway_events import GATEWAY_CANONICAL_EVENT_TYPES
-
-        canonical_count = sum(str(event.get("event_type") or "") in GATEWAY_CANONICAL_EVENT_TYPES for event in events)
-        durable_count = int(response.get("durable_accepted_count") or 0) + int(response.get("durable_duplicate_count") or 0)
-        conflict_count = int(response.get("durable_conflict_count") or 0)
-        accepted_count = int(response.get("accepted_alert_count") or 0) + int(response.get("duplicate_alert_count") or 0)
-        if conflict_count or durable_count < canonical_count:
-            raise RuntimeError("control plane did not durably acknowledge canonical gateway activity")
-        if accepted_count < len(events):
-            raise RuntimeError("control plane did not acknowledge the complete gateway audit batch")
-
-    def _payload(self, events: list[dict[str, Any]]) -> dict[str, Any]:
-        return {
-            "source_id": self._source_id,
-            "session_id": self._session_id,
-            "idempotency_key": self._batch_idempotency_key(self._session_id, events),
-            "alerts": events,
-        }
-
-    def _headers(self) -> dict[str, str]:
-        headers = {"Content-Type": "application/json"}
-        if self._token:
-            headers["Authorization"] = f"Bearer {self._token}"
-        return headers
 
     async def _persist_and_flush(self, event: dict[str, Any], *, require_remote_ack: bool) -> None:
         async with self._lock:
@@ -454,7 +500,7 @@ def build_control_plane_audit_sink(
     sender: GatewayAuditSender | None = None,
     tenant_routing_enabled: bool = True,
     max_tenant_sinks: int = _GATEWAY_AUDIT_MAX_TENANT_SINKS,
-) -> ControlPlaneAuditSink:
+) -> GatewayAuditSinkBase:
     """Build the gateway's shared bounded control-plane audit delivery sink."""
 
     backend = env_str("AGENT_BOM_GATEWAY_AUDIT_BACKEND", "local").strip().lower()

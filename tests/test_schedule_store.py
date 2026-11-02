@@ -104,8 +104,9 @@ class TestInMemoryScheduleStore:
         schedule = _make_schedule("shared", tenant_id="tenant-alpha")
         store.put(schedule, tenant_id="tenant-alpha")
 
+        missing_tenant: dict[str, str] = {}
         with pytest.raises(TypeError):
-            store.get("shared")
+            store.get("shared", **missing_tenant)
         with pytest.raises(ValueError, match="different tenant"):
             store.put(_make_schedule("shared", tenant_id="tenant-beta"), tenant_id="tenant-beta")
         assert store.get("shared", tenant_id="tenant-beta") is None

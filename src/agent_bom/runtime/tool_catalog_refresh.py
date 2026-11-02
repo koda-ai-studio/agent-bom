@@ -20,7 +20,8 @@ class CatalogRefreshSession(Protocol):
     log_file: Any
     server_stdin_lock: asyncio.Lock
 
-    async def handle_alerts(self, alerts: Any, log_f: Any = None) -> None: ...
+    async def handle_alerts(self, alerts: Any, log_f: Any = None) -> None:
+        """Route detector alerts through the relay's alert handling."""
 
 
 @dataclass

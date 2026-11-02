@@ -156,7 +156,7 @@ async def create_ticket_for_finding(
         logger.warning("Ticketing create failed for connection %s", record.id)
         raise TicketingError(_safe_detail(exc), code="transport_error") from exc
     finally:
-        secret = ""  # drop the plaintext reference
+        del secret  # drop the plaintext reference
 
     link.external_id = ref.external_id
     link.key = ref.key
@@ -211,7 +211,7 @@ async def sync_ticket_status(
         logger.warning("Ticketing status sync failed for ticket %s", sanitize_log_value(ticket_id))
         raise TicketingError(_safe_detail(exc), code="transport_error") from exc
     finally:
-        secret = ""
+        del secret
 
     link.status = status.value
     link.updated_at = _now()

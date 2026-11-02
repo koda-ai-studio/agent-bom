@@ -1406,7 +1406,7 @@ def _wait_for_scan_job(client: TestClient, job_id: str, *, tenant: str = "tenant
         if job is not None and job.status.value in {"done", "failed", "cancelled"}:
             return job.model_dump(mode="json")
         time.sleep(0.01)
-    pytest.fail(f"scan job {job_id} did not become terminal")
+    raise AssertionError(f"scan job {job_id} did not become terminal")
 
 
 def test_manual_connection_scan_enqueues_without_running_broker_inline(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -466,7 +466,7 @@ def assume_account_session(
     try:
         assumed = sts.assume_role(**assume_kwargs)
     finally:
-        ext = ""  # drop the plaintext ExternalId reference immediately
+        del ext  # drop the plaintext ExternalId reference immediately
     creds = assumed.get("Credentials", {})
     return boto3.Session(
         aws_access_key_id=creds.get("AccessKeyId"),

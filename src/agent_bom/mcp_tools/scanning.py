@@ -165,7 +165,7 @@ async def scan_impl(
             # discovery path. The temp dir is removed when this block exits.
             config_path = str(cloned_dir)
 
-        return await _scan_impl_inner(
+        result = await _scan_impl_inner(
             config_path=config_path,
             no_discover=no_discover,
             image=image,
@@ -189,7 +189,7 @@ async def scan_impl(
             _result_owner=_result_owner,
             _result_store=store,
         )
-    raise ToolError("scan failed before producing a result")
+    return result
 
 
 def _target_pipeline(pipeline, *, section, project_path, config_path, repo_url):
@@ -327,7 +327,7 @@ async def _scan_impl_inner(
         incomplete = _incomplete_scan_response(exc, offline, _truncate_response)
         if incomplete is not None:
             return incomplete
-        raise_scan_tool_failure(exc, logger)
+        return raise_scan_tool_failure(exc, logger)
 
 
 async def _post_scan_enrichment(agents, scan_warnings: list[str], *, verify_integrity: bool, scorecard: bool) -> None:

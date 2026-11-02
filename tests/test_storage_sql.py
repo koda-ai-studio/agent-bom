@@ -486,11 +486,15 @@ def test_batched_returning_tracks_only_inserted_rows_and_rolls_back(backend: Sql
     statement = (
         "INSERT INTO tenant_quota_overrides (tenant_id, updated_at, data) VALUES (?, ?, ?) ON CONFLICT DO NOTHING RETURNING tenant_id"
     )
+
+    def insert_then_roll_back() -> None:
+        with backend.transaction() as tx:
+            assert tx.executemany_returning(statement, [(tenant, "t1", "{}"), (tenant, "t2", "{}")]) == [(tenant,)]
+            assert tx.executemany_returning(statement, []) == []
+            raise RuntimeError("rollback")
+
     with as_tenant(tenant):
         with pytest.raises(RuntimeError, match="rollback"):
-            with backend.transaction() as tx:
-                assert tx.executemany_returning(statement, [(tenant, "t1", "{}"), (tenant, "t2", "{}")]) == [(tenant,)]
-                assert tx.executemany_returning(statement, []) == []
-                raise RuntimeError("rollback")
+            insert_then_roll_back()
         with backend.transaction(read_only=True) as tx:
             assert tx.execute("SELECT COUNT(*) FROM tenant_quota_overrides WHERE tenant_id = ?", (tenant,)).fetchone()[0] == 0

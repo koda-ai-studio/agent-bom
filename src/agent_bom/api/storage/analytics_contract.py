@@ -29,35 +29,27 @@ class AnalyticsStore(Protocol):
         tenant_id: str = "default",
     ) -> None:
         """Append vulnerability scan results."""
-        ...
 
     def record_event(self, event: dict, *, tenant_id: str = "default") -> None:
         """Append a runtime protection event."""
-        ...
 
     def record_events(self, events: list[dict], *, tenant_id: str = "default") -> None:
         """Append multiple runtime protection events in one batch."""
-        ...
 
     def record_posture(self, agent_name: str, snapshot: dict, *, tenant_id: str = "default") -> None:
         """Append a posture score snapshot."""
-        ...
 
     def record_fleet_snapshot(self, snapshot: dict) -> None:
         """Append a fleet-agent snapshot."""
-        ...
 
     def record_compliance_control(self, control: dict, *, tenant_id: str = "default") -> None:
         """Append a compliance control measurement."""
-        ...
 
     def record_cis_benchmark_checks(self, checks: list[dict], *, tenant_id: str = "default") -> None:
         """Append normalized CIS benchmark check rows."""
-        ...
 
     def record_audit_event(self, event: dict) -> None:
         """Append an audit event for analytics/trending."""
-        ...
 
     def query_vuln_trends(
         self,
@@ -67,11 +59,9 @@ class AnalyticsStore(Protocol):
         tenant_id: str | None = None,
     ) -> list[dict]:
         """Vulnerability counts grouped by day and severity."""
-        ...
 
     def query_top_cves(self, limit: int = 20, *, tenant_id: str | None = None) -> list[dict]:
         """Most frequent CVEs across all scans."""
-        ...
 
     def query_posture_history(
         self,
@@ -81,19 +71,15 @@ class AnalyticsStore(Protocol):
         tenant_id: str | None = None,
     ) -> list[dict]:
         """Posture grade time-series."""
-        ...
 
     def query_event_summary(self, hours: int = 24, *, tenant_id: str | None = None) -> list[dict]:
         """Runtime event counts grouped by type."""
-        ...
 
     def query_top_riskiest_agents(self, limit: int = 20, *, tenant_id: str | None = None) -> list[dict]:
         """Top fleet agents by trust/risk posture."""
-        ...
 
     def query_compliance_heatmap(self, days: int = 30, *, tenant_id: str | None = None) -> list[dict]:
         """Compliance control pass/fail summary grouped by framework."""
-        ...
 
     def query_cis_benchmark_checks(
         self,
@@ -106,15 +92,12 @@ class AnalyticsStore(Protocol):
         tenant_id: str | None = None,
     ) -> list[dict]:
         """List normalized CIS benchmark checks."""
-        ...
 
     def record_scan_metadata(self, metadata: dict, *, tenant_id: str = "default") -> None:
         """Record scan-level metadata (agent count, vuln count, grade)."""
-        ...
 
     def close(self) -> None:
         """Flush and release any buffered resources."""
-        ...
 
 
 # ------------------------------------------------------------------

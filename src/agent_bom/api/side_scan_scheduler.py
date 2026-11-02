@@ -172,13 +172,12 @@ def load_scheduled_targets(raw: str | None = None) -> list[ScheduledSideScanTarg
     # Probe for a file path, but treat any OS error (e.g. an over-long inline
     # JSON string that cannot be a path) as "not a file" and fall through to
     # parsing the value as inline JSON — never raise on a config probe.
+    candidate = Path(source).expanduser()
     try:
-        candidate = Path(source).expanduser()
         is_file = candidate.is_file()
     except OSError:
-        candidate = None
         is_file = False
-    if is_file and candidate is not None:
+    if is_file:
         try:
             text = candidate.read_text(encoding="utf-8")
         except OSError:

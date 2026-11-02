@@ -25,6 +25,7 @@ additive aliases and guidance, not a restructure.
 
 from __future__ import annotations
 
+import contextlib
 import os
 from typing import Any
 
@@ -547,43 +548,41 @@ def _register_via_server(
 
     from agent_bom.client import AgentBomApiError, AgentBomClient
 
-    client = AgentBomClient(base_url=server, api_key=api_key, tenant_id=tenant or None)
-    try:
-        created = client.create_cloud_connection(
-            provider=source.name,
-            display_name=display_name,
-            role_ref=role_ref,
-            external_id=external_id,
-            regions=regions,
-            auth_params=auth_params,
-            inventory_scope=inventory_scope,
-            scan_mode=scan_mode,
-            auto_scan_on_create=auto_scan_on_create,
-        )
-        connection_id = str(created.get("id") or "")
-        con.print(f"[green]Registered[/green] {source.title} connection [bold]{connection_id}[/bold] on {server}.")  # type: ignore[attr-defined]
-        test = client.test_cloud_connection(connection_id)
-        raw_capabilities = test.get("verified_capabilities", [])
-        capabilities = ", ".join(str(item) for item in raw_capabilities) if isinstance(raw_capabilities, list) else ""
-        detail = f" ({capabilities})" if capabilities else ""
-        con.print(f"[green]Test:[/green] read-only capability probe -> {test.get('capability_probe_status', 'unknown')}{detail}.")  # type: ignore[attr-defined]
-        if do_scan:
-            scan = client.scan_cloud_connection(connection_id)
-            con.print(f"[green]Scan:[/green] launched (scan_id {scan.get('scan_id', '?')}).")  # type: ignore[attr-defined]
-    except AgentBomApiError as exc:
-        detail = _control_plane_detail(exc.body)
-        suffix = f" {escape(detail)}" if detail else " Re-run with the control plane's logs available for detail."
-        con.print(f"[red]Control plane rejected the request ({exc.status_code}).[/red]{suffix}")  # type: ignore[attr-defined]
-        code = _EXIT_USAGE if exc.status_code in _USAGE_STATUSES else _EXIT_OPERATIONAL
-        raise click.exceptions.Exit(code) from None
-    except httpx.RequestError as exc:
-        con.print(  # type: ignore[attr-defined]
-            f"[red]Could not reach the agent-bom control plane at {escape(server)}.[/red] "
-            f"Check --server, network reachability, and that the API is running: {escape(type(exc).__name__)}."
-        )
-        raise click.exceptions.Exit(_EXIT_OPERATIONAL) from None
-    finally:
-        client.close()
+    with contextlib.closing(AgentBomClient(base_url=server, api_key=api_key, tenant_id=tenant or None)) as client:
+        try:
+            created = client.create_cloud_connection(
+                provider=source.name,
+                display_name=display_name,
+                role_ref=role_ref,
+                external_id=external_id,
+                regions=regions,
+                auth_params=auth_params,
+                inventory_scope=inventory_scope,
+                scan_mode=scan_mode,
+                auto_scan_on_create=auto_scan_on_create,
+            )
+            connection_id = str(created.get("id") or "")
+            con.print(f"[green]Registered[/green] {source.title} connection [bold]{connection_id}[/bold] on {server}.")  # type: ignore[attr-defined]
+            test = client.test_cloud_connection(connection_id)
+            raw_capabilities = test.get("verified_capabilities", [])
+            capabilities = ", ".join(str(item) for item in raw_capabilities) if isinstance(raw_capabilities, list) else ""
+            detail = f" ({capabilities})" if capabilities else ""
+            con.print(f"[green]Test:[/green] read-only capability probe -> {test.get('capability_probe_status', 'unknown')}{detail}.")  # type: ignore[attr-defined]
+            if do_scan:
+                scan = client.scan_cloud_connection(connection_id)
+                con.print(f"[green]Scan:[/green] launched (scan_id {scan.get('scan_id', '?')}).")  # type: ignore[attr-defined]
+        except AgentBomApiError as exc:
+            detail = _control_plane_detail(exc.body)
+            suffix = f" {escape(detail)}" if detail else " Re-run with the control plane's logs available for detail."
+            con.print(f"[red]Control plane rejected the request ({exc.status_code}).[/red]{suffix}")  # type: ignore[attr-defined]
+            code = _EXIT_USAGE if exc.status_code in _USAGE_STATUSES else _EXIT_OPERATIONAL
+            raise click.exceptions.Exit(code) from None
+        except httpx.RequestError as exc:
+            con.print(  # type: ignore[attr-defined]
+                f"[red]Could not reach the agent-bom control plane at {escape(server)}.[/red] "
+                f"Check --server, network reachability, and that the API is running: {escape(type(exc).__name__)}."
+            )
+            raise click.exceptions.Exit(_EXIT_OPERATIONAL) from None
 
 
 def _make_connect_subcommand(source: _ConnectSource) -> click.Command:

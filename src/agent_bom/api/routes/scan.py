@@ -195,7 +195,6 @@ async def create_scan(request: Request, body: ScanRequest) -> ScanJob:
         if existing is not None:
             heartbeat.ensure_owned()
             heartbeat.__exit__()
-            heartbeat = None
             recovered = cast(
                 ScanJob,
                 await asyncio.to_thread(

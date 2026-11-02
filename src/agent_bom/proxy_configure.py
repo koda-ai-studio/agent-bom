@@ -20,6 +20,7 @@ Optionally enriches the proxy args with --log, --policy, --detect-credentials,
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -236,20 +237,20 @@ def apply_proxy_configs(
                 # Atomic write: temp file + rename to prevent corruption
                 fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp", prefix=".agent-bom-")
                 fd_closed = False
+                replaced = False
                 try:
                     os.write(fd, json.dumps(data, indent=2).encode("utf-8"))
                     os.close(fd)
                     fd_closed = True
                     os.chmod(tmp_path, orig_mode & 0o777)
                     os.replace(tmp_path, str(path))
-                except BaseException:
-                    if not fd_closed:
-                        os.close(fd)
-                    try:
-                        os.unlink(tmp_path)
-                    except OSError:
-                        pass
-                    raise
+                    replaced = True
+                finally:
+                    if not replaced:
+                        if not fd_closed:
+                            os.close(fd)
+                        with contextlib.suppress(OSError):
+                            os.unlink(tmp_path)
                 modified += 1
             except OSError as exc:
                 logger.warning("Cannot write %s: %s", config_path, exc)

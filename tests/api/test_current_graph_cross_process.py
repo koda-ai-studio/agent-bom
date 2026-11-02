@@ -34,7 +34,7 @@ def _resolve_in_another_process(kind: str, jobs_path: str, graph_path: str, stat
     try:
         store = CurrentGraphStore(SQLiteGraphStore(graph_path), _job_store(kind, jobs_path))
         conn.send(("ok", store._resolve_current_id(TENANT)))
-    except BaseException as exc:  # noqa: BLE001 - report every child failure to the parent
+    except Exception as exc:  # noqa: BLE001 - report every child failure to the parent
         conn.send(("error", repr(exc)))
     finally:
         conn.close()

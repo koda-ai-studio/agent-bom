@@ -103,7 +103,7 @@ def supported_clients() -> list[SupportedClient]:
     from agent_bom.discovery import CONFIG_LOCATIONS
 
     clients: list[SupportedClient] = []
-    for agent_type in AgentType:
+    for agent_type in list(AgentType):
         if agent_type is AgentType.CUSTOM:
             continue
         paths = CONFIG_LOCATIONS.get(agent_type, {})
