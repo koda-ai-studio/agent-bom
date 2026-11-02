@@ -105,7 +105,7 @@ async def test_cli_and_mcp_scan_the_same_project_inputs(
 
     monkeypatch.setattr("agent_bom.scanners.scan_agents", _no_vulns)
     agents, _b, _w, _s = await run_scan_pipeline(
-        safe_path=lambda value: Path(value),
+        safe_path=Path,
         config_path=str(project),
         sbom_path=str(sbom) if with_sbom else None,
         no_discover=True,

@@ -123,10 +123,10 @@ def test_scheduling_returns_at_once_and_coalesces_while_a_warm_up_runs(monkeypat
     monkeypatch.setattr(graph_rollup_prewarm, "prewarm_rollup", slow_prewarm)
     monkeypatch.delenv("AGENT_BOM_GRAPH_ROLLUP_PREWARM", raising=False)
 
-    graph_rollup_prewarm.schedule_rollup_prewarm(lambda: object(), tenant_id="tenant-a")
+    graph_rollup_prewarm.schedule_rollup_prewarm(object, tenant_id="tenant-a")
     assert started.wait(5)
     for _ in range(5):
-        graph_rollup_prewarm.schedule_rollup_prewarm(lambda: object(), tenant_id="tenant-a")
+        graph_rollup_prewarm.schedule_rollup_prewarm(object, tenant_id="tenant-a")
     # Scheduling returned while the warm-up is still held open: it never waited on it.
     assert not finished.is_set()
     release.set()
@@ -171,7 +171,7 @@ def test_prewarm_can_be_disabled(monkeypatch) -> None:
     monkeypatch.setattr(graph_rollup_prewarm, "prewarm_rollup", lambda _store, *, tenant_id: calls.append(tenant_id) or 0)
     monkeypatch.setenv("AGENT_BOM_GRAPH_ROLLUP_PREWARM", "0")
 
-    graph_rollup_prewarm.schedule_rollup_prewarm(lambda: object(), tenant_id="default")
+    graph_rollup_prewarm.schedule_rollup_prewarm(object, tenant_id="default")
     assert graph_rollup_prewarm.wait_idle(5)
     assert calls == []
 

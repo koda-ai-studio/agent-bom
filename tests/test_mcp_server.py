@@ -496,7 +496,7 @@ def test_scan_pipeline_builds_inventory_from_npx_package(monkeypatch):
 
     agents, _blast_radii, warnings, scan_sources = _run(
         run_scan_pipeline(
-            safe_path=lambda value: Path(value),
+            safe_path=Path,
             package="npx -y @modelcontextprotocol/server-filesystem",
             offline=True,
         )
@@ -532,7 +532,7 @@ def test_scan_pipeline_no_discover_excludes_ambient_agents(monkeypatch, tmp_path
 
     agents, _blast_radii, _warnings, scan_sources = _run(
         run_scan_pipeline(
-            safe_path=lambda value: Path(value),
+            safe_path=Path,
             config_path=str(tmp_path),
             no_discover=True,
             offline=True,
@@ -551,7 +551,7 @@ def test_scan_pipeline_no_discover_without_target_skips_discovery(monkeypatch):
         raise AssertionError("ambient discovery must be disabled")
 
     monkeypatch.setattr("agent_bom.discovery.discover_all", _unexpected_discovery)
-    agents, _b, _w, _s = _run(run_scan_pipeline(safe_path=lambda value: Path(value), no_discover=True, offline=True))
+    agents, _b, _w, _s = _run(run_scan_pipeline(safe_path=Path, no_discover=True, offline=True))
     assert agents == []
 
 

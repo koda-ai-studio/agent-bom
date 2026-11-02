@@ -52,7 +52,7 @@ def test_health_reports_supported_snowflake_control_plane_slice(mock_connect, mo
     monkeypatch.delenv("SNOWFLAKE_PASSWORD", raising=False)
     monkeypatch.delenv("AGENT_BOM_POSTGRES_URL", raising=False)
     mock_connect.return_value = _mock_connection()
-    monkeypatch.setattr("agent_bom.api.server._cleanup_loop", lambda: _async_noop())
+    monkeypatch.setattr("agent_bom.api.server._cleanup_loop", _async_noop)
     monkeypatch.setattr("agent_bom.api.scheduler.scheduler_loop", lambda store, fn: _async_noop())
 
     _clear_store_globals()
@@ -85,7 +85,7 @@ def test_supported_snowflake_routes_remain_wired(mock_connect, monkeypatch):
     monkeypatch.delenv("SNOWFLAKE_PASSWORD", raising=False)
     monkeypatch.delenv("AGENT_BOM_POSTGRES_URL", raising=False)
     mock_connect.return_value = _mock_connection()
-    monkeypatch.setattr("agent_bom.api.server._cleanup_loop", lambda: _async_noop())
+    monkeypatch.setattr("agent_bom.api.server._cleanup_loop", _async_noop)
     monkeypatch.setattr("agent_bom.api.scheduler.scheduler_loop", lambda store, fn: _async_noop())
 
     api_key = "snowflake-contract-test-key"

@@ -256,7 +256,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         ),
         path=lambda: settings.policy_path,
         interval=lambda: settings.policy_reload_interval_seconds,
-        load=lambda path: _load_policy_file(path),
+        load=_load_policy_file,
         logger=logger,
         log_prefix="gateway policy",
         sanitize_log=_sanitize_for_log,
@@ -275,7 +275,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         ),
         path=lambda: settings.firewall_policy_path,
         interval=lambda: settings.firewall_policy_reload_interval_seconds,
-        load=lambda path: load_firewall_policy_file(path),
+        load=load_firewall_policy_file,
         logger=logger,
         log_prefix="gateway firewall policy",
         sanitize_log=_sanitize_for_log,
@@ -664,7 +664,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         bind_audit_tenant=_bind_authenticated_audit_tenant,
         emit_policy_interop=_emit_policy_interop_event,
         visual_detector=lambda: _get_visual_leak_detector(),
-        response_scanner=lambda message, config: scan_jsonrpc_response(message, config),
+        response_scanner=scan_jsonrpc_response,
         tracer=_GATEWAY_TRACER,
     )
 

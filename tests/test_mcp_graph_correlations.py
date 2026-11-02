@@ -172,8 +172,8 @@ def test_graph_correlate_requires_idempotency_and_distinct_snapshots(monkeypatch
 
 def test_graph_correlation_status_is_tenant_scoped(monkeypatch) -> None:
     monkeypatch.setenv(MCP_TENANT_ENV_VAR, "tenant-a")
-    payload = json.loads(asyncio.run(graph_correlation_status_impl("corr-1", tenant_id="tenant-a", _get_graph_store=lambda: _Store())))
-    missing = json.loads(asyncio.run(graph_correlation_status_impl("corr-1", tenant_id="tenant-b", _get_graph_store=lambda: _Store())))
+    payload = json.loads(asyncio.run(graph_correlation_status_impl("corr-1", tenant_id="tenant-a", _get_graph_store=_Store)))
+    missing = json.loads(asyncio.run(graph_correlation_status_impl("corr-1", tenant_id="tenant-b", _get_graph_store=_Store)))
 
     assert payload["correlation_id"] == "corr-1"
     assert missing["tenant_id"] == "tenant-a"

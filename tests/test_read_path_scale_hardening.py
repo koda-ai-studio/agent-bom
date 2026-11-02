@@ -323,8 +323,8 @@ def test_cleanup_tick_runs_store_work_off_the_event_loop(monkeypatch) -> None:
         return {"grants": {}, "dormant": {}, "rotation": {}}
 
     monkeypatch.setattr("agent_bom.api.agent_identity_store.run_nhi_lifecycle_cleanup", _nhi_cleanup)
-    monkeypatch.setattr("agent_bom.api.agent_identity_store.get_agent_identity_store", lambda: object())
-    monkeypatch.setattr("agent_bom.api.governance_audit_log.get_governance_audit_log", lambda: object())
+    monkeypatch.setattr("agent_bom.api.agent_identity_store.get_agent_identity_store", object)
+    monkeypatch.setattr("agent_bom.api.governance_audit_log.get_governance_audit_log", object)
 
     def _fail_stale(store: Any, *, timeout_seconds: int, now: Any) -> int:
         seen["fail_stale_active_scan_jobs"] = threading.get_ident()

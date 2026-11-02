@@ -158,7 +158,7 @@ def test_shared_pool_is_cluster_consistent():
 def test_get_cost_store_prefers_postgres(monkeypatch):
     set_cost_store(None)
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgres://localhost/test")
-    monkeypatch.setattr("agent_bom.api.postgres_cost._get_pool", lambda: _FakePool())
+    monkeypatch.setattr("agent_bom.api.postgres_cost._get_pool", _FakePool)
     try:
         store = get_cost_store()
         assert isinstance(store, PostgresCostStore)

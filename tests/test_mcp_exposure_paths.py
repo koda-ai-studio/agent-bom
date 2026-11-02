@@ -63,7 +63,7 @@ class _FailingGraphStore:
 
 @pytest.mark.asyncio
 async def test_exposure_paths_impl_returns_agent_native_contract():
-    response = await exposure_paths_impl(view="full", _get_graph_store=lambda: _GraphStore(), _truncate_response=lambda value: value)
+    response = await exposure_paths_impl(view="full", _get_graph_store=_GraphStore, _truncate_response=lambda value: value)
     payload = json.loads(response)
 
     assert payload["schema_version"] == "v1"
@@ -84,7 +84,7 @@ async def test_exposure_paths_impl_returns_agent_native_contract():
 
 @pytest.mark.asyncio
 async def test_exposure_paths_impl_validates_agent_limits():
-    response = await exposure_paths_impl(limit=0, _get_graph_store=lambda: _GraphStore())
+    response = await exposure_paths_impl(limit=0, _get_graph_store=_GraphStore)
     payload = json.loads(response)
 
     assert payload["error"]["code"] == "AGENTBOM_MCP_VALIDATION_INVALID_ARGUMENT"
@@ -93,7 +93,7 @@ async def test_exposure_paths_impl_validates_agent_limits():
 
 @pytest.mark.asyncio
 async def test_exposure_paths_impl_explains_empty_queue():
-    response = await exposure_paths_impl(min_risk=95, _get_graph_store=lambda: _GraphStore(), _truncate_response=lambda value: value)
+    response = await exposure_paths_impl(min_risk=95, _get_graph_store=_GraphStore, _truncate_response=lambda value: value)
     payload = json.loads(response)
 
     assert payload["count"] == 0
@@ -105,7 +105,7 @@ async def test_exposure_paths_impl_explains_empty_queue():
 
 @pytest.mark.asyncio
 async def test_exposure_paths_impl_redacts_internal_errors():
-    response = await exposure_paths_impl(_get_graph_store=lambda: _FailingGraphStore())
+    response = await exposure_paths_impl(_get_graph_store=_FailingGraphStore)
     payload = json.loads(response)
 
     assert payload["error"]["code"] == "AGENTBOM_MCP_INTERNAL_UNEXPECTED"
@@ -117,7 +117,7 @@ async def test_exposure_paths_impl_redacts_internal_errors():
 async def test_deploy_decision_blocks_high_risk_candidate():
     response = await deploy_decision_impl(
         candidate="requests",
-        _get_graph_store=lambda: _GraphStore(),
+        _get_graph_store=_GraphStore,
         _truncate_response=lambda value: value,
     )
     payload = json.loads(response)
@@ -132,7 +132,7 @@ async def test_deploy_decision_blocks_high_risk_candidate():
 
 @pytest.mark.asyncio
 async def test_deploy_decision_does_not_approve_without_matching_evidence():
-    response = await deploy_decision_impl(candidate="safe-service", _get_graph_store=lambda: _GraphStore())
+    response = await deploy_decision_impl(candidate="safe-service", _get_graph_store=_GraphStore)
     payload = json.loads(response)
 
     assert payload["decision"] == "not_found"
@@ -144,7 +144,7 @@ async def test_deploy_decision_does_not_approve_without_matching_evidence():
 
 @pytest.mark.asyncio
 async def test_deploy_decision_validates_candidate():
-    response = await deploy_decision_impl(candidate=" ", _get_graph_store=lambda: _GraphStore())
+    response = await deploy_decision_impl(candidate=" ", _get_graph_store=_GraphStore)
     payload = json.loads(response)
 
     assert payload["error"]["code"] == "AGENTBOM_MCP_VALIDATION_INVALID_ARGUMENT"

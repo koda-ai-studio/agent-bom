@@ -144,7 +144,7 @@ def derive_campaigns(
 
     campaigns: list[dict[str, Any]] = []
     for group_key, rows in groups.items():
-        rows.sort(key=lambda row: _finding_id(row))
+        rows.sort(key=_finding_id)
         campaign_id = _campaign_id(group_key)
         membership_fingerprint = hashlib.sha256("\x1f".join(_finding_id(row) for row in rows).encode()).hexdigest()
         workflow = workflow_by_id.get(campaign_id)

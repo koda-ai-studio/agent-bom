@@ -214,7 +214,7 @@ def test_prepping_a_release_leaves_copy_paste_surfaces_on_the_published_version(
     monkeypatch.setattr(cva, "PUBLISHED_VERSION_FILE", tmp_path / "PUBLISHED_VERSION")
     monkeypatch.setattr(cva, "SCAN_ROOTS", (docs,))
     monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
-    monkeypatch.setattr(cva, "_release_tags", lambda: set())
+    monkeypatch.setattr(cva, "_release_tags", set)
     monkeypatch.setattr(bump, "ROOT", tmp_path)
     monkeypatch.setattr(bump, "_load_alignment", lambda: cva)
     monkeypatch.setattr(bump, "VERSION_LOCATIONS", [])
@@ -322,7 +322,7 @@ def test_published_version_ahead_of_source_is_drift(monkeypatch) -> None:
     cva = _load_script("check_version_alignment.py")
     monkeypatch.setattr(cva, "SCAN_ROOTS", ())
     monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
-    monkeypatch.setattr(cva, "_release_tags", lambda: set())
+    monkeypatch.setattr(cva, "_release_tags", set)
     drift = cva.find_drift("0.105.0", published="0.106.0")
     assert any("ahead of" in line for line in drift), drift
 
@@ -370,7 +370,7 @@ def test_rewrite_moves_each_class_to_its_own_version(tmp_path, monkeypatch) -> N
     monkeypatch.setattr(cva, "SCAN_ROOTS", (pilot, built, guide))
     monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
     monkeypatch.setattr(cva, "ROOT", tmp_path)
-    monkeypatch.setattr(cva, "_release_tags", lambda: set())
+    monkeypatch.setattr(cva, "_release_tags", set)
     cva.rewrite("0.106.0", published="0.105.0")
     assert "${AGENT_BOM_IMAGE_TAG:-0.105.0}" in pilot.read_text()
     assert "0.106.0" in built.read_text()

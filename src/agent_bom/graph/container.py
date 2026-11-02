@@ -154,7 +154,7 @@ class UnifiedGraph:
     # times resolve to it; created_at stays the build/storage time that
     # retention and latest-snapshot selection read.
     observed_at: str = ""
-    completeness: "GraphCompleteness" = field(default_factory=lambda: GraphCompleteness())
+    completeness: "GraphCompleteness" = field(default_factory=GraphCompleteness)
 
     def __post_init__(self) -> None:
         if not self.created_at:

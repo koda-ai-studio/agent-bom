@@ -992,7 +992,7 @@ def test_readyz_red_when_postgres_unreachable(monkeypatch) -> None:
 
 def test_readyz_red_when_shared_auth_schema_is_unavailable(monkeypatch) -> None:
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://stub")
-    monkeypatch.setattr("agent_bom.api.postgres_common._get_pool", lambda: _HealthyReadinessPool())
+    monkeypatch.setattr("agent_bom.api.postgres_common._get_pool", _HealthyReadinessPool)
     monkeypatch.setattr("agent_bom.api.shared_auth_state.PostgresAuthState._ensure_schema", lambda _self: False)
     from agent_bom.api.readiness import evaluate_control_plane_readiness
     from agent_bom.api.shared_auth_state import reset_auth_state_for_tests

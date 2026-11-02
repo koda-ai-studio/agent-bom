@@ -131,7 +131,7 @@ _EXPRESSION_FIELD_GETTERS = {
     "scorecard_score": lambda b: b.package.scorecard_score if b.package.scorecard_score is not None else 0.0,
     "is_malicious": lambda b: getattr(b.package, "is_malicious", False),
     # Blast radius and graph fields
-    "risk_score": lambda b: assessed_risk_score(b),
+    "risk_score": assessed_risk_score,
     "agent_count": lambda b: len(b.affected_agents),
     "server_count": lambda b: len(b.affected_servers),
     "tool_count": lambda b: len(b.exposed_tools),

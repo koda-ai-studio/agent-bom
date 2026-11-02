@@ -1513,7 +1513,7 @@ def initialized_postgres_lifespan(request, monkeypatch):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv(request.param, "postgresql://unused.example/agent_bom")
     monkeypatch.setenv("AGENT_BOM_ANALYTICS_BACKEND", "disabled")
-    monkeypatch.setattr(skills_scan_store, "get_skills_scan_store", lambda: object())
+    monkeypatch.setattr(skills_scan_store, "get_skills_scan_store", object)
 
     bindings = {
         "PostgresFleetStore": (stores, "_fleet_store"),

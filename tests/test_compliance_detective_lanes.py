@@ -290,7 +290,7 @@ def test_api_no_scan_import_evidences_inventory_not_vulnerability_scanning(tmp_p
     agent = Agent(name="a", agent_type=AgentType.CUSTOM, config_path="/tmp/a", mcp_servers=[MCPServer(name="s", packages=[package])])
     source = tmp_path / "bom.json"
     source.write_text(json.dumps(to_cyclonedx(AIBOMReport(agents=[agent], blast_radii=[]))))
-    monkeypatch.setattr("agent_bom.api.pipeline._get_store", lambda: InMemoryJobStore())
+    monkeypatch.setattr("agent_bom.api.pipeline._get_store", InMemoryJobStore)
     job = ScanJob(
         job_id="import-lanes", created_at="2026-10-05T00:00:00Z", request=ScanRequest(sbom=str(source), no_scan=True, offline=True)
     )
