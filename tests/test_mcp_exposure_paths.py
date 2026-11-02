@@ -114,9 +114,21 @@ async def test_exposure_paths_impl_redacts_internal_errors():
 
 
 @pytest.mark.asyncio
-async def test_deploy_decision_blocks_high_risk_candidate():
+@pytest.mark.parametrize("prior_session", [False, True])
+async def test_deploy_decision_blocks_high_risk_candidate(tmp_path, prior_session):
+    from agent_bom.mcp_tools.result_store import DurableScanResultStore
+
+    cache = DurableScanResultStore(path=tmp_path / "results.db", tenant_id="default", max_entries=5, ttl_seconds=60)
+    if prior_session:
+        # An explicit persisted snapshot must win over a previous local scan.
+        cache.put(
+            "local",
+            {"report": {"blast_radius": [{"package_name": "requests", "risk_score": 9.0, "exposure_path_id": "prior"}]}},
+        )
     response = await deploy_decision_impl(
         candidate="requests",
+        scan_id="scan-1",
+        _result_store=cache,
         _get_graph_store=_GraphStore,
         _truncate_response=lambda value: value,
     )
@@ -132,7 +144,7 @@ async def test_deploy_decision_blocks_high_risk_candidate():
 
 @pytest.mark.asyncio
 async def test_deploy_decision_does_not_approve_without_matching_evidence():
-    response = await deploy_decision_impl(candidate="safe-service", _get_graph_store=_GraphStore)
+    response = await deploy_decision_impl(candidate="safe-service", scan_id="scan-1", _get_graph_store=_GraphStore)
     payload = json.loads(response)
 
     assert payload["decision"] == "not_found"
