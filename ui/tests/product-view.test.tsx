@@ -37,7 +37,12 @@ describe("product view preference", () => {
       expect(screen.getByRole("combobox")).toHaveValue(expected);
     }
     act(() => { setProductView("team"); });
-    act(() => { window.localStorage.clear(); window.dispatchEvent(new StorageEvent("storage", { key: null })); });
+    act(() => {
+      window.localStorage.clear();
+      const storageEvent = new StorageEvent("storage");
+      Object.defineProperty(storageEvent, "key", { value: null });
+      window.dispatchEvent(storageEvent);
+    });
     expect(screen.getByRole("combobox")).toHaveValue("personal");
   });
 
