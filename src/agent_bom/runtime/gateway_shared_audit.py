@@ -8,14 +8,14 @@ from typing import Any
 
 from agent_bom.api.storage.gateway_delivery import PostgresGatewayOutbox
 from agent_bom.runtime.audit_delivery import AuditDeliveryController
-from agent_bom.runtime.gateway_audit import ControlPlaneAuditSink, _send_gateway_audit_batch
+from agent_bom.runtime.gateway_audit import GatewayAuditSinkBase, _send_gateway_audit_batch
 from agent_bom.runtime.gateway_contracts import GatewayAuditDeliveryUnavailableError, GatewayAuditSender
 from agent_bom.runtime.gateway_events import canonicalize_gateway_enforcement_event, ensure_gateway_event_identity
 
 ADMISSION_ACK_TIMEOUT_SECONDS = 20
 
 
-class SharedGatewayAuditSink(ControlPlaneAuditSink):
+class SharedGatewayAuditSink(GatewayAuditSinkBase):
     """Cross-pod retries with fenced acknowledgement and fail-closed admission.
 
     Each replica set serves one authenticated tenant using a dedicated delivery

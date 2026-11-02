@@ -91,9 +91,8 @@ def reports(tmp_path_factory: pytest.TempPathFactory) -> dict[str, dict[str, Any
     return _LazyReports(get)  # type: ignore[return-value]
 
 
-class _LazyReports(dict):  # type: ignore[type-arg]
+class _LazyReports:
     def __init__(self, getter: Any) -> None:
-        super().__init__()
         self._get = getter
 
     def __getitem__(self, name: str) -> dict[str, Any]:

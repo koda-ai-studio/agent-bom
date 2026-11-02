@@ -813,7 +813,6 @@ def shield_start(request: Request, session_id: str = "default", correlation_wind
                 old.stop()
 
         dispatcher = AlertDispatcher()
-        from agent_bom.api.routes.proxy import push_proxy_alert
 
         class _RingBufferChannel:
             async def send(self, alert: dict) -> bool:

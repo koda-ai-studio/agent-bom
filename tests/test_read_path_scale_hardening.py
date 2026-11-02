@@ -209,12 +209,12 @@ def test_overview_concurrent_misses_share_one_fold(monkeypatch) -> None:
     monkeypatch.setattr(overview, "_compose_overview", _slow_compose)
 
     results: list[Any] = [None] * readers
-    errors: list[BaseException] = []
+    errors: list[Exception] = []
 
     def _reader(index: int) -> None:
         try:
             results[index] = overview._build_overview(SimpleNamespace(state=SimpleNamespace(tenant_id="acme")))
-        except BaseException as exc:  # noqa: BLE001 — surfaced by the assertion below
+        except Exception as exc:  # noqa: BLE001 — surfaced by the assertion below
             errors.append(exc)
 
     threads = [threading.Thread(target=_reader, args=(i,)) for i in range(readers)]

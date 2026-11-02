@@ -105,6 +105,7 @@ from agent_bom.proxy_scanner import ScanConfig, scan_jsonrpc_response
 from agent_bom.runtime.correlation_facts import RUNTIME_FACTS_CACHE_INVALIDATING_ERRORS, RuntimeFactsBundleError, RuntimeFactsPoller
 from agent_bom.runtime.fail_mode import gateway_fail_mode_matrix
 from agent_bom.runtime.gateway_audit import ControlPlaneAuditSink as ControlPlaneAuditSink
+from agent_bom.runtime.gateway_audit import GatewayAuditSinkBase
 from agent_bom.runtime.gateway_audit import build_control_plane_audit_sink as build_control_plane_audit_sink
 from agent_bom.runtime.gateway_audit_local import LocalGatewayAuditSink as LocalGatewayAuditSink
 from agent_bom.runtime.gateway_audit_local import UnavailableGatewayAuditSink
@@ -347,7 +348,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         nonlocal firewall_reload_task
         nonlocal runtime_facts_task
         try:
-            if isinstance(settings.audit_sink, ControlPlaneAuditSink):
+            if isinstance(settings.audit_sink, GatewayAuditSinkBase):
                 await settings.audit_sink.start()
             if settings.policy_path is not None:
                 await policy_reload.reload(force=True)
@@ -375,7 +376,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
             reload_task = None
             firewall_reload_task = None
             runtime_facts_task = None
-            if isinstance(settings.audit_sink, ControlPlaneAuditSink):
+            if isinstance(settings.audit_sink, GatewayAuditSinkBase):
                 await settings.audit_sink.aclose()
 
     app = create_gateway_http_app(settings, _lifespan)
@@ -409,7 +410,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
 
     async def _bind_authenticated_audit_tenant(request: Request, tenant_id: str, auth_method: str) -> None:
         sink = settings.audit_sink
-        if not isinstance(sink, ControlPlaneAuditSink):
+        if not isinstance(sink, GatewayAuditSinkBase):
             return
         request_token = _extract_request_token(request) if auth_method == "api_key" else None
         await sink.bind_authenticated_tenant(tenant_id, request_token)

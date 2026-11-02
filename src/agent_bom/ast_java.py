@@ -104,13 +104,12 @@ def _load_maven_dependency_map(project: Path) -> dict[str, str]:
             text = pom.read_text(encoding="utf-8", errors="replace")
         except OSError:
             text = ""
-        else:
-            for match in _MAVEN_DEP_RE.finditer(text):
-                group = match.group("group").strip()
-                artifact = match.group("artifact").strip()
-                if not group or not artifact:
-                    continue
-                mapping.update(_maven_map_from_coord(f"{group}:{artifact}"))
+        for match in _MAVEN_DEP_RE.finditer(text):
+            group = match.group("group").strip()
+            artifact = match.group("artifact").strip()
+            if not group or not artifact:
+                continue
+            mapping.update(_maven_map_from_coord(f"{group}:{artifact}"))
     if mapping:
         return mapping
 

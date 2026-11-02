@@ -134,6 +134,6 @@ def _collect_aws_inventory_cis(
             inventory_payload = aws_inventory.discover_inventory(region=region, force=True, session=session)
             cis_report = run_aws_cis(region=region, session=session)
     finally:
-        external_id = ""
+        del external_id
 
     return inventory_payload, cis_report

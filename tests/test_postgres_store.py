@@ -1878,6 +1878,7 @@ def test_graph_store_init_tolerates_restricted_pg_trgm_extension():
 
     class RestrictedPgTrgmPool(MockPool):
         def __init__(self):
+            super().__init__()
             self._conn = RestrictedPgTrgmConnection()
 
     pool = RestrictedPgTrgmPool()

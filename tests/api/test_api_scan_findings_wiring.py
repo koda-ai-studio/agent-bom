@@ -341,11 +341,10 @@ def test_findings_read_sheds_with_429_when_backpressure_opens(wired_client, monk
 
     original_impl = finding_page_read._list_findings_impl
 
-    calls = 0
+    calls: list[float] = []
 
     def _slow_impl(*args, **kwargs):
-        nonlocal calls
-        calls += 1
+        calls.append(time.monotonic())
         time.sleep(0.01)
         return original_impl(*args, **kwargs)
 
@@ -356,11 +355,11 @@ def test_findings_read_sheds_with_429_when_backpressure_opens(wired_client, monk
         # tripping the p99 cooldown; the next read must shed.
         warm = wired_client.get("/v1/findings")
         assert warm.status_code == 200
-        assert calls == 1
+        assert len(calls) == 1
 
         shed = wired_client.get("/v1/findings")
         assert shed.status_code == 429
-        assert calls == 1
+        assert len(calls) == 1
         body = shed.json()["detail"]
         assert body["path"] == "findings"
         assert body["reason"] == "p99_latency_threshold"

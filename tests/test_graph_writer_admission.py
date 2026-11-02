@@ -112,9 +112,13 @@ def test_failed_nested_owner_releases_admission(tmp_path):
     from agent_bom.db.graph_write_admission import graph_writer_admission
 
     path = tmp_path / "graph.db"
-    with pytest.raises(RuntimeError):
+
+    def failing_nested_owner():
         with graph_writer_admission(path), graph_writer_admission(path):
             raise RuntimeError("producer failed")
+
+    with pytest.raises(RuntimeError):
+        failing_nested_owner()
 
     def next_writer():
         with graph_writer_admission(path, timeout=0.1):

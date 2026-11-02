@@ -43,7 +43,7 @@ def test_compliance_metric_uses_the_canonical_framework_count() -> None:
     tag_mapped_count = len(TAG_MAPPED_FRAMEWORKS)
 
     assert tag_mapped_count == 15
-    assert compliance["value"] == tag_mapped_count + 1 == 16
+    assert compliance["value"] == tag_mapped_count + 1
     assert compliance["notes"] == f"{tag_mapped_count} tag-mapped frameworks plus the OWASP AISVS benchmark surface."
 
     checked_in = json.loads(METRICS_JSON.read_text(encoding="utf-8"))

@@ -283,7 +283,7 @@ class _FinalizationRaceConn(_FakeConn):
 
 class _FinalizationRacePool(_FakePool):
     def __init__(self, table: dict[tuple, dict] | None = None) -> None:
-        self.table = table if table is not None else {}
+        super().__init__(table)
         self.conn = _FinalizationRaceConn(self.table)
 
 

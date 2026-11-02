@@ -89,8 +89,7 @@ def test_agent_context_is_bounded_and_persists_after_cache_eviction():
     from agent_bom.graph.types import EntityType as E
     from agent_bom.graph.types import RelationshipType as R
 
-    graph = open_store_backed_unified_graph(backend="sqlite", capacity=1, tenant_id="tenant-a", scan_id="bounded")
-    try:
+    with open_store_backed_unified_graph(backend="sqlite", capacity=1, tenant_id="tenant-a", scan_id="bounded") as graph:
         graph.add_node(UnifiedNode("agent:a", E.AGENT, "workflow"))
         for i in range(CONTEXT_ITEM_LIMIT + 3):
             graph.add_node(UnifiedNode(f"host:{i}", E.CONTAINER, f"host-{i}"))
@@ -102,8 +101,6 @@ def test_agent_context_is_bounded_and_persists_after_cache_eviction():
         assert len(context["execution"]["items"]) == CONTEXT_ITEM_LIMIT
         assert context["execution"]["recorded_count"] == CONTEXT_ITEM_LIMIT + 3
         assert context["execution"]["truncated"] is True
-    finally:
-        graph.close()
 
 
 def test_context_bounds_labels_without_copying_unrelated_node_attributes():

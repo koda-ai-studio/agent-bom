@@ -125,17 +125,23 @@ class AccessReviewCampaign:
 class AccessReviewStore(Protocol):
     """Protocol for access-review campaign + item persistence."""
 
-    def put_campaign(self, campaign: AccessReviewCampaign) -> None: ...
+    def put_campaign(self, campaign: AccessReviewCampaign) -> None:
+        """Insert or replace a campaign within its tenant."""
 
-    def get_campaign(self, campaign_id: str, tenant_id: str | None = None) -> AccessReviewCampaign | None: ...
+    def get_campaign(self, campaign_id: str, tenant_id: str | None = None) -> AccessReviewCampaign | None:
+        """Return one campaign, or None when it is absent for the tenant."""
 
-    def list_campaigns(self, tenant_id: str, *, limit: int = 200) -> list[AccessReviewCampaign]: ...
+    def list_campaigns(self, tenant_id: str, *, limit: int = 200) -> list[AccessReviewCampaign]:
+        """Return up to ``limit`` campaigns for the tenant."""
 
-    def put_item(self, item: AccessReviewItem) -> None: ...
+    def put_item(self, item: AccessReviewItem) -> None:
+        """Insert or replace a review item within its tenant."""
 
-    def get_item(self, item_id: str, tenant_id: str | None = None) -> AccessReviewItem | None: ...
+    def get_item(self, item_id: str, tenant_id: str | None = None) -> AccessReviewItem | None:
+        """Return one review item, or None when it is absent for the tenant."""
 
-    def list_items(self, campaign_id: str, tenant_id: str | None = None, *, limit: int = 1000) -> list[AccessReviewItem]: ...
+    def list_items(self, campaign_id: str, tenant_id: str | None = None, *, limit: int = 1000) -> list[AccessReviewItem]:
+        """Return up to ``limit`` items of one campaign."""
 
 
 _CREATE_CAMPAIGNS_SQL = """

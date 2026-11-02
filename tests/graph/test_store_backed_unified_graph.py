@@ -150,24 +150,18 @@ def _synthetic_graph(scan: str, n: int) -> UnifiedGraph:
 @pytest.mark.parametrize("report", _report_fixtures(), ids=["self_scan_fixture", "constructed_report"])
 def test_to_dict_byte_identical_on_real_report(report: dict) -> None:
     graph = build_unified_graph_from_report(report, scan_id="s", tenant_id="t1")
-    store = _sqlite_store(tenant_id="t1", scan_id=graph.scan_id, created_at=graph.created_at)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id=graph.scan_id, created_at=graph.created_at) as store:
         _replay(graph, store)
         assert _dumps(store) == _dumps(graph)
         assert len(graph.nodes) > 0
-    finally:
-        store.close()
 
 
 @pytest.mark.parametrize("n", [1, 200, 2000])
 def test_to_dict_byte_identical_on_synthetic(n: int) -> None:
     graph = _synthetic_graph("s", n)
-    store = _sqlite_store(tenant_id="t1", scan_id="s", created_at=graph.created_at)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", created_at=graph.created_at) as store:
         _replay(graph, store)
         assert _dumps(store) == _dumps(graph)
-    finally:
-        store.close()
 
 
 def test_add_node_merge_union_matches_in_ram() -> None:
@@ -207,19 +201,15 @@ def test_add_node_merge_union_matches_in_ram() -> None:
     g.add_node(_v1())
     g.add_node(_v2())
 
-    store = _sqlite_store(tenant_id="t1", scan_id="s", created_at="2026-07-20T00:00:00Z")
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", created_at="2026-07-20T00:00:00Z") as store:
         store.add_node(_v1())
         store.add_node(_v2())
         assert _dumps(store) == _dumps(g)
-    finally:
-        store.close()
 
 
 def test_add_node_caller_mutation_survives_lru_eviction() -> None:
     """A newly added node remains write-back safe before it is evicted."""
-    store = _sqlite_store(tenant_id="t1", scan_id="s", capacity=1)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", capacity=1) as store:
         first = UnifiedNode(id="first", entity_type=EntityType.PACKAGE, label="first")
         store.add_node(first)
         first.attributes["post_add"] = True
@@ -230,8 +220,6 @@ def test_add_node_caller_mutation_survives_lru_eviction() -> None:
         reloaded = store.get_node("first")
         assert reloaded is not None
         assert reloaded.attributes["post_add"] is True
-    finally:
-        store.close()
 
 
 def test_add_edge_dedup_evidence_merge_matches_in_ram() -> None:
@@ -263,8 +251,7 @@ def test_add_edge_dedup_evidence_merge_matches_in_ram() -> None:
     g.add_edge(_e({"cvss": 7.0, "empty": ""}))
     g.add_edge(_e({"cvss": 9.9, "kev": True}))  # dup triple: cvss kept (present), kev merged in
 
-    store = _sqlite_store(tenant_id="t1", scan_id="s", created_at="2026-07-20T00:00:00Z")
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", created_at="2026-07-20T00:00:00Z") as store:
         _nodes(store)
         store.add_edge(_e({"cvss": 7.0, "empty": ""}))
         store.add_edge(_e({"cvss": 9.9, "kev": True}))
@@ -272,8 +259,6 @@ def test_add_edge_dedup_evidence_merge_matches_in_ram() -> None:
         edges = list(store.edges)
         assert len(edges) == 1
         assert edges[0].evidence == {"cvss": 7.0, "empty": "", "kev": True}
-    finally:
-        store.close()
 
 
 def _bidir_graph(g) -> None:
@@ -313,8 +298,7 @@ def _bidir_graph(g) -> None:
 def test_bidirectional_adjacency_and_traversal_match_in_ram() -> None:
     g = UnifiedGraph(scan_id="s", tenant_id="t1", created_at="2026-07-20T00:00:00Z")
     _bidir_graph(g)
-    store = _sqlite_store(tenant_id="t1", scan_id="s", created_at="2026-07-20T00:00:00Z")
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", created_at="2026-07-20T00:00:00Z") as store:
         _bidir_graph(store)
         # to_dict byte-identical (edges list holds only original edges, not reverse)
         assert _dumps(store) == _dumps(g)
@@ -336,8 +320,6 @@ def test_bidirectional_adjacency_and_traversal_match_in_ram() -> None:
         assert store.reachable_from("c") == g.reachable_from("c")
         assert store.has_edge("a", "b") == g.has_edge("a", "b")
         assert store.has_edge("b", "a") == g.has_edge("b", "a")  # via bidirectional reverse
-    finally:
-        store.close()
 
 
 # ── Mutation write-back (the crux) ───────────────────────────────────────────
@@ -345,8 +327,7 @@ def test_bidirectional_adjacency_and_traversal_match_in_ram() -> None:
 
 def test_get_node_mutation_persists_in_to_dict() -> None:
     g = _synthetic_graph("s", 60)
-    store = _sqlite_store(tenant_id="t1", scan_id="s", created_at=g.created_at, capacity=8)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", created_at=g.created_at, capacity=8) as store:
         _replay(g, store)
         # Simulate the cnapp/effective-permissions overlay pattern on BOTH graphs.
         for nid in ("n:0", "n:25", "n:59"):
@@ -359,23 +340,18 @@ def test_get_node_mutation_persists_in_to_dict() -> None:
         # Independently confirm the value round-tripped through the store.
         reread = store.get_node("n:0")
         assert reread.attributes["cnapp_exposed"] is True
-    finally:
-        store.close()
 
 
 def test_values_iteration_mutation_persists() -> None:
     """The overlay pattern `for node in graph.nodes.values(): node.attributes[...] = ...`."""
     g = _synthetic_graph("s", 120)
-    store = _sqlite_store(tenant_id="t1", scan_id="s", created_at=g.created_at, capacity=8)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", created_at=g.created_at, capacity=8) as store:
         _replay(g, store)
         for node in g.nodes.values():
             node.attributes["swept"] = 1
         for node in store.nodes.values():  # capacity(8) << 120 forces mid-iteration write-back eviction
             node.attributes["swept"] = 1
         assert _dumps(store) == _dumps(g)
-    finally:
-        store.close()
 
 
 # ── Memory bound ─────────────────────────────────────────────────────────────
@@ -398,8 +374,7 @@ def _peak_full_in_ram(n: int) -> int:
 
 def _peak_store_backed(n: int) -> int:
     tracemalloc.start()
-    store = _sqlite_store(tenant_id="t1", scan_id="s", created_at="2026-07-20T00:00:00Z", capacity=256)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", created_at="2026-07-20T00:00:00Z", capacity=256) as store:
         for node in _gen_nodes(n):
             store.add_node(node)
         for edge in _gen_edges(n):
@@ -410,8 +385,6 @@ def _peak_store_backed(n: int) -> int:
                 node.attributes["touched"] = True
         store.flush()
         _, peak = tracemalloc.get_traced_memory()
-    finally:
-        store.close()
     tracemalloc.stop()
     return peak
 
@@ -517,8 +490,7 @@ def test_inherited_algorithms_match_in_ram() -> None:
     traverse_subgraph / to_ocsf_events are inherited from UnifiedGraph and must
     produce the same results when driven by the store-backed views."""
     g = _synthetic_graph("s", 40)
-    store = _sqlite_store(tenant_id="t1", scan_id="s", created_at=g.created_at, capacity=8)
-    try:
+    with _sqlite_store(tenant_id="t1", scan_id="s", created_at=g.created_at, capacity=8) as store:
         _replay(g, store)
 
         assert store.bfs("n:0", max_depth=3, traversable_only=False) == g.bfs("n:0", max_depth=3, traversable_only=False)
@@ -539,5 +511,3 @@ def test_inherited_algorithms_match_in_ram() -> None:
         assert depth_s == depth_g and trunc_s == trunc_g
 
         assert len(store.to_ocsf_events()) == len(g.to_ocsf_events())
-    finally:
-        store.close()

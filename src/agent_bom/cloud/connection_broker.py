@@ -163,7 +163,7 @@ def _broker_aws(record: CloudConnectionRecord, *, session_name: str, duration_se
         ) from exc
     finally:
         # Drop the plaintext reference as soon as the call returns.
-        external_id = ""
+        del external_id
 
     creds = assumed.get("Credentials", {})
     # The "all regions" sentinel is not a real region — leave the session's
@@ -224,7 +224,7 @@ def _broker_azure(record: CloudConnectionRecord) -> Any:
         raise ConnectionBrokerError(f"Azure credential construction failed for connection {record.id}.") from exc
     finally:
         # Drop the plaintext reference as soon as the credential is built.
-        client_secret = ""
+        del client_secret
 
 
 def _broker_gcp(record: CloudConnectionRecord) -> Any:
@@ -245,7 +245,7 @@ def _broker_gcp(record: CloudConnectionRecord) -> Any:
         key_info = json.loads(key_json)
     except (ValueError, TypeError) as exc:
         # Never echo the key material — only the failure mode.
-        key_json = ""
+        del key_json
         raise ConnectionBrokerError(f"GCP connection {record.id} service-account key is not valid JSON.") from exc
     try:
         return service_account.Credentials.from_service_account_info(key_info, scopes=[_GCP_READONLY_SCOPE])
@@ -254,8 +254,7 @@ def _broker_gcp(record: CloudConnectionRecord) -> Any:
         raise ConnectionBrokerError(f"GCP credential construction failed for connection {record.id}.") from exc
     finally:
         # Drop the plaintext key material and parsed copy as soon as we are done.
-        key_json = ""
-        key_info = {}
+        del key_json, key_info
 
 
 def connect_snowflake_keypair(
@@ -316,7 +315,7 @@ def connect_snowflake_keypair(
     try:
         return snowflake.connector.connect(**conn_kwargs)
     finally:
-        der = b""
+        del der
 
 
 # Bounded connect timeout (seconds) for a brokered database session so a wedged
@@ -365,7 +364,7 @@ def _broker_database(record: CloudConnectionRecord) -> Any:
         ) from exc
     finally:
         # Drop the plaintext DSN reference as soon as the connect returns.
-        dsn = ""  # noqa: F841
+        del dsn
 
 
 def _broker_snowflake(record: CloudConnectionRecord) -> Any:
@@ -406,7 +405,7 @@ def _broker_snowflake(record: CloudConnectionRecord) -> Any:
         logger.warning("Snowflake connection failed for connection %s", record.id)
         raise ConnectionBrokerError(f"Snowflake connection failed for connection {record.id}.") from exc
     finally:
-        pem = ""
+        del pem
 
 
 def broker_session(

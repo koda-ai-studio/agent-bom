@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from typing import Annotated, Any, Awaitable, Callable
 
 from pydantic import Field
@@ -408,20 +409,19 @@ def register_specialized_ai_tools(
                     api_key = os.getenv("AGENT_BOM_API_KEY")
                     bearer_token = os.getenv("AGENT_BOM_API_TOKEN")
                     if base_url and (api_key or bearer_token):
-                        client = AgentBomClient(
-                            base_url=base_url,
-                            api_key=api_key,
-                            bearer_token=bearer_token,
-                            tenant_id=os.getenv("AGENT_BOM_TENANT_ID"),
-                        )
-                        try:
+                        with contextlib.closing(
+                            AgentBomClient(
+                                base_url=base_url,
+                                api_key=api_key,
+                                bearer_token=bearer_token,
+                                tenant_id=os.getenv("AGENT_BOM_TENANT_ID"),
+                            )
+                        ) as client:
                             result["control_plane"] = client.ingest_findings(
                                 findings,
                                 source=source,
                                 reconcile_absent=reconcile_absent,
                             )
-                        finally:
-                            client.close()
                     elif findings:
                         result["control_plane"] = {
                             "skipped": True,

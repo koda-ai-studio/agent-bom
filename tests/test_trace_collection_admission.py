@@ -85,14 +85,14 @@ async def test_collection_queue_is_bounded_and_cancelled_waiters_do_not_run(monk
         assert error.value.headers == {"Retry-After": "1"}
         queued.cancel()
         with pytest.raises(asyncio.CancelledError):
-            await queued
+            await asyncio.wait_for(queued, timeout=10)
         assert admission._gate().waiting == 0
         assert calls == []
     finally:
         release.set()
-        await first
+        await asyncio.wait_for(first, timeout=10)
         if queued is not None and not queued.done():
-            await queued
+            await asyncio.wait_for(queued, timeout=10)
     assert await admission.run_collection(lambda: "next") == "next"
 
 
@@ -116,7 +116,7 @@ async def test_disconnected_collection_keeps_slot_until_worker_finishes(monkeypa
         assert await asyncio.to_thread(entered.wait, 2)
         first.cancel()
         with pytest.raises(asyncio.CancelledError):
-            await first
+            await asyncio.wait_for(first, timeout=10)
         second = asyncio.create_task(admission.run_collection(lambda: calls.append("next")))
         await asyncio.sleep(0)
         assert admission._gate().waiting == 1

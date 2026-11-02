@@ -38,7 +38,7 @@ def _until(client, section, predicate):
         if predicate(state):
             return state
         time.sleep(0.02)
-    pytest.fail(f"Expected reload state was not reached for {section}")
+    raise AssertionError(f"Expected reload state was not reached for {section}")
 
 
 @pytest.mark.parametrize("firewall", [False, True])

@@ -11,7 +11,8 @@ class _PackageWithVulnerabilities(Protocol):
     """The slice of ``models.Package`` this module reads; avoids importing the model."""
 
     @property
-    def vulnerabilities(self) -> Sequence[object]: ...
+    def vulnerabilities(self) -> Sequence[object]:
+        """Vulnerabilities already attached to the package."""
 
 
 PRIMARY_ADVISORY_SOURCES: tuple[str, ...] = ("osv", "ghsa", "nvidia_csaf", "amd_psirt", "intel_psirt")

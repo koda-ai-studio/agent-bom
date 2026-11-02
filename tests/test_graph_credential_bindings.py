@@ -112,8 +112,7 @@ def test_store_backed_binding_matches_memory_with_evicted_native_nodes(count):
     server["credential_env_vars"].append("SECOND_TOKEN")
     server["identity_bindings"].append({**server["identity_bindings"][0], "credential_ref": "SECOND_TOKEN"})
     memory = inventory(count=count)
-    stored = open_store_backed_unified_graph(backend="sqlite", tenant_id="tenant-a", scan_id="scan", capacity=1)
-    try:
+    with open_store_backed_unified_graph(backend="sqlite", tenant_id="tenant-a", scan_id="scan", capacity=1) as stored:
         for node in memory.nodes.values():
             stored.add_node(node)
         for graph in (memory, stored):
@@ -129,8 +128,6 @@ def test_store_backed_binding_matches_memory_with_evicted_native_nodes(count):
 
         assert bindings(stored) == bindings(memory)
         assert len(bindings(stored)) == (2 if count == 1 else 6)
-    finally:
-        stored.close()
 
 
 @pytest.mark.parametrize("reference,provider", [("same-name", "azure"), ("native-id", "gcp")])

@@ -416,7 +416,8 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
 
     active_findings, kernel_groups = collapse_kernel_header_findings(report, active_cve_findings(report))
     if not active_findings:
-        return print_kernel_groups_only(kernel_groups)
+        print_kernel_groups_only(kernel_groups)
+        return
 
     priority = [finding for finding in active_findings if is_actionable_finding(finding)]
     rest_count = len(active_findings) - len(priority)
@@ -430,7 +431,6 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
     page, start, end = _page_window(total, limit, page)
     shown = display_list[start:end]
 
-    # Detect if we have blast radius context (agents/servers/credentials)
     has_blast_context = any(finding.affected_agents and (finding.affected_servers or finding.exposed_credentials) for finding in shown)
 
     console.print()

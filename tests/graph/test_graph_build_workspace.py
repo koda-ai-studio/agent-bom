@@ -246,8 +246,7 @@ def _materialize_peak(n: int) -> int:
 
 
 def _iter_peak(n: int, batch: int) -> int:
-    ws = GraphBuildWorkspace(_SQLiteWorkspaceBackend(), tenant_id="t1", batch_size=batch)
-    try:
+    with GraphBuildWorkspace(_SQLiteWorkspaceBackend(), tenant_id="t1", batch_size=batch) as ws:
         ws.add_nodes(_node_gen(n))  # spill to store; producer never retained
         tracemalloc.start()
         # Consume without retaining — the working set is one fetch batch of
@@ -259,8 +258,6 @@ def _iter_peak(n: int, batch: int) -> int:
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         return peak
-    finally:
-        ws.close()
 
 
 def test_workspace_working_set_is_bounded_by_batch_not_total() -> None:
@@ -358,13 +355,10 @@ def _assert_random_access_parity(backend, tenant: str, graph: UnifiedGraph) -> N
 def test_random_access_parity_on_synthetic_graph() -> None:
     graph = _synthetic_graph("s", 300, tenant="t1")
     backend = _SQLiteWorkspaceBackend()
-    ws = GraphBuildWorkspace(backend, tenant_id="t1", batch_size=64)
-    try:
+    with GraphBuildWorkspace(backend, tenant_id="t1", batch_size=64) as ws:
         ws.add_nodes(graph.nodes.values())
         ws.add_edges(graph.edges)
         _assert_random_access_parity(backend, ws.tenant_id, graph)
-    finally:
-        ws.close()
 
 
 def test_random_access_parity_on_real_builder_fixture() -> None:
@@ -375,13 +369,10 @@ def test_random_access_parity_on_real_builder_fixture() -> None:
     assert len(graph.nodes) > 0 and len(graph.edges) > 0
 
     backend = _SQLiteWorkspaceBackend()
-    ws = GraphBuildWorkspace(backend, tenant_id="t1", batch_size=8)
-    try:
+    with GraphBuildWorkspace(backend, tenant_id="t1", batch_size=8) as ws:
         ws.add_nodes(graph.nodes.values())
         ws.add_edges(graph.edges)
         _assert_random_access_parity(backend, ws.tenant_id, graph)
-    finally:
-        ws.close()
 
 
 def test_random_access_reads_are_tenant_scoped() -> None:
@@ -411,10 +402,7 @@ def test_random_access_reads_are_tenant_scoped() -> None:
 
 def test_open_workspace_defaults_to_sqlite_without_postgres_url(monkeypatch) -> None:
     monkeypatch.delenv("AGENT_BOM_POSTGRES_URL", raising=False)
-    ws = open_graph_build_workspace(tenant_id="t1")
-    try:
+    with open_graph_build_workspace(tenant_id="t1") as ws:
         assert isinstance(ws._backend, _SQLiteWorkspaceBackend)
         ws.add_nodes([UnifiedNode(id="x", entity_type=EntityType.AGENT, label="x")])
         assert ws.node_count() == 1
-    finally:
-        ws.close()

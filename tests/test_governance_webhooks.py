@@ -162,21 +162,17 @@ def test_webhook_api_rejects_unknown_event_and_bad_url(client):
 def test_identity_revoke_emits_webhook(client):
     # Register a catch-all subscription, then revoke an identity and confirm a
     # delivery was queued to the durable outbox for this tenant.
-    from agent_bom import posture_streaming as ps
-    from agent_bom.posture_streaming import WebhookOutbox
+    import agent_bom.posture_streaming as ps
 
     captured = []
 
-    class _CaptureOutbox(WebhookOutbox):  # type: ignore[misc]
-        def __init__(self):
-            pass
-
+    class _CaptureOutbox:
         def enqueue(self, event, destination):
             captured.append((event.event_type, destination.url))
             return len(captured)
 
     original = ps.default_webhook_outbox
-    ps.default_webhook_outbox = lambda: _CaptureOutbox()  # type: ignore[assignment]
+    ps.default_webhook_outbox = _CaptureOutbox  # type: ignore[assignment]
     try:
         client.post("/v1/webhooks", json={"url": "https://hooks.example.com/in", "event_types": []})
         issued = client.post("/v1/identities", json={"agent_id": "agent-a"})
