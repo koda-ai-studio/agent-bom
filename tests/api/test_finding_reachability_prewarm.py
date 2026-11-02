@@ -98,14 +98,13 @@ def test_loading_finding_read_surface_registers_commit_prewarm(tmp_path, monkeyp
     import sys
 
     monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
+    script = (
+        "import agent_bom.api.finding_page_read; "
+        "from agent_bom.api.graph_commit_hooks import _HOOKS; "
+        "assert 'finding_reachability_prewarm' in _HOOKS, 'commit prewarm hook missing'"
+    )
     result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            "import agent_bom.api.finding_page_read; "
-            "from agent_bom.api.graph_commit_hooks import _HOOKS; "
-            "assert 'finding_reachability_prewarm' in _HOOKS, 'commit prewarm hook missing'",
-        ],
+        [sys.executable, "-c", script],
         capture_output=True,
         text=True,
         timeout=30,
