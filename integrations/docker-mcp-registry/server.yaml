@@ -23,7 +23,7 @@ about:
 
 source:
   project: https://github.com/koda-ai-studio/agent-bom
-  commit: 3aab2a58fea964dc631eefa4752c7ef35997ba22
+  commit: de9e51f3f2c381a8f69465e9621c2a87cc763f4e
 
 run:
   env:
