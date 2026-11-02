@@ -32,7 +32,7 @@ describe("product view preference", () => {
     for (const [stored, expected] of [["organization", "organization"], ["administrator", "personal"]]) {
       act(() => {
         window.localStorage.setItem(PRODUCT_VIEW_KEY, stored!);
-        window.dispatchEvent(new StorageEvent("storage", { key: PRODUCT_VIEW_KEY }));
+        window.dispatchEvent(new Event("storage"));
       });
       expect(screen.getByRole("combobox")).toHaveValue(expected);
     }
