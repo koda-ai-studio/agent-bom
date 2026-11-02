@@ -14,7 +14,9 @@ import click
 from agent_bom.cli._param_source import is_explicit
 from agent_bom.cli.agents._context import ScanContext
 from agent_bom.cli.agents._output_terminal import _emit_console_report as _emit_console_report
+from agent_bom.cli.agents._output_terminal import _emit_skill_analysis as _emit_skill_analysis
 from agent_bom.cli.agents._output_terminal import _emit_stdout_report as _emit_stdout_report
+from agent_bom.cli.agents._output_terminal import _emit_stdout_standard as _emit_stdout_standard
 from agent_bom.cli.agents._report_written import announce_report_written
 from agent_bom.models import AIBOMReport
 from agent_bom.output import (
@@ -44,6 +46,8 @@ from agent_bom.output import (
     to_spdx2,
 )
 from agent_bom.output.json_fmt import write_redacted_json
+
+__all__ = ["_emit_console_report", "_emit_skill_analysis", "_emit_stdout_report", "_emit_stdout_standard"]  # fmt: skip
 
 _FORMAT_OUTPUT_RULES: dict[str, tuple[str, tuple[str, ...]]] = {
     "json": ("agent-bom-report.json", (".json", ".json.gz")),
@@ -102,11 +106,9 @@ def _resolve_output_path(output: Any, output_format: str) -> str:
         default_suffix = "".join(Path(default_name).suffixes)
         return f"{raw_path}{default_suffix}"
 
-    # Friendly short-form handling: a truncated final suffix like `.cdx` /
-    # `.spdx` / `.spdx2` that becomes a valid multi-part suffix for this format
-    # once `.json` is appended is accepted rather than hard-erroring. We match
-    # the exact allowed multi-part suffix (e.g. `.cdx.json`), so unrelated
-    # extensions like `.png` still error instead of silently gaining `.json`.
+    # Friendly short-form handling: a truncated final suffix like `.cdx` / `.spdx` / `.spdx2` that becomes a valid multi-part suffix for
+    # this format once `.json` is appended is accepted rather than hard-erroring. We match the exact allowed multi-part suffix (e.g.
+    # `.cdx.json`), so unrelated extensions like `.png` still error instead of silently gaining `.json`.
     short_form = f"{path.suffix.lower()}.json"
     if short_form in allowed_suffixes:
         aliased = f"{raw_path}.json"
@@ -281,9 +283,8 @@ def render_output(
     is_stdout = output == "-"
     compact_page = int(kwargs.get("page") or 1)
 
-    # ``--output *.zip`` names the compliance bundle when a compliance export
-    # is requested.  ZIP is not a normal report format, so do not send that
-    # path through report-format inference before the bundle exporter runs.
+    # ``--output *.zip`` names the compliance bundle when a compliance export is requested.  ZIP is not a normal report format, so do not
+    # send that path through report-format inference before the bundle exporter runs.
     click_ctx = click.get_current_context(silent=True)
     compliance_bundle_output = bool(compliance_export and output and output.lower().endswith(".zip") and is_explicit(click_ctx, "output"))
     if not compliance_bundle_output:

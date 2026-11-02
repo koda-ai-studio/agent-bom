@@ -24,20 +24,24 @@ from datetime import datetime, timezone
 from typing import Any, Mapping
 
 from agent_bom.cloud.aws_iam_evaluator import IamDecision
-from agent_bom.cloud.aws_iam_evidence import (
-    EvidenceCompleteness,
-)
+from agent_bom.cloud.aws_iam_evidence import EvidenceCompleteness
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import InteractionRisk, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.permission_policy import _ACCOUNT_WIDE_IAM_ARN as _ACCOUNT_WIDE_IAM_ARN
+from agent_bom.graph.permission_policy import _ADMIN_EQUIVALENCE_PROBES as _ADMIN_EQUIVALENCE_PROBES
+from agent_bom.graph.permission_policy import _POLICY_DOC_KEYS as _POLICY_DOC_KEYS
 from agent_bom.graph.permission_policy import _admin_equivalence_decisions as _admin_equivalence_decisions
 from agent_bom.graph.permission_policy import _admin_resource_scopes as _admin_resource_scopes
+from agent_bom.graph.permission_policy import _iter_policy_documents as _iter_policy_documents
 from agent_bom.graph.permission_policy import _normalized_policies_for as _normalized_policies_for
 from agent_bom.graph.permission_policy import _potential_conditional_admin as _potential_conditional_admin
 from agent_bom.graph.types import EntityType, RelationshipType
+
+__all__ = ["_ACCOUNT_WIDE_IAM_ARN", "_ADMIN_EQUIVALENCE_PROBES", "_POLICY_DOC_KEYS", "_admin_equivalence_decisions",
+    "_admin_resource_scopes", "_iter_policy_documents", "_normalized_policies_for", "_potential_conditional_admin"]  # fmt: skip
 
 _logger = logging.getLogger(__name__)
 
@@ -56,14 +60,11 @@ _PRINCIPAL_TYPES = frozenset(
     }
 )
 _RESOURCE_TYPES = frozenset({EntityType.CLOUD_RESOURCE, EntityType.RESOURCE, EntityType.DATA_STORE})
-# Edges that let a principal gain the access of *another* principal by moving
-# outbound. TRUSTS / CROSS_ACCOUNT_TRUST are deliberately excluded: those edges
-# are emitted as ``role R -> trusted principal P`` where P is *allowed to assume*
-# R (INBOUND trust). Folding them into an assume walk would make an exposed R
-# inherit P's access and mint a false HAS_PERMISSION{assume_chain} edge into P's
-# account — a fabricated cross-account kill-chain (the same class #3761 removed
-# from toxic_findings). ASSUMES (principal -> role) is the genuine outbound
-# vector; INHERITS is scoped-policy inheritance, also outbound.
+# Edges that let a principal gain the access of *another* principal by moving outbound. TRUSTS / CROSS_ACCOUNT_TRUST are deliberately
+# excluded: those edges are emitted as ``role R -> trusted principal P`` where P is *allowed to assume* R (INBOUND trust). Folding them into
+# an assume walk would make an exposed R inherit P's access and mint a false HAS_PERMISSION{assume_chain} edge into P's account — a
+# fabricated cross-account kill-chain (the same class #3761 removed from toxic_findings). ASSUMES (principal -> role) is the genuine
+# outbound vector; INHERITS is scoped-policy inheritance, also outbound.
 _ASSUME_RELS = frozenset({RelationshipType.ASSUMES, RelationshipType.INHERITS})
 
 _MAX_PRINCIPALS = 5000
@@ -117,10 +118,8 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
         )
         return {"has_permission_edges": 0, "privilege_escalations": 0}
     if len(principals) > _MAX_PRINCIPALS:
-        # Capped, NOT "no escalations". Persist the honest SKIPPED status on the
-        # graph (the same analysis_status contract fusion uses, surfaced through
-        # ``stats()``) AND return a reason so consumers can distinguish "too big
-        # to compute" from "genuinely clean".
+        # Capped, NOT "no escalations". Persist the honest SKIPPED status on the graph (the same analysis_status contract fusion uses,
+        # surfaced through ``stats()``) AND return a reason so consumers can distinguish "too big to compute" from "genuinely clean".
         _logger.warning(
             "effective-permissions capped: %d principals exceed cap %d; "
             "privilege-escalation NOT computed for this graph (result is 'skipped', not 'none')",
@@ -170,9 +169,8 @@ class _PermissionDerivation:
         self.inactive_edges = 0
         self.temporal_relations = {*_ASSUME_RELS, RelationshipType.CAN_ACCESS, RelationshipType.MEMBER_OF, RelationshipType.ATTACHED}
         self.admin_principals: set[str] = set()
-        # Broad admin grants whose Allow conditions (MFA, source IP, region, ...)
-        # have not been verified. They feed escalation analysis as a distinct,
-        # lower-confidence target and never set ``admin_equivalent``.
+        # Broad admin grants whose Allow conditions (MFA, source IP, region, ...) have not been verified. They feed escalation analysis as a
+        # distinct, lower-confidence target and never set ``admin_equivalent``.
         self.conditional_admin_principals: set[str] = set()
         self.admin_via_evaluation = 0
         self.admin_via_scanner = 0
@@ -201,9 +199,8 @@ class _PermissionDerivation:
             rel = edge.relationship
             if not self._active_at_evaluation(edge):
                 continue
-            # Context-only links cannot acquire authority through a derived overlay.
-            # Attached policy documents remain available to the policy evaluator;
-            # only access, membership and delegation walks require traversability.
+            # Context-only links cannot acquire authority through a derived overlay. Attached policy documents remain available to the
+            # policy evaluator; only access, membership and delegation walks require traversability.
             if not edge.traversable and rel in {*_ASSUME_RELS, RelationshipType.CAN_ACCESS, RelationshipType.MEMBER_OF}:
                 continue
             if rel == RelationshipType.CAN_ACCESS and edge.source in self.principal_ids:
@@ -217,9 +214,8 @@ class _PermissionDerivation:
                 if key not in self.assume_edges or edge.id < self.assume_edges[key].id:
                     self.assume_edges[key] = edge
             elif rel == RelationshipType.MEMBER_OF and edge.source in self.principal_ids:
-                # A principal inherits the access of every GROUP it belongs to. Group
-                # membership is NOT an assume chain, so it is tracked separately and
-                # never flagged as privilege escalation.
+                # A principal inherits the access of every GROUP it belongs to. Group membership is NOT an assume chain, so it is tracked
+                # separately and never flagged as privilege escalation.
                 target = self.graph.nodes.get(edge.target)
                 if target is not None and target.entity_type == EntityType.GROUP:
                     self.member_of_groups[edge.source].add(edge.target)
@@ -255,9 +251,8 @@ class _PermissionDerivation:
     def _classify_admins(self) -> None:
         for p in self.principals:
             docs = _normalized_policies_for(p, self.attached_policy_nodes.get(p.id, ()))
-            # Evidence is authoritative only when EVERY collected document is COMPLETE.
-            # A single PARTIAL document means the evaluator's non-ALLOW verdict is
-            # inconclusive, not a real "not admin" — it must not gate out the heuristic.
+            # Evidence is authoritative only when EVERY collected document is COMPLETE. A single PARTIAL document means the evaluator's
+            # non-ALLOW verdict is inconclusive, not a real "not admin" — it must not gate out the heuristic.
             evidence_authoritative = bool(docs) and all(d.completeness is EvidenceCompleteness.COMPLETE for d in docs)
             basis: str | None = None
             decisions = _admin_equivalence_decisions(docs) if docs else set()
@@ -281,16 +276,11 @@ class _PermissionDerivation:
                 basis = "policy_evaluation"
                 self.admin_via_evaluation += 1
             elif decisions == {IamDecision.EXPLICIT_DENY} or (evidence_authoritative and p.id not in self.admin_with_unavailable_policy):
-                # COMPLETE documents did not prove unconditional admin-equivalence.
-                # Deny, resource scope and unresolved conditions must not be bypassed
-                # by an action-only scanner classification or a policy-name guess.
-                # Record the evaluation basis without inventing a request context.
-                # An unfetched admin policy remains a degraded signal unless every
-                # admin probe is explicitly denied by the collected documents.
-                # Re-resolve
-                # through the graph before writing so the mutation persists on a
-                # store-backed container (the held principal may have been evicted from
-                # the LRU during the scan above); in-RAM this is the same object.
+                # COMPLETE documents did not prove unconditional admin-equivalence. Deny, resource scope and unresolved conditions must not
+                # be bypassed by an action-only scanner classification or a policy-name guess. Record the evaluation basis without inventing
+                # a request context. An unfetched admin policy remains a degraded signal unless every admin probe is explicitly denied by
+                # the collected documents. Re-resolve through the graph before writing so the mutation persists on a store-backed container
+                # (the held principal may have been evicted from the LRU during the scan above); in-RAM this is the same object.
                 (self.graph.nodes.get(p.id) or p).attributes["admin_equivalence_basis"] = "policy_evaluation"
             elif p.id in self.admin_by_policy_actions:
                 basis = "scanner_actions"

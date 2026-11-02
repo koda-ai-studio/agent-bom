@@ -1,20 +1,16 @@
 """AI-powered enrichment — LLM-generated risk narratives, executive summaries, and threat chains.
 
 Supports three LLM backends (in priority order):
-
 1. **Ollama (free, local)** — auto-detected at ``http://localhost:11434``.
-   No extra install needed (uses httpx, already a core dependency).
-   Start with: ``ollama serve`` then ``ollama pull llama3.2``
+   Uses the core httpx dependency. Start with: ``ollama serve`` then ``ollama pull llama3.2``
 
 2. **HuggingFace Inference API (free tier)** — open-source models in the cloud.
-   Install with: ``pip install 'agent-bom[huggingface]'``
-   Set ``HF_TOKEN`` env var for gated models.
+   Install ``agent-bom[huggingface]``; set ``HF_TOKEN`` for gated models.
 
 3. **litellm (100+ providers)** — OpenAI, Anthropic, Mistral, Groq, etc.
    Install with: ``pip install 'agent-bom[ai-enrich]'``
 
-All LLM calls are:
-- **Optional**: graceful fallback when no provider is available.
+All LLM calls are optional and gracefully fall back when no provider is available.
 - **Cached**: in-memory dedup by ``sha256(model:prompt)`` within a scan run.
 - **Batched**: grouped by package to minimize API calls.
 - **Structured**: Pydantic schemas + Ollama's ``format`` parameter for reliable JSON."""
@@ -30,8 +26,15 @@ from typing import TYPE_CHECKING, Optional
 from agent_bom import config
 from agent_bom.ai_components.ai_prompts import _ASSIGNMENT_PATTERN as _ASSIGNMENT_PATTERN
 from agent_bom.ai_components.ai_prompts import _IDENTIFIER_RE as _IDENTIFIER_RE
-from agent_bom.ai_components.ai_prompts import _MAX_AI_PROMPT_CHARS, redact_secrets
+from agent_bom.ai_components.ai_prompts import _MAX_AI_PROMPT_CHARS as _MAX_AI_PROMPT_CHARS
+from agent_bom.ai_components.ai_prompts import _MAX_AI_SKILL_FILE_CHARS as _MAX_AI_SKILL_FILE_CHARS
 from agent_bom.ai_components.ai_prompts import _MAX_AI_SKILL_FILES as _MAX_AI_SKILL_FILES
+from agent_bom.ai_components.ai_prompts import _MAX_AI_SKILL_FINDINGS as _MAX_AI_SKILL_FINDINGS
+from agent_bom.ai_components.ai_prompts import _PROMPT_TRUNCATION_MARKER as _PROMPT_TRUNCATION_MARKER
+from agent_bom.ai_components.ai_prompts import _SECRET_PATTERNS as _SECRET_PATTERNS
+from agent_bom.ai_components.ai_prompts import _bounded_ai_text as _bounded_ai_text
+from agent_bom.ai_components.ai_prompts import _bounded_prompt_list as _bounded_prompt_list
+from agent_bom.ai_components.ai_prompts import _bounded_prompt_text as _bounded_prompt_text
 from agent_bom.ai_components.ai_prompts import _build_blast_radius_prompt as _build_blast_radius_prompt
 from agent_bom.ai_components.ai_prompts import _build_executive_summary_prompt as _build_executive_summary_prompt
 from agent_bom.ai_components.ai_prompts import _build_finding_assessment_prompt as _build_finding_assessment_prompt
@@ -39,6 +42,10 @@ from agent_bom.ai_components.ai_prompts import _build_mcp_config_analysis_prompt
 from agent_bom.ai_components.ai_prompts import _build_skill_analysis_prompt as _build_skill_analysis_prompt
 from agent_bom.ai_components.ai_prompts import _build_threat_chain_prompt as _build_threat_chain_prompt
 from agent_bom.ai_components.ai_prompts import _canonical_skill_source_path as _canonical_skill_source_path
+from agent_bom.ai_components.ai_prompts import _compose_bounded_prompt as _compose_bounded_prompt
+from agent_bom.ai_components.ai_prompts import _looks_like_secret_value as _looks_like_secret_value
+from agent_bom.ai_components.ai_prompts import _redact_assignment as _redact_assignment
+from agent_bom.ai_components.ai_prompts import redact_secrets as redact_secrets
 from agent_bom.security import sanitize_error
 
 if TYPE_CHECKING:
@@ -66,7 +73,12 @@ from agent_bom.ai_components.provider_discovery import _has_any_provider, _resol
 from agent_bom.ai_components.providers import _call_llm, _call_llm_structured, _parse_json_response
 
 _DEFAULT_AI_MAX_CALLS = 50  # Hard cap: prevent runaway spend on large monorepos
-__all__ = ["_MAX_AI_PROMPT_CHARS", "redact_secrets"]  # fmt: skip
+__all__ = ["_ASSIGNMENT_PATTERN", "_IDENTIFIER_RE", "_MAX_AI_PROMPT_CHARS", "_MAX_AI_SKILL_FILES",
+    "_MAX_AI_SKILL_FILE_CHARS", "_MAX_AI_SKILL_FINDINGS", "_PROMPT_TRUNCATION_MARKER", "_SECRET_PATTERNS",
+    "_bounded_ai_text", "_bounded_prompt_list", "_bounded_prompt_text", "_build_blast_radius_prompt",
+    "_build_executive_summary_prompt", "_build_finding_assessment_prompt", "_build_mcp_config_analysis_prompt",
+    "_build_skill_analysis_prompt", "_build_threat_chain_prompt", "_canonical_skill_source_path", "_compose_bounded_prompt",
+    "_looks_like_secret_value", "_redact_assignment", "redact_secrets"]  # fmt: skip
 
 
 async def enrich_blast_radii(
@@ -321,8 +333,7 @@ async def _run_ai_enrichment_impl(
 
     console.print(f"\n[bold blue]AI Enrichment[/bold blue]  [dim]model: {model} via {provider}[/dim]\n")
 
-    # Advisory triage is the primary structured surface, so it receives budget
-    # before optional narrative generation on large estates.
+    # Advisory triage is the primary structured surface, so it receives budget before optional narrative generation on large estates.
     triage_resolution = _resolve_ai_provider(triage_model)
     assessments = await assess_report_findings(
         report,
@@ -535,9 +546,8 @@ def _apply_skill_analysis(
         )
 
     if gate_ai_findings:
-        # Explicit opt-in only: false-positive reviews and AI-detected findings
-        # may affect the result, but only high-confidence model judgments can
-        # change the deterministic gate. Missing confidence normalizes to low.
+        # Explicit opt-in only: false-positive reviews and AI-detected findings may affect the result, but only high-confidence model
+        # judgments can change the deterministic gate. Missing confidence normalizes to low.
         def _blocks_gate(finding: SkillFinding) -> bool:
             if finding.ai_detected:
                 return finding.ai_confidence == "high" and finding.severity in ("critical", "high")

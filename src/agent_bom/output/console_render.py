@@ -13,22 +13,21 @@ from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_worst_fi
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.core.terminal import safe_emoji as safe_emoji
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
-from agent_bom.output.cis_posture import (
-    ERROR,
-    INCOMPLETE,
-    NOT_EVALUATED,
-    PASS,
-    cis_pass_rate,
-    cis_verdict,
-)
+from agent_bom.output.cis_posture import ERROR, INCOMPLETE, NOT_EVALUATED, PASS, cis_pass_rate, cis_verdict
 from agent_bom.output.compact import _compact_detail, _coverage_bar
-from agent_bom.output.console_frameworks import print_threat_frameworks
-from agent_bom.output.console_remediation import build_remediation_plan, print_remediation_plan
-from agent_bom.output.console_style import SEVERITY_BADGES, _sev_badge
+from agent_bom.output.console_frameworks import print_threat_frameworks as print_threat_frameworks
+from agent_bom.output.console_remediation import build_remediation_plan as build_remediation_plan
+from agent_bom.output.console_remediation import print_remediation_plan as print_remediation_plan
+from agent_bom.output.console_style import SEVERITY_BADGES as SEVERITY_BADGES
 from agent_bom.output.console_style import SEVERITY_TEXT as SEVERITY_TEXT
 from agent_bom.output.console_style import _finding_sev_badge as _finding_sev_badge
+from agent_bom.output.console_style import _sev_badge as _sev_badge
 from agent_bom.output.console_style import console as console
-from agent_bom.output.console_summary import print_posture_summary, print_scan_performance_summary, print_summary
+from agent_bom.output.console_summary import _osv_lookup_count as _osv_lookup_count
+from agent_bom.output.console_summary import _registry_lookup_count as _registry_lookup_count
+from agent_bom.output.console_summary import print_posture_summary as print_posture_summary
+from agent_bom.output.console_summary import print_scan_performance_summary as print_scan_performance_summary
+from agent_bom.output.console_summary import print_summary as print_summary
 from agent_bom.output.dependency_hierarchy import dependency_count_label, dependency_groups
 from agent_bom.output.finding_views import (
     cve_findings,
@@ -67,8 +66,9 @@ _THREAT_TAG_COLORS = (
     ("soc2_tags", "bright_yellow"),
     ("cis_tags", "bright_magenta"),
 )
-__all__ = ["SEVERITY_BADGES", "_sev_badge", "build_remediation_plan", "print_posture_summary", "print_remediation_plan",
-    "print_scan_performance_summary", "print_summary", "print_threat_frameworks"]  # fmt: skip
+__all__ = ["SEVERITY_BADGES", "SEVERITY_TEXT", "_finding_sev_badge", "_osv_lookup_count", "_registry_lookup_count",
+    "_sev_badge", "build_remediation_plan", "console", "print_posture_summary", "print_remediation_plan",
+    "print_scan_performance_summary", "print_summary", "print_threat_frameworks", "safe_emoji"]  # fmt: skip
 
 
 # ─── Console Output ─────────────────────────────────────────────────────────
@@ -195,8 +195,7 @@ def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
     table.add_column("Threats", ratio=3)
     table.add_column("Fix", ratio=2)
 
-    # Filter to actionable findings only — UNKNOWN severity transitive
-    # deps with no creds/tools are noise. Users see all with --verbose.
+    # Filter to actionable findings only — UNKNOWN severity transitive deps with no creds/tools are noise. Users see all with --verbose.
     actionable = [finding for finding in all_cve if is_actionable_finding(finding)]
     # --fixable-only: keep only entries that have a fix available
     if fixable_only:
@@ -491,8 +490,7 @@ def print_cis_findings(report: AIBOMReport, *, show_passed: bool = False) -> Non
 
         band = "green" if pass_rate >= 90 else "yellow" if pass_rate >= 70 else "red"
 
-        # Verdict comes from the one shared derivation so this panel and the
-        # HTML report can never disagree about the same scan.
+        # Verdict comes from the one shared derivation so this panel and the HTML report can never disagree about the same scan.
         verdict_text = cis_verdict(checks)
         if verdict_text == NOT_EVALUATED:
             band = "dim"
@@ -746,9 +744,8 @@ def print_export_hint(report: AIBOMReport) -> None:
     _console().print(Panel("\n".join(lines), border_style="blue", padding=(1, 2)))
 
 
-# The compact output family moved to agent_bom/output/compact.py as Phase 1a
-# of the #1522 monolith split. Re-exported at the bottom of this file for
-# backward compatibility.
+# The compact output family moved to agent_bom/output/compact.py as Phase 1a of the #1522 monolith split. Re-exported at the bottom of this
+# file for backward compatibility.
 
 
 # ─── Diff Output ─────────────────────────────────────────────────────────────

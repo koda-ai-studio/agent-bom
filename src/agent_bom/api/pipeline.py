@@ -18,33 +18,26 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import ExitStack
 from typing import Any
 
-from agent_bom.api.graph_persistence import (
-    _estimate_graph_entities,
-    _graph_store_backed_build_enabled,
-)
-from agent_bom.api.graph_persistence import (
-    _record_graph_persistence as _record_graph_persistence,
-)
+from agent_bom.api.graph_persistence import _estimate_graph_entities as _estimate_graph_entities
+from agent_bom.api.graph_persistence import _graph_build_workspace_enabled as _graph_build_workspace_enabled
+from agent_bom.api.graph_persistence import _graph_store_backed_build_enabled as _graph_store_backed_build_enabled
+from agent_bom.api.graph_persistence import _persist_via_build_workspace as _persist_via_build_workspace
+from agent_bom.api.graph_persistence import _record_graph_persistence as _record_graph_persistence
 from agent_bom.api.hub_ingest import ingest_runtime_findings
 from agent_bom.api.models import JobStatus, ScanJob, StepStatus
-from agent_bom.api.pipeline_events import (
-    PIPELINE_DAG_EDGES,
-    PIPELINE_DAG_EVENT_SCHEMA,
-    iter_pipeline_dag_event_records,
-    pipeline_dag_events_jsonl,
-)
-from agent_bom.api.pipeline_events import (
-    PIPELINE_STEPS as PIPELINE_STEPS,
-)
-from agent_bom.api.pipeline_events import (
-    ScanPipeline as ScanPipeline,
-)
-from agent_bom.api.pipeline_events import (
-    _now as _now,
-)
-from agent_bom.api.pipeline_fleet import (
-    sync_scan_agents_to_fleet,
-)
+from agent_bom.api.pipeline_events import _PIPELINE_PREDECESSORS as _PIPELINE_PREDECESSORS
+from agent_bom.api.pipeline_events import _PIPELINE_STEP_INDEX as _PIPELINE_STEP_INDEX
+from agent_bom.api.pipeline_events import _PIPELINE_SUCCESSORS as _PIPELINE_SUCCESSORS
+from agent_bom.api.pipeline_events import _TERMINAL_STEP_STATUSES as _TERMINAL_STEP_STATUSES
+from agent_bom.api.pipeline_events import PIPELINE_DAG_EDGES as PIPELINE_DAG_EDGES
+from agent_bom.api.pipeline_events import PIPELINE_DAG_EVENT_SCHEMA as PIPELINE_DAG_EVENT_SCHEMA
+from agent_bom.api.pipeline_events import PIPELINE_STEPS as PIPELINE_STEPS
+from agent_bom.api.pipeline_events import ScanPipeline as ScanPipeline
+from agent_bom.api.pipeline_events import _now as _now
+from agent_bom.api.pipeline_events import iter_pipeline_dag_event_records as iter_pipeline_dag_event_records
+from agent_bom.api.pipeline_events import pipeline_dag_events_jsonl as pipeline_dag_events_jsonl
+from agent_bom.api.pipeline_fleet import _optional_str as _optional_str
+from agent_bom.api.pipeline_fleet import sync_scan_agents_to_fleet
 from agent_bom.api.scan_analysis_stages import (
     analyse_reachability_stage,
     attach_repo_evidence,
@@ -54,17 +47,13 @@ from agent_bom.api.scan_analysis_stages import (
     scan_vulnerabilities_stage,
 )
 from agent_bom.api.scan_context import ScanContext, ScanStage
-from agent_bom.api.scan_discovery_stages import (
-    discover_agents,
-    flag_blocklisted_servers,
-    prepare_request,
-    refresh_vulnerability_db,
-)
+from agent_bom.api.scan_discovery_stages import discover_agents, flag_blocklisted_servers, prepare_request, refresh_vulnerability_db
 from agent_bom.api.scan_report_support import _apply_tenant_workflow_metadata as _apply_tenant_workflow_metadata
 from agent_bom.api.scan_report_support import _ast_result_for_symbol_reach as _ast_result_for_symbol_reach
 from agent_bom.api.scan_report_support import _project_paths_for_symbol_reach as _project_paths_for_symbol_reach
-from agent_bom.api.scan_report_support import _promote_repo_dependency_inventory, _surface_graph_derived_findings
+from agent_bom.api.scan_report_support import _promote_repo_dependency_inventory as _promote_repo_dependency_inventory
 from agent_bom.api.scan_report_support import _rendered_result_document as _rendered_result_document
+from agent_bom.api.scan_report_support import _surface_graph_derived_findings as _surface_graph_derived_findings
 from agent_bom.api.scan_snapshot import finalize_with_scan_snapshot
 from agent_bom.api.stores import (
     _compact_terminal_job_in_place,
@@ -81,9 +70,13 @@ from agent_bom.core.tenancy import require_explicit_tenant_id
 from agent_bom.security import sanitize_error, sanitize_text, sanitize_text_memo
 
 _logger = logging.getLogger(__name__)
-__all__ = ["PIPELINE_DAG_EDGES", "PIPELINE_DAG_EVENT_SCHEMA", "_estimate_graph_entities",
-    "_graph_store_backed_build_enabled", "_promote_repo_dependency_inventory", "_surface_graph_derived_findings",
-    "iter_pipeline_dag_event_records", "pipeline_dag_events_jsonl"]  # fmt: skip
+__all__ = ["PIPELINE_DAG_EDGES", "PIPELINE_DAG_EVENT_SCHEMA", "PIPELINE_STEPS", "ScanPipeline", "_PIPELINE_PREDECESSORS",
+    "_PIPELINE_STEP_INDEX", "_PIPELINE_SUCCESSORS", "_TERMINAL_STEP_STATUSES", "_apply_tenant_workflow_metadata",
+    "_ast_result_for_symbol_reach", "_estimate_graph_entities", "_graph_build_workspace_enabled",
+    "_graph_store_backed_build_enabled", "_now", "_optional_str", "_persist_via_build_workspace",
+    "_project_paths_for_symbol_reach", "_promote_repo_dependency_inventory", "_record_graph_persistence",
+    "_rendered_result_document", "_surface_graph_derived_findings", "iter_pipeline_dag_event_records",
+    "pipeline_dag_events_jsonl"]  # fmt: skip
 
 
 class ScanCancelledError(Exception):
@@ -122,15 +115,11 @@ def _raise_if_cancelled(job: ScanJob, lock: threading.Lock) -> None:
 
 
 # ─── Shared executor ─────────────────────────────────────────────────────────
-# The scan pool is a module-level singleton so submit sites can reuse it across
-# requests, but graceful shutdown in the API lifespan calls `.shutdown()` — and
-# once that fires, the pool rejects further submissions with
-# ``RuntimeError: cannot schedule new futures after shutdown``. In long-lived
-# production processes the lifespan only fires at exit, so the effect is
-# invisible. In the test suite, any test that enters a ``TestClient`` context
-# manager exercises the full lifespan, leaves the global shut down, and breaks
-# every subsequent test that reaches the scan path. ``get_executor()`` restores
-# the pool on demand so shutdown becomes idempotent and recoverable rather than
+# The scan pool is a module-level singleton so submit sites can reuse it across requests, but graceful shutdown in the API lifespan calls
+# `.shutdown()` — and once that fires, the pool rejects further submissions with ``RuntimeError: cannot schedule new futures after
+# shutdown``. In long-lived production processes the lifespan only fires at exit, so the effect is invisible. In the test suite, any test
+# that enters a ``TestClient`` context manager exercises the full lifespan, leaves the global shut down, and breaks every subsequent test
+# that reaches the scan path. ``get_executor()`` restores the pool on demand so shutdown becomes idempotent and recoverable rather than
 # terminal.
 _executor_lock = threading.RLock()
 _executor = ThreadPoolExecutor(max_workers=max(1, API_SCAN_WORKERS))
@@ -350,11 +339,9 @@ def _begin_job(job: ScanJob, lock: threading.Lock) -> bool:
 
 
 def _dispatch_connection_scan(ctx: ScanContext) -> bool:
-    # Cloud-connection scans share the same durable ScanJob queue and worker
-    # lifecycle as regular scans, but their evidence collector starts from a
-    # tenant-scoped encrypted connection rather than local path targets.
-    # Dispatch before the generic discovery pipeline so the API request never
-    # performs provider I/O inline and worker reclaims keep the same job id.
+    # Cloud-connection scans share the same durable ScanJob queue and worker lifecycle as regular scans, but their evidence collector starts
+    # from a tenant-scoped encrypted connection rather than local path targets. Dispatch before the generic discovery pipeline so the API
+    # request never performs provider I/O inline and worker reclaims keep the same job id.
     from agent_bom.api.connection_scan_worker import execute_queued_connection_scan, is_queued_connection_scan
 
     if not is_queued_connection_scan(ctx.job):
@@ -489,8 +476,7 @@ def _publish_no_agents(ctx: ScanContext) -> None:
         "warnings": scan_run.warnings,
         "scan_run": scan_run.to_dict(),
     }
-    # An empty estate still honours the requested format: the rendered
-    # document carries the same "nothing discovered" outcome rather than
+    # An empty estate still honours the requested format: the rendered document carries the same "nothing discovered" outcome rather than
     # leaving the caller with a null they cannot distinguish from a bug.
     from agent_bom.models import AIBOMReport as _EmptyReport
 
@@ -588,8 +574,7 @@ def _record_analytics(ctx: ScanContext) -> bool:
 
         analytics_store = _get_analytics_store()
         analytics = build_scan_analytics_payload(ctx.report, report_json=ctx.report_json, scan_id=ctx.job.job_id, source="api")
-        # Plumb the job's tenant through to analytics so the shared
-        # ClickHouse cluster stays segregated per tenant at row level.
+        # Plumb the job's tenant through to analytics so the shared ClickHouse cluster stays segregated per tenant at row level.
         tenant_id = str(getattr(ctx.job, "tenant_id", None) or "default")
         for agent_name, findings in analytics.agent_findings.items():
             analytics_store.record_scan(analytics.scan_id, agent_name, findings, tenant_id=tenant_id)
@@ -597,10 +582,8 @@ def _record_analytics(ctx: ScanContext) -> bool:
         for agent_name, snapshot in analytics.posture_snapshots.items():
             analytics_store.record_posture(agent_name, snapshot, tenant_id=tenant_id)
         for fleet_snapshot in analytics.fleet_snapshots:
-            # The analytics builder seeds tenant_id="default" so CLI scans
-            # without a request context keep working. When a real job is
-            # on the wire we override with the authed tenant so dashboards
-            # see the finding in the right column.
+            # The analytics builder seeds tenant_id="default" so CLI scans without a request context keep working. When a real job is on the
+            # wire we override with the authed tenant so dashboards see the finding in the right column.
             fleet_snapshot["tenant_id"] = tenant_id
             analytics_store.record_fleet_snapshot(fleet_snapshot)
         for control in analytics.compliance_controls:
@@ -693,24 +676,18 @@ def _persist_final_state(job: ScanJob, lock: threading.Lock) -> tuple[Any, JobSt
     try:
         store.put(job)
     except Exception as persist_exc:  # noqa: BLE001
-        # Persistence is the durability boundary. If the store rejects the
-        # final write, this result only ever existed in this process's
-        # memory: it will not survive a restart and will never reach the
-        # compliance/graph reads that load from the store. Reporting it as a
-        # clean success would be a lie, so surface the failure on the job
-        # the caller polls rather than swallowing it in a finally block.
+        # Persistence is the durability boundary. If the store rejects the final write, this result only ever existed in this process's
+        # memory: it will not survive a restart and will never reach the compliance/graph reads that load from the store. Reporting it as a
+        # clean success would be a lie, so surface the failure on the job the caller polls rather than swallowing it in a finally block.
         _logger.error("Scan result persistence failed job=%s: %s", job.job_id, sanitize_text(persist_exc))
         with lock:
             job.status = JobStatus.FAILED
             job.error = f"result not persisted: {sanitize_error(persist_exc)}"
             job.progress.append(f"Persistence failed: {sanitize_error(persist_exc)}")
             terminal_status = job.status
-    # Default to "retains in memory" so a store that does not declare the
-    # attribute (e.g. test mocks, third-party plugins) keeps a usable job
-    # result for the caller. Durable stores that fully serialize on put()
-    # opt in to in-place compaction by setting
-    # ``retains_job_objects_in_memory = False`` explicitly — see
-    # SQLiteJobStore, PostgresJobStore, SnowflakeJobStore.
+    # Default to "retains in memory" so a store that does not declare the attribute (e.g. test mocks, third-party plugins) keeps a usable
+    # job result for the caller. Durable stores that fully serialize on put() opt in to in-place compaction by setting
+    # ``retains_job_objects_in_memory = False`` explicitly — see SQLiteJobStore, PostgresJobStore, SnowflakeJobStore.
     if not bool(getattr(store, "retains_job_objects_in_memory", True)):
         _compact_terminal_job_in_place(job)
     _jobs_put(job.job_id, job, compact_terminal=True)
@@ -729,9 +706,8 @@ def _refresh_batch_parent(job: ScanJob) -> None:
 
 
 def _record_completion_metrics(store: Any, terminal_status: JobStatus) -> None:
-    # Update operator-visible scan metrics. The active gauge feeds
-    # the KEDA scaler in deploy/helm/agent-bom; the completion
-    # counter feeds dashboards + alerting on failure rate.
+    # Update operator-visible scan metrics. The active gauge feeds the KEDA scaler in deploy/helm/agent-bom; the completion counter feeds
+    # dashboards + alerting on failure rate.
     try:
         from agent_bom.api import metrics as _api_metrics
         from agent_bom.api.scan_job_reconciliation import reconcile_scan_jobs_active

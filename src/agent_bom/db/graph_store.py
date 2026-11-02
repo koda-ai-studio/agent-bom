@@ -32,12 +32,14 @@ from agent_bom.db.graph_store_correlation import list_correlation_runs as list_c
 from agent_bom.db.graph_store_correlation import update_correlation_run as update_correlation_run
 from agent_bom.db.graph_store_history import _diff_summary_counts as _diff_summary_counts
 from agent_bom.db.graph_store_history import _edge_change_fingerprint as _edge_change_fingerprint
+from agent_bom.db.graph_store_history import _edge_history_row as _edge_history_row
 from agent_bom.db.graph_store_history import active_edges_at as active_edges_at
 from agent_bom.db.graph_store_history import changed_edges_between_scans as changed_edges_between_scans
 from agent_bom.db.graph_store_history import diff_snapshots as diff_snapshots
 from agent_bom.db.graph_store_history import list_snapshots as list_snapshots
 from agent_bom.db.graph_store_history import snapshots_by_ids as snapshots_by_ids
 from agent_bom.db.graph_store_schema import _CREATE_TABLES as _CREATE_TABLES
+from agent_bom.db.graph_store_schema import _DEFAULT_GRAPH_RETENTION_DAYS as _DEFAULT_GRAPH_RETENTION_DAYS
 from agent_bom.db.graph_store_schema import _DEFAULT_GRAPH_WRITE_BATCH_SIZE as _DEFAULT_GRAPH_WRITE_BATCH_SIZE
 from agent_bom.db.graph_store_schema import _FINDING_ENTITY_TYPES as _FINDING_ENTITY_TYPES
 from agent_bom.db.graph_store_schema import _GRAPH_EVIDENCE_EXCLUDED_PRIVATE_FIELDS as _GRAPH_EVIDENCE_EXCLUDED_PRIVATE_FIELDS
@@ -58,6 +60,8 @@ from agent_bom.db.graph_store_schema import _record_purge_state as _record_purge
 from agent_bom.db.graph_store_schema import _table_exists as _table_exists
 from agent_bom.db.graph_store_schema import normalize_graph_tenant_id as normalize_graph_tenant_id
 from agent_bom.db.graph_store_schema import normalize_snapshot_kind as normalize_snapshot_kind
+from agent_bom.db.graph_store_snapshots import _edge_from_snapshot_row as _edge_from_snapshot_row
+from agent_bom.db.graph_store_snapshots import _node_from_snapshot_row as _node_from_snapshot_row
 from agent_bom.db.graph_store_snapshots import _resolve_snapshot as _resolve_snapshot
 from agent_bom.db.graph_store_snapshots import iter_graph_edges as iter_graph_edges
 from agent_bom.db.graph_store_snapshots import iter_graph_nodes as iter_graph_nodes
@@ -99,12 +103,17 @@ from agent_bom.security import sanitize_text
 from agent_bom.storage import sqlite_wal, state_home
 
 logger = logging.getLogger(__name__)
-__all__ = ["GRAPH_SNAPSHOT_KINDS", "_batched_rows", "_correlation_run_from_row", "_edge_change_fingerprint",
-    "_executemany_batched", "active_edges_at", "changed_edges_between_scans", "claim_correlation_run_execution",
-    "count_active_correlation_runs", "create_correlation_run", "get_correlation_run",
-    "get_correlation_run_by_idempotency_key", "heartbeat_correlation_run_execution", "iter_graph_edges",
-    "iter_graph_nodes", "list_correlation_runs", "load_rollup_graph", "normalize_snapshot_kind", "prior_delta_digest",
-    "snapshots_by_ids", "update_correlation_run"]  # fmt: skip
+__all__ = ["DEFAULT_GRAPH_TENANT_ID", "GRAPH_SNAPSHOT_KINDS", "_CREATE_TABLES", "_DEFAULT_GRAPH_RETENTION_DAYS",
+    "_DEFAULT_GRAPH_WRITE_BATCH_SIZE", "_FINDING_ENTITY_TYPES", "_GRAPH_EVIDENCE_EXCLUDED_PRIVATE_FIELDS",
+    "_GRAPH_EVIDENCE_INCLUDED_TABLES", "_GRAPH_PURGEABLE_TABLES", "_GRAPH_SCHEMA_VERSION", "_GRAPH_TENANT_TABLE_KEYS",
+    "_batched_rows", "_correlation_run_from_row", "_diff_summary_counts", "_digest_payload", "_edge_change_fingerprint",
+    "_edge_from_snapshot_row", "_edge_history_row", "_executemany_batched", "_graph_retention_days",
+    "_node_from_snapshot_row", "_parse_iso_timestamp", "_read_purge_state", "_record_purge_state", "_resolve_snapshot",
+    "_table_exists", "active_edges_at", "changed_edges_between_scans", "claim_correlation_run_execution",
+    "count_active_correlation_runs", "create_correlation_run", "diff_snapshots", "get_correlation_run",
+    "get_correlation_run_by_idempotency_key", "heartbeat_correlation_run_execution", "iter_graph_edges", "iter_graph_nodes",
+    "latest_snapshot_id", "list_correlation_runs", "list_snapshots", "load_rollup_graph", "normalize_graph_tenant_id",
+    "normalize_snapshot_kind", "previous_snapshot_id", "prior_delta_digest", "snapshots_by_ids", "update_correlation_run"]  # fmt: skip
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Schema DDL — scan_id is part of every PK for per-scan isolation
@@ -219,9 +228,8 @@ def _init_db(conn: sqlite3.Connection, *, backfill_legacy_tenants: bool = True) 
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_tenant_scan_target ON graph_edges(tenant_id, scan_id, target_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_adjacency_out ON graph_edges(tenant_id, scan_id, source_id, target_id, relationship)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_adjacency_in ON graph_edges(tenant_id, scan_id, target_id, source_id, relationship)")
-    # Materialise the per-snapshot entity-type breakdown so inventory/summary
-    # reads a cached count instead of a per-request GROUP BY over every node.
-    # NULL marks pre-migration snapshots, which fall back to the live GROUP BY.
+    # Materialise the per-snapshot entity-type breakdown so inventory/summary reads a cached count instead of a per-request GROUP BY over
+    # every node. NULL marks pre-migration snapshots, which fall back to the live GROUP BY.
     snapshot_columns = {row["name"] for row in conn.execute("PRAGMA table_info(graph_snapshots)").fetchall()}
     if "node_type_counts" not in snapshot_columns:
         conn.execute("ALTER TABLE graph_snapshots ADD COLUMN node_type_counts TEXT DEFAULT NULL")
@@ -359,14 +367,11 @@ def purge_expired_graph_snapshots(
     }
 
 
-# ``PRAGMA optimize`` runs ANALYZE only where SQLite judges the statistics
-# stale, so the steady-state cost is nil (measured: 96.8 ms on the first pass
-# over a 300k-node store, 0.02 ms on every pass after it). The 0x10000 bit asks
-# it to consider every table rather than only those this connection happened to
-# query, which SQLite's documentation recommends for a connection that has no
-# query history — the write connections here are short-lived and open with
-# none. 0x00002 is "actually run ANALYZE" and is on by default; it is named
-# explicitly so the intent survives a future default change.
+# ``PRAGMA optimize`` runs ANALYZE only where SQLite judges the statistics stale, so the steady-state cost is nil (measured: 96.8 ms on the
+# first pass over a 300k-node store, 0.02 ms on every pass after it). The 0x10000 bit asks it to consider every table rather than only those
+# this connection happened to query, which SQLite's documentation recommends for a connection that has no query history — the write
+# connections here are short-lived and open with none. 0x00002 is "actually run ANALYZE" and is on by default; it is named explicitly so the
+# intent survives a future default change.
 #
 # Since SQLite 3.46 the command self-limits its own scope, so this stays bounded
 # on an arbitrarily large store without ``PRAGMA analysis_limit``.
@@ -400,8 +405,7 @@ def refresh_query_planner_stats(conn: sqlite3.Connection) -> None:
 def open_graph_db(db_path: str | Path) -> Generator[sqlite3.Connection, None, None]:
     """Open (or create) a graph database with schema initialisation."""
     target = str(db_path)
-    # Create the parent directory up front: on a fresh deploy (new volume /
-    # container, offline) ``~/.agent-bom/db`` may not exist yet, and
+    # Create the parent directory up front: on a fresh deploy (new volume / container, offline) ``~/.agent-bom/db`` may not exist yet, and
     # ``sqlite3.connect`` does not create missing parents — it raises
     # "unable to open database file", which silently leaves the seeded demo
     # estate with an empty graph. ``:memory:`` has no parent to create.
@@ -544,9 +548,8 @@ def save_graph_streaming(
     conn.commit()
     logger.info("Saved graph: %d nodes, %d edges, %d attack paths (scan=%s)", node_count, edge_count, attack_path_count, scan)
 
-    # Enforce age-based retention on the post-save lifecycle hook. A purge
-    # failure must never fail the durable save that already committed above, so
-    # it is best-effort and logged with sanitized text.
+    # Enforce age-based retention on the post-save lifecycle hook. A purge failure must never fail the durable save that already committed
+    # above, so it is best-effort and logged with sanitized text.
     try:
         result = purge_expired_graph_snapshots(conn)
         if result["purged_count"]:
@@ -610,12 +613,10 @@ def load_graph(
     budget = resolve_node_budget(node_budget)
     total_nodes = 0
     if budget is not None:
-        # The budget has to bound the *read*, not the result. Trimming after a
-        # full materialization declares the same completeness while still having
-        # paid for every row: at 200k nodes that is ~783 MB the cap was
-        # introduced to avoid. Risk-ranked so a trimmed view keeps what matters,
-        # id breaking ties so the selection is deterministic — the same order
-        # Postgres uses, so the two backends return the same nodes.
+        # The budget has to bound the *read*, not the result. Trimming after a full materialization declares the same completeness while
+        # still having paid for every row: at 200k nodes that is ~783 MB the cap was introduced to avoid. Risk-ranked so a trimmed view
+        # keeps what matters, id breaking ties so the selection is deterministic — the same order Postgres uses, so the two backends return
+        # the same nodes.
         count_row = conn.execute(
             f"SELECT COUNT(*) FROM graph_nodes WHERE {where}",  # nosec B608 - where is built from static clause fragments
             params,
@@ -666,12 +667,9 @@ def load_graph(
 
     sql_scoped_edges = budget is not None or bool(entity_types) or bool(sev_sql)
     if sql_scoped_edges:
-        # Drive the edge read from the exact node ids loaded above. Encoding the
-        # bounded set as one JSON parameter avoids SQLite's variable limit and
-        # avoids repeating the ranked node query. The endpoint index makes the
-        # work proportional to edges touching those nodes instead of every edge
-        # in the snapshot; the second join preserves the induced-subgraph
-        # contract.
+        # Drive the edge read from the exact node ids loaded above. Encoding the bounded set as one JSON parameter avoids SQLite's variable
+        # limit and avoids repeating the ranked node query. The endpoint index makes the work proportional to edges touching those nodes
+        # instead of every edge in the snapshot; the second join preserves the induced-subgraph contract.
         eq = """
             WITH selected_node_ids AS MATERIALIZED (
                 SELECT CAST(value AS TEXT) AS id FROM json_each(?)

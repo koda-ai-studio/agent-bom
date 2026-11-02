@@ -16,45 +16,31 @@ import secrets
 from datetime import datetime, timezone
 from typing import Any
 
-from agent_bom.api.identity_grants import (
-    AgentJITGrant as AgentJITGrant,
-)
-from agent_bom.api.identity_grants import (
-    approve_jit_grant,
-    deny_jit_grant,
-    issue_jit_grant,
-    request_jit_grant,
-    revoke_jit_grant,
-)
-from agent_bom.api.identity_grants import (
-    identity_expiry as _ttl_to_expiry,
-)
-from agent_bom.api.identity_local_store import (
-    InMemoryAgentIdentityStore as InMemoryAgentIdentityStore,
-)
-from agent_bom.api.identity_local_store import (
-    SQLiteAgentIdentityStore as SQLiteAgentIdentityStore,
-)
-from agent_bom.api.identity_models import (
-    AgentIdentity as AgentIdentity,
-)
-from agent_bom.api.identity_models import (
-    AgentIdentityStore as AgentIdentityStore,
-)
-from agent_bom.api.identity_policies import (
-    AccessContext,
-    ConditionalAccessPolicy,
-    create_conditional_policy,
-    evaluate_conditional_access,
-    evaluate_conditional_access_for_request,
-    set_conditional_policy_status,
-)
+from agent_bom.api.identity_grants import AgentJITGrant as AgentJITGrant
+from agent_bom.api.identity_grants import approve_jit_grant as approve_jit_grant
+from agent_bom.api.identity_grants import deny_jit_grant as deny_jit_grant
+from agent_bom.api.identity_grants import identity_expiry as _ttl_to_expiry
+from agent_bom.api.identity_grants import issue_jit_grant as issue_jit_grant
+from agent_bom.api.identity_grants import request_jit_grant as request_jit_grant
+from agent_bom.api.identity_grants import revoke_jit_grant as revoke_jit_grant
+from agent_bom.api.identity_local_store import InMemoryAgentIdentityStore as InMemoryAgentIdentityStore
+from agent_bom.api.identity_local_store import SQLiteAgentIdentityStore as SQLiteAgentIdentityStore
+from agent_bom.api.identity_local_store import _table_columns as _table_columns
+from agent_bom.api.identity_models import AgentIdentity as AgentIdentity
+from agent_bom.api.identity_models import AgentIdentityStore as AgentIdentityStore
+from agent_bom.api.identity_policies import AccessContext as AccessContext
+from agent_bom.api.identity_policies import ConditionalAccessPolicy as ConditionalAccessPolicy
+from agent_bom.api.identity_policies import create_conditional_policy as create_conditional_policy
+from agent_bom.api.identity_policies import evaluate_conditional_access as evaluate_conditional_access
+from agent_bom.api.identity_policies import evaluate_conditional_access_for_request as evaluate_conditional_access_for_request
+from agent_bom.api.identity_policies import set_conditional_policy_status as set_conditional_policy_status
 from agent_bom.core.settings import env_int
 
 TOKEN_PREFIX = "abi"
-__all__ = ["AccessContext", "ConditionalAccessPolicy", "approve_jit_grant", "create_conditional_policy", "deny_jit_grant",
-    "evaluate_conditional_access", "evaluate_conditional_access_for_request", "issue_jit_grant", "request_jit_grant",
-    "revoke_jit_grant", "set_conditional_policy_status"]  # fmt: skip
+__all__ = ["AccessContext", "AgentIdentity", "AgentIdentityStore", "AgentJITGrant", "ConditionalAccessPolicy",
+    "InMemoryAgentIdentityStore", "SQLiteAgentIdentityStore", "_table_columns", "approve_jit_grant",
+    "create_conditional_policy", "deny_jit_grant", "evaluate_conditional_access", "evaluate_conditional_access_for_request",
+    "issue_jit_grant", "request_jit_grant", "revoke_jit_grant", "set_conditional_policy_status"]  # fmt: skip
 
 
 def _now() -> datetime:
@@ -143,8 +129,7 @@ def rotate_identity(
     """Issue a replacement identity and keep the old one live for ``overlap_seconds``
     so in-flight callers are not cut off. Returns ``(new_identity, raw_token)``."""
     old = store.get(identity_id, tenant_id=tenant_id)
-    # Don't rotate a revoked identity, or one already mid-rotation (that would
-    # orphan the first replacement and break the rotated_to chain).
+    # Don't rotate a revoked identity, or one already mid-rotation (that would orphan the first replacement and break the rotated_to chain).
     if old is None or old.status in ("revoked", "rotating"):
         return None
     new_identity, raw = issue_identity(
@@ -178,14 +163,11 @@ def revoke_identity(store: AgentIdentityStore, identity_id: str, *, tenant_id: s
     return identity
 
 
-# Upper bound on identities fetched per revocation check. The agent-keyed
-# lookup bounds one agent's own rotation history, which no deployment approaches,
-# so the cap is not reachable in practice. A store that predates
-# ``list_by_agent`` still has to page the tenant roster by recency; there the cap
-# IS reachable, and hitting it means an older revoked row may sit in the
-# untraversed tail. That case reports the lookup as incomplete — an honest
-# partial signal the caller fails closed on — rather than a confident "not
-# revoked". Mirrors ``_DRIFT_INCIDENT_LOOKUP_CAP`` in the gateway.
+# Upper bound on identities fetched per revocation check. The agent-keyed lookup bounds one agent's own rotation history, which no
+# deployment approaches, so the cap is not reachable in practice. A store that predates ``list_by_agent`` still has to page the tenant
+# roster by recency; there the cap IS reachable, and hitting it means an older revoked row may sit in the untraversed tail. That case
+# reports the lookup as incomplete — an honest partial signal the caller fails closed on — rather than a confident "not revoked". Mirrors
+# ``_DRIFT_INCIDENT_LOOKUP_CAP`` in the gateway.
 _IDENTITY_LOOKUP_CAP = 5000
 
 
@@ -253,9 +235,8 @@ def active_jit_grant_for_tool(
 
 # ── Lifecycle-enforcement sweeps (driven by the API cleanup loop) ─────────────
 #
-# These transition lingering JIT grants and dormant agent-bom identities to a
-# terminal state and surface rotation-due tokens, emitting one append-only,
-# hash-chained governance-audit record per action. Every function:
+# These transition lingering JIT grants and dormant agent-bom identities to a terminal state and surface rotation-due tokens, emitting one
+# append-only, hash-chained governance-audit record per action. Every function:
 #   • takes an INJECTED ``now`` (never calls datetime.now itself) so results are
 #     deterministic and consistent across replicas,
 #   • derives a DETERMINISTIC action id from stable target state (so a re-run
@@ -529,9 +510,8 @@ def deprovision_dormant_identities(
                 continue
             last_used = identity.last_used_at.strip() if identity.last_used_at else ""
             if not last_used:
-                # Never-observed identities are not auto-revoked here: lack of a
-                # usage marker can mean a freshly issued token, not dormancy. The
-                # graph governance overlay still surfaces them as findings.
+                # Never-observed identities are not auto-revoked here: lack of a usage marker can mean a freshly issued token, not dormancy.
+                # The graph governance overlay still surfaces them as findings.
                 continue
             last_used_dt = datetime.fromisoformat(last_used)
             age_days = (now - last_used_dt).total_seconds() / 86400.0

@@ -64,3 +64,18 @@ def test_every_declared_export_resolves(module_name: str, names: list[str]) -> N
         raise
     missing = [name for name in names if not hasattr(module, name)]
     assert missing == [], f"{module_name}.__all__ lists names the module does not define: {missing}"
+
+
+def test_quality_cleanup_preserves_existing_compatibility_reexports() -> None:
+    """Import cleanup must retain the explicitly aliased compatibility bindings."""
+    import json
+
+    fixture = Path(__file__).parent / "fixtures" / "compatibility_reexports.json"
+    expected = json.loads(fixture.read_text(encoding="utf-8"))
+    missing = {}
+    for module_name, names in expected.items():
+        module = importlib.import_module(module_name)
+        absent = [name for name in names if not hasattr(module, name)]
+        if absent:
+            missing[module_name] = absent
+    assert missing == {}, f"Removed compatibility re-exports: {missing}"

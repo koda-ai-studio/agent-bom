@@ -7,18 +7,22 @@ used for current-state views, traversal, attack paths, and temporal diffs.
 
 from __future__ import annotations
 
+import hashlib as hashlib
+import json as json
 import logging
 from collections.abc import Mapping
 from typing import Any
 
 from agent_bom.api.tracing import get_tracer
-from agent_bom.cloud.normalization import coerce_truthy
-from agent_bom.core.cloud_identity import cloud_resource_node_id
+from agent_bom.cloud.normalization import coerce_truthy as coerce_truthy
+from agent_bom.core.cloud_identity import cloud_resource_node_id as cloud_resource_node_id
 from agent_bom.graph.activity_projection import project_recorded_activity
 from agent_bom.graph.agent_cloud_lineage import _add_agent_cloud_lineage as _add_agent_cloud_lineage
 from agent_bom.graph.agent_projection import project_agents
 from agent_bom.graph.asset_canonicalize import canonicalize_assets
 from agent_bom.graph.ast_tool_projection import _apply_ast_tool_overlay as _apply_ast_tool_overlay
+from agent_bom.graph.ast_tool_projection import _project_ast_entrypoints as _project_ast_entrypoints
+from agent_bom.graph.ast_tool_projection import _project_ast_tools as _project_ast_tools
 from agent_bom.graph.authorization_evidence import apply_authorization_evidence, has_authoritative_authorization_evidence
 from agent_bom.graph.benchmark_projection import benchmark_inputs, project_benchmarks
 from agent_bom.graph.blast_projection import enrich_blast_radius, project_blast_radius, project_package_exploits, project_shared_servers
@@ -26,67 +30,88 @@ from agent_bom.graph.build_analysis import GraphAnalysisPorts, apply_build_analy
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.build_input import GraphBuildInput
 from agent_bom.graph.builder_cloud_inventory import _add_management_group_hierarchy, _wire_instance_profile_roles
+from agent_bom.graph.builder_cloud_lineage import _add_cloud_principal_lineage as _add_cloud_principal_lineage
+from agent_bom.graph.builder_cloud_lineage import _add_lineage_resource_nodes as _add_lineage_resource_nodes
+from agent_bom.graph.builder_cloud_lineage import _add_lineage_scope_edges as _add_lineage_scope_edges
+from agent_bom.graph.builder_cloud_lineage import _resolve_cloud_lineage as _resolve_cloud_lineage
 from agent_bom.graph.builder_cloud_principals import _add_access_advisor_grants
 from agent_bom.graph.builder_cloud_principals import _role_last_used_at as _role_last_used_at
 from agent_bom.graph.builder_frameworks import _add_cross_env_correlation, _project_host_agent_id
-from agent_bom.graph.builder_network_edges import (
-    _GCP_LB_COLLECTION,
-    _NETWORK_EDGE_COLLECTIONS,
-)
-from agent_bom.graph.builder_network_exposure import (
-    _add_exposure_path_edge,
-    _apply_gcp_firewall_exposure,
-    _gcp_firewall_applies,
-    _instance_internet_reachable,
-    _link_internet_facing_load_balancers,
-)
-from agent_bom.graph.builder_network_inventory import NETWORK_INVENTORY_STAGES, _NetworkInventoryContext
-from agent_bom.graph.builder_overlays import (
-    _apply_agent_reach_risk as _apply_agent_reach_risk,
-)
-from agent_bom.graph.builder_overlays import (
-    _apply_aspm_overlay as _apply_aspm_overlay,
-)
-from agent_bom.graph.builder_overlays import (
-    _apply_ci_graph_overlay as _apply_ci_graph_overlay,
-)
-from agent_bom.graph.builder_overlays import (
-    _apply_code_graph_overlay as _apply_code_graph_overlay,
-)
-from agent_bom.graph.builder_overlays import (
-    _apply_cost_overlay as _apply_cost_overlay,
-)
-from agent_bom.graph.builder_overlays import (
-    _apply_repo_structure_overlay as _apply_repo_structure_overlay,
-)
-from agent_bom.graph.builder_overlays import (
-    _apply_repo_trust_overlay as _apply_repo_trust_overlay,
-)
-from agent_bom.graph.builder_overlays import (
-    _apply_runtime_evidence_overlay as _apply_runtime_evidence_overlay,
-)
-from agent_bom.graph.builder_snowflake_platform import (
-    _add_snowflake_organization,
-)
+from agent_bom.graph.builder_network_edges import _GCP_LB_COLLECTION as _GCP_LB_COLLECTION
+from agent_bom.graph.builder_network_edges import _NETWORK_EDGE_COLLECTIONS as _NETWORK_EDGE_COLLECTIONS
+from agent_bom.graph.builder_network_exposure import _add_exposure_path_edge as _add_exposure_path_edge
+from agent_bom.graph.builder_network_exposure import _apply_gcp_firewall_exposure, _link_internet_facing_load_balancers
+from agent_bom.graph.builder_network_exposure import _gcp_firewall_applies as _gcp_firewall_applies
+from agent_bom.graph.builder_network_exposure import _instance_internet_reachable as _instance_internet_reachable
+from agent_bom.graph.builder_network_inventory import NETWORK_INVENTORY_STAGES as NETWORK_INVENTORY_STAGES
+from agent_bom.graph.builder_network_inventory import _NetworkInventoryContext as _NetworkInventoryContext
+from agent_bom.graph.builder_overlays import _apply_agent_reach_risk as _apply_agent_reach_risk
+from agent_bom.graph.builder_overlays import _apply_aspm_overlay as _apply_aspm_overlay
+from agent_bom.graph.builder_overlays import _apply_ci_graph_overlay as _apply_ci_graph_overlay
+from agent_bom.graph.builder_overlays import _apply_code_graph_overlay as _apply_code_graph_overlay
+from agent_bom.graph.builder_overlays import _apply_cost_overlay as _apply_cost_overlay
+from agent_bom.graph.builder_overlays import _apply_repo_structure_overlay as _apply_repo_structure_overlay
+from agent_bom.graph.builder_overlays import _apply_repo_trust_overlay as _apply_repo_trust_overlay
+from agent_bom.graph.builder_overlays import _apply_runtime_evidence_overlay as _apply_runtime_evidence_overlay
+from agent_bom.graph.builder_snowflake_data_movement import _EXFIL_STAGE_SERVICE as _EXFIL_STAGE_SERVICE
+from agent_bom.graph.builder_snowflake_data_movement import _SF_EXTERNAL_BUCKET_SERVICE as _SF_EXTERNAL_BUCKET_SERVICE
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_exfil as _add_snowflake_exfil
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_external_data as _add_snowflake_external_data
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_external_stages as _add_snowflake_external_stages
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_external_tables as _add_snowflake_external_tables
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_iceberg_tables as _add_snowflake_iceberg_tables
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_outbound_shares as _add_snowflake_outbound_shares
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_sensitive_objects as _add_snowflake_sensitive_objects
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_stage_bucket as _add_snowflake_stage_bucket
+from agent_bom.graph.builder_snowflake_data_movement import _link_iceberg_bucket as _link_iceberg_bucket
+from agent_bom.graph.builder_snowflake_governance import _add_cortex_agent_nodes as _add_cortex_agent_nodes
+from agent_bom.graph.builder_snowflake_governance import _add_snowflake_access_edges as _add_snowflake_access_edges
+from agent_bom.graph.builder_snowflake_governance import _add_snowflake_activity as _add_snowflake_activity
+from agent_bom.graph.builder_snowflake_governance import _add_snowflake_governance as _add_snowflake_governance
+from agent_bom.graph.builder_snowflake_governance import _aggregate_cortex_agent_usage as _aggregate_cortex_agent_usage
+from agent_bom.graph.builder_snowflake_governance import _collect_snowflake_access as _collect_snowflake_access
+from agent_bom.graph.builder_snowflake_governance import _snowflake_access_receipt as _snowflake_access_receipt
+from agent_bom.graph.builder_snowflake_lane import _needs_account_scope as _needs_account_scope
+from agent_bom.graph.builder_snowflake_lane import _snowflake_data_store as _snowflake_data_store
+from agent_bom.graph.builder_snowflake_lane import _snowflake_thin_node as _snowflake_thin_node
+from agent_bom.graph.builder_snowflake_lane import _SnowflakeLane as _SnowflakeLane
+from agent_bom.graph.builder_snowflake_objects import _add_snowflake_auth_posture as _add_snowflake_auth_posture
+from agent_bom.graph.builder_snowflake_objects import _add_snowflake_identity as _add_snowflake_identity
+from agent_bom.graph.builder_snowflake_objects import _add_snowflake_login_threats as _add_snowflake_login_threats
+from agent_bom.graph.builder_snowflake_objects import _add_snowflake_object_graph as _add_snowflake_object_graph
+from agent_bom.graph.builder_snowflake_objects import _enrich_snowflake_user as _enrich_snowflake_user
+from agent_bom.graph.builder_snowflake_objects import _SnowflakeObjectGraph as _SnowflakeObjectGraph
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_databases as _add_snowflake_databases
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_integrations as _add_snowflake_integrations
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_organization as _add_snowflake_organization
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipeline as _add_snowflake_pipeline
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipes as _add_snowflake_pipes
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_schemas as _add_snowflake_schemas
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_services as _add_snowflake_services
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_streams as _add_snowflake_streams
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_tasks as _add_snowflake_tasks
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_warehouses as _add_snowflake_warehouses
+from agent_bom.graph.builder_snowflake_platform import _link_snowflake_objects_to_schemas as _link_snowflake_objects_to_schemas
 from agent_bom.graph.cloud_audit_projection import add_cloud_audit_behavioral as _add_cloud_audit_behavioral
 from agent_bom.graph.cloud_compute_projection import project_instances, project_security_groups
+from agent_bom.graph.cloud_context import _add_account_resource_hierarchy as _add_account_resource_hierarchy
 from agent_bom.graph.cloud_context import (
-    _add_account_resource_hierarchy,
     _add_identity_node,
     _identity_entity_type,
     _iter_cloud_inventories,
     _policy_document_attrs,
-    _recorded_exposure_attributes,
-    _resource_environment,
     _trust_entries,
     cloud_inventory_sources,
 )
-from agent_bom.graph.cloud_context import (
-    _normalize_cloud_inventory as _normalize_cloud_inventory,
-)
-from agent_bom.graph.cloud_context import (
-    _policy_entries as _policy_entries,
-)
+from agent_bom.graph.cloud_context import _environment_from_tags as _environment_from_tags
+from agent_bom.graph.cloud_context import _normalize_azure_inventory as _normalize_azure_inventory
+from agent_bom.graph.cloud_context import _normalize_cloud_inventory as _normalize_cloud_inventory
+from agent_bom.graph.cloud_context import _normalize_gcp_inventory as _normalize_gcp_inventory
+from agent_bom.graph.cloud_context import _policy_entries as _policy_entries
+from agent_bom.graph.cloud_context import _prepare_cloud_payload as _prepare_cloud_payload
+from agent_bom.graph.cloud_context import _recorded_exposure_attributes as _recorded_exposure_attributes
+from agent_bom.graph.cloud_context import _resource_environment as _resource_environment
+from agent_bom.graph.cloud_context import _stamp_owning_account as _stamp_owning_account
 from agent_bom.graph.cloud_rbac import add_cloud_role_assignments as _add_cloud_role_assignments
 from agent_bom.graph.cloud_service_projection import project_aws_services, project_gcp_services, project_gpu_compute
 from agent_bom.graph.cloud_storage_projection import project_buckets, project_databases, project_side_scan_targets
@@ -94,9 +119,9 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_bindings import project_credential_bindings
 from agent_bom.graph.declared_assets import declared_assets_by_identifier
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.edge_evidence import edge_evidence
+from agent_bom.graph.edge_evidence import edge_evidence as edge_evidence
+from agent_bom.graph.finding_projection import _resolve_skill_audit_target_ids as _resolve_skill_audit_target_ids
 from agent_bom.graph.finding_projection import (
-    _resolve_skill_audit_target_ids,
     project_iac,
     project_sast,
     project_scan_findings,
@@ -105,53 +130,104 @@ from agent_bom.graph.finding_projection import (
 )
 from agent_bom.graph.framework_topology_projection import _add_ai_stack_frameworks as _add_ai_stack_frameworks
 from agent_bom.graph.framework_topology_projection import _add_framework_topology as _add_framework_topology
+from agent_bom.graph.framework_topology_projection import _AIStackProjection as _AIStackProjection
+from agent_bom.graph.framework_topology_projection import _FrameworkTopology as _FrameworkTopology
 from agent_bom.graph.identity_nodes import identity_node_id as _identity_node_id
 from agent_bom.graph.kubernetes_projection import project_kubernetes_inventory
 from agent_bom.graph.network_entry_projection import _add_network_edge_inventory as _add_network_edge_inventory
+from agent_bom.graph.network_entry_projection import _wire_network_entry_exposure_paths as _wire_network_entry_exposure_paths
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.normalized_resource_projection import _add_normalized_cloud_resources as _add_normalized_cloud_resources
 from agent_bom.graph.organization_aws import _add_aws_organization as _add_aws_organization
 from agent_bom.graph.organization_findings import _add_cloud_org_architecture_findings as _add_cloud_org_architecture_findings
 from agent_bom.graph.organization_gcp import _add_gcp_organization as _add_gcp_organization
-from agent_bom.graph.package_projection import (
-    _package_evidence,
-    _package_node_id,
-    _package_node_id_from_parts,
-    _resolve_affected_server_ids,
-)
-from agent_bom.graph.projection_support import (
-    _add_rel_edge,
-    _agent_node_id,
-    _is_repository_inventory,
-    _is_sbom_import,
-    _normalized_environment,
-)
-from agent_bom.graph.resource_aliases import (
-    _resolve_cloud_resource_node_id,
-)
-from agent_bom.graph.runtime_projection import (
-    _add_agentic_identity_graph_projections as _add_agentic_identity_graph_projections,
-)
+from agent_bom.graph.package_projection import _add_exploitable_via_edges as _add_exploitable_via_edges
+from agent_bom.graph.package_projection import _add_vuln_node as _add_vuln_node
+from agent_bom.graph.package_projection import _blast_radius_package_evidence as _blast_radius_package_evidence
+from agent_bom.graph.package_projection import _collect_compliance_tags as _collect_compliance_tags
+from agent_bom.graph.package_projection import _has_mappable_package_version as _has_mappable_package_version
+from agent_bom.graph.package_projection import _normalize_server_name as _normalize_server_name
+from agent_bom.graph.package_projection import _normalize_tool_capability as _normalize_tool_capability
+from agent_bom.graph.package_projection import _package_evidence as _package_evidence
+from agent_bom.graph.package_projection import _package_graph_key as _package_graph_key
+from agent_bom.graph.package_projection import _package_node_id as _package_node_id
+from agent_bom.graph.package_projection import _package_node_id_from_parts as _package_node_id_from_parts
+from agent_bom.graph.package_projection import _package_version_provenance_from_dict as _package_version_provenance_from_dict
+from agent_bom.graph.package_projection import _resolve_affected_package_ids as _resolve_affected_package_ids
+from agent_bom.graph.package_projection import _resolve_affected_server_ids as _resolve_affected_server_ids
+from agent_bom.graph.package_projection import _tool_capabilities as _tool_capabilities
+from agent_bom.graph.projection_support import _add_rel_edge
+from agent_bom.graph.projection_support import _agent_identity_scope as _agent_identity_scope
+from agent_bom.graph.projection_support import _agent_node_id as _agent_node_id
+from agent_bom.graph.projection_support import _is_repository_inventory as _is_repository_inventory
+from agent_bom.graph.projection_support import _is_sbom_import as _is_sbom_import
+from agent_bom.graph.projection_support import _mapping_list as _mapping_list
+from agent_bom.graph.projection_support import _normalized_environment as _normalized_environment
+from agent_bom.graph.projection_support import _repository_manifest_directory as _repository_manifest_directory
+from agent_bom.graph.resource_aliases import _build_cloud_resource_alias_index as _build_cloud_resource_alias_index
+from agent_bom.graph.resource_aliases import _CloudResourceAliasIndex as _CloudResourceAliasIndex
+from agent_bom.graph.resource_aliases import _resolve_cloud_resource_node_id as _resolve_cloud_resource_node_id
+from agent_bom.graph.resource_aliases import _resource_tail as _resource_tail
+from agent_bom.graph.runtime_projection import _add_agentic_identity_graph_projections as _add_agentic_identity_graph_projections
 from agent_bom.graph.runtime_projection import _add_runtime_incident_feedback, project_runtime_session
+from agent_bom.graph.runtime_projection import _iter_agentic_identity_graph_projections as _iter_agentic_identity_graph_projections
+from agent_bom.graph.runtime_projection import _iter_runtime_incident_records as _iter_runtime_incident_records
+from agent_bom.graph.runtime_projection import _project_agent_feedback as _project_agent_feedback
+from agent_bom.graph.runtime_projection import _resolve_feedback_agent_ids as _resolve_feedback_agent_ids
+from agent_bom.graph.runtime_projection import _runtime_identity_entity_type as _runtime_identity_entity_type
+from agent_bom.graph.runtime_projection import _runtime_identity_evidence as _runtime_identity_evidence
+from agent_bom.graph.runtime_projection import _runtime_identity_node_attributes as _runtime_identity_node_attributes
+from agent_bom.graph.runtime_projection import _runtime_identity_relationship as _runtime_identity_relationship
 from agent_bom.graph.side_scan_projection import project_side_scan_results
 from agent_bom.graph.snowflake_source_lanes import _add_snowflake_source_lanes as _add_snowflake_source_lanes
-from agent_bom.graph.snowflake_source_lanes import _project_snowflake_lanes
+from agent_bom.graph.snowflake_source_lanes import _project_snowflake_lanes as _project_snowflake_lanes
 from agent_bom.graph.supabase_projection import project_supabase_inventory
 from agent_bom.graph.trace_projection import project_report_trace_events
+from agent_bom.graph.training_projection import _flatten_compliance_tags as _flatten_compliance_tags
+from agent_bom.graph.training_projection import _normalize_model_ref as _normalize_model_ref
+from agent_bom.graph.training_projection import _resolve_model_id as _resolve_model_id
 from agent_bom.graph.training_projection import project_dataset_cards, project_model_provenance, project_serving_configs
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part
 from agent_bom.graph.vercel_projection import project_vercel_inventory
-from agent_bom.security import sanitize_text
+from agent_bom.security import sanitize_text as sanitize_text
 
 _GRAPH_TRACER = get_tracer("agent_bom.graph")
-__all__ = ["NETWORK_INVENTORY_STAGES", "_GCP_LB_COLLECTION", "_NETWORK_EDGE_COLLECTIONS", "_NetworkInventoryContext",
-    "_add_account_resource_hierarchy", "_add_exposure_path_edge", "_add_snowflake_organization", "_agent_node_id",
-    "_gcp_firewall_applies", "_instance_internet_reachable", "_is_repository_inventory", "_is_sbom_import", "_logger",
-    "_normalized_environment", "_package_evidence", "_package_node_id", "_package_node_id_from_parts",
-    "_project_snowflake_lanes", "_recorded_exposure_attributes", "_resolve_affected_server_ids",
-    "_resolve_cloud_resource_node_id", "_resolve_skill_audit_target_ids", "_resource_environment",
-    "cloud_resource_node_id", "coerce_truthy", "edge_evidence", "sanitize_text"]  # fmt: skip
+__all__ = ["NETWORK_INVENTORY_STAGES", "_AIStackProjection", "_CloudResourceAliasIndex", "_EXFIL_STAGE_SERVICE",
+    "_FrameworkTopology", "_GCP_LB_COLLECTION", "_NETWORK_EDGE_COLLECTIONS", "_NetworkInventoryContext",
+    "_SF_EXTERNAL_BUCKET_SERVICE", "_SnowflakeLane", "_SnowflakeObjectGraph", "_add_account_resource_hierarchy",
+    "_add_agent_cloud_lineage", "_add_agentic_identity_graph_projections", "_add_ai_stack_frameworks",
+    "_add_aws_organization", "_add_cloud_org_architecture_findings", "_add_cloud_principal_lineage",
+    "_add_cortex_agent_nodes", "_add_exploitable_via_edges", "_add_exposure_path_edge", "_add_framework_topology",
+    "_add_gcp_organization", "_add_lineage_resource_nodes", "_add_lineage_scope_edges", "_add_network_edge_inventory",
+    "_add_normalized_cloud_resources", "_add_snowflake_access_edges", "_add_snowflake_activity",
+    "_add_snowflake_auth_posture", "_add_snowflake_databases", "_add_snowflake_exfil", "_add_snowflake_external_data",
+    "_add_snowflake_external_stages", "_add_snowflake_external_tables", "_add_snowflake_governance",
+    "_add_snowflake_iceberg_tables", "_add_snowflake_identity", "_add_snowflake_integrations",
+    "_add_snowflake_login_threats", "_add_snowflake_object_graph", "_add_snowflake_organization",
+    "_add_snowflake_outbound_shares", "_add_snowflake_pipeline", "_add_snowflake_pipes", "_add_snowflake_schemas",
+    "_add_snowflake_sensitive_objects", "_add_snowflake_services", "_add_snowflake_source_lanes",
+    "_add_snowflake_stage_bucket", "_add_snowflake_streams", "_add_snowflake_tasks", "_add_snowflake_warehouses",
+    "_add_vuln_node", "_agent_identity_scope", "_agent_node_id", "_aggregate_cortex_agent_usage", "_apply_agent_reach_risk",
+    "_apply_aspm_overlay", "_apply_ast_tool_overlay", "_apply_ci_graph_overlay", "_apply_code_graph_overlay",
+    "_apply_cost_overlay", "_apply_repo_structure_overlay", "_apply_repo_trust_overlay", "_apply_runtime_evidence_overlay",
+    "_blast_radius_package_evidence", "_build_cloud_resource_alias_index", "_collect_compliance_tags",
+    "_collect_snowflake_access", "_enrich_snowflake_user", "_environment_from_tags", "_flatten_compliance_tags",
+    "_gcp_firewall_applies", "_has_mappable_package_version", "_instance_internet_reachable", "_is_repository_inventory",
+    "_is_sbom_import", "_iter_agentic_identity_graph_projections", "_iter_runtime_incident_records", "_link_iceberg_bucket",
+    "_link_snowflake_objects_to_schemas", "_logger", "_mapping_list", "_needs_account_scope", "_normalize_azure_inventory",
+    "_normalize_cloud_inventory", "_normalize_gcp_inventory", "_normalize_model_ref", "_normalize_server_name",
+    "_normalize_tool_capability", "_normalized_environment", "_package_evidence", "_package_graph_key", "_package_node_id",
+    "_package_node_id_from_parts", "_package_version_provenance_from_dict", "_policy_entries", "_prepare_cloud_payload",
+    "_project_agent_feedback", "_project_ast_entrypoints", "_project_ast_tools", "_project_snowflake_lanes",
+    "_recorded_exposure_attributes", "_repository_manifest_directory", "_resolve_affected_package_ids",
+    "_resolve_affected_server_ids", "_resolve_cloud_lineage", "_resolve_cloud_resource_node_id",
+    "_resolve_feedback_agent_ids", "_resolve_model_id", "_resolve_skill_audit_target_ids", "_resource_environment",
+    "_resource_tail", "_role_last_used_at", "_runtime_identity_entity_type", "_runtime_identity_evidence",
+    "_runtime_identity_node_attributes", "_runtime_identity_relationship", "_snowflake_access_receipt",
+    "_snowflake_data_store", "_snowflake_thin_node", "_stamp_owning_account", "_tool_capabilities",
+    "_wire_network_entry_exposure_paths", "cloud_resource_node_id", "coerce_truthy", "edge_evidence", "hashlib", "json",
+    "sanitize_text"]  # fmt: skip
 _logger = logging.getLogger(__name__)
 
 
@@ -319,9 +395,8 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
     """
     if not isinstance(inventory, dict) or inventory.get("status") not in ("ok", "partial"):
         return
-    # The provider translation below rebuilds an AWS-shaped dict and drops the
-    # data/secret/registry/network collections; keep the original to ingest them
-    # through the normalized resource model.
+    # The provider translation below rebuilds an AWS-shaped dict and drops the data/secret/registry/network collections; keep the original
+    # to ingest them through the normalized resource model.
     original_inventory = inventory
     allow_heuristic_authorization = not has_authoritative_authorization_evidence(original_inventory)
     inventory = _normalize_cloud_inventory(inventory)
@@ -406,8 +481,7 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
         sg_node_by_id=sg_node_by_id,
     )
 
-    # GCP rule applicability uses network and target scope. Recorded bindings
-    # remain distinct from assessed network reachability.
+    # GCP rule applicability uses network and target scope. Recorded bindings remain distinct from assessed network reachability.
     if provider == "gcp":
         _apply_gcp_firewall_exposure(graph, sg_node_by_id, instance_nodes)
 
@@ -489,11 +563,9 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
     )
 
     # ── IAM / Entra groups → GROUP nodes + MEMBER_OF edges from members ──
-    # A group carries its members' shared access (its attached policies / bound
-    # roles). Wiring the group as a principal with CAN_ACCESS, plus MEMBER_OF
-    # edges from each member, lets the effective-permissions overlay attribute
-    # group-granted access to the member — group-based access is one of the most
-    # common privilege paths and was invisible before.
+    # A group carries its members' shared access (its attached policies / bound roles). Wiring the group as a principal with CAN_ACCESS,
+    # plus MEMBER_OF edges from each member, lets the effective-permissions overlay attribute group-granted access to the member —
+    # group-based access is one of the most common privilege paths and was invisible before.
     for group in inventory.get("groups", []) or []:
         if isinstance(group, dict):
             _add_inventory_group(
@@ -544,9 +616,8 @@ def _add_inventory_principal(
         "iam_path": _clean_graph_part(principal.get("path")),
         "source": "cloud-inventory",
     }
-    # Thread collected role usage evidence so NHI governance dormancy uses a real
-    # last-used signal. Only a real timestamp sets ``last_used_at`` — absent
-    # telemetry leaves the field unset so dormancy stays fail-closed.
+    # Thread collected role usage evidence so NHI governance dormancy uses a real last-used signal. Only a real timestamp sets
+    # ``last_used_at`` — absent telemetry leaves the field unset so dormancy stays fail-closed.
     usage_evidence = principal.get("usage_evidence")
     if isinstance(usage_evidence, Mapping):
         state = usage_evidence.get("state")
@@ -641,9 +712,8 @@ def _add_inventory_principal(
             )
         )
 
-    # AWS Access-Advisor right-sizing evidence: each service the principal is
-    # granted, carrying its last-used timestamp (or None = never used), as a
-    # HAS_PERMISSION grant edge the CIEM over-privilege emitter reads.
+    # AWS Access-Advisor right-sizing evidence: each service the principal is granted, carrying its last-used timestamp (or None = never
+    # used), as a HAS_PERMISSION grant edge the CIEM over-privilege emitter reads.
     _add_access_advisor_grants(
         graph,
         principal,
@@ -652,10 +722,9 @@ def _add_inventory_principal(
         data_sources=data_sources,
     )
 
-    # Direct access to the account's inventoried resources. The effective-
-    # permissions overlay turns CAN_ACCESS (+ assume/trust chains) into the
-    # HAS_PERMISSION transitive closure; admin-privileged principals reach
-    # every resource, others get a baseline same-account access edge.
+    # Direct access to the account's inventoried resources. The effective- permissions overlay turns CAN_ACCESS (+ assume/trust chains) into
+    # the HAS_PERMISSION transitive closure; admin-privileged principals reach every resource, others get a baseline same-account access
+    # edge.
     privilege = _clean_graph_part(principal.get("privilege_level")) or "unknown"
     if allow_heuristic_authorization and privilege in ("admin", "write"):
         for resource_id in resource_ids:

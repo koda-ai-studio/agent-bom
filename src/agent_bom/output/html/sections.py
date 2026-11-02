@@ -5,104 +5,46 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from agent_bom.core.suppression_score import risk_rank_key
-from agent_bom.output.finding_views import (
-    package_name,
-    severity_value,
-)
-from agent_bom.output.html._common import (
-    _SEV_COLOR,
-)
-from agent_bom.output.html.sections_findings import (
-    _CIS_CLOUD_LABELS as _CIS_CLOUD_LABELS,
-)
-from agent_bom.output.html.sections_findings import (
-    _blast_table as _blast_table,
-)
-from agent_bom.output.html.sections_findings import (
-    _exposure_path_section as _exposure_path_section,
-)
-from agent_bom.output.html.sections_findings import (
-    _non_cve_findings as _non_cve_findings,
-)
-from agent_bom.output.html.sections_findings import (
-    _pager_controls as _pager_controls,
-)
-from agent_bom.output.html.sections_findings import (
-    _policy_findings_section as _policy_findings_section,
-)
-from agent_bom.output.html.sections_findings import (
-    _remediation_list as _remediation_list,
-)
-from agent_bom.output.html.sections_findings import (
-    _vuln_table as _vuln_table,
-)
-from agent_bom.output.html.sections_governance import (
-    _cis_benchmark_section as _cis_benchmark_section,
-)
-from agent_bom.output.html.sections_governance import (
-    _cis_evidence_html as _cis_evidence_html,
-)
-from agent_bom.output.html.sections_governance import (
-    _compliance_section as _compliance_section,
-)
-from agent_bom.output.html.sections_governance import (
-    _enforcement_section as _enforcement_section,
-)
-from agent_bom.output.html.sections_governance import (
-    _trust_assessment_section as _trust_assessment_section,
-)
-from agent_bom.output.html.sections_inventory import (
-    _ai_inventory_section as _ai_inventory_section,
-)
-from agent_bom.output.html.sections_inventory import (
-    _inventory_cards as _inventory_cards,
-)
-from agent_bom.output.html.sections_inventory import (
-    _skill_audit_section as _skill_audit_section,
-)
-from agent_bom.output.html.sections_summary import (
-    _delta_banner as _delta_banner,
-)
-from agent_bom.output.html.sections_summary import (
-    _executive_headline_section as _executive_headline_section,
-)
-from agent_bom.output.html.sections_summary import (
-    _scan_outcome_banner as _scan_outcome_banner,
-)
-from agent_bom.output.html.sections_summary import (
-    _summary_cards as _summary_cards,
-)
-from agent_bom.output.html.sections_summary import (
-    _warn_gate_banner as _warn_gate_banner,
-)
+from agent_bom.output.finding_views import package_name, severity_value
+from agent_bom.output.html._common import _SEV_COLOR
+from agent_bom.output.html.sections_findings import _CIS_CLOUD_LABELS as _CIS_CLOUD_LABELS
+from agent_bom.output.html.sections_findings import _REACH_COLOR as _REACH_COLOR
+from agent_bom.output.html.sections_findings import _blast_table as _blast_table
+from agent_bom.output.html.sections_findings import _exposure_path_section as _exposure_path_section
+from agent_bom.output.html.sections_findings import _non_cve_findings as _non_cve_findings
+from agent_bom.output.html.sections_findings import _pager_controls as _pager_controls
+from agent_bom.output.html.sections_findings import _policy_findings_section as _policy_findings_section
+from agent_bom.output.html.sections_findings import _remediation_list as _remediation_list
+from agent_bom.output.html.sections_findings import _vuln_table as _vuln_table
+from agent_bom.output.html.sections_findings import _workload_runtime_evidence_hint as _workload_runtime_evidence_hint
+from agent_bom.output.html.sections_governance import _BADGE_STYLE as _BADGE_STYLE
+from agent_bom.output.html.sections_governance import _CIS_VERDICT_COLOR as _CIS_VERDICT_COLOR
+from agent_bom.output.html.sections_governance import _STATUS_BADGE as _STATUS_BADGE
+from agent_bom.output.html.sections_governance import _cis_benchmark_section as _cis_benchmark_section
+from agent_bom.output.html.sections_governance import _cis_evidence_html as _cis_evidence_html
+from agent_bom.output.html.sections_governance import _compliance_section as _compliance_section
+from agent_bom.output.html.sections_governance import _enforcement_section as _enforcement_section
+from agent_bom.output.html.sections_governance import _trust_assessment_section as _trust_assessment_section
+from agent_bom.output.html.sections_inventory import _ai_inventory_section as _ai_inventory_section
+from agent_bom.output.html.sections_inventory import _inventory_cards as _inventory_cards
+from agent_bom.output.html.sections_inventory import _skill_audit_section as _skill_audit_section
+from agent_bom.output.html.sections_summary import _delta_banner as _delta_banner
+from agent_bom.output.html.sections_summary import _executive_headline_section as _executive_headline_section
+from agent_bom.output.html.sections_summary import _headline_row as _headline_row
+from agent_bom.output.html.sections_summary import _scan_outcome_banner as _scan_outcome_banner
+from agent_bom.output.html.sections_summary import _summary_cards as _summary_cards
+from agent_bom.output.html.sections_summary import _warn_gate_banner as _warn_gate_banner
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
     from agent_bom.models import AIBOMReport, BlastRadius
 
-__all__ = [
-    "_CIS_CLOUD_LABELS",
-    "_ai_inventory_section",
-    "_blast_table",
-    "_cis_benchmark_section",
-    "_cis_evidence_html",
-    "_compliance_section",
-    "_delta_banner",
-    "_enforcement_section",
-    "_executive_headline_section",
-    "_exposure_path_section",
-    "_inventory_cards",
-    "_non_cve_findings",
-    "_pager_controls",
-    "_policy_findings_section",
-    "_remediation_list",
-    "_scan_outcome_banner",
-    "_skill_audit_section",
-    "_summary_cards",
-    "_trust_assessment_section",
-    "_vuln_table",
-    "_warn_gate_banner",
-]
+__all__ = ["_BADGE_STYLE", "_CIS_CLOUD_LABELS", "_CIS_VERDICT_COLOR", "_REACH_COLOR", "_STATUS_BADGE",
+    "_ai_inventory_section", "_blast_table", "_cis_benchmark_section", "_cis_evidence_html", "_compliance_section",
+    "_delta_banner", "_enforcement_section", "_executive_headline_section", "_exposure_path_section", "_headline_row",
+    "_inventory_cards", "_non_cve_findings", "_pager_controls", "_policy_findings_section", "_remediation_list",
+    "_scan_outcome_banner", "_skill_audit_section", "_summary_cards", "_trust_assessment_section", "_vuln_table",
+    "_warn_gate_banner", "_workload_runtime_evidence_hint"]  # fmt: skip
 
 
 def _chart_data(findings: list["Finding"]) -> str:

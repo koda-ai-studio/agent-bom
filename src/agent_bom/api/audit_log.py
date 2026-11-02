@@ -27,17 +27,27 @@ from typing import Any, Protocol
 from uuid import uuid4
 
 from agent_bom.api.audit_details import _AUDIT_DETAIL_KEY_RE as _AUDIT_DETAIL_KEY_RE
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_COLLECTION_ITEMS as _MAX_AUDIT_DETAIL_COLLECTION_ITEMS
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_DEPTH as _MAX_AUDIT_DETAIL_DEPTH
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_KEY_LENGTH as _MAX_AUDIT_DETAIL_KEY_LENGTH
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_KEYS as _MAX_AUDIT_DETAIL_KEYS
+from agent_bom.api.audit_details import _MAX_AUDIT_DETAIL_STRING_LENGTH as _MAX_AUDIT_DETAIL_STRING_LENGTH
 from agent_bom.api.audit_details import _MAX_AUDIT_DETAILS_JSON_BYTES as _MAX_AUDIT_DETAILS_JSON_BYTES
 from agent_bom.api.audit_details import _safe_audit_label as _safe_audit_label
+from agent_bom.api.audit_details import _sanitize_detail_key as _sanitize_detail_key
+from agent_bom.api.audit_details import _sanitize_detail_value as _sanitize_detail_value
 from agent_bom.api.audit_details import sanitize_audit_details as sanitize_audit_details
 from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.settings import env_bool, env_int
 
+__all__ = ["_AUDIT_DETAIL_KEY_RE", "_MAX_AUDIT_DETAILS_JSON_BYTES", "_MAX_AUDIT_DETAIL_COLLECTION_ITEMS",
+    "_MAX_AUDIT_DETAIL_DEPTH", "_MAX_AUDIT_DETAIL_KEYS", "_MAX_AUDIT_DETAIL_KEY_LENGTH", "_MAX_AUDIT_DETAIL_STRING_LENGTH",
+    "_safe_audit_label", "_sanitize_detail_key", "_sanitize_detail_value", "sanitize_audit_details"]  # fmt: skip
+
 logger = logging.getLogger(__name__)
-# Bound on chain-head re-read retries when a concurrent writer wins the race to
-# link the current head; each retry re-reads a strictly newer head, so this only
-# caps pathological contention rather than normal operation.
+# Bound on chain-head re-read retries when a concurrent writer wins the race to link the current head; each retry re-reads a strictly newer
+# head, so this only caps pathological contention rather than normal operation.
 _MAX_APPEND_RETRIES = 50
 
 
@@ -168,11 +178,9 @@ def _describe_rotation_posture(
     }
 
 
-# HMAC key for audit log tamper detection.  When unset, an ephemeral
-# per-process key is generated — signatures verify within the same process
-# but provide no cross-restart integrity.  Production deployments MUST set
-# AGENT_BOM_AUDIT_HMAC_KEY (or AGENT_BOM_AUDIT_HMAC_KEY_FILE) for meaningful
-# tamper detection.
+# HMAC key for audit log tamper detection.  When unset, an ephemeral per-process key is generated — signatures verify within the same
+# process but provide no cross-restart integrity.  Production deployments MUST set AGENT_BOM_AUDIT_HMAC_KEY (or
+# AGENT_BOM_AUDIT_HMAC_KEY_FILE) for meaningful tamper detection.
 _HMAC_ENV_KEY = resolve_secret("AGENT_BOM_AUDIT_HMAC_KEY")
 if _HMAC_ENV_KEY:
     _HMAC_KEY = _HMAC_ENV_KEY.encode()
@@ -185,9 +193,8 @@ else:
         )
     _HMAC_KEY = _secrets.token_bytes(32)
 
-# The operator warning is raised where audit evidence is produced (API startup,
-# first signature), not at import: CLI reports import this module only to
-# describe signing posture, and a log line there lands mid-report.
+# The operator warning is raised where audit evidence is produced (API startup, first signature), not at import: CLI reports import this
+# module only to describe signing posture, and a log line there lands mid-report.
 _EPHEMERAL_KEY_WARNED = False
 
 
@@ -418,10 +425,9 @@ class InMemoryAuditLog:
 
     def append(self, entry: AuditEntry) -> None:
         tenant_id = _entry_tenant(entry)
-        # The chain-head read, signature, and head write must be atomic with the
-        # list append: doing the read-modify-write outside the lock lets two
-        # threads read the same head and fork the chain (both sign against one
-        # predecessor). Hold the lock across the whole sequence.
+        # The chain-head read, signature, and head write must be atomic with the list append: doing the read-modify-write outside the lock
+        # lets two threads read the same head and fork the chain (both sign against one predecessor). Hold the lock across the whole
+        # sequence.
         with self._lock:
             entry.prev_signature = self._last_sig_by_tenant[tenant_id]
             entry.sign(_HMAC_KEY)  # explicit key: no ephemeral-key warning (see class docstring)
@@ -522,10 +528,9 @@ class SQLiteAuditLog:
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_log(action)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(timestamp)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_resource ON audit_log(resource)")
-        # Materialise the canonical tenant (COALESCE-default — the same value the
-        # hash chain keys on) into a real column so tenant-scoped reads ride an
-        # index instead of a per-row json_extract scan. Derived from the signed
-        # `details`; the column itself is not part of the HMAC.
+        # Materialise the canonical tenant (COALESCE-default — the same value the hash chain keys on) into a real column so tenant-scoped
+        # reads ride an index instead of a per-row json_extract scan. Derived from the signed `details`; the column itself is not part of
+        # the HMAC.
         _audit_cols = {row[1] for row in self._conn.execute("PRAGMA table_info(audit_log)").fetchall()}
         if "tenant_id" not in _audit_cols:
             self._conn.execute("ALTER TABLE audit_log ADD COLUMN tenant_id TEXT NOT NULL DEFAULT 'default'")
@@ -599,10 +604,9 @@ class SQLiteAuditLog:
         return _AuditChainCheckpoint(entry_count=int(row[0]), head_signature=str(row[1]))
 
     def _upsert_checkpoint(self, tenant_id: str, head_signature: str) -> None:
-        # COALESCE short-circuits the legacy history count once a checkpoint
-        # exists. VALUES expressions also run on conflict, so an unconditional
-        # COUNT here makes every steady-state append scan the tenant's history.
-        # First seed still counts all rows, including this transaction's insert.
+        # COALESCE short-circuits the legacy history count once a checkpoint exists. VALUES expressions also run on conflict, so an
+        # unconditional COUNT here makes every steady-state append scan the tenant's history. First seed still counts all rows, including
+        # this transaction's insert.
         self._conn.execute(
             """
             INSERT INTO audit_chain_checkpoint (tenant_id, entry_count, head_signature)
@@ -645,10 +649,9 @@ class SQLiteAuditLog:
         return reconciled
 
     def _latest_signature_for_tenant(self, tenant_id: str) -> str:
-        # The chain head is the LAST-APPENDED row (max rowid), not the row with
-        # the latest timestamp. Under concurrent appends a later-inserted entry
-        # can carry an earlier wall-clock timestamp, so ordering by rowid (true
-        # insertion/append order) keeps head selection aligned with the chain.
+        # The chain head is the LAST-APPENDED row (max rowid), not the row with the latest timestamp. Under concurrent appends a
+        # later-inserted entry can carry an earlier wall-clock timestamp, so ordering by rowid (true insertion/append order) keeps head
+        # selection aligned with the chain.
         row = self._conn.execute(
             """
             SELECT hmac_signature
@@ -683,11 +686,9 @@ class SQLiteAuditLog:
 
     def append(self, entry: AuditEntry) -> None:
         tenant_id = _entry_tenant(entry)
-        # An in-process lock serializes seal+insert so threads sharing this store
-        # can't read the same head and fork the chain. The DB-level
-        # UNIQUE(tenant_id, prev_signature) plus this retry handle the
-        # cross-process case (separate connections/replicas): a writer that loses
-        # the race is rejected, then re-reads the advanced head and re-links.
+        # An in-process lock serializes seal+insert so threads sharing this store can't read the same head and fork the chain. The DB-level
+        # UNIQUE(tenant_id, prev_signature) plus this retry handle the cross-process case (separate connections/replicas): a writer that
+        # loses the race is rejected, then re-reads the advanced head and re-links.
         with self._append_lock:
             attempts = 0
             while True:
@@ -721,8 +722,7 @@ class SQLiteAuditLog:
                     self._conn.rollback()
                     if "prev_signature" not in str(exc) or attempts > _MAX_APPEND_RETRIES:
                         raise
-                    # Another writer linked this head first — drop the stale cache
-                    # and re-read the advanced head before retrying.
+                    # Another writer linked this head first — drop the stale cache and re-read the advanced head before retrying.
                     self._last_sig_by_tenant[tenant_id] = self._latest_signature_for_tenant(tenant_id)
                     continue
                 self._last_sig_by_tenant[tenant_id] = entry.hmac_signature
@@ -806,10 +806,8 @@ class SQLiteAuditLog:
             clauses.append("tenant_id = ?")
             params.append(tenant_id)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-        # Walk the chain in true append order (rowid), which is how entries were
-        # linked. Ordering by timestamp would reorder concurrently-appended rows
-        # whose wall-clock times don't match insertion order and report a healthy
-        # chain as tampered.
+        # Walk the chain in true append order (rowid), which is how entries were linked. Ordering by timestamp would reorder
+        # concurrently-appended rows whose wall-clock times don't match insertion order and report a healthy chain as tampered.
         sql = (
             f"SELECT entry_id, timestamp, action, actor, resource, details, prev_signature, hmac_signature"  # nosec B608
             f" FROM audit_log {where} ORDER BY rowid ASC LIMIT ?"
@@ -897,9 +895,8 @@ def log_action(action: str, actor: str = "system", resource: str = "", **details
     from agent_bom.evidence import EvidenceTier, redact_for_persistence
 
     raw_details = dict(details)
-    # Tenant scope is caller-resolved routing metadata, not redactable payload.
-    # Entropy redaction (or metadata truncation) must not collapse distinct
-    # tenants into a shared audit chain or make their records inaccessible.
+    # Tenant scope is caller-resolved routing metadata, not redactable payload. Entropy redaction (or metadata truncation) must not collapse
+    # distinct tenants into a shared audit chain or make their records inaccessible.
     tenant_id = _default_tenant_id(raw_details)
     raw_details.pop("tenant_id", None)
     audit_details = redact_for_persistence(raw_details, EvidenceTier.SAFE_TO_STORE)

@@ -5,10 +5,7 @@ from __future__ import annotations
 from typing import Any, TextIO
 
 from agent_bom.advisory_ids import vulnerability_enrichment_metadata
-from agent_bom.asset_provenance import (
-    package_discovery_provenance,
-    package_version_provenance,
-)
+from agent_bom.asset_provenance import package_discovery_provenance, package_version_provenance
 from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.core.severity import severity_basis
@@ -17,15 +14,26 @@ from agent_bom.finding import Finding, _forward_fixed_version
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.exposure_path import exposure_path_for_report_finding
 from agent_bom.output.finding_views import blast_radius_output_tags, cve_findings
-from agent_bom.output.json_inventory import (
-    INVENTORY_SNAPSHOT_SCHEMA_VERSION as INVENTORY_SNAPSHOT_SCHEMA_VERSION,
-)
-from agent_bom.output.json_inventory import (
-    _build_ai_bom_entities_snapshot as _build_ai_bom_entities_snapshot,
-)
-from agent_bom.output.json_inventory import (
-    _build_inventory_snapshot as _build_inventory_snapshot,
-)
+from agent_bom.output.json_inventory import _DISCOVERY_PROVENANCE_SCHEMA_FIELDS as _DISCOVERY_PROVENANCE_SCHEMA_FIELDS
+from agent_bom.output.json_inventory import _INVENTORY_SCHEMA_AGENT_TYPES as _INVENTORY_SCHEMA_AGENT_TYPES
+from agent_bom.output.json_inventory import _INVENTORY_SCHEMA_ECOSYSTEMS as _INVENTORY_SCHEMA_ECOSYSTEMS
+from agent_bom.output.json_inventory import _INVENTORY_SCHEMA_TRANSPORTS as _INVENTORY_SCHEMA_TRANSPORTS
+from agent_bom.output.json_inventory import _SECURITY_INTELLIGENCE_SCHEMA_FIELDS as _SECURITY_INTELLIGENCE_SCHEMA_FIELDS
+from agent_bom.output.json_inventory import _VERSION_PROVENANCE_SCHEMA_FIELDS as _VERSION_PROVENANCE_SCHEMA_FIELDS
+from agent_bom.output.json_inventory import INVENTORY_SNAPSHOT_SCHEMA_VERSION as INVENTORY_SNAPSHOT_SCHEMA_VERSION
+from agent_bom.output.json_inventory import _build_ai_bom_entities_snapshot as _build_ai_bom_entities_snapshot
+from agent_bom.output.json_inventory import _build_inventory_snapshot as _build_inventory_snapshot
+from agent_bom.output.json_inventory import _drop_empty as _drop_empty
+from agent_bom.output.json_inventory import _schema_agent_type as _schema_agent_type
+from agent_bom.output.json_inventory import _schema_discovery_provenance as _schema_discovery_provenance
+from agent_bom.output.json_inventory import _schema_ecosystem as _schema_ecosystem
+from agent_bom.output.json_inventory import _schema_package as _schema_package
+from agent_bom.output.json_inventory import _schema_security_intelligence as _schema_security_intelligence
+from agent_bom.output.json_inventory import _schema_server as _schema_server
+from agent_bom.output.json_inventory import _schema_tool as _schema_tool
+from agent_bom.output.json_inventory import _schema_transport as _schema_transport
+from agent_bom.output.json_inventory import _schema_version_provenance as _schema_version_provenance
+from agent_bom.output.json_inventory import _snapshot_payload as _snapshot_payload
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
 from agent_bom.output.json_writer import write_json_document, write_json_file
 from agent_bom.output.possibly_affected import json_section as possibly_affected_json
@@ -33,13 +41,16 @@ from agent_bom.output.side_findings import _append_side_findings, stamp_finding_
 from agent_bom.output.vulnerability_counts import report_summary
 from agent_bom.redaction.payload import StreamingRedaction
 from agent_bom.redaction.report_paths import prepare_iac_path_redaction
-from agent_bom.security import (
-    sanitize_sensitive_payload,
-)
+from agent_bom.security import sanitize_sensitive_payload
 from agent_bom.vex import is_vex_suppressed
 
 SCAN_REPORT_SCHEMA_VERSION = "1.0"
-__all__ = ["INVENTORY_SNAPSHOT_SCHEMA_VERSION"]  # fmt: skip
+__all__ = ["INVENTORY_SNAPSHOT_SCHEMA_VERSION", "_DISCOVERY_PROVENANCE_SCHEMA_FIELDS", "_INVENTORY_SCHEMA_AGENT_TYPES",
+    "_INVENTORY_SCHEMA_ECOSYSTEMS", "_INVENTORY_SCHEMA_TRANSPORTS", "_SECURITY_INTELLIGENCE_SCHEMA_FIELDS",
+    "_VERSION_PROVENANCE_SCHEMA_FIELDS", "_build_ai_bom_entities_snapshot", "_build_inventory_snapshot", "_drop_empty",
+    "_schema_agent_type", "_schema_discovery_provenance", "_schema_ecosystem", "_schema_package",
+    "_schema_security_intelligence", "_schema_server", "_schema_tool", "_schema_transport", "_schema_version_provenance",
+    "_snapshot_payload"]  # fmt: skip
 SCAN_RUN_SCHEMA_VERSION = "1"
 BLAST_RADIUS_SCHEMA_VERSION = "2"
 _FINDING_SEVERITIES = ("critical", "high", "medium", "low", "unknown")
@@ -472,8 +483,7 @@ def _blast_radius_json_entry(
     )
     return {
         "schema_version": BLAST_RADIUS_SCHEMA_VERSION,
-        # The blast-radius block is a compatibility projection of this exact
-        # unified finding.  Preserve its identity so API consumers do not
+        # The blast-radius block is a compatibility projection of this exact unified finding.  Preserve its identity so API consumers do not
         # materialize a second anonymous row for the same CVE/package/asset.
         "canonical_id": finding.canonical_id,
         "asset": {
@@ -595,11 +605,9 @@ def _export_findings_json(report: AIBOMReport) -> list[dict[str, Any]]:
     from agent_bom.output.finding_views import apply_workload_runtime_evidence_for_export
 
     export_findings = apply_workload_runtime_evidence_for_export(list(report.to_findings()))
-    # Anchor the remediation SLA window: scan completion is the authoritative
-    # first-observation time for a fresh scan's findings, so stamp it when the
-    # finding does not already carry a first-seen history. to_dict() then derives
-    # ``sla_due_at`` from this anchor (with the KEV override) — one source of
-    # truth for the report, the API job result, and every export.
+    # Anchor the remediation SLA window: scan completion is the authoritative first-observation time for a fresh scan's findings, so stamp
+    # it when the finding does not already carry a first-seen history. to_dict() then derives ``sla_due_at`` from this anchor (with the KEV
+    # override) — one source of truth for the report, the API job result, and every export.
     scan_observed_at = report.generated_at.isoformat()
     for finding in export_findings:
         if not finding.first_seen:
@@ -787,9 +795,8 @@ def to_json(report: AIBOMReport) -> dict:
         result["gcp_cis_benchmark"] = fail_closed_cis_bundle(report.gcp_cis_benchmark_data, cloud="gcp")
 
     if report.databricks_security_data:
-        # Canonical vendor-best-practice key; Databricks has no official CIS
-        # benchmark. ``databricks_cis_benchmark`` is retained as a deprecated
-        # alias (identical payload) for existing CIS-named consumers.
+        # Canonical vendor-best-practice key; Databricks has no official CIS benchmark. ``databricks_cis_benchmark`` is retained as a
+        # deprecated alias (identical payload) for existing CIS-named consumers.
         result["databricks_security"] = report.databricks_security_data
         result["databricks_cis_benchmark"] = report.databricks_security_data
 

@@ -46,6 +46,7 @@ from agent_bom.demo_estate.enterprise_risk_rules import _DATA_RULES as _DATA_RUL
 from agent_bom.demo_estate.enterprise_risk_rules import _IAC_RULES as _IAC_RULES
 from agent_bom.demo_estate.enterprise_risk_rules import _IDENTITY_RULES as _IDENTITY_RULES
 from agent_bom.demo_estate.enterprise_risk_rules import _TOOL_RULES as _TOOL_RULES
+from agent_bom.demo_estate.enterprise_risk_rules import _DataRule as _DataRule
 from agent_bom.demo_estate.enterprise_risk_rules import _IacRule as _IacRule
 from agent_bom.demo_estate.enterprise_risk_rules import _RuntimeRule as _RuntimeRule
 from agent_bom.finding import (
@@ -88,13 +89,10 @@ def advisory_catalog() -> tuple[tuple[str, str, str, DemoAdvisory], ...]:
 
 # One ``Asset.asset_type`` per estate asset, for every lane.
 #
-# ``Asset.canonical_id`` includes asset_type, identifier and provider scope, so lanes
-# that describe the SAME inventoried row with different asset_types mint two
-# canonical ids for one asset — and the findings list, the graph and the exports
-# stop joining. The posture lane goes through ``cloud_cis_check_to_finding``,
-# which always writes ``cloud_resource``; anything the posture lane can also
-# reach must therefore say ``cloud_resource`` too. This map holds only the rows
-# posture never touches.
+# ``Asset.canonical_id`` includes asset_type, identifier and provider scope, so lanes that describe the SAME inventoried row with different
+# asset_types mint two canonical ids for one asset — and the findings list, the graph and the exports stop joining. The posture lane goes
+# through ``cloud_cis_check_to_finding``, which always writes ``cloud_resource``; anything the posture lane can also reach must therefore
+# say ``cloud_resource`` too. This map holds only the rows posture never touches.
 _ASSET_TYPE_OVERRIDES: dict[str, str] = {
     "package": "package",
     "container_image": "container",
@@ -206,19 +204,14 @@ def build_vulnerability_evidence(estate: EnterpriseEstate) -> tuple[tuple[Any, F
         blast_radius = estate_blast_radius(asset, advisory)
         finding = blast_radius_to_finding(blast_radius)
         bind_to_inventory(finding, asset, estate, location=asset.native_id)
-        # The converter keys a finding on (advisory, package) because a
-        # repository scan sees each package once. An estate ships the same
-        # package inside twenty-one images, so that key collapsed twenty-one
-        # distinct exposures onto one id — the same "dedupe key omits the scope"
-        # defect that has cost this repo a cross-tenant row before. The scope
-        # here is the inventoried package row.
+        # The converter keys a finding on (advisory, package) because a repository scan sees each package once. An estate ships the same
+        # package inside twenty-one images, so that key collapsed twenty-one distinct exposures onto one id — the same "dedupe key omits the
+        # scope" defect that has cost this repo a cross-tenant row before. The scope here is the inventoried package row.
         finding.id = stable_id("estate-vuln", advisory.vuln_id, asset.asset_id)
         finding.evidence.update(
             {
-                # Every lane states what was observed and what was expected.
-                # For a vulnerability that is the version edge — not a
-                # fabricated "configuration", the actual finding: this version
-                # is installed, the advisory fixes it in that one.
+                # Every lane states what was observed and what was expected. For a vulnerability that is the version edge — not a fabricated
+                # "configuration", the actual finding: this version is installed, the advisory fixes it in that one.
                 "configuration": {
                     "setting": f"{ecosystem} package version",
                     "observed": f"{name}@{version}",
@@ -283,8 +276,7 @@ def build_secret_findings(estate: EnterpriseEstate) -> tuple[Finding, ...]:
         if asset.resource_type != "repository":
             continue
         seed = _seed("secret", asset.asset_id)
-        # Roughly a third of repositories carry one. An estate where every
-        # repository leaks is a lint rule, not a posture.
+        # Roughly a third of repositories carry one. An estate where every repository leaks is a lint rule, not a posture.
         if seed % 3 != 0:
             continue
         for offset in range(1 + (seed // 5) % 2):
@@ -297,19 +289,15 @@ def build_secret_findings(estate: EnterpriseEstate) -> tuple[Finding, ...]:
                     "type": kind,
                     "category": category,
                     "severity": severity,
-                    # Never a value, not even a synthetic one: the converter
-                    # redacts, and handing it something that looks like a secret
+                    # Never a value, not even a synthetic one: the converter redacts, and handing it something that looks like a secret
                     # teaches the demo to carry secret-shaped strings.
                     "preview": "***REDACTED***",
                 }
             )
             bind_to_inventory(finding, asset, estate, location=f"{asset.display_name}/{path}")
-            # ``secret_dict_to_finding`` sets no framework classification — it
-            # predates the hub — so a secret would evidence no control and drop
-            # out of the compliance posture entirely. Every other lane's
-            # converter already does this internally.
-            # The controls a committed credential genuinely evidences, from the
-            # catalogs this repo ships. ``secret_dict_to_finding`` sets none.
+            # ``secret_dict_to_finding`` sets no framework classification — it predates the hub — so a secret would evidence no control and
+            # drop out of the compliance posture entirely. Every other lane's converter already does this internally. The controls a
+            # committed credential genuinely evidences, from the catalogs this repo ships. ``secret_dict_to_finding`` sets none.
             finding.owasp_tags = ["LLM02"]
             finding.owasp_mcp_tags = ["MCP01"]
             finding.nist_800_53_tags = ["IA-5"]
@@ -350,8 +338,7 @@ def build_iac_findings(estate: EnterpriseEstate) -> tuple[Finding, ...]:
             continue
         for rule in rules:
             seed = _seed("iac", asset.asset_id, rule.rule_id)
-            # An IaC defect is a property of a module, so it repeats across the
-            # resources that module produces — but not across all of them.
+            # An IaC defect is a property of a module, so it repeats across the resources that module produces — but not across all of them.
             if seed % 100 >= 24:
                 continue
             module = f"infra/{asset.provider}/{asset.resource_type}s/main.tf"
@@ -362,10 +349,8 @@ def build_iac_findings(estate: EnterpriseEstate) -> tuple[Finding, ...]:
             # Claim only the frameworks this rule actually evidences. Every IaC
             # rule used to declare ``["CIS", "NIST-800-53"]`` regardless — so
             # "resource declared without an ownership tag" asserted CIS
-            # coverage it cannot support, and a consumer reading the compliance
-            # posture was told a control had been evaluated when nothing had
-            # evaluated it. Half these rules have no CIS twin at all, and
-            # saying so is the accurate answer.
+            # coverage it cannot support, and a consumer reading the compliance posture was told a control had been evaluated when nothing
+            # had evaluated it. Half these rules have no CIS twin at all, and saying so is the accurate answer.
             cis_check = rule.cis_checks.get(asset.provider)
             frameworks = (["CIS"] if cis_check else []) + (["NIST-800-53"] if rule.nist_800_53 else [])
             finding = iac_finding_to_finding(
@@ -387,18 +372,15 @@ def build_iac_findings(estate: EnterpriseEstate) -> tuple[Finding, ...]:
                 "observed": rule.observed,
                 "expected": rule.expected,
             }
-            # ``check_id`` is the join key every posture consumer reads. The
-            # rule id already IS the check identity, so emitting it only as
-            # ``rule_id`` left this lane unjoinable to everything the cspm
-            # domain is expected to support.
+            # ``check_id`` is the join key every posture consumer reads. The rule id already IS the check identity, so emitting it only as
+            # ``rule_id`` left this lane unjoinable to everything the cspm domain is expected to support.
             finding.evidence["check_id"] = rule.rule_id
             if cis_check:
                 finding.evidence["control_id"] = f"CIS-{cis_check}"
             if rule.nist_800_53:
                 finding.nist_800_53_tags = list(rule.nist_800_53)
-            # ``iac_finding_to_finding`` derives its id from the file path, and
-            # one module declares many resources — so without re-deriving it,
-            # every resource from one module collapsed onto a single finding id.
+            # ``iac_finding_to_finding`` derives its id from the file path, and one module declares many resources — so without re-deriving
+            # it, every resource from one module collapsed onto a single finding id.
             finding.id = stable_id("estate-iac", rule.rule_id, asset.asset_id)
             _classify(finding)
             findings.append(finding)
@@ -447,12 +429,10 @@ def _runtime_finding(rule: _RuntimeRule, asset: EstateAsset, estate: EnterpriseE
         id=stable_id("estate-runtime", rule.finding_type.value, asset.asset_id),
     )
     bind_to_inventory(finding, asset, estate)
-    # Declare the frameworks whose controls this rule actually names. The hub's
-    # selection table has no row for every (source, finding_type) pair the
-    # product emits — ``CLOUD_SECURITY`` + ``CIEM_OVER_PRIVILEGE`` resolves to
-    # nothing — and a finding classified into no framework is invisible to the
-    # compliance posture no matter how many control tags it carries. This adds
-    # no crosswalk: it names exactly the frameworks whose codes are on the rule.
+    # Declare the frameworks whose controls this rule actually names. The hub's selection table has no row for every (source, finding_type)
+    # pair the product emits — ``CLOUD_SECURITY`` + ``CIEM_OVER_PRIVILEGE`` resolves to nothing — and a finding classified into no framework
+    # is invisible to the compliance posture no matter how many control tags it carries. This adds no crosswalk: it names exactly the
+    # frameworks whose codes are on the rule.
     declared = [
         slug
         for slug, tags in (
@@ -597,8 +577,7 @@ def build_data_findings(estate: EnterpriseEstate) -> tuple[Finding, ...]:
                 description=rule.description,
                 remediation_guidance=rule.remediation,
                 evidence={
-                    # ``check_id`` is the join key every posture consumer reads;
-                    # the rule id IS the check identity.
+                    # ``check_id`` is the join key every posture consumer reads; the rule id IS the check identity.
                     "check_id": rule.rule_id,
                     "data_classification": rule.classification,
                     "category": "sensitive-data-access",
@@ -612,12 +591,10 @@ def build_data_findings(estate: EnterpriseEstate) -> tuple[Finding, ...]:
                 id=stable_id("estate-data", rule.rule_id, asset.asset_id),
             )
             bind_to_inventory(finding, asset, estate)
-            # Declare the frameworks whose controls this rule actually names.
-            # The hub's selection table has no row for (DSPM, SENSITIVE_DATA),
-            # and a finding classified into no framework is invisible to the
-            # compliance posture no matter how many control tags it carries —
-            # the same gap the runtime lane hit. This adds no crosswalk: it
-            # names exactly the frameworks whose codes are on the rule.
+            # Declare the frameworks whose controls this rule actually names. The hub's selection table has no row for (DSPM,
+            # SENSITIVE_DATA), and a finding classified into no framework is invisible to the compliance posture no matter how many control
+            # tags it carries — the same gap the runtime lane hit. This adds no crosswalk: it names exactly the frameworks whose codes are
+            # on the rule.
             finding.applicable_frameworks = ["nist-800-53"] if rule.nist_800_53 else []
             findings.append(apply_hub_classification(finding))
     return tuple(findings)
@@ -635,17 +612,7 @@ def build_risk_findings(estate: EnterpriseEstate) -> tuple[Finding, ...]:
     return tuple(finding for lane in lanes for finding in lane)
 
 
-__all__ = [
-    "ESTATE_RISK_VERSION",
-    "advisory_catalog",
-    "build_vulnerability_blast_radii",
-    "build_vulnerability_evidence",
-    "bind_to_inventory",
-    "build_data_findings",
-    "build_iac_findings",
-    "build_risk_findings",
-    "build_runtime_findings",
-    "build_secret_findings",
-    "build_vulnerability_findings",
-    "vulnerable_version_for",
-]
+__all__ = ["ESTATE_RISK_VERSION", "_AI_RULES", "_DATA_RULES", "_DataRule", "_IAC_RULES", "_IDENTITY_RULES", "_IacRule",
+    "_RuntimeRule", "_TOOL_RULES", "advisory_catalog", "bind_to_inventory", "build_data_findings", "build_iac_findings",
+    "build_risk_findings", "build_runtime_findings", "build_secret_findings", "build_vulnerability_blast_radii",
+    "build_vulnerability_evidence", "build_vulnerability_findings", "vulnerable_version_for"]  # fmt: skip
