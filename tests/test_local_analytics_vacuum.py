@@ -150,3 +150,24 @@ def test_report_prune_shows_free_bytes_and_hint_until_compacted(tmp_path, small_
     assert compacted.exit_code == 0, compacted.output
     assert "Free:" in compacted.output
     assert "--apply --compact" not in compacted.output
+
+
+def test_release_free_pages_empties_the_freelist_in_one_call(tmp_path):
+    # Python < 3.12 runs a PRAGMA from execute() for a single step, which freed one page.
+    from agent_bom.db.local_analytics_sqlite import release_free_pages
+
+    path = tmp_path / "freelist.sqlite"
+    conn = sqlite3.connect(str(path))
+    conn.execute("PRAGMA auto_vacuum=INCREMENTAL")
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("CREATE TABLE blobs (body TEXT)")
+    conn.executemany("INSERT INTO blobs VALUES (?)", [(PADDING,)] * 500)
+    conn.commit()
+    conn.execute("DELETE FROM blobs")
+    conn.commit()
+    assert int(conn.execute("PRAGMA freelist_count").fetchone()[0]) > 1
+
+    release_free_pages(conn)
+
+    assert int(conn.execute("PRAGMA freelist_count").fetchone()[0]) == 0
+    conn.close()
