@@ -96,14 +96,16 @@ from agent_bom.storage.tiers import preflight_storage_backends
 
 _logger = logging.getLogger(__name__)
 __all__ = ["_analytics_backend_config", "AnalyticsHealth", "PIPELINE_DAG_EDGES", "_api_key", "_dataclass_to_dict",
-    "_get_credential_ref_store", "_load_registry", "_sanitize_api_path", "push_proxy_alert", "set_dev_api_key",
-    "set_job_store", "PIPELINE_DAG_EVENT_SCHEMA", "PostgresPortabilityHealth", "_backend_name", "_get_source_store",
-    "push_proxy_metrics"]  # fmt: skip
+    "_get_credential_ref_store", "_load_registry", "_sanitize_api_path", "push_proxy_alert", "set_dev_api_key", "set_job_store",
+    "PIPELINE_DAG_EVENT_SCHEMA", "PostgresPortabilityHealth", "_backend_name", "_get_source_store", "push_proxy_metrics", "PIPELINE_STEPS",
+    "ScanJob", "ScanPipeline", "ScanRequest", "StepStatus", "StorageHealth", "_control_plane_backend", "_executor", "_jobs_get",
+    "_jobs_pop", "_jobs_put", "_postgres_portability_health", "_run_scan_sync", "_sync_scan_agents_to_fleet", "get_executor",
+    "iter_pipeline_dag_event_records", "pipeline_dag_events_jsonl", "set_analytics_store", "set_credential_ref_store",
+    "set_exception_store", "set_fleet_store", "set_graph_store", "set_policy_store", "set_schedule_store", "set_source_store",
+    "set_trend_store"]  # fmt: skip
 
-# Demo estate mode must resolve every default local store under its own data
-# directory. Pin it before anything below lazily opens a store; this covers
-# ``uvicorn agent_bom.api.server:app`` and multi-worker re-imports as well as
-# the CLI, which activates it earlier.
+# Pin every demo-estate default store under its own data directory before lazy store access.
+# This covers ``uvicorn agent_bom.api.server:app``, multi-worker re-imports and the CLI, which activates it earlier.
 _state_home.activate_demo_state_dir()
 # ─── Dependency check ─────────────────────────────────────────────────────────
 
@@ -643,9 +645,7 @@ _export_scheduler_task: asyncio.Task | None = None
 _side_scan_scheduler_task: asyncio.Task | None = None
 _advisory_rematch_task: asyncio.Task | None = None
 _auto_correlation_task: asyncio.Task | None = None
-# Flipped to True during graceful shutdown so the /readyz probe goes red
-# and upstream load balancers stop sending new traffic while in-flight
-# requests complete under the drain budget.
+# Set during graceful shutdown: /readyz rejects new traffic while in-flight requests finish under the drain budget.
 _shutting_down: bool = False
 
 

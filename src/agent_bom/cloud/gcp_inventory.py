@@ -652,6 +652,8 @@ def _discover_load_balancers(
 # ---------------------------------------------------------------------------
 
 
-__all__ = ["ALL_PROJECTS_ENV_FLAG", "INVENTORY_ENV_FLAG", "all_projects_enabled", "discover_all_project_inventories",
-    "discover_inventory", "inventory_enabled", "_bucket_public", "_highest_privilege", "_normalize_instance",
-    "_policy_bindings"]  # fmt: skip
+__all__ = ["ALL_PROJECTS_ENV_FLAG", "INVENTORY_ENV_FLAG", "all_projects_enabled", "discover_all_project_inventories", "discover_inventory",
+    "inventory_enabled", "_bucket_public", "_highest_privilege", "_normalize_instance", "_policy_bindings", "_GCP_COMPUTE_PERMISSIONS",
+    "_GCP_IAM_PERMISSIONS", "_GCP_ROLE_PRIVILEGE", "_GCP_STORAGE_PERMISSIONS", "_INTERNET_RANGES", "_PUBLIC_MEMBERS",
+    "_classify_role_privilege", "_clean_labels", "_firewall_internet_exposure", "_normalize_firewall", "_parse_port", "_role_policy_entry",
+    "_safe_int", "_segment", "_service_account_usage_evidence"]  # fmt: skip

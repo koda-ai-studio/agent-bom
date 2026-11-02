@@ -12,10 +12,8 @@ projection; cursor resume is ledger-only and server ordered.
     * recent LLM calls                                          — observability
       cost store (priced OTel GenAI spans)
 
-This module is read-only over those existing stores. It does NOT re-implement
-enforcement, DLP, or audit. Postgres/SQLite ledger data is primary;
-the in-process ring/JSONL path is labeled degraded and never satisfies a cursor
-resume when the ledger is unavailable.
+This module reads existing stores without re-implementing enforcement, DLP or audit. Postgres/SQLite ledger data is primary;
+the in-process ring/JSONL path is labeled degraded and never satisfies cursor resume when the ledger is unavailable.
 
 Endpoints:
     GET /v1/gateway/feed       normalized, time-ordered fused event list
@@ -100,7 +98,9 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
-__all__ = ["_SHADOW_BLOCK_MARKERS", "GatewayFeedCompletenessModel", "ACTION_LLM_CALL", "GatewayFeedEventModel"]  # fmt: skip
+__all__ = ["_SHADOW_BLOCK_MARKERS", "GatewayFeedCompletenessModel", "ACTION_LLM_CALL", "GatewayFeedEventModel", "GatewayFeedHealthModel",
+    "GatewayFeedKpiCompletenessModel", "GatewayFeedWindowModel", "ProducerAssuranceCountsModel", "_alert_agent", "_alert_policy_ids",
+    "_alert_revision", "_alert_target", "_block_detail", "_bounded_alert_identifier", "_data_filter_detail", "_sort_key"]  # fmt: skip
 
 _FEED_SCHEMA_VERSION = "gateway.feed.v1"
 _STREAM_MAX_SECONDS = 30.0

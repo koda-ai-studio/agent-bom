@@ -705,5 +705,13 @@ def _discover_iam(
 
 
 __all__ = ["ALL_REGIONS_ENV_FLAG", "ALL_REGIONS_SENTINEL", "INVENTORY_ENV_FLAG", "REGIONS_ENV_VAR", "all_regions_enabled",
-    "discover_all_account_inventories", "discover_inventory", "discover_inventory_all_regions", "inventory_enabled",
-    "is_all_regions", "_latest_ecr_image_ref"]  # fmt: skip
+    "discover_all_account_inventories", "discover_inventory", "discover_inventory_all_regions", "inventory_enabled", "is_all_regions",
+    "_latest_ecr_image_ref", "_AWS_COMPUTE_PERMISSIONS", "_AWS_DATA_PERMISSIONS", "_AWS_EC2_PERMISSIONS", "_AWS_EDGE_PERMISSIONS",
+    "_AWS_IAM_PERMISSIONS", "_AWS_NETWORK_PERMISSIONS", "_AWS_S3_PERMISSIONS", "_AWS_SECURITY_PERMISSIONS", "_BILLING_DISABLED_MARKERS",
+    "_EdgeStage", "_INTERNET_CIDRS", "_INTERNET_IPV6", "_PAYLOAD_META_KEYS", "_PUBLIC_ACL_GRANTEE_URIS", "_REGION_SCOPED_KEYS",
+    "_SERVICE_DISABLED_MARKERS", "_account_public_access_block", "_attached_policies", "_bucket_location", "_bucket_public",
+    "_bucket_tags", "_ec2_pages", "_error_code", "_group_members", "_groups_for_user", "_highest_privilege", "_inline_policies",
+    "_internet_gateway_row", "_iso", "_nat_gateway_row", "_network_acl_exposure", "_network_acl_row", "_network_edge_stages",
+    "_network_interface_row", "_normalize_instance", "_normalize_security_group", "_policy_privilege_and_document", "_route_table_row",
+    "_security_group_internet_exposure", "_status_code", "_subnet_row", "_vpc_endpoint_row", "build_missing_permission",
+    "classify_project_disabled_error", "dedupe_missing_permissions", "is_access_denied_error"]  # fmt: skip

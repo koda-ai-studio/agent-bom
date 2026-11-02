@@ -613,7 +613,8 @@ def _entra_directory_client(client: Any, *, force: bool, warnings: list[str]) ->
 # ---------------------------------------------------------------------------
 
 
-__all__ = ["ALL_SUBSCRIPTIONS_ENV_FLAG", "INVENTORY_ENV_FLAG", "all_subscriptions_enabled",
-    "discover_all_subscription_inventories", "discover_inventory", "enumerate_subscription_ids", "inventory_enabled",
-    "_ENTRA_MAX_GROUPS_EXPANDED", "_append_db_servers", "_classify_storage_account_blobs", "_clean_tags",
-    "_discover_role_assignments"]  # fmt: skip
+__all__ = ["ALL_SUBSCRIPTIONS_ENV_FLAG", "INVENTORY_ENV_FLAG", "all_subscriptions_enabled", "discover_all_subscription_inventories",
+    "discover_inventory", "enumerate_subscription_ids", "inventory_enabled", "_ENTRA_MAX_GROUPS_EXPANDED", "_append_db_servers",
+    "_classify_storage_account_blobs", "_clean_tags", "_discover_role_assignments", "_entra_group_members", "_nsg_internet_exposure",
+    "_public_ip_ref_value", "_resource_group_from_id", "_route_table_has_internet_route", "_rule_port_range", "_rule_sources", "_safe_int",
+    "_vm_identity", "_vm_user_assigned_identity_ids", "_vnet_id_from_subnet_id"]  # fmt: skip

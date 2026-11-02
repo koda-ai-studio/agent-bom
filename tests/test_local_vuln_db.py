@@ -554,7 +554,7 @@ def test_sync_db_runs_wal_checkpoint(tmp_path, monkeypatch, shadow_sync_module):
     import types
 
     import agent_bom.db as db_package
-    from agent_bom.db import schema as schema_mod
+    import agent_bom.db.schema as schema_mod
 
     unexpected_calls = []
     if shadow_sync_module:

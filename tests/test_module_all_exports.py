@@ -75,7 +75,7 @@ def test_quality_cleanup_preserves_existing_compatibility_reexports() -> None:
     missing = {}
     for module_name, names in expected.items():
         module = importlib.import_module(module_name)
-        absent = [name for name in names if not hasattr(module, name)]
+        absent = [name for name in names if not hasattr(module, name) or name not in module.__all__]
         if absent:
             missing[module_name] = absent
     assert missing == {}, f"Removed compatibility re-exports: {missing}"

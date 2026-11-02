@@ -41,11 +41,12 @@ from .idempotency_store_core import (  # noqa: F401 - re-exported for callers an
 )
 from .idempotency_store_memory import InMemoryIdempotencyStore  # noqa: F401 - re-exported for callers and tests
 
-# Fixed namespace for content-derived batch ids so an identical write resent
-# without an ``Idempotency-Key`` header still collapses onto one logical batch
-# (stable observation dedup key) instead of minting a fresh random batch id.
+# Fixed namespace deduplicates identical writes into one content-derived batch id,
+# including retries without an ``Idempotency-Key`` header.
 _BATCH_ID_NAMESPACE = uuid.UUID("6f6b4b2e-2c1a-4d9e-9d3b-8a1f0c5e7d42")
-__all__ = ["IdempotencyPayloadError", "InMemoryIdempotencyStore", "IdempotencyRecord"]  # fmt: skip
+__all__ = ["IdempotencyPayloadError", "InMemoryIdempotencyStore", "IdempotencyRecord", "IdempotencyReservationHeartbeat",
+    "IdempotencyStore", "_normalize_request_payload", "_reservation_is_expired", "idempotency_owner_token",
+    "idempotency_request_fingerprint"]  # fmt: skip
 _DEFAULT_IDEMPOTENCY_TTL_HOURS = 24
 _DEFAULT_IDEMPOTENCY_RESERVATION_LEASE_SECONDS = 30
 _MAX_IDEMPOTENCY_RESERVATION_LEASE_SECONDS = 300

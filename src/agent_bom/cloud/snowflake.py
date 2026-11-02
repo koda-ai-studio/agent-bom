@@ -161,21 +161,26 @@ from .snowflake_organization import discover_organization as discover_organizati
 
 logger = logging.getLogger(__name__)
 __all__ = ["_AGENT_QUERY_PATTERNS", "_COMPILED_PATTERNS", "_CONTROL_CHAR_RE", "_LIVE_GRANT_OBJECT_TYPES", "_LIVE_MAX_ROLES",
-    "_MAX_ORG_ACCOUNTS", "_SAFE_IDENT_RE", "_SF_EXTERNAL_SCHEMES", "_SF_INTEGRATION_EGRESS",
-    "_SF_ORG_NOT_AUTHORIZED_MARKERS", "_SNOWFLAKE_INVENTORY_FAILURES", "_access_actor", "_access_actor_context",
-    "_borrowed_connection", "_classify_agent_query", "_coerce_int_or_none", "_coerce_snowflake_days", "_collect_show_rows",
-    "_database_row", "_derive_findings", "_derive_org_findings", "_describe_mcp_server_tools", "_discover_cortex_agents",
-    "_discover_cortex_services", "_discover_custom_tools", "_discover_from_query_history", "_discover_mcp_servers",
-    "_discover_sf_dependencies", "_discover_sf_grants", "_discover_sf_objects", "_discover_snowflake_notebooks",
-    "_discover_snowpark_packages", "_discover_streamlit_apps", "_env_or_value", "_estate_result",
-    "_find_agent_usage_anomalies", "_find_elevated_privilege_risks", "_find_sensitive_data_access",
-    "_find_write_access_risks", "_grant_object_fqn", "_live_show_users", "_mine_access_history", "_mine_cortex_agent_usage",
-    "_mine_grants_to_roles", "_mine_observability_events", "_mine_query_history_365", "_mine_tag_references",
-    "_open_estate_connection", "_parse_create_statement_name", "_parse_external_location", "_parse_json_field",
-    "_parse_json_object", "_quote_sf_identifier", "_record_snowflake_inventory_failure", "_schema_row", "_sf_truthy",
-    "_snowflake_cloud_origin", "_split_fqn_parts", "_validate_sf_identifier", "_warehouse_row", "discover_activity",
-    "discover_identity_live", "discover_object_dependencies", "discover_organization", "discover_snowflake_external_data",
-    "discover_snowflake_integrations", "discover_snowflake_pipeline", "discover_snowflake_services", "logger"]  # fmt: skip
+    "_MAX_ORG_ACCOUNTS", "_SAFE_IDENT_RE", "_SF_EXTERNAL_SCHEMES", "_SF_INTEGRATION_EGRESS", "_SF_ORG_NOT_AUTHORIZED_MARKERS",
+    "_SNOWFLAKE_INVENTORY_FAILURES", "_access_actor", "_access_actor_context", "_borrowed_connection", "_classify_agent_query",
+    "_coerce_int_or_none", "_coerce_snowflake_days", "_collect_show_rows", "_database_row", "_derive_findings", "_derive_org_findings",
+    "_describe_mcp_server_tools", "_discover_cortex_agents", "_discover_cortex_services", "_discover_custom_tools",
+    "_discover_from_query_history", "_discover_mcp_servers", "_discover_sf_dependencies", "_discover_sf_grants", "_discover_sf_objects",
+    "_discover_snowflake_notebooks", "_discover_snowpark_packages", "_discover_streamlit_apps", "_env_or_value", "_estate_result",
+    "_find_agent_usage_anomalies", "_find_elevated_privilege_risks", "_find_sensitive_data_access", "_find_write_access_risks",
+    "_grant_object_fqn", "_live_show_users", "_mine_access_history", "_mine_cortex_agent_usage", "_mine_grants_to_roles",
+    "_mine_observability_events", "_mine_query_history_365", "_mine_tag_references", "_open_estate_connection",
+    "_parse_create_statement_name", "_parse_external_location", "_parse_json_field", "_parse_json_object", "_quote_sf_identifier",
+    "_record_snowflake_inventory_failure", "_schema_row", "_sf_truthy", "_snowflake_cloud_origin", "_split_fqn_parts",
+    "_validate_sf_identifier", "_warehouse_row", "discover_activity", "discover_identity_live", "discover_object_dependencies",
+    "discover_organization", "discover_snowflake_external_data", "discover_snowflake_integrations", "discover_snowflake_pipeline",
+    "discover_snowflake_services", "logger", "_BorrowedConnection", "_LiveRoleGraph", "_add_external_stage", "_add_login_summary",
+    "_add_network_policy", "_add_outbound_share", "_add_sensitive_object", "_auth_posture_findings", "_collect_auth_posture",
+    "_collect_exfil_surfaces", "_collect_login_signals", "_estate_exfil", "_estate_external_data", "_estate_governance",
+    "_estate_integrations", "_estate_login_anomalies", "_estate_object_graph", "_estate_pipeline", "_estate_services", "_exfil_findings",
+    "_for_each_row", "_has_any", "_live_role_grants", "_login_findings", "_merge_live_rows", "_role_grants_failure",
+    "_set_account_network_policy", "_snowpark_agent", "_warn_with", "discover_auth_posture", "discover_data_exfil",
+    "discover_login_anomalies", "enrich_report_with_snowflake_estate", "merge_live_identity_into_object_graph"]  # fmt: skip
 
 # Opt-in env flag. Default OFF — estate-wide enumeration must be explicitly requested by an operator. Symmetric with the other providers'
 # AGENT_BOM_<PROVIDER>_INVENTORY gates (AWS / AZURE / GCP), so an ordinary scan can fold the Snowflake estate into the graph without the

@@ -151,34 +151,18 @@ except Exception:  # pragma: no cover - normalization always present in practice
         return str(value)[:max_len]
 
 
-__all__ = [
-    "CHECK_REGISTRY",
-    "_IAM_SECTION",
-    "_check_1_1",
-    "_check_1_9",
-    "_check_2_1",
-    "_check_3_1",
-    "_check_4_1",
-    "_check_5_1",
-    "_check_6_1",
-    "_check_7_1",
-    "classify_project_disabled_error",
-    "finalize_read_coverage",
-    "logger",
-    "run_all_project_benchmarks",
-    "run_benchmark",
-    "CheckStatus",
-    "_BIGQUERY_SECTION",
-    "_check_1_10",
-    "_check_1_2",
-    "_check_2_2",
-    "_check_3_2",
-    "_check_4_2",
-    "_check_5_2",
-    "_check_6_2",
-    "_check_7_2",
-    "is_access_denied_error",
-]
+__all__ = ["CHECK_REGISTRY", "_IAM_SECTION", "_check_1_1", "_check_1_9", "_check_2_1", "_check_3_1", "_check_4_1", "_check_5_1",
+    "_check_6_1", "_check_7_1", "classify_project_disabled_error", "finalize_read_coverage", "logger", "run_all_project_benchmarks",
+    "run_benchmark", "CheckStatus", "_BIGQUERY_SECTION", "_check_1_10", "_check_1_2", "_check_2_2", "_check_3_2", "_check_4_2",
+    "_check_5_2", "_check_6_2", "_check_7_2", "is_access_denied_error", "CISCheckResult", "_COMPUTE_SECTION", "_CTX", "_CredentialContext",
+    "_LOGGING_SECTION", "_NETWORK_SECTION", "_SQL_SECTION", "_STORAGE_SECTION", "_check_1_11", "_check_1_12", "_check_1_13", "_check_1_14",
+    "_check_1_15", "_check_1_3", "_check_1_4", "_check_1_5", "_check_1_6", "_check_1_7", "_check_1_8", "_check_2_10", "_check_2_11",
+    "_check_2_12", "_check_2_3", "_check_2_4", "_check_2_5", "_check_2_6", "_check_2_7", "_check_2_8", "_check_2_9", "_check_3_10",
+    "_check_3_3", "_check_3_4", "_check_3_5", "_check_3_6", "_check_3_7", "_check_3_8", "_check_3_9", "_check_4_11", "_check_4_3",
+    "_check_4_4", "_check_4_5", "_check_4_6", "_check_4_7", "_check_4_8", "_check_4_9", "_check_6_3", "_check_6_4", "_check_6_5",
+    "_check_6_6", "_check_6_7", "_check_7_3", "_creds_kwargs", "_ctx", "_discovery_client", "_gcp_bigquery_datasets",
+    "_gcp_cloud_sql_instances", "_gcp_kms_crypto_keys", "_gcp_managed_zones", "_gcp_paginate_list",
+    "_import_google_cloud_module"]  # fmt: skip
 
 
 logger = logging.getLogger(__name__)
