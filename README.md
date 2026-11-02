@@ -21,9 +21,9 @@ For AppSec and platform engineers. Self-host free; local scans need no account.
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="#why-an-ai-supply-chain-bom">Why an AI BOM</a> ·
   <a href="#what-you-get">What you get</a> ·
-  <a href="docs/INTEGRATIONS.md">All integrations</a> ·
   <a href="#open-the-sample-graph">Sample graph</a> ·
   <a href="#self-host-in-your-environment">Self-host</a> ·
+  <a href="docs/INTEGRATIONS.md">Integrations</a> ·
   <a href="docs/GALLERY.md">Product tour</a> ·
   <a href="https://koda-ai-studio.github.io/agent-bom/">Docs</a>
 </p>
@@ -36,23 +36,30 @@ From the repository you want to inspect, with [uv installed](https://docs.astral
 uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
-Measured on real repositories: [299 of 299 OSV advisories matched across seven
-real repositories, no false positives](site-docs/features/real-repository-accuracy.md).
+Accuracy: [299 of 299 OSV advisories matched across seven real repositories, no
+false positives](site-docs/features/real-repository-accuracy.md) (measured 2026-10-25 on 0.111.0).
 
-Open `agent-bom-report.html` to review inventory, findings, coverage and fix
-guidance. This command scans the selected project, including its recorded MCP
-configuration; `--no-discover` excludes workstation-wide discovery.
-
-No MCP configuration in the project? Package findings still apply. Agent/tool
-relationships require discovered configuration or an explicit inventory; their
-absence is a coverage limit. Review gaps beside the verdict: incomplete evidence
-is not a clean assessment.
-[What this scan does and does not establish](docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
+Open `agent-bom-report.html` for inventory, findings, coverage and fix guidance.
+The scan covers this project, including its MCP configuration; `--no-discover`
+skips workstation-wide discovery. No MCP configuration in the project? Package
+findings still apply; agent and tool links need a config or an inventory. A
+coverage gap is not a clean result:
+[what this scan does and does not establish](docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 
 No project handy? Run `uvx agent-bom scan --demo --offline` for a bundled sample.
 Exit `1` is expected: the sample trips the security gate. A non-zero exit
-can mean a security gate or incomplete assessment; inspect the report and coverage.
-See the [exit codes](site-docs/reference/exit-codes.md).
+can mean a security gate or incomplete assessment; inspect the report and
+coverage ([exit codes](site-docs/reference/exit-codes.md)).
+
+<details>
+<summary>Recorded demo scan: inventory, findings and fix guidance</summary>
+
+<p align="center"><img src="docs/images/demo-latest.gif" alt="Recorded agent-bom CLI showing sample findings and remediation guidance; no fix executed" width="920" /></p>
+
+Labeled sample data and bundled advisories. Credential references are names,
+not secret values. Recorded relationships do not prove exploitation or data access.
+
+</details>
 
 <details>
 <summary>Verify fixes, export reports, and add a CI gate</summary>
@@ -80,38 +87,51 @@ steps:
 
 </details>
 
-
-
-<p align="center"><img src="docs/images/demo-latest.gif" alt="Recorded agent-bom CLI showing sample findings and remediation guidance; no fix executed" width="920" /></p>
-
-The recording uses labeled sample data and bundled advisories. Credential
-references are names, not secret values. Recorded relationships do not prove
-exploitation or successful data access.
-
 ## Why an AI supply-chain BOM
 
 Agents and MCP servers ship without an inventory. A CVE in an AI package, a
 poisoned tool description or an over-scoped credential matters by what the
 agent that loads it can reach. A package SBOM stops at packages; agent-bom
-records the chain — agent → MCP server → tool → package → credential → data —
-and keeps the evidence for every edge, so you can answer which agent uses the
-vulnerable component and what it could reach. Findings map to
+records the chain and keeps the evidence for every edge.
+
+| 1. Inventory | 2. Correlate | 3. Act |
+|---|---|---|
+| Agents, MCP servers, tools, packages, models, credential references and cloud resources, read-only | One graph: agent → MCP server → tool → package → credential → data, each edge with its source | Fix, gate CI, block poisoned tool calls, rescan to verify |
+
+<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
+
+*Fictional sample estate. Dashed use, credential and access links are configured
+or modeled, not observed at runtime; path analysis covers the collected snapshot only.
+The AWS badge describes environment membership; these sample agents have no
+recorded execution host or model endpoint.*
+[Agent, hosting and model context](docs/graph/AGENT_CONTEXT.md).
+
+Findings map to
 [OWASP LLM Top 10, OWASP Agentic Top 10, OWASP MCP Top 10, MITRE ATLAS, EU AI Act and NIST AI RMF](site-docs/features/compliance.md);
 control mappings are investigation context, not certification.
+
+## What you get
+
+| Offering | What it includes | Cost | Start |
+|---|---|---|---|
+| CLI, CI and exports | Local and CI scans; SARIF, CycloneDX, SPDX, JSON and HTML exports; `check` pre-install gate; GitHub Action | Free, Apache-2.0; no account | [First run](docs/FIRST_RUN.md) |
+| Self-hosted control plane | API and dashboard on Compose or Helm with PostgreSQL, SSO/OIDC, roles, tenant isolation, audit chain, lake evidence import and executive briefs | Free, Apache-2.0; your infrastructure | [Self-host](#self-host-in-your-environment) · [Helm](site-docs/deployment/control-plane-helm.md) |
+| MCP server and agent plugins | `agent-bom mcp server` tool profiles; Claude Code and Codex plugins; OpenClaw and Cortex Code skills | Free; runs locally | [MCP server](docs/MCP_SERVER.md) · [Plugins](#integrations) |
+| Hosted service and support | No managed cloud offering today. Community support on GitHub; security reports follow published response targets, not a contractual SLA | — | [Product boundaries](site-docs/deployment/product-boundaries.md) · [Support model](docs/ENTERPRISE_SUPPORT_MODEL.md) |
 
 ## What it covers
 
 | Area | What you get |
 |---|---|
 | AI agents and MCP | Agents, MCP servers, tools and credentials from local configs and agent frameworks, linked to what they can reach. |
-| Models and AI platforms | Discover supported OpenAI, Hugging Face, Ollama, MLflow and W&B assets and retain available model provenance alongside dependencies and agent context. |
+| Models and AI platforms | Supported OpenAI, Hugging Face, Ollama, MLflow and W&B assets, with available model provenance beside dependencies and agent context. |
 | Runtime | An MCP proxy and gateway that alert on poisoned tools and injected results, or block them with `--injection-mode enforce`. |
-| SBOM, AI-BOM and Agent-BOM | Generate software SBOMs in CycloneDX or SPDX. For an AI-BOM, CycloneDX AI components carry collected model metadata. Native agent-bom JSON connects agents, MCP servers, tools, credential references and packages. |
-| Dependencies | Lockfiles and manifests across Python, JavaScript, Go, Java, .NET, Rust and more, matched against OSV, GitHub advisories and NVD with KEV and EPSS. Ask "am I affected by CVE-X" across every stored scan. |
+| SBOM, AI-BOM and Agent-BOM | Software SBOMs in CycloneDX or SPDX. CycloneDX AI components carry collected model metadata. Native agent-bom JSON connects agents, MCP servers, tools, credential references and packages. |
+| Dependencies | Lockfiles and manifests across Python, JavaScript, Go, Java, .NET, Rust and more, matched against OSV, GitHub advisories and NVD with KEV and EPSS. |
 | Code | Findings imported from any SARIF producer, plus native analysis of AI code (prompt-injection sinks, guardrails, tool exposure) and whether your code reaches the vulnerable function. |
 | Containers and IaC | Images scanned in bounded memory and time; Dockerfile, Terraform, Kubernetes, Helm and compose risks with exact lines in SARIF. |
-| Cloud and data platforms | Read-only collection from AWS, Azure, GCP, Kubernetes, Databricks and Snowflake, with provider-specific posture checks and graph context. See the [coverage matrix](docs/VENDOR_COVERAGE.md) for each collection lane and the [capability matrix](docs/VENDOR_COVERAGE.md#capability-matrix) for per-lane rule counts generated from code. |
-| GPU and AI infrastructure | Discover AI workloads on CoreWeave, Nebius, Lambda, RunPod, Vast.ai and Crusoe; inventory GPU containers and Kubernetes GPU nodes. Collection depth varies by provider. |
+| Cloud and data platforms | Read-only collection from AWS, Azure, GCP, Kubernetes, Databricks and Snowflake, with provider-specific posture checks and graph context. Per-lane rule counts are generated from code in the [capability matrix](docs/VENDOR_COVERAGE.md#capability-matrix). |
+| GPU and AI infrastructure | AI workloads on CoreWeave, Nebius, Lambda, RunPod, Vast.ai and Crusoe; GPU containers and Kubernetes GPU nodes. Collection depth varies by provider. |
 
 Generate a BOM from a project, or inspect an agent inventory with sample data:
 
@@ -121,14 +141,11 @@ agent-bom scan --project . -f spdx -o sbom.spdx.json
 agent-bom scan --demo --offline -f json -o agent-bom.json
 ```
 
-Open the artifact to inspect the collected components and relationships. Model
-metadata appears when the selected source supplies it; a BOM is an inventory,
-not proof of safe execution or complete collection.
+Model metadata appears when the source supplies it. A BOM is an inventory, not
+proof of safe execution or complete collection.
 
 <details>
-<summary>All supported sources and evidence destinations</summary>
-
-Discovery and scanning read from these sources; the last row lists evidence destinations.
+<summary>All supported sources and evidence destinations, by category</summary>
 
 <!-- integrations:begin (generated by scripts/render_social_preview_svg.py; do not edit) -->
 | Area | Integrations |
@@ -149,21 +166,11 @@ Product names and logos are trademarks of their owners, used only to identify su
 ## Investigate context and exposure
 
 **Which agent uses the vulnerable component? What could it reach? What evidence supports that path?**
-Correlate retained scans by exact, tenant-scoped identities; trace the recorded
-blast radius from each agent through its MCP servers to packages, findings,
-credentials and data stores. Inspect each relationship's source and evidence
-kind, then rescan the same scope to check what changed. Agent kind, platform
-association, execution host and model links are separate facts; an environment
-badge does not establish where an agent runs or which model endpoint it calls.
-
-<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
-
-*Fictional sample estate. Dashed use, credential and access links are configured
-or modeled, not observed at runtime; path analysis covers the collected snapshot only.
-The AWS badge describes environment membership. These generic sample agents have
-no recorded execution host or model endpoint.*
-[Open the full-size environment graph](docs/images/graph-environment-dark-live.png).
-[Read agent, hosting and model context](docs/graph/AGENT_CONTEXT.md).
+Correlate retained scans by exact, tenant-scoped identities and trace the
+recorded blast radius from each agent through its MCP servers to packages,
+findings, credentials and data stores. Each relationship keeps its source and
+evidence kind. Agent kind, platform, execution host and model links are
+separate facts: an environment badge does not say where an agent runs.
 
 **From agent to verified fix:** select Document Intake Agent → inspect
 CVE-2023-4863 (high, KEV-listed) and the evidence on each arrow → take the
@@ -171,29 +178,9 @@ proposed [remediation](docs/GALLERY.md#engineers-and-grc-fix-and-verify) →
 [rescan the changed pin](examples/connected-bom/README.md) and compare snapshots.
 The comparison verifies the changed input, not a running deployment.
 
-<details>
-<summary>Inspect the evidence: one package, three parsed inputs</summary>
-
-**Supporting evidence: one package, three parsed inputs.** A repository pin, an
-image SBOM and a modeled Kubernetes workload resolve to one `pillow@9.0.0`. The
-image inventory and the deployment occurrence stay separate nodes; the advisory
-receipt is open.
-
-<p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Repository pin, image inventory and Kubernetes deployment occurrence resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the plain-language relationship evidence open" width="1100"></picture></a></p>
-
-*Real parsers, modeled infrastructure; a graph path does not prove exploitation.*
-[Open the full-size relationship graph](docs/images/graph-relationship-dark-live.png).
-
-[Explore context, correlation and reachability](docs/GALLERY.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md) · [Reproduce these screenshots](docs/GALLERY.md#reproduce-the-readme-screenshots)
-
-</details>
-
-Explain a finding to your team: [create an impact brief](docs/operations/IMPACT_BRIEF.md)
-with affected assets, source receipts, evidence gaps and the next action to review.
-
-Am I affected by a new CVE? Match it against stored scans, including CVEs only
-NVD has published, and get affected assets with their patch target, possibly
-affected distro packages to verify, and the blast radius
+**Am I affected by a new CVE?** Match it against stored scans, including CVEs
+only NVD has published. You get affected assets with their patch target,
+possibly affected distro packages to verify, and the blast radius
 ([walkthrough](docs/RESPOND_TO_A_NEW_CVE.md)):
 
 ```bash
@@ -204,24 +191,34 @@ agent-bom db advisory affected CVE-2026-109618 --report <scan-report.json> --for
 
 From an MCP client, the read-only `affected_assets` tool (`graph` and `full`
 profiles) takes the same `advisory_id`. In CI, run `uvx agent-bom db update`
-before the GitHub Action step above (its `auto-update-db` default only
-refreshes feeds older than seven days); the rescan then fails on the new
-advisory at the configured severity.
+before the GitHub Action step (its `auto-update-db` default only refreshes
+feeds older than seven days). To explain a finding to your team,
+[create an impact brief](docs/operations/IMPACT_BRIEF.md) with affected assets,
+source receipts, evidence gaps and the next action.
 
 <details>
-<summary>Repository and cloud investigations</summary>
+<summary>More sample graphs: package evidence, repository and cloud (3)</summary>
 
-Trace source imports, deployment configuration and CI to a published container
-and its vulnerable packages:
+**One package, three parsed inputs.** A repository pin, an image SBOM and a
+modeled Kubernetes workload resolve to one `pillow@9.0.0`. The image inventory
+and the deployment occurrence stay separate nodes; the advisory receipt is open.
+
+<p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Repository pin, image inventory and Kubernetes deployment occurrence resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the plain-language relationship evidence open" width="1100"></picture></a></p>
+
+*Real parsers, modeled infrastructure; a graph path does not prove exploitation.*
+
+**Repository.** Source imports, deployment configuration and CI traced to a
+published container and its vulnerable packages:
 
 <p align="center"><a href="docs/images/graph-repository-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-repository-light-live.png"><img src="docs/images/graph-repository-dark-live.png" alt="Sample repository linking source, deployment configuration and a CI job to a container, vulnerable npm and PyPI packages, their advisories and a CI misconfiguration" width="1100"></picture></a></p>
 
-Follow a public API gateway into a vulnerable workload, its role and a PII bucket:
+**Cloud.** A public API gateway into a vulnerable workload, its role and a PII bucket:
 
 <p align="center"><a href="docs/images/graph-cloud-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-cloud-light-live.png"><img src="docs/images/graph-cloud-dark-live.png" alt="Sample cloud account where a public API gateway exposes a workload with a critical advisory that authenticates as a role permitted to read a PII bucket" width="1100"></picture></a></p>
 
-</details>
+[Context, correlation and reachability](docs/GALLERY.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md) · [Reproduce these screenshots](docs/GALLERY.md#reproduce-the-readme-screenshots)
 
+</details>
 
 ## Open the sample graph
 
@@ -250,26 +247,15 @@ AGENT_BOM_IMAGE_TAG=0.112.1 docker compose up -d
 
 Open **http://localhost:3000**, then **Connections** or **New Scan**. The pilot
 binds to loopback and retains state in a Docker volume. For cloud accounts, add a
-scoped read-only connection, verify access, then start a scan. Use the
-[authenticated deployment](site-docs/deployment/authenticated-hosted-instance.md).
+scoped read-only connection, verify access, then start a scan. Before sharing
+access, move to the [authenticated deployment](site-docs/deployment/authenticated-hosted-instance.md).
 
 - **Scan** with CLI or CI; export findings, SBOMs and reports.
 - **Centralize** inventory, graph evidence, remediation and compliance in your own control plane.
 - **Enforce** policy on selected live MCP tool calls through the proxy or gateway.
 
-### What you get
-
-| Offering | What it includes | Cost | Start |
-|---|---|---|---|
-| CLI, CI and exports | Local and CI scans; SARIF, CycloneDX, SPDX, JSON and HTML exports; `check` pre-install gate; GitHub Action | Free, Apache-2.0; no account | [First run](docs/FIRST_RUN.md) |
-| Self-hosted control plane | API and dashboard on Compose or Helm with PostgreSQL, SSO/OIDC, roles, tenant isolation, audit chain, lake evidence import and executive briefs | Free, Apache-2.0; your infrastructure | [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Helm](site-docs/deployment/control-plane-helm.md) |
-| MCP server and agent plugins | `agent-bom mcp server` tool profiles; Claude Code and Codex plugins; OpenClaw and Cortex Code skills | Free; runs locally | [MCP server](docs/MCP_SERVER.md) · [Plugins](integrations/claude-code/README.md) |
-| Hosted service and support | No managed cloud offering today. Community support on GitHub; security reports follow published response targets, not a contractual SLA | — | [Product boundaries](site-docs/deployment/product-boundaries.md) · [Support model](docs/ENTERPRISE_SUPPORT_MODEL.md) |
-
-### Deployment types and operating modes
-
-Choose where to run the product, then enable the collection or runtime modes
-needed for your environment.
+<details>
+<summary>Deployment options (5): CLI, local dashboard, Compose pilot, authenticated host, Helm</summary>
 
 | Deployment | First step | Result and next step |
 |---|---|---|
@@ -279,55 +265,49 @@ needed for your environment.
 | Authenticated single host | [Platform Compose setup](site-docs/deployment/authenticated-hosted-instance.md) | Login-gated API/UI and PostgreSQL; configure TLS, identity, secrets and backups before sharing access. |
 | Kubernetes / EKS | [Helm deployment](site-docs/deployment/control-plane-helm.md) | Control plane in your cluster; provision role-separated secrets and storage, then validate authentication and health. |
 
-Operating modes can be combined:
-
-- **Scan:** collect inventory and findings on demand or in CI; retain reports and graph evidence.
-- **Fleet inventory:** endpoints or collectors sync inventory to the control plane. Start with the [fleet sync command](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#fleet), then review endpoint inventory and last-seen evidence.
-- **MCP server:** `agent-bom mcp server` exposes security tools to an MCP client. Configure the client and [tool profile](docs/MCP_SERVER.md), then query scan evidence.
-- **Runtime proxy:** wrap selected local stdio MCP servers to inspect tool calls. Follow the [proxy setup](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#proxy) and verify policy decisions in the audit trail.
-- **Runtime gateway:** relay selected remote MCP traffic through a shared service. Follow the [gateway setup](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#gateway) and validate client authentication, policy and upstream connectivity.
-
-The dashboard's **Sources** indicator describes recorded evidence: local scans,
-fleet inventory, cluster scans, CI/CD, imported evidence, or mixed sources. It
-does not select a deployment type or enable runtime enforcement. **Demo data**
-identifies labelled sample inventory. Preview and community deployment paths
-have separate [support boundaries](site-docs/deployment/product-boundaries.md).
-
-In the console, **Assets** are inventoried resources, **Findings** are detections
-on those resources, and **Issues** group related findings for investigation or
-remediation. **Affected assets** counts distinct resources only when that count
-is available. One finding may belong to several security areas, so area counts
-must not be summed. Repeated observations across scans are shown separately.
-
-[Docker pilot guide](docs/DEPLOY_PLATFORM.md) · [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Choose a deployment](site-docs/deployment/overview.md) · [Enterprise controls](docs/TRUST.md) · [Connect cloud accounts](docs/CLOUD_CONNECT.md)
+</details>
 
 <details>
-<summary>Work with your existing tools</summary>
+<summary>Operating modes (5): scan, fleet inventory, MCP server, runtime proxy, runtime gateway</summary>
 
-Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneDX,
-SPDX, JSON and HTML**. Cloud connectors and fleet sync collect inventory;
-proxy and gateway deployments add runtime evidence.
+Modes can be combined:
 
-For other MCP clients, run `agent-bom mcp server`.
-Start with eight focused tools in the default profile.
-[Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
-[Try three investigations](docs/MCP_SERVER.md#investigation-workflows): affected agents, exposure receipts and a before/after scan comparison.
-[Import existing scanner reports](docs/IMPORTERS.md) without replacing their source evidence.
-
-Check a dependency before installing it with
-`uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
-[pre-commit and CI setup](docs/FIRST_RUN.md#pre-commit-hook) for repeated checks.
-
-[Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/CLOUD_CONNECT.md) · [MCP client setup](docs/MCP_SERVER.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
+| Mode | What it does | Start |
+|---|---|---|
+| Scan | Collect inventory and findings on demand or in CI; retain reports and graph evidence. | [First run](docs/FIRST_RUN.md) |
+| Fleet inventory | Endpoints or collectors sync inventory to the control plane; review last-seen evidence. | [Fleet sync](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#fleet) |
+| MCP server | `agent-bom mcp server` exposes security tools to an MCP client. | [Tool profiles](docs/MCP_SERVER.md) |
+| Runtime proxy | Wrap selected local stdio MCP servers to inspect tool calls; verify decisions in the audit trail. | [Proxy setup](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#proxy) |
+| Runtime gateway | Relay selected remote MCP traffic through a shared service; validate client auth, policy and upstream connectivity. | [Gateway setup](site-docs/deployment/proxy-vs-gateway-vs-fleet.md#gateway) |
 
 </details>
+
+<details>
+<summary>Console terms: Sources, Assets, Findings, Issues</summary>
+
+- **Sources** describes recorded evidence: local scans, fleet inventory, cluster
+  scans, CI/CD, imported evidence, or mixed sources. It does not select a
+  deployment type or enable runtime enforcement. **Demo data** marks labelled
+  sample inventory.
+- **Assets** are inventoried resources; **Findings** are detections on those
+  resources; **Issues** group related findings for investigation or remediation.
+- **Affected assets** counts distinct resources only when that count is
+  available. One finding may belong to several security areas, so area counts
+  must not be summed. Repeated observations across scans are shown separately.
+
+Preview and community deployment paths have separate
+[support boundaries](site-docs/deployment/product-boundaries.md).
+
+</details>
+
+[Docker pilot guide](docs/DEPLOY_PLATFORM.md) · [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Choose a deployment](site-docs/deployment/overview.md) · [Enterprise controls](docs/TRUST.md) · [Connect cloud accounts](docs/CLOUD_CONNECT.md)
 
 ## Integrations
 
 <details>
 <summary><b>Claude Code and Codex plugins</b>: ask your coding agent instead of reading a report</summary>
 
-Ask your coding agent instead of reading a report. In Claude Code:
+In Claude Code:
 
 ```text
 /plugin marketplace add koda-ai-studio/agent-bom
@@ -350,6 +330,27 @@ Add `/plugin install agent-bom-guard@agent-bom` to block malicious and
 typosquatted package installs before Claude runs them.
 [All skills and their permissions](integrations/claude-code/README.md) ·
 [Guard details](integrations/agent-bom-guard/README.md)
+
+</details>
+
+<details>
+<summary>Work with your existing tools</summary>
+
+Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneDX,
+SPDX, JSON and HTML**. Cloud connectors and fleet sync collect inventory;
+proxy and gateway deployments add runtime evidence.
+
+For other MCP clients, run `agent-bom mcp server`.
+Start with eight focused tools in the default profile.
+[Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
+[Try three investigations](docs/MCP_SERVER.md#investigation-workflows): affected agents, exposure receipts and a before/after scan comparison.
+[Import existing scanner reports](docs/IMPORTERS.md) without replacing their source evidence.
+
+Check a dependency before installing it with
+`uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
+[pre-commit and CI setup](docs/FIRST_RUN.md#pre-commit-hook) for repeated checks.
+
+[Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/CLOUD_CONNECT.md) · [MCP client setup](docs/MCP_SERVER.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
 
 </details>
 
