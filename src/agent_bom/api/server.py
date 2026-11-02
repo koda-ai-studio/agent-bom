@@ -4,8 +4,7 @@ Start with:
     agent-bom api                      # default: http://localhost:8422
     agent-bom api --host 0.0.0.0 --port 8422
 
-Core infrastructure: lifespan, middleware, CORS, meta routes (/, /health, /version),
-dashboard mounting. All domain routes live in api/routes/ sub-modules.
+Owns lifespan, middleware, CORS, /, /health, /version and dashboard mounting; domain routes live in api/routes/.
 """
 
 from __future__ import annotations

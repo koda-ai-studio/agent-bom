@@ -1,8 +1,7 @@
 """Gateway Live Feed — unified fleet event stream.
 
-A single normalized, cursor-backed stream that projects the durable gateway
-activity ledger with per-agent attribution. Legacy proxy alerts and recent LLM
-cost observations remain an explicitly partial initial-page compatibility
+A normalized, cursor-backed stream projects the durable gateway activity ledger with per-agent attribution.
+Legacy proxy alerts and recent LLM cost observations remain an explicitly partial initial-page compatibility
 projection; cursor resume is ledger-only and server ordered.
 
     * tool-call authorization decisions  (allowed / blocked)  — durable gateway
