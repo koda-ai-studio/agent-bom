@@ -129,6 +129,13 @@ describe('Nav', () => {
     expect(screen.getByRole('button', { name: /^governance$/i })).toBeInTheDocument()
   })
 
+  it('does not promote Governance for a Findings link shared by multiple groups', () => {
+    window.localStorage.setItem('agent-bom.product-view', 'personal')
+    mockedPathname = '/findings'
+    renderExpandedNav()
+    expect(screen.queryByRole('button', { name: /^governance$/i })).not.toBeInTheDocument()
+  })
+
   it('retains the active governance route when Personal is selected', () => {
     window.localStorage.setItem('agent-bom.product-view', 'personal')
     mockedPathname = '/compliance'

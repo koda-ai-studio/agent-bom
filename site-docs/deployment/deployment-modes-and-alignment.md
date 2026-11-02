@@ -1,180 +1,128 @@
 # Deployment Modes and Alignment
 
-> **You do not need to read this unless** you are aligning packaging,
-> docs, UX, and release wording across the product (the
-> `local` / `fleet` / `cluster` / `hybrid` modes, the `#1520`
-> deployment-mode-aware navigation track, or the `agent-bom` vs
-> `agent-bom-ui` image story). For "what should I deploy?" use
-> [Deployment Overview](overview.md). For runtime choice use
-> [Proxy vs Gateway vs Fleet](proxy-vs-gateway-vs-fleet.md).
+Use the [Deployment Overview](overview.md#choose-your-workflow) to choose a
+starting path. This page explains how workflow, hosting, evidence sources and
+runtime surfaces relate. They are independent choices within one product.
 
-Use this page when the question is not "can `agent-bom` do this?" but "how do
-we package, deploy, explain, and scale it without making the product feel more
-complicated than it is?"
+## Four different choices
 
-The short answer:
+| Choice | Examples | What it determines |
+|---|---|---|
+| **Workflow** | individual project review, team investigation, organization governance | Which tasks and evidence are useful first. It does not grant permissions. |
+| **Hosting** | CLI process, loopback dashboard pilot, authenticated single host, Kubernetes | Where processes and data run, and which storage, identity and operations must be configured. |
+| **Evidence sources** | local, CI, fleet, cluster, imported artifacts | What collection is recorded. These labels do not identify the audience or hosting topology. |
+| **Runtime enforcement** | selected local proxy, shared gateway, neither | Whether selected tool traffic passes through an enforcement surface. Scanning alone does not enable it. |
 
-- `agent-bom` is **one product**
-- it is a **self-hosted control plane for AI and MCP security**
-- it uses **two deployable images**
-- proxy and gateway are **optional runtime surfaces**, not mandatory chokepoints
+A developer can scan cloud infrastructure without adopting organization
+governance. A team can review local and CI scans without running a gateway.
+An organization can use a single authenticated host; Kubernetes is a hosting
+choice, not a requirement for compliance.
 
-## What Is Already Real
+## Start with the relevant product surfaces
 
-Core security and isolation are already part of the shipped control-plane path:
+| Workflow | First surface and result | Expand when needed |
+|---|---|---|
+| **Individual / developer** | CLI or assistant workflow → report → finding → reviewed fix → rescan | Add CI checks, browser report review or a local MCP proxy for selected tool traffic. |
+| **Team** | CLI/CI reports, or shared Findings and Investigation over retained scans | Add connected sources, endpoint fleet inventory, job review and shared runtime controls. |
+| **Organization** | Team evidence plus scoped access and operating controls | Use compliance assessments, audit review, retention/export integrations and executive reporting for governance needs. |
 
-- tenant isolation across API, store, and export paths
-- RBAC on sensitive routes
-- OIDC and SAML for operator auth
-- API-key auth with tenant propagation and quotas
-- auditability and signed or tamper-evident evidence flows
+These are adoption paths, not separate editions or license gates. Compliance frameworks and executive reporting are optional
+workflows. Framework mappings in findings remain investigation context and do
+not establish certification. An individual scan needs no shared control-plane
+database, identity provider or governance configuration.
 
-That means the remaining work is mostly productization, operability, and
-alignment, not "invent auth" or "add tenant boundaries from scratch."
+Authentication, role permissions and tenant scope apply independently of which
+workflow a user follows. A simpler presentation must not imply broader access
+or that shared evidence has become private to the current user.
 
-The honest auth and runtime gaps that still matter are:
+## Hosting profiles
 
-- gateway and control-plane API-key rotation / revocation UX
-- per-user OAuth2 auth-code / PKCE for laptop to gateway
-- clearer deployment-mode UX so operators only see surfaces that apply to their environment
+| Host | Starting point | Boundary |
+|---|---|---|
+| **CLI only** | [First Run Guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md) | Writes reports without deploying an API or UI. Advisory lookups may use the network; use the documented offline path when required. |
+| **Loopback dashboard pilot** | `scripts/deploy/install.sh pilot` | API + UI with SQLite for one-workstation evaluation. The shipped no-auth pilot is not a shared service. |
+| **Authenticated single host** | Compose platform, with the documented product overlay where needed | Configure authentication, TLS, PostgreSQL and operational secrets before exposing the service. |
+| **Customer Kubernetes** | Helm chart; EKS reference installer | Customer-operated identity, stores, workers and optional runtime services. Follow the profile's prerequisites. |
 
-## One Product, Two Images
+See the [deployment support tiers](overview.md#support-tiers) for AKS/GKE,
+Snowflake, air-gapped packaging and community targets. Preview packaging is not
+proof of a validated deployment. The product does not currently include a
+managed cloud offering.
 
-The two-image split (`agentbom/agent-bom` runtime + `agentbom/agent-bom-ui`
-companion) is documented as canonical in
-[Deployment Overview — Product Surfaces](overview.md#product-surfaces).
-Same image taxonomy across CLI, API, jobs, gateway, proxy, MCP server, and
-the browser UI; the mistake to avoid is presenting the two images like two
-separate products.
-
-Use this wording everywhere:
-
-- **one product**: `agent-bom`
-- **one self-hosted control plane**
-- **API / runtime image**
-- **UI companion image**
-- **optional proxy and gateway surfaces**
-
-## Canonical Deployment Modes
-
-These are the four modes that should drive the product story, navigation, docs,
-and packaging.
-
-| Mode | Deploy this | Primary surfaces | Best fit |
-|---|---|---|---|
-| **local** | CLI only | scan, exports, local posture | individual developer, one-off audit |
-| **fleet** | control plane + endpoint pushes | fleet, findings, audit, source/job review | laptops or collectors reporting into a shared plane |
-| **cluster** | EKS control plane + scheduled jobs + optional gateway/proxy | scan, API/UI, runtime, traces, cluster inventory | customer-managed EKS rollout |
-| **hybrid** | cluster mode plus endpoint proxy/fleet | fleet + runtime + control-plane review | enterprise with laptops and shared runtime surfaces |
+## Observed evidence modes
 
 The API's `deployment_mode` field describes observed evidence sources, not a
-configuration switch. It additionally returns `ci` for CI/CD receipts, `ingest`
-for evidence intake without observed local/fleet/cluster collection, and
-`unknown` when collection is not observed. `has_local_scan` requires an explicit
-local discovery source; imported SBOMs or agent relationships do not establish
-that a local scan ran. UI labels do not choose databases, enable enforcement,
-or change deployment policy. An ingestion-only control plane can still display
-recorded agents and their evidence.
+configuration switch. Its name is retained for API compatibility.
 
-## Customer EKS Story
-
-This is the clean customer-facing deployment story:
-
-> `agent-bom` is one self-hosted control plane for AI and MCP security. It runs
-> inside the customer's EKS or VPC, keeps tenant-scoped findings, audit, and
-> graph state in customer-owned stores, and uses two deployable images: the
-> API/runtime image and the UI companion image. Proxy and gateway are optional
-> runtime surfaces, not mandatory chokepoints.
-
-### What the customer actually deploys
-
-The per-surface ownership (UI, API, scanner jobs, fleet ingest, proxy,
-gateway, stores) is described in [Deployment Overview — Product
-Surfaces](overview.md#product-surfaces) and the
-[Self-Hosted Product Architecture](../architecture/self-hosted-product-architecture.md)
-page. Do not re-document it here; this section exists to anchor the alignment
-matrix below.
-
-### Response to the three practical concerns
-
-| Concern | Honest answer | What still needs polish |
-|---|---|---|
-| **Tenant isolation** | already enforced at API, store, and export layers | make tenant context more visible in sources, jobs, evidence, fleet, quotas, and gateway audit views |
-| **Gateway bottleneck** | proxy remains edge enforcement; not every workload must hairpin through one relay | document HPA, PDB, policy cache behavior, fail-open/fail-closed choices, and per-tenant or per-upstream limits more explicitly |
-| **Deployment complexity** | the control plane, jobs, proxy, and gateway already map to code-backed surfaces | reduce mode sprawl, unify wording, simplify install docs, and keep one canonical operator story |
-
-## End-to-End Alignment Matrix
-
-These are the surfaces that need to stay aligned in wording, docs, packaging,
-and UX.
-
-| Surface | Canonical story |
+| Value | Meaning |
 |---|---|
-| **Commands** | CLI for local work, jobs, proxy, gateway, and MCP server all stay under `agent-bom` |
-| **API routes** | API owns auth, RBAC, tenant scope, orchestration, graph, audit, policy, and exports |
-| **UI screens** | UI drives workflows and review; it never collects privileged data directly |
-| **Helm values** | one chart, one operator plane, optional runtime surfaces |
-| **Docker images** | `agentbom/agent-bom` + `agentbom/agent-bom-ui` under one product |
-| **Compose examples** | local-built image names are examples, not a separate product taxonomy |
-| **README and docs** | one deployment/offering matrix, one deployment-mode vocabulary |
-| **Docker Hub descriptions** | explicitly describe the two-image model as one product |
-| **Offering language** | local, fleet, cluster, and hybrid should be the only primary deployment modes |
+| `local` | Local discovery sources are recorded. |
+| `fleet` | Fleet inventory is recorded. |
+| `cluster` | Cluster collection or a recognized cluster environment is recorded. |
+| `ci` | CI/CD collection sources are recorded. |
+| `hybrid` | More than one of local, fleet, cluster or CI collection is recorded. |
+| `ingest` | Scan or runtime evidence is recorded without those collection signals. |
+| `unknown` | Collection is not observed. This is missing evidence, not proof that no assets exist. |
 
-## Track 1: `#1520` Product-Surface Alignment
+`has_local_scan` requires an explicit local discovery source; imported SBOMs or
+agent relationships do not establish that a local scan ran. An ingestion-only
+control plane can still display recorded agents and their evidence.
 
-Issue: `#1520 feat: deployment-context-aware navigation (local / fleet / cluster / hybrid)`
+These values do not choose databases, enable enforcement, identify an individual
+versus a team, or change permissions. A policy record or runtime-related flag
+also does not by itself prove a proxy or gateway is currently running. Review
+runtime receipts and health separately.
 
-Implementation checklist:
+The source contract lives in
+[`compliance_routes/common.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/routes/compliance_routes/common.py);
+browser labels and evidence-based surface availability live in
+[`deployment-context.ts`](https://github.com/koda-ai-studio/agent-bom/blob/main/ui/lib/deployment-context.ts).
+## Choose a dashboard view
 
-- extend posture/counts to return `deployment_mode`
-- add granular booleans for `has_local_scan`, `has_fleet_ingest`, `has_cluster_scan`, `has_mesh`, `has_gateway`, `has_proxy`, `has_traces`, and `has_registry`
-- hide nav items that are not meaningful for the current mode
-- add direct-link empty states that explain what enables the page
-- make `/sources`, `/jobs`, `/fleet`, `/gateway`, `/proxy`, `/traces`, `/mesh`, and `/context` mode-aware
-- make tenant context visible on source, job, evidence, fleet, audit, and quota views
+Use **Product view** in the expanded sidebar (or the navigation menu on mobile):
 
-Acceptance fixtures:
+- **Personal** is the default. Get started leads with a local command and report
+  preview. Governance and Operations stay out of the primary navigation.
+- **Team** brings Operations into the primary navigation for shared scan jobs
+  and integrations. Get started opens the shared-source paths.
+- **Organization** also brings Governance forward, with compliance and executive
+  reporting on Overview. Local report previews still omit tenant compliance.
 
-- `local`
-- `fleet`
-- `cluster`
-- `hybrid`
+Use **Show all pages** or search to find additional pages. A direct link keeps
+its active group visible. Role, tenant and demo restrictions still apply in
+every view. A view does not grant access, change a scan target, enable a service
+or filter shared evidence down to the current user. Personal does not mean a
+private workspace.
 
-## Track 2: Packaging, Docs, and Image Alignment
+The preference is saved in this browser, not to the control plane. It applies
+across tabs on the same origin; if browser storage is unavailable, it lasts only
+for the current page session. Choose it explicitly rather than inferring it from
+a source label or account role.
 
-Checklist:
+## Runtime and packaging
 
-- keep the product name as `agent-bom` everywhere
-- keep the image split as API/runtime image plus UI companion image
-- remove wording that makes the UI sound like a separate product
-- distinguish local-built compose image names from published Docker Hub names
-- add one canonical install and deployment matrix across CLI, control plane, proxy, gateway, fleet, and backends
-- keep Docker Hub, PyPI, README, compose, Helm, and release notes using the same deployment-mode vocabulary
-- keep charts and released image tags aligned with the active release branch
+The primary control-plane images are:
 
-## Track 3: Customer EKS Operability Hardening
+- `agentbom/agent-bom`: scanner, API, jobs, proxy, gateway and MCP server runtimes.
+- `agentbom/agent-bom-ui`: the browser dashboard companion.
 
-Checklist:
+CLI installation does not require either image. The separately packaged
+collector serves collection deployments; it is not required for every control
+plane. See [Product surfaces](overview.md#product-surfaces) for the owning
+commands and [Proxy vs Gateway vs Fleet](proxy-vs-gateway-vs-fleet.md) for runtime
+choices. Fleet collection is inventory intake, not inline enforcement.
 
-- gateway API-key rotation and revocation UX
-- gateway per-tenant runtime rate limiting
-- chart appVersion and published artifact alignment
-- chart or install validation as a first-class CI path
-- clearer MDM-friendly endpoint proxy install story
-- optional sidecar auto-injection later, but not required for the core control-plane cleanup
+## Keep the surfaces aligned
 
-## What To Say In The Product Pitch
+Public entry points should lead to a command, an artifact and a next step:
 
-Use the strongest claim that is true today:
+- **Individual:** scan a chosen project, open the report, fix and rescan.
+- **Team:** retain a scan, review its source and scope, investigate and compare.
+- **Organization:** configure shared access and operations, review scoped
+  evidence, then use the governance workflows required by the organization.
 
-> `agent-bom` gives teams one self-hosted control plane for AI and MCP
-> security: scan, fleet, graph, audit, proxy, and gateway under one operator
-> story, inside the customer's EKS or VPC, with tenant-scoped state in their
-> own stores and no mandatory vendor control plane.
-
-Avoid overstating:
-
-- do not imply the gateway must be the only path for every workload
-- do not imply the UI is its own product
-- do not imply deployment requires every surface at once
-- do not imply API-key lifecycle UX is finished when rotation and revocation are still being productized
+Hosting documentation owns deployment prerequisites. API evidence labels own
+collection semantics. UI navigation owns task discovery while preserving
+server-side authorization. None should infer the other choices from a local,
+fleet or cluster label. Keep optional services out of the first-run requirement
+unless the selected workflow actually depends on them.

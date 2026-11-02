@@ -1,5 +1,7 @@
 "use client";
 
+import { useProductView } from "@/lib/product-view";
+
 import { classifyApiOfflineKind, type ApiOfflineKind } from "@/lib/api-offline-kind";
 import { useQueueTopRisks } from "@/hooks/use-queue-top-risks";
 import { AdvisoryFreshness } from "@/components/advisory-freshness";
@@ -30,7 +32,7 @@ import {
   type PostureScoreFormat,
 } from "@/components/overview-cockpit";
 import { ApiOfflineState } from "@/components/api-offline-state";
-import { useDeploymentContext } from "@/hooks/use-deployment-context";
+import { useShellDeploymentContext } from "@/components/shell-deployment-context";
 import { openIssueSeverity } from "@/lib/open-issue-counts";
 import { deploymentModeLabel, hasDeploymentSignals } from "@/lib/deployment-context";
 import { useCaptureMode } from "@/lib/use-capture-mode";
@@ -60,6 +62,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
   // 401 -> "auth", 403 -> "forbidden", network/5xx -> "network".
   const [apiErrorKind, setApiErrorKind] = useState<ApiOfflineKind>("network");
   const [apiErrorDetail, setApiErrorDetail] = useState<string | null>(null);
+  const productView = useProductView();
   const [importedReport, setImportedReport] = useState<ScanResult | null>(initialReport);
   const [posture, setPosture] = useState<PostureResponse | null>(null);
   const [inventorySummary, setInventorySummary] = useState<InventorySummaryResponse | null>(null);
@@ -75,7 +78,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
   // Local display-format override; falls back to the persisted per-tenant
   // config carried on the overview posture. Toggling persists via the API (#3940).
   const [scoreFormatOverride, setScoreFormatOverride] = useState<PostureScoreFormat | null>(null);
-  const { counts } = useDeploymentContext();
+  const { counts } = useShellDeploymentContext();
   const captureMode = useCaptureMode();
   const seededEvidence = captureMode || Boolean(counts?.scan_sources?.some((source) => source.includes("demo")));
 
@@ -135,6 +138,17 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
     void api.getPosture().then((value) => {
       if (!cancelled) setPosture(value);
     }, () => {});
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [importedReport]);
+
+  // Governance data is optional on the overview; its route remains accessible.
+  useEffect(() => {
+    if (importedReport || productView !== "organization") return;
+    let cancelled = false;
+    setComplianceLoading(true);
     void api.getCompliance().then(
       (value) => {
         if (!cancelled) setCompliance(value);
@@ -143,11 +157,8 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
     ).finally(() => {
       if (!cancelled) setComplianceLoading(false);
     });
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [importedReport]);
+    return () => { cancelled = true; };
+  }, [importedReport, productView]);
 
   const demoSeeding = Boolean(overview?.demo_estate_seeding);
   useEffect(() => {
@@ -429,7 +440,10 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
     <div className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight">{initialReport ? "Report preview" : "Overview"}</h1>
-        <div className="flex flex-wrap gap-4 text-sm text-emerald-800 dark:text-emerald-300"><Link href="/brief">Executive brief →</Link><Link href="/connections">Manage sources →</Link></div>
+        {!importedReport && <div className="flex flex-wrap gap-4 text-sm text-emerald-800 dark:text-emerald-300">
+          {productView === "organization" && <Link href="/brief">Executive brief →</Link>}
+          <Link href={productView === "personal" ? "/get-started" : "/connections"}>{productView === "personal" ? "Scan a project →" : "Manage sources →"}</Link>
+        </div>}
       </header>
 
       {importedReport && <button type="button" onClick={() => onExitReport ? onExitReport() : setImportedReport(null)} className="text-sm text-emerald-800 dark:text-emerald-300">{onExitReport ? "Back to Get started" : "Return to live overview"}</button>}

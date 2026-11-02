@@ -112,6 +112,13 @@ control mappings are investigation context, not certification.
 
 ## What you get
 
+Start with the workflow you need. An individual developer can scan, inspect
+findings and verify fixes without a shared control plane or a compliance
+workflow. Teams can add retained scans and shared inventory; organizations can
+add identity, audit review and governance when needed. These are adoption paths,
+not separate editions or permissions. See the
+[deployment chooser](site-docs/deployment/overview.md#choose-your-workflow).
+
 | Offering | What it includes | Cost | Start |
 |---|---|---|---|
 | CLI, CI and exports | Local and CI scans; SARIF, CycloneDX, SPDX, JSON and HTML exports; `check` pre-install gate; GitHub Action | Free, Apache-2.0; no account | [First run](docs/FIRST_RUN.md) |
