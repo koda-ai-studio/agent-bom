@@ -17,7 +17,7 @@ from agent_bom.iac.terraform_security_hcl import (
 )
 
 # Service tags and literals that mean "any internet source" in an NSG rule.
-_ANY_SOURCE = frozenset({"*", "0.0.0.0/0", "0.0.0.0", "::/0", "internet", "any"})
+_ANY_SOURCE = frozenset({"*", "0.0.0.0/0", "0.0.0.0", "::/0", "internet", "any"})  # nosec B104 - NSG source values to detect, not a bind
 _MIN_FLOW_LOG_RETENTION_DAYS = 90
 
 
