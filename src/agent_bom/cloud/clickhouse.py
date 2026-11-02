@@ -89,14 +89,14 @@ class ClickHouseClient:
             return
         _validate_identifier(table, "table")
         ndjson = "\n".join(json.dumps(r, default=str) for r in rows)
-        query = f"INSERT INTO {table} FORMAT JSONEachRow\n{ndjson}"
+        query = f"INSERT INTO {table} FORMAT JSONEachRow\n{ndjson}"  # nosec B608 - table validated; json.dumps rows are data, not SQL
         self.execute(query)
 
     def query_json(self, query: str) -> list[dict[str, Any]]:
         """Execute SELECT, return parsed JSON rows."""
         if not query.rstrip().upper().endswith("FORMAT JSON"):
             query = query.rstrip().rstrip(";") + " FORMAT JSON"
-        raw = self.execute(query)
+        raw = self.execute(query)  # nosec B608 - executor; store callers escape values via _escape; adds only a literal FORMAT JSON
         parsed = json.loads(raw)
         return parsed.get("data", [])
 

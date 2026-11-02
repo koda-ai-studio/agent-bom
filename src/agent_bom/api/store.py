@@ -568,7 +568,7 @@ class SQLiteJobStore:
                                  batch_id, parent_job_id, child_job_ids, target, target_index, target_count
                           FROM jobs"""
             where, params = _sqlite_job_summary_filter(tenant_id, query=query, status=status)
-            sql = f"{base_sql}{where} ORDER BY created_at DESC"
+            sql = f"{base_sql}{where} ORDER BY created_at DESC"  # nosec B608 - _sqlite_job_summary_filter: literal clauses with ? only
             if limit is not None:
                 sql = f"{sql} LIMIT ? OFFSET ?"
                 params.extend([int(limit), max(0, int(offset))])

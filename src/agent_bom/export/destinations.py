@@ -238,7 +238,7 @@ class ClickHouseWarehouseDestination:
             # No publication was attempted: this is a definitive staging
             # failure. Cleanup is best-effort and must not mask the load error.
             try:
-                self._client.execute(cleanup_attempt)
+                self._client.execute(cleanup_attempt)  # nosec B608 - validated table; tenant/run/attempt escaped by _clickhouse_literal
             except Exception:
                 logger.warning("ClickHouse failed-attempt cleanup deferred")
             raise
@@ -393,11 +393,11 @@ class SnowflakeWarehouseDestination:
                         gz.write(json.dumps(feed, separators=(",", ":"), ensure_ascii=True, default=str))
                         gz.write("\n")
                         row_count += 1
-                # PUT the pre-gzipped file to the table stage (no re-compression),
-                # then start the replacement transaction. Snowflake connections
-                # default to autocommit, so BEGIN/COMMIT are explicit SQL rather
-                # than relying on the connector's no-op commit() method.
-                cursor.execute(f"PUT 'file://{tmp_path}' {stage_ref} AUTO_COMPRESS=FALSE SOURCE_COMPRESSION=GZIP OVERWRITE=TRUE")
+                # PUT the pre-gzipped file to the table stage (no re-compression), then start the replacement transaction.
+                # Snowflake connections autocommit, so BEGIN/COMMIT are explicit SQL, not the connector's no-op commit().
+                cursor.execute(  # nosec B608 - OS temp-file path; stage ref: quoted validated table + hex ids
+                    f"PUT 'file://{tmp_path}' {stage_ref} AUTO_COMPRESS=FALSE SOURCE_COMPRESSION=GZIP OVERWRITE=TRUE"
+                )
                 cursor.execute("BEGIN")
                 transaction_started = True
                 # table_ref is quoted from the validated table name; tenant_id
@@ -408,7 +408,7 @@ class SnowflakeWarehouseDestination:
                 )
                 if row_count:
                     cursor.execute(
-                        f"COPY INTO {table_ref} FROM {stage_ref} "
+                        f"COPY INTO {table_ref} FROM {stage_ref} "  # nosec B608 - _sf_ident-quoted validated table; stage ref of hex ids
                         "FILE_FORMAT = (TYPE = JSON) "
                         "MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE "
                         "PURGE = TRUE"
@@ -438,7 +438,7 @@ class SnowflakeWarehouseDestination:
                         raise ExportPublicationIndeterminateError("Snowflake COMMIT status is indeterminate") from None
                 if row_count == 0:
                     try:
-                        cursor.execute(f"REMOVE {stage_ref}")
+                        cursor.execute(f"REMOVE {stage_ref}")  # nosec B608 - stage ref: _sf_ident-quoted validated table + hex ids
                     except Exception:
                         logger.warning("Snowflake empty-attempt stage cleanup deferred")
             except Exception:
@@ -448,7 +448,7 @@ class SnowflakeWarehouseDestination:
                     except Exception:
                         logger.warning("Snowflake rollback status is indeterminate")
                 try:
-                    cursor.execute(f"REMOVE {stage_ref}")
+                    cursor.execute(f"REMOVE {stage_ref}")  # nosec B608 - stage ref: _sf_ident-quoted validated table + hex ids
                 except Exception:
                     logger.warning("Snowflake stage cleanup deferred")
                 raise

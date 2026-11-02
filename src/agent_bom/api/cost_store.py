@@ -696,8 +696,7 @@ class SQLiteCostStore:
             "SELECT tenant_id, call_id, agent, session_id, provider, model, input_tokens, output_tokens, "
             "cost_usd, priced, observed_at, cost_center, allocation_tags FROM llm_costs WHERE "
         )
-        sql += scope
-        sql += " ORDER BY observed_at DESC, call_id DESC LIMIT ?"
+        sql += scope + " ORDER BY observed_at DESC, call_id DESC LIMIT ?"  # nosec B608 - _cost_scope: literal columns, ? placeholders
         rows = self._conn.execute(sql, [*params, limit]).fetchall()
         return [
             LLMCostRecord(
@@ -720,7 +719,8 @@ class SQLiteCostStore:
 
     def report_totals(self, tenant_id: str, *, agent: str | None = None, cost_center: str | None = None) -> dict[str, Any]:
         scope, params = _cost_scope(tenant_id, agent, cost_center)
-        return _report_totals_row(self._conn.execute(_REPORT_TOTALS_SQL + scope, params).fetchone())
+        query = _REPORT_TOTALS_SQL + scope  # nosec B608 - _cost_scope: literal columns and ? placeholders only
+        return _report_totals_row(self._conn.execute(query, params).fetchone())
 
     def spend_rollup(self, tenant_id: str, *, since: str | None = None) -> list[dict[str, Any]]:
         """GROUP BY in SQL so a busy tenant is never truncated or walked in Python."""
