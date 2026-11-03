@@ -8,9 +8,6 @@ from typing import Any
 from agent_bom.api.correlation_cohort_ingest import CorrelationCohortIngestError, prior_or_conflict
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob
 from agent_bom.api.observability_events import _logger
-from agent_bom.api.push_ingest_worker import _graph_snapshot_exists as _graph_snapshot_exists
-from agent_bom.api.push_ingest_worker import _record_push_trend as _record_push_trend
-from agent_bom.api.push_ingest_worker import _store_pushed_job as _store_pushed_job
 from agent_bom.api.push_ingest_worker import notify_push_committed
 from agent_bom.api.stores import _get_fleet_store, _get_idempotency_store, _get_store
 from agent_bom.security import sanitize_error, sanitize_text

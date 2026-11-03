@@ -68,16 +68,12 @@ class SQLiteClaimFenceMixin:
         fd = os.open(lock_path, flags, 0o600)
         try:
             _lock_file_descriptor(fd, blocking=blocking)
-        except BaseException:
-            os.close(fd)
-            raise
-        try:
-            yield
-        finally:
             try:
-                _unlock_file_descriptor(fd)
+                yield
             finally:
-                os.close(fd)
+                _unlock_file_descriptor(fd)
+        finally:
+            os.close(fd)
 
     @contextmanager
     def _try_claim_fence(self, endpoint: str, tenant_id: str, source_id: str, idempotency_key: str) -> Iterator[bool]:

@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
+import os
 import threading
 import time
+
+import pytest
 
 from agent_bom.api.idempotency_store import SQLiteIdempotencyStore, idempotency_request_fingerprint
 
@@ -134,3 +138,48 @@ def test_in_memory_claim_never_blocks_behind_a_live_commit() -> None:
         release.set()
         owner.join(10)
     assert store.get(*args, request_hash=request_hash) == {"job_id": "j", "committed": True}
+
+
+@pytest.mark.parametrize("failure", [RuntimeError, asyncio.CancelledError])
+def test_failed_memory_commit_releases_fence_and_preserves_receipt(failure) -> None:
+    from agent_bom.api.idempotency_store import InMemoryIdempotencyStore
+
+    store = InMemoryIdempotencyStore()
+    args = (_ENDPOINT, "tenant-a", "source-a", "retry-after-failure")
+    pending = {"job_id": "j", "committed": False}
+    store.claim(*args, pending, request_hash="hash", owner_token="owner")
+
+    def fail():
+        raise failure("interrupted callback")
+
+    with pytest.raises(failure, match="interrupted callback"):
+        store.commit_claim(*args, pending, action=fail, request_hash="hash", owner_token="owner")
+    assert store.get(*args, request_hash="hash") == pending
+    result = store.commit_claim(
+        *args, {"job_id": "j", "committed": True}, action=lambda: "stored", request_hash="hash", owner_token="owner"
+    )
+    assert result == "stored"
+    assert store.get(*args, request_hash="hash") == {"job_id": "j", "committed": True}
+
+
+@pytest.mark.parametrize("failure", [BlockingIOError, asyncio.CancelledError])
+def test_failed_file_lock_closes_descriptor_without_unlocking(tmp_path, monkeypatch, failure) -> None:
+    from agent_bom.api import idempotency_sqlite_fence
+
+    store = SQLiteIdempotencyStore(str(tmp_path / "fence.db"))
+    descriptors: list[int] = []
+    unlocked: list[int] = []
+
+    def fail(fd, *, blocking):
+        descriptors.append(fd)
+        raise failure("lock interrupted")
+
+    monkeypatch.setattr(idempotency_sqlite_fence, "_lock_file_descriptor", fail)
+    monkeypatch.setattr(idempotency_sqlite_fence, "_unlock_file_descriptor", unlocked.append)
+    with pytest.raises(failure, match="lock interrupted"):
+        with store._claim_file_lock(_ENDPOINT, "tenant-a", "source-a", "key", blocking=False):
+            pytest.fail("failed lock must not enter the protected section")
+    assert len(descriptors) == 1
+    with pytest.raises(OSError):
+        os.fstat(descriptors[0])
+    assert unlocked == []

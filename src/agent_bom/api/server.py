@@ -40,9 +40,9 @@ from agent_bom.api.middleware import (
     MaxBodySizeMiddleware,
     RateLimitMiddleware,
     TrustHeadersMiddleware,
-    effective_result_push_max_bytes,
     global_ip_rate_limit_rpm,
 )
+from agent_bom.api.middleware_body import effective_result_push_max_bytes
 
 # ─── Extracted modules ────────────────────────────────────────────────────────
 from agent_bom.api.models import (  # noqa: F401 — legacy model imports

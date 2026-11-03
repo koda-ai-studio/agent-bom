@@ -15,7 +15,6 @@ from agent_bom.api.leader_lock import SCHEDULER_LEADER_LOCK_ID, AlwaysLeader, Le
 from agent_bom.api.tenant_worker import tenant_bound_context
 
 logger = logging.getLogger(__name__)
-_SCHEDULER_LEADER_LOCK_ID = SCHEDULER_LEADER_LOCK_ID
 
 
 def _uses_postgres_schedule_store(schedule_store: Any) -> bool:

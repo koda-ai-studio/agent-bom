@@ -112,7 +112,7 @@ class InMemoryIdempotencyStore:
         try:
             result = action()
             resolved_response = response(result) if callable(response) else response
-        except BaseException:
+        except BaseException:  # broad-except: release the commit fence on callback failure or cancellation, then propagate
             with self._lock:
                 self._committing.discard(key)
             raise
