@@ -182,17 +182,12 @@ def _declares_auth(server: MCPServer) -> bool:
     meta = _server_metadata(server)
     if bool(meta.get("requires_auth")) or bool(meta.get("oauth")) or bool(meta.get("oidc")):
         return True
-    # Configured auth header names (Authorization, X-API-Key, ...) or an OAuth
-    # block recorded by discovery; header values are never retained.
+    # Configured auth header names (values are never retained) or an OAuth block.
     if server.declared_auth_headers or server.connection_metadata.get("oauth_configured"):
         return True
-    # A server that carries an auth-shaped credential ref (bearer/token/oauth)
-    # is configured with authentication material; treat it as authenticated.
-    for cred in server.credential_names:
-        low = cred.lower()
-        if any(hint in low for hint in ("token", "bearer", "oauth", "auth", "key", "secret")):
-            return True
-    return False
+    # An auth-shaped credential ref (bearer/token/oauth) is authentication material.
+    hints = ("token", "bearer", "oauth", "auth", "key", "secret")
+    return any(hint in cred.lower() for cred in server.credential_names for hint in hints)
 
 
 def _has_tls(server: MCPServer) -> bool:
