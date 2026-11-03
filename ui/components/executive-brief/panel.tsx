@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { type ExecutiveBrief, briefMarkdown, briefTimestamp, saveBriefArtifact } from "@/lib/executive-brief";
+import { type ExecutiveBrief, briefMarkdown, briefTimestamp, briefTrend, saveBriefArtifact } from "@/lib/executive-brief";
 import { useAuthState } from "@/components/auth-provider";
 import { Card } from "@/components/card";
 import { PanelButton } from "@/components/integrations/panel-kit";
@@ -42,6 +42,7 @@ function BriefContent() {
         <p className="break-words text-xs text-ink-secondary">Tenant: {brief.tenant_id} · Generated: {briefTimestamp(brief.generated_at)}</p>
         <h2 className="text-xl font-semibold">{brief.posture.summary}</h2>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">{[["Open issue groups", brief.issues.total], ["Critical groups", brief.issues.critical], ["High groups", brief.issues.high], ["Known exploited", brief.issues.kev ?? "Unknown"]].map(([label, value]) => <div key={label}><dt className="text-xs text-ink-secondary">{label}</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd></div>)}</dl>
+        <p className="text-sm font-medium">{briefTrend(brief)} <span className="font-normal text-ink-secondary">Counts are correlated issue groups, not finding occurrences.</span></p>
         {brief.posture.no_data ? <p className="text-sm">Posture evidence is incomplete. Returned issue counts do not establish complete coverage.</p> : null}
         <p className="text-sm leading-6 text-ink-secondary">{brief.evidence_boundary}</p>
       </Card>

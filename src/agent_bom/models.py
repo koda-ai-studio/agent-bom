@@ -368,6 +368,7 @@ class AIBOMReport:
     cloud_audit_trail_data: Optional[Union[dict[str, Any], list[Any]]] = None
     runtime_correlation: Optional[RuntimeCorrelationPayload] = None  # Runtime ↔ scan correlation (proxy audit vs CVE findings)
     delta_data: Optional[dict[str, Any]] = None  # Baseline/delta comparison metadata for CI gate outputs
+    since_last_scan: Optional[dict[str, Any]] = None  # Local trend vs this target's previous scan; human outputs only
     scan_performance_data: Optional[dict[str, Any]] = None  # Cache coverage / scan latency metadata
     vuln_data_freshness: Optional[VulnerabilityFreshnessPayload] = None  # Vuln-data age/staleness (CLI-set; API/MCP-surfaced)
     training_pipelines: Optional[dict[str, Any]] = None  # Serialized TrainingPipelineScanResult

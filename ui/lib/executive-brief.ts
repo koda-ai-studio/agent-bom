@@ -62,6 +62,16 @@ export function briefComponent(row: Pick<BriefPriority, "component" | "package">
   return row.component || row.package || "—";
 }
 
+/** Better/worse from the newest comparable history point, worded as the CLI and reports word it. */
+export function briefTrend(brief: Pick<ExecutiveBrief, "scan_history">): string {
+  const comparison = brief.scan_history.data_points[0]?.comparison;
+  if (!comparison || comparison.status !== "comparable") return `Trend: not comparable with the previous scan (${comparison?.reason ?? "no previous scan"}).`;
+  const added = comparison.new_findings ?? 0;
+  const resolved = comparison.no_longer_detected ?? 0;
+  const head = added > resolved ? "Worse than the last scan" : resolved > added ? "Better than the last scan" : "Unchanged since the last scan";
+  return `Trend: ${head}: ${added} new, ${resolved} resolved.`;
+}
+
 export function briefFindingHref(row: ExecutiveBrief["remediation_priorities"][number]): string {
   const params = new URLSearchParams();
   if (row.canonical_id) params.set("finding", row.canonical_id);
@@ -76,7 +86,7 @@ export function briefMarkdown(brief: ExecutiveBrief): string {
     `Tenant: ${md(brief.tenant_id)} · Generated: ${md(brief.generated_at)}`, "",
     "## Current posture", "", md(posture.summary),
     `Open issue groups: ${md(issues.total)} · Critical: ${md(issues.critical)} · High: ${md(issues.high)} · KEV: ${md(issues.kev)}`,
-    "Counts are correlated issue groups, not finding occurrences.", "",
+    "Counts are correlated issue groups, not finding occurrences.", md(briefTrend(brief)), "",
     "## Remediation priorities", "", "| Finding | Component | Owner | SLA | SLA due | Policy |", "|---|---|---|---|---|---|",
     ...brief.remediation_priorities.map(row => `| ${[briefFindingLabel(row), briefComponent(row), row.owner ?? "Unassigned", slaChipLabel(row).label, briefTimestamp(row.sla_due_at), slaPolicyLabel(row)].map(md).join(" | ")} |`),
   ];

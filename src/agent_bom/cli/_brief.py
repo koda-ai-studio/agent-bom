@@ -10,6 +10,7 @@ from typing import Any
 import click
 
 from agent_bom.cli._findings_group import _common_api_options, _emit_json, _make_client, _run_request
+from agent_bom.core.trend import trend_sentence
 from agent_bom.security import sanitize_text
 
 
@@ -30,6 +31,15 @@ def _finding_label(row: Mapping[str, Any]) -> str:
     return str(row.get("title") or identifier or "Untitled finding")
 
 
+def brief_trend(payload: Mapping[str, Any]) -> str:
+    """Better/worse from the newest comparable scan-history point; never inferred across scopes."""
+    points = (payload.get("scan_history") or {}).get("data_points") or []
+    comparison = (points[0].get("comparison") or {}) if points else {}
+    if comparison.get("status") != "comparable":
+        return "Trend: not comparable with the previous scan (" + str(comparison.get("reason") or "no previous scan") + ")."
+    return "Trend: " + trend_sentence(int(comparison.get("new_findings") or 0), int(comparison.get("no_longer_detected") or 0))
+
+
 def render_markdown(payload: Mapping[str, Any]) -> str:
     posture, issues, compliance = payload["posture"], payload["issues"], payload["compliance"]
     lines = [
@@ -43,6 +53,7 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         f"Open issue groups: {_text(issues['total'])} · Critical: {_text(issues['critical'])} · "
         f"High: {_text(issues['high'])} · KEV: {_text(issues.get('kev'))}",
         "Counts are correlated issue groups, not finding occurrences.",
+        _text(brief_trend(payload)),
         "",
         "## Remediation priorities",
         "",
