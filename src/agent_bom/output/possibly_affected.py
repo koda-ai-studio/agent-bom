@@ -1,7 +1,8 @@
 """Possibly-affected advisories across every report surface.
 
 ``Package.possibly_affected`` holds advisories the scan could not decide (a
-distro package of a CPE product with no distro record). Each output renders
+distro package of a CPE product with no distro record, or a version the
+registry selected for an unlocked range). Each output renders
 them from the rows built here so JSON, SARIF, CycloneDX, HTML and the terminal
 agree. They are review items: never vulnerabilities, never counted in severity
 totals, never a ``--fail-on-severity`` trigger.
@@ -18,6 +19,7 @@ from urllib.parse import quote
 from rich.markup import escape
 
 SARIF_RULE_ID = "agent-bom/possibly-affected"
+_REGISTRY_SELECTED = "registry_selected_version"
 _NVD_URL = "https://nvd.nist.gov/vuln/detail/"
 
 
@@ -75,7 +77,10 @@ def _label(row: dict[str, Any]) -> str:
 
 
 def _sarif_rule() -> dict[str, Any]:
-    text = "A distro package ships a product an advisory names, and no distro record decides it; verify the distribution's advisory."
+    text = (
+        "A distro package ships a product an advisory names, and no distro record decides it; verify the distribution's advisory. "
+        "Also used when the matched version was selected from the registry for an unlocked range; lock or pin it to confirm."
+    )
     return {
         "id": SARIF_RULE_ID,
         "name": "PossiblyAffectedDistroPackage",
@@ -161,7 +166,9 @@ def print_possibly_affected(report: Any, console: Any, limit: int = 20) -> None:
     if not rows:
         return
     console.print()
-    console.print(f"[bold yellow]Possibly affected — verify distro advisory ({len(rows)})[/bold yellow]")
+    registry_selected = any(row.get("reason") == _REGISTRY_SELECTED for row in rows)
+    heading = "version or advisory unconfirmed" if registry_selected else "verify distro advisory"
+    console.print(f"[bold yellow]Possibly affected — {heading} ({len(rows)})[/bold yellow]")
     console.print("  [dim]Review items, not counted as vulnerabilities and never a --fail-on-severity trigger.[/dim]")
     for row in rows[:limit]:
         fix = f" · upstream fix {row['upstream_fixed_version']}" if row.get("upstream_fixed_version") else ""

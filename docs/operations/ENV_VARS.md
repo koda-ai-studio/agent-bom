@@ -311,7 +311,8 @@ so they cannot regress silently, but they are not part of this reference.
 ## OS-package reporting
 | Env var | Type | Default | Description |
 |---|---|---|---|
-| `AGENT_BOM_INCLUDE_UNFIXED` | `bool` | `False` | When False (default), Debian/Alpine advisories with no fix for the scanned release are suppressed. RPM advisories with unresolved fixes stay visible. Set AGENT_BOM_INCLUDE_UNFIXED=1 to include unfixed Debian/Alpine advisories. The scanner r |
+| `AGENT_BOM_INCLUDE_RANGE_RESOLVED` | `bool` | `False` | Advisories on a registry-selected version (unlocked range) are possibly-affected review items, not gate triggers, unless AGENT_BOM_INCLUDE_RANGE_RESOLVED=1. |
+| `AGENT_BOM_INCLUDE_UNFIXED` | `bool` | `False` | Debian/Alpine advisories with no fix for the scanned release are suppressed unless AGENT_BOM_INCLUDE_UNFIXED=1 (RPM unresolved fixes stay visible). Re-read at scan time; see agent_bom.scanners.set_include_unfixed. |
 
 ## Partition Retention (#3463)
 | Env var | Type | Default | Description |
