@@ -10,6 +10,7 @@ import { ScopeBreadcrumbChip } from "@/components/graph-scope-breadcrumb";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import { GraphInvestigationContextControls } from "@/components/graph-investigation-context-controls";
+import { GraphCloudGroups } from "@/components/graph-cloud-groups";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
@@ -799,6 +800,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 setBlastError(null);
               }}
             >
+              <GraphCloudGroups />
               <GraphCanvasAutoFit
                 padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}

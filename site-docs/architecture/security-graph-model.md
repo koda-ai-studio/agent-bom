@@ -53,9 +53,13 @@ In a small cloud snapshot, read left to right: account scope, hosting or entry
 points, application workloads, identities, then data resources. An API gateway
 is an entry point; an application workload can authenticate as a role; a role's
 recorded permissions relate it to a data resource. Relationship arrows and
-labels retain their recorded direction and evidence basis.
+labels retain their recorded direction and evidence basis. Category headings
+organize the canvas without adding ownership boundaries. **Contains ×N** and
+**Hosts ×N** sit beside their source asset and count distinct connected assets
+in the displayed graph, not total inventory. Individual links remain inspectable.
 
-A finding with exactly one affected asset sits beneath that asset. Shared
+A finding with exactly one affected asset appears as a compact attachment beneath
+that asset, retaining its identifier, severity and any KEV marker. Shared
 findings, rollups, unknown workload kinds and larger graphs keep the general
 layout rather than implying an arbitrary owner. Grouping changes presentation,
 not the stored records or reachability verdict. On phones, use the Paths list

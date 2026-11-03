@@ -51,7 +51,7 @@ function splitLabel(label: string): { base: string; qualifier: string } {
 export function declutterRelationshipLabels(edges: Edge[]): Edge[] {
   // Cluster and aggregate links already carry their own counts.
   const labelled = edges.filter(edge => typeof edge.label === "string" && edge.label.length > 0 && !edge.hidden
-    && !edge.data?.isClusterEdge && !edge.data?.aggregate);
+    && !edge.data?.isClusterEdge && !edge.data?.aggregate && !edge.data?.individualLabel);
   if (labelled.length < 2) return edges;
   const parts = new Map(labelled.map(edge => [edge.id, splitLabel(edge.label as string)]));
 

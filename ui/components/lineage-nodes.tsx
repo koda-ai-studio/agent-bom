@@ -56,6 +56,10 @@ export type LineageNodeData = {
   occurrenceRole?: string | undefined;
   /** Presentation of recorded roles in a bounded cloud hierarchy. */
   readingLabel?: string | undefined;
+  readingFinding?: boolean | undefined;
+  readingOwner?: string | undefined;
+  readingGroup?: string | undefined;
+  readingConnections?: { relationship: string; label: string; targets: string[] }[] | undefined;
   /** Visible distinction for same-name nodes; never substitutes for their IDs. */
   identityContext?: string | undefined;
   agentContext?: AgentContext | undefined;
@@ -212,10 +216,31 @@ function NodeCard({
   const named = [environmentRaw, provider ? data.dimensions?.cloud_provider ?? data.attributes?.cloud_provider : undefined, provider?.label];
   const shownSubtitle = typeof subtitle === "string" && named.some(value => typeof value === "string" && value && subtitle.trim().toLowerCase() === value.toLowerCase())
     ? undefined : subtitle;
+  if (data.readingFinding) return <div data-graph-entity="true" data-finding-owner={data.readingOwner}
+    title={graphNodeTooltip(data)} style={{ width: "var(--graph-node-card-width, 220px)" }}
+    className={`grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 rounded-xl border border-outline-strong bg-surface-elevated p-3 ${data.highlighted ? `ring-2 ${ringClass}` : ""} ${data.dimmed ? "opacity-25" : ""}`}>
+    <div className="min-w-0 flex-1 text-left">
+      <p className="mb-1 font-medium text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>
+        {severity ? `${severity.charAt(0).toUpperCase()}${severity.slice(1)} · ` : ""}{data.readingLabel}
+      </p>
+    </div>
+    <div ref={glyphRef} data-severity-ring={severity}
+      className={`graph-entity-glyph relative flex shrink-0 items-center justify-center rounded-full border-2 ${borderClass} ${bgClass}`}
+      style={{ width: "calc(var(--graph-node-glyph-size, 72px) * 0.65)", height: "calc(var(--graph-node-glyph-size, 72px) * 0.65)" }}>
+      {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
+      <Handle type="target" position={Position.Right} className="!h-1 !w-1 !border-0 !bg-transparent" />
+      <Handle type="source" position={Position.Right} className="!h-1 !w-1 !border-0 !bg-transparent" />
+      <ContextHandles />
+      <Icon aria-hidden="true" className={iconClass} style={{ width: "calc(var(--graph-node-icon-size, 32px) * 0.7)", height: "calc(var(--graph-node-icon-size, 32px) * 0.7)" }} />
+    </div>
+    <SegmentedLabel text={displayTitle} className="col-span-2 font-semibold leading-snug text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
+    {footer && <div className="col-span-2">{footer}</div>}
+  </div>;
   return (
     <div title={[graphNodeTooltip(data), ring?.description].filter(Boolean).join(" · ")} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       style={{ width: "var(--graph-node-card-width, 220px)" }}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
+      {data.readingLabel && <p data-entity-role className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{data.readingLabel}</p>}
       <div ref={glyphRef} data-severity-ring={severity} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
@@ -225,6 +250,12 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
+        {Boolean(data.readingConnections?.length) && <span className="absolute left-full top-1/2 ml-2 flex -translate-y-1/2 flex-col gap-1">
+          {data.readingConnections!.map(summary => <span key={summary.relationship} data-asset-connections
+            title={`${summary.label} in this view. Inspect the asset for its recorded connections.`}
+            className="whitespace-nowrap rounded-full border border-outline-strong bg-surface px-2 py-1 font-medium text-ink-secondary"
+            style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{summary.label}</span>)}
+        </span>}
         <GraphPackageGlyph ecosystem={data.nodeType === "package" ? allBadges.find(badge => badge.kind === "ecosystem")?.value : undefined} fallback={<Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />} />
         {/* A contrasting vendor badge at 4:30, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
@@ -232,9 +263,9 @@ function NodeCard({
       <SegmentedLabel text={repository?.slug || displayTitle} className="mb-1 w-full min-w-0 line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
-        <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
-        </span>
+        {!data.readingLabel && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
+          {(repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
+        </span>}
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
       {repository && !repository.source && <span className="text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{repository.host}</span>}
