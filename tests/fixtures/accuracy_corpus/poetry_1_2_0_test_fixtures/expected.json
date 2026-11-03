@@ -1,0 +1,17 @@
+{
+  "packages": [
+    "cachy@0.3.0",
+    "certifi@2022.6.15",
+    "charset-normalizer@2.1.1",
+    "cleo@1.0.0a5",
+    "crashtest@0.3.1",
+    "idna@3.3",
+    "pylev@1.4.0",
+    "requests@2.28.1",
+    "urllib3@1.26.12"
+  ],
+  "skipped_fixture_directories": [
+    "tests/fixtures/sample_project"
+  ],
+  "source": "python-poetry/poetry tag 1.2.0: pyproject.toml dependency excerpt, poetry.lock package excerpt, tests/fixtures/sample_project/pyproject.toml verbatim"
+}
