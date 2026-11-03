@@ -118,6 +118,7 @@ def project_iac(graph: UnifiedGraph, iac_data: dict[str, Any] | None) -> None:
                         "rule_id": rule_id,
                         "file_path": finding_path,
                         "line_number": finding_line,
+                        "finding_kind": "iac",
                         "category": category,
                         "message": finding.get("message", ""),
                         "remediation": remediation,

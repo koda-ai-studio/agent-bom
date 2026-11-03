@@ -376,7 +376,7 @@ export interface GraphRollupAggregateCountMetadata {
   extra_memberships: number;
   /** True only for the returned entries over the loaded source, not the whole estate. */
   additive: boolean;
-  /** Distinct finding occurrences across every evaluated entry; entries sharing a server each count its occurrences. */
+  /** Distinct finding occurrences across returned entries; entries sharing a server each count its occurrences. */
   distinct_finding_occurrences?: number;
   finding_occurrence_memberships?: number;
   occurrences_additive?: boolean;

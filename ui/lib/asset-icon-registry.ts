@@ -5,7 +5,7 @@ import {
   FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderInput, FolderOutput, Gpu, Handshake, HardDrive, IdCard, Inbox, KeyRound,
   Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, PlugZap, ScrollText, Server, Share2,
   ShieldAlert, ShieldCheck, ShipWheel, Siren, Sparkles, SquareFunction, Store, Table, Ticket, User, UserCog, Users, Vault,
-  Warehouse, Webhook, Workflow, Wrench, Zap,
+  Unplug, Warehouse, Webhook, Workflow, Wrench, Zap,
 } from "lucide-react";
 
 /**
@@ -46,6 +46,7 @@ export const ASSET_KINDS = {
   disk: { label: "Disk", icon: HardDrive },
   secret: { label: "Secret store", icon: Vault },
   integration: { label: "Integration", icon: Cable },
+  data_connection: { label: "Data connection", icon: Unplug },
   model: { label: "Model", icon: BrainCircuit },
   endpoint: { label: "Endpoint", icon: PlugZap },
   ai_service: { label: "AI service", icon: Sparkles },
@@ -123,7 +124,7 @@ const SUBTYPE_FIELDS = ["resource_type", "resource_kind", "cloud_service", "serv
 
 /** Exact native types whose words would otherwise match a broader rule. */
 const EXACT: Record<string, AssetKind> = {
-  server: "mcp_server", agent: "agent", tool: "tool", package: "package", framework: "framework",
+  server: "mcp_server", agent: "agent", tool: "tool", package: "package", framework: "framework", data_connection: "data_connection",
   cortex_function: "ai_service", cortex_search_service: "ai_service", openai_deployment: "model",
   hosted_model: "model", model_artifact: "model", repository: "repository", ai_foundry_project: "ml_workspace",
   share: "data_share", task: "job", pipe: "job", stage: "stage", external_stage: "stage", internal_stage: "stage", cluster: "cluster",
@@ -276,6 +277,7 @@ export function assetIcon(input: AssetKindInput): EntityIcon {
 }
 
 export function assetKindLabel(input: AssetKindInput): string {
+  if ((input.entityType ?? input.nodeType) === "misconfiguration" && input.attributes?.finding_kind === "iac") return "IaC finding";
   const resolved = resolveAssetKind(input);
   if (resolved.basis === "subtype") return ASSET_KINDS[resolved.kind].label;
   const type = input.entityType && Object.hasOwn(ENTITY_KIND, input.entityType) ? input.entityType : input.nodeType ?? "";

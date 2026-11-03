@@ -53,7 +53,7 @@ Not drawn, because they can connect almost any two types: `recorded_activity`, `
 | `configures` | `structural` | yes | `config_file` | AI and agents: `agent`, `server`, `tool` |
 | `contains` | `structural` | yes | `ci_job`, `config_file`, `directory`, `package`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `environment`, `fleet` | `ci_job`, `config_file`, `directory`, `package`, `source_file`<br/>Cloud, infrastructure and data: `container`<br/>Findings: `misconfiguration`, `vulnerability`<br/>AI and agents: `server` |
 | `defines` | `structural` | yes | `source_file` | AI and agents: `tool` |
-| `depends_on` | `dependency` | yes | Cloud, infrastructure and data: `container`<br/>AI and agents: `framework`, `server` | `package` |
+| `depends_on` | `dependency` | yes | Cloud, infrastructure and data: `container`, `resource`<br/>AI and agents: `framework`, `server` | `package` |
 | `part_of` | `structural` | yes | `ci_job` | AI and agents: `application` |
 | `recorded_activity` | `correlation` | no | AI and agents: `agent`, `server`, `tool_call`<br/>Identity and access: `federated_identity`, `managed_identity`, `role`, `service_account`, `service_principal`, `user`<br/>Cloud, infrastructure and data: `resource` | `ci_job`, `config_file`, `package` |
 | `remediates` | `finding` | no | `package` | Findings: `misconfiguration`, `vulnerability` |

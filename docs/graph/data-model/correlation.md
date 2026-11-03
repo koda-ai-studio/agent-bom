@@ -63,6 +63,7 @@ A finding row becomes a finding node through `evidence/finding_node_ids.py`:
 | Function | Node id |
 |---|---|
 | `iac_misconfig_node_id` | `misconfig:iac:{rule_id or 'unknown'}:{path or 'unknown'}:{line or 0}` |
+| `iac_misconfig_node_id` | `misconfig:iac:{occurrence}` |
 | `benchmark_misconfig_node_id` | `misconfig:{section}:{check_id or 'unknown'}` |
 | `mcp_audit_node_id` | `misconfig:mcp_audit:{finding_id}` |
 | `skill_audit_node_id` | `misconfig:skill_audit:{key}` |

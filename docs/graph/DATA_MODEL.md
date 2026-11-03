@@ -13,10 +13,10 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 
 | Domain | Entity types | Relationships inside | To other domains | Detail |
 |---|---|---|---|---|
-| AI and agents | `agent`, `application`, `blueprint`, `framework`, `server`, `tool`, `tool_call` | 22 | 34 | [ERD and relationships](data-model/domains/ai.md) |
+| AI and agents | `agent`, `application`, `blueprint`, `framework`, `server`, `tool`, `tool_call` | 22 | 35 | [ERD and relationships](data-model/domains/ai.md) |
 | Code and supply chain | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `package`, `source_file` | 6 | 13 | [ERD and relationships](data-model/domains/supply.md) |
 | Findings | `drift_incident`, `misconfiguration`, `vulnerability` | 1 | 9 | [ERD and relationships](data-model/domains/findings.md) |
-| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 13 | 22 | [ERD and relationships](data-model/domains/cloud.md) |
+| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 13 | 24 | [ERD and relationships](data-model/domains/cloud.md) |
 | Identity and access | `access_grant`, `access_policy`, `account`, `credential`, `credential_ref`, `federated_identity`, `group`, `managed_identity`, `org`, `policy`, `role`, `service_account`, `service_principal`, `user` | 17 | 25 | [ERD and relationships](data-model/domains/identity.md) |
 
 ## Entities
@@ -57,7 +57,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 7 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |
 | `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 (+1 demo) |
-| `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 4 |
+| `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 5 |
 | `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 9 (+2 demo) |
 | `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 4 (+2 demo) |
 | `service_account` | Service Account | Identity and access | `identity` | 3 / 3001 |  | 4 (+1 demo) |
@@ -91,11 +91,11 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `cross_account_trust` | `authority` | identity | directed | yes | `account`, `federated_identity`, `role`, `service_principal` | `account`, `federated_identity`, `role`, `service_principal` | 16 | — | 2 |
 | `defines` | `structural` | code_topology | directed | yes | `source_file` | `ci_job`, `code_module`, `tool` | 3 | — | 2 |
 | `delegated_to` | `runtime` | runtime | directed | yes | `agent` | `agent` | 1 | RT | 1 |
-| `depends_on` | `dependency` | inventory | directed | yes | `cloud_resource`, `config_file`, `container`, `data_store`, `directory`, `framework` (+3 more) | `cloud_resource`, `container`, `data_store`, `package` | 11 | FU, BR | 11 (+2 demo) |
+| `depends_on` | `dependency` | inventory | directed | yes | `cloud_resource`, `config_file`, `container`, `data_store`, `directory`, `framework` (+4 more) | `cloud_resource`, `container`, `data_store`, `package` | 12 | FU, BR | 11 (+2 demo) |
 | `exhibits_drift` | `governance` | governance | bidirectional | yes | `agent` | `drift_incident` | 1 | — | 1 |
 | `exploitable_via` | `finding` | vulnerability | directed | yes | `misconfiguration`, `vulnerability` | `credential`, `tool` | 4 | FU | 1 (+1 demo) |
 | `exposed_to` | `exposure` | exposure | directed | yes | `agent`, `api_gateway`, `cloud_resource`, `container`, `data_store`, `server` | `account`, `agent`, `cloud_resource`, `data_store`, `resource` | 20 | FU | 3 (+2 demo) |
-| `exposes_cred` | `authority` | inventory | directed | yes | `agent`, `server` | `credential` | 2 | FU, CR | 2 (+1 demo) |
+| `exposes_cred` | `authority` | inventory | directed | yes | `agent`, `resource`, `server` | `credential` | 3 | FU, CR | 2 (+1 demo) |
 | `governs` | `governance` | governance | directed | no | `access_policy`, `blueprint`, `policy` | `account`, `agent`, `drift_incident`, `managed_identity`, `org`, `tool` | 10 | — | 3 |
 | `has_permission` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource` (+1 more) | 42 | FU, LT | 5 |
 | `hosted_on` | `dependency` | inventory | directed | yes | `agent`, `container`, `server` | `cloud_resource`, `cluster`, `container`, `fleet` | 12 | — | 4 (+1 demo) |
@@ -126,7 +126,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `triggers` | `finding` | vulnerability | directed | yes | `vulnerability` | `misconfiguration` | 1 | — | 1 |
 | `trusts` | `authority` | identity | directed | yes | `account`, `role` | `account`, `federated_identity`, `group`, `role`, `service_account`, `service_principal` (+1 more) | 14 | — | 2 |
 | `used_credential` | `runtime` | runtime | directed | yes | `agent`, `tool`, `tool_call` | `credential`, `credential_ref` | 6 | CR, RT | 2 |
-| `uses` | `dependency` | inventory | directed | yes | `agent` | `server` | 1 | FU, CR, BR | 3 (+1 demo) |
+| `uses` | `dependency` | inventory | directed | yes | `agent` | `resource`, `server` | 2 | FU, CR, BR | 3 (+1 demo) |
 | `uses_framework` | `dependency` | inventory | directed | yes | `agent` | `framework` | 1 | — | 1 |
 | `vulnerable_to` | `finding` | vulnerability | directed | yes | `agent`, `cloud_resource`, `container`, `credential`, `credential_ref`, `directory` (+4 more) | `misconfiguration`, `vulnerability` | 20 | FU, BR | 8 (+3 demo) |
 

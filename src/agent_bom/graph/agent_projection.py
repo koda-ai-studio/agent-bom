@@ -262,12 +262,22 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
         )
 
     if not agent.static_inventory:
+        entity_type = EntityType.RESOURCE if surface == "data-connection" else EntityType.SERVER
         graph.add_node(
             UnifiedNode(
                 id=srv_id,
-                entity_type=EntityType.SERVER,
+                entity_type=entity_type,
                 label=srv_name,
                 attributes={
+                    **(
+                        {
+                            "resource_type": "data_connection",
+                            "inventory_role": "configured_data_connection",
+                            **({"cloud_provider": "snowflake"} if agent.agent_type == "snowflake-cli" else {}),
+                        }
+                        if surface == "data-connection"
+                        else {}
+                    ),
                     "command": sanitize_text(srv_dict.get("command", "")),
                     "transport": srv_dict.get("transport", ""),
                     "url": sanitize_url(str(srv_dict.get("url") or "")) or "",
@@ -287,7 +297,7 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
                     "environment": agent.agent_env,
                     "canonical_id": srv_dict.get("canonical_id")
                     or srv_dict.get("stable_id")
-                    or canonical_graph_node_id(EntityType.SERVER.value, srv_id),
+                    or canonical_graph_node_id(entity_type.value, srv_id),
                     "source_ids": source_ids(stable_id=srv_dict.get("stable_id"), registry_id=srv_dict.get("registry_id")),
                     "stable_id": srv_dict.get("stable_id", ""),
                     "fingerprint": srv_dict.get("fingerprint", ""),
@@ -362,7 +372,8 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
         # Equal labels or launch recipes do not establish a shared instance.
         # The resolved scoped identity also recognizes one remote endpoint
         # configured under different local names.
-        indexes.server_to_agents[srv_id].append(agent.agent_id)
+        if surface != "data-connection":
+            indexes.server_to_agents[srv_id].append(agent.agent_id)
     indexes.server_name_to_agent_servers[srv_name][agent.agent_id] = srv_id
     indexes.agent_to_server_ids[agent.agent_name].add(srv_id)
     if agent.agent_scope:

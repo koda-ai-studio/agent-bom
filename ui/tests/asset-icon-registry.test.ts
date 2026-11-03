@@ -297,3 +297,14 @@ describe("Snowflake stage", () => {
     expect(assetKind({ entityType: "data_store", attributes: { resource_type: "s3" }, provider: "aws" })).toBe("bucket");
   });
 });
+
+
+it("labels non-MCP connection profiles and IaC findings from their recorded kind", () => {
+  const connection = { entityType: "resource", attributes: { resource_type: "data_connection" } };
+  expect(assetKind(connection)).toBe("data_connection");
+  expect(assetKindLabel(connection)).toBe("Data connection");
+  expect(assetIcon(connection)).not.toBe(ASSET_KINDS.mcp_server.icon);
+  const finding = { entityType: "misconfiguration", attributes: { finding_kind: "iac" } };
+  expect(assetKindLabel(finding)).toBe("IaC finding");
+  expect(assetKindLabel({ entityType: "misconfiguration", attributes: { resource_type: "data_connection" } })).toBe("Finding");
+});

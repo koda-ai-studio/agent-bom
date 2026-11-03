@@ -80,7 +80,7 @@ Not drawn, because they can connect almost any two types: `possibly_correlates_w
 | `contains` | `structural` | yes | `access_policy`, `account`, `role`, `service_account`, `service_principal`<br/>Cloud, infrastructure and data: `environment`, `resource` | `access_policy`, `role`, `service_account`, `service_principal`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `data_store`, `environment`<br/>AI and agents: `application`<br/>Findings: `misconfiguration`, `vulnerability` |
 | `exploitable_via` | `finding` | yes | Findings: `misconfiguration`, `vulnerability` | `credential` |
 | `exposed_to` | `exposure` | yes | Cloud, infrastructure and data: `data_store` | `account` |
-| `exposes_cred` | `authority` | yes | AI and agents: `agent`, `server` | `credential` |
+| `exposes_cred` | `authority` | yes | AI and agents: `agent`, `server`<br/>Cloud, infrastructure and data: `resource` | `credential` |
 | `governs` | `governance` | no | `access_policy`<br/>AI and agents: `blueprint` | `managed_identity`<br/>AI and agents: `agent`, `tool`<br/>Findings: `drift_incident` |
 | `has_permission` | `authority` | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | Cloud, infrastructure and data: `cloud_resource`, `cluster`, `data_store`, `resource`<br/>AI and agents: `tool` |
 | `hosts` | `structural` | yes | `account`<br/>Cloud, infrastructure and data: `cloud_resource`, `environment`, `fleet`, `provider` | `account`, `org`<br/>AI and agents: `agent`, `server`<br/>Cloud, infrastructure and data: `cloud_resource` |

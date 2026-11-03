@@ -7,11 +7,14 @@ the containment tree; the shapes here are what every roll-up entry reports.
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from agent_bom.core.severity import SEVERITY_BUCKETS_WORST_FIRST
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.path_derivation import _node_type_value
+from agent_bom.graph.rollup_edges import descendants
 from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, ISSUE_SEVERITY_DEFINITION
 
 _SEVERITY_ORDER: tuple[str, ...] = SEVERITY_BUCKETS_WORST_FIRST
@@ -89,3 +92,55 @@ def aggregate_count_metadata(graph: UnifiedGraph, memberships: Counter[str], occ
 
 
 __all__ = ["RollupAggregate", "_histogram", "aggregate_count_metadata"]
+
+
+def orphan_summary(graph: UnifiedGraph, agg: RollupAggregate, *, total: int, shown: int, truncated_ids: list[str]) -> dict[str, Any]:
+    """Aggregate over every orphan plus a bounded sample of the truncated tail."""
+    return {
+        "total": total,
+        "shown": shown,
+        "truncated": len(truncated_ids),
+        "by_type": dict(sorted(agg.by_type.items())),
+        "severity_counts": _histogram(agg.severity_counts),
+        "issue_count": agg.issue_count,
+        "worst_severity": agg.worst_severity,
+        "worst_severity_rank": agg.worst_severity_rank,
+        "internet_exposed": agg.internet_exposed,
+        "toxic_combo": agg.toxic_combo,
+        "exposed_count": agg.exposed_count,
+        "toxic_count": agg.toxic_count,
+        "sample": [
+            {
+                "id": graph.nodes[nid].id,
+                "label": graph.nodes[nid].label,
+                "entity_type": _node_type_value(graph.nodes[nid]),
+                "severity": graph.nodes[nid].severity or "",
+            }
+            for nid in truncated_ids[:20]
+        ],
+    }
+
+
+class ScopeAggregates:
+    """Collect unique memberships with the same aggregator used by scope rows."""
+
+    def __init__(self, aggregate: Callable[..., RollupAggregate], **kwargs: Any) -> None:
+        self.memberships: Counter[str] = Counter()
+        self.occurrences: Counter[str] = Counter()
+        self.aggregate = aggregate
+        self.kwargs = kwargs
+
+    def __call__(self, member_ids: list[str], *, scope_root: str) -> RollupAggregate:
+        return self.aggregate(
+            member_ids, scope_root=scope_root, memberships=self.memberships, occurrence_memberships=self.occurrences, **self.kwargs
+        )
+
+    def metadata(self, graph: UnifiedGraph, page_ids: Sequence[str], total: int, children: dict[str, list[str]]) -> dict[str, Any]:
+        if len(page_ids) < total:
+            # Ranking needs all aggregates; reconciliation is explicitly page-scoped.
+            # Rewalk only the bounded returned entries, without retaining per-scope sets.
+            self.memberships.clear()
+            self.occurrences.clear()
+            for node_id in page_ids:
+                self(descendants(node_id, children), scope_root=node_id)
+        return aggregate_count_metadata(graph, self.memberships, self.occurrences)

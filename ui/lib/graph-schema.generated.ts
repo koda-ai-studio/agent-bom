@@ -988,6 +988,7 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "config_file",
       "source_file",
       "framework",
+      "resource",
       "package",
       "directory",
       "cloud_resource",
@@ -1062,7 +1063,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "direction": "directed",
     "source_types": [
       "server",
-      "agent"
+      "agent",
+      "resource"
     ],
     "target_types": [
       "credential"
@@ -1712,7 +1714,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "agent"
     ],
     "target_types": [
-      "server"
+      "server",
+      "resource"
     ],
     "traversable": true,
     "traversal_class": "dependency"

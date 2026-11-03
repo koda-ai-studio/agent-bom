@@ -205,7 +205,7 @@ Emitted by: `graph/runtime_projection.py`
 
 ## `depends_on`
 
-Class `dependency` · directed · traversable · required evidence `source`, `tier` · 11 pairs
+Class `dependency` · directed · traversable · required evidence `source`, `tier` · 12 pairs
 
 - `cloud_resource` → `cloud_resource`
 - `config_file` → `package`
@@ -214,6 +214,7 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 - `directory` → `package`
 - `framework` → `package`
 - `package` → `package`
+- `resource` → `package`
 - `server` → `package`
 - `source_file` → `package`
 
@@ -251,9 +252,10 @@ Emitted by: `graph/builder_network_exposure.py`, `graph/builder_snowflake_data_m
 
 ## `exposes_cred`
 
-Class `authority` · directed · traversable · required evidence `source`, `tier` · 2 pairs
+Class `authority` · directed · traversable · required evidence `source`, `tier` · 3 pairs
 
 - `agent` → `credential`
+- `resource` → `credential`
 - `server` → `credential`
 
 Emitted by: `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_credentials.py`
@@ -599,9 +601,9 @@ Emitted by: `graph/runtime_projection.py`, `graph/trace_projection.py`
 
 ## `uses`
 
-Class `dependency` · directed · traversable · required evidence `source`, `tier` · 1 pairs
+Class `dependency` · directed · traversable · required evidence `source`, `tier` · 2 pairs
 
-- `agent` → `server`
+- `agent` → `resource`, `server`
 
 Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/gpu_paths.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
