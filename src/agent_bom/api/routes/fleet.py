@@ -32,6 +32,7 @@ from agent_bom.api.stores import _get_fleet_store, _get_idempotency_store, _get_
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_fleet_agents_quota, tenant_quota_guard
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
+from agent_bom.domain.mcp_model import server_dict_counts_as_mcp_server
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_command_args, sanitize_error, sanitize_security_warnings, sanitize_text, sanitize_url
@@ -246,7 +247,7 @@ async def get_fleet_agent(request: Request, agent_id: str) -> dict[str, Any]:
 
 
 def _server_counts(agent: Any) -> tuple[int, int, int, int]:
-    server_count = len(agent.mcp_servers)
+    server_count = agent.total_mcp_servers
     pkg_count = sum(len(s.packages) for s in agent.mcp_servers)
     cred_count = sum(len(s.credential_names) for s in agent.mcp_servers)
     vuln_count = sum(s.total_vulnerabilities for s in agent.mcp_servers)
@@ -255,7 +256,7 @@ def _server_counts(agent: Any) -> tuple[int, int, int, int]:
 
 def _payload_counts(agent: dict) -> tuple[int, int, int, int]:
     servers = agent.get("mcp_servers", []) or []
-    server_count = len(servers)
+    server_count = sum(1 for server in servers if isinstance(server, dict) and server_dict_counts_as_mcp_server(server))
     pkg_count = 0
     cred_count = 0
     vuln_count = 0

@@ -223,6 +223,16 @@ class CredentialIdentityBinding:
 SBOM_DECLARED_MCP_SOURCE = "sbom:mcp-server"
 
 
+def server_dict_counts_as_mcp_server(server: dict) -> bool:
+    """:attr:`MCPServer.counts_as_mcp_server` for a serialized server row.
+
+    Package manifests, images and SBOM components reuse the server shape but
+    are not MCP servers. Rows without a surface predate the field and are MCP.
+    """
+    surface = str(server.get("surface") or "mcp-server")
+    return surface == "mcp-server" or (surface == "sbom" and SBOM_DECLARED_MCP_SOURCE in (server.get("discovery_sources") or []))
+
+
 @dataclass
 class MCPServer:
     """An MCP server with its tools, resources, and dependencies."""
