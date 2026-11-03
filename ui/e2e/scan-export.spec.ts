@@ -126,7 +126,7 @@ test("scan flow reaches result view and exports graph JSON", async ({ page }) =>
     });
   });
 
-  await page.route(`**/v1/scan/${scanJob.job_id}`, async (route) => {
+  await page.route(`**/v1/scan/${scanJob.job_id}?view=full`, async (route) => {
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify(scanJob),

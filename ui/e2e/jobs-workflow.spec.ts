@@ -144,7 +144,7 @@ async function routeJobs(page: Page) {
     });
   });
 
-  await page.route("**/v1/scan/job-prod-cloud", async (route) => {
+  await page.route("**/v1/scan/job-prod-cloud?view=full", async (route) => {
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
@@ -213,7 +213,7 @@ async function routeJobs(page: Page) {
       }),
     });
   });
-  await page.route("**/v1/scan/job-no-telemetry", async (route) => {
+  await page.route("**/v1/scan/job-no-telemetry?view=full", async (route) => {
     await route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({

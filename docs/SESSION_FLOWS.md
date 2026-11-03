@@ -237,6 +237,9 @@ flowchart TB
   returned exactly once and the actor is derived from the authenticated principal.
 - **Lands in:** the key store as a **scrypt hash** — the plaintext key is never
   persisted or logged (`api/auth.py`, `create_api_key`).
+- **Verified per request:** against the freshly read key record; a short-lived
+  in-process cache skips repeat scrypt work without delaying revocation (see
+  [`RUNTIME_FAIL_MODES.md`](RUNTIME_FAIL_MODES.md#managed-api-key-verification-cache)).
 
 ---
 

@@ -119,7 +119,7 @@ def client_and_job():
 def test_the_plan_is_exactly_what_the_whole_job_carried(client_and_job):
     """Differential: a narrower read is only correct if the answer is identical."""
     client, job_id, _store = client_and_job
-    wide = client.get(f"/v1/scan/{job_id}")
+    wide = client.get(f"/v1/scan/{job_id}?view=full")
     narrow = client.get(f"/v1/scan/{job_id}/remediation")
     assert narrow.status_code == 200, narrow.text
     assert narrow.json()["remediation_plan"] == wide.json()["result"]["remediation_plan"]
@@ -136,7 +136,7 @@ def test_the_response_does_not_carry_the_rest_of_the_scan(client_and_job):
 def test_it_is_dramatically_smaller_than_the_whole_job(client_and_job):
     """Structural, not timing: the transfer must not track estate size."""
     client, job_id, _store = client_and_job
-    wide = len(client.get(f"/v1/scan/{job_id}").content)
+    wide = len(client.get(f"/v1/scan/{job_id}?view=full").content)
     narrow = len(client.get(f"/v1/scan/{job_id}/remediation").content)
     assert narrow * 10 < wide, f"narrow read {narrow}B is not materially smaller than {wide}B"
 

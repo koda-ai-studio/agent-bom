@@ -385,7 +385,11 @@ def enforce_retained_jobs_quota(tenant_id: str, attempted: int = 1) -> None:
     limit = _quota_limit(tenant_id, "retained_scan_jobs")
     if limit <= 0:
         return
-    current = len(_get_store().list_all(tenant_id=tenant_id))
+    store = _get_store()
+    # A row count, not ``list_all``: admission must not deserialize every
+    # retained (possibly 100 MB) result just to compare a number.
+    count_summary = getattr(store, "count_summary", None)
+    current = int(count_summary(tenant_id)) if callable(count_summary) else len(store.list_all(tenant_id=tenant_id))
     if current + attempted > limit:
         _raise_quota_exceeded(
             tenant_id=tenant_id,

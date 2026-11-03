@@ -34,8 +34,9 @@ export const scansApi = {
     post<ScanJob>("/v1/scan", req, { "Idempotency-Key": mutationIdempotencyKey("ui-scan") }),
 
 
-  /** Poll scan status + results */
-  getScan: (jobId: string, signal?: AbortSignal) => get<ScanJob>(`/v1/scan/${jobId}`, signal ? { signal } : {}),
+  /** Full scan job including `result`; the default API view is a bounded summary. */
+  getScan: (jobId: string, signal?: AbortSignal) =>
+    get<ScanJob>(`/v1/scan/${encodeURIComponent(jobId)}?view=full`, signal ? { signal } : {}),
 
 
   /** Poll scan status without loading large result payloads */

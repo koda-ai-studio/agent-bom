@@ -20,6 +20,27 @@ spec:
   {{- end }}
 ---
 {{- end }}
+{{- if and .Values.controlPlane.worker.enabled (gt (int (include "agent-bom.controlPlaneReplicaCapacity" .Values.controlPlane.worker)) 1) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "agent-bom.name" . }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent-bom.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "agent-bom.name" . }}
+      app.kubernetes.io/component: worker
+  {{- if ne .Values.pdb.maxUnavailable nil }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  {{- else }}
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  {{- end }}
+---
+{{- end }}
 {{- if and .Values.controlPlane.ui.enabled (gt (int (include "agent-bom.controlPlaneReplicaCapacity" .Values.controlPlane.ui)) 1) }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget

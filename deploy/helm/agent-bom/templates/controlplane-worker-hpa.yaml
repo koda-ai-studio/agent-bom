@@ -1,0 +1,41 @@
+{{- /*
+CPU/memory HPA for the scan/ingest worker. Suppressed when the KEDA queue-depth
+ScaledObject is enabled, since KEDA owns its own HPA for the same Deployment.
+*/ -}}
+{{- $worker := .Values.controlPlane.worker }}
+{{- if and .Values.controlPlane.enabled $worker.enabled $worker.autoscaling.enabled (not $worker.autoscaling.keda.enabled) }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "agent-bom.name" . }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent-bom.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "agent-bom.name" . }}-worker
+  minReplicas: {{ $worker.autoscaling.minReplicas }}
+  maxReplicas: {{ $worker.autoscaling.maxReplicas }}
+  {{- with $worker.autoscaling.behavior }}
+  behavior:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $worker.autoscaling.targetCPUUtilizationPercentage }}
+    {{- if $worker.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $worker.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}

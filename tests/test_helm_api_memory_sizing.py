@@ -63,3 +63,29 @@ def test_values_file_defaults_match_the_sizing_table():
     api_section = SIZING_DOC.read_text().split("### API", 1)[1].split("### UI", 1)[0]
     assert re.search(rf"requests:.*`{API_MEMORY_REQUEST}` memory", api_section), api_section
     assert re.search(rf"limits:.*`{API_MEMORY_LIMIT}` memory", api_section), api_section
+
+
+_PUSH_PARSE_AMPLIFICATION = 8
+_UNITS = {"Ki": 1024, "Mi": 1024**2, "Gi": 1024**3}
+
+
+def _bytes(quantity: str) -> int:
+    match = re.fullmatch(r"(\d+)(Ki|Mi|Gi)", quantity)
+    assert match, quantity
+    return int(match.group(1)) * _UNITS[match.group(2)]
+
+
+def _default_push_budget() -> int:
+    source = (ROOT / "src/agent_bom/config.py").read_text()
+    match = re.search(r'_int\("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES",\s*(\d+)\s*\*\s*1024\s*\*\s*1024\)', source)
+    assert match, "push budget default moved; update this sizing guard"
+    return int(match.group(1)) * 1024 * 1024
+
+
+def test_api_and_worker_memory_limits_cover_one_maximum_push_parse():
+    """Parsing a maximum-size push costs roughly 8x the decoded body."""
+    values = yaml.safe_load((CHART / "values.yaml").read_text())["controlPlane"]
+    floor = _PUSH_PARSE_AMPLIFICATION * _default_push_budget()
+    for component in ("api", "worker"):
+        limit = _bytes(values[component]["resources"]["limits"]["memory"])
+        assert limit >= floor, f"{component} memory limit {limit} < {_PUSH_PARSE_AMPLIFICATION}x push budget {floor}"

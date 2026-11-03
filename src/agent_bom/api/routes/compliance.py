@@ -761,7 +761,9 @@ def export_compliance_pack(
 router.include_router(reads.posture_router)
 
 
-@router.get("/posture/counts", **read_models.documented(read_models.PostureCountsResponse), tags=["compliance"])
+@router.get(
+    "/posture/counts", **read_models.documented(read_models.PostureCountsResponse), tags=["compliance"], dependencies=[SEEDING_GUARD]
+)
 async def get_posture_counts(request: Request) -> dict:
     """Aggregate open-finding severity counts across all completed scans.
 
@@ -772,9 +774,7 @@ async def get_posture_counts(request: Request) -> dict:
     critical/high. The CVE-only ``blast_radius`` is used only for the
     correlation-based ``compound_issues`` metric, where reachability/exposure
     lives. ``unrated`` is an explicit bucket so the histogram sums to ``total``.
-
-    Returns:
-        {critical, high, medium, low, unrated, total, kev, compound_issues, …}
+    Like ``/v1/posture`` it answers 503 ``current_estate_seeding`` while the demo estate seeds.
     """
     try:
         async with adaptive_backpressure("overview"):

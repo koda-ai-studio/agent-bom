@@ -100,6 +100,31 @@ class ScanResultSectionRef(ReadModel):
     href: str
 
 
+class ScanJobLinks(ReadModel):
+    self: str
+    full: str
+    status: str
+    result: str
+    stream: str
+
+
+class ScanJobSummaryResponse(ScanStatusResponse):
+    """Default ``GET /v1/scan/{job_id}`` body: lifecycle and summary without the result document.
+
+    ``view=full`` returns the complete ``ScanJob``; ``result_sections`` link the
+    paged ``/v1/scan/{job_id}/result/{section}`` reads of a completed result.
+    """
+
+    view: Literal["summary"]
+    triggered_by: str | None
+    started_at: str | None
+    result_format: str
+    progress: list[str]
+    graph_persistence: dict[str, Any] | None
+    result_sections: list[ScanResultSectionRef]
+    links: ScanJobLinks
+
+
 class ScanResultIndexResponse(ReadResponse):
     job_id: str
     status: str

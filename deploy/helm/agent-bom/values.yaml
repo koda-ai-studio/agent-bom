@@ -498,6 +498,9 @@ controlPlane:
     ingressNamespaces:
       - ingress-nginx
     additionalIngress: []
+    # Worker pods (controlPlane.worker) admit no peer ingress by default; their
+    # port answers kubelet probes only. Add rules here, e.g. for metrics scraping.
+    workerAdditionalIngress: []
   # Provider label for diagnostics and evidence only. It never changes the
   # PostgreSQL protocol contract or upgrades compatibility into certification.
   postgres:
@@ -693,6 +696,14 @@ controlPlane:
       annotations: {}
     # Allow headroom for graph and scan payloads, response caching, and concurrent
     # cold reads. Measure peak resident memory against the deployed inventory.
+    # Push sizing: POST /v1/results/push accepts a decoded body up to
+    # AGENT_BOM_API_RESULT_PUSH_MAX_BYTES. Parsing JSON into the report model
+    # costs roughly 8x the body, so the memory limit must stay at least
+    # 8 x that budget plus baseline for one maximum-size push in flight. The 2Gi
+    # default covers the 192 MiB default budget (~1.5 GiB parse) with headroom; raise the
+    # limit (or lower the budget) before raising the budget or expecting several
+    # maximum-size pushes per pod at once. With controlPlane.worker.enabled the
+    # queued ingest runs on worker pods, which need the same envelope.
     resources:
       requests:
         memory: "512Mi"
@@ -729,6 +740,63 @@ controlPlane:
       timeoutSeconds: 5
     # Leaves a 5s margin over the default 25s drain window for in-flight
     # requests to finish before Kubernetes force-kills the pod.
+    terminationGracePeriodSeconds: 30
+  # Optional scan/ingest worker split. When enabled, a second Deployment runs
+  # the API image with AGENT_BOM_API_ROLE=worker: it drains the shared Postgres
+  # scan_dispatch_queue (scan jobs and queued pushed-result ingest) and binds
+  # the HTTP port only for probes. No Service or Ingress routes to it. API pods
+  # switch to AGENT_BOM_API_ROLE=api (serve HTTP, no claim loop), and both get
+  # AGENT_BOM_DISTRIBUTED_SCANS=1. Requires controlPlane.postgresSecrets.enabled.
+  # Image, args, env, envFrom, Postgres Secrets, service account, security
+  # context, volumes and probes are inherited from controlPlane.api.
+  worker:
+    enabled: false
+    replicas: 2
+    autoscaling:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 6
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: null
+      behavior: {}
+      # KEDA scaling on claimable queue depth (postgresql trigger). Replaces the
+      # CPU HPA when enabled. The query counts rows a worker can claim: pending,
+      # or running with an expired lease.
+      keda:
+        enabled: false
+        pollingIntervalSeconds: 30
+        cooldownSeconds: 300
+        # Claimable jobs per worker replica before scaling out.
+        queueDepthPerReplica: "4"
+        # Required: a TriggerAuthentication (or ClusterTriggerAuthentication)
+        # whose `connection` parameter is a Postgres URL for the MAINTENANCE
+        # role with the RLS bypass flag set, for example
+        #   postgresql://agent_bom_maintenance:...@host:5432/agent_bom?sslmode=require&options=-c%20app.bypass_rls%3D1
+        # scan_dispatch_queue is under forced row-level security; the app role,
+        # or a session without app.bypass_rls=1, counts zero rows and the
+        # worker would never scale out.
+        authenticationRef:
+          name: ""
+          kind: TriggerAuthentication
+        triggers: []  # set non-empty to fully replace the default queue-depth trigger
+        fallback:
+          failureThreshold: 3
+          replicas: 2
+        advanced: {}
+    # Workers parse queued pushes and run scans: keep at least the API envelope.
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "100m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    # Empty falls back to the chart-wide nodeSelector / tolerations / affinity.
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    # Worker-only env appended after controlPlane.api.env.
+    extraEnv: []
     terminationGracePeriodSeconds: 30
   ui:
     enabled: true

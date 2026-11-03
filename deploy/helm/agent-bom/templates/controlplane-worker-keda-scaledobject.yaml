@@ -1,0 +1,58 @@
+{{- /*
+KEDA queue-depth autoscaling for the scan/ingest worker.
+
+The default trigger counts rows a worker can claim from scan_dispatch_queue,
+using the same predicate as PostgresJobStore.claim_next: pending rows, or
+running rows whose lease expired. lease_expires_at is stored as ISO-8601 UTC
+text, so "now" is formatted the same way rather than compared as timestamptz.
+
+The table is under forced row-level security, so the TriggerAuthentication
+connection must use the maintenance role with app.bypass_rls=1 (see
+values.yaml controlPlane.worker.autoscaling.keda.authenticationRef).
+*/ -}}
+{{- $worker := .Values.controlPlane.worker }}
+{{- if and .Values.controlPlane.enabled $worker.enabled $worker.autoscaling.enabled $worker.autoscaling.keda.enabled }}
+{{- $keda := $worker.autoscaling.keda }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "agent-bom.name" . }}-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "agent-bom.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "agent-bom.name" . }}-worker
+  minReplicaCount: {{ $worker.autoscaling.minReplicas }}
+  maxReplicaCount: {{ $worker.autoscaling.maxReplicas }}
+  pollingInterval: {{ $keda.pollingIntervalSeconds | default 30 }}
+  cooldownPeriod: {{ $keda.cooldownSeconds | default 300 }}
+  fallback:
+    failureThreshold: {{ $keda.fallback.failureThreshold | default 3 }}
+    replicas: {{ $keda.fallback.replicas | default $worker.autoscaling.minReplicas }}
+  {{- with $keda.advanced }}
+  advanced:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  triggers:
+    {{- if $keda.triggers }}
+    {{- toYaml $keda.triggers | nindent 4 }}
+    {{- else }}
+    - type: postgresql
+      authenticationRef:
+        name: {{ required "controlPlane.worker.autoscaling.keda.authenticationRef.name is required when worker KEDA is enabled and triggers is empty" $keda.authenticationRef.name | quote }}
+        kind: {{ $keda.authenticationRef.kind | default "TriggerAuthentication" }}
+      metadata:
+        targetQueryValue: {{ $keda.queueDepthPerReplica | default "4" | quote }}
+        activationTargetQueryValue: "0"
+        query: >-
+          SELECT count(*) FROM scan_dispatch_queue
+          WHERE status = 'pending'
+          OR (status = 'running'
+          AND lease_expires_at IS NOT NULL
+          AND lease_expires_at < to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+    {{- end }}
+{{- end }}

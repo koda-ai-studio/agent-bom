@@ -48,6 +48,8 @@ secrets, CronJobs, Jobs, and PVCs before the Terraform baseline is destroyed.
 When you set `controlPlane.enabled=true`, the Helm chart can package:
 
 - API Deployment + Service
+- optional scan/ingest worker Deployment (no Service), see
+  [Separate scan and ingest workers](#separate-scan-and-ingest-workers)
 - UI Deployment + Service
 - same-origin Ingress that routes API paths to the API service and `/` to the UI
 - scanner CronJob
@@ -108,7 +110,8 @@ scoped maintenance, and migration/admin credentials.
 
 The chart derives `AGENT_BOM_CONTROL_PLANE_REPLICAS` from the largest configured
 API replica count: initial replicas, an enabled autoscaler's minimum/maximum,
-and its KEDA fallback. A deployment that starts at one but can grow to six
+and its KEDA fallback. With `controlPlane.worker.enabled`, the worker's
+capacity is added, and API and worker pods receive the same total. A deployment that starts at one but can grow to six
 therefore enables the application's shared-state safeguards from its first
 pod. This is a configuration safety signal, not a live pod-count metric.
 Set `replicas` and `autoscaling` through chart values; overriding this variable
@@ -122,10 +125,41 @@ budgets constrain supported voluntary evictions; they do not prevent node
 failures or govern Deployment rolling updates. See
 [Kubernetes disruptions](https://kubernetes.io/docs/concepts/workloads/pods/disruptions/).
 
+### Separate scan and ingest workers
+
+By default every API pod serves HTTP and also runs the distributed claim loop
+that drains the shared PostgreSQL `scan_dispatch_queue` (scan jobs and queued
+pushed-result ingest). Set `controlPlane.worker.enabled=true` to split them:
+
+| Pod | `AGENT_BOM_API_ROLE` | Serves HTTP | Runs claim loop |
+|---|---|---|---|
+| `agent-bom-api` | `api` | yes (Service, Ingress) | no |
+| `agent-bom-worker` | `worker` | probes only; no Service or Ingress | yes |
+
+Both receive `AGENT_BOM_DISTRIBUTED_SCANS=1`. The worker requires
+`controlPlane.postgresSecrets.enabled=true`; the chart refuses to render it
+otherwise, and it rejects `AGENT_BOM_API_ROLE` or `AGENT_BOM_DISTRIBUTED_SCANS`
+set by hand in `controlPlane.api.env` or `controlPlane.worker.extraEnv`. The
+worker reuses the API image, arguments, env, Secrets, service account, security
+context, volumes, and probes; it sets its own `replicas`, `resources`,
+`nodeSelector`, `tolerations`, `affinity`, and `extraEnv`. Its NetworkPolicy
+admits no peer ingress (node-originated probe traffic is always allowed); add
+rules with `controlPlane.networkPolicy.workerAdditionalIngress`. With
+`pdb.enabled=true`, a worker PodDisruptionBudget renders above one replica.
+
+Scale workers with `controlPlane.worker.autoscaling` (CPU/memory HPA) or its
+`keda` block, which counts claimable queue rows (pending, or running with an
+expired lease) through a KEDA `postgresql` trigger. That trigger needs a
+`TriggerAuthentication` whose connection uses the maintenance role with
+`app.bypass_rls=1`; the queue is under forced row-level security, so the app
+role counts zero rows. Workers parse queued pushes, so size their memory like
+the API: at least eight times `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` per
+maximum-size push in flight (`values.yaml` documents the default envelope).
+
 ### PostgreSQL connection budget
 
 Budget all pools in `src/agent_bom/api/postgres_common.py`, not only the main
-application pool. Each API process can open:
+application pool. Each API or worker process can open:
 
 - Application pool: `max(1, AGENT_BOM_POSTGRES_POOL_MIN_SIZE, AGENT_BOM_POSTGRES_POOL_MAX_SIZE)`.
 - Idempotency fencing pool: `max(1, min(4, AGENT_BOM_POSTGRES_POOL_MAX_SIZE))`.

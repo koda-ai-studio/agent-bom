@@ -194,7 +194,7 @@ def test_mapping_receipts_survive_database_api_and_graph_export(monkeypatch, tmp
     monkeypatch.setattr(stores, "_store", SQLiteJobStore(str(tmp_path / "jobs.db")))
     monkeypatch.setattr(stores, "_graph_store", graphs)
     client = TestClient(app)
-    response = client.get("/v1/scan/atlas-receipt")
+    response = client.get("/v1/scan/atlas-receipt?view=full")
     assert response.status_code == 200
     rows = response.json()["result"]["findings"]
     assert any(row.get("evidence", {}).get("atlas_mapping_evidence") == expected for row in rows), [

@@ -111,7 +111,9 @@ def test_push_concurrent_same_key_commits_one_job_endpoint_and_graph(monkeypatch
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda _index: _post(), range(2)))
 
-    assert {status for status, _body in results} == {201}
+    # The loser never waits on the winner's commit: it answers 202 with the
+    # same deterministic job id while that commit is in flight.
+    assert sorted(status for status, _body in results) in ([201, 201], [201, 202])
     assert len({body["job_id"] for _status, body in results}) == 1
     assert len(stores._get_store().list_all(all_tenants=True)) == 1
     endpoints, total = stores._get_fleet_store().query_endpoints("default")

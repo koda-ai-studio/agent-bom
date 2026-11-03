@@ -257,10 +257,17 @@ def idempotency_request_fingerprint(payload: Any) -> str:
     """
     try:
         normalized = _normalize_request_payload(payload or {})
-        encoded = json.dumps(normalized, sort_keys=True, separators=(",", ":"), default=str)
+        # The one-shot C encoder holds the GIL for the entire report, even
+        # when this function runs in a worker thread. Incremental encoding
+        # keeps the same canonical bytes while allowing API requests to run
+        # between chunks and avoids allocating a second full report string.
+        digest = hashlib.sha256()
+        encoder = json.JSONEncoder(sort_keys=True, separators=(",", ":"), default=str)
+        for chunk in encoder.iterencode(normalized):
+            digest.update(chunk.encode("utf-8"))
     except (ValueError, TypeError, RecursionError) as exc:
         raise IdempotencyPayloadError("Request payload is too deeply nested to process") from exc
-    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    return digest.hexdigest()
 
 
 def _ensure_request_hash_matches(stored_hash: str, request_hash: str) -> None:

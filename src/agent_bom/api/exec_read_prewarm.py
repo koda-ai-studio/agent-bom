@@ -11,6 +11,10 @@ already holds the new generation when the first request arrives.
 Bounded and best-effort: at most one warm-up queued per tenant (repeat pushes
 coalesce), one worker thread per process, never on the request path, and a
 failing read is logged and skipped. ``AGENT_BOM_EXEC_PREWARM=0`` disables it.
+
+Not leader-gated on a clustered control plane: the reads fill the
+process-local response cache (``read_cache``), so electing one replica would
+leave every other replica cold; the reads write no shared durable state.
 """
 
 from __future__ import annotations

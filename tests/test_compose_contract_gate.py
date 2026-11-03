@@ -49,7 +49,6 @@ class TestDiscovery:
         found = {p.relative_to(ROOT).as_posix() for p in [*standalone, *overlays]}
         expected = {
             "compose.yaml",
-            "deploy/docker-compose.yml",
             "deploy/docker-compose.pilot.yml",
             "deploy/docker-compose.fullstack.yml",
             "deploy/docker-compose.platform.yml",
@@ -86,7 +85,7 @@ class TestRenderedAssertions:
     """`docker compose config` exiting 0 is not proof the graph is usable."""
 
     def _target(self) -> gate.Target:
-        return gate.Target(files=[ROOT / "deploy" / "docker-compose.yml"], label="synthetic")
+        return gate.Target(files=[ROOT / "deploy" / "docker-compose.fullstack.yml"], label="synthetic")
 
     def test_service_without_image_or_build_is_caught(self):
         target = self._target()

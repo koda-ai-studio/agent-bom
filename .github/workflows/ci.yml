@@ -1910,6 +1910,7 @@ jobs:
             tests/test_postgres_agent_identity_tenant_key.py \
             tests/api/test_operator_api_keys.py \
             tests/api/test_iac_tenant_exceptions.py \
+            tests/api/test_job_detail_reads.py \
             tests/test_tenant_key_invariant.py \
             tests/test_postgres_mcp_results.py \
             tests/test_mcp_postgres_tenant_rls.py \
@@ -1936,6 +1937,8 @@ jobs:
             tests/test_graph_traverse_subgraph_completeness.py \
             tests/test_self_posture_postgres.py \
             tests/test_tenant_quota_store.py \
+            tests/test_leader_lock_postgres.py \
+            tests/test_postgres_upgrade_catchup_live.py \
             tests/test_tenant_graph_retention_store.py \
             tests/test_storage_sql.py \
             tests/test_jit_grant_tenant_boundary.py \
@@ -1945,6 +1948,8 @@ jobs:
             tests/test_findings_current_sql_contract.py \
             tests/test_jobs_tenant_key_contract.py \
             tests/test_jobs_dispatch_postgres.py \
+            tests/test_push_ingest_dispatch_postgres.py \
+            tests/test_postgres_idempotency_nonblocking.py \
             tests/test_findings_cursor_keyset_parity.py \
             tests/api/test_api_hosted_invitations.py \
             tests/api/test_authenticated_tenant_backends.py \

@@ -53,7 +53,7 @@ camelCase `configSchema` is purely a Smithery surface and has no effect on a
 self-hosted deployment.
 
 ```bash
-# Railway, Fly, Render, Docker, etc.
+# Railway, Docker, Helm, etc.
 export NVD_API_KEY="<your-nvd-api-key>"
 export AGENT_BOM_CLICKHOUSE_URL="https://<host>:8443"
 agent-bom serve mcp

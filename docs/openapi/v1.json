@@ -39443,6 +39443,412 @@
         "title": "ScanJob",
         "type": "object"
       },
+      "ScanJobLinks": {
+        "additionalProperties": true,
+        "properties": {
+          "full": {
+            "title": "Full",
+            "type": "string"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          },
+          "self": {
+            "title": "Self",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stream": {
+            "title": "Stream",
+            "type": "string"
+          }
+        },
+        "required": [
+          "self",
+          "full",
+          "status",
+          "result",
+          "stream"
+        ],
+        "title": "ScanJobLinks",
+        "type": "object"
+      },
+      "ScanJobSummaryResponse": {
+        "additionalProperties": true,
+        "description": "Default ``GET /v1/scan/{job_id}`` body: lifecycle and summary without the result document.\n\n``view=full`` returns the complete ``ScanJob``; ``result_sections`` link the\npaged ``/v1/scan/{job_id}/result/{section}`` reads of a completed result.",
+        "properties": {
+          "aggregation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregation"
+          },
+          "auto_correlation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Correlation"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "child_job_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Child Job Ids",
+            "type": "array"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "correlation_cohort_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Cohort Id"
+          },
+          "correlation_cohort_manifest_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Cohort Manifest Hash"
+          },
+          "correlation_max_age_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Max Age Hours"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "graph_persistence": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Persistence"
+          },
+          "graph_scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Scan Id"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "links": {
+            "$ref": "#/components/schemas/ScanJobLinks"
+          },
+          "parent_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Job Id"
+          },
+          "progress": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Progress",
+            "type": "array"
+          },
+          "pushed": {
+            "title": "Pushed",
+            "type": "boolean"
+          },
+          "request": {
+            "additionalProperties": true,
+            "title": "Request",
+            "type": "object"
+          },
+          "result_format": {
+            "title": "Result Format",
+            "type": "string"
+          },
+          "result_sections": {
+            "items": {
+              "$ref": "#/components/schemas/ScanResultSectionRef"
+            },
+            "title": "Result Sections",
+            "type": "array"
+          },
+          "scan_outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Outcome"
+          },
+          "scan_run": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Run"
+          },
+          "scan_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Timestamp"
+          },
+          "schedule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule Id"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "target_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Count"
+          },
+          "target_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Index"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "triggered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggered By"
+          },
+          "view": {
+            "const": "summary",
+            "title": "View",
+            "type": "string"
+          },
+          "warning_count": {
+            "title": "Warning Count",
+            "type": "integer"
+          },
+          "warnings_preview": {
+            "items": {},
+            "title": "Warnings Preview",
+            "type": "array"
+          }
+        },
+        "required": [
+          "job_id",
+          "graph_scan_id",
+          "tenant_id",
+          "batch_id",
+          "correlation_cohort_id",
+          "correlation_cohort_manifest_hash",
+          "correlation_max_age_hours",
+          "parent_job_id",
+          "child_job_ids",
+          "target",
+          "target_index",
+          "target_count",
+          "source_id",
+          "schedule_id",
+          "status",
+          "created_at",
+          "completed_at",
+          "request",
+          "summary",
+          "aggregation",
+          "scan_timestamp",
+          "generated_at",
+          "scan_run",
+          "scan_outcome",
+          "warning_count",
+          "warnings_preview",
+          "pushed",
+          "error",
+          "view",
+          "triggered_by",
+          "started_at",
+          "result_format",
+          "progress",
+          "graph_persistence",
+          "result_sections",
+          "links"
+        ],
+        "title": "ScanJobSummaryResponse",
+        "type": "object"
+      },
       "ScanLicensesResponse": {
         "$ref": "#/components/schemas/LicenseReportPayload",
         "description": "The same license payload emitted in the report envelope.",
@@ -79257,7 +79663,7 @@
     },
     "/v1/posture/counts": {
       "get": {
-        "description": "Aggregate open-finding severity counts across all completed scans.\n\nLightweight endpoint used by the dashboard nav to show Critical/High\nbadges. Reads the SAME reconciled source of truth as the ``/v1/overview``\nexec headline \u2014 the unified findings spine folded with hub-ingested\nevidence (#3961) \u2014 so the nav badges can never disagree with the overview's\ncritical/high. The CVE-only ``blast_radius`` is used only for the\ncorrelation-based ``compound_issues`` metric, where reachability/exposure\nlives. ``unrated`` is an explicit bucket so the histogram sums to ``total``.\n\nReturns:\n    {critical, high, medium, low, unrated, total, kev, compound_issues, \u2026}",
+        "description": "Aggregate open-finding severity counts across all completed scans.\n\nLightweight endpoint used by the dashboard nav to show Critical/High\nbadges. Reads the SAME reconciled source of truth as the ``/v1/overview``\nexec headline \u2014 the unified findings spine folded with hub-ingested\nevidence (#3961) \u2014 so the nav badges can never disagree with the overview's\ncritical/high. The CVE-only ``blast_radius`` is used only for the\ncorrelation-based ``compound_issues`` metric, where reachability/exposure\nlives. ``unrated`` is an explicit bucket so the histogram sums to ``total``.\nLike ``/v1/posture`` it answers 503 ``current_estate_seeding`` while the demo estate seeds.",
         "operationId": "get_posture_counts_v1_posture_counts_get",
         "parameters": [
           {
@@ -80270,7 +80676,7 @@
     },
     "/v1/results/push": {
       "post": {
-        "description": "Receive pushed scan results from a CLI instance.\n\nStores as a completed ScanJob with source metadata.",
+        "description": "Receive pushed scan results from a CLI instance.\n\nStores as a completed ScanJob with source metadata. With\n``Prefer: respond-async`` (or ``AGENT_BOM_PUSH_INGEST_MODE=async``) the\nreport is admitted durably and ``202`` returns ``job_id`` and ``status_url``\nwhile a worker persists the graph. A key another request is still\ncommitting also answers ``202`` with ``Retry-After``.",
         "operationId": "receive_push_v1_results_push_post",
         "requestBody": {
           "content": {
@@ -80289,6 +80695,112 @@
                 "schema": {
                   "additionalProperties": true,
                   "title": "Response Receive Push V1 Results Push Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "description": "Accepted for asynchronous ingest (``Prefer: respond-async``), or an identical push is still being committed. Poll ``status_url`` after ``Retry-After`` seconds."
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Receive Push",
+        "tags": [
+          "push"
+        ]
+      }
+    },
+    "/v1/results/push/{job_id}": {
+      "get": {
+        "description": "Return the receipt of one pushed result: accepted, running, stored or failed.",
+        "operationId": "get_push_status_v1_results_push__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Push Status V1 Results Push  Job Id  Get",
                   "type": "object"
                 }
               }
@@ -80316,7 +80828,7 @@
             "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
           }
         },
-        "summary": "Receive Push",
+        "summary": "Get Push Status",
         "tags": [
           "push"
         ]
@@ -82589,7 +83101,7 @@
         ]
       },
       "get": {
-        "description": "Fetch scan status and full results.\n\n``result`` is always the canonical AI-BOM JSON. When the request asked for a\nnon-json ``format``, ``result_document`` carries that rendering and\n``result_format`` names it. For bounded reads use ``GET /v1/scan/{job_id}/result``\nand ``.../result/{section}``.",
+        "description": "Fetch scan status, progress and a bounded result summary.\n\nThe default ``view=summary`` returns lifecycle fields, sanitized progress,\nthe result summary objects, the graph persistence receipt and links to the\npaged ``/v1/scan/{job_id}/result/{section}`` reads; it never loads the full\nresult document. ``view=full`` returns the complete ``ScanJob``: ``result``\nis the canonical AI-BOM JSON and, for a non-json ``format``,\n``result_document`` carries that rendering named by ``result_format``.",
         "operationId": "get_scan_v1_scan__job_id__get",
         "parameters": [
           {
@@ -82600,6 +83112,22 @@
               "title": "Job Id",
               "type": "string"
             }
+          },
+          {
+            "description": "`summary` (default) omits the result document; `full` returns the complete ScanJob including `result`.",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "summary",
+              "description": "`summary` (default) omits the result document; `full` returns the complete ScanJob including `result`.",
+              "enum": [
+                "summary",
+                "full"
+              ],
+              "title": "View",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -82607,11 +83135,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ScanJob"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ScanJobSummaryResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ScanJob"
+                    }
+                  ],
+                  "title": "Response 200 Get Scan V1 Scan  Job Id  Get"
                 }
               }
             },
-            "description": "Successful Response"
+            "description": "``view=summary`` (default) returns ScanJobSummaryResponse; ``view=full`` returns ScanJob."
           },
           "4XX": {
             "content": {
@@ -83426,7 +83962,7 @@
     },
     "/v1/scan/{job_id}/stream": {
       "get": {
-        "description": "Server-Sent Events stream for real-time scan progress.\n\nConnect with EventSource:\n    const es = new EventSource('/v1/scan/{job_id}/stream');\n    es.onmessage = e => console.log(JSON.parse(e.data));",
+        "description": "Server-Sent Events stream for real-time scan progress.\n\nConnect with EventSource:\n    const es = new EventSource('/v1/scan/{job_id}/stream');\n    es.onmessage = e => console.log(JSON.parse(e.data));\n\nWorks on any replica: a job running elsewhere is followed through the\ndurable job store, and the stream always ends with a ``done`` event once\nthe job reaches a terminal status.",
         "operationId": "stream_scan_v1_scan__job_id__stream_get",
         "parameters": [
           {

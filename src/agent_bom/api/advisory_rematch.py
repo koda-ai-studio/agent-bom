@@ -30,10 +30,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
-from agent_bom.api import health_models
+from agent_bom.api import health_models, leader_lock
 from agent_bom.api.advisory_affected_read import persist_tenant_advisories
 from agent_bom.api.finding_job_metadata import FindingHistoryJob
 from agent_bom.api.findings_current import current_scan_jobs
+from agent_bom.api.leader_lock import ADVISORY_REMATCH_LEADER_LOCK_ID, cluster_leader_lock
 from agent_bom.api.models import JobStatus
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
 from agent_bom.api.storage.finding_history import HistoryUnavailableError, metadata_for_job
@@ -427,17 +428,28 @@ def start_advisory_rematch_task() -> asyncio.Task[None] | None:
 
 
 async def advisory_rematch_loop(*, feed_source: FeedSource = local_feed_advisories_since) -> None:
-    """API-lifespan loop; off unless ``AGENT_BOM_ADVISORY_REMATCH`` is set."""
+    """API-lifespan loop; off unless ``AGENT_BOM_ADVISORY_REMATCH`` is set.
+
+    A run advances shared per-tenant cursors and persists findings, so on a
+    clustered control plane only the advisory-lock leader runs it.
+    """
     interval = rematch_interval_seconds()
-    while True:
-        try:
-            summary = await asyncio.to_thread(run_rematch_once, feed_source=feed_source)
-            logger.info("Advisory re-match %s across %d tenant(s)", summary["status"], summary["tenants_examined"])
-        except asyncio.CancelledError:
-            raise
-        except Exception:  # broad-except: the loop must survive and report the failed run
-            health_models.ADVISORY_REMATCH_LAST_RUN.update(
-                {"last_run_at": datetime.now(timezone.utc).isoformat(), "last_run_status": "incomplete"}
-            )
-            logger.error("Advisory re-match run failed; cursors unchanged")
-        await asyncio.sleep(interval)
+    lock = cluster_leader_lock(ADVISORY_REMATCH_LEADER_LOCK_ID, "Advisory re-match")
+    try:
+        while True:
+            if not await asyncio.to_thread(lock.ensure):
+                await asyncio.sleep(leader_lock.standby_poll_seconds(interval))
+                continue
+            try:
+                summary = await asyncio.to_thread(run_rematch_once, feed_source=feed_source)
+                logger.info("Advisory re-match %s across %d tenant(s)", summary["status"], summary["tenants_examined"])
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # broad-except: the loop must survive and report the failed run
+                health_models.ADVISORY_REMATCH_LAST_RUN.update(
+                    {"last_run_at": datetime.now(timezone.utc).isoformat(), "last_run_status": "incomplete"}
+                )
+                logger.error("Advisory re-match run failed; cursors unchanged")
+            await asyncio.sleep(interval)
+    finally:
+        lock.release()

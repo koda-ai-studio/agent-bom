@@ -84,7 +84,7 @@ def test_index_lists_every_large_section_with_counts(empty_estate_client) -> Non
 
 def test_paging_every_section_reproduces_the_full_redacted_result(empty_estate_client) -> None:  # noqa: F811
     job = _put()
-    full = _get(empty_estate_client, f"/v1/scan/{job.job_id}").json()["result"]
+    full = _get(empty_estate_client, f"/v1/scan/{job.job_id}?view=full").json()["result"]
     assert SECRET not in json.dumps(full)
     index = _get(empty_estate_client, f"/v1/scan/{job.job_id}/result").json()
     rebuilt = dict(index["summary"])
