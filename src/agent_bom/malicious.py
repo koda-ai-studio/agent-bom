@@ -178,20 +178,18 @@ _EDIT1_MIN_LEN = 6
 
 
 def _single_substitution(a: str, b: str) -> bool:
-    """Return True when equal-length ``a`` and ``b`` differ in exactly one char.
+    """Return True when equal-length ``a`` and ``b`` differ by one substituted char or one adjacent swap.
 
-    Restricting to equal length (a pure substitution) avoids flagging legitimate
-    length-shifted neighbours such as ``panda`` vs ``pandas``.
+    Restricting to equal length (a pure substitution or transposition, as in
+    ``djanga`` or ``lodahs``) avoids flagging legitimate length-shifted
+    neighbours such as ``panda`` vs ``pandas``.
     """
     if len(a) != len(b):
         return False
-    diff = 0
-    for ca, cb in zip(a, b):
-        if ca != cb:
-            diff += 1
-            if diff > 1:
-                return False
-    return diff == 1
+    diffs = [i for i, (ca, cb) in enumerate(zip(a, b)) if ca != cb]
+    if len(diffs) == 1:
+        return True
+    return len(diffs) == 2 and diffs[1] == diffs[0] + 1 and a[diffs[0]] == b[diffs[1]] and a[diffs[1]] == b[diffs[0]]
 
 
 # Real squats are one or two edits from their target (``urlib3``, ``reqeusts``,
@@ -307,7 +305,44 @@ def check_typosquat(name: str, ecosystem: str, threshold: float = 0.85) -> str |
         return None
 
     legitimate = _KNOWN_LEGITIMATE.get(eco, frozenset()) | _ESTABLISHED.get(eco, frozenset())
-    return typosquat_target(normalized, eco, popular, legitimate, threshold)
+    scoped = _split_npm_scope(normalized) if eco == "npm" else None
+    if scoped is None:
+        return typosquat_target(normalized, eco, popular, legitimate, threshold)
+    return _scoped_typosquat_target(normalized, *scoped, popular, legitimate, threshold)
+
+
+def _split_npm_scope(name: str) -> tuple[str, str] | None:
+    """``@scope/rest`` -> ``(scope, rest)``; None for an unscoped or malformed name."""
+    if not name.startswith("@") or "/" not in name:
+        return None
+    scope, _, rest = name[1:].partition("/")
+    return (scope, rest) if scope and rest else None
+
+
+def _same_project_family(scope: str, target: str) -> bool:
+    """True when ``target`` is the scope's own unscoped package family (``rollup-*`` for ``@rollup``).
+
+    npm scopes are owned namespaces: only the rollup organisation can publish
+    under ``@rollup/``, so ``@rollup/plugin-babel`` resembling the older
+    ``rollup-plugin-babel`` is the project migrating to its scope, not a squat.
+    A scope that merely resembles the project (``@rolup``) is not the family.
+    """
+    root = target.split("-", 1)[0]
+    return scope in (root, f"{root}js", target)
+
+
+def _scoped_typosquat_target(
+    name: str, scope: str, rest: str, popular: frozenset[str], legitimate: frozenset[str], threshold: float
+) -> str | None:
+    """Scoped npm squats imitate either the unscoped project (``@rolup/plugin-babel``) or a popular name (``@x/expresss``)."""
+    flattened = f"{scope}-{rest}"
+    if flattened in popular or rest in popular:
+        return None
+    for form in (name, flattened, rest):
+        target = typosquat_target(form, "npm", popular, legitimate, threshold)
+        if target:
+            return None if _same_project_family(scope, target) else target
+    return None
 
 
 # ── Dependency confusion detection ─────────────────────────────────────────
