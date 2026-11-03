@@ -683,3 +683,24 @@ def test_dashboard_gateway_command_is_inside_the_scanned_tree() -> None:
     cva = _load_script("check_version_alignment.py")
     scanned = {cva._rel(path) for path in cva._iter_files()}
     assert "ui/lib/deployment-context.ts" in scanned
+
+
+def test_platform_eks_module_installs_the_published_oci_chart() -> None:
+    """The Terraform module must not default to the repo chart (unreleased image tags on main)."""
+    cva = _load_script("check_version_alignment.py")
+    variables = (ROOT / "deploy/terraform/platform-eks/variables.tf").read_text()
+    main_tf = (ROOT / "deploy/terraform/platform-eks/main.tf").read_text()
+    published = cva.published_version()
+    assert re.search(r'variable "chart_repository" \{[^}]*default\s*=\s*"oci://ghcr\.io/koda-ai-studio/charts"', variables)
+    assert re.search(r'variable "chart_path" \{[^}]*default\s*=\s*"agent-bom"', variables)
+    assert re.search(rf'variable "chart_version" \{{[^}}]*default\s*=\s*"{re.escape(published)}"', variables)
+    assert main_tf.count("repository = var.chart_repository") == 2
+
+
+def test_platform_eks_chart_version_is_a_managed_published_pin() -> None:
+    cva = _load_script("check_version_alignment.py")
+    text = 'variable "chart_version" {\n  description = "x"\n  type        = string\n  default     = "0.104.0"\n}\n'
+    rel = "deploy/terraform/platform-eks/variables.tf"
+    assert cva.scan_text(rel, text, "0.106.0", published="0.104.0") == []
+    drift = cva.scan_text(rel, text, "0.106.0", published="0.105.0")
+    assert len(drift) == 1 and "Terraform chart pin" in drift[0], drift
