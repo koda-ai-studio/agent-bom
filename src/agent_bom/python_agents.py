@@ -42,6 +42,7 @@ from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.ast_signal_utils import is_agent_tool_decorator
 from agent_bom.core.packages import normalize_package_name
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
+from agent_bom.parsers.workspace_members import first_party_frameworks
 
 # ─── Framework registry ───────────────────────────────────────────────────────
 # Maps canonical PyPI package name → (display_name, framework_key, import_roots)
@@ -527,26 +528,16 @@ def _definition_identity(project: Path, d: _PythonAgentDef) -> tuple[str, str, d
     return qualified, config_path, metadata
 
 
-def _first_party_frameworks(project: Path) -> frozenset[str]:
-    """Framework keys the scanned repository builds itself (workspace root or member)."""
-    from agent_bom.parsers.workspace_members import first_party_package_names
-
-    first_party = first_party_package_names(project)["pypi"]
-    return frozenset(fkey for pkg_name, (_, fkey, _) in _FRAMEWORKS.items() if normalize_package_name(pkg_name, "pypi") in first_party)
-
-
 def _build_agents(
     project: Path, agent_defs: list[_PythonAgentDef], framework_packages: dict[str, list[Package]], warnings: list[str]
 ) -> list[Agent]:
     """One Agent per definition; an undeclared third-party framework is warned about once per file."""
     agents: list[Agent] = []
     undeclared_warned: set[tuple[str, str]] = set()
-    first_party = _first_party_frameworks(project)
+    first_party = first_party_frameworks(project, {pkg: fkey for pkg, (_, fkey, _) in _FRAMEWORKS.items()})
     for d in agent_defs:
         pkgs = framework_packages.get(d.framework, [])
 
-        # A first-party framework is the repository's own code: no registry
-        # package to scan and nothing missing from its requirements.
         if not pkgs and d.framework not in first_party:
             # Framework not in requirements but used in code — add as unknown version
             pkgs = [
@@ -556,7 +547,6 @@ def _build_agents(
                     ecosystem="pypi",
                 )
             ]
-            # One warning per (framework, file), not one per agent call in the file.
             if (d.framework, d.file) not in undeclared_warned:
                 undeclared_warned.add((d.framework, d.file))
                 warnings.append(

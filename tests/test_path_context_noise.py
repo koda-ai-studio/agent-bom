@@ -19,7 +19,8 @@ from agent_bom.core.path_context import classify_path_context
 from agent_bom.models import AIBOMReport, Severity
 from agent_bom.sast import _parse_sarif_findings
 from agent_bom.scanners.secret_models import SecretFinding
-from agent_bom.secret_scanner import apply_path_context, scan_secrets
+from agent_bom.scanners.secret_path_context import apply_path_context
+from agent_bom.secret_scanner import scan_secrets
 
 # Assembled at runtime so no real-shaped secret is committed.
 _PASSWORD = "Pr0d" + "Passw0rd" + "!x9"
@@ -123,8 +124,6 @@ def test_ast_flow_in_example_is_low_and_labelled_through_the_unified_stream() ->
         entrypoint="build",
         sink="child_process.exec",
     )
-    assert flow.severity == "low"
-    assert flow.path_context == "example"
 
     production = FlowFinding(
         category="tainted_command_execution",
@@ -135,12 +134,11 @@ def test_ast_flow_in_example_is_low_and_labelled_through_the_unified_stream() ->
         entrypoint="build",
         sink="child_process.exec",
     )
-    assert production.severity == "critical"
-    assert production.path_context == ""
-
     from agent_bom.ast.flow_serialize import flow_finding_rows
 
     rows = flow_finding_rows([flow, production])
+    assert (rows[0]["severity"], rows[0]["path_context"]) == ("low", "example")
+    assert rows[1]["severity"] == "critical" and "path_context" not in rows[1]
     report = AIBOMReport(ai_inventory_data={"ast_analysis": {"flow_findings": rows}}, scan_sources=["ast_analysis"])
     by_file = {f.asset.location: f for f in report.to_findings()}
     assert by_file["examples/gulpfile.js"].severity == "low"

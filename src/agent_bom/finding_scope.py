@@ -85,8 +85,7 @@ FINDING_SEVERITY_FILTERS: tuple[FindingSeverityFilter, ...] = (
 
 # Exploitable code, content or component: weaknesses, malicious artifacts, observed attacks.
 _VULNERABILITY_TYPES = {"CVE", "MALICIOUS_PACKAGE", "MALICIOUS_MODEL", "SAST", "INJECTION", "MCP_BLOCKLIST", "EXFILTRATION", "CLOAKING"}
-# Posture of how assets are set up or governed. Mirrored in ui/lib/finding-issue-type.ts
-# (pinned by tests/test_finding_class_parity.py).
+# Posture of how assets are set up or governed; mirrored in ui/lib/finding-issue-type.ts (pinned by test_finding_class_parity.py).
 _MISCONFIGURATION_TYPES = {
     "CIS_FAIL",
     "CIS_ERROR",
@@ -374,10 +373,8 @@ def _is_iac_misconfig(source: "FindingSource | None", ftype: "FindingType", ev: 
     """
     from agent_bom.finding import FindingType
 
-    if ftype == FindingType.IAC_MISCONFIGURATION:
-        return True
     if ftype != FindingType.CIS_FAIL:
-        return False
+        return ftype == FindingType.IAC_MISCONFIGURATION
     if ev.get("iac"):
         return True
     marker = " ".join(str(ev.get(key) or "") for key in ("category", "scan_type", "framework", "resource_type", "source_kind")).lower()

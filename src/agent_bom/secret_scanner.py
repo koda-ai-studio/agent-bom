@@ -30,7 +30,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agent_bom import config
-from agent_bom.core.path_context import CONTEXT_SEVERITY, classify_path_context, context_downgrade_reason
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.runtime.patterns import PII_PATTERNS
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator
@@ -42,6 +41,7 @@ from agent_bom.scanners.secret_lines import ENTROPY_PLACEHOLDER_RE as _ENTROPY_P
 from agent_bom.scanners.secret_lines import is_comment_line, match_credential, match_file_secret
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
+from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
 from agent_bom.scanners.source_pii import machine_identity_match, source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
@@ -464,30 +464,6 @@ def _scan_file(
             findings.extend(_entropy_findings(line, rel_path, line_num))
 
     return apply_path_context(rel_path, findings)
-
-
-# Go `testdata/` and JS `__fixtures__`/`__mocks__` hold sample inputs beside the
-# code under test; docs and examples hold illustrative snippets. Unlike `tests/`
-# (never scanned), they are scanned and kept: a real credential left there is
-# still a leak, so the finding is labelled and lowered, not hidden. A credential
-# a provider confirmed live keeps its severity wherever it sits.
-_FIXTURE_DIRS = frozenset({"testdata", "__fixtures__", "__mocks__"})
-
-
-def apply_path_context(rel_path: str, findings: list[SecretFinding]) -> list[SecretFinding]:
-    """Label findings in documentation/example/test paths and lower them to ``low``."""
-    context = classify_path_context(rel_path)
-    if context is None:
-        return findings
-    fixture_dir = next((part for part in Path(rel_path).parts[:-1] if part in _FIXTURE_DIRS), None)
-    reason = f"test fixture path ({fixture_dir}); verify the value is synthetic" if fixture_dir else context_downgrade_reason(context)
-    for finding in findings:
-        finding.path_context = context
-        if finding.validation_status == "valid":
-            continue
-        finding.severity = CONTEXT_SEVERITY
-        finding.downgrade_reason = reason
-    return findings
 
 
 # RFC 5737 reserves these purely for documentation and examples; Python's

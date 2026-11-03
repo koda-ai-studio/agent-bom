@@ -360,7 +360,6 @@ _FINDING_TYPE_ADDITIONS: dict[FindingType, tuple[str, ...]] = {
     FindingType.CIS_ERROR: (FRAMEWORK_CIS,),
     FindingType.CLOUD_BEST_PRACTICE_FAIL: (),
     FindingType.CLOUD_BEST_PRACTICE_ERROR: (),
-    FindingType.IAC_MISCONFIGURATION: (),
 }
 
 

@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 
 from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_severity
 from agent_bom.ast.flow_serialize import flow_finding_rows
-from agent_bom.core.path_context import CONTEXT_SEVERITY, classify_path_context, context_downgrade_reason
 
 
 @dataclass
@@ -90,17 +89,10 @@ class FlowFinding:
     severity: str = ""
     cwe_ids: list[str] = field(default_factory=list)
     suppression: str = ""  # reviewer marker text (``nosec B608 - why``) when an inline marker waives it
-    path_context: str = ""  # documentation | example | test when the file is illustrative context
-    downgrade_reason: str = ""
 
     def __post_init__(self) -> None:
         self.severity = self.severity or flow_severity(self.category)
         self.cwe_ids = self.cwe_ids or flow_cwe_ids(self.category, self.sink)
-        context = classify_path_context(self.file_path)
-        if context is not None:
-            self.path_context = context
-            self.severity = CONTEXT_SEVERITY
-            self.downgrade_reason = context_downgrade_reason(context)
 
 
 @dataclass

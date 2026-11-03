@@ -125,6 +125,15 @@ def is_virtualenv_root(dirpath: Path) -> bool:
         return False
 
 
+def skip_walk_child(candidate: Path, depth: int, skip: frozenset[str]) -> bool:
+    """Directory-walk filter: policy names, hidden children, file symlinks/loops and virtualenvs."""
+    if candidate.name in skip or (candidate.name.startswith(".") and depth > 0):
+        return True
+    if candidate.is_symlink() and not candidate.is_dir():
+        return True
+    return is_virtualenv_root(candidate)
+
+
 def symlink_reason(link: Path, root: Path, kind: str) -> str:
     """Classify a symlink the walk does not follow.
 

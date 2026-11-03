@@ -328,8 +328,8 @@ def _source_unavailable_warning(family: str, release: str, pkg_count: int) -> di
     ).to_dict()
 
 
-def _record_end_of_life_notes(packages: Sequence["Package"]) -> None:
-    """Record one informational note per end-of-life OS release in the target."""
+def _record_end_of_life_notes(packages: Sequence["Package"]) -> dict[tuple[str, str], int]:
+    """Record one informational note per end-of-life OS release; returns an empty tally to seed the caller."""
     from agent_bom.core.distro_eol import end_of_life_detail, end_of_life_release
 
     counts: dict[tuple[str, str], int] = {}
@@ -341,6 +341,7 @@ def _record_end_of_life_notes(packages: Sequence["Package"]) -> None:
         record = end_of_life_release(release_key)
         if record is not None:
             record_scan_note(ecosystem=family, path=release_key, reason="distro_end_of_life", detail=end_of_life_detail(record, count))
+    return {}
 
 
 def detect_release_coverage_gaps(
@@ -361,8 +362,7 @@ def detect_release_coverage_gaps(
         complete or the local DB has no data for the relevant distro families.
     """
     groups: dict[tuple[str, str], int] = {}
-    unsupported: dict[tuple[str, str], int] = {}
-    _record_end_of_life_notes(packages)
+    unsupported: dict[tuple[str, str], int] = _record_end_of_life_notes(packages)
     for pkg in packages:
         source_gap = _unsupported_rpm_release(pkg)
         if source_gap is not None:

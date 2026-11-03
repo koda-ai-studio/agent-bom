@@ -101,3 +101,9 @@ def first_party_package_names(root: Path) -> dict[str, set[str]]:
     """``{ecosystem: names}`` for the packages *root* builds (pypi names normalized)."""
     root = Path(root)
     return {"pypi": _pypi_names(root), "npm": _npm_names(root), "cargo": _cargo_names(root)}
+
+
+def first_party_frameworks(root: Path, framework_by_package: dict[str, str]) -> frozenset[str]:
+    """Framework keys whose PyPI package is the repository's own workspace root or member."""
+    first_party = _pypi_names(Path(root))
+    return frozenset(key for package, key in framework_by_package.items() if normalize_package_name(package, "pypi") in first_party)
