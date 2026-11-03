@@ -28,6 +28,11 @@ async def call_with_request_tenant(
         if not_found is not None:
             return not_found
         return JSONResponse(status_code=403, content={"detail": "Forbidden — operation has no authorization policy"})
+    from agent_bom.api.demo_tenant_guard import demo_tenant_ingest_rejection
+
+    demo_rejection = demo_tenant_ingest_rejection(request.method, request.url.path, tenant_id)
+    if demo_rejection is not None:
+        return demo_rejection
     request.state.tenant_id = tenant_id
     if authenticate is not None:
         from agent_bom.api.stream_authorization import bind_http_stream_authorization
