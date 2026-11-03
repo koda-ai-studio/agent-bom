@@ -166,8 +166,10 @@ it("keeps attached findings identifiable, severity-bearing, highlighted and mark
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "CVE-2025-29927", nodeType: "vulnerability",
     severity: "critical", isKev: true, highlighted: true, readingFinding: true, readingLabel: "Vulnerability", readingOwner: "checkout" }} /></ReactFlowProvider>);
   expect(screen.getByText("CVE-2025-29927")).toBeVisible();
-  expect(screen.getByText("Critical · Vulnerability")).toBeVisible();
+  expect(screen.getByText("Vulnerability")).toBeVisible();
+  expect(container.querySelector("[data-finding-severity]")).toHaveTextContent("critical severity");
+  expect(container.querySelector("[data-graph-entity]")?.getAttribute("title")).toContain("Critical severity");
   expect(screen.getByText("KEV")).toBeVisible();
   expect(container.querySelector("[data-finding-owner]")).toHaveAttribute("data-finding-owner", "checkout");
-  expect(container.querySelector("[data-graph-entity]")).toHaveClass("ring-2");
+  expect(container.querySelector(".graph-entity-glyph")).toHaveClass("ring-2");
 });

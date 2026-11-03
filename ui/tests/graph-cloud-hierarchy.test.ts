@@ -21,7 +21,7 @@ const edges = [edge("account", "cluster", "contains"), edge("account", "gateway"
   edge("checkout", "role", "authenticates_as"), edge("role", "bucket", "has_permission"),
   edge("checkout", "cve", "vulnerable_to"), edge("grant-finding", "role", "affects")];
 
-it("separates hosting, applications, identities and data, with findings below their assets", () => {
+it("branches recorded findings from their assets while preserving access order", () => {
   const result = graphHierarchyLayout(nodes, edges);
   const byId = new Map(result.nodes.map(n => [n.id, n]));
   expect(byId.get("cluster")!.position.x).toBe(byId.get("gateway")!.position.x);
@@ -29,15 +29,15 @@ it("separates hosting, applications, identities and data, with findings below th
   const chain = ["account", "cluster", "checkout", "role", "bucket"].map(id => byId.get(id)!.position.x);
   expect(chain.every((x, i) => i === 0 || x > chain[i - 1]!)).toBe(true);
   for (const [finding, owner] of [["cve", "checkout"], ["grant-finding", "role"]]) {
-    expect(byId.get(finding!)!.position.x).toBe(byId.get(owner!)!.position.x);
-    expect(byId.get(finding!)!.position.y - byId.get(owner!)!.position.y).toBeGreaterThanOrEqual(324);
+    expect(byId.get(finding!)!.position.x).toBeGreaterThan(byId.get(owner!)!.position.x);
+    expect(byId.get(finding!)!.data.readingOwner).toBe(owner);
   }
   expect(byId.get("role")!.data.readingLabel).toBe("Permission role");
   expect(byId.get("checkout")!.data.readingLabel).toBe("Application");
   expect(result.edges.map(e => [e.source, e.target, e.markerEnd, e.data?.relationship])).toEqual(edges.map(e => [e.source, e.target, e.markerEnd, e.data?.relationship]));
   const captions = readableGraphEdges(result.edges);
-  expect(captions.find(e => e.data?.relationship === "authenticates_as")!.label).toBeTruthy();
-  expect(captions.find(e => e.data?.relationship === "has_permission")!.label).toMatch(/modeled/i);
+  expect(captions.find(e => e.data?.relationship === "authenticates_as")!.ariaLabel).toMatch(/Authenticates As.*modeled/i);
+  expect(captions.find(e => e.data?.relationship === "has_permission")!.ariaLabel).toMatch(/modeled/i);
 });
 
 it("is deterministic and preserves original records and modeled evidence", () => {
@@ -72,18 +72,18 @@ it("reserves full captions and separates every node without dropping disconnecte
 it("explains each connection and separates findings from infrastructure entities", () => {
   const result = graphHierarchyLayout(nodes, edges);
   const displayed = declutterRelationshipLabels(readableGraphEdges(result.edges));
-  expect(displayed.filter(edge => !["hosts", "contains", "affects", "vulnerable_to"].includes(String(edge.data?.relationship))).every(edge => typeof edge.label === "string" && edge.label.length > 0)).toBe(true);
+  expect(displayed.every(edge => edge.data?.quietLabel && edge.ariaLabel?.includes("relationship from"))).toBe(true);
   expect(displayed.some(edge => String(edge.label).includes("×"))).toBe(false);
   expect(result.nodes.find(node => node.id === "grant-finding")!.data.readingFinding).toBe(true);
-  expect(displayed.find(edge => edge.data?.relationship === "authenticates_as")!.label).toContain("Uses role");
+  expect(result.edges.find(edge => edge.data?.relationship === "authenticates_as")!.label).toContain("Uses role");
 });
 
 
 it("anchors containment counts to their source asset and keeps access links explicit", () => {
   const result = graphHierarchyLayout(nodes, edges);
   const cluster = result.nodes.find(n => n.id === "cluster")!;
-  expect(cluster.data.readingConnections).toEqual([{ relationship: "hosts", label: "Hosts ×2", targets: ["checkout", "ledger"] }]);
-  expect(result.nodes.find(n => n.id === "account")!.data.readingConnections).toEqual([{ relationship: "contains", label: "Contains ×2", targets: ["cluster", "gateway"] }]);
+  expect(cluster.data.readingConnections).toEqual([{ relationship: "hosts", label: "2 applications", targets: ["checkout", "ledger"] }]);
+  expect(result.nodes.find(n => n.id === "account")!.data.readingConnections).toEqual([{ relationship: "contains", label: "2 resources", targets: ["cluster", "gateway"] }]);
   expect(result.edges.filter(e => e.data?.relationship === "hosts").every(e => e.data?.quietLabel)).toBe(true);
   expect(result.nodes.find(n => n.id === "role")!.data.readingGroup).toBe("Identities");
   expect(result.nodes.find(n => n.id === "cve")!.data.readingOwner).toBe("checkout");
@@ -101,5 +101,19 @@ it("distinguishes identity kinds without inventing role semantics or hidden inve
   const hidden = cloudHierarchyLayout(nodes.map(n => n.id === "ledger" ? { ...n, hidden: true } : n), edges)!;
   expect(hidden.nodes.find(n => n.id === "cluster")!.data.readingConnections).toEqual([]);
   const duplicates = cloudHierarchyLayout(nodes, [...edges, { ...edges[2]!, id: "duplicate-host-evidence" }])!;
-  expect(duplicates.nodes.find(n => n.id === "cluster")!.data.readingConnections?.[0]?.label).toBe("Hosts ×2");
+  expect(duplicates.nodes.find(n => n.id === "cluster")!.data.readingConnections?.[0]?.label).toBe("2 applications");
+});
+
+
+it("places assets by recorded parent depth, not by entity category", () => {
+  const result = cloudHierarchyLayout(nodes, edges.filter(e => e.target !== "ledger").concat(edge("account", "ledger", "hosts")))!;
+  const at = new Map(result.nodes.map(n => [n.id, n.position]));
+  expect(at.get("ledger")!.x).toBeLessThan(at.get("checkout")!.x);
+  expect(result.nodes.every(n => !n.style?.paddingTop)).toBe(true);
+});
+
+it("supports several uniquely owned findings without inventing ownership for shared findings", () => {
+  const result = cloudHierarchyLayout([...nodes, node("cve-2", "vulnerability")], [...edges, edge("checkout", "cve-2", "vulnerable_to")]);
+  expect(result).not.toBeNull();
+  expect(result!.nodes.find(n => n.id === "cve-2")!.data.readingOwner).toBe("checkout");
 });
