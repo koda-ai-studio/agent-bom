@@ -16,6 +16,7 @@ from agent_bom.api.models import JobStatus
 from agent_bom.api.read_models import documented
 from agent_bom.api.read_models.scan import ScanLicensesResponse, ScanResultIndexResponse, ScanResultSectionResponse, ScanVexResponse
 from agent_bom.api.remediation_view import CurrentRemediationResponse
+from agent_bom.api.routes.developer_evidence import router as developer_evidence_router
 from agent_bom.api.scan_graph_view import _context_graph_payload as _context_graph_payload
 from agent_bom.api.scan_graph_view import _graph_export_response as _graph_export_response
 from agent_bom.api.scan_graph_view import _scan_graph_compute_call as _scan_graph_compute_call
@@ -27,6 +28,7 @@ from agent_bom.evidence.scan_agent_bom import AgentSelectionError, build_scan_ag
 from agent_bom.rbac import require_authenticated_permission
 
 router = APIRouter()
+router.include_router(developer_evidence_router)
 
 
 @router.get("/scan/{job_id}/attack-flow", tags=["scan"])

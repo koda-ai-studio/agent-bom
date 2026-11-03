@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JobPipelinePanel } from "@/components/job-pipeline-panel";
 
-const mocks = vi.hoisted(() => ({ getScan: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getScanDashboard: vi.fn() }));
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
-  return { ...actual, api: { ...actual.api, getScan: mocks.getScan } };
+  return { ...actual, api: { ...actual.api, getScanDashboard: mocks.getScanDashboard } };
 });
 
 vi.mock("@/lib/use-scan-stream", () => ({
@@ -40,10 +40,10 @@ function chip(label: string): number | null {
 }
 
 describe("JobPipelinePanel result chips and stage telemetry", () => {
-  beforeEach(() => mocks.getScan.mockReset());
+  beforeEach(() => mocks.getScanDashboard.mockReset());
 
   it("takes findings and critical from the unified finding summary so critical never exceeds total", async () => {
-    mocks.getScan.mockResolvedValue(
+    mocks.getScanDashboard.mockResolvedValue(
       seededJob({
         total_agents: 5,
         total_servers: 10,
@@ -61,7 +61,7 @@ describe("JobPipelinePanel result chips and stage telemetry", () => {
   });
 
   it("drops a critical chip that cannot be reconciled with the findings total", async () => {
-    mocks.getScan.mockResolvedValue(
+    mocks.getScanDashboard.mockResolvedValue(
       seededJob({ total_packages: 23, total_vulnerabilities: 22, critical_findings: 103 }),
     );
     render(<JobPipelinePanel jobId="seeded-1" status="done" createdAt="2026-10-08T12:00:00Z" />);
@@ -71,14 +71,14 @@ describe("JobPipelinePanel result chips and stage telemetry", () => {
 
   it("does not call inventory-only evidence zero findings when no assessment count exists", async () => {
     const job = seededJob({});
-    mocks.getScan.mockResolvedValue({ ...job, result: { ...job.result, cloud_inventory: { resource_count: 12, identity_count: 3 } } });
+    mocks.getScanDashboard.mockResolvedValue({ ...job, result: { ...job.result, cloud_inventory: { resource_count: 12, identity_count: 3 } } });
     render(<JobPipelinePanel jobId="seeded-1" status="done" createdAt="2026-10-08T12:00:00Z" />);
     await waitFor(() => expect(chip("resources")).toBe(12));
     expect(chip("findings")).toBeNull();
   });
 
   it("hides stage timing rows and wall clock when no stage telemetry exists", async () => {
-    mocks.getScan.mockResolvedValue(seededJob({ total_packages: 23, total_vulnerabilities: 22 }));
+    mocks.getScanDashboard.mockResolvedValue(seededJob({ total_packages: 23, total_vulnerabilities: 22 }));
     render(<JobPipelinePanel jobId="seeded-1" status="done" createdAt="2026-10-08T12:00:00Z" />);
     await waitFor(() => expect(chip("findings")).toBe(22));
     expect(screen.queryByText("Stage timing")).not.toBeInTheDocument();

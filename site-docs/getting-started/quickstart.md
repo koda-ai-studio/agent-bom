@@ -47,6 +47,22 @@ and graph before printing Findings and Investigation links. Start the printed
 server command before opening them. Each run has a separate evidence directory;
 the command does not alter project files or apply fixes.
 
+A partial scan can also activate its retained evidence after both database
+readbacks succeed. Its receipt records `scan_outcome: partial`, the command
+still exits **1**, and the report retains `scan_run` and `coverage_warnings`.
+Failed scans or unverifiable graphs do not receive an activation receipt.
+
+Overview separates test/fixture, example, documentation and unclassified path
+contexts. Select a context to review matching Findings; headline posture still
+includes all contexts. Path names alone do not prove deployment or justify
+suppressing a finding. Original severities and compliance evidence remain.
+
+Dashboard reads omit bulk AST relationship lists. The authenticated
+`GET /v1/scan/{job_id}/dashboard` response links these lists under
+`result.analysis_sections`; follow each link with `offset` and `limit` (maximum
+1,000) to retrieve redacted pages. Full report reads and artifact downloads
+retain the relationship evidence.
+
 Add `--offline` to skip package-CVE lookup; zero CVEs then is not a clean
 security verdict. Non-default tenants require a matching authenticated
 principal. See the [first-run guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#activate-your-own-project-in-the-dashboard)

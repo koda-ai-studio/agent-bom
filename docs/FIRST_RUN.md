@@ -237,10 +237,13 @@ evidence directories are never overwritten. The directory contains:
 - `activation.json`: the exact scan ID, tenant, verified graph counts, report
   SHA-256, database locations and scan-specific Findings/Investigation links.
 
-The completion receipt is written only after the graph and completed scan are
-read back from the configured databases. A failed or incomplete scan retains
-available evidence without issuing a completion receipt. The hash identifies
-the report bytes; it does not authenticate a collector or verify remediation.
+An activation receipt is written only after the exact graph and scan report
+are read back from both configured databases. A partial scan with exit status
+1 can activate retained evidence: the receipt records `scan_outcome: partial`,
+the handoff warns about incomplete coverage, and the command still exits 1.
+Failed scans or unverifiable graph/job writes retain available evidence without
+a receipt. The hash identifies report bytes; it does not authenticate a
+collector or verify remediation.
 
 Start the printed server command before opening either link. For the default
 tenant it uses explicit loopback analyst mode. A non-default

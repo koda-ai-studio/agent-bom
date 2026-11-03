@@ -92,13 +92,29 @@ def activate_project(*, project: Path, evidence_dir: Path | None, offline: bool,
         raise click.ClickException(
             "Project scan did not complete. Retained evidence is incomplete; no activation receipt was issued."
         ) from None
-    if result.returncode != 0:
+    partial = False
+    if result.returncode == 1:
+        try:
+            payload = json.loads(report.read_text())
+            partial = (
+                isinstance(payload, dict) and isinstance(payload.get("scan_run"), dict) and payload["scan_run"].get("outcome") == "partial"
+            )
+        except (OSError, ValueError):
+            # Unreadable or malformed evidence cannot authorize partial activation.
+            partial = False
+    if result.returncode != 0 and not partial:
         raise click.ClickException(
             f"Project scan exited with status {result.returncode}. Retained evidence is incomplete; no activation receipt was issued."
         )
-    graph = quickstart._verify_persisted_graph(report_path=report, graph_db=graph_db, scan_started_at=started)
-    quickstart._persist_completed_scan(report, control_db, graph["scan_id"], started)
-    _receipt_and_handoff(project, destination, report, graph, control_db, graph_db, offline, port)
+    if partial:
+        graph = quickstart._verify_persisted_graph(report_path=report, graph_db=graph_db, scan_started_at=started, allow_partial=True)
+        quickstart._persist_completed_scan(report, control_db, graph["scan_id"], started, allow_partial=True)
+    else:
+        graph = quickstart._verify_persisted_graph(report_path=report, graph_db=graph_db, scan_started_at=started)
+        quickstart._persist_completed_scan(report, control_db, graph["scan_id"], started)
+    _receipt_and_handoff(project, destination, report, graph, control_db, graph_db, offline, port, partial=partial)
+    if partial:
+        raise click.exceptions.Exit(1)
 
 
 def _receipt_and_handoff(
@@ -110,6 +126,8 @@ def _receipt_and_handoff(
     graph_db: Path,
     offline: bool,
     port: int,
+    *,
+    partial: bool = False,
 ) -> None:
     tenant = resolve_cli_tenant_id_strict()
     base = f"http://127.0.0.1:{port}"
@@ -117,6 +135,7 @@ def _receipt_and_handoff(
     links = {"findings": f"{base}/findings?{query}", "investigation": f"{base}/security-graph?{query}"}
     receipt = {
         "schema_version": "project-activation.v1",
+        "scan_outcome": "partial" if partial else "complete",
         "tenant_id": tenant,
         "project": str(project),
         "report": str(report),
@@ -134,7 +153,10 @@ def _receipt_and_handoff(
             stream.write("\n")
     except OSError:
         raise click.ClickException("Scan and graph were retained, but the activation receipt could not be written.") from None
-    click.echo("\nProject activation complete. The exact scan and graph were read back from the configured local databases.")
+    if partial:
+        click.echo("\nPartial evidence activated. Coverage is incomplete; exit status remains 1. Review scan_run and coverage_warnings.")
+    else:
+        click.echo("\nProject activation complete. The exact scan and graph were read back from the configured local databases.")
     click.echo(f"JSON report: {report}")
     click.echo(f"Activation receipt: {destination / 'activation.json'}")
     click.echo(

@@ -1,4 +1,5 @@
 "use client";
+import { FindingContextFilter, CONTEXT_LABELS } from "@/components/finding-context-panel";
 import { DOMAIN_FILTERS,FindingsAdvancedFilters,WINDOW_OPTIONS,type ReachabilityFilter,type TriageFilter } from "@/components/findings/advanced-filters";
 
 import { ApiOfflineState } from "@/components/api-offline-state";
@@ -115,6 +116,9 @@ function FindingsPage() {
   const paramSla = searchParams.get("sla");
   const paramReachability = searchParams.get("reachability");
   const paramTriage = searchParams.get("triage");
+  const paramContext = searchParams.get("path_context") ?? "";
+  const [pathContextFilter, setPathContextFilter] = useState(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : "");
+  useEffect(() => { setPathContextFilter(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : ""); }, [paramContext]);
   // Compliance drill-through (epic #4790): a framework section id + optional
   // control code linked from the Compliance view's per-control finding count.
   const paramFramework = searchParams.get("framework");
@@ -319,6 +323,7 @@ function FindingsPage() {
     if (slaFilter) params.set("sla", slaFilter);
     if (reachabilityFilter) params.set("reachability", reachabilityFilter);
     if (triageFilter) params.set("triage", triageFilter);
+    if (pathContextFilter) params.set("path_context", pathContextFilter);
     if (frameworkFilter.trim()) params.set("framework", frameworkFilter.trim());
     // A control code without a framework is meaningless — only sync it alongside.
     if (frameworkFilter.trim() && controlFilter.trim()) params.set("control", controlFilter.trim());
@@ -339,7 +344,7 @@ function FindingsPage() {
     ownerFilter,
     slaFilter,
     reachabilityFilter,
-    triageFilter,
+    pathContextFilter, triageFilter,
     frameworkFilter,
     controlFilter,
     windowDays,
@@ -428,6 +433,7 @@ function FindingsPage() {
   }, [triageRows]);
 
   const handleExportVex = useCallback(async () => {
+    if (pathContextFilter) { setTriageError("Clear the path context filter before exporting signed VEX; this export covers all contexts."); return; }
     setVexExporting(true);
     setTriageError("");
     try {
@@ -476,7 +482,7 @@ function FindingsPage() {
     search,
     slaFilter,
     reachabilityFilter,
-    triageFilter,
+    pathContextFilter, triageFilter,
     windowDays,
   ]);
 
@@ -493,6 +499,7 @@ function FindingsPage() {
         const currentCursor = pageCursors[page - 1] || undefined;
         const findingQuery = search.trim() || deepLinkFinding;
         const response = await api.listFindings({
+          ...(pathContextFilter ? { pathContext: pathContextFilter } : {}),
           ...(paramScan ? { scanId: paramScan } : {}),
           ...(findingQuery ? { query: findingQuery } : {}),
           ...(filter !== "all" ? { severity: filter === "unrated" ? "unknown" : filter } : {}),
@@ -556,7 +563,7 @@ function FindingsPage() {
     ownerFilter,
     slaFilter,
     reachabilityFilter,
-    triageFilter,
+    pathContextFilter, triageFilter,
     frameworkFilter,
     controlFilter,
     lane,
@@ -604,7 +611,7 @@ function FindingsPage() {
     ownerFilter,
     slaFilter,
     reachabilityFilter,
-    triageFilter,
+    pathContextFilter, triageFilter,
     frameworkFilter,
     controlFilter,
     windowDays,
@@ -686,7 +693,7 @@ function FindingsPage() {
     setOwnerFilter("");
     setSlaFilter("");
     setReachabilityFilter("");
-    setTriageFilter("");
+    setTriageFilter(""); setPathContextFilter("");
     setFrameworkFilter("");
     setControlFilter("");
   };
@@ -859,6 +866,7 @@ function FindingsPage() {
                     />
                   )}
                 </div>
+                <FindingContextFilter value={pathContextFilter} onChange={setPathContextFilter} />
                 <div id="findings-table-controls" />
               </div>
 

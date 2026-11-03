@@ -1582,6 +1582,12 @@ async function fulfill(route, body, status = 200) {
 
 export async function installRoutes(page, fixtureGraph = graph) {
   const graph = fixtureGraph;
+  // The recorded gallery predates path-context collection; do not invent counts.
+  await page.route("**/v1/findings/context-summary", (route) => fulfill(route, {
+    schema_version: "1", contexts: [], count: 0, approximate: true,
+    basis: "Path context not recorded in this fixture",
+    warnings: ["Path context not recorded in this fixture"],
+  }));
   await page.route("**/v1/intel/sources", (route) => fulfill(route, intelSourcesFixture()));
   // Canonical persisted neighborhood fixture. IDs and edges come from the same
   // demo snapshot used by the other graph surfaces; no label-based joins.
@@ -1935,7 +1941,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
   });
   await page.route((url) => {
     try {
-      return new URL(url).pathname === `/v1/scan/${SCAN_ID}`;
+      return [`/v1/scan/${SCAN_ID}`, `/v1/scan/${SCAN_ID}/dashboard`].includes(new URL(url).pathname);
     } catch {
       return false;
     }
@@ -3447,7 +3453,7 @@ async function main() {
       await scrollTo(scanPage, top - 100);
     }, {
       expectedText: ["Collection partial", "2 of 3 requested scopes complete", "Download agent BOM", "Experimental profile"],
-      expectedApiPaths: [`/v1/scan/${SCAN_ID}`, `/v1/scan/${SCAN_ID}/status`],
+      expectedApiPaths: [`/v1/scan/${SCAN_ID}/dashboard`, `/v1/scan/${SCAN_ID}/status`],
       assertNoHorizontalOverflow: true,
     });
     const jobsProofPage = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 980 });
@@ -3507,7 +3513,7 @@ async function main() {
     }, {
       expectedText: [/scan pipeline dag/i, /6\/6 stages complete/i, /wall clock 2m 0s/i, /timing & activity/i, "12.0s"],
       rejectedText: [/Loading jobs/i, /Loading persisted pipeline events/i, /Stage telemetry unavailable/i],
-      expectedApiPaths: ["/v1/jobs", `/v1/scan/${SCAN_ID}`],
+      expectedApiPaths: ["/v1/jobs", `/v1/scan/${SCAN_ID}/dashboard`],
       minGraphNodes: 6,
       minGraphEdges: 5,
     });

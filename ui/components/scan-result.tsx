@@ -56,7 +56,7 @@ export function ScanResultView({ id }: { id: string }) {
     if (fetchedResultRef.current || fetchingResultRef.current) return;
     fetchingResultRef.current = true;
     try {
-      const fullJob = await api.getScan(id);
+      const fullJob = await api.getScanDashboard(id);
       if (activeJobIdRef.current === id) {
         setJob(fullJob);
         fetchedResultRef.current = true;
@@ -154,20 +154,24 @@ export function ScanResultView({ id }: { id: string }) {
     }
   }
 
-  function handleArtifactDownload() {
-    const format = job?.request?.format ?? "json";
-    const artifactDocument = format === "json" ? result : job?.result_document;
-    if (artifactDocument == null) return;
-    const content = typeof artifactDocument === "string" ? artifactDocument : JSON.stringify(artifactDocument, null, 2);
-    const blob = new Blob([content], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `scan-${id}.${scanArtifact.fileSuffix}`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+  async function handleArtifactDownload() {
+    setExportError("");
+    try {
+      const fullJob = await api.getScan(id);
+      const format = job?.request?.format ?? "json";
+      const artifactDocument = format === "json" ? fullJob.result : fullJob.result_document;
+      if (artifactDocument == null) return;
+      const content = typeof artifactDocument === "string" ? artifactDocument : JSON.stringify(artifactDocument, null, 2);
+      const blob = new Blob([content], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `scan-${id}.${scanArtifact.fileSuffix}`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch { setExportError("Unable to download the complete report. Retry the download."); }
   }
 
   return (

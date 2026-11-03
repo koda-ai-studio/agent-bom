@@ -12,6 +12,7 @@ from functools import lru_cache
 from typing import Any
 
 from agent_bom.atlas import ATLAS_TECHNIQUES
+from agent_bom.evidence.finding_context import finding_context
 
 _PROVENANCE_KEYS = frozenset(
     {
@@ -61,7 +62,7 @@ def catalog_remediation(row: Mapping[str, Any]) -> str | None:
 
 
 def restored_public_fields(row: Mapping[str, Any]) -> dict[str, Any]:
-    fields: dict[str, Any] = {}
+    fields: dict[str, Any] = {"path_context": finding_context(row)}
     reachability = row.get("reachability")
     if isinstance(reachability, str) and reachability in {"confirmed", "likely", "unknown", "unlikely"}:
         fields["reachability"] = reachability
