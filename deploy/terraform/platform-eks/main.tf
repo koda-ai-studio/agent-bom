@@ -469,8 +469,9 @@ resource "helm_release" "control_plane_secrets" {
   name      = "${var.name}-secret-sync"
   namespace = kubernetes_namespace.this.metadata[0].name
 
-  chart   = var.chart_path
-  version = var.chart_version != "" ? var.chart_version : null
+  repository = var.chart_repository != "" ? var.chart_repository : null
+  chart      = var.chart_path
+  version    = var.chart_version != "" ? var.chart_version : null
 
   timeout       = var.helm_timeout_seconds
   wait          = true
@@ -541,8 +542,9 @@ resource "helm_release" "control_plane" {
   name      = var.name
   namespace = kubernetes_namespace.this.metadata[0].name
 
-  chart   = var.chart_path
-  version = var.chart_version != "" ? var.chart_version : null
+  repository = var.chart_repository != "" ? var.chart_repository : null
+  chart      = var.chart_path
+  version    = var.chart_version != "" ? var.chart_version : null
 
   timeout       = var.helm_timeout_seconds
   wait          = true

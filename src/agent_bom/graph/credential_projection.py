@@ -22,6 +22,10 @@ def project_credentials(
         env_dict = srv_dict.get("env", {})
         if isinstance(env_dict, dict):
             env_keys = [k for k in env_dict if _is_credential_key(k)]
+    embedded = srv_dict.get("embedded_credential_names", [])
+    env_keys = env_keys if isinstance(env_keys, list) else []
+    embedded = embedded if isinstance(embedded, list) else []
+    env_keys = list(dict.fromkeys(key for key in [*env_keys, *embedded] if isinstance(key, str) and key.strip()))
     for env_key in env_keys:
         cred_id = f"cred:{srv_id}:{env_key}"
         _add_credential(graph, cred_id, srv_id, env_key, tool_ids, data_source_tag, configured_by)

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
+from agent_bom.core.sla import sla_status_text
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.finding import Finding
 from agent_bom.models import AIBOMReport
@@ -17,7 +20,28 @@ from agent_bom.output.html._common import (
 # ─── HTML sections ────────────────────────────────────────────────────────────
 
 
+def _trend_banner(report: "AIBOMReport") -> str:
+    """Better/worse than this target's previous local scan, when one was remembered."""
+    change = getattr(report, "since_last_scan", None)
+    if not change:
+        return ""
+    from agent_bom.core.trend import trend_sentence
+
+    sentence = trend_sentence(int(change.get("new", 0)), int(change.get("resolved", 0)), partial=bool(change.get("partial")))
+    when = _esc(str(change.get("previous_at") or "")[:16].replace("T", " "))
+    return (
+        '<div class="trend-banner" style="border:1px solid #334155;border-radius:8px;padding:10px 16px;'
+        'margin-bottom:12px;font-size:.85rem">'
+        f'<b>Trend</b>: {_esc(sentence)} <span style="color:#94a3b8;font-size:.75rem">previous scan {when}</span></div>'
+    )
+
+
 def _delta_banner(report: "AIBOMReport") -> str:
+    """Render the local trend and, with --delta, the delta-mode banner."""
+    return _trend_banner(report) + _delta_mode_banner(report)
+
+
+def _delta_mode_banner(report: "AIBOMReport") -> str:
     """Render a delta mode info banner when the scan used --delta."""
     scan_json = getattr(report, "_cached_json", None)
     delta = (scan_json or {}).get("delta") if scan_json else None
@@ -77,13 +101,14 @@ def _scan_outcome_banner(report: "AIBOMReport") -> str:
     )
 
 
-def _headline_row(finding: "Finding") -> dict[str, object]:
+def _headline_row(finding: "Finding", observed_at: datetime | None = None) -> dict[str, object]:
+    """Headline row; a finding with no recorded first sighting is anchored to this scan, as the JSON export does."""
     from agent_bom.graph.sla import finding_sla_fields
 
     sla = finding_sla_fields(
         {
             "severity": finding.effective_severity(),
-            "first_seen": finding.first_seen,
+            "first_seen": finding.first_seen or (observed_at.isoformat() if observed_at else None),
             "evidence": finding.evidence,
             "sla_due_at": finding.sla_due_at,
             "sla_due_at_source": finding.sla_due_at_source or ("explicit" if finding.sla_due_at is not None else None),
@@ -102,11 +127,20 @@ def _headline_row(finding: "Finding") -> dict[str, object]:
     }
 
 
-def _executive_headline_section(findings: list["Finding"], policy_findings: list["Finding"]) -> str:
+def _sla_cell(due_at: str | None, observed_at: datetime | None) -> str:
+    """Deadline plus its status as of the scan, so a report reads the same whenever it is opened."""
+    if not due_at:
+        return "no SLA set"
+    status = sla_status_text(due_at, now=observed_at)
+    return f"{due_at} ({status} at scan time)" if observed_at else f"{due_at} ({status})"
+
+
+def _executive_headline_section(findings: list["Finding"], policy_findings: list["Finding"], observed_at: datetime | None = None) -> str:
     """Leadership paragraph over every finding in the report, with owner/SLA as recorded."""
     from agent_bom.output.executive_headline import build_executive_headline
 
-    headline = build_executive_headline((_headline_row(finding) for finding in [*findings, *policy_findings]), include_risk_sentences=False)
+    rows_in = (_headline_row(finding, observed_at) for finding in [*findings, *policy_findings])
+    headline = build_executive_headline(rows_in, include_risk_sentences=False)
     rows = "".join(
         '<li class="headline-risk">'
         f"<h3>{_esc(risk.title)}</h3>"
@@ -115,7 +149,7 @@ def _executive_headline_section(findings: list["Finding"], policy_findings: list
         f"<dt>Recorded context</dt><dd>{_esc(', '.join(risk.affected_agents) or 'none recorded')}</dd>"
         f"<dt>Risk score</dt><dd>{f'{risk.risk_score:.1f}/10' if risk.risk_score is not None else 'unscored'}</dd>"
         f"<dt>Owner</dt><dd>{_esc(risk.owner or 'unassigned')}</dd>"
-        f"<dt>SLA target</dt><dd>{_esc(risk.sla_due_at or 'no SLA set')}</dd>"
+        f"<dt>SLA target</dt><dd>{_esc(_sla_cell(risk.sla_due_at, observed_at))}</dd>"
         '</dl><p class="headline-risk-note">SLA targets may come from configured policy.</p></details>'
         "</li>"
         for risk in headline.top_risks

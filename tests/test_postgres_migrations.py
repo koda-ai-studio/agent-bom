@@ -55,7 +55,7 @@ _FORK_GUARD_INDEX_CANON = "createuniqueindexifnotexistsaudit_log_team_prevsig_un
 
 # The newest migration. One place to update when a revision lands, so the
 # single-head property and the head's identity do not drift apart.
-ALEMBIC_HEAD = "20261027_03"
+ALEMBIC_HEAD = "20261102_01"
 
 
 def _canonical_sql(text: str) -> str:
@@ -1192,3 +1192,15 @@ def test_gateway_delivery_leases_grant_readonly_select_in_every_schema_path() ->
     # The outbox is drained only by app-role writers; the cross-tenant maintenance
     # role has no consumer and gets no new DML on audit evidence.
     assert "gateway_audit_outbox TO agent_bom_rls_maintenance" not in migration
+
+
+def test_iac_exception_scope_is_additive_chained_and_in_runtime_schema() -> None:
+    migration = (VERSIONS_DIR / "20261102_01_iac_exception_scope.py").read_text()
+    assert re.search(r'down_revision\s*=\s*"20261027_03"', migration)
+    runtime = (POSTGRES_DIR / "runtime-schema.sql").read_text()
+    for column in ("iac_rule_id", "iac_path", "iac_resource"):
+        ddl = f"ALTER TABLE exceptions ADD COLUMN IF NOT EXISTS {column} TEXT NOT NULL DEFAULT ''"
+        assert ddl in migration
+        assert ddl in runtime
+    assert "version=4" in migration and "version=4" in runtime
+    assert "DROP" not in migration.upper().replace("DROPPING", "")

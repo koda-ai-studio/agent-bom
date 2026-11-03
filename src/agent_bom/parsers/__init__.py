@@ -35,6 +35,7 @@ from agent_bom.parsers.compiled_parsers import (  # noqa: F401
 
 # Re-export .NET/NuGet parsers
 from agent_bom.parsers.dotnet_parsers import parse_nuget_packages  # noqa: F401
+from agent_bom.parsers.fixture_manifests import FixtureManifestScope
 
 # Re-export Node.js parsers for backward compatibility
 from agent_bom.parsers.node_parsers import (  # noqa: F401
@@ -68,7 +69,7 @@ from agent_bom.parsers.python_parsers import (  # noqa: F401
 # Re-export Ruby, PHP, and Swift parsers
 from agent_bom.parsers.ruby_parsers import parse_ruby_packages  # noqa: F401
 from agent_bom.parsers.swift_parsers import parse_swift_packages  # noqa: F401
-from agent_bom.traversal import _coverage_recorder, is_nested_worktree_root
+from agent_bom.traversal import _coverage_recorder, is_nested_worktree_root, skip_walk_child
 
 _ENTRY_POINT_GROUP = "agent_bom.inventory_parsers"
 
@@ -861,16 +862,13 @@ def scan_project_directory(
         max_depth: Maximum directory depth to descend (default 5).
         follow_symlinks: Whether to descend into symlinked directories.
         warnings: Optional list populated with skipped or cross-boundary paths.
-
-    Returns:
-        Dict mapping each manifest-bearing directory to its parsed packages.
-        Empty dict if no manifests are found.
     """
     root = Path(root).resolve()
     results: dict[Path, list[Package]] = {}
 
     visited_real: set[str] = set()
     report_gap = _coverage_recorder(root)
+    fixtures = FixtureManifestScope(root, report_gap, _LOCKFILE_FILES)
 
     def _warn(message: str) -> None:
         if warnings is not None:
@@ -883,15 +881,15 @@ def scan_project_directory(
         except ValueError:
             return False
 
-    def _walk(directory: Path, depth: int) -> None:
+    def _walk(directory: Path, depth: int, locked: bool = False) -> None:
         try:
-            _walk_directory(directory, depth)
+            _walk_directory(directory, depth, locked)
         except OSError:
             message = "Project package discovery incomplete: a directory or manifest could not be read."
             report_gap("read_error", message)
             _warn(message)
 
-    def _walk_directory(directory: Path, depth: int) -> None:
+    def _walk_directory(directory: Path, depth: int, locked: bool) -> None:
         if depth > max_depth:
             return
         if not os.access(directory, os.R_OK | os.X_OK):
@@ -905,7 +903,8 @@ def scan_project_directory(
             return
         visited_real.add(real)
 
-        if _has_manifest(directory):
+        parse, child_locked = fixtures.visit(directory, locked, _has_manifest(directory))
+        if parse:
             from agent_bom.parsers.project_packages import parse_project_packages
 
             if unique := parse_project_packages(directory):
@@ -914,7 +913,7 @@ def scan_project_directory(
         # Recurse into subdirectories
         subdirs = []
         for candidate in directory.iterdir():
-            if candidate.name in _SKIP_DIRS or (candidate.name.startswith(".") and depth > 0):
+            if skip_walk_child(candidate, depth, _SKIP_DIRS):
                 continue
             # A linked worktree/submodule is a second copy of the project;
             # descending into it counts every manifest twice.
@@ -932,7 +931,8 @@ def scan_project_directory(
                 subdirs.append(candidate)
 
         for subdir in sorted(subdirs):
-            _walk(subdir, depth + 1)
+            _walk(subdir, depth + 1, child_locked)
 
     _walk(root, 0)
+    fixtures.finish(_warn)
     return results

@@ -10,13 +10,20 @@ from datetime import datetime, timezone
 from functools import cache, partial
 from typing import Any
 
+from agent_bom import __version__
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.pipeline import _now
 from agent_bom.api.store import DEMO_ESTATE_TRIGGERED_BY
 from agent_bom.demo_estate import demo_estate_enabled as demo_estate_enabled
 from agent_bom.demo_estate.boot_seed import serialized_seed
+from agent_bom.demo_estate.enterprise import ENTERPRISE_SCHEMA_VERSION
+from agent_bom.demo_estate.enterprise_findings import ESTATE_FINDINGS_VERSION
+from agent_bom.demo_estate.enterprise_risk import ESTATE_RISK_VERSION
 from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks
 from agent_bom.demo_estate.estate_cis_catalog import estate_cis_passes
+from agent_bom.demo_estate.estate_graph import ESTATE_GRAPH_VERSION
+from agent_bom.demo_estate.feed_receipts import seed_demo_feed_receipts
+from agent_bom.demo_estate.maintenance import current_seed_summary
 from agent_bom.demo_estate.showcase_findings import append_showcase_graph_findings, bind_mcp_auth_findings, estate_scan_evidence
 from agent_bom.demo_estate.showcase_graph import (
     SHOWCASE_AGENTS,
@@ -25,6 +32,8 @@ from agent_bom.demo_estate.showcase_graph import (
     SHOWCASE_SCAN_ID,
     SHOWCASE_SERVERS,
     SHOWCASE_TENANT,
+    _existing_snapshots,
+    _showcase_seed_is_current,
     seed_showcase_fleet_and_runtime,
     seed_showcase_graph_if_empty,
     seed_showcase_identities,
@@ -37,6 +46,7 @@ from agent_bom.security import sanitize_error
 _logger = logging.getLogger(__name__)
 
 _TRUTHY = {"1", "true", "yes", "on"}
+DEMO_ESTATE_SEED_MARKER = (__version__, ENTERPRISE_SCHEMA_VERSION, ESTATE_GRAPH_VERSION, ESTATE_FINDINGS_VERSION, ESTATE_RISK_VERSION)
 
 # The UTC day the day-scoped demo evidence was last refreshed for. Guards the
 # per-request hook down to one string compare once the day is current.
@@ -370,29 +380,8 @@ def _graph_owner_scan_id(graph_store: Any, tenant_id: str) -> str:
     return ""
 
 
-@serialized_seed
-def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str, Any]:
-    """Seed showcase graph + curated findings when demo estate mode is enabled."""
-    if not demo_estate_enabled():
-        return _remember_bootstrap_status(
-            tenant_id,
-            {"enabled": False, "tenant_id": tenant_id, "seeded": False},
-        )
-
-    from agent_bom.api.stores import _get_graph_store, _get_store
-
-    if _demo_seed_block_reason(None, tenant_id):
-        return _blocked_summary(tenant_id, "demo_state_not_isolated")
-    graph_store = _get_graph_store()
-    block_reason = _demo_seed_block_reason(graph_store, tenant_id)
-    if block_reason:
-        return _blocked_summary(tenant_id, block_reason)
-    store = _get_store()
-    summary: dict[str, Any] = {"enabled": True, "tenant_id": tenant_id, "seeded": False}
-    force = demo_estate_force_reseed()
-    if force:
-        summary["force"] = True
-
+def _enterprise_contract_summary(tenant_id: str) -> dict[str, Any]:
+    summary: dict[str, Any] = {}
     # Validate and fingerprint the versioned synthetic-estate contract on every
     # demo boot. PRs that project this evidence into graph/runtime/UI surfaces
     # can now consume one deterministic source instead of inventing unrelated
@@ -414,6 +403,60 @@ def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str
     except Exception:
         _logger.warning("demo enterprise contract validation failed", exc_info=True)
         summary["enterprise_contract_error"] = True
+
+    return summary
+
+
+def _feed_receipt_summary() -> dict[str, Any]:
+    summary: dict[str, Any] = {}
+    try:
+        summary["feed_receipts"] = seed_demo_feed_receipts()
+    except Exception:
+        _logger.warning("demo feed receipt seed failed", exc_info=False)
+        summary["feed_receipts_error"] = True
+
+    return summary
+
+
+@serialized_seed
+def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str, Any]:
+    """Seed showcase graph + curated findings when demo estate mode is enabled."""
+    if not demo_estate_enabled():
+        return _remember_bootstrap_status(
+            tenant_id,
+            {"enabled": False, "tenant_id": tenant_id, "seeded": False},
+        )
+
+    from agent_bom.api.stores import _get_graph_store, _get_store
+
+    if _demo_seed_block_reason(None, tenant_id):
+        return _blocked_summary(tenant_id, "demo_state_not_isolated")
+    graph_store = _get_graph_store()
+    block_reason = _demo_seed_block_reason(graph_store, tenant_id)
+    if block_reason:
+        return _blocked_summary(tenant_id, block_reason)
+    store = _get_store()
+    summary: dict[str, Any] = {
+        "enabled": True,
+        "tenant_id": tenant_id,
+        "seeded": False,
+        "estate_seed_marker": list(DEMO_ESTATE_SEED_MARKER),
+    }
+    force = demo_estate_force_reseed()
+    if force:
+        summary["force"] = True
+
+    current = current_seed_summary(
+        get_demo_estate_bootstrap_status(tenant_id=tenant_id),
+        seed_marker=DEMO_ESTATE_SEED_MARKER,
+        usable_job=not force and _tenant_has_demo_jobs(store, tenant_id),
+        snapshots_current=_showcase_seed_is_current(_existing_snapshots(graph_store, tenant_id)),
+    )
+    if current is not None:
+        refresh_demo_daily_evidence(tenant_id=tenant_id)
+        return current
+
+    summary.update(_enterprise_contract_summary(tenant_id))
 
     # Graph seed is isolated and stale-aware: a real scan is left untouched, a
     # current demo seed is a no-op, and a stale demo seed is refreshed (see
@@ -506,6 +549,8 @@ def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str
     except Exception:
         _logger.warning("demo estate governance/cost seeding failed", exc_info=True)
         summary["governance_cost_error"] = True
+
+    summary.update(_feed_receipt_summary())
 
     # A refreshed demo graph must also receive matching scan evidence. Keep
     # prior demo jobs as history, then make subsequent boots a no-op again.

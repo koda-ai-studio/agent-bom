@@ -36,13 +36,14 @@ from agent_bom.iac.dbt_security import is_dbt_file, scan_dbt_file
 from agent_bom.iac.dcm import is_dcm_migration, scan_dcm_migration
 from agent_bom.iac.docker_daemon import is_docker_daemon_config, scan_docker_daemon
 from agent_bom.iac.dockerfile import scan_dockerfile
+from agent_bom.iac.exceptions import apply_iac_exceptions, cwd_relative_paths
 from agent_bom.iac.github_actions_rules import is_workflow_file, scan_github_workflow
 from agent_bom.iac.helm import scan_chart_yaml, scan_values_yaml
 from agent_bom.iac.helm_templates import chart_root_for_template, scan_chart_templates
 from agent_bom.iac.iam_policy import is_iam_policy_document, scan_iam_policy
 from agent_bom.iac.kubernetes import scan_k8s_manifest
 from agent_bom.iac.models import IaCFinding, ScanContext, ScannerVerdict, ScanResult, set_repository_context
-from agent_bom.iac.suppressions import apply_inline_suppressions
+from agent_bom.iac.suppressions import inline_lookup
 from agent_bom.iac.terraform_security import scan_terraform_security
 from agent_bom.traversal import iter_discovery_files
 
@@ -250,6 +251,15 @@ def _build_verdicts(
     return verdicts
 
 
+def _apply_controls(findings: list[IaCFinding], ctx: ScanContext, walk_root: Path) -> ScanResult:
+    """Inline markers, operator/tenant exceptions and policy allow rules, then policy warn/block, in one pass."""
+    paths = cwd_relative_paths(walk_root)
+    exceptions = list(ctx.exceptions) + (ctx.policy.allow_exceptions(paths) if ctx.policy else [])
+    outcome = apply_iac_exceptions(findings, exceptions, inline=inline_lookup(walk_root), paths=paths, today=ctx.today)
+    policy_result = ctx.policy.evaluate(outcome, paths) if ctx.policy else None
+    return ScanResult(findings=outcome.active, suppressed=outcome.suppressed, notices=outcome.notices, policy_result=policy_result)
+
+
 def scan_iac_with_context(
     root: str | Path,
     context: ScanContext | None = None,
@@ -363,11 +373,11 @@ def scan_iac_with_context(
         if not finding.atlas_techniques:
             finding.atlas_techniques = get_atlas_techniques(finding.rule_id, message=finding.message)
 
-    findings, suppressed = apply_inline_suppressions(findings, walk_root)
-    findings.sort(key=lambda f: (severity_worst_first_rank(f.severity), f.file_path, f.line_number))
-
-    verdicts = _build_verdicts(disabled, files_matched, verdict_reasons, ctx)
-    return ScanResult(findings=findings, verdicts=verdicts, not_evaluated=not_evaluated, suppressed=suppressed)
+    result = _apply_controls(findings, ctx, walk_root)
+    result.findings.sort(key=lambda f: (severity_worst_first_rank(f.severity), f.file_path, f.line_number))
+    result.verdicts = _build_verdicts(disabled, files_matched, verdict_reasons, ctx)
+    result.not_evaluated = not_evaluated
+    return result
 
 
 def scan_iac_directory(root: str | Path) -> list[IaCFinding]:

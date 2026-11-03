@@ -56,6 +56,7 @@ import { FrameworkIcon } from "@/components/framework-icon";
 import {
   canonicalFrameworkId,
   complianceFrameworkSummaries,
+  complianceHeadline,
   complianceScoredTotals,
   controlMatchesQuery,
   type ComplianceFrameworkSummary,
@@ -405,20 +406,21 @@ function CompliancePageContent() {
   // NIST catalog rescores evidence these rows already counted.
   const { pass: totalPass, warn: totalWarn, fail: totalFail } = complianceScoredTotals(frameworks);
   const frameworkCoverage = frameworkCoverageCounts(frameworks);
-  const overallNotEvaluated = isNotEvaluated(data.overall_status);
+  const headline = complianceHeadline(frameworks, data);
+  const overallNotEvaluated = headline.rate === null || isNotEvaluated(headline.status);
 
   const kpis: StatStripItem[] = [
     {
       label: "Evaluated pass rate",
-      value: overallNotEvaluated ? "—" : `${Math.round(data.overall_score)}%`,
-      accent: statusToAccent(data.overall_status),
+      value: overallNotEvaluated ? "Not scored" : `${headline.rate}%`,
+      accent: statusToAccent(headline.status),
       // The score is a percentage of EVALUATED controls, so it always ships its
       // denominator. Without it, passing the handful of controls a scan can
       // actually evaluate renders as a bare "100% / Compliant" over an estate
       // that was almost entirely unmeasured.
       hint: overallNotEvaluated
-        ? postureLabel(data.overall_status)
-        : `${postureLabel(data.overall_status)} · ${data.evaluated_controls} of ${data.total_controls} controls evaluated`,
+        ? `${postureLabel(headline.status)} · 0 of ${headline.total} controls evaluated`
+        : `${postureLabel(headline.status)} · ${headline.evaluated} of ${headline.total} controls evaluated`,
     },
     {
       label: "Control frameworks",
@@ -486,10 +488,16 @@ function CompliancePageContent() {
       header: "Fail",
       align: "right",
       sortable: true,
-      width: "4rem",
+      width: "5.5rem",
       cell: (f) =>
         f.kind === "applicability" ? (
-          <span className="text-[color:var(--text-tertiary)]">—</span>
+          <span
+            className="text-xs text-[color:var(--text-tertiary)]"
+            title="Applicability catalog: it records which techniques are in play and is never scored pass or fail."
+            data-testid="framework-not-scored"
+          >
+            Not scored
+          </span>
         ) : (
           <span
             className={
@@ -590,7 +598,7 @@ function CompliancePageContent() {
       key: "findings",
       header: "Findings",
       align: "right",
-      width: "5rem",
+      width: "6.5rem",
       cell: (c) =>
         c.findings > 0 ? (
           // Drill a non-zero count into the findings queue, scoped to this

@@ -210,7 +210,7 @@ def _scan(run: CheckRun) -> None:
         # offline verdict into an unrelated incomplete result.
         reset_scan_warnings()
         try:
-            asyncio.run(scan_packages(run.pkgs, options=ScanOptions(offline=run.offline)))
+            asyncio.run(scan_packages(run.pkgs, options=ScanOptions(offline=run.offline, registry_selected_as_candidates=False)))
         except IncompleteScanError as exc:
             if run.structured_output:
                 _emit(run, ecosystems=run.ecosystems, verdict="incomplete", message=str(exc), exit_code=2)

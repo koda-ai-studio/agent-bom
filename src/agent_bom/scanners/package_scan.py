@@ -47,6 +47,7 @@ from agent_bom.scanners.package_coverage import (
     _detect_coverage_gaps,
     _flag_suspicious_packages,
     _query_osv_results,
+    _record_runtime_coverage_gaps,
     _scan_supplemental_advisories,
     _select_osv_targets,
 )
@@ -69,6 +70,7 @@ from agent_bom.scanners.package_preparation import (
 )
 from agent_bom.scanners.package_versions import eligible_advisories
 from agent_bom.scanners.package_versions import is_unresolved_package as _is_unresolved_package
+from agent_bom.scanners.registry_selected_policy import demote_registry_selected
 from agent_bom.scanners.risk import osv_cvss_vector, parse_osv_severity
 from agent_bom.scanners.scan_options import IncompleteScanError, ScanOptions, _logger, _package_db_key, console
 from agent_bom.scanners.state import _bump_scan_perf, _get_api_semaphore, peek_coverage_warnings
@@ -546,10 +548,13 @@ async def scan_packages(
         console.print(unconfirmed)
     retire_stale_receipt_warnings_if_decided(scannable)
     total_vulns += await _scan_supplemental_advisories(scannable, scan_offline)
+    _record_runtime_coverage_gaps(scannable, scan_offline)
     resolve_upstream_advisory_severity(scannable)
     _flag_suspicious_packages(scannable)
     total_vulns -= _suppress_unfixed_findings(scannable)
     total_vulns -= demote_ambiguous_distro_matches(scannable)
+    if scan_options.registry_selected_as_candidates:
+        total_vulns -= demote_registry_selected(scannable)
 
     # Apply ignores once after BlastRadius construction so outputs can record why findings were accepted.
     return total_vulns

@@ -184,7 +184,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `campaign_evidence_state` | Postgres, SQLite | 3 |  | persistent |
 | `compliance_hub_findings` | Postgres, SQLite, Snowflake | 13 |  | persistent |
 | `drift_incidents` | Postgres, SQLite | 6 |  | persistent |
-| `exceptions` | Postgres, SQLite, Snowflake | 17 |  | persistent |
+| `exceptions` | Postgres, SQLite, Snowflake | 20 |  | persistent |
 | `finding_history_jobs` | Postgres | 4 |  | persistent |
 | `finding_history_rows` | Postgres | 7 |  | persistent |
 | `findings` | Postgres | 26 |  | persistent |

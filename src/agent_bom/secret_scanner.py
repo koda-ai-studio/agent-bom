@@ -41,6 +41,7 @@ from agent_bom.scanners.secret_lines import ENTROPY_PLACEHOLDER_RE as _ENTROPY_P
 from agent_bom.scanners.secret_lines import is_comment_line, match_credential, match_file_secret
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
+from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
 from agent_bom.scanners.source_pii import machine_identity_match, source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
@@ -462,24 +463,7 @@ def _scan_file(
         if detect_entropy and not any(f.line_number == line_num for f in findings):
             findings.extend(_entropy_findings(line, rel_path, line_num))
 
-    return _downgrade_fixture_findings(rel_path, findings)
-
-
-# Go `testdata/` and JS `__fixtures__`/`__mocks__` hold sample inputs beside the
-# code under test. Unlike `tests/` (never scanned), they are scanned and kept:
-# a real credential left in a fixture is still a leak, so the finding is
-# lowered, not hidden.
-_FIXTURE_DIRS = frozenset({"testdata", "__fixtures__", "__mocks__"})
-
-
-def _downgrade_fixture_findings(rel_path: str, findings: list[SecretFinding]) -> list[SecretFinding]:
-    fixture_dir = next((part for part in Path(rel_path).parts[:-1] if part in _FIXTURE_DIRS), None)
-    if fixture_dir is None:
-        return findings
-    for finding in findings:
-        finding.severity = "low"
-        finding.downgrade_reason = f"test fixture path ({fixture_dir}); verify the value is synthetic"
-    return findings
+    return apply_path_context(rel_path, findings)
 
 
 # RFC 5737 reserves these purely for documentation and examples; Python's

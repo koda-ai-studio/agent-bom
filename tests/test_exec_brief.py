@@ -98,7 +98,8 @@ async def test_brief_preserves_canonical_sources_and_mcp_tenant(empty_estate_cli
         assert body["tenant_id"] == tenant
         # Canonical fields pass through untouched; status and policy name are derived from them.
         assert [
-            {k: v for k, v in row.items() if k not in {"sla_status", "sla_policy"}} for row in body["remediation_priorities"]
+            {k: v for k, v in row.items() if k not in {"sla_status", "sla_policy", "sla_status_text"}}
+            for row in body["remediation_priorities"]
         ] == priorities
         assert all(row["sla_status"] in {"overdue", "due_soon", "on_track", "unknown"} for row in body["remediation_priorities"])
         assert "owner" not in body["exposure_paths"]["paths"][0]

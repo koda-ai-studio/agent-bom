@@ -72,6 +72,7 @@ def _clone_and_scan_repository(ctx: ScanContext) -> None:
         warnings=ctx.warnings_all,
         update_progress=lambda message: pipeline.update_step("discovery", message),
         offline=ctx.req.offline,
+        iac_exceptions=ctx.iac_exceptions,
     )
     ctx.skill_audit_data = repo_tree_result.skill_audit_data
     ctx.iac_findings_data = repo_tree_result.iac_findings_data

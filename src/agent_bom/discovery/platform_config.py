@@ -49,6 +49,12 @@ def _read_json_config_no_symlink(path: Path) -> dict:
     return json.loads(_read_text_no_symlink(path))
 
 
+_WINDSURF_CODEIUM_CONFIGS = (
+    "~/.codeium/windsurf/mcp_config.json",
+    "~/.codeium/windsurf-next/mcp_config.json",
+    "~/.codeium/mcp_config.json",
+)
+
 CONFIG_LOCATIONS: dict[AgentType, dict[str, list[str]]] = {
     AgentType.CLAUDE_DESKTOP: {
         "Darwin": ["~/Library/Application Support/Claude/claude_desktop_config.json"],
@@ -66,14 +72,33 @@ CONFIG_LOCATIONS: dict[AgentType, dict[str, list[str]]] = {
         "Windows": ["~/AppData/Roaming/Cursor/User/globalStorage/cursor.mcp/mcp.json", "~/.cursor/mcp.json"],
     },
     AgentType.WINDSURF: {
-        "Darwin": ["~/.windsurf/mcp.json", "~/Library/Application Support/Windsurf/User/globalStorage/windsurf.mcp/mcp.json"],
-        "Linux": ["~/.windsurf/mcp.json"],
-        "Windows": ["~/.windsurf/mcp.json"],
+        # Documented as of 2026-11-02 (the Windsurf docs redirect to the renamed product's docs):
+        # https://docs.devin.ai/windsurf/plugins/cascade/mcp — stable and Next build files under
+        # ~/.codeium, plus the Cascade config under ~/.config/devin (macOS, Linux) or %AppData%/devin;
+        # https://docs.devin.ai/desktop/devin-desktop-faq — ~/.codeium/mcp_config.json.
+        "Darwin": [
+            *_WINDSURF_CODEIUM_CONFIGS,
+            "~/.config/devin/mcp_config.json",
+            "~/.windsurf/mcp.json",
+            "~/Library/Application Support/Windsurf/User/globalStorage/windsurf.mcp/mcp.json",
+        ],
+        "Linux": [*_WINDSURF_CODEIUM_CONFIGS, "~/.config/devin/mcp_config.json", "~/.windsurf/mcp.json"],
+        "Windows": [*_WINDSURF_CODEIUM_CONFIGS, "~/AppData/Roaming/devin/mcp_config.json", "~/.windsurf/mcp.json"],
     },
     AgentType.CLINE: {
-        "Darwin": ["~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"],
-        "Linux": ["~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"],
-        "Windows": ["~/AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json"],
+        # VS Code extension global storage plus the documented Cline CLI settings file.
+        "Darwin": [
+            "~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json",
+            "~/.cline/data/settings/cline_mcp_settings.json",
+        ],
+        "Linux": [
+            "~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json",
+            "~/.cline/data/settings/cline_mcp_settings.json",
+        ],
+        "Windows": [
+            "~/AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json",
+            "~/.cline/data/settings/cline_mcp_settings.json",
+        ],
     },
     AgentType.VSCODE_COPILOT: {
         # VS Code Copilot Agent mode global MCP config (in addition to workspace .vscode/mcp.json)
@@ -161,10 +186,23 @@ CONFIG_LOCATIONS: dict[AgentType, dict[str, list[str]]] = {
         "Windows": ["~/AppData/Roaming/Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/cline_mcp_settings.json"],
     },
     AgentType.AMAZON_Q: {
-        # Amazon Q Developer VS Code extension
-        "Darwin": ["~/Library/Application Support/Code/User/globalStorage/amazonwebservices.amazon-q-vscode/mcp.json"],
-        "Linux": ["~/.config/Code/User/globalStorage/amazonwebservices.amazon-q-vscode/mcp.json"],
-        "Windows": ["~/AppData/Roaming/Code/User/globalStorage/amazonwebservices.amazon-q-vscode/mcp.json"],
+        # Amazon Q Developer: documented global default.json plus legacy mcp.json (IDE and CLI),
+        # and the VS Code extension global storage.
+        "Darwin": [
+            "~/.aws/amazonq/default.json",
+            "~/.aws/amazonq/mcp.json",
+            "~/Library/Application Support/Code/User/globalStorage/amazonwebservices.amazon-q-vscode/mcp.json",
+        ],
+        "Linux": [
+            "~/.aws/amazonq/default.json",
+            "~/.aws/amazonq/mcp.json",
+            "~/.config/Code/User/globalStorage/amazonwebservices.amazon-q-vscode/mcp.json",
+        ],
+        "Windows": [
+            "~/.aws/amazonq/default.json",
+            "~/.aws/amazonq/mcp.json",
+            "~/AppData/Roaming/Code/User/globalStorage/amazonwebservices.amazon-q-vscode/mcp.json",
+        ],
     },
     AgentType.DOCKER_MCP: {
         # Docker Desktop MCP Toolkit — discovery via registry.yaml + catalog

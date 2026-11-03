@@ -33,6 +33,10 @@ Fields
 - ``path``    : Glob matched against the config path of the discovering agent.
 - ``expires`` : ISO date (``YYYY-MM-DD``).  Entry is ignored after this date.
 - ``reason``  : Free-text (required for auditability).
+
+Entries with ``rule``, ``resource`` or ``type: iac``, or whose ``id`` is an IaC
+rule id, are IaC exceptions: they never apply here and are validated and applied
+by the IaC scan (``agent_bom.core.iac_exceptions``).
 """
 
 from __future__ import annotations
@@ -44,6 +48,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.core.iac_exceptions import is_iac_ignore_entry
 from agent_bom.core.suppression_score import mark_blast_radius_suppressed
 
 if TYPE_CHECKING:
@@ -312,6 +317,8 @@ def apply_ignores(
 
     active_entries: list[dict[str, Any]] = []
     for entry in ignore_entries:
+        if is_iac_ignore_entry(entry):
+            continue  # IaC entries are applied by the IaC scan; a rule/path entry must never hide a vulnerability
         if _entry_is_expired(entry):
             cve = entry.get("id") or entry.get("package") or entry.get("type", "?")
             logger.warning("agent-bom-ignore: entry for '%s' expired on %s — re-surfacing", cve, entry["expires"])

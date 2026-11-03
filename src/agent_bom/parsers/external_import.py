@@ -115,7 +115,7 @@ def _unresolved_finding(pkg: Package, vuln: Vulnerability, manifest: str) -> "Fi
             "reason": "external result named a package without a version and no native package matched it",
         },
         sources=tool_labels or ["external"],
-        id=stable_id("external-unresolved", pkg.ecosystem, pkg.name, vuln.id, manifest),
+        id=stable_id("external-unresolved", pkg.ecosystem, pkg.name, vuln.id, manifest, *([pkg.version] if pkg.version else [])),
     )
     return apply_hub_classification(finding)
 

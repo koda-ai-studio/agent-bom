@@ -437,6 +437,18 @@ def apply_registry_latest(package: Any, version: str) -> None:
         package.floating_reference_reason = _UNPINNED_REASON
 
 
+def apply_registry_range(package: Any, version: str, constraint: str, resolved_at: str) -> None:
+    """Record the version a fresh install selects for a declared range: a registry observation, not an install."""
+    apply_registry_latest(package, version)
+    package.resolved_version = version
+    package.floating_reference_reason = (
+        f"declared as a version range ({constraint}); resolved to the version a fresh install selects from the registry"
+    )
+    package.version_confidence = "low"
+    package.version_resolved_at = resolved_at
+    package.version_evidence.append({"type": "registry_range", "declared_version": constraint, "resolved_version": version})
+
+
 def copy_registry_observation(source: Any, target: Any) -> None:
     """Carry registry-observation flags onto a deduplicated peer."""
     if source.resolved_from_registry:

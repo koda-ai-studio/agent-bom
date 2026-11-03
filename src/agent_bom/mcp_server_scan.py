@@ -183,6 +183,9 @@ def unresolved_package_spec_warning(package_spec: str) -> str:
 _REPO_TREE_INVENTORY: ContextVar[Optional[dict]] = ContextVar("mcp_repo_tree_inventory", default=None)
 
 
+_REPO_TREE_IAC: ContextVar[Optional[dict]] = ContextVar("mcp_repo_tree_iac", default=None)
+
+
 def consume_repo_tree_inventory() -> Optional[dict]:
     """Return and clear the repo-tree side inventory (secrets, AST, ...) of the last pipeline run."""
     inventory = _REPO_TREE_INVENTORY.get()
@@ -190,23 +193,51 @@ def consume_repo_tree_inventory() -> Optional[dict]:
     return inventory
 
 
+def _publish_repo_tree_side(inventory: Optional[dict], iac: Optional[dict]) -> None:
+    _REPO_TREE_INVENTORY.set(inventory)
+    _REPO_TREE_IAC.set(iac)
+
+
+def consume_repo_tree_iac() -> Optional[dict]:
+    """Return and clear the repo-tree IaC findings (active, accepted exceptions, notices) of the last pipeline run."""
+    iac = _REPO_TREE_IAC.get()
+    _REPO_TREE_IAC.set(None)
+    return iac
+
+
+def _bound_tenant_iac_exceptions(warnings: list[str]) -> list:
+    """The bound tenant's approved IaC exceptions; an unavailable store means none apply (findings stay active)."""
+    try:
+        from agent_bom.mcp_tools.exceptions import bound_tenant_iac_exceptions
+
+        return bound_tenant_iac_exceptions()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Tenant IaC exceptions unavailable: %s", sanitize_error(exc))
+        warnings.append("Tenant IaC exceptions unavailable; IaC findings are reported without them")
+        return []
+
+
 def _scan_config_path_statically(
     config_path: str, agents: list, warnings: list[str], scan_sources: list[str], *, offline: bool
-) -> Optional[dict]:
+) -> tuple[Optional[dict], Optional[dict]]:
     """Repo-tree, Python-agent, Terraform and GitHub Actions passes over an explicit target.
 
-    Returns the repo-tree AI inventory; the caller publishes it, because this
-    runs in a worker thread whose context-variable writes do not propagate.
+    Returns the repo-tree AI inventory and IaC findings; the caller publishes them,
+    because this runs in a worker thread whose context-variable writes do not propagate.
     """
     inventory: Optional[dict] = None
+    iac_data: Optional[dict] = None
     try:
         from agent_bom.api.repo_tree_scan import scan_cloned_repo_tree
         from agent_bom.github_actions import scan_github_actions
         from agent_bom.python_agents import scan_python_agents
         from agent_bom.terraform import scan_terraform_dir
 
-        tree = scan_cloned_repo_tree(config_path, agents=agents, warnings=warnings, offline=offline)
+        tree = scan_cloned_repo_tree(
+            config_path, agents=agents, warnings=warnings, offline=offline, iac_exceptions=_bound_tenant_iac_exceptions(warnings)
+        )
         inventory = tree.ai_inventory_data or None
+        iac_data = tree.iac_findings_data
         scan_sources.append("repo_tree")
         # IaC is scanned opportunistically here, so a tree without .tf files is not a warning.
         passes = (
@@ -224,7 +255,7 @@ def _scan_config_path_statically(
         msg = f"Repo static scan failed for {config_path}: {sanitize_error(exc)}"
         logger.warning(msg)
         warnings.append(msg)
-    return inventory
+    return inventory, iac_data
 
 
 def _scan_project_dir(discover_all, project_dir: str, warnings: list[str], scan_sources: list[str], *, offline: bool):
@@ -237,8 +268,8 @@ def _scan_project_dir(discover_all, project_dir: str, warnings: list[str], scan_
     agents = discover_all(project_dir=project_dir)
     if agents:
         scan_sources.append("agent_discovery")
-    inventory = _scan_config_path_statically(project_dir, agents, warnings, scan_sources, offline=offline)
-    return agents, inventory, consume_scan_warnings(), consume_coverage_warnings()
+    side = _scan_config_path_statically(project_dir, agents, warnings, scan_sources, offline=offline)
+    return agents, side, consume_scan_warnings(), consume_coverage_warnings()
 
 
 def _resolve_scan_dir(safe_path, value: str, *, argument: str) -> str:
@@ -293,7 +324,7 @@ async def run_scan_pipeline(
 
     warnings: list[str] = []
     scan_sources: list[str] = []
-    _REPO_TREE_INVENTORY.set(None)
+    _publish_repo_tree_side(None, None)
 
     if project_path and config_path:
         conflict = "Provide only one of project_path or config_path"
@@ -322,10 +353,10 @@ async def run_scan_pipeline(
     # Machine-wide discovery reads host data, so shared transports refuse it.
     if config_path:
         # A large repo walk must not stall the MCP event loop (and its timeout).
-        agents, inventory, thread_warnings, thread_coverage = await asyncio.to_thread(
+        agents, side, thread_warnings, thread_coverage = await asyncio.to_thread(
             _scan_project_dir, discover_all, config_path, warnings, scan_sources, offline=offline
         )
-        _REPO_TREE_INVENTORY.set(inventory)
+        _publish_repo_tree_side(*side)
         restore_scan_warnings(thread_warnings, thread_coverage)
     elif no_discover or _host_discovery_refused(config_path, any((image, sbom_path, package)), warnings):
         agents = []

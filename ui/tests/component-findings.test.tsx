@@ -78,3 +78,10 @@ it("shows useful recorded context and next steps without inferring a blast radiu
   expect(screen.getByText(/Source collection coverage remains unknown/)).toBeVisible();
   expect(screen.queryByText(/blast radius: 1/i)).not.toBeInTheDocument();
 });
+
+it("keeps findings and links attached to the canonical component after alias resolution", async () => {
+  fetchPage.mockResolvedValue({ ...page("canonical"), scan_id: "current-estate:new", resolved_from: "old-id" });
+  render(<ComponentFindings assetId="old-id" scanId="current-estate:old" />);
+  expect(await screen.findByRole("link", { name: "Linked vulnerability" })).toHaveAttribute("href", "/security-graph?lens=estate&node=vuln%3Aone&scan=current-estate%3Anew");
+  expect(screen.getByRole("link", { name: /Investigate the component chain/ })).toHaveAttribute("href", "/security-graph?lens=estate&node=canonical&scan=current-estate%3Anew");
+});

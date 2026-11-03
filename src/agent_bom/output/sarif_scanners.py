@@ -14,7 +14,7 @@ from agent_bom.output.sarif_common import (
     _SarifCatalog,
     _to_relative_path,
 )
-from agent_bom.output.sarif_iac import iac_rule, iac_rule_id, iac_shared_compliance
+from agent_bom.output.sarif_iac import iac_rule, iac_rule_id, iac_shared_compliance, iac_suppressions
 from agent_bom.security import sanitize_url
 
 __all__ = ["_DEDICATED_CIS_PROVIDERS"]
@@ -48,7 +48,8 @@ def _add_iac_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
     iac_data = getattr(report, "iac_findings_data", None)
     if not iac_data:
         return
-    findings = iac_data.get("findings", [])
+    # Accepted exceptions stay in SARIF with ``suppressions``, so code-scanning UIs show them as dismissed with the reason.
+    findings = list(iac_data.get("findings", [])) + list(iac_data.get("suppressed", []) or [])
     shared_compliance = iac_shared_compliance(findings)
     for iac_finding in findings:
         sev = iac_finding.get("severity", "medium").lower()
@@ -60,23 +61,24 @@ def _add_iac_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
             catalog.rules.append(iac_rule(iac_finding, rule_id, level, security_severity, shared_compliance[rule_id]))
 
         fp_input = f"{rule_id}:{file_path}:{line_num}"
-        catalog.results.append(
-            {
-                "ruleId": rule_id,
-                "level": level,
-                "kind": "fail",
-                "message": {
-                    "text": sanitize_advisory_text(
-                        "description",
-                        iac_finding.get("message"),
-                        fallback=sanitize_advisory_text("title", iac_finding.get("title", "IaC misconfiguration")),
-                    )
-                },
-                **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
-                "locations": [_sarif_location(file_path, line_num)],
-                "properties": {"compliance": list(iac_finding.get("compliance") or [])},
-            }
-        )
+        result: dict[str, Any] = {
+            "ruleId": rule_id,
+            "level": level,
+            "kind": "fail",
+            "message": {
+                "text": sanitize_advisory_text(
+                    "description",
+                    iac_finding.get("message"),
+                    fallback=sanitize_advisory_text("title", iac_finding.get("title", "IaC misconfiguration")),
+                )
+            },
+            **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
+            "locations": [_sarif_location(file_path, line_num)],
+            "properties": {"compliance": list(iac_finding.get("compliance") or [])},
+        }
+        if suppressions := iac_suppressions(iac_finding):
+            result["suppressions"] = suppressions
+        catalog.results.append(result)
 
 
 def _ai_inventory_rule(comp: dict[str, Any], rule_id: str, name: str, level: str, security_severity: str) -> dict[str, Any]:

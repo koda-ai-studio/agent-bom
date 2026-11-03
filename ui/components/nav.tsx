@@ -1,8 +1,6 @@
 "use client";
 import { activeGroupForPath,ALL_GROUP_LABELS,isNavLinkActive,NAV_GROUPS,NAV_LINK_ICON_CLASS,navGroupIconClass,navLinkIconClass,type NavLink } from "@/components/navigation/nav-config";
 
-import { ProductViewPicker } from "@/components/product-view-picker";
-import { primaryProductGroups, PRODUCT_VIEWS, useProductView } from "@/lib/product-view";
 import { AccountMenu } from "@/components/account-menu";
 import { useAuthState } from "@/components/auth-provider";
 import { BrandLogo } from "@/components/brand-logo";
@@ -45,8 +43,6 @@ import { useCallback,useEffect,useMemo,useRef,useState } from "react";
 
 export function Nav() {
   const path = usePathname();
-  const productView = useProductView();
-  const [showAllPages, setShowAllPages] = useState(false);
   const [captureMode, setCaptureMode] = useState(false);
   const { collapsed, setCollapsed } = useSidebarLayout();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -274,14 +270,8 @@ export function Nav() {
       return { ...group, visibleLinks, hiddenLinks, secondaryLinks };
     })
     .filter((group) => group.visibleLinks.length > 0 || group.hiddenLinks.length > 0 || group.secondaryLinks.length > 0);
-  const primaryGroups = primaryProductGroups(productView);
-  const navGroups = availableGroups.filter((group) => showAllPages || searchQuery || primaryGroups.includes(group.label)
-    || activeGroupForPath(path) === group.label)
-    .sort((a, b) => {
-      const rank = (label: string) => { const index = primaryGroups.indexOf(label); return index < 0 ? primaryGroups.length : index; };
-      return rank(a.label) - rank(b.label);
-    });
-  // Search remains a complete, role-filtered directory in every view.
+  const navGroups = availableGroups;
+  // Search and navigation use the same complete, role-filtered directory.
   const commandLinks = availableGroups.flatMap((group) =>
     [...group.visibleLinks, ...group.hiddenLinks, ...group.secondaryLinks].map((link) => ({ ...link, group: group.label }))
   );
@@ -357,15 +347,6 @@ export function Nav() {
         >
           {isCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
         </button>}
-      </div>
-
-      <div className={isCollapsed ? "px-1.5 pt-3" : "px-3 pt-3"}>
-        {isCollapsed ? <button type="button" onClick={() => setCollapsed(false)}
-          aria-label={`Change product view: ${PRODUCT_VIEWS[productView].label}`}
-          title={`Product view: ${PRODUCT_VIEWS[productView].label}`}
-          className="min-h-10 w-full rounded-lg border border-outline text-xs font-semibold text-ink-secondary hover:bg-surface-muted">
-          {PRODUCT_VIEWS[productView].label.slice(0, 1)}
-        </button> : <ProductViewPicker />}
       </div>
 
       {/* Search */}
@@ -610,13 +591,6 @@ export function Nav() {
             </div>
           );
         })}
-        {productView !== "organization" && <button type="button" onClick={() => setShowAllPages((value) => !value)}
-          aria-label={showAllPages ? "Show focused pages" : "Show all pages"} aria-expanded={showAllPages}
-          title={showAllPages ? "Show focused pages" : "Show all pages"}
-          className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-outline px-2 text-xs text-ink-secondary hover:bg-surface-muted">
-          <ChevronDown className={`h-4 w-4 shrink-0 ${showAllPages ? "rotate-180" : ""}`} />
-          {!isCollapsed && (showAllPages ? "Show focused pages" : "Show all pages")}
-        </button>}
       </nav>
 
       {/* Bottom section — collapsed by default so nav lanes keep vertical space */}

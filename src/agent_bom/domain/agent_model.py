@@ -16,7 +16,23 @@ from agent_bom.domain.inventory_types import AgentStatus, AgentType, _utc_now_is
 from agent_bom.domain.mcp_model import MCPServer
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
-__all__ = ["Agent", "Severity", "classify_agent_kind", "normalize_package_name", "parse_debian_source_name"]
+__all__ = [
+    "Agent",
+    "Severity",
+    "agent_is_installed_unconfigured",
+    "classify_agent_kind",
+    "normalize_package_name",
+    "parse_debian_source_name",
+]
+
+
+def agent_is_installed_unconfigured(status: object, has_servers: bool) -> bool:
+    """The one judgement for a client found on this machine with nothing to inventory.
+
+    Works for an :class:`AgentStatus` or its serialized string value, so live
+    discovery and saved reports count agents identically.
+    """
+    return str(getattr(status, "value", status)) == AgentStatus.INSTALLED_NOT_CONFIGURED.value and not has_servers
 
 
 @dataclass
@@ -58,7 +74,7 @@ class Agent:
     @property
     def is_installed_unconfigured(self) -> bool:
         """A client found on this machine with no MCP configuration to inventory."""
-        return self.status == AgentStatus.INSTALLED_NOT_CONFIGURED and not self.mcp_servers
+        return agent_is_installed_unconfigured(self.status, bool(self.mcp_servers))
 
     @property
     def stable_id(self) -> str:

@@ -52,6 +52,7 @@ SCAN_ROOTS: tuple[Path, ...] = (
     ROOT / "deploy",
     ROOT / "integrations",
     ROOT / "ui" / "components" / "persona-start-routes.tsx",
+    ROOT / "ui" / "lib" / "deployment-context.ts",
 )
 
 _BINARY_SUFFIXES = {
@@ -69,6 +70,14 @@ _BINARY_SUFFIXES = {
     ".gz",
 }
 _EXCLUDE_DIRS = {"node_modules", ".git", ".next", "dist", "build", "__pycache__"}
+
+
+_OCI_CHART_URL = "oci://ghcr.io/koda-ai-studio/charts/agent-bom"
+# The published chart pins the images of its own release. --version must
+# directly follow the chart reference (same line or next continuation line).
+_OCI_CHART_PIN = re.compile(
+    r"(oci://ghcr\.io/(?:koda-ai-studio|msaad00)/charts/agent-bom\b[ \t]*(?:\\\n[ \t#]*)?--version[ =])(\d+\.\d+\.\d+)"
+)
 
 
 class ManagedPattern(NamedTuple):
@@ -162,7 +171,45 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         re.compile(r'(dependencies = \["agent-bom==)(\d+\.\d+\.\d+)'),
         "published",
     ),
+    ManagedPattern("OCI chart pin", _OCI_CHART_PIN, "published"),
+    # The platform-eks Terraform module installs the same published chart.
+    ManagedPattern(
+        "Terraform chart pin",
+        re.compile(r'(variable "chart_version" \{[^}]*?default\s*=\s*")(\d+\.\d+\.\d+)'),
+        "published",
+    ),
 )
+
+# A chart installed from the repository path on main references the next,
+# unreleased image tags. Such an install is drift unless the few lines above it
+# label it development-only.
+_REPO_CHART_INSTALL = re.compile(r"helm\s+(?:upgrade\s+--install|install|upgrade)\s+\S+\s+(?:\./)?deploy/helm/agent-bom/?(?=[\s\\\"'`]|$)")
+_DEV_ONLY_LABEL = re.compile(r"development[- ]only|source checkout", re.I)
+_DEV_LABEL_WINDOW = 8
+_OCI_CHART_INSTALL = re.compile(
+    r"helm\s+(?:upgrade\s+--install|install|upgrade|pull|template|show\s+\w+)\s+(?:\S+\s+)?oci://ghcr\.io/(?:koda-ai-studio|msaad00)/charts/agent-bom\b"
+)
+
+
+def helm_install_drift(rel_path: str, text: str) -> list[str]:
+    """Repo-path installs outside a development-only block, and unpinned OCI chart commands."""
+    drift: list[str] = []
+    lines = text.splitlines()
+    pinned_starts = {match.start() for match in _OCI_CHART_PIN.finditer(text)}
+    for match in _OCI_CHART_INSTALL.finditer(text):
+        if text.index("oci://", match.start()) not in pinned_starts:
+            lineno = text.count("\n", 0, match.start()) + 1
+            drift.append(f"{rel_path}:{lineno}: OCI chart install without --version -> {lines[lineno - 1].strip()}")
+    for match in _REPO_CHART_INSTALL.finditer(text):
+        lineno = text.count("\n", 0, match.start()) + 1
+        context = "\n".join(lines[max(0, lineno - 1 - _DEV_LABEL_WINDOW) : lineno])
+        if not _DEV_ONLY_LABEL.search(context):
+            drift.append(
+                f"{rel_path}:{lineno}: repo-path chart install outside a development-only block "
+                f"(use {_OCI_CHART_URL} --version <published>) -> {lines[lineno - 1].strip()}"
+            )
+    return drift
+
 
 # The Claude Code plugin's MCP servers run `uv run --frozen` against this
 # project, so its uv.lock must lock the pinned release. The lock carries hashes
@@ -273,6 +320,7 @@ def scan_text(rel_path: str, text: str, version: str, *, published: str | None =
             lineno = text.count("\n", 0, match.start(2)) + 1
             line = lines[lineno - 1].strip() if lineno <= len(lines) else ""
             drift.append(f"{rel_path}:{lineno}: {managed.label} pinned to {found} (expected {want}) -> {line}")
+    drift.extend(helm_install_drift(rel_path, text))
     return drift
 
 

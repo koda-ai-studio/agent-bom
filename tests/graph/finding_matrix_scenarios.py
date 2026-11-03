@@ -60,6 +60,12 @@ def scenario_demo(work: Path, monkeypatch: Any) -> dict[str, Any]:
     return _cli(work, monkeypatch, "demo", "--demo")
 
 
+def scenario_iac(work: Path, monkeypatch: Any) -> dict[str, Any]:
+    root = work / "iac"
+    _write(root / ".github/workflows/ci.yml", "name: CI\non: push\npermissions: write-all\njobs: {}\n")
+    return _cli(work, monkeypatch, "iac", "--no-scan", "--no-discover", "--iac", str(root))
+
+
 def scenario_secrets(work: Path, monkeypatch: Any) -> dict[str, Any]:
     src = work / "secrets-src"
     _write(
@@ -316,6 +322,7 @@ def scenario_shadow(work: Path, mp: Any) -> dict[str, Any]:
 
 
 SCENARIOS = {
+    "iac": scenario_iac,
     "shadow": scenario_shadow,
     "demo": scenario_demo,
     "secrets": scenario_secrets,

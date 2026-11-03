@@ -52,9 +52,8 @@ adopting an organization-wide control plane.
 
 "Local" describes where work or collection happens, not who owns it: a team
 can retain local scans, and one developer can inspect a cloud workload. The
-dashboard offers Personal, Team and Organization views to prioritize relevant
-pages. The view is a browser preference; it does not change access or evidence
-scope.
+dashboard exposes one platform navigation. Deployment modes describe where
+services run; permissions govern access and source scopes govern evidence.
 See [Modes and alignment](deployment-modes-and-alignment.md)
 for the distinction between workflow, hosting and observed evidence.
 
@@ -131,7 +130,7 @@ pre-created role-separated Secrets documented in
 [Control Plane Helm](control-plane-helm.md):
 
 ```bash
-helm upgrade --install agent-bom deploy/helm/agent-bom \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```

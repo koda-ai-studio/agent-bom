@@ -939,3 +939,21 @@ def test_external_sast_without_native_match_stays_external_sast():
     external = [f for f in sast if f.source is FindingSource.EXTERNAL]
     assert len(external) == 1
     assert external[0].sources == ["external:CodeScanner"]
+
+
+def test_unresolved_external_finding_id_keeps_package_version_distinct():
+    from agent_bom.finding import stable_id
+    from agent_bom.models import Package, Severity, Vulnerability
+    from agent_bom.parsers.external_import import _unresolved_finding
+
+    vuln = Vulnerability(id="GHSA-0000-0000-0000", summary="x", severity=Severity.HIGH)
+    old = Package(name="lodash", version="3.10.1", ecosystem="npm")
+    new = Package(name="lodash", version="4.17.20", ecosystem="npm")
+    name_only = Package(name="lodash", version="", ecosystem="npm")
+
+    ids = {_unresolved_finding(pkg, vuln, "package-lock.json").id for pkg in (old, new, name_only)}
+    assert len(ids) == 3
+    # A name-only result keeps the id it has always had, so finding history does not churn.
+    assert _unresolved_finding(name_only, vuln, "package-lock.json").id == stable_id(
+        "external-unresolved", "npm", "lodash", "GHSA-0000-0000-0000", "package-lock.json"
+    )

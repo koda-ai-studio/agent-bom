@@ -19,7 +19,10 @@ TOXIC_COMBINATION_CONTROLS: dict[str, dict[str, tuple[str, ...]]] = {
     "PUBLIC_EXPOSED_VULNERABLE": _PUBLIC_VULNERABLE_TAGS,
     "PUBLIC_TO_SENSITIVE_DATA": {"nist_800_53_tags": ("AC-3",), "soc2_tags": ("CC6.6",)},
     "OVERPERMISSIONED_TO_SENSITIVE": {"nist_800_53_tags": ("AC-6",), "soc2_tags": ("CC6.1",)},
+    # The agent reaches the credential or privileged tool through its MCP
+    # servers: MCP01 (secret exposure) and MCP02 (privilege via scope creep).
     "AGENT_REACHES_PRIVILEGED": {
+        "owasp_mcp_tags": ("MCP01", "MCP02"),
         "owasp_tags": ("LLM06",),
         "owasp_agentic_tags": ("ASI03",),
         "nist_800_53_tags": ("AC-6", "IA-5"),

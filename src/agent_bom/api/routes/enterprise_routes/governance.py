@@ -234,7 +234,7 @@ def verify_audit_export(request: Request, body: AuditExportVerifyRequest) -> dic
 
 @router.post("/exceptions", tags=["enterprise"], status_code=201)
 def create_exception(request: Request, req: ExceptionRequest) -> dict:
-    """Request a vulnerability exception / waiver."""
+    """Request a vulnerability or IaC exception / waiver (pending until a second admin approves it)."""
     from agent_bom.api.audit_log import log_action
     from agent_bom.api.exception_store import VulnException
 
@@ -249,15 +249,22 @@ def create_exception(request: Request, req: ExceptionRequest) -> dict:
         requested_by=actor,
         expires_at=req.expires_at,
         tenant_id=tenant_id,
+        iac_rule_id=req.iac_rule_id.strip().upper(),
+        iac_path=req.iac_path.strip(),
+        iac_resource=dict(req.iac_resource),
     )
     _get_exception_store().put(exc, tenant_id=tenant_id)
+    scope = (
+        {"iac_rule_id": exc.iac_rule_id, "iac_path": exc.iac_path, "iac_resource": exc.iac_resource}
+        if exc.iac_rule_id
+        else {"vuln_id": req.vuln_id, "package": req.package_name}
+    )
     log_action(
         "exception_create",
         actor=actor,
         resource=f"exception/{exc.exception_id}",
         tenant_id=tenant_id,
-        vuln_id=req.vuln_id,
-        package=req.package_name,
+        **scope,
     )
     return exception_response(exc)
 

@@ -10,7 +10,7 @@ const PUSH_URL = "http://localhost:3000/v1/results/push";
 describe("first scan guidance", () => {
   beforeEach(() => { window.localStorage.setItem("agent-bom.product-view", "team"); auth.loading = false; auth.hasCapability.mockReturnValue(true); auth.session = { auth_required: true }; });
 
-  it("starts personal use with a local report and makes sharing optional", () => {
+  it("offers local and shared source paths without a product preset", () => {
     window.localStorage.setItem("agent-bom.product-view", "personal");
     render(<FirstScanGuide onImport={vi.fn()} />);
     expect(screen.getByRole("heading", { name: "Scan a project on your machine" })).toBeVisible();
@@ -18,7 +18,7 @@ describe("first scan guidance", () => {
     expect(command).toHaveTextContent("--no-discover");
     expect(command).not.toHaveTextContent("--push-url");
     expect(command).not.toHaveTextContent("API_KEY");
-    expect(screen.getByText("Share evidence or connect a source").closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("link", { name: "Connect a source" })).toBeVisible();
   });
 
   it("offers distinct source paths and explains the retained evidence workflow", () => {
@@ -33,7 +33,7 @@ describe("first scan guidance", () => {
   it("keeps the local project command explicit, scoped and credential-free", () => {
     render(<FirstScanGuide onImport={vi.fn()} />);
     fireEvent.click(screen.getByText("Show project command"));
-    expect(screen.getByText(/agent-bom scan \. --no-discover --context-graph/)).toHaveTextContent(`--push-url "\${AGENT_BOM_PUSH_URL:-${PUSH_URL}}"`);
+    expect(screen.getByLabelText("Project push command")).toHaveTextContent(`--push-url "\${AGENT_BOM_PUSH_URL:-${PUSH_URL}}"`);
     expect(screen.getByText(/AGENT_BOM_PUSH_API_KEY through your secret manager/)).toBeVisible();
     expect(screen.getByText(PUSH_URL, { selector: "code:not(.block)" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Copy project command" })).toBeVisible();
@@ -44,7 +44,7 @@ describe("first scan guidance", () => {
 
   it("checks push configuration before scanning without putting the key in arguments", () => {
     render(<FirstScanGuide onImport={vi.fn()} />);
-    const command = screen.getByText(/agent-bom scan \. --no-discover --context-graph/, { selector: "code" }).textContent!;
+    const command = screen.getByLabelText("Project push command").textContent!;
     const script = `agent-bom() { printf 'scan-started\\n'; printf '%s\\n' "$@"; test -n "$AGENT_BOM_PUSH_API_KEY"; }; ${command}`;
     const run = (extra: Record<string, string>) => spawnSync("/bin/bash", ["-c", script], {
       encoding: "utf8", env: { PATH: "/usr/bin:/bin", NODE_ENV: "test", ...extra },
@@ -81,7 +81,7 @@ describe("first scan guidance", () => {
     auth.hasCapability.mockReturnValue(true);
     render(<FirstScanGuide onImport={vi.fn()} />);
     fireEvent.click(screen.getByText("Show project command"));
-    const command = screen.getByText(/agent-bom scan \. --no-discover --context-graph/, { selector: "code" }).textContent!;
+    const command = screen.getByLabelText("Project push command").textContent!;
     expect(command).not.toContain("AGENT_BOM_PUSH_API_KEY");
     expect(command).toContain(PUSH_URL);
     expect(screen.queryByText(/through your secret manager/)).not.toBeInTheDocument();

@@ -9,21 +9,27 @@
 
 **AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.**
 
-For AppSec and platform engineers. Self-host free; local scans need no account.
+For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP
+client: see which agents, MCP servers, tools and packages are installed, which
+are vulnerable, and what each one can reach. Local scans need no account.
+[Try it in your browser](https://koda-ai-studio.github.io/agent-bom/demo/) first, no install.
 
 ```bash
 uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
-Measured on real repositories: [299 of 299 OSV advisories matched across seven
-real repositories, no false positives](features/real-repository-accuracy.md).
 Open `agent-bom-report.html` to inspect inventory, findings, coverage and fix
-guidance. `--no-discover` excludes workstation-wide discovery. No MCP
+guidance. Run the same scan again later and agent-bom prints what changed since
+the last one. `--no-discover` excludes workstation-wide discovery. No MCP
 configuration? Package findings remain useful; agent/tool relationships require
 discovered configuration or an explicit inventory.
+[Measured matching accuracy on real repositories](features/real-repository-accuracy.md).
 
-Centralize the same evidence in your own infrastructure when your team needs a
-shared control plane.
+| Where | Start with | You get |
+|---|---|---|
+| On your laptop | `uvx agent-bom scan .` and `claude mcp add agent-bom -- uvx agent-bom mcp server` | Findings with fixes, a delta on every rescan, agent-bom as a tool in your coding agent |
+| In your team | `uses: koda-ai-studio/agent-bom@v0` on pull requests plus a weekly `schedule:` ([GitHub Action](integrations/github-action.md)) | A PR gate with a findings comment and SARIF, and a weekly rescan for new CVEs |
+| Across your org | `agent-bom up`, then Docker Compose or the [Helm chart](deployment/control-plane-helm.md) | Retained scans, one graph of agents, servers, packages and credentials, SSO and audit in your infrastructure |
 
 `agent-bom` is also an open security data plane. It generates a
 reachability-backed AI BOM across agents, MCP servers, tools, packages,

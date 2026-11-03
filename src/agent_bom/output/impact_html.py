@@ -46,11 +46,22 @@ def _fields(pairs: list[tuple[str, Any]]) -> str:
     return "<dl>" + "".join(f"<dt>{_text(label)}</dt><dd>{_text(value)}</dd>" for label, value in pairs) + "</dl>"
 
 
+def _id_list(ids: list[str], noun: str) -> str:
+    """Internal ids stay inspectable but collapsed, so a long list never floods the page."""
+    if not ids:
+        return ""
+    label = f"{len(ids)} {noun}{'' if len(ids) == 1 else 's'}"
+    return f"<details><summary>{_text(label)}</summary><p><code>{'</code> <code>'.join(_text(i) for i in ids)}</code></p></details>"
+
+
 def _risk(row: dict[str, Any], index: int) -> str:
     fields = [
         ("Affected asset", row["asset_name"]),
         ("Asset ID", row["asset_id"]),
-        ("Linked agent IDs", ", ".join(row["agent_ids"]) or "Not recorded"),
+        (
+            "Linked agents",
+            ", ".join(row.get("agent_names") or []) or f"{len(row['agent_ids'])} linked by ID" if row["agent_ids"] else "None recorded",
+        ),
         ("Reported condition", row["reported_condition"]),
         ("Potential consequence", row["potential_consequence"]),
         ("Confidence basis", row["confidence_basis"]),
@@ -59,7 +70,7 @@ def _risk(row: dict[str, Any], index: int) -> str:
     ]
     return (
         f'<article class="risk"><div class="rank">Priority {index} · {_text(row["severity"])}</div>'
-        f"<h3>{_text(row['title'])}</h3>{_fields(fields)}"
+        f"<h3>{_text(row['title'])}</h3>{_fields(fields)}{_id_list(row['agent_ids'], 'linked agent ID')}"
         "<details><summary>Inspect source receipt</summary>"
         f"<p>Source JSON pointer: <code>{_text(row['receipt_pointer'])}</code>. "
         f"Finding occurrence: <code>{_text(row['id'])}</code>.</p>{_receipt(row['receipt'])}</details></article>"

@@ -4,9 +4,11 @@
 
 **AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.**
 
-For AppSec and platform engineers. Self-host free; local scans need no account.
-Credential references are names, not secret values. Recorded relationships do
-not prove exploitation or successful data access.
+For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP
+client: see which agents, MCP servers, tools and packages are installed, which
+are vulnerable, and what each one can reach. Local scans need no account.
+[Try it in your browser](https://koda-ai-studio.github.io/agent-bom/demo/) first,
+no install.
 
 With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), run
 from the repository you want to inspect:
@@ -15,24 +17,23 @@ from the repository you want to inspect:
 uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
-Open `agent-bom-report.html` for inventory, findings, recorded exposure,
-evidence coverage and fix guidance. `--no-discover` keeps discovery within the
-selected project. No MCP configuration? Package findings remain useful;
-agent/tool relationships need discovered configuration or an explicit inventory.
-Review coverage warnings beside the verdict; incomplete evidence is not clean.
-[What this scan does and does not establish](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
-Apply a reviewed fix, update the lockfile, and rerun `uvx agent-bom scan .`
-in the same repository. Run `uvx agent-bom doctor` if the first scan cannot start.
+Open `agent-bom-report.html` for inventory, findings and fix guidance. Run the
+same scan again later and agent-bom prints what changed since the last one.
+No MCP configuration? Package findings still apply. Incomplete evidence is not
+a clean result: [what a scan does and does not establish](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
+For a bundled sample, run `uvx agent-bom scan --demo --offline`; status `1` is
+the expected security verdict for its blocking findings.
 
-For a deterministic sample, use the built-in offline demo. It deliberately
-contains blocking findings, so status `1` is the expected security verdict;
-the printed report is complete.
+![agent-bom demo](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/demo-latest.gif)
 
-```bash
-uvx agent-bom scan --demo --offline
-```
+| Where | Start with | You get |
+|---|---|---|
+| On your laptop | `uvx agent-bom scan .` and `claude mcp add agent-bom -- uvx agent-bom mcp server` | Findings with fixes, a delta on every rescan, agent-bom as a tool in your coding agent |
+| In your team | `uses: koda-ai-studio/agent-bom@v0` on pull requests plus a weekly `schedule:` | A PR gate with a findings comment and SARIF, and a weekly rescan for new CVEs |
+| Across your org | `agent-bom up`, then Docker Compose or the Helm chart | Retained scans, one graph of agents, servers, packages and credentials, SSO and audit in your infrastructure |
 
-The demo uses a curated sample for reproducible output within a release; advisory and severity updates can change later releases.
+Credential references are names, not secret values. Recorded relationships do
+not prove exploitation or successful data access.
 
 For the installed-command examples below, run `pip install agent-bom` in a
 virtual environment. If you want an inspectable sample before scanning your own repo:
@@ -45,13 +46,6 @@ agent-bom scan --inventory agent-bom-first-run/inventory.json -p agent-bom-first
 The bundled first-run stack includes agent inventory, MCP server definitions,
 placeholder credential environment variable names, Python/npm manifests, and a
 prompt file. See `docs/FIRST_RUN.md` in the repository for the guided flow.
-
-<details>
-<summary><b>See the terminal demo</b></summary>
-
-![agent-bom demo](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/demo-latest.gif)
-
-</details>
 
 ## Follow one component
 
@@ -100,7 +94,7 @@ release checkout. Follow the [required secret bootstrap](https://github.com/koda
 and wait for all four target Secrets before installing the workload:
 
 ```bash
-helm upgrade --install agent-bom deploy/helm/agent-bom \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```

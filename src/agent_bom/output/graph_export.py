@@ -169,12 +169,12 @@ def _sanitized_graph(graph: DepGraph) -> DepGraph:
 
 def _credential_names_from_server(server: dict[str, Any]) -> list[str]:
     env_vars = server.get("credential_env_vars")
-    if isinstance(env_vars, list):
-        return sorted({str(item) for item in env_vars if str(item).strip()})
-    env = server.get("env")
-    if not isinstance(env, dict):
-        return []
-    return sorted({key for key in env if is_credential_key(key)})
+    if not isinstance(env_vars, list):
+        env = server.get("env")
+        env_vars = [key for key in env if is_credential_key(key)] if isinstance(env, dict) else []
+    embedded = server.get("embedded_credential_names", [])
+    embedded = embedded if isinstance(embedded, list) else []
+    return sorted({item for item in [*env_vars, *embedded] if isinstance(item, str) and item.strip()})
 
 
 def _tool_names_from_server(server: dict[str, Any]) -> list[str]:

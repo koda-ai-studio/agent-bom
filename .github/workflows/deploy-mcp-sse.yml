@@ -102,31 +102,25 @@ jobs:
             railway up --detach
           fi
 
-      # The Railway deploy above has already succeeded when this runs. The probe
-      # verifies the deployed release contract; its outcome is classified so an
-      # identity-provider outage reads as "deploy succeeded, probe deferred"
-      # instead of a failed deploy.
+      # The Railway deploy above has already succeeded when this runs. The
+      # deployment serves the anonymous read-only tier, so the probe needs no
+      # credential: it proves the exact release answers anonymous lookups and
+      # still refuses every other tool with HTTP 401.
       - name: Post-deploy exact release contract check
         id: probe
         shell: bash
         env:
           RAILWAY_MCP_URL: ${{ vars.RAILWAY_MCP_URL }}
-          RAILWAY_MCP_BEARER_TOKEN: ${{ secrets.RAILWAY_MCP_BEARER_TOKEN }}
-          MCP_PROBE_OAUTH_ISSUER: ${{ vars.MCP_PROBE_OAUTH_ISSUER }}
-          MCP_PROBE_OAUTH_TOKEN_URL: ${{ vars.MCP_PROBE_OAUTH_TOKEN_URL }}
-          MCP_PROBE_OAUTH_AUDIENCE: ${{ vars.MCP_PROBE_OAUTH_AUDIENCE }}
-          MCP_PROBE_OAUTH_CLIENT_ID: ${{ vars.MCP_PROBE_OAUTH_CLIENT_ID }}
-          MCP_PROBE_OAUTH_CLIENT_SECRET: ${{ secrets.MCP_PROBE_OAUTH_CLIENT_SECRET }}
         run: |
           set -euo pipefail
           echo "Waiting 60s for Railway to rebuild and start..."
           sleep 60
           DEPLOY_URL="${RAILWAY_MCP_URL:-https://agent-bom-mcp.up.railway.app}"
-          echo "Checking the public server card at $DEPLOY_URL"
+          echo "Checking the public server card and anonymous tier at $DEPLOY_URL"
           set +e
-          PYTHONPATH=src python3 scripts/deploy/probe_with_oauth.py -- \
+          PYTHONPATH=src python3 -m agent_bom.deployment_probe \
             --base-url "$DEPLOY_URL" \
-            --server-card --require-mcp-auth \
+            --server-card --require-public-readonly \
             --expected-version "$repo_version" \
             --expected-tool-count "$repo_tool_count" \
             --attempts 5 \
@@ -136,9 +130,11 @@ jobs:
           set -e
           if [ "$status" -eq 0 ]; then
             echo "outcome=verified" >> "$GITHUB_OUTPUT"
-            echo "Exact release contract confirmed: v${repo_version}, ${repo_tool_count} MCP tool schemas"
+            echo "Exact release contract confirmed: v${repo_version}, ${repo_tool_count} MCP tool schemas, public tier enforced"
+          else
+            echo "probe_outcome=probe_failed" >> "$GITHUB_OUTPUT"
+            echo "probe_detail=public read-only probe exited ${status}" >> "$GITHUB_OUTPUT"
           fi
-          # probe_with_oauth.py wrote probe_outcome / probe_detail to GITHUB_OUTPUT.
           exit 0
 
       - name: Classify a failed post-deploy probe (deploy already succeeded)

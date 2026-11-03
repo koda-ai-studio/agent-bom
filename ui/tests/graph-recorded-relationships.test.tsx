@@ -123,3 +123,20 @@ it("shows evidence type and source time in each row without opening raw evidence
   expect(screen.getByText("Source observed at").nextElementSibling).toHaveTextContent("2026-09-01T00:00:00Z");
   expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent("2026-10-12T00:00:00Z");
 });
+
+it("keeps outgoing direction and neighbor navigation after canonical alias resolution", async () => {
+  fetchPage.mockResolvedValue({ ...page(), resolved_from: "legacy-agent" });
+  const inspect = vi.fn();
+  render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="legacy-agent"><GraphRecordedRelationships scanId="s-1" nodeId="legacy-agent" onInspectNode={inspect} /></GraphRecordedRelationshipScope>);
+  const neighbor = await screen.findByRole("button", { name: "Recorded server name" });
+  expect(screen.getByText("Outgoing → · Uses · evidence unspecified")).toBeVisible();
+  fireEvent.click(neighbor);
+  expect(inspect).toHaveBeenCalledWith("server:opaque-id");
+});
+
+it("keeps terminal-page missing evidence visible instead of reporting complete relationships", async () => {
+  fetchPage.mockResolvedValue(page(null, true));
+  render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="agent:one"><GraphRecordedRelationships scanId="s-1" nodeId="agent:one" /></GraphRecordedRelationshipScope>);
+  expect(await screen.findByText(/relationship evidence is incomplete/i)).toBeVisible();
+  expect(screen.getByRole("status")).not.toHaveTextContent("all pages loaded");
+});

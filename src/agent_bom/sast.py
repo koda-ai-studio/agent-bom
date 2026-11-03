@@ -29,6 +29,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from agent_bom.core.path_context import classify_path_context
 from agent_bom.models import Package, Severity, Vulnerability
 from agent_bom.parsers.sarif import SarifValidationError, normalize_sarif_document
 
@@ -94,6 +95,7 @@ class SASTFinding:
     security_severity: float | None = None
     fingerprints: dict[str, str] = field(default_factory=dict)
     partial_fingerprints: dict[str, str] = field(default_factory=dict)
+    path_context: str | None = None  # documentation | example | test; severity lowered to LOW there
 
 
 @dataclass
@@ -159,6 +161,7 @@ class SASTResult:
                     "security_severity": f.security_severity,
                     "fingerprints": f.fingerprints,
                     "partial_fingerprints": f.partial_fingerprints,
+                    **({"path_context": f.path_context} if f.path_context else {}),
                 }
                 for f in self.findings
             ],
@@ -173,6 +176,9 @@ _SARIF_LEVEL_MAP: dict[str, Severity] = {
     "note": Severity.LOW,
     "none": Severity.NONE,
 }
+
+
+_CONTEXT_LOWERED = frozenset({Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM})
 
 
 # ── Internal helpers ────────────────────────────────────────────────────────
@@ -356,12 +362,16 @@ def _parse_sarif_findings(sarif: dict) -> tuple[list[SASTFinding], int, int]:
             severity = Severity.LOW
         else:
             severity = Severity.NONE
+        file_path = location.uri if location is not None else "unknown"
+        path_context = classify_path_context(file_path)
+        if path_context is not None and severity in _CONTEXT_LOWERED:
+            severity = Severity.LOW
         findings.append(
             SASTFinding(
                 rule_id=result.rule_id or "unknown",
                 message=(result.message or result.rule_full_description or result.rule_short_description)[:500],
                 severity=severity,
-                file_path=location.uri if location is not None else "unknown",
+                file_path=file_path,
                 start_line=location.start_line if location is not None else 0,
                 end_line=location.end_line if location is not None else 0,
                 start_col=location.start_column if location is not None else 0,
@@ -374,6 +384,7 @@ def _parse_sarif_findings(sarif: dict) -> tuple[list[SASTFinding], int, int]:
                 security_severity=result.security_severity,
                 fingerprints=dict(result.fingerprints),
                 partial_fingerprints=dict(result.partial_fingerprints),
+                path_context=path_context,
             )
         )
 

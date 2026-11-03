@@ -11,6 +11,7 @@ from agent_bom.compliance_utils import effective_blast_radius_tags
 from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import normalize_severity
 from agent_bom.core.suppression_score import risk_rank_key
+from agent_bom.domain.inventory_types import DEV_DEPENDENCY_SCOPES
 from agent_bom.finding import Finding, FindingType, blast_radius_to_finding
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
 from agent_bom.security import sanitize_log_label, sanitize_text, text_requires_redaction
@@ -256,7 +257,7 @@ def is_package_direct(finding: Finding) -> bool:
 
 def is_dev_dependency(finding: Finding) -> bool:
     """True when the lockfile placed the package in a development-only scope."""
-    return str(evidence(finding, "package_dependency_scope", "") or "").strip().lower() in {"dev", "development", "test"}
+    return str(evidence(finding, "package_dependency_scope", "") or "").strip().lower() in DEV_DEPENDENCY_SCOPES
 
 
 def is_package_malicious(finding: Finding) -> bool:

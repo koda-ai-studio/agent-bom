@@ -25,6 +25,7 @@ class BriefPriority(OverviewTopRisk):
 
     sla_status: Literal["overdue", "due_soon", "on_track", "unknown"] | None = None
     sla_policy: str | None = None
+    sla_status_text: str | None = None
 
 
 class ExecutiveBriefResponse(ReadResponse):

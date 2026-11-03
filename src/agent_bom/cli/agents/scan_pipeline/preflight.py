@@ -245,6 +245,8 @@ def _run_iac_only(opts: ScanOptions, st: ScanState) -> None:
             exclude_unfixable=opts.exclude_unfixable,
             fixable_only=opts.fixable_only,
             fail_on_severity=opts.fail_on_severity,
+            ignore_file=opts.ignore_file,
+            policy=opts.policy,
         )
         raise StopScan
 

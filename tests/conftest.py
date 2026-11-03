@@ -332,10 +332,13 @@ def _reset_scan_warning_state() -> None:
     # offline_ecosystem_gap dict (no "reason") that makes a later assertion on
     # consume_coverage_warnings()[0]["reason"] raise KeyError. Drain both
     # channels between tests.
+    # Scan-performance counters (e.g. unfixed OS findings suppressed) feed the
+    # zero-findings verdict, so a prior scan's count must not leak either.
     try:
-        from agent_bom.scanners.state import reset_scan_warnings
+        from agent_bom.scanners.state import reset_scan_performance, reset_scan_warnings
 
         reset_scan_warnings()
+        reset_scan_performance()
     except Exception:
         pass  # best-effort isolation reset; the module may be absent in this environment
 

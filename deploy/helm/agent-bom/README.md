@@ -40,20 +40,38 @@ the flag toggles.
 
 ## Quick start
 
-From a checked-out repo (chart path `deploy/helm/agent-bom/`):
+Install the published chart at an exact release. `--version` selects the chart
+and the image tags it pins; the release tooling keeps these examples on the
+latest published version. Values files referenced below ship in the repository
+under `deploy/helm/agent-bom/examples/`.
 
 ```bash
 # Scanner CronJob only (default)
-helm upgrade --install agent-bom deploy/helm/agent-bom \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   -n agent-bom --create-namespace
 
 # API + UI control plane (use a shipped profile; it includes Postgres wiring)
 python scripts/install_helm_profile.py focused-pilot
 
 # Custom scan schedule
-helm upgrade --install agent-bom deploy/helm/agent-bom \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   -n agent-bom --create-namespace \
   --set scanner.schedule="0 */2 * * *"
+```
+
+`scripts/install_helm_profile.py` installs the same published chart; pass
+`--local-chart` only when developing the chart itself.
+
+### Development only: install from a source checkout
+
+The chart directory on `main` pins the images of the next, unreleased version,
+so an install from it pulls tags that do not exist yet (ImagePullBackOff). Use it
+only to develop the chart, with images you built and pushed yourself:
+
+```bash
+helm upgrade --install agent-bom deploy/helm/agent-bom \
+  -n agent-bom --create-namespace \
+  --set image.tag=<your-dev-tag>
 ```
 
 ### Production ExternalSecrets are a separate stage
@@ -64,7 +82,7 @@ release. The chart rejects that configuration. For the production profile,
 install the secret-sync release first and wait for its four target Secrets:
 
 ```bash
-helm upgrade --install agent-bom-secrets deploy/helm/agent-bom \
+helm upgrade --install agent-bom-secrets oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   -n agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml \
   -f deploy/helm/agent-bom/examples/eks-production-secret-sync-values.yaml
@@ -81,7 +99,7 @@ kubectl get -n agent-bom secret \
   agent-bom-control-plane-admin \
   agent-bom-control-plane-auth
 
-helm upgrade --install agent-bom deploy/helm/agent-bom \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   -n agent-bom \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```

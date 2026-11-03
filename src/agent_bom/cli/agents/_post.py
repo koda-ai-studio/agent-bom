@@ -42,7 +42,7 @@ def run_integrations(
     blast_radii = ctx.blast_radii
 
     # Step 7b: Policy evaluation
-    if policy and blast_radii:
+    if policy and (blast_radii or getattr(ctx.report, "iac_findings_data", None)):
         from agent_bom.policy import evaluate_policy, load_policy
 
         try:

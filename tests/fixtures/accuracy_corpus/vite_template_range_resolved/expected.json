@@ -1,0 +1,24 @@
+{
+  "packages": [
+    "@vitejs/plugin-vue@4.6.2",
+    "vite@4.5.14",
+    "vue@3.5.44"
+  ],
+  "possibly_affected": {
+    "vite@4.5.14": [
+      "GHSA-4w7w-66w2-5vf9",
+      "GHSA-587h-7wmj-h5pm",
+      "GHSA-698v-4r3x-3vcv",
+      "GHSA-93m4-6634-74q7",
+      "GHSA-9jrq-w75r-8gcw",
+      "GHSA-c27g-q93r-2cwf",
+      "GHSA-fx2h-pf6j-xcff",
+      "GHSA-g4jq-h2w9-997c",
+      "GHSA-jqfw-vq24-v9c3",
+      "GHSA-r825-w8mm-5pxw",
+      "GHSA-rq7h-c2jc-7f22",
+      "GHSA-v6wh-96g9-6wx3"
+    ]
+  },
+  "source": "vitejs/vite tag v4.0.0 packages/create-vite/template-vue/package.json verbatim; registry selections from the npm registry and advisories from the OSV API, captured 2026-11-02"
+}

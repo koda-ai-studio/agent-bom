@@ -1629,9 +1629,10 @@ export async function installRoutes(page, fixtureGraph = graph) {
   });
   await page.route("**/health", (route) => fulfill(route, { status: "ok", version: RELEASE_VERSION }));
   await page.route("**/v1/compliance", (route) => fulfill(route, {
-    overall_score: 72,
-    overall_status: "warning",
-    evaluated_controls: 12,
+    // No framework rows below are evaluated, so the fixture reports no score.
+    overall_score: 0,
+    overall_status: "no_data",
+    evaluated_controls: 0,
     total_controls: 12,
     coverage_pct: 100,
     scan_count: 2,
@@ -1882,6 +1883,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
   }));
   await page.route("**/v1/overview", (route) => fulfill(route, overviewResponse()));
   await page.route("**/v1/agents", (route) => fulfill(route, {
+    scope: "scanned_estate",
     agents: scanJob().result.agents,
     count: scanJob().result.agents.length,
     warnings: [],
@@ -2915,7 +2917,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     {
       path: "dashboard-live.png",
       page: "/?capture=1",
-      scope: "Organization view: posture and current findings with compliance and security-area disclosures collapsed using their controls",
+      scope: "Posture and current findings with compliance and security-area disclosures collapsed using their controls",
       presentation: `${CAPTURE_THEME} desktop`,
     },
     {
@@ -3213,9 +3215,6 @@ async function main() {
       });
       await capturePage.addInitScript((selectedTheme) => {
         window.localStorage.setItem("agent-bom-theme", selectedTheme);
-        // The governance tour exercises the selectable Organization view.
-        // This is a display preference; fixture evidence and access stay unchanged.
-        window.localStorage.setItem("agent-bom.product-view", "organization");
       }, theme);
       return capturePage;
     };
@@ -3451,7 +3450,8 @@ async function main() {
       expectedApiPaths: [`/v1/scan/${SCAN_ID}`, `/v1/scan/${SCAN_ID}/status`],
       assertNoHorizontalOverflow: true,
     });
-    await capture(page, "/jobs?capture=1", "jobs-pipeline-live.png", async (jobsPage) => {
+    const jobsProofPage = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 980 });
+    await capture(jobsProofPage, "/jobs?capture=1", "jobs-pipeline-live.png", async (jobsPage) => {
       // Start a fresh canvas after the scan page unmounts its React Flow tree.
       await jobsPage.reload({ waitUntil: "load" });
       const pipeline = jobsPage.getByTestId(`job-pipeline-${SCAN_ID}`);
@@ -3511,6 +3511,7 @@ async function main() {
       minGraphNodes: 6,
       minGraphEdges: 5,
     });
+    await jobsProofPage.close();
     await capture(page, "/agents?name=developer-copilot&view=lifecycle&capture=1", "agent-lifecycle-live.png", async (agentsPage) => {
       await agentsPage.getByText("Configured inventory", { exact: true }).waitFor({ state: "visible", timeout: 20_000 });
       await fitReactFlow(agentsPage);

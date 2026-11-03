@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, ArrowUpRight, FileSearch, Shield } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
+import { incidentPagesComplete } from "@/lib/graph-incident-scope";
 import { useIncidentNeighborhood } from "@/hooks/use-incident-neighborhood";
 import { componentControlEvidence } from "@/lib/component-compliance-evidence";
 import { buildGraphInvestigationBundle, downloadGraphInvestigation } from "@/lib/graph-investigation-bundle";
@@ -18,19 +19,21 @@ export function ComponentCompliance({ assetId, scanId }: { assetId: string; scan
 
 function ControlEvidence({ assetId, scanId, owner }: { assetId: string; scanId: string; owner: string }) {
   const graph = useIncidentNeighborhood(scanId, assetId, "both", owner);
+  const readId = graph.pages[0]?.node_id ?? assetId;
+  const readScanId = graph.pages[0]?.scan_id ?? scanId;
   const [exportError, setExportError] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const rows = componentControlEvidence(assetId, graph.nodes, graph.edges);
+  const rows = componentControlEvidence(readId, graph.nodes, graph.edges);
   const keyOf = (row: (typeof rows)[number]) => JSON.stringify([row.tag, row.node.id]);
   const selected = rows.find(row => keyOf(row) === selectedKey) ?? rows[0];
   const last = graph.pages.at(-1);
-  const component = graph.nodes.find(node => node.id === assetId);
-  const label = component?.label || assetId;
-  const params = new URLSearchParams({ asset: assetId, scan: scanId });
-  const graphHref = (node: string) => `/security-graph?${new URLSearchParams({ lens: "estate", node, scan: scanId })}`;
-  const gaps = graph.pages.some(page => (page.completeness.missing_endpoint_count ?? 0) > 0);
+  const component = graph.nodes.find(node => node.id === readId);
+  const label = component?.label || readId;
+  const params = new URLSearchParams({ asset: readId, scan: readScanId });
+  const graphHref = (node: string) => `/security-graph?${new URLSearchParams({ lens: "estate", node, scan: readScanId })}`;
+  const gaps = graph.pages.some(page => (page.completeness?.missing_endpoint_count ?? 0) > 0);
   const failed = selected?.status === "recorded_fail";
-  const onComponent = selected?.node.id === assetId;
+  const onComponent = selected?.node.id === readId;
   return <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
     <header className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -39,7 +42,7 @@ function ControlEvidence({ assetId, scanId, owner }: { assetId: string; scanId: 
           <div className="min-w-0"><p className="text-xs font-medium text-ink-secondary">Component investigation</p>
             <h1 className="break-words text-xl font-semibold">{label}</h1></div>
         </div>
-        <Link href={graphHref(assetId)} className="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 text-xs font-medium hover:bg-surface">View component chain <ArrowUpRight size={14} aria-hidden="true" /></Link>
+        <Link href={graphHref(readId)} className="inline-flex items-center gap-1 rounded-lg border border-outline px-3 py-2 text-xs font-medium hover:bg-surface">View component chain <ArrowUpRight size={14} aria-hidden="true" /></Link>
       </div>
       <nav aria-label="Component investigation" className="flex gap-5 border-b border-outline text-sm">
         <Link href={`/findings?${params}`} className="pb-2 text-ink-secondary hover:text-foreground">Findings</Link>
@@ -52,7 +55,7 @@ function ControlEvidence({ assetId, scanId, owner }: { assetId: string; scanId: 
     </div>
     {graph.error && <div role="alert" className="space-y-2 rounded-lg border border-outline p-4"><p>{graph.error}</p>
       <button type="button" className="rounded border border-outline px-3 py-2" disabled={graph.busy}
-        onClick={() => graph.stale ? graph.restart() : void graph.load(assetId, last?.next_cursor ?? undefined)}>Retry control evidence</button></div>}
+        onClick={() => graph.stale ? graph.restart() : void graph.load(readId, last?.next_cursor ?? undefined)}>Retry control evidence</button></div>}
     {gaps && <p className="text-sm">Some relationship endpoints are missing. Control evidence coverage is incomplete.</p>}
     {selected && <div className="grid overflow-hidden rounded-xl border border-outline bg-surface md:grid-cols-[240px_minmax(0,1fr)]">
       <section className="border-b border-outline bg-surface-muted md:border-r md:border-b-0" aria-label="Select control evidence">
@@ -87,7 +90,7 @@ function ControlEvidence({ assetId, scanId, owner }: { assetId: string; scanId: 
         <div className="rounded-lg border border-outline bg-surface-muted p-3">
           <h4 className="flex items-center gap-2 text-sm font-semibold"><FileSearch size={15} aria-hidden="true" />{failed ? "Review the failed check" : "Assessment still needed"}</h4>
           <p className="mt-1 text-sm leading-relaxed text-ink-secondary">{failed ? "Inspect the supporting check detail, correct the affected configuration, then collect a new check for the same scope." : "Collect a scoped control check before making a compliance decision."}</p>
-          <Link href={onComponent ? graphHref(assetId) : graphHref(selected.node.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent">Inspect source evidence <ArrowUpRight size={13} aria-hidden="true" /></Link>
+          <Link href={onComponent ? graphHref(readId) : graphHref(selected.node.id)} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent">Inspect source evidence <ArrowUpRight size={13} aria-hidden="true" /></Link>
         </div>
         <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
           <div><dt className="text-ink-secondary">Scope</dt><dd className="mt-1">{selected.scope.replaceAll("_", " ")}</dd></div>
@@ -102,13 +105,13 @@ function ControlEvidence({ assetId, scanId, owner }: { assetId: string; scanId: 
     </div>}
     {last && !graph.error && rows.length === 0 && <p className="rounded-lg border border-outline p-4 text-sm">No control evidence is recorded in the loaded pages. This does not establish compliance.</p>}
     {last?.next_cursor && !graph.error && <button type="button" className="rounded border border-outline px-3 py-2 text-sm disabled:opacity-50" disabled={graph.busy || graph.capped}
-      onClick={() => void graph.load(assetId, last.next_cursor!)}>{graph.busy ? "Loading…" : "Load more control evidence"}</button>}
+      onClick={() => void graph.load(readId, last.next_cursor!)}>{graph.busy ? "Loading…" : "Load more control evidence"}</button>}
     {graph.capped && last?.next_cursor && <p className="text-xs">Display limit reached. Additional relationships may contain control evidence.</p>}
     <footer className="space-y-3 text-xs text-ink-secondary">
-      {last && !last.next_cursor && !graph.error && <p>All recorded relationship pages loaded. Collection coverage and evidence freshness are not assessed.</p>}
+      {last && !last.next_cursor && !graph.error && <p>{incidentPagesComplete(graph.pages) ? "All recorded relationship pages loaded. Collection coverage and evidence freshness are not assessed." : "End of available pages; control evidence is incomplete."}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <details className="rounded-lg border border-outline px-3 py-2"><summary className="cursor-pointer font-medium">Snapshot &amp; scope</summary>
-          <p className="mt-2 break-all">Component: {assetId}</p><p className="mt-1 break-all">{scanId.startsWith("current-estate:") ? "Current tenant estate" : `Snapshot: ${scanId}`}</p>
+          <p className="mt-2 break-all">Component: {readId}</p><p className="mt-1 break-all">{readScanId.startsWith("current-estate:") ? "Current tenant estate" : `Snapshot: ${readScanId}`}</p>
           <p className="mt-2">Only this component and its directly linked evidence are included. Account checks apply at account scope; no result is inherited from a parent.</p>
         </details>
         <details className="rounded-lg border border-outline px-3 py-2"><summary className="cursor-pointer font-medium">Export control evidence</summary>

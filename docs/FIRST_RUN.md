@@ -483,6 +483,12 @@ agent-bom scan . --warn-on medium --fail-on-severity critical   # two-tier gate
 agent-bom scan . --exit-zero --warn-on medium  # vulnerability report only; incomplete/malicious still fail
 ```
 
+Gate on production dependencies only with `--exclude-dev` (alias `--prod-only`).
+It drops packages a lockfile marks as development-only before matching, so the
+gate, SARIF, SBOMs and the report all cover the same production scope, and the
+report records the exclusion as a scan note. Packages with an unknown scope are
+kept. Console tables label dev-only packages `dev` when the flag is not set.
+
 `--warn-on` reports findings below the active failure threshold. Pair it with
 `--exit-zero` when all vulnerability severities should be reporting-only;
 malicious packages, policy failures, and incomplete scans still return

@@ -22,6 +22,8 @@ from agent_bom.mcp_tools.dispatch import ToolErrorPayload as ToolErrorPayload
 from agent_bom.mcp_tools.dispatch import record_completion as _record_completion
 from agent_bom.mcp_tools.dispatch import resolve_tool_path, tool_result_error
 from agent_bom.mcp_tools.estate_refusal import retryable_estate_refusal
+from agent_bom.mcp_tools.public_tier import anonymous_caller_key, is_public_token
+from agent_bom.mcp_tools.request_identity import verified_access_token
 from agent_bom.security import sanitize_log_label
 
 _ToolReturn = TypeVar("_ToolReturn")
@@ -369,11 +371,9 @@ def current_tool_request(request_ctx_getter: Callable[[], Any]) -> dict[str, str
     client_id = getattr(meta, "client_id", None) if meta else None
     session = getattr(current_request, "session", None)
     session_label = f"session-{id(session) % 1_000_000}" if session is not None else "local"
-    from agent_bom.mcp_tools.request_identity import verified_access_token
-
     token = verified_access_token(current_request)
     auth_scopes = {scope.strip().lower() for scope in token.scopes if scope.strip()} if token is not None else set()
-    verified_caller = _verified_token_caller(token)
+    verified_caller = anonymous_caller_key(current_request) if is_public_token(token) else _verified_token_caller(token)
     return {
         "caller": verified_caller or client_id or session_label,
         "client_id": client_id,

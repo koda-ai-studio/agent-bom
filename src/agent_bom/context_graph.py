@@ -323,13 +323,11 @@ def build_context_graph(
                 graph.nodes[srv_id].metadata["shared_identity_key"] = shared_identity
                 graph.nodes[srv_id].metadata["identity_basis"] = "configured_endpoint"
 
-            # Credentials. The serialized scan contract surfaces credential env
-            # var names via ``credential_env_vars`` (the canonical builder writes
-            # them there and leaves ``env`` empty/redacted in output), so reading
-            # only ``env`` produced zero credential nodes on real scan JSON. Read
-            # both the explicit credential list and any credential-looking inline
-            # env keys, deduped within this server.
+            # Serialized scans preserve credential names, never values. Include
+            # embedded launch/header slots and legacy inline environment keys.
             cred_keys = list(srv_dict.get("credential_env_vars", []))
+            embedded = srv_dict.get("embedded_credential_names", [])
+            cred_keys += [key for key in embedded if isinstance(key, str) and key.strip()] if isinstance(embedded, list) else []
             cred_keys += [k for k in srv_dict.get("env", {}) if _is_credential_key(k)]
             for env_key in dict.fromkeys(cred_keys):
                 # The report carries only a credential env-var name, not proof

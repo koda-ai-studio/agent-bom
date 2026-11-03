@@ -524,7 +524,11 @@ def test_refreshed_demo_graph_gets_matching_scan_evidence(demo_estate_client, mo
     report = next(job.result for job in before if job.result and bootstrap._job_has_demo_source(job))
     monkeypatch.setattr(bootstrap, "seed_showcase_graph_if_empty", lambda *args, **kwargs: True)
     monkeypatch.setattr(bootstrap, "_run_demo_scan_report", lambda **kwargs: report)
-    refreshed = bootstrap.maybe_bootstrap_demo_estate(tenant_id="default")
+    # A refresh requires stale graph evidence; a current estate now returns
+    # before the expensive seeder. Model the precondition as well as its write.
+    with monkeypatch.context() as stale_graph:
+        stale_graph.setattr(bootstrap, "_showcase_seed_is_current", lambda _snapshots: False)
+        refreshed = bootstrap.maybe_bootstrap_demo_estate(tenant_id="default")
     assert refreshed["seeded"] is True
     assert len(store.list_all(tenant_id="default")) == len(before) + 1
     monkeypatch.setattr(bootstrap, "seed_showcase_graph_if_empty", lambda *args, **kwargs: False)

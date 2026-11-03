@@ -37,6 +37,9 @@ class ScanOptions:
     # When set, bare/floating versions are resolved against the target — its
     # virtualenv for pip, the dir itself for npm/go — never the scanner host.
     project_dir: Optional[str] = None
+    # Advisories on a registry-selected (range/unpinned) version become
+    # possibly-affected candidates; ``check`` of a named target turns this off.
+    registry_selected_as_candidates: bool = True
 
 
 class IncompleteScanError(RuntimeError):

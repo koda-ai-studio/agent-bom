@@ -262,91 +262,34 @@ def run_iac_only_scan(
     exclude_unfixable: bool,
     fixable_only: bool,
     fail_on_severity: str | None,
+    ignore_file: str | None = None,
+    policy: str | None = None,
 ) -> None:
     """Execute the dedicated IaC-only scan path and exit from the main command."""
-    from agent_bom.iac import scan_iac_with_context
-    from agent_bom.iac.models import ScanContext as IaCContext
-    from agent_bom.k8s import CollectorState, K8sPostureStatus, scan_live_cluster_posture_with_evidence
+    from agent_bom.cli.agents._iac_controls import IaCRun
 
     iac_ctx = ScanContext(con=con)
-    all_iac_findings: list = []
-    all_iac_verdicts: list = []
+    iac_run = IaCRun.load(deployment_mode="standalone", ignore_file=ignore_file, policy_path=policy)
     k8s_posture_evidence: dict | None = None
 
     if iac_paths:
         con.print(f"\n[bold blue]Scanning {len(iac_paths)} path(s) for IaC misconfigurations...[/bold blue]\n")
-        iac_scan_ctx = IaCContext(deployment_mode="standalone")
         for iac_path in iac_paths:
-            result = scan_iac_with_context(iac_path, iac_scan_ctx)
-            all_iac_findings.extend(result.findings)
-            all_iac_verdicts.extend(result.verdicts)
+            result = iac_run.scan(iac_path)
+            iac_run.add(result)
             _print_iac_path_result(con, iac_path, result)
-        if verbose and all_iac_verdicts:
-            _print_scanner_verdicts(con, all_iac_verdicts)
+        if verbose and iac_run.verdicts:
+            _print_scanner_verdicts(con, iac_run.verdicts)
 
     if k8s_live:
-        con.print("\n[bold blue]Inspecting live Kubernetes cluster posture...[/bold blue]\n")
-        posture = scan_live_cluster_posture_with_evidence(
-            namespace=k8s_live_namespace,
-            all_namespaces=k8s_live_all_namespaces,
-            context=k8s_live_context,
-        )
-        k8s_posture_evidence = posture.to_evidence_dict()
-        benchmark = k8s_posture_evidence["benchmark"]
-        con.print(
-            f"  benchmark: {benchmark['benchmark_name']} v{benchmark['benchmark_version']} "
-            "(vendor-asserted; recommendation identifiers only)"
-        )
-
-        # Surface every collector that could not be evaluated so a denied/partial/
-        # timeout read is explicit — it is never silently rendered as a clean pass.
-        for collector in posture.collectors:
-            if collector.state in {CollectorState.UNEVALUABLE, CollectorState.FAILED}:
-                label = "unevaluable" if collector.state is CollectorState.UNEVALUABLE else "failed"
-                con.print(f"  [yellow]○[/yellow] {collector.collector_id}: {label} — {collector.message or 'read not evaluable'}")
-
-        if posture.status is K8sPostureStatus.FAILED:
-            detail = next((collector.message for collector in posture.collectors if collector.message), "collection failed")
-            con.print(f"  [red]✗[/red] live cluster posture unavailable: {detail}")
-            raise SystemExit(1)
-
-        # A single denied read no longer aborts the run — evaluated collectors
-        # still contribute findings and the run is reported as partial.
-        all_iac_findings.extend(posture.findings)
-        if posture.findings:
-            summary = iac_severity_summary(posture.findings)
-            con.print(f"  [red]⚠[/red]  live cluster posture: {len(posture.findings)} finding(s) ({summary})")
-        else:
-            con.print("  [green]✓[/green] live cluster posture: no misconfigurations in evaluated collectors")
-
-        if posture.status is K8sPostureStatus.PARTIAL:
-            con.print("  [yellow]partial coverage[/yellow] — some reads were unevaluable; absence of findings there is not a pass")
+        k8s_posture_evidence = _scan_live_posture(con, iac_run, k8s_live_namespace, k8s_live_all_namespaces, k8s_live_context)
 
     if output_format == "console" and not output and not quiet:
-        print_iac_findings_table(con, all_iac_findings, limit=None if verbose else DEFAULT_IAC_TABLE_LIMIT)
+        print_iac_findings_table(con, iac_run.findings, limit=None if verbose else DEFAULT_IAC_TABLE_LIMIT)
+    iac_run.print_summary(con, verbose=verbose)
 
     iac_report = AIBOMReport(agents=[], blast_radii=[])
-    iac_report.iac_findings_data = {
-        "schema_version": "1.0",
-        "document_type": "IAC-FINDINGS",
-        "spec_version": "1.0",
-        "total": len(all_iac_findings),
-        "findings": [
-            {
-                "rule_id": finding.rule_id,
-                "severity": finding.severity,
-                "title": finding.title,
-                "message": finding.message,
-                "file_path": finding.file_path,
-                "line_number": finding.line_number,
-                "category": finding.category,
-                "compliance": finding.compliance,
-                "attack_techniques": finding.attack_techniques,
-                "remediation": finding.remediation,
-            }
-            for finding in all_iac_findings
-        ],
-    }
+    iac_report.iac_findings_data = iac_run.payload(schema_version="1.0", document_type="IAC-FINDINGS", spec_version="1.0")
     if k8s_posture_evidence is not None:
         # Persist the honest posture evidence envelope (benchmark provenance +
         # per-collector execution state) alongside the findings so downstream
@@ -382,6 +325,42 @@ def run_iac_only_scan(
             fixable_only=fixable_only,
         )
 
-    if fail_on_severity and all_iac_findings:
-        if any(severity_at_or_above(finding.severity, fail_on_severity) for finding in all_iac_findings):
-            sys.exit(1)
+    policy_failed = iac_run.policy_result is not None and not iac_run.policy_result["passed"]
+    if policy_failed or (fail_on_severity and any(severity_at_or_above(f.severity, fail_on_severity) for f in iac_run.findings)):
+        sys.exit(1)
+
+
+def _scan_live_posture(con: Any, iac_run: Any, namespace: str, all_namespaces: bool, context: str | None) -> dict:
+    """Live cluster posture: findings join the run (exceptions applied); returns the evidence envelope."""
+    from agent_bom.k8s import CollectorState, K8sPostureStatus, scan_live_cluster_posture_with_evidence
+
+    con.print("\n[bold blue]Inspecting live Kubernetes cluster posture...[/bold blue]\n")
+    posture = scan_live_cluster_posture_with_evidence(namespace=namespace, all_namespaces=all_namespaces, context=context)
+    evidence = posture.to_evidence_dict()
+    benchmark = evidence["benchmark"]
+    con.print(
+        f"  benchmark: {benchmark['benchmark_name']} v{benchmark['benchmark_version']} (vendor-asserted; recommendation identifiers only)"
+    )
+
+    # Surface every collector that could not be evaluated so a denied/partial/
+    # timeout read is explicit — it is never silently rendered as a clean pass.
+    for collector in posture.collectors:
+        if collector.state in {CollectorState.UNEVALUABLE, CollectorState.FAILED}:
+            label = "unevaluable" if collector.state is CollectorState.UNEVALUABLE else "failed"
+            con.print(f"  [yellow]○[/yellow] {collector.collector_id}: {label} — {collector.message or 'read not evaluable'}")
+
+    if posture.status is K8sPostureStatus.FAILED:
+        detail = next((collector.message for collector in posture.collectors if collector.message), "collection failed")
+        con.print(f"  [red]✗[/red] live cluster posture unavailable: {detail}")
+        raise SystemExit(1)
+
+    # A single denied read no longer aborts the run — evaluated collectors
+    # still contribute findings and the run is reported as partial.
+    iac_run.add_live(posture.findings)
+    if posture.findings:
+        con.print(f"  [red]⚠[/red]  live cluster posture: {len(posture.findings)} finding(s) ({iac_severity_summary(posture.findings)})")
+    else:
+        con.print("  [green]✓[/green] live cluster posture: no misconfigurations in evaluated collectors")
+    if posture.status is K8sPostureStatus.PARTIAL:
+        con.print("  [yellow]partial coverage[/yellow] — some reads were unevaluable; absence of findings there is not a pass")
+    return evidence

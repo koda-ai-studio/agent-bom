@@ -40,6 +40,7 @@
       "discovery_sources": [
        "project-config:<path:.mcp.json>"
       ],
+      "embedded_credential_names": [],
       "fingerprint": "<UUID>",
       "has_credentials": true,
       "identity_bindings": [],
@@ -183,6 +184,7 @@
        "source_type": "local_discovery"
       },
       "discovery_sources": [],
+      "embedded_credential_names": [],
       "fingerprint": "<UUID>",
       "has_credentials": false,
       "identity_bindings": [],

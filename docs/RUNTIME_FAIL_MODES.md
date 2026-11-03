@@ -450,6 +450,18 @@ variables. Invalid or non-finite settings fail startup before control-plane
 requests or binding a listener. CLI flags take precedence; security policies and
 authentication defaults are unchanged. See the [operator limits and defaults](perf/gateway-relay-latency.md#configure-upstream-limits).
 
+## Demo tenant ingest
+
+With `AGENT_BOM_DEMO_ESTATE=1` (`agent-bom serve --demo-estate`), the showcase
+tenant holds only labeled synthetic data. Every authenticated principal passes
+through one tenant-binding step, and that step refuses ingest operations
+addressed to the showcase tenant with `409 Conflict` and a fixed message, for
+every role. The guarded operations are listed in
+`src/agent_bom/api/demo_tenant_guard.py`; a test fails when a new ingest-shaped
+write route is neither guarded nor declared non-ingest. Other tenants on the
+same server, and all reads, are unaffected. Anonymous callers in demo mode are
+already clamped to `viewer` and cannot write at all.
+
 ## Executive brief read access
 
 `GET /v1/brief` fails closed for anonymous callers outside the explicitly enabled
@@ -462,3 +474,15 @@ The brief is advisory and unsigned. An unavailable graph is reported as
 fail the request through the existing sanitized API error handling. Independently
 read source scopes and snapshot identifiers remain attached; the brief does not
 claim atomic consistency, compliance attestation, or confirmed exploitation.
+
+## MCP public read-only tier
+
+Fail-closed in every direction. With the tier off (the default) anonymous
+`/mcp` requests are 401 as before. With it on, an anonymous `tools/call`
+outside the allowlist is HTTP 401, any other anonymous method except
+`initialize`, `ping`, notifications and the filtered listings is refused, and
+an invalid, expired or unrecognised bearer token is 401 rather than a fallback
+to anonymous access. An unparseable `AGENT_BOM_MCP_PUBLIC_READONLY` value
+refuses startup, as does combining the tier with MCP OAuth or SSE. Rate-limit
+state is in process memory, so it cannot be unavailable; a restart resets it.
+See [MCP server](MCP_SERVER.md#public-read-only-tier).

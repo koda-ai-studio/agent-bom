@@ -205,16 +205,27 @@ variable "external_secrets_prerequisites_ready" {
 # Helm release: control-plane chart (API + UI)
 ###############################################################################
 
-variable "chart_path" {
-  description = "Path to the packaged Helm chart relative to this module."
+variable "chart_repository" {
+  description = "Chart repository. Defaults to the published OCI chart. Set to \"\" with chart_path = \"../../helm/agent-bom\" only to develop the chart from a source checkout: on an unreleased branch its images are not published yet."
   type        = string
-  default     = "../../helm/agent-bom"
+  default     = "oci://ghcr.io/koda-ai-studio/charts"
+}
+
+variable "chart_path" {
+  description = "Chart name in chart_repository, or a local chart path when chart_repository is empty."
+  type        = string
+  default     = "agent-bom"
 }
 
 variable "chart_version" {
-  description = "Helm chart version pin. Empty uses whatever chart_path resolves to."
+  description = "Exact published chart version; it also selects the image tags the chart pins. Release tooling keeps this default on the latest published release."
   type        = string
-  default     = ""
+  default     = "0.113.0"
+
+  validation {
+    condition     = var.chart_version == "" || can(regex("^[0-9]+\\.[0-9]+\\.[0-9]+$", var.chart_version))
+    error_message = "chart_version must be an exact X.Y.Z release, or empty for a local chart path."
+  }
 }
 
 variable "image_tag" {

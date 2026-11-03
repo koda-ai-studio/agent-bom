@@ -36,6 +36,7 @@ PRODUCERS: dict[FindingType, tuple[str, ...]] = {
     FindingType.SHADOW_AI: ("shadow",),
     FindingType.CVE: ("demo", "securityhub"),
     FindingType.CIS_FAIL: ("cloud",),
+    FindingType.IAC_MISCONFIGURATION: ("iac",),
     FindingType.CIS_ERROR: ("cloud",),
     FindingType.CLOUD_BEST_PRACTICE_FAIL: ("cloud", "prowler", "securityhub"),
     FindingType.CLOUD_BEST_PRACTICE_ERROR: ("cloud", "prowler"),

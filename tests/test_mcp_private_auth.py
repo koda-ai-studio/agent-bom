@@ -188,11 +188,21 @@ def test_public_server_card_advertises_the_configured_bearer_contract(monkeypatc
     with TestClient(getattr(server, transport)(), base_url="http://localhost:8000") as client:
         response = client.get("/.well-known/mcp/server-card.json")
         assert response.status_code == 200
-        assert response.json()["authentication"] == {"required": True, "schemes": ["bearer"]}
+        assert response.json()["authentication"] == {
+            "required": True,
+            "schemes": ["bearer"],
+            "public_readonly": False,
+            "anonymous_tools": [],
+        }
         assert client.post("/oauth/register", json={"redirect_uris": ["https://client.example/cb"]}).status_code == 404
 
 
 def test_unprotected_server_card_does_not_advertise_authentication():
     from agent_bom.mcp_server_metadata import build_server_card
 
-    assert build_server_card(auth_required=False)["authentication"] == {"required": False, "schemes": []}
+    assert build_server_card(auth_required=False)["authentication"] == {
+        "required": False,
+        "schemes": [],
+        "public_readonly": False,
+        "anonymous_tools": [],
+    }

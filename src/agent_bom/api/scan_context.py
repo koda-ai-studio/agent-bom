@@ -53,6 +53,8 @@ class ScanContext:
     cloned_path: str = ""
     skill_audit_data: dict | None = None
     iac_findings_data: dict | None = None
+    # Approved tenant IaC exceptions (agent_bom.core.iac_exceptions.IaCException) applied to repository IaC scans.
+    iac_exceptions: list[Any] = field(default_factory=list)
     kubernetes_inventories: list[dict[str, Any]] = field(default_factory=list)
     repo_ai_inventory_data: dict | None = None
     repo_sast_data: dict | None = None

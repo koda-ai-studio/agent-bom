@@ -37,6 +37,7 @@ from agent_bom.output.html.sections import (
     _vuln_table,
     _warn_gate_banner,
 )
+from agent_bom.output.html.sections_iac_exceptions import iac_exceptions_banner
 from agent_bom.output.html.sections_possibly_affected import possibly_affected_section
 from agent_bom.output.html.styles import render_styles
 from agent_bom.output.html.tabs import _apply_tabs
@@ -244,9 +245,9 @@ def to_html(
   <!-- Delta / warn-gate banners (only rendered when applicable) -->
   {_delta_banner(report)}
   {_warn_gate_banner(report)}
-  {_scan_outcome_banner(report)}
+  {_scan_outcome_banner(report)}{iac_exceptions_banner(report)}
 
-  {_executive_headline_section(findings, policy_findings)}
+  {_executive_headline_section(findings, policy_findings, observed_at=report.generated_at)}
 
   <!-- Summary stat cards -->
   <section id="summary">

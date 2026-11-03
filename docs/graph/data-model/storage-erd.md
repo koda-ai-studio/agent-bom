@@ -357,7 +357,7 @@ Tables defined for both backends whose column sets differ (columns added by `ALT
 | `audit_chain_checkpoint` | `updated_at` | — |
 | `audit_log` | `team_id` | `tenant_id` |
 | `drift_incidents` | `blueprint_key` | — |
-| `exceptions` | `team_id` | `tenant_id` |
+| `exceptions` | `iac_path`, `iac_resource`, `iac_rule_id`, `team_id` | `tenant_id` |
 | `fleet_agents` | — | `device_fingerprint` |
 | `gateway_policies` | `team_id` | `enabled`, `mode`, `name`, `tenant_id`, `updated_at` |
 | `governance_audit_log` | `prev_hash` | — |

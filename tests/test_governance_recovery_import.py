@@ -13,7 +13,39 @@ from agent_bom.api.storage.registry_import import import_registries, read_source
 TABLES = ["fleet_agents", "fleet_endpoints", "gateway_policies", "exceptions"]
 
 
-def seed(path):
+@pytest.mark.parametrize("resource", [{}, {"kind": "Pod", "namespace": "dev", "labels": {"env": "dev"}}])
+def test_recovery_decodes_iac_scope_without_changing_the_decision(tmp_path, resource):
+    path = tmp_path / "iac.db"
+    waiver = VulnException(
+        tenant_id="source",
+        iac_rule_id="K8S-001",
+        iac_path="dev/**",
+        iac_resource=resource,
+        status=ExceptionStatus.REVOKED,
+        approved_by="reviewer",
+        revoked_at="2026-10-02T00:00:00Z",
+    )
+    SQLiteExceptionStore(str(path)).put(waiver, tenant_id="source")
+    before = path.read_bytes()
+    [(table, record, payload)] = read_source(path, {"source": "target"}, ["exceptions"])
+    assert table == "exceptions"
+    assert record.iac_resource == resource
+    assert payload["iac_resource"] == resource
+    assert record.iac_rule_id == "K8S-001" and record.iac_path == "dev/**"
+    assert record.tenant_id == "target" and record.status == ExceptionStatus.REVOKED
+    assert record.approved_by == "reviewer" and record.revoked_at == waiver.revoked_at
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize("raw", ["not-json", "[]", "null", '"Pod"'])
+def test_recovery_rejects_malformed_iac_resource(raw):
+    from agent_bom.api.storage.canonical_import import CONTROL_TABLES
+
+    with pytest.raises(ValueError):
+        CONTROL_TABLES["exceptions"].decode({"status": "revoked", "iac_resource": raw})
+
+
+def seed(path, *, iac=False):
     suffix = uuid4().hex
     fleet = SQLiteFleetStore(str(path))
     agent = FleetAgent(
@@ -32,8 +64,11 @@ def seed(path):
     waiver = VulnException(
         exception_id=suffix,
         tenant_id="source",
-        vuln_id="CVE-2026-0001",
-        package_name="fixture",
+        vuln_id="" if iac else "CVE-2026-0001",
+        package_name="" if iac else "fixture",
+        iac_rule_id="K8S-001" if iac else "",
+        iac_path="dev/**" if iac else "",
+        iac_resource={"kind": "Pod", "labels": {"env": "dev"}} if iac else {},
         status=ExceptionStatus.REVOKED,
         approved_by="reviewer",
         approved_at="2026-10-01T00:00:00Z",
@@ -59,7 +94,8 @@ def test_governance_recovery_reads_without_reactivating_or_mutating_source(tmp_p
 
 
 @pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires restricted-role Postgres")
-def test_governance_recovery_dry_run_repeat_conflict_and_tenant_isolation(tmp_path):
+@pytest.mark.parametrize("iac", [False, True])
+def test_governance_recovery_dry_run_repeat_conflict_and_tenant_isolation(tmp_path, iac):
     from agent_bom.api.postgres_access import PostgresExceptionStore
     from agent_bom.api.postgres_common import _new_application_pool
     from agent_bom.api.postgres_fleet_store import PostgresFleetStore
@@ -67,7 +103,7 @@ def test_governance_recovery_dry_run_repeat_conflict_and_tenant_isolation(tmp_pa
     from tests.test_postgres_job_evidence_revision import tenant_scope
 
     path = tmp_path / "governance.db"
-    agent, endpoint, policy, waiver = seed(path)
+    agent, endpoint, policy, waiver = seed(path, iac=iac)
     target = "recovery-" + uuid4().hex
     pool = _new_application_pool(min_size=1, max_size=2)
     try:
@@ -87,6 +123,11 @@ def test_governance_recovery_dry_run_repeat_conflict_and_tenant_isolation(tmp_pa
             assert not PostgresPolicyStore(pool=pool).get_policy(policy.policy_id, tenant_id=target).enabled
             restored = PostgresExceptionStore(pool=pool).get(waiver.exception_id, tenant_id=target)
             assert restored.status == ExceptionStatus.REVOKED and not restored.matches(waiver.vuln_id, waiver.package_name)
+            assert (restored.iac_rule_id, restored.iac_path, restored.iac_resource) == (
+                waiver.iac_rule_id,
+                waiver.iac_path,
+                waiver.iac_resource,
+            )
         with tenant_scope("other"):
             assert PostgresExceptionStore(pool=pool).get(waiver.exception_id, tenant_id=target) is None
         waiver.reason = "Changed historical decision"

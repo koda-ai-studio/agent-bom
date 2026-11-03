@@ -53,7 +53,12 @@ def _data() -> dict[str, Any]:
 
 
 def _single_substitution(a: str, b: str) -> bool:
-    return len(a) == len(b) and sum(1 for x, y in zip(a, b) if x != y) == 1
+    if len(a) != len(b):
+        return False
+    diffs = [i for i, (x, y) in enumerate(zip(a, b)) if x != y]
+    if len(diffs) == 1:
+        return True
+    return len(diffs) == 2 and diffs[1] == diffs[0] + 1 and a[diffs[0]] == b[diffs[1]] and a[diffs[1]] == b[diffs[0]]
 
 
 def _edit_distance(a: str, b: str, limit: int) -> int:
@@ -73,36 +78,58 @@ def _edit_distance(a: str, b: str, limit: int) -> int:
     return prev[-1]
 
 
+def _target(name: str, popular: list[str], legitimate: set[str]) -> str | None:
+    if name in popular or name in legitimate:
+        return None
+    best, best_ratio = "", 0.0
+    matcher = SequenceMatcher(None, "", name, autojunk=False)
+    for candidate in popular:
+        if 2 * min(len(name), len(candidate)) < TYPOSQUAT_THRESHOLD * (len(name) + len(candidate)):
+            continue
+        if name.startswith(candidate + "-") or name.endswith("-" + candidate):
+            continue
+        matcher.set_seq1(candidate)
+        if matcher.quick_ratio() < TYPOSQUAT_THRESHOLD:
+            continue
+        ratio = matcher.ratio()
+        if ratio > best_ratio and ratio >= TYPOSQUAT_THRESHOLD and _edit_distance(name, candidate, MAX_EDITS) <= MAX_EDITS:
+            best, best_ratio = candidate, ratio
+    if best:
+        return best
+    if len(name) >= EDIT1_MIN_LEN:
+        return next((c for c in sorted(popular) if _single_substitution(name, c)), None)
+    return None
+
+
+def _scoped_target(scope: str, rest: str, normalized: str, popular: list[str], legitimate: set[str]) -> str | None:
+    """An owned npm scope is not a squat of its own project family (``@rollup/x`` vs ``rollup-x``)."""
+    flattened = f"{scope}-{rest}"
+    if flattened in popular or rest in popular:
+        return None
+    for form in (normalized, flattened, rest):
+        target = _target(form, popular, legitimate)
+        if target:
+            root = target.split("-", 1)[0]
+            return None if scope in (root, f"{root}js", target) else target
+    return None
+
+
 def check_typosquat(name: str, ecosystem: str) -> str | None:
     """Return the popular package ``name`` imitates, or None."""
     data = _data()
     eco = ecosystem.lower()
     popular = data["popular"].get(eco, [])
     normalized = re.sub(r"[-_.]+", "-", name.lower()) if eco == "pypi" else name.lower()
-    if not popular or normalized in popular:
-        return None
-    if normalized in data["known_legitimate"].get(eco, []) or normalized in data["established"].get(eco, []):
+    if not popular:
         return None
     if eco == "npm" and normalized.startswith(tuple(data["safe_npm_scopes"])):
         return None
-    best, best_ratio = "", 0.0
-    matcher = SequenceMatcher(None, "", normalized, autojunk=False)
-    for candidate in popular:
-        if 2 * min(len(normalized), len(candidate)) < TYPOSQUAT_THRESHOLD * (len(normalized) + len(candidate)):
-            continue
-        if normalized.startswith(candidate + "-") or normalized.endswith("-" + candidate):
-            continue
-        matcher.set_seq1(candidate)
-        if matcher.quick_ratio() < TYPOSQUAT_THRESHOLD:
-            continue
-        ratio = matcher.ratio()
-        if ratio > best_ratio and ratio >= TYPOSQUAT_THRESHOLD and _edit_distance(normalized, candidate, MAX_EDITS) <= MAX_EDITS:
-            best, best_ratio = candidate, ratio
-    if best:
-        return best
-    if len(normalized) >= EDIT1_MIN_LEN:
-        return next((c for c in sorted(popular) if _single_substitution(normalized, c)), None)
-    return None
+    legitimate = set(data["known_legitimate"].get(eco, [])) | set(data["established"].get(eco, []))
+    if eco == "npm" and normalized.startswith("@") and "/" in normalized:
+        scope, _, rest = normalized[1:].partition("/")
+        if scope and rest:
+            return _scoped_target(scope, rest, normalized, popular, legitimate)
+    return _target(normalized, popular, legitimate)
 
 
 # --- bundled known-malicious names ---

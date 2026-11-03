@@ -620,3 +620,87 @@ def test_preparing_release_keeps_openclaw_install_pins_published(tmp_path, monke
     assert "agent-bom:0.112.0" in skill.read_text()
     assert "agent-bom@0.112.0" in skill.read_text()
     assert bump.bump(check=True) == 0
+
+
+# ---------------------------------------------------------------------------
+# Helm installs: user-facing docs install the published OCI chart at an exact
+# released --version; the repo chart path is for development checkouts only.
+# A repo-path install on main pins the NEXT, unreleased images and pulls
+# nothing (ImagePullBackOff).
+# ---------------------------------------------------------------------------
+
+_OCI = "oci://ghcr.io/koda-ai-studio/charts/agent-bom"
+
+
+def test_oci_chart_pin_is_managed_and_tracks_published() -> None:
+    cva = _load_script("check_version_alignment.py")
+    same_line = f"helm install agent-bom {_OCI} --version 0.105.0 -n agent-bom\n"
+    continued = f"helm upgrade --install agent-bom {_OCI} \\\n  --version 0.105.0 \\\n  -n agent-bom\n"
+    for text in (same_line, continued):
+        assert cva.scan_text("docs/X.md", text, "0.106.0", published="0.105.0") == []
+        drift = cva.scan_text("docs/X.md", text, "0.106.0", published="0.104.0")
+        assert len(drift) == 1 and "OCI chart pin" in drift[0], drift
+        assert len(cva.scan_text("docs/X.md", text.replace("0.105.0", "0.106.0"), "0.106.0", published="0.105.0")) == 1
+
+
+def test_unpinned_oci_chart_install_is_drift() -> None:
+    cva = _load_script("check_version_alignment.py")
+    text = f"helm upgrade --install agent-bom {_OCI} \\\n  -n agent-bom --create-namespace\n"
+    drift = cva.scan_text("site-docs/deployment/x.md", text, "0.106.0", published="0.105.0")
+    assert len(drift) == 1 and "without --version" in drift[0], drift
+
+
+def test_repo_path_helm_install_must_be_labeled_development_only() -> None:
+    cva = _load_script("check_version_alignment.py")
+    for chart in ("deploy/helm/agent-bom", "./deploy/helm/agent-bom/", "deploy/helm/agent-bom/"):
+        text = f"```bash\nhelm install agent-bom {chart} -n agent-bom\n```\n"
+        drift = cva.scan_text("docs/RUNTIME_REFERENCE.md", text, "0.106.0", published="0.105.0")
+        assert len(drift) == 1 and "repo-path chart install" in drift[0], (chart, drift)
+    labeled = (
+        "Development only (source checkout, unreleased images):\n\n```bash\nhelm upgrade --install agent-bom deploy/helm/agent-bom\n```\n"
+    )
+    assert cva.scan_text("deploy/helm/agent-bom/README.md", labeled, "0.106.0", published="0.105.0") == []
+    rendering = "helm template agent-bom deploy/helm/agent-bom -f values.yaml\n"
+    assert cva.scan_text("docs/X.md", rendering, "0.106.0", published="0.105.0") == []
+
+
+def test_published_bump_rewrites_oci_chart_pins(tmp_path, monkeypatch) -> None:
+    cva = _load_script("check_version_alignment.py")
+    guide = tmp_path / "guide.md"
+    guide.write_text(f"helm install agent-bom {_OCI} \\\n  --version 0.104.0 \\\n  -n agent-bom\n")
+    monkeypatch.setattr(cva, "SCAN_ROOTS", (guide,))
+    monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
+    monkeypatch.setattr(cva, "LAUNCHERS", ())
+    monkeypatch.setattr(cva, "ROOT", tmp_path)
+    monkeypatch.setattr(cva, "_release_tags", set)
+    count, changed = cva.rewrite("0.106.0", published="0.105.0")
+    assert count == 1 and changed == [guide]
+    assert "--version 0.105.0" in guide.read_text()
+    assert cva.find_drift("0.106.0", published="0.105.0") == []
+
+
+def test_dashboard_gateway_command_is_inside_the_scanned_tree() -> None:
+    cva = _load_script("check_version_alignment.py")
+    scanned = {cva._rel(path) for path in cva._iter_files()}
+    assert "ui/lib/deployment-context.ts" in scanned
+
+
+def test_platform_eks_module_installs_the_published_oci_chart() -> None:
+    """The Terraform module must not default to the repo chart (unreleased image tags on main)."""
+    cva = _load_script("check_version_alignment.py")
+    variables = (ROOT / "deploy/terraform/platform-eks/variables.tf").read_text()
+    main_tf = (ROOT / "deploy/terraform/platform-eks/main.tf").read_text()
+    published = cva.published_version()
+    assert re.search(r'variable "chart_repository" \{[^}]*default\s*=\s*"oci://ghcr\.io/koda-ai-studio/charts"', variables)
+    assert re.search(r'variable "chart_path" \{[^}]*default\s*=\s*"agent-bom"', variables)
+    assert re.search(rf'variable "chart_version" \{{[^}}]*default\s*=\s*"{re.escape(published)}"', variables)
+    assert main_tf.count("repository = var.chart_repository") == 2
+
+
+def test_platform_eks_chart_version_is_a_managed_published_pin() -> None:
+    cva = _load_script("check_version_alignment.py")
+    text = 'variable "chart_version" {\n  description = "x"\n  type        = string\n  default     = "0.104.0"\n}\n'
+    rel = "deploy/terraform/platform-eks/variables.tf"
+    assert cva.scan_text(rel, text, "0.106.0", published="0.104.0") == []
+    drift = cva.scan_text(rel, text, "0.106.0", published="0.105.0")
+    assert len(drift) == 1 and "Terraform chart pin" in drift[0], drift

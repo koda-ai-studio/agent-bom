@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 from uuid import UUID
 
 from agent_bom.canonical_ids import (
@@ -13,9 +13,12 @@ from agent_bom.canonical_ids import (
     canonical_mcp_tool_id,
     mcp_server_fingerprint,
 )
+from agent_bom.constants import is_credential_key
 from agent_bom.core.packages import normalize_package_name as normalize_package_name
 from agent_bom.core.severity import Severity as Severity
 from agent_bom.domain.inventory_types import ServerSurface, TransportType
+from agent_bom.domain.mcp_auth_headers import auth_header_names
+from agent_bom.domain.mcp_embedded_credentials import embedded_credential_names
 from agent_bom.domain.package_model import Package
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
@@ -223,6 +226,23 @@ class CredentialIdentityBinding:
 SBOM_DECLARED_MCP_SOURCE = "sbom:mcp-server"
 
 
+def surface_counts_as_mcp_server(surface: object, discovery_sources: Iterable[str] = ()) -> bool:
+    """The one MCP-inventory judgement, for model objects and serialized server dicts alike.
+
+    ``surface`` may be a :class:`ServerSurface` or its string value; a missing
+    surface on a legacy record means an MCP server.
+    """
+    value = str(getattr(surface, "value", surface) or ServerSurface.MCP.value)
+    if value == ServerSurface.MCP.value:
+        return True
+    return value == ServerSurface.SBOM.value and SBOM_DECLARED_MCP_SOURCE in discovery_sources
+
+
+def server_dict_counts_as_mcp_server(server: dict) -> bool:
+    """Apply the canonical MCP inventory rule to a serialized server row."""
+    return surface_counts_as_mcp_server(server.get("surface"), server.get("discovery_sources") or ())
+
+
 @dataclass
 class MCPServer:
     """An MCP server with its tools, resources, and dependencies."""
@@ -302,12 +322,17 @@ class MCPServer:
         return self.stable_id
 
     @property
+    def declared_auth_headers(self) -> list[str]:
+        """Configured HTTP header names that carry authentication (names only)."""
+        names = self.connection_metadata.get("header_names") or []
+        return auth_header_names(names if isinstance(names, list) else [])
+
+    @property
     def auth_mode(self) -> str:
         """Best-effort auth posture classification for the server."""
-        if self.connection_metadata.get("header_names") or self.connection_metadata.get("oauth_configured"):
+        if self.declared_auth_headers or self.connection_metadata.get("oauth_configured"):
             return "configured-http-auth"
-        credential_names = self.credential_names
-        if credential_names:
+        if self.env_credential_names:
             return "env-credentials"
         if self.url and "@" in self.url:
             return "url-embedded-credentials"
@@ -330,17 +355,26 @@ class MCPServer:
 
     @property
     def has_credentials(self) -> bool:
-        """Check if env vars suggest credentials are present."""
-        from agent_bom.constants import is_credential_key
+        """Whether env vars, args, the URL or auth headers carry a credential."""
+        return bool(self.credential_names)
 
-        return any(is_credential_key(key) for key in self.env)
+    @property
+    def env_credential_names(self) -> list[str]:
+        """Names of env vars that look like credentials."""
+        return [key for key in self.env if is_credential_key(key)]
+
+    @property
+    def embedded_credential_names(self) -> list[str]:
+        """Labels for credentials embedded in args, the URL or auth headers (names only)."""
+        # Synthetic inventory wrappers carry file paths, not launch arguments.
+        if not self.counts_as_mcp_server:
+            return []
+        return embedded_credential_names(self.args, self.url, self.connection_metadata.get("header_names"))
 
     @property
     def credential_names(self) -> list[str]:
-        """Return names of env vars that look like credentials."""
-        from agent_bom.constants import is_credential_key
-
-        return [key for key in self.env if is_credential_key(key)]
+        """Every credential the server carries: env-var names, then embedded labels."""
+        return list(dict.fromkeys([*self.env_credential_names, *self.embedded_credential_names]))
 
     @property
     def is_mcp_surface(self) -> bool:
@@ -354,7 +388,7 @@ class MCPServer:
         Imported servers keep the SBOM surface (identity, never executed) but
         still count in the MCP inventory, so re-scanning a BOM preserves it.
         """
-        return self.is_mcp_surface or (self.surface == ServerSurface.SBOM and SBOM_DECLARED_MCP_SOURCE in self.discovery_sources)
+        return surface_counts_as_mcp_server(self.surface, self.discovery_sources)
 
     @property
     def allows_registry_resolution(self) -> bool:

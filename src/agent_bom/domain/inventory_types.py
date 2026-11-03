@@ -57,6 +57,10 @@ class TransportType(str, Enum):
     UNKNOWN = "unknown"
 
 
+# Lockfile dependency scopes that mean "development only" (never shipped).
+DEV_DEPENDENCY_SCOPES = frozenset({"dev", "development", "test"})
+
+
 class ServerSurface(str, Enum):
     MCP = "mcp-server"
     CONTAINER_IMAGE = "container-image"
@@ -67,6 +71,7 @@ class ServerSurface(str, Enum):
     OS_PACKAGES = "os-packages"
     SAST = "sast"
     AI_INVENTORY = "ai-inventory"
+    DATA_CONNECTION = "data-connection"  # a data-platform CLI connection profile, e.g. Snowflake CLI
     OTHER = "other"
 
 

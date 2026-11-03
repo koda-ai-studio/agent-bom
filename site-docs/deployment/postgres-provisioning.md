@@ -80,7 +80,7 @@ Declare the provider separately from credentials so health and diagnostic
 output can name the deployment without parsing or exposing a DSN:
 
 ```bash
-helm upgrade agent-bom deploy/helm/agent-bom \
+helm upgrade agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   --reuse-values \
   --set controlPlane.postgres.provider=aws-rds
 ```

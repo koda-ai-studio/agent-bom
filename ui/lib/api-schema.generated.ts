@@ -2991,7 +2991,7 @@ export interface paths {
         put?: never;
         /**
          * Create Exception
-         * @description Request a vulnerability exception / waiver.
+         * @description Request a vulnerability or IaC exception / waiver (pending until a second admin approves it).
          */
         post: operations["create_exception_v1_exceptions_post"];
         delete?: never;
@@ -9710,6 +9710,8 @@ export interface components {
             asset_id?: string | null;
             /** Canonical Id */
             canonical_id?: string | null;
+            /** Component */
+            component?: string | null;
             /** Cvss Score */
             cvss_score?: number | null;
             /** Epss Score */
@@ -9736,6 +9738,10 @@ export interface components {
             sla_policy?: string | null;
             /** Sla Status */
             sla_status?: ("overdue" | "due_soon" | "on_track" | "unknown") | null;
+            /** Sla Status Text */
+            sla_status_text?: string | null;
+            /** Title */
+            title?: string | null;
             /** Vulnerability Id */
             vulnerability_id: string;
         } & {
@@ -13620,14 +13626,39 @@ export interface components {
          * @enum {string}
          */
         EvidenceSource: "aws_cloudtrail" | "azure_activity" | "entra_signin" | "gcp_audit" | "github_actions" | "kubernetes_audit" | "mcp_gateway" | "otel_llm" | "snowflake_access_history";
-        /** ExceptionRequest */
+        /**
+         * ExceptionRequest
+         * @description A vulnerability exception (``vuln_id`` + ``package_name``) or an IaC exception (``iac_rule_id`` + path/resource).
+         */
         ExceptionRequest: {
             /**
              * Expires At
              * @default
              */
             expires_at: string;
-            /** Package Name */
+            /**
+             * Iac Path
+             * @description Glob on the finding's repository-relative path
+             * @default
+             */
+            iac_path: string;
+            /**
+             * Iac Resource
+             * @description Resource selector: kind, name, namespace, labels
+             */
+            iac_resource?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Iac Rule Id
+             * @description IaC rule id, e.g. K8S-001 (IaC exceptions only)
+             * @default
+             */
+            iac_rule_id: string;
+            /**
+             * Package Name
+             * @default
+             */
             package_name: string;
             /**
              * Reason
@@ -13649,7 +13680,10 @@ export interface components {
              * @default default
              */
             tenant_id: string;
-            /** Vuln Id */
+            /**
+             * Vuln Id
+             * @default
+             */
             vuln_id: string;
         };
         /**
@@ -20948,6 +20982,8 @@ export interface components {
             asset_id?: string | null;
             /** Canonical Id */
             canonical_id?: string | null;
+            /** Component */
+            component?: string | null;
             /** Cvss Score */
             cvss_score?: number | null;
             /** Epss Score */
@@ -20970,6 +21006,8 @@ export interface components {
             sla_due_at?: string | null;
             /** Sla Due At Source */
             sla_due_at_source?: string | null;
+            /** Title */
+            title?: string | null;
             /** Vulnerability Id */
             vulnerability_id: string;
         } & {
@@ -25150,6 +25188,23 @@ export interface components {
             exception_id: string;
             /** Expires At */
             expires_at: string;
+            /**
+             * Iac Path
+             * @default
+             */
+            iac_path: string;
+            /**
+             * Iac Resource
+             * @default {}
+             */
+            iac_resource: {
+                [key: string]: unknown;
+            };
+            /**
+             * Iac Rule Id
+             * @default
+             */
+            iac_rule_id: string;
             /** Package Name */
             package_name: string;
             /** Reason */
@@ -25189,6 +25244,23 @@ export interface components {
             exception_id: string;
             /** Expires At */
             expires_at: string;
+            /**
+             * Iac Path
+             * @default
+             */
+            iac_path: string;
+            /**
+             * Iac Resource
+             * @default {}
+             */
+            iac_resource: {
+                [key: string]: unknown;
+            };
+            /**
+             * Iac Rule Id
+             * @default
+             */
+            iac_rule_id: string;
             /** Package Name */
             package_name: string;
             /** Reason */

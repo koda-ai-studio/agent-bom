@@ -7,26 +7,41 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- IaC exceptions with an audit trail: `.agent-bom-ignore.yaml` entries scoped by rule, path and Kubernetes resource (kind, name, namespace, labels) with required reason, optional owner and expiry; inline markers accept `expires=` and `owner=`. Accepted findings stay in JSON (`iac_findings.suppressed`), SARIF (`suppressions`), HTML and console, and leave the gates. Expired exceptions re-activate their findings with a warning; exceptions due within 14 days print a notice. A malformed IaC entry in the ignore file stops every scan up front, with or without IaC paths.
+- Tenant IaC exceptions through `POST /v1/exceptions` (`iac_rule_id`, `iac_path`, `iac_resource`) with the existing four-eyes approval, bounded expiry and tenant scoping; repository scans through the API and project scans by the MCP `scan` tool apply them, and MCP scan results now include the project's IaC findings.
+- Policy-as-code rules for IaC findings (`iac_rule`, `severity_gte`, `iac_path`, resource, labels, `iac_environment`) with `allow`, `warn` and `block` actions; a non-waivable `block` rejects repository-local exceptions. `agent-bom iac` accepts `--ignore-file` and `--policy`.
+
+### Changed
+- Dashboard navigation exposes every platform group without Personal, Shared or Governance presets. Retired browser preferences no longer hide reporting or source setup. Deployment settings and permission checks remain authoritative.
+- Executive briefs emphasize issue groups, severity, remediation ownership and evidence coverage; source and signing details expand on demand. A finding no longer detected by a comparable scan is not labelled a verified remediation.
+
+### Upgrade notes
+- Database migration `20261102_01` adds three columns to `exceptions` (additive, idempotent).
+
 ## [0.113.1] - 2026-11-02
 
 ### Highlights
-- Start with a Personal dashboard view for local scans and report previews; select Team or Organization when shared operations or governance are needed.
-- Personal and Team overviews skip optional compliance loading, and the dashboard reuses the shell's posture-count request.
+- Start with a Personal dashboard view for local scans and report previews; select Shared or Governance when shared operations or governance are needed.
+- Personal and Shared overviews skip optional compliance loading, and the dashboard reuses the shell's posture-count request.
 - Discover Continue's user-level YAML MCP configuration while preserving passive discovery and legacy JSON support.
 
 ### Added
-- Personal, Team and Organization dashboard views prioritize relevant navigation without changing permissions or evidence scope. Personal onboarding starts with a local report; shared-source setup remains optional, and tenant compliance is omitted from local report previews.
+- Personal, Shared and Governance dashboard views prioritize relevant navigation without changing permissions or evidence scope. Personal onboarding starts with a local report; shared-source setup remains optional, and tenant compliance is omitted from local report previews.
 
 ### Changed
 - Compact cloud graphs use connected branches, readable names and types, and expandable findings on their owning assets. Relationship details appear on interaction; shared findings and larger graphs retain their general topology.
 - Deployment and first-run guides distinguish individual scans, shared team evidence and optional organization governance. Hosting profiles and observed evidence-source labels are documented separately; a local scan does not require a control plane or compliance setup.
 
 ### Fixed
+- Recorded relationship drill-down and JSON exports accept explicit canonical-node aliases, retain generation checks and identify incomplete endpoint evidence.
 - Continue's `~/.continue/config.yaml` is discovered on macOS, Linux and Windows. Malformed YAML does not hide legacy JSON configurations, and configured commands are not executed during discovery (#6147).
 - Browser coverage explicitly verifies all three product views and expands optional shared setup before testing its controls.
 
 ### Upgrade notes
-- Existing browser sessions start in Personal view unless a product view was already saved. Use the sidebar selector to choose Team or Organization; permissions and evidence scope do not change.
+- Existing browser sessions start in Personal view unless a product view was already saved. Use the sidebar selector to choose Shared or Governance; permissions and evidence scope do not change.
 - See [upgrade guidance](docs/UPGRADING.md) for verification after publication. The release does not introduce a database migration.
 
 ## [0.113.0] - 2026-11-01

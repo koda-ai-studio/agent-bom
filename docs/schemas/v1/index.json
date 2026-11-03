@@ -117,7 +117,7 @@
       "schema": "EvidenceCompletenessLedger.json"
     },
     {
-      "doc": "",
+      "doc": "A vulnerability exception (``vuln_id`` + ``package_name``) or an IaC exception (``iac_rule_id`` + path/resource).",
       "name": "ExceptionRequest",
       "schema": "ExceptionRequest.json"
     },

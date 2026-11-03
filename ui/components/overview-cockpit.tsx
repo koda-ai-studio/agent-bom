@@ -1,6 +1,5 @@
 "use client";
 
-import { useProductView } from "@/lib/product-view";
 import { Collapsible } from "@/components/collapsible";
 import { DetailTabs } from "@/components/detail-tabs";
 import { OverviewAssets } from "@/components/overview-assets";
@@ -51,11 +50,10 @@ export function OverviewCockpit({
   compliance = null,
   services = null,
 }: OverviewCockpitProps) {
-  const productView = useProductView();
-  const showCompliance = !localReport && productView === "organization";
+  const showCompliance = !localReport;
   const [riskTab, setRiskTab] = useState<"risks" | "posture" | "assets">("posture");
   const hasScanEvidence = Boolean(summaryReady && scans && scans > 0);
-  // In Organization view, scans retain a chip, but an unevidenced score reads as
+  // For retained scans, keep a chip, but an unevidenced score reads as
   // an em dash — the SAME treatment the Trust Center gives this status. Hiding
   // the chip instead would leave the reader unable to tell "not measured" from
   // "not loaded"; printing the raw percentage claimed compliance we never

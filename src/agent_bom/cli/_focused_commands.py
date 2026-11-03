@@ -24,6 +24,7 @@ import click
 
 from agent_bom.cli._param_source import invoke_forwarding
 from agent_bom.cli._scan_help import AliasedChoice
+from agent_bom.cli.options_iac import iac_control_options
 from agent_bom.cli.options_image import image_supply_chain_options
 from agent_bom.cli.options_sources import SCAN_OUTPUT_FORMAT_ALIASES, SCAN_OUTPUT_FORMATS
 from agent_bom.core.severity import severity_at_or_above
@@ -257,6 +258,7 @@ def fs_cmd(
 @click.option("--k8s-namespace", "k8s_live_namespace", default="default", show_default=True, help="Kubernetes namespace for --k8s-live")
 @click.option("--k8s-all-namespaces", "k8s_live_all_namespaces", is_flag=True, help="Inspect all namespaces for --k8s-live")
 @click.option("--k8s-context", "k8s_live_context", default=None, help="kubectl context for --k8s-live")
+@iac_control_options
 def iac_cmd(
     paths: tuple[str, ...],
     output_format: str,
@@ -268,6 +270,7 @@ def iac_cmd(
     k8s_live_namespace: str,
     k8s_live_all_namespaces: bool,
     k8s_live_context: Optional[str],
+    **iac_controls: Any,
 ) -> None:
     """Scan infrastructure-as-code files for misconfigurations.
 
@@ -318,6 +321,7 @@ def iac_cmd(
         k8s_live_namespace=k8s_live_namespace,
         k8s_live_all_namespaces=k8s_live_all_namespaces,
         k8s_live_context=k8s_live_context,
+        **iac_controls,  # --ignore-file / --policy
     )
 
 

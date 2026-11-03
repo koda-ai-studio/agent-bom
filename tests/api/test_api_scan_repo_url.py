@@ -72,9 +72,10 @@ jobs:
 
     from agent_bom.api.repo_tree_scan import RepoTreeScanResult
 
-    def fake_repo_tree(path: str, *, agents, warnings, update_progress=None, offline=False):
+    def fake_repo_tree(path: str, *, agents, warnings, update_progress=None, offline=False, iac_exceptions=()):
         tree_calls.append(path)
         assert offline is False
+        assert not iac_exceptions
         return RepoTreeScanResult(
             iac_findings_data={"total": 1, "findings": [{"rule_id": "TF001", "severity": "high", "title": "test"}]},
             sast_data={"scanner_driver_id": "sast-semgrep", "execution_status": "clean", "findings": []},

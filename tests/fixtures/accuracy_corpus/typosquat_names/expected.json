@@ -1,0 +1,14 @@
+{
+  "legitimate": [
+    {"ecosystem": "npm", "name": "@rollup/plugin-babel"},
+    {"ecosystem": "npm", "name": "@rollup/plugin-commonjs"},
+    {"ecosystem": "npm", "name": "@babel/core"},
+    {"ecosystem": "npm", "name": "@types/node"}
+  ],
+  "typosquats": [
+    {"ecosystem": "pypi", "name": "reqeusts", "target": "requests"},
+    {"ecosystem": "npm", "name": "expresss", "target": "express"},
+    {"ecosystem": "npm", "name": "lodahs", "target": "lodash"},
+    {"ecosystem": "npm", "name": "@rolup/plugin-babel", "target": "rollup-plugin-babel"}
+  ]
+}

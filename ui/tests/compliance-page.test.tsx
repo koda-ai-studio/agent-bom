@@ -128,6 +128,10 @@ const { compliance } = vi.hoisted(() => {
         owasp_pass: 1,
         owasp_fail: 1,
         owasp_mcp_warn: 1,
+        // The scored rows sum to the headline's 25 evaluated controls (18 pass = 72%).
+        nist_pass: 18,
+        nist_warn: 7,
+        nist_fail: 0,
         aisvs_pass: 0,
         aisvs_fail: 0,
         aisvs_error: 0,
@@ -196,6 +200,16 @@ describe("CompliancePage (dense restyle)", () => {
     expect(within(row).getByText("Not evaluated")).toBeVisible();
     expect(within(row).queryByText("0%")).not.toBeInTheDocument();
     expect(within(table).getByRole("columnheader", { name: "Assessment" })).toBeVisible();
+  });
+
+  it("says applicability catalogs are not scored instead of leaving a bare dash", async () => {
+    render(<CompliancePage />);
+    const table = await screen.findByTestId("compliance-frameworks-table");
+    for (const name of [/LLM OWASP LLM Top 10/, /MCP OWASP MCP Top 10/, /ATLAS MITRE ATLAS/]) {
+      const row = within(table).getByRole("button", { name });
+      expect(within(row).getByTestId("framework-not-scored")).toHaveTextContent("Not scored");
+      expect(within(row).queryByText("—")).not.toBeInTheDocument();
+    }
   });
 
   it("opens each benchmark in the detail pane and returns to framework controls", async () => {

@@ -15,6 +15,7 @@ from agent_bom.cli.agents._modes import apply_demo_mode, apply_self_scan_mode, v
 from agent_bom.cli.agents.scan_pipeline.helpers import _is_null_device, _output_format_was_explicit
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
+from agent_bom.core.iac_exceptions import parse_ignore_entries
 from agent_bom.scanners import reset_scan_warnings
 
 # Shared with the GitHub Action default (action.yml severity-threshold).
@@ -283,13 +284,15 @@ def _validate_input_files(opts: ScanOptions, st: ScanState) -> None:
             _load_policy_for_validation(opts.policy)
         except (FileNotFoundError, ValueError) as exc:
             raise click.ClickException(f"Policy error: {exc}") from exc
-    if opts.ignore_file:
-        from agent_bom.ignores import load_ignore_file as _load_ignore_file_for_validation
+    from agent_bom.ignores import load_ignore_file as _load_ignore_file_for_validation
 
-        try:
-            st.validated_ignore_entries = _load_ignore_file_for_validation(opts.ignore_file)
-        except ValueError as exc:
-            raise click.ClickException(str(exc)) from exc
+    # The default .agent-bom-ignore.yaml is checked too: a malformed IaC exception fails here, IaC paths or not.
+    try:
+        entries = _load_ignore_file_for_validation(opts.ignore_file)
+        parse_ignore_entries(entries, origin=Path(opts.ignore_file or ".agent-bom-ignore.yaml").name)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    st.validated_ignore_entries = entries if opts.ignore_file else None
     if opts.vex_path:
         from agent_bom.vex import load_vex as _load_vex_for_validation
 

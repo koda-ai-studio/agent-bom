@@ -13,6 +13,11 @@
 #   PORT         — Override default port (Railway/Render inject this)
 #   AGENT_BOM_MCP_BEARER_TOKEN — Required for secure non-loopback deployments
 #   AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT — Absolute timezone-aware expiry within one hour
+#   AGENT_BOM_MCP_PUBLIC_READONLY — Opt-in anonymous lookup tier (check, intel_lookup);
+#       every other tool still needs the bearer token. Off by default in this image;
+#       the hosted Railway service opts in through railway.json's startCommand,
+#       so other deployments of this image stay bearer-only unless they set it.
+#       See docs/MCP_SERVER.md "Public read-only tier".
 
 ## ── Builder stage ────────────────────────────────────────────────────────────
 FROM python:3.12.15-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f AS builder

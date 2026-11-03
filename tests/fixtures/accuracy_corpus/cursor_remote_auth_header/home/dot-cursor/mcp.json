@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "remote-with-auth": {
+      "url": "https://mcp.example.com/mcp",
+      "headers": {"Authorization": "Bearer ${env:REMOTE_MCP_TOKEN}"}
+    },
+    "remote-without-auth": {
+      "url": "https://mcp.example.com/open"
+    }
+  }
+}

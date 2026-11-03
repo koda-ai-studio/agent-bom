@@ -28,6 +28,7 @@ import sqlite3
 from dataclasses import asdict, dataclass
 from typing import Optional, Protocol, Sequence
 
+from agent_bom.core.distro_eol import end_of_life_detail, end_of_life_release
 from agent_bom.os_advisory import covered_distro_labels, rpm_advisory_ecosystems
 
 
@@ -44,7 +45,13 @@ class Package(Protocol):
 
 _logger = logging.getLogger(__name__)
 
-SCOPE_EXCLUSION_REASONS = frozenset({"directory_policy", "nested_worktree", "repository_ignore"})
+# ``symlink_within_root`` targets are walked by their real path and
+# ``broken_symlink`` (loops, dangling links) has no content, so neither hides
+# evidence. A symlink out of the root stays a coverage gap. ``fixture_manifest``
+# directories are test inputs of a locked project, not its dependencies.
+SCOPE_EXCLUSION_REASONS = frozenset(
+    {"directory_policy", "fixture_manifest", "nested_worktree", "repository_ignore", "symlink_within_root", "broken_symlink"}
+)
 
 
 GRAPH_GAP_REASON = "graph_analysis_limited"
@@ -325,6 +332,20 @@ def _source_unavailable_warning(family: str, release: str, pkg_count: int) -> di
     ).to_dict()
 
 
+def _record_end_of_life_notes(packages: Sequence["Package"]) -> dict[tuple[str, str], int]:
+    """Record one informational note per end-of-life OS release; returns an empty tally to seed the caller."""
+    counts: dict[tuple[str, str], int] = {}
+    for pkg in packages:
+        key = _release_key(pkg)
+        if key is not None:
+            counts[key] = counts.get(key, 0) + 1
+    for (family, release_key), count in sorted(counts.items()):
+        record = end_of_life_release(release_key)
+        if record is not None:
+            record_scan_note(ecosystem=family, path=release_key, reason="distro_end_of_life", detail=end_of_life_detail(record, count))
+    return {}
+
+
 def detect_release_coverage_gaps(
     packages: Sequence["Package"],
     *,
@@ -343,7 +364,7 @@ def detect_release_coverage_gaps(
         complete or the local DB has no data for the relevant distro families.
     """
     groups: dict[tuple[str, str], int] = {}
-    unsupported: dict[tuple[str, str], int] = {}
+    unsupported: dict[tuple[str, str], int] = _record_end_of_life_notes(packages)
     for pkg in packages:
         source_gap = _unsupported_rpm_release(pkg)
         if source_gap is not None:
@@ -441,3 +462,23 @@ def osv_fallback_db_keys(
         if release_key in sparse_releases:
             keys.add(package_db_key(pkg))
     return keys
+
+
+RUNTIME_COVERAGE_UNKNOWN = "runtime_advisory_coverage_unknown"
+
+
+def runtime_coverage_release(pkg: "Package") -> str:
+    """Coverage-warning ``release`` for one runtime component, e.g. ``node:18.20.8``."""
+    return f"{pkg.name.lower()}:{pkg.version}"
+
+
+def package_vulnerability_unassessed(pkg: "Package", coverage_warnings: Sequence[dict]) -> bool:
+    """True when no advisory source assessed ``pkg``: its zero findings mean "not scanned", not clean."""
+    if _unsupported_rpm_release(pkg) is not None:
+        return True
+    ecosystem = (pkg.ecosystem or "").lower()
+    release = runtime_coverage_release(pkg)
+    return any(
+        warning.get("reason") == RUNTIME_COVERAGE_UNKNOWN and warning.get("ecosystem") == ecosystem and warning.get("release") == release
+        for warning in coverage_warnings
+    )

@@ -43,11 +43,9 @@ profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
 
 ## Changes from 0.113.0
 
-- **Product view.** Personal is the default browser preference. Select Team or
-  Organization in the sidebar to prioritize shared operations or governance.
-  The preference does not change access permissions or tenant evidence scope.
-- **Optional loading.** Personal and Team overviews omit the compliance request
-  and executive brief. Direct pages remain available to authorized users.
+- **Navigation.** The sidebar exposes all platform groups without a product-view
+  preset. Retired browser preferences no longer hide pages or reporting.
+  Permissions, deployment capabilities and local report scope still apply.
 - **Continue discovery.** User-level `~/.continue/config.yaml` joins legacy
   JSON discovery. Review the discovered config paths after upgrading; inventory
   can now include previously missed servers. Discovery does not launch them.
