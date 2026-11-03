@@ -31,7 +31,9 @@ from agent_bom.domain.finding_types import _control_tag_from_compliance_tag as _
 from agent_bom.domain.finding_types import _dedupe_control_tags as _dedupe_control_tags
 from agent_bom.domain.finding_types import _occurrence_evidence_qualifier as _occurrence_evidence_qualifier
 from agent_bom.domain.finding_types import _stable_id as _stable_id
+from agent_bom.domain.finding_types import cites_cis_control
 from agent_bom.domain.finding_types import stable_id as stable_id
+from agent_bom.security import sanitize_text
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -172,8 +174,6 @@ def is_ast_security_flow(raw: dict) -> bool:
 
 def _path_context_evidence(raw: dict) -> dict[str, str]:
     """Carry the documentation/example/test label (and its downgrade reason) into evidence."""
-    from agent_bom.security import sanitize_text
-
     context = raw.get("path_context")
     if context not in {"documentation", "example", "test"}:
         return {}
@@ -484,8 +484,6 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
     compliance = [str(t) for t in (iac.get("compliance") or []) if str(t).strip()]
     attack = [str(t) for t in (iac.get("attack_techniques") or []) if str(t).strip()]
 
-    from agent_bom.iac.models import cites_cis_control
-
     finding = Finding(
         finding_type=FindingType.CIS_FAIL if cites_cis_control(compliance) else FindingType.IAC_MISCONFIGURATION,
         source=FindingSource.IAC_SCAN,
@@ -514,9 +512,8 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         },
         is_actionable=True,
         impact_category="iac_misconfiguration",
-        # One rule can fire several times on one line (a flow-style list such as
-        # ``add: [NET_RAW, SYS_ADMIN]``); the rule's own title/message carry the
-        # matched value, so they are part of the occurrence identity.
+        # One rule can fire several times per line (``add: [NET_RAW, SYS_ADMIN]``);
+        # title/message carry the matched value, so they are part of the identity.
         id=stable_id("iac", rule_id, file_path, str(line_number), title, message),
     )
     from agent_bom.evidence.iac_controls import classify_iac_finding

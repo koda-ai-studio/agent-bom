@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -328,3 +329,11 @@ def _occurrence_evidence_qualifier(evidence: object) -> dict[str, object]:
     if not isinstance(evidence, dict):
         return {}
     return {key: value for key in _OCCURRENCE_EVIDENCE_KEYS if (value := evidence.get(key)) not in (None, "", [], {})}
+
+
+_CIS_CONTROL_ID = re.compile(r"^CIS-(?:[A-Za-z0-9]+-)?\d+(?:\.\d+)*$", re.IGNORECASE)
+
+
+def cites_cis_control(compliance: Iterable[str]) -> bool:
+    """True when an IaC rule cites a CIS benchmark control id (``CIS-Docker-4.6``, ``CIS-5.1``)."""
+    return any(_CIS_CONTROL_ID.match(str(tag).strip()) for tag in compliance)
