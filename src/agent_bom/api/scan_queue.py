@@ -30,6 +30,7 @@ from agent_bom.config import (
     API_SCAN_LEASE_SECONDS,
     API_SCAN_WORKERS,
 )
+from agent_bom.core.settings import env_str
 
 _logger = logging.getLogger(__name__)
 _local_dispatch_lock = threading.Lock()
@@ -87,6 +88,34 @@ def distributed_scans_enabled() -> bool:
         return clustered_control_plane_required()
     except Exception:  # noqa: BLE001
         return False
+
+
+API_ROLES = frozenset({"all", "api", "worker"})
+
+
+def api_role() -> str:
+    """``AGENT_BOM_API_ROLE``: ``all`` (default), ``api`` (HTTP only) or ``worker`` (queue only)."""
+
+    role = (env_str("AGENT_BOM_API_ROLE") or "all").strip().lower()
+    if role not in API_ROLES:
+        raise ValueError("AGENT_BOM_API_ROLE must be one of: all, api, worker")
+    return role
+
+
+def dispatch_worker_enabled(store: object) -> bool:
+    """Whether this process runs the claim-loop that drains queued scans and pushes.
+
+    An ``api`` replica only enqueues; a ``worker`` replica must have distributed
+    dispatch or it would idle silently, so that misconfiguration fails startup.
+    """
+
+    role = api_role()
+    if role == "api":
+        return False
+    enabled = distributed_scans_enabled() and store_supports_dispatch(store)
+    if role == "worker" and not enabled:
+        raise RuntimeError("AGENT_BOM_API_ROLE=worker requires distributed dispatch (Postgres and AGENT_BOM_DISTRIBUTED_SCANS)")
+    return enabled
 
 
 def store_supports_dispatch(store: object) -> bool:
@@ -200,3 +229,20 @@ class DistributedScanWorker:
             self._store.complete_dispatch(job_id, tenant_id=tenant_id, claim_owner=claim_owner)
         except Exception:  # noqa: BLE001
             _logger.error("Failed to clear dispatch row job=%s", job_id)
+
+
+async def start_dispatch_worker(store: Any) -> DistributedScanWorker | None:
+    """Start this replica's claim-loop when its role and storage call for one.
+
+    A misconfigured ``worker`` replica fails startup instead of idling; any other
+    start failure degrades to single-node dispatch, as before.
+    """
+    if not dispatch_worker_enabled(store):
+        return None
+    worker = DistributedScanWorker(store)
+    try:
+        await worker.start()
+    except Exception:  # noqa: BLE001
+        _logger.error("Distributed scan worker failed to start; continuing single-node")
+        return None
+    return worker

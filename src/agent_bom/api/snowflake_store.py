@@ -22,17 +22,13 @@ import os
 import warnings
 from typing import Any
 
+from agent_bom.api.storage.job_detail_reads import status_view_from_full_read
 from agent_bom.api.storage.snowflake_fleet import SnowflakeFleetOperations
 from agent_bom.cloud.snowflake_spcs_auth import apply_spcs_workload_identity, native_app_mode
 from agent_bom.config import API_JOB_TTL_SECONDS as _JOB_TTL_SECONDS
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
-from .exception_store import (
-    ExceptionStatus,
-    VulnException,
-    exception_record_for_tenant,
-    exception_write_tenant,
-)
+from .exception_store import ExceptionStatus, VulnException, exception_record_for_tenant, exception_write_tenant
 from .models import ScanJob
 from .policy_store import GatewayPolicy, PolicyAuditEntry
 from .schedule_store import ScanSchedule, schedule_record_for_tenant, schedule_write_tenant
@@ -147,6 +143,7 @@ class SnowflakeJobStore:
     does not bypass Snowflake row-access policies or expand a supplied tenant.
     """
 
+    get_status_view = status_view_from_full_read
     retains_job_objects_in_memory = False
 
     def __init__(self, connection_params: dict) -> None:

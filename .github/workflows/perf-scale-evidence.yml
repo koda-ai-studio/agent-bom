@@ -11,6 +11,7 @@ name: Perf Scale Evidence
 on:
   schedule:
     - cron: "0 4 * * 1"  # Mondays 04:00 UTC
+    - cron: "30 3 * * *"  # nightly push-ingest-with-readers budgets
   workflow_dispatch:
     inputs:
       trace_collection:
@@ -25,6 +26,10 @@ on:
         description: "Mixed-load duration (0 uses fixed counts; maximum 600 seconds)"
         type: string
         default: "0"
+      push_ingest:
+        description: "Measure 10x/50x report-push ingest with concurrent readers"
+        type: boolean
+        default: false
       open_pr:
         description: "Open a PR if the regenerated JSON differs from the checked-in baseline"
         type: boolean
@@ -39,7 +44,7 @@ concurrency:
 
 jobs:
   regenerate-scale-evidence:
-    if: github.event_name != 'workflow_dispatch' || inputs.trace_collection != true || inputs.open_pr == true
+    if: (github.event_name != 'workflow_dispatch' || inputs.trace_collection != true || inputs.open_pr == true) && github.event.schedule != '30 3 * * *'
     name: Regenerate scale evidence
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -220,3 +225,38 @@ jobs:
             ${{ runner.temp }}/graph-mixed-evidence/server.log
           if-no-files-found: warn
           retention-days: 30
+
+  push-ingest-readers:
+    # Nightly, not on PRs: the 50x estate takes minutes. PR CI carries the 1x
+    # budget (tests/test_push_ingest_perf_budget.py).
+    if: github.event.schedule == '30 3 * * *' || (github.event_name == 'workflow_dispatch' && inputs.push_ingest == true)
+    name: Push ingest with readers (${{ matrix.agents }} agents)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        agents: [500, 2500]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: "3.11"
+
+      - name: Install agent-bom (from source)
+        run: uv sync --frozen --extra api --extra dev
+
+      - name: Push the estate with a timed-out retry and concurrent readers
+        shell: bash
+        run: |
+          uv run python scripts/run_push_ingest_benchmark.py --agents "${{ matrix.agents }}" --mode async --readers 4 \
+            | tee "push-ingest-${{ matrix.agents }}.json"
+
+      - name: Upload measurement
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: push-ingest-${{ matrix.agents }}
+          path: push-ingest-${{ matrix.agents }}.json
+          if-no-files-found: ignore

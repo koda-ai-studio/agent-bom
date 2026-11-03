@@ -56,8 +56,7 @@ def test_http_export_matches_published_contract(monkeypatch, export):
         )
     )
     path = "/v1/scan/http-contract"
-    if export == "graph-export":
-        path += "/graph-export?format=json"
+    path += "/graph-export?format=json" if export == "graph-export" else "?view=full"
     response = TestClient(app).get(path)
     assert response.status_code == 200
     payload = response.json()["result"] if export == "scan-report" else response.json()

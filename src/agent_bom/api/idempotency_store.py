@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import sqlite3
 import threading
 import uuid
-from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Iterator
+from typing import Any, Callable
 
-from agent_bom.api.file_lock import lock_file_descriptor as _lock_file_descriptor
-from agent_bom.api.file_lock import unlock_file_descriptor as _unlock_file_descriptor
 from agent_bom.api.postgres_common import (
     ConnectionPool,
     _ensure_tenant_rls,
@@ -23,6 +19,7 @@ from agent_bom.api.postgres_common import (
 )
 from agent_bom.api.storage_schema import ensure_postgres_schema_version, ensure_sqlite_schema_version
 
+from .idempotency_sqlite_fence import SQLiteClaimFenceMixin
 from .idempotency_store_core import (  # noqa: F401 - re-exported for callers and tests
     _T,
     IdempotencyConflictError,
@@ -51,8 +48,6 @@ _DEFAULT_IDEMPOTENCY_TTL_HOURS = 24
 _DEFAULT_IDEMPOTENCY_RESERVATION_LEASE_SECONDS = 30
 _MAX_IDEMPOTENCY_RESERVATION_LEASE_SECONDS = 300
 _SQLITE_IDEMPOTENCY_INIT_LOCK = threading.Lock()
-_SQLITE_CLAIM_LOCK_STRIPE_COUNT = 256
-_SQLITE_CLAIM_LOCKS = tuple(threading.Lock() for _ in range(_SQLITE_CLAIM_LOCK_STRIPE_COUNT))
 
 
 def deterministic_batch_id(seed: str) -> str:
@@ -87,57 +82,12 @@ def idempotency_reservation_lease_seconds() -> int:
         return _DEFAULT_IDEMPOTENCY_RESERVATION_LEASE_SECONDS
 
 
-class SQLiteIdempotencyStore:
+class SQLiteIdempotencyStore(SQLiteClaimFenceMixin):
     def __init__(self, db_path: str = "agent_bom_jobs.db", ttl_hours: int | None = None) -> None:
         self._db_path = db_path
         self._ttl_hours = ttl_hours
         self._local = threading.local()
         self._init_db()
-
-    def _claim_lock_digest(self, endpoint: str, tenant_id: str, source_id: str, idempotency_key: str) -> str:
-        identity = json.dumps(
-            [os.path.abspath(self._db_path), endpoint, tenant_id, source_id, idempotency_key],
-            separators=(",", ":"),
-            ensure_ascii=True,
-        )
-        return hashlib.sha256(identity.encode("utf-8")).hexdigest()
-
-    def _claim_lock(self, endpoint: str, tenant_id: str, source_id: str, idempotency_key: str) -> threading.Lock:
-        digest = self._claim_lock_digest(endpoint, tenant_id, source_id, idempotency_key)
-        return _SQLITE_CLAIM_LOCKS[int(digest[:2], 16)]
-
-    @contextmanager
-    def _claim_file_lock(
-        self,
-        endpoint: str,
-        tenant_id: str,
-        source_id: str,
-        idempotency_key: str,
-    ) -> Iterator[None]:
-        """Fence one SQLite idempotency key across API worker processes."""
-
-        if self._db_path == ":memory:":
-            yield
-            return
-        database_path = os.path.abspath(self._db_path)
-        lock_directory = f"{database_path}.idempotency-locks"
-        os.makedirs(lock_directory, mode=0o700, exist_ok=True)
-        digest = self._claim_lock_digest(endpoint, tenant_id, source_id, idempotency_key)
-        # Fixed stripes prevent one lock artifact per idempotency key while
-        # retaining concurrency across unrelated keys.
-        lock_path = os.path.join(lock_directory, f"{digest[:2]}.lock")
-        flags = os.O_CREAT | os.O_RDWR
-        flags |= getattr(os, "O_CLOEXEC", 0)
-        flags |= getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(lock_path, flags, 0o600)
-        try:
-            _lock_file_descriptor(fd)
-            yield
-        finally:
-            try:
-                _unlock_file_descriptor(fd)
-            finally:
-                os.close(fd)
 
     def _prune(self) -> None:
         """Delete idempotency keys past the TTL (keyed on ``idx_idempotency_created_at``)."""
@@ -345,10 +295,11 @@ class SQLiteIdempotencyStore:
         reservation_lease_seconds: int | None = None,
         owner_token: str = "",
     ) -> tuple[dict[str, Any], bool]:
-        with (
-            self._claim_lock(endpoint, tenant_id, source_id, idempotency_key),
-            self._claim_file_lock(endpoint, tenant_id, source_id, idempotency_key),
-        ):
+        # A live ``commit_claim`` holds this fence for its whole durable action.
+        # Never wait behind it: a busy fence means the key (or a stripe
+        # neighbour) is mid-commit, so this caller may still insert a fresh
+        # reservation but must not reclaim an expired lease it cannot fence.
+        with self._try_claim_fence(endpoint, tenant_id, source_id, idempotency_key) as fenced:
             return self._claim_without_process_fence(
                 endpoint,
                 tenant_id,
@@ -358,6 +309,7 @@ class SQLiteIdempotencyStore:
                 request_hash=request_hash,
                 reservation_lease_seconds=reservation_lease_seconds,
                 owner_token=owner_token,
+                allow_reclaim=fenced,
             )
 
     def _claim_without_process_fence(
@@ -371,6 +323,7 @@ class SQLiteIdempotencyStore:
         request_hash: str = "",
         reservation_lease_seconds: int | None = None,
         owner_token: str = "",
+        allow_reclaim: bool = True,
     ) -> tuple[dict[str, Any], bool]:
         """Atomically insert a reservation across threads and API processes."""
         response_json = json.dumps(response, sort_keys=True)
@@ -405,7 +358,11 @@ class SQLiteIdempotencyStore:
         except IdempotencyConflictError:
             self._conn.rollback()
             raise
-        if not acquired and _reservation_lease_is_expired(str(row[0]), str(row[2]), str(row[4] or ""), reservation_lease_seconds):
+        if (
+            not acquired
+            and allow_reclaim
+            and _reservation_lease_is_expired(str(row[0]), str(row[2]), str(row[4] or ""), reservation_lease_seconds)
+        ):
             cursor = self._conn.execute(
                 """UPDATE idempotency_keys SET created_at = ?, reservation_owner = ?, lease_expires_at = ?
                    WHERE endpoint = ? AND tenant_id = ? AND source_id = ? AND idempotency_key = ?
@@ -721,33 +678,26 @@ class PostgresIdempotencyStore:
             ).fetchone()
             row = inserted
             if row is None:
+                # ``commit_claim`` holds this row lock for its whole durable
+                # action. SKIP LOCKED answers "in flight" at once instead of
+                # parking this request (and its fence connection) behind it.
                 row = conn.execute(
                     """SELECT response_json, request_hash, created_at, reservation_owner, lease_expires_at FROM idempotency_keys
                        WHERE endpoint = %s AND tenant_id = %s AND source_id = %s AND idempotency_key = %s
-                       FOR UPDATE""",
+                       FOR UPDATE SKIP LOCKED""",
                     (endpoint, tenant_id, source_id, idempotency_key),
                 ).fetchone()
-                if row is not None:
-                    _ensure_request_hash_matches(str(row[1] or ""), request_hash)
-                    lease_expression = self._LEASE_ISO if owner_token and reservation_lease_seconds is not None else "''"
-                    update_params: tuple[Any, ...] = (owner_token,)
-                    if lease_expression != "''":
-                        update_params += (max(1, int(reservation_lease_seconds or 1)),)
-                    update_params += (endpoint, tenant_id, source_id, idempotency_key, max(1, int(reservation_lease_seconds or 1)))
-                    reclaimed = conn.execute(
-                        f"""UPDATE idempotency_keys
-                           SET created_at = {self._NOW_ISO}, reservation_owner = %s,
-                               lease_expires_at = {lease_expression}
-                           WHERE endpoint = %s AND tenant_id = %s AND source_id = %s AND idempotency_key = %s
-                             AND (response_json::jsonb ->> 'committed') = 'false'
-                             AND (
-                                 (lease_expires_at <> '' AND lease_expires_at::timestamptz <= now())
-                                 OR (lease_expires_at = '' AND created_at::timestamptz <=
-                                     now() - (%s * INTERVAL '1 second'))
-                             )
-                           RETURNING response_json, request_hash""",  # nosec B608 - expressions are fixed internal SQL
-                        update_params,
+                if row is None:
+                    row = conn.execute(
+                        """SELECT response_json, request_hash FROM idempotency_keys
+                           WHERE endpoint = %s AND tenant_id = %s AND source_id = %s AND idempotency_key = %s""",
+                        (endpoint, tenant_id, source_id, idempotency_key),
                     ).fetchone()
+                else:
+                    _ensure_request_hash_matches(str(row[1] or ""), request_hash)
+                    reclaimed = self._reclaim_expired(
+                        conn, endpoint, tenant_id, source_id, idempotency_key, owner_token, reservation_lease_seconds
+                    )
                     if reclaimed is not None:
                         inserted = reclaimed
             self._prune(conn)
@@ -756,6 +706,37 @@ class PostgresIdempotencyStore:
             raise RuntimeError("Idempotency reservation was not persisted")
         _ensure_request_hash_matches(str(row[1] or ""), request_hash)
         return json.loads(row[0]), inserted is not None
+
+    def _reclaim_expired(
+        self,
+        conn: Any,
+        endpoint: str,
+        tenant_id: str,
+        source_id: str,
+        idempotency_key: str,
+        owner_token: str,
+        reservation_lease_seconds: int | None,
+    ) -> Any:
+        """Take over an uncommitted reservation whose lease lapsed; ``None`` when still live."""
+        lease_expression = self._LEASE_ISO if owner_token and reservation_lease_seconds is not None else "''"
+        update_params: tuple[Any, ...] = (owner_token,)
+        if lease_expression != "''":
+            update_params += (max(1, int(reservation_lease_seconds or 1)),)
+        update_params += (endpoint, tenant_id, source_id, idempotency_key, max(1, int(reservation_lease_seconds or 1)))
+        return conn.execute(
+            f"""UPDATE idempotency_keys
+               SET created_at = {self._NOW_ISO}, reservation_owner = %s,
+                   lease_expires_at = {lease_expression}
+               WHERE endpoint = %s AND tenant_id = %s AND source_id = %s AND idempotency_key = %s
+                 AND (response_json::jsonb ->> 'committed') = 'false'
+                 AND (
+                     (lease_expires_at <> '' AND lease_expires_at::timestamptz <= now())
+                     OR (lease_expires_at = '' AND created_at::timestamptz <=
+                         now() - (%s * INTERVAL '1 second'))
+                 )
+               RETURNING response_json, request_hash""",  # nosec B608 - expressions are fixed internal SQL
+            update_params,
+        ).fetchone()
 
     def heartbeat(
         self,

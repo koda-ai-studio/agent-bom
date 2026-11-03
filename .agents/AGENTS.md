@@ -232,8 +232,8 @@ Minimum verification matrix:
    labels.
 5. **Persistence** — backends abstracted (SQLite default, Postgres ready,
    ClickHouse planned); RLS where multi-tenant.
-6. **Enterprise readiness** — Helm + values examples + EKS + Docker + Render /
-   Fly + airgap path.
+6. **Enterprise readiness** — Helm + values examples + EKS + Docker Compose +
+   Railway (MCP server) + airgap path.
 
 ## PR / commit style
 

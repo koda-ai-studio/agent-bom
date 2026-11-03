@@ -2920,7 +2920,7 @@ def test_api_scan_completes_successfully():
     import time
 
     time.sleep(1)
-    poll = client.get(f"/v1/scan/{job_id}")
+    poll = client.get(f"/v1/scan/{job_id}?view=full")
     assert poll.status_code == 200
     data = poll.json()
     # Job should complete (done) or fail gracefully (no crash)

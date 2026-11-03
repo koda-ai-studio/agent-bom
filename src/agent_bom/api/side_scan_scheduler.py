@@ -44,6 +44,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from agent_bom.api import leader_lock
+from agent_bom.api.leader_lock import SIDE_SCAN_SCHEDULER_LEADER_LOCK_ID, cluster_leader_lock
 from agent_bom.api.side_scan_authorization import authorize_side_scan
 from agent_bom.api.tenant_worker import run_tenant_bound, tenant_bound_context
 from agent_bom.config import SIDESCAN_SCHEDULER_MAX_CONCURRENCY, SIDESCAN_SCHEDULER_POLL_SECONDS
@@ -337,22 +339,31 @@ async def side_scan_scheduler_loop(
     """
     interval = max(1, poll_seconds)
     consecutive_failures = 0
-    while True:
-        try:
-            outcomes = await schedule_provider_side_scans()
-            if outcomes:
-                logger.info("Side-scan scheduler ran %d configured target side-scan(s)", len(outcomes))
-            consecutive_failures = 0
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            consecutive_failures += 1
-            backoff = min(interval * (2**consecutive_failures), max_backoff)
-            logger.error(
-                "Side-scan scheduler loop error (attempt %d, next retry in %ds)",
-                consecutive_failures,
-                backoff,
-            )
-            await asyncio.sleep(backoff)
-            continue
-        await asyncio.sleep(interval)
+    # Each pass creates cloud snapshots, so on a clustered control plane only
+    # the replica holding the advisory leader lock runs it.
+    lock = cluster_leader_lock(SIDE_SCAN_SCHEDULER_LEADER_LOCK_ID, "Side-scan scheduler")
+    try:
+        while True:
+            if not await asyncio.to_thread(lock.ensure):
+                await asyncio.sleep(leader_lock.standby_poll_seconds(interval))
+                continue
+            try:
+                outcomes = await schedule_provider_side_scans()
+                if outcomes:
+                    logger.info("Side-scan scheduler ran %d configured target side-scan(s)", len(outcomes))
+                consecutive_failures = 0
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                consecutive_failures += 1
+                backoff = min(interval * (2**consecutive_failures), max_backoff)
+                logger.error(
+                    "Side-scan scheduler loop error (attempt %d, next retry in %ds)",
+                    consecutive_failures,
+                    backoff,
+                )
+                await asyncio.sleep(backoff)
+                continue
+            await asyncio.sleep(interval)
+    finally:
+        lock.release()

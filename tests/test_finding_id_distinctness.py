@@ -168,7 +168,7 @@ class TestPushedDistinctFindingsAllCount:
         response = client.post("/v1/results/push", json={"source_id": "iac-distinct", "findings": findings}, headers=headers)
         assert response.status_code == 201, response.text
 
-        job = client.get(f"/v1/scan/{response.json()['job_id']}", headers=headers).json()
+        job = client.get(f"/v1/scan/{response.json()['job_id']}", params={"view": "full"}, headers=headers).json()
         assert job["result"]["summary"]["total_findings"] == len(rows) == 3
         listed = client.get("/v1/findings", params={"limit": 50, "offset": 0}, headers=headers)
         assert listed.status_code == 200, listed.text

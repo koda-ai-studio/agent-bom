@@ -193,6 +193,29 @@ same-origin dashboard. Managed tenant-key sessions continue to use their live
 key record, role and scope ceilings. Invalid non-ASCII CSRF tokens return 403;
 incorrect non-ASCII static credentials return 401 without exposing exceptions.
 
+## Managed API-key verification cache
+
+Each API process remembers a successful managed API-key verification for up to
+`AGENT_BOM_API_KEY_VERIFY_CACHE_TTL_SECONDS` (default 60, clamped to 0-60; 0
+disables) in a bounded LRU of `AGENT_BOM_API_KEY_VERIFY_CACHE_MAX_ENTRIES`
+(default 1024) entries, so the scrypt derivation runs once per key per window
+instead of on every request. The cache only replaces the hash comparison. Every
+request still re-reads the stored key record by prefix and re-evaluates
+revocation, expiry, rotation overlap and operator-key retirement on that fresh
+record, and the entry must match the record's exact `key_id`, salt and hash.
+Revocation, rotation and deletion therefore take effect on the next request in
+every replica; the cache adds no revocation window beyond the key-store read.
+An entry never outlives the key's `expires_at`.
+
+Entries are keyed by HMAC-SHA-256 of the presented key under a random
+per-process secret and hold only the `key_id` and an HMAC fingerprint of the
+stored record. The raw key and the scrypt output are never retained, and the
+secret is not persisted, so a restart empties the cache. Failed verifications
+are never cached: a wrong key always pays the full derivation. A valid key
+answers faster on a hit, which reveals nothing to a caller who does not already
+hold it. The gateway runs key-store reads and verification in a worker thread,
+like the API middleware, so a cache miss never stalls the event loop.
+
 ## Conditional-access header authority
 
 Gateway transport authentication does not authorize a client to assert its own
@@ -486,3 +509,18 @@ to anonymous access. An unparseable `AGENT_BOM_MCP_PUBLIC_READONLY` value
 refuses startup, as does combining the tier with MCP OAuth or SSE. Rate-limit
 state is in process memory, so it cannot be unavailable; a restart resets it.
 See [MCP server](MCP_SERVER.md#public-read-only-tier).
+
+## API-key verification cache
+
+The process-local cache remembers successful verifications for at most 60 seconds
+and never past the key's expiry. Its indexes and record fingerprints use
+HMAC-SHA-256 under a random process secret; the stored credential verifier remains
+salted scrypt. No raw credential or stored verifier is retained in a cache entry.
+
+Every request still loads the credential record and checks revocation, expiry,
+rotation and operator retirement. A changed credential record or process secret
+cannot reuse a cached match. A miss, eviction, expiry or disabled cache requires
+normal scrypt verification; it never grants access. Failed verifications are not
+cached. Cache entries remain bounded by `AGENT_BOM_API_KEY_VERIFY_CACHE_MAX_ENTRIES`;
+setting that limit or `AGENT_BOM_API_KEY_VERIFY_CACHE_TTL_SECONDS` to zero disables
+the optimization.

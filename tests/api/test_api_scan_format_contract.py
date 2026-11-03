@@ -238,7 +238,7 @@ def test_scan_read_endpoint_serves_the_requested_document(tmp_path, monkeypatch)
     assert created.status_code == 202, created.text
     job_id = created.json()["job_id"]
 
-    fetched = client.get(f"/v1/scan/{job_id}")
+    fetched = client.get(f"/v1/scan/{job_id}?view=full")
     assert fetched.status_code == 200, fetched.text
     body = fetched.json()
     assert body["status"] == JobStatus.DONE.value, body.get("error")

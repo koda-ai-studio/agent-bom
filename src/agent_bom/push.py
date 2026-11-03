@@ -14,12 +14,11 @@ import hashlib
 import json
 import logging
 import platform
-import uuid
 from typing import Any, Literal, overload
 
 import httpx
 
-from agent_bom.core.settings import env_list, env_str
+from agent_bom.core.settings import env_float, env_list, env_str
 from agent_bom.security import (
     sanitize_command_args,
     sanitize_env_vars,
@@ -104,7 +103,9 @@ def generate_source_id() -> str:
     return hashlib.sha256(hostname.encode()).hexdigest()[:12]
 
 
-def sanitize_results(results: dict, *, source_id: str | None = None, idempotency_key: str | None = None) -> dict:
+def sanitize_results(
+    results: dict, *, source_id: str | None = None, idempotency_key: str | None = None, idempotency_target: str = ""
+) -> dict:
     """Deep-copy results and strip sensitive data before push.
 
     - Removes config_path from agents
@@ -131,9 +132,22 @@ def sanitize_results(results: dict, *, source_id: str | None = None, idempotency
 
     # Add source identifier
     sanitized["source_id"] = source_id or str(endpoint_identity["source_id"])
-    sanitized["idempotency_key"] = idempotency_key or str(uuid.uuid4())
+    sanitized.pop("idempotency_key", None)
+    sanitized["idempotency_key"] = idempotency_key or content_idempotency_key(sanitized, target=idempotency_target)
 
     return sanitized
+
+
+def content_idempotency_key(sanitized: dict, *, target: str = "") -> str:
+    """Stable key for one sanitized report and destination.
+
+    Re-pushing the same report (a retry, or a rerun of the same file) yields
+    the same key, so the server dedupes it onto the job it already holds.
+    """
+    material = {key: value for key, value in sanitized.items() if key != "idempotency_key"}
+    digest = hashlib.sha256(target.encode("utf-8") + b"\0")
+    digest.update(json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str).encode("utf-8"))
+    return f"report-{digest.hexdigest()}"
 
 
 def _looks_like_secret(key: str) -> bool:
@@ -257,86 +271,179 @@ async def _push_async(
 ) -> bool | tuple[bool, dict[str, Any] | None]:
     """POST sanitized results to the central dashboard with bounded retries.
 
-    Retries on network errors (``httpx.HTTPError``, ``OSError``) and on
-    retryable server responses (408, 425, 429, 5xx). Non-retryable 4xx
-    responses short-circuit immediately to avoid hammering misconfigured
-    endpoints. Matches the backoff contract used by the proxy audit delivery
-    controller so both egress paths degrade the same way.
+    The idempotency key defaults to a hash of the sanitized report and its
+    destination, so a rerun or retry of the same report addresses the same
+    server job instead of creating a duplicate. Retries cover network errors,
+    408/425/429/5xx and a 409 carrying ``Retry-After`` (an identical push still
+    committing on an older server). A ``202`` (asynchronous ingest) is followed
+    by polling ``status_url``; a push the server accepted is never reported as
+    failed. Non-retryable 4xx responses short-circuit.
     """
     from agent_bom.http_client import create_client
     from agent_bom.security import SecurityError
 
-    sanitized = await asyncio.to_thread(sanitize_results, results, source_id=source_id, idempotency_key=idempotency_key)
+    sanitized = await asyncio.to_thread(
+        sanitize_results, results, source_id=source_id, idempotency_key=idempotency_key, idempotency_target=push_url
+    )
     try:
         _validate_push_destination_url(push_url)
     except SecurityError as exc:
         logger.error("Push URL rejected by outbound URL policy: %s", exc)
         return (False, None) if return_body else False
 
-    headers: dict[str, str] = {"Content-Type": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
+    auth_headers: dict[str, str] = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    headers: dict[str, str] = {
+        "Content-Type": "application/json",
+        "Prefer": "respond-async",
+        "Idempotency-Key": str(sanitized["idempotency_key"]),
+        **auth_headers,
+    }
     # Serialize once and reuse exactly the same bytes and idempotency identity
     # for every retry. Compression is on by default; AGENT_BOM_PUSH_GZIP=0 keeps
     # a receiver that predates gzip push support working.
     payload, encoding_headers = await asyncio.to_thread(_encode_push_payload, sanitized)
     headers.update(encoding_headers)
+    timeout = _push_timeout_seconds(len(payload), compressed=bool(encoding_headers))
 
-    retryable_status = {408, 425, 429, 500, 502, 503, 504}
-    last_status: int | None = None
-    last_error: str | None = None
-    async with create_client(timeout=30.0, cert=_push_tls_cert(), verify=_push_tls_verify()) as client:
+    outcome = _PushOutcome()
+    async with create_client(timeout=timeout, cert=_push_tls_cert(), verify=_push_tls_verify()) as client:
         for attempt in range(1, max_attempts + 1):
-            try:
-                resp = await client.post(push_url, content=payload, headers=headers)
-            except (httpx.HTTPError, ValueError, OSError) as exc:
-                from agent_bom.security import sanitize_error
-
-                last_error = f"{type(exc).__name__}: {sanitize_error(exc)}"
-                logger.warning(
-                    "Push attempt %d/%d failed with %s",
-                    attempt,
-                    max_attempts,
-                    last_error,
-                )
-            else:
-                last_status = resp.status_code
-                if resp.status_code < 300:
-                    logger.info(
-                        "Results pushed to configured endpoint (status=%d, attempt=%d)",
-                        resp.status_code,
-                        attempt,
-                    )
-                    if return_body:
-                        try:
-                            parsed = resp.json()
-                        except ValueError:
-                            parsed = {}
-                        return True, parsed if isinstance(parsed, dict) else {}
-                    return True
-                if resp.status_code not in retryable_status:
-                    logger.warning(
-                        "Push rejected with non-retryable status %d — %s",
-                        resp.status_code,
-                        sanitize_text(resp.text[:200]),
-                    )
-                    return (False, None) if return_body else False
-                last_error = sanitize_text(resp.text[:200])
-                logger.warning(
-                    "Push attempt %d/%d returned retryable status %d",
-                    attempt,
-                    max_attempts,
-                    resp.status_code,
-                )
-
+            retry_after = await _push_attempt(client, push_url, payload, headers, auth_headers, attempt, max_attempts, outcome)
+            if outcome.done:
+                break
             if attempt < max_attempts:
-                await asyncio.sleep(_push_retry_delay(attempt, base_delay_seconds, max_delay_seconds))
+                await asyncio.sleep(
+                    max(_push_retry_delay(attempt, base_delay_seconds, max_delay_seconds), min(retry_after, max_delay_seconds))
+                )
 
-    logger.error("Push failed after %d attempts (last_status=%s, last_error=%s)", max_attempts, last_status, last_error)
-    if return_body:
-        return False, None
-    return False
+    if outcome.ok:
+        return (True, outcome.body or {}) if return_body else True
+    if not outcome.done:
+        logger.error("Push failed after %d attempts (last_status=%s, last_error=%s)", max_attempts, outcome.last_status, outcome.last_error)
+    return (False, None) if return_body else False
+
+
+class _PushOutcome:
+    def __init__(self) -> None:
+        self.ok = False
+        self.done = False
+        self.body: dict[str, Any] | None = None
+        self.last_status: int | None = None
+        self.last_error: str | None = None
+
+
+def _response_json(resp: Any) -> dict[str, Any]:
+    try:
+        parsed = resp.json()
+    except ValueError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+async def _push_attempt(
+    client: Any,
+    push_url: str,
+    payload: bytes,
+    headers: dict[str, str],
+    auth_headers: dict[str, str],
+    attempt: int,
+    max_attempts: int,
+    outcome: _PushOutcome,
+) -> float:
+    """Run one POST; record the outcome and return the server's ``Retry-After`` hint."""
+    from agent_bom.security import sanitize_error
+
+    try:
+        resp = await client.post(push_url, content=payload, headers=headers)
+    except (httpx.HTTPError, ValueError, OSError) as exc:
+        outcome.last_error = f"{type(exc).__name__}: {sanitize_error(exc)}"
+        logger.warning("Push attempt %d/%d failed with %s", attempt, max_attempts, outcome.last_error)
+        return 0.0
+    outcome.last_status = resp.status_code
+    retry_after = _retry_after_seconds(resp)
+    if resp.status_code == 202:
+        receipt = await _await_push_receipt(client, push_url, _response_json(resp), auth_headers, retry_after)
+        if receipt.get("status") == "failed":
+            outcome.last_error = "server ingest failed; resubmitting the same report"
+            logger.warning("Push attempt %d/%d: server ingest failed; retrying with the same idempotency key", attempt, max_attempts)
+            return retry_after
+        outcome.ok, outcome.done, outcome.body = True, True, receipt
+        logger.info("Results accepted by configured endpoint (status=%s, attempt=%d)", receipt.get("status"), attempt)
+        return 0.0
+    if resp.status_code < 300:
+        outcome.ok, outcome.done = True, True
+        outcome.body = _response_json(resp) if resp.status_code != 204 else {}
+        logger.info("Results pushed to configured endpoint (status=%d, attempt=%d)", resp.status_code, attempt)
+        return 0.0
+    if resp.status_code in _RETRYABLE_PUSH_STATUS or (resp.status_code == 409 and retry_after > 0):
+        outcome.last_error = sanitize_text(resp.text[:200])
+        logger.warning("Push attempt %d/%d returned retryable status %d", attempt, max_attempts, resp.status_code)
+        return retry_after
+    logger.warning("Push rejected with non-retryable status %d — %s", resp.status_code, sanitize_text(resp.text[:200]))
+    outcome.done = True
+    return 0.0
+
+
+_RETRYABLE_PUSH_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504})
+
+
+def _retry_after_seconds(resp: Any) -> float:
+    headers = getattr(resp, "headers", None)
+    raw = headers.get("Retry-After") if isinstance(headers, (dict, httpx.Headers)) else None
+    try:
+        return max(0.0, float(raw)) if raw is not None else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _push_timeout_seconds(wire_bytes: int, *, compressed: bool) -> float:
+    """Read timeout sized to the decoded report: large synchronous commits take minutes."""
+    decoded_mb = wire_bytes * (17 if compressed else 1) / (1024 * 1024)
+    return float(min(_MAX_PUSH_TIMEOUT_SECONDS, max(30.0, 30.0 + 2.0 * decoded_mb)))
+
+
+_MAX_PUSH_TIMEOUT_SECONDS = 900.0
+
+
+def _push_status_url(push_url: str, status_url: Any) -> str | None:
+    """Resolve the server's relative ``status_url`` against the push URL; never follow another host."""
+    if not isinstance(status_url, str) or not status_url.startswith("/v1/") or "//" in status_url or ".." in status_url:
+        return None
+    base = push_url[: -len(SCAN_PUSH_PATH)] if push_url.rstrip("/").endswith(SCAN_PUSH_PATH) else push_url.rstrip("/")
+    return base.rstrip("/") + status_url
+
+
+async def _await_push_receipt(
+    client: Any, push_url: str, accepted: dict[str, Any], auth_headers: dict[str, str], retry_after: float
+) -> dict[str, Any]:
+    """Poll an accepted push until it is stored or failed, or the wait budget ends.
+
+    Running out of wait budget is not a failure: the server holds the report
+    durably and finishes it; the accepted receipt is returned as-is.
+    """
+    url = _push_status_url(push_url, accepted.get("status_url"))
+    if url is None:
+        return accepted
+    deadline = asyncio.get_running_loop().time() + max(0.0, env_float("AGENT_BOM_PUSH_WAIT_SECONDS", 900.0))
+    delay = max(1.0, retry_after or 2.0)
+    latest = accepted
+    while asyncio.get_running_loop().time() < deadline:
+        await asyncio.sleep(delay)
+        delay = min(10.0, delay * 1.5)
+        try:
+            resp = await client.get(url, headers=auth_headers)
+        except (httpx.HTTPError, ValueError, OSError):
+            continue
+        if resp.status_code == 404:
+            return latest
+        if resp.status_code != 200:
+            continue
+        receipt = _response_json(resp)
+        if receipt.get("status") in {"stored", "failed"}:
+            return receipt
+        latest = receipt or latest
+    logger.info("Push accepted; the server is still ingesting it (status_url=%s)", sanitize_text(str(accepted.get("status_url"))))
+    return latest
 
 
 def push_results(push_url: str, results: dict, api_key: str | None = None) -> bool:

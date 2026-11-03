@@ -20,6 +20,7 @@ UNPINNED = [
     ("/v1/fleet/stats", {}),
     ("/v1/compliance", {}),
     ("/v1/posture", {}),
+    ("/v1/posture/counts", {}),
 ]
 
 

@@ -379,7 +379,9 @@ def test_facet_deadline_starts_after_the_first_row_is_available(monkeypatch: pyt
         }
 
     monkeypatch.setattr("agent_bom.export.runner.iter_current_findings", _rows)
-    monkeypatch.setattr(scan_routes.time, "monotonic", lambda: clock["now"])
+    from agent_bom.api import finding_facets
+
+    monkeypatch.setattr(finding_facets.time, "monotonic", lambda: clock["now"])
 
     facets, total, metadata = scan_routes._finding_facets_bounded(
         "tenant-delayed-facets",

@@ -17,7 +17,7 @@ SIEM, incident process, DPA, and retention policy.
 
 | Review question | Current answer | Evidence |
 |---|---|---|
-| What deployment modes are supported? | CLI, Docker, Compose, Helm/EKS, GitHub Action, endpoint rollout, and Snowflake-supported slices | `docs/DEPLOY_PLATFORM.md`, `docs/DEPLOY_PLATFORM.md`, `deploy/docker-compose.yml`, `deploy/helm/agent-bom/` |
+| What deployment modes are supported? | CLI, Docker, Compose, Helm/EKS, GitHub Action, endpoint rollout, and Snowflake-supported slices | `docs/DEPLOY_PLATFORM.md`, `deploy/docker-compose.platform.yml`, `deploy/docker-compose.fullstack.yml`, `deploy/helm/agent-bom/` |
 | Is the production path multi-replica capable? | Yes for Postgres-backed control planes; multi-replica API, UI, HPA, PDB, topology spread, and anti-affinity are packaged in Helm examples | `site-docs/deployment/control-plane-helm.md`, `deploy/helm/agent-bom/examples/eks-production-values.yaml` |
 | Does the app fail closed for unsafe clustered state? | Yes for shared rate limiting, SCIM storage, browser session signing, and static-key clustered use | `docs/DEPLOY_PLATFORM.md`, `tests/api/test_api_hardening.py` |
 | Is mTLS supported? | Delegated ingress/sidecar/service-mesh mTLS posture is documented and reported; native app-terminated mTLS is tracked separately | `docs/DEPLOY_PLATFORM.md`, `docs/ENTERPRISE_SECURITY_PLAYBOOK.md` |

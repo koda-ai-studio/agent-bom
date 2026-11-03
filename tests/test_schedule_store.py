@@ -755,6 +755,12 @@ class TestSchedulerLoop:
             def execute(self, sql, params):
                 return _FakeCursor()
 
+            def commit(self):
+                return None
+
+            def close(self):
+                return None
+
         class _FakePool:
             def getconn(self):
                 return _FakeConn()
@@ -802,6 +808,12 @@ class TestSchedulerLoop:
         class _FakeConn:
             def execute(self, sql, params):
                 return _FakeCursor()
+
+            def commit(self):
+                return None
+
+            def close(self):
+                return None
 
         class _FakePool:
             def getconn(self):
