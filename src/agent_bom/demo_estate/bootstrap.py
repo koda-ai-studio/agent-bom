@@ -10,13 +10,18 @@ from datetime import datetime, timezone
 from functools import cache, partial
 from typing import Any
 
+from agent_bom import __version__
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.pipeline import _now
 from agent_bom.api.store import DEMO_ESTATE_TRIGGERED_BY
 from agent_bom.demo_estate import demo_estate_enabled as demo_estate_enabled
 from agent_bom.demo_estate.boot_seed import serialized_seed
+from agent_bom.demo_estate.enterprise import ENTERPRISE_SCHEMA_VERSION
+from agent_bom.demo_estate.enterprise_findings import ESTATE_FINDINGS_VERSION
+from agent_bom.demo_estate.enterprise_risk import ESTATE_RISK_VERSION
 from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks
 from agent_bom.demo_estate.estate_cis_catalog import estate_cis_passes
+from agent_bom.demo_estate.estate_graph import ESTATE_GRAPH_VERSION
 from agent_bom.demo_estate.showcase_findings import append_showcase_graph_findings, bind_mcp_auth_findings, estate_scan_evidence
 from agent_bom.demo_estate.showcase_graph import (
     SHOWCASE_AGENTS,
@@ -25,6 +30,8 @@ from agent_bom.demo_estate.showcase_graph import (
     SHOWCASE_SCAN_ID,
     SHOWCASE_SERVERS,
     SHOWCASE_TENANT,
+    _existing_snapshots,
+    _showcase_seed_is_current,
     seed_showcase_fleet_and_runtime,
     seed_showcase_graph_if_empty,
     seed_showcase_identities,
@@ -49,6 +56,16 @@ _daily_evidence_day: str | None = None
 # default instead of discarding the only code path that knows that decision.
 _bootstrap_status_lock = threading.Lock()
 _bootstrap_status_by_tenant: dict[str, dict[str, Any]] = {}
+
+# Identifies the estate content a completed seed was built from. A change in any
+# component (or the product version) makes the next bootstrap rebuild and reseed.
+DEMO_ESTATE_SEED_MARKER: tuple[str, ...] = (
+    __version__,
+    ENTERPRISE_SCHEMA_VERSION,
+    ESTATE_GRAPH_VERSION,
+    ESTATE_FINDINGS_VERSION,
+    ESTATE_RISK_VERSION,
+)
 
 
 def _demo_seed_block_reason(graph_store: Any | None, tenant_id: str) -> str | None:
@@ -98,6 +115,34 @@ def _remember_bootstrap_status(tenant_id: str, summary: dict[str, Any]) -> dict[
     with _bootstrap_status_lock:
         _bootstrap_status_by_tenant[tenant_id] = published
     return summary
+
+
+def _new_summary(tenant_id: str, *, force: bool) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "enabled": True,
+        "tenant_id": tenant_id,
+        "seeded": False,
+        "estate_seed_marker": list(DEMO_ESTATE_SEED_MARKER),
+    }
+    if force:
+        summary["force"] = True
+    return summary
+
+
+def _current_seed_status(store: Any, graph_store: Any, tenant_id: str, *, force: bool) -> dict[str, Any] | None:
+    """The last bootstrap result when it completed for this estate and its evidence is still in place."""
+    if force:
+        return None
+    prior = get_demo_estate_bootstrap_status(tenant_id=tenant_id)
+    completed = prior.get("seeded") is True or prior.get("reason") == "demo_jobs_present"
+    if not completed or prior.get("estate_seed_marker") != list(DEMO_ESTATE_SEED_MARKER):
+        return None
+    if "enterprise_contract" not in prior or any(key.endswith("_error") for key in prior):
+        return None
+    snapshots = _existing_snapshots(graph_store, tenant_id)
+    if not snapshots or not _showcase_seed_is_current(snapshots) or not _tenant_has_demo_jobs(store, tenant_id):
+        return None
+    return prior
 
 
 def get_demo_estate_bootstrap_status(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str, Any]:
@@ -388,10 +433,10 @@ def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str
     if block_reason:
         return _blocked_summary(tenant_id, block_reason)
     store = _get_store()
-    summary: dict[str, Any] = {"enabled": True, "tenant_id": tenant_id, "seeded": False}
     force = demo_estate_force_reseed()
-    if force:
-        summary["force"] = True
+    if (current := _current_seed_status(store, graph_store, tenant_id, force=force)) is not None:
+        return _remember_bootstrap_status(tenant_id, {**current, "reason": "demo_jobs_present", "rebuild_skipped": True})
+    summary = _new_summary(tenant_id, force=force)
 
     # Validate and fingerprint the versioned synthetic-estate contract on every
     # demo boot. PRs that project this evidence into graph/runtime/UI surfaces
