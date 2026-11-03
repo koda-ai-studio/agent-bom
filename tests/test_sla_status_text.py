@@ -21,6 +21,13 @@ def test_status_text_counts_days_either_side_of_the_deadline() -> None:
     assert annotate_sla_presentation({"sla_due_at": "2023-10-04"}, now=NOW)["sla_status_text"] == "Overdue 1126 days"
 
 
+def test_status_text_compares_dates_in_utc() -> None:
+    local_now = datetime.fromisoformat("2026-11-02T23:00:00-05:00")
+    assert sla_status_text("2026-11-03T12:00:00+00:00", now=local_now) == "Due today"
+    assert sla_status_text("2026-11-02T23:00:00-05:00", now=local_now) == "Due today"
+    assert sla_status_text("2026-11-03T12:00:00+00:00", now=NOW.replace(tzinfo=None)) == "Due today"
+
+
 def _combination(first_seen: str | None = None) -> Finding:
     return Finding(
         finding_type=FindingType.COMBINATION,

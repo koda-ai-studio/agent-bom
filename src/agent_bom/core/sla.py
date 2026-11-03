@@ -137,7 +137,9 @@ def sla_status_text(due_at: object, *, now: datetime | None = None) -> str:
     if due.tzinfo is None:
         due = due.replace(tzinfo=timezone.utc)
     current = now or datetime.now(timezone.utc)
-    days = (due.date() - current.date()).days
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    days = (due.date() - current.astimezone(timezone.utc).date()).days
     if days < 0:
         return f"Overdue {-days} day{'s' if days != -1 else ''}"
     if days == 0:

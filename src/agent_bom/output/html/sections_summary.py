@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from agent_bom.core.sla import sla_status_text
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.finding import Finding
 from agent_bom.models import AIBOMReport
@@ -128,8 +129,6 @@ def _headline_row(finding: "Finding", observed_at: datetime | None = None) -> di
 
 def _sla_cell(due_at: str | None, observed_at: datetime | None) -> str:
     """Deadline plus its status as of the scan, so a report reads the same whenever it is opened."""
-    from agent_bom.core.sla import sla_status_text
-
     if not due_at:
         return "no SLA set"
     status = sla_status_text(due_at, now=observed_at)
