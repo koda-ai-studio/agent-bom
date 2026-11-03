@@ -379,5 +379,6 @@ def mcp_rule_finding_to_finding(
         evidence=evidence,
         is_actionable=True,
         impact_category="mcp_tool_rule",
-        id=stable_id("mcp_tool_rule", rid, tname, str(prop or "")),
+        # The tool name alone is not an identity: two servers can expose ``read_file``.
+        id=stable_id("mcp_tool_rule", rid, tname, str(prop or ""), tool_stable_id or server_name),
     )
