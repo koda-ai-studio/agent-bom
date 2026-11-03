@@ -117,7 +117,7 @@ describe('Nav', () => {
     expect(screen.getByRole('button', { name: /^governance$/i })).toBeInTheDocument()
   })
 
-  it('switches primary navigation between Personal, Team and Organization', () => {
+  it('switches primary navigation between Personal, Shared and Governance', () => {
     window.localStorage.setItem('agent-bom.product-view', 'personal')
     renderExpandedNav()
     const selector = screen.getByRole('combobox', { name: 'Product view' })
@@ -178,8 +178,8 @@ describe('Nav', () => {
 
   it('renders Governance and Operations groups', () => {
     renderExpandedNav()
-    expect(screen.getByText('Governance')).toBeInTheDocument()
-    expect(screen.getByText('Operations')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^governance/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^operations/i })).toBeInTheDocument()
   })
 
   it('uses the full wordmark only while desktop navigation is expanded', () => {
