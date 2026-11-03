@@ -65,6 +65,12 @@ so they cannot regress silently, but they are not part of this reference.
 | `AGENT_BOM_SIDESCAN_SCHEDULER_MAX_CONCURRENCY` | `int` | `2` | — |
 | `AGENT_BOM_SIDESCAN_SCHEDULER_POLL_SECONDS` | `int` | `3600` | Cross-cloud (Azure/GCP) agentless disk side-scan scheduler (#4158 Stage 4). The background loop re-runs the shipped ``run_provider_side_scan`` executor for each configured target on a cadence, so a CWPP side-scan keeps evaluating without a  |
 
+## API-key verification cache
+| Env var | Type | Default | Description |
+|---|---|---|---|
+| `AGENT_BOM_API_KEY_VERIFY_CACHE_MAX_ENTRIES` | `int` | `1024` | — |
+| `AGENT_BOM_API_KEY_VERIFY_CACHE_TTL_SECONDS` | `float` | `60.0` | Remembers successful API-key verifications so scrypt runs once per key per window. The key record is still re-read and re-checked every request, so it adds no revocation delay. TTL clamps to 0-60 s (0 disables) and never passes the key's ex |
+
 ## Agent-to-Agent (A2A) auth posture
 | Env var | Type | Default | Description |
 |---|---|---|---|

@@ -22,10 +22,8 @@ from fastapi.responses import JSONResponse
 
 from agent_bom.agent_identity import ANONYMOUS, check_caller_identity, extract_identity_token, identity_token_scopes
 from agent_bom.api.gateway_auth import (
-    _authenticate_gateway_request,
-    _configured_gateway_tenant_id,
     _gateway_allows_anonymous_agents,
-    _gateway_requires_auth,
+    authenticate_gateway_request_off_loop,
 )
 from agent_bom.api.gateway_policy import _agent_identity_revoked
 from agent_bom.api.gateway_relay_context import RelayContext, RelayRuntime, _message_tool_label
@@ -68,10 +66,7 @@ async def parse_relay_request(runtime: RelayRuntime, server_name: str, request: 
     """Authenticate, route, bound and parse the request; snapshot the policy."""
     settings = runtime.settings
     trace_meta = make_request_trace(dict(request.headers))
-    tenant_id = _configured_gateway_tenant_id()
-    auth_method = "none"
-    if _gateway_requires_auth(settings):
-        tenant_id, auth_method = _authenticate_gateway_request(request, settings)
+    tenant_id, auth_method = await authenticate_gateway_request_off_loop(request, settings)
     request.state.tenant_id = tenant_id
     request.state.auth_method = auth_method
 

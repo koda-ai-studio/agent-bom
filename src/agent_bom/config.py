@@ -96,18 +96,9 @@ IMAGE_GRYPE_FALLBACK = _bool("AGENT_BOM_IMAGE_GRYPE_FALLBACK", False)
 # 0.7  — top ~2 %; very high likelihood of exploitation within 30 days.
 # 0.3  — top ~10 %; elevated risk when combined with HIGH severity.
 
-EPSS_ACTIVE_EXPLOITATION_THRESHOLD = _float(
-    "AGENT_BOM_EPSS_ACTIVE_THRESHOLD",
-    0.5,
-)
-EPSS_CRITICAL_THRESHOLD = _float(
-    "AGENT_BOM_EPSS_CRITICAL_THRESHOLD",
-    0.7,
-)
-EPSS_HIGH_LIKELY_THRESHOLD = _float(
-    "AGENT_BOM_EPSS_HIGH_THRESHOLD",
-    0.3,
-)
+EPSS_ACTIVE_EXPLOITATION_THRESHOLD = _float("AGENT_BOM_EPSS_ACTIVE_THRESHOLD", 0.5)
+EPSS_CRITICAL_THRESHOLD = _float("AGENT_BOM_EPSS_CRITICAL_THRESHOLD", 0.7)
+EPSS_HIGH_LIKELY_THRESHOLD = _float("AGENT_BOM_EPSS_HIGH_THRESHOLD", 0.3)
 
 
 # ── Blast Radius Risk Scoring ───────────────────────────────────────────────
@@ -667,6 +658,15 @@ DELTA_STREAM_SIGNING_SECRET = _str("AGENT_BOM_DELTA_STREAM_SIGNING_SECRET", "")
 RATE_LIMIT_KEY_ROTATION_DAYS = _int("AGENT_BOM_RATE_LIMIT_KEY_ROTATION_DAYS", 30)
 RATE_LIMIT_KEY_MAX_AGE_DAYS = _int("AGENT_BOM_RATE_LIMIT_KEY_MAX_AGE_DAYS", 90)
 RATE_LIMIT_KEY_LAST_ROTATED = _str("AGENT_BOM_RATE_LIMIT_KEY_LAST_ROTATED", "")
+
+# ── API-key verification cache ──────────────────────────────────────────
+# Remembers successful API-key verifications so scrypt runs once per key per
+# window. The key record is still re-read and re-checked every request, so it
+# adds no revocation delay. TTL clamps to 0-60 s (0 disables) and never passes
+# the key's expires_at. Entries hold HMACs only. See RUNTIME_FAIL_MODES.md.
+
+API_KEY_VERIFY_CACHE_TTL_SECONDS = _float("AGENT_BOM_API_KEY_VERIFY_CACHE_TTL_SECONDS", 60.0)
+API_KEY_VERIFY_CACHE_MAX_ENTRIES = _int("AGENT_BOM_API_KEY_VERIFY_CACHE_MAX_ENTRIES", 1024)
 
 # ── Deployment / integration env aliases ───────────────────────────────────
 # Canonical AGENT_BOM_* keys below. Legacy names stay honored via resolved_*
