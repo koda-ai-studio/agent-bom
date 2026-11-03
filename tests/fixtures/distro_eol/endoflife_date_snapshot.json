@@ -1,0 +1,345 @@
+{
+  "retrieved": "2026-11-02",
+  "api": {
+    "alpine-linux": "https://endoflife.date/api/alpine-linux.json",
+    "debian": "https://endoflife.date/api/debian.json",
+    "ubuntu": "https://endoflife.date/api/ubuntu.json",
+    "rhel": "https://endoflife.date/api/rhel.json"
+  },
+  "records": {
+    "alpine-linux": [
+      {
+        "cycle": "3.24",
+        "eol": "2028-06-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.23",
+        "eol": "2027-11-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.22",
+        "eol": "2027-05-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.21",
+        "eol": "2026-11-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.20",
+        "eol": "2026-04-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.19",
+        "eol": "2025-11-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.18",
+        "eol": "2025-05-09",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.17",
+        "eol": "2024-11-22",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.16",
+        "eol": "2024-05-23",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.15",
+        "eol": "2023-11-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.14",
+        "eol": "2023-05-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.13",
+        "eol": "2022-11-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.12",
+        "eol": "2022-05-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.11",
+        "eol": "2021-11-01",
+        "support": null,
+        "extendedSupport": null
+      },
+      {
+        "cycle": "3.10",
+        "eol": "2021-05-01",
+        "support": null,
+        "extendedSupport": null
+      }
+    ],
+    "debian": [
+      {
+        "cycle": "13",
+        "eol": "2030-06-30",
+        "support": "2028-08-09",
+        "extendedSupport": "2035-06-30"
+      },
+      {
+        "cycle": "12",
+        "eol": "2028-06-30",
+        "support": "2026-07-11",
+        "extendedSupport": "2033-06-30"
+      },
+      {
+        "cycle": "11",
+        "eol": "2026-08-31",
+        "support": "2024-08-14",
+        "extendedSupport": "2031-06-30"
+      },
+      {
+        "cycle": "10",
+        "eol": "2024-06-30",
+        "support": "2022-09-10",
+        "extendedSupport": "2029-06-30"
+      },
+      {
+        "cycle": "9",
+        "eol": "2022-07-01",
+        "support": "2020-07-18",
+        "extendedSupport": "2027-06-30"
+      },
+      {
+        "cycle": "8",
+        "eol": "2020-06-30",
+        "support": "2018-06-17",
+        "extendedSupport": "2025-06-30"
+      }
+    ],
+    "ubuntu": [
+      {
+        "cycle": "26.10",
+        "eol": "2027-07-01",
+        "support": "2027-07-01",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "26.04",
+        "eol": "2031-05-29",
+        "support": "2031-05-29",
+        "extendedSupport": "2036-04-23"
+      },
+      {
+        "cycle": "25.10",
+        "eol": "2026-07-01",
+        "support": "2026-07-01",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "25.04",
+        "eol": "2026-01-17",
+        "support": "2026-01-17",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "24.10",
+        "eol": "2025-07-10",
+        "support": "2025-07-10",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "24.04",
+        "eol": "2029-05-31",
+        "support": "2029-05-31",
+        "extendedSupport": "2034-04-25"
+      },
+      {
+        "cycle": "23.10",
+        "eol": "2024-07-12",
+        "support": "2024-07-12",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "23.04",
+        "eol": "2024-01-20",
+        "support": "2024-01-20",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "22.10",
+        "eol": "2023-07-20",
+        "support": "2023-07-20",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "22.04",
+        "eol": "2027-06-01",
+        "support": "2024-09-30",
+        "extendedSupport": "2032-04-21"
+      },
+      {
+        "cycle": "21.10",
+        "eol": "2022-07-14",
+        "support": "2022-07-14",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "21.04",
+        "eol": "2022-01-20",
+        "support": "2022-01-20",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "20.10",
+        "eol": "2021-07-22",
+        "support": "2021-07-22",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "20.04",
+        "eol": "2025-05-31",
+        "support": "2022-10-01",
+        "extendedSupport": "2030-04-23"
+      },
+      {
+        "cycle": "19.10",
+        "eol": "2020-07-06",
+        "support": "2020-07-06",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "19.04",
+        "eol": "2020-01-23",
+        "support": "2020-01-23",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "18.10",
+        "eol": "2019-07-18",
+        "support": "2019-07-18",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "18.04",
+        "eol": "2023-05-31",
+        "support": "2023-05-31",
+        "extendedSupport": "2028-04-26"
+      },
+      {
+        "cycle": "17.10",
+        "eol": "2018-07-19",
+        "support": "2018-07-19",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "17.04",
+        "eol": "2018-01-13",
+        "support": "2018-01-13",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "16.10",
+        "eol": "2017-07-20",
+        "support": "2017-07-20",
+        "extendedSupport": false
+      },
+      {
+        "cycle": "16.04",
+        "eol": "2021-04-02",
+        "support": "2021-04-02",
+        "extendedSupport": "2026-04-02"
+      }
+    ],
+    "rhel": [
+      {
+        "cycle": "10",
+        "eol": "2035-05-31",
+        "support": "2030-05-31",
+        "extendedSupport": "2039-05-31"
+      },
+      {
+        "cycle": "9",
+        "eol": "2032-05-31",
+        "support": "2027-05-31",
+        "extendedSupport": "2036-05-31"
+      },
+      {
+        "cycle": "8",
+        "eol": "2029-05-31",
+        "support": "2024-05-31",
+        "extendedSupport": "2033-05-31"
+      },
+      {
+        "cycle": "7",
+        "eol": "2024-06-30",
+        "support": "2019-08-06",
+        "extendedSupport": "2029-05-31"
+      }
+    ]
+  },
+  "vendor_overrides": {
+    "debian:9": {
+      "ended": "2022-06-30",
+      "api_eol": "2022-07-01",
+      "source": "https://wiki.debian.org/LTS",
+      "reason": "Debian LTS wiki lists Stretch LTS end as 2022-06-30"
+    },
+    "ubuntu:16.04": {
+      "ended": "2021-04-30",
+      "api_eol": "2021-04-02",
+      "source": "https://lists.ubuntu.com/archives/ubuntu-announce/2021-March/000266.html",
+      "reason": "Extended Security Maintenance for 16.04 began 2021-04-30"
+    },
+    "ubuntu:19.10": {
+      "ended": "2020-07-17",
+      "api_eol": "2020-07-06",
+      "source": "https://ubuntu.com/project/docs/release-team/list-of-releases/",
+      "reason": "Ubuntu list of releases gives 19.10 End of Life as Jul 17, 2020"
+    },
+    "ubuntu:23.04": {
+      "ended": "2024-01-25",
+      "api_eol": "2024-01-20",
+      "source": "https://lists.ubuntu.com/archives/ubuntu-announce/2024-January/000298.html",
+      "reason": "23.04 reached End of Life on 2024-01-25"
+    },
+    "ubuntu:23.10": {
+      "ended": "2024-07-11",
+      "api_eol": "2024-07-12",
+      "source": "https://lists.ubuntu.com/archives/ubuntu-announce/2024-July/000303.html",
+      "reason": "23.10 reached End of Life on 2024-07-11"
+    },
+    "ubuntu:25.04": {
+      "ended": "2026-01-15",
+      "api_eol": "2026-01-17",
+      "source": "https://lists.ubuntu.com/archives/ubuntu-announce/2026-January/000320.html",
+      "reason": "25.04 reached End of Life on 2026-01-15"
+    },
+    "ubuntu:25.10": {
+      "ended": "2026-07-09",
+      "api_eol": "2026-07-01",
+      "source": "https://lists.ubuntu.com/archives/ubuntu-announce/2026-July/000325.html",
+      "reason": "25.10 reached End of Life on 2026-07-09"
+    }
+  }
+}

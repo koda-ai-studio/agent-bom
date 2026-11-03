@@ -4,6 +4,12 @@ Small, dated table drawn from each vendor's published lifecycle page (``as of``
 below). Only releases whose end of life had already passed on that date are
 listed, so no date here is a forecast. A release missing from the table makes
 no claim either way.
+
+Every row was checked on ``END_OF_LIFE_AS_OF`` against the endoflife.date API
+(``https://endoflife.date/api/<product>.json``); the recorded records live in
+``tests/fixtures/distro_eol/endoflife_date_snapshot.json`` and a test holds the
+table to them offline. Where the vendor's own announcement disagrees with the
+API, the vendor date is used and the row cites that announcement.
 """
 
 from __future__ import annotations
@@ -15,8 +21,16 @@ END_OF_LIFE_AS_OF = date(2026, 11, 2)
 
 _ALPINE = "https://alpinelinux.org/releases/"
 _DEBIAN = "https://wiki.debian.org/LTS"
-_UBUNTU = "https://ubuntu.com/about/release-cycle"
+_UBUNTU = "https://ubuntu.com/project/docs/release-team/list-of-releases/"
+_UBUNTU_ANNOUNCE = "https://lists.ubuntu.com/archives/ubuntu-announce/"
 _RHEL = "https://access.redhat.com/support/policy/updates/errata"
+_UBUNTU_SOURCES = {
+    "16.04": f"{_UBUNTU_ANNOUNCE}2021-March/000266.html",
+    "23.04": f"{_UBUNTU_ANNOUNCE}2024-January/000298.html",
+    "23.10": f"{_UBUNTU_ANNOUNCE}2024-July/000303.html",
+    "25.04": f"{_UBUNTU_ANNOUNCE}2026-January/000320.html",
+    "25.10": f"{_UBUNTU_ANNOUNCE}2026-July/000325.html",
+}
 
 
 @dataclass(frozen=True)
@@ -43,6 +57,7 @@ def _table() -> dict[str, EndOfLife]:
                 (18, "2025-05-09"),
                 (19, "2025-11-01"),
                 (20, "2026-04-01"),
+                (21, "2026-11-01"),
             )
         ),
         # Debian: end of LTS, the last date any Debian security fix was published.
@@ -56,19 +71,30 @@ def _table() -> dict[str, EndOfLife]:
             EndOfLife(
                 f"ubuntu:{release}",
                 date.fromisoformat(ended),
-                _UBUNTU,
+                _UBUNTU_SOURCES.get(release, _UBUNTU),
                 "Expanded Security Maintenance may still apply under subscription."
                 if release.endswith(".04") and int(release[:2]) % 2 == 0
                 else "",
             )
             for release, ended in (
                 ("16.04", "2021-04-30"),
+                ("16.10", "2017-07-20"),
+                ("17.04", "2018-01-13"),
+                ("17.10", "2018-07-19"),
                 ("18.04", "2023-05-31"),
+                ("18.10", "2019-07-18"),
+                ("19.04", "2020-01-23"),
+                ("19.10", "2020-07-17"),
                 ("20.04", "2025-05-31"),
+                ("20.10", "2021-07-22"),
+                ("21.04", "2022-01-20"),
+                ("21.10", "2022-07-14"),
                 ("22.10", "2023-07-20"),
                 ("23.04", "2024-01-25"),
                 ("23.10", "2024-07-11"),
                 ("24.10", "2025-07-10"),
+                ("25.04", "2026-01-15"),
+                ("25.10", "2026-07-09"),
             )
         ),
         EndOfLife(
