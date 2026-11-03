@@ -949,7 +949,7 @@ jobs:
           GRAPH_SCAN_ARTIFACT: ""
         run: |
           cd ui
-          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts e2e/lineage-graph-readability.spec.ts e2e/graph-efficient-workspace.spec.ts
+          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts e2e/lineage-graph-readability.spec.ts e2e/graph-efficient-workspace.spec.ts e2e/graph-paint-budget.spec.ts
 
       - name: Retain UI failure diagnostics
         if: ${{ failure() || cancelled() }}
@@ -1329,6 +1329,11 @@ jobs:
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
           echo "Affected shard ${{ matrix.shard }}/${{ strategy.job-total }}: ${#TESTS[@]} test modules, ${WORKERS} workers"
           uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+
+      - name: Run isolated graph and findings read budgets
+        if: matrix.shard == 0
+        # Wall-clock gates run without xdist/coverage or competing test workers.
+        run: uv run pytest tests/api/test_graph_first_read_budget.py -q -m graph_performance
 
       - name: Graph accuracy fixture guard (#2259)
         if: >-

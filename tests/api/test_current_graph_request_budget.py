@@ -17,7 +17,7 @@ from tests.test_api_read_contracts import empty_estate_client  # noqa: F401
 
 @pytest.mark.parametrize("previous", [False, True])
 def test_request_releases_slow_build_and_reports_state(estate, monkeypatch, previous):  # noqa: F811
-    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS", "20")
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS", "2000" if previous else "20")
     record(estate, 8, "repo-a", "old-package")
     store = CurrentGraphStore(estate[1], estate[0])
     old = store.latest_snapshot_id(tenant_id=TENANT) if previous else ""

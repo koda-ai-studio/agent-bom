@@ -23,17 +23,22 @@ import platform
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 _MEASURE = r"""
-import gzip, json, sys, time, tracemalloc
+import gzip, json, os, sys, time, tracemalloc
 from pathlib import Path
+from pydantic_core import to_json
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.storage.jobs import parse_job_payload
 from agent_bom.output.json_writer import write_json_file
 
 report_path, repeat, scratch = Path(sys.argv[1]), int(sys.argv[2]), Path(sys.argv[3])
+os.environ.update(AGENT_BOM_STATE_DIR=str(scratch / 'state'), AGENT_BOM_EXEC_PREWARM='0', AGENT_BOM_GRAPH_ROLLUP_PREWARM='0')
+started = time.perf_counter()
 report = json.loads(report_path.read_text())
+parse_ms = (time.perf_counter() - started) * 1000
 if repeat > 1:
     report = {k: (v * repeat if isinstance(v, list) else v) for k, v in report.items()}
 pretty = (json.dumps(report, indent=2) + "\n").encode()
@@ -48,8 +53,27 @@ started = time.perf_counter()
 row = encode_job_payload(job)
 encode_ms = (time.perf_counter() - started) * 1000
 started = time.perf_counter()
-parse_job_payload(row)
+decoded = parse_job_payload(row)
 decode_ms = (time.perf_counter() - started) * 1000
+started = time.perf_counter()
+canonical = to_json(report)
+serialize_ms = (time.perf_counter() - started) * 1000
+assert to_json(decoded.result) == canonical
+from agent_bom.api.store import SQLiteJobStore
+store = SQLiteJobStore(str(scratch / 'jobs.db'))
+started = time.perf_counter()
+store.put(job)
+put_ms = (time.perf_counter() - started) * 1000
+one = sum(p.stat().st_size for p in scratch.glob('jobs.db*'))
+loaded = store.get('bench', tenant_id='bench')
+assert to_json(loaded.result) == canonical
+assert store.get('bench', tenant_id='foreign') is None
+started = time.perf_counter()
+write_json_file(loaded.result, str(scratch / 'export.json'))
+export_ms = (time.perf_counter() - started) * 1000
+assert to_json(json.loads((scratch / 'export.json').read_bytes())) == canonical
+store.put(job.model_copy(update={'job_id': 'bench-two'}))
+two = sum(p.stat().st_size for p in scratch.glob('jobs.db*'))
 tracemalloc.start()
 write_json_file(report, str(scratch / "report.json"))
 write_peak = tracemalloc.get_traced_memory()[1]
@@ -63,6 +87,10 @@ print(json.dumps({
     "job_row_bytes": len(row.encode()),
     "job_row_encode_ms": round(encode_ms, 1),
     "job_row_decode_ms": round(decode_ms, 1),
+    "parse_ms": round(parse_ms, 1), "serialize_compact_ms": round(serialize_ms, 1),
+    "sqlite_put_ms": round(put_ms, 1), "full_export_ms": round(export_ms, 1),
+    "sqlite_one_snapshot_bytes": one, "sqlite_two_identical_snapshot_bytes": two,
+    "full_export_parity": True, "foreign_tenant_denied": True,
     "write_json_file_peak_bytes": write_peak,
 }))
 """
@@ -75,23 +103,33 @@ def _env(src: Path | None) -> dict[str, str]:
     return env
 
 
-def measure(src: Path | None, repeat: int) -> dict:
+def measure(src: Path | None, repeat: int, report_path: Path | None = None) -> dict:
     with tempfile.TemporaryDirectory(prefix="report-volume-") as scratch:
-        report = Path(scratch) / "demo.json"
+        report = report_path.resolve() if report_path else Path(scratch) / "demo.json"
         cli = [sys.executable, "-c", "from agent_bom.cli import main; main()", "agents", "--demo", "--offline", "--exit-zero"]
-        subprocess.run([*cli, "-f", "json", "-o", str(report)], env=_env(src), check=True, capture_output=True)  # noqa: S603
+        generation_ms = None
+        if report_path is None:
+            started = time.perf_counter()
+            subprocess.run([*cli, "-f", "json", "-o", str(report)], env=_env(src), check=True, capture_output=True)  # noqa: S603
+            generation_ms = (time.perf_counter() - started) * 1000
         out = subprocess.run(  # noqa: S603
             [sys.executable, "-c", _MEASURE, str(report), str(repeat), scratch], env=_env(src), check=True, capture_output=True, text=True
         )
-        return json.loads(out.stdout.strip().splitlines()[-1])
+        return {"generation_ms": generation_ms, **json.loads(out.stdout.strip().splitlines()[-1])}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--src", type=Path, help="source tree to measure (default: the installed package)")
     parser.add_argument("--repeat", type=int, default=1, help="tile top-level lists N times (synthetic scale)")
+    parser.add_argument("--report", type=Path, help="profile an existing full JSON report without scanning or altering it")
     args = parser.parse_args()
-    result = {"python": platform.python_version(), "machine": platform.machine(), "repeat": args.repeat, **measure(args.src, args.repeat)}
+    result = {
+        "python": platform.python_version(),
+        "machine": platform.machine(),
+        "repeat": args.repeat,
+        **measure(args.src, args.repeat, args.report),
+    }
     print(json.dumps(result, indent=2))
     return 0
 

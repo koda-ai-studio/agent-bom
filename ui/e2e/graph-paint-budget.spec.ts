@@ -1,0 +1,77 @@
+import { expect, test, type Page } from "@playwright/test";
+import os from "node:os";
+import { writeFileSync } from "node:fs";
+
+const stamp = "2026-10-15T00:00:00Z";
+const node = (id:string, entity_type:string) => ({id,label:id,entity_type,severity:"none",status:"active",risk_score:0,
+  attributes:{},dimensions:{},data_sources:["synthetic-paint-budget"],compliance_tags:[]});
+
+async function fixture(page:Page, agents:number) {
+  const all = [node("Workspace", "agent"), ...Array.from({length:agents},(_,i)=>node(`mcp-${i}`,"server"))];
+  const nodes = all.slice(0,100);
+  const edges = nodes.slice(1).map(n=>({id:`use-${n.id}`,source:"Workspace",target:n.id,relationship:"uses",direction:"directed",
+    weight:1,traversable:false,evidence:{source:"synthetic-paint-budget",tier:"static_scan"},first_seen:stamp,last_seen:stamp}));
+  const graph = {scan_id:"paint",tenant_id:"fixture",created_at:stamp,nodes,edges,attack_paths:[],interaction_risks:[],
+    stats:{total_nodes:all.length,total_edges:all.length-1,node_counts:{},edge_counts:{},severity_counts:{},risk_score:0},
+    pagination:{total:all.length,offset:0,limit:100,returned:nodes.length,has_more:all.length>100},
+    completeness:{complete:all.length<=100,truncated:all.length>100,returned:nodes.length,total:all.length}};
+  const payload = JSON.stringify(graph);
+  await page.route("**/health",r=>r.fulfill({json:{status:"ok"}}));
+  await page.route("**/v1/**",r=>{
+    const url=new URL(r.request().url());
+    if(url.pathname==="/v1/auth/me") return r.fulfill({json:{authenticated:true,auth_required:false,tenant_id:"fixture",role:"admin",auth_method:"anonymous",memberships:[],configured_modes:[],recommended_ui_mode:"no_auth"}});
+    if(url.pathname==="/v1/graph/snapshots") return r.fulfill({json:[{scan_id:"paint",created_at:stamp,node_count:all.length,edge_count:all.length-1}]});
+    if(url.pathname==="/v1/graph") return r.fulfill({contentType:"application/json",body:payload});
+    return r.fulfill({status:404,json:{detail:"Outside paint fixture"}});
+  });
+  return {source_nodes:all.length,returned_nodes:nodes.length,payload_bytes:Buffer.byteLength(payload)};
+}
+
+function percentile(values:number[], p:number) {
+  const sorted=[...values].sort((a,b)=>a-b);
+  return sorted[Math.min(sorted.length-1, Math.ceil(sorted.length*p)-1)]!;
+}
+
+for(const agents of [12,120]) test(`first useful graph paint below two seconds at ${agents} servers`,async({browser},info)=>{
+  test.setTimeout(90_000);
+  const records:Array<{condition:string;ms:number;resources:unknown}> = [];
+  let basis:Awaited<ReturnType<typeof fixture>>|undefined;
+  for(const condition of ["fresh_context","reused_context"]){
+    let context=await browser.newContext({viewport:{width:1440,height:1000}});
+    for(let sample=0;sample<10;sample++){
+      if(condition==="fresh_context" && sample>0){await context.close();context=await browser.newContext({viewport:{width:1440,height:1000}});}
+      const page=await context.newPage();
+      basis=await fixture(page,agents);
+      await page.goto("/graph?scan=paint&rollup=0&layers=agent,server",{waitUntil:"domcontentloaded"});
+      await expect(page.locator(".react-flow__node .graph-entity-glyph").first()).toBeVisible();
+      await expect(page.locator(".react-flow__edge").first()).toBeVisible();
+      await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled","true");
+      // A quick paint of a clipped fan is not a useful first view. Leaf peers
+      // open as an expandable group; both cards must fit with their captions.
+      await expect(page.locator(".react-flow__node")).toHaveCount(2);
+      expect(await page.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
+        const box = node.getBoundingClientRect();
+        const frame = node.closest(".react-flow")!.getBoundingClientRect();
+        return box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
+      }))).toBe(true);
+      const result=await page.evaluate(async()=>{
+        await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+        const resources=performance.getEntriesByType("resource").filter(r=>r.name.includes("/v1/graph?")).map(r=>({ms:r.duration}));
+        return {ms:performance.now(),resources};
+      });
+      records.push({condition,...result});
+      if(sample===0) await page.screenshot({path:info.outputPath(`paint-${agents}-${condition}.png`),animations:"disabled"});
+      await page.close();
+    }
+    await context.close();
+  }
+  const summary=Object.fromEntries(["fresh_context","reused_context"].map(condition=>{
+    const times=records.filter(r=>r.condition===condition).map(r=>r.ms);
+    return [condition,{p50:percentile(times,.5),p95:percentile(times,.95),p99:percentile(times,.99),max:Math.max(...times)}];
+  }));
+  const receipt=info.outputPath("paint-budget.json");
+  writeFileSync(receipt,JSON.stringify({basis,records,summary,platform:os.platform(),arch:os.arch(),cpus:os.cpus()[0]?.model,memory:os.totalmem(),
+    conditions:"Production JavaScript; deterministic intercepted API page. Fresh/reused browser contexts; Playwright routing disables HTTP cache. Settled camera and two animation frames required. No backend build or external network latency is included."},null,2));
+  await info.attach("paint-budget.json",{path:receipt,contentType:"application/json"});
+  expect(Math.max(...records.map(r=>r.ms)),JSON.stringify(summary)).toBeLessThan(2000);
+});

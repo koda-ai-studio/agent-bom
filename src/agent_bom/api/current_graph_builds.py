@@ -118,7 +118,11 @@ def await_current_build(store: Any, tenant: str, *, seconds: float, prepared: tu
 def resolve_request_current(store: Any, tenant: str, epoch: str, evidence: tuple[Any, ...], previous: str) -> str:
     """Reuse the request's evidence read, keeping build work outside its scope."""
     prepared = (epoch, *evidence)
-    completed = await_current_build(store, tenant, seconds=build_wait_seconds(), prepared=prepared)
+    # An existing complete graph makes this a refresh, not a cold start. Leave
+    # room for the bounded page read/serialization and report stale coverage
+    # while the same coalesced worker finishes. Explicit snapshots stay exact.
+    seconds = min(build_wait_seconds(), 0.05) if previous else build_wait_seconds()
+    completed = await_current_build(store, tenant, seconds=seconds, prepared=prepared)
     with store._lock.shared():
         if live := store._cached_live_id(tenant, evidence[3]):
             return cast(str, store._pin(live))

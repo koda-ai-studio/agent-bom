@@ -80,9 +80,10 @@ export const FOCUSED_AGGREGATION_THRESHOLD = 5;
 
 /**
  * Threshold for the "expanded" filter preset — topology review view.
- * Twenty visible siblings is plenty before the canvas gets unreadable.
+ * Eight peers already exceed a readable desktop fan-out. Expansion preserves
+ * every loaded member; only leaf siblings with the same relationship group.
  */
-export const EXPANDED_AGGREGATION_THRESHOLD = 20;
+export const EXPANDED_AGGREGATION_THRESHOLD = 8;
 
 interface SiblingGroupKey {
   parentId: string;
