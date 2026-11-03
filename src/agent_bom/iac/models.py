@@ -11,6 +11,21 @@ from typing import Any
 
 from agent_bom.domain.finding_types import cites_cis_control as cites_cis_control
 
+__all__ = [
+    "IaCFinding",
+    "IaCResourceRef",
+    "IaCResourceType",
+    "ScanContext",
+    "ScanResult",
+    "ScannerVerdict",
+    "cites_cis_control",
+    "exception_summary",
+    "iac_finding_row",
+    "iac_findings_payload",
+    "merge_policy_results",
+    "set_repository_context",
+]
+
 
 class IaCResourceType(str, Enum):
     """First-class IaC resource types surfaced by agent-bom scanners."""

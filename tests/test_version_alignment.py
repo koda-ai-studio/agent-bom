@@ -672,7 +672,7 @@ def test_published_bump_rewrites_oci_chart_pins(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(cva, "LATEST_REQUIRED", ())
     monkeypatch.setattr(cva, "LAUNCHERS", ())
     monkeypatch.setattr(cva, "ROOT", tmp_path)
-    monkeypatch.setattr(cva, "_release_tags", lambda: set())
+    monkeypatch.setattr(cva, "_release_tags", set)
     count, changed = cva.rewrite("0.106.0", published="0.105.0")
     assert count == 1 and changed == [guide]
     assert "--version 0.105.0" in guide.read_text()

@@ -107,3 +107,33 @@ def test_blast_radius_and_json_expose_the_name_but_never_the_value(monkeypatch):
     assert server_doc["has_credentials"] is True
     row = doc["blast_radius"][0]
     assert set(row["exposed_credentials"]) == {"postgres-url-password", "--auth-token"}
+
+
+def test_saved_graph_retains_embedded_credential_names_without_values(tmp_path, monkeypatch):
+    from agent_bom.context_graph import NodeKind, build_context_graph
+    from agent_bom.output import to_json
+    from agent_bom.output.graph_export import build_graph_from_scan_data
+    from agent_bom.output.graph_export import to_json as graph_json
+    from tests.test_graph_export_repo_sbom_parity import _served
+
+    server = _server(args=["--auth-token", _SECRET, _DSN], connection_metadata={"header_names": ["Authorization"]})
+    agent = Agent(name="agent", agent_type=AgentType.CLAUDE_DESKTOP, config_path="/tmp/a.json", mcp_servers=[server])
+    report = to_json(AIBOMReport(agents=[agent], blast_radii=[]))
+    nodes, _ = _served(report, tmp_path, monkeypatch)
+    credentials = {node for node, kind in nodes.items() if kind == "credential"}
+    assert len(credentials) == 3
+    for label in server.embedded_credential_names:
+        assert any(node.endswith(":" + label) for node in credentials)
+    exported = graph_json(build_graph_from_scan_data(report))
+    assert {node["id"] for node in exported["nodes"] if node["entity_type"] == "credential"} == credentials
+    assert _SECRET not in json.dumps(exported)
+    context = build_context_graph(report["agents"], [])
+    assert {node.label for node in context.nodes.values() if node.kind == NodeKind.CREDENTIAL} == set(server.embedded_credential_names)
+
+
+@pytest.mark.parametrize("surface", ["sbom", "container-image", "filesystem", "external-scan"])
+def test_static_inventory_arguments_are_not_mcp_credential_evidence(surface):
+    from agent_bom.domain.mcp_model import ServerSurface
+
+    server = _server(surface=ServerSurface(surface), args=["--auth-token", _SECRET])
+    assert server.embedded_credential_names == []

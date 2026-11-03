@@ -168,8 +168,8 @@ def _sarif(uri: str) -> dict:
 
 
 def test_sarif_findings_in_examples_are_low_and_labelled() -> None:
-    [example], _rules, _files = _parse_sarif_findings(_sarif("examples/gulpfile.js"))
-    [production], _rules, _files = _parse_sarif_findings(_sarif("lib/core.js"))
+    [example], *_ = _parse_sarif_findings(_sarif("examples/gulpfile.js"))
+    [production], *_ = _parse_sarif_findings(_sarif("lib/core.js"))
     assert example.severity == Severity.LOW
     assert example.path_context == "example"
     assert production.severity == Severity.HIGH

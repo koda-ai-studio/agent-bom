@@ -366,6 +366,9 @@ class MCPServer:
     @property
     def embedded_credential_names(self) -> list[str]:
         """Labels for credentials embedded in args, the URL or auth headers (names only)."""
+        # Synthetic inventory wrappers carry file paths, not launch arguments.
+        if not self.counts_as_mcp_server:
+            return []
         return embedded_credential_names(self.args, self.url, self.connection_metadata.get("header_names"))
 
     @property
