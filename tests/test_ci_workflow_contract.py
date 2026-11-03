@@ -207,6 +207,16 @@ def test_gitleaks_remains_unconditional_for_documentation_changes() -> None:
     workflow = (ROOT / ".github" / "workflows" / "gitleaks.yml").read_text(encoding="utf-8")
     assert "classify_ci_changes.py" not in workflow
     assert "paths-ignore" not in workflow
+    steps = yaml.safe_load(workflow)["jobs"]["gitleaks"]["steps"]
+    checkout = next(step for step in steps if step.get("uses", "").startswith("actions/checkout@"))
+    # Keep every commit in the event range; fetch file contents on demand so
+    # unrelated historical image blobs cannot consume the scan's time budget.
+    assert checkout["with"]["fetch-depth"] == 0
+    assert checkout["with"].get("filter") == "blob:none"
+    scan = next(step["run"] for step in steps if step["name"] == "Scan the event's Git range")
+    assert '"${PR_BASE_SHA}..${PR_HEAD_SHA}"' in scan
+    assert '"${PUSH_BEFORE_SHA}..${CURRENT_SHA}"' in scan
+    assert "continue-on-error" not in workflow
 
 
 def test_main_ui_smoke_covers_every_ui_classifier_surface() -> None:

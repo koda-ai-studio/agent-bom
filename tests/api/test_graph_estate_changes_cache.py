@@ -49,19 +49,39 @@ def test_rows_cache_key_reads_only_snapshot_identity(estate, monkeypatch):
     assert key == graph_diff_read._rows_cache_key(graph_store, TENANT, f"{TENANT}-repo-a-7", f"{TENANT}-repo-a-8")
 
 
-def test_second_page_hits_the_caches(estate, monkeypatch):
+@pytest.mark.parametrize("background_read", [False, True])
+def test_second_page_hits_the_caches(estate, monkeypatch, background_read):
     seed(estate)
     jobs, graph_store = estate
     with client() as http:
         first = http.get("/v1/graph/changes?limit=20")
         job_reads = _Spy(monkeypatch, type(jobs), "get")
         diffs = _Spy(monkeypatch, type(graph_store), "diff_snapshots")
-        paths = _Spy(monkeypatch, type(graph_store), "attack_paths")
+        # Observe this route's path reads, not commit-hook prewarm running on
+        # another thread against the same graph store.
+        paths = _Spy(monkeypatch, graph_estate_changes, "_stored_paths")
+        if background_read:
+            # Reachability prewarm also reads stored paths. Its activity must
+            # not be attributed to the request whose cache use is measured.
+            from concurrent.futures import ThreadPoolExecutor
+
+            with ThreadPoolExecutor(max_workers=1) as worker:
+                effective, _, _, _ = worker.submit(
+                    graph_store.attack_paths, tenant_id=TENANT, scan_id=f"{TENANT}-repo-c-10", offset=0, limit=1
+                ).result(timeout=5)
+            assert effective == f"{TENANT}-repo-c-10"
         second = http.get("/v1/graph/changes?limit=20")
 
-    assert first.status_code == second.status_code == 200, second.text
-    assert second.json() == first.json()
-    assert (job_reads.calls, diffs.calls, paths.calls) == (0, 0, 0)
+        assert first.status_code == second.status_code == 200, second.text
+        assert second.json() == first.json()
+        assert (job_reads.calls, diffs.calls, paths.calls) == (0, 0, 0)
+
+        # Positive control: the observer must still catch an uncached request's
+        # reads of both snapshots in each of the two paired scopes.
+        graph_estate_changes.reset_estate_changes_caches()
+        cold = http.get("/v1/graph/changes?limit=20")
+        assert cold.status_code == 200 and cold.json() == first.json()
+        assert paths.calls == 4
 
 
 def test_a_new_scan_invalidates_the_cached_plan(estate):
