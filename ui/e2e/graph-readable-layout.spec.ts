@@ -13,9 +13,9 @@ const edge = (source: string, target: string, relationship: string) => ({
 type FixtureNode = ReturnType<typeof node>;
 type FixtureEdge = ReturnType<typeof edge>;
 
-async function fixture(page: Page, nodes: FixtureNode[], edges: FixtureEdge[], truncated = false) {
+async function fixture(page: Page, nodes: FixtureNode[], edges: FixtureEdge[], truncated = false, graphMetadata: Record<string, unknown> = {}) {
   const graph = { scan_id: "snapshot", tenant_id: "fixture", created_at: stamp, nodes, edges, attack_paths: [], interaction_risks: [],
-    stats: { total_nodes: nodes.length, total_edges: edges.length, severity_counts: {} } };
+    stats: { total_nodes: nodes.length, total_edges: edges.length, severity_counts: {} }, ...graphMetadata };
   await page.route("**/health", r => r.fulfill({ json: { status: "ok" } }));
   await page.route("**/v1/**", r => {
     const u = new URL(r.request().url());
@@ -83,7 +83,10 @@ async function labelCollisions(page: Page) {
   return page.locator(".react-flow").evaluate(canvas => {
     const visible = (el: Element) => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && r.width > 0 && r.height > 0; };
     const labels = [...canvas.querySelectorAll(".graph-relationship-label")].filter(visible).map(el => ({ text: el.textContent?.trim() ?? "", r: el.getBoundingClientRect() }));
-    const cards = [...canvas.querySelectorAll(".react-flow__node [data-graph-entity]")].map(el => ({ text: el.getAttribute("title") ?? "", r: el.getBoundingClientRect() }));
+    const cards = [...canvas.querySelectorAll(".react-flow__node [data-graph-entity]")].flatMap(el => [...el.children].map(child => {
+      const r = child.getBoundingClientRect(), pad = child.classList.contains("graph-entity-glyph") ? 8 : 0;
+      return { text: el.getAttribute("title") ?? "", r: new DOMRect(r.left - pad, r.top - pad, r.width + pad * 2, r.height + pad * 2) };
+    }));
     const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
     const out: string[] = [];
     labels.forEach((a, i) => {
@@ -319,3 +322,108 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
   if (lines.length > 1) expect(Math.min(...lines.map(l => l.length)) / Math.max(...lines.map(l => l.length))).toBeGreaterThanOrEqual(0.6);
   await page.screenshot({ path: info.outputPath(`provider-marks-${theme}.png`), animations: "disabled" });
 });
+
+for (const theme of ["light", "dark"] as const) for (const width of [1440, 390]) {
+  test(`cloud roles and finding ownership stay readable ${theme} ${width}`, async ({ page }, info) => {
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+    await page.setViewportSize({ width, height: 900 });
+    // The same owning fixture used by the product screenshot pipeline.
+    const { buildScopeShowcase } = await import("../scripts/product-proof-scope-showcase.mjs");
+    const catalog = JSON.parse(await readFile("fixtures/gallery-advisories.json", "utf8"));
+    const showcase = buildScopeShowcase("cloud", {
+      base: { scan_id: "snapshot" },
+      node: (id: string, type: string, label: string, severity: string, risk_score: number, attributes: Record<string, unknown>) => ({ ...node(id, type, label), severity, risk_score, attributes }),
+      edge: (source: string, target: string, relationship: string, weight: number, evidence: Record<string, unknown>) => ({ ...edge(source, target, relationship), weight, evidence: { tier: "modeled_infrastructure", source: "gallery-fixture", ...evidence } }),
+      advisory: (id: string) => catalog.advisories.find((item: { canonical_id: string }) => item.canonical_id === id) ?? catalog.advisories.find((item: { id: string }) => item.id === id),
+      referenceCve: { label: "unused", attributes: {} },
+    });
+    const entries: FixtureNode[] = showcase.nodes, links: FixtureEdge[] = showcase.edges;
+    await fixture(page, entries, links, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
+    await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
+    if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(7);
+    if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 7");
+    await settle(page);
+    await page.screenshot({ path: info.outputPath(`cloud-branches-${theme}-${width}.png`), animations: "disabled" });
+    if (width >= 640) {
+      const count = page.getByRole("button", { name: "Expand 1 finding for checkout-api", exact: true });
+      await count.hover();
+      await expect(page.getByRole("tooltip")).toContainText("highest severity: critical");
+      expect(await page.getByRole("tooltip").evaluate(tip => {
+        const a = tip.getBoundingClientRect();
+        return [...document.querySelectorAll("[data-graph-entity] > p, [data-entity-role], .graph-entity-glyph")].filter(el => {
+          const b = el.getBoundingClientRect();
+          return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+        }).map(el => el.textContent);
+      })).toEqual([]);
+      await page.screenshot({ path: info.outputPath(`cloud-finding-tooltip-${theme}.png`), animations: "disabled" });
+      await count.click();
+      await expect(page.locator('[data-id="cve:next"]')).toHaveCount(1);
+      await expect(page.locator('[data-id="container:checkout"] [data-finding-disclosure]')).toHaveCount(0);
+      await page.getByRole("button", { name: "Expand findings (3 grouped)", exact: true }).click();
+      await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
+      await page.getByRole("heading", { name: "Investigation", exact: true }).click();
+    }
+    await page.getByRole("button", { name: "Expand findings (4 grouped)", exact: true }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(entries.length);
+    if (width < 640) {
+      await settle(page);
+      const zoom = await page.locator(".react-flow__viewport").evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
+      expect(zoom).toBeGreaterThanOrEqual(0.8);
+      await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toBeVisible();
+      await page.getByRole("button", { name: "Next graph node", exact: true }).click();
+      await settle(page);
+      await page.screenshot({ path: info.outputPath(`cloud-roles-initial-${theme}-${width}.png`), animations: "disabled" });
+    }
+    await page.locator(".react-flow__controls-fitview").click();
+    await settle(page);
+    await expect(page.getByText("Permission role", { exact: true })).toBeVisible();
+    await expect(page.locator("[data-graph-category]")).toHaveCount(0);
+    // Counts for children already visible are tooltip details, never extra pills.
+    await expect(page.locator("[data-asset-connections]")).toHaveCount(0);
+    await expect(page.locator('[data-id="account:prod"] [data-graph-entity]')).toHaveAttribute("title", /Contains 2 resources in this view/);
+    await expect(page.locator('[data-id="cluster:payments"] [data-graph-entity]')).toHaveAttribute("title", /Hosts 2 applications in this view/);
+    expect(await cardOverlaps(page)).toEqual([]);
+    expect(await edgesThroughNodes(page)).toEqual([]);
+    expect(await labelCollisions(page)).toEqual([]);
+    // The provider plate must clear the name even at the expanded graph's fit zoom.
+    expect(await page.locator("[data-graph-source-badge]").evaluateAll(badges => badges.flatMap(badge => {
+      const a = badge.getBoundingClientRect();
+      const name = badge.closest("[data-graph-entity]")?.querySelector(":scope > p");
+      return [...(name?.querySelectorAll("span") ?? [])].filter(span => {
+        const b = span.getBoundingClientRect();
+        return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      }).map(span => span.textContent);
+    }))).toEqual([]);
+    await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(links.length);
+    const labels = await visibleLabelTexts(page);
+    if (width >= 640) {
+      expect(labels).toEqual([]); // Captions appear on focus; the overview stays quiet.
+      const access = page.getByRole("group", { name: /Has Permission.*relationship from checkout-runtime-role to customer-pii-bucket/ });
+      await access.focus();
+      await expect(page.locator(".graph-relationship-label").filter({ hasText: /Permission/i })).toBeVisible();
+      await page.screenshot({ path: info.outputPath(`cloud-relationship-focus-${theme}.png`), animations: "disabled" });
+      await page.getByRole("heading", { name: "Investigation", exact: true }).click();
+    } else {
+      // Explicit Fit all provides an overview; the initial mobile camera above stays readable.
+      await expect(page.getByRole("group", { name: /Has Permission.*relationship from checkout-runtime-role to customer-pii-bucket/ })).toHaveCount(1);
+    }
+    await page.screenshot({ path: info.outputPath(`cloud-roles-${theme}-${width}.png`), animations: "disabled" });
+    if (width >= 640) {
+      const clipped = await page.locator(".react-flow").evaluate(canvas => {
+        const b = canvas.getBoundingClientRect();
+        return [...canvas.querySelectorAll("[data-graph-entity]")].filter(el => {
+          const r = el.getBoundingClientRect();
+          return r.left < b.left || r.right > b.right || r.top < b.top || r.bottom > b.bottom;
+        }).map(el => el.textContent);
+      });
+      expect(clipped).toEqual([]);
+      await page.locator('[data-id="finding:waf"] [data-graph-entity]').click();
+      await expect(page.getByTestId("graph-entity-drawer")).toContainText("Public API stage has no WAF association");
+      await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
+      await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
+      await expect(page.locator(".react-flow__node")).toHaveCount(7);
+      await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
+    }
+  });
+}

@@ -47,6 +47,26 @@ content scan, complete lineage map or proof of sensitive records. Ingesting
 inventory or a scan report does not by itself ingest the contents of those stores.
 Source coverage and missing location or access evidence must be evaluated separately.
 
+## Read a compact cloud investigation
+
+In a small cloud snapshot, follow connected branches from account scope through
+hosting, application workloads, identities and data resources. Placement follows
+recorded relationships rather than fixed category columns. Names appear above
+their types; hover an asset for additional context. Relationship arrows retain
+their recorded direction, with relationship and evidence details available on
+hover or keyboard focus. A modeled permission does not establish successful access.
+
+A finding with exactly one affected asset is initially grouped on that asset.
+The count badge describes linked findings and their recorded highest severity on
+hover or focus. Select the badge or **Expand findings** to show the original
+finding nodes, including their names, types, severity indicators and KEV markers.
+Expanded findings have no duplicate count badge. Shared findings, rollups,
+unknown workload kinds and larger graphs keep the general layout rather than
+implying an arbitrary owner. Grouping changes presentation, not the stored
+records or reachability verdict. On phones, use the Paths list
+for the overview and Graph for readable inspection; **Fit all** shows the whole
+loaded topology, which can require zooming back in to read labels.
+
 ## Explore an estate map
 
 Open **Investigation** for a completed scan and switch to the broad graph view.

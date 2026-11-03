@@ -8,6 +8,7 @@ import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/rea
 import { Bug, FolderGit2, KeyRound, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
+import { GraphCountHint } from "@/components/graph-count-hint";
 import { GraphPackageGlyph } from "@/components/graph-package-glyph";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
@@ -54,6 +55,13 @@ export type LineageNodeData = {
   dataSources?: string[] | undefined;
   /** Distinguishes same-image container occurrences (inventory vs deployment). */
   occurrenceRole?: string | undefined;
+  /** Presentation of recorded roles in a bounded cloud hierarchy. */
+  readingFindings?: { count: number; expanded: boolean; severity?: string | undefined; toggle: () => void } | undefined;
+  readingLabel?: string | undefined;
+  readingFinding?: boolean | undefined;
+  readingOwner?: string | undefined;
+  readingGroup?: string | undefined;
+  readingConnections?: { relationship: string; label: string; targets: string[] }[] | undefined;
   /** Visible distinction for same-name nodes; never substitutes for their IDs. */
   identityContext?: string | undefined;
   agentContext?: AgentContext | undefined;
@@ -211,7 +219,7 @@ function NodeCard({
   const shownSubtitle = typeof subtitle === "string" && named.some(value => typeof value === "string" && value && subtitle.trim().toLowerCase() === value.toLowerCase())
     ? undefined : subtitle;
   return (
-    <div title={[graphNodeTooltip(data), ring?.description].filter(Boolean).join(" · ")} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
+    <div title={[graphNodeTooltip(data), ring?.description, ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ")} data-graph-entity="true" data-finding-owner={data.readingOwner} data-rollup-container={isRollupContainer ? "true" : undefined}
       style={{ width: "var(--graph-node-card-width, 220px)" }}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
       <div ref={glyphRef} data-severity-ring={severity} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
@@ -223,6 +231,15 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
+        {data.readingFindings && !data.readingFindings.expanded && <span className="absolute -left-5 -top-3"><GraphCountHint text={`${data.label}: ${data.readingFindings.count} linked finding${data.readingFindings.count === 1 ? "" : "s"}${data.readingFindings.severity ? ` · highest severity: ${data.readingFindings.severity}` : " · severity not rated"}. Click to ${data.readingFindings.expanded ? "collapse" : "expand"}.`}><button type="button" data-finding-disclosure
+          aria-label={`${data.readingFindings.expanded ? "Collapse" : "Expand"} ${data.readingFindings.count} finding${data.readingFindings.count === 1 ? "" : "s"} for ${data.label}`}
+          aria-expanded={data.readingFindings.expanded}
+          title=""
+          onClick={event => { event.stopPropagation(); data.readingFindings!.toggle(); }}
+          className="nodrag nopan flex min-h-10 min-w-10 items-center justify-center rounded-full border-2 border-outline-strong bg-surface-elevated px-2 font-semibold text-foreground shadow-sm"
+          style={{ fontSize: "var(--graph-node-meta-size, 12px)", ...(data.readingFindings.severity ? { borderColor: `var(--severity-ring-${data.readingFindings.severity})` } : {}) }}>
+          {data.readingFindings.count}<span className="sr-only"> findings</span>
+        </button></GraphCountHint></span>}
         <GraphPackageGlyph ecosystem={data.nodeType === "package" ? allBadges.find(badge => badge.kind === "ecosystem")?.value : undefined} fallback={<Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />} />
         {/* A contrasting vendor badge at 4:30, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
@@ -230,8 +247,8 @@ function NodeCard({
       <SegmentedLabel text={repository?.slug || displayTitle} className="mb-1 w-full min-w-0 line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
-        <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider })}
+        <span data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
+          {data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
