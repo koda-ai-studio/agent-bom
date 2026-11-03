@@ -227,7 +227,7 @@ maintenance, migration/admin, and auth Kubernetes Secrets described in
 [Control Plane Helm](control-plane-helm.md), then use the packaged chart:
 
 ```bash
-helm upgrade --install agent-bom deploy/helm/agent-bom \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```

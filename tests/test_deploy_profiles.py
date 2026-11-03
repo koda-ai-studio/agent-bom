@@ -445,3 +445,41 @@ def test_oidc_discovery_shim_header_passes_upstreams_as_a_file_not_values() -> N
     text = (repo_root / "deploy" / "helm" / "agent-bom" / "examples" / "oidc-discovery-shim-values.yaml").read_text()
     assert "-f deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml" not in text
     assert "--set-file gateway.upstreamsYaml=deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml" in text
+
+
+def test_install_helm_profile_defaults_to_the_published_oci_chart():
+    """A repo-path chart on main pins unreleased images; installs use the published chart."""
+    repo_root = Path(__file__).resolve().parent.parent
+    published = (repo_root / "PUBLISHED_VERSION").read_text().strip()
+    result = subprocess.run(
+        ["python3", "scripts/install_helm_profile.py", "focused-pilot", "--print-command"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    stdout = result.stdout.strip()
+    assert f"agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version {published} " in stdout
+    assert " " + str(repo_root / "deploy" / "helm" / "agent-bom") + " " not in stdout
+
+
+def test_install_helm_profile_local_chart_is_explicit():
+    repo_root = Path(__file__).resolve().parent.parent
+    result = subprocess.run(
+        ["python3", "scripts/install_helm_profile.py", "focused-pilot", "--print-command", "--local-chart"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "oci://" not in result.stdout
+    assert " " + str(repo_root / "deploy" / "helm" / "agent-bom") + " " in result.stdout
+    assert "development" in result.stderr.lower()
+
+
+def test_build_helm_profile_command_accepts_a_published_chart_reference():
+    repo_root = Path(__file__).resolve().parent.parent
+    cmd = build_helm_profile_command(
+        repo_root, "focused-pilot", chart_ref="oci://ghcr.io/koda-ai-studio/charts/agent-bom", chart_version="0.1.0"
+    )
+    assert cmd[4:7] == ["oci://ghcr.io/koda-ai-studio/charts/agent-bom", "--version", "0.1.0"]

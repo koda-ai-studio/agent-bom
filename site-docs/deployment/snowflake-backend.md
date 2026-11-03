@@ -142,7 +142,7 @@ Wire it to the cluster via ExternalSecrets pointing at
 Use the shipped example values file:
 
 ```bash
-helm install agent-bom deploy/helm/agent-bom \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   -n agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-snowflake-values.yaml
 ```

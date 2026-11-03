@@ -1,7 +1,7 @@
 # Control-plane identity overlay — layer on a control-plane profile; it does
 # not render on its own (the base supplies the database and auth wiring).
 #
-#   helm upgrade --install agent-bom deploy/helm/agent-bom \
+#   helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
 #     -f deploy/helm/agent-bom/examples/eks-production-values.yaml \
 #     -f deploy/helm/agent-bom/examples/control-plane-identity-values.yaml
 #
