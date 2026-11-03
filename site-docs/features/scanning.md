@@ -70,6 +70,25 @@ unreachable, or the scan is `--offline`, the version stays `unknown`, has no
 purl, and no advisory is matched against the range's lower bound. Git, URL,
 file, alias, and workspace specs are never resolved to a registry version.
 
+### Test fixtures and scaffold templates
+
+When a project directory has a lockfile, manifests below it in test-fixture
+or scaffold-template directories are not inventoried: `__fixtures__/`,
+`fixtures/` or `fixture/` under a `test`, `tests`, `__tests__`, `spec`,
+`specs` or `testdata` directory, `templates/`, and `template-*` directories
+(for example `packages/create-vite/template-vue/package.json` in a pnpm
+monorepo, or `tests/fixtures/<case>/pyproject.toml` in a Poetry project).
+They are inputs to the project's tests or to projects it generates, not
+dependencies it installs, and without their own lockfile they would only add
+range-resolved guesses. The scan prints one line naming the skipped
+directories and records a `fixture_manifest` scope receipt in
+`coverage_warnings`; it does not make the run partial.
+
+A fixture or template directory with its own lockfile is still scanned as its
+own project. Scanning a fixture directory directly (`agent-bom scan -p
+tests/fixtures/app`) scans it, and a project without a lockfile keeps every
+manifest. Set `AGENT_BOM_SCAN_FIXTURE_MANIFESTS=1` to inventory all of them.
+
 ### Python projects without a lockfile
 
 Python dependencies are resolved by the first source that applies:

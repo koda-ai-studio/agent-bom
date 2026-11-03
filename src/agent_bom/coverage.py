@@ -46,8 +46,11 @@ _logger = logging.getLogger(__name__)
 
 # ``symlink_within_root`` targets are walked by their real path and
 # ``broken_symlink`` (loops, dangling links) has no content, so neither hides
-# evidence. A symlink out of the root stays a coverage gap.
-SCOPE_EXCLUSION_REASONS = frozenset({"directory_policy", "nested_worktree", "repository_ignore", "symlink_within_root", "broken_symlink"})
+# evidence. A symlink out of the root stays a coverage gap. ``fixture_manifest``
+# directories are test inputs of a locked project, not its dependencies.
+SCOPE_EXCLUSION_REASONS = frozenset(
+    {"directory_policy", "fixture_manifest", "nested_worktree", "repository_ignore", "symlink_within_root", "broken_symlink"}
+)
 
 
 GRAPH_GAP_REASON = "graph_analysis_limited"

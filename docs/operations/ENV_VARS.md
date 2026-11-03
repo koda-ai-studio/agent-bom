@@ -313,6 +313,7 @@ so they cannot regress silently, but they are not part of this reference.
 |---|---|---|---|
 | `AGENT_BOM_INCLUDE_RANGE_RESOLVED` | `bool` | `False` | Advisories on a registry-selected version (unlocked range) are possibly-affected review items, not gate triggers, unless AGENT_BOM_INCLUDE_RANGE_RESOLVED=1. |
 | `AGENT_BOM_INCLUDE_UNFIXED` | `bool` | `False` | Debian/Alpine advisories with no fix for the scanned release are suppressed unless AGENT_BOM_INCLUDE_UNFIXED=1 (RPM unresolved fixes stay visible). Re-read at scan time; see agent_bom.scanners.set_include_unfixed. |
+| `AGENT_BOM_SCAN_FIXTURE_MANIFESTS` | `bool` | `False` | Skip test-fixture/template manifests inside a locked project (see agent_bom.parsers.fixture_manifests) unless set to 1. |
 
 ## Partition Retention (#3463)
 | Env var | Type | Default | Description |
