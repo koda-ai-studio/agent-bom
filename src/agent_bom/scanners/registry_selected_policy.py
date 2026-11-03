@@ -42,7 +42,7 @@ def _candidate(pkg: Package, vuln: Vulnerability) -> dict[str, Any]:
         "reason": REGISTRY_SELECTED_VERSION,
         "detail": (
             f"{pkg.name} is declared as {declared} with no lockfile or installed version; {pkg.version} is the "
-            "version a fresh install would select from the registry, not a confirmed installed version. "
+            "version a fresh install would resolve on the registry, not a confirmed installed version. "
             "Lock or pin the dependency to confirm."
         ),
         "severity": str(getattr(vuln.severity, "value", vuln.severity) or "unknown").lower(),

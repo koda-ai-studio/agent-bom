@@ -172,6 +172,12 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         "published",
     ),
     ManagedPattern("OCI chart pin", _OCI_CHART_PIN, "published"),
+    # The platform-eks Terraform module installs the same published chart.
+    ManagedPattern(
+        "Terraform chart pin",
+        re.compile(r'(variable "chart_version" \{[^}]*?default\s*=\s*")(\d+\.\d+\.\d+)'),
+        "published",
+    ),
 )
 
 # A chart installed from the repository path on main references the next,
