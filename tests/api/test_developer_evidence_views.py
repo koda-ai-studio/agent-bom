@@ -73,7 +73,9 @@ def test_dashboard_omits_analysis_lists_and_preserves_full_read(empty_estate_cli
     assert result["analysis_sections"][0]["href"] == f"/v1/scan/{job.job_id}/result/ai_inventory.ast_analysis.cfg_edges?offset=0&limit=100"
     assert SECRET not in response.text
     assert _get_store().get(job.job_id, tenant_id=job.tenant_id).result == job.result
-    full = _get(empty_estate_client, f"/v1/scan/{job.job_id}").json()["result"]
+    summary = _get(empty_estate_client, f"/v1/scan/{job.job_id}").json()
+    assert "result" not in summary
+    full = _get(empty_estate_client, f"/v1/scan/{job.job_id}?view=full").json()["result"]
     assert len(full["ai_inventory"]["ast_analysis"]["cfg_edges"]) == 3
     assert _get(empty_estate_client, f"/v1/scan/{job.job_id}/dashboard", tenant="other").status_code == 404
 

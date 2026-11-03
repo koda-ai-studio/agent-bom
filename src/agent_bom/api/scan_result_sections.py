@@ -1,6 +1,6 @@
 """Sectioned, paged reads of one completed scan result.
 
-``GET /v1/scan/{id}`` returns the whole AI-BOM document. These views return a
+``GET /v1/scan/{id}?view=full`` returns the whole AI-BOM document. These views return a
 small summary plus an index of the large sections, and one section at a time,
 paged when it is a list. Each section is redacted exactly as the full-result
 endpoint redacts it, so a client paging every section sees the same content.
