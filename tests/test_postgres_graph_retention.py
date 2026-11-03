@@ -107,11 +107,13 @@ class _FakePool:
 
 
 def _make_store(conn, monkeypatch):
-    from agent_bom.api import postgres_graph
+    from agent_bom.api import postgres_graph, postgres_graph_snapshots
 
     # Skip the schema/DDL bootstrap; we only exercise the purge method.
     monkeypatch.setattr(postgres_graph.PostgresGraphStore, "_init_tables", lambda self: None)
     monkeypatch.setattr(postgres_graph.PostgresGraphStore, "_init_optional_search_indexes", lambda self: None)
+    # RLS re-binding is exercised against psycopg in test_graph_retention_live_postgres.
+    monkeypatch.setattr(postgres_graph_snapshots, "_apply_tenant_session", lambda conn: None)
     return postgres_graph.PostgresGraphStore(pool=_FakePool(conn))
 
 

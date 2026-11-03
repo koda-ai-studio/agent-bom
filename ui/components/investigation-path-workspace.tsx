@@ -43,6 +43,7 @@ export function InvestigationPathWorkspace({
   filters,
   detail,
   queueFooter,
+  queueHeader,
   sideRail,
   scope,
   queueInitiallyOpen = false,
@@ -56,6 +57,7 @@ export function InvestigationPathWorkspace({
   filters: React.ReactNode;
   detail: React.ReactNode;
   queueFooter?: React.ReactNode | undefined;
+  queueHeader?: React.ReactNode | undefined;
   sideRail?: React.ReactNode | undefined;
   /** Server-side queue scope (e.g. vendor pairs), shown above the client filters. */
   scope?: React.ReactNode | undefined;
@@ -118,7 +120,7 @@ export function InvestigationPathWorkspace({
             <p className="mt-2 font-medium">{title}</p>
             <p className="mt-1">{subtitle}</p>
           </details>
-
+          {queueHeader}
           {scope ? <div className="mt-3">{scope}</div> : null}
           <div className="mt-3">
             <InvestigationFilterDrawer>{filters}</InvestigationFilterDrawer>

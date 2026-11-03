@@ -18,6 +18,7 @@ from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_sta
 from agent_bom.security import sanitize_text
 
 from .postgres_common import (
+    _apply_tenant_session,
     _tenant_connection,
 )
 from .postgres_graph_support import (
@@ -25,6 +26,7 @@ from .postgres_graph_support import (
     PostgresGraphStoreBase,
     _decode_json_array,
     _decode_json_object,
+    _execute_many_batched,
     logger,
     select_expired_snapshot_ids,
 )
@@ -199,6 +201,10 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
         from agent_bom.api.tenant_graph_retention import resolve_graph_retention_days
 
         try:
+            # save_graph commits before best-effort retention. Transaction-local
+            # RLS binding expires at that commit; rebind the authenticated tenant
+            # before reading or deleting anything in the cleanup transaction.
+            _apply_tenant_session(conn)
             rows = conn.execute(
                 "SELECT scan_id, created_at FROM graph_snapshots WHERE tenant_id = %s",
                 (tenant,),
@@ -213,9 +219,11 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
                 return
             delete_params = [(tenant_id, scan_id) for scan_id, tenant_id in expired]
             for table in _GRAPH_RETENTION_PURGE_TABLES:
-                conn.executemany(
+                _execute_many_batched(
+                    conn,
                     f"DELETE FROM {table} WHERE tenant_id = %s AND scan_id = %s",  # nosec B608 - table names are static internal schema metadata
                     delete_params,
+                    batch_size=128,
                 )
             conn.commit()
             logger.info("Purged %d expired graph snapshot(s) (tenant=%s)", len(expired), tenant)
