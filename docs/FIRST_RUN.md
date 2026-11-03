@@ -148,7 +148,7 @@ ANALYZE | Critical Details
   CVE-2023-36258 · langchain@0.0.150 · CRITICAL
   Fix: upgrade to ≥ 0.0.247
   Blast: langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY, OPENAI_API_KEY
-ANALYZE | Graph & Policy Findings (36 occurrences)
+ANALYZE | Graph & Policy Findings (36 occurrences · 20 groups)
    CRIT  COMBINATION AI agent can reach a credential or privileged tool
       langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY (+3 more)
    HIGH  PROMPT_SECURITY No verified agent identity observed in MCP configuration
@@ -535,6 +535,16 @@ the requested import, not a fresh vulnerability assessment. Run again without `-
 advisory matches, or rescan the original target to refresh inventory coverage.
 
 ## Choose the next workflow
+
+A console scan in an interactive terminal ends with next steps chosen from
+what it found (a CI gate when there are findings; the MCP server, `agent-bom watch`
+and the install guard when agents are present) and, once per machine, a GitHub
+star tip. Rescanning the same target prints a one-line `Since last scan` delta:
+new and resolved vulnerabilities and new MCP servers or tools, computed with the
+same comparison as `agent-bom report diff`. Neither appears in JSON, SARIF,
+CycloneDX, SPDX, quiet mode or CI, and neither changes the exit code. Set
+`AGENT_BOM_NO_HINTS=1` to hide the tips and `AGENT_BOM_NO_SCAN_MEMORY=1` to stop
+remembering scans ([what is stored](PERMISSIONS.md#what-we-never-do)).
 
 | Task | Artifact and next step |
 |---|---|

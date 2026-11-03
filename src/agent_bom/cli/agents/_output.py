@@ -51,7 +51,7 @@ __all__ = ["_emit_console_report", "_emit_skill_analysis", "_emit_stdout_report"
 
 _FORMAT_OUTPUT_RULES: dict[str, tuple[str, tuple[str, ...]]] = {
     "json": ("agent-bom-report.json", (".json", ".json.gz")),
-    "cyclonedx": ("agent-bom.cdx.json", (".cdx.json", ".json", ".cdx.json.gz", ".json.gz")),
+    "cyclonedx": ("agent-bom.cdx.json", (".cdx.json", ".cyclonedx.json", ".json", ".cdx.json.gz", ".json.gz")),
     "sarif": ("agent-bom.sarif", (".sarif", ".sarif.json", ".sarif.gz", ".sarif.json.gz")),
     "spdx": ("agent-bom.spdx.json", (".spdx.json", ".json", ".spdx.json.gz", ".json.gz")),
     "spdx2": ("agent-bom.spdx2.json", (".spdx2.json", ".spdx.json", ".json", ".spdx2.json.gz", ".spdx.json.gz", ".json.gz")),
