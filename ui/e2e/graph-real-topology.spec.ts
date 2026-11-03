@@ -37,6 +37,9 @@ for (const width of [1440, 390]) for (const theme of ["light", "dark"]) {
     await page.screenshot({ path: info.outputPath(`terraform-${width}-${theme}.png`), fullPage: true });
     await page.getByRole("button", { name: /Show full map/ }).click();
     await expect(nodes).toHaveCount(50);
+    await page.reload();
+    if (width < 640) await page.getByRole("button", { name: "Graph", exact: true }).click();
+    await expect(nodes).toHaveCount(50);
     await page.getByRole("button", { name: "Return to connection preview" }).click();
     await expect(nodes).toHaveCount(width < 640 ? 2 : 6);
     const repository = topology.nodes.find(node => node.label === "Project root")!;

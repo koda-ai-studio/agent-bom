@@ -206,6 +206,9 @@ export function useGraphCanvasModel(page: GraphPageData) {
     const contextView = currentSearch.get("context_view") || initialContextViewRef.current
       || (activeSnapshot?.snapshot_kind === "correlation" ? "dependency" : null);
     if (contextView) nextParams.set("context_view", contextView);
+    if (currentSearch.get("map_view") === "full") nextParams.set("map_view", "full");
+    const previewRoot = currentSearch.get("preview_root");
+    if (previewRoot) nextParams.set("preview_root", previewRoot);
     if (selectedScenarioId) {
       nextParams.set("scenario", selectedScenarioId);
       nextParams.set("state", attackPathLens ? "current" : scenarioState);
@@ -370,17 +373,27 @@ export function useGraphCanvasModel(page: GraphPageData) {
   // the broad estate view. Large graphs switch to the WebGL/overview
   // renderers upstream, so ReactFlow only ever lays out small/medium graphs
   // where dagre is the better fit.
-  const [previewChoice, setPreviewChoice] = useState({ scope: "", root: "", expanded: false });
-  const previewExpanded = previewChoice.scope === graphIdentityKey && previewChoice.expanded;
+  const previewExpanded = searchParams.get("map_view") === "full";
+  const previewRoot = searchParams.get("preview_root") ?? undefined;
   const connectionPreview = useMemo(() => {
     if (investigationMode || selectedAttackPath || selectedScenarioId || rollupNavigationActive || aggregated.nodes.length <= 24) return null;
     if (decideGraphRenderer({ nodeCount: aggregated.nodes.length, edgeCount: aggregated.edges.length, captureMode }).kind === "webgl") return null;
     return graphConnectionPreview(aggregated.nodes, aggregated.edges,
-      previewChoice.scope === graphIdentityKey ? previewChoice.root : undefined, narrowViewport ? 2 : 6);
-  }, [aggregated, investigationMode, selectedAttackPath, selectedScenarioId, rollupNavigationActive, captureMode, previewChoice, graphIdentityKey, narrowViewport]);
+      previewRoot, narrowViewport ? 2 : 6);
+  }, [aggregated, investigationMode, selectedAttackPath, selectedScenarioId, rollupNavigationActive, captureMode, previewRoot, narrowViewport]);
   const previewActive = Boolean(connectionPreview) && !previewExpanded;
-  const setPreviewRoot = (root: string) => setPreviewChoice({ scope: graphIdentityKey, root, expanded: false });
-  const setPreviewExpanded = (expanded: boolean) => setPreviewChoice({ scope: graphIdentityKey, root: connectionPreview?.root.id ?? "", expanded });
+  const setPreviewRoot = (root: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("preview_root", root);
+    url.searchParams.delete("map_view");
+    history.replaceState(null, "", url);
+  };
+  const setPreviewExpanded = (expanded: boolean) => {
+    const url = new URL(window.location.href);
+    if (expanded) url.searchParams.set("map_view", "full");
+    else url.searchParams.delete("map_view");
+    history.replaceState(null, "", url);
+  };
   const compactGroupedTopology = aggregated.clusters.size > 0 && aggregated.nodes.length <= 6;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
