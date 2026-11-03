@@ -573,7 +573,6 @@ test("grouped findings remain legible in both themes", async ({ page }, testInfo
     await route.fulfill({ json: graph });
   });
   await page.goto("/graph?view=investigation", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /Show full map/ }).click();
   const pill = page.getByTestId("cluster-pill");
   await expect(pill).toBeVisible();
   for (const theme of ["light", "dark"] as const) {
