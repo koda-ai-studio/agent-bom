@@ -45,7 +45,7 @@ exact reads. These are request budgets, not ingest-completion deadlines.
 
 For the browser, run `npx playwright test e2e/graph-paint-budget.spec.ts` from
 `ui/` after a production build. It measures navigation through settled camera
-and two animation frames, checks that the visible cards fit, and retains
+and two animation frames, checks that the visible nodes fit, and retains
 screenshots plus p50/p95/p99 JSON receipts. Each case uses ten fresh-context and
 ten reused-context samples. The synthetic source contains one workspace and
 12 or 120 MCP servers, capped at 100 returned nodes. This is a different fixture
@@ -53,6 +53,23 @@ from the API's 12/120 **agents**. Intercepted responses isolate JavaScript,
 layout and paint; routing disables the browser HTTP cache, and the measurement
 excludes backend construction and external network latency. It is included in
 the PR browser smoke command. Ten samples do not establish a tail-latency SLO.
+
+The 2026-11-03 local baseline at `cda8e7d4f` used Chromium, Node 22,
+an Apple M4 (arm64), and 16 GiB RAM. The first view contains a workspace,
+three named servers and an expandable remainder, with four visible connections.
+Every sample passed the two-second budget and canvas-bounds checks.
+
+| Source servers | Returned nodes | Payload bytes | Browser context | Samples | p50 ms | p95 ms | p99 ms |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 12 | 13 | 6,287 | Fresh | 10 | 496.8 | 545.6 | 545.6 |
+| 12 | 13 | 6,287 | Reused | 10 | 442.7 | 542.2 | 542.2 |
+| 120 | 100 | 47,704 | Fresh | 10 | 526.0 | 545.5 | 545.5 |
+| 120 | 100 | 47,704 | Reused | 10 | 443.5 | 526.8 | 526.8 |
+
+[Raw samples and environment](results/graph-browser-paint-2026-11-03.json)
+retain the exact measurements. With ten samples per condition, p95 and p99
+both select the slowest sample. These are browser regression measurements with
+fixed API responses, not end-to-end service latency.
 
 Next, repeat on a dedicated host, record CPU/RAM and revision, and increase the
 sample count. For
