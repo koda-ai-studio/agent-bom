@@ -178,6 +178,60 @@ expired configured credential. There is no embedded OAuth refresh flow. Existing
 remote deployments must provision bounded credentials before upgrading; registry
 clients must receive the replacement through their secure credential settings.
 
+### Public read-only tier
+
+Off by default. `--public-readonly` (or `AGENT_BOM_MCP_PUBLIC_READONLY=1`) on a
+Streamable HTTP server lets a caller **with no `Authorization` header** use only
+pure-lookup tools that read no server-host state and fetch no caller-chosen URL:
+
+| Tool | Reads | Anonymous restrictions |
+|---|---|---|
+| `check` | bundled advisory DB, OSV, fixed package-registry origins | `deb`/`apk`/`rpm` refused (they read the host's distro and package DB) |
+| `intel_lookup` | bundled intel DB | operator advisories, plugin sources and saved scans are skipped |
+| `registry_lookup` | bundled MCP server registry (full profile only) | none |
+
+The served set is this allowlist intersected with the active profile, so the
+default `scan` profile exposes `check` and `intel_lookup`. Everything else
+fails closed: an anonymous `tools/call` for any other tool is HTTP 401 with a
+`WWW-Authenticate: Bearer` challenge; resources, prompts and completions are
+refused; `tools/list` shows only the anonymous tools. A request that carries any
+`Authorization` header takes the normal bearer path unchanged, so a wrong or
+expired token is a 401, never a downgrade to anonymous. A new tool is
+auth-required until it is reviewed and added to `PUBLIC_TOOL_SPECS` in
+`src/agent_bom/mcp_tools/public_tier.py`; tests pin each allowlisted tool's
+argument set so adding a path, URL or host argument forces that review.
+
+Bounds for anonymous requests: 16 KiB request body (413 above), 256 characters
+per argument, string or boolean arguments only, and a per-client budget
+(`AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT`, default 30 per
+`AGENT_BOM_MCP_CALLER_WINDOW_SECONDS`) plus an aggregate anonymous budget
+(`AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT`, default 300) on top of the existing
+per-caller and global limits. Behind a reverse proxy set
+`AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS` to the number of trusted proxies that
+append to `X-Forwarded-For`; the client is the entry that many places from the
+right, which the client cannot forge. Unset, the socket peer is used, so every
+caller behind one proxy shares a budget (safe, but coarse). Budgets are per
+process: N replicas allow N times the anonymous rate.
+
+`/health`, `/` and the server card report `public_readonly` and
+`anonymous_tools`; `authentication.required` stays `true` because every other
+tool needs the bearer token. The tier pairs with static bearer auth or with no
+full-access credential; startup refuses it together with MCP OAuth.
+
+```bash
+agent-bom mcp server --transport streamable-http --host 0.0.0.0 --public-readonly
+# optional full access alongside it:
+#   AGENT_BOM_MCP_BEARER_TOKEN + AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT (bounded, as above)
+```
+
+The hosted `https://agent-bom-mcp.up.railway.app/mcp` endpoint runs this tier
+(`railway.json` start command); it is listed as a `streamable-http` remote in the
+MCP Registry manifest. The shared `Dockerfile.sse` image stays
+bearer-only unless you set the variable. Release deploys verify the tier with
+`python -m agent_bom.deployment_probe --server-card --require-public-readonly`,
+which needs no credential and fails unless an out-of-tier anonymous call is a 401.
+Threat model: [THREAT_MODEL.md](THREAT_MODEL.md#anonymous-public-mcp-tier).
+
 
 ### Enterprise Control-Plane Contract
 

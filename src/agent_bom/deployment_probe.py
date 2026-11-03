@@ -154,6 +154,110 @@ def verify_mcp_auth(base_url: str | None, *, bearer_token: str | None, expected_
         raise RuntimeError(_initialize_failure_message(exc)) from exc
 
 
+_PUBLIC_PROBE_DENIED_TOOL = "scan"
+_MAX_RPC_BYTES = 1_048_576
+
+
+def _secure_mcp_url(base_url: str | None) -> str:
+    parts = urlsplit((base_url or DEFAULT_BASE_URL).strip())
+    if parts.scheme != "https" or not parts.netloc or parts.username or parts.password:
+        raise ValueError("MCP probe requires an HTTPS origin without URL credentials")
+    path = parts.path.rstrip("/")
+    if not path.endswith("/mcp"):
+        path += "/mcp"
+    return urlunsplit((parts.scheme, parts.netloc, path, "", ""))
+
+
+def _read_rpc_body(response: Any) -> Any:
+    raw = response.read(_MAX_RPC_BYTES + 1)
+    if len(raw) > _MAX_RPC_BYTES:
+        raise ValueError("Oversized response")
+    if not raw.strip():
+        return None
+    if response.headers.get_content_type() != "text/event-stream":
+        return json.loads(raw)
+    chunks = [line[5:].decode().strip() for line in raw.splitlines() if line.startswith(b"data:")]
+    return json.loads("\n".join(chunks)) if chunks else None
+
+
+def _post_rpc(opener: Any, url: str, message: dict[str, Any], session: dict[str, str], timeout: float) -> tuple[Any, Any]:
+    headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream", "User-Agent": _USER_AGENT, **session}
+    request = urllib.request.Request(url, data=json.dumps(message).encode(), headers=headers)
+    with opener.open(request, timeout=timeout) as response:  # nosec B310 - HTTPS validated; redirects rejected
+        return _read_rpc_body(response), response.headers
+
+
+def _validated_initialize(payload: Any, expected_version: str | None) -> dict[str, Any]:
+    result = payload.get("result") if isinstance(payload, dict) else None
+    info = result.get("serverInfo") if isinstance(result, dict) else None
+    if (
+        not isinstance(payload, dict)
+        or payload.get("jsonrpc") != "2.0"
+        or payload.get("id") != 1
+        or "error" in payload
+        or not isinstance(result, dict)
+        or not isinstance(info, dict)
+        or not isinstance(result.get("capabilities"), dict)
+        or not result.get("protocolVersion")
+        or (expected_version and info.get("version") != expected_version)
+    ):
+        raise ValueError("Invalid initialize response")
+    return result
+
+
+def _expect_anonymous_rejection(opener: Any, url: str, session: dict[str, str], timeout: float) -> None:
+    call = {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": _PUBLIC_PROBE_DENIED_TOOL, "arguments": {}}}
+    try:
+        _post_rpc(opener, url, call, session, timeout)
+    except urllib.error.HTTPError as exc:
+        exc.close()
+        if exc.code == 401:
+            return
+        raise ValueError("Anonymous call outside the public tier was not answered with 401") from exc
+    raise ValueError("Anonymous call outside the public tier must be rejected")
+
+
+def verify_public_readonly(base_url: str | None, *, expected_version: str | None, timeout: float) -> list[str]:
+    """Prove the anonymous tier answers its lookups and refuses everything else.
+
+    Sends no credential: anonymous initialize and ``tools/list`` must succeed,
+    and an anonymous call to a tool outside the tier must be HTTP 401. Returns
+    the anonymously listed tool names for comparison with the server card.
+    """
+    url = _secure_mcp_url(base_url)
+    opener = urllib.request.build_opener(_NoAuthRedirect())
+    initialize = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {"protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": _USER_AGENT, "version": "1"}},
+    }
+    try:
+        payload, headers = _post_rpc(opener, url, initialize, {}, timeout)
+        result = _validated_initialize(payload, expected_version)
+        session = {"mcp-protocol-version": str(result["protocolVersion"])}
+        if headers.get("mcp-session-id"):
+            session["mcp-session-id"] = str(headers.get("mcp-session-id"))
+        _post_rpc(opener, url, {"jsonrpc": "2.0", "method": "notifications/initialized"}, session, timeout)
+        listed, _ = _post_rpc(opener, url, {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}, session, timeout)
+        tools = listed.get("result", {}).get("tools") if isinstance(listed, dict) else None
+        names = sorted(str(tool.get("name")) for tool in tools or [] if isinstance(tool, dict))
+        if not names or _PUBLIC_PROBE_DENIED_TOOL in names:
+            raise ValueError("Anonymous tools/list must list only the public lookup tools")
+        _expect_anonymous_rejection(opener, url, session, timeout)
+        return names
+    except (OSError, ValueError, TypeError, AttributeError) as exc:
+        raise RuntimeError(_initialize_failure_message(exc).replace("Authenticated", "Public read-only")) from exc
+
+
+def validate_public_readonly_card(payload: dict[str, Any], anonymous_tools: list[str]) -> None:
+    authentication = payload.get("authentication")
+    if not isinstance(authentication, dict) or authentication.get("public_readonly") is not True:
+        raise ValueError("server card does not declare the public read-only tier")
+    if sorted(authentication.get("anonymous_tools") or []) != sorted(anonymous_tools):
+        raise ValueError("server-card anonymous_tools differ from the anonymously listed tools")
+
+
 def _initialize_failure_message(exc: BaseException) -> str:
     """Status-only description of a failed initialize: numeric HTTP code or exception class, never server text."""
     if isinstance(exc, urllib.error.HTTPError):
@@ -346,9 +450,29 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--require-mcp-auth", action="store_true", help="Also require authenticated MCP initialize; public metadata alone cannot pass."
     )
+    parser.add_argument(
+        "--require-public-readonly",
+        action="store_true",
+        help="Require the anonymous read-only tier: lookups answer without a credential, other tools are HTTP 401.",
+    )
     parser.add_argument("--expected-version", default=None, help="Exact release version required from the server card.")
     parser.add_argument("--expected-tool-count", type=int, default=None, help="Exact released MCP tool count required.")
     return parser
+
+
+def _retry_public_probe(args: argparse.Namespace) -> list[str]:
+    if args.attempts < 1:
+        raise ValueError("attempts must be >= 1")
+    for attempt in range(1, args.attempts + 1):
+        try:
+            return verify_public_readonly(args.base_url, expected_version=args.expected_version, timeout=args.timeout)
+        except RuntimeError:
+            if attempt == args.attempts:
+                raise
+            delay = max(args.backoff_seconds, 0.0) * attempt
+            if delay:
+                time.sleep(delay)
+    raise RuntimeError("public read-only probe did not run")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -360,6 +484,9 @@ def main(argv: list[str] | None = None) -> int:
             sys.stdout.write(f"{resolve_health_url(args.base_url)}\n")
             return 0
 
+        if args.require_public_readonly and args.require_mcp_auth:
+            raise ValueError("--require-public-readonly and --require-mcp-auth are mutually exclusive")
+        anonymous_tools = _retry_public_probe(args) if args.require_public_readonly else None
         if args.require_mcp_auth:
             if args.attempts < 1:
                 raise ValueError("attempts must be >= 1")
@@ -391,6 +518,8 @@ def main(argv: list[str] | None = None) -> int:
                 expected_version=args.expected_version,
                 expected_tool_count=args.expected_tool_count,
             )
+            if anonymous_tools is not None:
+                validate_public_readonly_card(payload, anonymous_tools)
         else:
             _, payload = fetch_health(
                 args.base_url,

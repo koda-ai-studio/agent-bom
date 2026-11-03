@@ -189,6 +189,6 @@ def test_server_card_advertises_oauth_when_the_issuer_protects_the_transport(oau
     server = create_mcp_server(host="0.0.0.0", port=8000, bearer_token=None, oauth_enabled=True)
     with TestClient(server.streamable_http_app(host="0.0.0.0"), base_url="https://mcp.example") as client:
         card = client.get("/.well-known/mcp/server-card.json").json()
-        assert card["authentication"] == {"required": True, "schemes": ["oauth2"]}
+        assert card["authentication"] == {"required": True, "schemes": ["oauth2"], "public_readonly": False, "anonymous_tools": []}
         assert client.get("/.well-known/oauth-protected-resource/mcp").json()["authorization_servers"] == [ISSUER]
         assert client.post("/mcp", json={}).status_code == 401

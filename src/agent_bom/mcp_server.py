@@ -167,6 +167,7 @@ from agent_bom.mcp_tools.graph_registration import register_graph_agent_tools
 from agent_bom.mcp_tools.intel_registration import register_intel_tools
 from agent_bom.mcp_tools.inventory_registration import register_inventory_asset_tool
 from agent_bom.mcp_tools.profiles import _GUIDED_TOOL_NAMES as _GUIDED_TOOL_NAMES
+from agent_bom.mcp_tools.public_tier import anonymous_tools_for, check_public_rate_limit, public_readonly_enabled
 from agent_bom.mcp_tools.request_identity import request_context as _mcp_request_ctx
 from agent_bom.mcp_tools.result_store import scan_result_owner as _scan_result_owner
 from agent_bom.mcp_tools.scanning_registration import register_scanning_tools
@@ -370,6 +371,9 @@ def _current_tool_request() -> dict[str, str | None]:
 
 def _check_caller_rate_limit(caller: str) -> float | None:
     """Return retry-after seconds when a caller exceeds the bounded MCP rate window."""
+    public_retry = check_public_rate_limit(caller, window_seconds=_MCP_CALLER_WINDOW_SECONDS)
+    if public_retry is not None:
+        return public_retry
     return _mcp_runtime.check_caller_rate_limit(
         _caller_rate_windows,
         caller,
@@ -550,8 +554,12 @@ def create_mcp_server(
     bearer_token: str | None = None,
     profile: str = "scan",
     oauth_enabled: bool = False,
+    public_readonly: bool | None = None,
 ):
     """Create an MCP server exposing the selected bounded tool profile.
+
+    ``public_readonly`` (default: ``AGENT_BOM_MCP_PUBLIC_READONLY``) opens the
+    anonymous lookup tier described in ``mcp_tools.public_tier``.
 
     When the smithery SDK is installed, the server is automatically enhanced
     with session-config and CORS middleware for Smithery.ai hosted deployment.
@@ -559,6 +567,8 @@ def create_mcp_server(
     from agent_bom.logging_config import setup_logging
     from agent_bom.mcp_tools.profiles import configure_registration, get_profile
 
+    if public_readonly is None:
+        public_readonly = public_readonly_enabled()
     get_profile(profile)  # Reject unknown profiles before constructing the server.
     demo_estate_default_persist(activate_demo_state_dir())  # Before any store opens: demo state dir + the demo job DB serve uses.
     setup_logging(level="INFO")
@@ -573,6 +583,7 @@ def create_mcp_server(
         version=__version__,
         profile=profile,
         oauth_enabled=oauth_enabled,
+        public_readonly=public_readonly,
         token_verifier_factory=lambda token: _StaticBearerTokenVerifier(
             token,
             os.environ.get("AGENT_BOM_MCP_OPERATOR_TOKEN"),
@@ -774,10 +785,11 @@ def create_mcp_server(
 
     attach_metadata_routes(
         mcp,
-        auth_required=bool(bearer_token or oauth_enabled),
+        auth_required=bool(bearer_token or oauth_enabled or public_readonly),
         tool_metrics_snapshot=_tool_metrics_snapshot,
         profile=profile,
         oauth=oauth_enabled,
+        anonymous_tools=anonymous_tools_for(get_profile(profile).tools) if public_readonly else None,
     )
 
     # Strict-arg contract on every registered tool (#2197 audit P1).

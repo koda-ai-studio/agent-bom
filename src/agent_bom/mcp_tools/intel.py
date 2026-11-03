@@ -21,6 +21,7 @@ from agent_bom.mcp_errors import (
     mcp_error_json,
 )
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tools.public_tier import current_caller_is_public
 from agent_bom.mcp_tools.rest_parity import api_reads
 from agent_bom.scanners.operator_advisory import OPERATOR_ADVISORY_PROVENANCE
 from agent_bom.security import sanitize_error
@@ -110,6 +111,20 @@ def _operator_advisory_view(advisory_id: str) -> dict[str, Any] | None:
     }
 
 
+def _with_operator_context(advisory: str, result: Any) -> Any:
+    # Opt-in operator advisory source plugins augment the local record with
+    # provenance-tagged metadata (off by default; see plugin_activation).
+    from agent_bom.plugin_activation import advisory_source_lookup
+
+    operator_sources = advisory_source_lookup(advisory)
+    if operator_sources and isinstance(result, dict):
+        result = {**result, "operator_advisory_sources": operator_sources}
+    operator_view = _operator_advisory_view(advisory)
+    if operator_view and isinstance(result, dict):
+        result = {**result, "operator_advisory": operator_view}
+    return result
+
+
 async def intel_lookup_impl(*, advisory_id: str, _truncate_response=lambda value: value) -> str:
     """Look up one CVE/GHSA/OSV advisory from local intel."""
 
@@ -118,16 +133,10 @@ async def intel_lookup_impl(*, advisory_id: str, _truncate_response=lambda value
         if not advisory:
             return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "advisory_id is required", details={"argument": "advisory_id"})
         result = lookup_advisory(advisory)
-        # Opt-in operator advisory source plugins augment the local record with
-        # provenance-tagged metadata (off by default; see plugin_activation).
-        from agent_bom.plugin_activation import advisory_source_lookup
-
-        operator_sources = advisory_source_lookup(advisory)
-        if operator_sources and isinstance(result, dict):
-            result = {**result, "operator_advisory_sources": operator_sources}
-        operator_view = _operator_advisory_view(advisory)
-        if operator_view and isinstance(result, dict):
-            result = {**result, "operator_advisory": operator_view}
+        # Anonymous public-tier callers read only the bundled intel database,
+        # never operator-declared advisories, plugin sources or saved scans.
+        if not current_caller_is_public():
+            result = _with_operator_context(advisory, result)
         return _truncate_response(json.dumps(result, indent=2, default=str))
     except ValueError as exc:
         return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, sanitize_error(exc), details={"argument": "advisory_id"})

@@ -325,6 +325,10 @@ AGENT_BOM_MCP_OPERATOR_TOKEN
 AGENT_BOM_MCP_OPERATOR_TOKEN_EXPIRES_AT
 # Opt-in remote clone bind escape hatch for MCP repo scans; default stays loopback/SSRF-safe.
 AGENT_BOM_MCP_ALLOW_HOST_LOCAL_TOOLS  # read per MCP call in mcp_tools/host_local.py; documented in docs/MCP_SERVER.md
+AGENT_BOM_MCP_PUBLIC_READONLY  # opt-in anonymous lookup tier read at MCP server start (mcp_tools/public_tier.py); docs/MCP_SERVER.md
+AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS  # public-tier client address behind a proxy (mcp_tools/public_tier.py)
+AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT  # per-client anonymous budget per MCP window (mcp_tools/public_tier.py)
+AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT  # aggregate anonymous budget per MCP window (mcp_tools/public_tier.py)
 AGENT_BOM_MCP_LIVE_INTROSPECTION  # read per tool_risk_assessment call in mcp_tools/audit.py; the plugins set it to 0; documented in docs/MCP_SERVER.md
 AGENT_BOM_MCP_REMOTE_BIND
 AGENT_BOM_MCP_SANDBOX

@@ -462,3 +462,15 @@ The brief is advisory and unsigned. An unavailable graph is reported as
 fail the request through the existing sanitized API error handling. Independently
 read source scopes and snapshot identifiers remain attached; the brief does not
 claim atomic consistency, compliance attestation, or confirmed exploitation.
+
+## MCP public read-only tier
+
+Fail-closed in every direction. With the tier off (the default) anonymous
+`/mcp` requests are 401 as before. With it on, an anonymous `tools/call`
+outside the allowlist is HTTP 401, any other anonymous method except
+`initialize`, `ping`, notifications and the filtered listings is refused, and
+an invalid, expired or unrecognised bearer token is 401 rather than a fallback
+to anonymous access. An unparseable `AGENT_BOM_MCP_PUBLIC_READONLY` value
+refuses startup, as does combining the tier with MCP OAuth or SSE. Rate-limit
+state is in process memory, so it cannot be unavailable; a restart resets it.
+See [MCP server](MCP_SERVER.md#public-read-only-tier).

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+import secrets
 from typing import Any, Callable
 
 from pydantic import AnyHttpUrl, TypeAdapter
+
+from agent_bom.mcp_tools.public_tier import PublicTierGate, PublicTierTokenVerifier, public_tier_guard
 
 _HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
 
@@ -60,8 +63,9 @@ def create_fastmcp_server(
     token_verifier_factory: Callable[[str], Any],
     profile: str = "scan",
     oauth_enabled: bool = False,
+    public_readonly: bool = False,
 ):
-    """Create the FastMCP server with optional static bearer auth."""
+    """Create the FastMCP server with optional static bearer auth and public read-only tier."""
     from mcp.server.auth.settings import AuthSettings
     from mcp.server.mcpserver import MCPServer as FastMCP
     from mcp.server.mcpserver.server import Settings
@@ -74,8 +78,18 @@ def create_fastmcp_server(
     Settings.model_rebuild()
 
     auth_settings = None
-    token_verifier = None
-    if oauth_enabled:
+    token_verifier: Any = None
+    middleware: list[Any] = [request_identity_context]
+    anonymous_credential: str | None = None
+    if public_readonly:
+        if oauth_enabled:
+            raise ValueError("The MCP public read-only tier pairs with static bearer authentication; disable MCP OAuth or the public tier")
+        anonymous_credential = secrets.token_urlsafe(32)
+        auth_settings, token_verifier = _public_tier_auth(
+            AuthSettings, host, port, bearer_token, token_verifier_factory, anonymous_credential
+        )
+        middleware.append(public_tier_guard)
+    elif oauth_enabled:
         from agent_bom.mcp_tools.oauth import OAuthConfig, OAuthTokenVerifier
 
         if bearer_token or os.environ.get("AGENT_BOM_MCP_OPERATOR_TOKEN"):
@@ -109,11 +123,31 @@ def create_fastmcp_server(
     mcp = FastMCP(
         name="agent-bom",
         version=version,
-        middleware=[request_identity_context],
+        middleware=middleware,
         auth=auth_settings,
         token_verifier=token_verifier,
         instructions=_server_instructions(version, profile),
     )
     # Set the actual agent-bom version (FastMCP defaults to SDK version)
     mcp._lowlevel_server.version = version
+    if anonymous_credential is not None:
+        _install_public_gate(mcp, anonymous_credential)
     return mcp
+
+
+def _public_tier_auth(settings_cls: Any, host: str, port: int, bearer_token: str | None, factory: Callable[[str], Any], credential: str):
+    """Accept the gate's anonymous credential plus the optional full-access bearer token."""
+    settings = settings_cls(
+        issuer_url=_HTTP_URL_ADAPTER.validate_python(_public_base_url(host, port)), resource_server_url=None, required_scopes=[]
+    )
+    return settings, PublicTierTokenVerifier(factory(bearer_token) if bearer_token else None, credential)
+
+
+def _install_public_gate(mcp: Any, anonymous_credential: str) -> None:
+    """Wrap every streamable HTTP app this server builds; SSE stays bearer-only."""
+    build_app = mcp.streamable_http_app
+
+    def streamable_http_app(*args: Any, **kwargs: Any) -> Any:
+        return PublicTierGate(build_app(*args, **kwargs), anonymous_credential)
+
+    mcp.streamable_http_app = streamable_http_app

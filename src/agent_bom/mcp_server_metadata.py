@@ -564,7 +564,9 @@ _SERVER_CARD_RESOURCES = [
 ]
 
 
-def build_server_card(*, auth_required: bool = False, profile: str = "full", oauth: bool = False) -> dict[str, Any]:
+def build_server_card(
+    *, auth_required: bool = False, profile: str = "full", oauth: bool = False, anonymous_tools: list[str] | None = None
+) -> dict[str, Any]:
     from agent_bom import __version__
 
     registry_servers = registry_server_count()
@@ -625,5 +627,8 @@ def build_server_card(*, auth_required: bool = False, profile: str = "full", oau
         # protected-resource metadata; static credentials are then rejected.
         # Neither mode issues tokens or exposes registration endpoints.
         "schemes": (["oauth2"] if oauth else ["bearer"]) if auth_required else [],
+        # Opt-in public tier: these tools answer without a credential.
+        "public_readonly": anonymous_tools is not None,
+        "anonymous_tools": list(anonymous_tools or []),
     }
     return card
