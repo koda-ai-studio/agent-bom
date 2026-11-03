@@ -52,6 +52,8 @@ export function GraphPathList({ nodes, edges, onSelect }: {
                       <span className="min-w-0 flex-1">
                         <span className="block break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">{node.data.label}</span>
                         <span className="block text-xs text-ink-secondary">{kindLabel(node.data)}</span>
+                        {node.data.identityContext && <span className="block text-xs text-ink-secondary">{node.data.identityContext}</span>}
+                        {node.data.evidenceFlowContext && <span className="block text-xs text-ink-secondary">{node.data.evidenceFlowContext}</span>}
                       </span>
                       {severity && <span className="shrink-0 rounded border border-outline px-1.5 py-0.5 text-xs uppercase text-ink-secondary">{severity}</span>}
                     </button>

@@ -212,8 +212,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
   const selectedSnapshot = snapshots.find(item => item.scan_id === selectedScanId);
   const selectedSnapshotTitle = selectedSnapshot ? snapshotOptionLabel(selectedSnapshot)
     : selectedScanId && selectedScanId === currentEstateId ? "Current tenant estate" : selectedScanId || undefined;
-  const snapshotViewControls = (
-    <>
+  const graphHeadline = <>
       {!investigationMode && !firstFramePending && flow.summary && (
         <div
           data-testid="graph-headline-metrics"
@@ -245,13 +244,17 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           )}
         </div>
       )}
+  </>;
+  const snapshotViewControls = (
+    <>
+
 
       <select
         aria-label="Graph snapshot"
         value={selectedScanId}
         title={selectedSnapshotTitle}
         onChange={(event) => setSelectedScanId(event.target.value)}
-        className="graph-page-select min-w-0 max-w-full truncate"
+        className="graph-page-select w-64 min-w-0 max-w-full truncate sm:w-72"
       >
         {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
@@ -611,6 +614,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           )}
           {/* One status bar: counts, evidence, context and legend, instead of four stacked bands. */}
           {!firstFramePending && (showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
+          {graphHeadline}
           {showViewportScope && (
             <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
               {disclosed.collapsed ? <span title={`${displayNodes.length} total nodes and ${displayEdges.length} total relationships loaded`}>
@@ -630,26 +634,19 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}
             onOpen={() => { setChangesOpen(true); if (!viewingCurrentEstate) setComparisonRequested(true); }}
             onClearHighlight={() => { setDriftLensActive(false); setDriftFilter("all"); highlight.clear(); }} />}
-          {narrowViewport ? <details className="ml-auto text-xs">
-            <summary className="cursor-pointer text-ink-secondary">Graph options</summary>
-            <div className="flex flex-wrap items-center gap-3 py-2">
-          {graphRenderer.kind === "react-flow" && relationshipLabels.control}
-          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
-          {showContextControls && investigationContext && <GraphInvestigationContextControls inline
-            groups={investigationContext.groups} selected={selectedContextGroup}
-            visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
-            crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
-          {showLegend && <div className="ml-auto text-right has-[details[open]]:ml-0 has-[details[open]]:basis-full"><GraphLegendDock items={legendItems} popover /></div>}
+          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline compact />}
+              {showContextControls && investigationContext && <GraphInvestigationContextControls inline
+                groups={investigationContext.groups} selected={selectedContextGroup}
+                visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
+                crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
+          <details className="relative ml-auto text-xs">
+            <summary className="graph-page-action cursor-pointer">Graph options</summary>
+            <div className="absolute right-0 top-full z-30 mt-2 flex w-80 max-w-[calc(100vw-3rem)] flex-wrap items-center gap-3 rounded-xl border border-outline bg-surface p-3 shadow-lg">
+              {graphRenderer.kind === "react-flow" && relationshipLabels.control}
+              {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
+              {showLegend && <GraphLegendDock items={legendItems} popover />}
             </div>
-          </details> : <>
-          {graphRenderer.kind === "react-flow" && relationshipLabels.control}
-          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
-          {showContextControls && investigationContext && <GraphInvestigationContextControls inline
-            groups={investigationContext.groups} selected={selectedContextGroup}
-            visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
-            crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
-          {showLegend && <div className="ml-auto text-right has-[details[open]]:ml-0 has-[details[open]]:basis-full"><GraphLegendDock items={legendItems} popover /></div>}
-          </>}
+          </details>
 
           </div>}
           <GraphChangesPanel open={changesOpen} changes={viewingCurrentEstate ? graphChanges.estateChanges : null}

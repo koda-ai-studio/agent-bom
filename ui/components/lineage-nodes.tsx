@@ -8,6 +8,7 @@ import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/rea
 import { Bug, FolderGit2, KeyRound, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
+import { mcpNodeCaption } from "@/lib/graph-mcp-caption";
 import { GraphCountHint } from "@/components/graph-count-hint";
 import { GraphPackageGlyph } from "@/components/graph-package-glyph";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
@@ -42,6 +43,8 @@ export type RuntimeEvidenceTier = "static_scan" | "runtime_observed" | "runtime_
 
 export type LineageNodeData = {
   label: string;
+  evidenceFlow?: boolean;
+  evidenceFlowContext?: string | undefined;
   rollup?: GraphRollupContainer | undefined;
   rollupCompact?: boolean | undefined;
   reverseFlow?: boolean;
@@ -210,6 +213,7 @@ function NodeCard({
   const provider = repository?.source ?? (showsProviderMark(data) ? entitySource(data) : null);
   const severity = findingSeverity(data);
   const displayTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
+  const caption = data.evidenceFlow ? mcpNodeCaption(data, displayTitle) : null;
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   const { badges: allBadges, ring } = nodeBadges(data);
   const badges = allBadges.filter((badge) => badge.kind !== "provider" && (badge.kind !== "environment" || showsEnvironmentChip(data)));
@@ -219,9 +223,9 @@ function NodeCard({
   const shownSubtitle = typeof subtitle === "string" && named.some(value => typeof value === "string" && value && subtitle.trim().toLowerCase() === value.toLowerCase())
     ? undefined : subtitle;
   return (
-    <div title={[graphNodeTooltip(data), ring?.description, ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ")} data-graph-entity="true" data-finding-owner={data.readingOwner} data-rollup-container={isRollupContainer ? "true" : undefined}
+    <div title={[graphNodeTooltip(data), data.evidenceFlowContext, ring?.description, ...(data.readingConnections ?? []).map(summary => `${summary.relationship === "hosts" ? "Hosts" : "Contains"} ${summary.label} in this view`)].filter(Boolean).join(" · ")} data-graph-entity="true" data-evidence-flow={data.evidenceFlow || undefined} data-finding-owner={data.readingOwner} data-rollup-container={isRollupContainer ? "true" : undefined}
       style={{ width: "var(--graph-node-card-width, 220px)" }}
-      className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
+      className={`relative flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
       <div ref={glyphRef} data-severity-ring={severity} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
@@ -244,21 +248,22 @@ function NodeCard({
         {/* A contrasting vendor badge at 4:30, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
       </div>
-      <SegmentedLabel text={repository?.slug || displayTitle} className="mb-1 w-full min-w-0 line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
+      <SegmentedLabel text={caption?.title ?? (repository?.slug || displayTitle)} className={`mb-1 w-full min-w-0 ${data.evidenceFlow ? "" : "line-clamp-3 "}text-lg font-semibold leading-[1.2] text-foreground`} style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
         <span data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
+          {caption?.meta ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
       {repository && !repository.source && <span className="text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{repository.host}</span>}
-      {data.identityContext && <p data-testid="graph-identity-context" className="mt-1 max-w-full break-words text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{data.identityContext}</p>}
+      {!data.evidenceFlow && data.identityContext && <p data-testid="graph-identity-context" className="mt-1 max-w-full break-words text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{data.identityContext}</p>}
+
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
       </div>}
-      {shownSubtitle && <div style={data.nodeType === "agent" ? { fontSize: "var(--graph-node-meta-size, 12px)", lineHeight: 1.3 } : undefined} title={typeof shownSubtitle === "string" ? shownSubtitle : undefined} className={`${data.nodeType === "agent" ? "" : "graph-node-context "}mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary`}>{shownSubtitle}</div>}
-      {footer && <div className={`${data.nodeType === "vulnerability" || data.nodeType === "misconfiguration" ? "" : "graph-node-context "}mt-1 flex max-w-full flex-wrap items-baseline justify-center gap-x-2`} title={data.countScope === "loaded_graph" ? graphCountDescription(data) : undefined}>
+      {!data.evidenceFlow && shownSubtitle && <div style={data.nodeType === "agent" ? { fontSize: "var(--graph-node-meta-size, 12px)", lineHeight: 1.3 } : undefined} title={typeof shownSubtitle === "string" ? shownSubtitle : undefined} className={`${data.nodeType === "agent" ? "" : "graph-node-context "}mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary`}>{shownSubtitle}</div>}
+      {!data.evidenceFlow && footer && <div className={`${data.nodeType === "vulnerability" || data.nodeType === "misconfiguration" ? "" : "graph-node-context "}mt-1 flex max-w-full flex-wrap items-baseline justify-center gap-x-2`} title={data.countScope === "loaded_graph" ? graphCountDescription(data) : undefined}>
         {footer}
       </div>}
     </div>

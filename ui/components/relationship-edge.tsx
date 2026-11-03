@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, useStore, useStoreApi, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
@@ -10,8 +10,9 @@ import {
 
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
-import { relationshipEdgeLabelText } from "@/lib/graph-utils";
+import { minimapNodeColor, relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { relationshipPath } from "@/lib/relationship-routing";
+import { mcpBranchPath } from "@/lib/graph-mcp-routing";
 import { columnEdgePath } from "@/lib/path-card-column";
 
 // Icons supplement the recorded verb; they never replace its meaning or imply
@@ -86,6 +87,7 @@ export function qualifiedLabel(relationship: string, label: React.ReactNode, dat
 }
 
 export function RelationshipEdge(props: EdgeProps) {
+  const gradientId = `mcp-edge-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const edgeRef = useRef<SVGGElement>(null);
@@ -117,12 +119,20 @@ export function RelationshipEdge(props: EdgeProps) {
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
   const columnSource = props.data?.columnFlow === true ? nodes.find(node => node.id === props.source) : undefined;
-  const [path, x, y] = columnSource
+  const mcpSource = props.data?.mcpEvidenceFlow ? nodes.find(node => node.id === props.source) : undefined;
+  const mcpTarget = mcpSource ? nodes.find(node => node.id === props.target) : undefined;
+  const mcpPath = mcpSource && mcpTarget ? mcpBranchPath(props,
+    { ...mcpSource.position, width: mcpSource.measured?.width ?? 260, height: mcpSource.measured?.height ?? 188 },
+    { ...mcpTarget.position, width: mcpTarget.measured?.width ?? 260, height: mcpTarget.measured?.height ?? 188 },
+    nodes.filter(node => !node.hidden && node.id !== props.source && node.id !== props.target).map(node => ({
+      ...node.position, width: node.measured?.width ?? 260, height: node.measured?.height ?? 188,
+    }))) : null;
+  const [path, x, y] = mcpPath ?? (columnSource
     ? columnEdgePath(props, columnSource.position.y + (columnSource.measured?.height ?? 0) + 6)
     : relationshipPath(props, nodes.length <= 80 ? nodes.filter(node => !node.hidden).map(node => ({
       id: node.id, x: node.position.x, y: node.position.y,
       width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
-    })) : []);
+    })) : []));
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y]);
   // Subscribing outside render keeps a pan from re-rendering every edge.
   const store = useStoreApi();
@@ -138,7 +148,13 @@ export function RelationshipEdge(props: EdgeProps) {
 
   return <g ref={edgeRef} data-label-disclosure={packageFinding ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
-    <BaseEdge id={props.id} path={path} style={props.style}
+    {mcpSource && mcpTarget && <defs><linearGradient id={gradientId} gradientUnits="userSpaceOnUse"
+      x1={props.sourceX} y1={props.sourceY} x2={props.targetX} y2={props.targetY}>
+      <stop offset="0%" stopColor={minimapNodeColor(mcpSource)} />
+      <stop offset="100%" stopColor={minimapNodeColor(mcpTarget)} />
+    </linearGradient></defs>}
+    <BaseEdge id={props.id} path={path} style={mcpPath && !inspecting && !props.data?.pathEmphasis
+      ? { ...props.style, stroke: `url(#${gradientId})` } : props.style}
       {...(emphasized && props.markerStart ? { markerStart: props.markerStart } : {})}
       {...(emphasized && props.markerEnd ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />

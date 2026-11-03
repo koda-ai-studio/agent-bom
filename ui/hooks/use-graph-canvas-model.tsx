@@ -12,6 +12,7 @@ import { withFindingContext } from "@/lib/finding-investigation-href";
 import { ASSET_DRIFT_GRAPH_SCOPE_PARAM, createCanvasLensGraphFilters, createFocusedGraphFilters, graphScopePresetForFilters } from "@/components/lineage-filter";
 import { type LineageNodeData, type LineageNodeType } from "@/components/lineage-nodes";
 import { useGraphLayout } from "@/lib/use-graph-layout";
+import { findingEvidenceContext } from "@/lib/graph-mcp-flow";
 import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
 import { aggregateSiblings, EXPANDED_AGGREGATION_THRESHOLD, FOCUSED_AGGREGATION_THRESHOLD, isClusterPillNode } from "@/lib/sibling-aggregator";
@@ -517,9 +518,9 @@ export function useGraphCanvasModel(page: GraphPageData) {
   const localNeighborhoodIds = useMemo(
     () =>
       activeFocusId
-        ? getLocalNeighborhoodIds(activeFocusId, layoutEdges)
+        ? findingEvidenceContext(activeFocusId, canvasLayoutNodes, layoutEdges) ?? getLocalNeighborhoodIds(activeFocusId, layoutEdges)
         : null,
-    [activeFocusId, layoutEdges],
+    [activeFocusId, layoutEdges, canvasLayoutNodes],
   );
 
   const attackPathEdgeIds = useMemo(
@@ -537,7 +538,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
 
   // Levels of detail: the zoom band keeps dense graphs readable without moving nodes.
   const lodBand = useLodBand();
-  const effectiveLodBand = compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
+  const effectiveLodBand = canvasLayoutNodes.some(node => node.data.evidenceFlow) || compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
     sourceNodeCount: flow.nodes.length,
     renderedNodeCount: aggregated.nodes.length,
     clusterCount: aggregated.clusters.size,
@@ -676,7 +677,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     scope: presentationScope,
     // Keep the saved-layout identity stable across the responsive default.
     // Explicit personal positions and viewport remain authoritative on resize.
-    layout: graphLayoutKind === "asset-hierarchy" ? "evidence-flow-v1" : "dagre-lr",
+    layout: displayNodes.some(node => node.data.evidenceFlow) ? "mcp-evidence-flow-v2" : graphLayoutKind === "asset-hierarchy" ? "evidence-flow-v1" : "dagre-lr",
     enabled: !captureMode && !authLoading && Boolean(session),
     ownerActive: Boolean(session),
     localMode: session?.recommended_ui_mode === "no_auth",
