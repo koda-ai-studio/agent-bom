@@ -83,7 +83,10 @@ async function labelCollisions(page: Page) {
   return page.locator(".react-flow").evaluate(canvas => {
     const visible = (el: Element) => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && r.width > 0 && r.height > 0; };
     const labels = [...canvas.querySelectorAll(".graph-relationship-label")].filter(visible).map(el => ({ text: el.textContent?.trim() ?? "", r: el.getBoundingClientRect() }));
-    const cards = [...canvas.querySelectorAll(".react-flow__node [data-graph-entity]")].map(el => ({ text: el.getAttribute("title") ?? "", r: el.getBoundingClientRect() }));
+    const cards = [...canvas.querySelectorAll(".react-flow__node [data-graph-entity]")].flatMap(el => [...el.children].map(child => {
+      const r = child.getBoundingClientRect(), pad = child.classList.contains("graph-entity-glyph") ? 8 : 0;
+      return { text: el.getAttribute("title") ?? "", r: new DOMRect(r.left - pad, r.top - pad, r.width + pad * 2, r.height + pad * 2) };
+    }));
     const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
     const out: string[] = [];
     labels.forEach((a, i) => {
