@@ -914,7 +914,7 @@ main > div {
 .ep-severity[data-severity="low"], .ep-severity[data-severity="none"], .ep-severity[data-severity="unavailable"] { color: var(--text-secondary); background: var(--surface-muted); }
 
 /* One working area: mobile switches panes; desktop keeps the bounded queue beside the path. */
-.investigation-workspace { @apply grid min-w-0 gap-3; }
+.investigation-workspace { @apply grid min-w-0 gap-3; grid-template-columns: minmax(0, 1fr); }
 .investigation-panel-switch { @apply flex gap-1 rounded-lg border border-outline bg-surface p-1; }
 .investigation-panel-switch button { @apply min-h-11 flex-1 rounded-md px-3 text-sm text-ink-secondary; }
 .investigation-panel-switch button[aria-pressed="true"] { @apply bg-emerald-600 text-white; }

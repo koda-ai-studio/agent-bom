@@ -193,6 +193,7 @@ async function routeCockpit(
     rollupItemCount?: number;
     qualifiedEvidence?: boolean;
     longPathNodeCount?: number;
+    variedPathRoles?: boolean;
     longNodeLabel?: boolean;
     referenceGraph?: boolean;
     scenarioTool?: boolean;
@@ -219,6 +220,9 @@ async function routeCockpit(
     const intermediates = Array.from({ length: options.longPathNodeCount - 3 }, (_, index) =>
       node(`server:hop-${index}`, "server", `Recorded service ${index + 1}`));
     graph.nodes = [graph.nodes[0]!, ...intermediates, graph.nodes[2]!, graph.nodes[3]!];
+    if (options.variedPathRoles) graph.nodes.forEach((item, index) => {
+      item.entity_type = ["user", "service_account", "role", "agent", "server", "package", "vulnerability"][index % 7]!;
+    });
     graph.edges = graph.nodes.slice(1).map((item, index) => edge(graph.nodes[index]!.id, item.id, "depends_on"));
     graph.attack_paths = [{ ...graph.attack_paths[0]!, hops: graph.nodes.map(item => item.id), edges: graph.edges.map(item => item.id) }];
     graph.stats.total_nodes = graph.nodes.length;
@@ -1603,6 +1607,11 @@ for (const theme of ["light", "dark"] as const) {
       await page.goto(`/security-graph?lens=attack-path&scan=${scanId}`);
       const workspace = page.getByRole("region", { name: "Investigation workspace" });
       const detail = workspace.getByRole("region", { name: "Selected path detail" });
+      if (width < 1024) {
+        await expect(page.getByLabel("Attack path queue")).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+        await page.getByRole("button", { name: "Selected path", exact: true }).click();
+      }
       await expect(detail).toBeVisible();
       await inspectPathAssessment(detail, /unknown/i);
       await expect(detail.getByRole("heading", { level: 2 })).not.toContainText(/reachable|exploitable/i);
@@ -1613,6 +1622,7 @@ for (const theme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: /Paths & filters/ }).click();
         await expect(queue).toBeVisible();
         await expect(detail).toBeHidden();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
         await queue.getByRole("button", { name: /#2/ }).click();
         await expect(queue).toBeHidden();
         await expect(detail).toBeVisible();
@@ -1643,6 +1653,19 @@ for (const theme of ["light", "dark"] as const) {
     });
   }
 }
+
+test("mobile queue keeps a long identity and supply-chain role sequence inside the viewport", async ({ page }, info) => {
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await routeCockpit(page, undefined, { longPathNodeCount: 7, variedPathRoles: true });
+  await page.goto(`/security-graph?lens=attack-path&scan=${scanId}`);
+  const queue = page.getByLabel("Attack path queue");
+  await expect(queue).toBeVisible();
+  await expect(queue).toContainText("service account");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  const bounds = await queue.boundingBox();
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+  await page.screenshot({ path: info.outputPath("mobile-long-role-queue.png"), fullPage: true });
+});
 
 for (const theme of ["light", "dark"] as const) {
  for (const height of [800, 1000]) {
