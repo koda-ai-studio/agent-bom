@@ -9,6 +9,24 @@ import pytest
 
 from tests import _demo_estate_fixtures as fixtures
 
+
+def test_semantic_fixture_waits_past_a_previous_generation(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import Mock
+
+    import httpx
+
+    read = Mock(
+        side_effect=[
+            httpx.Response(200, json={"nodes": [{"id": "prior"}], "collection_coverage": {"freshness": "previous_generation"}}),
+            httpx.Response(200, json={"nodes": [{"id": "current"}], "collection_coverage": {"status": "complete"}}),
+        ]
+    )
+    monkeypatch.setattr(fixtures, "demo_graph_get", read)
+    monkeypatch.setattr(fixtures.time, "sleep", lambda _: None)
+    fixtures._wait_for_current_graph(Mock())
+    assert read.call_count == 2
+
+
 _TESTS = Path(__file__).resolve().parent
 _WRITES = {"post", "put", "patch", "delete", "save_graph", "maybe_bootstrap_demo_estate", "refresh_demo_daily_evidence"}
 

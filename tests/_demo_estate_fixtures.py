@@ -164,10 +164,13 @@ def _wait_for_current_graph(client: TestClient) -> None:
     while True:
         response = demo_graph_get(client, "/v1/graph", {"limit": 1})
         if response.status_code == 200:
-            assert response.json()["nodes"], "demo current graph must contain evidence"
-            return
-        assert response.status_code == 503, response.text
-        assert "current graph is being prepared" in response.text, response.text
+            body = response.json()
+            assert body["nodes"], "demo current graph must contain evidence"
+            if body.get("collection_coverage", {}).get("freshness") != "previous_generation":
+                return
+        else:
+            assert response.status_code == 503, response.text
+            assert "current graph is being prepared" in response.text, response.text
         assert time.monotonic() < deadline, response.text
         time.sleep(0.1)
 
