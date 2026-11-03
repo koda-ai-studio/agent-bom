@@ -151,7 +151,11 @@ const BUDGETS = {
   // the runtime snapshot/unattributed-block labels: our own code, no new
   // dependency. The clean build measures 4316.7 KiB; keep 15.3 KiB of bounded
   // headroom at 4332 KiB. Shared-runtime and largest-chunk limits stay fixed.
-  totalClientJsBytes: 4_435_968,
+  // Connected cloud branches and finding disclosure measure 4336.0 KiB on
+  // macOS and Linux CI; canonical investigation scope brings it to 4337.4 KiB
+  // locally. These features add no dependency. Allow 6.6 KiB of headroom at
+  // 4344 KiB; largest-chunk and shared-runtime ceilings remain unchanged.
+  totalClientJsBytes: 4_448_256,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.
