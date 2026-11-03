@@ -13,7 +13,7 @@ from typing import Optional
 import httpx
 from rich.console import Console
 
-from agent_bom.core.packages import apply_registry_latest, copy_registry_observation
+from agent_bom.core.packages import apply_registry_latest, apply_registry_range, copy_registry_observation
 from agent_bom.http_client import (
     create_client,
     registry_breaker_tripped,
@@ -21,7 +21,6 @@ from agent_bom.http_client import (
     reset_rate_limit_breaker,
 )
 from agent_bom.models import Package
-from agent_bom.package_utils import package_purl
 from agent_bom.parsers.npm_semver import classify_npm_spec
 from agent_bom.resolvers.registry_budget import (
     RESOLVE_ALL_TIMEOUT,
@@ -454,12 +453,7 @@ async def _resolve_declared_constraint(pkg: Package, constraint: str, client: ht
     elif ecosystem == "pypi":
         resolved = await transitive.resolve_pypi_spec_version(pkg.name, constraint, client)
     if resolved:
-        pkg.version = resolved
-        pkg.purl = package_purl(pkg.name, resolved, pkg.ecosystem)
-        pkg.resolved_version = resolved
-        pkg.resolved_from_registry = True
-        pkg.version_resolved_at = datetime.now(timezone.utc).isoformat()
-        pkg.version_evidence.append({"type": "registry_range", "declared_version": constraint, "resolved_version": resolved})
+        apply_registry_range(pkg, resolved, constraint, datetime.now(timezone.utc).isoformat())
         return True
     fallback = pkg.registry_version
     if fallback and fallback not in _INVALID_VERSIONS and _constraint_admits(ecosystem, fallback, constraint):

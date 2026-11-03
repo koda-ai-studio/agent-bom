@@ -19,6 +19,7 @@ from agent_bom.parsers.go_resolution import _UNRESOLVED_VERSIONS as _UNRESOLVED_
 from agent_bom.parsers.go_resolution import logger as logger
 from agent_bom.parsers.go_resolution import resolve_go_version as resolve_go_version
 from agent_bom.parsers.go_resolution import verify_go_checksums as verify_go_checksums
+from agent_bom.parsers.go_sum import supplement_from_go_sum
 from agent_bom.parsers.gradle_packages import parse_gradle_packages as parse_gradle_packages
 
 # Versions that need resolution via the Go module proxy
@@ -190,8 +191,8 @@ def parse_go_packages(
     :func:`parse_go_workspace` to handle multi-module workspaces (Go 1.18+).
 
     Otherwise reads go.mod to correctly distinguish direct from indirect
-    (transitive) dependencies and to apply ``replace`` directives.  Falls back
-    to go.sum only when go.mod is absent, preserving unknown directness.
+    (transitive) dependencies and ``replace``; a pre-1.17 ``go`` directive adds
+    go.sum module-zip modules (``go_sum``). go.sum alone is used without go.mod.
 
     Args:
         directory: Project root containing ``go.mod`` / ``go.sum``.
@@ -248,7 +249,7 @@ def parse_go_packages(
                 version_evidence=[{"type": "manifest", "source_file": str(go_mod)}],
             )
             packages.append(pkg)
-
+        packages.extend(supplement_from_go_sum(go_mod, go_sum, set(all_mods), set(replace_map)))
         if verify_checksums and go_sum.exists():
             modules_to_check = [(pkg.name, f"v{pkg.version}" if not pkg.version.startswith("v") else pkg.version) for pkg in packages]
             checksum_results = verify_go_checksums(go_sum, modules_to_check)

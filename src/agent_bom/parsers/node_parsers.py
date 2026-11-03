@@ -30,6 +30,7 @@ from agent_bom.parsers.npm_lock_paths import (
     _npm_workspace_edges,
 )
 from agent_bom.parsers.npm_semver import npm_exact_version
+from agent_bom.parsers.pnpm_keys import lockfile_major, parse_pnpm_key
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -505,9 +506,8 @@ def parse_yarn_lock(directory: Path) -> list[Package]:
 def parse_pnpm_lock(directory: Path) -> list[Package]:
     """Parse packages from pnpm-lock.yaml.
 
-    pnpm-lock.yaml v6+ uses a ``packages`` map with keys like
-    ``/name@version`` or ``name@version``.  Earlier versions use
-    ``/name/version``.  We support both.
+    Keys are parsed per ``lockfileVersion`` (v5 ``/name/version_peers``,
+    v6 ``/name@version(peers)``, v9 ``name@version``); see ``pnpm_keys``.
     """
     lock_file = directory / "pnpm-lock.yaml"
     if not lock_file.exists():
@@ -522,27 +522,14 @@ def parse_pnpm_lock(directory: Path) -> list[Package]:
             return []
 
         data = yaml.safe_load(read_text_limited(lock_file)) or {}
-        pkg_map = data.get("packages", {})
-        for key in pkg_map:
-            # key formats (pnpm v6): "/name@version", "/@scope/name@version"
-            # key formats (pnpm v9): "name@version", "@scope/name@version"
-            key = key.lstrip("/")
-            # Handle scoped packages: @scope/name@version
-            m = re.match(r"^(@[^/]+/[^@]+)@([^()\s]+)", key)
-            if not m:
-                # Unscoped: name@version
-                m = re.match(r"^([^@][^@]*)@([^()\s]+)", key)
-            if not m:
-                # Fallback: name/version (old pnpm)
-                parts = key.rsplit("/", 1)
-                if len(parts) == 2:
-                    name, version = parts[0], parts[1]
-                else:
-                    continue
-            else:
-                name, version = m.group(1), m.group(2)
-            name = name.strip()
-            version = version.strip()
+        lockfile_version = lockfile_major(data)
+        seen: set[tuple[str, str]] = set()
+        for key in data.get("packages", {}) or {}:
+            parsed = parse_pnpm_key(key, lockfile_version)
+            if parsed is None or parsed in seen:
+                continue
+            seen.add(parsed)
+            name, version = parsed
             if name and version:
                 packages.append(
                     Package(
