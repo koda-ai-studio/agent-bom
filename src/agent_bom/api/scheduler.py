@@ -153,11 +153,24 @@ async def scheduler_loop(
                 due = await asyncio.to_thread(schedule_store.list_due, now_iso)
 
                 for schedule in due:
-                    if not schedule.enabled:
-                        continue
-                    logger.info("Triggering scheduled scan: %s (%s)", schedule.name, schedule.schedule_id)
+                    # The database read yielded: another replica may now own
+                    # leadership or have advanced this occurrence. A stale due
+                    # list is discovery, not authorization to dispatch.
+                    if not await asyncio.to_thread(lock.ensure):
+                        break
                     try:
                         with tenant_bound_context(schedule.tenant_id):
+                            current = schedule_store.get(schedule.schedule_id, tenant_id=schedule.tenant_id)
+                            if (
+                                current is None
+                                or not current.enabled
+                                or not current.next_run
+                                or current.next_run > now_iso
+                                or current.next_run != schedule.next_run
+                            ):
+                                continue
+                            schedule = current
+                            logger.info("Triggering scheduled scan: %s (%s)", schedule.name, schedule.schedule_id)
                             job_id = run_scan_fn(
                                 schedule.scan_config,
                                 schedule_id=schedule.schedule_id,

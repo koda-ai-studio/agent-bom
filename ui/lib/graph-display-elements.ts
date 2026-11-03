@@ -152,7 +152,14 @@ export function emphasizedDisplayEdges({ edges, nodes, neighborhood, pathEdgeIds
       style: { ...edge.style, opacity: 1, strokeWidth: widthAtLeast(edge, 2, 3.2), filter: undefined },
     }));
   }
-  const glow = (included: boolean, edge: Edge, inactive: number, shadow: string): Edge => ({
+  // Remainders are navigation controls, not canonical reachability edges.
+  // Keep their connectors visible without implying a traversable route.
+  const glow = (included: boolean, edge: Edge, inactive: number, shadow: string): Edge => edge.data?.isClusterEdge ? {
+    ...edge,
+    data: { ...edge.data, directionEmphasis: false },
+    animated: false,
+    style: { ...edge.style, opacity: 0.85, stroke: "var(--text-secondary)", strokeWidth: 1.6, vectorEffect: "non-scaling-stroke", filter: undefined },
+  } : ({
     ...edge,
     data: { ...edge.data, directionEmphasis: included },
     animated: captureMode ? false : Boolean(included || edge.animated),

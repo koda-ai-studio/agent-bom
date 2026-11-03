@@ -61,7 +61,7 @@ export function TopRisksPanel({
               const finding = path.nodes.find((node) => node.type === "cve");
               return <button key={path.key} type="button" aria-pressed={selected?.key === path.key}
                 onClick={() => { setSelectedKey(path.key); if (!wide) setDrawerOpen(true); }}
-                className={`flex w-full items-start gap-2 rounded-md px-2 py-3 text-left ${selected?.key === path.key ? "bg-emerald-500/10" : "hover:bg-surface-muted"}`}>
+                className={`flex w-full items-start gap-2 rounded-md px-2 py-2.5 text-left sm:py-3 ${selected?.key === path.key ? "bg-emerald-500/10" : "hover:bg-surface-muted"}`}>
                 <span className="text-xs tabular-nums text-ink-secondary">{index + 1}</span>
                 <span className="min-w-0 flex-1"><span className="block break-words text-sm font-semibold">{workload ? (sbomSourceName(workload) ? `SBOM source: ${sbomSourceName(workload)}` : workload) : "Workload not identified"}</span>
                   <span className="block break-words text-xs text-ink-secondary">{finding?.label ?? "Finding"} · {finding?.severity ?? "Severity unavailable"}</span></span>

@@ -681,12 +681,12 @@ function ClusterPillNode({ data }: { data: LineageNodeData }) {
         position={data.reverseFlow ? Position.Left : Position.Right}
         className="!w-2 !h-2 !bg-sky-300"
       />
-      <button type="button" aria-label={`Expand ${count} ${childType === "vulnerability" ? "findings" : "members"}`} className="nodrag nopan flex items-center gap-1.5 rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500">
-        <Icon className="w-3.5 h-3.5 text-sky-700 dark:text-sky-200" />
-        <span className="text-lg font-semibold text-sky-900 dark:text-sky-100 whitespace-nowrap">
+      <button type="button" aria-label={`Expand ${count} ${childType === "vulnerability" ? "findings" : "members"}`} style={{ fontSize: "var(--graph-group-label-size, 18px)" }} className="nodrag nopan flex items-center gap-1.5 rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-sky-500">
+        <Icon className="h-[1em] w-[1em] shrink-0 text-sky-700 dark:text-sky-200" />
+        <span className="text-inherit font-semibold text-sky-900 dark:text-sky-100 whitespace-nowrap">
           {data.label}
         </span>
-        <span className="text-lg text-sky-800 dark:text-sky-300/80">
+        <span className="text-inherit text-sky-800 dark:text-sky-300/80">
           expand
         </span>
       </button>

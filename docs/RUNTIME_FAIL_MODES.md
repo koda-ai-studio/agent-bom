@@ -421,6 +421,16 @@ are disabled because legacy runs lack durable ownership records. Reconcile
 those resources manually using saved IDs and provider events; no clean-state
 claim follows from an empty sweep result.
 
+## Scheduled scan dispatch
+
+The scan scheduler rechecks its leadership lock after reading due schedules
+and before dispatching each occurrence. Lost leadership stops that dispatch
+batch. A missing, disabled or rescheduled tenant-owned record is skipped;
+a store error backs off without authorizing a scan from the stale due list.
+These checks do not provide exactly-once execution across a crash after
+submission or leadership loss after the final check. Submission idempotency
+must cover those boundaries where available.
+
 ## Graph roll-up warm-up failures
 
 Roll-up warming is a best-effort cache optimization. A failed warm-up does not

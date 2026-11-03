@@ -165,6 +165,8 @@ function InvestigationFlow({
   const nodesInitialized = useNodesInitialized();
   const canvasWidth = useStore(state => state.width);
   const canvasHeight = useStore(state => state.height);
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const visibleWidth = useElementWidth(surfaceRef);
   const compact = useNarrowViewport(embedded);
   const stepper = compact && !columnLayout;
   const [navigationId, setNavigationId] = useState<string | null>(null);
@@ -204,6 +206,9 @@ function InvestigationFlow({
     ownerActive,
     localMode,
   });
+  // Personal presentation applies layout changes on a later render. Fit that
+  // applied geometry too, without refitting for zoom-driven text measurements.
+  const presentedGeometry = JSON.stringify(presentation.nodes.map(node => [node.id, node.position.x, node.position.y]));
   const presentedEdges = useMemo(() => {
     const readable = readableGraphEdges(edges, undefined, {
       baseOpacity: 1,
@@ -220,7 +225,7 @@ function InvestigationFlow({
     void fitView({ nodes: [{ id }], minZoom: 1, maxZoom: 1, padding: 0.08, duration: 200 });
   }, [fitView]);
   useEffect(() => {
-    if (nodes.length === 0 || !nodesInitialized || !canvasWidth || !canvasHeight || manualViewportScope.current === presentation.storageKey) return;
+    if (nodes.length === 0 || !nodesInitialized || !visibleWidth || !reactFlow.viewportInitialized || !canvasWidth || !canvasHeight || manualViewportScope.current === presentation.storageKey) return;
     // A viewport restored from storage was fitted to an earlier canvas size
     // (or persisted by an automatic fit there). Judge it once per mount, not
     // on every re-measure or resize (node chrome scales with the zoom level,
@@ -236,6 +241,7 @@ function InvestigationFlow({
       }
     }
     const raf = requestAnimationFrame(() => {
+      if (!surfaceRef.current?.getBoundingClientRect().width) return;
       // Marked only when the fit really runs: a dependency change can cancel
       // this frame, and the next pass must then still re-fit.
       restoredViewportChecked.current = presentation.storageKey;
@@ -243,7 +249,7 @@ function InvestigationFlow({
       else void fitView(fitOptionsRef.current);
     });
     return () => cancelAnimationFrame(raf);
-  }, [canvasWidth, canvasHeight, controlsOverlay, stepper, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey, reactFlow]);
+  }, [canvasWidth, canvasHeight, visibleWidth, controlsOverlay, stepper, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey, presentedGeometry, reactFlow]);
   const fitVisible = useCallback(() => {
     manualViewportScope.current = null;
     setOverview(true);
@@ -290,7 +296,7 @@ function InvestigationFlow({
         controls={controls}
         layoutControls={presentation.enabled ? layoutControls : null}
       />}
-      <div className={`relative min-h-0 flex-1 ${roundedBottom ? "overflow-hidden rounded-b-2xl" : ""}`} {...wheelGate.handlers}>
+      <div ref={surfaceRef} className={`relative min-h-0 flex-1 ${roundedBottom ? "overflow-hidden rounded-b-2xl" : ""}`} {...wheelGate.handlers}>
         <WheelZoomHint visible={wheelGate.hintVisible} />
         <ReactFlow
           style={embedded ? pathCardNodeStyle(viewport.zoom) : readableGraphNodeStyle(viewport.zoom)}
@@ -299,7 +305,9 @@ function InvestigationFlow({
           edges={presentedEdges}
           nodeTypes={lineageNodeTypes}
           edgeTypes={relationshipEdgeTypes}
-          fitView={!stepper && !presentation.hasSavedState && !presentation.restoredSavedState}
+          // The mobile queue can mount this canvas inside a hidden panel.
+          // Only the visibility-aware effect above owns the initial fit.
+          fitView={false}
           fitViewOptions={fitOptions}
           minZoom={0.2}
           maxZoom={2.5}

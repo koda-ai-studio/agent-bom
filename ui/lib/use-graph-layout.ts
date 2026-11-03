@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { type Edge, type Node } from "@xyflow/react";
 
 import { graphHierarchyLayout } from "@/lib/graph-hierarchy-layout";
+import { peerPreviewLayout } from "@/lib/graph-peer-preview-layout";
+import { LINEAGE_NODE_HEIGHT, GRAPH_NODE_MIN_GAP } from "@/lib/graph-node-dimensions";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { GraphLayout } from "@/lib/graph-schema";
 import { type LayoutOptions } from "@/lib/dagre-layout";
@@ -132,6 +134,14 @@ export function useGraphLayout(
   );
 
   const hierarchyOptionsKey = JSON.stringify(options.dagreLr ?? {});
+  const peerRowPitch = Math.max(LINEAGE_NODE_HEIGHT + GRAPH_NODE_MIN_GAP,
+    (options.dagreLr?.minSeparation?.height ?? 0) + (options.dagreLr?.minSeparation?.gap ?? 0));
+  const peerPreview = useMemo(
+    () => enabled && resolvedKind === "dagre-lr"
+      ? peerPreviewLayout(nodes as Node<LineageNodeData>[], edges, peerRowPitch)
+      : null,
+    [enabled, resolvedKind, nodes, edges, peerRowPitch],
+  );
   const hierarchy = useMemo(
     () => enabled && resolvedKind === "asset-hierarchy"
       ? graphHierarchyLayout(nodes as Node<LineageNodeData>[], edges, JSON.parse(hierarchyOptionsKey) as LayoutOptions)
@@ -151,9 +161,11 @@ export function useGraphLayout(
       case "dagre":
         return { ...dagre, kind: resolvedKind };
       case "dagre-lr":
-        return { ...dagreLr, kind: resolvedKind };
+        return peerPreview
+          ? { ...peerPreview, pending: false, kind: resolvedKind }
+          : { ...dagreLr, kind: resolvedKind };
       case "sankey":
         return { ...sankey, kind: resolvedKind };
     }
-  }, [dagre, dagreLr, force, radial, resolvedKind, sankey, enabled, nodes, edges, hierarchy]);
+  }, [dagre, dagreLr, force, radial, resolvedKind, sankey, enabled, nodes, edges, hierarchy, peerPreview]);
 }

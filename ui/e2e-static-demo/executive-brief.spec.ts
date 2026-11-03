@@ -13,7 +13,9 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.goto(`${server.origin}${basePath}/brief`);
     await expect(page.getByRole("heading", { name: "Executive brief", exact: true })).toBeVisible();
     await expect(page.getByText("Sample data", { exact: true })).toBeVisible();
+    await page.getByText("Signed evidence and verification", { exact: true }).click();
     await expect(page.getByRole("button", { name: "Download signed pack" })).toBeDisabled();
+    await page.getByText("Signed evidence and verification", { exact: true }).click();
     await expect(page.getByRole("link", { name: "Investigate this snapshot" })).toHaveAttribute("href", /scan=/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`brief-${theme}-${width}.png`), fullPage: true });
