@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from agent_bom.constants import is_credential_key
+from agent_bom.domain.agent_model import agent_is_installed_unconfigured
+from agent_bom.domain.mcp_model import surface_counts_as_mcp_server
 
 
 def _vuln_color(count: int) -> str:
@@ -14,6 +16,11 @@ def _vuln_color(count: int) -> str:
     if count <= 8:
         return "#f97316"  # orange
     return "#ef4444"  # red
+
+
+def _reported_agent_count(agents_data: list[dict]) -> int:
+    """Count agents with the same judgement ``scan`` uses (``AIBOMReport.total_agents``)."""
+    return sum(1 for agent in agents_data if not agent_is_installed_unconfigured(agent.get("status"), bool(agent.get("mcp_servers"))))
 
 
 def build_agent_mesh(agents_data: list[dict], blast_radius: list[dict] | None = None) -> dict:
@@ -77,7 +84,7 @@ def build_agent_mesh(agents_data: list[dict], blast_radius: list[dict] | None = 
 
         for srv in servers:
             srv_name = srv.get("name", "unknown")
-            total_servers += 1
+            total_servers += int(surface_counts_as_mcp_server(srv.get("surface"), srv.get("discovery_sources") or ()))
             pkgs = srv.get("packages", [])
             tools = srv.get("tools", [])
             total_packages += len(pkgs)
@@ -174,7 +181,7 @@ def build_agent_mesh(agents_data: list[dict], blast_radius: list[dict] | None = 
         "nodes": nodes,
         "edges": edges,
         "stats": {
-            "total_agents": len(agents_data),
+            "total_agents": _reported_agent_count(agents_data),
             "total_servers": total_servers,
             "total_packages": total_packages,
             "total_tools": total_tools,

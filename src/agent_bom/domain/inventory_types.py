@@ -67,6 +67,7 @@ class ServerSurface(str, Enum):
     OS_PACKAGES = "os-packages"
     SAST = "sast"
     AI_INVENTORY = "ai-inventory"
+    DATA_CONNECTION = "data-connection"  # a data-platform CLI connection profile, e.g. Snowflake CLI
     OTHER = "other"
 
 

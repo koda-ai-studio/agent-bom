@@ -441,3 +441,23 @@ def osv_fallback_db_keys(
         if release_key in sparse_releases:
             keys.add(package_db_key(pkg))
     return keys
+
+
+RUNTIME_COVERAGE_UNKNOWN = "runtime_advisory_coverage_unknown"
+
+
+def runtime_coverage_release(pkg: "Package") -> str:
+    """Coverage-warning ``release`` for one runtime component, e.g. ``node:18.20.8``."""
+    return f"{pkg.name.lower()}:{pkg.version}"
+
+
+def package_vulnerability_unassessed(pkg: "Package", coverage_warnings: Sequence[dict]) -> bool:
+    """True when no advisory source assessed ``pkg``: its zero findings mean "not scanned", not clean."""
+    if _unsupported_rpm_release(pkg) is not None:
+        return True
+    ecosystem = (pkg.ecosystem or "").lower()
+    release = runtime_coverage_release(pkg)
+    return any(
+        warning.get("reason") == RUNTIME_COVERAGE_UNKNOWN and warning.get("ecosystem") == ecosystem and warning.get("release") == release
+        for warning in coverage_warnings
+    )

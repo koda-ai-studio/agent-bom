@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 from uuid import UUID
 
 from agent_bom.canonical_ids import (
@@ -223,6 +223,18 @@ class CredentialIdentityBinding:
 SBOM_DECLARED_MCP_SOURCE = "sbom:mcp-server"
 
 
+def surface_counts_as_mcp_server(surface: object, discovery_sources: Iterable[str] = ()) -> bool:
+    """The one MCP-inventory judgement, for model objects and serialized server dicts alike.
+
+    ``surface`` may be a :class:`ServerSurface` or its string value; a missing
+    surface on a legacy record means an MCP server.
+    """
+    value = str(getattr(surface, "value", surface) or ServerSurface.MCP.value)
+    if value == ServerSurface.MCP.value:
+        return True
+    return value == ServerSurface.SBOM.value and SBOM_DECLARED_MCP_SOURCE in discovery_sources
+
+
 @dataclass
 class MCPServer:
     """An MCP server with its tools, resources, and dependencies."""
@@ -354,7 +366,7 @@ class MCPServer:
         Imported servers keep the SBOM surface (identity, never executed) but
         still count in the MCP inventory, so re-scanning a BOM preserves it.
         """
-        return self.is_mcp_surface or (self.surface == ServerSurface.SBOM and SBOM_DECLARED_MCP_SOURCE in self.discovery_sources)
+        return surface_counts_as_mcp_server(self.surface, self.discovery_sources)
 
     @property
     def allows_registry_resolution(self) -> bool:

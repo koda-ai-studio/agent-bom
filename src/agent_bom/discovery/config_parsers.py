@@ -22,7 +22,7 @@ from rich.markup import escape
 from agent_bom.discovery.continue_config import continue_legacy_servers
 from agent_bom.discovery.coverage import report_blocked_server
 from agent_bom.discovery.mcp_metadata import connection_metadata
-from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, TransportType
+from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, ServerSurface, TransportType
 from agent_bom.security import (
     SecurityError,
     sanitize_env_vars,
@@ -375,7 +375,8 @@ def parse_goose_config(config_path: str) -> list[MCPServer]:
 def parse_snowflake_connections(config_path: str) -> list[MCPServer]:
     """Parse Snowflake CLI connections.toml or config.toml into inventory entries.
 
-    Each connection profile becomes an MCPServer entry for inventory visibility.
+    Each connection profile becomes a ``data-connection`` surface entry for
+    inventory visibility; it is not an MCP server and never counts as one.
     connections.toml uses [profile_name] sections; config.toml uses [connections.name].
     """
     try:
@@ -418,6 +419,7 @@ def parse_snowflake_connections(config_path: str) -> list[MCPServer]:
             env=env,
             transport=TransportType.UNKNOWN,
             config_path=config_path,
+            surface=ServerSurface.DATA_CONNECTION,
         )
         servers.append(server)
 
