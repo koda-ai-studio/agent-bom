@@ -16,6 +16,7 @@ from agent_bom.core.risk_display import risk_label
 from agent_bom.graph import SEVERITY_RANK as _SEVERITY_RANK
 from agent_bom.graph.compat import stamp_export_entity_types
 from agent_bom.graph.node import stable_node_id
+from agent_bom.graph.repository_identity import repository_scope, scoped_node_id
 from agent_bom.output.finding_views import package_graph_node_id as _package_node_id
 from agent_bom.output.graph_framework_agents import append_framework_agent_elements
 from agent_bom.output.graph_html import _CDN_FALLBACK_TAGS as _CDN_FALLBACK_TAGS
@@ -546,15 +547,11 @@ def _append_repo_structure_elements(
     collapse_cves: bool,
     vuln_pkg_keys: set[tuple[str, str, str]],
 ) -> None:
-    """Append the repository folder/file structure to a Cytoscape element list.
+    """Append scoped repository directories, files and vulnerable package links.
 
-    Materialises the directory tree (``directory`` nodes linked ``contains``
-    parent → child), the manifest / lockfile files each directory holds
-    (``config_file`` / ``source_file`` nodes the directory ``contains``), and a
-    ``depends_on`` edge from a directory's representative manifest to the
-    vulnerable packages discovered for that directory, so a viewer can trace a
-    finding back to the file and folder that introduced it. A no-op when the
-    report carries no project inventory.
+    Containment connects the directory tree and its files. A representative
+    manifest depends on each vulnerable package discovered in that directory.
+    Reports without project inventory are unchanged.
     """
     inventory = report.project_inventory_data
     if not isinstance(inventory, dict):
@@ -562,6 +559,8 @@ def _append_repo_structure_elements(
     directories = inventory.get("directories")
     if not isinstance(directories, list) or not directories:
         return
+
+    scope = repository_scope(inventory)
 
     code_ext = {
         "py",
@@ -597,7 +596,7 @@ def _append_repo_structure_elements(
         return "source_file" if ext in code_ext else "config_file"
 
     def dir_id(path: str) -> str:
-        return "directory:." if path == "" else f"directory:{path}"
+        return scoped_node_id("directory", path, scope)
 
     def dir_label(path: str) -> str:
         return "." if path == "" else path.rsplit("/", 1)[-1]
@@ -663,7 +662,7 @@ def _append_repo_structure_elements(
         all_files = sorted(set(manifest_files) | set(lockfiles) | set(declarations))
         for file_name in all_files:
             file_path = f"{path}/{file_name}" if path else file_name
-            node_id = f"{file_type(file_name)}:{file_path}"
+            node_id = scoped_node_id(file_type(file_name), file_path, scope)
             if node_id not in seen_nodes:
                 seen_nodes.add(node_id)
                 elements.append(
@@ -686,7 +685,7 @@ def _append_repo_structure_elements(
         representative = sorted(declarations or manifest_files or lockfiles)
         if representative and pkgs_by_dir.get(path):
             rep_path = f"{path}/{representative[0]}" if path else representative[0]
-            rep_id = f"{file_type(representative[0])}:{rep_path}"
+            rep_id = scoped_node_id(file_type(representative[0]), rep_path, scope)
             for pid in sorted(set(pkgs_by_dir[path])):
                 key = (rep_id, pid)
                 if key not in seen_edges:
