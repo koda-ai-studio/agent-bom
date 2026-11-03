@@ -495,7 +495,10 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         },
         is_actionable=True,
         impact_category="iac_misconfiguration",
-        id=stable_id("iac", rule_id, file_path, str(line_number)),
+        # One rule can fire several times on one line (a flow-style list such as
+        # ``add: [NET_RAW, SYS_ADMIN]``); the rule's own title/message carry the
+        # matched value, so they are part of the occurrence identity.
+        id=stable_id("iac", rule_id, file_path, str(line_number), title, message),
     )
     from agent_bom.evidence.iac_controls import classify_iac_finding
 

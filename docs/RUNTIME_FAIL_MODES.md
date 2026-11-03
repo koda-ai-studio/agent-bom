@@ -450,6 +450,18 @@ variables. Invalid or non-finite settings fail startup before control-plane
 requests or binding a listener. CLI flags take precedence; security policies and
 authentication defaults are unchanged. See the [operator limits and defaults](perf/gateway-relay-latency.md#configure-upstream-limits).
 
+## Demo tenant ingest
+
+With `AGENT_BOM_DEMO_ESTATE=1` (`agent-bom serve --demo-estate`), the showcase
+tenant holds only labeled synthetic data. Every authenticated principal passes
+through one tenant-binding step, and that step refuses ingest operations
+addressed to the showcase tenant with `409 Conflict` and a fixed message, for
+every role. The guarded operations are listed in
+`src/agent_bom/api/demo_tenant_guard.py`; a test fails when a new ingest-shaped
+write route is neither guarded nor declared non-ingest. Other tenants on the
+same server, and all reads, are unaffected. Anonymous callers in demo mode are
+already clamped to `viewer` and cannot write at all.
+
 ## Executive brief read access
 
 `GET /v1/brief` fails closed for anonymous callers outside the explicitly enabled
