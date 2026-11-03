@@ -265,8 +265,13 @@ def assert_repository_store_parity(tmp_path, backend="sqlite"):
     put(tmp_path, "app/main.py", "from agents import Agent\nassistant = Agent(name='demo')\n")
     report = {"project_inventory": summarize_project_inventory(tmp_path, {})}
     now = datetime.now(timezone.utc)
-    expected = UnifiedGraph(tenant_id="repository-parity")
-    with open_store_backed_unified_graph(tenant_id="repository-parity", backend=backend, capacity=2, page_size=2) as actual:
+    # Both implementations represent the same snapshot, even if opening the
+    # persistent backend crosses a wall-clock second. Compare timestamps too.
+    created_at = now.isoformat()
+    expected = UnifiedGraph(tenant_id="repository-parity", created_at=created_at)
+    with open_store_backed_unified_graph(
+        tenant_id="repository-parity", created_at=created_at, backend=backend, capacity=2, page_size=2
+    ) as actual:
         for graph in (expected, actual):
             for _ in range(2):
                 apply_pipeline_overlay(graph, report, now)
@@ -282,6 +287,12 @@ def assert_repository_store_parity(tmp_path, backend="sqlite"):
 
 
 def test_repository_overlays_preserve_mutations_with_two_node_cache(tmp_path):
+    assert_repository_store_parity(tmp_path)
+
+
+def test_repository_store_parity_survives_crossing_a_clock_second(tmp_path, monkeypatch):
+    monkeypatch.setattr("agent_bom.graph.container._now_iso", lambda: "2026-11-03T12:00:00+00:00")
+    monkeypatch.setattr("agent_bom.graph.store_backed._now_iso", lambda: "2026-11-03T12:00:01+00:00")
     assert_repository_store_parity(tmp_path)
 
 

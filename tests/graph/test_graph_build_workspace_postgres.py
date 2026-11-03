@@ -49,9 +49,13 @@ def _graph(n: int, tenant: str = "t1") -> UnifiedGraph:
     return g
 
 
-def test_repository_overlay_bounded_cache_parity(tmp_path):
+@pytest.mark.parametrize("cross_second", [False, True])
+def test_repository_overlay_bounded_cache_parity(tmp_path, monkeypatch, cross_second):
     from tests.test_repository_dbt_lineage import assert_repository_store_parity
 
+    if cross_second:
+        monkeypatch.setattr("agent_bom.graph.container._now_iso", lambda: "2026-11-03T12:00:00+00:00")
+        monkeypatch.setattr("agent_bom.graph.store_backed._now_iso", lambda: "2026-11-03T12:00:01+00:00")
     assert_repository_store_parity(tmp_path, "postgres")
 
 
