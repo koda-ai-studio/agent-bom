@@ -103,6 +103,16 @@ describe("FindingsPage", () => {
     });
   });
 
+  it("applies a context deep link on the server and preserves it in the URL", async () => {
+    navigationState.query = "lane=all&path_context=test";
+    render(<FindingsPage />);
+    await waitFor(() => expect(apiMock.listFindings).toHaveBeenCalledWith(expect.objectContaining({ pathContext: "test" })));
+    expect(screen.getByLabelText("Path context")).toHaveValue("test");
+    expect(routerReplace).toHaveBeenCalledWith(expect.stringContaining("path_context=test"), { scroll: false });
+    fireEvent.change(screen.getByLabelText("Path context"), { target: { value: "" } });
+    await waitFor(() => expect(apiMock.listFindings.mock.lastCall?.[0].pathContext).toBeUndefined());
+  });
+
   it("preserves verified repository-relative IaC evidence into the drawer", async () => {
     apiMock.listFindings.mockResolvedValue({ findings: [{ ...canonicalFinding, finding_class: "misconfiguration", evidence: { repository_relative_path: "infra/main.tf", file_path: "/private/host/main.tf" } }], total: 1, has_more: false });
     render(<FindingsPage />);

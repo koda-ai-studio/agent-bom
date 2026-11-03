@@ -1,6 +1,6 @@
 """Sectioned, paged reads of one completed scan result.
 
-``GET /v1/scan/{id}`` returns the whole AI-BOM document. These views return a
+``GET /v1/scan/{id}?view=full`` returns the whole AI-BOM document. These views return a
 small summary plus an index of the large sections, and one section at a time,
 paged when it is a list. Each section is redacted exactly as the full-result
 endpoint redacts it, so a client paging every section sees the same content.
@@ -13,6 +13,7 @@ from typing import Any
 
 from agent_bom.api.job_payload_codec import result_shape
 from agent_bom.api.models import ScanJob
+from agent_bom.api.scan_dashboard_view import ANALYSIS_SECTIONS
 from agent_bom.api.scan_job_views import _redact_scan_result_for_response
 
 SCHEMA_VERSION = "1"
@@ -70,6 +71,30 @@ def result_index(job: ScanJob) -> dict[str, Any]:
 def result_section(job: ScanJob, name: str, offset: int, limit: int) -> dict[str, Any]:
     """One section; lists are sliced to ``[offset, offset + limit)``. Raises ``KeyError``."""
     result = job.result or {}
+    if name in ANALYSIS_SECTIONS:
+        value: Any = result
+        for key in name.split("."):
+            value = value.get(key) if isinstance(value, dict) else None
+        if not isinstance(value, list):
+            raise KeyError(name)
+        # Retain the original nested redaction context before extracting the page.
+        window = value[offset : offset + limit]
+        wrapped = {"ai_inventory": {"ast_analysis": {name.rsplit(".", 1)[1]: window}}}
+        redacted = _redact_scan_result_for_response(wrapped) or {}
+        items = redacted.get("ai_inventory", {}).get("ast_analysis", {}).get(name.rsplit(".", 1)[1], [])
+        end = offset + len(window)
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "job_id": job.job_id,
+            "section": name,
+            "offset": offset,
+            "kind": "list",
+            "total": len(value),
+            "limit": limit,
+            "next_offset": end if end < len(value) else None,
+            "items": items,
+            "value": None,
+        }
     if name not in result or _is_summary_key(name, result[name]):
         raise KeyError(name)
     value = result[name]

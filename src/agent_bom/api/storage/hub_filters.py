@@ -330,6 +330,10 @@ def _redact_finding(payload: dict[str, Any]) -> dict[str, Any]:
     # space and can drift from the canonical classifiers after an upgrade.
     clean.pop("finding_class", None)
     clean.pop("lane", None)
+    # Response defaults are not stored evidence: compact current-state overlays
+    # and legacy ledger rows omit context. Preserve explicit classifications.
+    if clean.get("path_context") == "unclassified" and "path_context" not in payload:
+        clean.pop("path_context", None)
     # No deadline carries no provenance to preserve; recompute the unavailable
     # response marker on read instead of repeating it in every ledger payload.
     if clean.get("sla_due_at_source") == "unavailable":

@@ -3,6 +3,7 @@
 
 import { classifyApiOfflineKind, type ApiOfflineKind } from "@/lib/api-offline-kind";
 import { useQueueTopRisks } from "@/hooks/use-queue-top-risks";
+import { FindingContextPanel } from "@/components/finding-context-panel";
 import { AdvisoryFreshness } from "@/components/advisory-freshness";
 
 import { LocalReportEvidence } from "@/components/local-report-evidence";
@@ -232,7 +233,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
       setDetailLoading(true);
       try {
         const fullJobs = await Promise.all(
-          detailIds.map((jobId) => api.getScan(jobId).catch(() => null))
+          detailIds.map((jobId) => api.getScanDashboard(jobId).catch(() => null))
         );
         const hydrated = fullJobs
           .filter((job): job is ScanJob => Boolean(job))
@@ -472,6 +473,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
         {!importedReport && inventorySummary?.filters && Object.values(inventorySummary.filters).some((value) => Array.isArray(value) ? value.length > 0 : Boolean(value)) ? <span>Inventory filters do not change the findings window</span> : null}
       </div>
       {!importedReport && <AdvisoryFreshness />}
+      {!importedReport && <FindingContextPanel />}
       <OverviewCockpit
         localReport={Boolean(importedReport)}
         inventorySummary={importedReport ? null : inventorySummary}

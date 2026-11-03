@@ -37,6 +37,7 @@ class FindingAsset(ReadModel):
 
 
 class FindingRow(ReadModel):
+    path_context: str | None = None
     lane: str | None = None
     severity_source: str | None = None
     id: str

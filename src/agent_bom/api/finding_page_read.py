@@ -277,13 +277,12 @@ def _list_findings_view_impl(
     project_graph_reachability: bool = True,
     redact_page: bool = True,
     lane: str | None = None,
+    path_context: str | None = None,
 ) -> dict[str, Any]:
     """Apply evidence-backed view filters before pagination.
 
-    Reachability is graph-derived and triage lives in the exception store, so
-    neither can be pushed into the canonical finding store query. Walk the
-    canonical keyset stream instead; this preserves occurrence IDs and avoids
-    the dishonest client-side filtering of an already-selected page.
+    Walk canonical keysets for derived reachability, triage and path context;
+    filtering before pagination preserves occurrence IDs and complete pages.
     """
     query_kw = dict(q=q, severity=severity, scan_id=scan_id, sort=sort, window_days=window_days, finding_class=finding_class, kev=kev)
     scope_kw = dict(
@@ -292,7 +291,7 @@ def _list_findings_view_impl(
     tail_kw = dict(owner=owner, sla=sla, project_graph_reachability=project_graph_reachability, redact_page=redact_page)
     common: dict[str, Any] = {**query_kw, **scope_kw, **tail_kw}
     suppressed_only = status.strip().lower() == "suppressed"
-    if reachability is None and triage is None and not suppressed_only:
+    if path_context is None and reachability is None and triage is None and not suppressed_only:
         return _list_findings_impl(
             request,
             limit=limit,
@@ -322,12 +321,13 @@ def _list_findings_view_impl(
 
     triage_index = build_tenant_triage_state_index(_tenant_id(request)) if triage is not None else None
     redact_after_filter = redacts_after_filter(redact_page=redact_page, triage=triage, triage_index=triage_index)
-    row_filter = partial(
-        _view_filtered_row, triage_index=triage_index, reachability=reachability, triage=triage, suppressed_only=suppressed_only
-    )
+    view: dict[str, Any] = dict(triage_index=triage_index, reachability=reachability, triage=triage, suppressed_only=suppressed_only)
+    row_filter = partial(_view_filtered_row, **view, path_context=path_context)
     walk = _walk_view_filtered_findings(fetch_page, row_filter, target=limit if cursor else offset + limit, cursor=cursor)
     walk = redact_emitted_rows(walk, _redact_finding_page) if redact_after_filter else walk
     filters = _view_filters(walk.first_page, suppressed_only=suppressed_only, reachability=reachability, triage=triage)
+    if path_context is not None:
+        filters["path_context"] = path_context
     return _view_envelope(walk, limit=limit, offset=offset, cursor=cursor, sort=sort, scan_id=scan_id, filters=filters)
 
 
@@ -360,12 +360,12 @@ def _list_finding_groups_impl(
     lane: str | None = None,
     *,
     summary_only: bool = False,
+    path_context: str | None = None,
 ) -> dict[str, Any]:
     """Build a bounded server-side issue queue over canonical occurrence rows.
 
-    Group the canonical per-asset queue by asset-independent issue identity,
-    with bounded occurrence summaries. ``summary_only`` omits occurrence facets
-    and graph page details for internal counts; grouping and bounds are unchanged.
+    Group canonical occurrences by issue identity. ``summary_only`` omits
+    facets and graph details without changing grouping or bounds.
     A row-budget hit is explicit partial evidence, never a complete group count.
     """
     sort_key = _normalize_finding_sort(sort)
@@ -377,7 +377,7 @@ def _list_finding_groups_impl(
         head = (q, None, scan_id, sort_key, budget, 0, source_cursor, True, provider, account, environment, domain, window_days, status)
         occurrence_facets = include_facets and first and not summary_only
         tail = (finding_class, kev, occurrence_facets, framework, control, owner, sla, reachability, triage, False, False)
-        return _list_findings_view_impl(request, *head, *tail)
+        return _list_findings_view_impl(request, *head, *tail, path_context=path_context)
 
     rows, first_page, warnings, source_cursor = _collect_group_occurrences(fetch_page)
     all_groups = _group_occurrence_rows(rows)

@@ -311,7 +311,7 @@ def _resolve_quickstart_databases(environment: dict[str, str]) -> tuple[Path, Pa
     return control_plane_db, graph_db
 
 
-def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, started: datetime) -> None:
+def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, started: datetime, *, allow_partial: bool = False) -> None:
     """Populate the same completed-job evidence read by Overview and Findings.
 
     The graph was verified first. A failed job write leaves that evidence intact
@@ -322,7 +322,8 @@ def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, sta
 
     try:
         payload = json.loads(report_path.read_text())
-        if payload.get("scan_id") != scan_id or payload.get("scan_run", {}).get("outcome") != "complete":
+        allowed = {"complete", "partial"} if allow_partial else {"complete"}
+        if payload.get("scan_id") != scan_id or payload.get("scan_run", {}).get("outcome") not in allowed:
             raise ValueError("Completed report identity does not match graph")
         tenant = resolve_cli_tenant_id()
         database.parent.mkdir(parents=True, exist_ok=True)
@@ -364,6 +365,7 @@ def _verify_persisted_graph(
     report_path: Path,
     graph_db: Path,
     scan_started_at: datetime,
+    allow_partial: bool = False,
 ) -> _GraphReceipt:
     """Read back the exact scan snapshot before claiming onboarding success."""
 
@@ -375,7 +377,8 @@ def _verify_persisted_graph(
     scan_run = payload.get("scan_run")
     scan_id = str(payload.get("scan_id") or (scan_run.get("scan_id") if isinstance(scan_run, dict) else "") or "")
     outcome = str(scan_run.get("outcome") or "") if isinstance(scan_run, dict) else ""
-    if not scan_id or outcome != "complete" or not graph_db.is_file():
+    allowed = {"complete", "partial"} if allow_partial else {"complete"}
+    if not scan_id or outcome not in allowed or not graph_db.is_file():
         raise click.ClickException("Persisted graph could not be verified in the configured graph database.")
 
     try:

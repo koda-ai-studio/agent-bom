@@ -39,6 +39,11 @@ export const scansApi = {
     get<ScanJob>(`/v1/scan/${encodeURIComponent(jobId)}?view=full`, signal ? { signal } : {}),
 
 
+  /** Display projection; full evidence remains available through getScan for downloads. */
+  getScanDashboard: (jobId: string, signal?: AbortSignal) => get<ScanJob>(
+    `/v1/scan/${encodeURIComponent(jobId)}${isStaticDemo() ? "" : "/dashboard"}`, signal ? { signal } : {},
+  ),
+
   /** Poll scan status without loading large result payloads */
   getScanStatus: (jobId: string, signal?: AbortSignal) => get<ScanJobStatus>(`/v1/scan/${jobId}/status`, signal ? { signal } : {}),
 

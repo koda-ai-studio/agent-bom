@@ -51,6 +51,44 @@ def test_compliance_recovery_accepts_canonical_reference_payloads(tmp_path):
     assert records[0][1].tables["hub_cve_intel"][0]["payload"]["advisory_sources"] == ["osv", "ghsa", "nvd"]
 
 
+@pytest.mark.parametrize("context", [None, "test", "example", "documentation", "unclassified"])
+def test_recovery_preserves_legacy_and_classified_payloads(tmp_path, context):
+    import sqlite3
+
+    from agent_bom.api.hub_payload_codec import decode_hub_payload, encode_hub_payload
+
+    path = tmp_path / "context.db"
+    seed(path)
+    with sqlite3.connect(path) as conn:
+        payload = decode_hub_payload(conn.execute("SELECT payload FROM compliance_hub_findings").fetchone()[0])
+        payload.pop("path_context", None)
+        if context is not None:
+            payload["path_context"] = context
+        conn.execute("UPDATE compliance_hub_findings SET payload=?", (encode_hub_payload(payload),))
+    before = path.read_bytes()
+    records = read_source(path, {"source": "target"}, ["compliance_hub"])
+    assert records[0][1].tables["compliance_hub_findings"][0]["payload"] == payload
+    assert path.read_bytes() == before
+
+
+@pytest.mark.parametrize("table", ["compliance_hub_findings", "hub_findings_current"])
+def test_recovery_rejects_unrecognized_context(tmp_path, table):
+    import sqlite3
+
+    from agent_bom.api.hub_payload_codec import decode_hub_payload, encode_hub_payload
+
+    path = tmp_path / "context.db"
+    seed(path)
+    with sqlite3.connect(path) as conn:
+        payload = decode_hub_payload(conn.execute(f"SELECT payload FROM {table}").fetchone()[0])
+        payload["path_context"] = "private-context-placeholder"
+        conn.execute(f"UPDATE {table} SET payload=?", (encode_hub_payload(payload),))
+    before = path.read_bytes()
+    with pytest.raises(ValueError, match="redaction"):
+        read_source(path, {"source": "target"}, ["compliance_hub"])
+    assert path.read_bytes() == before
+
+
 @pytest.mark.parametrize("table", ["compliance_hub_findings", "hub_cve_intel", "hub_framework_refs"])
 def test_compliance_recovery_rejects_secret_payloads(tmp_path, table):
     import sqlite3

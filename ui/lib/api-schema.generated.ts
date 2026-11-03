@@ -3189,8 +3189,7 @@ export interface paths {
          *     Dedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event
          *     loop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.
          *
-         *     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls``
-         *     restores the full per-finding control mappings.
+         *     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls`` restores full mappings.
          *
          *     ``offset`` is a compatibility path capped at 10,000: past the ceiling the
          *     endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.
@@ -3224,6 +3223,29 @@ export interface paths {
          *     clients and is never trusted for routing.
          */
         post: operations["ingest_bulk_findings_v1_findings_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/findings/context-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Finding Contexts
+         * @description Path-derived occurrence counts; no severity, suppression or grade changes.
+         *
+         *     Unclassified includes missing paths and is not evidence of production use.
+         *     Bounds and unavailable evidence are reported explicitly.
+         */
+        get: operations["get_finding_contexts_v1_findings_context_summary_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7461,6 +7483,29 @@ export interface paths {
          *       ?agent=claude-desktop  - only compute lateral paths from this agent
          */
         get: operations["get_context_graph_v1_scan__job_id__context_graph_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/scan/{job_id}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scan Dashboard
+         * @description Scan display projection; large AST lists are linked for paged retrieval.
+         *
+         *     Original evidence and non-JSON documents remain at GET /v1/scan/{job_id}?view=full.
+         *     Projection uses the same tenant lookup and redaction as the full read.
+         */
+        get: operations["get_scan_dashboard_v1_scan__job_id__dashboard_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -14213,6 +14258,37 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** FindingContextCount */
+        FindingContextCount: {
+            /**
+             * Context
+             * @enum {string}
+             */
+            context: "test" | "example" | "documentation" | "unclassified";
+            /** Severity */
+            severity: {
+                [key: string]: number;
+            };
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FindingContextResponse */
+        FindingContextResponse: {
+            /** Approximate */
+            approximate: boolean;
+            /** Basis */
+            basis: string;
+            /** Contexts */
+            contexts: components["schemas"]["FindingContextCount"][];
+            /** Count */
+            count: number;
+            /** Warnings */
+            warnings: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * FindingFeedbackRequest
          * @description Request body for POST /v1/findings/feedback.
@@ -14389,6 +14465,8 @@ export interface components {
             package_provenance_status?: string | null;
             /** Package Version */
             package_version?: string | null;
+            /** Path Context */
+            path_context?: string | null;
             /** Provenance */
             provenance?: unknown;
             /** Provider */
@@ -32749,6 +32827,7 @@ export interface operations {
                 sla?: ("overdue" | "due" | "unassigned") | null;
                 reachability?: ("reachable" | "unreachable" | "unassessed") | null;
                 triage?: ("not_affected" | "affected" | "under_investigation" | "untriaged") | null;
+                path_context?: ("test" | "example" | "documentation" | "unclassified") | null;
                 include_facets?: boolean;
                 /** @description Comma-separated opt-ins; `controls` returns full per-finding control mappings */
                 include?: string | null;
@@ -32812,6 +32891,44 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_finding_contexts_v1_findings_context_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindingContextResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -43368,6 +43485,46 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_scan_dashboard_v1_scan__job_id__dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScanJob"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

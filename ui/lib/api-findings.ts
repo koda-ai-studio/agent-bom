@@ -26,6 +26,7 @@ export const findingsApi = {
   // ── Unified findings ──
   listFindings: (filters?: {
     scanId?: string;
+    pathContext?: string;
     query?: string;
     severity?: string;
     sort?: string;
@@ -79,6 +80,7 @@ export const findingsApi = {
     if (filters?.sla) params.set("sla", filters.sla);
     if (filters?.reachability) params.set("reachability", filters.reachability);
     if (filters?.triage) params.set("triage", filters.triage);
+    if (filters?.pathContext) params.set("path_context", filters.pathContext);
     if (filters?.lane) params.set("lane", filters.lane);
     if (filters?.findingClass) params.set("finding_class", filters.findingClass);
     if (filters?.kev != null) params.set("kev", String(filters.kev));
