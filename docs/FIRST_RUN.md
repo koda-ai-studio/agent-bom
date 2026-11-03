@@ -536,6 +536,16 @@ advisory matches, or rescan the original target to refresh inventory coverage.
 
 ## Choose the next workflow
 
+A console scan in an interactive terminal ends with next steps chosen from
+what it found (a CI gate when there are findings; the MCP server, `agent-bom watch`
+and the install guard when agents are present) and, once per machine, a GitHub
+star tip. Rescanning the same target prints a one-line `Since last scan` delta:
+new and resolved vulnerabilities and new MCP servers or tools, computed with the
+same comparison as `agent-bom report diff`. Neither appears in JSON, SARIF,
+CycloneDX, SPDX, quiet mode or CI, and neither changes the exit code. Set
+`AGENT_BOM_NO_HINTS=1` to hide the tips and `AGENT_BOM_NO_SCAN_MEMORY=1` to stop
+remembering scans ([what is stored](PERMISSIONS.md#what-we-never-do)).
+
 | Task | Artifact and next step |
 |---|---|
 | Scan a repository or gate CI | Export SARIF or an SBOM, then inspect findings and re-scan the same scope. See [CLI reference](cli.md). |

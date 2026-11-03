@@ -61,6 +61,38 @@ one job that needs them. Without `security-events: write`, leave
 requests from forks), `pr-comment: auto` skips the comment with a notice;
 `pr-comment: 'true'` fails the step instead, and `'false'` never posts.
 
+## Weekly rescan
+
+New advisories are published against code that has not changed, so a pull
+request gate alone misses them. Add a `schedule:` trigger to the same
+workflow, or keep a separate one like this, to rescan the default branch
+every week and refresh code scanning:
+
+```yaml
+name: agent-bom weekly
+on:
+  schedule:
+    - cron: '17 6 * * 1'   # Mondays 06:17 UTC
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  agent-bom:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # upload-sarif
+    steps:
+      - uses: actions/checkout@v4
+      - uses: koda-ai-studio/agent-bom@v0
+        with:
+          upload-sarif: 'true'
+```
+
+Scheduled runs have no pull request, so no comment is posted; results land in
+code scanning and the job summary. A failing scheduled run means a high or
+critical finding now exists on the default branch.
+
 ## New findings only
 
 `baseline` takes a JSON report from the base branch and runs

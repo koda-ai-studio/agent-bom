@@ -254,6 +254,11 @@ def is_package_direct(finding: Finding) -> bool:
     return bool(evidence(finding, "package_is_direct", False))
 
 
+def is_dev_dependency(finding: Finding) -> bool:
+    """True when the lockfile placed the package in a development-only scope."""
+    return str(evidence(finding, "package_dependency_scope", "") or "").strip().lower() in {"dev", "development", "test"}
+
+
 def is_package_malicious(finding: Finding) -> bool:
     return bool(evidence(finding, "package_is_malicious", False))
 

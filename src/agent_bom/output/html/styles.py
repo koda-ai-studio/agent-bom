@@ -325,6 +325,9 @@ def render_styles(status_color: str) -> str:
     .empty-state{{background:#052e1615;border:1px solid #16a34a30;border-radius:10px;padding:24px;color:#4ade80;text-align:center;font-size:.9rem}}
 
     footer{{border-top:1px solid #1e293b;padding:24px 32px;text-align:center;font-size:.75rem;color:#334155;margin-left:220px}}
+    .next-steps{{text-align:left;max-width:760px;margin:0 auto 16px;color:inherit}}
+    .next-steps ul{{margin:6px 0 0;padding-left:18px;line-height:1.7}}
+    .next-steps code{{font-size:.72rem}}
     .print-btn{{background:transparent;border:1px solid #334155;color:#64748b;font-size:.75rem;padding:4px 12px;border-radius:6px;cursor:pointer;margin-left:12px;transition:all .15s}}
     .print-btn:hover{{background:#1e293b;color:#94a3b8}}
 
