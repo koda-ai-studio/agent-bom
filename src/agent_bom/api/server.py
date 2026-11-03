@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, cast
 from agent_bom import __version__
 from agent_bom import config as _config
 from agent_bom.api import host_guard as _host_guard
+from agent_bom.api import scan_queue as _scan_queue_module
 from agent_bom.api import stores as _stores
 from agent_bom.api.audit_log import warn_if_ephemeral_hmac_key
 from agent_bom.api.auth import Role, get_key_store
@@ -41,6 +42,7 @@ from agent_bom.api.middleware import (
     TrustHeadersMiddleware,
     global_ip_rate_limit_rpm,
 )
+from agent_bom.api.middleware_body import effective_result_push_max_bytes
 
 # ─── Extracted modules ────────────────────────────────────────────────────────
 from agent_bom.api.models import (  # noqa: F401 — legacy model imports
@@ -298,21 +300,7 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     # ── Distributed scan dispatch ──
     # Start a per-replica claim-loop so queued scans are stolen across the
     # cluster. No-op on single-node / non-Postgres deployments.
-    _scan_worker = None
-    try:
-        from agent_bom.api.scan_queue import (
-            DistributedScanWorker,
-            distributed_scans_enabled,
-            store_supports_dispatch,
-        )
-
-        _scan_store = _get_store()
-        if distributed_scans_enabled() and store_supports_dispatch(_scan_store):
-            _scan_worker = DistributedScanWorker(_scan_store)
-            await _scan_worker.start()
-    except Exception:  # noqa: BLE001
-        _logger.error("Distributed scan worker failed to start; continuing single-node")
-        _scan_worker = None
+    _scan_worker = await _scan_queue_module.start_dispatch_worker(_get_store())
 
     demo_seed_task: asyncio.Task[None] | None = None
     if os.environ.get("AGENT_BOM_DEMO_ESTATE", "").strip().lower() in {"1", "true", "yes", "on"}:
@@ -575,9 +563,9 @@ def configure_api(
     # resolver stays installed in no-auth mode so credential-less callers get
     # NO_AUTH_ROLE and the same route role matrix (DEMO_ESTATE clamps to viewer).
 
-    if _config.API_RESULT_PUSH_MAX_BYTES <= 0:
-        raise ValueError("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES must be positive")
-    _replace_middleware(MaxBodySizeMiddleware, path_limits={"/v1/results/push": _config.API_RESULT_PUSH_MAX_BYTES})
+    _replace_middleware(
+        MaxBodySizeMiddleware, path_limits={"/v1/results/push": effective_result_push_max_bytes(_config.API_RESULT_PUSH_MAX_BYTES)}
+    )
     _replace_middleware(APIKeyMiddleware, api_key=api_key, allow_unauthenticated=allow_unauthenticated)
     _replace_middleware(GlobalRateLimitMiddleware, rpm=global_ip_rate_limit_rpm())
     _host_guard.configure_host_policy(posture.listener_host, _cors_origins)

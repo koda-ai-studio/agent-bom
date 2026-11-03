@@ -1,7 +1,8 @@
 # Compose secrets directory
 
-Used by `deploy/docker-compose.platform.yml`, `docker-compose.fullstack.yml`,
-and `docker-compose.yml` to mount credentials as files instead of env vars.
+Used by `deploy/docker-compose.platform.yml` and
+`deploy/docker-compose.fullstack.yml` to mount credentials as files instead of
+env vars.
 Secrets must never live in `.env`, compose interpolation, or git.
 
 Populate before `docker compose up` (or run

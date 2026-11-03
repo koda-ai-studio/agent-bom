@@ -10,6 +10,7 @@ import hmac
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from agent_bom.api import api_key_verify_cache as verify_cache
 from agent_bom.core.permission_scopes import scopes_allow
 from agent_bom.rbac import Role, role_rank
 
@@ -155,19 +156,58 @@ def _derive_key(raw_key: str, salt: bytes) -> str:
     return derived.hex()
 
 
+def _seconds_until_expiry(stored: ApiKey) -> float | None:
+    expires_at = ApiKey._parse_timestamp(stored.expires_at)
+    if expires_at is None:
+        return None
+    return (expires_at - datetime.now(timezone.utc)).total_seconds()
+
+
+def _fingerprint(stored: ApiKey) -> bytes:
+    return verify_cache.record_fingerprint(stored.key_id, stored.key_salt, stored.key_hash)
+
+
+def _cached_match(digest: bytes, candidates: list[ApiKey]) -> ApiKey | None:
+    hit = verify_cache.lookup(digest)
+    if hit is None:
+        return None
+    key_id, fingerprint = hit
+    for stored in candidates:
+        if stored.key_id == key_id and hmac.compare_digest(_fingerprint(stored), fingerprint):
+            return stored
+    verify_cache.forget(digest)
+    return None
+
+
 def verify_api_key(raw_key: str, stored_keys: list[ApiKey]) -> ApiKey | None:
     """Verify a raw API key against stored keys.
 
     Uses scrypt KDF with per-key salt and constant-time comparison.
     Returns the matching ApiKey if found and not expired, else None.
+
+    A recent successful match is remembered (``api_key_verify_cache``) so the
+    scrypt step is skipped for the same presented key, but only against the
+    exact stored credential the caller just re-read; ``is_usable()`` is always
+    evaluated on that fresh record, so revocation, expiry, rotation and
+    operator retirement apply to the very next request.
     """
     key_prefix = raw_key[:12]
     candidates = [stored for stored in stored_keys if stored.key_prefix == key_prefix]
+    if not candidates:
+        return None
+    digest = verify_cache.presented_key_digest(raw_key)
+    cached = _cached_match(digest, candidates)
+    if cached is not None:
+        if cached.is_usable():
+            return cached
+        verify_cache.forget(digest)
+        return None
     for stored in candidates:
         salt = bytes.fromhex(stored.key_salt)
         candidate = _derive_key(raw_key, salt)
         if hmac.compare_digest(stored.key_hash, candidate):
             if not stored.is_usable():
                 return None
+            verify_cache.remember(digest, stored.key_id, _fingerprint(stored), not_after_seconds=_seconds_until_expiry(stored))
             return stored
     return None

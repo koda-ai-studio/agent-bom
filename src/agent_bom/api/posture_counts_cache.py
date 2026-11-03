@@ -14,6 +14,10 @@ TTL bounds only the default read window sliding past old rows. A completed
 scan or hub write schedules those blocks to be computed for the new
 fingerprint in a background worker, so the first read after a write does not
 pay the grouped findings walk.
+
+The precompute worker is deliberately not leader-gated on a clustered control
+plane: it writes only this process's memory, so every replica must warm its
+own copy, and it never writes shared durable state.
 """
 
 from __future__ import annotations

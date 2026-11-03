@@ -267,7 +267,11 @@ def test_helm_templates_exist():
     templates_dir = HELM_DIR / "templates"
     expected = {
         "_helpers.tpl",
+        "_controlplane-api-pod.tpl",
         "controlplane-api-deployment.yaml",
+        "controlplane-worker-deployment.yaml",
+        "controlplane-worker-hpa.yaml",
+        "controlplane-worker-keda-scaledobject.yaml",
         "controlplane-api-hpa.yaml",
         "controlplane-api-service.yaml",
         "controlplane-backup-cronjob.yaml",

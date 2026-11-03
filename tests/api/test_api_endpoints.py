@@ -673,7 +673,7 @@ def test_get_scan_status_omits_large_result_payload():
     )
     store.put(job)
 
-    full = client.get("/v1/scan/job-large-result")
+    full = client.get("/v1/scan/job-large-result?view=full")
     status = client.get("/v1/scan/job-large-result/status")
 
     assert full.status_code == 200
@@ -721,7 +721,7 @@ def test_get_scan_redacts_result_findings_replay_only_fields():
     )
     store.put(job)
 
-    response = client.get("/v1/scan/job-finding-redaction")
+    response = client.get("/v1/scan/job-finding-redaction?view=full")
 
     assert response.status_code == 200
     finding = response.json()["result"]["findings"][0]

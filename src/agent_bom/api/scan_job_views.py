@@ -47,18 +47,24 @@ def _inventory_packages_from_agents(agents: list[dict[str, Any]]) -> list[dict[s
     return packages
 
 
-def _job_summary_payload(job: ScanJob) -> dict[str, Any]:
-    """Build a lightweight summary payload for list surfaces."""
+def _job_summary_payload(job: ScanJob, projected: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Build a lightweight summary payload for list surfaces.
+
+    ``projected`` replaces ``job.result`` with its stored summary projection, whose
+    ``warnings`` is only a preview and ``warning_total`` the full count.
+    """
     from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
-    result = job.result if isinstance(job.result, dict) else {}
+    result: Mapping[str, Any] = projected if projected is not None else (job.result if isinstance(job.result, dict) else {})
     summary = result.get("summary") if isinstance(result.get("summary"), dict) else None
     aggregation = result.get("aggregation") if isinstance(result.get("aggregation"), dict) else None
     scan_run = result.get("scan_run") if isinstance(result.get("scan_run"), dict) else None
     warnings_value = result.get("warnings")
     warnings: list[Any] = warnings_value if isinstance(warnings_value, list) else []
     raw_warning_count = (scan_run or {}).get("warning_count")
-    warning_count = max(0, min(100, raw_warning_count)) if isinstance(raw_warning_count, int) else len(warnings)
+    warning_total = projected.get("warning_total") if projected is not None else None
+    fallback_count = warning_total if type(warning_total) is int and warning_total >= 0 else len(warnings)
+    warning_count = max(0, min(100, raw_warning_count)) if isinstance(raw_warning_count, int) else fallback_count
     generated_at = result.get("generated_at") or (scan_run or {}).get("generated_at")
     scan_timestamp = result.get("scan_timestamp") or generated_at
     auto_correlation = sanitize_sensitive_payload(result.get("auto_correlation"))

@@ -11,6 +11,27 @@ from agent_bom.cli import main
 from tests.test_project_activation import project, scan  # noqa: F401
 
 
+@pytest.mark.parametrize("report_content", [None, "{invalid json", "[]", '{"scan_run": "partial"}'])
+def test_failed_scan_without_valid_partial_report_has_no_activation(project, tmp_path, scan, monkeypatch, report_content):  # noqa: F811
+    persisted = []
+
+    def run(args, **kwargs):
+        if report_content is not None:
+            Path(args[args.index("-o") + 1]).write_text(report_content)
+        return subprocess.CompletedProcess(args, 1)
+
+    monkeypatch.setattr("agent_bom.cli._quickstart.subprocess.run", run)
+    monkeypatch.setattr("agent_bom.cli._quickstart._persist_completed_scan", lambda *args, **kwargs: persisted.append(kwargs))
+    destination = tmp_path / "invalid-partial"
+    result = CliRunner().invoke(main, ["quickstart", "--run", "--project", str(project), "--evidence-dir", str(destination)])
+    assert result.exit_code == 1
+    assert "no activation receipt was issued" in result.output
+    assert not (destination / "activation.json").exists()
+    assert not persisted
+    if report_content is not None:
+        assert (destination / "report.json").read_text() == report_content
+
+
 @pytest.mark.parametrize(
     ("outcome", "code", "activated"), [("partial", 1, True), ("failed", 1, False), ("complete", 1, False), ("partial", 2, False)]
 )

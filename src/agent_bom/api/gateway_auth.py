@@ -9,6 +9,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import anyio
 from fastapi import HTTPException, Request
 
 from agent_bom.api.auth import Role, get_key_store
@@ -49,6 +50,17 @@ def _extract_request_token(request: Request) -> str:
     if auth.startswith("Bearer "):
         return auth[len("Bearer ") :].strip()
     return request.headers.get("x-api-key", "").strip()
+
+
+async def authenticate_gateway_request_off_loop(request: Request, settings: GatewaySettings) -> tuple[str, str]:
+    """Resolve ``(tenant_id, auth_method)`` with key-store reads and scrypt kept off the event loop."""
+
+    def resolve() -> tuple[str, str]:
+        if _gateway_requires_auth(settings):
+            return _authenticate_gateway_request(request, settings)
+        return _configured_gateway_tenant_id(), "none"
+
+    return await anyio.to_thread.run_sync(resolve)
 
 
 def _gateway_requires_auth(settings: GatewaySettings) -> bool:

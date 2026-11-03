@@ -1,0 +1,132 @@
+"""Request-path helpers for ``POST /v1/results/push`` that keep the event loop free.
+
+The body is parsed and validated in a worker thread (a 100+ MB report takes
+seconds of CPU), idempotency fingerprints and claims run off-loop, and a key
+that another request is still committing answers ``202`` with ``Retry-After``
+instead of parking the caller behind that commit.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any, cast
+
+from fastapi import HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from pydantic import ValidationError
+from starlette.responses import JSONResponse
+
+from agent_bom.api.models import JobStatus, PushPayload, ScanJob
+from agent_bom.api.observability_push_receipts import _pushed_job_receipt
+from agent_bom.api.push_ingest import (
+    PUSH_RETRY_AFTER_SECONDS,
+    accepted_push_receipt,
+    failed_push_receipt,
+    push_status_url,
+    redispatch_pending_push,
+)
+from agent_bom.api.stores import _get_store
+
+#: The route reads the raw body itself so validation runs off the event loop;
+#: the published request contract is unchanged.
+PUSH_REQUEST_BODY_OPENAPI: dict[str, Any] = {
+    "requestBody": {
+        "required": True,
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PushPayload"}}},
+    }
+}
+PUSH_ACCEPTED_RESPONSES: dict[int | str, dict[str, Any]] = {
+    202: {
+        "description": (
+            "Accepted for asynchronous ingest (``Prefer: respond-async``), or an identical push is still "
+            "being committed. Poll ``status_url`` after ``Retry-After`` seconds."
+        )
+    }
+}
+_ACTIVE_STATUSES = {JobStatus.PENDING.value, JobStatus.RUNNING.value}
+
+
+async def parse_push_payload(request: Request) -> PushPayload:
+    """Validate the buffered body in a worker thread; 422s keep FastAPI's error shape."""
+
+    raw = await request.body()
+    try:
+        return await asyncio.to_thread(PushPayload.model_validate_json, raw or b"{}")
+    except ValidationError as exc:
+        errors = [{**error, "loc": ("body", *error.get("loc", ()))} for error in exc.errors(include_url=False)]
+        raise RequestValidationError(errors) from None
+
+
+def accepted_response(receipt: dict[str, Any], *, status_code: int = 202) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content=receipt,
+        headers={"Retry-After": str(PUSH_RETRY_AFTER_SECONDS), "Location": receipt["status_url"]},
+    )
+
+
+def in_flight_response(job_id: str, *, source_id: str) -> JSONResponse:
+    """An identical push holds the key: tell the caller where to look, never wait on it."""
+
+    return accepted_response(accepted_push_receipt(job_id, source_id=source_id, ingest="committing"))
+
+
+def durable_job_status(job_id: str, tenant_id: str) -> str | None:
+    """Status of a job without decoding its (possibly 100 MB) result."""
+
+    store = _get_store()
+    view = getattr(store, "get_status_view", None)
+    if callable(view):
+        row = view(job_id, tenant_id)
+        return str(row.get("status")) if isinstance(row, dict) else None
+    job = store.get(job_id, tenant_id=tenant_id)
+    return job.status.value if job is not None else None
+
+
+def _load_job(job_id: str, tenant_id: str) -> ScanJob | None:
+    return cast(ScanJob | None, _get_store().get(job_id, tenant_id=tenant_id))
+
+
+async def committed_push_response(job_id: str, *, tenant_id: str, source_id: str) -> dict | JSONResponse | None:
+    """Answer a replay of a committed key from the durable job, or ``None`` to re-admit.
+
+    ``done`` replays the original stored receipt; ``pending``/``running`` returns
+    the accepted receipt (and re-offers the job, which is idempotent); ``failed``
+    returns ``None`` so the caller re-admits the same deterministic job.
+    """
+
+    status = await asyncio.to_thread(durable_job_status, job_id, tenant_id)
+    if status is None:
+        raise HTTPException(status_code=409, detail="The pushed result for this idempotency key is no longer retained; push again.")
+    if status == JobStatus.DONE.value:
+        job = await asyncio.to_thread(_load_job, job_id, tenant_id)
+        if job is None:  # pragma: no cover - deleted between the two reads
+            raise HTTPException(status_code=409, detail="The pushed result for this idempotency key is no longer retained; push again.")
+        return _pushed_job_receipt(job)
+    if status in _ACTIVE_STATUSES:
+        job = await asyncio.to_thread(_load_job, job_id, tenant_id)
+        if job is not None:
+            await asyncio.to_thread(redispatch_pending_push, job)
+        return accepted_response(accepted_push_receipt(job_id, source_id=source_id, ingest=status))
+    return None
+
+
+async def push_status_receipt(job_id: str, *, tenant_id: str) -> dict:
+    """Receipt for ``GET /v1/results/push/{job_id}``; tenant-scoped, 404 when absent."""
+
+    status = await asyncio.to_thread(durable_job_status, job_id, tenant_id)
+    if status is None:
+        raise HTTPException(status_code=404, detail="Pushed result not found")
+    if status in _ACTIVE_STATUSES:
+        return accepted_push_receipt(job_id, source_id="", ingest=status)
+    job = await asyncio.to_thread(_load_job, job_id, tenant_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Pushed result not found")
+    result = job.result if isinstance(job.result, dict) else {}
+    if not result.get("pushed"):
+        raise HTTPException(status_code=404, detail="Pushed result not found")
+    if job.status is JobStatus.DONE:
+        receipt = _pushed_job_receipt(job)
+        receipt["status_url"] = push_status_url(job_id)
+        return receipt
+    return failed_push_receipt(job_id, source_id=job.source_id or "")

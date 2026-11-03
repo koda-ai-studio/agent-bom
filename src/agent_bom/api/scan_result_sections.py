@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.api.job_payload_codec import result_shape
 from agent_bom.api.models import ScanJob
 from agent_bom.api.scan_dashboard_view import ANALYSIS_SECTIONS
 from agent_bom.api.scan_job_views import _redact_scan_result_for_response
@@ -42,16 +43,21 @@ def _href(job_id: str, name: str, kind: str) -> str:
     return f"{base}?offset=0&limit={DEFAULT_PAGE_SIZE}" if kind == "list" else base
 
 
+def section_refs(job_id: str, shape: list[list[Any]]) -> list[dict[str, Any]]:
+    """Section references for every large top-level member described by ``shape``."""
+    refs = []
+    for key, kind, count in shape:
+        if kind == "scalar" or key in SUMMARY_OBJECT_KEYS:
+            continue
+        refs.append({"name": key, "kind": kind, "count": count if kind == "list" else None, "href": _href(job_id, key, kind)})
+    return refs
+
+
 def result_index(job: ScanJob) -> dict[str, Any]:
     """Summary values plus a reference to every large section."""
     result = job.result or {}
     summary = {key: value for key, value in result.items() if _is_summary_key(key, value)}
-    sections = []
-    for key, value in result.items():
-        if _is_summary_key(key, value):
-            continue
-        kind = "list" if isinstance(value, list) else "object"
-        sections.append({"name": key, "kind": kind, "count": len(value) if kind == "list" else None, "href": _href(job.job_id, key, kind)})
+    sections = section_refs(job.job_id, result_shape(result))
     return {
         "schema_version": SCHEMA_VERSION,
         "job_id": job.job_id,

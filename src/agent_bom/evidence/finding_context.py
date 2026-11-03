@@ -25,4 +25,6 @@ def finding_context(row: Mapping[str, Any]) -> FindingContext:
             return "unclassified"
         return classify_path_context(normalized) or "unclassified"
     context = evidence.get("path_context")
+    if context not in CONTEXTS:
+        context = row.get("path_context")
     return context if context in CONTEXTS else "unclassified"

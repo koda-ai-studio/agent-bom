@@ -26,7 +26,7 @@ RUN_SHELL = showcase_tool_id("shell-runner-server", "run_shell")
 def _demo_report(client: TestClient) -> dict:
     jobs = client.get("/v1/jobs", headers=VIEWER, params={"include_details": "true"}).json().get("jobs") or []
     assert jobs, "expected at least one demo job after bootstrap"
-    detail = client.get(f"/v1/scan/{jobs[0]['job_id']}", headers=VIEWER).json()
+    detail = client.get(f"/v1/scan/{jobs[0]['job_id']}?view=full", headers=VIEWER).json()
     return detail.get("result") or {}
 
 
@@ -39,7 +39,7 @@ def test_demo_estate_bootstrap_seeds_jobs_and_graph(shared_demo_estate_client: T
     jobs = jobs_payload.get("jobs") or []
     assert jobs, "expected at least one demo job after bootstrap"
     job_id = jobs[0]["job_id"]
-    detail = shared_demo_estate_client.get(f"/v1/scan/{job_id}", headers=VIEWER).json()
+    detail = shared_demo_estate_client.get(f"/v1/scan/{job_id}?view=full", headers=VIEWER).json()
     sources = (detail.get("result") or {}).get("scan_sources", [])
     assert any("demo" in str(src).lower() for src in sources)
 

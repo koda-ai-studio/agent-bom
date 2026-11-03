@@ -100,7 +100,8 @@ def activate_project(*, project: Path, evidence_dir: Path | None, offline: bool,
                 isinstance(payload, dict) and isinstance(payload.get("scan_run"), dict) and payload["scan_run"].get("outcome") == "partial"
             )
         except (OSError, ValueError):
-            pass
+            # Unreadable or malformed evidence cannot authorize partial activation.
+            partial = False
     if result.returncode != 0 and not partial:
         raise click.ClickException(
             f"Project scan exited with status {result.returncode}. Retained evidence is incomplete; no activation receipt was issued."

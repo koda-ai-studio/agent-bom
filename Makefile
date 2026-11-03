@@ -120,12 +120,6 @@ e2e-test:  ## Run end-to-end tests
 	chmod +x test_e2e.sh
 	./test_e2e.sh
 
-docker-compose-up:  ## Start Docker Compose services
-	docker-compose -f deploy/docker-compose.yml up -d
-
-docker-compose-down:  ## Stop Docker Compose services
-	docker-compose -f deploy/docker-compose.yml down -v
-
 secrets:  ## Generate the mounted Docker secret files (idempotent; run before platform/fullstack up)
 	python scripts/deploy/hosted_poc_preflight.py --write-secret --skip-compose
 

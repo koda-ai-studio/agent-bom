@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from functools import partial
+import json
 from typing import cast
 
 import pytest
@@ -22,20 +22,20 @@ async def test_get_scan_offloads_full_result_redaction(monkeypatch: pytest.Monke
         request=ScanRequest(),
         result={"findings": [], "summary": {"total_findings": 0}},
     )
-    offloaded: list[partial[ScanJob]] = []
+    offloaded: list[object] = []
 
     async def fake_load(_request: Request, _job_id: str) -> ScanJob:
         return job
 
-    async def fake_run_sync(fn: partial[ScanJob]) -> ScanJob:
+    async def fake_run_sync(fn, *args):  # noqa: ANN001, ANN202
         offloaded.append(fn)
-        return fn()
+        return fn(*args)
 
     monkeypatch.setattr(scan_routes, "_load_job_for_request", fake_load)
     monkeypatch.setattr(scan_routes.anyio.to_thread, "run_sync", fake_run_sync)
 
-    response = await scan_routes.get_scan(cast(Request, object()), job.job_id)
+    response = await scan_routes.get_scan(cast(Request, object()), job.job_id, view="full")
 
-    assert response.job_id == job.job_id
-    assert len(offloaded) == 1
-    assert offloaded[0].func is scan_routes._job_response_payload
+    assert json.loads(response.body)["job_id"] == job.job_id
+    # Redaction and serialization of the full document run in one worker-thread call.
+    assert offloaded == [scan_routes.full_body]

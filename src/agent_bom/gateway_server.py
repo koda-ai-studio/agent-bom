@@ -41,7 +41,6 @@ from fastapi.responses import JSONResponse, Response
 
 from agent_bom.api.gateway_auth import _api_key_allows_gateway_relay as _api_key_allows_gateway_relay
 from agent_bom.api.gateway_auth import _authenticate_gateway_request as _authenticate_gateway_request
-from agent_bom.api.gateway_auth import _configured_gateway_tenant_id as _configured_gateway_tenant_id
 from agent_bom.api.gateway_auth import _enforce_gateway_anonymous_agents_posture as _enforce_gateway_anonymous_agents_posture
 from agent_bom.api.gateway_auth import _enforce_gateway_auth_posture as _enforce_gateway_auth_posture
 from agent_bom.api.gateway_auth import _env_flag_enabled as _env_flag_enabled
@@ -53,6 +52,7 @@ from agent_bom.api.gateway_auth import _parse_gateway_token_expiry as _parse_gat
 from agent_bom.api.gateway_auth import _request_has_expected_token as _request_has_expected_token
 from agent_bom.api.gateway_auth import _role_allows_gateway_relay as _role_allows_gateway_relay
 from agent_bom.api.gateway_auth import _validate_runtime_profile_posture as _validate_runtime_profile_posture
+from agent_bom.api.gateway_auth import authenticate_gateway_request_off_loop
 from agent_bom.api.gateway_context import create_gateway_http_app
 from agent_bom.api.gateway_policy import _CONDITIONAL_ACCESS_EVAL_FAILED as _CONDITIONAL_ACCESS_EVAL_FAILED
 from agent_bom.api.gateway_policy import _DRIFT_INCIDENT_LOOKUP_CAP as _DRIFT_INCIDENT_LOOKUP_CAP
@@ -526,10 +526,8 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         """
         # gateway --bearer-token (or API-key store) must gate the firewall-check endpoint, not just /mcp/{server}. Otherwise the policy
         # evaluator is reachable unauthenticated on shared deployments and leaks every rule via the matched_rule field.
-        tenant_id = _configured_gateway_tenant_id()
-        auth_method = "none"
-        if _gateway_requires_auth(settings):
-            tenant_id, auth_method = _authenticate_gateway_request(request, settings)
+        tenant_id, auth_method = await authenticate_gateway_request_off_loop(request, settings)
+        if auth_method != "none":
             request.state.tenant_id = tenant_id
             request.state.auth_method = auth_method
         await _bind_authenticated_audit_tenant(request, tenant_id, auth_method)
@@ -630,8 +628,8 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         #
         # scraping endpoints carry decision counters and tenant tags — gate them with the same bearer/API-key check that protects
         # /mcp/{server} when incoming auth is configured.
-        if _gateway_requires_auth(settings):
-            tenant_id, auth_method = _authenticate_gateway_request(request, settings)
+        tenant_id, auth_method = await authenticate_gateway_request_off_loop(request, settings)
+        if auth_method != "none":
             request.state.tenant_id = tenant_id
             request.state.auth_method = auth_method
         from agent_bom.api.metrics import render_prometheus_lines
@@ -674,7 +672,7 @@ __all__ = ["AuditSink", "ControlPlaneAuditSink", "GatewayAuditDeliveryUnavailabl
     "UpstreamCaller", "_CONDITIONAL_ACCESS_EVAL_FAILED", "_DRIFT_INCIDENT_LOOKUP_CAP", "_DriftLookup",
     "_MAX_GATEWAY_MESSAGE_BYTES", "_agent_cost_anomaly", "_agent_identity_revoked", "_api_key_allows_gateway_relay",
     "_authenticate_gateway_request", "_build_gateway_rate_limit_store", "_conditional_access_fail_closed",
-    "_configured_gateway_tenant_id", "_default_upstream_caller", "_emit_gateway_governance_event",
+    "_default_upstream_caller", "_emit_gateway_governance_event",
     "_enforce_gateway_anonymous_agents_posture", "_enforce_gateway_auth_posture", "_env_flag_enabled",
     "_evaluate_control_plane_bundle", "_extract_request_token", "_fleet_containment_reason",
     "_gateway_allows_anonymous_agents", "_gateway_configured_replicas", "_gateway_rate_limit_runtime_status",

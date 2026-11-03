@@ -662,3 +662,7 @@ AGENT_BOM_GATEWAY_UPSTREAM_FAILURE_THRESHOLD
 AGENT_BOM_GATEWAY_UPSTREAM_CIRCUIT_COOLDOWN_SECONDS
 # Gateway composition selects local or shared delivery per invocation before constructing its sink.
 AGENT_BOM_GATEWAY_AUDIT_BACKEND
+# Push ingest: the API reads the mode per request and the replica role at startup (documented in site-docs/deployment/performance-and-sizing.md); the CLI reads its accepted-push wait budget per push.
+AGENT_BOM_PUSH_INGEST_MODE
+AGENT_BOM_API_ROLE
+AGENT_BOM_PUSH_WAIT_SECONDS

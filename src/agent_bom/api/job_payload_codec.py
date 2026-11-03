@@ -6,12 +6,18 @@ values are stored as::
 
     {"__abom_codec": {"codec": "zstd", "encoding": "base64", "v": 1, "raw_bytes": N},
      "scan_sources": [...], "findings_count": n, "vulnerabilities_count": m,
+     "summary_projection": {"fields": {...}, "shape": [[key, kind, count], ...]},
      "data": "<base64 zstd of the JSON value>"}
 
 The header keeps the job row valid JSON/JSONB, so top-level job columns and
 ``data->>'source_id'`` style predicates are untouched. SQL that reads inside a
 stored result may only use ``SQL_PROJECTED_RESULT_KEYS``. Rows written before
 compression, small values and ``None`` stay plain JSON and decode unchanged.
+
+``summary_projection`` carries the small summary objects and the top-level
+shape of a compressed result so the default job read can answer without
+decompressing or parsing the whole document. It is derived from the same value
+at write time; rows without it fall back to a full decode.
 """
 
 from __future__ import annotations
@@ -33,7 +39,23 @@ MAX_RESULT_BYTES = 256 * 1024 * 1024
 _ZSTD_LEVEL = 3
 # Keys SQL may read inside a stored result. ``findings``/``vulnerabilities``
 # exist only on plain rows; compressed rows answer through the ``*_count`` keys.
-SQL_PROJECTED_RESULT_KEYS = frozenset({"scan_sources", "findings", "vulnerabilities", "findings_count", "vulnerabilities_count"})
+RESULT_PROJECTION_KEY = "summary_projection"
+SQL_PROJECTED_RESULT_KEYS = frozenset(
+    {"scan_sources", "findings", "vulnerabilities", "findings_count", "vulnerabilities_count", RESULT_CODEC_KEY, RESULT_PROJECTION_KEY}
+)
+# Small result members the summary read returns inline; everything else is a section.
+PROJECTED_RESULT_FIELDS = (
+    "summary",
+    "aggregation",
+    "scan_run",
+    "auto_correlation",
+    "generated_at",
+    "scan_timestamp",
+    "scan_id",
+    "pushed",
+    "graph_persistence",
+)
+_WARNINGS_PREVIEW = 3
 
 
 def _zstd() -> Any:
@@ -48,13 +70,36 @@ def _list_len(value: Any) -> int:
     return len(value) if isinstance(value, list) else 0
 
 
+def result_shape(result: dict[str, Any]) -> list[list[Any]]:
+    """``[key, kind, count]`` for every top-level member; ``count`` is set for lists."""
+    shape: list[list[Any]] = []
+    for key, value in result.items():
+        if isinstance(value, list):
+            shape.append([key, "list", len(value)])
+        elif isinstance(value, dict):
+            shape.append([key, "object", None])
+        else:
+            shape.append([key, "scalar", None])
+    return shape
+
+
+def result_summary_projection(result: dict[str, Any]) -> dict[str, Any]:
+    """Bounded summary members plus the shape of ``result``; never the large sections."""
+    fields = {key: result[key] for key in PROJECTED_RESULT_FIELDS if key in result}
+    warnings = result.get("warnings")
+    if isinstance(warnings, list):
+        fields["warnings"] = warnings[:_WARNINGS_PREVIEW]
+        fields["warning_total"] = len(warnings)
+    return {"fields": fields, "shape": result_shape(result)}
+
+
 def compression_enabled() -> bool:
     """``AGENT_BOM_JOB_RESULT_CODEC=none`` keeps new rows readable by older releases (read per write)."""
     return _str("AGENT_BOM_JOB_RESULT_CODEC", "zstd").strip().lower() != "none"
 
 
-def encode_result_field(value: Any) -> Any:
-    """Return the stored form of ``result``/``result_document``."""
+def encode_result_field(value: Any, *, project: bool = False) -> Any:
+    """Return the stored form of ``result``/``result_document``; ``project`` adds the summary projection."""
     if value is None:
         return None
     raw = to_json(value)
@@ -70,6 +115,8 @@ def encode_result_field(value: Any) -> Any:
         envelope["scan_sources"] = list(sources) if isinstance(sources, list) else []
         envelope["findings_count"] = _list_len(value.get("findings"))
         envelope["vulnerabilities_count"] = _list_len(value.get("vulnerabilities"))
+        if project:
+            envelope[RESULT_PROJECTION_KEY] = json.loads(to_json(result_summary_projection(value)))
     envelope["data"] = base64.b64encode(zstd.ZstdCompressor(level=_ZSTD_LEVEL).compress(raw)).decode("ascii")
     return envelope
 
@@ -97,7 +144,7 @@ def decode_result_field(value: Any) -> Any:
 def encode_job_payload(job: BaseModel) -> str:
     """Serialize a ``ScanJob`` for storage with its result fields compressed."""
     payload = json.loads(job.model_dump_json(exclude={"result", "result_document"}))
-    payload["result"] = encode_result_field(getattr(job, "result", None))
+    payload["result"] = encode_result_field(getattr(job, "result", None), project=True)
     payload["result_document"] = encode_result_field(getattr(job, "result_document", None))
     return json.dumps(payload, separators=(",", ":"))
 

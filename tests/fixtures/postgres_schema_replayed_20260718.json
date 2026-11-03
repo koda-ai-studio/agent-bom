@@ -1,0 +1,621 @@
+{
+ "description": "Tables and columns that init.sql and runtime-schema.sql defined when revision 20260718_01 last replayed them onto existing databases. Later edits to those files reach only fresh installs, so anything newer needs its own Alembic revision. Never edit by hand.",
+ "source_commit": "1d2ac264bbd1eedb2a1934bd8f50726eb671547e",
+ "tables": {
+  "access_review_campaigns": [
+   "campaign_id",
+   "created_at",
+   "data",
+   "due_at",
+   "status",
+   "tenant_id"
+  ],
+  "access_review_items": [
+   "campaign_id",
+   "data",
+   "decision",
+   "item_id",
+   "subject_id",
+   "tenant_id"
+  ],
+  "agent_bom_hub_backfills": [
+   "completed_at",
+   "name"
+  ],
+  "agent_conditional_access_policies": [
+   "created_at",
+   "data",
+   "policy_id",
+   "priority",
+   "status",
+   "tenant_id"
+  ],
+  "agent_identities": [
+   "data",
+   "identity_id",
+   "issued_at",
+   "status",
+   "tenant_id",
+   "token_hash"
+  ],
+  "agent_identity_jit_grants": [
+   "data",
+   "expires_at",
+   "grant_id",
+   "identity_id",
+   "requested_at",
+   "status",
+   "tenant_id",
+   "tool_name"
+  ],
+  "agents": [
+   "agent_id",
+   "agent_type",
+   "config_path",
+   "created_at",
+   "critical_count",
+   "mcp_server_count",
+   "metadata",
+   "name",
+   "package_count",
+   "parent_agent",
+   "scan_run_id",
+   "source",
+   "team_id",
+   "vuln_count"
+  ],
+  "ai_system_blueprint_versions": [
+   "blueprint_id",
+   "created_at",
+   "data",
+   "status",
+   "tenant_id",
+   "version",
+   "version_id"
+  ],
+  "ai_system_blueprints": [
+   "blueprint_id",
+   "data",
+   "name",
+   "tenant_id",
+   "updated_at"
+  ],
+  "api_keys": [
+   "created_at",
+   "created_by",
+   "expires_at",
+   "key_hash",
+   "key_id",
+   "key_prefix",
+   "key_salt",
+   "last_used",
+   "name",
+   "owner",
+   "replacement_key_id",
+   "revoked",
+   "revoked_at",
+   "role",
+   "rotation_overlap_until",
+   "scim_subject_id",
+   "scopes",
+   "team_id"
+  ],
+  "api_rate_limit_hits": [
+   "bucket_key",
+   "hit_at"
+  ],
+  "api_rate_limits": [
+   "bucket_key",
+   "hits",
+   "updated_at",
+   "window_started"
+  ],
+  "attack_paths": [
+   "composite_risk",
+   "computed_at",
+   "credential_exposure",
+   "hop_count",
+   "path_edges",
+   "path_nodes",
+   "scan_id",
+   "source_node",
+   "target_node",
+   "tenant_id",
+   "vuln_ids"
+  ],
+  "audit_chain_checkpoint": [
+   "entry_count",
+   "head_signature",
+   "tenant_id",
+   "updated_at"
+  ],
+  "audit_log": [
+   "action",
+   "actor",
+   "details",
+   "entry_id",
+   "hmac_signature",
+   "prev_signature",
+   "resource",
+   "team_id",
+   "timestamp"
+  ],
+  "auth_session_attempts": [
+   "attempted_at",
+   "key"
+  ],
+  "cis_benchmark_checks": [
+   "check_id",
+   "cis_section",
+   "cloud",
+   "effort",
+   "evidence",
+   "fix_cli",
+   "fix_console",
+   "guardrails",
+   "id",
+   "measured_at",
+   "priority",
+   "remediation",
+   "requires_human_review",
+   "resource_ids",
+   "scan_id",
+   "severity",
+   "status",
+   "team_id",
+   "title"
+  ],
+  "cloud_connections": [
+   "auth_params",
+   "created_at",
+   "display_name",
+   "external_id_encrypted",
+   "id",
+   "last_event_at",
+   "last_scan_at",
+   "last_scan_id",
+   "provider",
+   "regions",
+   "role_ref",
+   "scan_interval_minutes",
+   "status",
+   "status_detail",
+   "tenant_id",
+   "updated_at"
+  ],
+  "compliance_hub_findings": [
+   "applicable_frameworks_csv",
+   "cvss_score",
+   "effective_reach_score",
+   "finding_id",
+   "ingested_at",
+   "ordinal",
+   "origin",
+   "payload",
+   "severity",
+   "severity_rank",
+   "source",
+   "tenant_id"
+  ],
+  "control_plane_schema_versions": [
+   "component",
+   "updated_at",
+   "version"
+  ],
+  "control_plane_sources": [
+   "data",
+   "enabled",
+   "source_id",
+   "tenant_id",
+   "updated_at"
+  ],
+  "credential_refs": [
+   "credential_ref_id",
+   "data",
+   "enabled",
+   "tenant_id",
+   "updated_at"
+  ],
+  "exceptions": [
+   "approved_at",
+   "approved_by",
+   "created_at",
+   "exception_id",
+   "expires_at",
+   "package_name",
+   "reason",
+   "requested_by",
+   "revoked_at",
+   "server_name",
+   "status",
+   "team_id",
+   "vuln_id"
+  ],
+  "findings": [
+   "affected_agent_count",
+   "affected_server_count",
+   "blast_radius_risk",
+   "compliance_tags",
+   "created_at",
+   "cve_id",
+   "cvss_score",
+   "cwe_ids",
+   "epss_percentile",
+   "epss_score",
+   "exploitability",
+   "exposed_credentials",
+   "finding_id",
+   "fixed_version",
+   "is_kev",
+   "kev_date_added",
+   "kev_due_date",
+   "package_ecosystem",
+   "package_name",
+   "package_purl",
+   "package_version",
+   "scan_run_id",
+   "severity",
+   "summary",
+   "team_id",
+   "vex_status"
+  ],
+  "fleet_agents": [
+   "agent_id",
+   "canonical_id",
+   "data",
+   "lifecycle_state",
+   "name",
+   "tenant_id",
+   "trust_score",
+   "updated_at"
+  ],
+  "gateway_policies": [
+   "data",
+   "policy_id",
+   "team_id"
+  ],
+  "governance_audit_log": [
+   "action",
+   "action_id",
+   "data",
+   "observed_at",
+   "record_hash",
+   "seq",
+   "tenant_id"
+  ],
+  "graph_edges": [
+   "activity_id",
+   "confidence",
+   "direction",
+   "evidence",
+   "first_seen",
+   "last_seen",
+   "provenance",
+   "relationship",
+   "scan_id",
+   "source_id",
+   "source_run_id",
+   "source_scan_id",
+   "target_id",
+   "tenant_id",
+   "traversable",
+   "valid_from",
+   "valid_to",
+   "weight"
+  ],
+  "graph_filter_presets": [
+   "created_at",
+   "description",
+   "filters",
+   "name",
+   "tenant_id"
+  ],
+  "graph_node_search": [
+   "compliance_tags",
+   "data_sources",
+   "entity_type",
+   "node_id",
+   "scan_id",
+   "search_text",
+   "severity",
+   "tenant_id"
+  ],
+  "graph_nodes": [
+   "attributes",
+   "category_uid",
+   "class_uid",
+   "compliance_tags",
+   "data_sources",
+   "dimensions",
+   "entity_type",
+   "first_seen",
+   "id",
+   "label",
+   "last_seen",
+   "risk_score",
+   "scan_id",
+   "severity",
+   "severity_id",
+   "status",
+   "tenant_id",
+   "type_uid"
+  ],
+  "graph_snapshots": [
+   "analysis_status",
+   "created_at",
+   "edge_count",
+   "node_count",
+   "risk_summary",
+   "scan_id",
+   "tenant_id"
+  ],
+  "hub_cve_intel": [
+   "cve_id",
+   "payload",
+   "tenant_id",
+   "updated_at"
+  ],
+  "hub_findings_current": [
+   "canonical_id",
+   "cvss_score",
+   "effective_reach_score",
+   "first_seen",
+   "last_seen",
+   "ledger_finding_id",
+   "ledger_ordinal",
+   "origin",
+   "payload",
+   "reopened_at",
+   "resolved_at",
+   "scan_count",
+   "scan_id",
+   "severity",
+   "severity_rank",
+   "status",
+   "tenant_id",
+   "updated_at"
+  ],
+  "hub_findings_current_observations": [
+   "canonical_id",
+   "observed_at",
+   "scan_id",
+   "tenant_id"
+  ],
+  "hub_framework_refs": [
+   "framework_ref",
+   "payload",
+   "tenant_id",
+   "updated_at"
+  ],
+  "idempotency_keys": [
+   "created_at",
+   "endpoint",
+   "idempotency_key",
+   "request_hash",
+   "response_json",
+   "source_id",
+   "tenant_id"
+  ],
+  "interaction_risks": [
+   "agents",
+   "description",
+   "owasp_agentic_tag",
+   "pattern",
+   "risk_score",
+   "scan_id",
+   "tenant_id"
+  ],
+  "job_queue": [
+   "completed_at",
+   "created_at",
+   "error",
+   "job_id",
+   "job_type",
+   "max_retries",
+   "payload",
+   "result",
+   "retries",
+   "scheduled_for",
+   "started_at",
+   "status",
+   "team_id"
+  ],
+  "llm_cost_budgets": [
+   "agent",
+   "cost_center",
+   "limit_usd",
+   "mode",
+   "owner",
+   "tenant_id",
+   "updated_at",
+   "workflow"
+  ],
+  "llm_costs": [
+   "agent",
+   "allocation_tags",
+   "call_id",
+   "cost_center",
+   "cost_usd",
+   "input_tokens",
+   "model",
+   "observed_at",
+   "output_tokens",
+   "priced",
+   "provider",
+   "session_id",
+   "tenant_id"
+  ],
+  "mcp_client_configs": [
+   "config_id",
+   "created_at",
+   "data",
+   "name",
+   "profile_id",
+   "revoked",
+   "tenant_id"
+  ],
+  "model_provider_keys": [
+   "created_at",
+   "data",
+   "provider",
+   "provider_key_id",
+   "status",
+   "tenant_id"
+  ],
+  "model_virtual_keys": [
+   "data",
+   "issued_at",
+   "provider_key_id",
+   "status",
+   "tenant_id",
+   "token_hash",
+   "virtual_key_id"
+  ],
+  "osv_cache": [
+   "cache_key",
+   "cached_at",
+   "vulns_json"
+  ],
+  "policy_audit_log": [
+   "data",
+   "entry_id",
+   "id",
+   "team_id",
+   "ts"
+  ],
+  "policy_results": [
+   "conditions_triggered",
+   "created_at",
+   "policy_id",
+   "policy_name",
+   "remediation_guidance",
+   "result_id",
+   "scan_run_id",
+   "severity_on_fail",
+   "status",
+   "team_id"
+  ],
+  "proxy_replay_log": [
+   "captured_at",
+   "not_after",
+   "record",
+   "row_id",
+   "tenant_id"
+  ],
+  "revoked_session_nonces": [
+   "expires_at",
+   "nonce"
+  ],
+  "risk_campaign_workflows": [
+   "active",
+   "campaign_id",
+   "generation",
+   "member_ids",
+   "membership_fingerprint",
+   "owner",
+   "sla_due_at",
+   "state",
+   "tenant_id",
+   "title",
+   "updated_at",
+   "verification_status",
+   "version"
+  ],
+  "runtime_observations": [
+   "data",
+   "observation_id",
+   "observed_at",
+   "session_id",
+   "tenant_id"
+  ],
+  "runtime_sessions": [
+   "data",
+   "last_seen",
+   "session_id",
+   "tenant_id"
+  ],
+  "scan_dispatch_queue": [
+   "claimed_by",
+   "created_at",
+   "job_id",
+   "lease_expires_at",
+   "status",
+   "tenant_id"
+  ],
+  "scan_jobs": [
+   "batch_id",
+   "child_job_ids",
+   "completed_at",
+   "created_at",
+   "data",
+   "job_id",
+   "parent_job_id",
+   "schedule_id",
+   "status",
+   "target",
+   "target_count",
+   "target_index",
+   "team_id",
+   "triggered_by"
+  ],
+  "scan_schedules": [
+   "data",
+   "enabled",
+   "next_run",
+   "schedule_id",
+   "tenant_id"
+  ],
+  "scim_groups": [
+   "data",
+   "display_name",
+   "external_id",
+   "group_id",
+   "tenant_id",
+   "updated_at"
+  ],
+  "scim_users": [
+   "active",
+   "data",
+   "external_id",
+   "tenant_id",
+   "updated_at",
+   "user_id",
+   "user_name"
+  ],
+  "teams": [
+   "created_at",
+   "metadata",
+   "name",
+   "slug",
+   "team_id",
+   "updated_at"
+  ],
+  "tenant_graph_retention_overrides": [
+   "retention_days",
+   "tenant_id",
+   "updated_at"
+  ],
+  "tenant_quota_overrides": [
+   "data",
+   "tenant_id",
+   "updated_at"
+  ],
+  "tenant_score_config_overrides": [
+   "data",
+   "tenant_id",
+   "updated_at"
+  ],
+  "trend_history": [
+   "critical",
+   "high",
+   "id",
+   "low",
+   "medium",
+   "posture_grade",
+   "posture_score",
+   "team_id",
+   "timestamp",
+   "total_vulns"
+  ]
+ }
+}

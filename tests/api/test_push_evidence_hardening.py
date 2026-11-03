@@ -281,7 +281,7 @@ def test_pushed_coverage_contract_survives_api_read_and_restart(durable_push):
     pushed = client.post("/v1/results/push", json=original)
     assert pushed.status_code == 201, pushed.text
     job_id = pushed.json()["job_id"]
-    fetched = client.get(f"/v1/scan/{job_id}")
+    fetched = client.get(f"/v1/scan/{job_id}?view=full")
     assert fetched.status_code == 200, fetched.text
     report = fetched.json()["result"]
     assert report["coverage_warnings"] == original["coverage_warnings"]

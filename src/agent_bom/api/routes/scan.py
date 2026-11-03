@@ -5,8 +5,6 @@ from __future__ import annotations
 import asyncio
 import copy
 import json
-import time
-from collections.abc import AsyncIterator
 from functools import partial
 from importlib import import_module
 from typing import Annotated, Any, Literal, cast
@@ -94,13 +92,14 @@ from agent_bom.api.scan_graph_view import _context_graph_payload as _context_gra
 from agent_bom.api.scan_graph_view import _effective_reach_lookup as _effective_reach_lookup
 from agent_bom.api.scan_graph_view import _graph_export_response as _graph_export_response
 from agent_bom.api.scan_graph_view import _scan_graph_compute_call as _scan_graph_compute_call
+from agent_bom.api.scan_job_detail import SCAN_JOB_DETAIL_RESPONSES, ScanJobView, full_body, summary_body_for_request
 from agent_bom.api.scan_job_dispatch import _repair_scan_batch
 from agent_bom.api.scan_job_submission import enqueue_scan_job
 from agent_bom.api.scan_job_views import _inventory_packages_from_agents, _job_response_payload, _job_summary_payload
+from agent_bom.api.scan_progress_stream import scan_progress_events
 from agent_bom.api.scan_request_context import (
     _bulk_ingest_store_writes,
     _hub_store_call,
-    _job_response_payload_off_loop,
     _load_job_for_request,
     _logger,
     _request_header,
@@ -110,7 +109,7 @@ from agent_bom.api.scan_request_context import (
     _triggered_by,
     _visible_to_tenant,
 )
-from agent_bom.api.stores import _get_idempotency_store, _get_store, _job_lock, _jobs_get, _jobs_pop
+from agent_bom.api.stores import _get_idempotency_store, _get_store, _jobs_get, _jobs_pop
 from agent_bom.api.tenancy import require_body_tenant_match, require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.finding_scope import FindingClass
@@ -381,16 +380,36 @@ def list_scan_drivers(include_planned: bool = True) -> dict:
     }
 
 
-@router.get("/scan/{job_id}", response_model=ScanJob, tags=["scan"])
-async def get_scan(request: Request, job_id: str) -> ScanJob:
-    """Fetch scan status and full results.
+@router.get(
+    "/scan/{job_id}",
+    tags=["scan"],
+    response_model=None,
+    responses=SCAN_JOB_DETAIL_RESPONSES,
+    dependencies=[Depends(reject_unknown_query_params)],
+)
+async def get_scan(
+    request: Request,
+    job_id: str,
+    view: Annotated[
+        ScanJobView,
+        Query(description="`summary` (default) omits the result document; `full` returns the complete ScanJob including `result`."),
+    ] = "summary",
+) -> Response:
+    """Fetch scan status, progress and a bounded result summary.
 
-    ``result`` is always the canonical AI-BOM JSON. When the request asked for a
-    non-json ``format``, ``result_document`` carries that rendering and
-    ``result_format`` names it. For bounded reads use ``GET /v1/scan/{job_id}/result``
-    and ``.../result/{section}``.
+    The default ``view=summary`` returns lifecycle fields, sanitized progress,
+    the result summary objects, the graph persistence receipt and links to the
+    paged ``/v1/scan/{job_id}/result/{section}`` reads; it never loads the full
+    result document. ``view=full`` returns the complete ``ScanJob``: ``result``
+    is the canonical AI-BOM JSON and, for a non-json ``format``,
+    ``result_document`` carries that rendering named by ``result_format``.
     """
-    return await _job_response_payload_off_loop(await _load_job_for_request(request, job_id))
+    if view == "full":
+        job = await _load_job_for_request(request, job_id)
+        body = await anyio.to_thread.run_sync(full_body, job)
+    else:
+        body = await anyio.to_thread.run_sync(partial(summary_body_for_request, request, job_id))
+    return Response(content=body, media_type="application/json")
 
 
 @router.get("/scan/{job_id}/status", **documented(ScanStatusResponse), tags=["scan"])
@@ -438,6 +457,10 @@ async def stream_scan(request: Request, job_id: str) -> Response:
     Connect with EventSource:
         const es = new EventSource('/v1/scan/{job_id}/stream');
         es.onmessage = e => console.log(JSON.parse(e.data));
+
+    Works on any replica: a job running elsewhere is followed through the
+    durable job store, and the stream always ends with a ``done`` event once
+    the job reaches a terminal status.
     """
     try:
         from agent_bom.api.sse_authorization import AuthorizedEventSourceResponse as EventSourceResponse
@@ -448,43 +471,7 @@ async def stream_scan(request: Request, job_id: str) -> Response:
         ) from exc
 
     await _load_job_for_request(request, job_id)
-    tenant_id = _tenant_id(request)
-
-    import json as _json
-
-    async def event_generator() -> AsyncIterator[dict[str, Any]]:
-        sent = 0
-        lock = _job_lock(job_id)
-        start = time.monotonic()
-        while time.monotonic() - start < 2100:  # 35 min max (exceeds stuck-job timeout)
-            current = _jobs_get(job_id, tenant_id=tenant_id)
-            if current is None:
-                break
-            if not _visible_to_tenant(current, tenant_id):
-                break
-            # Thread-safe snapshot of new progress lines and status
-            with lock:
-                new_lines = list(current.progress[sent:])
-                status = current.status
-            from agent_bom.security import sanitize_sensitive_payload
-
-            for line in new_lines:
-                try:
-                    parsed = _json.loads(line)
-                    if isinstance(parsed, dict) and parsed.get("type") == "step":
-                        parsed = sanitize_sensitive_payload(parsed)
-                        yield {"data": _json.dumps(parsed)}
-                    else:
-                        yield {"data": _json.dumps({"type": "progress", "message": sanitize_sensitive_payload(line)})}
-                except (_json.JSONDecodeError, ValueError):
-                    yield {"data": _json.dumps({"type": "progress", "message": sanitize_sensitive_payload(line)})}
-                sent += 1
-            if status in (JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED):
-                yield {"data": _json.dumps({"type": "done", "status": status, "job_id": job_id})}
-                break
-            await asyncio.sleep(0.25)
-
-    return cast(Response, EventSourceResponse(event_generator()))
+    return cast(Response, EventSourceResponse(scan_progress_events(job_id, _tenant_id(request))))
 
 
 @router.get("/jobs", **documented(JobsResponse), tags=["scan"])

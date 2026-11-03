@@ -182,6 +182,10 @@ blank `collectorImage.tag` falls back to `image.tag`.
 | `collectorImage.repository` | `agentbom/agent-bom-collector` | Cloud-SDK collector image the scan CronJob runs |
 | `collectorImage.tag` | release version | Collector tag — override to bump the SDK layer independently of the control plane; blank falls back to `image.tag` |
 | `controlPlane.enabled` | `false` | Package API + dashboard Deployments |
+| `controlPlane.worker.enabled` | `false` | Separate scan/ingest worker Deployment (`AGENT_BOM_API_ROLE=worker`, no Service); API pods switch to `AGENT_BOM_API_ROLE=api`. Requires `controlPlane.postgresSecrets.enabled` |
+| `controlPlane.worker.replicas` / `.resources` / `.nodeSelector` / `.tolerations` / `.affinity` / `.extraEnv` | `2` / API envelope / chart-wide / chart-wide / chart-wide / `[]` | Worker-only overrides; image, env, Secrets, service account and probes come from `controlPlane.api` |
+| `controlPlane.worker.autoscaling.keda.enabled` | `false` | KEDA `postgresql` trigger on claimable `scan_dispatch_queue` depth; needs `keda.authenticationRef.name` (maintenance role, `app.bypass_rls=1`) |
+| `controlPlane.networkPolicy.workerAdditionalIngress` | `[]` | Worker pods admit no peer ingress by default |
 | `controlPlane.postgres.provider` | `auto` | Diagnostic provider hint; does not change the PostgreSQL contract or certification state |
 | `controlPlane.postgres.verification.enabled` | `true` | Run a post-install/post-upgrade portability probe for canonical Postgres deployments |
 | `controlPlane.ingress.enabled` | `false` | Same-origin ingress for UI + API |

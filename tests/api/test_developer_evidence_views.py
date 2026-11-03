@@ -34,6 +34,19 @@ def test_context_is_safe_metadata_not_a_severity_override(path, context):
     assert "file_path" not in json.dumps(safe)
 
 
+@pytest.mark.parametrize("context,path", [("test", "tests/fixtures/a.tf"), ("example", "examples/a.tf"), ("documentation", "docs/a.tf")])
+def test_context_survives_storage_and_repeated_redaction(context, path):
+    from agent_bom.api.storage.hub_filters import _redact_finding
+
+    raw = {"id": "finding", "source": "IAC_SCAN", "evidence": {"repository_relative_path": path, "iac": True, "rule_id": "TEST"}}
+    stored = _redact_finding(raw)
+    assert stored["path_context"] == context
+    assert stored["evidence"]["rule_id"] == "TEST"
+    assert _redact_finding(stored) == stored
+    assert safe_finding_response_payload(stored)["path_context"] == context
+    assert path not in json.dumps(stored)
+
+
 def _analysis_job():
     job = _put()
     job.result["ai_inventory"] = {

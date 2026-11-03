@@ -112,7 +112,7 @@ async function routeRemediation(page: Page) {
     remediation_plan: REMEDIATION_PLAN,
     total: REMEDIATION_PLAN.length,
   } }));
-  await page.route("**/v1/scan/job-remediation", (route) => route.fulfill({ json: {
+  await page.route("**/v1/scan/job-remediation?view=full", (route) => route.fulfill({ json: {
     job_id: "job-remediation",
     status: "done",
     created_at: CREATED_AT,
