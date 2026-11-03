@@ -434,7 +434,8 @@ def mcp_server_fingerprint(server: Any) -> str:
     tool_ids = sorted(t.stable_id for t in server.tools)
     resource_ids = sorted(r.stable_id for r in server.resources)
     prompt_ids = sorted(p.stable_id for p in server.prompts)
-    env_keys = sorted(server.credential_names)
+    env_names = getattr(server, "env_credential_names", None)
+    env_keys = sorted(server.credential_names if env_names is None else env_names)
     raw = json.dumps(
         {
             "registry_id": server.registry_id,

@@ -34,8 +34,8 @@ def _safe_path(value: object) -> str | None:
     return sanitize_text(str(value), max_len=300) if value else None
 
 
-def _credential_refs(names: Iterable[str]) -> list[dict[str, str]]:
-    return [{"name": sanitize_text(name, max_len=120), "kind": "env"} for name in sorted({name for name in names if name})]
+def _credential_refs(names: Iterable[str], kind: str = "env") -> list[dict[str, str]]:
+    return [{"name": sanitize_text(name, max_len=120), "kind": kind} for name in sorted({name for name in names if name})]
 
 
 def _credential_ref_rows(server: dict[str, object]) -> list[dict[str, object]]:
@@ -85,7 +85,7 @@ def _server(server: MCPServer, agent: Agent) -> dict[str, object]:
         "config_path": _safe_path(server.config_path),
         "working_dir": _safe_path(server.working_dir),
         "auth_mode": server.auth_mode,
-        "credential_refs": _credential_refs(server.credential_names),
+        "credential_refs": _credential_refs(server.env_credential_names) + _credential_refs(server.embedded_credential_names, "embedded"),
         "tools": [_tool(tool) for tool in server.tools],
         "tool_count": len(server.tools),
         "resource_count": len(server.resources),

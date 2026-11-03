@@ -39,12 +39,14 @@ def test_local_agent_manifest_redacts_credential_values() -> None:
     assert payload["summary"]["agents"] == 1
     assert payload["summary"]["mcp_servers"] == 1
     assert payload["summary"]["tools"] == 1
-    assert payload["graph"]["stats"]["nodes"] == 4
-    assert payload["graph"]["stats"]["edges"] == 3
+    # API_KEY (env) and the --token flag value (embedded) are two credential slots.
+    assert payload["graph"]["stats"]["nodes"] == 5
+    assert payload["graph"]["stats"]["edges"] == 4
     assert payload["visibility"]["unowned_agents"] == 1
     assert payload["blueprint_drift"]["status"] == "aligned"
-    assert payload["mcp_servers"][0]["credential_refs"] == [{"name": "API_KEY", "kind": "env"}]
+    assert payload["mcp_servers"][0]["credential_refs"] == [{"name": "API_KEY", "kind": "env"}, {"name": "--token", "kind": "embedded"}]
     assert "sk-secret-value" not in rendered
+    assert "sk-hidden" not in rendered
     assert "SAFE_FLAG" not in rendered
 
 
