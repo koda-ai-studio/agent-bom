@@ -13,10 +13,12 @@ from agent_bom.canonical_ids import (
     canonical_mcp_tool_id,
     mcp_server_fingerprint,
 )
+from agent_bom.constants import is_credential_key
 from agent_bom.core.packages import normalize_package_name as normalize_package_name
 from agent_bom.core.severity import Severity as Severity
 from agent_bom.domain.inventory_types import ServerSurface, TransportType
 from agent_bom.domain.mcp_auth_headers import auth_header_names
+from agent_bom.domain.mcp_embedded_credentials import embedded_credential_names
 from agent_bom.domain.package_model import Package
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
@@ -325,8 +327,7 @@ class MCPServer:
         """Best-effort auth posture classification for the server."""
         if self.declared_auth_headers or self.connection_metadata.get("oauth_configured"):
             return "configured-http-auth"
-        credential_names = self.credential_names
-        if credential_names:
+        if self.env_credential_names:
             return "env-credentials"
         if self.url and "@" in self.url:
             return "url-embedded-credentials"
@@ -349,17 +350,23 @@ class MCPServer:
 
     @property
     def has_credentials(self) -> bool:
-        """Check if env vars suggest credentials are present."""
-        from agent_bom.constants import is_credential_key
+        """Whether env vars, args, the URL or auth headers carry a credential."""
+        return bool(self.credential_names)
 
-        return any(is_credential_key(key) for key in self.env)
+    @property
+    def env_credential_names(self) -> list[str]:
+        """Names of env vars that look like credentials."""
+        return [key for key in self.env if is_credential_key(key)]
+
+    @property
+    def embedded_credential_names(self) -> list[str]:
+        """Labels for credentials embedded in args, the URL or auth headers (names only)."""
+        return embedded_credential_names(self.args, self.url, self.connection_metadata.get("header_names"))
 
     @property
     def credential_names(self) -> list[str]:
-        """Return names of env vars that look like credentials."""
-        from agent_bom.constants import is_credential_key
-
-        return [key for key in self.env if is_credential_key(key)]
+        """Every credential the server carries: env-var names, then embedded labels."""
+        return list(dict.fromkeys([*self.env_credential_names, *self.embedded_credential_names]))
 
     @property
     def is_mcp_surface(self) -> bool:

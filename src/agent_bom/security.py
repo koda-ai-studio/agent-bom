@@ -616,6 +616,7 @@ _CREDENTIAL_IDENTIFIER_KEYS = frozenset(
         "credential_env_vars",
         "credential_env_var",
         "credential_names",
+        "embedded_credential_names",
         "credential_refs",
         "credentials_exposed",
         "exposed_credentials",
