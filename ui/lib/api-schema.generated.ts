@@ -17191,6 +17191,10 @@ export interface components {
          *     nodes and links, the issue counts are the headline's unit. ``new_sources`` are first
          *     observations and are never counted as additions. ``totals`` cover the
          *     returned page of scopes; ``completeness`` says whether more scopes exist.
+         *     Per-source ``comparison`` gates comparable summaries on complete matching
+         *     collection coverage. ``kev_change`` requires matching recorded trend bases;
+         *     absent evidence is null. ``paths_changed`` includes path-only changes even
+         *     when node and edge sets are unchanged. Decreases are not proof of remediation.
          */
         GraphEstateChangesResponse: {
             completeness: components["schemas"]["GraphCompleteness"];
@@ -17973,6 +17977,10 @@ export interface components {
             collapsed?: {
                 [key: string]: unknown;
             }[] | null;
+            /** Collection Coverage */
+            collection_coverage?: {
+                [key: string]: unknown;
+            } | null;
             completeness: components["schemas"]["GraphCompleteness"];
             /** Created At */
             created_at: string;
@@ -35081,7 +35089,7 @@ export interface operations {
                     "application/json": components["schemas"]["GraphPageResponse"];
                 };
             };
-            /** @description Retryable: the demo estate is still being seeded (error.details.code ``current_estate_seeding``), or unpinned current-estate reads kept landing on retired generations (``current_estate_generation_rotating``). Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that changed is a 409 instead. */
+            /** @description Retryable: the demo estate is still being seeded (error.details.code ``current_estate_seeding``), or the current graph is being prepared (``current_estate_building``), or unpinned reads kept landing on retired generations (``current_estate_generation_rotating``). Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that changed is a 409 instead. */
             503: {
                 headers: {
                     /** @description Seconds to wait before retrying */

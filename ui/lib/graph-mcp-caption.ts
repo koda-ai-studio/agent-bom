@@ -1,3 +1,4 @@
+import { assetKindLabel } from "@/lib/asset-icon-registry";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 
 /** Presentation only: full canonical labels remain in the tooltip and inspector. */
@@ -17,5 +18,5 @@ export function mcpNodeCaption(data: LineageNodeData, title: string) {
       ? `${title.slice(0, 53).replace(/\s+\S*$/, "")}…` : title;
     return { title: preview, meta: [data.severity, "Finding"].filter(Boolean).join(" · ") };
   }
-  return { title, meta: data.nodeType === "agent" ? "Client" : data.nodeType === "credential" ? "Credential reference" : "Tool" };
+  return { title, meta: data.nodeType === "agent" ? "Client" : data.nodeType === "credential" ? "Credential reference" : assetKindLabel({ nodeType: data.nodeType, entityType: data.entityType, attributes: data.attributes }) };
 }

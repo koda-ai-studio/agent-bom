@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
+import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
 import { mcpEvidenceFlow } from "@/lib/graph-mcp-flow";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
@@ -99,6 +100,8 @@ function sourceRanks(nodes: Node[], edges: Edge[]): Map<string, number> | null {
 
 /** Rank by recorded relationships; finding arrows retain their original direction. */
 export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], options: LayoutOptions = {}) {
+  const mixed = mixedEvidenceFlow(nodes, edges);
+  if (mixed) return mixed;
   const mcp = mcpEvidenceFlow(nodes, edges);
   if (mcp) return mcp;
   const cloud = cloudHierarchyLayout(nodes, edges);

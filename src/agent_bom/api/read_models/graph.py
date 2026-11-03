@@ -195,6 +195,10 @@ class GraphEstateChangesResponse(ReadResponse):
     nodes and links, the issue counts are the headline's unit. ``new_sources`` are first
     observations and are never counted as additions. ``totals`` cover the
     returned page of scopes; ``completeness`` says whether more scopes exist.
+    Per-source ``comparison`` gates comparable summaries on complete matching
+    collection coverage. ``kev_change`` requires matching recorded trend bases;
+    absent evidence is null. ``paths_changed`` includes path-only changes even
+    when node and edge sets are unchanged. Decreases are not proof of remediation.
     """
 
     schema_version: str

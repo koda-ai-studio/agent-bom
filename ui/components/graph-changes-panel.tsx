@@ -142,6 +142,7 @@ export function GraphChangesPanel({
                   {source.baseline === "snapshot_continuity" && (
                     <p className="text-xs text-ink-tertiary [overflow-wrap:anywhere]">Compared with earlier snapshot {source.old.scan_id}</p>
                   )}
+                  {source.comparison?.status === "unavailable" && <p className="text-xs text-amber-700 dark:text-amber-300">Comparable summary unavailable: {source.comparison.reason?.replaceAll("_", " ")}. Snapshot differences below may reflect collection gaps; a disappearance is not verified remediation.</p>}
                   <GraphChangeIssueBasis change={source.issue_change} />
                   <GraphChangeAttribution attribution={source.changes_by_source} />
                   <GraphChangeExposures highlights={source.highlights ?? {}} scanId={source.new.scan_id} previousScanId={source.old.scan_id}

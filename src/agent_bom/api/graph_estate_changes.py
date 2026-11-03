@@ -26,6 +26,7 @@ from agent_bom.api.agent_evidence import job_revision
 from agent_bom.api.current_graph import available_sources, graph_scan_id, refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_job_metadata import scan_evidence_authority_key, scan_scope_key
 from agent_bom.api.finding_row_shapes import _scan_source_labels
+from agent_bom.api.graph_comparison_basis import graph_collection_basis, graph_comparison_basis, recorded_kev_change
 from agent_bom.api.graph_diff_read import _compute_rows, _rows_cache_key, _stored_paths
 from agent_bom.api.models import JobStatus, ScanJob
 from agent_bom.api.routes.graph_routes import _runtime
@@ -54,6 +55,7 @@ class _Baseline:
     captured_at: str
     # "scope_history": the scope's own earlier scan; "snapshot_continuity": the store's declared predecessor.
     basis: str
+    collection_basis: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -66,7 +68,7 @@ class _Scope:
 
 
 # Result fields scope selection reads besides top-level scalars; inventories and findings are never needed.
-_PLAN_RESULT_OBJECTS = frozenset({"scan_run", "target_scope"})
+_PLAN_RESULT_OBJECTS = frozenset({"scan_run", "target_scope", "coverage_warnings", "scan_sources"})
 _CACHE_SIZE = 16
 _plan_jobs_cache: OrderedDict[tuple[Any, ...], list[Any]] = OrderedDict()
 _entry_cache: OrderedDict[tuple[Any, ...], dict[str, Any]] = OrderedDict()
@@ -159,7 +161,13 @@ def _plan(store: Any, job_store: Any, tenant: str) -> tuple[list[_Scope], set[st
         skipped = 0
         for other in older[:PREVIOUS_SEARCH_LIMIT]:
             if _has_graph(store, tenant, graph_scan_id(other)):
-                previous = _Baseline(graph_scan_id(other), str(other.job_id), scan_evidence_authority_key(other)[0], "scope_history")
+                previous = _Baseline(
+                    graph_scan_id(other),
+                    str(other.job_id),
+                    scan_evidence_authority_key(other)[0],
+                    "scope_history",
+                    graph_collection_basis(other.result),
+                )
                 break
             skipped += 1
         if previous is None and not older:
@@ -274,7 +282,14 @@ def _recorded_issue_counts(tenant: str) -> dict[str, dict[str, Any]]:
     for point in history:
         recorded = point.comparison_metadata.get("issue_counts")
         if point.scan_id and isinstance(recorded, dict) and recorded.get("basis") == "issue_groups":
-            counts[str(point.scan_id)] = recorded
+            counts[str(point.scan_id)] = {
+                **recorded,
+                "kev_count": point.kev_count,
+                "trend_basis": {
+                    key: point.comparison_metadata.get(key)
+                    for key in ("scope_id", "measurement_version", "collection_coverage", "coverage_key")
+                },
+            }
     return counts
 
 
@@ -302,11 +317,13 @@ def _paired_entry(store: Any, tenant: str, old_id: str, new_id: str) -> dict[str
         return copy.deepcopy(cached)
     _diff, rows = _compute_rows(store, tenant, old_id, new_id)
     summary = diff_summary(rows)
-    if summary["total_changes"]:
-        summary["highlights"].update(_path_changes(store, tenant, old_id, new_id))
+    summary["highlights"].update(_path_changes(store, tenant, old_id, new_id))
+    paths_changed = any(summary["highlights"][key]["count"] for key in ("new_attack_paths", "removed_attack_paths"))
+    if summary["total_changes"] or paths_changed:
         _label_endpoints(store, tenant, old_id, new_id, summary["highlights"])
         attribute_highlight_vendors(store, tenant, old_id, new_id, summary["highlights"])
     entry = {
+        "paths_changed": paths_changed,
         "counts": summary["totals"],
         "total_changes": summary["total_changes"],
         "nodes_by_entity_type": summary["nodes_by_entity_type"],
@@ -348,11 +365,14 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
             totals["new_sources"] += 1
             continue
         old_id, new_id = scope.previous.scan_id, graph_scan_id(scope.current)
+        comparison = graph_comparison_basis(
+            scope.previous.collection_basis, graph_collection_basis(scope.current.result), scope.previous.basis
+        )
         entry = _paired_entry(store, tenant, old_id, new_id)
         for kind in ("nodes", "edges"):
             for change, count in entry["counts"][kind].items():
                 totals[kind][change] += count
-        totals["changed_sources" if entry["total_changes"] else "unchanged_sources"] += 1
+        totals["changed_sources" if entry["total_changes"] or entry["paths_changed"] else "unchanged_sources"] += 1
         sources.append(
             {
                 **base,
@@ -360,6 +380,8 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
                 "baseline": scope.previous.basis,
                 **entry,
                 "issue_change": _issue_change(recorded, old_id, new_id),
+                "comparison": comparison,
+                "kev_change": recorded_kev_change(recorded, old_id, new_id) if comparison["status"] == "comparable" else None,
                 "skipped_snapshots": scope.skipped,
             }
         )

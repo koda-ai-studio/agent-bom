@@ -552,6 +552,10 @@ export interface GraphEstateHighlights {
 
 /** One target scope compared with its comparable previous snapshot. */
 export interface GraphEstateChangeSource {
+  /** Same scope is necessary but not sufficient: both collections must be complete and cover the same sources. */
+  comparison?: { status: "comparable" | "unavailable"; reason: string | null };
+  kev_change?: { old: number; new: number; delta: number; basis: "issue_groups" } | null;
+  paths_changed?: boolean;
   scope_id: string;
   label: string;
   /** `default_scan_request`: the label is only the unnamed-request fallback, not a vendor source. */

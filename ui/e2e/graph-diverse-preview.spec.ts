@@ -30,7 +30,7 @@ for (const theme of ["light", "dark"]) {
       return r.fulfill({ status: 404, json: { detail: "Outside fixture" } });
     });
     await page.goto("/security-graph?lens=attack-path&scan=snapshot");
-    await page.getByText("Browse 10 paths & filters", { exact: true }).click();
+    await expect(page.locator("#investigation-queue")).toHaveAttribute("open", "");
     const queue = page.getByLabel("Attack path queue", { exact: true });
     await expect(queue.getByRole("button")).toHaveCount(10);
     // The action must be exposed without scrolling a nested queue footer.

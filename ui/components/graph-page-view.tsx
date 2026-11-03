@@ -41,6 +41,7 @@ import { LARGE_GRAPH_OVERVIEW_MAX_RENDERED_NODES } from "@/lib/large-graph-overv
 import { shouldVirtualizeReactFlowNodes } from "@/lib/graph-renderer-switch";
 import { GraphScenarioUnconnected } from "@/components/graph-scenario-unconnected";
 import { roleCanConnect } from "@/lib/roles";
+import { GraphScopeChangeStrip } from "@/components/graph-scope-change-strip";
 import { GraphChangesEntry } from "@/components/graph-changes-entry";
 import { GraphChangesPanel } from "@/components/graph-changes-panel";
 import { GraphSearchResults } from "@/components/graph-search-results";
@@ -630,6 +631,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
+          {showChangesEntry && viewingCurrentEstate && graphChanges.estateChanges && <GraphScopeChangeStrip changes={graphChanges.estateChanges} onOpen={() => setChangesOpen(true)} />}
           {showChangesEntry && <GraphChangesEntry loading={graphChanges.loading || loadingDiff} error={graphChanges.error ?? diffError}
             headline={viewingCurrentEstate ? graphChanges.headline : snapshotChangesHeadline(graphDiff ? diffCounts : null, Boolean(previousSnapshot))}
             baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}

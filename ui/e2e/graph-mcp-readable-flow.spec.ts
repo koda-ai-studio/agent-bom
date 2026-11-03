@@ -140,3 +140,51 @@ test("IaC subtype URL filters the rendered graph without changing canonical enti
   await expect(page.locator('.react-flow__node[data-id="other"]')).toHaveCount(0);
   await expect(page.locator('.react-flow__node[data-id="iac"]')).toContainText("IaC finding");
 });
+
+
+for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
+  test(`mixed endpoint and MCP findings ${theme} ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height:1000 });
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme",t),theme);
+    const nodes = [node("endpoint","api_gateway","Public application endpoint"), node("instance","cloud_resource","checkout-worker"),
+      node("mcp","server","Warehouse MCP"), node("role","role","Warehouse reader"), node("data","data_store","Customer records"),
+      node("cve-1","vulnerability","CVE-2026-1000"), node("cve-2","vulnerability","CVE-2026-2000"), node("config","misconfiguration","Server allows unreviewed tools")];
+    nodes[1]!.attributes = { resource_type:"ec2_instance", cloud_provider:"aws" };
+    nodes[5]!.severity="critical"; nodes[6]!.severity="high"; nodes[7]!.severity="medium";
+    const edges = [edge("endpoint","instance","exposed_to"),edge("instance","mcp","hosts"),edge("mcp","role","authenticates_as"),edge("role","data","has_permission"),
+      edge("mcp","cve-1","vulnerable_to"),edge("mcp","cve-2","vulnerable_to"),edge("config","mcp","affects")];
+    await fixture(page,nodes,edges);
+    await page.goto("/security-graph?lens=estate&scan=snapshot&rollup=0&layers=apiGateway,cloudResource,server,role,dataStore,vulnerability,misconfiguration");
+    if (width === 390) await page.getByRole("group", { name:"Investigation view" }).getByRole("button", { name:"Graph", exact:true }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(5);
+    await expect(page.locator('[data-evidence-flow]')).toHaveCount(5);
+    await expect(page.getByRole("button", { name:"Expand 3 findings for Warehouse MCP" })).toBeVisible();
+    await expect(page.locator('[data-graph-adaptive-frame]')).toHaveAttribute("data-graph-camera-settled","true");
+    await page.locator('.react-flow').scrollIntoViewIfNeeded();
+    await page.screenshot({ path:info.outputPath(`mixed-collapsed-${theme}-${width}.png`),fullPage:true });
+    // The toolbar remains available when the owner is outside a phone's focused viewport.
+    await page.getByRole("button", { name:"Expand findings (3 grouped)",exact:true }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(8);
+    await expect(page.locator('.react-flow__node[data-id="cve-1"]')).toContainText("CVE-2026-1000");
+    await expect(page.locator('.react-flow__edge[data-id="config:affects:mcp"]')).toHaveCount(1);
+    await expect(page.locator('[data-graph-adaptive-frame]')).toHaveAttribute("data-graph-camera-settled","true");
+    if (width === 1440) {
+      await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
+        const marks = [...canvas.querySelectorAll(".graph-provider-mark-node")].map(mark => mark.getBoundingClientRect());
+        return [...canvas.querySelectorAll<SVGPathElement>(".react-flow__edge-path")].filter(path => {
+          const matrix = path.getScreenCTM();
+          if (!matrix) return false;
+          for (let at=0; at<path.getTotalLength(); at+=2) {
+            const p=path.getPointAtLength(at).matrixTransform(matrix);
+            if (marks.some(box => p.x>box.left && p.x<box.right && p.y>box.top && p.y<box.bottom)) return true;
+          }
+          return false;
+        }).length;
+      })).toBe(0);
+    }
+    await page.screenshot({ path:info.outputPath(`mixed-expanded-${theme}-${width}.png`),fullPage:true });
+    await page.getByRole("button", { name:"Collapse findings",exact:true }).click();
+    await expect(page.locator('.react-flow__node')).toHaveCount(5);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1)).toBe(true);
+  });
+}

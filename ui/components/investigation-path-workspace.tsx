@@ -47,6 +47,7 @@ export function InvestigationPathWorkspace({
   sideRail,
   scope,
   queueInitiallyOpen = false,
+  compactQueue = false,
 }: {
   rows: RankedPathRow[];
   selectedKey: string | null;
@@ -63,6 +64,7 @@ export function InvestigationPathWorkspace({
   scope?: React.ReactNode | undefined;
   /** Open the queue on mount, e.g. while a queue scope is being chosen and the page reloads its paths. */
   queueInitiallyOpen?: boolean | undefined;
+  compactQueue?: boolean;
 }) {
   const detailRef = useRef<HTMLDivElement>(null);
   const [queueOpen, setQueueOpen] = useState(queueInitiallyOpen);
@@ -127,6 +129,7 @@ export function InvestigationPathWorkspace({
           </div>
 
           <RankedPathList
+            compact={compactQueue}
             rows={rows}
             selectedKey={selectedKey}
             onSelect={handleSelect}

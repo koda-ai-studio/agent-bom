@@ -118,6 +118,7 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
       const onPath = [preferred, ...Array.from({ length: 199 }, (_, index) => path.getPointAtLength(length * (index + 1) / 200))]
         .sort(byDistance);
       let nodeClear = onPath.map(point => ({ point, box: boxAt(point) })).filter(clearOfNodes);
+      const fitsOnPath = nodeClear.length > 0;
       if (!nodeClear.length) {
         // A short link can lie wholly inside its endpoint cards: nudge the
         // caption off the line, nearest the midpoint first, in growing steps.
@@ -131,7 +132,7 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
         // the caption inside the canvas, rather than restoring an overlap.
         const centerX = (fallback.box.left + fallback.box.right) / 2;
         const centerY = (fallback.box.top + fallback.box.bottom) / 2;
-        const boundaries = sized ? nodes.filter(node => intersects(fallback.box, node)).flatMap(node => [
+        const boundaries = sized ? nodes.filter(node => node.left < fallback.box.right + 2 && node.right > fallback.box.left - 2).flatMap(node => [
           { x: preferred.x, y: preferred.y + (node.top - 4 - bounds.height / 2 - centerY) / scaleY },
           { x: preferred.x, y: preferred.y + (node.bottom + 4 + bounds.height / 2 - centerY) / scaleY },
           { x: preferred.x + (node.left - 4 - bounds.width / 2 - centerX) / scaleX, y: preferred.y },
@@ -141,7 +142,7 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
       }
       const clearOfEdges = nodeClear.filter(({ box }) => !onForeignEdge(box, element.dataset.edgeId!));
       const candidates = clearOfEdges.length ? clearOfEdges : nodeClear;
-      return [{ element, length, candidates, fallback, scale }];
+      return [{ element, length, candidates, fallback, scale, fitsOnPath }];
     }).sort((a, b) => a.candidates.length - b.candidates.length || a.length - b.length
       || a.element.dataset.edgeId!.localeCompare(b.element.dataset.edgeId!));
     type Placement = { point: Point; box: Box };
@@ -166,9 +167,10 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
         chosen.push(item.candidates.find(candidate => !chosen.some(other => intersects(candidate.box, other.box))) ?? item.fallback);
       }
     }
-    // Finish all measurements before writing styles. Never hide a label when a
-    // crowded graph has no collision-free position.
-    labels.forEach(({ element, scale }, index) => {
+    // Auto captions yield to node names on short links. Explicit Show or edge
+    // inspection retains the full caption at the nearest clear position.
+    labels.forEach(({ element, scale, fitsOnPath }, index) => {
+      element.style.visibility = element.dataset.labelMode === "auto" && element.dataset.inspecting !== "true" && !fitsOnPath ? "hidden" : "";
       const { x, y } = keepInside(chosen[index]!, scale.x, scale.y);
       element.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px)`;
     });

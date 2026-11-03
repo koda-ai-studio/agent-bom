@@ -133,7 +133,7 @@ export function RelationshipEdge(props: EdgeProps) {
       id: node.id, x: node.position.x, y: node.position.y,
       width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
     })) : []));
-  useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y]);
+  useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y, visibility, inspecting]);
   // Subscribing outside render keeps a pan from re-rendering every edge.
   const store = useStoreApi();
   useEffect(() => {
@@ -159,10 +159,12 @@ export function RelationshipEdge(props: EdgeProps) {
       {...(emphasized && props.markerEnd ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
     {label != null && <EdgeLabelRenderer>
-      <div ref={labelRef} data-edge-id={props.id} data-label-x={x} data-label-y={y} className={`nodrag nopan graph-relationship-label ${props.data?.aggregate ? "graph-aggregate-label" : ""}`} style={{
+      <div ref={labelRef} data-label-mode={visibility ?? "auto"} data-inspecting={inspecting ? "true" : "false"} data-edge-id={props.id} data-label-x={x} data-label-y={y} className={`nodrag nopan graph-relationship-label ${props.data?.aggregate ? "graph-aggregate-label" : ""}`} style={{
         position: "absolute",
         transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
         fontSize: Math.max(Number(props.labelStyle?.fontSize) || 12, 12.5 / Math.max(zoom, 0.16)),
+        maxWidth: visibility === "show" || inspecting
+          ? Math.max(76 / zoom, Math.abs(props.targetX - props.sourceX) - 24 / zoom) : undefined,
         pointerEvents: "none",
       }}>
         <RelationshipBadge relationship={relationship}>{qualifiedLabel(relationship, label, props.data)}</RelationshipBadge>

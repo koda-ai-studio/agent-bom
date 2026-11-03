@@ -31,7 +31,9 @@ const changes = {
   schema_version: "v1", evidence_scope: "current_estate",
   sources: [
     { scope_id: "a1b2", label: "repo github.com/acme/agents", old: ref("repo-1", "2026-10-08T09:00:00+00:00"), new: ref("repo-2", "2026-10-15T09:00:00+00:00"),
-      counts: { nodes: { added: 1, removed: 1, changed: 0 }, edges: { added: 1, removed: 1, changed: 0 } }, total_changes: 4, nodes_by_entity_type: {}, highlights: {}, skipped_snapshots: 0 },
+      counts: { nodes: { added: 1, removed: 1, changed: 0 }, edges: { added: 1, removed: 1, changed: 0 } }, total_changes: 4, nodes_by_entity_type: { server:{added:1,removed:1,changed:0} },
+      comparison:{status:"comparable",reason:null},kev_change:{old:2,new:0,delta:-2,basis:"issue_groups"},
+      highlights: {new_attack_paths:{status:"complete",count:1,top:[]},removed_attack_paths:{status:"complete",count:0,top:[]}}, skipped_snapshots: 0 },
     { scope_id: "c3d4", label: "aws / 123456789012 / us-east-1", old: ref("aws-1", "2026-10-09T09:00:00+00:00"), new: ref("aws-2", "2026-10-15T08:00:00+00:00"),
       counts: { nodes: { added: 0, removed: 0, changed: 0 }, edges: { added: 0, removed: 0, changed: 0 } }, total_changes: 0, nodes_by_entity_type: {}, highlights: {}, skipped_snapshots: 0 },
   ],
