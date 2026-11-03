@@ -1,4 +1,4 @@
-"""Revision 20261102_01 repairs databases migrated before the August schema edits.
+"""Revision 20261102_10 repairs databases migrated before the August schema edits.
 
 Builds the pre-August shape (no ``fleet_endpoints``; ``trend_history`` without
 ``scan_id``) in a throwaway database, proves the store's trend upsert fails
@@ -22,7 +22,7 @@ import pytest
 pytestmark = pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_ADMIN_URL"), reason="AGENT_BOM_POSTGRES_ADMIN_URL is required")
 
 ROOT = Path(__file__).resolve().parents[1]
-MIGRATION = ROOT / "deploy/supabase/postgres/alembic/versions/20261102_01_fleet_endpoints_trend_scan_identity.py"
+MIGRATION = ROOT / "deploy/supabase/postgres/alembic/versions/20261102_10_fleet_endpoints_trend_scan_identity.py"
 TREND_UPSERT = (
     "INSERT INTO trend_history (timestamp, team_id, total_vulns, posture_score, posture_grade, scan_id) "
     "VALUES (%s, %s, 1, 70, 'C', %s) "

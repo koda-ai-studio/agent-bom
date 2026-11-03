@@ -12,13 +12,13 @@ from the current baseline. ``scan_id`` is added nullable without a default
 (catalog-only change), and the partial unique index covers only non-null scan
 ids, which an upgraded table does not have yet, so the build is brief.
 
-Revision ID: 20261102_01
+Revision ID: 20261102_10
 Revises: 20261027_03
 """
 
 from alembic import op
 
-revision = "20261102_01"
+revision = "20261102_10"
 down_revision = "20261027_03"
 branch_labels = None
 depends_on = None
