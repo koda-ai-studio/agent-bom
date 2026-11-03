@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, cast
 from agent_bom import __version__
 from agent_bom import config as _config
 from agent_bom.api import host_guard as _host_guard
+from agent_bom.api import scan_queue as _scan_queue_module
 from agent_bom.api import stores as _stores
 from agent_bom.api.audit_log import warn_if_ephemeral_hmac_key
 from agent_bom.api.auth import Role, get_key_store
@@ -298,21 +299,7 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     # ── Distributed scan dispatch ──
     # Start a per-replica claim-loop so queued scans are stolen across the
     # cluster. No-op on single-node / non-Postgres deployments.
-    _scan_worker = None
-    try:
-        from agent_bom.api.scan_queue import (
-            DistributedScanWorker,
-            distributed_scans_enabled,
-            store_supports_dispatch,
-        )
-
-        _scan_store = _get_store()
-        if distributed_scans_enabled() and store_supports_dispatch(_scan_store):
-            _scan_worker = DistributedScanWorker(_scan_store)
-            await _scan_worker.start()
-    except Exception:  # noqa: BLE001
-        _logger.error("Distributed scan worker failed to start; continuing single-node")
-        _scan_worker = None
+    _scan_worker = await _scan_queue_module.start_dispatch_worker(_get_store())
 
     demo_seed_task: asyncio.Task[None] | None = None
     if os.environ.get("AGENT_BOM_DEMO_ESTATE", "").strip().lower() in {"1", "true", "yes", "on"}:

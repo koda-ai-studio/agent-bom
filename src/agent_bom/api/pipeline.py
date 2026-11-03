@@ -745,9 +745,32 @@ def _finalize(ctx: ScanContext) -> None:
     _record_adoption(ctx.job, terminal_status)
 
 
+# The push-ingest worker registers itself here (``push_ingest_worker`` imports
+# the stores this module sits above, so a direct import would form a cycle).
+_PUSH_INGEST_HANDLER: list[Any] = []
+
+
+def register_push_ingest_handler(handler: Any) -> None:
+    _PUSH_INGEST_HANDLER[:] = [handler]
+
+
+def _run_push_ingest(job: ScanJob) -> None:
+    """Never scan an admitted push: without its handler, leave it queued and fail loudly."""
+    if not _PUSH_INGEST_HANDLER:
+        raise RuntimeError("push ingest handler is not registered; queued push left pending")
+    _PUSH_INGEST_HANDLER[0](job)
+
+
 @sanitize_text_memo()
 def _run_scan_sync(job: ScanJob) -> None:
-    """Run the full scan pipeline in a thread (blocking). Updates job in-place."""
+    """Run the full scan pipeline in a thread (blocking). Updates job in-place.
+
+    An admitted asynchronous push rides the same executor and dispatch queue;
+    it is persisted by the push-ingest worker instead of scanned.
+    """
+    if isinstance(job.result, dict) and job.result.get("pushed") is True:
+        _run_push_ingest(job)
+        return
     lock = _job_lock(job.job_id)
     if not _begin_job(job, lock):
         return

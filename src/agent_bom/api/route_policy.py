@@ -229,6 +229,7 @@ ROUTE_POLICIES: tuple[RoutePolicy, ...] = (
     RoutePolicy("GET", "/v1/plugins", "viewer", "config:read"),
     RoutePolicy("GET", "/v1/proxy", "viewer", "runtime:read"),
     RoutePolicy("GET", "/v1/registry", "viewer", "intel:read"),
+    RoutePolicy("GET", "/v1/results/push", "viewer", "scan:read"),
     RoutePolicy("GET", "/v1/runtime", "viewer", "runtime:read"),
     RoutePolicy("GET", "/v1/scan", "viewer", "scan:read"),
     RoutePolicy("GET", "/v1/schedules", "viewer", "schedule:read"),

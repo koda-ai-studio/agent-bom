@@ -31,7 +31,7 @@ GZIP_RATIO_WARMUP_BYTES = 1024 * 1024
 
 PUSH_TOO_LARGE_HINT = (
     "Split the push into smaller scans (one image, repository or project per run) or raise "
-    "AGENT_BOM_API_RESULT_PUSH_MAX_BYTES on the control plane."
+    "AGENT_BOM_API_RESULT_PUSH_MAX_BYTES on the control plane (capped at 240 MiB, below the PostgreSQL jsonb value limit)."
 )
 
 

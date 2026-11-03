@@ -1945,6 +1945,8 @@ jobs:
             tests/test_findings_current_sql_contract.py \
             tests/test_jobs_tenant_key_contract.py \
             tests/test_jobs_dispatch_postgres.py \
+            tests/test_push_ingest_dispatch_postgres.py \
+            tests/test_postgres_idempotency_nonblocking.py \
             tests/test_findings_cursor_keyset_parity.py \
             tests/api/test_api_hosted_invitations.py \
             tests/api/test_authenticated_tenant_backends.py \
