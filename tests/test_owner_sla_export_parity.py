@@ -180,7 +180,8 @@ def test_flat_and_human_exports_preserve_owner_sla_and_workflow_status() -> None
         "pdf": to_pdf(report).decode("latin-1", "replace"),
     }.items():
         assert "payments-security" in rendered, f"owner dropped by {name}"
-        assert "2026-08-08T00:00:00+00:00" in rendered, f"SLA dropped by {name}"
+        # The executive PDF prints the SLA day; the other human exports keep the full timestamp.
+        assert ("2026-08-08" if name == "pdf" else "2026-08-08T00:00:00+00:00") in rendered, f"SLA dropped by {name}"
         assert "in_progress" in rendered, f"workflow status dropped by {name}"
 
 
