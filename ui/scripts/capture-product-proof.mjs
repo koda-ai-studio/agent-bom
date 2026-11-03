@@ -1882,6 +1882,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
   }));
   await page.route("**/v1/overview", (route) => fulfill(route, overviewResponse()));
   await page.route("**/v1/agents", (route) => fulfill(route, {
+    scope: "scanned_estate",
     agents: scanJob().result.agents,
     count: scanJob().result.agents.length,
     warnings: [],

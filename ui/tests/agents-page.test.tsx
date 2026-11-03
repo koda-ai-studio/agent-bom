@@ -106,7 +106,7 @@ beforeEach(() => {
   navigationMock.query = "";
   apiMock.getAgentDetail.mockReset();
   apiMock.listAgents.mockReset();
-  apiMock.listAgents.mockResolvedValue({ agents: AGENTS });
+  apiMock.listAgents.mockResolvedValue({ scope: "local_discovery", agents: AGENTS });
 });
 
 afterEach(() => {
@@ -201,7 +201,7 @@ describe("AgentsPage agent population", () => {
 
   it("keeps the estate count visible when nothing is configured on the API host", async () => {
     deploymentMock.counts = { agents: { total: 0, scan_id: null, basis: "graph_agents" } };
-    apiMock.listAgents.mockResolvedValue({ agents: [] });
+    apiMock.listAgents.mockResolvedValue({ scope: "local_discovery", agents: [] });
     render(<AgentsPage />);
 
     await waitFor(() => expect(subtitle()).toHaveTextContent("Estate agents: 0"));
@@ -237,6 +237,25 @@ describe("AgentsPage agent population", () => {
     // Manifest directories and the AI-inventory wrapper are not MCP servers.
     const mcpServersCell = kpis.getByText("MCP servers").parentElement!.parentElement!;
     expect(within(mcpServersCell).getByText("2")).toBeInTheDocument();
+  });
+
+  it("never claims an unlabelled population is on this host", async () => {
+    apiMock.listAgents.mockResolvedValue({ agents: AGENTS });
+    render(<AgentsPage />);
+
+    const kpis = within(await screen.findByTestId("agents-kpis"));
+    expect(kpis.getByText("Agents")).toBeInTheDocument();
+    expect(kpis.queryByText("Agents on this host")).not.toBeInTheDocument();
+    expect(subtitle()).not.toHaveTextContent("on this API host");
+  });
+
+  it("names the blocked tile for what it counts instead of implying no risk", async () => {
+    render(<AgentsPage />);
+
+    const kpis = within(await screen.findByTestId("agents-kpis"));
+    expect(kpis.getByText("Launch-blocked servers")).toBeInTheDocument();
+    expect(kpis.getByText(/vulnerabilities are on Findings/)).toBeInTheDocument();
+    expect(kpis.queryByText("Blocked / risky")).not.toBeInTheDocument();
   });
 
   it("omits the estate count when the server does not report one", async () => {

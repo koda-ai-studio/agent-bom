@@ -486,10 +486,16 @@ function CompliancePageContent() {
       header: "Fail",
       align: "right",
       sortable: true,
-      width: "4rem",
+      width: "5.5rem",
       cell: (f) =>
         f.kind === "applicability" ? (
-          <span className="text-[color:var(--text-tertiary)]">—</span>
+          <span
+            className="text-xs text-[color:var(--text-tertiary)]"
+            title="Applicability catalog: it records which techniques are in play and is never scored pass or fail."
+            data-testid="framework-not-scored"
+          >
+            Not scored
+          </span>
         ) : (
           <span
             className={
@@ -590,7 +596,7 @@ function CompliancePageContent() {
       key: "findings",
       header: "Findings",
       align: "right",
-      width: "5rem",
+      width: "6.5rem",
       cell: (c) =>
         c.findings > 0 ? (
           // Drill a non-zero count into the findings queue, scoped to this
