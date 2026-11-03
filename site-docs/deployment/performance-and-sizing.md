@@ -104,6 +104,13 @@ scan payloads in memory while building the response. The default memory limit
 provides headroom; measure peak resident memory with your inventory and expected
 concurrency before choosing production limits.
 
+Pushed results (`POST /v1/results/push`) are bounded by
+`AGENT_BOM_API_RESULT_PUSH_MAX_BYTES`. Parsing one maximum-size body into the
+report model takes roughly eight times its size, so keep the memory limit at
+least eight times that budget plus baseline for each maximum-size push a pod
+may handle at once. The chart's test suite enforces the single-push floor for
+API and worker pods.
+
 Repeated reads use a per-process cache of at most 64 responses, keyed by tenant,
 query parameters and evidence revisions, including graph snapshot replacements.
 The default TTL is 60 seconds (`AGENT_BOM_READ_CACHE_TTL_SECONDS`; `0` disables

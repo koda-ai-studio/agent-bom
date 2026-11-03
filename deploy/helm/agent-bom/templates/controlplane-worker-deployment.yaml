@@ -1,0 +1,10 @@
+{{- /*
+Optional scan/ingest worker: the API image with AGENT_BOM_API_ROLE=worker.
+It drains the shared Postgres scan_dispatch_queue (scan jobs and queued
+pushed-result ingest). It binds the HTTP port only for kubelet probes; no
+Service or Ingress selects it.
+*/ -}}
+{{- if and .Values.controlPlane.enabled .Values.controlPlane.worker.enabled }}
+{{- include "agent-bom.controlPlaneApiValidate" . }}
+{{ include "agent-bom.controlPlaneApiDeployment" (dict "root" . "component" "worker") }}
+{{- end }}
