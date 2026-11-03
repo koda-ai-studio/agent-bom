@@ -8,11 +8,20 @@ from agent_bom.api import scan_queue
 
 
 class _DispatchStore:
-    def enqueue_for_dispatch(self, job): ...  # noqa: ANN001, ANN201
-    def claim_next(self, worker_id, lease): ...  # noqa: ANN001, ANN201
-    def renew_leases(self, claims, lease): ...  # noqa: ANN001, ANN201
-    def complete_dispatch(self, job_id, **kwargs): ...  # noqa: ANN001, ANN003, ANN201
-    def requeue_expired_leases(self): ...  # noqa: ANN201
+    def enqueue_for_dispatch(self, job):  # noqa: ANN001, ANN201
+        pass
+
+    def claim_next(self, worker_id, lease):  # noqa: ANN001, ANN201
+        pass
+
+    def renew_leases(self, claims, lease):  # noqa: ANN001, ANN201
+        pass
+
+    def complete_dispatch(self, job_id, **kwargs):  # noqa: ANN001, ANN003, ANN201
+        pass
+
+    def requeue_expired_leases(self):  # noqa: ANN201
+        pass
 
 
 @pytest.mark.parametrize("raw,expected", [(None, "all"), ("", "all"), ("API", "api"), (" worker ", "worker")])

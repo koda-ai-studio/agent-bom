@@ -55,7 +55,7 @@ async def _stream(job_id: str, during: Any = None) -> tuple[int, list[dict[str, 
         side = asyncio.create_task(during()) if during else None
         response = await asyncio.wait_for(client.get(f"/v1/scan/{job_id}/stream"), timeout=30)
         if side:
-            await side
+            await asyncio.gather(side)
     return response.status_code, _events(response.text)
 
 

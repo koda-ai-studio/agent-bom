@@ -509,3 +509,18 @@ to anonymous access. An unparseable `AGENT_BOM_MCP_PUBLIC_READONLY` value
 refuses startup, as does combining the tier with MCP OAuth or SSE. Rate-limit
 state is in process memory, so it cannot be unavailable; a restart resets it.
 See [MCP server](MCP_SERVER.md#public-read-only-tier).
+
+## API-key verification cache
+
+The process-local cache remembers successful verifications for at most 60 seconds
+and never past the key's expiry. Its indexes and record fingerprints use
+HMAC-SHA-256 under a random process secret; the stored credential verifier remains
+salted scrypt. No raw credential or stored verifier is retained in a cache entry.
+
+Every request still loads the credential record and checks revocation, expiry,
+rotation and operator retirement. A changed credential record or process secret
+cannot reuse a cached match. A miss, eviction, expiry or disabled cache requires
+normal scrypt verification; it never grants access. Failed verifications are not
+cached. Cache entries remain bounded by `AGENT_BOM_API_KEY_VERIFY_CACHE_MAX_ENTRIES`;
+setting that limit or `AGENT_BOM_API_KEY_VERIFY_CACHE_TTL_SECONDS` to zero disables
+the optimization.

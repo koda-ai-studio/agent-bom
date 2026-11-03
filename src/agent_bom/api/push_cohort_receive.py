@@ -57,7 +57,7 @@ class _CohortPush:
 
     async def claim(self) -> bool:
         try:
-            _receipt, self.claimed = await asyncio.to_thread(
+            _, self.claimed = await asyncio.to_thread(
                 partial(
                     _get_idempotency_store().claim,
                     _COHORT_ENDPOINT,

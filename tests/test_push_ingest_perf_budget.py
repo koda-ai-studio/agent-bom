@@ -145,7 +145,7 @@ async def test_event_loop_stays_live_while_a_10x_push_is_admitted_and_retried(
         while len(latencies) < 30:
             await asyncio.sleep(0.01)
         stop.set()
-        await prober
+        await asyncio.gather(prober)
 
     assert (first.status_code, retry.status_code) == (202, 202)
     assert first.json()["job_id"] == retry.json()["job_id"]

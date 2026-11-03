@@ -71,7 +71,8 @@ def test_cached_identity_matches_uncached(derivations, monkeypatch):
 def test_revoke_takes_effect_on_the_next_verify(derivations):
     store, raw, key = _store_with_key()
     assert store.verify(raw) is key
-    assert store.remove(key.key_id)
+    removed = store.remove(key.key_id)
+    assert removed
     assert store.verify(raw) is None
     assert api_key_verify_cache.size() == 0
 
@@ -80,14 +81,16 @@ def test_rotation_past_overlap_rejects_a_cached_key(derivations):
     store, raw, key = _store_with_key()
     assert store.verify(raw) is key
     past = (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()
-    assert store.mark_rotating(key.key_id, replacement_key_id="replacement", overlap_until=past)
+    rotated = store.mark_rotating(key.key_id, replacement_key_id="replacement", overlap_until=past)
+    assert rotated
     assert store.verify(raw) is None
 
 
 def test_deleted_key_is_not_served_from_cache(derivations):
     store, raw, key = _store_with_key()
     assert store.verify(raw) is key
-    assert store.delete_tenant("tenant-a") == 1
+    deleted = store.delete_tenant("tenant-a")
+    assert deleted == 1
     assert store.verify(raw) is None
 
 
@@ -159,6 +162,23 @@ def test_replaced_hash_for_same_key_id_is_not_served(derivations):
     assert store.verify(raw) is key
     key.key_salt = "00" * 16
     assert store.verify(raw) is None
+
+
+def test_process_secret_change_requires_fresh_verification(derivations, monkeypatch):
+    store, raw, key = _store_with_key()
+    first = store.verify(raw)
+    assert first is key
+    monkeypatch.setattr(api_key_verify_cache, "_SECRET", b"cache-test-process-secret" * 2)
+    second = store.verify(raw)
+    assert second is key
+    assert len(derivations) == 2
+
+
+def test_cache_fingerprints_separate_credential_and_record_domains():
+    record = ("id", "salt", "derived-hash")
+    presented = api_key_verify_cache.presented_key_digest("\x00".join(record))
+    fingerprint = api_key_verify_cache.record_fingerprint(*record)
+    assert presented != fingerprint
 
 
 def test_cache_is_bounded(monkeypatch):

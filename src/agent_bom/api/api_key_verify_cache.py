@@ -14,7 +14,6 @@ verifications are never stored.
 
 from __future__ import annotations
 
-import hashlib
 import hmac
 import secrets
 import threading
@@ -50,13 +49,13 @@ def _max_entries() -> int:
 
 def presented_key_digest(raw_key: str) -> bytes:
     """Cache key for a presented credential; irreversible without the process secret."""
-    return hmac.new(_SECRET, b"presented\x00" + raw_key.encode(), hashlib.sha256).digest()
+    return hmac.digest(_SECRET, b"presented\x00" + raw_key.encode(), "sha256")
 
 
 def record_fingerprint(key_id: str, key_salt: str, key_hash: str) -> bytes:
     """Binds an entry to one exact stored credential without retaining its hash."""
     material = "\x00".join((key_id, key_salt, key_hash)).encode()
-    return hmac.new(_SECRET, b"record\x00" + material, hashlib.sha256).digest()
+    return hmac.digest(_SECRET, b"record\x00" + material, "sha256")
 
 
 def lookup(digest: bytes) -> tuple[str, bytes] | None:
