@@ -38,7 +38,7 @@ so they cannot regress silently, but they are not part of this reference.
 | `AGENT_BOM_API_MAX_RETAINED_JOBS_PER_TENANT` | `int` | `500` | — |
 | `AGENT_BOM_API_MAX_SCAN_CREDITS_24H_PER_TENANT` | `int` | `0` | — |
 | `AGENT_BOM_API_MAX_SCHEDULES_PER_TENANT` | `int` | `100` | — |
-| `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` | `int` | `256 * 1024 * 1024` | Decoded upload budget for POST /v1/results/push: the 10k-package estate measured 154 MB raw (8.7 MB gzipped) on 2026-11-01; gzip expansion is capped separately. Other bodies keep 10 MiB. |
+| `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` | `int` | `192 * 1024 * 1024` | Decoded POST /v1/results/push budget (10k-package estate: 154 MB raw, 8.7 MB gzip); the API clamps it to 240 MiB (jsonb limit). |
 | `AGENT_BOM_API_SCAN_CLAIM_POLL_SECONDS` | `int` | `3` | — |
 | `AGENT_BOM_API_SCAN_LEASE_SECONDS` | `int` | `600` | Distributed scan dispatch (multi-replica work-stealing). When enabled, scan jobs are enqueued to a shared Postgres dispatch queue and any control-plane replica claims them via FOR UPDATE SKIP LOCKED, so scan throughput scales with replicas  |
 | `AGENT_BOM_API_SCAN_WORKERS` | `int` | `min(4, os.cpu_count() or 2)` | — |

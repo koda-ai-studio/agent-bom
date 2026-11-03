@@ -34,7 +34,11 @@ def client(limit: int) -> TestClient:
 def test_defaults_fit_the_advertised_estate_and_compress_by_default() -> None:
     # 154 MB raw at 10k packages (lane D) with headroom for richer findings; still bounded.
     assert config.API_RESULT_PUSH_MAX_BYTES == 192 * 1024 * 1024
-    assert 154_000_000 < config.API_RESULT_PUSH_MAX_BYTES <= config.API_RESULT_PUSH_JSONB_CEILING_BYTES < 255 * 1024 * 1024
+    assert 154_000_000 < config.API_RESULT_PUSH_MAX_BYTES <= middleware_body.RESULT_PUSH_JSONB_CEILING_BYTES < 255 * 1024 * 1024
+    assert middleware_body.effective_result_push_max_bytes(1 << 30) == middleware_body.RESULT_PUSH_JSONB_CEILING_BYTES
+    assert middleware_body.effective_result_push_max_bytes(1024) == 1024
+    with pytest.raises(ValueError):
+        middleware_body.effective_result_push_max_bytes(0)
     assert config.PUSH_GZIP is True
 
 

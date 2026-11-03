@@ -612,12 +612,8 @@ FINDINGS_APPROXIMATE_TOTAL_THRESHOLD = _int("AGENT_BOM_FINDINGS_APPROXIMATE_TOTA
 # MaxBodySizeMiddleware. 0 disables the floor entirely (escape hatch
 # for legitimate slow clients in restricted networks).
 API_BODY_MIN_BPS = _int("AGENT_BOM_BODY_MIN_BPS", 256)
-# Decoded POST /v1/results/push budget (10k-package estate: 154 MB raw, 8.7 MB gzip, 2026-11-01); other bodies 10 MiB.
-# Clamped below the 255 MiB PostgreSQL jsonb value limit so even AGENT_BOM_JOB_RESULT_CODEC=none rows fit.
-API_RESULT_PUSH_JSONB_CEILING_BYTES, API_RESULT_PUSH_MAX_BYTES = (
-    240 << 20,
-    min(_int("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES", 192 << 20), 240 << 20),
-)
+# Decoded POST /v1/results/push budget (10k-package estate: 154 MB raw, 8.7 MB gzip); the API clamps it to 240 MiB (jsonb limit).
+API_RESULT_PUSH_MAX_BYTES = _int("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES", 192 * 1024 * 1024)
 # Pushes are gzip-compressed by default; 0 only for a receiver older than #5193 (2026-09-10).
 PUSH_GZIP = _bool("AGENT_BOM_PUSH_GZIP", True)
 

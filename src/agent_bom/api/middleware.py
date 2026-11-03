@@ -53,6 +53,7 @@ from agent_bom.api.error_envelope import install_error_envelope as install_error
 from agent_bom.api.error_envelope import with_middleware_error_envelope
 from agent_bom.api.host_guard import browser_origin_trusted
 from agent_bom.api.middleware_body import MaxBodySizeMiddleware as MaxBodySizeMiddleware
+from agent_bom.api.middleware_body import effective_result_push_max_bytes as effective_result_push_max_bytes
 from agent_bom.api.middleware_headers import _API_CSP as _API_CSP
 from agent_bom.api.middleware_headers import TrustHeadersMiddleware as TrustHeadersMiddleware
 from agent_bom.api.middleware_headers import _cache_control as _cache_control

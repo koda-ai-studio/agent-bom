@@ -389,30 +389,66 @@ Those choices stay explicit, which is why the self-hosted story remains honest.
 
 ## Large collector reports
 
-`POST /v1/results/push` accepts complete scan reports up to 64 MiB by default.
-Set `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` on the receiving API to a positive
-byte budget appropriate for the pod's memory and concurrent uploads. Other
-API requests retain their 10 MiB budget. Configure the ingress or reverse
-proxy to permit the same wire size; an upstream 413 never reaches the API.
+`POST /v1/results/push` accepts a decoded report of up to 192 MiB by default
+(`AGENT_BOM_API_RESULT_PUSH_MAX_BYTES`). Configured values above 240 MiB are
+clamped so a stored result always fits PostgreSQL's 255 MiB `jsonb` value
+limit, even with the result codec disabled. Other API requests keep their
+10 MiB budget. Configure the ingress or reverse proxy to permit the same wire
+size; an upstream 413 never reaches the API.
 
-After upgrading the receiver, enable fast gzip on collectors:
-
-```bash
-AGENT_BOM_PUSH_GZIP=1 agent-bom scan -p . --push-url https://agent-bom.example.com
-```
-
-Use the scan command's existing API-key environment/file configuration for
-authentication. Compression is opt-in so collectors remain compatible with
-older receivers. JSON is serialized and compressed once per push; retries
-reuse the same bytes and idempotency identity. Standard HTTP clients can also
-send `Content-Encoding: gzip` to the report-push endpoint.
+Collectors gzip pushes by default (`AGENT_BOM_PUSH_GZIP=0` keeps a receiver
+older than 2026-09-10 working). JSON is serialized and compressed once per
+push; retries reuse the same bytes and idempotency identity. Standard HTTP
+clients can also send `Content-Encoding: gzip` to the report-push endpoint.
 
 Authentication runs before buffering/inflation. Both wire and decoded bytes
 must fit the report budget. Invalid/truncated gzip returns 400, unsupported
-encoding returns 415, and over-budget requests return 413 with `max_bytes`.
-The API checks actual streamed bytes even when Content-Length is present and
-applies the existing 30-second body-read deadline and throughput floor. These
-failures do not create a scan job or truncate the report.
+encoding returns 415, and over-budget requests return 413 with `max_bytes`
+and a hint to split the push. The API checks actual streamed bytes even when
+Content-Length is present and applies the existing 30-second body-read
+deadline and throughput floor. These failures do not create a scan job or
+truncate the report.
+
+### Asynchronous ingest
+
+Graph persistence for a large report takes minutes. The CLI therefore sends
+`Prefer: respond-async`:
+
+1. The API validates the report in a worker thread, writes the job once as
+   `pending`, and enqueues it on the same dispatch queue scans use (the shared
+   Postgres `scan_dispatch_queue` with `FOR UPDATE SKIP LOCKED` and leases
+   when distributed dispatch is on, the local scan executor otherwise).
+2. It answers `202` with `job_id`, `status_url` (`/v1/results/push/{job_id}`)
+   and `Retry-After`.
+3. A worker persists the graph and marks the job `done` or `failed`.
+   `GET /v1/results/push/{job_id}` returns the stored receipt, including the
+   graph persistence counts, without decoding the stored report.
+
+The idempotency key is the dedupe fence. The CLI derives it from a hash of the
+sanitized report and its destination, so rerunning or retrying the same report
+addresses the same job instead of creating a duplicate. A key that another
+request is still committing answers `202` with `Retry-After` immediately; it
+never waits for that commit. Replaying a committed key returns the stored
+receipt. Retrying the key of a `failed` ingest re-admits the same job.
+
+The CLI sizes its HTTP timeout to the report, retries 408/425/429/5xx and a
+`409` that carries `Retry-After`, and polls `status_url` for up to
+`AGENT_BOM_PUSH_WAIT_SECONDS` (default 900). When that wait ends first it
+reports the push as accepted, not failed: the server holds the report durably
+and finishes it.
+
+Clients that do not send `Prefer: respond-async` keep the synchronous `201`
+receipt. Set `AGENT_BOM_PUSH_INGEST_MODE=async` on the API to make every
+report push asynchronous, or `sync` to ignore the header. Pushes that carry
+`endpoint_inventory` always commit synchronously, because their raw inventory
+rows never enter the stored job.
+
+For clustered deployments, run ingest and scans on dedicated workers with
+`AGENT_BOM_API_ROLE`: `api` replicas serve HTTP and only enqueue, `worker`
+replicas drain the queue, and `all` (the default) does both. A `worker` without
+distributed dispatch (Postgres plus `AGENT_BOM_DISTRIBUTED_SCANS`) fails at
+startup instead of idling. The Helm chart wires this through
+`controlPlane.worker`; see [Separate scan and ingest workers](control-plane-helm.md#separate-scan-and-ingest-workers).
 
 A full JSON report is still materialized for validation and graph projection;
 compression reduces transfer size, not that working set. Size memory using

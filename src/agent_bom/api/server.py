@@ -40,6 +40,7 @@ from agent_bom.api.middleware import (
     MaxBodySizeMiddleware,
     RateLimitMiddleware,
     TrustHeadersMiddleware,
+    effective_result_push_max_bytes,
     global_ip_rate_limit_rpm,
 )
 
@@ -562,9 +563,9 @@ def configure_api(
     # resolver stays installed in no-auth mode so credential-less callers get
     # NO_AUTH_ROLE and the same route role matrix (DEMO_ESTATE clamps to viewer).
 
-    if _config.API_RESULT_PUSH_MAX_BYTES <= 0:
-        raise ValueError("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES must be positive")
-    _replace_middleware(MaxBodySizeMiddleware, path_limits={"/v1/results/push": _config.API_RESULT_PUSH_MAX_BYTES})
+    _replace_middleware(
+        MaxBodySizeMiddleware, path_limits={"/v1/results/push": effective_result_push_max_bytes(_config.API_RESULT_PUSH_MAX_BYTES)}
+    )
     _replace_middleware(APIKeyMiddleware, api_key=api_key, allow_unauthenticated=allow_unauthenticated)
     _replace_middleware(GlobalRateLimitMiddleware, rpm=global_ip_rate_limit_rpm())
     _host_guard.configure_host_policy(posture.listener_host, _cors_origins)

@@ -29,6 +29,18 @@ from agent_bom.core.settings import env_raw
 MAX_GZIP_EXPANSION_RATIO = 100
 GZIP_RATIO_WARMUP_BYTES = 1024 * 1024
 
+#: A stored result must fit PostgreSQL's 255 MiB jsonb value limit even with the
+#: result codec off (``AGENT_BOM_JOB_RESULT_CODEC=none``).
+RESULT_PUSH_JSONB_CEILING_BYTES = 240 * 1024 * 1024
+
+
+def effective_result_push_max_bytes(configured: int) -> int:
+    """The enforced decoded push budget: the configured value, clamped to the jsonb ceiling."""
+    if configured <= 0:
+        raise ValueError("AGENT_BOM_API_RESULT_PUSH_MAX_BYTES must be positive")
+    return min(configured, RESULT_PUSH_JSONB_CEILING_BYTES)
+
+
 PUSH_TOO_LARGE_HINT = (
     "Split the push into smaller scans (one image, repository or project per run) or raise "
     "AGENT_BOM_API_RESULT_PUSH_MAX_BYTES on the control plane (capped at 240 MiB, below the PostgreSQL jsonb value limit)."

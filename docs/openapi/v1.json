@@ -80676,7 +80676,7 @@
     },
     "/v1/results/push": {
       "post": {
-        "description": "Receive pushed scan results from a CLI instance.\n\nStores as a completed ScanJob with source metadata.",
+        "description": "Receive pushed scan results from a CLI instance.\n\nStores as a completed ScanJob with source metadata. With\n``Prefer: respond-async`` (or ``AGENT_BOM_PUSH_INGEST_MODE=async``) the\nreport is admitted durably and ``202`` returns ``job_id`` and ``status_url``\nwhile a worker persists the graph. A key another request is still\ncommitting also answers ``202`` with ``Retry-After``.",
         "operationId": "receive_push_v1_results_push_post",
         "requestBody": {
           "content": {
@@ -80695,6 +80695,112 @@
                 "schema": {
                   "additionalProperties": true,
                   "title": "Response Receive Push V1 Results Push Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "description": "Accepted for asynchronous ingest (``Prefer: respond-async``), or an identical push is still being committed. Poll ``status_url`` after ``Retry-After`` seconds."
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Receive Push",
+        "tags": [
+          "push"
+        ]
+      }
+    },
+    "/v1/results/push/{job_id}": {
+      "get": {
+        "description": "Return the receipt of one pushed result: accepted, running, stored or failed.",
+        "operationId": "get_push_status_v1_results_push__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Push Status V1 Results Push  Job Id  Get",
                   "type": "object"
                 }
               }
@@ -80722,7 +80828,7 @@
             "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
           }
         },
-        "summary": "Receive Push",
+        "summary": "Get Push Status",
         "tags": [
           "push"
         ]
