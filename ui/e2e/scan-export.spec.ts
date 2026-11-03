@@ -133,6 +133,10 @@ test("scan flow reaches result view and exports graph JSON", async ({ page }) =>
     });
   });
 
+  await page.route(`**/v1/scan/${scanJob.job_id}/dashboard`, async (route) => {
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify(scanJob) });
+  });
+
   await page.route(`**/v1/scan/${scanJob.job_id}/status`, async (route) => {
     await route.fulfill({
       contentType: "application/json",
