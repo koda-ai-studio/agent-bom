@@ -304,6 +304,15 @@ def output_options(fn):
                 help="With --agent-mode, inline the complete report instead of the bounded summary (large output).",
             ),
             click.option(
+                "--exclude-dev",
+                "--prod-only",
+                "exclude_dev",
+                is_flag=True,
+                default=False,
+                help="Drop packages a lockfile marks as development-only before matching, so findings, gates and "
+                "every export cover production dependencies. Packages with an unknown scope are kept.",
+            ),
+            click.option(
                 "--exclude-unfixable",
                 is_flag=True,
                 default=False,
