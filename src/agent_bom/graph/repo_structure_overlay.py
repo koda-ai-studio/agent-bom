@@ -45,6 +45,7 @@ from typing import Any
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.repository_identity import repository_scope, scoped_file_path, scoped_node_id
 from agent_bom.graph.types import EntityType, GraphSemanticLayer, RelationshipType
 
 _OVERLAY_SOURCE = "repo-structure-overlay"
@@ -112,12 +113,12 @@ def _norm_path(raw: Any) -> str:
     return "" if text == "." else text
 
 
-def _dir_node_id(dir_path: str) -> str:
-    return "directory:." if dir_path == "" else f"directory:{dir_path}"
+def _dir_node_id(dir_path: str, scope: str = "") -> str:
+    return scoped_node_id("directory", dir_path, scope)
 
 
-def _file_node_id(file_path: str, entity_type: EntityType) -> str:
-    return f"{entity_type.value}:{file_path}"
+def _file_node_id(file_path: str, entity_type: EntityType, scope: str = "") -> str:
+    return scoped_node_id(entity_type.value, file_path, scope)
 
 
 def _dir_label(dir_path: str) -> str:
@@ -174,6 +175,44 @@ def _looks_like_path(value: Any) -> bool:
     return "/" in text or "." in text
 
 
+def _directory_records(inventory: Any, scope: str) -> dict[str, dict[str, Any]]:
+    records = {}
+    directories = inventory.get("directories") if isinstance(inventory, dict) else None
+    for record in directories if isinstance(directories, list) else []:
+        if isinstance(record, dict) and isinstance(record.get("path"), str):
+            if not scope or scoped_file_path(record["path"], inventory) is not None:
+                records[_norm_path(record["path"])] = record
+    context = inventory.get("repository_context", {}) if isinstance(inventory, dict) else {}
+    packages = context.get("workspace_packages", []) if isinstance(context, dict) else []
+    for row in packages[:500] if scope and isinstance(packages, list) else []:
+        if not isinstance(row, dict) or scoped_file_path(row.get("path"), inventory) is None:
+            continue
+        path = _norm_path(row["path"])
+        record = records.setdefault(path, {"path": row["path"]})
+        manifest = scoped_file_path(row.get("manifest"), inventory)
+        if manifest and _file_dir(manifest) == path:
+            record = {**record, "manifest_files": sorted(set(_str_list(record.get("manifest_files"))) | {manifest.rsplit("/", 1)[-1]})}
+            records[path] = record
+    return records
+
+
+def _finding_files(graph: UnifiedGraph, inventory: Any, scope: str) -> dict[str, str]:
+    finding_files: dict[str, str] = {}  # misconfig_node_id -> normalised file path
+    for node in graph.nodes.values():
+        if node.entity_type != EntityType.MISCONFIGURATION:
+            continue
+        attrs = node.attributes or {}
+        raw_path = next((attrs.get(key) for key in _FILE_PATH_ATTRS if _looks_like_path(attrs.get(key))), None)
+        if raw_path is None:
+            continue
+        file_path = scoped_file_path(raw_path, inventory) if scope else _norm_path(raw_path)
+        if not file_path:
+            continue
+        finding_files[node.id] = file_path
+
+    return finding_files
+
+
 def apply_repo_structure_overlay(
     graph: UnifiedGraph,
     report_json: dict[str, Any],
@@ -200,12 +239,8 @@ def apply_repo_structure_overlay(
     now_iso = now.isoformat()
 
     project_inventory = report_json.get("project_inventory") if isinstance(report_json, dict) else None
-    directories = project_inventory.get("directories") if isinstance(project_inventory, dict) else None
-    directory_records: dict[str, dict[str, Any]] = {}
-    if isinstance(directories, list):
-        for record in directories:
-            if isinstance(record, dict) and isinstance(record.get("path"), str):
-                directory_records[_norm_path(record.get("path"))] = record
+    scope = repository_scope(project_inventory)
+    directory_records = _directory_records(project_inventory, scope)
 
     # ── Index existing graph state we stitch onto ───────────────────────────
     # Manifest inventory directories (and legacy SERVER nodes) are keyed by path
@@ -230,18 +265,8 @@ def apply_repo_structure_overlay(
 
     # File-scoped findings: map an existing misconfiguration node → the file it
     # names, so we can both create the file node and link finding → file.
-    finding_files: dict[str, str] = {}  # misconfig_node_id -> normalised file path
-    for node in graph.nodes.values():
-        if node.entity_type != EntityType.MISCONFIGURATION:
-            continue
-        attrs = node.attributes or {}
-        raw_path = next((attrs.get(key) for key in _FILE_PATH_ATTRS if _looks_like_path(attrs.get(key))), None)
-        if raw_path is None:
-            continue
-        file_path = _norm_path(raw_path)
-        if not file_path:
-            continue
-        finding_files[node.id] = file_path
+    finding_files = _finding_files(graph, project_inventory, scope)
+    for file_path in finding_files.values():
         needed_dirs.update(_ancestors(_file_dir(file_path)))
 
     if not needed_dirs:
@@ -249,7 +274,7 @@ def apply_repo_structure_overlay(
 
     # ── 1. Directory nodes ──────────────────────────────────────────────────
     for dir_path in sorted(needed_dirs):
-        node_id = _dir_node_id(dir_path)
+        node_id = _dir_node_id(dir_path, scope)
         if node_id not in graph.nodes:
             counts["directories"] += 1
         record = directory_records.get(dir_path, {})
@@ -262,6 +287,7 @@ def apply_repo_structure_overlay(
                 last_seen=now_iso,
                 attributes={
                     "path": dir_path or ".",
+                    **({"repository_scope": scope} if scope else {}),
                     "is_repo_root": dir_path == "",
                     "package_count": record.get("package_count", 0),
                     "direct_packages": record.get("direct_packages", 0),
@@ -279,8 +305,8 @@ def apply_repo_structure_overlay(
             continue
         graph.add_edge(
             UnifiedEdge(
-                source=_dir_node_id(_parent_dir(dir_path)),
-                target=_dir_node_id(dir_path),
+                source=_dir_node_id(_parent_dir(dir_path), scope),
+                target=_dir_node_id(dir_path, scope),
                 relationship=RelationshipType.CONTAINS,
                 evidence={"source": _OVERLAY_SOURCE},
             )
@@ -297,8 +323,10 @@ def apply_repo_structure_overlay(
 
         for file_name in all_files:
             file_path = f"{dir_path}/{file_name}" if dir_path else file_name
+            if scope and scoped_file_path(file_path, project_inventory) is None:
+                continue
             entity_type = _file_entity_type(file_path)
-            file_id = _file_node_id(file_path, entity_type)
+            file_id = _file_node_id(file_path, entity_type, scope)
             if file_id not in graph.nodes:
                 counts["files"] += 1
             graph.add_node(
@@ -308,14 +336,14 @@ def apply_repo_structure_overlay(
                     label=file_name,
                     first_seen=now_iso,
                     last_seen=now_iso,
-                    attributes={"path": file_path, "directory": dir_path or "."},
+                    attributes={**({"repository_scope": scope} if scope else {}), "path": file_path, "directory": dir_path or "."},
                     data_sources=[_OVERLAY_SOURCE],
                     dimensions=NodeDimensions(surface=GraphSemanticLayer.CODE.value),
                 )
             )
             graph.add_edge(
                 UnifiedEdge(
-                    source=_dir_node_id(dir_path),
+                    source=_dir_node_id(dir_path, scope),
                     target=file_id,
                     relationship=RelationshipType.CONTAINS,
                     evidence={"source": _OVERLAY_SOURCE},
@@ -332,7 +360,7 @@ def apply_repo_structure_overlay(
         if representative and server_id:
             rep_name = sorted(representative)[0]
             rep_path = f"{dir_path}/{rep_name}" if dir_path else rep_name
-            rep_id = _file_node_id(rep_path, _file_entity_type(rep_path))
+            rep_id = _file_node_id(rep_path, _file_entity_type(rep_path), scope)
             for pkg_id in sorted(set(deps_by_server.get(server_id, []))):
                 pkg_node = graph.nodes.get(pkg_id)
                 if pkg_node is None or not pkg_node.attributes.get("is_direct", True):
@@ -350,7 +378,7 @@ def apply_repo_structure_overlay(
     # ── 4. file → finding: place each finding's file in the tree + link it ───
     for misconfig_id, file_path in sorted(finding_files.items()):
         entity_type = _file_entity_type(file_path)
-        file_id = _file_node_id(file_path, entity_type)
+        file_id = _file_node_id(file_path, entity_type, scope)
         if file_id not in graph.nodes:
             counts["files"] += 1
             graph.add_node(
@@ -360,14 +388,18 @@ def apply_repo_structure_overlay(
                     label=file_path.rsplit("/", 1)[-1],
                     first_seen=now_iso,
                     last_seen=now_iso,
-                    attributes={"path": file_path, "directory": _file_dir(file_path) or "."},
+                    attributes={
+                        **({"repository_scope": scope} if scope else {}),
+                        "path": file_path,
+                        "directory": _file_dir(file_path) or ".",
+                    },
                     data_sources=[_OVERLAY_SOURCE],
                     dimensions=NodeDimensions(surface=GraphSemanticLayer.CODE.value),
                 )
             )
             graph.add_edge(
                 UnifiedEdge(
-                    source=_dir_node_id(_file_dir(file_path)),
+                    source=_dir_node_id(_file_dir(file_path), scope),
                     target=file_id,
                     relationship=RelationshipType.CONTAINS,
                     evidence={"source": _OVERLAY_SOURCE},

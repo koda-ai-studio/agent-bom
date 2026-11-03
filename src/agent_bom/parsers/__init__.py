@@ -55,6 +55,7 @@ from agent_bom.parsers.os_parsers import (  # noqa: F401
     scan_os_packages,
 )
 from agent_bom.parsers.php_parsers import parse_php_packages  # noqa: F401
+from agent_bom.parsers.project_inventory import summarize_project_inventory as _summarize_project_inventory
 
 # Re-export Python parsers for backward compatibility
 from agent_bom.parsers.python_parsers import (  # noqa: F401
@@ -748,99 +749,9 @@ def _manifest_file_names(directory: Path) -> list[str]:
     return sorted(name for name in _MANIFEST_FILES if (directory / name).exists())
 
 
-def summarize_project_inventory(
-    root: Path,
-    dir_map: dict[Path, list[Package]],
-) -> dict[str, object]:
-    """Summarize manifest/lockfile coverage for a project scan.
-
-    This keeps lockfile-driven project scanning visible in CLI/JSON output so
-    users can tell whether a project scan was backed by resolved lockfiles or
-    only manifest declarations.
-    """
-    root = Path(root).resolve()
-    directories: list[dict[str, object]] = []
-    ecosystems: dict[str, int] = {}
-    total_packages = 0
-    total_direct = 0
-    total_transitive = 0
-    manifest_file_total = 0
-    lockfile_total = 0
-    lockfile_directories = 0
-    declaration_only_directories = 0
-    lockfile_backed_packages = 0
-    declaration_only_packages = 0
-    lockfile_backed_direct_packages = 0
-    lockfile_backed_transitive_packages = 0
-    declaration_only_direct_packages = 0
-    declaration_only_transitive_packages = 0
-
-    for directory, packages in sorted(dir_map.items(), key=lambda item: str(item[0])):
-        manifest_files = _manifest_file_names(directory)
-        lockfiles = [name for name in manifest_files if name in _LOCKFILE_FILES]
-        manifests = [name for name in manifest_files if name not in _LOCKFILE_FILES]
-        direct_count = sum(1 for pkg in packages if pkg.is_direct)
-        transitive_count = len(packages) - direct_count
-        advisory_evidence = "lockfile_backed" if lockfiles else "declaration_only"
-
-        rel_path = "." if directory == root else str(directory.relative_to(root))
-        eco_breakdown: dict[str, int] = {}
-        for pkg in packages:
-            eco_breakdown[pkg.ecosystem] = eco_breakdown.get(pkg.ecosystem, 0) + 1
-            ecosystems[pkg.ecosystem] = ecosystems.get(pkg.ecosystem, 0) + 1
-
-        directories.append(
-            {
-                "path": rel_path,
-                "package_count": len(packages),
-                "direct_packages": direct_count,
-                "transitive_packages": transitive_count,
-                "manifest_files": manifest_files,
-                "lockfile_files": lockfiles,
-                "declaration_files": manifests,
-                "advisory_evidence": advisory_evidence,
-                "ecosystems": eco_breakdown,
-            }
-        )
-        total_packages += len(packages)
-        total_direct += direct_count
-        total_transitive += transitive_count
-        manifest_file_total += len(manifest_files)
-        lockfile_total += len(lockfiles)
-        if lockfiles:
-            lockfile_directories += 1
-            lockfile_backed_packages += len(packages)
-            lockfile_backed_direct_packages += direct_count
-            lockfile_backed_transitive_packages += transitive_count
-        else:
-            declaration_only_directories += 1
-            declaration_only_packages += len(packages)
-            declaration_only_direct_packages += direct_count
-            declaration_only_transitive_packages += transitive_count
-
-    advisory_depth_pct = round(lockfile_backed_packages / total_packages * 100) if total_packages else 0
-
-    return {
-        "root": str(root),
-        "manifest_directories": len(dir_map),
-        "lockfile_directories": lockfile_directories,
-        "declaration_only_directories": declaration_only_directories,
-        "manifest_files": manifest_file_total,
-        "lockfiles": lockfile_total,
-        "declaration_only_files": manifest_file_total - lockfile_total,
-        "package_count": total_packages,
-        "direct_packages": total_direct,
-        "transitive_packages": total_transitive,
-        "lockfile_backed_packages": lockfile_backed_packages,
-        "declaration_only_packages": declaration_only_packages,
-        "lockfile_backed_direct_packages": lockfile_backed_direct_packages,
-        "lockfile_backed_transitive_packages": lockfile_backed_transitive_packages,
-        "declaration_only_direct_packages": declaration_only_direct_packages,
-        "declaration_only_transitive_packages": declaration_only_transitive_packages,
-        "advisory_depth_pct": advisory_depth_pct,
-        "ecosystems": ecosystems,
-        "directories": directories,
-    }
+def summarize_project_inventory(root: Path, dir_map: dict[Path, list[Package]]) -> dict[str, object]:
+    """Summarize dependency coverage and bounded first-party repository context."""
+    return _summarize_project_inventory(root, dir_map, _MANIFEST_FILES, _LOCKFILE_FILES)
 
 
 def scan_project_directory(

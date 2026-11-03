@@ -164,6 +164,8 @@ _SPECS: tuple[RelationshipSpec, ...] = (
             (E.CLOUD_RESOURCE, E.CLOUD_RESOURCE),
             (E.DATA_STORE, E.DATA_STORE),
             (E.DATA_STORE, E.CLOUD_RESOURCE),
+            (E.CODE_MODULE, E.CODE_MODULE),
+            (E.CODE_MODULE, E.PACKAGE),
         ),
     ),
     _spec(R.PROVIDES_TOOL, T.STRUCTURAL, "inventory", (E.SERVER,), (E.TOOL,)),
@@ -431,6 +433,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         "aspm",
         (*_FINDINGS, E.PACKAGE, E.CONTAINER, E.CLOUD_RESOURCE, E.SERVER, E.CREDENTIAL),
         (E.APPLICATION,),
+        extra=tuple(product((E.SOURCE_FILE, E.CONFIG_FILE, *_FINDINGS), (E.CODE_MODULE,))),
     ),
 )
 

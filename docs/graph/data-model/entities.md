@@ -67,7 +67,7 @@ Emitted by: —; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `code_module`
 
-Emitted by: `graph/ast_tool_projection.py`, `graph/code_graph_overlay.py`
+Emitted by: `graph/ast_tool_projection.py`, `graph/code_graph_overlay.py`, `graph/workspace_overlay.py`
 
 Id formats:
 
@@ -118,7 +118,7 @@ Id formats:
 
 ## `directory`
 
-Emitted by: `graph/agent_projection.py`, `graph/repo_structure_overlay.py`, `output/graph_inventory.py`
+Emitted by: `graph/agent_projection.py`, `graph/repo_structure_overlay.py`, `graph/workspace_overlay.py`, `output/graph_inventory.py`
 
 ## `drift_incident`
 

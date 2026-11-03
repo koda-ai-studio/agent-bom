@@ -9,24 +9,15 @@ Entity types in the code and supply chain domain and the relationships allowed b
 
 ### Structure: what contains, depends on or governs what
 
-```mermaid
-erDiagram
-  ci_job }o--o{ config_file : "configures"
-  ci_job }o--o{ source_file : "defines"
-  code_module }o--o{ code_module : "imports"
-  code_module }o--o{ directory : "contains"
-  code_module }o--o{ external_import : "imports"
-  code_module }o--o{ package : "imports"
-  code_module }o--o{ source_file : "defines, imports"
-  config_file }o--o{ directory : "contains"
-  config_file }o--o{ package : "depends_on"
-  directory }o--o{ directory : "contains"
-  directory }o--o{ package : "contains, depends_on"
-  directory }o--o{ source_file : "contains"
-  external_import }o--o{ source_file : "imports"
-  package }o--o{ package : "depends_on"
-  package }o--o{ source_file : "contains, depends_on, imports"
-```
+16 type pairs, too many to draw legibly. Read a row as *source → relationship → target*.
+
+| Source ↓ / target → | `ci_job` | `code_module` | `config_file` | `directory` | `external_import` | `package` | `source_file` |
+|---|---|---|---|---|---|---|---|
+| `code_module` |  | depends_on<br/>imports |  |  | imports | depends_on<br/>imports |  |
+| `config_file` | configures | belongs_to |  |  |  | depends_on |  |
+| `directory` |  | contains | contains | contains |  | contains<br/>depends_on | contains |
+| `package` |  |  |  |  |  | depends_on |  |
+| `source_file` | defines | belongs_to<br/>defines<br/>imports |  |  | imports | contains<br/>depends_on<br/>imports |  |
 
 Not drawn, because they can connect almost any two types: `recorded_activity`, `trace_step`. They are listed in the tables below.
 
@@ -36,10 +27,11 @@ Not drawn, because they can connect almost any two types: `recorded_activity`, `
 
 | Relationship | Class | Traversable | From | To |
 |---|---|---|---|---|
+| `belongs_to` | `structural` | yes | `config_file`, `source_file` | `code_module` |
 | `configures` | `structural` | yes | `config_file` | `ci_job` |
 | `contains` | `structural` | yes | `directory`, `source_file` | `code_module`, `config_file`, `directory`, `package`, `source_file` |
 | `defines` | `structural` | yes | `source_file` | `ci_job`, `code_module` |
-| `depends_on` | `dependency` | yes | `config_file`, `directory`, `package`, `source_file` | `package` |
+| `depends_on` | `dependency` | yes | `code_module`, `config_file`, `directory`, `package`, `source_file` | `code_module`, `package` |
 | `imports` | `dependency` | yes | `code_module`, `source_file` | `code_module`, `external_import`, `package` |
 | `trace_step` | `runtime` | yes | `ci_job`, `config_file`, `package` | `ci_job`, `config_file`, `package` |
 
@@ -48,7 +40,7 @@ Not drawn, because they can connect almost any two types: `recorded_activity`, `
 | Relationship | Class | Traversable | From | To |
 |---|---|---|---|---|
 | `affects` | `finding` | yes | Findings: `misconfiguration`, `vulnerability` | `ci_job`, `config_file`, `package`, `source_file` |
-| `belongs_to` | `structural` | yes | `package` | AI and agents: `application` |
+| `belongs_to` | `structural` | yes | `package`<br/>Findings: `misconfiguration`, `vulnerability` | `code_module`<br/>AI and agents: `application` |
 | `can_access` | `authority` | yes | AI and agents: `agent`, `application`, `server`, `tool`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `model`<br/>Identity and access: `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `config_file` |
 | `configures` | `structural` | yes | `config_file` | AI and agents: `agent`, `server`, `tool` |
 | `contains` | `structural` | yes | `ci_job`, `config_file`, `directory`, `package`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `environment`, `fleet` | `ci_job`, `config_file`, `directory`, `package`, `source_file`<br/>Cloud, infrastructure and data: `container`<br/>Findings: `misconfiguration`, `vulnerability`<br/>AI and agents: `server` |

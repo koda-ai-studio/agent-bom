@@ -21,6 +21,7 @@ from typing import Any
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.repository_identity import scoped_node_id
 from agent_bom.graph.types import EntityType, GraphSemanticLayer, RelationshipType
 
 _OVERLAY_SOURCE = "code_graph_overlay"
@@ -60,7 +61,7 @@ def apply_code_graph_overlay(
     counts = {"code_modules": 0, "defines_edges": 0, "contains_edges": 0}
     now_iso = now.isoformat()
 
-    files_by_dir: dict[str, list[str]] = defaultdict(list)
+    files_by_dir: dict[tuple[str, str], list[str]] = defaultdict(list)
     for node in graph.nodes.values():
         if node.entity_type != EntityType.SOURCE_FILE or node.dimensions.surface == "sbom":
             # Imported inventory is a source artifact, not observed source code.
@@ -68,14 +69,14 @@ def apply_code_graph_overlay(
         path = _norm_path((node.attributes or {}).get("path") or node.label)
         if not path:
             continue
-        files_by_dir[_file_dir(path)].append(node.id)
+        files_by_dir[(str(node.attributes.get("repository_scope") or ""), _file_dir(path))].append(node.id)
 
     if not files_by_dir:
         return counts
 
-    for dir_path in sorted(files_by_dir):
-        module_id = _module_id(dir_path)
-        file_ids = sorted(files_by_dir[dir_path])
+    for scope, dir_path in sorted(files_by_dir):
+        module_id = scoped_node_id("code_module", dir_path, scope)
+        file_ids = sorted(files_by_dir[(scope, dir_path)])
         if module_id not in graph.nodes:
             counts["code_modules"] += 1
         label = dir_path.rsplit("/", 1)[-1] if dir_path else "(repo root)"
@@ -88,6 +89,7 @@ def apply_code_graph_overlay(
                 last_seen=now_iso,
                 attributes={
                     "path": dir_path or ".",
+                    **({"repository_scope": scope} if scope else {}),
                     "source_file_count": len(file_ids),
                     "evidence_tier": "static_scan",
                 },
@@ -96,7 +98,7 @@ def apply_code_graph_overlay(
             )
         )
 
-        dir_id = _dir_node_id(dir_path)
+        dir_id = scoped_node_id("directory", dir_path, scope)
         if dir_id in graph.nodes:
             graph.add_edge(
                 UnifiedEdge(

@@ -279,6 +279,7 @@ export function assetIcon(input: AssetKindInput): EntityIcon {
 }
 
 export function assetKindLabel(input: AssetKindInput): string {
+  if ((input.entityType === "code_module" || input.nodeType === "codeModule") && input.attributes?.subtype === "workspace_package") return "Workspace package";
   if ((input.entityType ?? input.nodeType) === "misconfiguration" && input.attributes?.finding_kind === "iac") return "IaC finding";
   const resolved = resolveAssetKind(input);
   if (resolved.basis === "subtype") return ASSET_KINDS[resolved.kind].label;

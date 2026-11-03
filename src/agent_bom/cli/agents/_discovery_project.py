@@ -76,12 +76,12 @@ def _scan_one_project(run: DiscoveryRun, project: Any, *, primary: bool) -> None
     dir_map = scan_project_directory(proj_root, follow_symlinks=run.follow_symlinks, warnings=package_warnings)
     for warning in package_warnings:
         con.print(f"  [yellow]⚠[/yellow] {warning}")
+    project_inventory = summarize_project_inventory(proj_root, dir_map)
+    # Repository-only projects (for example dbt) can have no dependency manifest.
+    # Preserve their local context independently of third-party package inventory.
+    if primary:
+        run.ctx.project_inventory_data = project_inventory
     if dir_map:
-        project_inventory = summarize_project_inventory(proj_root, dir_map)
-        # The manifest-tree summary is rooted at one directory; it describes the
-        # primary project, while every project's packages land on its own agent.
-        if primary:
-            run.ctx.project_inventory_data = project_inventory
         total_proj_pkgs = sum(len(v) for v in dir_map.values())
         _print_project_summary(run, proj_label, project_inventory, total_proj_pkgs)
         proj_agent = Agent(

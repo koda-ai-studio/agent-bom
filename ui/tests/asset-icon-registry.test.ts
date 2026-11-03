@@ -308,3 +308,8 @@ it("labels non-MCP connection profiles and IaC findings from their recorded kind
   expect(assetKindLabel(finding)).toBe("IaC finding");
   expect(assetKindLabel({ entityType: "misconfiguration", attributes: { resource_type: "data_connection" } })).toBe("Finding");
 });
+
+it("labels a recorded first-party workspace separately from dependency packages", () => {
+  expect(assetKindLabel({ entityType: "code_module", attributes: { subtype: "workspace_package" } })).toBe("Workspace package");
+  expect(assetKindLabel({ entityType: "package", attributes: {} })).not.toBe("Workspace package");
+});

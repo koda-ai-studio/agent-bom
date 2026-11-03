@@ -318,10 +318,10 @@ def _scan_dependency_stage(
     if update_progress is not None:
         update_progress("Parsing lockfiles and dependency manifests (uv.lock, requirements.txt, …)")
     dir_map = scan_project_directory(root, warnings=warnings)
-    if not dir_map:
-        return
     inventory = summarize_project_inventory(root, dir_map)
     ai_inventory["dependency_inventory"] = inventory
+    if not dir_map:
+        return
     _append_dependency_agents(root, dir_map, agents)
     if update_progress is not None:
         update_progress(
