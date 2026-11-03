@@ -21,6 +21,8 @@ def flow_finding_rows(findings: list[Any]) -> list[dict[str, Any]]:
             "severity": finding.severity,
             "cwe_ids": list(finding.cwe_ids),
             **({"suppression": finding.suppression} if finding.suppression else {}),
+            **({"path_context": finding.path_context} if getattr(finding, "path_context", "") else {}),
+            **({"downgrade_reason": finding.downgrade_reason} if getattr(finding, "downgrade_reason", "") else {}),
         }
         for finding in findings
     ]

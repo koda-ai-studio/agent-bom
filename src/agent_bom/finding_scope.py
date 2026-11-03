@@ -92,6 +92,7 @@ _MISCONFIGURATION_TYPES = {
     "CIS_ERROR",
     "CLOUD_BEST_PRACTICE_FAIL",
     "CLOUD_BEST_PRACTICE_ERROR",
+    "IAC_MISCONFIGURATION",
     "PROMPT_SECURITY",
     "TOOL_DRIFT",
     "SKILL_RISK",
@@ -373,6 +374,8 @@ def _is_iac_misconfig(source: "FindingSource | None", ftype: "FindingType", ev: 
     """
     from agent_bom.finding import FindingType
 
+    if ftype == FindingType.IAC_MISCONFIGURATION:
+        return True
     if ftype != FindingType.CIS_FAIL:
         return False
     if ev.get("iac"):

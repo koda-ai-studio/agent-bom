@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -54,6 +56,14 @@ class IaCFinding:
     remediation: str = ""  # Fix guidance
     resource_type: IaCResourceType | None = None  # Structured resource type for graph/compliance wiring
     repository_relative_path: str | None = None  # Set only by a scanner with a known repository root
+
+
+_CIS_CONTROL_ID = re.compile(r"^CIS-(?:[A-Za-z0-9]+-)?\d+(?:\.\d+)*$", re.IGNORECASE)
+
+
+def cites_cis_control(compliance: Iterable[str]) -> bool:
+    """True when an IaC rule cites a CIS benchmark control id (``CIS-Docker-4.6``, ``CIS-5.1``)."""
+    return any(_CIS_CONTROL_ID.match(str(tag).strip()) for tag in compliance)
 
 
 @dataclass

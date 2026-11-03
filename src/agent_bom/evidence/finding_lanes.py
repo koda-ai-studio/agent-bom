@@ -21,7 +21,11 @@ def finding_lane(row: Mapping[str, Any]) -> str:
     if kind == "misconfiguration":
         from agent_bom.finding import FindingType
 
-        if asset.get("asset_type") == "iac_resource" or _is_iac_misconfig(None, FindingType.CIS_FAIL, dict(evidence)):
+        if (
+            asset.get("asset_type") == "iac_resource"
+            or str(row.get("finding_type") or "").strip().upper() == FindingType.IAC_MISCONFIGURATION.value
+            or _is_iac_misconfig(None, FindingType.CIS_FAIL, dict(evidence))
+        ):
             return "iac"
         if str(row.get("finding_type") or "").strip().upper() in {
             "CIS_FAIL",

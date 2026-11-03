@@ -47,6 +47,7 @@ class FindingType(str, Enum):
     CIS_ERROR = "CIS_ERROR"  # CIS control could not be evaluated reliably
     CLOUD_BEST_PRACTICE_FAIL = "CLOUD_BEST_PRACTICE_FAIL"
     CLOUD_BEST_PRACTICE_ERROR = "CLOUD_BEST_PRACTICE_ERROR"
+    IAC_MISCONFIGURATION = "IAC_MISCONFIGURATION"  # IaC/CI rule failure that cites no CIS benchmark control
     CREDENTIAL_EXPOSURE = "CREDENTIAL_EXPOSURE"  # Credential found in environment/config
     TOOL_DRIFT = "TOOL_DRIFT"  # MCP tool description changed (rug pull)
     INJECTION = "INJECTION"  # Prompt/argument injection in MCP tool
