@@ -183,12 +183,14 @@ function vulnOnlyPasses(
 function buildVulnReachSet(
   nodes: UnifiedNode[],
   edges: UnifiedEdge[],
+  findingKind?: FilterState["findingKind"],
 ): Set<string> {
   const reach = new Set<string>();
   const seeds = nodes.filter(
     (n) =>
-      n.entity_type === EntityType.VULNERABILITY ||
-      n.entity_type === EntityType.MISCONFIGURATION,
+      findingKind === "iac"
+        ? n.entity_type === EntityType.MISCONFIGURATION && n.attributes?.finding_kind === "iac"
+        : n.entity_type === EntityType.VULNERABILITY || n.entity_type === EntityType.MISCONFIGURATION,
   );
   if (seeds.length === 0) return reach;
   const adj = new Map<string, Set<string>>();
@@ -342,7 +344,10 @@ function passNodes(
   const vulnReach = filters.vulnOnly
     ? buildVulnReachSet(nodes, edgeSubset)
     : null;
+  const iacReach = filters.findingKind === "iac" ? buildVulnReachSet(nodes, edgeSubset, "iac") : null;
   const filtered = nodes.filter((n) => {
+    if (iacReach && (!iacReach.has(n.id) || ((n.entity_type === EntityType.MISCONFIGURATION || n.entity_type === EntityType.VULNERABILITY)
+      && n.attributes?.finding_kind !== "iac"))) return false;
     if (!opts.skipLayer && !layerPasses(n, filters.layers)) return false;
     if (!opts.skipSeverity && !severityPasses(n, filters.severity))
       return false;
@@ -623,6 +628,7 @@ export function encodeFiltersToParams(filters: FilterState): URLSearchParams {
   if (filters.maxDepth !== 2) params.set("depth", String(filters.maxDepth));
   if (filters.pageSize !== 50) params.set("pageSize", String(filters.pageSize));
   if (filters.vulnOnly) params.set("vulnOnly", "1");
+  if (filters.findingKind === "iac") params.set("findingKind", "iac");
 
   // Encode layers as a compact CSV of enabled keys, but only when the
   // layer set diverges from the focused defaults — avoids polluting
@@ -688,6 +694,8 @@ export function decodeFiltersFromParams(
   const vulnOnly = get("vulnOnly");
   if (vulnOnly === "1" || vulnOnly === "true") patch.vulnOnly = true;
   else if (vulnOnly === "0" || vulnOnly === "false") patch.vulnOnly = false;
+  const findingKind = get("findingKind");
+  if (findingKind === "iac" || findingKind === "all") patch.findingKind = findingKind;
 
   const layers = get("layers");
   if (layers !== null) {

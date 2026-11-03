@@ -14,7 +14,7 @@ import { PathExploitStory } from "@/components/path-exploit-story";
 import { usePathExploitStory } from "@/hooks/use-path-exploit-story";
 
 import { investigationHref, investigationView } from "@/lib/investigation-url";
-import { selectAttackPathQueue } from "@/lib/attack-path-queue";
+import { representativeAttackPaths, selectAttackPathQueue } from "@/lib/attack-path-queue";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
@@ -23,7 +23,8 @@ import { ApiOfflineState } from "@/components/api-offline-state";
 import { userFacingApiErrorMessage } from "@/lib/api-errors";
 import { resolveSecurityGraphSurface } from "@/lib/security-graph-route";
 
-import type { RankedPathRow } from "@/components/ranked-path-list";
+import { investigationPathRows } from "@/lib/investigation-path-rows";
+import { PathPreviewControl } from "@/components/path-preview-control";
 import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
 import { AttackPathCorrelationProof } from "@/components/attack-path-correlation-proof";
 import { ExposurePathCommandCenter, type ExposurePathView } from "@/components/exposure-path-command-center";
@@ -55,10 +56,10 @@ import {
   type UnifiedGraphResponse,
 } from "@/lib/api";
 import {
-  attackPathKey, attackPathRoleChain, buildFindingsHref, buildGraphInvestigationHref, buildSecurityGraphHref,
-  descriptiveAttackPathTitle, dedupeAttackPathsForPresentation, graphPathQueueCounts,
-  investigationRootForAttackPath, labelsForAttackPathType, matchesAttackPathFocus, mergeAttackPathGraphPages,
-  rankedAttackPathRows, recommendedAttackPathActions, toAttackCardNodes, toExposurePathFromAttackPath,
+  attackPathKey, buildFindingsHref, buildGraphInvestigationHref, buildSecurityGraphHref,
+  dedupeAttackPathsForPresentation, graphPathQueueCounts,
+  investigationRootForAttackPath, matchesAttackPathFocus, mergeAttackPathGraphPages,
+  recommendedAttackPathActions, toExposurePathFromAttackPath,
   withCanonicalExposurePresentation,
 } from "@/lib/attack-paths";
 import { FindingInvestigationContext } from "@/components/finding-investigation-context";
@@ -89,7 +90,7 @@ const EMPTY_INVESTIGATION_FILTERS: InvestigationPresetFilters = {
 };
 
 /** First/next fetch size for GET /v1/graph/attack-paths (API offset paging). */
-const ATTACK_PATH_FETCH_PAGE = 10;
+const ATTACK_PATH_FETCH_PAGE = 100;
 const ATTACK_PATH_QUEUE_PAGE_SIZE = 10;
 const FIX_FIRST_CARD_LIMIT = 10;
 const DEFAULT_SNAPSHOT_CHIP_COUNT = 3;
@@ -123,6 +124,7 @@ function AttackPathInvestigationContent() {
   const [focusApplied, setFocusApplied] = useState(false);
   const [showAllSnapshots, setShowAllSnapshots] = useState(false);
   const [visibleAttackPathCount, setVisibleAttackPathCount] = useState(ATTACK_PATH_QUEUE_PAGE_SIZE);
+  const [previewPaths, setPreviewPaths] = useState(true);
   const [loadingMorePaths, setLoadingMorePaths] = useState(false);
   const [morePathsError, setMorePathsError] = useState<string | null>(null);
   const pathPageRequest = useRef<AbortController | null>(null);
@@ -477,21 +479,19 @@ function AttackPathInvestigationContent() {
     params.set("related_finding", focus.findingId);
     return `${pathname}?${params.toString()}`;
   }, [allAttackPaths.length, fixFirstCards, focus, graphData?.attack_paths, graphNodeById, pathname, searchParams, serverFocus]);
-  const presentationAttackPaths = useMemo(
-    () => dedupeAttackPathsForPresentation(allAttackPaths, graphNodeById),
-    [allAttackPaths, graphNodeById],
-  );
   const attackPaths = useMemo(
-    () => filterInvestigationQuestion(filterAttackPathsForInvestigation(presentationAttackPaths, graphNodeById, investigationFilters), graphNodeById, requestedQuestion),
-    [graphNodeById, investigationFilters, presentationAttackPaths, requestedQuestion],
+    () => filterInvestigationQuestion(filterAttackPathsForInvestigation(allAttackPaths, graphNodeById, investigationFilters), graphNodeById, requestedQuestion),
+    [graphNodeById, investigationFilters, allAttackPaths, requestedQuestion],
   );
+  const previewCandidates = useMemo(() => dedupeAttackPathsForPresentation(attackPaths, graphNodeById), [attackPaths, graphNodeById]);
   const pathEnvironments = useMemo(
     () => collectPathEnvironments(allAttackPaths, graphNodeById),
     [allAttackPaths, graphNodeById],
   );
+  const showingPreview = previewPaths && visibleAttackPathCount === ATTACK_PATH_QUEUE_PAGE_SIZE && !hasFocusContext;
   const visibleAttackPaths = useMemo(
-    () => attackPaths.slice(0, Math.min(visibleAttackPathCount, attackPaths.length)),
-    [attackPaths, visibleAttackPathCount],
+    () => showingPreview ? representativeAttackPaths(previewCandidates, graphNodeById) : attackPaths.slice(0, visibleAttackPathCount),
+    [attackPaths, previewCandidates, graphNodeById, showingPreview, visibleAttackPathCount],
   );
   const filtersNarrowQueue =
     Boolean(selectedCampaign?.member_paths?.length) ||
@@ -500,6 +500,7 @@ function AttackPathInvestigationContent() {
   const hiddenLoadedAttackPathCount = Math.max(0, attackPaths.length - visibleAttackPaths.length);
 
   const loadMoreAttackPaths = useCallback(async () => {
+    setPreviewPaths(false);
     if (hiddenLoadedAttackPathCount > 0) {
       setVisibleAttackPathCount((current) =>
         Math.min(attackPaths.length, current + ATTACK_PATH_QUEUE_PAGE_SIZE),
@@ -550,31 +551,9 @@ function AttackPathInvestigationContent() {
     pageSize={ATTACK_PATH_QUEUE_PAGE_SIZE} hiddenMatches={hiddenLoadedAttackPathCount} narrowed={filtersNarrowQueue || hasFocusContext}
     loading={loadingMorePaths} error={morePathsError} onMore={() => void loadMoreAttackPaths()} />;
 
-  const rankedRows = useMemo<RankedPathRow[]>(
-    () =>
-      rankedAttackPathRows(visibleAttackPaths, fixFirstCards).flatMap(({ path, card, rank, key }) => {
-        const pathNodes = toAttackCardNodes(path, graphNodeById);
-        if (pathNodes.length === 0) return [];
-        const row: RankedPathRow = {
-          key,
-          selectionKey: attackPathKey(path),
-          rank,
-          title: descriptiveAttackPathTitle(pathNodes),
-          cve: path.vuln_ids[0] ?? null,
-          riskScore: path.composite_risk,
-          nodeCount: path.hops.length,
-          agents: labelsForAttackPathType(path, graphNodeById, "agent").length,
-          roleChain: attackPathRoleChain(path, graphNodeById),
-        };
-        if (card?.rank_meta?.tool_capabilities?.length) {
-          row.capabilityTags = card.rank_meta.tool_capabilities;
-        }
-        if (card?.rank_meta?.environments?.length) {
-          row.environmentTags = card.rank_meta.environments;
-        }
-        return [row];
-      }),
-    [fixFirstCards, graphNodeById, visibleAttackPaths],
+  const rankedRows = useMemo(
+    () => investigationPathRows(visibleAttackPaths, fixFirstCards, graphNodeById, allAttackPaths),
+    [fixFirstCards, graphNodeById, visibleAttackPaths, allAttackPaths],
   );
   const pathQueueCounts = useMemo(
     () => graphPathQueueCounts(graphData, rankedRows.length),
@@ -702,6 +681,7 @@ function AttackPathInvestigationContent() {
 
   useEffect(() => {
     setFocusApplied(false);
+    setPreviewPaths(true);
     setVisibleAttackPathCount(ATTACK_PATH_QUEUE_PAGE_SIZE);
   }, [focus.agentName, focus.crossVendor, focus.cve, focus.findingId, focus.nodeId, focus.packageName, selectedScanId]);
 
@@ -710,14 +690,14 @@ function AttackPathInvestigationContent() {
   }, [focus.nodeId]);
 
   useEffect(() => {
-    if (!selectedAttackPathKey) return;
+    if (!selectedAttackPathKey || visibleAttackPaths.some(path => attackPathKey(path) === selectedAttackPathKey)) return;
     const selectedIndex = attackPaths.findIndex((path) => attackPathKey(path) === selectedAttackPathKey);
     if (selectedIndex < 0 || selectedIndex < visibleAttackPathCount) return;
     const nextPageCount =
       Math.ceil((selectedIndex + 1) / ATTACK_PATH_QUEUE_PAGE_SIZE) *
       ATTACK_PATH_QUEUE_PAGE_SIZE;
     setVisibleAttackPathCount(Math.min(attackPaths.length, nextPageCount));
-  }, [attackPaths, selectedAttackPathKey, visibleAttackPathCount]);
+  }, [attackPaths, selectedAttackPathKey, visibleAttackPathCount, visibleAttackPaths]);
 
   useEffect(() => {
     if (attackPaths.length === 0) {
@@ -852,7 +832,7 @@ function AttackPathInvestigationContent() {
           subtitle={`${pathQueueCounts.queueRows} from the path queue. ${pathQueueCounts.snapshotTotal} snapshot paths. ${pathQueueCounts.materializedPaths} materialized · ${pathQueueCounts.derivedPaths} derived. ${
             graphData?.count_metadata?.source === "derived_graph_paths" ? "Ranked from bounded graph traversal." : "Ranked from persisted scan paths."
           }`}
-          queueInitiallyOpen={Boolean(focus.crossVendor)} scope={<PathVendorScopeChips scanId={selectedScanId} value={focus.crossVendor}
+          compactQueue queueInitiallyOpen={!hasFocusContext || Boolean(focus.crossVendor)} scope={<PathVendorScopeChips scanId={selectedScanId} value={focus.crossVendor}
             onChange={scope => router.replace(investigationHref(pathname, searchParams.toString(), { [CROSS_VENDOR_PARAM]: scope || null, selected_path: null }), { scroll: false })} />}
           filters={
             <>
@@ -875,6 +855,8 @@ function AttackPathInvestigationContent() {
               ) : null}
             </>
           }
+          queueHeader={<PathPreviewControl preview={showingPreview} shown={visibleAttackPaths.length} loaded={attackPaths.length}
+            onShowAll={() => { setPreviewPaths(false); setVisibleAttackPathCount(attackPaths.length); }} />}
           queueFooter={queueContinuation}
           detail={
             selectedExposurePath ? (

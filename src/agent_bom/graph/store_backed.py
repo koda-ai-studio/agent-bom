@@ -69,6 +69,7 @@ from agent_bom.graph.rekey import normalized_rekey_mapping, rekey_path_reference
 from agent_bom.graph.relationship_contract import ContractRejections
 from agent_bom.graph.types import EntityType
 from agent_bom.graph.util import _now_iso
+from agent_bom.graph.workspace_writes import WorkspaceWrites
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -225,6 +226,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     ) -> None:
         self._backend = backend
         self._tenant = _normalize_tenant(tenant_id)
+        self._writes = WorkspaceWrites(backend, self._tenant)
         self._capacity = max(1, capacity)
         self._page_size = max(1, page_size)
         self._owns_backend = owns_backend
@@ -294,7 +296,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         if cached is not None:
             self._cache.move_to_end(node_id)
             return cached
-        payload = self._backend.get_node_payload(self._tenant, node_id)
+        payload = self._writes.node_payload(node_id) or self._backend.get_node_payload(self._tenant, node_id)
         if payload is None:
             return None
         node = _node_from_payload(json.loads(payload))
@@ -305,27 +307,28 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         self._dirty.add(node_id)
 
     def _write_back(self, node_id: str, node: UnifiedNode) -> None:
-        self._backend.add_node_payloads(self._tenant, [_node_to_row(node)])
+        self._writes.add_node(_node_to_row(node))
 
     def flush(self) -> None:
         """Persist all dirty (mutated / handed-out) nodes to the store."""
-        if not self._dirty:
-            return
         for node_id in list(self._dirty):
             node = self._cache.get(node_id)
             if node is not None:
                 self._write_back(node_id, node)
         self._dirty.clear()
+        self._writes.flush()
 
     def _has_node(self, node_id: str) -> bool:
-        if node_id in self._cache:
+        if node_id in self._cache or node_id in self._writes.nodes:
             return True
         return self._backend.get_node_payload(self._tenant, node_id) is not None
 
     def _node_count(self) -> int:
+        self._writes.flush_nodes()
         return self._backend.count_nodes(self._tenant)
 
     def _edge_count(self) -> int:
+        self._writes.flush_edges()
         return self._backend.count_edges(self._tenant)
 
     # ── Keyset-paged iteration (write-back safe between pages) ────────────────
@@ -352,6 +355,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
             yield node
 
     def _iter_edges(self) -> Iterator[UnifiedEdge]:
+        self._writes.flush_edges()
         after = 0
         while True:
             page = self._backend.fetch_edge_page(self._tenant, after, self._page_size)
@@ -362,6 +366,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
                 yield _edge_from_payload(json.loads(payload))
 
     def _collect_edges(self, *, source: str | None = None, target: str | None = None) -> list[UnifiedEdge]:
+        self._writes.flush_edges()
         out: list[UnifiedEdge] = []
         after = 0
         while True:
@@ -395,9 +400,8 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
             merge_node(existing, node)
             self._mark_dirty(node.id)
             return
-        # New node: insert immediately so ``seq`` fixes insertion order (matching
-        # the in-RAM dict's first-insert ordering), then cache for identity.
-        self._backend.add_node_payloads(self._tenant, [_node_to_row(node)])
+        # Pending rows preserve first-insert order; cache owns the live identity.
+        self._writes.add_node(_node_to_row(node))
         self._cache_put(node.id, node)
         # The caller owns the object it passed and may mutate it immediately
         # after add_node(). Mark the cached identity dirty so an LRU eviction
@@ -406,7 +410,8 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
 
     def write_edges(self, edges: list[UnifiedEdge]) -> None:
         """Persist edges read from this graph and changed in place, as-is (no evidence merge)."""
-        self._backend.add_edge_payloads(self._tenant, [_edge_to_row(edge) for edge in edges])
+        for edge in edges:
+            self._writes.add_edge(_edge_to_row(edge))
 
     def add_stored_edge(self, edge: UnifiedEdge) -> None:
         self.add_edge(edge)
@@ -417,16 +422,16 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         stamp_edge(edge, self.observed_at or self.created_at)
         normalize_edge_evidence(edge.evidence, edge.provenance)
         key = _edge_key(edge)
-        existing_payload = self._backend.get_edge_payload(self._tenant, key)
+        existing_payload = self._writes.edge_payload(key) or self._backend.get_edge_payload(self._tenant, key)
         if existing_payload is not None:
             stored = _edge_from_payload(json.loads(existing_payload))
             before = (stored.confidence, json.dumps(stored.provenance, sort_keys=True, default=str))
             changed = merge_edge_evidence(stored.evidence, edge.evidence)
             merge_edge_provenance(stored, edge)
             if changed or before != (stored.confidence, json.dumps(stored.provenance, sort_keys=True, default=str)):
-                self._backend.add_edge_payloads(self._tenant, [_edge_to_row(stored)])
+                self._writes.add_edge(_edge_to_row(stored))
             return
-        self._backend.add_edge_payloads(self._tenant, [_edge_to_row(edge)])
+        self._writes.add_edge(_edge_to_row(edge))
 
     def rekey_nodes(self, mapping: dict[str, str]) -> int:
         """Store-backed :meth:`UnifiedGraph.rekey_nodes`: move rows, re-point edges, merge duplicates.
@@ -497,14 +502,22 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     # ── Lifecycle ────────────────────────────────────────────────────────────
 
     def close(self) -> None:
-        if self._owns_backend:
-            self._backend.close()
+        try:
+            self.flush()
+        finally:
+            if self._owns_backend:
+                self._backend.close()
 
     def __enter__(self) -> "StoreBackedUnifiedGraph":
         return self
 
     def __exit__(self, exc_type: Any, exc: Any, _tb: Any) -> None:
-        self.close()
+        if exc_type is None:
+            self.close()
+        elif self._owns_backend:
+            # A failed private build is discarded, never promoted. Do not
+            # replace the original failure with another pending-write attempt.
+            self._backend.close()
 
     def __repr__(self) -> str:
         return f"StoreBackedUnifiedGraph(tenant={self._tenant!r}, nodes={self._node_count()}, edges={self._edge_count()})"

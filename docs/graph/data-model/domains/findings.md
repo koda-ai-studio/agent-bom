@@ -27,7 +27,7 @@ erDiagram
 | Relationship | Class | Traversable | From | To |
 |---|---|---|---|---|
 | `affects` | `finding` | yes | `misconfiguration`, `vulnerability` | Identity and access: `access_policy`, `account`, `org`, `role`, `service_account`, `service_principal`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource`<br/>Code and supply chain: `ci_job`, `config_file`, `package`, `source_file` |
-| `belongs_to` | `structural` | yes | `misconfiguration`, `vulnerability` | AI and agents: `application` |
+| `belongs_to` | `structural` | yes | `misconfiguration`, `vulnerability` | AI and agents: `application`<br/>Code and supply chain: `code_module` |
 | `contains` | `structural` | yes | Identity and access: `access_policy`, `role`, `service_account`, `service_principal`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Cloud, infrastructure and data: `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`<br/>Code and supply chain: `ci_job`, `config_file`, `package` | `misconfiguration`, `vulnerability` |
 | `exhibits_drift` | `governance` | yes | AI and agents: `agent` | `drift_incident` |
 | `exploitable_via` | `finding` | yes | `misconfiguration`, `vulnerability` | Identity and access: `credential`<br/>AI and agents: `tool` |

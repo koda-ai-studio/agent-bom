@@ -20,6 +20,7 @@ from agent_bom.parsers.go_resolution import logger as logger
 from agent_bom.parsers.go_resolution import resolve_go_version as resolve_go_version
 from agent_bom.parsers.go_resolution import verify_go_checksums as verify_go_checksums
 from agent_bom.parsers.go_sum import supplement_from_go_sum
+from agent_bom.parsers.go_workspace import parse_go_workspace_members
 from agent_bom.parsers.gradle_packages import parse_gradle_packages as parse_gradle_packages
 
 # Versions that need resolution via the Go module proxy
@@ -111,72 +112,8 @@ def _parse_go_mod_requires(
 
 
 def parse_go_workspace(directory: Path) -> list[Package]:
-    """Parse go.work for workspace module paths, then parse each module's go.mod.
-
-    Supports Go 1.18+ multi-module workspaces.  Reads ``use`` directives from
-    ``go.work`` and calls :func:`parse_go_packages` for each referenced module
-    directory.  Deduplicates by ``(name, version)``; direct dependencies take
-    priority over indirect when the same module appears in multiple modules.
-
-    Args:
-        directory: Directory containing the ``go.work`` file.
-
-    Returns:
-        Combined list of :class:`~agent_bom.models.Package` objects from all
-        workspace modules.  Returns an empty list if ``go.work`` does not exist.
-    """
-    go_work = directory / "go.work"
-    if not go_work.exists():
-        return []
-
-    try:
-        content = go_work.read_text(encoding="utf-8", errors="replace")
-    except OSError as exc:
-        logger.debug("Could not read go.work at %s: %s", go_work, exc)
-        record_manifest_parse_warning(
-            ecosystem="go",
-            path=str(go_work),
-            detail="go.work could not be read; Go workspace dependencies were not scanned",
-        )
-        return []
-
-    # Parse "use ./module_path" directives (single-line and block forms)
-    module_dirs: list[Path] = []
-
-    # Block-style: use ( ... )
-    block_re = re.compile(r"use\s*\(([^)]+)\)", re.DOTALL)
-    for block in block_re.finditer(content):
-        for raw in block.group(1).splitlines():
-            raw = raw.strip()
-            if raw and not raw.startswith("//"):
-                module_dirs.append(directory / raw)
-
-    # Single-line: use ./path
-    single_re = re.compile(r"^use\s+(\S+)", re.MULTILINE)
-    for m in single_re.finditer(content):
-        # Avoid double-counting entries already captured by block form
-        candidate = directory / m.group(1)
-        if candidate not in module_dirs:
-            module_dirs.append(candidate)
-
-    if not module_dirs:
-        return []
-
-    # Parse each module and merge; prefer direct over indirect for duplicates
-    seen_direct: dict[tuple[str, str], Package] = {}
-    seen_indirect: dict[tuple[str, str], Package] = {}
-
-    for mod_dir in module_dirs:
-        for pkg in parse_go_packages(mod_dir):
-            key = (pkg.name, pkg.version)
-            if pkg.is_direct:
-                seen_direct[key] = pkg
-            else:
-                seen_indirect.setdefault(key, pkg)
-
-    # Merge: direct wins over indirect
-    merged: dict[tuple[str, str], Package] = {**seen_indirect, **seen_direct}
-    return list(merged.values())
+    """Read bounded Go workspace members within the explicitly selected project."""
+    return parse_go_workspace_members(directory, parse_go_packages)
 
 
 def parse_go_packages(

@@ -392,11 +392,20 @@ export interface GraphVendorFacets {
   covers_all_paths: boolean;
 }
 
+export interface GraphCollectionCoverage {
+  status?: "unknown" | "partial" | undefined;
+  reason?: string | undefined;
+  reason_codes?: string[] | undefined;
+  refresh_status?: "building" | undefined;
+  freshness?: "previous_generation" | undefined;
+}
+
 export interface UnifiedGraphResponse extends Omit<
   UnifiedGraphData,
   "attack_paths"
 > {
   attack_paths: GraphAttackPath[];
+  collection_coverage?: GraphCollectionCoverage | undefined;
   pagination: GraphPagination;
   completeness?: GraphCompleteness | undefined;
   focus?: GraphPathFocus | undefined;

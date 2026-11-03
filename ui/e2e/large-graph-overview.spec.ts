@@ -540,6 +540,7 @@ test("root investigations expose depth and direction controls with bounded reque
   expect(reverseResponse?.ok()).toBe(true);
   await reverseResponse!.finished();
   await expect(page.getByText("Loading related assets · current view retained", { exact: true })).toBeHidden();
+  await page.getByText("Graph options", { exact: true }).click();
   const canvas = page.locator(".react-flow");
   const documentTop = () => canvas.evaluate(element => element.getBoundingClientRect().top + window.scrollY);
   const top = await documentTop();

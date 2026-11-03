@@ -268,7 +268,7 @@ export function GraphRollupDecisionSurface({
 
               <div className="col-span-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:col-span-1 md:w-60">
                 {item.has_children && <div>
-                  <p className="text-ink-secondary">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count.toLocaleString()} nodes</span>{item.direct_child_count > 0 && <> · {item.direct_child_count} direct</>}</p>
+                  <p className="text-ink-secondary" title="Filtered descendants, excluding this scope itself. Shared nodes can appear in more than one scope.">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count.toLocaleString()} nodes</span>{item.direct_child_count > 0 && <> · {item.direct_child_count} direct</>}</p>
                 </div>}
                 {item.has_children && <div>
                   <p className="text-ink-secondary">Contained critical / high <span className="font-semibold tabular-nums text-foreground">{critical.toLocaleString()} / {high.toLocaleString()}</span></p>

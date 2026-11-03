@@ -111,3 +111,32 @@ def test_index_is_tenant_scoped():
     result = project_persisted_graph_reachability(rows, graph_store=empty, tenant_id="tenant-b", scan_id=None)  # type: ignore[arg-type]
     assert result.rows[0]["graph_reachable"] is None
     assert {call["tenant_id"] for call in empty.calls} == {"tenant-b"}
+
+
+def test_refresh_does_not_stamp_prior_paths_onto_current_findings():
+    class RefreshingStore(PagedStore):
+        def current_view_coverage(self, **kwargs):
+            assert kwargs == {"tenant_id": "t", "scan_id": self.scan_id}
+            return {"freshness": "previous_generation"}
+
+    store = RefreshingStore([_path(1)])
+    rows = [{"finding_id": "occurrence-1", "cve_id": "CVE-2026-00001"}]
+    result = project_persisted_graph_reachability(rows, graph_store=store, tenant_id="t", scan_id=None)  # type: ignore[arg-type]
+    assert result.refreshing is True
+    assert result.rows[0]["graph_reachable"] is None
+    assert result.rows[0]["graph_reachable_from_agents"] == []
+    assert "graph_reachable" not in rows[0]
+    repeated = project_persisted_graph_reachability(
+        [{**rows[0], "graph_reachable": True, "graph_reachable_from_agents": ["old-agent"], "graph_min_hop_distance": 2}],
+        graph_store=store,
+        tenant_id="t",
+        scan_id=None,  # type: ignore[arg-type]
+    )
+    assert repeated.rows[0]["graph_reachable"] is None
+    assert repeated.rows[0]["graph_reachable_from_agents"] == []
+    assert repeated.rows[0]["graph_min_hop_distance"] is None
+    # A recorded snapshot is still an exact, independently addressable read.
+    store.scan_id = "recorded"
+    pinned = project_persisted_graph_reachability(rows, graph_store=store, tenant_id="t", scan_id="recorded")  # type: ignore[arg-type]
+    assert pinned.refreshing is False
+    assert pinned.rows[0]["graph_reachable"] is True

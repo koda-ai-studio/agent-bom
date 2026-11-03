@@ -66,7 +66,9 @@ def _iac_node_ids(finding: Any) -> tuple[str | None, str | None]:
         return None, None
     path = evidence.get("file_path") or "unknown"
     category = str(evidence.get("category") or "iac").lower()
-    return iac_misconfig_node_id(evidence.get("rule_id"), path, evidence.get("line_number")), f"iac_target:{category}:{path}"
+    return iac_misconfig_node_id(
+        evidence.get("rule_id"), path, evidence.get("line_number"), evidence.get("occurrence_id")
+    ), f"iac_target:{category}:{path}"
 
 
 def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:

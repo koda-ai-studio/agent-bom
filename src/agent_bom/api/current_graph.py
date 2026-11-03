@@ -27,6 +27,10 @@ from typing import Any, cast
 from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
+from agent_bom.api.current_graph_builds import ROTATING_CODE as ROTATING_CODE
+from agent_bom.api.current_graph_builds import build_wait_seconds as _build_wait_seconds
+from agent_bom.api.current_graph_builds import current_view_coverage, resolve_request_current
+from agent_bom.api.current_graph_builds import generation_rotating as _generation_rotating
 from agent_bom.api.current_graph_counts import count_current_nodes
 from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
 from agent_bom.api.file_lock import exclusive_file_lock
@@ -36,7 +40,6 @@ from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.models import JobStatus
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.core.estate_read_boundary import inside_estate_read_boundary
-from agent_bom.core.settings import env_raw
 from agent_bom.demo_estate.boot_seed import SEEDING_CODE, SEEDING_MESSAGE, SEEDING_RETRY_AFTER_SECONDS, demo_estate_seeding
 from agent_bom.graph import UnifiedGraph
 from agent_bom.graph.adjacency_page import CURRENT_ESTATE_SCAN_PREFIX
@@ -45,7 +48,7 @@ from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuse
 from agent_bom.storage.projection_cache import cache_path_for, postgres_locator, sqlite_locator, sweep_sibling_projections
 
 CURRENT_PREFIX = CURRENT_ESTATE_SCAN_PREFIX
-_PROJECTION_FORMAT = 3
+_PROJECTION_FORMAT = 6
 # Restarts of an unpinned read whose generation another worker retired between
 # resolve and read. In-process readers are pinned and never need one.
 _UNPINNED_READ_ATTEMPTS = 3
@@ -81,16 +84,6 @@ _READS = frozenset(
 )
 
 
-ROTATING_CODE = "current_estate_generation_rotating"
-
-
-def _generation_rotating() -> HTTPException:
-    """New evidence is landing faster than the retry budget: retryable, not a conflict."""
-    detail = {"code": ROTATING_CODE, "message": "The current estate is being updated; retry the read shortly."}
-    # Starlette types detail as str, but the API's handler serializes any JSON value.
-    return HTTPException(503, cast(str, detail), headers={"Retry-After": "1"})
-
-
 def seeding_refusal() -> HTTPException:
     detail = {"code": SEEDING_CODE, "message": SEEDING_MESSAGE}
     return HTTPException(503, cast(str, detail), headers={"Retry-After": str(SEEDING_RETRY_AFTER_SECONDS)})
@@ -110,14 +103,6 @@ def _refuse_current_read_while_seeding(tenant_id: str | None = None) -> None:
 
 class _EvidenceMovedError(Exception):
     """A source snapshot was replaced while the projection was assembled; rebuild from fresh evidence."""
-
-
-def _build_wait_seconds() -> float:
-    """How long a read waits for another request's rebuild before serving the previous generation."""
-    try:
-        return max(0.0, float(env_raw("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS") or 2000) / 1000)
-    except ValueError:
-        return 2.0
 
 
 def _digest(value: Any) -> str:
@@ -225,8 +210,8 @@ class CurrentGraphStore:
                 result = {
                     **result,
                     "evidence_scope": "current_estate",
-                    "collection_coverage": self._coverage.get(
-                        str(kwargs["scan_id"]), {"status": "unknown", "reason": "Collection coverage is unknown."}
+                    "collection_coverage": self.current_view_coverage(
+                        tenant_id=str(kwargs.get("tenant_id") or "default"), scan_id=str(kwargs["scan_id"])
                     ),
                     "snapshot_generation": str(kwargs["scan_id"]).removeprefix(CURRENT_PREFIX),
                 }
@@ -251,6 +236,9 @@ class CurrentGraphStore:
                 return execute(*args, **resolved)
 
         return read
+
+    def current_view_coverage(self, *, tenant_id: str, scan_id: str) -> dict[str, Any]:
+        return current_view_coverage(self, tenant_id=tenant_id, scan_id=scan_id)
 
     @contextmanager
     def _reading(self, kwargs: dict[str, Any]) -> Iterator[dict[str, Any]]:
@@ -448,6 +436,10 @@ class CurrentGraphStore:
                 return self._pin(live)
             cached = self._cache.get(tenant)
             previous = cached[2] if cached and self._live(tenant, cached[2]) else ""
+        if inside_estate_read_boundary():
+            # A request may wait briefly for read-your-writes, but never owns
+            # an unbounded build. Worker reads retain the synchronous path.
+            return resolve_request_current(self, tenant, epoch, evidence, previous)
         # While another request or worker builds, keep serving the previous
         # whole generation instead of queueing behind the rebuild.
         with self._building(tenant, wait=not previous) as building:

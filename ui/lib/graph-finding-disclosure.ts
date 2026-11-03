@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
+import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
 import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
 
 /** Display-only disclosure: canonical IDs, direction and evidence stay intact. */
@@ -19,7 +20,7 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
   });
   const hidden = new Set(mapped.filter(n => n.hidden).map(n => n.id));
   const mappedEdges = edges.map(e => ({ ...e, hidden: e.hidden || hidden.has(e.source) || hidden.has(e.target) }));
-  const layout = preservePositions ? null : cloudHierarchyLayout(mapped, mappedEdges);
+  const layout = preservePositions ? null : mixedEvidenceFlow(mapped, mappedEdges) ?? cloudHierarchyLayout(mapped, mappedEdges);
   // Preserve operator positions in general views; only the bounded cloud layout reflows.
   return { nodes: layout?.nodes ?? mapped, edges: mappedEdges };
 }

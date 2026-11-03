@@ -134,3 +134,10 @@ it("searches layer names and can restore all layers without altering other filte
   expect(Object.values(updated.layers).every(Boolean)).toBe(true);
   expect({...updated,layers:DEFAULT_FILTERS.layers}).toEqual(DEFAULT_FILTERS);
 });
+
+
+it("offers an explicit IaC subtype filter with loaded-view scope", () => {
+  const onChange = renderFilterPanel([]);
+  fireEvent.change(screen.getByRole("combobox", { name: "Finding kind in loaded graph" }), { target: { value: "iac" } });
+  expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ findingKind: "iac" }));
+});

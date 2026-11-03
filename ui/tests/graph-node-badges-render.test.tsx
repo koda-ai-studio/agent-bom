@@ -63,3 +63,14 @@ it("renders collision context as visible text, independent of hover", () => {
   render(<ReactFlowProvider><Renderer data={{ label: "Workspace reader", nodeType: "agent", identityContext: "Instance 1" }} /></ReactFlowProvider>);
   expect(screen.getByText("Instance 1")).toBeVisible();
 });
+
+
+it("lists IaC and other configuration findings separately in the visible legend", () => {
+  const nodes = [
+    { data: { nodeType: "misconfiguration", entityType: "misconfiguration", attributes: { finding_kind: "iac" } } },
+    { data: { nodeType: "misconfiguration", entityType: "misconfiguration", attributes: {} } },
+  ];
+  const labels = legendItemsForVisibleGraph(nodes, []).map(item => item.label);
+  expect(labels).toContain("IaC finding");
+  expect(labels.filter(label => /config/i.test(label))).toHaveLength(1);
+});

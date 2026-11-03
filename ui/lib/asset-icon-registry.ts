@@ -1,18 +1,20 @@
 import type { ComponentType, CSSProperties } from "react";
+import { McpGlyph } from "@/components/graph-mcp-glyph";
 import {
   Activity, AppWindow, Archive, BadgeCheck, Blocks, Bot, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
   Cable, CalendarClock, Cloud, CloudCog, Container, Cpu, Database, Disc3, DraftingCompass, Earth, FileCode, FileCog,
   FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderInput, FolderOutput, Gpu, Handshake, HardDrive, IdCard, Inbox, KeyRound,
-  Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, PlugZap, ScrollText, Server, Share2,
+  Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, PlugZap, ScrollText, Share2,
   ShieldAlert, ShieldCheck, ShipWheel, Siren, Sparkles, SquareFunction, Store, Table, Ticket, User, UserCog, Users, Vault,
-  Warehouse, Webhook, Workflow, Wrench, Zap,
+  Unplug, Warehouse, Webhook, Workflow, Wrench, Zap,
 } from "lucide-react";
 
 /**
  * The one registry from an asset to its glyph. A vendor's native resource type
  * (Lambda, Azure Functions, Cloud Functions, Workers…) normalises to a semantic
  * kind, and each kind owns exactly one glyph. The vendor logo is a separate
- * badge and never replaces the glyph. Every surface resolves icons here.
+ * badge and never replaces the glyph. The MCP protocol mark identifies its
+ * server kind. Every surface resolves icons here.
  */
 export type EntityIcon = ComponentType<{ className?: string; style?: CSSProperties }>;
 
@@ -46,6 +48,7 @@ export const ASSET_KINDS = {
   disk: { label: "Disk", icon: HardDrive },
   secret: { label: "Secret store", icon: Vault },
   integration: { label: "Integration", icon: Cable },
+  data_connection: { label: "Data connection", icon: Unplug },
   model: { label: "Model", icon: BrainCircuit },
   endpoint: { label: "Endpoint", icon: PlugZap },
   ai_service: { label: "AI service", icon: Sparkles },
@@ -54,7 +57,7 @@ export const ASSET_KINDS = {
   prompt: { label: "Prompt", icon: MessageSquareText },
   observability: { label: "Observability", icon: Activity },
   agent: { label: "Agent", icon: Bot },
-  mcp_server: { label: "Server", icon: Server },
+  mcp_server: { label: "Server", icon: McpGlyph },
   shared_server: { label: "Shared", icon: Share2 },
   tool: { label: "Tool", icon: Wrench },
   tool_call: { label: "Tool call", icon: Zap },
@@ -123,7 +126,7 @@ const SUBTYPE_FIELDS = ["resource_type", "resource_kind", "cloud_service", "serv
 
 /** Exact native types whose words would otherwise match a broader rule. */
 const EXACT: Record<string, AssetKind> = {
-  server: "mcp_server", agent: "agent", tool: "tool", package: "package", framework: "framework",
+  server: "mcp_server", agent: "agent", tool: "tool", package: "package", framework: "framework", data_connection: "data_connection",
   cortex_function: "ai_service", cortex_search_service: "ai_service", openai_deployment: "model",
   hosted_model: "model", model_artifact: "model", repository: "repository", ai_foundry_project: "ml_workspace",
   share: "data_share", task: "job", pipe: "job", stage: "stage", external_stage: "stage", internal_stage: "stage", cluster: "cluster",
@@ -276,6 +279,16 @@ export function assetIcon(input: AssetKindInput): EntityIcon {
 }
 
 export function assetKindLabel(input: AssetKindInput): string {
+  const subtype = input.attributes?.subtype;
+  if (input.entityType === "ci_job" || input.nodeType === "ciJob") {
+    if (subtype === "gitlab_job") return "GitLab job";
+    if (subtype === "airflow_dag") return "Airflow DAG";
+    if (subtype === "airflow_task") return "Airflow task";
+  }
+  if ((input.entityType === "code_module" || input.nodeType === "codeModule") && subtype === "agent_implementation") return "Agent declaration";
+  if ((input.entityType === "code_module" || input.nodeType === "codeModule") && typeof subtype === "string" && /^dbt_(model|source|seed|exposure)$/.test(subtype)) return subtype.replace("_", " ");
+  if ((input.entityType === "code_module" || input.nodeType === "codeModule") && input.attributes?.subtype === "workspace_package") return "Workspace package";
+  if ((input.entityType ?? input.nodeType) === "misconfiguration" && input.attributes?.finding_kind === "iac") return "IaC finding";
   const resolved = resolveAssetKind(input);
   if (resolved.basis === "subtype") return ASSET_KINDS[resolved.kind].label;
   const type = input.entityType && Object.hasOwn(ENTITY_KIND, input.entityType) ? input.entityType : input.nodeType ?? "";

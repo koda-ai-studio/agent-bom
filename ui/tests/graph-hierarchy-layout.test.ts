@@ -14,6 +14,12 @@ const edge = (id: string, source: string, target: string, relationship: string):
 });
 
 describe("evidence-driven graph flow", () => {
+  it("frames a collapsed peer group by its actual cards instead of an empty row cell", () => {
+    const group = { ...node("peers", "server"), type: "clusterPillNode" };
+    const result = graphHierarchyLayout([node("workspace", "agent"), group], [edge("uses", "workspace", "peers", "uses")]);
+    expect(result.nodes.every(node => node.style?.minHeight === 0)).toBe(true);
+    expect(result.nodes[1]!.position.x).toBeGreaterThan(result.nodes[0]!.position.x);
+  });
   it("fits a compact three-source correlation without hiding its finding off canvas", () => {
     const sources = [node("file", "sourceFile"), node("image", "container"), node("deployment", "container")];
     const entries = [...sources, node("package", "package"), node("finding", "vulnerability")];

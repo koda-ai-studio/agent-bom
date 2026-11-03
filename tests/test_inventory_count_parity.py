@@ -74,3 +74,44 @@ def test_graph_keeps_the_connection_surface(tmp_path: Path) -> None:
         node.label: node.dimensions.surface for node in graph.nodes.values() if node.label.startswith(("sf-connection:", "filesystem"))
     }
     assert surfaces == {"sf-connection:prod": "data-connection", "sf-connection:dev": "data-connection", "filesystem": "mcp-server"}
+
+
+def test_graph_counts_connections_separately_from_mcp_servers(tmp_path: Path) -> None:
+    from agent_bom.graph import EntityType
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.output.json_fmt import to_json
+
+    report = AIBOMReport(agents=_host(tmp_path))
+    graph = build_unified_graph_from_report(to_json(report))
+    assert len(graph.nodes_by_type(EntityType.SERVER)) == report.total_servers == 1
+    connections = [node for node in graph.nodes.values() if node.dimensions.surface == "data-connection"]
+    assert len(connections) == 2
+    assert all(node.entity_type == EntityType.RESOURCE for node in connections)
+    assert all(node.attributes["resource_type"] == "data_connection" for node in connections)
+    assert all(node.attributes["inventory_role"] == "configured_data_connection" for node in connections)
+    assert all(node.attributes["cloud_provider"] == "snowflake" for node in connections)
+    assert {node.label for node in connections} == {"sf-connection:prod", "sf-connection:dev"}
+
+
+def test_data_connection_retains_only_credential_reference_evidence(tmp_path: Path) -> None:
+    from agent_bom.graph import EntityType, RelationshipType
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.output.json_fmt import to_json
+
+    profile = tmp_path / "connections.toml"
+    placeholder = "local-test-" + "placeholder"
+    profile.write_text('[prod]\naccount = "acme"\npassword = "' + placeholder + '"\n')
+    agent = Agent(
+        name="snow", agent_type=AgentType.SNOWFLAKE_CLI, config_path=str(profile), mcp_servers=parse_snowflake_connections(str(profile))
+    )
+    graph = build_unified_graph_from_report(to_json(AIBOMReport(agents=[agent])))
+    connections = graph.nodes_by_type(EntityType.RESOURCE)
+    assert len(connections) == 1
+    credentials = graph.nodes_by_type(EntityType.CREDENTIAL)
+    assert len(credentials) == 1 and credentials[0].label == "password"
+    assert any(
+        edge.source == connections[0].id and edge.target == credentials[0].id and edge.relationship == RelationshipType.EXPOSES_CRED
+        for edge in graph.edges
+    )
+    assert not graph.nodes_by_type(EntityType.SERVER)
+    assert placeholder not in str(graph.to_dict())

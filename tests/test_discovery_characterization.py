@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
+import hashlib
 import io
 import json
 import os
@@ -215,6 +216,10 @@ _CONTEXT_FIELDS = (
 
 def _normalize(value: Any) -> Any:
     text = json.dumps(value, default=str, sort_keys=True)
+    # macOS resolves /tmp through /private; Linux does not. Normalize only the
+    # exact fixture-root identity, preserving unexpected hashes as golden drift.
+    project_scope = hashlib.sha256(f"local-root-v1\0{(ROOT / 'project').resolve()}".encode()).hexdigest()
+    text = text.replace(project_scope, "<PROJECT_SCOPE>")
     text = text.replace(str(ROOT.resolve()), "<ROOT>").replace(str(ROOT), "<ROOT>")
     text = text.replace(str(Path(__file__).resolve().parents[1]), "<REPO>")
     return json.loads(text)

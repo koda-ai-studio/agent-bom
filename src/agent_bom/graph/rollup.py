@@ -21,7 +21,6 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from functools import partial
 from typing import Any, Optional
 
 from agent_bom.cloud.normalization import coerce_truthy
@@ -31,7 +30,8 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _node_type_value
 from agent_bom.graph.provider_inheritance import provider_fields as _provider_fields
-from agent_bom.graph.rollup_aggregate import RollupAggregate, _histogram, aggregate_count_metadata
+from agent_bom.graph.rollup_aggregate import RollupAggregate, ScopeAggregates, _histogram, aggregate_count_metadata
+from agent_bom.graph.rollup_aggregate import orphan_summary as _orphan_summary
 from agent_bom.graph.rollup_edges import combine_reasons as _combine_reasons
 from agent_bom.graph.rollup_edges import cross_container_edge_rows, edge_projection
 from agent_bom.graph.rollup_edges import descendants as _descendants
@@ -48,8 +48,6 @@ _SEVERITY_ORDER: tuple[str, ...] = SEVERITY_BUCKETS_WORST_FIRST
 # highest-risk orphans individually and fold the long tail into an aggregate
 # ``orphan_summary`` so nothing silently disappears from the view.
 _MAX_TOP_LEVEL_ORPHANS: int = 200
-# Bounded per-type sample of the truncated orphan tail carried on the summary.
-_ORPHAN_SUMMARY_SAMPLE: int = 20
 
 # Estate containment edges: org/account/resource trees use CONTAINS; cloud
 # inventory emits account→resource as OWNS; legacy graphs may use HOSTS-only.
@@ -66,6 +64,9 @@ _ACCOUNT_RESOURCE_CONTAINMENT_TARGETS: frozenset[str] = frozenset({EntityType.CL
 _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
     {
         (RelationshipType.USES.value, EntityType.AGENT.value, EntityType.SERVER.value),
+        (RelationshipType.USES.value, EntityType.AGENT.value, EntityType.RESOURCE.value),
+        (RelationshipType.DEPENDS_ON.value, EntityType.RESOURCE.value, EntityType.PACKAGE.value),
+        (RelationshipType.EXPOSES_CRED.value, EntityType.RESOURCE.value, EntityType.CREDENTIAL.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.AGENT.value, EntityType.MISCONFIGURATION.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.SERVER.value, EntityType.MISCONFIGURATION.value),
         (RelationshipType.DEPENDS_ON.value, EntityType.SERVER.value, EntityType.PACKAGE.value),
@@ -458,33 +459,6 @@ def _edge_projection(
     return edge_projection(graph, entries, children, flags)
 
 
-def _orphan_summary(graph: UnifiedGraph, agg: RollupAggregate, *, total: int, shown: int, truncated_ids: list[str]) -> dict[str, Any]:
-    """Aggregate over every orphan plus a bounded sample of the truncated tail."""
-    return {
-        "total": total,
-        "shown": shown,
-        "truncated": len(truncated_ids),
-        "by_type": dict(sorted(agg.by_type.items())),
-        "severity_counts": _histogram(agg.severity_counts),
-        "issue_count": agg.issue_count,
-        "worst_severity": agg.worst_severity,
-        "worst_severity_rank": agg.worst_severity_rank,
-        "internet_exposed": agg.internet_exposed,
-        "toxic_combo": agg.toxic_combo,
-        "exposed_count": agg.exposed_count,
-        "toxic_count": agg.toxic_count,
-        "sample": [
-            {
-                "id": graph.nodes[nid].id,
-                "label": graph.nodes[nid].label,
-                "entity_type": _node_type_value(graph.nodes[nid]),
-                "severity": graph.nodes[nid].severity or "",
-            }
-            for nid in truncated_ids[:_ORPHAN_SUMMARY_SAMPLE]
-        ],
-    }
-
-
 def rollup_view(
     graph: UnifiedGraph,
     *,
@@ -513,9 +487,7 @@ def rollup_view(
     facts = _node_facts(graph, suppressed_finding_ids)
 
     containers: list[RollupContainer] = []
-    memberships: Counter[str] = Counter()
-    occurrences: Counter[str] = Counter()
-    scoped = partial(_aggregate, graph=graph, filters=filters, memberships=memberships, facts=facts, occurrence_memberships=occurrences)
+    scoped = ScopeAggregates(_aggregate, graph=graph, filters=filters, facts=facts)
     rolled_up_ids: set[str] = set()
     for root_id in root_ids:
         node = graph.nodes.get(root_id)
@@ -590,7 +562,7 @@ def rollup_view(
         # excluded: it is the nesting the roll-up already expresses.
         "edges": relationship_edges,
         "edge_count_metadata": edge_count_metadata,
-        "aggregate_count_metadata": aggregate_count_metadata(graph, memberships, occurrences),
+        "aggregate_count_metadata": scoped.metadata(graph, [entry.id for entry in page], len(top_level), children),
         "orphan_summary": orphan_summary,
         "summary": {
             "total_nodes": len(graph.nodes),
@@ -636,13 +608,10 @@ def drill_down(
     limit: Optional[int] = None,
     suppressed_finding_ids: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
-    """Return one level of direct CONTAINS children of *node_id*.
+    """Return one ranked page of direct containment children.
 
-    Each child carries its own roll-up so the UI can keep expanding on demand.
-    O(direct children); never loads the whole graph. ``offset``/``limit`` page
-    the ranked children so a container with tens of thousands of direct
-    children returns a bounded response; ranking is computed over every
-    matching child first so pages are stable and disjoint.
+    Each entry aggregates its filtered descendants. All matching children are
+    ranked before paging; count metadata describes only the returned page.
     """
     offset = max(0, offset)
     if node_id not in graph.nodes:
@@ -673,8 +642,7 @@ def drill_down(
     direct = children.get(node_id, [])
     parent = graph.nodes[node_id]
     child_entries: list[RollupContainer] = []
-    memberships: Counter[str] = Counter()
-    scoped = partial(_aggregate, graph=graph, filters=filters, memberships=memberships, facts=_node_facts(graph, suppressed_finding_ids))
+    scoped = ScopeAggregates(_aggregate, graph=graph, filters=filters, facts=_node_facts(graph, suppressed_finding_ids))
     for child_id in direct:
         child = graph.nodes.get(child_id)
         if child is None:
@@ -710,7 +678,7 @@ def drill_down(
         # other constantly.
         "edges": relationship_edges,
         "edge_count_metadata": edge_count_metadata,
-        "aggregate_count_metadata": aggregate_count_metadata(graph, memberships),
+        "aggregate_count_metadata": scoped.metadata(graph, [entry.id for entry in page], matching_total, children),
         "summary": {
             "direct_child_count": len(direct),
             "matching_child_count": matching_total,

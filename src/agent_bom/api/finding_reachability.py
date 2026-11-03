@@ -44,6 +44,7 @@ _TRACE_ORDER_EDGES = frozenset(rel.value for rel in TRACE_ORDER_RELATIONSHIP_TYP
 class FindingReachabilityProjection:
     rows: list[dict[str, Any]]
     truncated: bool
+    refreshing: bool = False
 
 
 _PATH_VERDICT_STRENGTH = {"confirmed": 3, "likely": 2, "unknown": 1, "unlikely": 0}
@@ -203,6 +204,14 @@ def project_persisted_graph_reachability(
         return FindingReachabilityProjection(projected, truncated=False)
 
     index = _snapshot_index(graph_store, tenant_id=tenant_id, scan_id=scan_id or "", path_limit=path_limit)
+    coverage_reader = getattr(graph_store, "current_view_coverage", None)
+    if not scan_id and callable(coverage_reader):
+        coverage = coverage_reader(tenant_id=tenant_id, scan_id=index.scan_id)
+        if coverage.get("freshness") == "previous_generation":
+            for row in projected:
+                row.update(graph_reachable=None, graph_min_hop_distance=None, graph_reachable_from_agents=[])
+            _derive_verdicts(projected)
+            return FindingReachabilityProjection(projected, truncated=False, refreshing=True)
     # Rows only carry their job's scan id, which never equals the correlated
     # current-estate snapshot id, so the cross-scan guard applies only when the
     # caller asked for one scan.

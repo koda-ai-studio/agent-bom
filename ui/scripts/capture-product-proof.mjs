@@ -3994,6 +3994,7 @@ async function main() {
       },
     );
     await capture(mobilePage, `/security-graph?lens=attack-path&scan=${SCAN_ID}&capture=1`, "security-graph-mobile-live.png", async (securityGraphPage) => {
+      await securityGraphPage.getByRole("button", { name: "Selected path", exact: true }).click();
       await securityGraphPage
         .getByTestId("security-graph-investigation")
         .waitFor({ state: "visible", timeout: 30_000 });

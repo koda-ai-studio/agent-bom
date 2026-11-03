@@ -73,6 +73,40 @@ to history or modify source observations. Collection gaps remain visible and
 query completeness does not establish complete collection. Finding severity and
 recorded connections do not by themselves establish assessed risk or execution.
 
+An HTTP read can wait up to `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default
+2,000 ms) for a missing current projection. A bounded, tenant-bound background
+worker continues after that wait. If a previous complete projection exists,
+graph and rollup responses identify it with
+`collection_coverage.refresh_status: building` and
+`collection_coverage.freshness: previous_generation`; this does not upgrade
+its source collection coverage. Without a usable previous projection the read
+returns 503 `current_estate_building` and `Retry-After: 1`. A failed build
+returns `current_estate_build_unavailable` without exposing source errors.
+Retry to obtain the new generation; keep historical reads explicitly pinned.
+
+Workers coalesce work per store and tenant and retain the existing process/file
+promotion locks and source-revision checks. The in-process queue is rebuildable:
+after a restart, committed source revisions remain authoritative and the next
+read or commit warmer retries preparation. Rollback can revert the worker path
+without rewriting any historical snapshot. See the reproducible
+[first-read budget](../perf/graph-first-read-budget.md) for the bounded test
+workload and its limits.
+
+
+## IaC occurrence identity
+
+IaC findings at the same rule, file and line can describe different matched
+values. Each complete hit uses the unified finding's canonical occurrence UUID
+in `misconfig:iac:<uuid>`. Equal evidence deduplicates; distinct title/message
+values remain distinct. JSON carries the occurrence key before redaction so
+hiding a private path does not change finding references.
+
+Existing stored snapshots and their links remain unchanged. Current projections
+rebuild under a new projection version; rebuilding a report upgrades legacy
+coordinate references only when its canonical finding ID or a unique source
+coordinate resolves the occurrence. Ambiguous legacy rows are not assigned to
+an arbitrary hit. Export the original snapshot to retain its historical IDs;
+use the rebuilt response's `finding_node_id` for current links.
 
 ## Agent inventory lifecycle view
 

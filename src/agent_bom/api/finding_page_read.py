@@ -33,6 +33,7 @@ from agent_bom.api.finding_view_filters import _walk_view_filtered_findings as _
 from agent_bom.api.finding_view_filters import redact_emitted_rows, redacts_after_filter
 from agent_bom.api.scan_request_context import _logger, _tenant_id
 from agent_bom.api.stores import _get_graph_store
+from agent_bom.core.estate_read_boundary import estate_read_boundary
 from agent_bom.security import sanitize_error, sanitize_text
 
 # Importing the reader surface registers its bounded graph-commit warm-up.
@@ -61,12 +62,15 @@ def _project_findings_reachability(
     """
     warnings: list[str] = []
     try:
-        projection = project_persisted_graph_reachability(
-            rows,
-            graph_store=_get_graph_store(),
-            tenant_id=tenant_id,
-            scan_id=scan_id,
-        )
+        with estate_read_boundary():
+            projection = project_persisted_graph_reachability(
+                rows,
+                graph_store=_get_graph_store(),
+                tenant_id=tenant_id,
+                scan_id=scan_id,
+            )
+        if projection.refreshing:
+            warnings.append("The current graph is being prepared; graph reachability remains unassessed for this page.")
         if projection.truncated:
             warnings.append(
                 "Graph reachability projection is bounded to the highest-risk 200000 persisted paths; unmatched findings remain unassessed."

@@ -467,6 +467,7 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
     lens. The rule's declared 800-53 controls become scored tags; SARIF renders it
     via its dedicated IaC loop, which the unified SARIF loop skips.
     """
+    from agent_bom.evidence.iac_identity import iac_occurrence_id
     from agent_bom.security import sanitize_text
 
     rule_id = sanitize_text(str(iac.get("rule_id", "") or "unknown"), max_len=80)
@@ -502,6 +503,7 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         attack_tags=sorted(set(attack)),
         evidence={
             "iac": True,
+            "occurrence_id": iac_occurrence_id(iac),
             "rule_id": rule_id,
             "category": category,
             "scan_type": "iac",
@@ -514,7 +516,7 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         impact_category="iac_misconfiguration",
         # One rule can fire several times per line (``add: [NET_RAW, SYS_ADMIN]``);
         # title/message carry the matched value, so they are part of the identity.
-        id=stable_id("iac", rule_id, file_path, str(line_number), title, message),
+        id=iac_occurrence_id(iac),
     )
     from agent_bom.evidence.iac_controls import classify_iac_finding
 

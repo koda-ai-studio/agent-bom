@@ -145,13 +145,14 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         (E.AGENT, E.SERVER, E.CONTAINER),
         (E.CONTAINER, E.CLUSTER, E.CLOUD_RESOURCE, E.FLEET),
     ),
-    _spec(R.USES, T.DEPENDENCY, "inventory", (E.AGENT,), (E.SERVER,)),
+    # Configured data-connection profiles are resources, not MCP servers.
+    _spec(R.USES, T.DEPENDENCY, "inventory", (E.AGENT,), (E.SERVER, E.RESOURCE)),
     _spec(R.USES_FRAMEWORK, T.DEPENDENCY, "inventory", (E.AGENT,), (E.FRAMEWORK,)),
     _spec(
         R.DEPENDS_ON,
         T.DEPENDENCY,
         "inventory",
-        (E.SERVER, E.CONTAINER, E.CONFIG_FILE, E.SOURCE_FILE, E.FRAMEWORK),
+        (E.SERVER, E.CONTAINER, E.CONFIG_FILE, E.SOURCE_FILE, E.FRAMEWORK, E.RESOURCE),
         (E.PACKAGE,),
         # Image layering, a manifest directory's packages, and service/data lineage
         # (an external table reads the bucket behind it).
@@ -163,10 +164,13 @@ _SPECS: tuple[RelationshipSpec, ...] = (
             (E.CLOUD_RESOURCE, E.CLOUD_RESOURCE),
             (E.DATA_STORE, E.DATA_STORE),
             (E.DATA_STORE, E.CLOUD_RESOURCE),
+            (E.CODE_MODULE, E.CODE_MODULE),
+            (E.CODE_MODULE, E.PACKAGE),
+            (E.CI_JOB, E.CI_JOB),
         ),
     ),
     _spec(R.PROVIDES_TOOL, T.STRUCTURAL, "inventory", (E.SERVER,), (E.TOOL,)),
-    _spec(R.EXPOSES_CRED, T.AUTHORITY, "inventory", (E.SERVER, E.AGENT), (E.CREDENTIAL,)),
+    _spec(R.EXPOSES_CRED, T.AUTHORITY, "inventory", (E.SERVER, E.AGENT, E.RESOURCE), (E.CREDENTIAL,)),
     _spec(R.REACHES_TOOL, T.AUTHORITY, "inventory", (E.CREDENTIAL, E.AGENT), (E.TOOL,)),
     _spec(R.SERVES_MODEL, T.DEPENDENCY, "inventory", (E.SERVER, E.AGENT, E.FRAMEWORK, E.CONTAINER), (E.MODEL,)),
     _spec(R.OBSERVES, T.STRUCTURAL, "inventory", (E.FRAMEWORK,), (E.AGENT, E.SERVER)),
@@ -190,6 +194,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
             # Warehouse hierarchy (database -> schema) and a directory's code modules.
             (E.DATA_STORE, E.DATA_STORE),
             (E.DIRECTORY, E.CODE_MODULE),
+            (E.CI_JOB, E.CI_JOB),
             (E.ORG, E.ACCOUNT),
             (E.ACCOUNT, E.ENVIRONMENT),
             (E.ACCOUNT, E.APPLICATION),
@@ -355,6 +360,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         "correlation",
         (E.AGENT, E.SERVER),
         (E.AGENT, E.SERVER),
+        extra=((E.CODE_MODULE, E.DATA_STORE),),
         direction="bidirectional",
         traversable=False,
     ),
@@ -430,6 +436,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         "aspm",
         (*_FINDINGS, E.PACKAGE, E.CONTAINER, E.CLOUD_RESOURCE, E.SERVER, E.CREDENTIAL),
         (E.APPLICATION,),
+        extra=tuple(product((E.SOURCE_FILE, E.CONFIG_FILE, *_FINDINGS), (E.CODE_MODULE,))),
     ),
 )
 

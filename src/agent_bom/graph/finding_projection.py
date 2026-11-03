@@ -6,6 +6,7 @@ from pathlib import PurePath
 from typing import Any
 
 from agent_bom.evidence.finding_node_ids import iac_misconfig_node_id, skill_audit_node_id
+from agent_bom.evidence.iac_identity import iac_occurrence_id, recorded_occurrence_id
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -103,7 +104,8 @@ def project_iac(graph: UnifiedGraph, iac_data: dict[str, Any] | None) -> None:
             compliance = list(finding.get("compliance", []))
             attack_techniques = list(finding.get("attack_techniques", []))
             remediation = finding.get("remediation", "")
-            iac_id = iac_misconfig_node_id(rule_id, finding_path, finding_line)
+            occurrence = recorded_occurrence_id(finding.get("occurrence_id")) or (iac_occurrence_id(finding) if rule_id else None)
+            iac_id = iac_misconfig_node_id(rule_id, finding_path, finding_line, occurrence)
             target_id = f"iac_target:{category}:{finding_path}"
 
             graph.add_node(
@@ -116,6 +118,7 @@ def project_iac(graph: UnifiedGraph, iac_data: dict[str, Any] | None) -> None:
                         "rule_id": rule_id,
                         "file_path": finding_path,
                         "line_number": finding_line,
+                        "finding_kind": "iac",
                         "category": category,
                         "message": finding.get("message", ""),
                         "remediation": remediation,

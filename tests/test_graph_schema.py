@@ -1087,14 +1087,17 @@ class TestGraphSchemaEndpoint:
         node_entries = {entry["key"]: entry for entry in body["node_kinds"]}
         edge_entries = {entry["key"]: entry for entry in body["edge_kinds"]}
 
-        reserved_nodes = {"external_import", "tool_call", "environment", "cluster", "credential_ref"}
-        reserved_edges = {"imports", "remediates", "acted_as", "inherits", "lateral_path", "shares_cred", "trace_step"}
+        reserved_nodes = {"tool_call", "environment", "cluster", "credential_ref"}
+        reserved_edges = {"remediates", "acted_as", "inherits", "lateral_path", "shares_cred", "trace_step"}
         for key in reserved_nodes:
             assert node_entries[key]["emission_status"] == "reserved"
             assert "Reserved" in node_entries[key]["emission_notes"]
         for key in reserved_edges:
             assert edge_entries[key]["emission_status"] == "reserved"
             assert "Reserved" in edge_entries[key]["emission_notes"]
+
+        assert node_entries["external_import"]["emission_status"] == "emitted"
+        assert edge_entries["imports"]["emission_status"] == "emitted"
 
         # ``owns`` is NOT dead vocabulary: it is the account → resource
         # ownership backbone every cloud scan emits (see

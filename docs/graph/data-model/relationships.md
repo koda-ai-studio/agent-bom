@@ -82,17 +82,19 @@ Emitted by: `graph/credential_bindings.py`, `graph/governance_overlay.py`, `grap
 
 ## `belongs_to`
 
-Class `structural` · directed · traversable · required evidence `source`, `tier` · 7 pairs
+Class `structural` · directed · traversable · required evidence `source`, `tier` · 11 pairs
 
 - `cloud_resource` → `application`
+- `config_file` → `code_module`
 - `container` → `application`
 - `credential` → `application`
-- `misconfiguration` → `application`
+- `misconfiguration` → `application`, `code_module`
 - `package` → `application`
 - `server` → `application`
-- `vulnerability` → `application`
+- `source_file` → `code_module`
+- `vulnerability` → `application`, `code_module`
 
-Emitted by: `graph/aspm_overlay.py`
+Emitted by: `graph/aspm_overlay.py`, `graph/dbt_overlay.py`, `graph/workspace_overlay.py`
 
 ## `called`
 
@@ -132,18 +134,18 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 
 - `config_file` → `agent`, `ci_job`, `server`, `tool`
 
-Emitted by: `graph/ci_graph_overlay.py`
+Emitted by: `graph/ci_graph_overlay.py`, `graph/pipeline_overlay.py`
 
 ## `contains`
 
-Class `structural` · directed · traversable · required evidence `source`, `tier` · 98 pairs
+Class `structural` · directed · traversable · required evidence `source`, `tier` · 99 pairs
 
 - `access_policy` → `misconfiguration`, `vulnerability`
 - `account` → `api_gateway`, `application`, `cloud_resource`, `data_store`, `environment`
 - `agent` → `agent`, `misconfiguration`, `vulnerability`
 - `api_gateway` → `misconfiguration`, `vulnerability`
 - `application` → `misconfiguration`, `vulnerability`
-- `ci_job` → `misconfiguration`, `vulnerability`
+- `ci_job` → `ci_job`, `misconfiguration`, `vulnerability`
 - `cloud_resource` → `cloud_resource`, `misconfiguration`, `package`, `vulnerability`
 - `cluster` → `config_file`, `container`, `directory`, `misconfiguration`, `package`, `resource`, `server`, `source_file`, `vulnerability`
 - `config_file` → `misconfiguration`, `vulnerability`
@@ -165,16 +167,17 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `source_file` → `package`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/framework_topology_projection.py`, `graph/gpu_projection.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/repo_structure_overlay.py`, `graph/side_scan_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_finding_nodes.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/dbt_overlay.py`, `graph/framework_topology_projection.py`, `graph/gpu_projection.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/pipeline_overlay.py`, `graph/repo_structure_overlay.py`, `graph/repository_artifacts.py`, `graph/side_scan_projection.py`, `graph/vercel_projection.py`, `graph/workspace_overlay.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_finding_nodes.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `correlates_with`
 
-Class `correlation` · bidirectional · not traversable · required evidence `source`, `tier` · 4 pairs
+Class `correlation` · bidirectional · not traversable · required evidence `source`, `tier` · 5 pairs
 
 - `agent` → `agent`, `server`
+- `code_module` → `data_store`
 - `server` → `agent`, `server`
 
-Emitted by: `graph/builder_frameworks.py`
+Emitted by: `graph/builder_frameworks.py`, `graph/dbt_overlay.py`
 
 ## `cross_account_trust`
 
@@ -193,7 +196,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 
 - `source_file` → `ci_job`, `code_module`, `tool`
 
-Emitted by: `graph/ast_tool_projection.py`, `graph/code_graph_overlay.py`
+Emitted by: `graph/ast_tool_projection.py`, `graph/code_graph_overlay.py`, `graph/pipeline_overlay.py`, `graph/sdk_overlay.py`
 
 ## `delegated_to`
 
@@ -205,19 +208,22 @@ Emitted by: `graph/runtime_projection.py`
 
 ## `depends_on`
 
-Class `dependency` · directed · traversable · required evidence `source`, `tier` · 11 pairs
+Class `dependency` · directed · traversable · required evidence `source`, `tier` · 15 pairs
 
+- `ci_job` → `ci_job`
 - `cloud_resource` → `cloud_resource`
+- `code_module` → `code_module`, `package`
 - `config_file` → `package`
 - `container` → `container`, `package`
 - `data_store` → `cloud_resource`, `data_store`
 - `directory` → `package`
 - `framework` → `package`
 - `package` → `package`
+- `resource` → `package`
 - `server` → `package`
 - `source_file` → `package`
 
-Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cross_vendor_paths.py`, `graph/framework_topology_projection.py`, `graph/gpu_paths.py`, `graph/package_dependency_projection.py`, `graph/repo_structure_overlay.py`, `graph/side_scan_projection.py`; demo fixtures: `demo_estate/estate_external_stages.py`, `demo_estate/showcase_packages.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cross_vendor_paths.py`, `graph/dbt_overlay.py`, `graph/framework_topology_projection.py`, `graph/gpu_paths.py`, `graph/package_dependency_projection.py`, `graph/pipeline_overlay.py`, `graph/repo_structure_overlay.py`, `graph/side_scan_projection.py`, `graph/workspace_overlay.py`; demo fixtures: `demo_estate/estate_external_stages.py`, `demo_estate/showcase_packages.py`
 
 ## `exhibits_drift`
 
@@ -251,9 +257,10 @@ Emitted by: `graph/builder_network_exposure.py`, `graph/builder_snowflake_data_m
 
 ## `exposes_cred`
 
-Class `authority` · directed · traversable · required evidence `source`, `tier` · 2 pairs
+Class `authority` · directed · traversable · required evidence `source`, `tier` · 3 pairs
 
 - `agent` → `credential`
+- `resource` → `credential`
 - `server` → `credential`
 
 Emitted by: `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_credentials.py`
@@ -310,7 +317,7 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 - `code_module` → `code_module`, `external_import`, `package`
 - `source_file` → `code_module`, `external_import`, `package`
 
-Emitted by: —
+Emitted by: `graph/sdk_overlay.py`
 
 ## `inherits`
 
@@ -599,9 +606,9 @@ Emitted by: `graph/runtime_projection.py`, `graph/trace_projection.py`
 
 ## `uses`
 
-Class `dependency` · directed · traversable · required evidence `source`, `tier` · 1 pairs
+Class `dependency` · directed · traversable · required evidence `source`, `tier` · 2 pairs
 
-- `agent` → `server`
+- `agent` → `resource`, `server`
 
 Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/gpu_paths.py`; demo fixtures: `demo_estate/showcase_graph.py`
 

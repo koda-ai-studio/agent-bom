@@ -14,6 +14,12 @@ import { ENTITY_ICONS, type LineageNodeType } from "@/lib/entity-icons";
 import { EntityType } from "@/lib/graph-schema";
 import { entitySource } from "@/lib/agent-source";
 
+it("labels static pipeline and implementation artifacts without implying a live agent", () => {
+  expect(assetKindLabel({entityType:"ci_job",attributes:{subtype:"gitlab_job"}})).toBe("GitLab job");
+  expect(assetKindLabel({entityType:"ci_job",attributes:{subtype:"airflow_dag"}})).toBe("Airflow DAG");
+  expect(assetKindLabel({entityType:"code_module",attributes:{subtype:"agent_implementation"}})).toBe("Agent declaration");
+});
+
 // Every (entity_type, resource_type) pair the demo estate API emits, collected
 // from GET /v1/graph on the seeded demo estate.
 const DEMO_PAIRS: Array<[string, string]> = [
@@ -296,4 +302,26 @@ describe("Snowflake stage", () => {
     }
     expect(assetKind({ entityType: "data_store", attributes: { resource_type: "s3" }, provider: "aws" })).toBe("bucket");
   });
+});
+
+
+it("labels non-MCP connection profiles and IaC findings from their recorded kind", () => {
+  const connection = { entityType: "resource", attributes: { resource_type: "data_connection" } };
+  expect(assetKind(connection)).toBe("data_connection");
+  expect(assetKindLabel(connection)).toBe("Data connection");
+  expect(assetIcon(connection)).not.toBe(ASSET_KINDS.mcp_server.icon);
+  const finding = { entityType: "misconfiguration", attributes: { finding_kind: "iac" } };
+  expect(assetKindLabel(finding)).toBe("IaC finding");
+  expect(assetKindLabel({ entityType: "misconfiguration", attributes: { resource_type: "data_connection" } })).toBe("Finding");
+});
+
+it("labels a recorded first-party workspace separately from dependency packages", () => {
+  expect(assetKindLabel({ entityType: "code_module", attributes: { subtype: "workspace_package" } })).toBe("Workspace package");
+  expect(assetKindLabel({ entityType: "package", attributes: {} })).not.toBe("Workspace package");
+});
+
+it("identifies dbt artifacts without calling them live warehouse objects", () => {
+  for (const kind of ["model", "source", "seed", "exposure"]) {
+    expect(assetKindLabel({ entityType: "code_module", attributes: { subtype: `dbt_${kind}` } })).toBe(`dbt ${kind}`);
+  }
 });

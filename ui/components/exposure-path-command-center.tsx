@@ -286,8 +286,13 @@ export function ExposurePathCommandCenter({
             <EvidenceRow label="Findings" values={path.findings} />
             <EvidenceRow label="Agents" values={path.affectedAgents} />
             <EvidenceRow label="Servers" values={path.affectedServers} />
-            <EvidenceRow label="Tools" values={path.reachableTools} emptyLabel="none" />
-            <EvidenceRow label="Credentials" values={path.exposedCredentials} emptyLabel="none" />
+            <section aria-label="Reported exposure context" className="col-span-full grid gap-2 sm:grid-cols-2">
+              <EvidenceRow label="Tools" values={path.reachableTools} emptyLabel="none" />
+              <EvidenceRow label="Credential references" values={path.exposedCredentials} emptyLabel="none" />
+              {(path.reachableTools.length > 0 || path.exposedCredentials.length > 0) && <p className="col-span-full text-xs text-ink-secondary">
+                Reported exposure context. These entries do not add path hops or establish access.
+              </p>}
+            </section>
             <div className="ep-evidence-score">
               <div className="ep-evidence-meta">
                 <ShieldAlert className="h-3.5 w-3.5 text-red-300" />

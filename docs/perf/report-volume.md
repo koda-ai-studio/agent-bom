@@ -73,7 +73,49 @@ The tiled job row (14.65 MB before, 94 KB after) is not a fair compression
 figure: tiling repeats identical rows, which zstd folds away. Use the demo
 row's 12.3x as the expected ratio.
 
-## Known gaps
+## Retained repository report profile (2026-11-03)
+
+An offline scan of the tracked repository source produced a 119,028,435-byte
+report with 1,192 dependency packages, 978 findings and 24 coverage warnings.
+This includes test/example evidence and a partial collection outcome; the counts
+are not confirmed production vulnerabilities. The source scan used `--no-scan`,
+so it did not refresh vulnerability assessments. The retained report was
+profiled locally on macOS arm64 with Python 3.13 using the existing zstd codec
+and isolated SQLite storage. Report generation time was not measured in this
+receipt. The input SHA-256 was
+`7c85702ff32d55984c4bad4d5fd3840cb0add675aae199404db1140af5a2d075`.
+
+| Phase or size | Local measurement |
+|---|---:|
+| Compact JSON | 85,605,363 bytes / 207 ms |
+| Compact JSON gzip level 1 / 6 | 5,444,112 / 4,071,409 bytes |
+| Stored job row | 5,320,348 bytes |
+| Job encode / decode | 311 / 272 ms |
+| First SQLite write / full read | 338 / 278 ms |
+| Full JSON export | 2,719 ms |
+| SQLite files, one / two identical report snapshots | 5,419,008 / 10,743,808 bytes |
+| Streaming export peak Python allocations | 80,001 bytes |
+
+Codec decode, stored read and exported JSON preserved every field under compact
+JSON equality; a foreign tenant could not read the job. The allocation figure
+is only the writer, measured separately from wall time, and excludes the
+already-loaded report. The second identical snapshot added about 5.3 MB:
+content deduplication could potentially avoid most repeated payload bytes, but
+this is an upper-bound opportunity, not a measured deduplication implementation.
+No retention, snapshot identity or storage format changed for this profile.
+
+Reproduce the profile with a privately retained report:
+
+```bash
+uv run python scripts/bench/report_volume_bench.py --src src --report /path/to/report.json
+```
+
+The command leaves the source intact and uses disposable storage, checks full
+export parity and tenant scope, and prints sizes and phase timings. Omit
+`--report` to generate and time the offline demo report. Keep real report
+contents private; the measurement does not require publishing them.
+
+## Remaining scale qualification
 
 - A completed job's result is still decoded whole before
   `GET /v1/scan/{id}/result/{section}` slices it; the paged response is small

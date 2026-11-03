@@ -433,3 +433,20 @@ describe("URL state codec", () => {
     expect(patch.pageSize).toBe(500);
   });
 });
+
+
+describe("IaC finding subtype in the loaded graph", () => {
+  it("retains recorded IaC context and excludes other findings and disconnected inventory", () => {
+    const graph = buildSyntheticGraph();
+    graph.nodes = [node("iac", EntityType.MISCONFIGURATION, "Privileged container", "high", { attributes: { finding_kind: "iac" } }),
+      node("other", EntityType.MISCONFIGURATION, "Unrelated config", "high"),
+      node("asset", EntityType.RESOURCE, "Container"), node("orphan", EntityType.RESOURCE, "Unlinked")];
+    graph.edges = [edge("iac", "asset", RelationshipType.AFFECTS), edge("other", "asset", RelationshipType.AFFECTS)];
+    const filters = { ...createExpandedGraphFilters(), findingKind: "iac" as const };
+    const result = applyFilters(graph, filters);
+    expect(result.nodes.map(n => n.id).sort()).toEqual(["asset", "iac"]);
+    expect(result.edges).toEqual([graph.edges[0]]);
+    expect(decodeFiltersFromParams(encodeFiltersToParams(filters)).findingKind).toBe("iac");
+    expect(decodeFiltersFromParams(new URLSearchParams("findingKind=unknown"))).not.toHaveProperty("findingKind");
+  });
+});

@@ -103,7 +103,7 @@ from agent_bom.api.routes.graph_routes.payloads import _encode_node_page, _encod
 from agent_bom.api.routes.graph_routes.payloads import _filtered_graph_response as _filtered_graph_response
 from agent_bom.api.routes.graph_routes.payloads import _fix_first_graph_view_payload as _fix_first_graph_view_payload
 from agent_bom.api.routes.graph_routes.payloads import _governance_graph_payload as _governance_graph_payload
-from agent_bom.api.routes.graph_routes.rollup_inputs import rollup_source, rollup_suppressions
+from agent_bom.api.routes.graph_routes.rollup_inputs import rollup_source, rollup_suppressions, with_current_coverage
 from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_EDGE_KINDS as _RESERVED_GRAPH_EDGE_KINDS
 from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_NODE_KINDS as _RESERVED_GRAPH_NODE_KINDS
 from agent_bom.api.stores import _get_graph_store as _get_graph_store
@@ -759,7 +759,7 @@ async def get_graph_rollup(
         )
         cached = graph_rollup_cache.get(cache_key)
         if cached is not None:
-            return cached
+            return await with_current_coverage(cached, graph_store, tenant)
         requested_scan_id = cache_identity[0]
 
     node, resolved_from = await _runtime.resolve_node_id(graph_store, tenant, requested_scan_id, node) if node else (node, None)
@@ -784,7 +784,7 @@ async def get_graph_rollup(
         payload.update({"resolved_from": resolved_from} if resolved_from else {})
         if cache_key:
             graph_rollup_cache.put(cache_key, payload)
-        return payload
+        return await with_current_coverage(payload, graph_store, tenant)
     except HTTPException:
         raise
     except Exception as exc:  # noqa: BLE001

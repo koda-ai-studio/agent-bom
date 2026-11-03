@@ -28,3 +28,11 @@ describe("path reach summary", () => {
     expect(container).toBeEmptyDOMElement();
   });
 });
+
+it("labels metadata as reported context without asserting a next attack hop", () => {
+  render(<PathReachSummary path={path} scanId="scan-1" />);
+  const context=screen.getByRole("region",{name:"Reported path exposure"});
+  expect(context).toHaveTextContent("Reported exposure");
+  expect(context).toHaveTextContent("References only; inspect recorded relationships to establish a connection.");
+  expect(screen.queryByText("Reached from this path")).toBeNull();
+});

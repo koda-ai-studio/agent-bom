@@ -32,9 +32,11 @@ import conftest  # noqa: E402
 
 
 @pytest.mark.parametrize("closed", [False, True])
-def test_store_restore_never_revives_a_closed_postgres_pool(closed) -> None:
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_store_restore_never_revives_a_closed_postgres_pool(closed, wrapped) -> None:
     pool = SimpleNamespace(closed=False)
-    store = SimpleNamespace(_pool=pool)
+    backend = SimpleNamespace(_pool=pool)
+    store = SimpleNamespace(_backend=backend) if wrapped else backend
     module = SimpleNamespace(_store=store)
     snapshot = [(module, "_store", store)]
     # A lifespan shutdown or explicit restart closes the captured pool.
@@ -45,10 +47,12 @@ def test_store_restore_never_revives_a_closed_postgres_pool(closed) -> None:
 
 
 @pytest.mark.parametrize("closed", [False, True])
-def test_store_snapshot_discards_pool_closed_after_previous_teardown(monkeypatch, closed) -> None:
+@pytest.mark.parametrize("wrapped", [False, True])
+def test_store_snapshot_discards_pool_closed_after_previous_teardown(monkeypatch, closed, wrapped) -> None:
     from agent_bom.api import stores
 
-    store = SimpleNamespace(_pool=SimpleNamespace(closed=closed))
+    backend = SimpleNamespace(_pool=SimpleNamespace(closed=closed))
+    store = SimpleNamespace(_backend=backend) if wrapped else backend
     monkeypatch.setattr(stores, "_store", store)
     snapshot = conftest._snapshot_store_singletons()
     captured = next(value for module, name, value in snapshot if module is stores and name == "_store")

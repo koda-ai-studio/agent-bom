@@ -2010,6 +2010,58 @@
    "manifest_directories": 1,
    "manifest_files": 2,
    "package_count": 4,
+   "repository_context": {
+    "code": {
+     "coverage": "python_named_sdk_imports_and_static_calls",
+     "files": [],
+     "status": "complete",
+     "unresolved": []
+    },
+    "coverage": {
+     "cargo": "package_manifests",
+     "go": "module_manifests",
+     "npm_yarn": "package_manifests",
+     "nx": "not_present",
+     "pnpm": "package_manifests",
+     "turbo": "not_present",
+     "uv": "project_manifests"
+    },
+    "identity_basis": "local_root",
+    "pipelines": {
+     "coverage": "literal_gitlab_jobs_and_airflow_dag_operators",
+     "edges": [],
+     "nodes": [],
+     "status": "complete",
+     "unresolved": []
+    },
+    "ref": "unrecorded",
+    "ref_status": "unavailable",
+    "revision": null,
+    "scope_id": "<HEX>",
+    "status": "complete",
+    "unresolved": [],
+    "version": 1,
+    "workspace_packages": [
+     {
+      "declared_dependencies": [
+       "lodash",
+       "minimist"
+      ],
+      "ecosystem": "npm",
+      "evidence_tier": "static_scan",
+      "first_party": true,
+      "id": "repo:workspace_package:<HEX>",
+      "local_dependency_paths": {},
+      "manifest": "package.json",
+      "manifest_digest": "<HEX>",
+      "name": "fixture-app",
+      "owner_source": "",
+      "owners": [],
+      "path": ".",
+      "workspace_dependencies": []
+     }
+    ]
+   },
    "root": "<path:proj>",
    "transitive_packages": 0
   },

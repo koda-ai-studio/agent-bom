@@ -514,3 +514,15 @@ describe("path step glyphs", () => {
     expect(new Set(drawn).size).toBe(drawn.length);
   });
 });
+
+
+it("keeps reported exposure context separate from recorded path hops", () => {
+  const path = { ...basePath, hops: basePath.hops.slice(0,4), exposedCredentials: ["WAREHOUSE_TOKEN_REFERENCE"] };
+  render(<ExposurePathCommandCenter path={path} />);
+  fireEvent.click(screen.getByText(/Path context & evidence/));
+  fireEvent.click(screen.getByText("Evidence & relationships"));
+  const context = screen.getByRole("region", { name: "Reported exposure context" });
+  expect(context).toHaveTextContent("WAREHOUSE_TOKEN_REFERENCE");
+  expect(context).toHaveTextContent("do not add path hops or establish access");
+  expect(screen.getAllByText("WAREHOUSE_TOKEN_REFERENCE")).toHaveLength(1);
+});

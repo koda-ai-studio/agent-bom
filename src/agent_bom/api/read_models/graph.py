@@ -195,6 +195,13 @@ class GraphEstateChangesResponse(ReadResponse):
     nodes and links, the issue counts are the headline's unit. ``new_sources`` are first
     observations and are never counted as additions. ``totals`` cover the
     returned page of scopes; ``completeness`` says whether more scopes exist.
+    Per-source ``comparison`` gates comparable summaries on complete matching
+    collection coverage. ``kev_change`` requires matching recorded trend bases;
+    absent evidence is null. ``paths_changed`` includes path-only changes even
+    when node and edge sets are unchanged. Decreases are not proof of remediation.
+    ``repository_changes`` adds bounded workspace/dbt/pipeline rows and files with
+    new finding links only for complete matching repository/ref collection bases.
+    Missing ref evidence or a replaced snapshot generation makes it unavailable.
     """
 
     schema_version: str
@@ -428,6 +435,7 @@ class GraphRollupResponse(ReadResponse):
     scan_id: str
     tenant_id: str
     created_at: str
+    collection_coverage: Row | None = None
     mode: str
     filters: Row
     summary: Row

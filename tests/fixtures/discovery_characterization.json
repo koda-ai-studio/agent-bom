@@ -2374,6 +2374,67 @@
     "manifest_directories": 2,
     "manifest_files": 2,
     "package_count": 3,
+    "repository_context": {
+     "code": {
+      "coverage": "python_named_sdk_imports_and_static_calls",
+      "files": [
+       {
+        "calls": [
+         {
+          "evidence": "static_call_expression",
+          "line": 3,
+          "symbol": "openai.OpenAI"
+         }
+        ],
+        "digest": "33939e45c7d9bff3e116b2b88debe5723680d38788197f6657507333e15a400e",
+        "evidence_tier": "static_scan",
+        "implementations": [],
+        "imports": [
+         {
+          "alias": "OpenAI",
+          "line": 1,
+          "module": "openai.OpenAI",
+          "symbol": "openai.OpenAI"
+         },
+         {
+          "alias": "AgentExecutor",
+          "line": 2,
+          "module": "langchain.agents.AgentExecutor",
+          "symbol": "langchain.agents.AgentExecutor"
+         }
+        ],
+        "path": "agent_app.py"
+       }
+      ],
+      "status": "complete",
+      "unresolved": []
+     },
+     "coverage": {
+      "cargo": "package_manifests",
+      "go": "module_manifests",
+      "npm_yarn": "package_manifests",
+      "nx": "not_present",
+      "pnpm": "package_manifests",
+      "turbo": "not_present",
+      "uv": "project_manifests"
+     },
+     "identity_basis": "local_root",
+     "pipelines": {
+      "coverage": "literal_gitlab_jobs_and_airflow_dag_operators",
+      "edges": [],
+      "nodes": [],
+      "status": "complete",
+      "unresolved": []
+     },
+     "ref": "unrecorded",
+     "ref_status": "unavailable",
+     "revision": null,
+     "scope_id": "<PROJECT_SCOPE>",
+     "status": "complete",
+     "unresolved": [],
+     "version": 1,
+     "workspace_packages": []
+    },
     "root": "<ROOT>/project",
     "transitive_packages": 0
    },
@@ -2894,6 +2955,67 @@
     "manifest_directories": 2,
     "manifest_files": 2,
     "package_count": 3,
+    "repository_context": {
+     "code": {
+      "coverage": "python_named_sdk_imports_and_static_calls",
+      "files": [
+       {
+        "calls": [
+         {
+          "evidence": "static_call_expression",
+          "line": 3,
+          "symbol": "openai.OpenAI"
+         }
+        ],
+        "digest": "33939e45c7d9bff3e116b2b88debe5723680d38788197f6657507333e15a400e",
+        "evidence_tier": "static_scan",
+        "implementations": [],
+        "imports": [
+         {
+          "alias": "OpenAI",
+          "line": 1,
+          "module": "openai.OpenAI",
+          "symbol": "openai.OpenAI"
+         },
+         {
+          "alias": "AgentExecutor",
+          "line": 2,
+          "module": "langchain.agents.AgentExecutor",
+          "symbol": "langchain.agents.AgentExecutor"
+         }
+        ],
+        "path": "agent_app.py"
+       }
+      ],
+      "status": "complete",
+      "unresolved": []
+     },
+     "coverage": {
+      "cargo": "package_manifests",
+      "go": "module_manifests",
+      "npm_yarn": "package_manifests",
+      "nx": "not_present",
+      "pnpm": "package_manifests",
+      "turbo": "not_present",
+      "uv": "project_manifests"
+     },
+     "identity_basis": "local_root",
+     "pipelines": {
+      "coverage": "literal_gitlab_jobs_and_airflow_dag_operators",
+      "edges": [],
+      "nodes": [],
+      "status": "complete",
+      "unresolved": []
+     },
+     "ref": "unrecorded",
+     "ref_status": "unavailable",
+     "revision": null,
+     "scope_id": "<PROJECT_SCOPE>",
+     "status": "complete",
+     "unresolved": [],
+     "version": 1,
+     "workspace_packages": []
+    },
     "root": "<ROOT>/project",
     "transitive_packages": 0
    },

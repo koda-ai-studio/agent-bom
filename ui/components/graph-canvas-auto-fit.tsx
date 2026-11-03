@@ -122,9 +122,13 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     frames.push(requestAnimationFrame(() => settle(0)));
     return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
   }, [padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
-  // The stepper walks an ordered path on a phone; a plain graph is shown whole.
-  if (!initialized || width >= 640 || width <= 0 || !navigationIds?.length) return null;
-  const navigator = <GraphNodeNavigator nodes={getNodes()} orderedIds={navigationIds} />;
+  // Small screens focus one readable node. Always provide a way to reach the
+  // other loaded nodes, including inventory views without an ordered path.
+  if (!initialized || width >= 640 || width <= 0) return null;
+  const visibleNodes = getNodes().filter(node => !node.hidden);
+  const orderedIds = navigationIds?.length ? navigationIds : [...visibleNodes]
+    .sort((a, b) => a.position.x - b.position.x || a.position.y - b.position.y || a.id.localeCompare(b.id)).map(node => node.id);
+  const navigator = <GraphNodeNavigator nodes={visibleNodes} orderedIds={orderedIds} />;
   return navigationMount ? createPortal(navigator, navigationMount) : <Panel position="top-center">{navigator}</Panel>;
 }
 

@@ -31,7 +31,14 @@ const changes = {
   schema_version: "v1", evidence_scope: "current_estate",
   sources: [
     { scope_id: "a1b2", label: "repo github.com/acme/agents", old: ref("repo-1", "2026-10-08T09:00:00+00:00"), new: ref("repo-2", "2026-10-15T09:00:00+00:00"),
-      counts: { nodes: { added: 1, removed: 1, changed: 0 }, edges: { added: 1, removed: 1, changed: 0 } }, total_changes: 4, nodes_by_entity_type: {}, highlights: {}, skipped_snapshots: 0 },
+      counts: { nodes: { added: 1, removed: 1, changed: 0 }, edges: { added: 1, removed: 1, changed: 0 } }, total_changes: 4, nodes_by_entity_type: { server:{added:1,removed:1,changed:0} },
+      comparison:{status:"comparable",reason:null},kev_change:{old:2,new:0,delta:-2,basis:"issue_groups"},
+      repository_changes:{status:"complete",ref:"refs/heads/main",counts:{workspace_packages:{added:1,removed:0},dbt_models:{added:1,removed:0},pipelines:{added:0,removed:1}},
+        rows:[{id:"module:analytics",label:"analytics workspace",change:"added",kind:"workspace_package",scan_id:"repo-2"},
+          {id:"module:orders",label:"Orders",change:"added",kind:"dbt_model",scan_id:"repo-2"},
+          {id:"job:deploy",label:"deploy",change:"removed",kind:"pipeline",scan_id:"repo-1"}],
+        files_with_new_findings:{status:"complete",count:1}},
+      highlights: {new_attack_paths:{status:"complete",count:1,top:[]},removed_attack_paths:{status:"complete",count:0,top:[]}}, skipped_snapshots: 0 },
     { scope_id: "c3d4", label: "aws / 123456789012 / us-east-1", old: ref("aws-1", "2026-10-09T09:00:00+00:00"), new: ref("aws-2", "2026-10-15T08:00:00+00:00"),
       counts: { nodes: { added: 0, removed: 0, changed: 0 }, edges: { added: 0, removed: 0, changed: 0 } }, total_changes: 0, nodes_by_entity_type: {}, highlights: {}, skipped_snapshots: 0 },
   ],
@@ -92,6 +99,14 @@ for (const [theme, width] of [["light", 1440], ["dark", 1440], ["light", 390], [
     await expect(panel.getByTestId("graph-changes-first-observation")).toContainText("image nginx:1.27");
     await expect(panel.getByTestId("graph-changes-first-observation")).toContainText("not counted as additions");
     await page.screenshot({ path: info.outputPath(`changes-panel-${theme}-${width}.png`), animations: "disabled" });
+    await panel.getByText("Repository changes",{exact:true}).click();
+    await expect(sources.nth(0)).toContainText("dbt models +1 −0");
+    await expect(sources.nth(0)).toContainText("deploy · no longer recorded");
+    await expect(sources.nth(0).getByRole("link",{name:"Open deploy in its recorded snapshot"})).toHaveAttribute("href",/scan=repo-1/);
+    await expect(sources.nth(0)).toContainText("Static declarations do not establish execution.");
+    await panel.getByText("Repository changes",{exact:true}).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: info.outputPath(`repository-changes-${theme}-${width}.png`), animations: "disabled" });
+    await panel.getByText("Repository changes",{exact:true}).click();
 
     await sources.nth(0).getByRole("button", { name: /open diff/i }).click();
     await expect(sources.nth(0).getByTestId("graph-snapshot-diff")).toContainText("requests@2.32.0");

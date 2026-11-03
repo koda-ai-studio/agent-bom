@@ -122,3 +122,12 @@ async def test_cli_and_mcp_scan_the_same_project_inputs(
     assert _servers(cli_agents) & expected_servers == _servers(mcp_agents) & expected_servers
     assert _packages(cli_agents) & (PROJECT_PACKAGES | SBOM_PACKAGES) == _packages(mcp_agents) & (PROJECT_PACKAGES | SBOM_PACKAGES)
     assert expected_packages <= _packages(cli_agents)
+
+
+def test_explicit_repository_preserves_workspace_without_third_party_packages(tmp_path: Path) -> None:
+    project = tmp_path / "workspace"
+    project.mkdir()
+    (project / "package.json").write_text(json.dumps({"name": "local-project"}))
+    payload = _cli_scan(tmp_path, "-p", str(project), "--no-discover")
+    packages = payload["project_inventory"]["repository_context"]["workspace_packages"]
+    assert [(p["name"], p["first_party"]) for p in packages] == [("local-project", True)]

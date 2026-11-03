@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.core.severity import SEVERITY_RANK
@@ -26,8 +27,6 @@ def _apply_cost_overlay(graph: UnifiedGraph, report_json: Mapping[str, Any]) -> 
     records = [r for r in raw if isinstance(r, dict)]
     if not records:
         return
-    from datetime import datetime, timezone
-
     from agent_bom.graph.cost_overlay import apply_cost_overlay
 
     apply_cost_overlay(graph, records, datetime.now(timezone.utc))
@@ -92,8 +91,6 @@ def _apply_aspm_overlay(graph: UnifiedGraph, report_json: Mapping[str, Any]) -> 
     raw = report_json.get("findings")
     if not isinstance(raw, list) or not raw:
         return
-    from datetime import datetime, timezone
-
     from agent_bom.graph.aspm_overlay import apply_aspm_overlay
 
     apply_aspm_overlay(graph, dict(report_json), datetime.now(timezone.utc))
@@ -114,19 +111,24 @@ def _apply_repo_structure_overlay(graph: UnifiedGraph, report_json: Mapping[str,
     has_inventory = isinstance(report_json.get("project_inventory"), Mapping)
     if not has_inventory and not any(node.entity_type == EntityType.MISCONFIGURATION for node in graph.nodes.values()):
         return
-    from datetime import datetime, timezone
-
+    from agent_bom.graph.dbt_overlay import apply_dbt_overlay
+    from agent_bom.graph.pipeline_overlay import apply_pipeline_overlay
     from agent_bom.graph.repo_structure_overlay import apply_repo_structure_overlay
+    from agent_bom.graph.sdk_overlay import apply_sdk_overlay
+    from agent_bom.graph.workspace_overlay import apply_workspace_overlay
 
-    apply_repo_structure_overlay(graph, dict(report_json), datetime.now(timezone.utc))
+    now = datetime.now(timezone.utc)
+    apply_repo_structure_overlay(graph, dict(report_json), now)
+    apply_pipeline_overlay(graph, dict(report_json), now)
+    apply_sdk_overlay(graph, dict(report_json), now)
+    apply_workspace_overlay(graph, dict(report_json), now)
+    apply_dbt_overlay(graph, dict(report_json), now)
 
 
 def _apply_code_graph_overlay(graph: UnifiedGraph, report_json: Mapping[str, Any]) -> None:
     """Emit CODE_MODULE nodes from SOURCE_FILE evidence already on the graph."""
     if not any(node.entity_type == EntityType.SOURCE_FILE for node in graph.nodes.values()):
         return
-    from datetime import datetime, timezone
-
     from agent_bom.graph.code_graph_overlay import apply_code_graph_overlay
 
     apply_code_graph_overlay(graph, dict(report_json), datetime.now(timezone.utc))
@@ -139,8 +141,6 @@ def _apply_repo_trust_overlay(graph: UnifiedGraph, report_json: Mapping[str, Any
     has_nested = isinstance(inventory, Mapping) and isinstance(inventory.get("repo_trust"), Mapping) and bool(inventory.get("repo_trust"))
     if not has_trust and not has_nested:
         return
-    from datetime import datetime, timezone
-
     from agent_bom.graph.repo_trust_overlay import apply_repo_trust_overlay
 
     apply_repo_trust_overlay(graph, dict(report_json), datetime.now(timezone.utc))
@@ -153,8 +153,6 @@ def _apply_ci_graph_overlay(graph: UnifiedGraph, report_json: Mapping[str, Any])
         return
     if not any(isinstance(agent, dict) and agent.get("source") == "github-actions" for agent in agents):
         return
-    from datetime import datetime, timezone
-
     from agent_bom.graph.ci_graph_overlay import apply_ci_graph_overlay
 
     apply_ci_graph_overlay(graph, dict(report_json), datetime.now(timezone.utc))

@@ -73,9 +73,13 @@ def _served(report: dict, tmp_path: Path, monkeypatch) -> tuple[dict[str, str], 
 
 
 def _assert_fixture_shape(report: dict, served_nodes: dict[str, str], served_edges: set[tuple[str, str, str]]) -> None:
+    from agent_bom.graph.repository_identity import repository_scope, scoped_node_id
+
+    scope = repository_scope(report["project_inventory"])
+    assert scope, "new repository scans must retain their scoped identity"
     assert {"sbom", "project"} <= {agent.get("source") for agent in report["agents"]}
-    assert served_nodes.get("directory:.") == "directory"
-    assert served_nodes.get("config_file:requirements.txt") == "config_file"
+    assert served_nodes.get(scoped_node_id("directory", ".", scope)) == "directory"
+    assert served_nodes.get(scoped_node_id("config_file", "requirements.txt", scope)) == "config_file"
     assert [nid for nid, kind in served_nodes.items() if nid.startswith("source_file:sbom:") and kind == "source_file"]
     assert len([nid for nid, kind in served_nodes.items() if kind == "vulnerability"]) == 4
     manifest_rollups = {e for e in served_edges if e[0].startswith("directory:manifest:") and e[2] == "vulnerable_to"}
@@ -90,7 +94,7 @@ def test_cli_graph_format_names_repo_and_sbom_nodes_with_persisted_graph_ids(tmp
     nodes = {e["data"]["id"]: e["data"].get("entity_type") for e in cytoscape["elements"] if "source" not in e["data"]}
     edges = {(e["data"]["source"], e["data"]["target"]) for e in cytoscape["elements"] if "source" in e["data"]}
     assert {nid: kind for nid, kind in nodes.items() if served_nodes.get(nid) != kind} == {}
-    assert {"directory:.", "config_file:requirements.txt"} <= set(nodes)
+    assert {nid for nid, kind in served_nodes.items() if kind in {"directory", "config_file"}} <= set(nodes)
     assert [nid for nid in nodes if nid.startswith("source_file:sbom:")]
     assert len([nid for nid, kind in nodes.items() if kind == "vulnerability"]) == 4
     assert edges - {(source, target) for source, target, _ in served_edges} == set()

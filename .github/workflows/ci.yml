@@ -72,6 +72,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # Keep ancestry for merge-base/diff without every historical image blob.
+          filter: blob:none
 
       - name: Classify changed paths
         id: classify
@@ -949,7 +951,7 @@ jobs:
           GRAPH_SCAN_ARTIFACT: ""
         run: |
           cd ui
-          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts e2e/lineage-graph-readability.spec.ts e2e/graph-efficient-workspace.spec.ts
+          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts e2e/lineage-graph-readability.spec.ts e2e/graph-efficient-workspace.spec.ts e2e/graph-paint-budget.spec.ts
 
       - name: Retain UI failure diagnostics
         if: ${{ failure() || cancelled() }}
@@ -1298,6 +1300,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # Keep ancestry for merge-base/diff without every historical image blob.
+          filter: blob:none
 
       - uses: ./.github/actions/setup-python
         with:
@@ -1329,6 +1333,11 @@ jobs:
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
           echo "Affected shard ${{ matrix.shard }}/${{ strategy.job-total }}: ${#TESTS[@]} test modules, ${WORKERS} workers"
           uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+
+      - name: Run isolated graph and findings read budgets
+        if: matrix.shard == 0
+        # Wall-clock gates run without xdist/coverage or competing test workers.
+        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py -q -m graph_performance
 
       - name: Graph accuracy fixture guard (#2259)
         if: >-
@@ -1455,7 +1464,12 @@ jobs:
           echo "Shard ${{ matrix.shard }}/4: ${#TESTS[@]} test modules, ${WORKERS} workers"
           uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
 
-      # Smoke is skipped when these shards run; keep its non-pytest guards.
+      # Smoke is skipped when these shards run; keep its isolated timing gates.
+      - name: Run isolated graph and findings read budgets
+        if: matrix.shard == 0
+        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py -q -m graph_performance
+
+      # Keep the non-pytest guards too.
       - name: Graph accuracy fixture guard (#2259)
         if: >-
           always() && matrix.shard == 0 && (
@@ -1891,6 +1905,7 @@ jobs:
             tests/test_job_result_codec.py \
             tests/test_graph_snapshot_ownership.py \
             tests/test_current_graph_assembly_postgres.py \
+            tests/test_graph_retention_live_postgres.py \
             tests/test_graph_diff_aliases.py \
             tests/test_postgres_alembic_ledger.py \
             tests/test_postgres_graph_snapshot_paths.py \

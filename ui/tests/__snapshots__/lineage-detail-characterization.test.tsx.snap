@@ -84,7 +84,7 @@ exports[`lineage inspector rendering before extraction > preserves the provider 
 
 exports[`lineage inspector rendering before extraction > preserves the role overview DOM 1`] = `"f5512316fb0375894c806fcd9a358cf1c5ea5fcc4f945db7f2d18f8b43b8d04a"`;
 
-exports[`lineage inspector rendering before extraction > preserves the server overview DOM 1`] = `"29a4bbeee0e4629c7607b7bb3d0eb0a9f6f245b8ee0b5c1cd0987549529cf36f"`;
+exports[`lineage inspector rendering before extraction > preserves the server overview DOM 1`] = `"d576a899a5bb6220bd8aab38696eb8d840e9d4edf1e4b8bdd2e8d20d777394aa"`;
 
 exports[`lineage inspector rendering before extraction > preserves the serviceAccount overview DOM 1`] = `"f656d3efed0b2efb165d0a6befa29dbd3a58ca6359401acae15bb3a1e8edf5aa"`;
 

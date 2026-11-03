@@ -1,5 +1,8 @@
 import type { Edge, Node } from "@xyflow/react";
 import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
+import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
+import { peerPreviewLayout } from "@/lib/graph-peer-preview-layout";
+import { mcpEvidenceFlow } from "@/lib/graph-mcp-flow";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { applyDagreLayout, countStraightCrossings, reduceRankCrossings, type LayoutOptions } from "@/lib/dagre-layout";
@@ -97,7 +100,13 @@ function sourceRanks(nodes: Node[], edges: Edge[]): Map<string, number> | null {
 }
 
 /** Rank by recorded relationships; finding arrows retain their original direction. */
-export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], options: LayoutOptions = {}) {
+export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], options: LayoutOptions = {}): { nodes: Node[]; edges: Edge[] } {
+  const peers = peerPreviewLayout(nodes, edges);
+  if (peers) return peers;
+  const mixed = mixedEvidenceFlow(nodes, edges);
+  if (mixed) return mixed;
+  const mcp = mcpEvidenceFlow(nodes, edges);
+  if (mcp) return mcp;
   const cloud = cloudHierarchyLayout(nodes, edges);
   if (cloud) return cloud;
   const byId = new Map(nodes.map(node => [node.id, node]));
@@ -178,8 +187,15 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   const positioned = new Map((compact && repository ? alignHierarchyBranches(ordered, rankedEdges, rowStep) : ordered).map(node => [node.id, node]));
   const columns = [...new Set([...positioned.values()].map(node => node.position.x))].sort((a, b) => a - b);
   const roomyOverview = boundedOverview && columns.length > 1 && columns.slice(1).every((x, index) => x - columns[index]! >= 364);
+  // One parent and its collapsed peer groups need their real caption bounds.
+  // Reserving a full stacked-row cell here shifts the visible diagram upward
+  // when the camera centres the otherwise empty lower half of that cell.
+  const compactBundle = nodes.length <= 3 && nodes.some(node => node.type === "clusterPillNode");
   return {
-    nodes: nodes.map(node => positioned.get(node.id)!),
+    nodes: nodes.map(node => {
+      const placed = positioned.get(node.id)!;
+      return compactBundle ? { ...placed, style: { ...placed.style, minHeight: 0 } } : placed;
+    }),
     edges: edges.map((edge): Edge => ({ ...edge,
       ...(contextEdges.has(edge.id) ? { sourceHandle: "context", targetHandle: "context" } : {}),
       data: { ...edge.data, quietLabel: !edge.data?.isClusterEdge,

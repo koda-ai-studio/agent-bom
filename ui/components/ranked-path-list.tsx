@@ -45,6 +45,7 @@ export function RankedPathList({
   onSelect,
   onKeyDown,
   controlsId,
+  compact = false,
 }: {
   rows: RankedPathRow[];
   selectedKey: string | null;
@@ -52,6 +53,7 @@ export function RankedPathList({
   onKeyDown?: ((event: React.KeyboardEvent<HTMLDivElement>) => void) | undefined;
   /** Detail region updated by a row selection. */
   controlsId?: string | undefined;
+  compact?: boolean;
 }) {
   return (
     <div
@@ -64,6 +66,7 @@ export function RankedPathList({
         const active = row.selectionKey === selectedKey;
         const displayTitle = displayPathTitle(row);
         const advisory = row.cve?.trim() || null;
+        if (compact) return <CompactPathRow key={row.key} row={row} active={active} controlsId={controlsId} onSelect={onSelect} />;
         return (
           <button
             key={row.key}
@@ -148,4 +151,22 @@ export function RankedPathList({
       })}
     </div>
   );
+}
+
+
+function CompactPathRow({ row, active, controlsId, onSelect }: {
+  row: RankedPathRow; active: boolean; controlsId?: string | undefined; onSelect: (key: string) => void;
+}) {
+  const description = [`#${row.rank}`, row.cve, displayPathTitle(row), `Path priority ${row.riskScore.toFixed(1)}`,
+    `${pathSpanLabel(row.nodeCount)} · ${row.agents} agents`, row.roleChain, ...(row.environmentTags ?? []), ...(row.capabilityTags ?? [])].filter(Boolean).join(" · ");
+  return <button type="button" aria-pressed={active} aria-controls={controlsId} onClick={() => onSelect(row.selectionKey)}
+    title={description} aria-label={description}
+    className={`block min-h-16 w-full rounded-lg border px-3 py-2 text-left ${active ? "border-orange-400 bg-orange-500/10" : "border-outline bg-surface hover:border-outline-strong"}`}>
+    <span className="flex items-baseline gap-2 text-xs">
+      <span className="shrink-0 text-ink-secondary">#{row.rank}</span>
+      {row.cve ? <span data-testid="ranked-path-advisory" className="font-mono font-semibold text-red-700 dark:text-red-200">{row.cve}</span> : null}
+    </span>
+    <span className="mt-1 block line-clamp-2 break-words text-sm font-medium leading-snug text-foreground">{displayPathTitle(row)}</span>
+    <span className="mt-1 block truncate text-xs text-ink-secondary">{row.roleChain || pathSpanLabel(row.nodeCount)}</span>
+  </button>;
 }

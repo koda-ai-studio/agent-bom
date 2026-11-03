@@ -4,7 +4,7 @@ UnifiedEdge,
 UnifiedGraphData,
 UnifiedNode
 } from "../graph-schema";
-import type { GraphAttackPath,GraphCompleteness,GraphPagination } from "./scan-inventory";
+import type { GraphAttackPath,GraphCollectionCoverage,GraphCompleteness,GraphPagination } from "./scan-inventory";
 import type { ApiSchemas,ContractEnvelope } from "./shared";
 
 export interface FixFirstRiskReason {
@@ -334,6 +334,7 @@ export interface GraphRollupOrphanSummary {
 }
 
 export interface GraphRollupResponse {
+  collection_coverage?: GraphCollectionCoverage | undefined;
   snapshot_generation?: string;
   scan_id: string;
   tenant_id: string;
@@ -376,7 +377,7 @@ export interface GraphRollupAggregateCountMetadata {
   extra_memberships: number;
   /** True only for the returned entries over the loaded source, not the whole estate. */
   additive: boolean;
-  /** Distinct finding occurrences across every evaluated entry; entries sharing a server each count its occurrences. */
+  /** Distinct finding occurrences across returned entries; entries sharing a server each count its occurrences. */
   distinct_finding_occurrences?: number;
   finding_occurrence_memberships?: number;
   occurrences_additive?: boolean;
@@ -550,7 +551,22 @@ export interface GraphEstateHighlights {
 }
 
 /** One target scope compared with its comparable previous snapshot. */
+export interface GraphRepositoryChangeSummary {
+  status: "complete" | "partial" | "unavailable";
+  reason?: string;
+  ref?: string;
+  counts?: Record<string, { added: number; removed: number }>;
+  rows?: Array<{ id: string; label: string; kind: string; change: string; scan_id: string }>;
+  files_with_new_findings?: {count:number;status:string;rows:Array<{id:string;label:string;scan_id:string}>};
+  rows_truncated?: boolean;
+}
+
 export interface GraphEstateChangeSource {
+  repository_changes?: GraphRepositoryChangeSummary;
+  /** Same scope is necessary but not sufficient: both collections must be complete and cover the same sources. */
+  comparison?: { status: "comparable" | "unavailable"; reason: string | null };
+  kev_change?: { old: number; new: number; delta: number; basis: "issue_groups" } | null;
+  paths_changed?: boolean;
   scope_id: string;
   label: string;
   /** `default_scan_request`: the label is only the unnamed-request fallback, not a vendor source. */

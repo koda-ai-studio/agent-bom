@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { LineageDetailPanel } from "@/components/lineage-detail";
 import { lineageNodeTypes } from "@/components/lineage-nodes";
@@ -172,4 +172,25 @@ it("keeps attached findings identifiable, severity-bearing, highlighted and mark
   expect(screen.getByText("KEV")).toBeVisible();
   expect(container.querySelector("[data-finding-owner]")).toHaveAttribute("data-finding-owner", "checkout");
   expect(container.querySelector(".graph-entity-glyph")).toHaveClass("ring-2");
+});
+
+
+it("keeps an MCP node identified when the local protocol mark cannot load", () => {
+  const Renderer = lineageNodeTypes.serverNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "github", nodeType: "server" }} /></ReactFlowProvider>);
+  const mark = container.querySelector('img[data-protocol-mark="mcp"]')!;
+  expect(mark.getAttribute("src")).toMatch(/\/logos\/mcp\.svg$/);
+  expect(mark.getAttribute("aria-hidden")).toBe("true");
+  fireEvent.error(mark);
+  expect(container.querySelector('img[data-protocol-mark="mcp"]')).toBeNull();
+  expect(container.querySelector('.lucide-server')).not.toBeNull();
+  expect(screen.getByText("github")).toBeVisible();
+});
+
+
+it("keeps the IaC subtype visible when a layout supplies a generic finding caption", () => {
+  const Renderer = lineageNodeTypes.misconfigNode;
+  render(<ReactFlowProvider><Renderer data={{ label: "Privilege escalation enabled", nodeType: "misconfiguration", readingLabel: "Configuration finding", attributes: { finding_kind: "iac" } }} /></ReactFlowProvider>);
+  expect(screen.getByText("IaC finding")).toBeVisible();
+  expect(screen.queryByText("Configuration finding")).not.toBeInTheDocument();
 });

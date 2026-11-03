@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.evidence.iac_identity import recorded_occurrence_id
+
 _BENCHMARK_SECTIONS = {
     "aws": "cis_benchmark",
     "snowflake": "snowflake_cis_benchmark",
@@ -25,8 +27,11 @@ def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def iac_misconfig_node_id(rule_id: Any, path: Any, line: Any) -> str:
-    """One IaC rule hit at one file line; absent parts read ``unknown`` / ``0``, never ``None``."""
+def iac_misconfig_node_id(rule_id: Any, path: Any, line: Any, occurrence_id: Any = None) -> str:
+    """An exact occurrence, with coordinate-only fallback for legacy evidence."""
+    occurrence = recorded_occurrence_id(occurrence_id)
+    if occurrence:
+        return f"misconfig:iac:{occurrence}"
     return f"misconfig:iac:{rule_id or 'unknown'}:{path or 'unknown'}:{line or 0}"
 
 
@@ -45,7 +50,9 @@ def skill_audit_node_id(key: str) -> str:
 def _iac_node_id(evidence: dict[str, Any]) -> str | None:
     if not evidence.get("iac"):
         return None
-    return iac_misconfig_node_id(evidence.get("rule_id"), evidence.get("file_path"), evidence.get("line_number"))
+    return iac_misconfig_node_id(
+        evidence.get("rule_id"), evidence.get("file_path"), evidence.get("line_number"), evidence.get("occurrence_id")
+    )
 
 
 def _benchmark_node_id(evidence: dict[str, Any]) -> str | None:

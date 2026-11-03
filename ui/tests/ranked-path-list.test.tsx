@@ -105,3 +105,15 @@ describe("RankedPathList", () => {
     );
   });
 });
+
+it("keeps the preview compact while exposing rank, exact advisory, path and priority to keyboard users", () => {
+  const select = vi.fn();
+  render(<RankedPathList rows={rows} selectedKey="k1" onSelect={select} compact />);
+  const choices = screen.getAllByRole("button");
+  expect(choices).toHaveLength(2);
+  expect(choices[0]).toHaveAttribute("title", expect.stringContaining("Path priority 9.6"));
+  expect(within(choices[0]!).getByTestId("ranked-path-advisory")).toHaveTextContent("CVE-2026-0002");
+  expect(within(choices[0]!).getByText("agent → server → package → finding")).toBeVisible();
+  fireEvent.click(choices[1]!);
+  expect(select).toHaveBeenCalledWith("k2");
+});

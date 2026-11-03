@@ -9,6 +9,7 @@ from agent_bom.asset_provenance import package_discovery_provenance, package_ver
 from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.core.severity import severity_basis
+from agent_bom.evidence.iac_identity import prepare_iac_occurrences
 from agent_bom.exploitability import fused_triage_priority
 from agent_bom.finding import Finding, _forward_fixed_version
 from agent_bom.models import AIBOMReport, BlastRadius
@@ -882,7 +883,7 @@ def to_json(report: AIBOMReport) -> dict:
     result["credential_risk_ranking"] = compute_credential_risk_ranking(report)
     result["incident_correlation"] = compute_incident_correlation(report)
 
-    return result
+    return prepare_iac_occurrences(result)
 
 
 def redact_json_payload(report_json: dict[str, Any]) -> dict[str, Any]:

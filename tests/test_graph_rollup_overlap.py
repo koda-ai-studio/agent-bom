@@ -102,3 +102,31 @@ def test_overlap_counts_survive_persistence_and_api_json(tmp_path) -> None:
         assert response.json()["tenant_id"] == "default"
     finally:
         stores.set_graph_store(original)
+
+
+@pytest.mark.parametrize("drill", [False, True])
+@pytest.mark.parametrize("offset", [0, 1, 20])
+def test_paged_count_metadata_counts_only_returned_entries(drill, offset):
+    graph = _shared_estate(root=drill)
+    payload = drill_down(graph, "org", offset=offset, limit=1) if drill else rollup_view(graph, offset=offset, limit=1)
+    entries = payload["children" if drill else "top_level"]
+    counts = payload["aggregate_count_metadata"]
+    expected = sum(entry["aggregate"]["descendant_count"] for entry in entries)
+    assert counts["descendant_memberships"] == expected
+    assert counts["distinct_descendants"] == expected
+    assert counts["extra_memberships"] == 0
+    assert counts["additive"] is True
+
+
+def test_drilldown_occurrence_metadata_matches_returned_aggregates():
+    graph = _shared_estate(root=True)
+    graph.add_node(
+        UnifiedNode(
+            id="finding", entity_type=EntityType.MISCONFIGURATION, label="Finding", severity="high", attributes={"finding_id": "f-1"}
+        )
+    )
+    graph.add_edge(UnifiedEdge(source="scope:a", target="finding", relationship=RelationshipType.CONTAINS))
+    page = drill_down(graph, "org", limit=1)
+    assert page["aggregate_count_metadata"]["distinct_finding_occurrences"] == 1
+    assert page["aggregate_count_metadata"]["finding_occurrence_memberships"] == 1
+    assert page["children"][0]["aggregate"]["finding_occurrence_count"] == 1

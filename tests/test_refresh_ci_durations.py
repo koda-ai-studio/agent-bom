@@ -70,3 +70,15 @@ def test_refresh_merges_sources_and_writes_sorted_rounded_json(tmp_path: Path, m
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert list(payload["files"]) == sorted(payload["files"])
     assert payload["files"] == {"tests/api/test_b.py": 8.5, "tests/test_a.py": 5.0, "tests/test_c.py": 2.0}
+
+
+def test_partial_refresh_replaces_measured_modules_and_retains_others(tmp_path, monkeypatch):
+    import sys
+
+    report = tmp_path / "junit.xml"
+    report.write_text(JUNIT)
+    out = tmp_path / "durations.json"
+    out.write_text(json.dumps({"unit": "worker-seconds per module", "files": {"tests/test_a.py": 99, "tests/test_untouched.py": 4.2}}))
+    monkeypatch.setattr(sys, "argv", ["refresh", "--junit", str(report), "--output", str(out), "--merge-existing"])
+    assert main() == 0
+    assert json.loads(out.read_text())["files"] == {"tests/test_a.py": 2.0, "tests/api/test_b.py": 2.0, "tests/test_untouched.py": 4.2}

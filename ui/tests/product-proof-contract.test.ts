@@ -10,6 +10,14 @@ const graphPage = ["app/graph/graph-page-client.tsx", "hooks/use-graph-page-data
 const exposurePath = fs.readFileSync(path.join(process.cwd(), "components", "exposure-path-command-center.tsx"), "utf8");
 
 describe("product proof capture contract", () => {
+  it("opens the selected path before capturing its mobile canvas", () => {
+    const start = source.indexOf('"security-graph-mobile-live.png", async');
+    const block = source.slice(start, source.indexOf("await capture(", start + 1));
+    const select = block.indexOf('getByRole("button", { name: "Selected path", exact: true }).click()');
+    expect(select).toBeGreaterThan(0);
+    expect(select).toBeLessThan(block.indexOf('getByTestId("security-graph-investigation")'));
+  });
+
   it("carries advisory severity on every overview queue fixture path", () => {
     const pathSource = source.slice(source.indexOf("  const attackPaths = ["), source.indexOf("  const stats = {", source.indexOf("  const attackPaths = [")));
     const advisories = JSON.parse(fs.readFileSync(path.join(process.cwd(), "fixtures/gallery-advisories.json"), "utf8")).advisories;

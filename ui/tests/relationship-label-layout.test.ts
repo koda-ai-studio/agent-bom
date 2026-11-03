@@ -203,3 +203,36 @@ it("scales glyph clearance with the rendered glyph so short-link labels stay att
   scheduleRelationshipLabelLayout(labels[0]!);
   expect(labels[0]!.style.transform).toContain("translate(490px, 100px)");
 });
+
+it("clears stacked captions when a long relationship cannot fit between its glyphs", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape:(value:string)=>value });
+  const labels=fixture();labels[1]!.remove();
+  const canvas=document.querySelector<HTMLElement>(".react-flow")!;
+  canvas.querySelector('.react-flow__edge[data-id="b"]')!.remove();
+  canvas.querySelector('.react-flow__node')!.remove();
+  canvas.getBoundingClientRect=()=>new DOMRect(0,60,1000,240);
+  for(const x of [368,548]) {
+    const n=document.createElement("div");n.className="react-flow__node";
+    n.innerHTML='<div data-graph-entity="true"><div class="graph-entity-glyph"></div><p>Name and context</p></div>';
+    n.querySelector<HTMLElement>('.graph-entity-glyph')!.getBoundingClientRect=()=>new DOMRect(x,68,64,64);
+    n.querySelector<HTMLElement>('p')!.getBoundingClientRect=()=>new DOMRect(x-80,136,224,70);
+    canvas.append(n);
+  }
+  Object.assign(canvas.querySelector('path')!,{getTotalLength:()=>116,getPointAtLength:(at:number)=>({x:432+at,y:100})});
+  labels[0]!.getBoundingClientRect=()=>new DOMRect(423,90,134,20);
+  labels[0]!.dataset.labelX="490";
+  scheduleRelationshipLabelLayout(labels[0]!);
+  const y=Number(labels[0]!.style.transform.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/)![2]);
+  expect(y-10).toBeGreaterThanOrEqual(208);
+  labels[0]!.dataset.labelMode="auto";
+  scheduleRelationshipLabelLayout(labels[0]!);
+  expect(labels[0]).not.toBeVisible();
+  labels[0]!.dataset.inspecting="true";
+  scheduleRelationshipLabelLayout(labels[0]!);
+  expect(labels[0]).toBeVisible();
+  labels[0]!.dataset.inspecting="false";
+  labels[0]!.dataset.labelMode="show";
+  scheduleRelationshipLabelLayout(labels[0]!);
+  expect(labels[0]).toBeVisible();
+});

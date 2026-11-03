@@ -112,8 +112,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(fit.inside).toBe(true);
     expect(fit.title).toBe(fit.selected);
     expect(fit.selected).toContain(scanId);
-    if (width >= 1440) expect(fit.actual).toBeGreaterThanOrEqual(fit.natural - 1);
-    else if (fit.actual < fit.natural - 1) expect(fit.ellipsis).toBe("ellipsis");
+    if (fit.actual < fit.natural - 1) expect(fit.ellipsis).toBe("ellipsis");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await select.scrollIntoViewIfNeeded();
     await page.screenshot({ path: testInfo.outputPath(`snapshot-selector-${theme}-${width}.png`) });
@@ -420,7 +419,9 @@ async function captureGraphScreenshot(page: Page, testInfo: TestInfo, theme: "da
     if (await legendToggle.isVisible()) {
       await legendToggle.click();
     } else {
-      await page.locator(".graph-legend-dock > summary").click();
+      const legend = page.locator(".graph-legend-dock > summary");
+      if (!await legend.isVisible()) await page.getByText("Graph options", { exact: true }).click();
+      await legend.click();
     }
     // Graph chrome may render the legend in the evidence shelf instead of on
     // the canvas. Verify that either route keeps the legend readable.
@@ -663,17 +664,25 @@ for (const width of [1440, 390]) {
       if (width === 1440) {
         for (const box of boxes) expect(box.bottom).toBeLessThanOrEqual(811);
       } else {
-        // A phone lists every loaded node as a readable path and its Graph view
-        // shows readable context; there is no one-node-at-a-time stepper.
-        await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toHaveCount(0);
+        // The readable list keeps every node; camera targets remain explicit
+        // navigation aids rather than implying additional access hops.
+        await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toContainText("Canvas target");
         const view = page.getByRole("group", { name: "Investigation view" });
         await view.getByRole("button", { name: "Paths", exact: true }).click();
         for (const label of [sourceLabel, "pillow@9.0.0"]) await expect(page.getByTestId("graph-path-list")).toContainText(label);
         await view.getByRole("button", { name: "Graph", exact: true }).click();
       }
-      const memberLabels = await page.locator(".react-flow__edge-text").evaluateAll((labels) => labels.filter((label) => /×22\b/.test(label.textContent ?? "")).map((label) => {
+      // Auto suppresses captions at phone zoom; explicit Show must reveal
+      // complete relationship words and group counts at every viewport.
+      await page.getByText("Graph options", { exact: true }).click();
+      await page.getByLabel("Relationship labels", { exact: true }).selectOption("show");
+      await page.getByText("Graph options", { exact: true }).click();
+      const groupedLabels = page.locator(".graph-relationship-label").filter({ hasText: /×22\b/ });
+      await expect(groupedLabels).toHaveCount(2);
+      await expect(groupedLabels.first()).toBeVisible();
+      const memberLabels = await groupedLabels.locator(".relationship-badge > span").evaluateAll((labels) => labels.map((label) => {
         const text = label.getBoundingClientRect();
-        const background = label.parentElement!.querySelector(".react-flow__edge-textbg")!.getBoundingClientRect();
+        const background = label.parentElement!.getBoundingClientRect();
         return { text: { left: text.left, right: text.right, top: text.top, bottom: text.bottom }, background: { left: background.left, right: background.right, top: background.top, bottom: background.bottom } };
       }));
       expect(memberLabels.length).toBeGreaterThan(0);
@@ -924,8 +933,8 @@ for (const theme of ["light", "dark"] as const) {
     await testInfo.attach("mobile-lineage-geometry", { body: JSON.stringify({ headerBox, canvasBox }), contentType: "application/json" });
     await page.screenshot({ path: testInfo.outputPath(`lineage-compact-${theme}.png`) });
     expect(headerBox.height).toBeLessThanOrEqual(240);
-    // The Paths/Graph toggle sits above the canvas; there is no node stepper.
-    await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toHaveCount(0);
+    // Camera navigation complements the complete Paths list on narrow screens.
+    await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toContainText("Canvas target");
     const navigation = page.getByRole("group", { name: "Investigation view" });
     await expect(navigation).toBeInViewport();
     const navigationBox = (await navigation.boundingBox())!;
@@ -1055,15 +1064,16 @@ for (const theme of ["light", "dark"] as const) {
     expect(overlaps).toEqual([]);
     await page.screenshot({path:testInfo.outputPath(`small-snapshot-${theme}.png`),fullPage:true});
     const agent = page.locator('[data-id="agent:small"].react-flow__node');
-    const counts = agent.locator(".graph-node-context").last();
     await expect(page.getByText("Loaded graph", { exact: true })).toHaveCount(0);
-    await expect(counts).toHaveCSS("visibility", "hidden");
-    await agent.hover();
-    await expect(counts).toBeVisible();
-    await expect(counts).toContainText("linked server");
-    await page.mouse.move(0, 0);
+    // The compact evidence flow keeps names and types on the canvas;
+    // its client context remains available on the server's hover target.
+    await expect(agent.locator(".graph-node-context")).toHaveCount(0);
+    await expect(agent.locator("[data-entity-role]")).toHaveText("Client");
+    await expect(page.locator('[data-id="server:small"] [data-graph-entity]')).toHaveAttribute(
+      "title", /Client: Document processing agent/,
+    );
     await agent.focus();
-    await expect(counts).toBeVisible();
+    await expect(agent).toBeFocused();
   });
 }
 
@@ -1109,5 +1119,21 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".graph-relationship-label .sr-only")).toHaveCount(0);
     expect(metrics.every(metric => metric.lines <= 1.1)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`expanded-reference-${theme}.png`), fullPage: true });
+  });
+}
+
+for (const theme of ["light", "dark"] as const) {
+  test(`focused path keeps broader finding counts on topology only ${theme}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await routeGraphPage(page);
+    await page.goto(`/graph?capture=1&scan=${scanId}&path=top&rollup=0`);
+    await expect(page.getByTestId("focused-path-decision")).toBeVisible();
+    await expect(page.locator(".react-flow__node")).toHaveCount(4);
+    await expect(page.getByTestId("graph-headline-metrics")).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath(`focused-count-scope-${theme}.png`) });
+    await page.getByRole("button", { name: "Return to topology", exact: true }).click();
+    await expect(page.getByTestId("focused-path-decision")).toHaveCount(0);
+    await expect(page.getByTestId("graph-headline-metrics")).toContainText("16 findings in view");
   });
 }

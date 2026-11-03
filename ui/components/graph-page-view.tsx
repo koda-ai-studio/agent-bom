@@ -16,6 +16,7 @@ import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
+import { GraphProjectionNotice } from "@/components/graph-projection-notice";
 import dynamic from "next/dynamic";
 import { Background, Controls, MiniMap, ReactFlow } from "@xyflow/react";
 import { Loader2, ShieldAlert } from "lucide-react";
@@ -28,7 +29,7 @@ import { GraphLensSwitcher } from "@/components/graph-lens-switcher";
 import { GraphScenarioAuthoring, GraphScenarioComparisonPanel, GraphScenarioSelector } from "@/components/graph-scenario-comparison";
 import { GraphRelationshipDetail, GraphRollupRelationshipDetail } from "@/components/graph-relationship-detail";
 import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
-import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
+import { GraphScopeOverview } from "@/components/graph-scope-overview";
 import { GraphEmptyState, GraphFindingsFallback, GraphPanelSkeleton, GraphRefreshOverlay } from "@/components/graph-state-panels";
 import { GraphViewControls } from "@/components/graph-view-controls";
 import { createExpandedGraphFilters, createInvestigationGraphFilters, graphScopeLabelForFilters } from "@/components/lineage-filter";
@@ -40,6 +41,7 @@ import { LARGE_GRAPH_OVERVIEW_MAX_RENDERED_NODES } from "@/lib/large-graph-overv
 import { shouldVirtualizeReactFlowNodes } from "@/lib/graph-renderer-switch";
 import { GraphScenarioUnconnected } from "@/components/graph-scenario-unconnected";
 import { roleCanConnect } from "@/lib/roles";
+import { GraphScopeChangeStrip } from "@/components/graph-scope-change-strip";
 import { GraphChangesEntry } from "@/components/graph-changes-entry";
 import { GraphChangesPanel } from "@/components/graph-changes-panel";
 import { GraphSearchResults } from "@/components/graph-search-results";
@@ -212,9 +214,8 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
   const selectedSnapshot = snapshots.find(item => item.scan_id === selectedScanId);
   const selectedSnapshotTitle = selectedSnapshot ? snapshotOptionLabel(selectedSnapshot)
     : selectedScanId && selectedScanId === currentEstateId ? "Current tenant estate" : selectedScanId || undefined;
-  const snapshotViewControls = (
-    <>
-      {!investigationMode && !firstFramePending && flow.summary && (
+  const graphHeadline = <>
+      {!investigationMode && !selectedAttackPath && !firstFramePending && flow.summary && (
         <div
           data-testid="graph-headline-metrics"
           className="text-xs text-ink-secondary"
@@ -245,13 +246,17 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           )}
         </div>
       )}
+  </>;
+  const snapshotViewControls = (
+    <>
+
 
       <select
         aria-label="Graph snapshot"
         value={selectedScanId}
         title={selectedSnapshotTitle}
         onChange={(event) => setSelectedScanId(event.target.value)}
-        className="graph-page-select min-w-0 max-w-full truncate"
+        className="graph-page-select w-64 min-w-0 max-w-full truncate sm:w-72"
       >
         {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
@@ -611,6 +616,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           )}
           {/* One status bar: counts, evidence, context and legend, instead of four stacked bands. */}
           {!firstFramePending && (showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
+          {graphHeadline}
           {showViewportScope && (
             <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
               {disclosed.collapsed ? <span title={`${displayNodes.length} total nodes and ${displayEdges.length} total relationships loaded`}>
@@ -625,31 +631,25 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
+          {showChangesEntry && viewingCurrentEstate && graphChanges.estateChanges && <GraphScopeChangeStrip changes={graphChanges.estateChanges} onOpen={() => setChangesOpen(true)} />}
           {showChangesEntry && <GraphChangesEntry loading={graphChanges.loading || loadingDiff} error={graphChanges.error ?? diffError}
             headline={viewingCurrentEstate ? graphChanges.headline : snapshotChangesHeadline(graphDiff ? diffCounts : null, Boolean(previousSnapshot))}
             baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}
             onOpen={() => { setChangesOpen(true); if (!viewingCurrentEstate) setComparisonRequested(true); }}
             onClearHighlight={() => { setDriftLensActive(false); setDriftFilter("all"); highlight.clear(); }} />}
-          {narrowViewport ? <details className="ml-auto text-xs">
-            <summary className="cursor-pointer text-ink-secondary">Graph options</summary>
-            <div className="flex flex-wrap items-center gap-3 py-2">
-          {graphRenderer.kind === "react-flow" && relationshipLabels.control}
-          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
-          {showContextControls && investigationContext && <GraphInvestigationContextControls inline
-            groups={investigationContext.groups} selected={selectedContextGroup}
-            visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
-            crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
-          {showLegend && <div className="ml-auto text-right has-[details[open]]:ml-0 has-[details[open]]:basis-full"><GraphLegendDock items={legendItems} popover /></div>}
+          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline compact />}
+              {showContextControls && investigationContext && <GraphInvestigationContextControls inline
+                groups={investigationContext.groups} selected={selectedContextGroup}
+                visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
+                crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
+          <details className="ml-auto text-xs open:w-full">
+            <summary className="graph-page-action ml-auto w-fit cursor-pointer">Graph options</summary>
+            <div className="mt-2 flex w-full flex-wrap items-start gap-3 rounded-xl border border-outline bg-surface p-3">
+              {graphRenderer.kind === "react-flow" && relationshipLabels.control}
+              {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline label="Relationship evidence breakdown" />}
+              {showLegend && <GraphLegendDock items={legendItems} popover />}
             </div>
-          </details> : <>
-          {graphRenderer.kind === "react-flow" && relationshipLabels.control}
-          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
-          {showContextControls && investigationContext && <GraphInvestigationContextControls inline
-            groups={investigationContext.groups} selected={selectedContextGroup}
-            visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
-            crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
-          {showLegend && <div className="ml-auto text-right has-[details[open]]:ml-0 has-[details[open]]:basis-full"><GraphLegendDock items={legendItems} popover /></div>}
-          </>}
+          </details>
 
           </div>}
           <GraphChangesPanel open={changesOpen} changes={viewingCurrentEstate ? graphChanges.estateChanges : null}
@@ -673,7 +673,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             : <GraphPathList nodes={displayNodes} edges={relationshipLabels.edges}
               onSelect={id => { const node = flowNodeById.get(id) ?? displayNodes.find(item => item.id === id); if (node) onNodeClick({} as React.MouseEvent, node); }} />)}
           <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : undefined} />
-          <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`${mobileListActive ? "hidden " : ""}relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
+          <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`${mobileListActive ? "hidden " : ""}relative flex ${rollupDecisionActive ? "min-h-[28rem]" : selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <GraphScenarioUnconnected
             nodes={scenarioElements.unconnected}
@@ -682,6 +682,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             onSelect={node => onNodeClick({} as React.MouseEvent, node)}
           />
           <div className="relative min-h-0 min-w-0 flex-1">
+          <GraphProjectionNotice coverage={(rollupCanvasOwnsPresentation ? rollupView : graphData)?.collection_coverage} onRetry={retryGraph} />
           {graphPanelError && graphData && !loadingGraph && (
             <div role="status" className="flex items-center justify-between gap-3 border-b border-outline px-4 py-2 text-sm">
               <span>Refresh failed. Showing the last loaded graph for this scope.</span>
@@ -713,7 +714,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               detail="Grouping the containment hierarchy."
             />
           ) : rollupDecisionActive ? (
-            <GraphRollupDecisionSurface
+            <GraphScopeOverview
               items={rollupItems}
               edges={rollupView?.edges ?? []}
               completeness={rollupView?.completeness}

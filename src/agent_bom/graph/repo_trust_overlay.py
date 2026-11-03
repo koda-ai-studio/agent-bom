@@ -19,6 +19,7 @@ from typing import Any
 
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.repository_identity import repository_scope, scoped_node_id
 from agent_bom.graph.types import EntityType, GraphSemanticLayer
 
 _OVERLAY_SOURCE = "repo-trust-overlay"
@@ -134,7 +135,7 @@ def apply_repo_trust_overlay(
             existing.data_sources = sources
         existing.last_seen = now_iso
 
-    root = graph.nodes.get(_ROOT_DIR_ID)
+    root = graph.nodes.get(scoped_node_id("directory", ".", repository_scope(report_json.get("project_inventory"))))
     if root is not None and root.entity_type == EntityType.DIRECTORY:
         merged = dict(root.attributes or {})
         for key, value in attrs.items():
