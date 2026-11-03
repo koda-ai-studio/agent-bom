@@ -13,7 +13,7 @@ requires-python = ">=3.11"
 authors = [
     {name = "Wagdy Saad", email = "andwgdysaad@gmail.com"}
 ]
-keywords = ["ai-bom", "sbom", "mcp", "mcp-server", "security", "ai-agents", "vulnerability", "supply-chain", "owasp", "mitre-atlas", "nist-ai-rmf", "blast-radius", "cve", "llm-security", "remediation", "mcp-introspection", "openclaw", "ai-enrichment", "credential-exposure", "config-security", "ai-supply-chain", "ai-infrastructure", "gpu-security", "cuda", "pytorch", "openssf-scorecard", "malicious-package-detection", "runtime-monitoring", "model-provenance"]
+keywords = ["ai-bom", "sbom", "mcp", "mcp-server", "mcp-security", "ai-agents", "ai-supply-chain", "supply-chain", "supply-chain-security", "vulnerability-scanner", "cve", "cyclonedx", "llm-security", "security"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -300,7 +300,7 @@ Issues = "https://github.com/koda-ai-studio/agent-bom/issues"
 Changelog = "https://github.com/koda-ai-studio/agent-bom/releases"
 Documentation = "https://koda-ai-studio.github.io/agent-bom/"
 "Security Policy" = "https://github.com/koda-ai-studio/agent-bom/blob/main/SECURITY.md"
-"Trust & Permissions" = "https://github.com/koda-ai-studio/agent-bom/blob/main/PERMISSIONS.md"
+"Trust & Permissions" = "https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERMISSIONS.md"
 
 [tool.uv]
 # Only install core deps by default — extras (cloud, dev) must be explicit.

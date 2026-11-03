@@ -47,3 +47,13 @@ describe("relationship badges", () => {
     expect(css).not.toMatch(/\.graph-relationship-qualifier\s*\{/);
   });
 });
+
+
+it("keeps configured and modeled qualifiers visible in stacked cloud labels", () => {
+  render(<>{qualifiedLabel("authenticates_as", "Uses role · configured", { evidenceMode: "static", stackedQualifier: true })}
+    {qualifiedLabel("has_permission", "Permission on · modeled", { evidenceMode: "inferred", stackedQualifier: true })}</>);
+  expect(screen.getByText("Uses role")).toBeVisible();
+  expect(screen.getByText("configured")).toBeVisible();
+  expect(screen.getByText("Permission on")).toBeVisible();
+  expect(screen.getByText("modeled")).toBeVisible();
+});

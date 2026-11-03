@@ -219,21 +219,27 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
     hero = readme[: positions[0]]
     # One lead message: the tagline, one audience line, one command.
     assert "<b>AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.</b>" in hero
-    assert "For AppSec and platform engineers. Self-host free; local scans need no account." in hero
+    assert "For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP" in hero
+    assert "local scans need no account" in " ".join(hero.split()).lower()
+    assert "https://koda-ai-studio.github.io/agent-bom/demo/" in hero.split("<!-- mcp-name:", 1)[0], "the hero opens the browser demo"
+    assert "Try in browser" in hero
     assert "Find vulnerable software behind" not in hero, "the second bold descriptor paragraph was dropped"
     assert hero.count("img.shields.io") <= 5, "the badge rows are capped at five badges"
     assert "docs/GALLERY.md" in hero
     quick_start = readme.split("## Quick start", 1)[1].split("\n## ", 1)[0]
     command = "```bash\nuvx agent-bom scan . --no-discover -f html -o agent-bom-report.html\n```"
     assert command in quick_start
-    command_end = quick_start.index(command) + len(command)
-    accuracy = quick_start.index("site-docs/features/real-repository-accuracy.md")
-    assert command_end < accuracy < command_end + 400, "the measured accuracy link sits directly under the quick-start command"
-    assert "299 of 299 OSV advisories" in quick_start
+    assert "docs/images/demo-latest.gif" in quick_start.split("<details>", 1)[0], "the proof visual is visible, not collapsed"
+    assert "[Measured matcher proof](site-docs/features/scanning.md#reproducible-matching-evidence)" in readme
     assert "agent-bom db advisory affected CVE-" in readme
     assert "`affected_assets` tool" in readme
     assert "#what-this-scan-does-and-does-not-establish" in quick_start
-    assert "upload-sarif: 'true'" in quick_start
+    ladder = readme.split("## From laptop to team to org", 1)[1].split("\n## ", 1)[0]
+    for rung in ("On your laptop", "In your team", "Across your org"):
+        assert rung in ladder
+    for step in ("claude mcp add agent-bom", "koda-ai-studio/agent-bom@v0", "schedule:", "agent-bom up", "oci://"):
+        assert step in ladder
+    assert readme.index("## Quick start") < readme.index("## From laptop to team to org") < readme.index("## Why an AI supply-chain BOM")
     assert "agent-bom scan --demo --offline" in quick_start
     assert "Exit `1` is expected" in quick_start
     assert "does not prove" in readme or "do not prove" in readme

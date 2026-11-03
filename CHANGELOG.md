@@ -18,7 +18,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Personal, Shared and Governance dashboard views prioritize relevant navigation without changing permissions or evidence scope. Personal onboarding starts with a local report; shared-source setup remains optional, and tenant compliance is omitted from local report previews.
 
 ### Changed
-- Compact cloud graphs separate hosting, application workloads, identities and data, and place single-owner findings beneath their assets. Shared findings and larger graphs retain their general topology.
+- Compact cloud graphs use connected branches, readable names and types, and expandable findings on their owning assets. Relationship details appear on interaction; shared findings and larger graphs retain their general topology.
 - Deployment and first-run guides distinguish individual scans, shared team evidence and optional organization governance. Hosting profiles and observed evidence-source labels are documented separately; a local scan does not require a control plane or compliance setup.
 
 ### Fixed

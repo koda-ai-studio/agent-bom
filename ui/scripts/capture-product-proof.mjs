@@ -3234,13 +3234,13 @@ async function main() {
           await view.click();
           await expect(view).toHaveAttribute("aria-pressed", "true");
           await p.getByRole("button", { name: "View & layers", exact: true }).click();
+          if (scope === "cloud") await p.getByRole("button", { name: /^Expand findings/ }).click();
           await expect(p.locator(".react-flow__node")).toHaveCount(fixture.nodes.length);
           await fitReactFlow(p);
           await scrollTo(p, 0);
           if (scope === "cloud") {
-            await expect(p.getByText("Identity · permissions role", { exact: true })).toBeVisible();
-            await expect(p.locator(".graph-relationship-label").filter({ hasText: "Authenticates As" })).toBeVisible();
-            await expect(p.locator(".graph-relationship-label").filter({ hasText: "Has Permission" })).toBeVisible();
+            await expect(p.getByText("Permission role", { exact: true })).toBeVisible();
+            await expect(p.getByRole("group", { name: /Has Permission.*relationship from checkout-runtime-role to customer-pii-bucket/ })).toHaveCount(1);
           }
         }, { expectedText: [/Demo data/i, "Path analysis complete for this snapshot", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp((n.attributes?.display_title || n.label).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[- ]"), "i"))],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
@@ -3248,7 +3248,7 @@ async function main() {
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12, minGraphBadgeFontPx: 11,
           assertGraphNodesSeparated: true, assertGraphNodesWithinCanvas: true,
-          assertQuietGraphLabels: scope !== "cloud",
+          assertQuietGraphLabels: true,
           repositoryVisualAudit: scope === "repository" ? fixture.edges : undefined,
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true });
         await p.close();

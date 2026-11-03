@@ -78,6 +78,9 @@ export function RelationshipIcon({ relationship }: { relationship: string }) {
 export function qualifiedLabel(relationship: string, label: React.ReactNode, data: EdgeProps["data"]): React.ReactNode {
   const qualifier = accessEvidenceQualifier(relationship, data as Parameters<typeof accessEvidenceQualifier>[1]);
   const suffix = ` · ${qualifier}`;
+  if (data?.stackedQualifier && qualifier && typeof label === "string" && label.endsWith(suffix)) {
+    return <span className="inline-flex flex-col items-center leading-tight"><span>{label.slice(0, -suffix.length)}</span><span className="mt-1 text-ink-secondary">{qualifier}</span></span>;
+  }
   if (data?.boundedOverview || !qualifier || typeof label !== "string" || !label.endsWith(suffix)) return label;
   return <>{label.slice(0, -suffix.length)}<span className="sr-only">{suffix}</span></>;
 }
@@ -114,13 +117,9 @@ export function RelationshipEdge(props: EdgeProps) {
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
   const columnSource = props.data?.columnFlow === true ? nodes.find(node => node.id === props.source) : undefined;
-  const findingX = Math.max(props.sourceX, props.targetX) + 180;
-  const [path, x, y] = props.data?.findingAttachment === true
-    ? [`M ${props.sourceX},${props.sourceY} C ${findingX},${props.sourceY} ${findingX},${props.targetY} ${props.targetX},${props.targetY}`,
-      findingX, (props.sourceY + props.targetY) / 2] as [string, number, number]
-    : columnSource
+  const [path, x, y] = columnSource
     ? columnEdgePath(props, columnSource.position.y + (columnSource.measured?.height ?? 0) + 6)
-    : relationshipPath(props, nodes.length <= 80 ? nodes.map(node => ({
+    : relationshipPath(props, nodes.length <= 80 ? nodes.filter(node => !node.hidden).map(node => ({
       id: node.id, x: node.position.x, y: node.position.y,
       width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
     })) : []);
