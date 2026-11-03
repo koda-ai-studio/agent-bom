@@ -31,7 +31,8 @@ it("previews canonical counts, sample and unavailable evidence with scoped drill
   expect(await screen.findByText("Technical evidence needs review")).toBeVisible();
   expect(screen.getByText("Sample data")).toBeVisible();
   expect(screen.getByText(/Path evidence unavailable/)).toBeVisible();
-  expect(screen.getByText(/different_scope/)).toBeVisible();
+  expect(screen.getAllByText(/different_scope/)[0]).toBeVisible();
+  expect(screen.getByText("Trend: not comparable with the previous scan (different_scope).", { exact: false })).toBeVisible();
   expect(screen.getByRole("link", { name: /CVE-example/ })).toHaveAttribute("href", "/findings?finding=finding%2Fone");
   expect(screen.getByRole("button", { name: "Download Markdown" })).toBeEnabled();
   expect(screen.getByRole("button", { name: "Download JSON" })).toBeEnabled();

@@ -1039,6 +1039,7 @@
         "cloud_audit_trail_data",
         "runtime_correlation",
         "delta_data",
+        "since_last_scan",
         "scan_performance_data",
         "vuln_data_freshness",
         "training_pipelines",

@@ -41,7 +41,7 @@ def sync_scan_agents_to_fleet(agents: list, tenant_id: str, *, get_fleet_store: 
             **discovered_fleet_identity(agent),
             claimed_agent_ids=claimed_agent_ids,
         )
-        server_count = agent.total_mcp_servers
+        server_count = sum(1 for server in agent.mcp_servers if getattr(server, "counts_as_mcp_server", True))
         pkg_count = sum(len(s.packages) for s in agent.mcp_servers)
         cred_count = sum(len(s.credential_names) for s in agent.mcp_servers)
         vuln_count = sum(s.total_vulnerabilities for s in agent.mcp_servers)
