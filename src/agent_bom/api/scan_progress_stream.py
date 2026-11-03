@@ -77,11 +77,8 @@ async def scan_progress_events(job_id: str, tenant_id: str) -> AsyncIterator[dic
             except Exception as exc:  # noqa: BLE001 - a transient store error must not kill the stream
                 from agent_bom.security import sanitize_error, sanitize_text
 
-                _logger.warning(
-                    "Scan stream durable read failed for job=%s: %s",
-                    sanitize_text(job_id),
-                    sanitize_text(sanitize_error(exc, generic=True)),
-                )
+                # The job id is caller-supplied; keep it out of the log line.
+                _logger.warning("Scan stream durable read failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
                 await asyncio.sleep(interval)
                 continue
             if snapshot is None:
