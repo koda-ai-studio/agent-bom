@@ -9,6 +9,7 @@ from pathlib import Path
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 from agent_bom.parsers.file_limits import read_json_limited
+from agent_bom.parsers.pnpm_keys import lockfile_major, parse_pnpm_key, pnpm_dependency_ref
 
 Key = tuple[str, str]
 
@@ -130,37 +131,31 @@ def yarn_topology(directory: Path, packages: list[Package], content: str) -> Non
 
 def pnpm_topology(directory: Path, packages: list[Package], document: dict) -> None:
     by_key = {(p.name, p.version): p for p in packages}
+    lockfile_version = lockfile_major(document)
+    source = directory / "pnpm-lock.yaml"
 
     def resolve(name: str, value: object) -> Key | None:
-        version = value.get("version") if isinstance(value, dict) else value
-        if not isinstance(version, str):
-            return None
-        key = (name, version.split("(", 1)[0])
+        key = pnpm_dependency_ref(name, value, lockfile_version)
         return key if key in by_key else None
 
     roots: dict[Key, str] = {}
     importers = document.get("importers", {".": document})
-    for importer in _mapping(importers, directory / "pnpm-lock.yaml").values():
-        importer = _mapping(importer, directory / "pnpm-lock.yaml")
+    for importer in _mapping(importers, source).values():
+        importer = _mapping(importer, source)
         for field, scope in [("devDependencies", "dev"), ("optionalDependencies", "optional"), ("dependencies", "runtime")]:
-            for name, value in _mapping(importer.get(field, {}), directory / "pnpm-lock.yaml").items():
+            for name, value in _mapping(importer.get(field, {}), source).items():
                 key = resolve(name, value)
                 if key:
                     roots[key] = scope
     edges: dict[Key, set[Key]] = defaultdict(set)
     snapshots = document.get("snapshots", document.get("packages", {}))
-    for label, metadata in _mapping(snapshots, directory / "pnpm-lock.yaml").items():
-        if not isinstance(label, str):
+    for label, metadata in _mapping(snapshots, source).items():
+        parent = parse_pnpm_key(label, lockfile_version)
+        if parent is None or parent not in by_key or not isinstance(metadata, dict):
             continue
-        label = label.lstrip("/").split("(", 1)[0]
-        name, sep, version = label.rpartition("@")
-        if not sep:
-            name, _, version = label.rpartition("/")
-        parent = (name, version)
-        if parent not in by_key or not isinstance(metadata, dict):
-            continue
-        for child_name, value in _mapping(metadata.get("dependencies", {}), directory / "pnpm-lock.yaml").items():
-            child = resolve(child_name, value)
-            if child:
-                edges[parent].add(child)
-    apply_topology(packages, edges, roots, directory / "pnpm-lock.yaml")
+        for field in ("dependencies", "optionalDependencies"):
+            for child_name, value in _mapping(metadata.get(field, {}), source).items():
+                child = resolve(child_name, value)
+                if child:
+                    edges[parent].add(child)
+    apply_topology(packages, edges, roots, source)
