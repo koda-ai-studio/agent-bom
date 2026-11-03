@@ -5,10 +5,10 @@ const SEVERITY_ORDER: (keyof FindingSeverityCounts)[] = ["critical", "high", "me
 type HeadlineSummary = Pick<UnifiedGraphFlowSummary, "findings" | "findingSeverity" | "kevListed">;
 
 /** Severity and KEV status are separate axes: a high-severity KEV advisory is "1 high finding · 1 KEV-listed". */
-export function formatGraphFindingCounts(summary: HeadlineSummary): string {
+export function formatGraphFindingCounts(summary: HeadlineSummary, scope: "view" | "loaded scope" = "view"): string {
   const { findings, findingSeverity, kevListed } = summary;
   // Canvas-scoped: the estate's issue total lives in the overview and roll-up.
-  const noun = findings === 1 ? "finding in view" : "findings in view";
+  const noun = `${findings === 1 ? "finding" : "findings"} in ${scope}`;
   const buckets = SEVERITY_ORDER.filter((key) => findingSeverity[key] > 0);
   let text: string;
   if (findings === 0 || buckets.length === 0) text = `${findings.toLocaleString()} ${noun}`;
@@ -17,6 +17,6 @@ export function formatGraphFindingCounts(summary: HeadlineSummary): string {
   return kevListed > 0 ? `${text} · ${kevListed.toLocaleString()} KEV-listed` : text;
 }
 
-export function formatGraphHeadline(summary: HeadlineSummary, snapshotPaths: number): string {
-  return `${formatGraphFindingCounts(summary)} · ${snapshotPaths.toLocaleString()} ${snapshotPaths === 1 ? "attack path" : "attack paths"} in snapshot (deduplicated)`;
+export function formatGraphHeadline(summary: HeadlineSummary, snapshotPaths: number, scope: "view" | "loaded scope" = "view"): string {
+  return `${formatGraphFindingCounts(summary, scope)} · ${snapshotPaths.toLocaleString()} ${snapshotPaths === 1 ? "attack path" : "attack paths"} in snapshot (deduplicated)`;
 }

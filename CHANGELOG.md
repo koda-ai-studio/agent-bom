@@ -7,7 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [Unreleased]
+## [0.113.1] - 2026-11-03
+
+### Highlights
+- Investigate inventory and findings on one scoped graph with readable names, circular entity icons, grouped findings, recorded relationship details, and light/dark/mobile layouts.
+- Apply scoped IaC exceptions and policy rules while retaining suppressed evidence in reports and an audit trail.
+- Discover Continue user-level YAML MCP configurations without executing configured commands.
 
 ### Added
 - IaC exceptions with an audit trail: `.agent-bom-ignore.yaml` entries scoped by rule, path and Kubernetes resource (kind, name, namespace, labels) with required reason, optional owner and expiry; inline markers accept `expires=` and `owner=`. Accepted findings stay in JSON (`iac_findings.suppressed`), SARIF (`suppressions`), HTML and console, and leave the gates. Expired exceptions re-activate their findings with a warning; exceptions due within 14 days print a notice. A malformed IaC entry in the ignore file stops every scan up front, with or without IaC paths.
@@ -18,31 +23,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Dashboard navigation exposes every platform group without Personal, Shared or Governance presets. Retired browser preferences no longer hide reporting or source setup. Deployment settings and permission checks remain authoritative.
 - Executive briefs emphasize issue groups, severity, remediation ownership and evidence coverage; source and signing details expand on demand. A finding no longer detected by a comparable scan is not labelled a verified remediation.
 
-### Upgrade notes
-- Database migration `20261102_01` adds three columns to `exceptions` (additive, idempotent).
-
-## [0.113.1] - 2026-11-02
-
-### Highlights
-- Start with a Personal dashboard view for local scans and report previews; select Shared or Governance when shared operations or governance are needed.
-- Personal and Shared overviews skip optional compliance loading, and the dashboard reuses the shell's posture-count request.
-- Discover Continue's user-level YAML MCP configuration while preserving passive discovery and legacy JSON support.
-
-### Added
-- Personal, Shared and Governance dashboard views prioritize relevant navigation without changing permissions or evidence scope. Personal onboarding starts with a local report; shared-source setup remains optional, and tenant compliance is omitted from local report previews.
-
-### Changed
-- Compact cloud graphs use connected branches, readable names and types, and expandable findings on their owning assets. Relationship details appear on interaction; shared findings and larger graphs retain their general topology.
-- Deployment and first-run guides distinguish individual scans, shared team evidence and optional organization governance. Hosting profiles and observed evidence-source labels are documented separately; a local scan does not require a control plane or compliance setup.
-
 ### Fixed
-- Recorded relationship drill-down and JSON exports accept explicit canonical-node aliases, retain generation checks and identify incomplete endpoint evidence.
-- Continue's `~/.continue/config.yaml` is discovered on macOS, Linux and Windows. Malformed YAML does not hide legacy JSON configurations, and configured commands are not executed during discovery (#6147).
-- Browser coverage explicitly verifies all three product views and expands optional shared setup before testing its controls.
+- Dense graph snapshots open with a labeled connection preview and circular nodes; the full loaded map and every starting point remain available. Phone previews reserve enough scrollable canvas space to keep both endpoints visible.
+- Graph entry pages defer closed evidence inspectors until opened, reducing initial JavaScript loading while preserving the first-useful-paint budget.
+- SQLite graph writes build the search index from bounded node batches, avoiding a second full-node read during cold current-estate projection. Search content and atomic replacement remain unchanged.
+- Findings retain source, occurrence and partial-evidence context across API results and graph investigations; incomplete collection is not presented as a clean result.
+- Push ingestion avoids blocking the API event loop, retains idempotency boundaries and isolates background graph enrichment from mutable report objects.
+- Scheduled scans revalidate leadership and the current tenant-owned schedule before dispatch; deleted, disabled or rescheduled stale entries are skipped.
+- Continue's `~/.continue/config.yaml` is discovered on macOS, Linux and Windows. Malformed YAML does not hide legacy JSON configurations, and discovery does not execute commands (#6147).
 
 ### Upgrade notes
-- Existing browser sessions start in Personal view unless a product view was already saved. Use the sidebar selector to choose Shared or Governance; permissions and evidence scope do not change.
-- See [upgrade guidance](docs/UPGRADING.md) for verification after publication. The release does not introduce a database migration.
+- Postgres migration `20261102_01` adds IaC exception scope columns. Migration `20261102_10` adds missing fleet endpoint storage and retry-safe trend scan identity to upgraded databases; both are additive and idempotent.
+- Retired dashboard product-view preferences no longer hide navigation. Permissions and evidence scope remain authoritative.
+- See [upgrade guidance](docs/UPGRADING.md) for backup, migration and rollback verification. Scheduler revalidation does not guarantee exactly-once execution across crashes or leadership loss after the final check.
 
 ## [0.113.0] - 2026-11-01
 

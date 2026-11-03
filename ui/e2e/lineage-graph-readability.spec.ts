@@ -448,6 +448,7 @@ for (const theme of ["dark", "light"] as const) {
     await page.waitForURL((url) => url.pathname === "/graph" && url.searchParams.has("layers"), {
       waitUntil: "domcontentloaded",
     });
+    await page.getByRole("button", { name: /Show full map/ }).click();
     await captureGraphScreenshot(page, testInfo, theme);
   });
 }
@@ -455,6 +456,7 @@ for (const theme of ["dark", "light"] as const) {
 test("lineage graph controls zoom, move, persist, lock, fit, and auto-layout", async ({ page }) => {
   await routeGraphPage(page);
   await page.goto("/graph", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: /Show full map/ }).click();
   const canvas = page.locator(".react-flow").last();
   const node = canvas.getByTestId("rf__node-agent:desktop");
   await expect(node).toBeVisible();
@@ -540,6 +542,7 @@ for (const activation of ["pointer", "keyboard"] as const) {
 test("graph minimap mask follows light and dark themes without remounting", async ({ page }) => {
   await routeGraphPage(page);
   await page.goto("/graph?view=investigation", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: /Show full map/ }).click();
   const mask = page.locator(".react-flow__minimap-mask");
   await expect(mask).toBeHidden();
   await page.getByRole("button", { name: "Show minimap", exact: true }).click();
@@ -771,7 +774,7 @@ for (const theme of ["light", "dark"] as const) {
       const graph = buildDenseGraph();
       await routeGraphPage(page, graph);
       await page.addInitScript((value) => localStorage.setItem("agent-bom-theme", value), theme);
-      await page.goto(`/graph?scan=${scanId}&scope=expanded`);
+      await page.goto(`/graph?scan=${scanId}&scope=expanded&map_view=full`);
       await openGraphView(page);
       const flow = page.locator(".react-flow");
       const anchor = page.getByTestId("rf__node-agent:desktop");
@@ -933,14 +936,17 @@ for (const theme of ["light", "dark"] as const) {
     await testInfo.attach("mobile-lineage-geometry", { body: JSON.stringify({ headerBox, canvasBox }), contentType: "application/json" });
     await page.screenshot({ path: testInfo.outputPath(`lineage-compact-${theme}.png`) });
     expect(headerBox.height).toBeLessThanOrEqual(240);
-    // Camera navigation complements the complete Paths list on narrow screens.
-    await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toContainText("Canvas target");
+    // Both preview endpoints fit the canvas; the picker reaches the remaining map.
+    await expect(page.getByRole("group", { name: "Connection preview" })).toContainText("2 of 37 nodes");
     const navigation = page.getByRole("group", { name: "Investigation view" });
     await expect(navigation).toBeInViewport();
     const navigationBox = (await navigation.boundingBox())!;
     expect(navigationBox.y + navigationBox.height).toBeLessThanOrEqual(canvasBox.y);
     expect(canvasBox.height).toBeGreaterThanOrEqual(240);
-    expect(canvasBox.y + canvasBox.height).toBeLessThanOrEqual(844);
+    // The bounded canvas may scroll vertically so neither endpoint is clipped.
+    await page.locator(".react-flow__node").last().scrollIntoViewIfNeeded();
+    await expect(page.locator(".react-flow__node").last()).toBeInViewport();
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expect(header.getByLabel("Graph snapshot", { exact: true })).toBeHidden();
     await header.getByText("Snapshot & view", { exact: true }).click();
     await expect(header.getByLabel("Graph snapshot", { exact: true })).toHaveValue(scanId);
@@ -1134,6 +1140,6 @@ for (const theme of ["light", "dark"] as const) {
     await page.screenshot({ path: testInfo.outputPath(`focused-count-scope-${theme}.png`) });
     await page.getByRole("button", { name: "Return to topology", exact: true }).click();
     await expect(page.getByTestId("focused-path-decision")).toHaveCount(0);
-    await expect(page.getByTestId("graph-headline-metrics")).toContainText("16 findings in view");
+    await expect(page.getByTestId("graph-headline-metrics")).toContainText("16 findings in loaded scope");
   });
 }

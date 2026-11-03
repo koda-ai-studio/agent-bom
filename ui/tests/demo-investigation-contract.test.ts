@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const page = readFileSync(join(process.cwd(), "app/security-graph/page.tsx"), "utf8");
+const page = readFileSync(join(process.cwd(), "app/security-graph/attack-path-content.tsx"), "utf8");
 const scanEvidence = readFileSync(join(process.cwd(), "components/investigation-scan-evidence.tsx"), "utf8");
 
 describe("investigation demo hierarchy", () => {

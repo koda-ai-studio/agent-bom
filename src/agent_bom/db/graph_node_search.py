@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections.abc import Iterable, Iterator
 
 from agent_bom.graph import EntityType, NodeDimensions, NodeStatus, UnifiedNode
 
@@ -90,6 +91,10 @@ def sqlite_node_from_row(row: sqlite3.Row) -> UnifiedNode:
 
 
 def node_search_text(node: UnifiedNode) -> str:
+    attributes = {key: value for key, value in node.attributes.items() if key != "_agent_bom_canonical_id"}
+    assessment = attributes.get("risk_assessment")
+    if isinstance(assessment, dict) and assessment.get("status") == "assessed" and "scored_value" not in assessment:
+        attributes["risk_assessment"] = {**assessment, "scored_value": node.risk_score}
     parts: list[str] = [
         node.id,
         node.label,
@@ -97,7 +102,7 @@ def node_search_text(node: UnifiedNode) -> str:
         node.severity or "",
         " ".join(node.compliance_tags),
         " ".join(node.data_sources),
-        json.dumps(node.attributes, default=str, sort_keys=True),
+        json.dumps(attributes, default=str, sort_keys=True),
         json.dumps(node.dimensions.to_dict(), sort_keys=True),
     ]
     return " ".join(part for part in parts if part).lower()
@@ -118,13 +123,34 @@ _SEARCH_INSERT = """
 """
 
 
+def write_node_search_batch(conn: sqlite3.Connection, nodes: Iterable[UnifiedNode], *, tenant_id: str, scan_id: str) -> None:
+    """Index the writer's bounded node batch without a second database read."""
+
+    def rows() -> Iterator[tuple[object, ...]]:
+        for node in nodes:
+            # Preserve stored-row enum validation while avoiding reconstruction.
+            NodeStatus(node.status)
+            yield (
+                tenant_id,
+                scan_id,
+                node.id,
+                EntityType(node.entity_type).value,
+                (node.severity or "").lower(),
+                " ".join(node.compliance_tags).lower(),
+                " ".join(node.data_sources).lower(),
+                node_search_text(node),
+            )
+
+    conn.executemany(_SEARCH_INSERT, rows())
+
+
 def refresh_snapshot_search_index(conn: sqlite3.Connection, *, tenant_id: str, scan_id: str, batch_size: int) -> None:
     """Rebuild one snapshot's search rows from its stored nodes, in the caller's write transaction.
 
-    Every SQLite graph writer (API store and the CLI ``save_graph`` path) calls
-    this, so a snapshot is searchable no matter which writer produced it. Rows
-    stream in ``batch_size`` chunks: a separate read cursor iterates
-    ``graph_nodes`` while batches go to ``graph_node_search`` (#4075).
+    Offline repair can rebuild from durable rows. Ordinary snapshot writes
+    index their existing node batches directly. Repair rows stream in
+    ``batch_size`` chunks: a separate read cursor iterates ``graph_nodes``
+    while batches go to ``graph_node_search`` (#4075).
     """
     ensure_search_index(conn)
     conn.execute("DELETE FROM graph_node_search WHERE tenant_id = ? AND scan_id = ?", (tenant_id, scan_id))

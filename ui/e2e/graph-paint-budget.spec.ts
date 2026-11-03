@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import os from "node:os";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const stamp = "2026-10-15T00:00:00Z";
 const node = (id:string, entity_type:string) => ({id,label:id,entity_type,severity:"none",status:"active",risk_score:0,
@@ -65,7 +65,10 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
       const result=await page.evaluate(async()=>{
         await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
         const resources=performance.getEntriesByType("resource").filter(r=>r.name.includes("/v1/graph?")).map(r=>({ms:r.duration}));
-        return {ms:performance.now(),resources};
+        const scripts = performance.getEntriesByType("resource").filter((entry): entry is PerformanceResourceTiming =>
+          entry instanceof PerformanceResourceTiming && entry.initiatorType === "script");
+        return {ms:performance.now(),resources,scriptCount:scripts.length,
+          scriptBytes:scripts.reduce((total,entry)=>total+entry.decodedBodySize,0)};
       });
       records.push({condition,...result});
       if(sample===0) await page.screenshot({path:info.outputPath(`paint-${agents}-${condition}.png`),animations:"disabled"});
@@ -82,4 +85,23 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
     conditions:"Production JavaScript; deterministic intercepted API page. Fresh/reused browser contexts; Playwright routing disables HTTP cache. Settled camera and two animation frames required. No backend build or external network latency is included."},null,2));
   await info.attach("paint-budget.json",{path:receipt,contentType:"application/json"});
   expect(Math.max(...records.map(r=>r.ms)),JSON.stringify(summary)).toBeLessThan(2000);
+});
+
+// This suite runs against the production build, as enforced by test:e2e.
+// Verify actual chunk requests as well as timing: inspectors must remain usable.
+test("loads node evidence code only when the inspector is opened", async ({ page }) => {
+  const manifest = JSON.parse(readFileSync(".next/react-loadable-manifest.json", "utf8"));
+  const entry = manifest["components/graph-page-view.tsx -> @/components/graph-entity-drawer"];
+  expect(entry, "Node evidence must have an on-demand production chunk").toBeDefined();
+  const chunk = entry.files.at(-1) as string;
+  expect(chunk).toMatch(/\.js$/);
+  const requested: string[] = [];
+  page.on("request", request => requested.push(new URL(request.url()).pathname));
+  await fixture(page, 120);
+  await page.goto("/graph?scan=paint&rollup=0&layers=agent,server");
+  await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
+  expect(requested.some(path => path.endsWith(chunk))).toBe(false);
+  await page.locator(".react-flow__node-agentNode").click();
+  await expect(page.getByRole("tablist", { name: "Node detail sections" })).toBeVisible();
+  expect(requested.some(path => path.endsWith(chunk))).toBe(true);
 });

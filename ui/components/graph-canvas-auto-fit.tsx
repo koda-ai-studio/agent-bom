@@ -8,7 +8,8 @@ import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
-export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, navigationIds, navigationMount, padding = 0.08 }: {
+export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, navigationIds, navigationMount, padding = 0.08, boundedPreview = false }: {
+  boundedPreview?: boolean;
   padding?: number;
   navigationMount?: HTMLElement | null | undefined;
   navigationIds?: string[] | undefined;
@@ -64,7 +65,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const nodes = getNodes().filter(node => !node.hidden);
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
     const frameSize = graphAdaptiveFrame({
-      bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length,
+      bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length, boundedPreview,
       availableHeight: windowHeight - spaceAbove - 24,
       focusHeight: focusCardHeight(anchor), focusPadding: padding,
     });
@@ -121,10 +122,10 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     };
     frames.push(requestAnimationFrame(() => settle(0)));
     return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
-  }, [padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
+  }, [boundedPreview, padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
   // Small screens focus one readable node. Always provide a way to reach the
   // other loaded nodes, including inventory views without an ordered path.
-  if (!initialized || width >= 640 || width <= 0) return null;
+  if (boundedPreview || !initialized || width >= 640 || width <= 0) return null;
   const visibleNodes = getNodes().filter(node => !node.hidden);
   const orderedIds = navigationIds?.length ? navigationIds : [...visibleNodes]
     .sort((a, b) => a.position.x - b.position.x || a.position.y - b.position.y || a.id.localeCompare(b.id)).map(node => node.id);

@@ -14,6 +14,8 @@ test("compact inventory names remain readable after zooming out", async ({ page 
   });
   await page.goto("/graph?scan=summary&rollup=0&layers=package");
   await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
+  await page.getByRole("button", { name: "Show full map (30)" }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(30);
   // An explicit user zoom selects the summary renderer without changing data.
   await page.getByRole("button", { name: /zoom out/i }).click();
   await expect(page.getByTestId("summary-node").first()).toBeAttached();
