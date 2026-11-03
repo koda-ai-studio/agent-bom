@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.finding import Finding
 from agent_bom.models import AIBOMReport
@@ -98,13 +100,14 @@ def _scan_outcome_banner(report: "AIBOMReport") -> str:
     )
 
 
-def _headline_row(finding: "Finding") -> dict[str, object]:
+def _headline_row(finding: "Finding", observed_at: datetime | None = None) -> dict[str, object]:
+    """Headline row; a finding with no recorded first sighting is anchored to this scan, as the JSON export does."""
     from agent_bom.graph.sla import finding_sla_fields
 
     sla = finding_sla_fields(
         {
             "severity": finding.effective_severity(),
-            "first_seen": finding.first_seen,
+            "first_seen": finding.first_seen or (observed_at.isoformat() if observed_at else None),
             "evidence": finding.evidence,
             "sla_due_at": finding.sla_due_at,
             "sla_due_at_source": finding.sla_due_at_source or ("explicit" if finding.sla_due_at is not None else None),
@@ -123,11 +126,22 @@ def _headline_row(finding: "Finding") -> dict[str, object]:
     }
 
 
-def _executive_headline_section(findings: list["Finding"], policy_findings: list["Finding"]) -> str:
+def _sla_cell(due_at: str | None, observed_at: datetime | None) -> str:
+    """Deadline plus its status as of the scan, so a report reads the same whenever it is opened."""
+    from agent_bom.core.sla import sla_status_text
+
+    if not due_at:
+        return "no SLA set"
+    status = sla_status_text(due_at, now=observed_at)
+    return f"{due_at} ({status} at scan time)" if observed_at else f"{due_at} ({status})"
+
+
+def _executive_headline_section(findings: list["Finding"], policy_findings: list["Finding"], observed_at: datetime | None = None) -> str:
     """Leadership paragraph over every finding in the report, with owner/SLA as recorded."""
     from agent_bom.output.executive_headline import build_executive_headline
 
-    headline = build_executive_headline((_headline_row(finding) for finding in [*findings, *policy_findings]), include_risk_sentences=False)
+    rows_in = (_headline_row(finding, observed_at) for finding in [*findings, *policy_findings])
+    headline = build_executive_headline(rows_in, include_risk_sentences=False)
     rows = "".join(
         '<li class="headline-risk">'
         f"<h3>{_esc(risk.title)}</h3>"
@@ -136,7 +150,7 @@ def _executive_headline_section(findings: list["Finding"], policy_findings: list
         f"<dt>Recorded context</dt><dd>{_esc(', '.join(risk.affected_agents) or 'none recorded')}</dd>"
         f"<dt>Risk score</dt><dd>{f'{risk.risk_score:.1f}/10' if risk.risk_score is not None else 'unscored'}</dd>"
         f"<dt>Owner</dt><dd>{_esc(risk.owner or 'unassigned')}</dd>"
-        f"<dt>SLA target</dt><dd>{_esc(risk.sla_due_at or 'no SLA set')}</dd>"
+        f"<dt>SLA target</dt><dd>{_esc(_sla_cell(risk.sla_due_at, observed_at))}</dd>"
         '</dl><p class="headline-risk-note">SLA targets may come from configured policy.</p></details>'
         "</li>"
         for risk in headline.top_risks

@@ -247,7 +247,7 @@ def to_html(
   {_warn_gate_banner(report)}
   {_scan_outcome_banner(report)}{iac_exceptions_banner(report)}
 
-  {_executive_headline_section(findings, policy_findings)}
+  {_executive_headline_section(findings, policy_findings, observed_at=report.generated_at)}
 
   <!-- Summary stat cards -->
   <section id="summary">

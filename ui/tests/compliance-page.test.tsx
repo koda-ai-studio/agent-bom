@@ -128,6 +128,10 @@ const { compliance } = vi.hoisted(() => {
         owasp_pass: 1,
         owasp_fail: 1,
         owasp_mcp_warn: 1,
+        // The scored rows sum to the headline's 25 evaluated controls (18 pass = 72%).
+        nist_pass: 18,
+        nist_warn: 7,
+        nist_fail: 0,
         aisvs_pass: 0,
         aisvs_fail: 0,
         aisvs_error: 0,

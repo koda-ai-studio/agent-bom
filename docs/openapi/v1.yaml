@@ -2288,6 +2288,11 @@ components:
             type: string
           - type: 'null'
           title: Sla Status
+        sla_status_text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sla Status Text
         title:
           anyOf:
           - type: string

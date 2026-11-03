@@ -129,6 +129,22 @@ def sla_status(due_at: object, *, now: datetime | None = None) -> str:
     return "on_track"
 
 
+def sla_status_text(due_at: object, *, now: datetime | None = None) -> str:
+    """``Overdue 12 days`` / ``Due in 3 days`` / ``Due today`` / ``No SLA``, in whole UTC days."""
+    due = _parse_iso(due_at)
+    if due is None:
+        return "No SLA"
+    if due.tzinfo is None:
+        due = due.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    days = (due.date() - current.date()).days
+    if days < 0:
+        return f"Overdue {-days} day{'s' if days != -1 else ''}"
+    if days == 0:
+        return "Due today"
+    return f"Due in {days} day{'s' if days != 1 else ''}"
+
+
 def _row_is_kev(row: Mapping[str, Any]) -> bool | None:
     if "is_kev" in row or "cisa_kev" in row or "kev_due_date" in row:
         return bool(row.get("is_kev") or row.get("cisa_kev") or row.get("kev_due_date"))
@@ -140,6 +156,7 @@ def annotate_sla_presentation(row: Mapping[str, Any], *, now: datetime | None = 
     return {
         **row,
         "sla_status": sla_status(row.get("sla_due_at"), now=now),
+        "sla_status_text": sla_status_text(row.get("sla_due_at"), now=now),
         "sla_policy": sla_policy_label(row.get("sla_due_at_source"), is_kev=_row_is_kev(row)),
     }
 
