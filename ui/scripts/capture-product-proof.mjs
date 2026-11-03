@@ -2916,7 +2916,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     {
       path: "dashboard-live.png",
       page: "/?capture=1",
-      scope: "Governance view: posture and current findings with compliance and security-area disclosures collapsed using their controls",
+      scope: "Posture and current findings with compliance and security-area disclosures collapsed using their controls",
       presentation: `${CAPTURE_THEME} desktop`,
     },
     {
@@ -3214,8 +3214,6 @@ async function main() {
       });
       await capturePage.addInitScript((selectedTheme) => {
         window.localStorage.setItem("agent-bom-theme", selectedTheme);
-        // The governance tour exercises the selectable Governance view.
-        // This is a display preference; fixture evidence and access stay unchanged.
       }, theme);
       return capturePage;
     };
@@ -3451,7 +3449,8 @@ async function main() {
       expectedApiPaths: [`/v1/scan/${SCAN_ID}`, `/v1/scan/${SCAN_ID}/status`],
       assertNoHorizontalOverflow: true,
     });
-    await capture(page, "/jobs?capture=1", "jobs-pipeline-live.png", async (jobsPage) => {
+    const jobsProofPage = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 980 });
+    await capture(jobsProofPage, "/jobs?capture=1", "jobs-pipeline-live.png", async (jobsPage) => {
       // Start a fresh canvas after the scan page unmounts its React Flow tree.
       await jobsPage.reload({ waitUntil: "load" });
       const pipeline = jobsPage.getByTestId(`job-pipeline-${SCAN_ID}`);
@@ -3511,6 +3510,7 @@ async function main() {
       minGraphNodes: 6,
       minGraphEdges: 5,
     });
+    await jobsProofPage.close();
     await capture(page, "/agents?name=developer-copilot&view=lifecycle&capture=1", "agent-lifecycle-live.png", async (agentsPage) => {
       await agentsPage.getByText("Configured inventory", { exact: true }).waitFor({ state: "visible", timeout: 20_000 });
       await fitReactFlow(agentsPage);
