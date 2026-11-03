@@ -148,7 +148,7 @@ ANALYZE | Critical Details
   CVE-2023-36258 · langchain@0.0.150 · CRITICAL
   Fix: upgrade to ≥ 0.0.247
   Blast: langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY, OPENAI_API_KEY
-ANALYZE | Graph & Policy Findings (36 occurrences)
+ANALYZE | Graph & Policy Findings (36 occurrences · 20 groups)
    CRIT  COMBINATION AI agent can reach a credential or privileged tool
       langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY (+3 more)
    HIGH  PROMPT_SECURITY No verified agent identity observed in MCP configuration
