@@ -88,15 +88,14 @@ class _Pools:
 
     workflows: tuple[EstateAsset, ...]
     identities: tuple[EstateAsset, ...]
-    workloads: tuple[EstateAsset, ...]
-    tools: tuple[EstateAsset, ...]
+    mcp_placements: tuple[tuple[EstateAsset, EstateAsset], ...]
     tables: tuple[EstateAsset, ...]
     models: tuple[EstateAsset, ...]
     ai_services: tuple[EstateAsset, ...]
 
     @property
     def complete(self) -> bool:
-        return all((self.workflows, self.identities, self.workloads, self.tools, self.tables, self.models))
+        return all((self.workflows, self.identities, self.mcp_placements, self.tables, self.models))
 
 
 _IDENTITY_TYPES = frozenset({"iam_role", "service_principal", "service_account", "role"})
@@ -117,6 +116,27 @@ _AI_SERVICE_TYPES = frozenset(
 _MODEL_TYPES = frozenset({"hosted_model", "model_artifact", "foundation_model", "vertex_model", "sagemaker_model"})
 
 
+def _recorded_mcp_placements(assets: Sequence[EstateAsset]) -> tuple[tuple[EstateAsset, EstateAsset], ...]:
+    """Ordinary demo calls use an inventoried server's recorded deployment.
+
+    Cross-platform data and federation steps remain explicit in the trace;
+    selecting a random workload is not evidence that it hosts an MCP server.
+    This is linear in the inventory and tools, with no workload/tool product.
+    """
+    by_id = {asset.asset_id: asset for asset in assets}
+    placements = []
+    for tool in sorted((asset for asset in assets if asset.resource_type == "tool"), key=lambda asset: asset.asset_id):
+        server = by_id.get(tool.tags.get("mcp_server", ""))
+        workload = by_id.get(server.tags.get("deployment", "")) if server else None
+        if server is None or server.resource_type != "server" or workload is None or workload.resource_type != "deployment":
+            continue
+        scopes = {(asset.tenant_id, asset.account_scope, asset.environment) for asset in (workload, server, tool)}
+        host = workload.tags.get("host_provider")
+        if len(scopes) == 1 and host and host == server.tags.get("host_provider"):
+            placements.append((workload, tool))
+    return tuple(placements)
+
+
 def _pools(assets: Sequence[EstateAsset]) -> _Pools:
     def pick(predicate) -> tuple[EstateAsset, ...]:
         return tuple(sorted((a for a in assets if predicate(a)), key=lambda a: a.asset_id))
@@ -124,8 +144,7 @@ def _pools(assets: Sequence[EstateAsset]) -> _Pools:
     return _Pools(
         workflows=pick(lambda a: a.resource_type == "workflow"),
         identities=pick(lambda a: a.resource_type in _IDENTITY_TYPES),
-        workloads=pick(lambda a: a.resource_type == "deployment"),
-        tools=pick(lambda a: a.resource_type == "tool"),
+        mcp_placements=_recorded_mcp_placements(assets),
         tables=pick(lambda a: a.resource_type in {"table", "database"} and a.provider == "snowflake"),
         models=pick(lambda a: a.resource_type in _MODEL_TYPES),
         ai_services=pick(lambda a: a.resource_type in _AI_SERVICE_TYPES),
@@ -231,8 +250,7 @@ def build_journeys(
         workflow = pools.workflows[seed % len(pools.workflows)]
         repository = workflow.tags.get("repository", "")
         identity = pools.identities[(seed // 3) % len(pools.identities)]
-        workload = pools.workloads[(seed // 7) % len(pools.workloads)]
-        tool = pools.tools[(seed // 11) % len(pools.tools)]
+        workload, tool = pools.mcp_placements[(seed // 7) % len(pools.mcp_placements)]
         table = pools.tables[(seed // 13) % len(pools.tables)]
         model = pools.models[(seed // 17) % len(pools.models)]
         ai_service = pools.ai_services[(seed // 19) % len(pools.ai_services)] if pools.ai_services else None
