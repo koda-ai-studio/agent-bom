@@ -175,7 +175,7 @@ def test_scan_vuln_flows_to_findings_and_attack_paths(wired_client):
     assert create.status_code == 202, create.text
     job_id = create.json()["job_id"]
 
-    scan = wired_client.get(f"/v1/scan/{job_id}")
+    scan = wired_client.get(f"/v1/scan/{job_id}?view=full")
     assert scan.status_code == 200
     assert scan.json()["status"] == JobStatus.DONE.value
 

@@ -222,7 +222,7 @@ def _assert_demo_job_matches_graph(client: TestClient, graph: dict[tuple[str, st
     from agent_bom.demo_estate.showcase_constants import SHOWCASE_SCAN_ID
 
     jobs = client.get("/v1/jobs", headers=VIEWER, params={"include_details": "true"}).json()["jobs"]
-    results = [client.get(f"/v1/scan/{job['job_id']}", headers=VIEWER).json().get("result") or {} for job in jobs]
+    results = [client.get(f"/v1/scan/{job['job_id']}?view=full", headers=VIEWER).json().get("result") or {} for job in jobs]
     (result,) = [result for result in results if result.get("scan_id") == SHOWCASE_SCAN_ID]
     stored: dict[tuple[str, str], list[str]] = {}
     for section, cloud in _CIS_SECTIONS.items():

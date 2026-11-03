@@ -21,8 +21,13 @@ VEX to suppress findings downstream.
 
 ## Large results over the REST API
 
-`GET /v1/scan/{job_id}` returns the complete AI-BOM document. For a bounded
-read of a completed scan, fetch the index first:
+`GET /v1/scan/{job_id}` returns a bounded summary by default: job lifecycle
+fields, sanitized `progress`, the `summary`/`scan_run`/`aggregation` objects,
+the `graph_persistence` receipt, `result_sections` (each large section with its
+item `count` and `href`) and `links`. It never loads the full result document,
+so it stays small and fast however large the scan is. Pass `?view=full` for the
+complete `ScanJob` including `result` (and `result_document` for a non-json
+`format`). For a bounded read of a completed scan, fetch the index first:
 
 ```bash
 curl -s "$API/v1/scan/$JOB/result" | jq '.summary.summary, .sections'

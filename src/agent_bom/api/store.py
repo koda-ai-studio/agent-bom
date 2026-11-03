@@ -13,7 +13,9 @@ from agent_bom.api.scan_snapshot_store import discard_job_snapshot
 from agent_bom.api.storage.campaign_revisions import initialize_sqlite_campaign_evidence
 from agent_bom.api.storage.finding_history_adapters import sqlite_history_backfill, sqlite_history_read
 from agent_bom.api.storage.finding_history_schema import initialize_sqlite_finding_history
+from agent_bom.api.storage.job_detail_reads import memory_status_view, sqlite_detail_projection, sqlite_status_view
 from agent_bom.api.storage.job_read_projections import sqlite_demo_exists, sqlite_job_revision
+from agent_bom.api.storage.job_search_text import _job_search_text, _job_summary_search_text
 from agent_bom.api.storage.jobs import get_job, parse_job_payload, put_job, require_job_tenant
 from agent_bom.api.storage.jobs_schema import JOBS_SCHEMA_VERSION, migrate_sqlite_job_key
 from agent_bom.api.storage.sql import connection_session
@@ -33,30 +35,6 @@ DEMO_ESTATE_TRIGGERED_BY = "demo-estate-bootstrap"
 def _literal_like_pattern(value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return f"%{escaped}%"
-
-
-def _job_search_text(job: ScanJob) -> str:
-    request_source = getattr(job.request, "source_id", None)
-    values = (
-        job.job_id,
-        job.source_id,
-        request_source,
-        job.triggered_by,
-        job.schedule_id,
-        json.dumps(job.target, sort_keys=True) if job.target is not None else None,
-    )
-    return " ".join(str(value) for value in values if value).casefold()
-
-
-def _job_summary_search_text(row: dict) -> str:
-    values = (
-        row.get("job_id"),
-        row.get("source_id"),
-        row.get("triggered_by"),
-        row.get("schedule_id"),
-        json.dumps(row.get("target"), sort_keys=True) if row.get("target") is not None else None,
-    )
-    return " ".join(str(value) for value in values if value).casefold()
 
 
 def _sqlite_job_summary_filter(
@@ -107,6 +85,7 @@ class JobStore(Protocol):
     def put_many_atomic(self, jobs: list[ScanJob]) -> None: ...
     def put_many_if_absent_atomic(self, jobs: list[ScanJob]) -> list[str]: ...
     def get(self, job_id: str, tenant_id: str | None = None, *, all_tenants: bool = False) -> ScanJob | None: ...
+    def get_status_view(self, job_id: str, tenant_id: str | None = None) -> dict[str, Any] | None: ...
     def delete(self, job_id: str, tenant_id: str | None = None, *, all_tenants: bool = False) -> bool: ...
     def list_all(self, tenant_id: str | None = None, *, all_tenants: bool = False) -> list[ScanJob]: ...
     def list_summary(
@@ -145,6 +124,7 @@ class InMemoryJobStore:
     """Dict-based in-memory store (original behavior). Thread-safe via lock."""
 
     retains_job_objects_in_memory = True
+    get_status_view = memory_status_view
 
     def __init__(self, *, max_retained_jobs: int | None = API_MAX_IN_MEMORY_JOBS) -> None:
         self._jobs: dict[tuple[str, str], ScanJob] = {}
@@ -339,6 +319,8 @@ class SQLiteJobStore:
     finding_history_read = sqlite_history_read
     backfill_finding_history = sqlite_history_backfill
     has_usable_demo_job = sqlite_demo_exists
+    get_status_view = sqlite_status_view
+    get_detail_projection = sqlite_detail_projection
     retains_job_objects_in_memory = False
 
     def __init__(self, db_path: str = "agent_bom_jobs.db") -> None:

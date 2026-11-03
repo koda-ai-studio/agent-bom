@@ -7318,12 +7318,14 @@ export interface paths {
         };
         /**
          * Get Scan
-         * @description Fetch scan status and full results.
+         * @description Fetch scan status, progress and a bounded result summary.
          *
-         *     ``result`` is always the canonical AI-BOM JSON. When the request asked for a
-         *     non-json ``format``, ``result_document`` carries that rendering and
-         *     ``result_format`` names it. For bounded reads use ``GET /v1/scan/{job_id}/result``
-         *     and ``.../result/{section}``.
+         *     The default ``view=summary`` returns lifecycle fields, sanitized progress,
+         *     the result summary objects, the graph persistence receipt and links to the
+         *     paged ``/v1/scan/{job_id}/result/{section}`` reads; it never loads the full
+         *     result document. ``view=full`` returns the complete ``ScanJob``: ``result``
+         *     is the canonical AI-BOM JSON and, for a non-json ``format``,
+         *     ``result_document`` carries that rendering named by ``result_format``.
          */
         get: operations["get_scan_v1_scan__job_id__get"];
         put?: never;
@@ -7621,6 +7623,10 @@ export interface paths {
          *     Connect with EventSource:
          *         const es = new EventSource('/v1/scan/{job_id}/stream');
          *         es.onmessage = e => console.log(JSON.parse(e.data));
+         *
+         *     Works on any replica: a job running elsewhere is followed through the
+         *     durable job store, and the stream always ends with a ``done`` event once
+         *     the job reaches a terminal status.
          */
         get: operations["stream_scan_v1_scan__job_id__stream_get"];
         put?: never;
@@ -22875,6 +22881,122 @@ export interface components {
             tenant_id: string;
             /** Triggered By */
             triggered_by?: string | null;
+        };
+        /** ScanJobLinks */
+        ScanJobLinks: {
+            /** Full */
+            full: string;
+            /** Result */
+            result: string;
+            /** Self */
+            self: string;
+            /** Status */
+            status: string;
+            /** Stream */
+            stream: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ScanJobSummaryResponse
+         * @description Default ``GET /v1/scan/{job_id}`` body: lifecycle and summary without the result document.
+         *
+         *     ``view=full`` returns the complete ``ScanJob``; ``result_sections`` link the
+         *     paged ``/v1/scan/{job_id}/result/{section}`` reads of a completed result.
+         */
+        ScanJobSummaryResponse: {
+            /** Aggregation */
+            aggregation: {
+                [key: string]: unknown;
+            } | null;
+            /** Auto Correlation */
+            auto_correlation?: {
+                [key: string]: unknown;
+            } | null;
+            /** Batch Id */
+            batch_id: string | null;
+            /** Child Job Ids */
+            child_job_ids: string[];
+            /** Completed At */
+            completed_at: string | null;
+            /** Correlation Cohort Id */
+            correlation_cohort_id: string | null;
+            /** Correlation Cohort Manifest Hash */
+            correlation_cohort_manifest_hash: string | null;
+            /** Correlation Max Age Hours */
+            correlation_max_age_hours: number | null;
+            /** Created At */
+            created_at: string;
+            /** Error */
+            error: string | null;
+            /** Generated At */
+            generated_at: string | null;
+            /** Graph Persistence */
+            graph_persistence: {
+                [key: string]: unknown;
+            } | null;
+            /** Graph Scan Id */
+            graph_scan_id: string | null;
+            /** Job Id */
+            job_id: string;
+            links: components["schemas"]["ScanJobLinks"];
+            /** Parent Job Id */
+            parent_job_id: string | null;
+            /** Progress */
+            progress: string[];
+            /** Pushed */
+            pushed: boolean;
+            /** Request */
+            request: {
+                [key: string]: unknown;
+            };
+            /** Result Format */
+            result_format: string;
+            /** Result Sections */
+            result_sections: components["schemas"]["ScanResultSectionRef"][];
+            /** Scan Outcome */
+            scan_outcome: string | null;
+            /** Scan Run */
+            scan_run: {
+                [key: string]: unknown;
+            } | null;
+            /** Scan Timestamp */
+            scan_timestamp: string | null;
+            /** Schedule Id */
+            schedule_id: string | null;
+            /** Source Id */
+            source_id: string | null;
+            /** Started At */
+            started_at: string | null;
+            /** Status */
+            status: string;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            } | null;
+            /** Target */
+            target: {
+                [key: string]: unknown;
+            } | null;
+            /** Target Count */
+            target_count: number | null;
+            /** Target Index */
+            target_index: number | null;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Triggered By */
+            triggered_by: string | null;
+            /**
+             * View
+             * @constant
+             */
+            view: "summary";
+            /** Warning Count */
+            warning_count: number;
+            /** Warnings Preview */
+            warnings_preview: unknown[];
+        } & {
+            [key: string]: unknown;
         };
         /**
          * ScanLicensesResponse
@@ -42929,7 +43051,10 @@ export interface operations {
     };
     get_scan_v1_scan__job_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description `summary` (default) omits the result document; `full` returns the complete ScanJob including `result`. */
+                view?: "summary" | "full";
+            };
             header?: never;
             path: {
                 job_id: string;
@@ -42938,13 +43063,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description ``view=summary`` (default) returns ScanJobSummaryResponse; ``view=full`` returns ScanJob. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ScanJob"];
+                    "application/json": components["schemas"]["ScanJobSummaryResponse"] | components["schemas"]["ScanJob"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

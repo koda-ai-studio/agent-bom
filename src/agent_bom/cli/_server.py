@@ -634,7 +634,7 @@ def api_cmd(
       GET  /health                 Liveness probe
       GET  /version                Version info
       POST /v1/scan                Start a scan (async, returns job_id)
-      GET  /v1/scan/{job_id}       Poll status + results
+      GET  /v1/scan/{job_id}       Poll status + summary (?view=full for the result)
       GET  /v1/scan/{job_id}/stream  SSE real-time progress
       GET  /v1/agents              Quick agent discovery (no CVE scan)
       GET  /v1/jobs                List all scan jobs
