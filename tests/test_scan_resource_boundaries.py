@@ -27,11 +27,16 @@ def test_file_symlinks_are_excluded_with_coverage(tmp_path, target_kind):
     try:
         assert link not in list(iter_discovery_files(root))
         gaps = consume_coverage_warnings()
-        assert any(w["reason"] == "file_symlink" and w["kind"] == "coverage_gap" for w in gaps)
+        # Only an out-of-root target hides content; an in-root target is walked by
+        # its real path and a dangling link has none, so those are scope exclusions.
+        expected = {"outside": ("file_symlink", "coverage_gap"), "inside": ("symlink_within_root", "scope_exclusion")}.get(
+            target_kind, ("broken_symlink", "scope_exclusion")
+        )
+        assert any((w["reason"], w["kind"]) == expected for w in gaps)
     finally:
         reset_scan_warnings()
     result = scan_secrets(root)
-    assert result.warnings
+    assert bool(result.warnings) is (target_kind == "outside")
     assert result.files_scanned == (1 if target_kind == "inside" else 0)
     assert result.pruned_directories == 0
 

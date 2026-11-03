@@ -22,6 +22,8 @@ class SecretFinding:
     # Set when the severity was lowered from the pattern's default (e.g. a
     # test-fixture path). The finding is kept so the location stays visible.
     downgrade_reason: str | None = None
+    # "documentation" | "example" | "test" when the file is illustrative context.
+    path_context: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -33,6 +35,7 @@ class SecretFinding:
             "category": self.category,
             **({"validation_status": self.validation_status} if self.validation_status is not None else {}),
             **({"downgrade_reason": self.downgrade_reason} if self.downgrade_reason is not None else {}),
+            **({"path_context": self.path_context} if self.path_context is not None else {}),
         }
 
 
@@ -77,6 +80,8 @@ class SecretScanResult:
 
     def record_pruned_path(self, reason: str) -> int:
         """Record a refused file without counting it as a directory subtree."""
+        if reason in {"symlink_within_root", "broken_symlink"}:
+            return 0
         if reason == "file_symlink":
             warning = "Skipped file symlinks; their contents were not inspected."
             if warning not in self.warnings:

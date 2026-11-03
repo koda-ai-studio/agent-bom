@@ -68,7 +68,7 @@ from agent_bom.parsers.python_parsers import (  # noqa: F401
 # Re-export Ruby, PHP, and Swift parsers
 from agent_bom.parsers.ruby_parsers import parse_ruby_packages  # noqa: F401
 from agent_bom.parsers.swift_parsers import parse_swift_packages  # noqa: F401
-from agent_bom.traversal import _coverage_recorder, is_nested_worktree_root
+from agent_bom.traversal import _coverage_recorder, is_nested_worktree_root, is_virtualenv_root
 
 _ENTRY_POINT_GROUP = "agent_bom.inventory_parsers"
 
@@ -915,6 +915,11 @@ def scan_project_directory(
         subdirs = []
         for candidate in directory.iterdir():
             if candidate.name in _SKIP_DIRS or (candidate.name.startswith(".") and depth > 0):
+                continue
+            if candidate.is_symlink() and not candidate.is_dir():
+                # File symlinks and loops: the walk only descends directories.
+                continue
+            if is_virtualenv_root(candidate):
                 continue
             # A linked worktree/submodule is a second copy of the project;
             # descending into it counts every manifest twice.

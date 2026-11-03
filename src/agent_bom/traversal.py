@@ -32,7 +32,14 @@ from agent_bom.coverage import SCOPE_EXCLUSION_REASONS
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.scanners.repo_ignore import RepositoryIgnore
 
-__all__ = ["DEFAULT_MAX_FILES", "VENDOR_SKIP_DIRS", "is_nested_worktree_root", "iter_discovery_files"]
+__all__ = [
+    "DEFAULT_MAX_FILES",
+    "VENDOR_SKIP_DIRS",
+    "is_nested_worktree_root",
+    "is_virtualenv_root",
+    "iter_discovery_files",
+    "symlink_reason",
+]
 
 # Directory names never worth descending for source/manifest discovery: VCS
 # metadata, virtualenvs, vendored dependencies, build output, and tool caches.
@@ -110,12 +117,39 @@ def _relative_posix(root: Path, path: Path) -> str:
     return "" if rel == Path(".") else rel.as_posix()
 
 
+def is_virtualenv_root(dirpath: Path) -> bool:
+    """True for a Python virtualenv or conda env, whatever its directory name."""
+    try:
+        return (dirpath / "pyvenv.cfg").is_file() or (dirpath / "conda-meta").is_dir()
+    except OSError:
+        return False
+
+
+def symlink_reason(link: Path, root: Path, kind: str) -> str:
+    """Classify a symlink the walk does not follow.
+
+    A target inside *root* is walked by its real path, and a loop or dangling
+    link has no content: both are scope exclusions. Only a target outside the
+    root hides content from the scan (``{kind}_symlink``, a coverage gap).
+    """
+    try:
+        target = link.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return "broken_symlink"
+    try:
+        target.relative_to(root.resolve())
+    except (OSError, ValueError):
+        return f"{kind}_symlink"
+    return "symlink_within_root"
+
+
 def _prune_dirnames(
     dirpath: Path,
     dirnames: list[str],
     skip: frozenset[str],
     on_prune: Callable[[Path, str], None] | None = None,
     on_error: Callable[[OSError], None] | None = None,
+    root: Path | None = None,
 ) -> None:
     """Prune ancestors without enumerating their children; report exclusions."""
     kept = []
@@ -128,10 +162,10 @@ def _prune_dirnames(
                 on_error(exc)
             continue
         reason = (
-            "directory_symlink"
+            symlink_reason(child, root or dirpath, "directory")
             if is_link
             else "directory_policy"
-            if name in skip
+            if name in skip or is_virtualenv_root(child)
             else "nested_worktree"
             if is_nested_worktree_root(child)
             else ""
@@ -237,7 +271,7 @@ def iter_discovery_files(
             report_gap("directory_read_error", "One or more directories could not be read.", dirpath)
             dirnames[:] = []
             continue
-        _prune_dirnames(dirpath, dirnames, skip, note_pruned, note_error)
+        _prune_dirnames(dirpath, dirnames, skip, note_pruned, note_error, root)
         if ignore is not None:
             rel_dir = _relative_posix(root, dirpath)
             ignore.enter_directory(rel_dir)
@@ -260,7 +294,7 @@ def iter_discovery_files(
                 note_error(exc)
                 continue
             if is_link:
-                note_pruned(candidate, "file_symlink")
+                note_pruned(candidate, symlink_reason(candidate, root, "file"))
                 continue
             if ignore is not None:
                 rel_file = f"{rel_dir}/{name}" if rel_dir else name
