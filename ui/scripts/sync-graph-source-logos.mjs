@@ -7,8 +7,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const sources = JSON.parse(await readFile(path.join(root, "docs/images/vendor/provenance.json"), "utf8"));
 const destination = path.join(root, "ui/public/logos/agent-source-provenance.json");
 const manifest = JSON.parse(await readFile(destination, "utf8"));
-for (const id of ["okta", "databricks", "kubernetes", "clickhouse"]) {
-  const sourcePath = `docs/images/vendor/simple-icons/${id}.svg`;
+for (const id of ["okta", "databricks", "kubernetes", "clickhouse", "mcp"]) {
+  const sourcePath = id === "mcp" ? "docs/images/vendor/mcp.svg" : `docs/images/vendor/simple-icons/${id}.svg`;
   const source = sources.assets.find(asset => asset.path === sourcePath);
   if (!source) throw new Error(`Missing attribution for ${id}`);
   const bytes = await readFile(path.join(root, sourcePath));

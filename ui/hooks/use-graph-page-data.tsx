@@ -303,7 +303,13 @@ export function useGraphPageData() {
     }
   }, [attackPathLens, scenarioState]);
 
+  const appliedLensRef = useRef(`${canvasLens ?? ""}:${canvasAgent ?? ""}`);
   useEffect(() => {
+    const key = `${canvasLens ?? ""}:${canvasAgent ?? ""}`;
+    // Initial URL filters were already decoded by the state initializer.
+    // Only a deliberate lens/agent change should reset them to a preset.
+    if (appliedLensRef.current === key) return;
+    appliedLensRef.current = key;
     const next = createCanvasLensGraphFilters(canvasLens, canvasAgent);
     if (!next || requestedInvestigationRef.current || hasRequestedInvestigation) return;
     setInvestigationMode(null);

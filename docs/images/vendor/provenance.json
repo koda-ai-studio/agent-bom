@@ -528,6 +528,16 @@
       "sha256": "176488bda903cf3c84e247e4569412a82766b25558cc05b474980940046bad6d",
       "license": "CC0-1.0",
       "terms": "Unmodified Simple Icons vector used to identify the recorded package ecosystem; Packagist trademarks remain with their owner."
+    },
+    {
+      "path": "docs/images/vendor/mcp.svg",
+      "vendor": "Model Context Protocol",
+      "source_repo": "https://github.com/modelcontextprotocol/modelcontextprotocol",
+      "source_commit": "3c4d91b7e832d9b74338d56eed03403ccc662123",
+      "source_path": "docs/favicon.svg",
+      "sha256": "f6f33e24e95846f9ae2582ab72c4eae7beec5ec52c13d767d9f342bf639dd3e6",
+      "license_file": "docs/images/vendor/MCP-LICENSE",
+      "terms": "Unmodified upstream favicon used to identify recorded MCP server entities. The mark does not imply endorsement, authentication, or runtime verification; upstream licensing notice is retained in MCP-LICENSE."
     }
   ],
   "neutral_icon_policy": "Use agent-bom neutral category icons when a vendor does not publish redistributable diagram assets or when trademark terms are unclear."

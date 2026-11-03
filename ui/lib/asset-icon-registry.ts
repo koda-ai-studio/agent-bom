@@ -1,9 +1,10 @@
 import type { ComponentType, CSSProperties } from "react";
+import { McpGlyph } from "@/components/graph-mcp-glyph";
 import {
   Activity, AppWindow, Archive, BadgeCheck, Blocks, Bot, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
   Cable, CalendarClock, Cloud, CloudCog, Container, Cpu, Database, Disc3, DraftingCompass, Earth, FileCode, FileCog,
   FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderInput, FolderOutput, Gpu, Handshake, HardDrive, IdCard, Inbox, KeyRound,
-  Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, PlugZap, ScrollText, Server, Share2,
+  Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, PlugZap, ScrollText, Share2,
   ShieldAlert, ShieldCheck, ShipWheel, Siren, Sparkles, SquareFunction, Store, Table, Ticket, User, UserCog, Users, Vault,
   Unplug, Warehouse, Webhook, Workflow, Wrench, Zap,
 } from "lucide-react";
@@ -12,7 +13,8 @@ import {
  * The one registry from an asset to its glyph. A vendor's native resource type
  * (Lambda, Azure Functions, Cloud Functions, Workers…) normalises to a semantic
  * kind, and each kind owns exactly one glyph. The vendor logo is a separate
- * badge and never replaces the glyph. Every surface resolves icons here.
+ * badge and never replaces the glyph. The MCP protocol mark identifies its
+ * server kind. Every surface resolves icons here.
  */
 export type EntityIcon = ComponentType<{ className?: string; style?: CSSProperties }>;
 
@@ -55,7 +57,7 @@ export const ASSET_KINDS = {
   prompt: { label: "Prompt", icon: MessageSquareText },
   observability: { label: "Observability", icon: Activity },
   agent: { label: "Agent", icon: Bot },
-  mcp_server: { label: "Server", icon: Server },
+  mcp_server: { label: "Server", icon: McpGlyph },
   shared_server: { label: "Shared", icon: Share2 },
   tool: { label: "Tool", icon: Wrench },
   tool_call: { label: "Tool call", icon: Zap },

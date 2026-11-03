@@ -3,15 +3,14 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 
 const LANES: Record<string, number> = { agent: 0, server: 1, sharedServer: 1,
   package: 2, credential: 2, tool: 2, vulnerability: 3, misconfiguration: 3 };
-const HEADINGS = ["Clients", "MCP servers", "Packages & access", "Findings"];
 export const MCP_FLOW_FOOTPRINT = { width: 260, height: 188, column: 368, row: 224 };
 
-/** Role columns organize a small MCP inventory; they never assert a missing link.
+/** Recorded branches organize a small MCP inventory; they never assert a missing link.
  * Mixed infrastructure and larger estates retain the general hierarchy. */
 export function mcpEvidenceFlow(nodes: Node<LineageNodeData>[], edges: Edge[]) {
   if (edges.length > 32 || !nodes.some(n => n.data.nodeType === "agent") || !nodes.some(n => n.data.nodeType === "server")
     || nodes.some(n => n.data.rollup || n.type === "clusterPillNode" || n.hidden || !Object.hasOwn(LANES, n.data.nodeType))) return null;
-  const lanes = HEADINGS.map((_, lane) => nodes.filter(n => LANES[n.data.nodeType] === lane)
+  const lanes = [0, 1, 2, 3].map(lane => nodes.filter(n => LANES[n.data.nodeType] === lane)
     .sort((a, b) => a.data.label.localeCompare(b.data.label) || a.id.localeCompare(b.id)));
   if (lanes.some(lane => lane.length > 4)) return null;
   const byId = new Map(nodes.map(n => [n.id, n]));
@@ -34,6 +33,7 @@ export function mcpEvidenceFlow(nodes: Node<LineageNodeData>[], edges: Edge[]) {
   for (const lane of lanes) {
     const primaryLabels = new Set(lane.filter(n => spine.has(n.id)).map(n => n.data.label));
     lane.sort((a, b) => Number(spine.has(b.id)) - Number(spine.has(a.id))
+      || Number(parents(b.id).length > 0) - Number(parents(a.id).length > 0)
       || Number(primaryLabels.has(b.data.label)) - Number(primaryLabels.has(a.data.label))
       || a.data.label.localeCompare(b.data.label) || a.id.localeCompare(b.id));
   }
@@ -42,8 +42,12 @@ export function mcpEvidenceFlow(nodes: Node<LineageNodeData>[], edges: Edge[]) {
     const used: number[] = [];
     for (const n of lane) {
       const upstream = parents(n.id).flatMap(id => rowById.has(id) ? [rowById.get(id)!] : []);
-      let row = spine.has(n.id) ? 0 : upstream.length ? upstream.reduce((a, b) => a + b, 0) / upstream.length : 0;
-      while (used.some(other => Math.abs(other - row) < 1)) row += 1;
+      const desired = spine.has(n.id) ? 0 : upstream.length ? upstream.reduce((a, b) => a + b, 0) / upstream.length : 0;
+      // Keep the main chain level and place support on both sides. The old
+      // downward-only collision search pushed the chain against the top edge.
+      const choices = [desired];
+      for (let step = 0.5; step <= 8; step += 0.5) choices.push(desired + step, desired - step);
+      const row = choices.find(candidate => used.every(other => Math.abs(other - candidate) >= 1)) ?? desired + 9;
       used.push(row); rowById.set(n.id, row);
     }
   }

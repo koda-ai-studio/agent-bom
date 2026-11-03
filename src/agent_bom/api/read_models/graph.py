@@ -428,6 +428,7 @@ class GraphRollupResponse(ReadResponse):
     scan_id: str
     tenant_id: str
     created_at: str
+    collection_coverage: Row | None = None
     mode: str
     filters: Row
     summary: Row

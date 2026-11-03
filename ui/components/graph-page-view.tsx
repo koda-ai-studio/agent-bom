@@ -16,6 +16,7 @@ import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
+import { GraphProjectionNotice } from "@/components/graph-projection-notice";
 import dynamic from "next/dynamic";
 import { Background, Controls, MiniMap, ReactFlow } from "@xyflow/react";
 import { Loader2, ShieldAlert } from "lucide-react";
@@ -679,6 +680,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             onSelect={node => onNodeClick({} as React.MouseEvent, node)}
           />
           <div className="relative min-h-0 min-w-0 flex-1">
+          <GraphProjectionNotice coverage={(rollupCanvasOwnsPresentation ? rollupView : graphData)?.collection_coverage} onRetry={retryGraph} />
           {graphPanelError && graphData && !loadingGraph && (
             <div role="status" className="flex items-center justify-between gap-3 border-b border-outline px-4 py-2 text-sm">
               <span>Refresh failed. Showing the last loaded graph for this scope.</span>

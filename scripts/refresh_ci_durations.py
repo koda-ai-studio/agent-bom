@@ -90,11 +90,18 @@ def main() -> int:
     parser.add_argument("--log", nargs="*", type=Path, default=[], help="pytest -v -n N CI job logs")
     parser.add_argument("--junit", nargs="*", type=Path, default=[], help="pytest junitxml reports")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--merge-existing", action="store_true", help="replace measured modules while retaining other recorded timings")
     args = parser.parse_args()
     if not args.log and not args.junit:
         parser.error("pass at least one --log or --junit source")
     parts = [seconds_from_log(path) for path in args.log] + [seconds_from_junit(path) for path in args.junit]
-    payload = {"unit": "worker-seconds per module", "files": _merge(parts)}
+    measured = _merge(parts)
+    if args.merge_existing and args.output.exists():
+        # This is an incremental measurement, not another sample to add to a
+        # previous run. Leave unmeasured modules intact and replace overlap.
+        previous = json.loads(args.output.read_text(encoding="utf-8"))["files"]
+        measured = {**previous, **measured}
+    payload = {"unit": "worker-seconds per module", "files": dict(sorted(measured.items()))}
     args.output.write_text(json.dumps(payload, indent=1) + "\n", encoding="utf-8")
     print(f"wrote {len(payload['files'])} module timings to {args.output}")
     return 0

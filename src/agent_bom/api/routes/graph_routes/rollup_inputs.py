@@ -18,6 +18,16 @@ async def rollup_suppressions(tenant: str) -> str:
     return await _runtime._graph_store_call(suppression_revision, tenant)
 
 
+async def with_current_coverage(payload: dict, store: Any, tenant: str) -> dict:
+    """Freshness is request-local and must never be retained in a roll-up cache."""
+    scan_id = str(payload.get("scan_id") or "")
+    reader = getattr(store, "current_view_coverage", None)
+    if not scan_id.startswith("current-estate:") or not callable(reader):
+        return payload
+    coverage = await _runtime._graph_store_call(reader, tenant_id=tenant, scan_id=scan_id)
+    return {**payload, "collection_coverage": coverage}
+
+
 async def rollup_source(graph_store: Any, tenant: str, scan_id: str, node: str | None, mode: str) -> tuple[Any, frozenset[str]]:
     """The graph one roll-up view reads, and the occurrences suppressed now."""
     try:

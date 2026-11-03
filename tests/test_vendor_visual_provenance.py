@@ -80,6 +80,7 @@ ICON_SET_VENDORS = {
 }
 REPOSITORY_PINNED_VENDORS = {
     "Cursor",
+    "Model Context Protocol",
 }
 BRAND_REFERENCE_VENDORS = {
     "Google Cloud",

@@ -12,7 +12,7 @@ const flow = vi.hoisted(() => ({
   width: 900,
 }));
 vi.mock("@xyflow/react", () => ({
-  Panel: () => null,
+  Panel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   useNodesInitialized: () => flow.initialized,
   useReactFlow: () => flow,
   useStore: (select: (state: unknown) => unknown) => select({ width: flow.width, height: 400, domNode: flow.frame }),
@@ -295,4 +295,19 @@ it("sizes a phone's focus frame from the anchor's layout cell, not its zoom-infl
   await act(() => vi.advanceTimersByTimeAsync(100));
   expect(flow.frame.style.getPropertyValue("--graph-adaptive-height")).toBe("331px");
   expect(flow.fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: "agent" }], minZoom: 0.85 }));
+});
+
+
+it("offers next-node navigation for an ordinary phone graph without path IDs", async () => {
+  flow.frame = null;
+  flow.width = 356;
+  flow.getNodes.mockReturnValue([
+    { id: "client", position: { x: 0, y: 0 }, data: { label: "Client" } },
+    { id: "server", position: { x: 368, y: 0 }, data: { label: "MCP server" } },
+  ]);
+  const view = render(<GraphCanvasAutoFit enabled={false} layoutKey="phone-inventory" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  const next = view.getByRole("button", { name: "Next graph node" });
+  await act(async () => { next.click(); });
+  expect(flow.fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: "server" }] }));
+  expect(view.getByText("Canvas target · 2 of 2")).toBeTruthy();
 });

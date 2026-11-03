@@ -501,7 +501,8 @@ export function legendItemsForVisibleNodes(
       shape: legendShapeForGraphShape(meta.shape), nodeType: data.nodeType,
     } : data.entityType ? { label: "Unknown entity type", color: "#52525b", kind: "node" as const, shape: "pill" as const }
       : NODE_TYPE_LEGEND_ITEMS[data.nodeType];
-    byKind.set(data.entityType ?? kind ?? data.nodeType, item);
+    const iac = data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac";
+    byKind.set(`${data.entityType ?? kind ?? data.nodeType}${iac ? ":iac" : ""}`, iac ? { ...item, label: "IaC finding" } : item);
   }
   const items = [...byKind.values()].sort((a, b) =>
     NODE_TYPE_LEGEND_ORDER.indexOf(a.nodeType!) - NODE_TYPE_LEGEND_ORDER.indexOf(b.nodeType!) || a.label.localeCompare(b.label));

@@ -11,6 +11,8 @@ export interface FilterState {
   severity: string | null;
   agentName: string | null;
   vulnOnly: boolean;
+  /** Local subtype within the loaded graph; does not imply estate coverage. */
+  findingKind?: "all" | "iac";
   runtimeMode: "all" | "static" | "dynamic";
   relationshipScope: "all" | "inventory" | "attack" | "runtime" | "governance";
   maxDepth: number;
@@ -698,6 +700,15 @@ export function FilterPanel({
             );
           })}
         </select>
+        <label className="mt-2 block text-xs">
+          Finding kind in loaded graph
+          <select aria-label="Finding kind in loaded graph" value={filters.findingKind ?? "all"}
+            onChange={event => onChange({ ...filters, findingKind: event.target.value as "all" | "iac" })}
+            className="mt-1 w-full rounded border border-outline bg-surface px-2 py-1 text-foreground">
+            <option value="all">All findings</option>
+            <option value="iac">IaC findings and connected assets</option>
+          </select>
+        </label>
       </FilterSection>
 
       <FilterSection

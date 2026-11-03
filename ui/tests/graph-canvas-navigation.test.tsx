@@ -22,9 +22,11 @@ const props = { enabled: false, layoutKey: "nodes", inspector: false, preserveVi
 const path = ["agent:a", "tool:b", "data:c"];
 beforeEach(() => { fixture.width = 390; fixture.fitView.mockClear(); });
 
-it("shows a plain mobile graph whole, without a one-node-at-a-time stepper", () => {
+it("makes every loaded node reachable in a plain mobile graph", async () => {
   render(<GraphCanvasAutoFit {...props} />);
-  expect(screen.queryByRole("button", { name: "Next graph node" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Next graph node" }));
+  await waitFor(() => expect(fixture.fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: "tool:b" }] })));
+  expect(await screen.findByText(/2 of 3/)).toBeInTheDocument();
 });
 
 it("navigates mobile path nodes by exact ID when labels repeat", async () => {

@@ -17159,6 +17159,12 @@ components:
             type: array
           - type: 'null'
           title: Collapsed
+        collection_coverage:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Collection Coverage
         completeness:
           $ref: '#/components/schemas/GraphCompleteness'
         created_at:
@@ -43863,10 +43869,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: 'Retryable: the demo estate is still being seeded (error.details.code
-            ``current_estate_seeding``), or unpinned current-estate reads kept landing
-            on retired generations (``current_estate_generation_rotating``). Wait
-            ``Retry-After`` seconds and retry; a pinned ``snapshot_generation`` that
-            changed is a 409 instead.'
+            ``current_estate_seeding``), or the current graph is being prepared (``current_estate_building``),
+            or unpinned reads kept landing on retired generations (``current_estate_generation_rotating``).
+            Wait ``Retry-After`` seconds and retry; a pinned ``snapshot_generation``
+            that changed is a 409 instead.'
           headers:
             Retry-After:
               description: Seconds to wait before retrying

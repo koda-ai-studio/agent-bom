@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from starlette.exceptions import HTTPException
 
+from tests.test_api_read_contracts import empty_estate_client  # noqa: F401
 from tests.test_postgres_migrated_graph_parity import migrated_fresh_database  # noqa: F401
 from tests.test_postgres_migrated_graph_parity import pytestmark as _migrated_postgres_pytestmark
 
@@ -98,3 +99,20 @@ def test_postgres_current_count_matches_ordered_merge_and_rls(migrated_fresh_dat
         )
     finally:
         reset_current_tenant(token)
+
+
+def test_http_background_projection_retains_postgres_tenant_binding(migrated_fresh_database, empty_estate_client, monkeypatch):  # noqa: F811
+    from agent_bom.api import stores
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from agent_bom.api.store import InMemoryJobStore
+    from tests.auth_helpers import proxy_headers
+
+    jobs, backing = InMemoryJobStore(), PostgresGraphStore()
+    _record(jobs, backing, "owned-package")
+    monkeypatch.setattr(stores, "_store", jobs)
+    monkeypatch.setattr(stores, "_graph_store", backing)
+    response = empty_estate_client.get("/v1/graph?limit=100&view=canvas", headers=proxy_headers(role="analyst", tenant=TENANT))
+    assert response.status_code == 200, response.text
+    assert {node["id"] for node in response.json()["nodes"]} == {"owned-package"}
+    foreign = empty_estate_client.get("/v1/graph?limit=100&view=canvas", headers=proxy_headers(role="analyst", tenant="other-tenant"))
+    assert foreign.status_code == 503 or not foreign.json().get("nodes")

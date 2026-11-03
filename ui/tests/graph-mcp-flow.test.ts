@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphHierarchyLayout } from "@/lib/graph-hierarchy-layout";
+import { mcpNodeCaption } from "@/lib/graph-mcp-caption";
 import { findingEvidenceContext, mcpEvidenceFlow } from "@/lib/graph-mcp-flow";
 
 const node = (id: string, nodeType: LineageNodeData["nodeType"], label = id): Node<LineageNodeData> => ({
@@ -46,11 +47,22 @@ describe("small MCP evidence flow", () => {
     expect(at.client!.y).toBe(at["github-1"]!.y);
     expect(at.credential!.y).toBe(at.client!.y);
     expect(at.finding!.y).toBe(at.client!.y);
-    expect(at["github-package"]!.y).toBeGreaterThan(at.credential!.y);
+    expect(at["github-package"]!.y).not.toBe(at.credential!.y);
     expect(at["files-1"]!.y).toBeGreaterThan(at["github-1"]!.y);
     const backwards = mcpEvidenceFlow(nodes, [{ id: "back", source: "finding", target: "credential", data: { relationship: "affects" } }])!;
     expect(backwards.edges[0]!.sourceHandle).toBe("context");
     expect(backwards.edges[0]!.targetHandle).toBe("context");
+  });
+
+  it("balances connected branches above and below the primary evidence chain", () => {
+    const result = mcpEvidenceFlow(nodes, edges)!;
+    const primary = result.nodes.find(n => n.id === "client")!.position.y;
+    const branchRows = result.nodes.filter(n => n.data.nodeType === "server").map(n => n.position.y);
+    expect(Math.min(...branchRows)).toBeLessThan(primary);
+    expect(Math.max(...branchRows)).toBeGreaterThan(primary);
+    const low = Math.min(...result.nodes.map(n => n.position.y)), high = Math.max(...result.nodes.map(n => n.position.y));
+    expect((primary - low) / (high - low)).toBeGreaterThanOrEqual(0.3);
+    expect((primary - low) / (high - low)).toBeLessThanOrEqual(0.7);
   });
 
   it("is deterministic across API ordering and does not relabel scope or evidence", () => {
@@ -78,4 +90,12 @@ describe("small MCP evidence flow", () => {
     expect(mcpEvidenceFlow([...nodes, node("cloud", "cloudResource")], edges)).toBeNull();
     expect(mcpEvidenceFlow([...nodes, node("fifth-server", "server")], edges)).toBeNull();
   });
+});
+
+
+it("uses a compact prose finding caption without altering evidence or advisory identifiers", () => {
+  const data: LineageNodeData = { label: "AI agent can reach a credential or privileged tool through a configured MCP server", nodeType: "misconfiguration", severity: "high" };
+  expect(mcpNodeCaption(data, data.label).title).toBe("AI agent can reach a credential or privileged tool…");
+  expect(data.label).toContain("through a configured MCP server");
+  expect(mcpNodeCaption({ ...data, nodeType: "vulnerability" }, "CVE-2025-29927").title).toBe("CVE-2025-29927");
 });

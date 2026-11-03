@@ -104,6 +104,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
             agentName: null,
             severity: null,
             vulnOnly: false,
+            findingKind: "all" as const,
             runtimeMode: "all" as const,
             relationshipScope: "all" as const,
             layers,
@@ -115,7 +116,10 @@ export function useGraphCanvasModel(page: GraphPageData) {
     const changedNodeIds = selectedScenarioId && scenarioComparison?.available && !attackPathLens
       ? graphScenarioContextIds(projectedGraphData.nodes, [], scenarioComparison.difference, [...(mergedGraphData?.edges ?? []), ...projectedGraphData.edges])
       : undefined;
-    return buildUnifiedFlowGraph(projectedGraphData, presentationFilters, changedNodeIds ?? (investigationMode ? new Set([investigationMode.rootId]) : undefined));
+    const presentationGraph = presentationFilters.findingKind === "iac"
+      ? { ...projectedGraphData, ...applyFilters(projectedGraphData, presentationFilters) }
+      : projectedGraphData;
+    return buildUnifiedFlowGraph(presentationGraph, presentationFilters, changedNodeIds ?? (investigationMode ? new Set([investigationMode.rootId]) : undefined));
   }, [
     projectedGraphData,
     investigationMode,

@@ -108,12 +108,35 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
         return stable;
       }, { intervals: [100], timeout: 8000 }).toBeGreaterThanOrEqual(8);
     }
+    if (width === 390) {
+      const navigation = page.getByRole("group", { name: "Navigate loaded graph nodes" });
+      await expect(navigation).toBeVisible();
+      await navigation.getByRole("button", { name: "Next graph node" }).click();
+      await expect(navigation).toContainText("Canvas target · 2 of 9");
+      await navigation.getByRole("button", { name: "Previous graph node" }).click();
+      await expect(navigation).toContainText("Canvas target · 1 of 9");
+    }
     await page.screenshot({ path: info.outputPath(`mcp-flow-${theme}-${width}.png`), fullPage: width === 390 });
     await page.locator('.react-flow__node[data-id="finding"]').click();
     await expect(page.locator('.react-flow__node[data-id="github-1"]')).not.toHaveClass(/lineage-node-dim/);
     await expect(page.locator('.react-flow__node[data-id="files-2"]')).toHaveClass(/lineage-node-dim/);
     await expect(page.getByTestId("graph-entity-drawer")).toContainText(title);
+    if (width === 390) {
+      await expect.poll(() => page.getByTestId("graph-entity-drawer").getByRole("dialog").evaluate(dialog => getComputedStyle(dialog).opacity)).toBe("1");
+    }
     await page.screenshot({ path: info.outputPath(`mcp-selected-${theme}-${width}.png`), fullPage: width === 390 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   });
 }
+
+
+test("IaC subtype URL filters the rendered graph without changing canonical entity types", async ({ page }) => {
+  const nodes = [node("iac", "misconfiguration", "Privileged container"), node("other", "misconfiguration", "Other finding"), node("resource", "resource", "Container")];
+  nodes[0]!.attributes = { finding_kind: "iac" };
+  await fixture(page, nodes, [edge("iac", "resource", "affects"), edge("other", "resource", "affects")]);
+  await page.goto("/security-graph?lens=estate&scan=snapshot&rollup=0&layers=cloudResource,misconfiguration&findingKind=iac");
+  await expect(page.locator('.react-flow__node[data-id="iac"]')).toBeVisible();
+  await expect(page.locator('.react-flow__node[data-id="resource"]')).toBeVisible();
+  await expect(page.locator('.react-flow__node[data-id="other"]')).toHaveCount(0);
+  await expect(page.locator('.react-flow__node[data-id="iac"]')).toContainText("IaC finding");
+});

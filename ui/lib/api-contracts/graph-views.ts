@@ -4,7 +4,7 @@ UnifiedEdge,
 UnifiedGraphData,
 UnifiedNode
 } from "../graph-schema";
-import type { GraphAttackPath,GraphCompleteness,GraphPagination } from "./scan-inventory";
+import type { GraphAttackPath,GraphCollectionCoverage,GraphCompleteness,GraphPagination } from "./scan-inventory";
 import type { ApiSchemas,ContractEnvelope } from "./shared";
 
 export interface FixFirstRiskReason {
@@ -334,6 +334,7 @@ export interface GraphRollupOrphanSummary {
 }
 
 export interface GraphRollupResponse {
+  collection_coverage?: GraphCollectionCoverage | undefined;
   snapshot_generation?: string;
   scan_id: string;
   tenant_id: string;
