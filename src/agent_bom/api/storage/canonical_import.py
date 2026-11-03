@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any, cast
@@ -44,6 +45,13 @@ class ImportAdapter:
         values = dict(payload)
         if self.record_type is VulnException:
             values["status"] = ExceptionStatus(values["status"])
+            resource = values.get("iac_resource", "")
+            resource = json.loads(resource) if isinstance(resource, str) and resource else resource
+            if resource == "":
+                resource = {}
+            if not isinstance(resource, dict):
+                raise ValueError("Source IaC resource selector must be an object")
+            values["iac_resource"] = resource
         record = self.record_type(**values)
         if set(payload) - set(payload_of(record)):
             raise ValueError("Source has fields unsupported by the current store model")

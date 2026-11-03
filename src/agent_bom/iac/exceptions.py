@@ -24,6 +24,25 @@ from agent_bom.core.iac_exceptions import parse_ignore_entries as parse_ignore_e
 from agent_bom.core.iac_exceptions import parse_resource_selector as parse_resource_selector
 from agent_bom.iac.models import IaCFinding
 
+__all__ = [
+    "IAC_RULE_ID",
+    "ExceptionNotice",
+    "ExceptionOutcome",
+    "IaCException",
+    "InlineLookup",
+    "PathLookup",
+    "ResourceSelector",
+    "apply_iac_exceptions",
+    "cwd_relative_paths",
+    "expired_message",
+    "expiring_message",
+    "is_iac_ignore_entry",
+    "parse_expiry",
+    "parse_ignore_entries",
+    "parse_resource_selector",
+    "unsuppress",
+]
+
 
 @dataclass
 class ExceptionOutcome:
@@ -120,6 +139,7 @@ def cwd_relative_paths(walk_root: Path) -> PathLookup:
             try:
                 found.append((walk_root / finding.file_path).resolve().relative_to(cwd).as_posix())
             except ValueError:
+                # Roots outside cwd retain their scan-relative path candidates.
                 pass
         return tuple(dict.fromkeys(found))
 
