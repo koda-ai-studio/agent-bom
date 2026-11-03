@@ -760,10 +760,13 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "container",
       "cloud_resource",
       "server",
-      "credential"
+      "credential",
+      "source_file",
+      "config_file"
     ],
     "target_types": [
-      "application"
+      "application",
+      "code_module"
     ],
     "traversable": true,
     "traversal_class": "structural"
@@ -859,6 +862,7 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "agent",
       "org",
       "data_store",
+      "ci_job",
       "account",
       "cloud_resource",
       "source_file",
@@ -875,7 +879,6 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "package",
       "framework",
       "config_file",
-      "ci_job",
       "access_policy"
     ],
     "target_types": [
@@ -891,6 +894,7 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "org",
       "data_store",
       "code_module",
+      "ci_job",
       "account",
       "environment",
       "application",
@@ -903,7 +907,6 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "dataset",
       "tool",
       "framework",
-      "ci_job",
       "access_policy",
       "vulnerability",
       "misconfiguration"
@@ -918,11 +921,13 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "direction": "bidirectional",
     "source_types": [
       "agent",
-      "server"
+      "server",
+      "code_module"
     ],
     "target_types": [
       "agent",
-      "server"
+      "server",
+      "data_store"
     ],
     "traversable": false,
     "traversal_class": "correlation"
@@ -992,13 +997,17 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "package",
       "directory",
       "cloud_resource",
-      "data_store"
+      "data_store",
+      "code_module",
+      "ci_job"
     ],
     "target_types": [
       "package",
       "container",
       "cloud_resource",
-      "data_store"
+      "data_store",
+      "code_module",
+      "ci_job"
     ],
     "traversable": true,
     "traversal_class": "dependency"

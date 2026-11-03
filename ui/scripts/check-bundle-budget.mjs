@@ -155,7 +155,12 @@ const BUDGETS = {
   // macOS and Linux CI; canonical investigation scope brings it to 4337.4 KiB
   // locally. These features add no dependency. Allow 6.6 KiB of headroom at
   // 4344 KiB; largest-chunk and shared-runtime ceilings remain unchanged.
-  totalClientJsBytes: 4_448_256,
+  // Scoped connection previews, endpoint/MCP context, repository changes, and
+  // readable path navigation measure 4366.7 KiB in Linux CI and 4366.9 KiB
+  // locally before the taxonomy refresh, without adding dependencies. This
+  // total includes lazy chunks; retain ~17 KiB of headroom at 4384 KiB.
+  // Largest-chunk and shared-runtime ceilings remain unchanged.
+  totalClientJsBytes: 4_489_216,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.
