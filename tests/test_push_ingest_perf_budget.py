@@ -82,6 +82,11 @@ async def test_estate_push_ingests_within_budget_and_a_timed_out_retry_adds_no_j
     headers = {"Content-Type": "application/json", "Prefer": "respond-async"}
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://perf") as client:
+        # Measure a running API, as the 10x responsiveness budget does below.
+        # FastAPI lazily builds routing/model schemas on the first matching
+        # request. An invalid empty push warms that framework work without
+        # admitting a job, normalizing a report or warming graph persistence.
+        assert (await client.post("/v1/results/push", json={})).status_code == 422
         began = time.monotonic()
         first = await client.post("/v1/results/push", content=body, headers=headers)
         admitted = time.monotonic() - began
