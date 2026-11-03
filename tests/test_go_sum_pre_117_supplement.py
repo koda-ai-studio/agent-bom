@@ -89,3 +89,10 @@ def test_checksum_history_cannot_raise_a_direct_requirement(tmp_path: Path) -> N
     (tmp_path / "go.sum").write_text("example.com/pkg v1.0.0 h1:aaaa=\nexample.com/pkg v9.0.0 h1:bbbb=\n")
     [pkg] = parse_go_packages(tmp_path, verify_checksums=False)
     assert pkg.version == "1.0.0"
+
+
+def test_checksum_history_cannot_duplicate_a_replacement_target(tmp_path: Path) -> None:
+    (tmp_path / "go.mod").write_text(_go_mod("go 1.16"))
+    (tmp_path / "go.sum").write_text(GO_SUM + "github.com/new/mod v9.0.0 h1:stale=\n")
+    versions = [p.version for p in parse_go_packages(tmp_path, verify_checksums=False) if p.name == "github.com/new/mod"]
+    assert versions == ["1.2.3"]

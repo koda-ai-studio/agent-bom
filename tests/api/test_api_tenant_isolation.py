@@ -52,6 +52,7 @@ from agent_bom.api.stores import (
 )
 from agent_bom.api.tenant_quota_store import InMemoryTenantQuotaStore
 from agent_bom.asset_tracker import AssetTracker
+from agent_bom.models import Agent, AgentType
 from tests._host_discovery import host_bound_to
 
 
@@ -141,14 +142,9 @@ async def test_fleet_sync_assigns_request_tenant():
     set_fleet_store(store)
     req = _request("tenant-alpha")
 
-    class _Discovered:
-        name = "alpha"
-        agent_type = "claude-desktop"
-        config_path = "/tmp/alpha.json"
-        mcp_servers = []
-        version = "1.0"
+    discovered = Agent(name="alpha", agent_type=AgentType.CLAUDE_DESKTOP, config_path="/tmp/alpha.json", version="1.0")
 
-    with patch("agent_bom.discovery.discover_all", return_value=[_Discovered()]):
+    with patch("agent_bom.discovery.discover_all", return_value=[discovered]):
         resp = fleet_routes.sync_fleet(req)
 
     assert resp["synced"] == 1
@@ -189,14 +185,9 @@ def test_pipeline_fleet_sync_uses_job_tenant_scope():
     set_fleet_store(store)
     store.put(_fleet_agent("beta-1", "tenant-beta", "shared-agent"))
 
-    class _Discovered:
-        name = "shared-agent"
-        agent_type = "claude-desktop"
-        config_path = "/tmp/shared.json"
-        mcp_servers = []
-        version = "1.0"
+    discovered = Agent(name="shared-agent", agent_type=AgentType.CLAUDE_DESKTOP, config_path="/tmp/shared.json", version="1.0")
 
-    _sync_scan_agents_to_fleet([_Discovered()], tenant_id="tenant-alpha")
+    _sync_scan_agents_to_fleet([discovered], tenant_id="tenant-alpha")
 
     alpha_agents = store.list_by_tenant("tenant-alpha")
     beta_agents = store.list_by_tenant("tenant-beta")
