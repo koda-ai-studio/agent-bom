@@ -242,3 +242,15 @@ def test_typosquat_verdicts_are_exact():
     assert {row["name"]: check_typosquat(row["name"], row["ecosystem"]) for row in expected["typosquats"]} == {
         row["name"]: row["target"] for row in expected["typosquats"]
     }
+
+
+def test_go_reference_count_has_a_different_evidence_scope(tmp_path):
+    root = _materialize("go_node_exporter_1_3_0", tmp_path)
+    lines = (root / "go-list-reference.txt").read_text().splitlines()
+    assert lines[0] == "github.com/prometheus/node_exporter"
+    assert len(lines) == 121
+    reference = {line.split()[0] for line in lines[1:]}
+    inventory = {pkg.name for pkg in scan_project_directory(root)[root.resolve()]}
+    assert len(reference) == 120
+    assert len(inventory) == 57
+    assert len(reference - inventory) == 63

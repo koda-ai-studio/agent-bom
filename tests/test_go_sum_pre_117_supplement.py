@@ -1,8 +1,8 @@
 """Modules with a pre-1.17 ``go`` directive list only direct requires in go.mod.
 
 Before Go 1.17 the module graph was not pruned, so go.mod omits most transitive
-modules; go.sum's module-zip (``h1:``) lines are the inventory of what was
-built. From 1.17 on go.mod lists every module needed to build the main module
+modules; go.sum's module-zip (``h1:``) lines are static candidates, not proof of
+what was built. From 1.17 on go.mod lists every module needed to build the main module
 and stays the authority.
 """
 
@@ -74,3 +74,18 @@ def test_go_117_and_later_keep_go_mod_authoritative(tmp_path: Path, directive: s
     packages = _inventory(tmp_path, directive)
 
     assert set(packages) == {"github.com/prometheus/client_golang", "github.com/new/mod"}
+
+
+def test_checksum_history_does_not_claim_resolved_runtime_evidence(tmp_path: Path) -> None:
+    packages = _inventory(tmp_path, "go 1.16")
+    pkg = packages["golang.org/x/crypto"]
+    assert pkg.reachability_evidence == "unknown"
+    assert pkg.version_confidence == "low"
+    assert pkg.version_evidence[0]["build_list_verified"] is False
+
+
+def test_checksum_history_cannot_raise_a_direct_requirement(tmp_path: Path) -> None:
+    (tmp_path / "go.mod").write_text("module example.com/m\ngo 1.14\nrequire example.com/pkg v1.0.0\n")
+    (tmp_path / "go.sum").write_text("example.com/pkg v1.0.0 h1:aaaa=\nexample.com/pkg v9.0.0 h1:bbbb=\n")
+    [pkg] = parse_go_packages(tmp_path, verify_checksums=False)
+    assert pkg.version == "1.0.0"

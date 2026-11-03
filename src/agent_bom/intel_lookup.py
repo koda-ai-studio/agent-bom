@@ -19,6 +19,7 @@ from agent_bom.db.intel_catalog import IntelSource as IntelSource
 from agent_bom.db.lookup import LocalVuln, _current_severity, lookup_package
 from agent_bom.db.schema import DB_PATH, _validated_db_path, init_db, sync_meta_run_status
 from agent_bom.package_utils import normalize_package_name
+from agent_bom.storage.state_home import demo_intel_db_path
 
 _CVE_RE = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 __all__ = ["SYNC_META_SOURCE_LABELS", "sync_meta_source_label"]  # fmt: skip
@@ -33,9 +34,7 @@ def resolve_intel_db_path() -> Path:
     """Return the local vulnerability DB path for read-only intel surfaces."""
 
     configured = (os.environ.get("AGENT_BOM_DB_PATH") or "").strip()
-    if configured:
-        return _validated_db_path(configured)
-    return DB_PATH
+    return _validated_db_path(configured) if configured else demo_intel_db_path(DB_PATH)
 
 
 def _sync_meta(conn: sqlite3.Connection) -> dict[str, dict[str, Any]]:

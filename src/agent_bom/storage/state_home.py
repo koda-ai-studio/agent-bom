@@ -146,3 +146,8 @@ def demo_estate_default_persist(demo_state_dir: Path | None) -> str | None:
     path = str(demo_state_dir / "control-plane.db")
     os.environ["AGENT_BOM_DB"] = path
     return path
+
+
+def demo_intel_db_path(fallback: Path) -> Path:
+    """Keep demo intelligence defaults in the same isolated state as its estate."""
+    return state_path("db", "vulns.db") if demo_estate_requested() else fallback

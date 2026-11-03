@@ -220,3 +220,21 @@ identifier-safe redaction, MCP session result scoping, gzip push budgets, exec
 read prewarm, local cache and mirror retention with `db prune`, and the
 registry-sync tracking issue. This scoped review does not establish full
 security review, publication or live provider qualification.
+
+
+### Consolidated scan and demo evidence boundaries
+
+- MCP exception lookup resolves the server-bound tenant; callers cannot choose
+  another tenant's suppressions. Store failure preserves active findings and a
+  warning (`tests/test_iac_exceptions_mcp.py`). Approval and expiry still apply.
+- Embedded MCP credentials contribute names to exposure counts; output retains
+  the existing value redaction. Identity fingerprints retain their previous
+  environment-key basis (`tests/test_mcp_embedded_credentials.py`).
+- Demo intelligence receipts are partial, explicitly synthetic fixtures. The
+  seeder refuses operator database paths or existing non-demo evidence, and
+  maintenance checks persisted jobs and snapshot freshness before skipping work
+  (`tests/test_demo_maintenance_receipts.py`). These receipts do not establish
+  live feed freshness or independent validation.
+- Go checksum candidates carry unknown reachability and low confidence; a
+  historical checksum cannot raise a declared direct requirement
+  (`tests/test_go_sum_pre_117_supplement.py`).

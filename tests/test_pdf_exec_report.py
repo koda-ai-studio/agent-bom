@@ -65,3 +65,9 @@ def test_long_cells_wrap_and_tables_repeat_their_header_on_new_pages() -> None:
     doc.table([("Name", 0.5), ("Value", 0.5)], [[f"row {i}", "v"] for i in range(120)])
     assert len(doc.pages) > 1
     assert any("(Name) Tj" in command for command in doc.pages[1])
+
+
+def test_wide_credential_labels_fit_their_pdf_column() -> None:
+    # Helvetica W advances 944/1000 em; an average-character width clips labels.
+    lines = wrap("W" * 80, 100, 10)
+    assert all(len(line) * 9.44 <= 100 for line in lines)

@@ -42,7 +42,7 @@ from agent_bom.core.settings import env_bool, env_int
 from agent_bom.mcp_tools.request_identity import request_context, verified_access_token
 
 PUBLIC_READONLY_ENV = "AGENT_BOM_MCP_PUBLIC_READONLY"
-TRUSTED_PROXY_HOPS_ENV = "AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS"
+FORWARDED_HOP_COUNT_ENV = "AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS"
 PUBLIC_CALLER_RATE_LIMIT_ENV = "AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT"
 PUBLIC_TOTAL_RATE_LIMIT_ENV = "AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT"
 
@@ -155,7 +155,7 @@ def anonymous_caller_key(context: Any) -> str:
     request = getattr(context, "request", None)
     client = getattr(request, "client", None)
     address = str(getattr(client, "host", "") or "")
-    hops = env_int(TRUSTED_PROXY_HOPS_ENV, 0, minimum=0, maximum=10)
+    hops = env_int(FORWARDED_HOP_COUNT_ENV, 0, minimum=0, maximum=10)
     if hops and request is not None:
         entries = [part.strip() for value in request.headers.getlist("x-forwarded-for") for part in value.split(",") if part.strip()]
         if len(entries) >= hops:

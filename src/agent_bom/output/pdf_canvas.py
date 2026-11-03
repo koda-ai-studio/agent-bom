@@ -21,9 +21,24 @@ MARGIN = 48
 CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN
 _TOP = PAGE_HEIGHT - MARGIN
 _BOTTOM = MARGIN + 24
-# Average Helvetica advance as a fraction of the font size; wide enough that
-# wrapped text never overruns its column in practice.
-_CHAR_EM = {False: 0.48, True: 0.53}
+
+
+# Conservative per-glyph bounds for both standard Helvetica faces. Wide
+# capitals and credential labels must not use an average-character estimate.
+def _glyph_em(char: str) -> float:
+    if char in " ilj.,'!:;|":
+        return 0.3
+    if char in "ft()[]{}":
+        return 0.4
+    if char in "mwMW@%&":
+        return 1.02
+    if char.isascii() and char.isupper():
+        return 0.8
+    if char.isascii() and (char.islower() or char.isdigit() or char in "_-/=+?"):
+        return 0.62
+    return 1.02
+
+
 _TRANSLIT = {
     "—": "-",
     "–": "-",
@@ -61,25 +76,22 @@ def _escape(text: str) -> str:
 
 
 def text_width(text: str, size: float, bold: bool = False) -> float:
-    return len(text) * size * _CHAR_EM[bold]
+    return sum(_glyph_em(char) for char in text) * size
 
 
 def wrap(text: str, width: float, size: float, bold: bool = False) -> list[str]:
     words, lines, line = clean(text).split(" "), [], ""
-    limit = max(4, int(width / (size * _CHAR_EM[bold])))
     for word in words:
-        while len(word) > limit:
-            if line:
-                lines.append(line)
-                line = ""
-            lines.append(word[:limit])
-            word = word[limit:]
-        candidate = f"{line} {word}".strip()
-        if len(candidate) > limit and line:
+        if line and text_width(f"{line} {word}", size, bold) > width:
             lines.append(line)
-            line = word
-        else:
-            line = candidate
+            line = ""
+        while text_width(word, size, bold) > width and len(word) > 1:
+            stop = 1
+            while stop < len(word) and text_width(word[: stop + 1], size, bold) <= width:
+                stop += 1
+            lines.append(word[:stop])
+            word = word[stop:]
+        line = f"{line} {word}".strip()
     if line:
         lines.append(line)
     return lines or [""]

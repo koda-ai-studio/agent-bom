@@ -596,3 +596,20 @@ and coverage before allowing a skill to run. NVIDIA NeMo Guardrails imports are
 also recognized as guardrail evidence; that does not establish effective enforcement.
 
 Project and repository scans automatically enable AI inventory for supported source languages, including JavaScript-only and TypeScript-only projects. CLI, API repository scans, and MCP repository scans preserve package identity and source-file evidence in `ai_inventory`.
+
+
+### Go checksum inventory and build-list scope
+
+For pre-Go-1.17 projects, the offline parser supplements `go.mod` with
+module-zip checksum candidates from `go.sum`. Those candidates carry low version
+confidence and unknown reachability. Checksums can outlive a dependency or
+record versions inspected during resolution; they do not prove the current
+build list. See the [Go module reference](https://go.dev/ref/mod#go-sum-files).
+
+The node_exporter v1.3.0 corpus records 57 static inventory candidates versus
+121 lines from `go list -mod=readonly -m all`: one main module and 120 dependencies.
+The 63 additional module paths are outside that static inventory, and selected
+versions can differ too. This is a documented coverage gap, not full build-list
+parity. For resolved evidence, supply an SBOM generated from the intended build
+or scan its compiled Go binary/container. The raw reference and full manifests
+are in `tests/fixtures/accuracy_corpus/go_node_exporter_1_3_0/`.

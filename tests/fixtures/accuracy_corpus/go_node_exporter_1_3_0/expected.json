@@ -1,5 +1,5 @@
 {
-  "derivation": "go.mod require set plus each go.sum module with a zip h1 line that go.mod does not list; /go.mod-only lines are not inventory",
+  "derivation": "Static go.mod requirements plus highest module-zip checksum candidates; not a resolved build list. The recorded toolchain list has 121 rows: main module plus 120 dependencies.",
   "go_mod_only_modules": [
     "cloud.google.com/go"
   ],
@@ -62,5 +62,5 @@
     "gopkg.in/check.v1@1.0.0-20190902080502-41f04d3bba15",
     "gopkg.in/yaml.v2@2.4.0"
   ],
-  "source": "prometheus/node_exporter tag v1.3.0 go.mod (go 1.14) and go.sum: every module-zip h1 line plus 12 /go.mod-only lines"
+  "source": "prometheus/node_exporter tag v1.3.0: complete go.mod and go.sum; go-list-reference.txt records go list -mod=readonly -m all"
 }

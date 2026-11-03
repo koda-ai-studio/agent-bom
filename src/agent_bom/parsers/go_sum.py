@@ -1,11 +1,11 @@
 """Supplement pre-Go-1.17 go.mod inventories with the modules recorded in go.sum.
 
-Go 1.17 introduced module graph pruning: from then on go.mod lists every module
-that provides a package to the main module, so go.mod is the authority. Before
-1.17 (or with no ``go`` directive) go.mod carries only direct requirements and
-the transitive build list is visible only in go.sum. Lines hashing a module zip
-(``mod v1.2.3 h1:...``) mean the module source was downloaded for the build;
-``/go.mod``-only lines were read for version selection and are not inventory.
+Go 1.17 go.mod files list the pruned graph. Older manifests are supplemented
+with module-zip checksums as static inventory candidates. A checksum proves
+neither current build membership nor reachability: go.sum may retain historical
+versions and /go.mod-only graph entries. Never raise a manifest requirement
+from checksum history or describe this heuristic as go list -m all parity.
+Reference: https://go.dev/ref/mod#go-sum-files
 """
 
 from __future__ import annotations
@@ -76,7 +76,16 @@ def supplement_from_go_sum(go_mod: Path, go_sum: Path, known: set[str], replaced
                 purl=f"pkg:golang/{module}@{version}",
                 is_direct=False,
                 version_source="lockfile",
-                version_evidence=[{"type": "lockfile", "source_file": str(go_sum), "parser": "go.sum (pre-1.17 module graph)"}],
+                version_confidence="low",
+                reachability_evidence="unknown",
+                version_evidence=[
+                    {
+                        "type": "lockfile",
+                        "source_file": str(go_sum),
+                        "parser": "go.sum (pre-1.17 checksum candidate)",
+                        "build_list_verified": False,
+                    }
+                ],
             )
         )
     return packages

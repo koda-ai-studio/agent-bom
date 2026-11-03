@@ -26,7 +26,7 @@ def _isolated_state(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
     monkeypatch.setenv("AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT", (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat())
     monkeypatch.delenv(public_tier.PUBLIC_READONLY_ENV, raising=False)
-    monkeypatch.delenv(public_tier.TRUSTED_PROXY_HOPS_ENV, raising=False)
+    monkeypatch.delenv(public_tier.FORWARDED_HOP_COUNT_ENV, raising=False)
     public_tier.reset_public_rate_windows()
     yield
     public_tier.reset_public_rate_windows()
@@ -255,7 +255,7 @@ def test_anonymous_intel_lookup_skips_operator_advisory_data(monkeypatch):
 
 def test_anonymous_rate_limit_is_per_caller_and_enforced(monkeypatch):
     monkeypatch.setenv(public_tier.PUBLIC_CALLER_RATE_LIMIT_ENV, "2")
-    monkeypatch.setenv(public_tier.TRUSTED_PROXY_HOPS_ENV, "1")
+    monkeypatch.setenv(public_tier.FORWARDED_HOP_COUNT_ENV, "1")
     with _stub_check():
         server = _public_server(monkeypatch)
         with TestClient(server.streamable_http_app(), base_url="http://localhost:8000") as client:
@@ -270,7 +270,7 @@ def test_anonymous_rate_limit_is_per_caller_and_enforced(monkeypatch):
 
 def test_spoofed_forwarded_prefix_does_not_reset_the_bucket(monkeypatch):
     monkeypatch.setenv(public_tier.PUBLIC_CALLER_RATE_LIMIT_ENV, "1")
-    monkeypatch.setenv(public_tier.TRUSTED_PROXY_HOPS_ENV, "1")
+    monkeypatch.setenv(public_tier.FORWARDED_HOP_COUNT_ENV, "1")
     with _stub_check():
         server = _public_server(monkeypatch)
         with TestClient(server.streamable_http_app(), base_url="http://localhost:8000") as client:
@@ -283,7 +283,7 @@ def test_spoofed_forwarded_prefix_does_not_reset_the_bucket(monkeypatch):
 
 def test_aggregate_anonymous_budget_caps_rotating_callers(monkeypatch):
     monkeypatch.setenv(public_tier.PUBLIC_TOTAL_RATE_LIMIT_ENV, "2")
-    monkeypatch.setenv(public_tier.TRUSTED_PROXY_HOPS_ENV, "1")
+    monkeypatch.setenv(public_tier.FORWARDED_HOP_COUNT_ENV, "1")
     with _stub_check():
         server = _public_server(monkeypatch)
         with TestClient(server.streamable_http_app(), base_url="http://localhost:8000") as client:
