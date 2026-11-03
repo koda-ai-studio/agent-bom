@@ -77,8 +77,9 @@ def test_failed_build_does_not_flush_or_mask_original_error(monkeypatch):
     calls = []
     monkeypatch.setattr(graph, "flush", lambda: calls.append("flush"))
     try:
-        with pytest.raises(ValueError, match="original build error"), graph:
-            raise ValueError("original build error")
+        with pytest.raises(ValueError, match="original build error"):
+            with graph:
+                raise ValueError("original build error")
         assert calls == []
     finally:
         backend.close()

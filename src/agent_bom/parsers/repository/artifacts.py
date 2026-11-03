@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
+from collections.abc import Iterator
+from contextlib import ExitStack, contextmanager
 from pathlib import Path, PurePosixPath
 
 from agent_bom.core.repository_identity import relative_path
@@ -14,6 +16,16 @@ MAX_ARTIFACT_BYTES = 2 * 1024 * 1024
 MAX_TOTAL_BYTES = 32 * 1024 * 1024
 MAX_ENTRIES = 10_000
 _SKIP = {".git", ".hg", ".svn", "node_modules", ".venv", "venv", "__pycache__", ".codex", ".claude", ".next", "dist", "build", "target"}
+
+
+@contextmanager
+def _descriptor(path: str | Path, flags: int, *, dir_fd: int | None = None) -> Iterator[int]:
+    """Keep one owner for each descriptor, including failed stream wrapping."""
+    descriptor = os.open(path, flags, dir_fd=dir_fd)
+    try:
+        yield descriptor
+    finally:
+        os.close(descriptor)
 
 
 class RepositoryReader:
@@ -41,21 +53,21 @@ class RepositoryReader:
         if self.bytes_read >= MAX_TOTAL_BYTES:
             self.note(clean, "total_byte_limit")
             return None
-        descriptors: list[int] = []
         try:
             if os.open in os.supports_dir_fd and hasattr(os, "O_NOFOLLOW"):
-                descriptor = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-                descriptors.append(descriptor)
-                parts = PurePosixPath(clean).parts
-                for part in parts[:-1]:
-                    descriptor = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=descriptor)
-                    descriptors.append(descriptor)
-                descriptor = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=descriptor)
-                descriptors.append(descriptor)
-                if not stat.S_ISREG(os.fstat(descriptor).st_mode):
-                    raise ValueError("not a regular file")
-                with os.fdopen(os.dup(descriptor), "rb") as stream:
-                    data = stream.read(min(max_bytes, MAX_TOTAL_BYTES - self.bytes_read) + 1)
+                with ExitStack() as opened:
+                    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+                    descriptor = opened.enter_context(_descriptor(self.root, directory_flags))
+                    parts = PurePosixPath(clean).parts
+                    for part in parts[:-1]:
+                        descriptor = opened.enter_context(_descriptor(part, directory_flags, dir_fd=descriptor))
+                    descriptor = opened.enter_context(
+                        _descriptor(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=descriptor)
+                    )
+                    if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                        raise ValueError("not a regular file")
+                    with os.fdopen(descriptor, "rb", closefd=False) as stream:
+                        data = stream.read(min(max_bytes, MAX_TOTAL_BYTES - self.bytes_read) + 1)
             else:
                 # Platforms without dir_fd still reject every symlink component.
                 if any(p.is_symlink() for p in [path, *path.parents] if p != self.root and p.is_relative_to(self.root)):
@@ -72,9 +84,6 @@ class RepositoryReader:
         except (OSError, ValueError):
             self.note(clean, "invalid_or_unreadable_artifact")
             return None
-        finally:
-            for descriptor in reversed(descriptors):
-                os.close(descriptor)
 
     def directories(self) -> list[str]:
         """Bound enumeration itself, not just the number of matched workspaces."""
