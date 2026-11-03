@@ -88,31 +88,33 @@ def test_railway_json_valid():
     assert data["deploy"]["restartPolicyType"] == "ON_FAILURE"
 
 
-def test_render_yaml_valid():
-    """render.yaml should be valid YAML with service config."""
-    import yaml
-
-    f = ROOT / "deploy" / "render.yaml"
-    assert f.exists(), "deploy/render.yaml is missing"
-    data = yaml.safe_load(f.read_text())
-    assert "services" in data
-    assert len(data["services"]) >= 1
-    svc = data["services"][0]
-    assert svc["type"] == "web"
-    assert "Dockerfile.sse" in svc["dockerfilePath"]
+RETIRED_DEPLOY_MANIFESTS = ("deploy/fly.toml", "deploy/render.yaml", "deploy/docker-compose.yml")
+_RETIRED_REFERENCE_SCAN = ("docs", "site-docs", "deploy", "scripts", ".github", "integrations")
+_RETIRED_REFERENCE_FILES = ("Makefile", "mkdocs.yml", "README.md", "AGENTS.md", "railway.json", "compose.yaml")
 
 
-def test_fly_toml_valid():
-    """fly.toml should be valid TOML with http_service config."""
-    import toml
+def test_retired_deploy_manifests_stay_removed_and_unreferenced():
+    """Retired PaaS/dev manifests must not come back or be pointed at by docs, CI, or tooling."""
+    for relative in RETIRED_DEPLOY_MANIFESTS:
+        assert not (ROOT / relative).exists(), f"{relative} was retired; do not re-add it"
 
-    f = ROOT / "deploy" / "fly.toml"
-    assert f.exists(), "deploy/fly.toml is missing"
-    data = toml.loads(f.read_text())
-    assert "build" in data
-    assert "http_service" in data
-    assert data["http_service"]["internal_port"] == 8423
-    assert data["http_service"]["force_https"] is True
+    candidates = [ROOT / name for name in _RETIRED_REFERENCE_FILES if (ROOT / name).is_file()]
+    for directory in _RETIRED_REFERENCE_SCAN:
+        base = ROOT / directory
+        if base.is_dir():
+            candidates.extend(
+                path
+                for path in base.rglob("*")
+                if path.is_file() and path.suffix in {".md", ".yml", ".yaml", ".toml", ".py", ".sh", ".json", ".txt", ""}
+            )
+    offenders = []
+    for path in candidates:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        offenders.extend(f"{path.relative_to(ROOT)}: {rel}" for rel in RETIRED_DEPLOY_MANIFESTS if rel in text)
+    assert not offenders, "references to retired deploy manifests:\n" + "\n".join(offenders)
 
 
 def test_procfile_exists():
@@ -206,7 +208,7 @@ def test_dev_compose_mounts_agent_bom_home_for_abom_user():
     """Dev compose profiles persist ~/.agent-bom into the abom user home."""
     import yaml
 
-    for relative in ("deploy/docker-compose.yml", "deploy/docker-compose.fullstack.yml"):
+    for relative in ("deploy/docker-compose.fullstack.yml",):
         data = yaml.safe_load((ROOT / relative).read_text(encoding="utf-8"))
         services = data["services"]
         service = services.get("agent-bom") or services.get("api")
@@ -1035,7 +1037,6 @@ def test_maintained_python_images_install_project_from_reviewed_lock(dockerfile)
 def test_compose_examples_pass_through_proxy_and_ca_env():
     """Compose examples should expose the same enterprise network env contract."""
     compose_files = [
-        ROOT / "deploy" / "docker-compose.yml",
         ROOT / "deploy" / "docker-compose.runtime-example.yml",
     ]
     required_tokens = [

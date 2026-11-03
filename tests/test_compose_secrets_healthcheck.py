@@ -28,11 +28,6 @@ ENV_EXAMPLE = ROOT / ".env.example"
 # Services that intentionally have no healthcheck — keep this list short and
 # explain each. Anything else missing a healthcheck fails the test.
 HEALTHCHECK_EXEMPT: dict[str, set[str]] = {
-    "docker-compose.yml": {
-        # Scanner runs as a one-shot `agent-bom scan ...` command and exits;
-        # depends_on uses postgres healthcheck for ordering.
-        "agent-bom",
-    },
     "docker-compose.platform.yml": {
         # One-shot Alembic upgrade (stamp init.sql baseline if needed, then
         # upgrade head). Exits 0; API waits on service_completed_successfully.
@@ -173,7 +168,7 @@ def test_env_example_does_not_store_postgres_passwords() -> None:
 
 @pytest.mark.parametrize(
     "compose_name",
-    ("docker-compose.yml", "docker-compose.fullstack.yml", "docker-compose.platform.yml"),
+    ("docker-compose.fullstack.yml", "docker-compose.platform.yml"),
 )
 def test_compose_stacks_never_interpolate_postgres_passwords(compose_name: str) -> None:
     path = COMPOSE_DIR / compose_name
@@ -230,19 +225,6 @@ def test_platform_api_fails_closed_for_auth_docs_and_local_scans() -> None:
     assert api.get("ports") == ["${AGENT_BOM_API_BIND_HOST:-127.0.0.1}:${API_PORT:-8422}:8422"]
     secrets = set(api.get("secrets") or [])
     assert {"api_key", "audit_hmac_key", "browser_session_signing_key", "connections_key"} <= secrets
-
-
-def test_deprecated_one_shot_scanner_does_not_receive_maintenance_credentials() -> None:
-    path = COMPOSE_DIR / "docker-compose.yml"
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    scanner = data["services"]["agent-bom"]
-    raw_env = scanner.get("environment") or []
-    env = {item.split("=", 1)[0]: item.split("=", 1)[1] for item in raw_env if isinstance(item, str) and "=" in item}
-
-    assert "AGENT_BOM_POSTGRES_MAINTENANCE_URL" not in env
-    assert "AGENT_BOM_POSTGRES_MAINTENANCE_PASSWORD_FILE" not in env
-    assert "postgres_maintenance_password" not in set(scanner.get("secrets") or [])
-    assert "postgres_maintenance_password" in set(data["services"]["postgres"].get("secrets") or [])
 
 
 def test_platform_migrate_runs_alembic_before_api() -> None:
@@ -485,7 +467,6 @@ def test_active_docker_docs_do_not_mount_config_under_root_home() -> None:
         ROOT / "docs" / "MCP_SERVER.md",
         ROOT / "site-docs" / "getting-started" / "install.md",
         ROOT / "site-docs" / "deployment" / "docker.md",
-        COMPOSE_DIR / "docker-compose.yml",
         COMPOSE_DIR / "docker-compose.fullstack.yml",
     ]
     offenders = [str(path.relative_to(ROOT)) for path in active_docs if "/root/.config" in path.read_text(encoding="utf-8")]
