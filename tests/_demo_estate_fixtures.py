@@ -117,6 +117,7 @@ def seeded_demo_estate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Itera
             from agent_bom.demo_estate.boot_seed import wait_for_demo_estate_boot_seed
 
             assert wait_for_demo_estate_boot_seed(600), "demo estate seed did not finish"
+            _wait_for_current_graph(client)
             yield client
     finally:
         _active_seeds.remove(tmp_path)
@@ -148,7 +149,27 @@ def shared_demo_estate_client(_module_demo_estate: TestClient) -> TestClient:
     # A per-test client starts with fresh latency controllers; keep that, so a
     # slow read earlier in the module cannot turn a later read into a 429.
     reset_backpressure_for_tests()
+    _wait_for_current_graph(_module_demo_estate)
+    reset_backpressure_for_tests()
     return _module_demo_estate
+
+
+def _wait_for_current_graph(client: TestClient) -> None:
+    """Topology assertions require a settled generation, not a cold-build reply.
+
+    Request latency/building behavior is tested separately by the bounded-read
+    contracts. Keep this fixture's semantic comparisons on one ready generation.
+    """
+    deadline = time.monotonic() + 120
+    while True:
+        response = demo_graph_get(client, "/v1/graph", {"limit": 1})
+        if response.status_code == 200:
+            assert response.json()["nodes"], "demo current graph must contain evidence"
+            return
+        assert response.status_code == 503, response.text
+        assert "current graph is being prepared" in response.text, response.text
+        assert time.monotonic() < deadline, response.text
+        time.sleep(0.1)
 
 
 def demo_graph_get(client: TestClient, path: str, params: dict):

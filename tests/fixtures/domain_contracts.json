@@ -578,6 +578,7 @@
         "file_path": "unknown",
         "iac": true,
         "line_number": 0,
+        "occurrence_id": "3955b150-9403-51e8-b85a-2c46163d37a9",
         "repository_relative_path": null,
         "rule_id": "TF-001",
         "scan_type": "iac"

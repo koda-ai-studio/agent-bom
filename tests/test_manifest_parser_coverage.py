@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import builtins
 import json
+import os
 from collections.abc import Callable
 from pathlib import Path
 
@@ -87,6 +88,7 @@ def test_manifest_read_failure_records_named_coverage_gap(
 
     original_path_open = Path.open
     original_builtin_open = builtins.open
+    original_os_open = os.open
 
     def denied_path_open(self: Path, *args, **kwargs):
         if self == target:
@@ -98,8 +100,17 @@ def test_manifest_read_failure_records_named_coverage_gap(
             raise OSError("simulated unreadable manifest")
         return original_builtin_open(file, *args, **kwargs)
 
+    def denied_os_open(file, *args, **kwargs):
+        # Repository readers use no-follow directory descriptors for safety.
+        if Path(file) == target or (kwargs.get("dir_fd") is not None and str(file) == target.name):
+            raise OSError("simulated unreadable manifest")
+        return original_os_open(file, *args, **kwargs)
+
     monkeypatch.setattr(Path, "open", denied_path_open)
     monkeypatch.setattr(builtins, "open", denied_builtin_open)
+    monkeypatch.setattr(os, "open", denied_os_open)
+    if original_os_open in os.supports_dir_fd:
+        monkeypatch.setattr(os, "supports_dir_fd", os.supports_dir_fd | {denied_os_open})
 
     assert parser(tmp_path) == []
     warnings = scanner_state.consume_coverage_warnings()

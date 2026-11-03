@@ -46,6 +46,7 @@ def _normalize_str(value: str, tmp: str) -> str:
     value = value.replace(__version__, "<VERSION>")
     value = _UUID.sub("<UUID>", value)
     value = _TIMESTAMP.sub("<TS>", value)
+    value = re.sub(r"<path:agent-bom-demo-dir-[^>]+>", "<path:agent-bom-demo-dir-TMP>", value)
     return _LONG_HEX.sub("<HEX>", value)
 
 
@@ -160,6 +161,8 @@ def test_scan_characterization(name: str, tmp_path: Path, monkeypatch: pytest.Mo
 
 
 def test_normalizer_strips_only_volatile_values() -> None:
+    assert _normalize_str("<path:agent-bom-demo-dir-random123>", "/tmp/xyz") == "<path:agent-bom-demo-dir-TMP>"
+    assert _normalize_str("<path:customer-project>", "/tmp/xyz") == "<path:customer-project>"
     raw = {
         "scan_id": "7f3e4b2a-9c1d-5f8e-a0b4-12c3d4e5f6a7",
         "generated_at": "2026-09-27T10:11:12.123456Z",
