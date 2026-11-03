@@ -49,20 +49,21 @@ Source coverage and missing location or access evidence must be evaluated separa
 
 ## Read a compact cloud investigation
 
-In a small cloud snapshot, read left to right: account scope, hosting or entry
-points, application workloads, identities, then data resources. An API gateway
-is an entry point; an application workload can authenticate as a role; a role's
-recorded permissions relate it to a data resource. Relationship arrows and
-labels retain their recorded direction and evidence basis. Category headings
-organize the canvas without adding ownership boundaries. **Contains ×N** and
-**Hosts ×N** sit beside their source asset and count distinct connected assets
-in the displayed graph, not total inventory. Individual links remain inspectable.
+In a small cloud snapshot, follow connected branches from account scope through
+hosting, application workloads, identities and data resources. Placement follows
+recorded relationships rather than fixed category columns. Names appear above
+their types; hover an asset for additional context. Relationship arrows retain
+their recorded direction, with relationship and evidence details available on
+hover or keyboard focus. A modeled permission does not establish successful access.
 
-A finding with exactly one affected asset appears as a compact attachment beneath
-that asset, retaining its identifier, severity and any KEV marker. Shared
-findings, rollups, unknown workload kinds and larger graphs keep the general
-layout rather than implying an arbitrary owner. Grouping changes presentation,
-not the stored records or reachability verdict. On phones, use the Paths list
+A finding with exactly one affected asset is initially grouped on that asset.
+The count badge describes linked findings and their recorded highest severity on
+hover or focus. Select the badge or **Expand findings** to show the original
+finding nodes, including their names, types, severity indicators and KEV markers.
+Expanded findings have no duplicate count badge. Shared findings, rollups,
+unknown workload kinds and larger graphs keep the general layout rather than
+implying an arbitrary owner. Grouping changes presentation, not the stored
+records or reachability verdict. On phones, use the Paths list
 for the overview and Graph for readable inspection; **Fit all** shows the whole
 loaded topology, which can require zooming back in to read labels.
 

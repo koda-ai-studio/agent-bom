@@ -1,5 +1,6 @@
 "use client";
 
+import { useCloudFindingDisclosure } from "@/hooks/use-cloud-finding-disclosure";
 import { ASSET_BASE } from "@/lib/asset-base";
 import { useRelationshipLabelControl } from "@/components/relationship-label-control";
 import { GraphFocusedPathDecision } from "@/components/graph-focused-path-decision";
@@ -10,7 +11,6 @@ import { ScopeBreadcrumbChip } from "@/components/graph-scope-breadcrumb";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import { GraphInvestigationContextControls } from "@/components/graph-investigation-context-controls";
-import { GraphCloudGroups } from "@/components/graph-cloud-groups";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
@@ -101,6 +101,19 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
     retryGraph, graphTruncated,
   } = page;
   const relationshipLabels = useRelationshipLabelControl(displayEdges);
+  const disclosed = useCloudFindingDisclosure(presentation.nodes, relationshipLabels.edges, selectedNodeId, presentation.storageKey, presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
+  const toggleFindingGroups = () => {
+    if (!disclosed.collapsed) {
+      if (presentation.nodes.find(node => node.id === selectedNodeId)?.data.readingOwner) {
+        setSelectedNode(null);
+        setSelectedNodeId(null);
+        setPinnedFocusId(null);
+        setHoveredNodeId(null);
+      }
+      setSelectedRelationship(null);
+    }
+    disclosed.toggleAll();
+  };
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   if (loadingSnapshots) {
     return (
@@ -204,7 +217,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
       {!investigationMode && !firstFramePending && flow.summary && (
         <div
           data-testid="graph-headline-metrics"
-          className="rounded-xl border border-outline bg-surface/80 px-3 py-1.5 text-xs text-ink-secondary"
+          className="text-xs text-ink-secondary"
         >
           {formatGraphHeadline(flow.summary, snapshotAttackPathCount)}
           {flow.summary.costUsd30d > 0 && (
@@ -326,7 +339,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           </div>
 
           <GraphLensSwitcher variant="compact" scanId={selectedScanId || undefined} />
-          <div>
+          <div className="hidden sm:block">
             {!investigationMode && <GraphAnalysisStatusBanner
               status={graphData?.stats.analysis_status?.attack_path_fusion}
               compact
@@ -373,7 +386,10 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
 
           <div className="relative mt-1">
           <GraphViewControls
-            actions={!narrowViewport ? <div className="order-first flex min-w-0 flex-1 flex-wrap items-center gap-2">{scopeNavigation}{snapshotViewControls}{graphSearchForm}</div> : <details className="relative ml-auto" data-testid="mobile-graph-search">
+            actions={!narrowViewport ? <div className="order-first flex min-w-0 flex-1 flex-wrap items-center gap-2">{scopeNavigation}{snapshotViewControls}<details className="relative ml-auto">
+              <summary className="graph-page-action cursor-pointer">Search graph</summary>
+              <div className="absolute right-0 top-full z-30 mt-2 w-96 max-w-[calc(100vw-4rem)] rounded-xl border border-outline bg-surface p-3 shadow-lg">{graphSearchForm}</div>
+            </details></div> : <details className="relative ml-auto" data-testid="mobile-graph-search">
               <summary className="graph-page-action cursor-pointer">Search graph</summary>
               <div className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-4rem)] rounded-xl border border-outline bg-surface p-3 shadow-lg">
                 {graphSearchForm}
@@ -392,6 +408,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             estateSummary={rollupCanvasOwnsPresentation}
             focusedPath={Boolean(selectedAttackPath)}
             onReset={() => {
+              disclosed.reset();
               if (investigationMode) {
                 // Same root, investigation defaults: depth 1, every layer and relationship, a fresh fit.
                 setFilters(current => createInvestigationGraphFilters(current));
@@ -596,10 +613,13 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           {!firstFramePending && (showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
           {showViewportScope && (
             <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
-              <span>{scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}{scenarioElements.unconnected.length > 0 && ` · ${scenarioElements.unconnected.length} unconnected items`}</span>
+              {disclosed.collapsed ? <span title={`${displayNodes.length} total nodes and ${displayEdges.length} total relationships loaded`}>
+                Graph · {disclosed.nodes.filter(node => !node.hidden).length} visible nodes · {disclosed.collapsed} grouped findings
+              </span> : <span>{scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}{scenarioElements.unconnected.length > 0 && ` · ${scenarioElements.unconnected.length} unconnected items`}</span>}
               {selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode && <button type="button" onClick={() => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId)} className="text-foreground underline underline-offset-4">{scenarioExpanded ? "Focus changes" : "Show full graph"}</button>}
               {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
               <button type="button" onClick={fitVisible} className="text-foreground underline underline-offset-4">Fit all</button>
+              {disclosed.available && <button type="button" onClick={toggleFindingGroups} className="text-foreground underline underline-offset-4">{disclosed.collapsed ? `Expand findings (${disclosed.collapsed} grouped)` : "Collapse findings"}</button>}
 
           {investigationMode?.truncated && rootConnections && <span data-testid="graph-connection-progress">Showing {rootConnections.loaded} of {rootConnections.total} connections</span>}
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
@@ -610,13 +630,27 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}
             onOpen={() => { setChangesOpen(true); if (!viewingCurrentEstate) setComparisonRequested(true); }}
             onClearHighlight={() => { setDriftLensActive(false); setDriftFilter("all"); highlight.clear(); }} />}
+          {narrowViewport ? <details className="ml-auto text-xs">
+            <summary className="cursor-pointer text-ink-secondary">Graph options</summary>
+            <div className="flex flex-wrap items-center gap-3 py-2">
           {graphRenderer.kind === "react-flow" && relationshipLabels.control}
-          {showScopeEvidence && <GraphScopeEvidence edges={relationshipLabels.edges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
+          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
           {showContextControls && investigationContext && <GraphInvestigationContextControls inline
             groups={investigationContext.groups} selected={selectedContextGroup}
             visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
             crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
           {showLegend && <div className="ml-auto text-right has-[details[open]]:ml-0 has-[details[open]]:basis-full"><GraphLegendDock items={legendItems} popover /></div>}
+            </div>
+          </details> : <>
+          {graphRenderer.kind === "react-flow" && relationshipLabels.control}
+          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
+          {showContextControls && investigationContext && <GraphInvestigationContextControls inline
+            groups={investigationContext.groups} selected={selectedContextGroup}
+            visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
+            crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
+          {showLegend && <div className="ml-auto text-right has-[details[open]]:ml-0 has-[details[open]]:basis-full"><GraphLegendDock items={legendItems} popover /></div>}
+          </>}
+
           </div>}
           <GraphChangesPanel open={changesOpen} changes={viewingCurrentEstate ? graphChanges.estateChanges : null}
             loading={graphChanges.loading} error={graphChanges.error}
@@ -737,11 +771,12 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             />
           ) : (
             <ReactFlow
-              style={readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport)}
+              style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport),
+                ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": `${Math.min(156, 64 / Math.max(graphViewport.zoom, 0.1))}px` } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
-              nodes={presentation.nodes}
-              edges={relationshipLabels.edges}
+              nodes={disclosed.nodes}
+              edges={disclosed.edges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
               // Ordinary views have one camera owner: GraphCanvasAutoFit.
@@ -779,7 +814,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 if (edge) { event.preventDefault(); event.stopPropagation(); inspectRelationship(edge); }
               }}
               onNodeClick={onNodeClick}
-              onNodeMouseEnter={onNodeMouseEnter}
+              onNodeMouseEnter={(event, node) => { if (!node.data.readingGroup) onNodeMouseEnter(event, node); }}
               onNodeMouseLeave={onNodeMouseLeave}
               onNodesChange={presentation.onNodesChange}
               onNodeDragStop={presentation.onNodeDragStop}
@@ -800,13 +835,12 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 setBlastError(null);
               }}
             >
-              <GraphCloudGroups />
               <GraphCanvasAutoFit
                 padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
-                navigationIds={selectedAttackPath?.hops}
+                navigationIds={selectedAttackPath?.hops ?? (disclosed.available ? disclosed.nodes.filter(node => !node.hidden).map(node => node.id) : undefined)}
                 enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
-                layoutKey={compactLayoutKey}
+                layoutKey={`${compactLayoutKey}:${disclosed.key}`}
                 anchorId={selectedNodeId ?? investigationMode?.rootId}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
                 preserveViewport={manualCamera || presentation.restoredSavedState}

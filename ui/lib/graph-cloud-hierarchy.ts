@@ -6,7 +6,6 @@ import { assetKindLabel } from "@/lib/asset-icon-registry";
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
 const LANES: Record<string, number> = { account: 0, cluster: 1, apiGateway: 1, container: 2,
   role: 3, serviceAccount: 3, managedIdentity: 3, servicePrincipal: 3, dataStore: 4 };
-const LANE_X = [0, 600, 1200, 1940, 2680] as const;
 const GROUPS = ["Account scope", "Infrastructure", "Applications", "Identities", "Data"] as const;
 const CAPTIONS: Record<string, string> = { account: "Account", cluster: "Cluster",
   apiGateway: "API gateway", container: "Application", role: "Permission role",
@@ -34,41 +33,66 @@ export function cloudHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
     const link = links[0]!;
     const owner = link.data?.relationship === "affects" && link.source === finding.id ? link.target
       : link.data?.relationship === "vulnerable_to" && link.target === finding.id ? link.source : null;
-    if (!owner || !byId.has(owner) || FINDINGS.has(byId.get(owner)!.data.nodeType)
-      || [...owners.values()].includes(owner)) return null;
+    if (!owner || !byId.has(owner) || FINDINGS.has(byId.get(owner)!.data.nodeType)) return null;
     owners.set(finding.id, owner); attachments.add(link.id);
   }
-  const lanes = new Map<number, Node<LineageNodeData>[]>();
-  for (const n of nodes.filter(n => !FINDINGS.has(n.data.nodeType))) {
-    const lane = LANES[n.data.nodeType]!;
-    lanes.set(lane, [...(lanes.get(lane) ?? []), n]);
+  // Build placement from recorded containment/hosting/identity relationships.
+  // Cross-links (including exposure) keep their direction but do not invent a parent.
+  const visible = nodes.filter(n => !n.hidden);
+  const parents = new Map<string, string>();
+  for (const e of [...edges].sort((a, b) => a.id.localeCompare(b.id))) {
+    if (!e.hidden && ["contains", "hosts", "authenticates_as", "has_permission"].includes(String(e.data?.relationship))
+      && byId.has(e.source) && byId.has(e.target) && !byId.get(e.source)!.hidden && !byId.get(e.target)!.hidden) {
+      if (parents.has(e.target) && parents.get(e.target) !== e.source) return null;
+      parents.set(e.target, e.source);
+    }
   }
-  if ([...lanes.values()].some(lane => lane.length > 3)) return null;
-  const rowCount = Math.max(...[...lanes.values()].map(lane => lane.length));
+  for (const [finding, owner] of owners) if (!byId.get(finding)!.hidden) parents.set(finding, owner);
   const positions = new Map<string, { x: number; y: number }>();
-  for (const [lane, members] of [...lanes.entries()].sort(([a], [b]) => a - b)) {
-    const parentRows = (n: Node) => edges.filter(e => e.target === n.id && !attachments.has(e.id))
-      .flatMap(e => positions.has(e.source) ? [positions.get(e.source)!.y] : []);
-    const preferredRow = (n: Node) => {
-      const rows = parentRows(n);
-      return rows.length ? rows.reduce((a, b) => a + b, 0) / rows.length : 0;
-    };
-    members.sort((a, b) => preferredRow(a) - preferredRow(b) || a.id.localeCompare(b.id)).forEach((n, row) => {
-      const y = members.length === 1 && parentRows(n).length ? preferredRow(n) : ((rowCount - members.length) / 2 + row) * 760;
-      positions.set(n.id, { x: LANE_X[lane]!, y });
+  const visiting = new Set<string>();
+  type Branch = { id: string; depth: number; y: number }[];
+  // Keep the deepest recorded asset branch on a shared baseline. Side branches
+  // occupy the nearest free row; entity categories never determine coordinates.
+  const branch = (id: string): Branch | null => {
+    if (visiting.has(id)) return null;
+    visiting.add(id);
+    const children = visible.filter(n => parents.get(n.id) === id).sort((a, b) => a.id.localeCompare(b.id));
+    const branches: Branch[] = [];
+    for (const child of children) {
+      const tree = branch(child.id);
+      if (!tree) return null;
+      branches.push(tree);
+    }
+    const assetDepth = (tree: Branch) => Math.max(...tree.filter(n => !FINDINGS.has(byId.get(n.id)!.data.nodeType)).map(n => n.depth), -1);
+    branches.sort((a, b) => assetDepth(b) - assetDepth(a) || a[0]!.id.localeCompare(b[0]!.id));
+    const placed: Branch = [{ id, depth: 0, y: 0 }];
+    branches.forEach((tree, index) => {
+      let offset = 0;
+      const sign = byId.get(id)!.data.nodeType === "account" ? 1 : -1;
+      const collides = () => tree.some(n => placed.some(other => other.depth === n.depth + 1 && Math.abs(other.y - n.y - offset) < 340));
+      if (index) offset = sign * 340;
+      while (collides()) offset += sign * 340;
+      placed.push(...tree.map(n => ({ ...n, depth: n.depth + 1, y: n.y + offset })));
     });
+    visiting.delete(id);
+    return placed;
+  };
+  let bottom = 0;
+  for (const root of visible.filter(n => !parents.has(n.id)).sort((a, b) => a.id.localeCompare(b.id))) {
+    const tree = branch(root.id);
+    if (!tree) return null;
+    const top = Math.min(...tree.map(n => n.y));
+    for (const n of tree) positions.set(n.id, { x: n.depth * 600, y: n.y - top + bottom });
+    bottom += Math.max(...tree.map(n => n.y)) - top + 340;
   }
-  for (const [finding, owner] of owners) {
-    const at = positions.get(owner)!;
-    positions.set(finding, { x: at.x, y: at.y + 430 });
-  }
+  if (positions.size !== visible.length) return null;
   const connectionSummaries = new Map(nodes.map(n => [n.id, ["contains", "hosts"].flatMap(relationship => {
     const targets = [...new Set(edges.filter(e => e.source === n.id && e.data?.relationship === relationship && byId.has(e.target) && !byId.get(e.target)?.hidden && !e.hidden)
       .map(e => e.target))].sort();
-    return targets.length > 1 ? [{ relationship, label: `${relationship === "hosts" ? "Hosts" : "Contains"} ×${targets.length}`, targets }] : [];
+    return targets.length > 1 ? [{ relationship, label: `${targets.length} ${relationship === "hosts" && targets.every(id => byId.get(id)?.data.nodeType === "container") ? "applications" : "resources"}`, targets }] : [];
   })]));
   return {
-    nodes: nodes.map(n => ({ ...n, position: positions.get(n.id)!, style: { ...n.style, minHeight: FINDINGS.has(n.data.nodeType) ? 200 : 424, paddingTop: FINDINGS.has(n.data.nodeType) ? 0 : 100 },
+    nodes: nodes.map(n => ({ ...n, position: positions.get(n.id) ?? n.position, style: { ...n.style, minHeight: 300, paddingTop: 0 },
       data: { ...n.data, readingGroup: GROUPS[LANES[n.data.nodeType] ?? LANES[byId.get(owners.get(n.id) ?? "")?.data.nodeType ?? ""]!],
         readingConnections: connectionSummaries.get(n.id), readingOwner: owners.get(n.id), readingFinding: FINDINGS.has(n.data.nodeType), readingLabel: n.data.nodeType === "dataStore"
         ? assetKindLabel({ nodeType: n.data.nodeType, entityType: n.data.entityType, attributes: n.data.attributes }) === "Data"
@@ -79,8 +103,8 @@ export function cloudHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
       const qualifier = accessEvidenceQualifier(relationship, e.data);
       const verb = relationship === "authenticates_as" && byId.get(e.target)?.data.nodeType !== "role" ? "Uses identity" : VERBS[relationship];
       return { ...e, ...(verb ? { label: `${verb}${qualifier ? ` · ${qualifier}` : ""}` } : {}),
-        ...(attachments.has(e.id) ? { targetHandle: "context" } : {}),
-        data: { ...e.data, findingAttachment: attachments.has(e.id), individualLabel: true, stackedQualifier: true, quietLabel: attachments.has(e.id) || (connectionSummaries.get(e.source)?.some(s => s.relationship === relationship) ?? false), boundedOverview: true, roomyOverview: true, directionEmphasis: true },
+        ...(attachments.has(e.id) && owners.get(e.source) ? { sourceHandle: "context", targetHandle: "context" } : {}),
+        data: { ...e.data, individualLabel: true, stackedQualifier: true, quietLabel: true, boundedOverview: true, roomyOverview: true, directionEmphasis: true },
       };
     }),
   };
