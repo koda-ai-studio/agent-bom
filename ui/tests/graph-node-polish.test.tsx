@@ -88,3 +88,20 @@ describe("vendor badge and environment chip on asset nodes", () => {
     expect(visibleText(root)).not.toContain("Container");
   });
 });
+
+
+it("uses an unboxed finding glyph and puts its type below the name", () => {
+  const root = renderNode("misconfigNode", { label: "Public API stage has no WAF association", nodeType: "misconfiguration", readingFinding: true, readingOwner: "gateway", readingLabel: "Configuration finding" });
+  const card = root.querySelector("[data-graph-entity]")!;
+  expect(card.className).not.toContain("bg-surface-elevated");
+  const name = card.querySelector("p")!;
+  expect(name.textContent).toBe("Public API stage has no WAF association");
+});
+
+it("keeps visible child counts in the tooltip and removes a finding count once expanded", () => {
+  const root = renderNode("containerNode", { label: "workload", nodeType: "container", readingConnections: [{ relationship: "hosts", label: "2 applications", targets: ["a", "b"] }],
+    readingFindings: { count: 1, expanded: true, toggle: () => {} } });
+  expect(root.querySelector("[data-graph-entity]")?.getAttribute("title")).toContain("Hosts 2 applications in this view");
+  expect(root.querySelector("[data-asset-connections]")).toBeNull();
+  expect(root.querySelector("[data-finding-disclosure]")).toBeNull();
+});

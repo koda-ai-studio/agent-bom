@@ -61,7 +61,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     if (!enabled || !initialized || !width || !height || !windowHeight) return;
     const frameElement = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");
     if (!frameElement) return;
-    const nodes = getNodes();
+    const nodes = getNodes().filter(node => !node.hidden);
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
     const frameSize = graphAdaptiveFrame({
       bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length,
@@ -94,7 +94,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
       ...(focus ? phone ? { nodes: focus, minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width) } : {}) };
     const fitIds = focus ? new Set(focus.map(node => node.id)) : null;
     // Convergence must measure exactly the nodes passed to fitView.
-    const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => fitIds.has(node.id)) : getNodes());
+    const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => !node.hidden && fitIds.has(node.id)) : getNodes().filter(node => !node.hidden));
     let cancelled = false;
     const frames: number[] = [];
     const settle = (pass: number) => {
@@ -154,7 +154,7 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
           aria-label={`Center graph node: ${String(target.data.label ?? target.id)}`} onClick={() => void focus(target)}>
           {String(target.data.label ?? target.id)}
         </button>
-        <span className="block">Pan for connections · Fit all for overview</span>
+        <span className="sr-only">Pan for connections · Fit all for overview</span>
       </div>
       <button type="button" aria-label="Next graph node" disabled={index >= ordered.length - 1}
         className="graph-page-action min-h-11 px-3 disabled:opacity-40"

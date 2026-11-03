@@ -511,6 +511,7 @@ test("identity investigation links preserve the selected root during client navi
   const query = page.waitForRequest((request) => request.url().endsWith("/v1/graph/query") && request.method() === "POST");
   await page.getByRole("link", { name: /Investigated identity.*86/ }).click();
   expect((await query).postDataJSON()).toMatchObject({ scan_id: scanId, roots: ["pkg:42"], max_depth: 1, max_nodes: 4, max_edges: 96 });
+  await page.getByText("Search graph", { exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Search nodes, tags, severities, or attributes" })).toHaveValue("Investigated identity");
   await expect(page).toHaveURL(/root=pkg%3A42/);
   await expect(page.getByTestId("sigma-graph-overview")).toBeHidden();
