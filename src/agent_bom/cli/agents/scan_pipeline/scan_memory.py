@@ -46,7 +46,7 @@ def target_parts(opts: ScanOptions) -> dict[str, Any]:
 
 
 def _eligible(opts: ScanOptions) -> bool:
-    from agent_bom import last_scan_summary
+    from agent_bom.storage import last_scan_summary
 
     if last_scan_summary.disabled() or detect_ci_environment().get("is_ci"):
         return False
@@ -61,7 +61,7 @@ def remember_and_report(opts: ScanOptions, st: ScanState) -> bool:
     """Print the delta header when a previous summary exists; return True on a first scan of this target."""
     if not _eligible(opts) or not isinstance(st.current_report_json, dict):
         return False
-    from agent_bom import last_scan_summary as memory
+    from agent_bom.storage import last_scan_summary as memory
 
     try:
         key = memory.target_key(target_parts(opts))

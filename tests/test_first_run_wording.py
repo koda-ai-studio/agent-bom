@@ -125,3 +125,15 @@ def test_dev_dependency_scope_is_recognised_for_console_labels() -> None:
 
     assert is_dev_dependency(cve("dev"))
     assert not is_dev_dependency(cve("runtime")) and not is_dev_dependency(cve("unknown"))
+
+
+def test_compliance_recommendation_does_not_call_mcp_tools_upgrades() -> None:
+    from agent_bom.output.compliance_narrative import _framework_recommendations
+    from agent_bom.output.compliance_narrative_models import ControlNarrative
+
+    control = ControlNarrative(
+        control_id="MCP01", title="t", status="fail", narrative="n", affected_packages=["browser_click on playwright"]
+    )
+    recs = " ".join(_framework_recommendations("OWASP MCP Top 10", "owasp-mcp", 1, 0, [control]))
+    assert "upgrades to" not in recs
+    assert "Fix these affected components first: browser_click on playwright." in recs

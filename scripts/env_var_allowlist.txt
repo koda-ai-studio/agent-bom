@@ -303,7 +303,7 @@ AGENT_BOM_GRAPH_RETENTION_OVERRIDES
 AGENT_BOM_HISTORY_MAX_REPORTS
 # Console-only next-step tips opt-out; read by cli/scan_hints.py, documented in docs/FIRST_RUN.md.
 AGENT_BOM_NO_HINTS
-# Opt-out for the per-target last-scan summary behind the console delta header; read by last_scan_summary.py.
+# Opt-out for the per-target last-scan summary behind the console delta header; read by storage/last_scan_summary.py.
 AGENT_BOM_NO_SCAN_MEMORY
 # Cap for local analytics mirrors and runtime observation tables on write.
 AGENT_BOM_GRAPH_WRITE_BATCH_SIZE

@@ -12,7 +12,7 @@ import pytest
 from click.testing import CliRunner
 from rich.console import Console
 
-from agent_bom import last_scan_summary as memory
+from agent_bom.storage import last_scan_summary as memory
 from agent_bom.cli import scan_hints
 
 _CI_VARS = ("CI", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL", "CIRCLECI", "TRAVIS", "TF_BUILD", "BITBUCKET_PIPELINE_UUID")
