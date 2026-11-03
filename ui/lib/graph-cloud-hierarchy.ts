@@ -5,6 +5,7 @@ import { assetKindLabel } from "@/lib/asset-icon-registry";
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
 const LANES: Record<string, number> = { account: 0, cluster: 1, apiGateway: 1, container: 2,
   role: 3, serviceAccount: 3, managedIdentity: 3, servicePrincipal: 3, dataStore: 4 };
+const LANE_X = [0, 520, 1040, 2000, 2960] as const;
 const CAPTIONS: Record<string, string> = { account: "Account · ownership scope", cluster: "Cluster · hosting",
   apiGateway: "API gateway · entry point", container: "Application workload", role: "Identity · permissions role",
   serviceAccount: "Identity · service account", managedIdentity: "Managed identity", servicePrincipal: "Identity · service principal",
@@ -50,7 +51,7 @@ export function cloudHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
     };
     members.sort((a, b) => preferredRow(a) - preferredRow(b) || a.id.localeCompare(b.id)).forEach((n, row) => {
       const y = members.length === 1 && parentRows(n).length ? preferredRow(n) : ((rowCount - members.length) / 2 + row) * 720;
-      positions.set(n.id, { x: lane * 640 + (lane >= 3 ? 400 : 0) + (lane === 4 ? 400 : 0), y });
+      positions.set(n.id, { x: LANE_X[lane]!, y });
     });
   }
   for (const [finding, owner] of owners) {
