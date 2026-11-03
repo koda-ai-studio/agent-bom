@@ -141,11 +141,11 @@ async def test_scheduled_scan_callback_drops_bypass_on_sqlite_and_restores(monke
         schedule_id="schedule",
         tenant_id=tenant,
         scan_config={},
-        next_run=None,
+        next_run="2020-01-01T00:00:00+00:00",
         cron_expression="0 * * * *",
     )
     seen = []
-    store = SimpleNamespace(list_due=lambda _: [schedule], get=lambda *a, **kw: None)
+    store = SimpleNamespace(list_due=lambda _: [schedule], get=lambda *a, **kw: schedule, put=lambda *a, **kw: None)
 
     async def stop(_):
         raise asyncio.CancelledError

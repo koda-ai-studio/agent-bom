@@ -47,7 +47,7 @@ test("repo overview renders failed SAST as failed rather than clean", async ({ p
       }),
     }),
   );
-  await page.route(`**/v1/scan/${job.job_id}`, (route) =>
+  await page.route(`**/v1/scan/${job.job_id}/dashboard`, (route) =>
     route.fulfill({ contentType: "application/json", body: JSON.stringify(job) }),
   );
   await page.route(`**/v1/scan/${job.job_id}/stream`, (route) =>

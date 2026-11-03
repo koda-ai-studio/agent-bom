@@ -648,7 +648,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("region", { name: "Start with evidence" }).getByRole("link", { name: "Get started" }).click();
       await expect(page).toHaveURL(/\/get-started\/?$/);
       await expect(page.getByRole("heading", { name: "Scan a project on your machine" })).toBeVisible();
-      await page.locator("summary").filter({ hasText: "Share evidence or connect a source" }).click();
+      await expect(page.locator("details").filter({ has: page.locator("summary", { hasText: "Connect or share evidence" }) })).toHaveAttribute("open", "");
       const start = page.getByRole("link", { name: "Choose a scan target" });
       await expect(start).toHaveAttribute("href", "/scan");
       const guide = page.getByRole("region", { name: "Start with evidence" });

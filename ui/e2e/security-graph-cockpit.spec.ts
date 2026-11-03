@@ -697,6 +697,7 @@ async function openPathQueue(page: Page) {
 }
 
 async function expectCockpitVisible(page: Page) {
+  if ((page.viewportSize()?.width ?? 1440) < 1024) await page.getByRole("button", { name: "Selected path", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Investigation" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Claude Desktop → CVE-2025-7783" }),
@@ -798,7 +799,7 @@ test("ranked persisted paths render before slower fix guidance", async ({ page }
 
   await page.goto("/security-graph?lens=attack-path");
   await openPathQueue(page);
-  await expect(page.getByText("#1 fix first")).toBeVisible();
+  await expect(page.getByLabel("Attack path queue").getByRole("button", { name: /^#1 ·/ })).toBeVisible();
   await expect(page.getByText(/Ranked paths are ready; fix guidance is still loading/)).toBeVisible();
   await expect(page.getByText("agent → server → package → finding")).toBeVisible();
 
@@ -936,6 +937,7 @@ test(`mobile selected path keeps its advisory id whole and edge labels inside th
 
   await page.goto("/security-graph?lens=attack-path");
   await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Selected path", exact: true }).click();
   const detail = page.getByTestId("selected-exposure-path");
   const title = detail.getByRole("heading", { level: 2 });
   await expect(title).toHaveText("Contractor Reviewer → CVE-2025-7783");
@@ -1009,7 +1011,7 @@ test("priority enrichment cannot replace or inflate the authoritative path queue
   await openPathQueue(page);
   const queue = page.getByLabel("Attack path queue");
   await expect(queue.getByText("Outside repository", { exact: false })).toHaveCount(0);
-  await queue.getByRole("button", { name: /#1 FIX FIRST/i }).click();
+  await queue.getByRole("button", { name: /^#1 ·/ }).click();
   const detail = page.getByRole("region", { name: "Selected path detail" });
   await expect(detail).toContainText("claude-desktop");
   await expect(detail).not.toContainText("Outside repository");
@@ -1049,7 +1051,7 @@ test(`a selected queue path missing from the canvas loads its exact graph in ${t
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
   if (width < 1024) await page.getByRole("button", { name: /Paths & filters/ }).click();
   await openPathQueue(page);
-  await page.getByLabel("Attack path queue").getByRole("button", { name: /#1 FIX FIRST/i }).click();
+  await page.getByLabel("Attack path queue").getByRole("button", { name: /^#1 ·/ }).click();
   const detail = page.getByRole("region", { name: "Selected path detail" });
   await page.waitForLoadState("networkidle");
   const viewNavigations: string[] = [];
@@ -1075,6 +1077,12 @@ test(`a selected queue path missing from the canvas loads its exact graph in ${t
       const frame = element.closest(".react-flow")!.getBoundingClientRect();
       return box.width >= 180 && box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
     });
+    for (const id of [source.id, target.id]) await expect.poll(() => inCanvas(id)).toBe(true);
+    // Opening the queue hides this mounted canvas. Reopening it must fit the
+    // visible panel, never reuse a camera calculated at zero width.
+    await page.getByRole("button", { name: /Paths & filters/ }).click();
+    await expect(canvas).not.toBeVisible();
+    await page.getByRole("button", { name: "Selected path", exact: true }).click();
     for (const id of [source.id, target.id]) await expect.poll(() => inCanvas(id)).toBe(true);
   }
   // Narrow panels start with readable node focus; the explicit overview still
@@ -1468,7 +1476,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByText("3 shown · 3 loaded paths", { exact: true })).toBeVisible();
     await expect(page.getByText(/3 from the path queue/)).toBeVisible();
     await openPathQueue(page);
-    await page.getByLabel("Attack path queue").getByRole("button", { name: /#1 fix first/ }).click();
+    await page.getByLabel("Attack path queue").getByRole("button", { name: /^#1 ·/ }).click();
     await page.getByRole("button", { name: "Connections", exact: true }).click();
     const explorer = page.getByRole("region", { name: "Expand path neighbors" });
     await explorer.getByRole("button", { name: "Expand neighbors of Billing repository" }).click();
@@ -2047,7 +2055,8 @@ for (const estateSize of [10, 1_000, 10_000]) {
         await expect.poll(() => page.locator(".react-flow__node").count()).toBeGreaterThan(0);
         expect(await page.locator(".react-flow__node").count()).toBeLessThanOrEqual(100);
         expect(requests.length).toBeGreaterThan(0);
-        expect(requests.every(limit => limit === 10)).toBe(true);
+        // Fetch 100 records for a representative ten-row queue; the canvas stays bounded.
+        expect(requests).toEqual([100]);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
         expect(errors).toEqual([]);
         await page.screenshot({ path: testInfo.outputPath(`bounded-${estateSize}-${theme}-${width}.png`), fullPage: true });
@@ -2062,7 +2071,7 @@ for (const theme of ["dark", "light"] as const) {
       await page.setViewportSize({ width, height: 900 });
       await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
       await routeCockpit(page);
-      await page.goto(`/security-graph?lens=attack-path&scan=${scanId}`);
+      await page.goto(`/security-graph?lens=attack-path&scan=${scanId}&node=agent%3Adesktop`);
       const workspace = page.getByRole("region", { name: "Investigation workspace" });
       await expect(workspace).toHaveAttribute("data-layout", "focused-path");
       await expect(page.getByTestId("selected-exposure-path")).toBeVisible();

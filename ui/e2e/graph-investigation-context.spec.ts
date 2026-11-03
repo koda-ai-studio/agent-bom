@@ -34,9 +34,13 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await page.getByTestId("graph-entity-drawer").getByRole("button", { name: "Close", exact: true }).click();
       await expect(page.getByTestId("graph-connections-list")).toContainText("Developer agent");
       await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
-      // The Graph view frames the loaded context; no one-node-at-a-time stepper.
+      // The phone keeps readable labels and lets the operator center each loaded node.
       await expect(page.locator('.react-flow__node[data-id="agent"]')).toBeVisible();
-      await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toHaveCount(0);
+      const navigation = page.getByRole("group", { name: "Navigate loaded graph nodes" });
+      await expect(navigation).toBeVisible();
+      await expect(navigation).toContainText("of 4");
+      await navigation.getByRole("button", { name: "Next graph node", exact: true }).click();
+      await expect(navigation).toContainText("2 of 4");
     }
     if (width === 390) await controls.getByLabel("Graph context", { exact: true }).selectOption("identity");
     else await controls.getByRole("button", { name: "Identity and access context", exact: true }).click();
@@ -174,8 +178,8 @@ test("larger investigation captions stay inside ordinary layout cards", async ({
   await fixture(page, [node("role", "role", "prod-ai-admin"), node("agent", "agent", "Developer Copilot"), ...servers],
     [edge("role", "agent", "can_access"), ...servers.map(server => edge("agent", server.id, "uses"))]);
   await page.goto("/graph?scan=snapshot&root=agent&lens=context&capture=1");
-  // Fifteen sibling servers arrive as one group; expanding restores every card.
-  await page.getByRole("button", { name: "Expand 15 members", exact: true }).click();
+  // Three named servers precede the twelve remaining siblings.
+  await page.getByRole("button", { name: "Expand 12 members", exact: true }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(17);
   await expect.poll(() => page.locator("[data-graph-entity]").evaluateAll(cards =>
     Math.max(...cards.map(card => parseFloat(getComputedStyle(card).width))))).toBeLessThanOrEqual(240);
@@ -197,15 +201,17 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(context.getByRole("region", { name: "Environment membership", exact: true })).toContainText("Production AI");
     await expect(context).toContainText("does not prove runtime execution");
     if (width === 1440) {
-      await expect(page.locator('.react-flow__node[data-id="agent"]')).toContainText("Host not recorded");
-      await expect(page.getByText("Includes · membership", { exact: true })).toBeVisible();
-      await page.getByRole("button", { name: "Zoom Out", exact: true }).click({ clickCount: 2 });
       const agentCard = page.locator('.react-flow__node[data-id="agent"]');
-      await expect.poll(async () => {
-        const hostSize = await agentCard.getByText("Host not recorded", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-        const kindSize = await agentCard.getByText("Workflow", { exact: true }).evaluate(el => parseFloat(getComputedStyle(el).fontSize));
-        return hostSize / kindSize;
-      }, { message: "Host context remains as readable as agent kind after zooming out" }).toBeGreaterThanOrEqual(0.95);
+      await expect(agentCard).toContainText("Support workflow");
+      await expect(agentCard).toContainText("Workflow");
+      // Missing host evidence belongs in the inspector; it must not be
+      // presented as a deployment claim or repeated as a canvas caption.
+      await expect(agentCard).not.toContainText("Host not recorded");
+      const membership = page.locator('.react-flow__edge[data-id="environment:contains:agent"]');
+      await membership.focus();
+      await membership.press("Enter");
+      await expect(page.getByLabel("Relationship details", { exact: true })).toContainText("Production AI");
+      await page.keyboard.press("Escape");
     }
     await page.screenshot({ path: info.outputPath(`agent-context-${theme}-${width}.png`), fullPage: true });
   });

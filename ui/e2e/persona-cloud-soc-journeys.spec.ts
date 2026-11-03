@@ -85,7 +85,7 @@ async function routeApi(page: Page) {
 
 async function openQueue(page: Page) {
   if ((page.viewportSize()?.width ?? 1440) < 1024) await page.getByRole("button", { name: /^Paths & filters/ }).click();
-  else await page.locator("#investigation-queue > summary").click();
+  else if (await page.locator("#investigation-queue").getAttribute("open") === null) await page.locator("#investigation-queue > summary").click();
 }
 
 test("cloud persona reaches a Snowflake → AWS path from the queue in three clicks", async ({ page }) => {

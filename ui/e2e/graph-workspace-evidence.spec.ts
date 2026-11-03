@@ -163,8 +163,8 @@ test("identity context survives bounded expansion and grouped drilldown", async 
     await expect.poll(async () => { await expandGroups(page); return page.locator(".react-flow__node").count(); }).toBe(count);
     await page.getByRole("button", { name: "Show more connections", exact: true }).click();
   }
-  await expect(page.locator(".react-flow__node")).toHaveCount(3);
-  await page.getByRole("button", { name: "Expand 22 members", exact: true }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(6);
+  await page.getByRole("button", { name: "Expand 19 members", exact: true }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(24);
   const context = page.getByLabel("Investigation context", { exact: true });
   await expect(context).toContainText("24 of 24 nodes in this view");

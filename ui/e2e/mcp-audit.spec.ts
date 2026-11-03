@@ -13,7 +13,7 @@ for (const scenario of [
     await page.route('**/v1/**', route => {
       const path = new URL(route.request().url()).pathname;
       if (path.startsWith('/v1/auth/')) return route.fulfill({ json: { authenticated: true, tenant_id: 'fixture', role: 'analyst', permissions: ['read'] } });
-      if (path === '/v1/scan/audit-scan' || path === '/v1/scan/audit-scan/status') return route.fulfill({ json: job });
+      if (path === '/v1/scan/audit-scan/dashboard' || path === '/v1/scan/audit-scan/status') return route.fulfill({ json: job });
       return route.fulfill({ status: 503, json: { detail: 'Outside audit fixture' } });
     });
     await page.goto('/scan?id=audit-scan');
