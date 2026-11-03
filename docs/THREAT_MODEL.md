@@ -67,8 +67,8 @@ expiry, and leave only the gates. Expired or malformed exceptions are not
 applied. Inline markers and ignore files are controlled by whoever can commit to
 the scanned repository; a policy `block` rule with `"waivable": false` rejects
 them, and only a tenant exception approved by a second admin can waive it.
-Repository scans through the API apply inline markers and the scan tenant's
-approved exceptions only. See `site-docs/features/iac-exceptions-policy.md`,
+Repository scans through the API and the MCP `scan` tool apply inline markers
+and the bound tenant's approved exceptions only. See `site-docs/features/iac-exceptions-policy.md`,
 `tests/test_iac_exceptions.py`, `tests/test_iac_policy.py` and
 `tests/api/test_iac_tenant_exceptions.py`.
 

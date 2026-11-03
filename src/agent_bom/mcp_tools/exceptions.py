@@ -7,7 +7,20 @@ from datetime import datetime
 
 from agent_bom.api.suppression_approval import ApprovalPersistenceError, exception_response, persist_approval
 from agent_bom.api.suppression_policy import expiry_window_error
-from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tenant import resolve_mcp_tenant_id, resolve_mcp_tool_tenant_id
+
+
+def _exception_store():
+    from agent_bom.api.stores import _get_exception_store
+
+    return _get_exception_store()
+
+
+def bound_tenant_iac_exceptions() -> list:
+    """Approved, unexpired IaC exceptions of the tenant this MCP server is bound to (same contract as API repo scans)."""
+    from agent_bom.suppression_rules import tenant_iac_exceptions
+
+    return tenant_iac_exceptions(_exception_store(), tenant_id=resolve_mcp_tenant_id())
 
 
 async def list_exceptions_impl(
@@ -18,10 +31,8 @@ async def list_exceptions_impl(
     _truncate_response,
 ) -> str:
     """List one bounded page of exception evidence for the bound tenant."""
-    from agent_bom.api.stores import _get_exception_store
-
     resolved_tenant = resolve_mcp_tool_tenant_id(tenant_id)
-    rows = _get_exception_store().list_all(status=status.strip() or None, tenant_id=resolved_tenant)
+    rows = _exception_store().list_all(status=status.strip() or None, tenant_id=resolved_tenant)
     bounded = rows[: max(1, min(limit, 500))]
     return _truncate_response(
         json.dumps(
@@ -53,7 +64,6 @@ async def request_exception_impl(
     """Create a pending exception through the same store as REST and UI."""
     from agent_bom.api.audit_log import log_action
     from agent_bom.api.exception_store import VulnException
-    from agent_bom.api.stores import _get_exception_store
 
     vuln_id = vulnerability_id.strip()
     clean_reason = exception_reason.strip()
@@ -82,7 +92,7 @@ async def request_exception_impl(
         expires_at=expires_at.strip(),
         tenant_id=resolved_tenant,
     )
-    _get_exception_store().put(exception, tenant_id=resolved_tenant)
+    _exception_store().put(exception, tenant_id=resolved_tenant)
     log_action(
         "exception_create",
         actor=actor,
@@ -104,13 +114,11 @@ async def approve_exception_impl(
     **_audit: str,
 ) -> str:
     """Activate one pending exception through the canonical lifecycle store."""
-    from agent_bom.api.stores import _get_exception_store
-
     clean_id = exception_id.strip()
     if not clean_id:
         return json.dumps({"status": "rejected", "error": "exception_id is required"})
     resolved_tenant = resolve_mcp_tool_tenant_id(tenant_id)
-    store = _get_exception_store()
+    store = _exception_store()
     exception = store.get(clean_id, tenant_id=resolved_tenant)
     if exception is None:
         return json.dumps({"status": "not_found", "error": "exception not found"})

@@ -19,8 +19,9 @@ Every accepted exception:
   the scan prints a warning. Within 14 days of expiry the scan prints a notice.
 
 A malformed exception never suppresses anything. A bad ignore-file entry or
-policy rule stops the scan with an error naming the entry; an inline marker
-with a malformed `expires=` is reported and not applied.
+policy rule stops the scan before anything is scanned, with an error naming the
+entry, whether or not the run includes IaC paths; an inline marker with a
+malformed `expires=` is reported and not applied.
 
 ## Where exceptions come from
 
@@ -110,9 +111,12 @@ curl -X PUT "$AGENT_BOM_URL/v1/exceptions/$ID/approve" -H "X-API-Key: $SECOND_AD
 An IaC exception needs an exact rule id, a path or resource scope, a reason and
 a bounded, timezone-aware expiry; the requester cannot approve it. Only
 approved, unexpired exceptions of the scan's tenant are applied when the API
-scans a repository. A revoked or expired one stops applying at the next scan.
-Repository scans through the API honour inline markers and tenant exceptions;
-they do not read an ignore file from the scanned repository.
+scans a repository, and when the MCP `scan` tool scans a project directory
+(the tenant the MCP server is bound to with `AGENT_BOM_MCP_TENANT_ID`). A revoked
+or expired one stops applying at the next scan. These repository scans honour
+inline markers and tenant exceptions; they do not read an ignore file from the
+scanned repository. If the exception store is unavailable, no tenant exception
+applies and the scan records a warning.
 
 ## Policy-as-code for IaC
 

@@ -12,7 +12,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
 from agent_bom.evidence.scan_run import scanner_warning_issues
-from agent_bom.mcp_server_scan import consume_repo_tree_inventory
+from agent_bom.mcp_server_scan import consume_repo_tree_iac, consume_repo_tree_inventory
 from agent_bom.mcp_tools.check_lookup import (
     incomplete_lookup_reason,
     resolution_malware_reason,
@@ -346,6 +346,8 @@ def _attach_pipeline_evidence(report, scanner_warnings: list[str], coverage_warn
     repo_inventory = consume_repo_tree_inventory()
     if repo_inventory:
         report.ai_inventory_data = {**(report.ai_inventory_data or {}), **repo_inventory}
+    if (repo_iac := consume_repo_tree_iac()) is not None:
+        report.iac_findings_data = repo_iac
 
 
 def _scan_report(report_cls, agents, blast_radii, scan_sources, *, offline: bool):
