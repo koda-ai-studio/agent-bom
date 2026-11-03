@@ -9,12 +9,14 @@ from __future__ import annotations
 import hashlib
 import json
 import threading
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Protocol, TypeVar
+from typing import Any, Callable, Iterator, Protocol, TypeVar
 
 _T = TypeVar("_T")
+_FINGERPRINT_BUFFER_BYTES = 2048
 
 
 @dataclass
@@ -248,6 +250,33 @@ def _normalize_request_payload(value: Any) -> Any:
     return value
 
 
+def _request_json_chunks(value: Any, encoder: json.JSONEncoder) -> Iterator[str]:
+    """Normalize one container at a time, retaining the existing canonical bytes."""
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(mode="json")
+    if isinstance(value, dict):
+        # Preserve string-key collision order and recursive key exclusion. Only
+        # this container's references are copied; descendants stay untouched.
+        items = {str(key): item for key, item in sorted(value.items(), key=lambda pair: str(pair[0])) if str(key) != "idempotency_key"}
+        yield "{"
+        for index, (key, item) in enumerate(items.items()):
+            if index:
+                yield ","
+            yield encoder.encode(key)
+            yield ":"
+            yield from _request_json_chunks(item, encoder)
+        yield "}"
+    elif isinstance(value, list | tuple):
+        yield "["
+        for index, item in enumerate(value):
+            if index:
+                yield ","
+            yield from _request_json_chunks(item, encoder)
+        yield "]"
+    else:
+        yield encoder.encode(value)
+
+
 def idempotency_request_fingerprint(payload: Any) -> str:
     """Return a stable fingerprint for comparing idempotent write retries.
 
@@ -256,15 +285,33 @@ def idempotency_request_fingerprint(payload: Any) -> str:
             (or otherwise cyclic) to normalize. Callers surface this as 422.
     """
     try:
-        normalized = _normalize_request_payload(payload or {})
         # The one-shot C encoder holds the GIL for the entire report, even
         # when this function runs in a worker thread. Incremental encoding
-        # keeps the same canonical bytes while allowing API requests to run
-        # between chunks and avoids allocating a second full report string.
+        # and normalization keep the same canonical bytes without an extra
+        # full tree of containers whose collection can stall other requests.
         digest = hashlib.sha256()
         encoder = json.JSONEncoder(sort_keys=True, separators=(",", ":"), default=str)
-        for chunk in encoder.iterencode(normalized):
-            digest.update(chunk.encode("utf-8"))
+        pending = bytearray()
+        for chunk in _request_json_chunks(payload or {}, encoder):
+            encoded = chunk.encode("utf-8")
+            if len(encoded) >= _FINGERPRINT_BUFFER_BYTES:
+                if pending:
+                    digest.update(pending)
+                    pending.clear()
+                digest.update(encoded)
+                time.sleep(0)
+            else:
+                pending.extend(encoded)
+                if len(pending) >= _FINGERPRINT_BUFFER_BYTES:
+                    # hashlib releases the GIL above 2047 bytes. Tiny token
+                    # updates otherwise keep competing with the API loop.
+                    digest.update(pending)
+                    pending.clear()
+                    # Give runnable request threads a turn; repeated tiny
+                    # Python tokens can otherwise reclaim the GIL immediately.
+                    time.sleep(0)
+        if pending:
+            digest.update(pending)
     except (ValueError, TypeError, RecursionError) as exc:
         raise IdempotencyPayloadError("Request payload is too deeply nested to process") from exc
     return digest.hexdigest()

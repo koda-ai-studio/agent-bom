@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-
 import pytest
 from starlette.testclient import TestClient
 
@@ -19,6 +17,7 @@ from agent_bom.push import sanitize_results
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 from tests.cloud import test_supabase_inventory as supabase_fixture
 from tests.cloud import test_vercel_inventory as vercel_fixture
+from tests.current_graph_http import current_graph_response
 
 TENANT = "connector-tenant"
 SCAN = {
@@ -77,19 +76,7 @@ def push_connector(client, report, tenant=TENANT):
 
 def graph(client, tenant=TENANT):
     """Assert the pushed evidence after its bounded asynchronous refresh finishes."""
-    deadline = time.monotonic() + 10
-    while True:
-        response = client.get("/v1/graph", params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=tenant))
-        body = response.json()
-        refreshing = response.status_code == 200 and body.get("collection_coverage", {}).get("freshness") == "previous_generation"
-        building = response.status_code == 503 and body.get("detail", {}).get("code") in {
-            "current_estate_building",
-            "current_estate_generation_rotating",
-        }
-        if not (refreshing or building):
-            return response
-        assert time.monotonic() < deadline, "current graph did not finish refreshing"
-        time.sleep(0.05)
+    return current_graph_response(client, params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=tenant))
 
 
 def node_ids(client, tenant=TENANT):

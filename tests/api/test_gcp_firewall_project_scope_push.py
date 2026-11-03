@@ -12,6 +12,7 @@ from agent_bom.api.server import app
 from agent_bom.api.store import InMemoryJobStore
 from agent_bom.push import sanitize_results
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
+from tests.current_graph_http import current_graph_response
 from tests.graph.test_gcp_firewall_project_scope import FW_A, FW_B, VM_A, VM_B, _inventories
 
 TENANT = "gcp-fw-tenant"
@@ -49,7 +50,7 @@ def _push(client, source_id: str, inventories: list[dict]) -> None:
 
 
 def _current_graph(client) -> dict:
-    response = client.get("/v1/graph", params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=TENANT))
+    response = current_graph_response(client, params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=TENANT))
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -78,13 +79,38 @@ def test_one_push_with_two_projects_keeps_both_firewalls(client, reverse: bool) 
 
 
 @pytest.mark.parametrize("reverse", [False, True], ids=["a-then-b", "b-then-a"])
-def test_separate_project_pushes_keep_both_firewalls(client, reverse: bool) -> None:
+@pytest.mark.parametrize("deferred_refresh", [False, True])
+def test_separate_project_pushes_keep_both_firewalls(client, monkeypatch, reverse: bool, deferred_refresh: bool) -> None:
+    from tests.api.test_current_graph_unpinned_reads import _hold_materialize
+
     inventories = _inventories()
     if reverse:
         inventories.reverse()
-    for inventory in inventories:
-        _push(client, f"gcp-{inventory['project_id']}", [inventory])
-    _assert_both_projects_survive(_current_graph(client))
+    first, second = inventories
+    _push(client, f"gcp-{first['project_id']}", [first])
+    _current_graph(client)
+    release, previous = None, []
+    if deferred_refresh:
+        entered, release = _hold_materialize(stores._get_graph_store())
+        get = client.get
+
+        def release_after_previous(*args, **kwargs):
+            response = get(*args, **kwargs)
+            if response.json().get("collection_coverage", {}).get("freshness") == "previous_generation":
+                assert entered.is_set()
+                previous.append(response.json())
+                release.set()
+            return response
+
+        monkeypatch.setattr(client, "get", release_after_previous)
+    try:
+        _push(client, f"gcp-{second['project_id']}", [second])
+        _assert_both_projects_survive(_current_graph(client))
+    finally:
+        if release:
+            release.set()
+    if deferred_refresh:
+        assert previous, "the test must exercise the explicit previous-generation response"
 
 
 @pytest.mark.parametrize("legacy", [False, True], ids=["scoped-collector-ids", "legacy-router-nat-ids"])
