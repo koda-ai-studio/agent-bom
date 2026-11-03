@@ -1204,3 +1204,9 @@ def test_iac_exception_scope_is_additive_chained_and_in_runtime_schema() -> None
         assert ddl in runtime
     assert "version=4" in migration and "version=4" in runtime
     assert "DROP" not in migration.upper().replace("DROPPING", "")
+
+
+def test_fleet_upgrade_continues_from_the_published_iac_revision() -> None:
+    """An existing IaC deployment must have a linear upgrade to the ingest schema."""
+    migration = (VERSIONS_DIR / "20261102_10_fleet_endpoints_trend_scan_identity.py").read_text()
+    assert re.search(r'down_revision\s*=\s*"20261102_01"', migration)
