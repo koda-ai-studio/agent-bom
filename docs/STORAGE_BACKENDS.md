@@ -262,6 +262,15 @@ the rewrite; gateway and API writers to `drift_incidents` block until it
 commits, and the accompanying index is built `CONCURRENTLY` afterwards so the
 lock does not also cover the index build.
 
+`init.sql` and `runtime-schema.sql` are replayed onto a database once (by
+`20260416_01` and `20260718_01`); a later edit to either reaches fresh installs
+only. Every new table or column therefore ships in its own additive revision,
+and `tests/test_postgres_schema_single_owner.py` fails when store code or those
+files define one that no revision does. Revision `20261102_01` is the catch-up
+for the two that slipped through: it creates `fleet_endpoints` and adds
+`trend_history.scan_id` with its unique index on databases migrated before
+those shipped, and is a no-op on newer ones.
+
 Alembic refuses to run as a runtime role. `ALEMBIC_DATABASE_URL` must connect
 as the Postgres bootstrap/admin (migration owner) identity; a connection whose
 `current_user` is `agent_bom_app` or `agent_bom_rls_maintenance` fails before
