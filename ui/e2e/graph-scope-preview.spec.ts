@@ -9,7 +9,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       internet_exposed: false, toxic_combo: false, exposed_count: 0, toxic_count: 0 };
     const items = ["Deploy service", "Worker service"].flatMap((label, owner) => [
       { id: `app-${owner}`, label, entity_type: "application", severity: "none" },
-      ...Array.from({ length: 14 }, (_, i) => ({ id: `finding-${owner}-${i}`, label: ["Public endpoint allows anonymous access", "Container runs as root", "Storage encryption is disabled"][i % 3]! + ` ${i}`, entity_type: "misconfiguration", severity: "high" })),
+      ...Array.from({ length: 14 }, (_, i) => ({ id: `finding-${owner}-${i}`, label: ["Public endpoint allows anonymous access", "Container runs as root", "Storage encryption is disabled"][i % 3]!, entity_type: "misconfiguration", severity: "high" })),
     ]).map(item => ({ ...item, is_container: false, has_children: false, direct_child_count: 0, aggregate }));
     const edges = items.filter(item => item.entity_type === "misconfiguration").map(item => ({ source: item.id, target: `app-${item.id.split("-")[1]}`, count: 1, relationships: ["belongs_to"], directions: ["directed"] }));
     await page.route("**/health", route => route.fulfill({ json: { status: "ok" } }));

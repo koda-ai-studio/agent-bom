@@ -20,7 +20,12 @@ export function buildScopePreview(items: GraphRollupContainer[], edges: GraphRol
   const neighbors = [...new Set(links.map(edge => edge.source === root.id ? edge.target : edge.source))]
     .map(id => byId.get(id)!).sort((a, b) => severityRank(b.severity) - severityRank(a.severity) || a.label.localeCompare(b.label) || a.id.localeCompare(b.id));
   const labels = new Set<string>();
-  const diverse = neighbors.filter(item => { if (labels.has(item.label)) return false; labels.add(item.label); return true; });
+  const diverse = neighbors.filter(item => {
+    const family = FINDINGS.has(item.entity_type) ? item.label.match(/\b(?:CVE-\d{4}-\d{4,}|MCP-TOOL-\d+)\b/i)?.[0].toUpperCase() ?? item.label : item.id;
+    const key = `${item.entity_type}:${family}`;
+    if (labels.has(key)) return false;
+    labels.add(key); return true;
+  });
   const chosen = [...diverse, ...neighbors.filter(item => !diverse.includes(item))].slice(0, 3);
   const ids = new Set(chosen.map(item => item.id));
   const selectedLinks = links.filter(edge => ids.has(edge.source === root.id ? edge.target : edge.source));

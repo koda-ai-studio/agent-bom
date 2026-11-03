@@ -28,4 +28,11 @@ describe("scope relationship preview", () => {
     expect(buildScopePreview([item("a"), item("b")], [{ source: "a", target: "b", count: 1, relationships: ["related_to"] }])).toBeNull();
     expect(buildScopePreview([item("repo", "application")], [{ source: "missing", target: "repo", count: 1, relationships: ["belongs_to"] }])).toBeNull();
   });
+  it("shows different recorded finding families before repeating one MCP rule across tools", () => {
+    const items = [item("root", "agent"), item("a", "misconfiguration", "MCP schema risk on browser_click: MCP-TOOL-07"),
+      item("b", "misconfiguration", "MCP schema risk on browser_close: MCP-TOOL-07"),
+      item("c", "misconfiguration", "Unpinned server version"), item("d", "misconfiguration", "Wildcard permissions")];
+    const edges = items.slice(1).map(n => ({ source: n.id, target: "root", count: 1, relationships: ["affects"] }));
+    expect(buildScopePreview(items, edges)?.nodes.map(n => n.id)).toEqual(["root", "a", "c", "d"]);
+  });
 });
