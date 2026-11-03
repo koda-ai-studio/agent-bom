@@ -7,7 +7,7 @@ import { ScanResultView } from "@/components/scan-result";
 const { apiMock } = vi.hoisted(() => ({
   apiMock: {
     getScanStatus: vi.fn(),
-    getScan: vi.fn(),
+    getScanDashboard: vi.fn(),
     downloadScanGraph: vi.fn(),
   },
 }));
@@ -60,7 +60,7 @@ describe("ScanResultView cloud evidence", () => {
       completed_at: "2026-06-27T00:05:00Z",
       request: {},
     });
-    apiMock.getScan.mockResolvedValue({
+    apiMock.getScanDashboard.mockResolvedValue({
       job_id: "scan-cloud-1",
       status: "done",
       created_at: "2026-06-27T00:00:00Z",
@@ -90,7 +90,7 @@ describe("ScanResultView cloud evidence", () => {
   it("renders persisted cloud inventory and CIS evidence even without attack-path findings", async () => {
     render(<ScanResultView id="scan-cloud-1" />);
 
-    await waitFor(() => expect(apiMock.getScan).toHaveBeenCalledWith("scan-cloud-1"));
+    await waitFor(() => expect(apiMock.getScanDashboard).toHaveBeenCalledWith("scan-cloud-1"));
 
     expect(screen.getByText("Cloud evidence")).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Cloud evidence" })).toHaveClass(
@@ -116,7 +116,7 @@ describe("ScanResultView cloud evidence", () => {
   });
 
   it("reconciles every recorded ATLAS association without a detection denominator", async () => {
-    apiMock.getScan.mockResolvedValue({
+    apiMock.getScanDashboard.mockResolvedValue({
       job_id: "scan-cloud-1", status: "done", created_at: "2026-06-27T00:00:00Z", request: {},
       result: { agents: [], blast_radius: [{ vulnerability_id: "CVE-2026-1000", severity: "low",
         affected_agents: [], exposed_credentials: [], exposed_tools: [],
@@ -133,7 +133,7 @@ describe("ScanResultView cloud evidence", () => {
   });
 
   it("filters and paginates dense blast-radius evidence instead of rendering every path", async () => {
-    apiMock.getScan.mockResolvedValue({
+    apiMock.getScanDashboard.mockResolvedValue({
       job_id: "scan-cloud-1",
       status: "done",
       created_at: "2026-06-27T00:00:00Z",
@@ -177,7 +177,7 @@ describe("ScanResultView cloud evidence", () => {
   });
 
   it("sums per-account counts for an organization fan-out inventory list", async () => {
-    apiMock.getScan.mockResolvedValue({
+    apiMock.getScanDashboard.mockResolvedValue({
       job_id: "scan-cloud-1",
       status: "done",
       created_at: "2026-06-27T00:00:00Z",
@@ -196,7 +196,7 @@ describe("ScanResultView cloud evidence", () => {
 
     render(<ScanResultView id="scan-cloud-1" />);
 
-    await waitFor(() => expect(apiMock.getScan).toHaveBeenCalledWith("scan-cloud-1"));
+    await waitFor(() => expect(apiMock.getScanDashboard).toHaveBeenCalledWith("scan-cloud-1"));
 
     // Resources is the estate total, not the member-account count (2).
     expect(screen.getByText("42")).toBeInTheDocument();
@@ -216,8 +216,8 @@ it("opens recorded stage details from the full scan and rolls up without another
       stats: step_id === "extraction" ? { packages: 1095 } : {},
     })), result: { agents: [], blast_radius: [], summary: { total_packages: 1095, total_vulnerabilities: 2 } },
   };
-  apiMock.getScan.mockReset();
-  apiMock.getScan.mockResolvedValue(full);
+  apiMock.getScanDashboard.mockReset();
+  apiMock.getScanDashboard.mockResolvedValue(full);
   apiMock.getScanStatus.mockResolvedValue(full);
   render(<ScanResultView id="scan-interactive" />);
   await user.click(await screen.findByRole("button", { name: "Inspect extraction" }));
@@ -227,7 +227,7 @@ it("opens recorded stage details from the full scan and rolls up without another
   expect(detail).toHaveTextContent("2.0s");
   await user.click(screen.getByRole("button", { name: "Close stage detail" }));
   expect(screen.queryByRole("complementary", { name: "Stage details" })).not.toBeInTheDocument();
-  expect(apiMock.getScan).toHaveBeenCalledTimes(1);
+  expect(apiMock.getScanDashboard).toHaveBeenCalledTimes(1);
 });
 
 it("labels the credentials the hosting servers hold apart from exposure by impact in the scan's plan", async () => {
@@ -238,7 +238,7 @@ it("labels the credentials the hosting servers hold apart from exposure by impac
     owasp_tags: [], atlas_tags: [], risk_narrative: "narrative",
   };
   apiMock.getScanStatus.mockResolvedValue({ job_id: "scan-plan", status: "done", created_at: "2026-06-27T00:00:00Z", request: {} });
-  apiMock.getScan.mockResolvedValue({
+  apiMock.getScanDashboard.mockResolvedValue({
     job_id: "scan-plan", status: "done", created_at: "2026-06-27T00:00:00Z", request: {},
     result: { agents: [], blast_radius: [], remediation_plan: [
       { ...planItem, server_credentials: ["DATABASE_URL", "STRIPE_KEY"], server_credential_count: 2 },

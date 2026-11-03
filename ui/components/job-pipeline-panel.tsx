@@ -255,7 +255,7 @@ export function JobPipelinePanel({
     setLoading(true);
     setError("");
     api
-      .getScan(jobId)
+      .getScanDashboard(jobId)
       .then((full) => {
         if (!cancelled) setJob(full);
       })

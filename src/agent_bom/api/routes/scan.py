@@ -637,6 +637,7 @@ async def list_findings(
     sla: Literal["overdue", "due", "unassigned"] | None = None,
     reachability: Literal["reachable", "unreachable", "unassessed"] | None = None,
     triage: Literal["not_affected", "affected", "under_investigation", "untriaged"] | None = None,
+    path_context: Literal["test", "example", "documentation", "unclassified"] | None = None,
     include_facets: bool = False,
     include: FindingListInclude = None,
     lane: Annotated[
@@ -648,8 +649,7 @@ async def list_findings(
     Dedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event
     loop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.
 
-    Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls``
-    restores the full per-finding control mappings.
+    Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls`` restores full mappings.
 
     ``offset`` is a compatibility path capped at 10,000: past the ceiling the
     endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.
@@ -661,7 +661,7 @@ async def list_findings(
             implementation = _list_finding_groups_impl if group_occurrences else _list_findings_view_impl
             with finding_list_projection(include_controls="controls" in includes):
                 body = await anyio.to_thread.run_sync(
-                    partial(implementation, lane=lane),
+                    partial(implementation, lane=lane, path_context=path_context),
                     request,
                     q,
                     severity,

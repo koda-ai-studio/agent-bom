@@ -24,7 +24,7 @@ const { apiMock, deploymentCounts, deploymentState } = vi.hoisted(() => ({
     getCompliance: vi.fn(),
     listJobs: vi.fn(),
     listAgents: vi.fn(),
-    getScan: vi.fn(),
+    getScanDashboard: vi.fn(),
     updateScoreConfig: vi.fn(),
   },
   deploymentCounts: {
@@ -134,7 +134,7 @@ describe("Overview canonical finding counts", () => {
         request: index === 0 ? { repo_url: "https://github.com/acme/payments" } : {},
       })),
     });
-    apiMock.getScan.mockImplementation(async (jobId: string) => staleScan(jobId));
+    apiMock.getScanDashboard.mockImplementation(async (jobId: string) => staleScan(jobId));
   });
 
   afterEach(() => vi.useRealTimers());
@@ -182,7 +182,7 @@ describe("Overview canonical finding counts", () => {
     expect(evidence).toHaveTextContent(status);
     expect(evidence).toHaveTextContent("An empty finding list is not a clean security verdict");
     expect(evidence).toHaveTextContent("Reported by this file");
-    expect(apiMock.getScan).not.toHaveBeenCalled();
+    expect(apiMock.getScanDashboard).not.toHaveBeenCalled();
   });
 
   it.each(["2026-07-01T00:00:00Z", undefined])("does not mix tenant posture with an imported offline report (timestamp %s)", async (timestamp) => {
@@ -230,10 +230,10 @@ describe("Overview canonical finding counts", () => {
       by_group: {}, completeness: "complete", scope: "snapshot",
     });
     await act(async () => { render(<Dashboard />); });
-    expect(apiMock.getScan).not.toHaveBeenCalled();
+    expect(apiMock.getScanDashboard).not.toHaveBeenCalled();
     expect(apiMock.listAgents).not.toHaveBeenCalled();
     await act(async () => resolveOverview({ ...overviewFixture(), finding_counts: { ...deploymentCounts } }));
-    expect(apiMock.getScan).not.toHaveBeenCalled();
+    expect(apiMock.getScanDashboard).not.toHaveBeenCalled();
     expect(apiMock.listAgents).not.toHaveBeenCalled();
     expect(cockpitProps.mock.lastCall?.[0]).toMatchObject({ agents: 93, signals: { packages: 27, tools: null } });
   });
@@ -369,7 +369,7 @@ describe("Overview canonical finding counts", () => {
 
   it("restores recent-scan metadata from bounded hydrated details after a cold API start", async () => {
     apiMock.listJobs.mockResolvedValue({ jobs: [{ job_id: "cold-sbom", status: "done", created_at: "2026-09-06T22:26:37Z" }] });
-    apiMock.getScan.mockResolvedValue({
+    apiMock.getScanDashboard.mockResolvedValue({
       job_id: "cold-sbom", status: "done", created_at: "2026-09-06T22:26:37Z",
       request: { sbom: "<path:reference.cdx.json>" }, progress: [],
       result: { agents: [], blast_radius: [], summary: { total_vulnerabilities: 22, critical_findings: 4 } },
@@ -381,14 +381,14 @@ describe("Overview canonical finding counts", () => {
     expect(row).toHaveTextContent("4 CRIT");
     expect(row).not.toHaveTextContent("Metrics unavailable");
     expect(row).not.toHaveTextContent("agents");
-    expect(apiMock.getScan).toHaveBeenCalledTimes(1);
-    expect(apiMock.getScan).toHaveBeenCalledWith("cold-sbom");
+    expect(apiMock.getScanDashboard).toHaveBeenCalledTimes(1);
+    expect(apiMock.getScanDashboard).toHaveBeenCalledWith("cold-sbom");
     expect(apiMock.listJobs).toHaveBeenCalledTimes(1);
   });
 
   it("does not invent an agents source when recent-scan details are unavailable", async () => {
     apiMock.listJobs.mockResolvedValue({ jobs: [{ job_id: "unknown-scan", status: "done", created_at: "2026-09-06T22:26:37Z" }] });
-    apiMock.getScan.mockRejectedValue(new Error("unavailable"));
+    apiMock.getScanDashboard.mockRejectedValue(new Error("unavailable"));
     render(<Dashboard />);
     const row = await screen.findByRole("link", { name: /Completed scan.*Metrics unavailable/i });
     expect(row).not.toHaveTextContent("agents");
@@ -398,7 +398,7 @@ describe("Overview canonical finding counts", () => {
     render(<Dashboard />);
     fireEvent.click(screen.getByRole("tab", { name: "Posture" }));
 
-    await waitFor(() => expect(apiMock.getScan).toHaveBeenCalledTimes(10));
+    await waitFor(() => expect(apiMock.getScanDashboard).toHaveBeenCalledTimes(10));
     const critical = await screen.findByRole("link", { name: /^Critical 7/i });
     const high = screen.getByRole("link", { name: /^High 11/i });
     expect(critical).toHaveTextContent("7");

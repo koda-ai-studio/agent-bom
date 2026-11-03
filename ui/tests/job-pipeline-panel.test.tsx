@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { JobPipelinePanel } from "@/components/job-pipeline-panel";
 
-const mocks = vi.hoisted(() => ({ getScan: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getScanDashboard: vi.fn() }));
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api")>();
-  return { ...actual, api: { ...actual.api, getScan: mocks.getScan } };
+  return { ...actual, api: { ...actual.api, getScanDashboard: mocks.getScanDashboard } };
 });
 
 vi.mock("@/lib/use-scan-stream", () => ({
@@ -22,8 +22,8 @@ vi.mock("@/components/scan-pipeline", () => ({
 
 describe("JobPipelinePanel evidence explainability", () => {
   beforeEach(() => {
-    mocks.getScan.mockReset();
-    mocks.getScan.mockResolvedValue({
+    mocks.getScanDashboard.mockReset();
+    mocks.getScanDashboard.mockResolvedValue({
       job_id: "scan-1",
       status: "done",
       created_at: "2026-08-23T12:00:00Z",

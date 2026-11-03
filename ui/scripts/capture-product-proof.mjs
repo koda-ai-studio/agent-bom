@@ -1935,7 +1935,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
   });
   await page.route((url) => {
     try {
-      return new URL(url).pathname === `/v1/scan/${SCAN_ID}`;
+      return [`/v1/scan/${SCAN_ID}`, `/v1/scan/${SCAN_ID}/dashboard`].includes(new URL(url).pathname);
     } catch {
       return false;
     }
@@ -3447,7 +3447,7 @@ async function main() {
       await scrollTo(scanPage, top - 100);
     }, {
       expectedText: ["Collection partial", "2 of 3 requested scopes complete", "Download agent BOM", "Experimental profile"],
-      expectedApiPaths: [`/v1/scan/${SCAN_ID}`, `/v1/scan/${SCAN_ID}/status`],
+      expectedApiPaths: [`/v1/scan/${SCAN_ID}/dashboard`, `/v1/scan/${SCAN_ID}/status`],
       assertNoHorizontalOverflow: true,
     });
     const jobsProofPage = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 980 });
@@ -3507,7 +3507,7 @@ async function main() {
     }, {
       expectedText: [/scan pipeline dag/i, /6\/6 stages complete/i, /wall clock 2m 0s/i, /timing & activity/i, "12.0s"],
       rejectedText: [/Loading jobs/i, /Loading persisted pipeline events/i, /Stage telemetry unavailable/i],
-      expectedApiPaths: ["/v1/jobs", `/v1/scan/${SCAN_ID}`],
+      expectedApiPaths: ["/v1/jobs", `/v1/scan/${SCAN_ID}/dashboard`],
       minGraphNodes: 6,
       minGraphEdges: 5,
     });

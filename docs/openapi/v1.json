@@ -14939,6 +14939,79 @@
         "title": "FindingAsset",
         "type": "object"
       },
+      "FindingContextCount": {
+        "additionalProperties": true,
+        "properties": {
+          "context": {
+            "enum": [
+              "test",
+              "example",
+              "documentation",
+              "unclassified"
+            ],
+            "title": "Context",
+            "type": "string"
+          },
+          "severity": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Severity",
+            "type": "object"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "context",
+          "total",
+          "severity"
+        ],
+        "title": "FindingContextCount",
+        "type": "object"
+      },
+      "FindingContextResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "approximate": {
+            "title": "Approximate",
+            "type": "boolean"
+          },
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "contexts": {
+            "items": {
+              "$ref": "#/components/schemas/FindingContextCount"
+            },
+            "title": "Contexts",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contexts",
+          "count",
+          "approximate",
+          "warnings",
+          "basis"
+        ],
+        "title": "FindingContextResponse",
+        "type": "object"
+      },
       "FindingFeedbackRequest": {
         "additionalProperties": false,
         "description": "Request body for POST /v1/findings/feedback.",
@@ -15673,6 +15746,17 @@
               }
             ],
             "title": "Package Version"
+          },
+          "path_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path Context"
           },
           "provenance": {
             "title": "Provenance"
@@ -59497,7 +59581,7 @@
     },
     "/v1/findings": {
       "get": {
-        "description": "List unified findings aggregated from completed scan results.\n\nDedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event\nloop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.\n\nRows carry ``framework_tags`` and ``controls_count``; ``?include=controls``\nrestores the full per-finding control mappings.\n\n``offset`` is a compatibility path capped at 10,000: past the ceiling the\nendpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.",
+        "description": "List unified findings aggregated from completed scan results.\n\nDedup/sort and synchronous store reads run in a worker thread (tenant scope and projection propagate) so the event\nloop never blocks. Saturation is 429 + Retry-After; a read not pinned to a scan_id is 503 while the demo seed lands.\n\nRows carry ``framework_tags`` and ``controls_count``; ``?include=controls`` restores full mappings.\n\n``offset`` is a compatibility path capped at 10,000: past the ceiling the\nendpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.",
         "operationId": "list_findings_v1_findings_get",
         "parameters": [
           {
@@ -59882,6 +59966,28 @@
           },
           {
             "in": "query",
+            "name": "path_context",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "test",
+                    "example",
+                    "documentation",
+                    "unclassified"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Path Context"
+            }
+          },
+          {
+            "in": "query",
             "name": "include_facets",
             "required": false,
             "schema": {
@@ -60016,6 +60122,48 @@
           }
         },
         "summary": "Ingest Bulk Findings",
+        "tags": [
+          "scan"
+        ]
+      }
+    },
+    "/v1/findings/context-summary": {
+      "get": {
+        "description": "Path-derived occurrence counts; no severity, suppression or grade changes.\n\nUnclassified includes missing paths and is not evidence of production use.\nBounds and unavailable evidence are reported explicitly.",
+        "operationId": "get_finding_contexts_v1_findings_context_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Get Finding Contexts",
         "tags": [
           "scan"
         ]
@@ -82990,6 +83138,59 @@
           }
         },
         "summary": "Get Context Graph",
+        "tags": [
+          "scan"
+        ]
+      }
+    },
+    "/v1/scan/{job_id}/dashboard": {
+      "get": {
+        "description": "Scan display projection; large AST lists are linked for paged retrieval.\n\nOriginal evidence and non-JSON documents remain at GET /v1/scan/{job_id}?view=full.\nProjection uses the same tenant lookup and redaction as the full read.",
+        "operationId": "get_scan_dashboard_v1_scan__job_id__dashboard_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanJob"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Get Scan Dashboard",
         "tags": [
           "scan"
         ]

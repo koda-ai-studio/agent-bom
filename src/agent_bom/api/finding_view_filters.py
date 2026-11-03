@@ -8,6 +8,7 @@ from typing import Any, NamedTuple
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_row_shapes import _package_base_name, _row_vuln_id
 from agent_bom.core.reachability import reachability_bucket
+from agent_bom.evidence.finding_context import finding_context
 
 _FINDINGS_VIEW_FILTER_MAX_ROWS = 50_000
 #: Fields a view adds to each emitted row from the triage store.
@@ -70,9 +71,12 @@ def _view_filtered_row(
     reachability: str | None,
     triage: str | None,
     suppressed_only: bool,
+    path_context: str | None = None,
 ) -> dict[str, Any] | None:
     """Annotate one occurrence with triage state; return it only when it matches."""
     row = dict(source_row)
+    if path_context is not None and finding_context(row) != path_context:
+        return None
     triage_state = _finding_triage_state(row, triage_index) if triage_index is not None else None
     if triage_index is not None:
         row["triage_id"] = triage_state.get("id") if triage_state else None
