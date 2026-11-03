@@ -27,8 +27,6 @@ import { GraphEvidenceExportButton, FullscreenButton, GraphInteractionToolbar, G
 import { GraphDriftTimeline } from "@/components/graph-drift-timeline";
 import { GraphLensSwitcher } from "@/components/graph-lens-switcher";
 import { GraphScenarioAuthoring, GraphScenarioComparisonPanel, GraphScenarioSelector } from "@/components/graph-scenario-comparison";
-import { GraphRelationshipDetail, GraphRollupRelationshipDetail } from "@/components/graph-relationship-detail";
-import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
 import { GraphScopeOverview } from "@/components/graph-scope-overview";
 import { GraphEmptyState, GraphFindingsFallback, GraphPanelSkeleton, GraphRefreshOverlay } from "@/components/graph-state-panels";
 import { GraphViewControls } from "@/components/graph-view-controls";
@@ -43,9 +41,7 @@ import { GraphScenarioUnconnected } from "@/components/graph-scenario-unconnecte
 import { roleCanConnect } from "@/lib/roles";
 import { GraphScopeChangeStrip } from "@/components/graph-scope-change-strip";
 import { GraphChangesEntry } from "@/components/graph-changes-entry";
-import { GraphChangesPanel } from "@/components/graph-changes-panel";
 import { GraphSearchResults } from "@/components/graph-search-results";
-import { GraphSnapshotDiff } from "@/components/graph-snapshot-diff";
 import { snapshotChangesHeadline } from "@/lib/graph-estate-changes";
 import { snapshotLabel, snapshotOptionLabel } from "@/lib/snapshot-label";
 import { estateIssueLine } from "@/lib/graph-issue-labels";
@@ -56,6 +52,13 @@ import { GraphAttackPathQueue } from "@/components/graph-attack-path-queue";
 import type { GraphPageData } from "@/hooks/use-graph-page-data";
 import type { GraphCanvasModel } from "@/hooks/use-graph-canvas-model";
 import type { GraphPageActions } from "@/hooks/use-graph-page-actions";
+
+// Load evidence inspectors only when opened, keeping their code off the first-paint path.
+const GraphEntityDrawer = dynamic(() => import("@/components/graph-entity-drawer").then(mod => mod.GraphEntityDrawer), { ssr: false });
+const GraphChangesPanel = dynamic(() => import("@/components/graph-changes-panel").then(mod => mod.GraphChangesPanel), { ssr: false });
+const GraphSnapshotDiff = dynamic(() => import("@/components/graph-snapshot-diff").then(mod => mod.GraphSnapshotDiff), { ssr: false });
+const GraphRelationshipDetail = dynamic(() => import("@/components/graph-relationship-detail").then(mod => mod.GraphRelationshipDetail), { ssr: false });
+const GraphRollupRelationshipDetail = dynamic(() => import("@/components/graph-relationship-detail").then(mod => mod.GraphRollupRelationshipDetail), { ssr: false });
 
 const SigmaGraphOverview = dynamic(() => import("@/components/sigma-graph-overview").then(mod => mod.SigmaGraphOverview), {
   ssr: false,
@@ -652,7 +655,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           </details>
 
           </div>}
-          <GraphChangesPanel open={changesOpen} changes={viewingCurrentEstate ? graphChanges.estateChanges : null}
+          {changesOpen && <GraphChangesPanel open={changesOpen} changes={viewingCurrentEstate ? graphChanges.estateChanges : null}
             loading={graphChanges.loading} error={graphChanges.error}
             title={viewingCurrentEstate ? "Changed since previous scans" : "Changed since previous snapshot"}
             highlighting={driftLensEngaged} highlightLoading={highlight.loading} highlightError={highlight.error}
@@ -662,7 +665,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             onClose={() => setChangesOpen(false)} onHighlight={() => { setMobileGraphView("graph"); void highlight.highlight(); }}
             onOpenDiff={pair => { highlight.openPair(pair); setComparisonRequested(true); }}
             onInvestigateNode={(rootId, rootLabel) => { setChangesOpen(false); void loadRootInvestigation({ rootId, rootLabel }); }}
- />
+ />}
           {mobileListAvailable && <div role="group" aria-label="Investigation view" className="flex gap-2">
             {(["list", "graph"] as const).map(view => <button key={view} type="button" aria-pressed={mobileGraphView === view} onClick={() => setMobileGraphView(view)}
               className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? (investigationMode ? "List" : "Paths") : "Graph"}</button>)}

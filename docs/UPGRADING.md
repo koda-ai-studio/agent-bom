@@ -49,8 +49,17 @@ profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
 - **Continue discovery.** User-level `~/.continue/config.yaml` joins legacy
   JSON discovery. Review the discovered config paths after upgrading; inventory
   can now include previously missed servers. Discovery does not launch them.
-- **Persistence.** This patch adds no database migration. Preserve the same
-  database, identity settings, signing keys and retained reports during upgrade.
+- **Persistence.** Apply Postgres migrations through `20261102_10` using your
+  deployment's migration procedure. `20261102_01` adds IaC exception scope
+  columns; `20261102_10` brings existing databases up to the fleet endpoint and
+  retry-safe trend scan schema. Both are additive and idempotent. Preserve the
+  same database, identity settings, signing keys and retained reports.
+- **Scheduled scans.** Dispatch rechecks leadership and the current tenant-owned
+  schedule. This fails closed for stale due-list records, but does not guarantee
+  exactly-once execution after a crash or leadership loss after the final check.
+- **Graph investigations.** The shared graph retains explicit snapshot and tenant
+  scope, partial-evidence notices and grouped findings. Review saved layouts and
+  finding links against the same scan after upgrading.
 
 ## Earlier changes from 0.112.1
 
