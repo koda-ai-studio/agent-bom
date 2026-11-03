@@ -29,6 +29,7 @@ from agent_bom.api.finding_row_shapes import _scan_source_labels
 from agent_bom.api.graph_comparison_basis import graph_collection_basis, graph_comparison_basis, recorded_kev_change
 from agent_bom.api.graph_diff_read import _compute_rows, _rows_cache_key, _stored_paths
 from agent_bom.api.models import JobStatus, ScanJob
+from agent_bom.api.repository_changes import compact_repository_context, repository_basis, repository_change_summary
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.stores import _get_store
 from agent_bom.graph.attack_path_queue import attack_path_rank_window
@@ -99,6 +100,9 @@ def reset_estate_changes_caches() -> None:
 def _slim_job(job: ScanJob) -> ScanJob:
     """The job with only the result fields scope selection and labels read, not its multi-MB report."""
     result = {key: value for key, value in (job.result or {}).items() if not isinstance(value, (dict, list)) or key in _PLAN_RESULT_OBJECTS}
+    context = compact_repository_context(job.result)
+    if context is not None:
+        result["project_inventory"] = {"repository_context": context}
     return job.model_copy(update={"result": result, "result_document": None})
 
 
@@ -381,6 +385,15 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
                 **entry,
                 "issue_change": _issue_change(recorded, old_id, new_id),
                 "comparison": comparison,
+                "repository_changes": repository_change_summary(
+                    store,
+                    tenant,
+                    old_id,
+                    new_id,
+                    (scope.previous.collection_basis or {}).get("repository"),
+                    repository_basis(scope.current.result),
+                    comparison,
+                ),
                 "kev_change": recorded_kev_change(recorded, old_id, new_id) if comparison["status"] == "comparable" else None,
                 "skipped_snapshots": scope.skipped,
             }

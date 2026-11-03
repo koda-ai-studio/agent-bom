@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from typing import Any
 
+from agent_bom.api.repository_changes import repository_basis
 from agent_bom.api.trend_comparison import comparison_metadata
 
 
@@ -11,7 +12,7 @@ def graph_collection_basis(result: Any) -> dict[str, Any]:
     result = result if isinstance(result, Mapping) else {}
     fields = {key: result.get(key) for key in ("scan_run", "coverage_warnings", "scan_sources")}
     metadata = comparison_metadata({**fields, "findings": []}, None)
-    return {key: metadata[key] for key in ("collection_coverage", "coverage_key")}
+    return {**{key: metadata[key] for key in ("collection_coverage", "coverage_key")}, "repository": repository_basis(result)}
 
 
 def graph_comparison_basis(old: Mapping[str, Any] | None, new: Mapping[str, Any], baseline: str) -> dict[str, str | None]:

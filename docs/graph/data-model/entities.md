@@ -39,7 +39,7 @@ Emitted by: `graph/governance_overlay.py`
 
 ## `ci_job`
 
-Emitted by: `graph/ci_graph_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/ci_graph_overlay.py`, `graph/pipeline_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `cloud_resource`
 
@@ -67,7 +67,7 @@ Emitted by: —; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `code_module`
 
-Emitted by: `graph/ast_tool_projection.py`, `graph/code_graph_overlay.py`, `graph/workspace_overlay.py`
+Emitted by: `graph/ast_tool_projection.py`, `graph/code_graph_overlay.py`, `graph/dbt_overlay.py`, `graph/sdk_overlay.py`, `graph/workspace_overlay.py`
 
 Id formats:
 
@@ -75,7 +75,7 @@ Id formats:
 
 ## `config_file`
 
-Emitted by: `graph/finding_row_projection.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/finding_row_projection.py`, `graph/repo_structure_overlay.py`, `graph/repository_artifacts.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `container`
 
@@ -118,7 +118,7 @@ Id formats:
 
 ## `directory`
 
-Emitted by: `graph/agent_projection.py`, `graph/repo_structure_overlay.py`, `graph/workspace_overlay.py`, `output/graph_inventory.py`
+Emitted by: `graph/agent_projection.py`, `graph/dbt_overlay.py`, `graph/repo_structure_overlay.py`, `graph/repository_artifacts.py`, `graph/workspace_overlay.py`, `output/graph_inventory.py`
 
 ## `drift_incident`
 
@@ -134,7 +134,7 @@ Id formats:
 
 ## `external_import`
 
-Emitted by: —
+Emitted by: `graph/sdk_overlay.py`
 
 ## `federated_identity`
 
@@ -244,7 +244,7 @@ Emitted by: `graph/authorization_evidence.py`, `graph/cloud_context.py`, `graph/
 
 ## `source_file`
 
-Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/repo_structure_overlay.py`, `output/graph_inventory.py`
+Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/repo_structure_overlay.py`, `graph/repository_artifacts.py`, `output/graph_inventory.py`
 
 Id formats:
 

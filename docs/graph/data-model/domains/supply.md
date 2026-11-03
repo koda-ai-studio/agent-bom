@@ -9,17 +9,18 @@ Entity types in the code and supply chain domain and the relationships allowed b
 
 ### Structure: what contains, depends on or governs what
 
-16 type pairs, too many to draw legibly. Read a row as *source → relationship → target*.
+17 type pairs, too many to draw legibly. Read a row as *source → relationship → target*.
 
 | Source ↓ / target → | `ci_job` | `code_module` | `config_file` | `directory` | `external_import` | `package` | `source_file` |
 |---|---|---|---|---|---|---|---|
+| `ci_job` | contains<br/>depends_on |  |  |  |  |  |  |
 | `code_module` |  | depends_on<br/>imports |  |  | imports | depends_on<br/>imports |  |
 | `config_file` | configures | belongs_to |  |  |  | depends_on |  |
 | `directory` |  | contains | contains | contains |  | contains<br/>depends_on | contains |
 | `package` |  |  |  |  |  | depends_on |  |
 | `source_file` | defines | belongs_to<br/>defines<br/>imports |  |  | imports | contains<br/>depends_on<br/>imports |  |
 
-Not drawn, because they can connect almost any two types: `recorded_activity`, `trace_step`. They are listed in the tables below.
+Not drawn, because they can connect almost any two types: `correlates_with`, `recorded_activity`, `trace_step`. They are listed in the tables below.
 
 ## Relationship reference
 
@@ -29,9 +30,9 @@ Not drawn, because they can connect almost any two types: `recorded_activity`, `
 |---|---|---|---|---|
 | `belongs_to` | `structural` | yes | `config_file`, `source_file` | `code_module` |
 | `configures` | `structural` | yes | `config_file` | `ci_job` |
-| `contains` | `structural` | yes | `directory`, `source_file` | `code_module`, `config_file`, `directory`, `package`, `source_file` |
+| `contains` | `structural` | yes | `ci_job`, `directory`, `source_file` | `ci_job`, `code_module`, `config_file`, `directory`, `package`, `source_file` |
 | `defines` | `structural` | yes | `source_file` | `ci_job`, `code_module` |
-| `depends_on` | `dependency` | yes | `code_module`, `config_file`, `directory`, `package`, `source_file` | `code_module`, `package` |
+| `depends_on` | `dependency` | yes | `ci_job`, `code_module`, `config_file`, `directory`, `package`, `source_file` | `ci_job`, `code_module`, `package` |
 | `imports` | `dependency` | yes | `code_module`, `source_file` | `code_module`, `external_import`, `package` |
 | `trace_step` | `runtime` | yes | `ci_job`, `config_file`, `package` | `ci_job`, `config_file`, `package` |
 
@@ -44,6 +45,7 @@ Not drawn, because they can connect almost any two types: `recorded_activity`, `
 | `can_access` | `authority` | yes | AI and agents: `agent`, `application`, `server`, `tool`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `model`<br/>Identity and access: `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `config_file` |
 | `configures` | `structural` | yes | `config_file` | AI and agents: `agent`, `server`, `tool` |
 | `contains` | `structural` | yes | `ci_job`, `config_file`, `directory`, `package`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `environment`, `fleet` | `ci_job`, `config_file`, `directory`, `package`, `source_file`<br/>Cloud, infrastructure and data: `container`<br/>Findings: `misconfiguration`, `vulnerability`<br/>AI and agents: `server` |
+| `correlates_with` | `correlation` | no | `code_module` | Cloud, infrastructure and data: `data_store` |
 | `defines` | `structural` | yes | `source_file` | AI and agents: `tool` |
 | `depends_on` | `dependency` | yes | Cloud, infrastructure and data: `container`, `resource`<br/>AI and agents: `framework`, `server` | `package` |
 | `part_of` | `structural` | yes | `ci_job` | AI and agents: `application` |

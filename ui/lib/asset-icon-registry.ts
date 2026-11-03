@@ -279,6 +279,14 @@ export function assetIcon(input: AssetKindInput): EntityIcon {
 }
 
 export function assetKindLabel(input: AssetKindInput): string {
+  const subtype = input.attributes?.subtype;
+  if (input.entityType === "ci_job" || input.nodeType === "ciJob") {
+    if (subtype === "gitlab_job") return "GitLab job";
+    if (subtype === "airflow_dag") return "Airflow DAG";
+    if (subtype === "airflow_task") return "Airflow task";
+  }
+  if ((input.entityType === "code_module" || input.nodeType === "codeModule") && subtype === "agent_implementation") return "Agent declaration";
+  if ((input.entityType === "code_module" || input.nodeType === "codeModule") && typeof subtype === "string" && /^dbt_(model|source|seed|exposure)$/.test(subtype)) return subtype.replace("_", " ");
   if ((input.entityType === "code_module" || input.nodeType === "codeModule") && input.attributes?.subtype === "workspace_package") return "Workspace package";
   if ((input.entityType ?? input.nodeType) === "misconfiguration" && input.attributes?.finding_kind === "iac") return "IaC finding";
   const resolved = resolveAssetKind(input);

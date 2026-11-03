@@ -17273,6 +17273,9 @@ export interface components {
          *     collection coverage. ``kev_change`` requires matching recorded trend bases;
          *     absent evidence is null. ``paths_changed`` includes path-only changes even
          *     when node and edge sets are unchanged. Decreases are not proof of remediation.
+         *     ``repository_changes`` adds bounded workspace/dbt/pipeline rows and files with
+         *     new finding links only for complete matching repository/ref collection bases.
+         *     Missing ref evidence or a replaced snapshot generation makes it unavailable.
          */
         GraphEstateChangesResponse: {
             completeness: components["schemas"]["GraphCompleteness"];

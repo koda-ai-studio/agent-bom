@@ -92,6 +92,7 @@ class _Pools:
     tables: tuple[EstateAsset, ...]
     models: tuple[EstateAsset, ...]
     ai_services: tuple[EstateAsset, ...]
+    asset_index: dict[str, EstateAsset]
 
     @property
     def complete(self) -> bool:
@@ -142,6 +143,7 @@ def _pools(assets: Sequence[EstateAsset]) -> _Pools:
         return tuple(sorted((a for a in assets if predicate(a)), key=lambda a: a.asset_id))
 
     return _Pools(
+        asset_index={asset.asset_id: asset for asset in assets},
         workflows=pick(lambda a: a.resource_type == "workflow"),
         identities=pick(lambda a: a.resource_type in _IDENTITY_TYPES),
         mcp_placements=_recorded_mcp_placements(assets),
@@ -217,6 +219,23 @@ def _observation(
     )
 
 
+def _with_boundary(payload: dict[str, object], resources: tuple[str, ...], assets: dict[str, EstateAsset]) -> dict[str, object]:
+    members = [assets[key] for key in resources if key in assets]
+    providers = sorted({asset.tags.get("host_provider") or asset.provider for asset in members})
+    environments = sorted({asset.environment for asset in members if asset.environment})
+    return {
+        **payload,
+        "boundary_context": {
+            "scenario": "intentional_federated_demo",
+            "basis": "synthetic_trace_sequence",
+            "cross_cloud": len(set(providers) & {"aws", "azure", "gcp", "snowflake"}) > 1,
+            "providers": providers,
+            "cross_environment": len(environments) > 1,
+            "environments": environments,
+        },
+    }
+
+
 def build_journeys(
     assets: Sequence[EstateAsset],
     *,
@@ -231,7 +250,7 @@ def build_journeys(
     inventoried, so the contract's own validator — events reference known assets
     — is what proves the chain is joinable rather than a separate assertion.
     """
-    pools = _pools(assets)
+    pools = _pools(tuple(asset for asset in assets if asset.tenant_id == tenant_id))
     if not pools.complete or count <= 0:
         return ()
 
@@ -277,7 +296,7 @@ def build_journeys(
             resource_ids: tuple[str, ...],
             payload: dict[str, object],
         ) -> None:
-            resources = tuple(dict.fromkeys(r for r in resource_ids if r))
+            resources = tuple(dict.fromkeys(r for r in resource_ids if r in pools.asset_index))
             if not resources:
                 return
             observations.append(
@@ -289,7 +308,7 @@ def build_journeys(
                     actor_id=actor,
                     resource_ids=resources,
                     trace_id=trace_id,
-                    payload=payload,
+                    payload=_with_boundary(payload, resources, pools.asset_index),
                     tenant_id=tenant_id,
                     run_id=run_id,
                 )

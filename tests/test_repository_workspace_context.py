@@ -202,3 +202,21 @@ def test_local_path_dependencies_are_exact_and_do_not_escape(tmp_path):
     assert records["a"]["local_dependency_paths"] == {"b": "crates/b"}
     graph = build_unified_graph_from_report({"agents": [], "project_inventory": inventory})
     assert any(e.source == records["a"]["id"] and e.target == records["b"]["id"] for e in graph.edges)
+
+
+def test_truncated_declarations_remain_explicitly_partial(tmp_path):
+    put(tmp_path, "package.json", {"name": "root", "dependencies": {f"dep{i}": "1" for i in range(1001)}})
+    result = context(tmp_path)
+    assert len(result["workspace_packages"][0]["declared_dependencies"]) == 1000
+    assert result["status"] == "partial"
+    assert any(row["reason"] == "declaration_limit" for row in result["unresolved"])
+
+
+def test_go_dependency_workspace_cannot_follow_outside_or_symlink_members(tmp_path):
+    from agent_bom.parsers import parse_go_workspace
+
+    root = tmp_path / "repo"
+    put(root, "go.work", "go 1.22\nuse (\n ../outside\n ./linked\n)\n")
+    put(tmp_path, "outside/go.mod", "module example.test/outside\ngo 1.22\nrequire example.test/should-not-read v1.2.3\n")
+    (root / "linked").symlink_to(tmp_path / "outside", target_is_directory=True)
+    assert parse_go_workspace(root) == []

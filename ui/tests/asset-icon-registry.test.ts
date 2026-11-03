@@ -14,6 +14,12 @@ import { ENTITY_ICONS, type LineageNodeType } from "@/lib/entity-icons";
 import { EntityType } from "@/lib/graph-schema";
 import { entitySource } from "@/lib/agent-source";
 
+it("labels static pipeline and implementation artifacts without implying a live agent", () => {
+  expect(assetKindLabel({entityType:"ci_job",attributes:{subtype:"gitlab_job"}})).toBe("GitLab job");
+  expect(assetKindLabel({entityType:"ci_job",attributes:{subtype:"airflow_dag"}})).toBe("Airflow DAG");
+  expect(assetKindLabel({entityType:"code_module",attributes:{subtype:"agent_implementation"}})).toBe("Agent declaration");
+});
+
 // Every (entity_type, resource_type) pair the demo estate API emits, collected
 // from GET /v1/graph on the seeded demo estate.
 const DEMO_PAIRS: Array<[string, string]> = [
@@ -312,4 +318,10 @@ it("labels non-MCP connection profiles and IaC findings from their recorded kind
 it("labels a recorded first-party workspace separately from dependency packages", () => {
   expect(assetKindLabel({ entityType: "code_module", attributes: { subtype: "workspace_package" } })).toBe("Workspace package");
   expect(assetKindLabel({ entityType: "package", attributes: {} })).not.toBe("Workspace package");
+});
+
+it("identifies dbt artifacts without calling them live warehouse objects", () => {
+  for (const kind of ["model", "source", "seed", "exposure"]) {
+    expect(assetKindLabel({ entityType: "code_module", attributes: { subtype: `dbt_${kind}` } })).toBe(`dbt ${kind}`);
+  }
 });

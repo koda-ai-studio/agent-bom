@@ -122,11 +122,11 @@ def _local_edges(graph: UnifiedGraph, records: list[dict[str, Any]], by_name: di
 
 
 def _membership(graph: UnifiedGraph, records: list[dict[str, Any]], scope: str) -> None:
-    files = [
+    files = (
         n
         for n in graph.nodes.values()
         if n.entity_type in {EntityType.CONFIG_FILE, EntityType.SOURCE_FILE} and n.attributes.get("repository_scope") == scope
-    ]
+    )
     for file in files:
         path = str(file.attributes.get("path") or "")
         candidates = [r for r in records if r["path"] == "." or path.startswith(r["path"] + "/")]

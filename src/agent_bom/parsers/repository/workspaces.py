@@ -10,6 +10,7 @@ import re
 import shlex
 import tomllib
 from functools import lru_cache
+from itertools import islice
 from typing import Any
 
 from agent_bom.core.packages import normalize_package_name
@@ -27,6 +28,24 @@ def _yaml(text: str) -> Any:
         return yaml.safe_load(text)
     except yaml.YAMLError as exc:
         raise ValueError("Invalid workspace YAML") from exc
+
+
+def _declaration_limits(reader: RepositoryReader, path: str, value: dict[str, Any]) -> None:
+    pending: list[Any] = [value]
+    seen: set[int] = set()
+    remaining = 5000
+    while pending and remaining > 0:
+        item = pending.pop()
+        if not isinstance(item, (dict, list)) or id(item) in seen:
+            continue
+        seen.add(id(item))
+        if len(item) > 1000:
+            reader.note(path, "declaration_limit")
+        children = list(islice(item.values() if isinstance(item, dict) else item, min(1000, remaining)))
+        pending.extend(child for child in children if isinstance(child, (dict, list)))
+        remaining -= len(children)
+    if pending:
+        reader.note(path, "declaration_limit")
 
 
 def _document(reader: RepositoryReader, path: str) -> tuple[dict[str, Any], str]:
@@ -49,6 +68,7 @@ def _document(reader: RepositoryReader, path: str) -> tuple[dict[str, Any], str]
             }
         if not isinstance(value, dict):
             raise ValueError("mapping expected")
+        _declaration_limits(reader, path, value)
         return value, digest
     except (ValueError, RecursionError):
         reader.note(path, "invalid_or_unreadable_artifact")
@@ -146,7 +166,7 @@ def _package(data: dict[str, Any], ecosystem: str) -> tuple[str, list[str]]:
             "dev-dependencies",
             "build-dependencies",
         ):
-            deps.update(k for k in _mapping(data.get(key)) if isinstance(k, str) and len(k) <= 256)
+            deps.update(k for k in islice(_mapping(data.get(key)), 1000) if isinstance(k, str) and len(k) <= 256)
     return normalize_package_name(name.strip(), ecosystem), sorted(deps)[:1000]
 
 
@@ -157,7 +177,7 @@ def _workspace_dependencies(data: dict[str, Any], ecosystem: str) -> list[str]:
             {
                 name
                 for key in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies")
-                for name, spec in _mapping(data.get(key)).items()
+                for name, spec in islice(_mapping(data.get(key)).items(), 1000)
                 if isinstance(name, str) and isinstance(spec, str) and spec.startswith("workspace:")
             }
         )[:1000]
@@ -165,7 +185,7 @@ def _workspace_dependencies(data: dict[str, Any], ecosystem: str) -> list[str]:
         sources = _mapping(_mapping(_mapping(data.get("tool")).get("uv")).get("sources"))
         return sorted(
             normalize_package_name(name, "pypi")
-            for name, spec in sources.items()
+            for name, spec in islice(sources.items(), 1000)
             if isinstance(name, str) and isinstance(spec, dict) and spec.get("workspace") is True
         )[:1000]
     return []
@@ -174,7 +194,7 @@ def _workspace_dependencies(data: dict[str, Any], ecosystem: str) -> list[str]:
 def _local_dependencies(data: dict[str, Any], ecosystem: str, directory: str) -> dict[str, str]:
     result = {}
     for key in ("dependencies", "devDependencies", "dev-dependencies", "build-dependencies", "optionalDependencies"):
-        for name, spec in _mapping(data.get(key)).items():
+        for name, spec in islice(_mapping(data.get(key)).items(), 1000):
             raw = spec.get("path") if ecosystem == "cargo" and isinstance(spec, dict) else None
             if ecosystem == "npm" and isinstance(spec, str) and spec.startswith(("file:", "link:")):
                 raw = spec.split(":", 1)[1]

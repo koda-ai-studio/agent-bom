@@ -111,12 +111,18 @@ def _apply_repo_structure_overlay(graph: UnifiedGraph, report_json: Mapping[str,
     has_inventory = isinstance(report_json.get("project_inventory"), Mapping)
     if not has_inventory and not any(node.entity_type == EntityType.MISCONFIGURATION for node in graph.nodes.values()):
         return
+    from agent_bom.graph.dbt_overlay import apply_dbt_overlay
+    from agent_bom.graph.pipeline_overlay import apply_pipeline_overlay
     from agent_bom.graph.repo_structure_overlay import apply_repo_structure_overlay
+    from agent_bom.graph.sdk_overlay import apply_sdk_overlay
     from agent_bom.graph.workspace_overlay import apply_workspace_overlay
 
     now = datetime.now(timezone.utc)
     apply_repo_structure_overlay(graph, dict(report_json), now)
+    apply_pipeline_overlay(graph, dict(report_json), now)
+    apply_sdk_overlay(graph, dict(report_json), now)
     apply_workspace_overlay(graph, dict(report_json), now)
+    apply_dbt_overlay(graph, dict(report_json), now)
 
 
 def _apply_code_graph_overlay(graph: UnifiedGraph, report_json: Mapping[str, Any]) -> None:

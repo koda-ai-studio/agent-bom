@@ -102,3 +102,32 @@ class RepositoryReader:
             except OSError:
                 self.note(directory.relative_to(self.root).as_posix(), "directory_unreadable")
         return sorted(found)
+
+    def source_files(self, suffix: str = ".py", limit: int = 250) -> list[str]:
+        """Bound local source enumeration; reads still use component-wise no-follow."""
+        pending = [self.root]
+        found: list[str] = []
+        visited = 0
+        while pending:
+            directory = pending.pop()
+            try:
+                with os.scandir(directory) as entries:
+                    for entry in entries:
+                        visited += 1
+                        if visited > MAX_ENTRIES or len(found) >= limit:
+                            self.note(".", "source_enumeration_limit")
+                            return sorted(found)
+                        if entry.name in _SKIP or entry.name.startswith(".tmp") or entry.is_symlink():
+                            continue
+                        path = Path(entry.path)
+                        relative = path.relative_to(self.root)
+                        if entry.is_dir(follow_symlinks=False):
+                            if len(relative.parts) <= 12:
+                                pending.append(path)
+                            else:
+                                self.note(relative.as_posix(), "depth_limit")
+                        elif entry.is_file(follow_symlinks=False) and entry.name.endswith(suffix):
+                            found.append(relative.as_posix())
+            except OSError:
+                self.note(directory.relative_to(self.root).as_posix(), "directory_unreadable")
+        return sorted(found)

@@ -6,8 +6,7 @@ from collections import Counter
 from pathlib import Path
 
 from agent_bom.models import Package
-from agent_bom.parsers.repository.artifacts import RepositoryReader
-from agent_bom.parsers.repository.workspaces import workspace_context
+from agent_bom.parsers.repository.context import collect_repository_context
 
 
 def _directory_record(root: Path, directory: Path, packages: list[Package], manifests: frozenset[str], locks: frozenset[str]) -> dict:
@@ -47,7 +46,7 @@ def summarize_project_inventory(
     lockfiles = sum(len(r["lockfile_files"]) for r in directories)
     return {
         "root": str(root),
-        "repository_context": workspace_context(RepositoryReader(root)),
+        "repository_context": collect_repository_context(root),
         "manifest_directories": len(dir_map),
         "lockfile_directories": len(backed),
         "declaration_only_directories": len(declared),

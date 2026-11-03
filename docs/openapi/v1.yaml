@@ -15770,7 +15770,14 @@ components:
 
         absent evidence is null. ``paths_changed`` includes path-only changes even
 
-        when node and edge sets are unchanged. Decreases are not proof of remediation.'
+        when node and edge sets are unchanged. Decreases are not proof of remediation.
+
+        ``repository_changes`` adds bounded workspace/dbt/pipeline rows and files
+        with
+
+        new finding links only for complete matching repository/ref collection bases.
+
+        Missing ref evidence or a replaced snapshot generation makes it unavailable.'
       properties:
         completeness:
           $ref: '#/components/schemas/GraphCompleteness'

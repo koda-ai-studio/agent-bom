@@ -39,3 +39,24 @@ def test_unrecorded_or_conflicting_mcp_placement_does_not_invent_a_journey(inval
             asset = asset.model_copy(update=changes)
         assets.append(asset)
     assert build_journeys(assets, tenant_id=estate.tenant_id, count=1, epoch=datetime(2026, 1, 1, tzinfo=timezone.utc)) == ()
+
+
+def test_intentional_federation_is_labeled_as_synthetic_trace_context():
+    estate = build_scaled_estate(ScaleProfile(accounts_per_cloud=2, resources_per_account=6, events_per_asset=1))
+    events = [event for event in estate.observations if event.event_id.startswith("evtj-")]
+    crossings = [event for event in events if event.raw_payload.get("boundary_context", {}).get("cross_cloud")]
+    assert crossings, "Intentional cross-cloud trace steps need explicit context"
+    for event in crossings:
+        context = event.raw_payload["boundary_context"]
+        assert context["scenario"] == "intentional_federated_demo"
+        assert context["basis"] == "synthetic_trace_sequence"
+        assert len(context["providers"]) > 1
+
+
+def test_journeys_do_not_reuse_foreign_tenant_data_assets():
+    estate = build_scaled_estate(ScaleProfile(accounts_per_cloud=2, resources_per_account=6, events_per_asset=1))
+    assets = [
+        asset.model_copy(update={"tenant_id": "foreign"}) if asset.resource_type in {"table", "database"} else asset
+        for asset in estate.assets
+    ]
+    assert build_journeys(assets, tenant_id=estate.tenant_id, count=1, epoch=datetime(2026, 1, 1, tzinfo=timezone.utc)) == ()

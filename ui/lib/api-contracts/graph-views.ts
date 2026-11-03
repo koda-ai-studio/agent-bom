@@ -551,7 +551,18 @@ export interface GraphEstateHighlights {
 }
 
 /** One target scope compared with its comparable previous snapshot. */
+export interface GraphRepositoryChangeSummary {
+  status: "complete" | "partial" | "unavailable";
+  reason?: string;
+  ref?: string;
+  counts?: Record<string, { added: number; removed: number }>;
+  rows?: Array<{ id: string; label: string; kind: string; change: string; scan_id: string }>;
+  files_with_new_findings?: {count:number;status:string;rows:Array<{id:string;label:string;scan_id:string}>};
+  rows_truncated?: boolean;
+}
+
 export interface GraphEstateChangeSource {
+  repository_changes?: GraphRepositoryChangeSummary;
   /** Same scope is necessary but not sufficient: both collections must be complete and cover the same sources. */
   comparison?: { status: "comparable" | "unavailable"; reason: string | null };
   kev_change?: { old: number; new: number; delta: number; basis: "issue_groups" } | null;

@@ -49,6 +49,12 @@ def _graph(n: int, tenant: str = "t1") -> UnifiedGraph:
     return g
 
 
+def test_repository_overlay_bounded_cache_parity(tmp_path):
+    from tests.test_repository_dbt_lineage import assert_repository_store_parity
+
+    assert_repository_store_parity(tmp_path, "postgres")
+
+
 def _persist_node_tuple(n: UnifiedNode):
     # Mirrors the exact serialised form save_graph_streaming persists per node.
     et = n.entity_type.value if hasattr(n.entity_type, "value") else n.entity_type

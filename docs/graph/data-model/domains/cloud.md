@@ -51,7 +51,7 @@ erDiagram
 | `container` | can_access | can_access | can_access | can_access | can_access | can_access | can_access | can_access |
 | `model` | can_access | can_access | can_access | can_access | can_access | can_access | can_access | can_access |
 
-Not drawn, because they can connect almost any two types: `possibly_correlates_with`, `recorded_activity`, `trace_step`. They are listed in the tables below.
+Not drawn, because they can connect almost any two types: `correlates_with`, `possibly_correlates_with`, `recorded_activity`, `trace_step`. They are listed in the tables below.
 
 ## Relationship reference
 
@@ -83,6 +83,7 @@ Not drawn, because they can connect almost any two types: `possibly_correlates_w
 | `belongs_to` | `structural` | yes | `cloud_resource`, `container` | AI and agents: `application` |
 | `can_access` | `authority` | yes | `cloud_resource`, `cluster`, `container`, `model`<br/>Identity and access: `account`, `federated_identity`, `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user`<br/>AI and agents: `agent`, `application`, `server`, `tool` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource`<br/>AI and agents: `agent`, `server`<br/>Code and supply chain: `config_file`<br/>Identity and access: `credential` |
 | `contains` | `structural` | yes | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `resource`<br/>Identity and access: `account`<br/>Code and supply chain: `directory` | `api_gateway`, `cloud_resource`, `container`, `data_store`, `environment`<br/>Identity and access: `access_policy`, `role`, `service_account`, `service_principal`<br/>AI and agents: `agent`, `application`, `framework`, `server`, `tool`<br/>Code and supply chain: `ci_job`, `config_file`, `directory`, `package`, `source_file`<br/>Findings: `misconfiguration`, `vulnerability` |
+| `correlates_with` | `correlation` | no | Code and supply chain: `code_module` | `data_store` |
 | `depends_on` | `dependency` | yes | `container`, `resource` | Code and supply chain: `package` |
 | `exposed_to` | `exposure` | yes | `data_store`<br/>AI and agents: `agent`, `server` | `cloud_resource`, `data_store`, `resource`<br/>Identity and access: `account` |
 | `exposes_cred` | `authority` | yes | `resource` | Identity and access: `credential` |

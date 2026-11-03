@@ -48,7 +48,7 @@ from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuse
 from agent_bom.storage.projection_cache import cache_path_for, postgres_locator, sqlite_locator, sweep_sibling_projections
 
 CURRENT_PREFIX = CURRENT_ESTATE_SCAN_PREFIX
-_PROJECTION_FORMAT = 5
+_PROJECTION_FORMAT = 6
 # Restarts of an unpinned read whose generation another worker retired between
 # resolve and read. In-process readers are pinned and never need one.
 _UNPINNED_READ_ATTEMPTS = 3

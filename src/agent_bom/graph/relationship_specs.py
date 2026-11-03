@@ -166,6 +166,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
             (E.DATA_STORE, E.CLOUD_RESOURCE),
             (E.CODE_MODULE, E.CODE_MODULE),
             (E.CODE_MODULE, E.PACKAGE),
+            (E.CI_JOB, E.CI_JOB),
         ),
     ),
     _spec(R.PROVIDES_TOOL, T.STRUCTURAL, "inventory", (E.SERVER,), (E.TOOL,)),
@@ -193,6 +194,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
             # Warehouse hierarchy (database -> schema) and a directory's code modules.
             (E.DATA_STORE, E.DATA_STORE),
             (E.DIRECTORY, E.CODE_MODULE),
+            (E.CI_JOB, E.CI_JOB),
             (E.ORG, E.ACCOUNT),
             (E.ACCOUNT, E.ENVIRONMENT),
             (E.ACCOUNT, E.APPLICATION),
@@ -358,6 +360,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         "correlation",
         (E.AGENT, E.SERVER),
         (E.AGENT, E.SERVER),
+        extra=((E.CODE_MODULE, E.DATA_STORE),),
         direction="bidirectional",
         traversable=False,
     ),

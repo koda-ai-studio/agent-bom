@@ -7,6 +7,7 @@ import { Drawer } from "@/components/drawer";
 import { GraphChangeAttribution, changeSourceHeading } from "@/components/graph-change-attribution";
 import { GraphChangeExposures } from "@/components/graph-change-exposures";
 import { GraphChangeIssueBasis } from "@/components/graph-change-issue-basis";
+import { GraphRepositoryChanges } from "@/components/graph-repository-changes";
 import type { GraphEstateChangesResponse } from "@/lib/api-types";
 import { countsLine, type SnapshotPair } from "@/lib/graph-estate-changes";
 
@@ -144,6 +145,7 @@ export function GraphChangesPanel({
                   )}
                   {source.comparison?.status === "unavailable" && <p className="text-xs text-amber-700 dark:text-amber-300">Comparable summary unavailable: {source.comparison.reason?.replaceAll("_", " ")}. Snapshot differences below may reflect collection gaps; a disappearance is not verified remediation.</p>}
                   <GraphChangeIssueBasis change={source.issue_change} />
+                  <GraphRepositoryChanges change={source.repository_changes} onOpenDiff={() => onOpenDiff(pair, source.label)} />
                   <GraphChangeAttribution attribution={source.changes_by_source} />
                   <GraphChangeExposures highlights={source.highlights ?? {}} scanId={source.new.scan_id} previousScanId={source.old.scan_id}
                     onInvestigateNode={onInvestigateNode} onOpenDiff={() => onOpenDiff(pair, source.label)} />
