@@ -11,7 +11,7 @@ const makeBrief = () => buildStaticExecutiveBrief({
 it("preserves sample provenance, source scope, incomplete evidence and inert labels in Markdown", () => {
   const brief = makeBrief(); const text = briefMarkdown(brief);
   expect(text).toContain("Sample data"); expect(text).toContain("graph-one");
-  expect(text).toContain("Open issues: 3"); expect(text).toContain("Collection coverage: unknown");
+  expect(text).toContain("Open issue groups: 3"); expect(text).toContain("not finding occurrences"); expect(text).toContain("Collection coverage: unknown");
   expect(text).toContain("Sample history does not record comparable scope");
   expect(text).not.toContain("<script>"); expect(text).not.toContain("\n# injected");
   expect(text).not.toContain("[owner](https://untrusted.example)");
@@ -31,4 +31,21 @@ it("composes sample counts and paths from the same estate without inventing owne
 it("uses the supported findings text filter when an occurrence identifier is absent", async () => {
   const { briefFindingHref } = await import("@/lib/executive-brief");
   expect(briefFindingHref(makeBrief().remediation_priorities[0]!)).toBe("/findings?q=%3Cscript%3E%7C%0A%23+injected");
+});
+it("labels non-advisory findings by title and component instead of an internal id", async () => {
+  const { briefFindingLabel, briefComponent } = await import("@/lib/executive-brief");
+  const uuid = "8c1d6f0e-1111-4222-8333-944455556666";
+  const row = { vulnerability_id: uuid, title: "AI agent can reach a credential or privileged tool", component: "cursor", package: null };
+  expect(briefFindingLabel(row)).toBe("AI agent can reach a credential or privileged tool");
+  expect(briefComponent(row)).toBe("cursor");
+  expect(briefFindingLabel({ vulnerability_id: "CVE-2023-4863", title: "x" })).toBe("CVE-2023-4863");
+  expect(briefComponent({ component: null, package: null })).toBe("—");
+});
+it("states better or worse only from a comparable history point", async () => {
+  const { briefTrend } = await import("@/lib/executive-brief");
+  const point = (comparison: object) => ({ scan_history: { data_points: [{ comparison }] } }) as never;
+  expect(briefTrend(point({ status: "comparable", new_findings: 1, no_longer_detected: 4 }))).toBe("Trend: Better than the last scan: 1 new, 4 resolved.");
+  expect(briefTrend(point({ status: "comparable", new_findings: 3, no_longer_detected: 0 }))).toContain("Worse than the last scan");
+  expect(briefTrend(point({ status: "unavailable", reason: "different_scope" }))).toContain("not comparable");
+  expect(briefMarkdown(makeBrief())).toContain("Trend: not comparable");
 });

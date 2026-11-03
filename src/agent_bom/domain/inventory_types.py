@@ -57,6 +57,10 @@ class TransportType(str, Enum):
     UNKNOWN = "unknown"
 
 
+# Lockfile dependency scopes that mean "development only" (never shipped).
+DEV_DEPENDENCY_SCOPES = frozenset({"dev", "development", "test"})
+
+
 class ServerSurface(str, Enum):
     MCP = "mcp-server"
     CONTAINER_IMAGE = "container-image"

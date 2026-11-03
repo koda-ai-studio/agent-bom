@@ -367,6 +367,8 @@ class OverviewTopRisk(ReadModel):
     owner: str | None = None
     sla_due_at: str | None = None
     sla_due_at_source: str | None = None
+    title: str | None = None
+    component: str | None = None
 
 
 class OverviewResponse(ReadResponse):

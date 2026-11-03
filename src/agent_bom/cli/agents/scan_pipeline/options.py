@@ -233,6 +233,7 @@ class ScanOptions:
     external_scan_path: Optional[str]
     os_packages: bool
     exclude_unfixable: bool = False
+    exclude_dev: bool = False
     fixable_only: bool = False
     iac_paths: tuple = ()
     ignore_file: Optional[str] = None

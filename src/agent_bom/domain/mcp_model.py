@@ -236,6 +236,11 @@ def surface_counts_as_mcp_server(surface: object, discovery_sources: Iterable[st
     return value == ServerSurface.SBOM.value and SBOM_DECLARED_MCP_SOURCE in discovery_sources
 
 
+def server_dict_counts_as_mcp_server(server: dict) -> bool:
+    """Apply the canonical MCP inventory rule to a serialized server row."""
+    return surface_counts_as_mcp_server(server.get("surface"), server.get("discovery_sources") or ())
+
+
 @dataclass
 class MCPServer:
     """An MCP server with its tools, resources, and dependencies."""

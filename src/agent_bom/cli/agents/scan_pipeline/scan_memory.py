@@ -68,8 +68,12 @@ def remember_and_report(opts: ScanOptions, st: ScanState) -> bool:
         outcome = str((st.current_report_json.get("scan_run") or {}).get("outcome") or "complete")
         current = memory.build_summary(st.current_report_json, outcome=outcome)
         previous = memory.load_summary(key)
-        if previous is not None and _console_visible(opts):
-            st.con.print(memory.delta_line(memory.compare(previous, current)))
+        if previous is not None:
+            change = memory.compare(previous, current)
+            if st.report is not None:
+                st.report.since_last_scan = memory.trend_payload(change)
+            if _console_visible(opts):
+                st.con.print(memory.delta_line(change))
         memory.save_summary(key, current)
         return previous is None
     except Exception as exc:  # noqa: BLE001 - scan memory is a convenience and must never break a scan

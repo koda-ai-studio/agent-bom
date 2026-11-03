@@ -17,7 +17,28 @@ from agent_bom.output.html._common import (
 # ─── HTML sections ────────────────────────────────────────────────────────────
 
 
+def _trend_banner(report: "AIBOMReport") -> str:
+    """Better/worse than this target's previous local scan, when one was remembered."""
+    change = getattr(report, "since_last_scan", None)
+    if not change:
+        return ""
+    from agent_bom.core.trend import trend_sentence
+
+    sentence = trend_sentence(int(change.get("new", 0)), int(change.get("resolved", 0)), partial=bool(change.get("partial")))
+    when = _esc(str(change.get("previous_at") or "")[:16].replace("T", " "))
+    return (
+        '<div class="trend-banner" style="border:1px solid #334155;border-radius:8px;padding:10px 16px;'
+        'margin-bottom:12px;font-size:.85rem">'
+        f'<b>Trend</b>: {_esc(sentence)} <span style="color:#94a3b8;font-size:.75rem">previous scan {when}</span></div>'
+    )
+
+
 def _delta_banner(report: "AIBOMReport") -> str:
+    """Render the local trend and, with --delta, the delta-mode banner."""
+    return _trend_banner(report) + _delta_mode_banner(report)
+
+
+def _delta_mode_banner(report: "AIBOMReport") -> str:
     """Render a delta mode info banner when the scan used --delta."""
     scan_json = getattr(report, "_cached_json", None)
     delta = (scan_json or {}).get("delta") if scan_json else None

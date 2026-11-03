@@ -745,7 +745,7 @@ class TestPdf:
         report, brs = _report_with_vulns()
         text = to_pdf(report, brs).decode("latin-1", "replace")
 
-        assert "Top Blast Radius Findings" in text
+        assert "Top package vulnerabilities by blast radius" in text
         assert "CVE-2024-0001" in text
         assert "lodash@4.17.20" in text
         assert "4.17.21" in text
@@ -757,7 +757,7 @@ class TestPdf:
         report.findings = [_make_unified_cve_finding()]
         text = to_pdf(report).decode("latin-1", "replace")
 
-        assert "Top Blast Radius Findings" in text
+        assert "Top package vulnerabilities by blast radius" in text
         assert "CVE-2026-4242" in text
         assert "web-lib@1.0.0" in text
         assert "AWS_SECRET_ACCESS_KEY" in text

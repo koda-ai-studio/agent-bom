@@ -10,6 +10,7 @@ from agent_bom.api.finding_collection import collect_scan_findings
 from agent_bom.api.models import PushPayload, ScanJob, ScanRequest
 from agent_bom.api.posture_recompute import compute_posture_scorecard_from_result
 from agent_bom.api.push_models import normalize_push_coverage
+from agent_bom.domain.mcp_model import server_dict_counts_as_mcp_server
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.output.json_fmt import _build_finding_summary
 from agent_bom.security import (
@@ -96,7 +97,7 @@ def derive_push_summary(report: dict) -> None:
     vuln_ids = {str(f.get("vulnerability_id") or f.get("cve_id")) for f in findings if f.get("vulnerability_id") or f.get("cve_id")}
     report["summary"] = {
         "total_agents": len(agents),
-        "total_mcp_servers": len(servers),
+        "total_mcp_servers": sum(1 for server in servers if isinstance(server, dict) and server_dict_counts_as_mcp_server(server)),
         "total_packages": len(packages),
         "unique_packages": len(package_keys),
         "total_vulnerabilities": len(vuln_ids),

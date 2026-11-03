@@ -10,6 +10,7 @@ from typing import Any
 import click
 
 from agent_bom.cli._findings_group import _common_api_options, _emit_json, _make_client, _run_request
+from agent_bom.core.trend import trend_sentence
 from agent_bom.security import sanitize_text
 
 
@@ -17,6 +18,26 @@ def _text(value: object) -> str:
     text = sanitize_text(str(value if value is not None else "Not recorded"), max_len=1000)
     text = " ".join(text.splitlines())
     return re.sub(r"([\\`*_{}\[\]()#+!|>])", r"\\\1", html.escape(text, quote=False))
+
+
+_ADVISORY_ID = re.compile(r"^(CVE|GHSA|OSV|PYSEC|RUSTSEC|GO|MAL)-", re.I)
+
+
+def _finding_label(row: Mapping[str, Any]) -> str:
+    """Advisory ids read as-is; other findings use their title instead of an internal id."""
+    identifier = str(row.get("vulnerability_id") or "")
+    if _ADVISORY_ID.match(identifier):
+        return identifier
+    return str(row.get("title") or identifier or "Untitled finding")
+
+
+def brief_trend(payload: Mapping[str, Any]) -> str:
+    """Better/worse from the newest comparable scan-history point; never inferred across scopes."""
+    points = (payload.get("scan_history") or {}).get("data_points") or []
+    comparison = (points[0].get("comparison") or {}) if points else {}
+    if comparison.get("status") != "comparable":
+        return "Trend: not comparable with the previous scan (" + str(comparison.get("reason") or "no previous scan") + ")."
+    return "Trend: " + trend_sentence(int(comparison.get("new_findings") or 0), int(comparison.get("no_longer_detected") or 0))
 
 
 def render_markdown(payload: Mapping[str, Any]) -> str:
@@ -29,16 +50,24 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         "## Current posture",
         "",
         f"{_text(posture.get('summary'))}",
-        f"Open issues: {_text(issues['total'])} · Critical: {_text(issues['critical'])} · "
+        f"Open issue groups: {_text(issues['total'])} · Critical: {_text(issues['critical'])} · "
         f"High: {_text(issues['high'])} · KEV: {_text(issues.get('kev'))}",
+        "Counts are correlated issue groups, not finding occurrences.",
+        _text(brief_trend(payload)),
         "",
         "## Remediation priorities",
         "",
-        "| Finding | Package | Owner | SLA due | SLA source |",
+        "| Finding | Component | Owner | SLA due | SLA basis |",
         "|---|---|---|---|---|",
     ]
     for row in payload["remediation_priorities"]:
-        cells = (row.get("vulnerability_id"), row.get("package"), row.get("owner"), row.get("sla_due_at"), row.get("sla_due_at_source"))
+        cells = (
+            _finding_label(row),
+            row.get("component") or row.get("package") or "—",
+            row.get("owner") or "Unassigned",
+            row.get("sla_due_at") or "—",
+            row.get("sla_policy") or row.get("sla_due_at_source") or "—",
+        )
         lines.append("| " + " | ".join(_text(value) for value in cells) + " |")
     if not payload["remediation_priorities"]:
         lines.append("No remediation priorities returned by the current overview.")

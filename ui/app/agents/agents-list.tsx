@@ -18,6 +18,13 @@ import { useEffect, useState } from "react";
 import { AgentDetailDrawer } from "./agent-detail-drawer";
 import { agentCredentialCount, agentPackageCount, ConfiguredPill, useAgentStats } from "./agent-display";
 
+/** Only live discovery of this API host is "on this host"; scanned or unlabelled populations never claim to be. */
+export function agentsCountLabel(scope: string | undefined): string {
+  if (scope === "local_discovery") return "Agents on this host";
+  if (scope === "scanned_estate") return "Scanned agents";
+  return "Agents";
+}
+
 export function AgentsList() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [scope, setScope] = useState<string | undefined>(undefined);
@@ -162,7 +169,7 @@ export function AgentsList() {
             Discovered AI clients/hosts and background agents, with their MCP servers
             {scannedEstate ? (
               <> from this workspace&apos;s scans, one per project or AI client.</>
-            ) : estateAgents !== null ? (
+            ) : scope === "local_discovery" && estateAgents !== null ? (
               <> on this API host. Estate agents: {estateAgents} <Link href="/inventory?type=agent" className="text-[color:var(--accent)]">Open agent inventory</Link></>
             ) : null}
           </p>
@@ -209,7 +216,7 @@ export function AgentsList() {
           data-testid="agents-kpis"
           items={[
             {
-              label: scannedEstate ? "Scanned agents" : "Agents on this host",
+              label: agentsCountLabel(scope),
               value: agents.length,
               icon: ASSET_KINDS.agent.icon,
               hint: !scannedEstate && estateAgents !== null
@@ -239,10 +246,11 @@ export function AgentsList() {
               hint: `across ${serversWithCredentials} servers`,
             },
             {
-              label: "Blocked / risky",
+              label: "Launch-blocked servers",
               value: blockedServers,
               icon: AlertCircle,
-              accent: "critical",
+              ...(blockedServers > 0 ? { accent: "critical" as const } : {}),
+              hint: "blocked by launch policy; vulnerabilities are on Findings",
             },
             {
               label: "Clients · background",

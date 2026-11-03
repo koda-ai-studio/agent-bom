@@ -7,6 +7,7 @@ import time as _time
 from contextlib import nullcontext as _nullcontext
 from typing import Any
 
+from agent_bom.cli.agents.scan_pipeline.dependency_scope import apply_dependency_scope
 from agent_bom.cli.agents.scan_pipeline.helpers import _agents_patchable, _expand_docker_mcp_packages
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
@@ -296,6 +297,7 @@ def _fold_external_packages(opts: ScanOptions, st: ScanState) -> None:
 
 def _resolve_versions(opts: ScanOptions, st: ScanState) -> None:
     # Step 3: Resolve unknown versions (skip in offline mode AND --no-scan)
+    apply_dependency_scope(opts, st)
     st.all_packages = [p for a in st.agents for s in a.mcp_servers for p in s.packages]
     st.unresolved = [p for p in st.all_packages if p.version in ("latest", "unknown", "")]
     if st.unresolved and not opts.offline and not opts.no_scan:

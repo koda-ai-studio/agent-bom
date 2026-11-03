@@ -198,6 +198,16 @@ describe("CompliancePage (dense restyle)", () => {
     expect(within(table).getByRole("columnheader", { name: "Assessment" })).toBeVisible();
   });
 
+  it("says applicability catalogs are not scored instead of leaving a bare dash", async () => {
+    render(<CompliancePage />);
+    const table = await screen.findByTestId("compliance-frameworks-table");
+    for (const name of [/LLM OWASP LLM Top 10/, /MCP OWASP MCP Top 10/, /ATLAS MITRE ATLAS/]) {
+      const row = within(table).getByRole("button", { name });
+      expect(within(row).getByTestId("framework-not-scored")).toHaveTextContent("Not scored");
+      expect(within(row).queryByText("—")).not.toBeInTheDocument();
+    }
+  });
+
   it("opens each benchmark in the detail pane and returns to framework controls", async () => {
     render(<CompliancePage />);
     await screen.findByText("Prompt Injection");

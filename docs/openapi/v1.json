@@ -3160,6 +3160,17 @@
             ],
             "title": "Canonical Id"
           },
+          "component": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component"
+          },
           "cvss_score": {
             "anyOf": [
               {
@@ -3310,6 +3321,17 @@
               }
             ],
             "title": "Sla Status"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           },
           "vulnerability_id": {
             "title": "Vulnerability Id",
@@ -33810,6 +33832,17 @@
             ],
             "title": "Canonical Id"
           },
+          "component": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component"
+          },
           "cvss_score": {
             "anyOf": [
               {
@@ -33932,6 +33965,17 @@
               }
             ],
             "title": "Sla Due At Source"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           },
           "vulnerability_id": {
             "title": "Vulnerability Id",
