@@ -47,6 +47,7 @@ from agent_bom.scanners.package_coverage import (
     _detect_coverage_gaps,
     _flag_suspicious_packages,
     _query_osv_results,
+    _record_runtime_coverage_gaps,
     _scan_supplemental_advisories,
     _select_osv_targets,
 )
@@ -543,6 +544,7 @@ async def scan_packages(
     total_vulns -= sum(demote_to_candidates(pkg) for pkg in scannable)
     retire_stale_receipt_warnings_if_decided(scannable)
     total_vulns += await _scan_supplemental_advisories(scannable, scan_offline)
+    _record_runtime_coverage_gaps(scannable, scan_offline)
     resolve_upstream_advisory_severity(scannable)
     _flag_suspicious_packages(scannable)
     total_vulns -= _suppress_unfixed_findings(scannable)
