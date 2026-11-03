@@ -72,7 +72,7 @@ jobs:
 
     from agent_bom.api.repo_tree_scan import RepoTreeScanResult
 
-    def fake_repo_tree(path: str, *, agents, warnings, update_progress=None, offline=False):
+    def fake_repo_tree(path: str, *, agents, warnings, update_progress=None, offline=False, iac_exceptions=()):
         tree_calls.append(path)
         assert offline is False
         return RepoTreeScanResult(

@@ -215,3 +215,37 @@ def test_scan_iac_uses_the_same_exceptions(repo: Path) -> None:
     unified = [f for f in payload["findings"] if f.get("evidence", {}).get("iac") and f.get("evidence", {}).get("rule_id") == "K8S-001"]
     assert len(unified) == 1  # the accepted one does not reach the unified gate stream
     assert result.exit_code == 1  # prod is still critical
+
+
+def _sbom(root: Path) -> Path:
+    path = root / "bom.cdx.json"
+    path.write_text(
+        json.dumps(
+            {
+                "bomFormat": "CycloneDX",
+                "specVersion": "1.5",
+                "components": [{"type": "library", "name": "requests", "version": "2.32.3", "purl": "pkg:pypi/requests@2.32.3"}],
+            }
+        )
+    )
+    return path
+
+
+@pytest.mark.parametrize("explicit", [False, True])
+def test_malformed_iac_entry_fails_a_run_without_iac_paths(tmp_path: Path, monkeypatch, explicit: bool) -> None:
+    monkeypatch.chdir(tmp_path)
+    ignore = _ignore(tmp_path, [{"rule": "K8S-001", "path": "deploy/*"}])
+    args = ["scan", "--sbom", str(_sbom(tmp_path)), "--no-scan", "-f", "json", "-o", str(tmp_path / "out.json")]
+    result = _run(*args, *(["--ignore-file", str(ignore)] if explicit else []))
+    assert result.exit_code == 1
+    text = " ".join(result.output.split())
+    assert "Error:" in text and "entry #1" in text and "reason" in text
+    assert not (tmp_path / "out.json").exists()
+
+
+def test_valid_iac_entries_do_not_disturb_a_run_without_iac_paths(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    _ignore(tmp_path, [{"rule": "K8S-001", "path": "deploy/*", "reason": "debug pods"}])
+    result = _run("scan", "--sbom", str(_sbom(tmp_path)), "--no-scan", "-f", "json", "-o", str(tmp_path / "out.json"))
+    assert "Error:" not in result.output  # --no-scan exits 1 as a partial-scan verdict; validation passed
+    assert (tmp_path / "out.json").exists()

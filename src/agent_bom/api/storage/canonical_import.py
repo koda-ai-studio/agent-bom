@@ -7,7 +7,7 @@ from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any, cast
 
 from agent_bom.api.access_review import _VALID_DECISIONS, DECISION_PENDING, AccessReviewCampaign, AccessReviewItem
-from agent_bom.api.exception_store import ExceptionStatus, VulnException
+from agent_bom.api.exception_store import ExceptionStatus, VulnException, decode_iac_resource
 from agent_bom.api.fleet_store import FleetAgent, FleetEndpoint
 from agent_bom.api.models import CredentialRefRecord, SourceRecord
 from agent_bom.api.policy_store import GatewayPolicy
@@ -44,6 +44,7 @@ class ImportAdapter:
         values = dict(payload)
         if self.record_type is VulnException:
             values["status"] = ExceptionStatus(values["status"])
+            values["iac_resource"] = decode_iac_resource(values.get("iac_resource"))  # SQLite stores the selector as JSON text
         record = self.record_type(**values)
         if set(payload) - set(payload_of(record)):
             raise ValueError("Source has fields unsupported by the current store model")

@@ -289,6 +289,15 @@
    "_browser_ext_results": null,
    "ai_inventory_data": null,
    "iac_findings_data": {
+    "exceptions": {
+     "accepted": 0,
+     "by_source": {},
+     "expired": 0,
+     "expiring_soon": 0,
+     "invalid": 0,
+     "notices": [],
+     "rejected": 0
+    },
     "findings": [
      {
       "attack_techniques": [
@@ -484,6 +493,12 @@
       "line_number": 10,
       "message": "Container 'c' in 'p' runs in privileged mode. This gives the container full host access. Remove privileged: true unless absolutely required.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-001",
       "severity": "critical",
       "title": "Privileged container"
@@ -501,6 +516,12 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-006",
       "severity": "high",
       "title": "Writable root filesystem"
@@ -518,6 +539,12 @@
       "line_number": 5,
       "message": "Resource 'p' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-010",
       "severity": "medium",
       "title": "Service account token auto-mounted"
@@ -535,6 +562,12 @@
       "line_number": 5,
       "message": "Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-013",
       "severity": "medium",
       "title": "No securityContext at pod level"
@@ -552,6 +585,12 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-004",
       "severity": "medium",
       "title": "No resource limits"
@@ -567,6 +606,12 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-031",
       "severity": "medium",
       "title": "Missing seccompProfile"
@@ -584,6 +629,12 @@
       "line_number": 8,
       "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-011",
       "severity": "medium",
       "title": "Container image uses :latest tag"
@@ -598,6 +649,12 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-022",
       "severity": "low",
       "title": "Container without liveness probe"
@@ -612,11 +669,18 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-023",
       "severity": "low",
       "title": "Container without readiness probe"
      }
     ],
+    "suppressed": [],
     "total": 20
    },
    "project_inventory_data": null,
@@ -1860,6 +1924,15 @@
     ]
    },
    "iac_findings_data": {
+    "exceptions": {
+     "accepted": 0,
+     "by_source": {},
+     "expired": 0,
+     "expiring_soon": 0,
+     "invalid": 0,
+     "notices": [],
+     "rejected": 0
+    },
     "findings": [
      {
       "attack_techniques": [
@@ -2055,6 +2128,12 @@
       "line_number": 10,
       "message": "Container 'c' in 'p' runs in privileged mode. This gives the container full host access. Remove privileged: true unless absolutely required.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-001",
       "severity": "critical",
       "title": "Privileged container"
@@ -2072,6 +2151,12 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' does not set readOnlyRootFilesystem: true. A read-only root filesystem prevents attackers from writing malicious binaries.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-006",
       "severity": "high",
       "title": "Writable root filesystem"
@@ -2089,6 +2174,12 @@
       "line_number": 5,
       "message": "Resource 'p' does not set automountServiceAccountToken: false. The default service account token is mounted into every pod, enabling lateral movement if compromised.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-010",
       "severity": "medium",
       "title": "Service account token auto-mounted"
@@ -2106,6 +2197,12 @@
       "line_number": 5,
       "message": "Pod 'p' has no pod-level securityContext. Set runAsNonRoot, fsGroup, and seccompProfile.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-013",
       "severity": "medium",
       "title": "No securityContext at pod level"
@@ -2123,6 +2220,12 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' has no resource limits. Set CPU and memory limits to prevent resource exhaustion and noisy-neighbor issues.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-004",
       "severity": "medium",
       "title": "No resource limits"
@@ -2138,6 +2241,12 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' has no seccompProfile set at container or pod level. Set seccompProfile.type to RuntimeDefault or Localhost to restrict syscalls.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-031",
       "severity": "medium",
       "title": "Missing seccompProfile"
@@ -2155,6 +2264,12 @@
       "line_number": 8,
       "message": "Container 'c' uses image 'nginx' without a pinned tag. Pin to a specific version.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-011",
       "severity": "medium",
       "title": "Container image uses :latest tag"
@@ -2169,6 +2284,12 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' has no livenessProbe. Without a liveness probe, Kubernetes cannot detect and restart deadlocked or unresponsive containers.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-022",
       "severity": "low",
       "title": "Container without liveness probe"
@@ -2183,11 +2304,18 @@
       "line_number": 7,
       "message": "Container 'c' in 'p' has no readinessProbe. Without a readiness probe, traffic is sent to pods before they are ready to serve requests.",
       "remediation": "",
+      "resource": {
+       "kind": "Pod",
+       "labels": {},
+       "name": "p",
+       "namespace": ""
+      },
       "rule_id": "K8S-023",
       "severity": "low",
       "title": "Container without readiness probe"
      }
     ],
+    "suppressed": [],
     "total": 20
    },
    "project_inventory_data": {
@@ -2608,6 +2736,15 @@
    "_browser_ext_results": null,
    "ai_inventory_data": null,
    "iac_findings_data": {
+    "exceptions": {
+     "accepted": 0,
+     "by_source": {},
+     "expired": 0,
+     "expiring_soon": 0,
+     "invalid": 0,
+     "notices": [],
+     "rejected": 0
+    },
     "findings": [
      {
       "attack_techniques": [
@@ -2698,6 +2835,7 @@
       "title": "S3 bucket logging not enabled"
      }
     ],
+    "suppressed": [],
     "total": 5
    },
    "project_inventory_data": {
