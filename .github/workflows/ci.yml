@@ -72,6 +72,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # Keep ancestry for merge-base/diff without every historical image blob.
+          filter: blob:none
 
       - name: Classify changed paths
         id: classify
@@ -1298,6 +1300,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # Keep ancestry for merge-base/diff without every historical image blob.
+          filter: blob:none
 
       - uses: ./.github/actions/setup-python
         with:

@@ -9,6 +9,27 @@ from tests.test_postgres_migrated_graph_parity import _with_database, migrated_f
 from tests.test_postgres_migrated_graph_parity import pytestmark as pytestmark
 
 
+def test_store_reset_reopens_wrapped_pool_and_keeps_retention_override(migrated_fresh_database, monkeypatch):  # noqa: F811
+    from agent_bom.api import postgres_common, tenant_graph_retention_store
+    from tests.conftest import _snapshot_store_singletons
+
+    monkeypatch.setattr(tenant_graph_retention_store, "_tenant_graph_retention_store", None)
+    token = postgres_common.set_current_tenant("retention-a")
+    try:
+        original = tenant_graph_retention_store._get_tenant_graph_retention_store()
+        original.put("retention-a", 400)
+        postgres_common.reset_pool()
+        assert original._backend._pool.closed
+        _snapshot_store_singletons()
+        assert tenant_graph_retention_store._tenant_graph_retention_store is None
+        restored = tenant_graph_retention_store._get_tenant_graph_retention_store()
+        assert restored is not original
+        assert restored.get("retention-a") == 400
+        assert restored.get("retention-b") is None
+    finally:
+        postgres_common.reset_current_tenant(token)
+
+
 @pytest.mark.parametrize("fail_cleanup", [False, True])
 def test_save_purges_only_expired_owned_history_on_real_psycopg(migrated_fresh_database, monkeypatch, fail_cleanup):  # noqa: F811
     import psycopg
