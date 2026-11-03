@@ -54,6 +54,12 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
         const frame = node.closest(".react-flow")!.getBoundingClientRect();
         return box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
       }))).toBe(true);
+      expect(await page.locator(".react-flow__node").evaluateAll(nodes => {
+        const boxes = nodes.map(node => node.getBoundingClientRect());
+        const frame = nodes[0]!.closest(".react-flow")!.getBoundingClientRect();
+        const center = (Math.min(...boxes.map(b => b.top)) + Math.max(...boxes.map(b => b.bottom))) / 2;
+        return Math.abs(center - (frame.top + frame.height / 2)) / frame.height;
+      })).toBeLessThan(0.1);
       const result=await page.evaluate(async()=>{
         await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
         const resources=performance.getEntriesByType("resource").filter(r=>r.name.includes("/v1/graph?")).map(r=>({ms:r.duration}));

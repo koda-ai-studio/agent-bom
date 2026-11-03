@@ -184,8 +184,15 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   const positioned = new Map((compact && repository ? alignHierarchyBranches(ordered, rankedEdges, rowStep) : ordered).map(node => [node.id, node]));
   const columns = [...new Set([...positioned.values()].map(node => node.position.x))].sort((a, b) => a - b);
   const roomyOverview = boundedOverview && columns.length > 1 && columns.slice(1).every((x, index) => x - columns[index]! >= 364);
+  // One parent and its collapsed peer groups need their real caption bounds.
+  // Reserving a full stacked-row cell here shifts the visible diagram upward
+  // when the camera centres the otherwise empty lower half of that cell.
+  const compactBundle = nodes.length <= 3 && nodes.some(node => node.type === "clusterPillNode");
   return {
-    nodes: nodes.map(node => positioned.get(node.id)!),
+    nodes: nodes.map(node => {
+      const placed = positioned.get(node.id)!;
+      return compactBundle ? { ...placed, style: { ...placed.style, minHeight: 0 } } : placed;
+    }),
     edges: edges.map((edge): Edge => ({ ...edge,
       ...(contextEdges.has(edge.id) ? { sourceHandle: "context", targetHandle: "context" } : {}),
       data: { ...edge.data, quietLabel: !edge.data?.isClusterEdge,
