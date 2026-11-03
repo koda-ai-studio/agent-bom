@@ -42,17 +42,9 @@ for (const theme of ["light", "dark"] as const) for (const view of ["personal", 
       await expect(page.getByRole("heading", { name: "Get started", exact: true })).toBeVisible();
       const guide = page.getByRole("region", { name: "Start with evidence" });
       await expect(guide).toBeVisible();
-      if (view === "personal") {
-        await expect(guide.getByRole("heading", { name: "Scan a project on your machine" })).toBeVisible();
-        await expect(guide.getByRole("link", { name: "Choose a scan target" })).not.toBeVisible();
-        await guide.getByRole("button", { name: "Copy local scan command" }).click();
-        await expect(page.locator("html")).toHaveAttribute("data-copied-command", /^uvx agent-bom scan \. --no-discover --context-graph -f json -o report.json$/);
-        const shared = guide.locator("summary").filter({ hasText: "Share evidence or connect a source" });
-        await shared.focus();
-        await page.keyboard.press("Enter");
-      } else {
-        await expect(guide.getByRole("heading", { name: "Scan a project on your machine" })).toHaveCount(0);
-      }
+      await expect(guide.getByRole("heading", { name: "Scan a project on your machine" })).toBeVisible();
+      await guide.getByRole("button", { name: "Copy local scan command" }).click();
+      await expect(page.locator("html")).toHaveAttribute("data-copied-command", /^uvx agent-bom scan \. --no-discover --context-graph -f json -o report.json$/);
       await expect(guide.getByRole("link", { name: "Choose a scan target" })).toHaveAttribute("href", "/scan");
       await expect(guide.getByRole("link", { name: "Connect a source" })).toHaveAttribute("href", "/connections?tab=connect");
       await expect(guide.getByRole("list", { name: "Your first investigation" })).toBeVisible();

@@ -73,10 +73,10 @@ for (const theme of ["light", "dark"] as const) test.describe(theme, () => {
       await expect(link).toBeFocused();
       await readable(link.getByText(value!, { exact: true }));
     }
-    const action = page.getByRole("link", { name: view === "personal" ? "Scan a project" : "Manage sources", exact: false });
-    await expect(action).toHaveAttribute("href", view === "personal" ? "/get-started" : "/connections");
+    const action = page.getByRole("link", { name: "Scan a project", exact: false });
+    await expect(action).toHaveAttribute("href", "/get-started");
     await readable(action);
-    expect(complianceReads).toHaveLength(view === "organization" ? 1 : 0);
+    expect(complianceReads).toHaveLength(1);
     await action.hover();
     await readable(action);
     await action.focus();

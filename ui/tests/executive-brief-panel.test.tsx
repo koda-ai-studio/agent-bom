@@ -60,6 +60,7 @@ it("keeps signed pack verification separate and exposes unverifiable signing hon
   apiMock.getExecutiveBrief.mockResolvedValue({ ...brief, sample_data: false });
   apiMock.getComplianceVerificationKey.mockResolvedValue({ algorithm: "hmac-sha256", signature_verifiable: false, verification_status: "unverifiable_ephemeral_key", public_key_pem: null });
   render(<ExecutiveBriefPanel />); await screen.findByText("Technical evidence needs review");
+  fireEvent.click(screen.getByText("Signed evidence and verification"));
   fireEvent.click(screen.getByRole("button", { name: "Check signing configuration" }));
   expect(await screen.findByText(/unverifiable_ephemeral_key/)).toBeVisible();
   expect(screen.queryByRole("button", { name: "Download verification key" })).toBeNull();
@@ -81,4 +82,12 @@ it("does not describe an incomplete posture as having zero findings", async () =
   render(<ExecutiveBriefPanel />);
   expect(await screen.findByText(/Posture evidence is incomplete/)).toBeVisible();
   expect(screen.queryByText(/Zero returned issues/)).toBeNull();
+});
+
+it("keeps verification details secondary and the decision queue visible", async () => {
+  render(<ExecutiveBriefPanel />);
+  await screen.findByText("Technical evidence needs review");
+  expect(screen.getByRole("region", { name: "Risk at a glance" })).toBeVisible();
+  expect(screen.getByRole("heading", { name: "Remediation priorities" })).toBeVisible();
+  expect(screen.getByText("Signed evidence and verification").closest("details")).not.toHaveAttribute("open");
 });

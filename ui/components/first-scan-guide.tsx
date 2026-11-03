@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { PersonalScanStart } from "@/components/personal-scan-start";
-import { PRODUCT_VIEWS, useProductView } from "@/lib/product-view";
 import { FolderSearch, Network, Upload } from "lucide-react";
 import type { ScanResult } from "@/lib/api";
 import { useAuthState } from "@/components/auth-provider";
@@ -30,7 +29,6 @@ export function projectCommand({ pushUrl, needsKey }: { pushUrl: string | null; 
 }
 
 export function FirstScanGuide({ onImport }: { onImport: (data: ScanResult) => void }) {
-  const view = useProductView();
   const { loading, hasCapability, session } = useAuthState();
   const [pushUrl, setPushUrl] = useState<string | null>(null);
   const preview = useRef<HTMLDetailsElement>(null);
@@ -46,10 +44,10 @@ export function FirstScanGuide({ onImport }: { onImport: (data: ScanResult) => v
     <section aria-labelledby="first-scan-title" className="rounded-xl border border-outline bg-surface p-4 sm:p-6">
       <p className="text-xs font-medium uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Your first source → your first investigation</p>
       <h2 id="first-scan-title" className="mt-2 text-2xl font-semibold tracking-tight">Start with evidence</h2>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-secondary">{PRODUCT_VIEWS[view].description}</p>
-      {view === "personal" && <PersonalScanStart onPreview={openPreview} />}
-      <details key={view} open={view !== "personal"} className="mt-5">
-        <summary className="cursor-pointer text-sm font-medium">{view === "personal" ? "Share evidence or connect a source" : "Add shared evidence"}</summary>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-secondary">Scan a project, connect a source, or inspect an existing report.</p>
+      <PersonalScanStart onPreview={openPreview} />
+      <details open className="mt-5">
+        <summary className="cursor-pointer text-sm font-medium">Connect or share evidence</summary>
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <div className="min-w-0 space-y-3 rounded-lg border border-outline p-4">
           <FolderSearch className="h-5 w-5 text-emerald-700 dark:text-emerald-300" aria-hidden="true" />
@@ -88,7 +86,7 @@ export function FirstScanGuide({ onImport }: { onImport: (data: ScanResult) => v
                 </p>
               ) : <p className="text-xs leading-5 text-ink-secondary">This session can push without a key.</p>}
               <p className="text-xs leading-5 text-ink-secondary">Bash or Zsh. The command stops before scanning if a required setting is missing; any key stays in the environment.</p>
-              <code className="block whitespace-pre-wrap break-words rounded-lg bg-surface-muted p-3 text-xs leading-5 [overflow-wrap:anywhere]">{command}</code>
+              <code aria-label="Project push command" className="block whitespace-pre-wrap break-words rounded-lg bg-surface-muted p-3 text-xs leading-5 [overflow-wrap:anywhere]">{command}</code>
               <div className="flex flex-wrap gap-2">
                 <CopyTextButton text={command} label="Copy project command" />
                 {canScan
@@ -104,7 +102,7 @@ export function FirstScanGuide({ onImport }: { onImport: (data: ScanResult) => v
       <ol aria-label="Your first investigation" className="mt-5 grid gap-4 rounded-lg bg-surface-muted p-4 md:grid-cols-3">
         {INVESTIGATION.map((step, index) => <li key={step.title} className="min-w-0">
           <h3 className="text-sm font-medium"><span className="mr-2 text-emerald-800 dark:text-emerald-300">0{index + 1}</span>{step.title}</h3>
-          <p className="mt-2 text-xs leading-5 text-ink-secondary">{index === 0 && view === "personal" ? "Confirm the scanned project, timestamp and collection gaps. Keep the report for comparison." : index === 1 && view === "personal" ? "Open a finding in the report. Review recorded relationships and what remains unverified." : step.detail}</p>
+          <p className="mt-2 text-xs leading-5 text-ink-secondary">{step.detail}</p>
         </li>)}
       </ol>
       <p className="mt-4 text-sm text-ink-secondary">Trying Agent-Bom before connecting a source? Preview a saved or sample report below. <a href={FIRST_RUN} target="_blank" rel="noreferrer" className="font-medium underline">Installation and first-run guide</a></p>

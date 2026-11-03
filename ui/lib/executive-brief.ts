@@ -69,7 +69,7 @@ export function briefTrend(brief: Pick<ExecutiveBrief, "scan_history">): string 
   const added = comparison.new_findings ?? 0;
   const resolved = comparison.no_longer_detected ?? 0;
   const head = added > resolved ? "Worse than the last scan" : resolved > added ? "Better than the last scan" : "Unchanged since the last scan";
-  return `Trend: ${head}: ${added} new, ${resolved} resolved.`;
+  return `Trend: ${head}: ${added} newly detected, ${resolved} no longer detected.`;
 }
 
 export function briefFindingHref(row: ExecutiveBrief["remediation_priorities"][number]): string {

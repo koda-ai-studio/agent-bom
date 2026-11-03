@@ -17,8 +17,8 @@ export function SlaChip({ row }: { row: ExecutiveBrief["remediation_priorities"]
 export function BriefPriorities({ brief }: { brief: ExecutiveBrief }) {
   return <Card className="space-y-3">
     <div className="flex flex-wrap justify-between gap-2"><h2 className="text-lg font-semibold">Remediation priorities</h2><Link className="text-sm underline" href="/remediation">Open remediation</Link></div>
-    <p className="text-sm text-ink-secondary">Canonical overview priorities. Owner and SLA remain attached to each finding occurrence.</p>
-    <ul className="divide-y divide-outline">{brief.remediation_priorities.map((row, i) => <li key={`${row.canonical_id ?? row.vulnerability_id}-${i}`} className="space-y-1.5 py-3">
+    <p className="text-xs font-medium uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Act next · Finding-level ownership and deadlines</p>
+    <ul className="divide-y divide-outline">{brief.remediation_priorities.map((row, i) => <li key={`${row.canonical_id ?? row.vulnerability_id}-${i}`} className="relative space-y-2 border-l-2 border-amber-500/60 py-4 pl-4">
       <div className="flex flex-wrap items-center gap-2">
         <Link href={briefFindingHref(row)} className="break-words font-medium underline">{briefFindingLabel(row)} · {briefComponent(row)}</Link>
         <SlaChip row={row} />
@@ -51,18 +51,19 @@ export function BriefPaths({ brief }: { brief: ExecutiveBrief }) {
 
 export function BriefControlsAndHistory({ brief }: { brief: ExecutiveBrief }) {
   const { compliance, scan_history: history } = brief;
-  return <div className="grid gap-4 lg:grid-cols-2">
+  return <div className="grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-1">
     <Card className="min-w-0 space-y-3">
-      <h2 className="text-lg font-semibold">Technical control evidence</h2>
-      <p className="text-sm">{compliance.overall_status} · {compliance.evaluated_controls} of {compliance.total_controls} controls evaluated</p>
+      <h2 className="text-lg font-semibold">Control coverage</h2>
+      <p className="text-3xl font-semibold tabular-nums">{compliance.evaluated_controls}<span className="text-base font-normal text-ink-secondary"> / {compliance.total_controls} evaluated</span></p>
+      <p className="text-sm text-ink-secondary">Recorded status: {compliance.overall_status}</p>
       <p className="break-words text-sm text-ink-secondary">Latest scan: {briefTimestamp(compliance.latest_scan)}</p>
-      <p className="text-sm text-ink-secondary">Technical results do not establish framework attestation. Inspect the control evidence and applicability.</p>
+      <p className="text-xs leading-5 text-ink-secondary">Evaluation coverage, not a compliance certification.</p>
       <Link href="/compliance" className="inline-block text-sm underline">Review control evidence</Link>
     </Card>
     <Card className="min-w-0 space-y-3">
-      <h2 className="text-lg font-semibold">Scope-specific scan history</h2>
-      <p className="text-sm text-ink-secondary">These comparisons retain their own scope. They are not deltas against the tenant-wide posture score.</p>
-      <ul className="space-y-3">{history.data_points.map((point, i) => <li key={`${point.scan_id}-${i}`} className="break-words text-sm">
+      <h2 className="text-lg font-semibold">Recent scan evidence</h2>
+      <p className="text-xs leading-5 text-ink-secondary">Each comparison keeps its scan scope; it does not measure a change in tenant-wide posture.</p>
+      <ul className="space-y-4 border-l border-outline pl-4">{history.data_points.map((point, i) => <li key={`${point.scan_id}-${i}`} className="break-words text-sm">
         {point.scan_id ? <Link href={`/findings?${new URLSearchParams({ scan: point.scan_id })}`} className="underline">Scan {point.scan_id}</Link> : "Scan not recorded"}
         <p className="text-ink-secondary">{briefTimestamp(point.timestamp)} · {point.comparison.status} · {briefText(point.comparison.reason)}</p>
       </li>)}</ul>

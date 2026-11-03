@@ -44,7 +44,7 @@ it("labels non-advisory findings by title and component instead of an internal i
 it("states better or worse only from a comparable history point", async () => {
   const { briefTrend } = await import("@/lib/executive-brief");
   const point = (comparison: object) => ({ scan_history: { data_points: [{ comparison }] } }) as never;
-  expect(briefTrend(point({ status: "comparable", new_findings: 1, no_longer_detected: 4 }))).toBe("Trend: Better than the last scan: 1 new, 4 resolved.");
+  expect(briefTrend(point({ status: "comparable", new_findings: 1, no_longer_detected: 4 }))).toBe("Trend: Better than the last scan: 1 newly detected, 4 no longer detected.");
   expect(briefTrend(point({ status: "comparable", new_findings: 3, no_longer_detected: 0 }))).toContain("Worse than the last scan");
   expect(briefTrend(point({ status: "unavailable", reason: "different_scope" }))).toContain("not comparable");
   expect(briefMarkdown(makeBrief())).toContain("Trend: not comparable");

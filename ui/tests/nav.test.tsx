@@ -108,32 +108,14 @@ describe('Nav', () => {
     vi.clearAllMocks()
   })
 
-  it('keeps governance optional in Personal view with all pages discoverable', () => {
-    window.localStorage.setItem('agent-bom.product-view', 'personal')
+  it.each(['personal', 'team', 'organization'])('shows the complete platform navigation despite retired %s preferences', (view) => {
+    window.localStorage.setItem('agent-bom.product-view', view)
     renderExpandedNav()
-    expect(screen.getByRole('combobox', { name: 'Product view' })).toHaveValue('personal')
-    expect(screen.queryByRole('button', { name: /^governance$/i })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Show all pages' }))
-    expect(screen.getByRole('button', { name: /^governance$/i })).toBeInTheDocument()
-  })
-
-  it('switches primary navigation between Personal, Shared and Governance', () => {
-    window.localStorage.setItem('agent-bom.product-view', 'personal')
-    renderExpandedNav()
-    const selector = screen.getByRole('combobox', { name: 'Product view' })
-    expect(screen.queryByRole('button', { name: /^operations$/i })).not.toBeInTheDocument()
-    fireEvent.change(selector, { target: { value: 'team' } })
-    expect(screen.getByRole('button', { name: /^operations$/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^governance$/i })).not.toBeInTheDocument()
-    fireEvent.change(selector, { target: { value: 'organization' } })
-    expect(screen.getByRole('button', { name: /^governance$/i })).toBeInTheDocument()
-  })
-
-  it('does not promote Governance for a Findings link shared by multiple groups', () => {
-    window.localStorage.setItem('agent-bom.product-view', 'personal')
-    mockedPathname = '/findings'
-    renderExpandedNav()
-    expect(screen.queryByRole('button', { name: /^governance$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Product view' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Show all pages' })).not.toBeInTheDocument()
+    for (const name of ['Posture', 'Inventory', 'Governance', 'Connect', 'Runtime', 'Operations']) {
+      expect(screen.getByRole('button', { name: new RegExp(`^${name}$`, 'i') })).toBeInTheDocument()
+    }
   })
 
   it('retains the active governance route when Personal is selected', () => {

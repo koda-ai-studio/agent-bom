@@ -3216,7 +3216,6 @@ async function main() {
         window.localStorage.setItem("agent-bom-theme", selectedTheme);
         // The governance tour exercises the selectable Governance view.
         // This is a display preference; fixture evidence and access stay unchanged.
-        window.localStorage.setItem("agent-bom.product-view", "organization");
       }, theme);
       return capturePage;
     };

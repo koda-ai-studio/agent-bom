@@ -77,57 +77,12 @@ The source contract lives in
 [`compliance_routes/common.py`](https://github.com/koda-ai-studio/agent-bom/blob/main/src/agent_bom/api/routes/compliance_routes/common.py);
 browser labels and evidence-based surface availability live in
 [`deployment-context.ts`](https://github.com/koda-ai-studio/agent-bom/blob/main/ui/lib/deployment-context.ts).
-## Choose a dashboard view
+## Dashboard navigation
 
-Use **Product view** in the expanded sidebar (or the navigation menu on mobile):
+The sidebar exposes the platform's navigation groups without a product-view
+preset. Use search to find a page, or expand its group. Permissions and actual
+deployment capabilities still determine which actions are available.
 
-- **Personal** is the default. Get started leads with a local command and report
-  preview. Governance and Operations stay out of the primary navigation.
-- **Shared** brings Operations into the primary navigation for shared scan jobs
-  and integrations. Get started opens the shared-source paths.
-- **Governance** also brings Governance forward, with compliance and executive
-  reporting on Overview. Local report previews still omit tenant compliance.
-
-Use **Show all pages** or search to find additional pages. A direct link keeps
-its active group visible. Role, tenant and demo restrictions still apply in
-every view. A view does not grant access, change a scan target, enable a service
-or filter shared evidence down to the current user. Personal does not mean a
-private workspace.
-
-These names describe the work, not company size or a deployment tier. Shared
-was previously labelled Team, and Governance was Organization; existing saved
-preferences keep working. Personal and Shared skip optional compliance loading
-on Overview. Select Governance when that review is useful.
-
-The preference is saved in this browser, not to the control plane. It applies
-across tabs on the same origin; if browser storage is unavailable, it lasts only
-for the current page session. Choose it explicitly rather than inferring it from
-a source label or account role.
-
-## Runtime and packaging
-
-The primary control-plane images are:
-
-- `agentbom/agent-bom`: scanner, API, jobs, proxy, gateway and MCP server runtimes.
-- `agentbom/agent-bom-ui`: the browser dashboard companion.
-
-CLI installation does not require either image. The separately packaged
-collector serves collection deployments; it is not required for every control
-plane. See [Product surfaces](overview.md#product-surfaces) for the owning
-commands and [Proxy vs Gateway vs Fleet](proxy-vs-gateway-vs-fleet.md) for runtime
-choices. Fleet collection is inventory intake, not inline enforcement.
-
-## Keep the surfaces aligned
-
-Public entry points should lead to a command, an artifact and a next step:
-
-- **Individual:** scan a chosen project, open the report, fix and rescan.
-- **Team:** retain a scan, review its source and scope, investigate and compare.
-- **Organization:** configure shared access and operations, review scoped
-  evidence, then use the governance workflows required by the organization.
-
-Hosting documentation owns deployment prerequisites. API evidence labels own
-collection semantics. UI navigation owns task discovery while preserving
-server-side authorization. None should infer the other choices from a local,
-fleet or cluster label. Keep optional services out of the first-run requirement
-unless the selected workflow actually depends on them.
+Deployment mode describes where services run and which evidence is available.
+It does not select an audience or hide platform pages. Local report previews
+remain scoped to the imported report and do not load tenant compliance.

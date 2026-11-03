@@ -14,6 +14,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Tenant IaC exceptions through `POST /v1/exceptions` (`iac_rule_id`, `iac_path`, `iac_resource`) with the existing four-eyes approval, bounded expiry and tenant scoping; repository scans through the API and project scans by the MCP `scan` tool apply them, and MCP scan results now include the project's IaC findings.
 - Policy-as-code rules for IaC findings (`iac_rule`, `severity_gte`, `iac_path`, resource, labels, `iac_environment`) with `allow`, `warn` and `block` actions; a non-waivable `block` rejects repository-local exceptions. `agent-bom iac` accepts `--ignore-file` and `--policy`.
 
+### Changed
+- Dashboard navigation exposes every platform group without Personal, Shared or Governance presets. Retired browser preferences no longer hide reporting or source setup. Deployment settings and permission checks remain authoritative.
+- Executive briefs emphasize issue groups, severity, remediation ownership and evidence coverage; source and signing details expand on demand. A finding no longer detected by a comparable scan is not labelled a verified remediation.
+
 ### Upgrade notes
 - Database migration `20261102_01` adds three columns to `exceptions` (additive, idempotent).
 
