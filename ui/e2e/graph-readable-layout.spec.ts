@@ -83,7 +83,10 @@ async function labelCollisions(page: Page) {
   return page.locator(".react-flow").evaluate(canvas => {
     const visible = (el: Element) => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && r.width > 0 && r.height > 0; };
     const labels = [...canvas.querySelectorAll(".graph-relationship-label")].filter(visible).map(el => ({ text: el.textContent?.trim() ?? "", r: el.getBoundingClientRect() }));
-    const cards = [...canvas.querySelectorAll(".react-flow__node [data-graph-entity]")].map(el => ({ text: el.getAttribute("title") ?? "", r: el.getBoundingClientRect() }));
+    const cards = [...canvas.querySelectorAll(".react-flow__node [data-graph-entity]")].flatMap(el => [...el.children].map(child => {
+      const r = child.getBoundingClientRect(), pad = child.classList.contains("graph-entity-glyph") ? 8 : 0;
+      return { text: el.getAttribute("title") ?? "", r: new DOMRect(r.left - pad, r.top - pad, r.width + pad * 2, r.height + pad * 2) };
+    }));
     const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
     const out: string[] = [];
     labels.forEach((a, i) => {
@@ -319,3 +322,45 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
   if (lines.length > 1) expect(Math.min(...lines.map(l => l.length)) / Math.max(...lines.map(l => l.length))).toBeGreaterThanOrEqual(0.6);
   await page.screenshot({ path: info.outputPath(`provider-marks-${theme}.png`), animations: "disabled" });
 });
+
+for (const theme of ["light", "dark"] as const) for (const width of [1440, 390]) {
+  test(`cloud roles and finding ownership stay readable ${theme} ${width}`, async ({ page }, info) => {
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+    await page.setViewportSize({ width, height: 1000 });
+    const workload = (id: string) => ({ ...node(id, "container"), attributes: { container_kind: "workload" } });
+    const entries = [node("account", "account"), node("cluster", "cluster"), node("gateway", "api_gateway"),
+      workload("checkout-api"), workload("ledger-worker"), node("role", "role", "checkout-runtime-role"),
+      node("bucket", "data_store", "customer-pii-bucket"), node("cve", "vulnerability", "CVE-2025-29927"),
+      node("grant", "misconfiguration", "Role grants broad storage access")];
+    const links = [edge("account", "cluster", "contains"), edge("account", "gateway", "contains"),
+      edge("cluster", "checkout-api", "hosts"), edge("cluster", "ledger-worker", "hosts"), edge("gateway", "checkout-api", "exposed_to"),
+      edge("checkout-api", "role", "authenticates_as"), edge("role", "bucket", "has_permission"),
+      edge("checkout-api", "cve", "vulnerable_to"), edge("grant", "role", "affects")];
+    await fixture(page, entries, links);
+    await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
+    if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(entries.length);
+    if (width < 640) {
+      await settle(page);
+      const zoom = await page.locator(".react-flow__viewport").evaluate(el => new DOMMatrixReadOnly(getComputedStyle(el).transform).a);
+      expect(zoom).toBeGreaterThanOrEqual(0.8);
+      await page.screenshot({ path: info.outputPath(`cloud-roles-initial-${theme}-${width}.png`), animations: "disabled" });
+    }
+    await page.locator(".react-flow__controls-fitview").click();
+    await settle(page);
+    await expect(page.getByText("Identity · permissions role", { exact: true })).toBeVisible();
+    expect(await cardOverlaps(page)).toEqual([]);
+    expect(await edgesThroughNodes(page)).toEqual([]);
+    expect(await labelCollisions(page)).toEqual([]);
+    await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(links.length);
+    const labels = await visibleLabelTexts(page);
+    if (width >= 640) {
+      expect(labels.some(text => /Authenticates As/i.test(text))).toBe(true);
+      expect(labels.some(text => /Has Permission/i.test(text))).toBe(true);
+    } else {
+      // Explicit Fit all provides an overview; the initial mobile camera above stays readable.
+      await expect(page.getByRole("group", { name: /Has Permission.*relationship from checkout-runtime-role to customer-pii-bucket/ })).toHaveCount(1);
+    }
+    await page.screenshot({ path: info.outputPath(`cloud-roles-${theme}-${width}.png`), animations: "disabled" });
+  });
+}
