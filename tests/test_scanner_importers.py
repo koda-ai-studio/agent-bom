@@ -173,6 +173,20 @@ def test_securityhub_vulnerabilities_become_cve_findings():
     assert finding.asset.identifier.startswith("arn:aws:ecr:us-east-1:123456789012:repository/app")
 
 
+def test_securityhub_same_advisory_on_two_package_versions_stays_two_findings():
+    payload = _load("securityhub_asff.json")
+    row = next(r for r in payload["Findings"] if r.get("Vulnerabilities"))
+    first = row["Vulnerabilities"][0]
+    second = copy.deepcopy(first)
+    second["VulnerablePackages"][0]["Version"] = "7.74.0"
+    row["Vulnerabilities"] = [first, second]
+
+    cves = [f for f in ingest_external_report({"Findings": [row]}).findings if f.finding_type == FindingType.CVE]
+
+    assert sorted(f.evidence["package_version"] for f in cves) == ["7.74.0", "7.88.1"]
+    assert len({f.id for f in cves}) == 2
+
+
 def test_securityhub_bare_list_matches_wrapped_response_ids():
     payload = _load("securityhub_asff.json")
     wrapped = ingest_external_report(payload)

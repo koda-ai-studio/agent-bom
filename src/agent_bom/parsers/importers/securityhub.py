@@ -118,6 +118,7 @@ def _vulnerability_findings(base: CloudRecord, vulnerabilities: list[Any]) -> li
         package = mapping(packages[0]) if isinstance(packages, list) and packages else {}
         score, vector = _cvss(vuln)
         package_name = text(package.get("Name"), 200)
+        package_version = text(package.get("Version"), 120)
         record = replace(
             base,
             finding_type=FindingType.CVE,
@@ -125,12 +126,12 @@ def _vulnerability_findings(base: CloudRecord, vulnerabilities: list[Any]) -> li
             title=f"{vuln_id} in {package_name}" if package_name else (base.title or vuln_id),
             cvss_score=score,
             fixed_version=text(package.get("FixedInVersion"), 120) or None,
-            key_parts=(vuln_id, package_name),
+            key_parts=(vuln_id, package_name, *([package_version] if package_version else [])),
             evidence={
                 **base.evidence,
                 "vulnerability_id": vuln_id,
                 "package_name": package_name,
-                "package_version": text(package.get("Version"), 120),
+                "package_version": package_version,
                 "package_manager": text(package.get("PackageManager"), 40),
                 "cvss_vector": vector,
                 "fix_available": text(vuln.get("FixAvailable"), 20),
