@@ -75,12 +75,18 @@ def test_lockfile_inventory_is_exact(case, tmp_path):
     assert [w for w in peek_coverage_warnings() if w.get("kind") != "scope_exclusion"] == []
 
 
-def test_go_mod_only_lines_are_not_inventory(tmp_path):
+def test_go_pre_117_inventory_is_the_recorded_build_list(tmp_path):
     expected = _expected("go_node_exporter_1_3_0")
+    main, *build_list = expected["go_list_m_all"]
+    assert main == expected["main_module"] and len(build_list) == 120
+    assert set(expected["packages"]) == {f"{m}@{v.removeprefix('v')}" for m, v in (line.split() for line in build_list)}
+
     root = _materialize("go_node_exporter_1_3_0", tmp_path)
-    names = {pkg.name for pkg in scan_project_directory(root)[root.resolve()]}
-    assert expected["go_mod_only_modules"]
-    assert names.isdisjoint(expected["go_mod_only_modules"])
+    packages = scan_project_directory(root)[root.resolve()]
+    assert main not in {pkg.name for pkg in packages}
+    graph_only = {pkg.name for pkg in packages if pkg.version_evidence[0].get("build_list_role") == "module_graph_only"}
+    assert graph_only == set(expected["module_graph_only"])
+    assert {pkg.reachability_evidence for pkg in packages if pkg.name in graph_only} == {"declaration_only"}
 
 
 def test_poetry_test_fixtures_are_skipped_and_locked_packages_kept(tmp_path):
