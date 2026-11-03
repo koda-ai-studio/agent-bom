@@ -1121,3 +1121,19 @@ for (const theme of ["light", "dark"] as const) {
     await page.screenshot({ path: testInfo.outputPath(`expanded-reference-${theme}.png`), fullPage: true });
   });
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test(`focused path keeps broader finding counts on topology only ${theme}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await routeGraphPage(page);
+    await page.goto(`/graph?capture=1&scan=${scanId}&path=top&rollup=0`);
+    await expect(page.getByTestId("focused-path-decision")).toBeVisible();
+    await expect(page.locator(".react-flow__node")).toHaveCount(4);
+    await expect(page.getByTestId("graph-headline-metrics")).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath(`focused-count-scope-${theme}.png`) });
+    await page.getByRole("button", { name: "Return to topology", exact: true }).click();
+    await expect(page.getByTestId("focused-path-decision")).toHaveCount(0);
+    await expect(page.getByTestId("graph-headline-metrics")).toContainText("16 findings in view");
+  });
+}

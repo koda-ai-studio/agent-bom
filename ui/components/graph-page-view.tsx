@@ -215,7 +215,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
   const selectedSnapshotTitle = selectedSnapshot ? snapshotOptionLabel(selectedSnapshot)
     : selectedScanId && selectedScanId === currentEstateId ? "Current tenant estate" : selectedScanId || undefined;
   const graphHeadline = <>
-      {!investigationMode && !firstFramePending && flow.summary && (
+      {!investigationMode && !selectedAttackPath && !firstFramePending && flow.summary && (
         <div
           data-testid="graph-headline-metrics"
           className="text-xs text-ink-secondary"
