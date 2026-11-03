@@ -113,8 +113,13 @@ class SQLiteIdempotencyStore:
         tenant_id: str,
         source_id: str,
         idempotency_key: str,
+        *,
+        blocking: bool = True,
     ) -> Iterator[None]:
-        """Fence one SQLite idempotency key across API worker processes."""
+        """Fence one SQLite idempotency key across API worker processes.
+
+        With ``blocking=False`` a fence held elsewhere raises ``BlockingIOError``.
+        """
 
         if self._db_path == ":memory:":
             yield
@@ -131,7 +136,11 @@ class SQLiteIdempotencyStore:
         flags |= getattr(os, "O_NOFOLLOW", 0)
         fd = os.open(lock_path, flags, 0o600)
         try:
-            _lock_file_descriptor(fd)
+            _lock_file_descriptor(fd, blocking=blocking)
+        except BaseException:
+            os.close(fd)
+            raise
+        try:
             yield
         finally:
             try:
@@ -345,10 +354,11 @@ class SQLiteIdempotencyStore:
         reservation_lease_seconds: int | None = None,
         owner_token: str = "",
     ) -> tuple[dict[str, Any], bool]:
-        with (
-            self._claim_lock(endpoint, tenant_id, source_id, idempotency_key),
-            self._claim_file_lock(endpoint, tenant_id, source_id, idempotency_key),
-        ):
+        # A live ``commit_claim`` holds this fence for its whole durable action.
+        # Never wait behind it: a busy fence means the key (or a stripe
+        # neighbour) is mid-commit, so this caller may still insert a fresh
+        # reservation but must not reclaim an expired lease it cannot fence.
+        with self._try_claim_fence(endpoint, tenant_id, source_id, idempotency_key) as fenced:
             return self._claim_without_process_fence(
                 endpoint,
                 tenant_id,
@@ -358,7 +368,28 @@ class SQLiteIdempotencyStore:
                 request_hash=request_hash,
                 reservation_lease_seconds=reservation_lease_seconds,
                 owner_token=owner_token,
+                allow_reclaim=fenced,
             )
+
+    @contextmanager
+    def _try_claim_fence(self, endpoint: str, tenant_id: str, source_id: str, idempotency_key: str) -> Iterator[bool]:
+        thread_lock = self._claim_lock(endpoint, tenant_id, source_id, idempotency_key)
+        if not thread_lock.acquire(blocking=False):
+            yield False
+            return
+        try:
+            file_fence = self._claim_file_lock(endpoint, tenant_id, source_id, idempotency_key, blocking=False)
+            try:
+                file_fence.__enter__()
+            except BlockingIOError:
+                yield False
+                return
+            try:
+                yield True
+            finally:
+                file_fence.__exit__(None, None, None)
+        finally:
+            thread_lock.release()
 
     def _claim_without_process_fence(
         self,
@@ -371,6 +402,7 @@ class SQLiteIdempotencyStore:
         request_hash: str = "",
         reservation_lease_seconds: int | None = None,
         owner_token: str = "",
+        allow_reclaim: bool = True,
     ) -> tuple[dict[str, Any], bool]:
         """Atomically insert a reservation across threads and API processes."""
         response_json = json.dumps(response, sort_keys=True)
@@ -405,7 +437,11 @@ class SQLiteIdempotencyStore:
         except IdempotencyConflictError:
             self._conn.rollback()
             raise
-        if not acquired and _reservation_lease_is_expired(str(row[0]), str(row[2]), str(row[4] or ""), reservation_lease_seconds):
+        if (
+            not acquired
+            and allow_reclaim
+            and _reservation_lease_is_expired(str(row[0]), str(row[2]), str(row[4] or ""), reservation_lease_seconds)
+        ):
             cursor = self._conn.execute(
                 """UPDATE idempotency_keys SET created_at = ?, reservation_owner = ?, lease_expires_at = ?
                    WHERE endpoint = ? AND tenant_id = ? AND source_id = ? AND idempotency_key = ?
@@ -721,13 +757,22 @@ class PostgresIdempotencyStore:
             ).fetchone()
             row = inserted
             if row is None:
+                # ``commit_claim`` holds this row lock for its whole durable
+                # action. SKIP LOCKED answers "in flight" at once instead of
+                # parking this request (and its fence connection) behind it.
                 row = conn.execute(
                     """SELECT response_json, request_hash, created_at, reservation_owner, lease_expires_at FROM idempotency_keys
                        WHERE endpoint = %s AND tenant_id = %s AND source_id = %s AND idempotency_key = %s
-                       FOR UPDATE""",
+                       FOR UPDATE SKIP LOCKED""",
                     (endpoint, tenant_id, source_id, idempotency_key),
                 ).fetchone()
-                if row is not None:
+                if row is None:
+                    row = conn.execute(
+                        """SELECT response_json, request_hash FROM idempotency_keys
+                           WHERE endpoint = %s AND tenant_id = %s AND source_id = %s AND idempotency_key = %s""",
+                        (endpoint, tenant_id, source_id, idempotency_key),
+                    ).fetchone()
+                else:
                     _ensure_request_hash_matches(str(row[1] or ""), request_hash)
                     lease_expression = self._LEASE_ISO if owner_token and reservation_lease_seconds is not None else "''"
                     update_params: tuple[Any, ...] = (owner_token,)

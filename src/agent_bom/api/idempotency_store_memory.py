@@ -23,6 +23,7 @@ class InMemoryIdempotencyStore:
         self._records: dict[tuple[str, str, str, str], IdempotencyRecord] = {}
         self._ttl = timedelta(hours=ttl_hours)
         self._lock = threading.Lock()
+        self._committing: set[tuple[str, str, str, str]] = set()
 
     def _prune(self) -> None:
         cutoff = datetime.now(timezone.utc) - self._ttl
@@ -102,8 +103,24 @@ class InMemoryIdempotencyStore:
             if existing is None or not owner_token or existing.reservation_owner != owner_token:
                 raise IdempotencyConflictError("idempotency reservation ownership was lost")
             _ensure_request_hash_matches(existing.request_hash, request_hash)
+            if key in self._committing:
+                raise IdempotencyConflictError("idempotency reservation is already committing")
+            self._committing.add(key)
+        # The action runs outside the store lock: claims, reads and heartbeats
+        # for every other key stay responsive, and ``_committing`` keeps a
+        # rival from reclaiming this key's lease until finalization.
+        try:
             result = action()
             resolved_response = response(result) if callable(response) else response
+        except BaseException:
+            with self._lock:
+                self._committing.discard(key)
+            raise
+        with self._lock:
+            self._committing.discard(key)
+            current = self._records.get(key)
+            if current is None or current.reservation_owner != owner_token:
+                raise IdempotencyConflictError("idempotency reservation ownership was lost")
             self._records[key] = IdempotencyRecord(
                 endpoint=endpoint,
                 tenant_id=tenant_id,
@@ -134,7 +151,7 @@ class InMemoryIdempotencyStore:
             existing = self._records.get(key)
             if existing is not None:
                 _ensure_request_hash_matches(existing.request_hash, request_hash)
-                if _reservation_lease_is_expired(
+                if key not in self._committing and _reservation_lease_is_expired(
                     existing.response_json,
                     existing.created_at,
                     existing.lease_expires_at,
