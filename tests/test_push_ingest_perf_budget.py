@@ -19,6 +19,8 @@ import pytest
 
 from scripts.generate_graph_benchmark_estate import generate_estate
 
+pytestmark = pytest.mark.graph_performance
+
 ESTATE_SEED = 2145
 INGEST_BUDGET_SECONDS = 5.0
 ADMISSION_BUDGET_SECONDS = 2.0
@@ -135,7 +137,7 @@ async def test_event_loop_stays_live_while_a_10x_push_is_admitted_and_retried(
                 latencies.append(time.monotonic() - began)
                 await asyncio.sleep(0.01)
 
-        # Idle baseline under the same runner conditions (xdist neighbours, CPU steal).
+        # Idle baseline on the same isolated runner (including host CPU steal).
         for _ in range(30):
             began = time.monotonic()
             await client.get("/health")

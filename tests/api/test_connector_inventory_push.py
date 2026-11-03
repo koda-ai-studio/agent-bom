@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 import pytest
 from starlette.testclient import TestClient
 
@@ -74,8 +76,20 @@ def push_connector(client, report, tenant=TENANT):
 
 
 def graph(client, tenant=TENANT):
-    response = client.get("/v1/graph", params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=tenant))
-    return response
+    """Assert the pushed evidence after its bounded asynchronous refresh finishes."""
+    deadline = time.monotonic() + 10
+    while True:
+        response = client.get("/v1/graph", params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=tenant))
+        body = response.json()
+        refreshing = response.status_code == 200 and body.get("collection_coverage", {}).get("freshness") == "previous_generation"
+        building = response.status_code == 503 and body.get("detail", {}).get("code") in {
+            "current_estate_building",
+            "current_estate_generation_rotating",
+        }
+        if not (refreshing or building):
+            return response
+        assert time.monotonic() < deadline, "current graph did not finish refreshing"
+        time.sleep(0.05)
 
 
 def node_ids(client, tenant=TENANT):
@@ -236,23 +250,51 @@ def test_cli_push_url_lands_vercel_and_supabase_in_current_estate(client, tmp_pa
     assert {supabase_project_node_id("org-one", ref) for ref in refs} <= nodes
 
 
-def test_cli_pushes_partial_inventory_as_partial_and_exits_2(client, tmp_path, monkeypatch):
+@pytest.mark.parametrize("deferred_refresh", [False, True])
+def test_cli_pushes_partial_inventory_as_partial_and_exits_2(client, tmp_path, monkeypatch, deferred_refresh):
     import json
 
     from click.testing import CliRunner
 
     import agent_bom.cloud.vercel_inventory as vercel_adapter
     from agent_bom.cli._cloud_group import cloud_group
+    from tests.api.test_current_graph_unpinned_reads import _hold_materialize
 
     _route_push_to(client, monkeypatch, [])
     token = _token(tmp_path)
     output = tmp_path / "vercel.json"
-    for report, code in ((vercel_report(), 0), (vercel_report(status=403), 2)):
-        monkeypatch.setattr(vercel_adapter, "collect_report", lambda report=report, **kw: report)
-        assert CliRunner().invoke(cloud_group, _vercel_args(token, output)).exit_code == code
-    stored = json.loads(output.read_text())
-    assert stored["persistence"]["push"]["receipts"][0]["scan_outcome"] == "partial"
-    response = graph(client)
+    complete = vercel_report()
+    monkeypatch.setattr(vercel_adapter, "collect_report", lambda **kw: complete)
+    assert CliRunner().invoke(cloud_group, _vercel_args(token, output)).exit_code == 0
+    assert vercel_project_node() in node_ids(client)
+    release, previous = None, []
+    if deferred_refresh:
+        entered, release = _hold_materialize(stores._get_graph_store())
+        get = client.get
+
+        def release_after_previous(*args, **kwargs):
+            response = get(*args, **kwargs)
+            if response.json().get("collection_coverage", {}).get("freshness") == "previous_generation":
+                assert entered.is_set()
+                previous.append(response.json())
+                release.set()
+            return response
+
+        monkeypatch.setattr(client, "get", release_after_previous)
+    try:
+        partial = vercel_report(status=403)
+        monkeypatch.setattr(vercel_adapter, "collect_report", lambda **kw: partial)
+        assert CliRunner().invoke(cloud_group, _vercel_args(token, output)).exit_code == 2
+        stored = json.loads(output.read_text())
+        assert stored["persistence"]["push"]["receipts"][0]["scan_outcome"] == "partial"
+        response = graph(client)
+    finally:
+        if release:
+            release.set()
+    if deferred_refresh:
+        assert previous, "the test must exercise the explicit previous-generation response"
+    assert response.status_code == 200, response.text
+    assert response.json()["collection_coverage"].get("freshness") != "previous_generation"
     assert vercel_project_node() in {node["id"] for node in response.json()["nodes"]}
     assert response.json()["collection_coverage"]["status"] == "partial"
 
