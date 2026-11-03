@@ -74,7 +74,8 @@ def _detect_coverage_gaps(scannable: list[Package]) -> list[dict]:
 
 def _record_runtime_coverage_gaps(scannable: list[Package], offline: bool) -> None:
     """Record runtimes no advisory source assessed, so their zero findings never read as clean."""
-    from agent_bom.coverage import _open_readonly_db, detect_runtime_coverage_gaps
+    from agent_bom.coverage import _open_readonly_db
+    from agent_bom.scanners.runtime_coverage import detect_runtime_coverage_gaps
 
     conn = _open_readonly_db()
     try:

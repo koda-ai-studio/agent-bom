@@ -26,12 +26,9 @@ from __future__ import annotations
 import logging
 import sqlite3
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Optional, Protocol, Sequence
+from typing import Optional, Protocol, Sequence
 
 from agent_bom.os_advisory import covered_distro_labels, rpm_advisory_ecosystems
-
-if TYPE_CHECKING:
-    from agent_bom.models import Package as ModelPackage
 
 
 class Package(Protocol):
@@ -449,80 +446,12 @@ def osv_fallback_db_keys(
 RUNTIME_COVERAGE_UNKNOWN = "runtime_advisory_coverage_unknown"
 
 
-def runtime_coverage_release(pkg: "ModelPackage") -> str:
+def runtime_coverage_release(pkg: "Package") -> str:
     """Coverage-warning ``release`` for one runtime component, e.g. ``node:18.20.8``."""
     return f"{pkg.name.lower()}:{pkg.version}"
 
 
-def _has_dedicated_runtime_source(pkg: "ModelPackage", *, offline: bool) -> bool:
-    """Runtimes with their own advisory lookup, which records its own coverage gap on failure."""
-    from agent_bom.scanners.cpython_advisory import is_cpython_runtime
-
-    if is_cpython_runtime(pkg):
-        return True
-    return not offline and (pkg.cpe or "").startswith("cpe:2.3:a:nvidia:")
-
-
-def _local_cpe_ranges_exist(conn: Optional[sqlite3.Connection], pkg: "ModelPackage") -> bool:
-    from agent_bom.cpe_match import cpe_identity
-
-    identity = cpe_identity(pkg)
-    if conn is None or identity is None:
-        return False
-    try:
-        row = conn.execute("SELECT 1 FROM cpe_matches WHERE vendor = ? AND product = ? LIMIT 1", identity).fetchone()
-    except sqlite3.Error as exc:
-        _logger.debug("runtime coverage check could not read CPE ranges: %s", exc)
-        return False
-    return row is not None
-
-
-def _runtime_gap_warning(pkg: "ModelPackage") -> dict:
-    return CoverageWarning(
-        ecosystem=(pkg.ecosystem or "").lower(),
-        release=runtime_coverage_release(pkg),
-        reason=RUNTIME_COVERAGE_UNKNOWN,
-        detail=(
-            f"Vulnerability coverage for {pkg.name} {pkg.version} is unknown: it has no OSV ecosystem and "
-            "no advisory source this scan consulted tracks it (the local advisory DB holds no CPE ranges "
-            "for it). It was not assessed, so zero findings is not a clean bill of health."
-        ),
-        package_count=1,
-        advisory_rows=0,
-    ).to_dict()
-
-
-def detect_runtime_coverage_gaps(
-    packages: Sequence["ModelPackage"],
-    *,
-    offline: bool,
-    conn: Optional[sqlite3.Connection] = None,
-) -> list[dict]:
-    """Coverage warnings for runtime components no advisory source assessed.
-
-    A runtime with no OSV ecosystem (``generic``) is only assessed when a
-    dedicated source covers it or the local DB carries CPE ranges for its
-    identity. Anything else was skipped, and must not read as clean.
-    """
-    from agent_bom.scanners.package_matching import _osv_ecosystems_for_package
-
-    warnings: list[dict] = []
-    seen: set[str] = set()
-    for pkg in packages:
-        if (pkg.ecosystem or "").lower() != "generic" or pkg.vulnerabilities:
-            continue
-        if _osv_ecosystems_for_package(pkg) or _has_dedicated_runtime_source(pkg, offline=offline):
-            continue
-        if _local_cpe_ranges_exist(conn, pkg):
-            continue
-        release = runtime_coverage_release(pkg)
-        if release not in seen:
-            seen.add(release)
-            warnings.append(_runtime_gap_warning(pkg))
-    return warnings
-
-
-def package_vulnerability_unassessed(pkg: "ModelPackage", coverage_warnings: Sequence[dict]) -> bool:
+def package_vulnerability_unassessed(pkg: "Package", coverage_warnings: Sequence[dict]) -> bool:
     """True when no advisory source assessed ``pkg``: its zero findings mean "not scanned", not clean."""
     if _unsupported_rpm_release(pkg) is not None:
         return True

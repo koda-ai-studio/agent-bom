@@ -6,8 +6,9 @@ import sqlite3
 
 import pytest
 
-from agent_bom.coverage import RUNTIME_COVERAGE_UNKNOWN, detect_runtime_coverage_gaps, package_vulnerability_unassessed
+from agent_bom.coverage import RUNTIME_COVERAGE_UNKNOWN, package_vulnerability_unassessed
 from agent_bom.models import Agent, AgentType, AIBOMReport, MCPServer, Package
+from agent_bom.scanners.runtime_coverage import detect_runtime_coverage_gaps
 
 
 def _node() -> Package:
