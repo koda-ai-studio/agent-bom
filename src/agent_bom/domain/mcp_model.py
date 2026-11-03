@@ -16,6 +16,7 @@ from agent_bom.canonical_ids import (
 from agent_bom.core.packages import normalize_package_name as normalize_package_name
 from agent_bom.core.severity import Severity as Severity
 from agent_bom.domain.inventory_types import ServerSurface, TransportType
+from agent_bom.domain.mcp_auth_headers import auth_header_names
 from agent_bom.domain.package_model import Package
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
@@ -302,9 +303,15 @@ class MCPServer:
         return self.stable_id
 
     @property
+    def declared_auth_headers(self) -> list[str]:
+        """Configured HTTP header names that carry authentication (names only)."""
+        names = self.connection_metadata.get("header_names") or []
+        return auth_header_names(names if isinstance(names, list) else [])
+
+    @property
     def auth_mode(self) -> str:
         """Best-effort auth posture classification for the server."""
-        if self.connection_metadata.get("header_names") or self.connection_metadata.get("oauth_configured"):
+        if self.declared_auth_headers or self.connection_metadata.get("oauth_configured"):
             return "configured-http-auth"
         credential_names = self.credential_names
         if credential_names:

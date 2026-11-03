@@ -173,6 +173,7 @@ def _declares_auth(server: MCPServer) -> bool:
 
     Reference-only signals, in priority order:
       * an explicit ``mcp_auth`` posture entry with ``requires_auth``/``oauth``;
+      * a configured auth header name or OAuth block on the connection;
       * a credential env var the server presents to the *upstream* (bearer /
         OAuth / token) — i.e. ``auth_mode == "env-credentials"`` with an
         auth-shaped credential name, which means the server is configured to
@@ -180,6 +181,10 @@ def _declares_auth(server: MCPServer) -> bool:
     """
     meta = _server_metadata(server)
     if bool(meta.get("requires_auth")) or bool(meta.get("oauth")) or bool(meta.get("oidc")):
+        return True
+    # Configured auth header names (Authorization, X-API-Key, ...) or an OAuth
+    # block recorded by discovery; header values are never retained.
+    if server.declared_auth_headers or server.connection_metadata.get("oauth_configured"):
         return True
     # A server that carries an auth-shaped credential ref (bearer/token/oauth)
     # is configured with authentication material; treat it as authenticated.
