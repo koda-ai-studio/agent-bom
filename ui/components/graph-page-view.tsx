@@ -642,9 +642,9 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 groups={investigationContext.groups} selected={selectedContextGroup}
                 visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
                 crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
-          <details className="relative ml-auto text-xs">
-            <summary className="graph-page-action cursor-pointer">Graph options</summary>
-            <div className="absolute right-0 top-full z-30 mt-2 flex w-80 max-w-[calc(100vw-3rem)] flex-wrap items-center gap-3 rounded-xl border border-outline bg-surface p-3 shadow-lg">
+          <details className="ml-auto text-xs open:w-full">
+            <summary className="graph-page-action ml-auto w-fit cursor-pointer">Graph options</summary>
+            <div className="mt-2 flex w-full flex-wrap items-start gap-3 rounded-xl border border-outline bg-surface p-3">
               {graphRenderer.kind === "react-flow" && relationshipLabels.control}
               {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline label="Relationship evidence breakdown" />}
               {showLegend && <GraphLegendDock items={legendItems} popover />}
