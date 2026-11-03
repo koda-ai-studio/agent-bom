@@ -16,6 +16,7 @@ from typing import Any
 
 from packaging.version import InvalidVersion, Version
 
+from agent_bom.core.sla import sla_status_text
 from agent_bom.core.trend import trend_sentence
 from agent_bom.eu_ai_act import EU_AI_ACT
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
@@ -115,7 +116,7 @@ def _posture_blocks(report: AIBOMReport, findings: list[Any], policy: list[Any])
 
 
 def _risk_blocks(report: AIBOMReport, findings: list[Any], policy: list[Any]) -> list[_Block]:
-    rows_in = (_headline_row(finding) for finding in [*findings, *policy])
+    rows_in = (_headline_row(finding, report.generated_at) for finding in [*findings, *policy])
     headline = build_executive_headline(rows_in, limit=10, include_risk_sentences=False)
     blocks = [_Block("heading", "Executive summary"), _Block("para", headline.summary)]
     if report.executive_summary:
@@ -129,7 +130,8 @@ def _risk_blocks(report: AIBOMReport, findings: list[Any], policy: list[Any]) ->
                 f"{risk.title} ({risk.id})" if _ADVISORY.match(risk.id) and risk.id not in risk.title else risk.title,
                 ", ".join(risk.affected_agents[:3]) + (f" +{len(risk.affected_agents) - 3}" if len(risk.affected_agents) > 3 else ""),
                 risk.owner or "Unassigned",
-                (risk.sla_due_at or "No SLA") + (f" / {statuses[risk.id]}" if statuses.get(risk.id) else ""),
+                (f"{risk.sla_due_at} ({sla_status_text(risk.sla_due_at, now=report.generated_at)})" if risk.sla_due_at else "No SLA")
+                + (f" / {statuses[risk.id]}" if statuses.get(risk.id) else ""),
             ]
             for index, risk in enumerate(headline.top_risks, start=1)
         ]

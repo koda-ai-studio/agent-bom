@@ -1629,9 +1629,10 @@ export async function installRoutes(page, fixtureGraph = graph) {
   });
   await page.route("**/health", (route) => fulfill(route, { status: "ok", version: RELEASE_VERSION }));
   await page.route("**/v1/compliance", (route) => fulfill(route, {
-    overall_score: 72,
-    overall_status: "warning",
-    evaluated_controls: 12,
+    // No framework rows below are evaluated, so the fixture reports no score.
+    overall_score: 0,
+    overall_status: "no_data",
+    evaluated_controls: 0,
     total_controls: 12,
     coverage_pct: 100,
     scan_count: 2,

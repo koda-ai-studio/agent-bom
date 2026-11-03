@@ -10,6 +10,7 @@ from typing import Any
 import click
 
 from agent_bom.cli._findings_group import _common_api_options, _emit_json, _make_client, _run_request
+from agent_bom.core.sla import sla_status_text
 from agent_bom.core.trend import trend_sentence
 from agent_bom.security import sanitize_text
 
@@ -65,7 +66,9 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
             _finding_label(row),
             row.get("component") or row.get("package") or "—",
             row.get("owner") or "Unassigned",
-            row.get("sla_due_at") or "—",
+            f"{row.get('sla_due_at')} ({row.get('sla_status_text') or sla_status_text(row.get('sla_due_at'))})"
+            if row.get("sla_due_at")
+            else "No SLA",
             row.get("sla_policy") or row.get("sla_due_at_source") or "—",
         )
         lines.append("| " + " | ".join(_text(value) for value in cells) + " |")

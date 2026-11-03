@@ -9738,6 +9738,8 @@ export interface components {
             sla_policy?: string | null;
             /** Sla Status */
             sla_status?: ("overdue" | "due_soon" | "on_track" | "unknown") | null;
+            /** Sla Status Text */
+            sla_status_text?: string | null;
             /** Title */
             title?: string | null;
             /** Vulnerability Id */

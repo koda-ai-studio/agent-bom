@@ -189,6 +189,26 @@ export function complianceScoredTotals(
     );
 }
 
+/**
+ * The page headline, derived from the same scored rows the Passing / Attention /
+ * Failing tiles sum, so the rate can never disagree with them: passing over
+ * evaluated (the API's score_compliance formula), and no rate at all when
+ * nothing was evaluated.
+ */
+export function complianceHeadline(
+  summaries: ComplianceFrameworkSummary[],
+  overall: Pick<ComplianceResponse, "overall_status" | "total_controls">,
+): { evaluated: number; total: number; rate: number | null; status: string } {
+  const { pass, warn, fail } = complianceScoredTotals(summaries);
+  const evaluated = pass + warn + fail;
+  return {
+    evaluated,
+    total: Math.max(overall.total_controls, evaluated),
+    rate: evaluated > 0 ? Math.round((pass / evaluated) * 100) : null,
+    status: evaluated > 0 ? overall.overall_status : "no_data",
+  };
+}
+
 export function compliancePassRate(summary: ComplianceFrameworkSummary): number {
   if (summary.total <= 0) return 0;
   if (summary.kind === "applicability") {
