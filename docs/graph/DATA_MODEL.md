@@ -192,6 +192,7 @@ Findings (`agent_bom.finding.Finding`) are linked to graph nodes by `graph/asset
 | `CREDENTIAL_EXPOSURE` | `graph/finding_projection.py`, `graph/nhi_governance.py` |
 | `CVE` | `graph/blast_reach.py` |
 | `EXFILTRATION` | — |
+| `IAC_MISCONFIGURATION` | — |
 | `INJECTION` | — |
 | `LICENSE` | — |
 | `MALICIOUS_MODEL` | — |

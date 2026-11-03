@@ -95,6 +95,21 @@ explicitly reporting-only vulnerability scan. `--exit-zero` never suppresses a
 malicious-package, policy, or incomplete-evidence failure. Add `--warn-on` when
 the reporting-only path should still print a named warning tier.
 
+#### Documentation, example and test paths are non-gating by default
+
+Secret, native source-analysis and SARIF/Semgrep findings in illustrative paths
+are kept and labelled, but lowered to `low`, so the default `high` gate does
+not trip on sample code. A path counts as illustrative when a directory in it is
+`docs/`, `doc/`, `documentation/`, `site-docs/`, `examples/`, `example/`,
+`samples/`, `sample/`, `test/`, `tests/`, `__tests__/`, `testing/`, `testdata/`,
+`fixtures/`, `__fixtures__/`, `__mocks__/`, `spec/` or `specs/`, or when the
+file is a Markdown/reStructuredText/AsciiDoc document, a `README*`,
+`CHANGELOG*` or `CONTRIBUTING*` file, or a test file (`test_*.py`, `*_test.go`,
+`*.test.*`, `*.spec.*`). Each such finding carries `path_context`
+(`documentation`, `example` or `test`) and a `downgrade_reason`. A credential a
+provider confirmed live (`validation_status: valid`) keeps its severity
+wherever it sits. To gate on these findings too, pass `--fail-on-severity low`.
+
 #### Unknown severity fails closed
 
 A finding whose severity is `unknown` (or `none`) trips any active severity
