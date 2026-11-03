@@ -1582,6 +1582,12 @@ async function fulfill(route, body, status = 200) {
 
 export async function installRoutes(page, fixtureGraph = graph) {
   const graph = fixtureGraph;
+  // The recorded gallery predates path-context collection; do not invent counts.
+  await page.route("**/v1/findings/context-summary", (route) => fulfill(route, {
+    schema_version: "1", contexts: [], count: 0, approximate: true,
+    basis: "Path context not recorded in this fixture",
+    warnings: ["Path context not recorded in this fixture"],
+  }));
   await page.route("**/v1/intel/sources", (route) => fulfill(route, intelSourcesFixture()));
   // Canonical persisted neighborhood fixture. IDs and edges come from the same
   // demo snapshot used by the other graph surfaces; no label-based joins.
