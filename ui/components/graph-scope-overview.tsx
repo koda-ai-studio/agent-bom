@@ -1,12 +1,13 @@
 "use client";
 
 import { Background, Controls, ReactFlow, ReactFlowProvider } from "@xyflow/react";
-import { useMemo, useState, type ComponentProps } from "react";
+import { useMemo, useState, type ComponentProps, type CSSProperties } from "react";
 import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
 import { lineageNodeTypes } from "@/components/lineage-nodes";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { buildScopePreview } from "@/lib/graph-scope-preview";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
+import { CONTROLS_CLASS } from "@/lib/graph-utils";
 
 type Props = ComponentProps<typeof GraphRollupDecisionSurface>;
 
@@ -28,24 +29,27 @@ export function GraphScopeOverview(props: Props) {
           </select>
         </label>}
       </div>
-      <button type="button" className="graph-page-action" onClick={() => setShowList(value => !value)}>{showList ? "Show connections" : `Browse all ${props.items.length} nodes and scopes`}</button>
+      <div className="flex flex-wrap items-center gap-2">
+        {!showList && <button type="button" className="graph-page-action" onClick={() => props.onInvestigate(preview.root)}>Inspect this scope</button>}
+        <button type="button" className="graph-page-action" onClick={() => setShowList(value => !value)}>{showList ? "Show connections" : `Browse all ${props.items.length} nodes and scopes`}</button>
+      </div>
     </div>
     {showList ? <GraphRollupDecisionSurface {...props} /> : <>
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3 text-xs text-ink-secondary">
         <span>{preview.shownRelationships} of {preview.availableRelationships} loaded relationships for this scope{props.completeness?.truncated ? " · partial inventory" : ""}</span>
-        <button type="button" className="graph-page-action" onClick={() => props.onInvestigate(preview.root)}>Inspect this scope</button>
       </div>
       {edgeDetail && <p role="status" className="px-4 pt-3 text-sm text-ink-secondary">{edgeDetail}</p>}
       <ReactFlowProvider key={`${preview.root.id}:${narrow}`}>
-        <div style={{ height: narrow ? preview.nodes.length * 230 : 620 }} data-testid="graph-scope-connections">
+        <div style={{ height: narrow ? preview.nodes.length * 230 : 560 }} data-testid="graph-scope-connections">
           <ReactFlow nodes={narrow ? preview.nodes.map((node, index) => ({ ...node, position: { x: 0, y: index * 230 } })) : preview.nodes}
+            style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
             edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
             fitView fitViewOptions={{ padding: 0.12, maxZoom: 1 }} minZoom={0.35} maxZoom={1.5}
             nodesDraggable={false} nodesConnectable={false} proOptions={{ hideAttribution: true }}
             onEdgeClick={(_, edge) => { const recorded = props.edges.find(row => row.source === edge.source && row.target === edge.target); if (recorded) setEdgeDetail(`${recorded.count} recorded relationship${recorded.count === 1 ? "" : "s"}: ${recorded.relationships.join(", ").replaceAll("_", " ")} · ${recorded.directions?.join(", ") || "direction not recorded"}.`); }}
             onNodeClick={(_, node) => { const item = props.items.find(item => item.id === node.id); if (item) props.onInvestigate(item); }}>
             <Background color="var(--border)" gap={20} size={1} />
-            <Controls showInteractive={false} />
+            <Controls showInteractive={false} className={CONTROLS_CLASS} />
           </ReactFlow>
         </div>
       </ReactFlowProvider>

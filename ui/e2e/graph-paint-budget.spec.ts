@@ -50,6 +50,7 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
       await expect(page.locator(".react-flow__node")).toHaveCount(5);
       await expect(page.locator(".react-flow__node-serverNode")).toHaveCount(3);
       await expect(page.locator(".react-flow__edge")).toHaveCount(4);
+      await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
       expect(await page.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
         const box = node.getBoundingClientRect();
         const frame = node.closest(".react-flow")!.getBoundingClientRect();

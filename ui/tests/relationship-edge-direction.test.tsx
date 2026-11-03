@@ -16,7 +16,7 @@ vi.mock("@xyflow/react", async (importOriginal) => ({
   useStore: (select: (state: unknown) => unknown) => select({ nodes: [], transform: [0, 0, 1] }),
   BaseEdge: ({ markerStart, markerEnd }: { markerStart?: string; markerEnd?: string }) => <path data-testid="edge" markerStart={markerStart} markerEnd={markerEnd} />,
   EdgeLabelRenderer: ({ children }: { children: React.ReactNode }) => <foreignObject>{children}</foreignObject>,
-  SmoothStepEdge: () => <path />,
+  SmoothStepEdge: ({ label }: { label?: React.ReactNode }) => <text>{label}</text>,
   useStoreApi: () => flowStore,
 }));
 vi.mock("@/lib/relationship-label-layout", () => ({ scheduleRelationshipLabelLayout: vi.fn(), scheduleRelationshipLabelLayoutAfterMove: vi.fn() }));
@@ -28,6 +28,17 @@ function mount(extra: Partial<EdgeProps> = {}) {
   return render(<svg><g className="react-flow__edge" tabIndex={0}><RelationshipEdge {...props} {...extra} /></g></svg>);
 }
 describe("progressive relationship direction", () => {
+  it("defers aggregate captions to hover or focus just like individual connections", () => {
+    const { container, queryByText, rerender } = mount({ label: "Uses ×9 · configured", data: { relationship: "uses", isClusterEdge: true, quietLabel: true } });
+    expect(queryByText("Uses ×9 · configured")).not.toBeInTheDocument();
+    fireEvent.mouseEnter(container.querySelector(".react-flow__edge > g")!);
+    expect(queryByText("Uses ×9 · configured")).toBeVisible();
+    fireEvent.mouseLeave(container.querySelector(".react-flow__edge > g")!);
+    fireEvent.focus(container.querySelector(".react-flow__edge")!);
+    expect(queryByText("Uses ×9 · configured")).toBeVisible();
+    rerender(<svg><RelationshipEdge {...props} label="Uses ×9 · configured" data={{ relationship: "uses", isClusterEdge: true, labelVisibility: "hide" }} /></svg>);
+    expect(queryByText("Uses ×9 · configured")).not.toBeInTheDocument();
+  });
   it("keeps overview connectors quiet, revealing the exact target and verb on hover", () => {
     const { container, getByTestId, getByText } = mount();
     expect(getByTestId("edge")).not.toHaveAttribute("marker-end");

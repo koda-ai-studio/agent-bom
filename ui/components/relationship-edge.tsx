@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, useStore, useStoreApi, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, useStore, useStoreApi, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
   GitBranch, KeyRound, Link2, LogIn, Plug, ShieldCheck, UserRoundCheck, Wrench,
@@ -144,8 +144,6 @@ export function RelationshipEdge(props: EdgeProps) {
       scheduleRelationshipLabelLayoutAfterMove(labelRef.current);
     });
   }, [store]);
-  if (props.data?.isClusterEdge) return <SmoothStepEdge {...props} />;
-
   return <g ref={edgeRef} data-label-disclosure={packageFinding ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
     {mcpSource && mcpTarget && <defs><linearGradient id={gradientId} gradientUnits="userSpaceOnUse"
