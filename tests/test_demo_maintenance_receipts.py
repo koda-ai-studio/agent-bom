@@ -17,7 +17,11 @@ def test_current_estate_skips_composition(monkeypatch):
     monkeypatch.setattr(stores, "_get_store", lambda: Mock())
     monkeypatch.setattr(bootstrap, "_existing_snapshots", lambda *a: [])
     monkeypatch.setattr(bootstrap, "_showcase_seed_is_current", lambda *a: True)
-    monkeypatch.setattr(bootstrap, "get_demo_estate_bootstrap_status", lambda **kw: {"enterprise_contract": {"content_hash": "recorded"}})
+    monkeypatch.setattr(
+        bootstrap,
+        "get_demo_estate_bootstrap_status",
+        lambda **kw: {"enterprise_contract": {"content_hash": "recorded"}, "estate_seed_marker": list(bootstrap.DEMO_ESTATE_SEED_MARKER)},
+    )
     monkeypatch.setattr(bootstrap, "refresh_demo_daily_evidence", lambda **kw: {})
     build = Mock(side_effect=RuntimeError("must not rebuild"))
     monkeypatch.setattr(enterprise_composition, "build_demo_estate", build)
@@ -76,7 +80,7 @@ def test_demo_feed_receipts_preserve_existing_non_demo_evidence(tmp_path, monkey
     monkeypatch.delenv("AGENT_BOM_DB_PATH", raising=False)
     conn = init_db(tmp_path / "db" / "vulns.db")
     try:
-        conn.execute("INSERT INTO vulns(id, source) VALUES ('CVE-2099-0001', 'nvd')")
+        conn.execute("INSERT INTO vulns(id, summary, severity, source) VALUES ('CVE-2099-0001', 'preserved', 'high', 'nvd')")
         conn.commit()
         assert seed_demo_feed_receipts() == 0
         assert conn.execute("SELECT count(*) FROM sync_meta").fetchone()[0] == 0

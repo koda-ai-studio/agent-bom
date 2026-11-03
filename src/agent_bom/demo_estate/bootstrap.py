@@ -10,13 +10,18 @@ from datetime import datetime, timezone
 from functools import cache, partial
 from typing import Any
 
+from agent_bom import __version__
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.pipeline import _now
 from agent_bom.api.store import DEMO_ESTATE_TRIGGERED_BY
 from agent_bom.demo_estate import demo_estate_enabled as demo_estate_enabled
 from agent_bom.demo_estate.boot_seed import serialized_seed
+from agent_bom.demo_estate.enterprise import ENTERPRISE_SCHEMA_VERSION
+from agent_bom.demo_estate.enterprise_findings import ESTATE_FINDINGS_VERSION
+from agent_bom.demo_estate.enterprise_risk import ESTATE_RISK_VERSION
 from agent_bom.demo_estate.estate_cis_benchmarks import estate_cis_benchmarks
 from agent_bom.demo_estate.estate_cis_catalog import estate_cis_passes
+from agent_bom.demo_estate.estate_graph import ESTATE_GRAPH_VERSION
 from agent_bom.demo_estate.feed_receipts import seed_demo_feed_receipts
 from agent_bom.demo_estate.maintenance import current_seed_summary
 from agent_bom.demo_estate.showcase_findings import append_showcase_graph_findings, bind_mcp_auth_findings, estate_scan_evidence
@@ -41,6 +46,7 @@ from agent_bom.security import sanitize_error
 _logger = logging.getLogger(__name__)
 
 _TRUTHY = {"1", "true", "yes", "on"}
+DEMO_ESTATE_SEED_MARKER = (__version__, ENTERPRISE_SCHEMA_VERSION, ESTATE_GRAPH_VERSION, ESTATE_FINDINGS_VERSION, ESTATE_RISK_VERSION)
 
 # The UTC day the day-scoped demo evidence was last refreshed for. Guards the
 # per-request hook down to one string compare once the day is current.
@@ -430,13 +436,19 @@ def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str
     if block_reason:
         return _blocked_summary(tenant_id, block_reason)
     store = _get_store()
-    summary: dict[str, Any] = {"enabled": True, "tenant_id": tenant_id, "seeded": False}
+    summary: dict[str, Any] = {
+        "enabled": True,
+        "tenant_id": tenant_id,
+        "seeded": False,
+        "estate_seed_marker": list(DEMO_ESTATE_SEED_MARKER),
+    }
     force = demo_estate_force_reseed()
     if force:
         summary["force"] = True
 
     current = current_seed_summary(
         get_demo_estate_bootstrap_status(tenant_id=tenant_id),
+        seed_marker=DEMO_ESTATE_SEED_MARKER,
         usable_job=not force and _tenant_has_demo_jobs(store, tenant_id),
         snapshots_current=_showcase_seed_is_current(_existing_snapshots(graph_store, tenant_id)),
     )
