@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { ApiError } from "@/lib/api-errors";
 import type { GraphIncidentPage } from "@/lib/api-types";
 import type { UnifiedEdge, UnifiedNode } from "@/lib/graph-schema";
+import { incidentCanonicalNode, incidentNodeMatches } from "@/lib/graph-incident-scope";
 
 export const INCIDENT_CACHE_EDGE_LIMIT = 240;
 export const INCIDENT_CACHE_PAGE_LIMIT = 10;
@@ -55,11 +56,12 @@ export function useIncidentNeighborhood(scanId: string, rootId: string, directio
     const generation = previous.pages[0]?.snapshot_generation;
     try {
       const resolvedScan = previous.pages[0]?.scan_id ?? scanId;
-      const page = await api.getGraphIncidentEdges(nodeId, { scanId: resolvedScan, direction, signal: controller.signal,
+      const readNode = incidentCanonicalNode(previous.pages, nodeId);
+      const page = await api.getGraphIncidentEdges(readNode, { scanId: resolvedScan, direction, signal: controller.signal,
         ...(cursor ? { cursor } : {}), ...(generation ? { snapshotGeneration: generation } : {}) });
       if (controller.signal.aborted || token !== sequence.current) return;
       const sameScope = page.scan_id === resolvedScan || (!generation && scanId.startsWith("current-estate:") && page.scan_id.startsWith("current-estate:"));
-      if (!sameScope || page.node_id !== nodeId || page.direction !== direction || (page.found && !page.snapshot_generation)
+      if (!sameScope || !incidentNodeMatches(page, readNode) || page.direction !== direction || (page.found && (!page.snapshot_generation || page.node?.id !== page.node_id))
         || (generation && page.snapshot_generation !== generation)) throw new Error("Scope changed");
       if (!page.found) {
         publish({ ...previous, busy: false, error: "Recorded node or snapshot unavailable; relationship coverage is unknown." });
@@ -92,9 +94,11 @@ export function useIncidentNeighborhood(scanId: string, rootId: string, directio
   return { ...visible, ...graph, capped: visible.pages.length >= INCIDENT_CACHE_PAGE_LIMIT || graph.edges.length >= INCIDENT_CACHE_EDGE_LIMIT,
     load, restart: () => { publish(empty(scope)); void load(rootId, undefined, true); },
     collapse: (nodeId: string) => {
-      if (nodeId === rootId || current.current.scope !== scope || !current.current.pages.some(page => page.node_id === nodeId)) return;
+      const canonicalRoot = incidentCanonicalNode(current.current.pages, rootId);
+      const canonicalNode = incidentCanonicalNode(current.current.pages, nodeId);
+      if (canonicalNode === canonicalRoot || current.current.scope !== scope || !current.current.pages.some(page => page.node_id === canonicalNode)) return;
       request.current?.controller.abort(); ++sequence.current;
-      publish({ ...current.current, busy: false, pages: collapsePages(current.current.pages, rootId, nodeId) });
+      publish({ ...current.current, busy: false, pages: collapsePages(current.current.pages, canonicalRoot, canonicalNode) });
     },
   };
 }

@@ -9,6 +9,7 @@ import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { countLabel } from "@/lib/count-label";
 import { graphEdgeEvidenceMode } from "@/lib/unified-graph-flow";
 import { buildGraphInvestigationBundle, downloadGraphInvestigation } from "@/lib/graph-investigation-bundle";
+import { incidentPagesComplete } from "@/lib/graph-incident-scope";
 
 type Props = { scanId: string; nodeId: string; onInspectNode?: ((id: string) => void) | undefined };
 
@@ -41,10 +42,12 @@ export function GraphRecordedRelationships({ scanId, nodeId, onInspectNode }: Pr
   // still evidence, while an unavailable label is never inferred from the ID.
   const edges = [...new Map(graph.pages.flatMap(page => page.edges).map(edge => [JSON.stringify([edge.source, edge.target, edge.relationship]), edge])).values()];
   const lastPage = graph.pages.at(-1);
+  const readNodeId = graph.pages[0]?.node_id ?? nodeId;
+  const complete = incidentPagesComplete(graph.pages);
   const missingLabels = edges.some(edge => !nodes.has(edge.source) || !nodes.has(edge.target));
   return <div className="space-y-3 text-xs">
     <p role="status" className="text-ink-secondary">
-      {graph.busy && !lastPage ? "Loading recorded relationships…" : lastPage && !lastPage.next_cursor && !graph.error ? `${countLabel(edges.length, "recorded relationship")} · all pages loaded` : `${countLabel(edges.length, "loaded relationship")} · total unknown`}
+      {graph.busy && !lastPage ? "Loading recorded relationships…" : complete && !graph.error ? `${countLabel(edges.length, "recorded relationship")} · all pages loaded` : `${countLabel(edges.length, "loaded relationship")} · total unknown`}
     </p>
     <details className="rounded-lg border border-outline p-3">
       <summary className="cursor-pointer font-medium">Export investigation</summary>
@@ -66,9 +69,9 @@ export function GraphRecordedRelationships({ scanId, nodeId, onInspectNode }: Pr
     <p className="text-ink-secondary">Graph timestamps describe link records; traversal eligibility does not establish runtime reachability.</p>
     <ul className="max-h-80 space-y-2 overflow-y-auto">
       {edges.map(edge => {
-        const neighborId = edge.source === nodeId ? edge.target : edge.source;
+        const neighborId = edge.source === readNodeId ? edge.target : edge.source;
         const label = nodes.get(neighborId)?.label || neighborId;
-        const direction = edge.source === edge.target ? "Self relationship" : edge.direction === "bidirectional" ? "Bidirectional ↔" : edge.direction === "directed" ? (edge.source === nodeId ? "Outgoing →" : "← Incoming") : "Related";
+        const direction = edge.source === edge.target ? "Self relationship" : edge.direction === "bidirectional" ? "Bidirectional ↔" : edge.direction === "directed" ? (edge.source === readNodeId ? "Outgoing →" : "← Incoming") : "Related";
         const relationship = relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
         return <li key={JSON.stringify([edge.source, edge.target, edge.relationship])} className="rounded-lg border border-outline p-3 [overflow-wrap:anywhere]">
           <p className="mb-1 text-ink-secondary">{direction} · {relationship}</p>
@@ -86,7 +89,9 @@ export function GraphRecordedRelationships({ scanId, nodeId, onInspectNode }: Pr
     </ul>
     {lastPage?.next_cursor && !graph.error && <button type="button" disabled={graph.busy || graph.capped} onClick={() => void graph.load(nodeId, lastPage.next_cursor!)} className="rounded-lg border border-outline px-3 py-2 disabled:opacity-50">{graph.busy ? "Loading relationships…" : "Load more recorded relationships"}</button>}
     {graph.capped && lastPage?.next_cursor && <p className="text-ink-secondary">Display limit reached. Focus on a connected entity to continue investigating.</p>}
-    {lastPage && !lastPage.next_cursor && !graph.error && <p className="text-ink-secondary">End of recorded pages. Source collection coverage remains separate.</p>}
+    {lastPage && !lastPage.next_cursor && !graph.error && <p className="text-ink-secondary">{complete
+      ? "End of recorded pages. Source collection coverage remains separate."
+      : "End of available pages; relationship evidence is incomplete. Inspect page limits and missing endpoints before drawing conclusions."}</p>}
     <p className="text-ink-secondary">Recorded relationships do not establish execution or successful data access.</p>
   </div>;
 }

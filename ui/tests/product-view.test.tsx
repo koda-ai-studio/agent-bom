@@ -55,3 +55,9 @@ describe("product view preference", () => {
     expect(screen.getByLabelText("Observed view")).toHaveTextContent("organization");
   });
 });
+
+it("names workflow intent while retaining existing saved view values", () => {
+  render(<ProductViewPicker />);
+  expect(screen.getByRole("option", { name: "Shared" })).toHaveValue("team");
+  expect(screen.getByRole("option", { name: "Governance" })).toHaveValue("organization");
+});

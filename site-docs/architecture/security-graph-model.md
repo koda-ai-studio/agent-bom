@@ -398,3 +398,27 @@ then use its investigation questions:
 Runtime hop receipts expose recorded opaque event/trace references when present
 on the matching runtime edge. Missing or placeholder references stay absent.
 These references do not create an end-to-end trace lookup or prove exploitation.
+
+## Retain a recorded investigation
+
+Select an entity, open **Relationships**, then expand **Export investigation**
+and download the JSON. The artifact contains the loaded relationship records,
+source evidence, canonical IDs, snapshot generation and a return link. Load
+additional pages before exporting when a wider record is needed.
+
+An older entity link can resolve to its canonical identity after normalization.
+The drawer, component findings and control evidence follow that identity; the
+export retains both the requested ID and the resolution receipt. Continuations
+stay on the returned snapshot generation. If that generation changes, restart
+the investigation instead of combining old and new records.
+
+Reaching the last available page does not establish complete evidence: missing
+endpoint records, sampling or a missing completeness receipt remain visible as
+incomplete. Collection coverage, effective authorization and observed execution
+are separate questions. The download is an unsigned local evidence bundle;
+reopening its link requires access to the original control plane and snapshot.
+
+For a credential-free source example, scan the
+[CrewAI fixture](https://github.com/koda-ai-studio/agent-bom/tree/main/tests/fixtures/agent_frameworks/crewai_hierarchical).
+Its declared crew relationships support investigation without claiming that any
+agent or tool ran.
