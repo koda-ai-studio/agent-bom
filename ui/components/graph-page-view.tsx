@@ -29,7 +29,7 @@ import { GraphLensSwitcher } from "@/components/graph-lens-switcher";
 import { GraphScenarioAuthoring, GraphScenarioComparisonPanel, GraphScenarioSelector } from "@/components/graph-scenario-comparison";
 import { GraphRelationshipDetail, GraphRollupRelationshipDetail } from "@/components/graph-relationship-detail";
 import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
-import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
+import { GraphScopeOverview } from "@/components/graph-scope-overview";
 import { GraphEmptyState, GraphFindingsFallback, GraphPanelSkeleton, GraphRefreshOverlay } from "@/components/graph-state-panels";
 import { GraphViewControls } from "@/components/graph-view-controls";
 import { createExpandedGraphFilters, createInvestigationGraphFilters, graphScopeLabelForFilters } from "@/components/lineage-filter";
@@ -673,7 +673,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             : <GraphPathList nodes={displayNodes} edges={relationshipLabels.edges}
               onSelect={id => { const node = flowNodeById.get(id) ?? displayNodes.find(item => item.id === id); if (node) onNodeClick({} as React.MouseEvent, node); }} />)}
           <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : undefined} />
-          <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`${mobileListActive ? "hidden " : ""}relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
+          <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`${mobileListActive ? "hidden " : ""}relative flex ${rollupDecisionActive ? "min-h-[28rem]" : selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <GraphScenarioUnconnected
             nodes={scenarioElements.unconnected}
@@ -714,7 +714,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               detail="Grouping the containment hierarchy."
             />
           ) : rollupDecisionActive ? (
-            <GraphRollupDecisionSurface
+            <GraphScopeOverview
               items={rollupItems}
               edges={rollupView?.edges ?? []}
               completeness={rollupView?.completeness}

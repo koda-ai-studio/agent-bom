@@ -49,6 +49,8 @@ export type ClusterPillData = LineageNodeData & {
 export interface SiblingAggregateOptions {
   /** Minimum sibling count before a fan-out collapses. Defaults to 5. */
   thresholdN?: number;
+  /** Keep representative inventory peers visible before grouping the remainder. */
+  visibleSiblingCount?: number;
   /** IDs that must remain expanded (e.g. user clicked-through clusters). */
   expandedClusterIds?: ReadonlySet<string>;
 }
@@ -199,7 +201,7 @@ export function aggregateSiblings(
     const uniqueChildren = [...new Set(group.childIds)];
     if (uniqueChildren.length < thresholdN) continue;
 
-    const collapsible = uniqueChildren.filter((id) =>
+    let collapsible = uniqueChildren.filter((id) =>
       !outgoing.has(id) && !dropNodeIds.has(id) &&
       ((incoming.get(id)?.length ?? 0) === 1 || packageGroupByChild.get(id) === key),
     );
@@ -212,13 +214,20 @@ export function aggregateSiblings(
     // pure function so the consumer can re-aggregate without losing state.
     if (expanded.has(id)) continue;
 
+    const visibleCount = ["vulnerability", "misconfiguration"].includes(group.childType) ? 0 : Math.max(0, options.visibleSiblingCount ?? 0);
+    if (visibleCount) {
+      collapsible = collapsible.sort((a, b) =>
+        String(nodeById.get(a)?.data.label ?? a).localeCompare(String(nodeById.get(b)?.data.label ?? b)) || a.localeCompare(b)).slice(visibleCount);
+      if (collapsible.length < 2) continue;
+    }
+
     for (const childId of collapsible) dropNodeIds.add(childId);
     const members = new Set(collapsible);
     const memberEdges = edges.filter((edge) => members.has(edge.target));
     for (const edge of memberEdges) dropEdgeIds.add(edge.id);
 
     const data: ClusterPillData = {
-      label: clusterLabel(group.childType, collapsible.length),
+      label: clusterLabel(group.childType, collapsible.length).replace(" ", visibleCount ? " more " : " "),
       nodeType: group.childType,
       count: collapsible.length,
       members: collapsible,

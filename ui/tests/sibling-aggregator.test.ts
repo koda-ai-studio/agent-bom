@@ -204,3 +204,17 @@ it("does not collapse a non-leaf parent and leave its evidence edge dangling", (
   expect(result.nodes).toEqual(nodes);
   expect(result.edges).toEqual(edges);
 });
+
+it("keeps named inventory branches visible and groups only the remainder", () => {
+  const nodes = [makeNode("client", "agent"), ...Array.from({ length: 12 }, (_, i) => makeNode(`server-${i}`, "server"))];
+  const edges = nodes.slice(1).map(child => makeEdge("client", child.id));
+  const result = aggregateSiblings(nodes, edges, { thresholdN: 8, visibleSiblingCount: 3 });
+  expect(result.nodes.filter(n => n.data.nodeType === "server" && !isClusterPillNode(n))).toHaveLength(3);
+  const bundle = result.nodes.find(isClusterPillNode)!;
+  expect((bundle.data as ClusterPillData).count).toBe(9);
+  expect(result.edges).toHaveLength(4);
+  expect(new Set([...result.nodes.filter(n => !isClusterPillNode(n)).map(n => n.id), ...(bundle.data as ClusterPillData).members])).toEqual(new Set(nodes.map(n => n.id)));
+  const expanded = aggregateSiblings(nodes, edges, { thresholdN: 8, visibleSiblingCount: 3, expandedClusterIds: new Set([bundle.id]) });
+  expect(expanded.nodes).toEqual(nodes);
+  expect(expanded.edges).toEqual(edges);
+});

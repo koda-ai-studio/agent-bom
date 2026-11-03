@@ -245,14 +245,14 @@ function NodeCard({
           {data.readingFindings.count}<span className="sr-only"> findings</span>
         </button></GraphCountHint></span>}
         <GraphPackageGlyph ecosystem={data.nodeType === "package" ? allBadges.find(badge => badge.kind === "ecosystem")?.value : undefined} fallback={<Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />} />
-        {/* A contrasting vendor badge at 4:30, shown once per scope. */}
+        {/* A contrasting vendor badge above the caption, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
       </div>
       <SegmentedLabel text={caption?.title ?? (repository?.slug || displayTitle)} className={`mb-1 w-full min-w-0 ${data.evidenceFlow ? "" : "line-clamp-3 "}text-lg font-semibold leading-[1.2] text-foreground`} style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
         <span data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {(data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac" ? "IaC finding" : caption?.meta) ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
+          {(data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac" ? "IaC finding" : caption?.meta) ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
@@ -298,7 +298,7 @@ function AgentNode({ data }: { data: LineageNodeData }) {
       ringClass="ring-emerald-400"
       iconClass="text-emerald-600 dark:text-emerald-400"
       target={false}
-      subtitle={agentExecutionCaption(data.agentContext)}
+      subtitle={data.agentContext?.execution.items.length ? agentExecutionCaption(data.agentContext) : undefined}
       footer={
         <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-xs text-ink-secondary">
           {data.serverCount !== undefined && (
@@ -742,6 +742,8 @@ function SummaryNode({ data }: { data: LineageNodeData }) {
   return (
     <div
       data-testid="summary-node"
+      title={graphNodeTooltip(data)}
+      style={{ maxWidth: "var(--graph-node-card-width, 220px)" }}
       className={`min-w-[112px] max-w-[180px] rounded-lg border px-2.5 py-1.5 shadow transition-opacity ${accent} ${
         data.dimmed ? "opacity-25" : ""
       } ${data.highlighted ? "ring-2 ring-sky-400" : ""}`}
@@ -758,7 +760,7 @@ function SummaryNode({ data }: { data: LineageNodeData }) {
       />
       <ContextHandles />
       <div className="flex items-center gap-1">
-        <span className="min-w-0 flex-1 break-words line-clamp-2 text-xs font-semibold leading-tight">
+        <span style={{ fontSize: "var(--graph-node-label-size, 18px)" }} className="min-w-0 flex-1 break-words line-clamp-2 text-xs font-semibold leading-tight">
           {data.label}
         </span>
         {vulnCount > 0 && (

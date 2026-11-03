@@ -46,9 +46,10 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
       await expect(page.locator(".react-flow__node .graph-entity-glyph").first()).toBeVisible();
       await expect(page.locator(".react-flow__edge").first()).toBeVisible();
       await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled","true");
-      // A quick paint of a clipped fan is not a useful first view. Leaf peers
-      // open as an expandable group; both cards must fit with their captions.
-      await expect(page.locator(".react-flow__node")).toHaveCount(2);
+      // Names and recorded branches must be visible before expanding the rest.
+      await expect(page.locator(".react-flow__node")).toHaveCount(5);
+      await expect(page.locator(".react-flow__node-serverNode")).toHaveCount(3);
+      await expect(page.locator(".react-flow__edge")).toHaveCount(4);
       expect(await page.locator(".react-flow__node").evaluateAll(nodes => nodes.every(node => {
         const box = node.getBoundingClientRect();
         const frame = node.closest(".react-flow")!.getBoundingClientRect();

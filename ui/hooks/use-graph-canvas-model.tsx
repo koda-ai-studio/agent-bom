@@ -325,6 +325,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
       }
       return aggregateSiblings(flow.nodes, flow.edges, {
         thresholdN: aggregationThreshold,
+        visibleSiblingCount: 3,
         expandedClusterIds: expandedClusterIds,
       });
     },
