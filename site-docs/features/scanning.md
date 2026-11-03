@@ -10,8 +10,8 @@ agent-bom discovers MCP clients and their configured servers by reading config f
 | Claude Code | `~/.claude/settings.json` |
 | Cursor | `~/.cursor/mcp.json` |
 | VS Code Copilot | `~/Library/Application Support/Code/User/mcp.json` |
-| Windsurf | `~/.windsurf/mcp.json` |
-| Cline | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/...` |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json`, `~/.windsurf/mcp.json` |
+| Cline | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/...`, `~/.cline/data/settings/cline_mcp_settings.json` |
 | Roo Code | `~/Library/Application Support/Code/User/globalStorage/rooveterinaryinc.roo-cline/...` |
 | Codex CLI | `~/.codex/config.toml` |
 | Gemini CLI | `~/.gemini/settings.json` |
@@ -19,7 +19,7 @@ agent-bom discovers MCP clients and their configured servers by reading config f
 | Cortex Code | `~/.snowflake/cortex/mcp.json` |
 | Continue | `~/.continue/config.yaml`, legacy `~/.continue/config.json` |
 | Zed | `~/.config/zed/settings.json` |
-| Amazon Q | VS Code globalStorage |
+| Amazon Q | `~/.aws/amazonq/default.json`, `~/.aws/amazonq/mcp.json`, VS Code globalStorage |
 | JetBrains AI | `~/Library/Application Support/JetBrains/*/mcp.json` |
 | Junie | `~/.junie/mcp/mcp.json` |
 | OpenClaw | `~/.openclaw/openclaw.json` |
