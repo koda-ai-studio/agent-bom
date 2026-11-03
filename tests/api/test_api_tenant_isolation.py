@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -391,9 +392,9 @@ async def test_scan_routes_are_tenant_scoped():
     assert detailed["jobs"][0]["summary"] is None
     assert detailed["jobs"][0]["error"] is None
 
-    got = await scan_routes.get_scan(req, "job-alpha")
-    assert got.job_id == "job-alpha"
-    assert got.tenant_id == "tenant-alpha"
+    got = json.loads((await scan_routes.get_scan(req, "job-alpha")).body)
+    assert got["job_id"] == "job-alpha"
+    assert got["tenant_id"] == "tenant-alpha"
 
     with pytest.raises(HTTPException) as exc:
         await scan_routes.get_scan(req, "job-beta")
