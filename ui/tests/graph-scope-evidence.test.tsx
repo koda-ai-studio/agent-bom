@@ -32,3 +32,11 @@ it("does not classify aggregated links as observed when their receipt is unavail
   render(<GraphScopeEvidence edges={[{ data: { evidenceMode: "runtime", aggregate: true } }]} />);
   expect(screen.getByLabelText("Visible relationship evidence")).toHaveTextContent("Bundled (expand for evidence)");
 });
+
+it("distinguishes the visible summary from its optional evidence breakdown", () => {
+  const edges = [{ data: { evidenceLabel: "Modeled" } }];
+  render(<><GraphScopeEvidence edges={edges} inline compact />
+    <GraphScopeEvidence edges={edges} inline label="Relationship evidence breakdown" /></>);
+  expect(screen.getAllByLabelText("Visible relationship evidence")).toHaveLength(1);
+  expect(screen.getByLabelText("Relationship evidence breakdown")).toHaveTextContent("Modeled 1");
+});
