@@ -208,6 +208,8 @@ def project_persisted_graph_reachability(
     if not scan_id and callable(coverage_reader):
         coverage = coverage_reader(tenant_id=tenant_id, scan_id=index.scan_id)
         if coverage.get("freshness") == "previous_generation":
+            for row in projected:
+                row.update(graph_reachable=None, graph_min_hop_distance=None, graph_reachable_from_agents=[])
             _derive_verdicts(projected)
             return FindingReachabilityProjection(projected, truncated=False, refreshing=True)
     # Rows only carry their job's scan id, which never equals the correlated

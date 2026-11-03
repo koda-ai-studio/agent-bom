@@ -126,6 +126,15 @@ def test_refresh_does_not_stamp_prior_paths_onto_current_findings():
     assert result.rows[0]["graph_reachable"] is None
     assert result.rows[0]["graph_reachable_from_agents"] == []
     assert "graph_reachable" not in rows[0]
+    repeated = project_persisted_graph_reachability(
+        [{**rows[0], "graph_reachable": True, "graph_reachable_from_agents": ["old-agent"], "graph_min_hop_distance": 2}],
+        graph_store=store,
+        tenant_id="t",
+        scan_id=None,  # type: ignore[arg-type]
+    )
+    assert repeated.rows[0]["graph_reachable"] is None
+    assert repeated.rows[0]["graph_reachable_from_agents"] == []
+    assert repeated.rows[0]["graph_min_hop_distance"] is None
     # A recorded snapshot is still an exact, independently addressable read.
     store.scan_id = "recorded"
     pinned = project_persisted_graph_reachability(rows, graph_store=store, tenant_id="t", scan_id="recorded")  # type: ignore[arg-type]
