@@ -114,7 +114,11 @@ export function RelationshipEdge(props: EdgeProps) {
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
   const columnSource = props.data?.columnFlow === true ? nodes.find(node => node.id === props.source) : undefined;
-  const [path, x, y] = columnSource
+  const findingX = Math.max(props.sourceX, props.targetX) + 180;
+  const [path, x, y] = props.data?.findingAttachment === true
+    ? [`M ${props.sourceX},${props.sourceY} C ${findingX},${props.sourceY} ${findingX},${props.targetY} ${props.targetX},${props.targetY}`,
+      findingX, (props.sourceY + props.targetY) / 2] as [string, number, number]
+    : columnSource
     ? columnEdgePath(props, columnSource.position.y + (columnSource.measured?.height ?? 0) + 6)
     : relationshipPath(props, nodes.length <= 80 ? nodes.map(node => ({
       id: node.id, x: node.position.x, y: node.position.y,

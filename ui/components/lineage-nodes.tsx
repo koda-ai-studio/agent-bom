@@ -54,6 +54,8 @@ export type LineageNodeData = {
   dataSources?: string[] | undefined;
   /** Distinguishes same-image container occurrences (inventory vs deployment). */
   occurrenceRole?: string | undefined;
+  /** Presentation of recorded roles in a bounded cloud hierarchy. */
+  readingLabel?: string | undefined;
   /** Visible distinction for same-name nodes; never substitutes for their IDs. */
   identityContext?: string | undefined;
   agentContext?: AgentContext | undefined;
@@ -231,7 +233,7 @@ function NodeCard({
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider })}
+          {data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent kind not recorded") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>

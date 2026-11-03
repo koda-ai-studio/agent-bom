@@ -47,6 +47,21 @@ content scan, complete lineage map or proof of sensitive records. Ingesting
 inventory or a scan report does not by itself ingest the contents of those stores.
 Source coverage and missing location or access evidence must be evaluated separately.
 
+## Read a compact cloud investigation
+
+In a small cloud snapshot, read left to right: account scope, hosting or entry
+points, application workloads, identities, then data resources. An API gateway
+is an entry point; an application workload can authenticate as a role; a role's
+recorded permissions relate it to a data resource. Relationship arrows and
+labels retain their recorded direction and evidence basis.
+
+A finding with exactly one affected asset sits beneath that asset. Shared
+findings, rollups, unknown workload kinds and larger graphs keep the general
+layout rather than implying an arbitrary owner. Grouping changes presentation,
+not the stored records or reachability verdict. On phones, use the Paths list
+for the overview and Graph for readable inspection; **Fit all** shows the whole
+loaded topology, which can require zooming back in to read labels.
+
 ## Explore an estate map
 
 Open **Investigation** for a completed scan and switch to the broad graph view.

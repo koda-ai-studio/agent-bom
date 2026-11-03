@@ -1,4 +1,5 @@
 import type { Edge, Node } from "@xyflow/react";
+import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { applyDagreLayout, countStraightCrossings, reduceRankCrossings, type LayoutOptions } from "@/lib/dagre-layout";
@@ -97,6 +98,8 @@ function sourceRanks(nodes: Node[], edges: Edge[]): Map<string, number> | null {
 
 /** Rank by recorded relationships; finding arrows retain their original direction. */
 export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], options: LayoutOptions = {}) {
+  const cloud = cloudHierarchyLayout(nodes, edges);
+  if (cloud) return cloud;
   const byId = new Map(nodes.map(node => [node.id, node]));
   const contextEdges = new Set(edges.filter(edge => {
     if (["hosted_on", "part_of", "belongs_to"].includes(String(edge.data?.relationship))) return true;
