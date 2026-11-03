@@ -496,7 +496,9 @@ uses: example-org/example-action@v1
 The marker names one or more rule ids (`ignore[GHA-002,GHA-004]`), and the
 reason is required: a marker without one suppresses nothing. Accepted findings
 leave the active results and the severity gate, and the scan result keeps them
-in `suppressed` so they stay reviewable.
+in `suppressed` so they stay reviewable. Markers take optional `expires=YYYY-MM-DD` and
+`owner=NAME` before the reason. For ignore-file entries, tenant exceptions and
+policy rules, see [Exceptions and policy for IaC](iac-exceptions-policy.md).
 
 ## Source flow rules (`agent-bom code`)
 

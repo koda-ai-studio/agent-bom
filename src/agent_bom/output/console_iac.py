@@ -66,3 +66,32 @@ def print_iac_findings_table(con: Any, findings: Sequence[Any], *, limit: int | 
     hidden = len(ordered) - len(shown)
     if hidden:
         con.print(f"  [dim]+{hidden} more finding(s) — full list: -f json, or -f sarif -o results.sarif[/dim]")
+
+
+_NOTICE_STYLE = {
+    "expired": "[yellow]⚠ expired[/yellow]",
+    "expiring": "[cyan]ℹ expiring[/cyan]",
+    "invalid": "[yellow]⚠ invalid[/yellow]",
+    "rejected": "[red]✗ rejected[/red]",
+}
+
+
+def print_iac_exceptions(con: Any, suppressed: Sequence[Any], notices: Sequence[Any], *, verbose: bool = False) -> None:
+    """``N accepted exception(s)`` plus every expired / expiring / invalid / rejected exception notice."""
+    if suppressed or notices:
+        con.print()
+    if suppressed:
+        sources = Counter(str((f.suppression or {}).get("source", "?")) for f in suppressed)
+        by_source = ", ".join(f"{source} {count}" for source, count in sorted(sources.items()))
+        con.print(f"  [dim]{len(suppressed)} accepted exception(s) ({by_source}) — retained in JSON/SARIF, excluded from gates[/dim]")
+        if verbose:
+            for finding in sorted(suppressed, key=_sort_key):
+                record = finding.suppression or {}
+                owner = f" owner={record['owner']}" if record.get("owner") else ""
+                expires = f" expires={record['expires']}" if record.get("expires") else ""
+                con.print(
+                    f"    [dim]{escape(finding.rule_id)} {escape(_location(finding))} — {escape(str(record.get('reason', '')))}"
+                    f" ({escape(str(record.get('source')))}{escape(owner)}{escape(expires)})[/dim]"
+                )
+    for notice in notices:
+        con.print(f"  {_NOTICE_STYLE.get(notice.kind, notice.kind)} exception: {escape(notice.message)}")

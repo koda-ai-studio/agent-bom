@@ -10,7 +10,8 @@ from agent_bom.api.suppression_approval import suppression_active
 
 def project_current_suppressions(rows: list[dict[str, Any]], tenant_id: str) -> list[dict[str, Any]]:
     """Revalidate a bounded read page without rewriting its original receipts."""
-    approved = [exc for exc in _get_exception_store().list_all(tenant_id=tenant_id) if suppression_active(exc)]
+    # IaC exceptions carry no vulnerability/package scope; they are applied when the IaC scan runs.
+    approved = [exc for exc in _get_exception_store().list_all(tenant_id=tenant_id) if not exc.iac_rule_id and suppression_active(exc)]
     by_scope: dict[tuple[str, str], list[Any]] = {}
     for exc in approved:
         by_scope.setdefault((exc.vuln_id, exc.package_name), []).append(exc)

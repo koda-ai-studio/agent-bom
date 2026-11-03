@@ -12,7 +12,6 @@ from agent_bom.cli.agents._context import ScanContext
 from agent_bom.cli.agents._discovery_ai import scan_ai_inventory
 from agent_bom.cli.agents._discovery_project import scan_project
 from agent_bom.cli.agents._discovery_reports import (
-    iac_findings_data,
     iac_severity_summary,
     print_iac_findings,
     scan_browser_extensions,
@@ -316,23 +315,19 @@ def scan_iac(run: DiscoveryRun) -> None:
     """Step 1g5: IaC misconfiguration scan (--iac)."""
     if run.skill_only or not run.iac_paths:
         return
+    from agent_bom.cli.agents._iac_controls import IaCRun
     from agent_bom.cli.agents._preflight import _print_scanner_verdicts, iac_partial_coverage_notes, iac_unevaluated_note
-    from agent_bom.iac import scan_iac_with_context
-    from agent_bom.iac.models import ScanContext as IaCContext
 
     con, iac_paths = run.con, run.iac_paths
-    iac_scan_ctx = IaCContext(deployment_mode=_iac_deployment_mode())
-    all_iac_findings: list = []
-    all_iac_verdicts: list = []
+    iac_run = IaCRun.load(deployment_mode=_iac_deployment_mode(), ignore_file=run.ctx.ignore_file, policy_path=run.ctx.policy_path)
     printed_iac_heading = False
     common_root = Path(os.path.commonpath([_iac_walk_root(path) for path in iac_paths])) if len(iac_paths) > 1 else None
     for iac_path in iac_paths:
         is_synthetic_demo_iac = Path(iac_path).name.startswith("agent-bom-demo-dir-")
-        result = scan_iac_with_context(iac_path, iac_scan_ctx)
+        result = iac_run.scan(iac_path)
         if common_root is not None:
-            _anchor_iac_paths(result.findings, _iac_walk_root(iac_path), common_root)
-        all_iac_findings.extend(result.findings)
-        all_iac_verdicts.extend(result.verdicts)
+            _anchor_iac_paths(result.findings + result.suppressed, _iac_walk_root(iac_path), common_root)
+        iac_run.add(result)
         if not result.findings and is_synthetic_demo_iac:
             continue
         if not printed_iac_heading:
@@ -346,11 +341,12 @@ def scan_iac(run: DiscoveryRun) -> None:
             con.print(f"  [dim]  {iac_path}: no misconfigurations found[/dim]")
         for coverage_note in iac_partial_coverage_notes(iac_path, result):
             con.print(coverage_note)
-    if run.verbose and all_iac_verdicts:
-        _print_scanner_verdicts(con, all_iac_verdicts)
-    if all_iac_findings:
-        print_iac_findings(run, all_iac_findings)
-    run.ctx.iac_findings_data = iac_findings_data(all_iac_findings)
+    if run.verbose and iac_run.verdicts:
+        _print_scanner_verdicts(con, iac_run.verdicts)
+    if iac_run.findings:
+        print_iac_findings(run, iac_run.findings)
+    iac_run.print_exceptions(con, verbose=run.verbose)
+    run.ctx.iac_findings_data = iac_run.payload()
     _manifest_k8s_inventory(run)
 
 

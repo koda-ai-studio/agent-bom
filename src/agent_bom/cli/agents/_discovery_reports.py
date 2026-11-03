@@ -191,24 +191,3 @@ def print_iac_findings(run: DiscoveryRun, all_iac_findings: list[Any]) -> None:
     stats = f"[dim]{crit} critical · {high} high · scan complete[/dim]"
     run.con.print()
     run.con.print(Panel(iac_table, subtitle=stats, border_style="cyan"))
-
-
-def iac_findings_data(all_iac_findings: list[Any]) -> dict[str, Any]:
-    return {
-        "total": len(all_iac_findings),
-        "findings": [
-            {
-                "rule_id": f.rule_id,
-                "severity": f.severity,
-                "title": f.title,
-                "message": f.message,
-                "file_path": f.file_path,
-                "line_number": f.line_number,
-                "category": f.category,
-                "compliance": f.compliance,
-                "attack_techniques": f.attack_techniques,
-                "remediation": f.remediation,
-            }
-            for f in all_iac_findings
-        ],
-    }

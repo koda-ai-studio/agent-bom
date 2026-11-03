@@ -778,15 +778,20 @@ class ExecScoreConfigUpdateRequest(BaseModel):
     display_format: str | None = None
 
 
-class ExceptionRequest(_policy_inputs.ExceptionExpiryValidation):
+class ExceptionRequest(_policy_inputs.ExceptionExpiryValidation, _policy_inputs.IaCExceptionScopeValidation):
+    """A vulnerability exception (``vuln_id`` + ``package_name``) or an IaC exception (``iac_rule_id`` + path/resource)."""
+
     model_config = ConfigDict(extra="forbid")
-    vuln_id: str
-    package_name: str
+    vuln_id: str = Field("", max_length=200)
+    package_name: str = Field("", max_length=400)
     server_name: str = ""
-    reason: str = ""
+    reason: str = Field("", max_length=2000)
     requested_by: str = ""
     expires_at: str = ""
     tenant_id: str = "default"
+    iac_rule_id: str = Field("", max_length=80, description="IaC rule id, e.g. K8S-001 (IaC exceptions only)")
+    iac_path: str = Field("", max_length=400, description="Glob on the finding's repository-relative path")
+    iac_resource: dict[str, Any] = Field(default_factory=dict, description="Resource selector: kind, name, namespace, labels")
 
 
 class IssueStatusUpdateRequest(BaseModel):

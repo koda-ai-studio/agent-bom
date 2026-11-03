@@ -42,6 +42,9 @@ class ScanContext:
     model_hash_verification_data: Any = None
     model_supply_chain_data: Any = None
     iac_findings_data: Any = None
+    # Operator controls the IaC step reads: ignore file (None = default .agent-bom-ignore.yaml) and policy file.
+    ignore_file: Any = None
+    policy_path: Any = None
     # Kubernetes workload inventories (live cluster and/or manifests), one per source.
     kubernetes_inventories: list = field(default_factory=list)
     # Findings imported from --external-scan that are not package evidence

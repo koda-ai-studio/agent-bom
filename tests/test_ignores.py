@@ -342,3 +342,21 @@ def test_non_sequence_aliases_do_not_crash():
     entries = [{"id": "CVE-2024-1234", "reason": "primary id still matches"}]
     filtered, suppressed = apply_ignores([br], entries)
     assert suppressed == 1
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"rule": "K8S-001", "path": "deploy/**", "reason": "debug pods"},
+        {"rule": "K8S-*", "resource": {"kind": "Pod"}, "path": "*", "reason": "x"},
+        {"type": "iac", "path": "deploy/**", "id": "K8S-001", "reason": "x"},
+    ],
+)
+def test_iac_entries_never_suppress_vulnerabilities(entry):
+    br = _make_blast_radius()
+    agent = MagicMock()
+    agent.config_path = "deploy/dev/mcp.json"
+    br.affected_agents = [agent]
+    br.suppressed = False
+    _, suppressed = apply_ignores([br], [entry])
+    assert suppressed == 0

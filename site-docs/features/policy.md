@@ -32,6 +32,12 @@ Declarative policy-as-code for security gates and enforcement.
 
 16 declarative conditions plus a `condition` expression engine supporting AND/OR/NOT and comparisons.
 
+## IaC rules
+
+Rules with `"scope": "iac"` or `iac_*` conditions allow, warn or block IaC
+findings by rule, severity, resource and environment. See
+[Exceptions and policy for IaC](iac-exceptions-policy.md).
+
 ## Usage
 
 ```bash

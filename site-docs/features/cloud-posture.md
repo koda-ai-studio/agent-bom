@@ -47,6 +47,15 @@ Supported pre-cloud inputs include:
 - Docker Compose files (`compose.yaml`, `docker-compose*.yml`)
 - Docker daemon configuration (`daemon.json`)
 
+### Accepting by-design findings
+
+To let a specific, explained case through without turning a rule off, use an
+inline marker, an `.agent-bom-ignore.yaml` entry scoped by rule, path and
+resource, a tenant exception approved through the API, or a policy rule that
+allows, warns or blocks by environment. Accepted findings stay in JSON, SARIF
+and HTML with their reason, owner and expiry. See
+[Exceptions and policy for IaC](iac-exceptions-policy.md).
+
 ### Docker rules
 
 | Family | Checks |

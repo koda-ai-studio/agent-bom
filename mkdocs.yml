@@ -86,6 +86,7 @@ nav:
       - Scanning & Discovery: features/scanning.md
       - Accuracy on Real Repositories: features/real-repository-accuracy.md
       - Cloud Posture and IaC Gates: features/cloud-posture.md
+      - Exceptions and Policy for IaC: features/iac-exceptions-policy.md
       - Blast Radius: features/blast-radius.md
       - Cloud Normalization: features/cloud-normalization.md
       - Compliance: features/compliance.md

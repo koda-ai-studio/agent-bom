@@ -1,8 +1,7 @@
 """Policy-as-code engine for agent-bom.
 
-Allows teams to define declarative security rules that are evaluated against
-scan results and produce structured violations. Rules are loaded from a JSON
-or YAML policy file and evaluated against BlastRadius findings.
+Declarative security rules, loaded from a JSON or YAML policy file, evaluated against BlastRadius findings
+to produce structured violations. IaC rules are evaluated at IaC scan time (``agent_bom.iac.policy``).
 
 Supports two rule styles:
 
@@ -47,6 +46,7 @@ import operator
 import re
 from pathlib import Path
 
+from agent_bom.core.iac_exceptions import scan_time_iac_violations, validate_iac_policy, vulnerability_rules
 from agent_bom.core.risk_display import assessed_risk_score
 from agent_bom.core.severity import SEVERITY_POLICY_ORDER as SEVERITY_ORDER
 
@@ -419,7 +419,8 @@ def _validate_policy(policy: dict) -> None:
         raise ValueError("Policy must have a 'rules' array")
     if not isinstance(policy["rules"], list):
         raise ValueError("Policy 'rules' must be an array")
-    for i, rule in enumerate(policy["rules"]):
+    validate_iac_policy(policy)  # IaC rules (scope: iac / iac_* conditions) have their own contract
+    for i, rule in vulnerability_rules(policy["rules"]):
         if "id" not in rule:
             raise ValueError(f"Rule at index {i} missing 'id'")
         if rule.get("action") not in ("fail", "warn", "jira", None):
@@ -581,14 +582,12 @@ def _rule_matches(rule: dict, br) -> bool:
 
 
 def evaluate_policy(policy: dict, blast_radii: list, *, report: object | None = None, dry_run: bool = False) -> dict:
-    """Evaluate policy rules against blast radius findings.
+    """Evaluate policy rules against blast radius findings, plus the IaC rule outcome recorded at scan time.
 
     Args:
         policy: Parsed policy dict with ``rules`` list.
         blast_radii: List of BlastRadius objects to evaluate.
-        dry_run: If True, evaluate rules but treat all 'fail' actions as
-                 'warn' — violations are reported but the scan will not
-                 fail.  Useful for testing new policies before enforcing.
+        dry_run: If True, treat all 'fail' actions as 'warn': violations are reported but the scan will not fail.
 
     Returns a dict with:
       violations  – list of {rule, finding, action} for matching rules
@@ -610,7 +609,7 @@ def evaluate_policy(policy: dict, blast_radii: list, *, report: object | None = 
             finding for finding in report.to_findings() if getattr(finding, "finding_type", None) == FindingType.MALICIOUS_PACKAGE
         ]
 
-    for rule in policy.get("rules", []):
+    for _, rule in vulnerability_rules(policy.get("rules", [])):
         action = rule.get("action", "fail")
         if rule.get("is_malicious"):
             for finding in malicious_findings:
@@ -659,6 +658,7 @@ def evaluate_policy(policy: dict, blast_radii: list, *, report: object | None = 
                     }
                 )
 
+    violations.extend(scan_time_iac_violations(report))
     failures = [v for v in violations if v["action"] == "fail"]
     warnings = [v for v in violations if v["action"] == "warn"]
     jira_violations = [v for v in violations if v["action"] == "jira"]

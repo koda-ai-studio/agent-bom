@@ -81,8 +81,20 @@ def suppression_requested(exc: "VulnException") -> bool:
     return True
 
 
+def _iac_scope_error(exc: "VulnException") -> str | None:
+    rule = str(getattr(exc, "iac_rule_id", "") or "")
+    if not rule.strip() or any(ch in rule for ch in "*?["):
+        return "IaC suppression approval requires an exact rule id"
+    if not str(getattr(exc, "iac_path", "") or "").strip() and not getattr(exc, "iac_resource", None):
+        return "IaC suppression approval requires a path or resource scope"
+    return None
+
+
 def approval_error(exc: "VulnException", *, now: datetime | None = None) -> str | None:
-    if any(not value.strip() or "*" in value for value in (exc.vuln_id, exc.package_name)):
+    if getattr(exc, "iac_rule_id", ""):
+        if error := _iac_scope_error(exc):
+            return error
+    elif any(not value.strip() or "*" in value for value in (exc.vuln_id, exc.package_name)):
         return "Suppression approval requires an exact finding and package scope"
     expiry = parse_identity_timestamp(exc.expires_at, require_timezone=True)
     if expiry is None or expiry <= (now or datetime.now(timezone.utc)):

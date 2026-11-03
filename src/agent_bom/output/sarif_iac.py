@@ -11,6 +11,9 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.output.advisory_text import advisory_help, sanitize_advisory_text
+from agent_bom.security import sanitize_sensitive_payload
+
+_SUPPRESSION_PROPERTIES = ("source", "origin", "owner", "expires", "approved_by", "exception_id", "state")
 
 
 def iac_rule_id(iac_finding: dict[str, Any]) -> str:
@@ -47,3 +50,20 @@ def iac_shared_compliance(findings: list[dict[str, Any]]) -> dict[str, list[str]
         ids = list(iac_finding.get("compliance") or [])
         shared[rule_id] = [cid for cid in shared[rule_id] if cid in ids] if rule_id in shared else ids
     return shared
+
+
+def iac_suppressions(iac_finding: dict[str, Any]) -> list[dict[str, Any]]:
+    """SARIF 2.1.0 ``suppressions[]`` for an accepted IaC exception (``inSource`` for inline markers)."""
+    record = iac_finding.get("suppression")
+    if not isinstance(record, dict):
+        return []
+    entry: dict[str, Any] = {"kind": "inSource" if record.get("source") == "inline" else "external", "status": "accepted"}
+    justification = sanitize_sensitive_payload(str(record.get("reason") or ""), key="justification", max_str_len=1000)
+    if isinstance(justification, str) and justification:
+        entry["justification"] = justification
+    properties = {
+        key: sanitize_sensitive_payload(str(record[key]), key=key, max_str_len=200) for key in _SUPPRESSION_PROPERTIES if record.get(key)
+    }
+    if properties:
+        entry["properties"] = properties
+    return [entry]
