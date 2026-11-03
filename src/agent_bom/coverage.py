@@ -28,6 +28,7 @@ import sqlite3
 from dataclasses import asdict, dataclass
 from typing import Optional, Protocol, Sequence
 
+from agent_bom.core.distro_eol import end_of_life_detail, end_of_life_release
 from agent_bom.os_advisory import covered_distro_labels, rpm_advisory_ecosystems
 
 
@@ -333,8 +334,6 @@ def _source_unavailable_warning(family: str, release: str, pkg_count: int) -> di
 
 def _record_end_of_life_notes(packages: Sequence["Package"]) -> dict[tuple[str, str], int]:
     """Record one informational note per end-of-life OS release; returns an empty tally to seed the caller."""
-    from agent_bom.core.distro_eol import end_of_life_detail, end_of_life_release
-
     counts: dict[tuple[str, str], int] = {}
     for pkg in packages:
         key = _release_key(pkg)

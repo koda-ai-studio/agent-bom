@@ -19,6 +19,9 @@ from rich.table import Table
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
+from agent_bom.output.compact_rows import console_group_key as _console_group_key
+from agent_bom.output.compact_rows import package_display as _package_display
+from agent_bom.output.compact_rows import posture_grade_line as _posture_grade_line
 from agent_bom.output.compact_text import GRADE_ECHO as _GRADE_ECHO
 from agent_bom.output.compact_text import clip as _clip
 from agent_bom.output.compact_text import compact_detail as _compact_detail
@@ -270,10 +273,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
             inventory_line,
         ]
         if scorecard.score < 100 or high_risk_policy_count:
-            grade_line = f"  [bold]Posture grade:[/bold]  {_posture_grade_badge(scorecard.grade)} {scorecard.score:.0f}/100"
-            if scorecard_summary:
-                grade_line += f"  [dim]{_posture_headline(scorecard_summary)}[/dim]"
-            lines.append(grade_line)
+            lines.append(_posture_grade_line(_posture_grade_badge, _posture_headline, scorecard.grade, scorecard.score, scorecard_summary))
             if weak_dimensions:
                 lines.append(f"  [dim]Top driver:[/dim] [yellow]{weak_dimensions[0].name}[/yellow]")
         if has_more_context:
@@ -405,7 +405,6 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
         exploit_likelihood_value,
         finding_severity,
         is_actionable_finding,
-        is_package_direct,
         package_name,
         package_version,
         sanitize_output_text,
@@ -486,9 +485,7 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
             epss_style = "red bold" if epss_pct >= 70 else "yellow" if epss_pct >= 30 else "dim"
             epss_display = f"[{epss_style}]{epss_pct}%[/{epss_style}]"
 
-        pkg_display = f"{safe(package_name(finding))}@{safe(package_version(finding))}" + (
-            "" if is_package_direct(finding) else " [dim]T[/dim]"
-        )
+        pkg_display = _package_display(finding, safe)
         vuln_id = safe(finding.cve_id or finding.id)
 
         if has_blast_context:
@@ -699,18 +696,12 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
     # compact operator view groups identical rule occurrences while the report,
     # SARIF, JSON, and graph retain every occurrence for drill-through.
     grouped: list[tuple[Finding, int, list[str]]] = []
-    grouped_index: dict[tuple[str, str, str], int] = {}
+    grouped_index: dict[tuple[str, ...], int] = {}
     for finding in findings:
-        evidence = finding.evidence or {}
-        is_iac = evidence.get("iac") is True
-        if not is_iac:
+        key = _console_group_key(finding)
+        if key is None:
             grouped.append((finding, 1, [finding.asset.name]))
             continue
-        key = (
-            finding.finding_type.value,
-            str(evidence.get("rule_id") or finding.title or ""),
-            str(finding.severity),
-        )
         existing = grouped_index.get(key)
         if existing is None:
             grouped_index[key] = len(grouped)

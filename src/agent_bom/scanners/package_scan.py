@@ -35,7 +35,7 @@ from agent_bom.pci_dss import tag_blast_radius as tag_pci_dss
 from agent_bom.reachability_cve import advisory_affected_symbols_by_path, advisory_affected_symbols_list
 from agent_bom.scanners import cpython_advisory as runtime_cve
 from agent_bom.scanners.blast_radius import expand_blast_radius_hops
-from agent_bom.scanners.clean_verdict import record_unfixed_suppression_receipt, zero_findings_verdict
+from agent_bom.scanners.clean_verdict import record_unfixed_suppression_receipt, unconfirmed_matches_line, vulnerability_summary_line
 from agent_bom.scanners.compat_exports import resolve_legacy_export
 from agent_bom.scanners.distro_cpe_scan import propagate_possibly_affected
 from agent_bom.scanners.kev_default_join import join_default_kev_catalog
@@ -542,7 +542,10 @@ async def scan_packages(
 
     total_vulns = local_count + runtime_count
     total_vulns += _apply_osv_results(scannable, osv_targets, results)
-    total_vulns -= sum(demote_to_candidates(pkg) for pkg in scannable)
+    demoted = sum(demote_to_candidates(pkg) for pkg in scannable)
+    total_vulns -= demoted
+    if unconfirmed := unconfirmed_matches_line(demoted):
+        console.print(unconfirmed)
     retire_stale_receipt_warnings_if_decided(scannable)
     total_vulns += await _scan_supplemental_advisories(scannable, scan_offline)
     _record_runtime_coverage_gaps(scannable, scan_offline)
@@ -557,12 +560,10 @@ async def scan_packages(
     return total_vulns
 
 
-def _print_vulnerability_summary(total_vulns: int, findings_count: int, *, agents: list[Agent] | None = None) -> None:
-    """Keep empty findings distinct from a complete negative assessment."""
-    if total_vulns:
-        console.print(f"  [red]⚠ Found {total_vulns} vulnerabilities across {findings_count} findings[/red]")
-    else:
-        console.print(zero_findings_verdict(agents or []))
+def _print_vulnerability_summary(
+    total_vulns: int, findings_count: int, *, agents: list[Agent] | None = None, blast_radii: list[BlastRadius] | None = None
+) -> None:
+    console.print(vulnerability_summary_line(total_vulns, findings_count, agents=agents or [], blast_radii=blast_radii))
 
 
 def _package_ai_risk_context(pkg: Package, exposed_creds: list[str], exposed_tools: list, phantom_tools: list) -> str | None:
@@ -799,7 +800,7 @@ async def scan_agents(
     # Sort by risk score descending
     blast_radii.sort(key=risk_rank_key)
 
-    _print_vulnerability_summary(total_vulns, len(blast_radii), agents=agents)
+    _print_vulnerability_summary(total_vulns, len(blast_radii), agents=agents, blast_radii=blast_radii)
 
     _logger.info(
         "Scan summary: %d packages scanned, %d vulnerabilities, %d blast radius findings across %d agent(s)",

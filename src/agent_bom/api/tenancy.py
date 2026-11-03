@@ -10,6 +10,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import JSONResponse, Response
 
 from agent_bom.api.dashboard_not_found import non_api_not_found
+from agent_bom.api.demo_tenant_guard import demo_tenant_ingest_rejection
 from agent_bom.api.request_tenant import require_request_tenant_id as require_request_tenant_id
 from agent_bom.api.route_policy import route_policy
 from agent_bom.platform_invariants import normalize_tenant_id
@@ -28,8 +29,6 @@ async def call_with_request_tenant(
         if not_found is not None:
             return not_found
         return JSONResponse(status_code=403, content={"detail": "Forbidden — operation has no authorization policy"})
-    from agent_bom.api.demo_tenant_guard import demo_tenant_ingest_rejection
-
     demo_rejection = demo_tenant_ingest_rejection(request.method, request.url.path, tenant_id)
     if demo_rejection is not None:
         return demo_rejection

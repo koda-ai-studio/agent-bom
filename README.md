@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="docs/INTEGRATIONS.md"><img src="docs/images/social-preview.svg" alt="agent-bom — AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach." width="1280" /></a>
+  <a href="https://koda-ai-studio.github.io/agent-bom/demo/"><img src="docs/images/social-preview.svg" alt="agent-bom — AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach." width="1280" /></a>
 </p>
 
 <p align="center">
@@ -15,15 +15,15 @@
 
 <p align="center"><b>AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.</b></p>
 
-For AppSec and platform engineers. Self-host free; local scans need no account.
+For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP
+client: see which agents, MCP servers, tools and packages are installed, which
+are vulnerable, and what each one can reach. Local scans need no account.
 
 <p align="center">
   <a href="#quick-start"><b>Quick start</b></a> ·
-  <a href="#why-an-ai-supply-chain-bom">Why an AI BOM</a> ·
+  <a href="https://koda-ai-studio.github.io/agent-bom/demo/"><b>Try in browser</b></a> ·
+  <a href="#from-laptop-to-team-to-org">Laptop → team → org</a> ·
   <a href="#what-you-get">What you get</a> ·
-  <a href="#open-the-sample-graph">Sample graph</a> ·
-  <a href="#self-host-in-your-environment">Self-host</a> ·
-  <a href="docs/INTEGRATIONS.md">Integrations</a> ·
   <a href="docs/GALLERY.md">Product tour</a> ·
   <a href="https://koda-ai-studio.github.io/agent-bom/">Docs</a>
 </p>
@@ -36,56 +36,25 @@ From the repository you want to inspect, with [uv installed](https://docs.astral
 uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
 ```
 
-Accuracy: [299 of 299 OSV advisories matched across seven real repositories, no
-false positives](site-docs/features/real-repository-accuracy.md) (measured 2026-10-25 on 0.111.0).
-
-Open `agent-bom-report.html` for inventory, findings, coverage and fix guidance.
-The scan covers this project, including its MCP configuration; `--no-discover`
-skips workstation-wide discovery. No MCP configuration in the project? Package
-findings still apply; agent and tool links need a config or an inventory. A
-coverage gap is not a clean result:
-[what this scan does and does not establish](docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
-
-No project handy? Run `uvx agent-bom scan --demo --offline` for a bundled sample.
-Exit `1` is expected: the sample trips the security gate. A non-zero exit
-can mean a security gate or incomplete assessment; inspect the report and
-coverage ([exit codes](site-docs/reference/exit-codes.md)).
-
-<details>
-<summary>Recorded demo scan: inventory, findings and fix guidance</summary>
+Open `agent-bom-report.html` for inventory, findings and fix guidance. Run the
+same scan again later and agent-bom prints what changed since the last one.
+No MCP configuration in the project? Package findings still apply.
+No project handy? Run `uvx agent-bom scan --demo --offline` for a bundled sample;
+Exit `1` is expected there because the sample trips the security gate. A non-zero
+exit can mean a security gate or incomplete assessment; inspect the report and
+coverage ([exit codes](site-docs/reference/exit-codes.md), [what a scan does and
+does not establish](docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish),
+[first-run guide](docs/FIRST_RUN.md)).
 
 <p align="center"><img src="docs/images/demo-latest.gif" alt="Recorded agent-bom CLI showing sample findings and remediation guidance; no fix executed" width="920" /></p>
 
-Labeled sample data and bundled advisories. Credential references are names,
-not secret values. Recorded relationships do not prove exploitation or data access.
+## From laptop to team to org
 
-</details>
-
-<details>
-<summary>Verify fixes, export reports, and add a CI gate</summary>
-
-Apply a reviewed fix, update the lockfile, then rerun `uvx agent-bom scan .`
-against the same repository to verify the finding changed.
-Save a report with `uvx agent-bom scan . -f sarif -o findings.sarif`, then
-[upload it and gate CI](docs/FIRST_RUN.md#5-gate-ci-on-the-result).
-Run `uvx agent-bom doctor` if setup fails. See the [first-run guide](docs/FIRST_RUN.md)
-for pip installation, or ask your coding agent with the [`checkup` skill](#integrations).
-
-In GitHub Actions, the same scan uploads SARIF to code scanning and fails on
-high or critical findings, the same default gate as the CLI:
-
-```yaml
-permissions:
-  contents: read
-  security-events: write
-steps:
-  - uses: actions/checkout@v4
-  - uses: koda-ai-studio/agent-bom@v0
-    with:
-      upload-sarif: 'true'
-```
-
-</details>
+| Where | Start with | You get |
+|---|---|---|
+| **On your laptop** | `uvx agent-bom scan .` · `claude mcp add agent-bom -- uvx agent-bom mcp server` | Findings with fixes, a delta on every rescan, and agent-bom as a tool inside your coding agent ([MCP server](docs/MCP_SERVER.md), [plugins](#integrations)) |
+| **In your team** | `uses: koda-ai-studio/agent-bom@v0` on pull requests and a weekly `schedule:` | A PR gate with a findings comment and SARIF in code scanning, plus a weekly rescan that catches new CVEs in unchanged code ([GitHub Action](site-docs/integrations/github-action.md)) |
+| **Across your org** | `agent-bom up` locally, then Docker Compose or the Helm chart from `oci://ghcr.io/koda-ai-studio/charts/agent-bom` | Retained scans, one graph of agents, MCP servers, packages and credentials, SSO and audit, in your own infrastructure ([self-host](#self-host-in-your-environment)) |
 
 ## Why an AI supply-chain BOM
 

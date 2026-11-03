@@ -194,16 +194,25 @@ def _report_vuln_data_freshness(opts: ScanOptions, st: ScanState) -> None:
             _db_stale, _db_age = False, None
         if _db_stale:
             _stale_days = db_stale_days_threshold()
-            _age_txt = f"{_db_age}d old" if _db_age is not None else "missing / undated"
             if not opts.quiet:
-                st.con.print(
-                    f"[bold yellow]⚠ Vulnerability DB is stale[/bold yellow] "
-                    f"({_age_txt}; threshold {_stale_days}d) — run `agent-bom db update`. "
-                    f"Recent CVEs may be missed."
-                )
+                st.con.print(stale_db_warning(_db_age, _stale_days, offline=bool(opts.offline)))
             if opts.require_fresh_db or require_fresh_db_env():
                 st.con.print("[red]--require-fresh-db is set and the local vuln DB is stale — failing (exit 3).[/red]")
                 sys.exit(3)
+
+
+def stale_db_warning(age_days: int | None, threshold_days: int, *, offline: bool) -> str:
+    """Stale local-DB warning: the age, what it means for this scan, and the exact refresh command."""
+    age = f"{age_days} day{'s' if age_days != 1 else ''} old" if age_days is not None else "missing or undated"
+    consequence = (
+        "--offline uses only local data, so recent CVEs may be missed."
+        if offline
+        else "This scan also checks OSV live, but local-only matches may be outdated."
+    )
+    return (
+        f"[bold yellow]⚠ Vulnerability DB is stale[/bold yellow] ({age}; threshold {threshold_days} days). "
+        f"{consequence} Refresh it: [bold]agent-bom db update[/bold]"
+    )
 
 
 def _run_iac_only(opts: ScanOptions, st: ScanState) -> None:

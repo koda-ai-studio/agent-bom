@@ -55,3 +55,4 @@ class ScanState:
     validated_ignore_entries: Any = None
     vuln_freshness: Any = None
     stage_timings: dict[str, float] = field(default_factory=dict)
+    first_scan_of_target: bool = False

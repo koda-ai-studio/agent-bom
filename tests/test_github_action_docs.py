@@ -43,6 +43,7 @@ def test_action_page_examples_are_valid_and_least_privilege() -> None:
     for heading in (
         "## Quick start",
         "## Full pull request gate",
+        "## Weekly rescan",
         "## New findings only",
         "## MCP gate",
         "## SBOM artifact",
@@ -61,3 +62,11 @@ def test_action_page_examples_are_valid_and_least_privilege() -> None:
             assert workflow.get("permissions") == {"contents": "read"}, "workflow default must be read-only"
     quick = _yaml_blocks(text)[0].strip().splitlines()
     assert len(quick) <= 3
+
+
+def test_action_page_shows_a_weekly_schedule_and_a_pr_comment_gate() -> None:
+    workflows = [yaml.safe_load(block) for block in _yaml_blocks(PAGE.read_text())]
+    triggers = [w.get(True, w.get("on")) for w in workflows if isinstance(w, dict) and "jobs" in w]
+    assert any(isinstance(t, dict) and t.get("schedule") for t in triggers)
+    pr_jobs = [job for w in workflows if isinstance(w, dict) for job in (w.get("jobs") or {}).values()]
+    assert any((job.get("permissions") or {}).get("pull-requests") == "write" for job in pr_jobs)

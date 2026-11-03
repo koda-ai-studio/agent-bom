@@ -35,6 +35,9 @@ from collections import OrderedDict, deque
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from mcp.server.auth.provider import AccessToken
+from mcp.shared.exceptions import MCPError
+
 from agent_bom.core.settings import env_bool, env_int
 from agent_bom.mcp_tools.request_identity import request_context, verified_access_token
 
@@ -134,8 +137,6 @@ class PublicTierTokenVerifier:
         self._anonymous_credential = anonymous_credential
 
     async def verify_token(self, token: str):
-        from mcp.server.auth.provider import AccessToken
-
         if token and hmac.compare_digest(token.encode(), self._anonymous_credential.encode()):
             return AccessToken(token=token, client_id=PUBLIC_CLIENT_ID, scopes=[PUBLIC_SCOPE], expires_at=None, resource=None)
         if self._inner is None:
@@ -219,8 +220,6 @@ _JSONRPC_INVALID_PARAMS = -32602
 
 
 def _mcp_error(code: int, message: str) -> Exception:
-    from mcp.shared.exceptions import MCPError
-
     return MCPError(code, message)
 
 
