@@ -223,7 +223,7 @@ class MockConnection:
                         rows = [r for r in rows if r[12] == params[0]]
                         if len(params) > 1:
                             rows = [r for r in rows if r[7] == params[1]]
-                cursor.rows = [tuple(r[:15]) for r in rows]
+                cursor.rows = [tuple(r[:18]) for r in rows]
             elif "from gateway_policies" in sql_lower:
                 rows = list(self._store.get("gateway_policies", {}).values())
                 if "where policy_id" in sql_lower and params:
@@ -1032,11 +1032,15 @@ def test_exception_store_put_get_list_delete(mock_pool):
         exc.tenant_id,
         exc.approval_version,
         exc.decided_by,
+        "",
+        "",
+        "",
     )
 
     loaded = store.get(exc.exception_id, tenant_id=exc.tenant_id)
     assert loaded is not None
     assert loaded.decided_by == "decider"
+    assert (loaded.iac_rule_id, loaded.iac_path, loaded.iac_resource) == ("", "", {})
     assert loaded.tenant_id == "tenant-alpha"
 
     listed = store.list_all(tenant_id="tenant-alpha")
@@ -1048,6 +1052,29 @@ def test_exception_store_put_get_list_delete(mock_pool):
     assert match.exception_id == exc.exception_id
 
     assert store.delete(exc.exception_id, tenant_id=exc.tenant_id) is True
+
+
+def test_exception_store_round_trips_iac_scope(mock_pool):
+    from agent_bom.api.exception_store import VulnException
+    from agent_bom.api.postgres_store import PostgresExceptionStore
+
+    store = PostgresExceptionStore(pool=mock_pool)
+    exc = VulnException(
+        exception_id="exc-iac",
+        iac_rule_id="K8S-001",
+        iac_path="deploy/*",
+        iac_resource={"kind": "Pod", "labels": {"team": "sre"}},
+        reason="node debugger",
+        tenant_id="tenant-alpha",
+    )
+    store.put(exc, tenant_id=exc.tenant_id)
+    insert_sql, insert_params = next((sql, params) for sql, params in mock_pool._conn.executed if "INSERT INTO exceptions" in sql)
+    assert "iac_rule_id, iac_path, iac_resource" in insert_sql
+    assert insert_params[-3:] == ("K8S-001", "deploy/*", '{"kind": "Pod", "labels": {"team": "sre"}}')
+
+    loaded = store.get(exc.exception_id, tenant_id="tenant-alpha")
+    assert loaded is not None
+    assert (loaded.iac_rule_id, loaded.iac_path, loaded.iac_resource) == ("K8S-001", "deploy/*", {"kind": "Pod", "labels": {"team": "sre"}})
 
 
 # ─── PostgresPolicyStore ──────────────────────────────────────────────────────

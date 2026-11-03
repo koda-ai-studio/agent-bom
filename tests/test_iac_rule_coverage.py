@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_bom.cli.agents._discovery_reports import iac_findings_data
 from agent_bom.iac import scan_iac_directory
+from agent_bom.iac.models import iac_findings_payload as iac_findings_data
 from agent_bom.models import AIBOMReport
 from agent_bom.output.sarif import to_sarif
 

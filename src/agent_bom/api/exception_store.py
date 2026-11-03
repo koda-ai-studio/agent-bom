@@ -11,10 +11,11 @@ Lifecycle:
 
 from __future__ import annotations
 
+import json
 import logging
 import sqlite3
 import threading
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Protocol
@@ -41,7 +42,12 @@ class ExceptionStatus(str, Enum):
 
 @dataclass
 class VulnException:
-    """A vulnerability exception / waiver."""
+    """A vulnerability or IaC exception / waiver.
+
+    An IaC exception sets ``iac_rule_id`` (an exact rule id) plus a path glob
+    and/or resource selector, and leaves ``vuln_id``/``package_name`` empty, so
+    it can never match a vulnerability finding.
+    """
 
     exception_id: str = ""
     vuln_id: str = ""  # CVE ID or "*" for package-level
@@ -58,6 +64,9 @@ class VulnException:
     tenant_id: str = "default"
     approval_version: int = 0
     decided_by: str = ""
+    iac_rule_id: str = ""  # IaC rule id (e.g. K8S-001); set only for IaC exceptions
+    iac_path: str = ""  # glob on the finding's repository-relative path
+    iac_resource: dict[str, Any] = field(default_factory=dict)  # kind/name/namespace/labels selector
 
     def __post_init__(self) -> None:
         if not self.exception_id:
@@ -69,10 +78,15 @@ class VulnException:
         expiry = parse_identity_timestamp(self.expires_at, require_timezone=True)
         return expiry is None or expiry <= datetime.now(timezone.utc)
 
+    def iac_suppression_active(self) -> bool:
+        """An approved, unexpired IaC exception (the same activation contract as vulnerability exceptions)."""
+        return bool(self.iac_rule_id) and suppression_active(self)
+
     def matches(self, vuln_id: str, package_name: str, server_name: str = "") -> bool:
         """Only explicitly approved, bounded exceptions affect a finding."""
         return (
-            suppression_active(self)
+            not self.iac_rule_id
+            and suppression_active(self)
             and self.vuln_id == vuln_id
             and self.package_name == package_name
             and (self.server_name in {"", "*", server_name})
@@ -95,6 +109,9 @@ class VulnException:
             "tenant_id": self.tenant_id,
             "approval_version": self.approval_version,
             "decided_by": self.decided_by,
+            "iac_rule_id": self.iac_rule_id,
+            "iac_path": self.iac_path,
+            "iac_resource": dict(self.iac_resource),
         }
 
 
@@ -115,6 +132,22 @@ def configured_exception_store() -> ExceptionStore:
     if path := env_raw("AGENT_BOM_DB"):
         return SQLiteExceptionStore(path)
     return InMemoryExceptionStore()
+
+
+def encode_iac_resource(resource: dict[str, Any]) -> str:
+    return json.dumps(resource, sort_keys=True) if resource else ""
+
+
+def decode_iac_resource(raw: Any) -> dict[str, Any]:
+    if isinstance(raw, dict):
+        return dict(raw)
+    if not raw:
+        return {}
+    try:
+        value = json.loads(raw)
+    except (TypeError, ValueError):
+        return {}
+    return value if isinstance(value, dict) else {}
 
 
 def exception_write_tenant(exc: VulnException, tenant_id: str) -> str:
@@ -196,7 +229,7 @@ class SQLiteExceptionStore:
         return conn
 
     def _init_db(self) -> None:
-        ensure_sqlite_schema_version(self._conn, "exceptions", version=3)
+        ensure_sqlite_schema_version(self._conn, "exceptions", version=4)
         self._conn.execute("""CREATE TABLE IF NOT EXISTS exceptions (
             exception_id TEXT PRIMARY KEY,
             vuln_id TEXT NOT NULL,
@@ -217,6 +250,9 @@ class SQLiteExceptionStore:
             self._conn.execute("ALTER TABLE exceptions ADD COLUMN approval_version INTEGER NOT NULL DEFAULT 0")
         if "decided_by" not in columns:
             self._conn.execute("ALTER TABLE exceptions ADD COLUMN decided_by TEXT NOT NULL DEFAULT ''")
+        for column in ("iac_rule_id", "iac_path", "iac_resource"):
+            if column not in columns:
+                self._conn.execute(f"ALTER TABLE exceptions ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")  # nosec B608 - fixed names
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_exc_status ON exceptions(status)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_exc_tenant ON exceptions(tenant_id)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_exc_vuln ON exceptions(vuln_id)")
@@ -230,12 +266,13 @@ class SQLiteExceptionStore:
         cursor = self._conn.execute(
             "INSERT INTO exceptions (exception_id, vuln_id, package_name, server_name, reason, "
             "requested_by, approved_by, status, created_at, expires_at, approved_at, revoked_at, tenant_id, approval_version, "
-            "decided_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+            "decided_by, iac_rule_id, iac_path, iac_resource) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT (exception_id) DO UPDATE SET vuln_id=excluded.vuln_id, package_name=excluded.package_name, "
             "server_name=excluded.server_name, reason=excluded.reason, requested_by=excluded.requested_by, "
             "approved_by=excluded.approved_by, status=excluded.status, created_at=excluded.created_at, "
             "expires_at=excluded.expires_at, approved_at=excluded.approved_at, revoked_at=excluded.revoked_at, "
-            "approval_version=excluded.approval_version, decided_by=excluded.decided_by "
+            "approval_version=excluded.approval_version, decided_by=excluded.decided_by, "
+            "iac_rule_id=excluded.iac_rule_id, iac_path=excluded.iac_path, iac_resource=excluded.iac_resource "
             "WHERE exceptions.tenant_id=excluded.tenant_id",
             (
                 exc.exception_id,
@@ -253,6 +290,9 @@ class SQLiteExceptionStore:
                 tenant,
                 exc.approval_version,
                 exc.decided_by,
+                exc.iac_rule_id,
+                exc.iac_path,
+                encode_iac_resource(exc.iac_resource),
             ),
         )
         self._conn.commit()
@@ -263,8 +303,8 @@ class SQLiteExceptionStore:
         tenant = require_explicit_tenant_id(tenant_id)
         row = self._conn.execute(
             "SELECT exception_id, vuln_id, package_name, server_name, reason, requested_by, "
-            "approved_by, status, created_at, expires_at, approved_at, revoked_at, tenant_id, approval_version, decided_by "
-            "FROM exceptions WHERE exception_id = ? AND tenant_id = ?",
+            "approved_by, status, created_at, expires_at, approved_at, revoked_at, tenant_id, approval_version, decided_by, "
+            "iac_rule_id, iac_path, iac_resource FROM exceptions WHERE exception_id = ? AND tenant_id = ?",
             (exception_id, tenant),
         ).fetchone()
         if not row:
@@ -286,6 +326,9 @@ class SQLiteExceptionStore:
                 tenant_id=row[12],
                 approval_version=row[13],
                 decided_by=row[14],
+                iac_rule_id=row[15],
+                iac_path=row[16],
+                iac_resource=decode_iac_resource(row[17]),
             ),
             tenant,
         )
@@ -309,8 +352,8 @@ class SQLiteExceptionStore:
         where = " AND ".join(clauses)
         rows = self._conn.execute(
             f"SELECT exception_id, vuln_id, package_name, server_name, reason, requested_by, "  # nosec B608 — clauses are static strings, values are parameterized
-            f"approved_by, status, created_at, expires_at, approved_at, revoked_at, tenant_id, approval_version, decided_by "
-            f"FROM exceptions WHERE {where} ORDER BY created_at DESC",
+            f"approved_by, status, created_at, expires_at, approved_at, revoked_at, tenant_id, approval_version, decided_by, "
+            f"iac_rule_id, iac_path, iac_resource FROM exceptions WHERE {where} ORDER BY created_at DESC",
             params,
         ).fetchall()
         return [
@@ -331,6 +374,9 @@ class SQLiteExceptionStore:
                     tenant_id=r[12],
                     approval_version=r[13],
                     decided_by=r[14],
+                    iac_rule_id=r[15],
+                    iac_path=r[16],
+                    iac_resource=decode_iac_resource(r[17]),
                 ),
                 tenant,
             )

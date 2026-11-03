@@ -13547,18 +13547,42 @@
       },
       "ExceptionRequest": {
         "additionalProperties": false,
+        "description": "A vulnerability exception (``vuln_id`` + ``package_name``) or an IaC exception (``iac_rule_id`` + path/resource).",
         "properties": {
           "expires_at": {
             "default": "",
             "title": "Expires At",
             "type": "string"
           },
+          "iac_path": {
+            "default": "",
+            "description": "Glob on the finding's repository-relative path",
+            "maxLength": 400,
+            "title": "Iac Path",
+            "type": "string"
+          },
+          "iac_resource": {
+            "additionalProperties": true,
+            "description": "Resource selector: kind, name, namespace, labels",
+            "title": "Iac Resource",
+            "type": "object"
+          },
+          "iac_rule_id": {
+            "default": "",
+            "description": "IaC rule id, e.g. K8S-001 (IaC exceptions only)",
+            "maxLength": 80,
+            "title": "Iac Rule Id",
+            "type": "string"
+          },
           "package_name": {
+            "default": "",
+            "maxLength": 400,
             "title": "Package Name",
             "type": "string"
           },
           "reason": {
             "default": "",
+            "maxLength": 2000,
             "title": "Reason",
             "type": "string"
           },
@@ -13578,14 +13602,12 @@
             "type": "string"
           },
           "vuln_id": {
+            "default": "",
+            "maxLength": 200,
             "title": "Vuln Id",
             "type": "string"
           }
         },
-        "required": [
-          "vuln_id",
-          "package_name"
-        ],
         "title": "ExceptionRequest",
         "type": "object"
       },
@@ -45651,6 +45673,22 @@
             "title": "Expires At",
             "type": "string"
           },
+          "iac_path": {
+            "default": "",
+            "title": "Iac Path",
+            "type": "string"
+          },
+          "iac_resource": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Iac Resource",
+            "type": "object"
+          },
+          "iac_rule_id": {
+            "default": "",
+            "title": "Iac Rule Id",
+            "type": "string"
+          },
           "package_name": {
             "title": "Package Name",
             "type": "string"
@@ -45743,6 +45781,22 @@
           },
           "expires_at": {
             "title": "Expires At",
+            "type": "string"
+          },
+          "iac_path": {
+            "default": "",
+            "title": "Iac Path",
+            "type": "string"
+          },
+          "iac_resource": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Iac Resource",
+            "type": "object"
+          },
+          "iac_rule_id": {
+            "default": "",
+            "title": "Iac Rule Id",
             "type": "string"
           },
           "package_name": {
@@ -58236,7 +58290,7 @@
         ]
       },
       "post": {
-        "description": "Request a vulnerability exception / waiver.",
+        "description": "Request a vulnerability or IaC exception / waiver (pending until a second admin approves it).",
         "operationId": "create_exception_v1_exceptions_post",
         "requestBody": {
           "content": {

@@ -113,6 +113,21 @@ def _record_enrichment_step(ctx: ScanContext) -> None:
         ctx.pipeline.skip_step("enrichment", "Enrichment not requested")
 
 
+def load_tenant_iac_exceptions(ctx: ScanContext) -> bool:
+    """Approved IaC exceptions of the scan's tenant, for repository scans; an unavailable store means none apply."""
+    if not ctx.repo_url:
+        return False
+    try:
+        from agent_bom.api.stores import _get_exception_store
+        from agent_bom.suppression_rules import tenant_iac_exceptions
+
+        ctx.iac_exceptions = tenant_iac_exceptions(_get_exception_store(), tenant_id=ctx.tenant_or_default)
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning("Tenant IaC exceptions unavailable: %s", sanitize_text(sanitize_error(exc)))
+        ctx.warnings_all.append("Tenant IaC exceptions unavailable; IaC findings are reported without them")
+    return False
+
+
 def _filter_and_suppress(ctx: ScanContext) -> None:
     req = ctx.req
     if req.min_severity:

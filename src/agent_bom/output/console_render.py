@@ -884,38 +884,39 @@ def print_diff(diff: dict, *, quiet: bool = False, console: Console | None = Non
 # ─── Policy Output ──────────────────────────────────────────────────────────
 
 
-def print_policy_results(policy_result: dict) -> None:
-    """Print policy evaluation results to console."""
+def print_policy_results(policy_result: dict, *, console: Console | None = None) -> None:
+    """Print policy evaluation results to ``console`` (default: the shared output console)."""
+    out = console or _console()
     name = policy_result["policy_name"]
     failures = policy_result["failures"]
     warnings = policy_result["warnings"]
     passed = policy_result["passed"]
 
     status = "[green]PASS[/green]" if passed else "[red bold]FAIL[/red bold]"
-    _console().print(f"\n[bold]📋 Policy: {name}[/bold]  {status}\n")
+    out.print(f"\n[bold]📋 Policy: {name}[/bold]  {status}\n")
 
     if warnings:
-        _console().print(f"  [yellow]⚠ {len(warnings)} warning(s):[/yellow]")
+        out.print(f"  [yellow]⚠ {len(warnings)} warning(s):[/yellow]")
         for v in warnings[:10]:
-            _console().print(f"    [yellow]WARN[/yellow]  [{v['rule_id']}]  {v['vulnerability_id']}  {v['package']}  [{v['severity']}]")
-            _console().print(f"           [dim]{v['rule_description']}[/dim]")
-        _console().print()
+            out.print(f"    [yellow]WARN[/yellow]  [{v['rule_id']}]  {v['vulnerability_id']}  {v['package']}  [{v['severity']}]")
+            out.print(f"           [dim]{v['rule_description']}[/dim]")
+        out.print()
 
     if failures:
-        _console().print(f"  [red bold]✗ {len(failures)} failure(s):[/red bold]")
+        out.print(f"  [red bold]✗ {len(failures)} failure(s):[/red bold]")
         for v in failures[:10]:
             kev = " [red bold][KEV][/red bold]" if v.get("is_kev") else ""
             ai = " [magenta][AI-RISK][/magenta]" if v.get("ai_risk_context") else ""
-            _console().print(
+            out.print(
                 f"    [red bold]FAIL[/red bold]  [{v['rule_id']}]  {v['vulnerability_id']}  {v['package']}  [{v['severity']}]{kev}{ai}"
             )
-            _console().print(f"           [dim]{v['rule_description']}[/dim]")
+            out.print(f"           [dim]{v['rule_description']}[/dim]")
         if len(failures) > 10:
-            _console().print(f"    [dim]...and {len(failures) - 10} more failures[/dim]")
-        _console().print()
+            out.print(f"    [dim]...and {len(failures) - 10} more failures[/dim]")
+        out.print()
 
     if passed and not warnings:
-        _console().print("  [green]✓ All policy rules passed.[/green]\n")
+        out.print("  [green]✓ All policy rules passed.[/green]\n")
 
 
 # ─── Severity Chart ─────────────────────────────────────────────────────────

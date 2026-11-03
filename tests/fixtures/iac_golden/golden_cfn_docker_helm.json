@@ -15,9 +15,11 @@
    "message": "Resource 'AdminPolicy' has overly permissive IAM policy (Action:* or Resource:*).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-004",
    "severity": "high",
+   "suppression": null,
    "title": "IAM policy with wildcard permissions"
   },
   {
@@ -33,9 +35,11 @@
    "message": "Resource 'AdminPolicy' has an IAM statement with Action: '*'. Follow least-privilege: scope actions to specific services.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-014",
    "severity": "critical",
+   "suppression": null,
    "title": "IAM policy with Action: * (overly permissive)"
   }
  ],
@@ -53,9 +57,11 @@
    "message": "Resource 'PrivateBucket' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -71,9 +77,11 @@
    "message": "Resource 'PrivateBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -92,9 +100,11 @@
    "message": "Resource 'MyDB' has StorageEncrypted=false or missing. Enable encryption at rest.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-005",
    "severity": "high",
+   "suppression": null,
    "title": "RDS instance without encryption"
   },
   {
@@ -110,9 +120,11 @@
    "message": "Resource 'MyDB' has StorageEncrypted=false or missing. Enable encryption at rest.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-012",
    "severity": "high",
+   "suppression": null,
    "title": "RDS instance without encryption"
   }
  ],
@@ -133,9 +145,11 @@
    "message": "Resource 'Trail' has IsMultiRegionTrail=false. Enable multi-region for full coverage.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-008",
    "severity": "medium",
+   "suppression": null,
    "title": "CloudTrail not multi-region"
   },
   {
@@ -151,9 +165,11 @@
    "message": "Resource 'Trail' has EnableLogFileValidation=false or missing. Enable log file validation to detect tampering.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-017",
    "severity": "medium",
+   "suppression": null,
    "title": "CloudTrail without log file validation"
   }
  ],
@@ -173,9 +189,11 @@
    "message": "Parameter 'ApiKey' has a non-empty Default value. Use NoEcho and SSM/Secrets Manager.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-007",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in parameter default"
   }
  ],
@@ -193,9 +211,11 @@
    "message": "Resource 'DataBucket' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -211,9 +231,11 @@
    "message": "Resource 'DataBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -231,9 +253,11 @@
    "message": "Resource 'PublicBucket' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -249,9 +273,11 @@
    "message": "Resource 'PublicBucket' uses AccessControl 'PublicReadWrite'. Use private ACL with bucket policies.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-002",
    "severity": "critical",
+   "suppression": null,
    "title": "S3 bucket with public ACL"
   },
   {
@@ -267,9 +293,11 @@
    "message": "Resource 'PublicBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -287,9 +315,11 @@
    "message": "Resource 'PublicBucket' uses AccessControl 'PublicRead'. Use private ACL with bucket policies.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-002",
    "severity": "critical",
+   "suppression": null,
    "title": "S3 bucket with public ACL"
   },
   {
@@ -305,9 +335,11 @@
    "message": "Resource 'PublicBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -325,9 +357,11 @@
    "message": "Resource 'Trail' has EnableLogFileValidation=false or missing. Enable log file validation to detect tampering.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-017",
    "severity": "medium",
+   "suppression": null,
    "title": "CloudTrail without log file validation"
   }
  ],
@@ -347,9 +381,11 @@
    "message": "Resource 'AllowSSH' allows ingress from 0.0.0.0/0 on ports 22-22.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-003",
    "severity": "high",
+   "suppression": null,
    "title": "Security group open to 0.0.0.0/0"
   }
  ],
@@ -368,9 +404,11 @@
    "message": "Parameter 'DBPassword' has a non-empty Default value. Use NoEcho and SSM/Secrets Manager.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-007",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in parameter default"
   }
  ],
@@ -388,9 +426,11 @@
    "message": "Resource 'AdminRole' has overly permissive IAM policy (Action:* or Resource:*).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-004",
    "severity": "high",
+   "suppression": null,
    "title": "IAM policy with wildcard permissions"
   },
   {
@@ -406,9 +446,11 @@
    "message": "Resource 'AdminRole' has an IAM statement with Action: '*'. Follow least-privilege: scope actions to specific services.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-014",
    "severity": "critical",
+   "suppression": null,
    "title": "IAM policy with Action: * (overly permissive)"
   }
  ],
@@ -428,9 +470,11 @@
    "message": "Resource 'DataVolume' has Encrypted=false or missing. Enable encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-009",
    "severity": "high",
+   "suppression": null,
    "title": "EBS volume not encrypted"
   },
   {
@@ -446,9 +490,11 @@
    "message": "Resource 'DataVolume' has Encrypted=false or missing. Enable encryption for EBS volumes.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-019",
    "severity": "high",
+   "suppression": null,
    "title": "EBS volume without encryption"
   }
  ],
@@ -466,9 +512,11 @@
    "message": "Resource 'DataBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -486,9 +534,11 @@
    "message": "Resource 'Bucket1' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -504,9 +554,11 @@
    "message": "Resource 'Bucket1' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   },
   {
@@ -522,9 +574,11 @@
    "message": "Resource 'Bucket2' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -543,9 +597,11 @@
    "message": "Resource 'BroadPolicy' has overly permissive IAM policy (Action:* or Resource:*).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-004",
    "severity": "high",
+   "suppression": null,
    "title": "IAM policy with wildcard permissions"
   }
  ],
@@ -563,9 +619,11 @@
    "message": "Resource 'WebServer' has no IamInstanceProfile. Use IAM roles instead of hardcoded credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-006",
    "severity": "medium",
+   "suppression": null,
    "title": "EC2 instance without IAM instance profile"
   }
  ],
@@ -583,9 +641,11 @@
    "message": "Resource 'DataBucket' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -601,9 +661,11 @@
    "message": "Resource 'DataBucket' uses AccessControl 'PublicRead'. Use private ACL with bucket policies.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-002",
    "severity": "critical",
+   "suppression": null,
    "title": "S3 bucket with public ACL"
   },
   {
@@ -619,9 +681,11 @@
    "message": "Resource 'DataBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -638,9 +702,11 @@
    "message": "Resource 'MyFunction' has no VpcConfig. Deploy in VPC for network isolation.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-010",
    "severity": "medium",
+   "suppression": null,
    "title": "Lambda function without VPC configuration"
   },
   {
@@ -656,9 +722,11 @@
    "message": "Resource 'MyFunction' has no VpcConfig. Deploy Lambda in a VPC for network isolation and access control.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-015",
    "severity": "medium",
+   "suppression": null,
    "title": "Lambda function without VPC configuration"
   }
  ],
@@ -678,9 +746,11 @@
    "message": "Resource 'AllowSSHv6' allows ingress from 0.0.0.0/0 on ports 22-22.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-003",
    "severity": "high",
+   "suppression": null,
    "title": "Security group open to 0.0.0.0/0"
   }
  ],
@@ -698,9 +768,11 @@
    "message": "Resource 'DataBucket' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -716,9 +788,11 @@
    "message": "Resource 'DataBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   }
  ],
@@ -736,9 +810,11 @@
    "message": "Resource 'OpenBucket' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -754,9 +830,11 @@
    "message": "Resource 'OpenBucket' uses AccessControl 'PublicReadWrite'. Use private ACL with bucket policies.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-002",
    "severity": "critical",
+   "suppression": null,
    "title": "S3 bucket with public ACL"
   },
   {
@@ -772,9 +850,11 @@
    "message": "Resource 'OpenBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   },
   {
@@ -790,9 +870,11 @@
    "message": "Resource 'ReadBucket' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -808,9 +890,11 @@
    "message": "Resource 'ReadBucket' uses AccessControl 'PublicRead'. Use private ACL with bucket policies.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-002",
    "severity": "critical",
+   "suppression": null,
    "title": "S3 bucket with public ACL"
   },
   {
@@ -826,9 +910,11 @@
    "message": "Resource 'ReadBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   },
   {
@@ -844,9 +930,11 @@
    "message": "Resource 'NoPropsBucket' has no BucketEncryption. Add SSE-S3 or SSE-KMS encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-001",
    "severity": "high",
+   "suppression": null,
    "title": "S3 bucket without encryption"
   },
   {
@@ -862,9 +950,11 @@
    "message": "Resource 'NoPropsBucket' does not have VersioningConfiguration.Status set to 'Enabled'. Enable versioning for data protection and recovery.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-011",
    "severity": "low",
+   "suppression": null,
    "title": "S3 bucket without versioning enabled"
   },
   {
@@ -881,9 +971,11 @@
    "message": "Resource 'WideOpenSg' allows ingress from 0.0.0.0/0 on ports 22-22.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-003",
    "severity": "high",
+   "suppression": null,
    "title": "Security group open to 0.0.0.0/0"
   },
   {
@@ -900,9 +992,11 @@
    "message": "Resource 'WideOpenSg' allows ingress from 0.0.0.0/0 on ports 0-65535.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-003",
    "severity": "high",
+   "suppression": null,
    "title": "Security group open to 0.0.0.0/0"
   },
   {
@@ -918,9 +1012,11 @@
    "message": "Resource 'AdminPolicy' has overly permissive IAM policy (Action:* or Resource:*).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-004",
    "severity": "high",
+   "suppression": null,
    "title": "IAM policy with wildcard permissions"
   },
   {
@@ -936,9 +1032,11 @@
    "message": "Resource 'AdminPolicy' has an IAM statement with Action: '*'. Follow least-privilege: scope actions to specific services.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-014",
    "severity": "critical",
+   "suppression": null,
    "title": "IAM policy with Action: * (overly permissive)"
   },
   {
@@ -954,9 +1052,11 @@
    "message": "Resource 'ResourceWildcardPolicy' has overly permissive IAM policy (Action:* or Resource:*).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-004",
    "severity": "high",
+   "suppression": null,
    "title": "IAM policy with wildcard permissions"
   },
   {
@@ -972,9 +1072,11 @@
    "message": "Resource 'InlineRole' has overly permissive IAM policy (Action:* or Resource:*).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-004",
    "severity": "high",
+   "suppression": null,
    "title": "IAM policy with wildcard permissions"
   },
   {
@@ -990,9 +1092,11 @@
    "message": "Resource 'InlineRole' has an IAM statement with Action: '*'. Follow least-privilege: scope actions to specific services.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-014",
    "severity": "critical",
+   "suppression": null,
    "title": "IAM policy with Action: * (overly permissive)"
   },
   {
@@ -1008,9 +1112,11 @@
    "message": "Resource 'PublicDb' has StorageEncrypted=false or missing. Enable encryption at rest.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-005",
    "severity": "high",
+   "suppression": null,
    "title": "RDS instance without encryption"
   },
   {
@@ -1026,9 +1132,11 @@
    "message": "Resource 'PublicDb' has StorageEncrypted=false or missing. Enable encryption at rest.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-012",
    "severity": "high",
+   "suppression": null,
    "title": "RDS instance without encryption"
   },
   {
@@ -1045,9 +1153,11 @@
    "message": "Resource 'PublicDb' has PubliclyAccessible=true. RDS instances should not be publicly accessible. Use private subnets and VPC security groups.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-020",
    "severity": "critical",
+   "suppression": null,
    "title": "RDS instance publicly accessible"
   },
   {
@@ -1063,9 +1173,11 @@
    "message": "Resource 'BareInstance' has no IamInstanceProfile. Use IAM roles instead of hardcoded credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-006",
    "severity": "medium",
+   "suppression": null,
    "title": "EC2 instance without IAM instance profile"
   },
   {
@@ -1081,9 +1193,11 @@
    "message": "Resource 'Trail' has IsMultiRegionTrail=false. Enable multi-region for full coverage.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-008",
    "severity": "medium",
+   "suppression": null,
    "title": "CloudTrail not multi-region"
   },
   {
@@ -1099,9 +1213,11 @@
    "message": "Resource 'Trail' has EnableLogFileValidation=false or missing. Enable log file validation to detect tampering.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-017",
    "severity": "medium",
+   "suppression": null,
    "title": "CloudTrail without log file validation"
   },
   {
@@ -1117,9 +1233,11 @@
    "message": "Resource 'Volume' has Encrypted=false or missing. Enable encryption.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-009",
    "severity": "high",
+   "suppression": null,
    "title": "EBS volume not encrypted"
   },
   {
@@ -1135,9 +1253,11 @@
    "message": "Resource 'Volume' has Encrypted=false or missing. Enable encryption for EBS volumes.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-019",
    "severity": "high",
+   "suppression": null,
    "title": "EBS volume without encryption"
   },
   {
@@ -1152,9 +1272,11 @@
    "message": "Resource 'Func' has no VpcConfig. Deploy in VPC for network isolation.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-010",
    "severity": "medium",
+   "suppression": null,
    "title": "Lambda function without VPC configuration"
   },
   {
@@ -1170,9 +1292,11 @@
    "message": "Resource 'Func' has no VpcConfig. Deploy Lambda in a VPC for network isolation and access control.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-015",
    "severity": "medium",
+   "suppression": null,
    "title": "Lambda function without VPC configuration"
   },
   {
@@ -1188,9 +1312,11 @@
    "message": "Resource 'ClassicElb' does not have access logging enabled. Enable access logs for security monitoring and compliance.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-016",
    "severity": "low",
+   "suppression": null,
    "title": "ELB without access logging"
   },
   {
@@ -1206,9 +1332,11 @@
    "message": "Resource 'AlbNoLogs' does not have access logging enabled. Enable access logs for security monitoring and compliance.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-016",
    "severity": "low",
+   "suppression": null,
    "title": "ELB without access logging"
   },
   {
@@ -1223,9 +1351,11 @@
    "message": "Resource 'Topic' does not have KmsMasterKeyId set. Enable server-side encryption with KMS for SNS topics.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-018",
    "severity": "medium",
+   "suppression": null,
    "title": "SNS topic without encryption"
   },
   {
@@ -1242,9 +1372,11 @@
    "message": "Parameter 'DbPassword' has a non-empty Default value. Use NoEcho and SSM/Secrets Manager.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "CFN-007",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in parameter default"
   }
  ],
@@ -1271,9 +1403,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   }
  ],
@@ -1291,9 +1425,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -1308,9 +1444,11 @@
    "message": "pip caches downloaded packages. Add --no-cache-dir to reduce image size.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-017",
    "severity": "low",
+   "suppression": null,
    "title": "pip install without --no-cache-dir"
   }
  ],
@@ -1328,9 +1466,11 @@
    "message": "Image 'ubuntu' has no explicit tag. Pin to a specific version tag for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses no tag (defaults to :latest)"
   },
   {
@@ -1346,9 +1486,11 @@
    "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -1365,9 +1507,11 @@
    "message": "ADD downloads remote content during the image build. Fetch artifacts in a verified step and pin checksums before COPY.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-022",
    "severity": "high",
+   "suppression": null,
    "title": "ADD fetches a remote URL"
   },
   {
@@ -1383,9 +1527,11 @@
    "message": "Piping remote scripts directly to a shell bypasses integrity checks. Download, verify checksums, then execute.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-005",
    "severity": "medium",
+   "suppression": null,
    "title": "Pipe install detected (curl|sh)"
   },
   {
@@ -1401,9 +1547,11 @@
    "message": "USER is set to root. Containers should run as a non-root user to limit blast radius of exploits.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "Container runs as root"
   },
   {
@@ -1419,9 +1567,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -1439,9 +1589,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -1457,9 +1609,11 @@
    "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "No USER directive (runs as root)"
   }
  ],
@@ -1478,9 +1632,11 @@
    "message": "Image 'ubuntu:latest' uses the :latest tag. Pin to a specific version for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses :latest tag"
   },
   {
@@ -1496,9 +1652,11 @@
    "message": "Image 'ubuntu:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -1514,9 +1672,11 @@
    "message": "USER is set to root. Containers should run as a non-root user to limit blast radius of exploits.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "Container runs as root"
   },
   {
@@ -1532,9 +1692,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -1552,9 +1714,11 @@
    "message": "Image 'python:3.12-slim' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   }
  ],
@@ -1572,9 +1736,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -1590,9 +1756,11 @@
    "message": "ADD can fetch remote URLs and auto-extract archives, introducing supply chain risk. Use COPY unless you specifically need ADD features.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-004",
    "severity": "medium",
+   "suppression": null,
    "title": "ADD used instead of COPY"
   }
  ],
@@ -1610,9 +1778,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   }
  ],
@@ -1630,9 +1800,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   }
  ],
@@ -1650,9 +1822,11 @@
    "message": "Image 'python:latest' uses the :latest tag. Pin to a specific version for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses :latest tag"
   },
   {
@@ -1668,9 +1842,11 @@
    "message": "Image 'python:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -1686,9 +1862,11 @@
    "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "No USER directive (runs as root)"
   },
   {
@@ -1704,9 +1882,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -1724,9 +1904,11 @@
    "message": "Image 'ubuntu:latest' uses the :latest tag. Pin to a specific version for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses :latest tag"
   },
   {
@@ -1742,9 +1924,11 @@
    "message": "Image 'ubuntu:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -1760,9 +1944,11 @@
    "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "No USER directive (runs as root)"
   },
   {
@@ -1778,9 +1964,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -1798,9 +1986,11 @@
    "message": "Image 'ubuntu' has no explicit tag. Pin to a specific version tag for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses no tag (defaults to :latest)"
   },
   {
@@ -1816,9 +2006,11 @@
    "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -1834,9 +2026,11 @@
    "message": "Package manager install without --no-cache or cache removal increases image size and attack surface. Add --no-cache or '&& rm -rf /var/cache/*' after install.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-007",
    "severity": "high",
+   "suppression": null,
    "title": "Package install without cache cleanup"
   },
   {
@@ -1852,9 +2046,11 @@
    "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
    "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-023",
    "severity": "low",
+   "suppression": null,
    "title": "apt install without --no-install-recommends"
   },
   {
@@ -1871,9 +2067,11 @@
    "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-024",
    "severity": "low",
+   "suppression": null,
    "title": "OS packages installed without a version pin"
   },
   {
@@ -1889,9 +2087,11 @@
    "message": "ADD can fetch remote URLs and auto-extract archives, introducing supply chain risk. Use COPY unless you specifically need ADD features.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-004",
    "severity": "medium",
+   "suppression": null,
    "title": "ADD used instead of COPY"
   },
   {
@@ -1907,9 +2107,11 @@
    "message": "Port 22 (SSH) is exposed. Containers should not run SSH daemons \u2014 use 'docker exec' or orchestrator tools instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-008",
    "severity": "medium",
+   "suppression": null,
    "title": "SSH port exposed"
   },
   {
@@ -1925,9 +2127,11 @@
    "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "No USER directive (runs as root)"
   },
   {
@@ -1943,9 +2147,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -1963,9 +2169,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   }
  ],
@@ -1983,9 +2191,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2001,9 +2211,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -2021,9 +2233,11 @@
    "message": "Image 'ubuntu' has no explicit tag. Pin to a specific version tag for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses no tag (defaults to :latest)"
   },
   {
@@ -2039,9 +2253,11 @@
    "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2057,9 +2273,11 @@
    "message": "ENV variable 'API_KEY' appears to contain a hardcoded secret. Use build args with --secret, multi-stage builds, or runtime secret injection instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in ENV"
   },
   {
@@ -2076,9 +2294,11 @@
    "message": "ADD downloads remote content during the image build. Fetch artifacts in a verified step and pin checksums before COPY.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-022",
    "severity": "high",
+   "suppression": null,
    "title": "ADD fetches a remote URL"
   },
   {
@@ -2095,9 +2315,11 @@
    "message": "COPY --chmod=777 makes copied files world-writable. Use the least-permissive mode required by the runtime user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-021",
    "severity": "high",
+   "suppression": null,
    "title": "COPY --chmod grants world-writable permissions"
   },
   {
@@ -2113,9 +2335,11 @@
    "message": "Piping remote scripts directly to a shell bypasses integrity checks. Download, verify checksums, then execute.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-005",
    "severity": "medium",
+   "suppression": null,
    "title": "Pipe install detected (curl|sh)"
   },
   {
@@ -2131,9 +2355,11 @@
    "message": "Port 22 (SSH) is exposed. Containers should not run SSH daemons \u2014 use 'docker exec' or orchestrator tools instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-008",
    "severity": "medium",
+   "suppression": null,
    "title": "SSH port exposed"
   },
   {
@@ -2149,9 +2375,11 @@
    "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "No USER directive (runs as root)"
   },
   {
@@ -2167,9 +2395,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -2187,9 +2417,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   }
  ],
@@ -2207,9 +2439,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2225,9 +2459,11 @@
    "message": "Port 22 (SSH) is exposed. Containers should not run SSH daemons \u2014 use 'docker exec' or orchestrator tools instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-008",
    "severity": "medium",
+   "suppression": null,
    "title": "SSH port exposed"
   }
  ],
@@ -2245,9 +2481,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2263,9 +2501,11 @@
    "message": "Piping remote scripts directly to a shell bypasses integrity checks. Download, verify checksums, then execute.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-005",
    "severity": "medium",
+   "suppression": null,
    "title": "Pipe install detected (curl|sh)"
   }
  ],
@@ -2283,9 +2523,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2302,9 +2544,11 @@
    "message": "ADD downloads remote content during the image build. Fetch artifacts in a verified step and pin checksums before COPY.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-022",
    "severity": "high",
+   "suppression": null,
    "title": "ADD fetches a remote URL"
   }
  ],
@@ -2322,9 +2566,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2340,9 +2586,11 @@
    "message": "ENV variable 'API_KEY' appears to contain a hardcoded secret. Use build args with --secret, multi-stage builds, or runtime secret injection instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in ENV"
   }
  ],
@@ -2360,9 +2608,11 @@
    "message": "Image 'ubuntu' has no explicit tag. Pin to a specific version tag for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses no tag (defaults to :latest)"
   },
   {
@@ -2378,9 +2628,11 @@
    "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2396,9 +2648,11 @@
    "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "No USER directive (runs as root)"
   },
   {
@@ -2414,9 +2668,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -2434,9 +2690,11 @@
    "message": "The final build stage sets no USER, so the container runs as root by default. Add a USER directive with a non-root user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "No USER directive (runs as root)"
   },
   {
@@ -2452,9 +2710,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -2472,9 +2732,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2490,9 +2752,11 @@
    "message": "USER is set to root. Containers should run as a non-root user to limit blast radius of exploits.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "Container runs as root"
   }
  ],
@@ -2510,9 +2774,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2529,9 +2795,11 @@
    "message": "COPY --chmod=777 makes copied files world-writable. Use the least-permissive mode required by the runtime user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-021",
    "severity": "high",
+   "suppression": null,
    "title": "COPY --chmod grants world-writable permissions"
   }
  ],
@@ -2549,9 +2817,11 @@
    "message": "Image 'alpine:3.18' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2568,9 +2838,11 @@
    "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-024",
    "severity": "low",
+   "suppression": null,
    "title": "OS packages installed without a version pin"
   }
  ],
@@ -2588,9 +2860,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2606,9 +2880,11 @@
    "message": "COPY . . copies the entire build context into the image. Without a .dockerignore, secrets, .git, and other sensitive files may be included. Create a .dockerignore file.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-009",
    "severity": "high",
+   "suppression": null,
    "title": "COPY . . without .dockerignore"
   }
  ],
@@ -2626,9 +2902,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2644,9 +2922,11 @@
    "message": "USER is set to root. Containers should run as a non-root user to limit blast radius of exploits.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-002",
    "severity": "high",
+   "suppression": null,
    "title": "Container runs as root"
   }
  ],
@@ -2664,9 +2944,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2682,9 +2964,11 @@
    "message": "Package manager install without --no-cache or cache removal increases image size and attack surface. Add --no-cache or '&& rm -rf /var/cache/*' after install.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-007",
    "severity": "high",
+   "suppression": null,
    "title": "Package install without cache cleanup"
   },
   {
@@ -2700,9 +2984,11 @@
    "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
    "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-023",
    "severity": "low",
+   "suppression": null,
    "title": "apt install without --no-install-recommends"
   },
   {
@@ -2719,9 +3005,11 @@
    "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-024",
    "severity": "low",
+   "suppression": null,
    "title": "OS packages installed without a version pin"
   }
  ],
@@ -2739,9 +3027,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2757,9 +3047,11 @@
    "message": "Piping remote scripts directly to a shell bypasses integrity checks. Download, verify checksums, then execute.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-005",
    "severity": "medium",
+   "suppression": null,
    "title": "Pipe install detected (curl|sh)"
   }
  ],
@@ -2777,9 +3069,11 @@
    "message": "Image 'ubuntu' has no explicit tag. Pin to a specific version tag for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses no tag (defaults to :latest)"
   },
   {
@@ -2795,9 +3089,11 @@
    "message": "Image 'ubuntu' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2813,9 +3109,11 @@
    "message": "Image 'python:latest' uses the :latest tag. Pin to a specific version for reproducible builds.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-001",
    "severity": "high",
+   "suppression": null,
    "title": "FROM uses :latest tag"
   },
   {
@@ -2831,9 +3129,11 @@
    "message": "Image 'python:latest' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2849,9 +3149,11 @@
    "message": "Image 'node:20-alpine' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2867,9 +3169,11 @@
    "message": "Image 'registry.example.com/app@sha512:abc' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -2885,9 +3189,11 @@
    "message": "ENV variable 'API_KEY' appears to contain a hardcoded secret. Use build args with --secret, multi-stage builds, or runtime secret injection instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in ENV"
   },
   {
@@ -2903,9 +3209,11 @@
    "message": "ENV variable 'DB_PASSWORD' appears to contain a hardcoded secret. Use build args with --secret, multi-stage builds, or runtime secret injection instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in ENV"
   },
   {
@@ -2921,9 +3229,11 @@
    "message": "ADD can fetch remote URLs and auto-extract archives, introducing supply chain risk. Use COPY unless you specifically need ADD features.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-004",
    "severity": "medium",
+   "suppression": null,
    "title": "ADD used instead of COPY"
   },
   {
@@ -2940,9 +3250,11 @@
    "message": "ADD downloads remote content during the image build. Fetch artifacts in a verified step and pin checksums before COPY.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-022",
    "severity": "high",
+   "suppression": null,
    "title": "ADD fetches a remote URL"
   },
   {
@@ -2958,9 +3270,11 @@
    "message": "Piping remote scripts directly to a shell bypasses integrity checks. Download, verify checksums, then execute.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-005",
    "severity": "medium",
+   "suppression": null,
    "title": "Pipe install detected (curl|sh)"
   },
   {
@@ -2976,9 +3290,11 @@
    "message": "Piping remote scripts directly to a shell bypasses integrity checks. Download, verify checksums, then execute.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-005",
    "severity": "medium",
+   "suppression": null,
    "title": "Pipe install detected (curl|sh)"
   },
   {
@@ -2994,9 +3310,11 @@
    "message": "Package manager install without --no-cache or cache removal increases image size and attack surface. Add --no-cache or '&& rm -rf /var/cache/*' after install.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-007",
    "severity": "high",
+   "suppression": null,
    "title": "Package install without cache cleanup"
   },
   {
@@ -3012,9 +3330,11 @@
    "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
    "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-023",
    "severity": "low",
+   "suppression": null,
    "title": "apt install without --no-install-recommends"
   },
   {
@@ -3031,9 +3351,11 @@
    "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-024",
    "severity": "low",
+   "suppression": null,
    "title": "OS packages installed without a version pin"
   },
   {
@@ -3049,9 +3371,11 @@
    "message": "Package manager install without --no-cache or cache removal increases image size and attack surface. Add --no-cache or '&& rm -rf /var/cache/*' after install.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-007",
    "severity": "high",
+   "suppression": null,
    "title": "Package install without cache cleanup"
   },
   {
@@ -3068,9 +3392,11 @@
    "message": "Packages installed without a version: git. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-024",
    "severity": "low",
+   "suppression": null,
    "title": "OS packages installed without a version pin"
   },
   {
@@ -3086,9 +3412,11 @@
    "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
    "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-023",
    "severity": "low",
+   "suppression": null,
    "title": "apt install without --no-install-recommends"
   },
   {
@@ -3105,9 +3433,11 @@
    "message": "Packages installed without a version: jq. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-024",
    "severity": "low",
+   "suppression": null,
    "title": "OS packages installed without a version pin"
   },
   {
@@ -3123,9 +3453,11 @@
    "message": "Port 22 (SSH) is exposed. Containers should not run SSH daemons \u2014 use 'docker exec' or orchestrator tools instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-008",
    "severity": "medium",
+   "suppression": null,
    "title": "SSH port exposed"
   },
   {
@@ -3141,9 +3473,11 @@
    "message": "Port 22 (SSH) is exposed. Containers should not run SSH daemons \u2014 use 'docker exec' or orchestrator tools instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-008",
    "severity": "medium",
+   "suppression": null,
    "title": "SSH port exposed"
   },
   {
@@ -3159,9 +3493,11 @@
    "message": "Exposing a range of ports increases attack surface. Expose only specific required ports.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-013",
    "severity": "medium",
+   "suppression": null,
    "title": "EXPOSE port range (excessive attack surface)"
   },
   {
@@ -3177,9 +3513,11 @@
    "message": "COPY . . copies the entire build context into the image. Without a .dockerignore, secrets, .git, and other sensitive files may be included. Create a .dockerignore file.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-009",
    "severity": "high",
+   "suppression": null,
    "title": "COPY . . without .dockerignore"
   },
   {
@@ -3195,9 +3533,11 @@
    "message": "COPY with --chown=0 explicitly sets root ownership. Use a non-root UID.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-011",
    "severity": "medium",
+   "suppression": null,
    "title": "COPY --chown=0 (root ownership)"
   },
   {
@@ -3214,9 +3554,11 @@
    "message": "COPY --chmod=777 makes copied files world-writable. Use the least-permissive mode required by the runtime user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-021",
    "severity": "high",
+   "suppression": null,
    "title": "COPY --chmod grants world-writable permissions"
   },
   {
@@ -3233,9 +3575,11 @@
    "message": "COPY --chmod=777 makes copied files world-writable. Use the least-permissive mode required by the runtime user.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-021",
    "severity": "high",
+   "suppression": null,
    "title": "COPY --chmod grants world-writable permissions"
   },
   {
@@ -3251,9 +3595,11 @@
    "message": "chmod 777 makes files world-writable. Use specific permissions (e.g. 755 for dirs, 644 for files).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-012",
    "severity": "high",
+   "suppression": null,
    "title": "RUN chmod 777 (world-writable files)"
   },
   {
@@ -3269,9 +3615,11 @@
    "message": "chmod 777 makes files world-writable. Use specific permissions (e.g. 755 for dirs, 644 for files).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-012",
    "severity": "high",
+   "suppression": null,
    "title": "RUN chmod 777 (world-writable files)"
   },
   {
@@ -3287,9 +3635,11 @@
    "message": "sudo in Dockerfile is unnecessary \u2014 RUN already executes as the current user. Remove sudo.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-014",
    "severity": "medium",
+   "suppression": null,
    "title": "RUN with sudo (unnecessary privilege escalation)"
   },
   {
@@ -3305,9 +3655,11 @@
    "message": "ARG values are stored in image history. Use BuildKit secrets (--mount=type=secret) instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-015",
    "severity": "critical",
+   "suppression": null,
    "title": "ARG used for secrets (visible in image history)"
   },
   {
@@ -3322,9 +3674,11 @@
    "message": "pip caches downloaded packages. Add --no-cache-dir to reduce image size.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-017",
    "severity": "low",
+   "suppression": null,
    "title": "pip install without --no-cache-dir"
   },
   {
@@ -3339,9 +3693,11 @@
    "message": "Use absolute paths in WORKDIR for clarity and predictability.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-018",
    "severity": "low",
+   "suppression": null,
    "title": "WORKDIR uses relative path"
   },
   {
@@ -3356,9 +3712,11 @@
    "message": "Custom SHELL changes RUN behavior. Ensure it's intentional and documented.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-019",
    "severity": "medium",
+   "suppression": null,
    "title": "SHELL instruction overrides default shell"
   },
   {
@@ -3374,9 +3732,11 @@
    "message": "--network=host in RUN exposes host network during build. Use default bridge network.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-020",
    "severity": "high",
+   "suppression": null,
    "title": "RUN with --network=host (shares host network during build)"
   }
  ],
@@ -3396,9 +3756,11 @@
    "message": "apt installs recommended packages by default, adding software the image does not need. Add --no-install-recommends to apt-get install.",
    "remediation": "apt-get install -y --no-install-recommends <pkg>=<version>",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-023",
    "severity": "low",
+   "suppression": null,
    "title": "apt install without --no-install-recommends"
   },
   {
@@ -3415,9 +3777,11 @@
    "message": "Packages installed without a version: curl. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-024",
    "severity": "low",
+   "suppression": null,
    "title": "OS packages installed without a version pin"
   },
   {
@@ -3434,9 +3798,11 @@
    "message": "COPY puts .env into an image layer, where anyone who can pull the image can read it, even if a later layer deletes it. Mount it at build time with RUN --mount=type=secret or inject it at runtime.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-026",
    "severity": "high",
+   "suppression": null,
    "title": "Credential file copied into the image"
   },
   {
@@ -3453,9 +3819,11 @@
    "message": "Packages installed without a version: nodejs. Unpinned packages make rebuilds pull whatever the mirror serves that day. Pin versions (apt: pkg=version, apk: pkg=version).",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-024",
    "severity": "low",
+   "suppression": null,
    "title": "OS packages installed without a version pin"
   },
   {
@@ -3470,9 +3838,11 @@
    "message": "Only the last CMD in a build stage takes effect; this one is silently ignored. Keep a single CMD per stage so the image runs what the file appears to say.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-025",
    "severity": "low",
+   "suppression": null,
    "title": "CMD overridden later in the same stage"
   }
  ],
@@ -3491,9 +3861,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   }
  ],
@@ -3511,9 +3883,11 @@
    "message": "Image 'python:3.12' is not pinned by digest (sha256). Use @sha256:<hash> to guarantee immutable base images.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-010",
    "severity": "medium",
+   "suppression": null,
    "title": "FROM without digest pin"
   },
   {
@@ -3529,9 +3903,11 @@
    "message": "No HEALTHCHECK instruction found. Add a HEALTHCHECK to enable container health monitoring and automatic restart on failure.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "DOCKER-006",
    "severity": "low",
+   "suppression": null,
    "title": "No HEALTHCHECK directive"
   }
  ],
@@ -3549,9 +3925,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -3566,9 +3944,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3586,9 +3966,11 @@
    "message": "values.yaml sets serviceAccount.create to false. Disabling service account creation may reuse the default service account, which is often over-privileged. Create a dedicated service account with only the required permissions.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-007",
    "severity": "medium",
+   "suppression": null,
    "title": "serviceAccount.create set to false"
   },
   {
@@ -3604,9 +3986,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -3621,9 +4005,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3641,9 +4027,11 @@
    "message": "Field 'password' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'password'"
   },
   {
@@ -3659,9 +4047,11 @@
    "message": "values.yaml sets image.tag to 'latest'. The latest tag is mutable and can cause unexpected version changes on re-deploy. Pin to a specific immutable digest or version tag.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-004",
    "severity": "medium",
+   "suppression": null,
    "title": "Image tag set to 'latest' in values.yaml"
   },
   {
@@ -3677,9 +4067,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -3694,9 +4086,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3714,9 +4108,11 @@
    "message": "Field 'adminPassword' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'adminPassword'"
   },
   {
@@ -3732,9 +4128,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -3750,9 +4148,11 @@
    "message": "values.yaml sets 'adminPassword' to a non-placeholder value. Default admin passwords are a common attack vector. Use a Kubernetes Secret or external secret manager instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-013",
    "severity": "critical",
+   "suppression": null,
    "title": "Default admin password in values.yaml: 'adminPassword'"
   },
   {
@@ -3767,9 +4167,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3787,9 +4189,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -3804,9 +4208,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3823,9 +4229,11 @@
    "message": "values.yaml sets service.externalTrafficPolicy to 'Cluster'. This causes source IP to be lost via SNAT. Set to 'Local' to preserve client source IP for auditing and network policy enforcement.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-009",
    "severity": "low",
+   "suppression": null,
    "title": "Service externalTrafficPolicy set to Cluster"
   },
   {
@@ -3841,9 +4249,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -3858,9 +4268,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3878,9 +4290,11 @@
    "message": "values.yaml sets image.tag to 'latest'. The latest tag is mutable and can cause unexpected version changes on re-deploy. Pin to a specific immutable digest or version tag.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-004",
    "severity": "medium",
+   "suppression": null,
    "title": "Image tag set to 'latest' in values.yaml"
   },
   {
@@ -3896,9 +4310,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -3913,9 +4329,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3933,9 +4351,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -3950,9 +4370,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -3970,9 +4392,11 @@
    "message": "values.yaml defines an ingress without TLS configuration. Traffic will be served over plain HTTP, exposing data in transit. Configure ingress.tls with a certificate secret.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-008",
    "severity": "high",
+   "suppression": null,
    "title": "Ingress without TLS configuration"
   },
   {
@@ -3988,9 +4412,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4005,9 +4431,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4025,9 +4453,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4042,9 +4472,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4062,9 +4494,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   }
  ],
@@ -4082,9 +4516,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4099,9 +4535,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4119,9 +4557,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4136,9 +4576,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   },
   {
@@ -4153,9 +4595,11 @@
    "message": "values.yaml sets replicaCount/replicas to 1. A single replica provides no high availability. Set replicas >= 2 for production workloads to ensure uptime.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-015",
    "severity": "low",
+   "suppression": null,
    "title": "Deployment replicas set to 1"
   }
  ],
@@ -4174,9 +4618,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4191,9 +4637,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4210,9 +4658,11 @@
    "message": "values.yaml defines persistence without an explicit storageClassName. The default storage class may not meet performance or encryption requirements. Specify storageClassName explicitly.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-010",
    "severity": "low",
+   "suppression": null,
    "title": "PersistentVolumeClaim without storageClassName"
   },
   {
@@ -4228,9 +4678,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4245,9 +4697,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4265,9 +4719,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4282,9 +4738,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   },
   {
@@ -4299,9 +4757,11 @@
    "message": "values.yaml sets replicaCount/replicas to 1. A single replica provides no high availability. Set replicas >= 2 for production workloads to ensure uptime.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-015",
    "severity": "low",
+   "suppression": null,
    "title": "Deployment replicas set to 1"
   }
  ],
@@ -4319,9 +4779,11 @@
    "message": "values.yaml explicitly disables NetworkPolicy (networkPolicy.enabled: false). Enable NetworkPolicy to enforce network isolation and restrict pod-to-pod traffic.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-006",
    "severity": "medium",
+   "suppression": null,
    "title": "networkPolicy.enabled set to false"
   },
   {
@@ -4337,9 +4799,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4354,9 +4818,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4374,9 +4840,11 @@
    "message": "Field 'password' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'password'"
   },
   {
@@ -4392,9 +4860,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4409,9 +4879,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4429,9 +4901,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4446,9 +4920,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4466,9 +4942,11 @@
    "message": "Field 'token' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'token'"
   },
   {
@@ -4484,9 +4962,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4501,9 +4981,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4521,9 +5003,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4538,9 +5022,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4558,9 +5044,11 @@
    "message": "values.yaml sets rbac.create to false. Disabling RBAC resource creation may leave the workload relying on overly permissive pre-existing roles. Enable RBAC to enforce least-privilege access control.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-007",
    "severity": "medium",
+   "suppression": null,
    "title": "rbac.create set to false"
   },
   {
@@ -4576,9 +5064,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4593,9 +5083,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4613,9 +5105,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4630,9 +5124,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4649,9 +5145,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4669,9 +5167,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4686,9 +5186,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4706,9 +5208,11 @@
    "message": "values.yaml sets service.type to 'NodePort'. NodePort exposes the service on all node IPs on a static port, increasing the attack surface. Use ClusterIP with an Ingress controller or LoadBalancer instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-005",
    "severity": "medium",
+   "suppression": null,
    "title": "service.type set to NodePort"
   },
   {
@@ -4724,9 +5228,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4741,9 +5247,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4761,9 +5269,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4778,9 +5288,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4798,9 +5310,11 @@
    "message": "values.yaml sets image.tag to 'latest'. The latest tag is mutable and can cause unexpected version changes on re-deploy. Pin to a specific immutable digest or version tag.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-004",
    "severity": "medium",
+   "suppression": null,
    "title": "Image tag set to 'latest' in values.yaml"
   },
   {
@@ -4816,9 +5330,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4833,9 +5349,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4853,9 +5371,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4870,9 +5390,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4890,9 +5412,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4907,9 +5431,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -4927,9 +5453,11 @@
    "message": "Field 'adminPassword' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'adminPassword'"
   },
   {
@@ -4945,9 +5473,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -4963,9 +5493,11 @@
    "message": "values.yaml sets 'adminPassword' to a non-placeholder value. Default admin passwords are a common attack vector. Use a Kubernetes Secret or external secret manager instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-013",
    "severity": "critical",
+   "suppression": null,
    "title": "Default admin password in values.yaml: 'adminPassword'"
   },
   {
@@ -4980,9 +5512,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5000,9 +5534,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5017,9 +5553,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5037,9 +5575,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5054,9 +5594,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5074,9 +5616,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5091,9 +5635,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5111,9 +5657,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5128,9 +5676,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5148,9 +5698,11 @@
    "message": "Field 'password' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'password'"
   },
   {
@@ -5166,9 +5718,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5183,9 +5737,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5203,9 +5759,11 @@
    "message": "values.yaml defines resources without memory limits. Without memory limits, a container can consume all node memory and cause OOM kills on other workloads. Set resources.limits.memory.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-011",
    "severity": "medium",
+   "suppression": null,
    "title": "Container resources without memory limits"
   },
   {
@@ -5221,9 +5779,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5238,9 +5798,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5258,9 +5820,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5275,9 +5839,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ],
@@ -5295,9 +5861,11 @@
    "message": "Field 'adminPassword' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'adminPassword'"
   },
   {
@@ -5313,9 +5881,11 @@
    "message": "Field 'admin_password' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'admin_password'"
   },
   {
@@ -5331,9 +5901,11 @@
    "message": "Field 'apiToken' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'apiToken'"
   },
   {
@@ -5349,9 +5921,11 @@
    "message": "Field 'credential' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'credential'"
   },
   {
@@ -5367,9 +5941,11 @@
    "message": "Field 'nestedToken' in values.yaml contains a hardcoded secret value. Use environment variable substitution, a Secrets Store CSI driver, or reference a Kubernetes Secret instead of hardcoding credentials.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-003",
    "severity": "critical",
+   "suppression": null,
    "title": "Hardcoded secret in values.yaml: 'nestedToken'"
   },
   {
@@ -5385,9 +5961,11 @@
    "message": "values.yaml sets image.tag to 'latest'. The latest tag is mutable and can cause unexpected version changes on re-deploy. Pin to a specific immutable digest or version tag.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-004",
    "severity": "medium",
+   "suppression": null,
    "title": "Image tag set to 'latest' in values.yaml"
   },
   {
@@ -5403,9 +5981,11 @@
    "message": "values.yaml sets service.type to 'NodePort'. NodePort exposes the service on all node IPs on a static port, increasing the attack surface. Use ClusterIP with an Ingress controller or LoadBalancer instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-005",
    "severity": "medium",
+   "suppression": null,
    "title": "service.type set to NodePort"
   },
   {
@@ -5421,9 +6001,11 @@
    "message": "values.yaml explicitly disables NetworkPolicy (networkPolicy.enabled: false). Enable NetworkPolicy to enforce network isolation and restrict pod-to-pod traffic.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-006",
    "severity": "medium",
+   "suppression": null,
    "title": "networkPolicy.enabled set to false"
   },
   {
@@ -5439,9 +6021,11 @@
    "message": "values.yaml sets rbac.create to false. Disabling RBAC resource creation may leave the workload relying on overly permissive pre-existing roles. Enable RBAC to enforce least-privilege access control.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-007",
    "severity": "medium",
+   "suppression": null,
    "title": "rbac.create set to false"
   },
   {
@@ -5457,9 +6041,11 @@
    "message": "values.yaml sets serviceAccount.create to false. Disabling service account creation may reuse the default service account, which is often over-privileged. Create a dedicated service account with only the required permissions.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-007",
    "severity": "medium",
+   "suppression": null,
    "title": "serviceAccount.create set to false"
   },
   {
@@ -5475,9 +6061,11 @@
    "message": "values.yaml defines an ingress without TLS configuration. Traffic will be served over plain HTTP, exposing data in transit. Configure ingress.tls with a certificate secret.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-008",
    "severity": "high",
+   "suppression": null,
    "title": "Ingress without TLS configuration"
   },
   {
@@ -5492,9 +6080,11 @@
    "message": "values.yaml sets service.externalTrafficPolicy to 'Cluster'. This causes source IP to be lost via SNAT. Set to 'Local' to preserve client source IP for auditing and network policy enforcement.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-009",
    "severity": "low",
+   "suppression": null,
    "title": "Service externalTrafficPolicy set to Cluster"
   },
   {
@@ -5509,9 +6099,11 @@
    "message": "values.yaml defines persistence without an explicit storageClassName. The default storage class may not meet performance or encryption requirements. Specify storageClassName explicitly.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-010",
    "severity": "low",
+   "suppression": null,
    "title": "PersistentVolumeClaim without storageClassName"
   },
   {
@@ -5527,9 +6119,11 @@
    "message": "values.yaml defines resources without memory limits. Without memory limits, a container can consume all node memory and cause OOM kills on other workloads. Set resources.limits.memory.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-011",
    "severity": "medium",
+   "suppression": null,
    "title": "Container resources without memory limits"
   },
   {
@@ -5545,9 +6139,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5563,9 +6159,11 @@
    "message": "values.yaml sets 'adminPassword' to a non-placeholder value. Default admin passwords are a common attack vector. Use a Kubernetes Secret or external secret manager instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-013",
    "severity": "critical",
+   "suppression": null,
    "title": "Default admin password in values.yaml: 'adminPassword'"
   },
   {
@@ -5581,9 +6179,11 @@
    "message": "values.yaml sets 'admin_password' to a non-placeholder value. Default admin passwords are a common attack vector. Use a Kubernetes Secret or external secret manager instead.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-013",
    "severity": "critical",
+   "suppression": null,
    "title": "Default admin password in values.yaml: 'admin_password'"
   },
   {
@@ -5598,9 +6198,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   },
   {
@@ -5615,9 +6217,11 @@
    "message": "values.yaml sets replicaCount/replicas to 1. A single replica provides no high availability. Set replicas >= 2 for production workloads to ensure uptime.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-015",
    "severity": "low",
+   "suppression": null,
    "title": "Deployment replicas set to 1"
   }
  ],
@@ -5639,9 +6243,11 @@
    "message": "values.yaml defines resources without memory limits. Without memory limits, a container can consume all node memory and cause OOM kills on other workloads. Set resources.limits.memory.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-011",
    "severity": "medium",
+   "suppression": null,
    "title": "Container resources without memory limits"
   },
   {
@@ -5657,9 +6263,11 @@
    "message": "values.yaml does not define podSecurityContext. Set podSecurityContext with runAsNonRoot: true, fsGroup, and seccompProfile to enforce pod-level security defaults.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-012",
    "severity": "medium",
+   "suppression": null,
    "title": "Missing podSecurityContext in values.yaml"
   },
   {
@@ -5674,9 +6282,11 @@
    "message": "values.yaml does not define livenessProbe defaults. Without a liveness probe, Kubernetes cannot detect and restart deadlocked containers. Define livenessProbe with httpGet or tcpSocket.",
    "remediation": "",
    "repository_relative_path": null,
+   "resource": null,
    "resource_type": null,
    "rule_id": "HELM-014",
    "severity": "low",
+   "suppression": null,
    "title": "Missing livenessProbe in values.yaml"
   }
  ]

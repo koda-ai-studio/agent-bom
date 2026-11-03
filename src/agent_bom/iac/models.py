@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+from collections import Counter
+from collections.abc import Iterable
 from dataclasses import dataclass, field
+from datetime import date
 from enum import Enum
+from typing import Any
 
 
 class IaCResourceType(str, Enum):
@@ -37,6 +41,19 @@ class IaCResourceType(str, Enum):
     DBT_PROJECT = "dbt_project"
 
 
+@dataclass(frozen=True)
+class IaCResourceRef:
+    """Identity of the declared resource a finding is about, where the parser knows it."""
+
+    kind: str
+    name: str
+    namespace: str = ""
+    labels: dict[str, str] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"kind": self.kind, "name": self.name, "namespace": self.namespace, "labels": dict(self.labels)}
+
+
 @dataclass
 class IaCFinding:
     """A single IaC misconfiguration finding."""
@@ -54,6 +71,8 @@ class IaCFinding:
     remediation: str = ""  # Fix guidance
     resource_type: IaCResourceType | None = None  # Structured resource type for graph/compliance wiring
     repository_relative_path: str | None = None  # Set only by a scanner with a known repository root
+    resource: IaCResourceRef | None = None  # Declared resource identity (Kubernetes kind/name/namespace/labels)
+    suppression: dict[str, Any] | None = None  # Accepted-exception record; set only on suppressed findings
 
 
 @dataclass
@@ -93,6 +112,12 @@ class ScanContext:
 
     deployment_mode: str = "standalone"
     enabled_scanners: frozenset[str] | None = None  # None = all unlocked
+    # Accepted exceptions from an ignore file or the tenant store; inline markers are read from the files.
+    exceptions: tuple[Any, ...] = ()  # agent_bom.core.iac_exceptions.IaCException
+    # IaC rules of a policy-as-code file (allow / warn / block).
+    policy: Any = None  # agent_bom.iac.policy.IaCPolicy
+    # Date exceptions are evaluated against; ``None`` means today (UTC).
+    today: date | None = None
 
 
 @dataclass
@@ -131,8 +156,12 @@ class ScanResult:
 
     findings: list[IaCFinding] = field(default_factory=list)
     verdicts: list[ScannerVerdict] = field(default_factory=list)
-    # Findings an inline ``agent-bom: ignore[RULE-ID] <reason>`` marker accepted.
+    # Findings an accepted exception covers; each carries its ``suppression`` record.
     suppressed: list[IaCFinding] = field(default_factory=list)
+    # Expired, soon-to-expire, invalid or policy-rejected exceptions worth telling the operator about.
+    notices: list[Any] = field(default_factory=list)  # agent_bom.core.iac_exceptions.ExceptionNotice
+    # IaC policy-as-code outcome (``None`` when no policy has IaC rules).
+    policy_result: dict[str, Any] | None = None
     # Explicitly named files that no rule module evaluates. Zero findings for
     # them means "not evaluated", never "clean".
     not_evaluated: list[str] = field(default_factory=list)
@@ -148,3 +177,79 @@ def set_repository_context(findings: list[IaCFinding], relative_path: str) -> No
     for finding in findings:
         finding.repository_relative_path = relative_path
         finding.file_path = relative_path
+
+
+# ── serialized shape (``iac_findings`` in JSON exports) ──────────────────────
+# ``findings`` holds active findings: gates, policy and the unified finding stream read
+# only these. ``suppressed`` keeps every finding an accepted exception covers, with its
+# suppression record. ``exceptions`` counts what was accepted, expired or is about to.
+
+
+def iac_finding_row(finding: IaCFinding) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "rule_id": finding.rule_id,
+        "severity": finding.severity,
+        "title": finding.title,
+        "message": finding.message,
+        "file_path": finding.file_path,
+        "line_number": finding.line_number,
+        "category": finding.category,
+        "compliance": finding.compliance,
+        "attack_techniques": finding.attack_techniques,
+        "remediation": finding.remediation,
+    }
+    if finding.resource is not None:
+        row["resource"] = finding.resource.to_dict()
+    if finding.suppression is not None:
+        row["suppressed"] = True
+        row["suppression"] = dict(finding.suppression)
+    return row
+
+
+def exception_summary(suppressed: Iterable[IaCFinding], notices: Iterable[Any]) -> dict[str, Any]:
+    records = [f.suppression for f in suppressed if f.suppression is not None]
+    notice_list = list(notices)
+    return {
+        "accepted": len(records),
+        "expired": sum(1 for n in notice_list if n.kind == "expired"),
+        "expiring_soon": sum(1 for n in notice_list if n.kind == "expiring"),
+        "invalid": sum(1 for n in notice_list if n.kind == "invalid"),
+        "rejected": sum(1 for n in notice_list if n.kind == "rejected"),
+        "by_source": dict(sorted(Counter(str(r.get("source")) for r in records).items())),
+        "notices": [n.to_dict() for n in notice_list],
+    }
+
+
+def iac_findings_payload(
+    findings: Iterable[IaCFinding],
+    suppressed: Iterable[IaCFinding] = (),
+    notices: Iterable[Any] = (),
+    *,
+    policy: dict[str, Any] | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    active = list(findings)
+    accepted = list(suppressed)
+    payload: dict[str, Any] = {
+        **extra,
+        "total": len(active),
+        "findings": [iac_finding_row(f) for f in active],
+        "suppressed": [iac_finding_row(f) for f in accepted],
+        "exceptions": exception_summary(accepted, notices),
+    }
+    if policy is not None:
+        payload["policy"] = policy
+    return payload
+
+
+def merge_policy_results(results: Iterable[dict[str, Any] | None]) -> dict[str, Any] | None:
+    """Combine per-path IaC policy outcomes into one."""
+    present = [r for r in results if r]
+    if not present:
+        return None
+    merged: dict[str, Any] = {"policy_name": present[0].get("policy_name"), "violations": [], "failures": [], "warnings": [], "allowed": []}
+    for result in present:
+        for key in ("violations", "failures", "warnings", "allowed"):
+            merged[key].extend(result.get(key) or [])
+    merged["passed"] = not merged["failures"]
+    return merged

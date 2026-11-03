@@ -8,6 +8,7 @@ canonical list shared with CLI ``--project`` / ``--repo`` auto-detect.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
@@ -268,34 +269,26 @@ def _scan_skill_stage(
     result.skill_audit_data = _skill_audit_payload(skill_audit)
 
 
-def _scan_iac_stage(root: Path, result: RepoTreeScanResult, update_progress: Callable[[str], None] | None) -> None:
+def _scan_iac_stage(
+    root: Path,
+    result: RepoTreeScanResult,
+    update_progress: Callable[[str], None] | None,
+    warnings: list[str] | None = None,
+    iac_exceptions: Sequence[Any] = (),
+) -> None:
     from agent_bom.iac import scan_iac_with_context
     from agent_bom.iac.models import ScanContext as IaCContext
+    from agent_bom.iac.models import iac_findings_payload
 
     if update_progress is not None:
         update_progress("Scanning IaC and cloud config files")
-    iac_result = scan_iac_with_context(root, IaCContext(deployment_mode="standalone"))
+    iac_result = scan_iac_with_context(root, IaCContext(deployment_mode="standalone", exceptions=tuple(iac_exceptions)))
     result.kubernetes_inventory, chart_issues = manifest_inventory_with_issues(root)
     result.scan_issues.extend(chart_issues)
-    if iac_result.findings:
-        result.iac_findings_data = {
-            "total": len(iac_result.findings),
-            "findings": [
-                {
-                    "rule_id": finding.rule_id,
-                    "severity": finding.severity,
-                    "title": finding.title,
-                    "message": finding.message,
-                    "file_path": finding.file_path,
-                    "line_number": finding.line_number,
-                    "category": finding.category,
-                    "compliance": finding.compliance,
-                    "attack_techniques": finding.attack_techniques,
-                    "remediation": finding.remediation,
-                }
-                for finding in iac_result.findings
-            ],
-        }
+    if warnings is not None:
+        warnings.extend(f"IaC exception {notice.kind}: {notice.message}" for notice in iac_result.notices)
+    if iac_result.findings or iac_result.suppressed or iac_result.notices:
+        result.iac_findings_data = iac_findings_payload(iac_result.findings, iac_result.suppressed, iac_result.notices)
 
 
 def _append_dependency_agents(root: Path, dir_map: dict[Any, Any], agents: list[Agent]) -> None:
@@ -564,6 +557,7 @@ def scan_cloned_repo_tree(
     warnings: list[str],
     update_progress: Callable[[str], None] | None = None,
     offline: bool = False,
+    iac_exceptions: Sequence[Any] = (),
 ) -> RepoTreeScanResult:
     """Run static discovery passes on a cloned repository root.
 
@@ -578,7 +572,7 @@ def scan_cloned_repo_tree(
     ai_inventory: dict[str, Any] = {}
 
     _scan_skill_stage(root, result, agents, warnings, update_progress)
-    _scan_iac_stage(root, result, update_progress)
+    _scan_iac_stage(root, result, update_progress, warnings, iac_exceptions)
     _scan_dependency_stage(root, ai_inventory, agents, warnings, update_progress)
     _scan_secrets_stage(root, result, ai_inventory, warnings, update_progress, offline)
     _scan_weak_crypto_stage(root, ai_inventory, warnings, update_progress)

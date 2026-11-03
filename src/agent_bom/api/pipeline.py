@@ -44,6 +44,7 @@ from agent_bom.api.scan_analysis_stages import (
     attach_repo_metadata,
     build_report_stage,
     extract_packages_stage,
+    load_tenant_iac_exceptions,
     scan_vulnerabilities_stage,
 )
 from agent_bom.api.scan_context import ScanContext, ScanStage
@@ -600,6 +601,7 @@ SCAN_STAGES: tuple[ScanStage, ...] = (
     ScanStage("prepare_request", prepare_request),
     ScanStage("dry_run", _finish_dry_run),
     ScanStage("refresh_vulnerability_db", refresh_vulnerability_db),
+    ScanStage("load_tenant_iac_exceptions", load_tenant_iac_exceptions),
     ScanStage("discover_agents", discover_agents),
     ScanStage("empty_estate", _finish_empty_estate),
     ScanStage("flag_blocklisted_servers", flag_blocklisted_servers),

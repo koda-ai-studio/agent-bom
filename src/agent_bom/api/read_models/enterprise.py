@@ -247,6 +247,9 @@ class VulnExceptionRow(ReadModel):
     tenant_id: str
     approval_version: int
     decided_by: str
+    iac_rule_id: str = ""
+    iac_path: str = ""
+    iac_resource: dict[str, Any] = {}
     suppression_active: bool
     approval_required: bool
 

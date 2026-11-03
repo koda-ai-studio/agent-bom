@@ -573,6 +573,11 @@ UPDATE control_plane_schema_versions SET version=2,updated_at=now() WHERE compon
 -- Suppression decision author for four-eyes approval (migration 20261007_03).
 ALTER TABLE exceptions ADD COLUMN IF NOT EXISTS decided_by TEXT NOT NULL DEFAULT '';
 UPDATE control_plane_schema_versions SET version=3,updated_at=now() WHERE component='exceptions' AND version < 3;
+-- IaC exception scope: rule id, path glob, resource selector (migration 20261102_01).
+ALTER TABLE exceptions ADD COLUMN IF NOT EXISTS iac_rule_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE exceptions ADD COLUMN IF NOT EXISTS iac_path TEXT NOT NULL DEFAULT '';
+ALTER TABLE exceptions ADD COLUMN IF NOT EXISTS iac_resource TEXT NOT NULL DEFAULT '';
+UPDATE control_plane_schema_versions SET version=4,updated_at=now() WHERE component='exceptions' AND version < 4;
 
 -- Committed job evidence revisions (migration 20261006_01).
 

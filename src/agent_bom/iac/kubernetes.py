@@ -57,7 +57,7 @@ import yaml  # type: ignore[import-untyped]
 from agent_bom.iac import kubernetes_containers as _containers
 from agent_bom.iac import kubernetes_resources as _resources
 from agent_bom.iac.kubernetes_common import K8sContainer, K8sDocument, K8sWorkload
-from agent_bom.iac.models import IaCFinding
+from agent_bom.iac.models import IaCFinding, IaCResourceRef
 from agent_bom.iac.yaml_lines import key_line, safe_load_all_with_lines
 
 # Workload kinds that have a pod spec
@@ -164,7 +164,26 @@ def _scan_workload(workload: K8sWorkload) -> list[IaCFinding]:
     return findings
 
 
+def _resource_ref(kind: str, metadata: dict[str, Any]) -> IaCResourceRef:
+    labels = metadata.get("labels")
+    return IaCResourceRef(
+        kind=str(kind or ""),
+        name=str(metadata.get("name") or ""),
+        namespace=str(metadata.get("namespace") or ""),
+        labels={str(k): str(v) for k, v in labels.items()} if isinstance(labels, dict) else {},
+    )
+
+
 def _scan_document(doc: dict[str, Any], content: str, rel_path: str) -> list[IaCFinding]:
+    findings = _scan_document_rules(doc, content, rel_path)
+    metadata = doc.get("metadata")
+    resource = _resource_ref(doc.get("kind", ""), metadata if isinstance(metadata, dict) else {})
+    for finding in findings:
+        finding.resource = resource
+    return findings
+
+
+def _scan_document_rules(doc: dict[str, Any], content: str, rel_path: str) -> list[IaCFinding]:
     kind = doc.get("kind", "")
     metadata = doc.get("metadata", {}) or {}
     name = metadata.get("name", kind)

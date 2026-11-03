@@ -7,6 +7,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Added
+- IaC exceptions with an audit trail: `.agent-bom-ignore.yaml` entries scoped by rule, path and Kubernetes resource (kind, name, namespace, labels) with required reason, optional owner and expiry; inline markers accept `expires=` and `owner=`. Accepted findings stay in JSON (`iac_findings.suppressed`), SARIF (`suppressions`), HTML and console, and leave the gates. Expired exceptions re-activate their findings with a warning; exceptions due within 14 days print a notice.
+- Tenant IaC exceptions through `POST /v1/exceptions` (`iac_rule_id`, `iac_path`, `iac_resource`) with the existing four-eyes approval, bounded expiry and tenant scoping; repository scans through the API apply them.
+- Policy-as-code rules for IaC findings (`iac_rule`, `severity_gte`, `iac_path`, resource, labels, `iac_environment`) with `allow`, `warn` and `block` actions; a non-waivable `block` rejects repository-local exceptions. `agent-bom iac` accepts `--ignore-file` and `--policy`.
+
+### Upgrade notes
+- Database migration `20261102_01` adds three columns to `exceptions` (additive, idempotent).
+
 ## [0.113.1] - 2026-11-02
 
 ### Highlights
