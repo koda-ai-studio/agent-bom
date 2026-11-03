@@ -6446,9 +6446,7 @@ export interface paths {
          *     critical/high. The CVE-only ``blast_radius`` is used only for the
          *     correlation-based ``compound_issues`` metric, where reachability/exposure
          *     lives. ``unrated`` is an explicit bucket so the histogram sums to ``total``.
-         *
-         *     Returns:
-         *         {critical, high, medium, low, unrated, total, kev, compound_issues, …}
+         *     Like ``/v1/posture`` it answers 503 ``current_estate_seeding`` while the demo estate seeds.
          */
         get: operations["get_posture_counts_v1_posture_counts_get"];
         put?: never;
@@ -6776,9 +6774,33 @@ export interface paths {
          * Receive Push
          * @description Receive pushed scan results from a CLI instance.
          *
-         *     Stores as a completed ScanJob with source metadata.
+         *     Stores as a completed ScanJob with source metadata. With
+         *     ``Prefer: respond-async`` (or ``AGENT_BOM_PUSH_INGEST_MODE=async``) the
+         *     report is admitted durably and ``202`` returns ``job_id`` and ``status_url``
+         *     while a worker persists the graph. A key another request is still
+         *     committing also answers ``202`` with ``Retry-After``.
          */
         post: operations["receive_push_v1_results_push_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/results/push/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Push Status
+         * @description Return the receipt of one pushed result: accepted, running, stored or failed.
+         */
+        get: operations["get_push_status_v1_results_push__job_id__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -41938,6 +41960,59 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Accepted for asynchronous ingest (``Prefer: respond-async``), or an identical push is still being committed. Poll ``status_url`` after ``Retry-After`` seconds. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_push_status_v1_results_push__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
