@@ -22,6 +22,24 @@ def _append_effect(path: str, owner: str) -> None:
         stream.write(f"{owner}\n")
 
 
+@pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        (
+            {"source_id": "fixture", "agents": [{"name": "agent-α", "packages": [{"name": "p", "version": "1.0", "score": 0.0}]}]},
+            "f4743d4b487fb883b0bf65676ef9dc9396bfd488ba15bbd5da8a7cae166c3f3a",
+        ),
+        (
+            {"z": None, "a": [True, False, "é", "line\nnext"], "idempotency_key": "ignored"},
+            "8468ce56b08d7e7c4f20f2732f0c7b8075553521cc3440301ec50b05d3f72ad0",
+        ),
+    ],
+)
+def test_streamed_fingerprint_preserves_existing_retry_keys(payload, expected) -> None:
+    """Persisted pre-streaming fingerprints still recognize identical retries."""
+    assert idempotency_request_fingerprint(payload) == expected
+
+
 def _sqlite_commit_owner_process(
     db_path: str,
     effects_path: str,
