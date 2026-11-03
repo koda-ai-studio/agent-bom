@@ -7,15 +7,15 @@ Checks for due schedules every 60 seconds, triggers scans.
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from agent_bom.api.leader_lock import SCHEDULER_LEADER_LOCK_ID, AlwaysLeader, LeaderLock, cluster_leader_lock
 from agent_bom.api.tenant_worker import tenant_bound_context
 
 logger = logging.getLogger(__name__)
-_SCHEDULER_LEADER_LOCK_ID = 4_197_042_001
+_SCHEDULER_LEADER_LOCK_ID = SCHEDULER_LEADER_LOCK_ID
 
 
 def _uses_postgres_schedule_store(schedule_store: Any) -> bool:
@@ -136,35 +136,18 @@ async def scheduler_loop(
     import asyncio
 
     consecutive_failures = 0
-    leader_conn = None
-    uses_postgres_store = _uses_postgres_schedule_store(schedule_store)
-    needs_leader_lock = bool(os.environ.get("AGENT_BOM_POSTGRES_URL")) and uses_postgres_store
-
-    def _try_acquire_postgres_leader_lock() -> Any:
-        if not needs_leader_lock:
-            return None
-        try:
-            from agent_bom.api.postgres_common import _get_pool
-
-            pool = _get_pool()
-            conn = pool.getconn()
-            row = conn.execute("SELECT pg_try_advisory_lock(%s)", (_SCHEDULER_LEADER_LOCK_ID,)).fetchone()
-            if row and bool(row[0]):
-                logger.info("Scheduler leader lock acquired")
-                return conn
-            pool.putconn(conn)
-        except Exception:
-            logger.error("Failed to acquire scheduler leader lock")
-        return None
+    lock: LeaderLock = (
+        cluster_leader_lock(SCHEDULER_LEADER_LOCK_ID, "Scheduler")
+        if _uses_postgres_schedule_store(schedule_store)
+        else AlwaysLeader("Scheduler")
+    )
 
     try:
         while True:
             try:
-                if needs_leader_lock and leader_conn is None:
-                    leader_conn = await asyncio.to_thread(_try_acquire_postgres_leader_lock)
-                    if leader_conn is None:
-                        await asyncio.sleep(interval_seconds)
-                        continue
+                if not await asyncio.to_thread(lock.ensure):
+                    await asyncio.sleep(interval_seconds)
+                    continue
 
                 now = datetime.now(timezone.utc)
                 now_iso = now.isoformat()
@@ -213,11 +196,4 @@ async def scheduler_loop(
 
             await asyncio.sleep(interval_seconds)
     finally:
-        if leader_conn is not None:
-            try:
-                from agent_bom.api.postgres_common import _get_pool
-
-                leader_conn.execute("SELECT pg_advisory_unlock(%s)", (_SCHEDULER_LEADER_LOCK_ID,))
-                _get_pool().putconn(leader_conn)
-            except Exception:
-                logger.error("Failed to release scheduler leader lock")
+        lock.release()
