@@ -29,6 +29,19 @@ const edges: Edge[] = [
 ];
 
 describe("graph layout dispatcher", () => {
+  it("keeps named siblings and the remainder connected in a focused investigation", () => {
+    const peers = ["root", "a", "b", "c", "rest"].map(id => ({
+      id, type: id === "rest" ? "clusterPillNode" : "agentNode",
+      position: { x: 0, y: 0 }, data: { label: id, nodeType: "agent" },
+    }));
+    const links = peers.slice(1).map(n => ({ id: n.id, source: "root", target: n.id }));
+    const { result } = renderHook(() => useGraphLayout("dagre-lr", peers, links));
+    const children = result.current.nodes.filter(n => n.id !== "root");
+    expect(children.map(n => n.position.y)).toEqual([0, 272, 544, 816]);
+    expect(result.current.edges.every(e => e.data?.quietLabel === true)).toBe(true);
+    expect(result.current.edges.map(e => [e.source, e.target])).toEqual(links.map(e => [e.source, e.target]));
+  });
+
   it("resolves GraphLayout values and UI aliases to concrete layout hooks", () => {
     expect(resolveGraphLayoutKind(GraphLayout.FORCE)).toBe("force");
     expect(resolveGraphLayoutKind(GraphLayout.RADIAL)).toBe("radial");

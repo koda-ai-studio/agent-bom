@@ -158,7 +158,7 @@ const SCENARIOS = {
 };
 
 for (const [name, scenario] of Object.entries(SCENARIOS)) for (const width of [1440, 390])
-for (const theme of name === "agents sharing an MCP server" && width === 390 ? ["dark", "light"] : ["dark"]) {
+for (const theme of (name === "agents sharing an MCP server" && width === 390) || name === "agent fans out to six roles" ? ["dark", "light"] : ["dark"]) {
   test(`${name} reads without false routes at ${width}${theme === "light" ? " light" : ""}`, async ({ page }, info) => {
     await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
     await fixture(page, scenario.nodes, scenario.edges);
@@ -170,6 +170,16 @@ for (const theme of name === "agents sharing an MCP server" && width === 390 ? [
     const texts = await visibleLabelTexts(page);
     const repeats = texts.filter((text, index) => texts.indexOf(text) !== index);
     expect(repeats, `repeated labels: ${texts.join(" | ")}`).toEqual([]);
+    if (name === "agent fans out to six roles") {
+      const remainderLink = page.locator('.react-flow__edge[data-id^="cluster:"] .react-flow__edge-path');
+      await expect(remainderLink).toHaveCount(1);
+      expect(await remainderLink.evaluate(path => Number(getComputedStyle(path).opacity))).toBeGreaterThanOrEqual(0.8);
+      const groupLabelSize = await page.getByTestId("cluster-pill").locator("button span").first().evaluate(label => {
+        const zoom = new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".react-flow__viewport")!).transform).a;
+        return parseFloat(getComputedStyle(label).fontSize) * zoom;
+      });
+      expect(groupLabelSize, "remainder labels stay readable after Fit all").toBeGreaterThanOrEqual(11);
+    }
     await page.screenshot({ path: info.outputPath(`${name.replace(/\s+/g, "-")}-${width}.png`), animations: "disabled" });
   });
 }
