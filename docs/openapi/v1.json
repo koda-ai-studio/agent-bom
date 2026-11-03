@@ -79663,7 +79663,7 @@
     },
     "/v1/posture/counts": {
       "get": {
-        "description": "Aggregate open-finding severity counts across all completed scans.\n\nLightweight endpoint used by the dashboard nav to show Critical/High\nbadges. Reads the SAME reconciled source of truth as the ``/v1/overview``\nexec headline \u2014 the unified findings spine folded with hub-ingested\nevidence (#3961) \u2014 so the nav badges can never disagree with the overview's\ncritical/high. The CVE-only ``blast_radius`` is used only for the\ncorrelation-based ``compound_issues`` metric, where reachability/exposure\nlives. ``unrated`` is an explicit bucket so the histogram sums to ``total``.\n\nReturns:\n    {critical, high, medium, low, unrated, total, kev, compound_issues, \u2026}",
+        "description": "Aggregate open-finding severity counts across all completed scans.\n\nLightweight endpoint used by the dashboard nav to show Critical/High\nbadges. Reads the SAME reconciled source of truth as the ``/v1/overview``\nexec headline \u2014 the unified findings spine folded with hub-ingested\nevidence (#3961) \u2014 so the nav badges can never disagree with the overview's\ncritical/high. The CVE-only ``blast_radius`` is used only for the\ncorrelation-based ``compound_issues`` metric, where reachability/exposure\nlives. ``unrated`` is an explicit bucket so the histogram sums to ``total``.\nLike ``/v1/posture`` it answers 503 ``current_estate_seeding`` while the demo estate seeds.",
         "operationId": "get_posture_counts_v1_posture_counts_get",
         "parameters": [
           {
