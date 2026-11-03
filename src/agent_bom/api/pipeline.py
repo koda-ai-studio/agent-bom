@@ -768,7 +768,7 @@ def _run_scan_sync(job: ScanJob) -> None:
     An admitted asynchronous push rides the same executor and dispatch queue;
     it is persisted by the push-ingest worker instead of scanned.
     """
-    if isinstance(job.result, dict) and job.result.get("pushed") is True:
+    if isinstance(getattr(job, "result", None), dict) and job.result.get("pushed") is True:
         _run_push_ingest(job)
         return
     lock = _job_lock(job.job_id)
