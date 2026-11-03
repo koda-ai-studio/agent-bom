@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from io import BytesIO
 
 from agent_bom.output.finding_views import sanitize_output_text
+from agent_bom.output.pdf_font_metrics import BOLD, REGULAR
 
 PAGE_WIDTH = 612
 PAGE_HEIGHT = 792
@@ -21,22 +22,6 @@ MARGIN = 48
 CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN
 _TOP = PAGE_HEIGHT - MARGIN
 _BOTTOM = MARGIN + 24
-
-
-# Conservative per-glyph bounds for both standard Helvetica faces. Wide
-# capitals and credential labels must not use an average-character estimate.
-def _glyph_em(char: str) -> float:
-    if char in " ilj.,'!:;|":
-        return 0.3
-    if char in "ft()[]{}":
-        return 0.4
-    if char in "mwMW@%&":
-        return 1.02
-    if char.isascii() and char.isupper():
-        return 0.8
-    if char.isascii() and (char.islower() or char.isdigit() or char in "_-/=+?"):
-        return 0.62
-    return 1.02
 
 
 _TRANSLIT = {
@@ -76,7 +61,8 @@ def _escape(text: str) -> str:
 
 
 def text_width(text: str, size: float, bold: bool = False) -> float:
-    return sum(_glyph_em(char) for char in text) * size
+    widths = BOLD if bold else REGULAR
+    return sum(widths[ord(char) - 32] if 32 <= ord(char) <= 126 else 1020 for char in text) * size / 1000
 
 
 def wrap(text: str, width: float, size: float, bold: bool = False) -> list[str]:

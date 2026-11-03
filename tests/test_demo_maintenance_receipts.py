@@ -64,3 +64,22 @@ def test_demo_feed_receipts_refuse_explicit_operator_path(tmp_path, monkeypatch)
     monkeypatch.setenv("AGENT_BOM_DB_PATH", str(operator))
     assert seed_demo_feed_receipts() == 0
     assert not operator.exists()
+
+
+def test_demo_feed_receipts_preserve_existing_non_demo_evidence(tmp_path, monkeypatch):
+    from agent_bom.db.schema import init_db
+    from agent_bom.demo_estate.feed_receipts import seed_demo_feed_receipts
+
+    monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "1")
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_BOM_DEMO_STATE_DIR", str(tmp_path))
+    monkeypatch.delenv("AGENT_BOM_DB_PATH", raising=False)
+    conn = init_db(tmp_path / "db" / "vulns.db")
+    try:
+        conn.execute("INSERT INTO vulns(id, source) VALUES ('CVE-2099-0001', 'nvd')")
+        conn.commit()
+        assert seed_demo_feed_receipts() == 0
+        assert conn.execute("SELECT count(*) FROM sync_meta").fetchone()[0] == 0
+        assert conn.execute("SELECT id, source FROM vulns").fetchone()["id"] == "CVE-2099-0001"
+    finally:
+        conn.close()
