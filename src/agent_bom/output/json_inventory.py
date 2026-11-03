@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Sequence
 
 from agent_bom.asset_provenance import (
     agent_discovery_provenance,
@@ -11,6 +11,7 @@ from agent_bom.asset_provenance import (
     sanitize_discovery_provenance,
 )
 from agent_bom.canonical_ids import agent_identity_export, canonical_id
+from agent_bom.coverage import package_vulnerability_unassessed
 from agent_bom.evidence.occurrence_ids import server_occurrence_id
 from agent_bom.evidence.scan_run import effective_scan_run, vulnerability_scan_skipped
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
@@ -88,7 +89,16 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport, *, vulnerabilities_scan
 
             _append_mcp_entities(server, server_id, servers, tools, resources, prompts, relationships)
 
-            _append_package_entities(server, server_id, servers, packages, relationships, agent_provenance, scanned=scanned)
+            _append_package_entities(
+                server,
+                server_id,
+                servers,
+                packages,
+                relationships,
+                agent_provenance,
+                scanned=scanned,
+                coverage_warnings=report.coverage_warnings,
+            )
 
     for server_row in servers.values():
         server_row.update({key: list(server_row[key]) for key in ("tool_ids", "resource_ids", "prompt_ids", "package_ids")})
@@ -104,10 +114,12 @@ def _append_package_entities(
     agent_provenance: dict | None,
     *,
     scanned: bool = True,
+    coverage_warnings: Sequence[dict] = (),
 ) -> None:
     """Keep package identity and per-server dependency edges in insertion order."""
     for pkg in server.packages:
         if pkg.stable_id not in packages:
+            assessed = scanned and not package_vulnerability_unassessed(pkg, coverage_warnings)
             packages[pkg.stable_id] = {
                 "id": pkg.stable_id,
                 "canonical_id": pkg.canonical_id,
@@ -126,8 +138,8 @@ def _append_package_entities(
                 "discovery_provenance": package_discovery_provenance(pkg, inherited=agent_provenance),
                 "occurrence_count": len(pkg.occurrences),
                 "occurrences": [_package_occurrence_to_dict(occ) for occ in pkg.occurrences],
-                "vulnerability_count": len(pkg.vulnerabilities) if scanned else None,
-                "vulnerability_status": "scanned" if scanned else "not_scanned",
+                "vulnerability_count": len(pkg.vulnerabilities) if assessed else None,
+                "vulnerability_status": "scanned" if assessed else "not_scanned",
             }
         servers[server_id]["package_ids"][pkg.stable_id] = None
         relationships.append({"from": server_id, "to": pkg.stable_id, "type": "depends_on"})

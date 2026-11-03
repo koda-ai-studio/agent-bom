@@ -214,7 +214,7 @@ def build_first_party_ai_assets(accounts: Sequence[CloudAccount], *, tenant_id: 
         families = _MODEL_FAMILIES[account.provider]
         for slot in range(per_account):
             spec = catalog[slot % len(catalog)]
-            name = f"{account.provider}-{spec.service}-{account.scope[-4:]}-{slot:02d}"
+            name = f"{account.provider}-{spec.service}-{account.scope[-4:].lstrip('-_.')}-{slot:02d}"
             seed = stable_index(account.provider, account.scope, name)
             region, environment = account.placements[seed % len(account.placements)]
             identity = account.identities[seed % len(account.identities)] if account.identities else ""
@@ -610,7 +610,7 @@ def build_delivery_assets(
         seed = stable_index(account.scope, "cluster", str(index))
         region, environment = account.placements[seed % len(account.placements)]
         distro = {"aws": "eks", "azure": "aks", "gcp": "gke"}[account.provider]
-        cluster_name = f"{distro}-{account.scope[-4:]}-{index:02d}"
+        cluster_name = f"{distro}-{account.scope[-4:].lstrip('-_.')}-{index:02d}"
         cluster_id = f"kubernetes:cluster:{distro}/{cluster_name}"
         assets.append(
             EstateAsset(

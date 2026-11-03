@@ -271,8 +271,15 @@ def build_helm_profile_command(
     extra_values_files: tuple[Path, ...] = (),
     extra_set_arguments: tuple[str, ...] = (),
     extra_set_file_arguments: tuple[tuple[str, Path], ...] = (),
+    chart_ref: str | None = None,
+    chart_version: str | None = None,
 ) -> list[str]:
-    """Build the canonical Helm upgrade/install command for a shipped profile."""
+    """Build the canonical Helm upgrade/install command for a shipped profile.
+
+    ``chart_ref``/``chart_version`` select a published chart (for example the
+    OCI release); omitted, the command renders the repository chart, which on
+    an unreleased branch references images that are not published yet.
+    """
 
     profiles = {profile.name: profile for profile in helm_validation_profiles(repo_root)}
     try:
@@ -295,10 +302,11 @@ def build_helm_profile_command(
         "upgrade",
         "--install",
         release_name,
-        str(helm_chart_dir(repo_root)),
-        "--namespace",
-        namespace,
+        chart_ref or str(helm_chart_dir(repo_root)),
     ]
+    if chart_ref and chart_version:
+        cmd.extend(["--version", chart_version])
+    cmd.extend(["--namespace", namespace])
     if create_namespace:
         cmd.append("--create-namespace")
 

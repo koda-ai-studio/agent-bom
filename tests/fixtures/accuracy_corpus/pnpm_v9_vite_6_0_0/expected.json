@@ -1,0 +1,12 @@
+{
+  "packages": [
+    "@babel/core@7.26.0",
+    "@types/node@22.9.0",
+    "@types/node@22.9.3",
+    "@vue/server-renderer@3.2.47",
+    "@vue/server-renderer@3.5.13",
+    "picocolors@1.1.1",
+    "postcss-js@4.0.1"
+  ],
+  "source": "vitejs/vite tag v6.0.0 pnpm-lock.yaml (lockfileVersion 9.0), packages + snapshots excerpt"
+}

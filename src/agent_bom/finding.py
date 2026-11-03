@@ -31,7 +31,9 @@ from agent_bom.domain.finding_types import _control_tag_from_compliance_tag as _
 from agent_bom.domain.finding_types import _dedupe_control_tags as _dedupe_control_tags
 from agent_bom.domain.finding_types import _occurrence_evidence_qualifier as _occurrence_evidence_qualifier
 from agent_bom.domain.finding_types import _stable_id as _stable_id
+from agent_bom.domain.finding_types import cites_cis_control
 from agent_bom.domain.finding_types import stable_id as stable_id
+from agent_bom.security import sanitize_text
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -170,6 +172,18 @@ def is_ast_security_flow(raw: dict) -> bool:
     return is_security_flow_category(category)
 
 
+def _path_context_evidence(raw: dict) -> dict[str, str]:
+    """Carry the documentation/example/test label (and its downgrade reason) into evidence."""
+    context = raw.get("path_context")
+    if context not in {"documentation", "example", "test"}:
+        return {}
+    reason = raw.get("downgrade_reason")
+    return {
+        "path_context": context,
+        **({"downgrade_reason": sanitize_text(reason, max_len=200)} if isinstance(reason, str) and reason else {}),
+    }
+
+
 def ast_flow_dict_to_finding(raw: dict) -> "Finding":
     """Promote one native AST flow result into the unified finding stream.
 
@@ -219,6 +233,7 @@ def ast_flow_dict_to_finding(raw: dict) -> "Finding":
             "sink": sink,
             "source": sanitize_text(raw.get("source", "") or "", max_len=200),
             "call_path": call_path,
+            **_path_context_evidence(raw),
         },
         risk_score=9.5 if severity == "critical" else 8.0 if severity == "high" else 6.0,
         exposed_tools=[entrypoint] if entrypoint else [],
@@ -302,6 +317,7 @@ def secret_dict_to_finding(secret: dict) -> "Finding":
             "category": category,
             "redacted_preview": _safe_secret_preview(secret.get("preview")),
             **({"downgrade_reason": sanitize_text(reason, max_len=200)} if isinstance(reason, str) and reason else {}),
+            **_path_context_evidence({"path_context": secret.get("path_context")}),
         },
         id=stable_id("secret", file_path, str(line or ""), secret_type, category),
     )
@@ -444,7 +460,8 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
     """Convert one IaC misconfiguration into a unified Finding.
 
     IaC (Terraform / CloudFormation / K8s / Dockerfile) joins the unified stream so
-    totals, ``--fail-on-severity`` and rollups count it. Modeled as a ``CIS_FAIL`` carrying the
+    totals, ``--fail-on-severity`` and rollups count it. Typed ``CIS_FAIL`` only when the rule
+    cites a CIS benchmark control id, otherwise ``IAC_MISCONFIGURATION``; both carry the
     ``iac`` evidence marker so :func:`agent_bom.finding_scope.security_domain_for`
     keeps its primary CSPM lane while :func:`_is_iac_misconfig` also adds the ASPM
     lens. The rule's declared 800-53 controls become scored tags; SARIF renders it
@@ -468,7 +485,7 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
     attack = [str(t) for t in (iac.get("attack_techniques") or []) if str(t).strip()]
 
     finding = Finding(
-        finding_type=FindingType.CIS_FAIL,
+        finding_type=FindingType.CIS_FAIL if cites_cis_control(compliance) else FindingType.IAC_MISCONFIGURATION,
         source=FindingSource.IAC_SCAN,
         asset=Asset(
             name=file_path,
@@ -495,7 +512,9 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         },
         is_actionable=True,
         impact_category="iac_misconfiguration",
-        id=stable_id("iac", rule_id, file_path, str(line_number)),
+        # One rule can fire several times per line (``add: [NET_RAW, SYS_ADMIN]``);
+        # title/message carry the matched value, so they are part of the identity.
+        id=stable_id("iac", rule_id, file_path, str(line_number), title, message),
     )
     from agent_bom.evidence.iac_controls import classify_iac_finding
 

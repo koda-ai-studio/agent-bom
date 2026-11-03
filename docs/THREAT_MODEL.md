@@ -123,6 +123,32 @@ live credentialed provider qualification. See [Cloud connect](CLOUD_CONNECT.md),
 `tests/cloud/test_side_scan_cleanup_authority.py`, and
 `tests/api/test_side_scan_connection_grants.py`.
 
+## Anonymous public MCP tier
+
+Off by default; enabled only by `--public-readonly` /
+`AGENT_BOM_MCP_PUBLIC_READONLY=1` on Streamable HTTP. Assets: the server host's
+files, configs and scan store; tenant and operator data; the bearer-protected
+tool catalog; upstream advisory/registry quotas; process availability. Actor:
+any internet client with no credential, able to send arbitrary JSON-RPC,
+headers (including `X-Forwarded-For`) and rotating source addresses. Trust
+boundary: the `/mcp` request without an `Authorization` header. Design and
+tests: [MCP server](MCP_SERVER.md#public-read-only-tier),
+`src/agent_bom/mcp_tools/public_tier.py`, `tests/test_mcp_public_readonly_tier.py`,
+`tests/test_deployment_probe.py`.
+
+| STRIDE | Attack | Mitigation | Regression test | Residual risk |
+|---|---|---|---|---|
+| Spoofing | Present a forged or expired token, or guess the internal anonymous credential, to reach full tools. | Any `Authorization` header takes the unchanged bearer path (no downgrade). The anonymous credential is 256 random bits per process, added only by the gate and never sent to clients. | `test_invalid_bearer_token_is_not_downgraded_to_anonymous`, `test_public_tier_without_bearer_token_still_refuses_other_tools` | None beyond the bearer path's own. |
+| Tampering | Use an anonymous call to write tenant data, scan state or audit records. | Allowlisted tools are lookups with no store writes; write tools stay operator-token gated; everything else is refused. | `test_anonymous_non_allowlisted_tool_is_401`, `test_new_tools_default_to_auth_required` | Lookups still refresh agent-bom's own advisory caches, which hold public data. |
+| Repudiation | Abuse anonymously without attribution. | Calls are recorded with caller `public-anon:<client address>` in the bounded request trace and logs. | `test_anonymous_rate_limit_is_per_caller_and_enforced` (caller keying) | Addresses are not identities; behind an unconfigured proxy every anonymous caller shares one label. |
+| Information disclosure | Read host files, history, saved scans, operator advisories, metrics or resources; make the server fetch an internal URL (SSRF). | Default-deny allowlist (`check`, `intel_lookup`, `registry_lookup`) reviewed by implementation; argument sets pinned so a path/URL/host argument forces re-review; OS-ecosystem checks (host distro/package DB) refused; `intel_lookup` skips operator data for anonymous callers; resources, prompts and completions refused; registry fetches go to fixed origins with URL-encoded names. | `test_allowlisted_tool_schemas_take_no_host_or_url_arguments`, `test_anonymous_os_package_check_is_refused`, `test_anonymous_intel_lookup_skips_operator_advisory_data`, `test_anonymous_non_tool_methods_are_refused` | Responses reveal the server's advisory-data freshness and agent-bom version, both already public. |
+| Denial of service | Flood lookups, rotate addresses, send large bodies, or spoof `X-Forwarded-For` to reset budgets. | 16 KiB body cap (413), 256-character arguments, per-client and aggregate anonymous budgets on top of the existing per-caller, global and concurrency limits; the client address is taken from the right of `X-Forwarded-For` only for declared trusted hops. | `test_anonymous_oversized_body_is_413`, `test_anonymous_overlong_argument_is_refused`, `test_spoofed_forwarded_prefix_does_not_reset_the_bucket`, `test_aggregate_anonymous_budget_caps_rotating_callers` | Budgets are per process, so replicas multiply them; upstream OSV/registry quotas are shared with authenticated callers; volumetric attacks need edge rate limiting. |
+| Elevation of privilege | Call a non-allowlisted tool, a tool added later, or batch one in with an allowed call. | ASGI gate answers HTTP 401 for any anonymous `tools/call` outside the allowlist, including inside a batch; the MCP middleware independently refuses the same and filters `tools/list`; new tools are auth-required until reviewed. Startup refuses the tier with MCP OAuth and over SSE. | `test_anonymous_batch_with_non_allowlisted_call_is_401`, `test_public_tier_rejects_oauth_combination`, `test_cli_public_readonly_requires_streamable_http`, `test_public_readonly_probe_requires_http_401_not_a_jsonrpc_error` | The allowlist is a reviewed code constant; a mistaken addition is caught only by its argument-set test and review. |
+
+Prompt injection: advisory summaries returned anonymously are third-party text
+and carry the server's untrusted-data instructions, the same as authenticated
+results; the tier adds no agent instruction surface.
+
 ## API and browser exposure
 
 Non-loopback API binds require configured authentication unless an operator

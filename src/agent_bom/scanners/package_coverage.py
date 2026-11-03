@@ -72,6 +72,23 @@ def _detect_coverage_gaps(scannable: list[Package]) -> list[dict]:
     return coverage_gaps
 
 
+def _record_runtime_coverage_gaps(scannable: list[Package], offline: bool) -> None:
+    """Record runtimes no advisory source assessed, so their zero findings never read as clean."""
+    from agent_bom.coverage import _open_readonly_db
+    from agent_bom.scanners.runtime_coverage import detect_runtime_coverage_gaps
+
+    conn = _open_readonly_db()
+    try:
+        gaps = detect_runtime_coverage_gaps(scannable, offline=offline, conn=conn)
+    finally:
+        if conn is not None:
+            conn.close()
+    for gap in gaps:
+        record_coverage_warning(gap)
+        _emit_scan_warning(str(gap["detail"]))
+        _scanners_patchable("console").print(f"  [yellow]⚠[/yellow] [bold]Not assessed:[/bold] {gap['detail']}")
+
+
 def _select_osv_targets(
     scannable: list[Package], offline: bool, local_db_targets: list[Package], db_covered: set[str], coverage_gaps: list[dict]
 ) -> tuple[list[Package], set[str]]:

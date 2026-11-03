@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "poetry"
+version = "1.2.0"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+cachy = "^0.3.0"
+cleo = "^1.0.0a5"
+crashtest = "^0.3.0"
+requests = "^2.18"
+urllib3 = "^1.26.0"

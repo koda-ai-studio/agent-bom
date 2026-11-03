@@ -1,0 +1,10 @@
+{
+  "packages": [
+    "@babel/core@7.23.3",
+    "@vue/server-renderer@3.3.8",
+    "esbuild@0.18.20",
+    "esbuild@0.19.3",
+    "postcss-js@4.0.1"
+  ],
+  "source": "vitejs/vite tag v5.0.0 pnpm-lock.yaml (lockfileVersion 6.0), packages excerpt"
+}

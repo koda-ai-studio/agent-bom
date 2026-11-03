@@ -10,8 +10,8 @@ agent-bom discovers MCP clients and their configured servers by reading config f
 | Claude Code | `~/.claude/settings.json` |
 | Cursor | `~/.cursor/mcp.json` |
 | VS Code Copilot | `~/Library/Application Support/Code/User/mcp.json` |
-| Windsurf | `~/.windsurf/mcp.json` |
-| Cline | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/...` |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json`, `~/.windsurf/mcp.json` |
+| Cline | `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/...`, `~/.cline/data/settings/cline_mcp_settings.json` |
 | Roo Code | `~/Library/Application Support/Code/User/globalStorage/rooveterinaryinc.roo-cline/...` |
 | Codex CLI | `~/.codex/config.toml` |
 | Gemini CLI | `~/.gemini/settings.json` |
@@ -19,7 +19,7 @@ agent-bom discovers MCP clients and their configured servers by reading config f
 | Cortex Code | `~/.snowflake/cortex/mcp.json` |
 | Continue | `~/.continue/config.yaml`, legacy `~/.continue/config.json` |
 | Zed | `~/.config/zed/settings.json` |
-| Amazon Q | VS Code globalStorage |
+| Amazon Q | `~/.aws/amazonq/default.json`, `~/.aws/amazonq/mcp.json`, VS Code globalStorage |
 | JetBrains AI | `~/Library/Application Support/JetBrains/*/mcp.json` |
 | Junie | `~/.junie/mcp/mcp.json` |
 | OpenClaw | `~/.openclaw/openclaw.json` |
@@ -69,6 +69,25 @@ highest satisfying release. When nothing satisfies it, the registry is
 unreachable, or the scan is `--offline`, the version stays `unknown`, has no
 purl, and no advisory is matched against the range's lower bound. Git, URL,
 file, alias, and workspace specs are never resolved to a registry version.
+
+### Test fixtures and scaffold templates
+
+When a project directory has a lockfile, manifests below it in test-fixture
+or scaffold-template directories are not inventoried: `__fixtures__/`,
+`fixtures/` or `fixture/` under a `test`, `tests`, `__tests__`, `spec`,
+`specs` or `testdata` directory, `templates/`, and `template-*` directories
+(for example `packages/create-vite/template-vue/package.json` in a pnpm
+monorepo, or `tests/fixtures/<case>/pyproject.toml` in a Poetry project).
+They are inputs to the project's tests or to projects it generates, not
+dependencies it installs, and without their own lockfile they would only add
+range-resolved guesses. The scan prints one line naming the skipped
+directories and records a `fixture_manifest` scope receipt in
+`coverage_warnings`; it does not make the run partial.
+
+A fixture or template directory with its own lockfile is still scanned as its
+own project. Scanning a fixture directory directly (`agent-bom scan -p
+tests/fixtures/app`) scans it, and a project without a lockfile keeps every
+manifest. Set `AGENT_BOM_SCAN_FIXTURE_MANIFESTS=1` to inventory all of them.
 
 ### Python projects without a lockfile
 

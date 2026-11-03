@@ -26,8 +26,8 @@ returned count and the true total for each list, and `summary` /
 ```json
 "bounds": {
   "events":       {"returned": 200, "total": 12219, "limit": 200, "truncated": true},
-  "correlations": {"returned":  50, "total":  2320, "limit":  50, "truncated": true},
-  "findings":     {"returned": 100, "total":  2681, "limit": 100, "truncated": true}
+  "correlations": {"returned":  50, "total":  2326, "limit":  50, "truncated": true},
+  "findings":     {"returned": 100, "total":  2676, "limit": 100, "truncated": true}
 }
 ```
 
@@ -51,6 +51,14 @@ links to it or labels it as sample data.
 Demo data never mixes with product data: with `AGENT_BOM_DEMO_ESTATE=1`, every
 local store resolves under `AGENT_BOM_DEMO_STATE_DIR` (default
 `<state dir>/demo-estate`). See [DEPLOY_PLATFORM.md](DEPLOY_PLATFORM.md#local-pilot-fastest-proof).
+
+The demo tenant also refuses real evidence. On a `--demo-estate` server, ingest
+operations addressed to the demo tenant (`POST /v1/results/push`, fleet sync,
+scan and source runs, cloud, compliance, VEX, OCSF, proxy-audit, runtime-event
+and trace ingest) return `409 Conflict` for every role, before the route handler
+runs. Send real results to a server started without `--demo-estate`, or to
+a separate tenant. See
+[RUNTIME_FAIL_MODES.md](RUNTIME_FAIL_MODES.md#demo-tenant-ingest).
 
 The primary story follows one trace through:
 

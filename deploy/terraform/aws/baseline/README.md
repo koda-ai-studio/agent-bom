@@ -75,7 +75,7 @@ save the workload-only output and install the chart:
 
 ```bash
 terraform output -raw helm_values_hint > baseline-workload-values.yaml
-helm upgrade --install agent-bom deploy/helm/agent-bom \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml \
   -f baseline-workload-values.yaml

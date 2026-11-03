@@ -1,0 +1,14 @@
+{
+  "@vitejs/plugin-vue": {
+    "declared": "^4.0.0-beta.0",
+    "selected": "4.6.2"
+  },
+  "vite": {
+    "declared": "^4.0.0-beta.3",
+    "selected": "4.5.14"
+  },
+  "vue": {
+    "declared": "^3.2.45",
+    "selected": "3.5.44"
+  }
+}

@@ -683,23 +683,26 @@ is current and what changed since the last observation.
 
 ## Helm Chart
 
-A Helm chart is provided in `deploy/helm/agent-bom/` for customizable deployments:
+Install the published chart (`oci://ghcr.io/koda-ai-studio/charts/agent-bom`) at an
+exact release version; its source lives in `deploy/helm/agent-bom/`. Installing
+from that directory is for chart development only: on `main` it pins images that
+are not published yet. See the [chart README](../deploy/helm/agent-bom/README.md).
 
 ```bash
 # Install with defaults (scheduled scanner only)
-helm install agent-bom deploy/helm/agent-bom/ -n agent-bom --create-namespace
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 -n agent-bom --create-namespace
 
 # Enable runtime monitoring DaemonSet
-helm install agent-bom deploy/helm/agent-bom/ -n agent-bom --create-namespace \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 -n agent-bom --create-namespace \
   --set monitor.enabled=true
 
 # Enable Prometheus scraping for the runtime monitor
-helm install agent-bom deploy/helm/agent-bom/ -n agent-bom --create-namespace \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 -n agent-bom --create-namespace \
   --set monitor.enabled=true \
   --set monitor.serviceMonitor.enabled=true
 
 # Custom scan schedule (every 2 hours)
-helm install agent-bom deploy/helm/agent-bom/ -n agent-bom --create-namespace \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 -n agent-bom --create-namespace \
   --set scanner.schedule="0 */2 * * *"
 ```
 

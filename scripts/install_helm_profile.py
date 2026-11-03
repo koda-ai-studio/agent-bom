@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+PUBLISHED_CHART = "oci://ghcr.io/koda-ai-studio/charts/agent-bom"
 
 
 def _load_profile_helpers():
@@ -23,6 +24,10 @@ def _load_profile_helpers():
 def _run(cmd: list[str]) -> None:
     print("+", shlex.join(cmd))
     subprocess.run(cmd, check=True)
+
+
+def _published_version() -> str:
+    return (REPO_ROOT / "PUBLISHED_VERSION").read_text(encoding="utf-8").strip()
 
 
 def main() -> int:
@@ -62,6 +67,19 @@ def main() -> int:
         help="Skip --create-namespace in the generated Helm command.",
     )
     parser.add_argument(
+        "--local-chart",
+        action="store_true",
+        help=(
+            "Development only: install the chart from this checkout instead of the published OCI chart. "
+            "On an unreleased branch its images are not published yet."
+        ),
+    )
+    parser.add_argument(
+        "--chart-version",
+        default=None,
+        help="Published chart version (default: the PUBLISHED_VERSION file, the latest release).",
+    )
+    parser.add_argument(
         "--print-command",
         action="store_true",
         help="Print the resolved Helm command and exit without running it.",
@@ -95,10 +113,14 @@ def main() -> int:
             extra_values_files=extra_values_files,
             extra_set_arguments=tuple(args.set_arguments),
             extra_set_file_arguments=tuple(extra_set_file_arguments),
+            chart_ref=None if args.local_chart else PUBLISHED_CHART,
+            chart_version=None if args.local_chart else (args.chart_version or _published_version()),
         )
     except KeyError as exc:
         parser.error(str(exc))
 
+    if args.local_chart:
+        print("note: --local-chart installs the development chart from this checkout", file=sys.stderr)
     if args.print_command:
         print(shlex.join(cmd))
         return 0

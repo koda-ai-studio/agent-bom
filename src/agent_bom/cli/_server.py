@@ -24,6 +24,7 @@ from agent_bom.cli._server_posture import _fail_missing_optional_dependencies as
 from agent_bom.cli._server_posture import _generate_dev_api_key as _generate_dev_api_key
 from agent_bom.cli._server_posture import _is_loopback_host as _is_loopback_host
 from agent_bom.cli._server_posture import _oidc_enabled as _oidc_enabled
+from agent_bom.cli._server_posture import _prepare_remote_mcp_transport
 from agent_bom.cli._server_posture import _require_optional_dependencies as _require_optional_dependencies
 from agent_bom.cli._server_posture import _resolve_allow_unauthenticated as _resolve_allow_unauthenticated
 from agent_bom.cli._server_posture import _saml_enabled as _saml_enabled
@@ -790,6 +791,16 @@ def api_cmd(
     help="Allow unauthenticated non-loopback SSE / HTTP exposure. Unsafe outside local development.",
 )
 @click.option(
+    "--public-readonly",
+    is_flag=True,
+    default=False,
+    envvar="AGENT_BOM_MCP_PUBLIC_READONLY",
+    help=(
+        "Streamable HTTP only: let anonymous callers use the pure-lookup tools (check, intel_lookup, registry_lookup). "
+        "Every other tool still requires the bearer token. See docs/MCP_SERVER.md."
+    ),
+)
+@click.option(
     "--workspace-root",
     "workspace_roots",
     multiple=True,
@@ -808,6 +819,7 @@ def mcp_server_cmd(
     profile: str,
     bearer_token: str | None,
     allow_insecure_no_auth: bool,
+    public_readonly: bool,
     workspace_roots: tuple[str, ...],
     log_level: str,
     log_json: bool,
@@ -861,12 +873,7 @@ def mcp_server_cmd(
     except ImportError:
         _fail_missing_optional_dependencies("agent-bom mcp server", "mcp-server", ["MCP SDK"])
 
-    if transport in ("sse", "streamable-http"):
-        _enforce_remote_mcp_auth_defaults(host, bearer_token, allow_insecure_no_auth)
-        # Signal a remotely-bound (internet-reachable) MCP transport so repo
-        # scans fail closed unless an explicit host allowlist is configured.
-        if not _is_loopback_host(host):
-            os.environ["AGENT_BOM_MCP_REMOTE_BIND"] = "1"
+    _prepare_remote_mcp_transport(transport, host, bearer_token, allow_insecure_no_auth, public_readonly)
 
     from agent_bom.mcp_tools.oauth import oauth_configured
 
@@ -878,6 +885,7 @@ def mcp_server_cmd(
             bearer_token=bearer_token if transport in ("sse", "streamable-http") else None,
             profile=profile,
             oauth_enabled=transport in ("sse", "streamable-http") and oauth_configured(),
+            public_readonly=public_readonly,
         )
     except ValueError as exc:
         from agent_bom.security import sanitize_error
@@ -901,6 +909,7 @@ def mcp_server_cmd(
                     allow_insecure_no_auth=allow_insecure_no_auth,
                     mcp_remote=True,
                     oidc_enabled=oauth_configured(),
+                    public_readonly=public_readonly,
                 ),
             ),
         ]

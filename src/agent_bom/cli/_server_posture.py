@@ -284,6 +284,25 @@ def _enforce_remote_mcp_auth_defaults(host: str, bearer_token: str | None, allow
     )
 
 
+def _prepare_remote_mcp_transport(
+    transport: str, host: str, bearer_token: str | None, allow_insecure_no_auth: bool, public_readonly: bool
+) -> None:
+    """Validate remote MCP auth posture before the server is built.
+
+    The public read-only tier satisfies the non-loopback auth requirement: it
+    still refuses every non-allowlisted tool without the bearer token.
+    """
+    if public_readonly and transport != "streamable-http":
+        raise click.ClickException("--public-readonly requires --transport streamable-http")
+    if transport not in ("sse", "streamable-http"):
+        return
+    _enforce_remote_mcp_auth_defaults(host, bearer_token, allow_insecure_no_auth or public_readonly)
+    # Signal a remotely-bound (internet-reachable) MCP transport so repo
+    # scans fail closed unless an explicit host allowlist is configured.
+    if not _is_loopback_host(host):
+        os.environ["AGENT_BOM_MCP_REMOTE_BIND"] = "1"
+
+
 def _env_truthy(name: str) -> bool:
     """Return True when environment variable ``name`` holds a truthy flag."""
     return env_flag(name)
@@ -343,8 +362,13 @@ def _auth_summary(
     allow_insecure_no_auth: bool = False,
     oidc_enabled: bool = False,
     mcp_remote: bool = False,
+    public_readonly: bool = False,
 ) -> str:
     """Return a user-facing summary for the active auth mode."""
+
+    if public_readonly:
+        full_access = "bearer token required for all other tools" if bearer_token else "no full-access credential configured"
+        return f"Public read-only tier: anonymous pure-lookup tools only; {full_access}"
 
     if api_key or secret_is_configured("AGENT_BOM_API_KEYS") or secret_is_configured("AGENT_BOM_API_KEY"):
         return "API key required (Bearer / X-API-Key)"

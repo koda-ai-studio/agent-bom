@@ -8,6 +8,20 @@
     "url": "https://github.com/koda-ai-studio/agent-bom",
     "source": "github"
   },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://agent-bom-mcp.up.railway.app/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Optional. Without it, only the read-only lookup tools (check, intel_lookup) answer. A deployment bearer token unlocks the rest.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
   "packages": [
     {
       "registryType": "pypi",

@@ -581,7 +581,7 @@ def _emitted_by_dedicated_loop(finding: Finding, evidence: dict[str, Any]) -> bo
     # report.to_findings() (for exec totals + the severity gate), carrying an
     # ``iac`` evidence marker; skip them here to keep each IaC finding to
     # exactly one SARIF result.
-    return bool(finding.finding_type == FindingType.CIS_FAIL and evidence.get("iac"))
+    return bool(finding.finding_type in {FindingType.CIS_FAIL, FindingType.IAC_MISCONFIGURATION} and evidence.get("iac"))
 
 
 def _unified_finding_rule(finding: Finding, rule_id: str, level: str, security_severity: str) -> dict[str, Any]:

@@ -9,6 +9,8 @@ from datetime import date
 from enum import Enum
 from typing import Any
 
+from agent_bom.domain.finding_types import cites_cis_control as cites_cis_control
+
 
 class IaCResourceType(str, Enum):
     """First-class IaC resource types surfaced by agent-bom scanners."""

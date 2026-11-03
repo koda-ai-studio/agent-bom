@@ -1,0 +1,5 @@
+{
+  "servers": ["remote-with-auth", "remote-without-auth"],
+  "source": "Cursor documented ~/.cursor/mcp.json remote server shape with headers and ${env:} interpolation",
+  "unauthenticated_servers": ["remote-without-auth"]
+}

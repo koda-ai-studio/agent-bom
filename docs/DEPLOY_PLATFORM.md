@@ -353,7 +353,7 @@ If you manage cluster provisioning yourself (any Kubernetes, not just EKS),
 install the chart directly:
 
 ```bash
-helm upgrade --install agent-bom deploy/helm/agent-bom \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
   --namespace agent-bom --create-namespace \
   --values deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```

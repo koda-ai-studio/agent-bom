@@ -314,15 +314,6 @@ def test_authenticated_probe_does_not_forward_bearer_on_redirect():
         _NoAuthRedirect().redirect_request(None, None, 302, "Found", {}, "https://other.example/mcp")
 
 
-def test_deployment_freshness_requires_mcp_auth_not_only_public_metadata():
-    from pathlib import Path
-
-    workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/deployment-freshness.yml").read_text()
-    railway = workflow.split("- name: Check Railway deployment", 1)[1].split("- name: Check Smithery", 1)[0]
-    assert "--server-card --require-mcp-auth" in railway
-    assert railway.index("--require-mcp-auth") < railway.index('echo "probe_failed=false"')
-
-
 @pytest.mark.parametrize(
     "payload",
     [
@@ -388,3 +379,127 @@ def test_authenticated_probe_rejects_unprotected_or_unverifiable_endpoint(monkey
         verify_mcp_auth("https://example.com", bearer_token="fixture-token", expected_version="0.105.0", timeout=1)
     assert len(calls) == 2
     assert calls[1].get_header("Authorization") is None
+
+
+# ── Public read-only tier probe (exercised against the real server app) ────
+
+
+class _TestClientOpener:
+    """Route urllib requests from the probe into an in-process MCP app."""
+
+    def __init__(self, client):
+        self.client = client
+        self.requests = []
+
+    def open(self, request, timeout=None):
+        import io
+        import urllib.parse
+        from email.message import Message
+
+        self.requests.append(request)
+        path = urllib.parse.urlsplit(request.full_url).path
+        response = self.client.post(path, content=request.data, headers=dict(request.header_items()))
+        if response.status_code >= 400:
+            raise urllib.error.HTTPError(request.full_url, response.status_code, "fixture", Message(), None)
+        body = io.BytesIO(response.content)
+        body.headers = Message()
+        for key, value in response.headers.items():
+            body.headers[key] = value
+        return body
+
+
+def _public_tier_client(monkeypatch, tmp_path, *, public=True):
+    from datetime import datetime, timedelta, timezone
+
+    from starlette.testclient import TestClient
+
+    from agent_bom.mcp_server import create_mcp_server
+
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT", (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat())
+    server = create_mcp_server(host="127.0.0.1", port=8000, bearer_token="fixture-read-token", profile="scan", public_readonly=public)
+    return TestClient(server.streamable_http_app(), base_url="http://localhost:8000")
+
+
+def _route_probe(monkeypatch, client):
+    from types import SimpleNamespace
+
+    opener = _TestClientOpener(client)
+    monkeypatch.setattr("agent_bom.deployment_probe.urllib.request.build_opener", lambda *args: SimpleNamespace(open=opener.open))
+    return opener
+
+
+def test_public_readonly_probe_passes_against_the_public_tier(monkeypatch, tmp_path):
+    from agent_bom import __version__
+    from agent_bom.deployment_probe import verify_public_readonly
+
+    with _public_tier_client(monkeypatch, tmp_path) as client:
+        opener = _route_probe(monkeypatch, client)
+        names = verify_public_readonly("https://example.com", expected_version=__version__, timeout=1)
+        assert names == ["check", "intel_lookup"]
+        assert all(request.get_header("Authorization") is None for request in opener.requests)
+
+
+def test_public_readonly_probe_fails_against_a_bearer_only_server(monkeypatch, tmp_path):
+    from agent_bom import __version__
+    from agent_bom.deployment_probe import verify_public_readonly
+
+    with _public_tier_client(monkeypatch, tmp_path, public=False) as client:
+        _route_probe(monkeypatch, client)
+        with pytest.raises(RuntimeError, match="HTTP 401"):
+            verify_public_readonly("https://example.com", expected_version=__version__, timeout=1)
+
+
+def test_public_readonly_probe_fails_when_every_tool_is_anonymous(monkeypatch, tmp_path):
+    """A server that answers a non-allowlisted anonymous call is not the public tier."""
+    from agent_bom import __version__
+    from agent_bom.deployment_probe import verify_public_readonly
+
+    monkeypatch.setattr("agent_bom.mcp_tools.public_tier.anonymous_call_allowed", lambda name: True)
+    with _public_tier_client(monkeypatch, tmp_path) as client:
+        _route_probe(monkeypatch, client)
+        with pytest.raises(RuntimeError, match="must (list only the public lookup tools|be rejected)"):
+            verify_public_readonly("https://example.com", expected_version=__version__, timeout=1)
+
+
+def test_public_readonly_card_must_match_the_anonymous_catalog():
+    from agent_bom.deployment_probe import validate_public_readonly_card
+
+    card = {"authentication": {"required": True, "public_readonly": True, "anonymous_tools": ["check", "intel_lookup"]}}
+    validate_public_readonly_card(card, ["check", "intel_lookup"])
+    with pytest.raises(ValueError, match="anonymous"):
+        validate_public_readonly_card(card, ["check"])
+    with pytest.raises(ValueError, match="public read-only"):
+        validate_public_readonly_card({"authentication": {"required": True}}, ["check"])
+
+
+def test_public_probe_rejects_insecure_origins(monkeypatch):
+    from agent_bom.deployment_probe import verify_public_readonly
+
+    monkeypatch.setattr("agent_bom.deployment_probe.urllib.request.build_opener", lambda *args: pytest.fail("must reject before network"))
+    for url in ("http://example.com/mcp", "https://user:pw@example.com/mcp"):
+        with pytest.raises(ValueError):
+            verify_public_readonly(url, expected_version="0.1.0", timeout=1)
+
+
+def test_railway_workflows_probe_the_public_tier():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    deploy = (root / ".github/workflows/deploy-mcp-sse.yml").read_text()
+    freshness = (root / ".github/workflows/deployment-freshness.yml").read_text()
+    railway = freshness.split("- name: Check Railway deployment", 1)[1].split("- name: Check Smithery", 1)[0]
+    for text in (deploy, railway):
+        assert "--server-card --require-public-readonly" in text
+    assert railway.index("--require-public-readonly") < railway.index('echo "probe_failed=false"')
+
+
+def test_public_readonly_probe_requires_http_401_not_a_jsonrpc_error(monkeypatch, tmp_path):
+    from agent_bom import __version__
+    from agent_bom.deployment_probe import verify_public_readonly
+
+    monkeypatch.setattr("agent_bom.mcp_tools.public_tier._anonymous_calls_allowed", lambda body: True)
+    with _public_tier_client(monkeypatch, tmp_path) as client:
+        _route_probe(monkeypatch, client)
+        with pytest.raises(RuntimeError, match="must be rejected"):
+            verify_public_readonly("https://example.com", expected_version=__version__, timeout=1)

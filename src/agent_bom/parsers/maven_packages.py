@@ -10,7 +10,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from agent_bom.coverage import record_manifest_parse_warning
+from agent_bom.coverage import record_manifest_parse_warning, record_scan_note
 from agent_bom.models import Package
 from agent_bom.parsers.go_resolution import _validate_https_url, logger
 from agent_bom.parsers.maven_properties import (
@@ -250,4 +250,24 @@ def parse_maven_packages(directory: Path, *, resolve_versions: bool = False, sca
                     pkg.purl = f"pkg:maven/{maven_group}/{maven_artifact}@{resolved_ver}"
                     pkg.version_source = "registry_fallback"
 
+    if unique:
+        _record_direct_only_note(directory, boundary, len(unique))
     return unique
+
+
+def _record_direct_only_note(directory: Path, boundary: Path, count: int) -> None:
+    """pom.xml names direct dependencies only; say so instead of implying full coverage."""
+    try:
+        label = directory.resolve().relative_to(boundary.resolve()).as_posix() or "."
+    except (OSError, ValueError):
+        label = directory.name or "."
+    record_scan_note(
+        ecosystem="maven",
+        path=f"{label}/pom.xml",
+        reason="maven_transitive_unresolved",
+        detail=(
+            f"Maven inventory for {label}/pom.xml lists {count} direct (declared) dependencies; transitive dependencies "
+            "are resolved by Maven at build time and were not inventoried, so vulnerabilities in them are not reported. "
+            "Scan a CycloneDX/SPDX SBOM from the build (for example the CycloneDX Maven plugin) for full coverage."
+        ),
+    )

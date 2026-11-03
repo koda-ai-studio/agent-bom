@@ -129,6 +129,12 @@ process environment rather than its command line or logs. It rejects redirects,
 incomplete configuration and excessive token lifetimes. With no OAuth settings,
 it preserves the existing `RAILWAY_MCP_BEARER_TOKEN` path.
 
+The hosted Railway endpoint does not use this helper: it serves the anonymous
+[public read-only tier](MCP_SERVER.md#public-read-only-tier), and its release
+probe (`python -m agent_bom.deployment_probe --server-card --require-public-readonly`)
+needs no credential. The public tier and external OAuth are mutually exclusive
+on one server; startup refuses both together.
+
 Next, run Deployment Freshness and compare exact tool schemas against the
 published release. Public health or server-card responses alone do not establish
 that protected MCP requests work.
