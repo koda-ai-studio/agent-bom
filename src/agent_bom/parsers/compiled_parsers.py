@@ -249,8 +249,7 @@ def parse_go_packages(
                 version_evidence=[{"type": "manifest", "source_file": str(go_mod)}],
             )
             packages.append(pkg)
-        replaced = set(replace_map) | {target for target, _ in replace_map.values()}
-        packages.extend(apply_pre_117_build_list(go_mod, go_sum, packages, replaced))
+        packages.extend(apply_pre_117_build_list(go_mod, go_sum, packages, replace_map))
         if verify_checksums and go_sum.exists():
             modules_to_check = [(pkg.name, f"v{pkg.version}" if not pkg.version.startswith("v") else pkg.version) for pkg in packages]
             checksum_results = verify_go_checksums(go_sum, modules_to_check)

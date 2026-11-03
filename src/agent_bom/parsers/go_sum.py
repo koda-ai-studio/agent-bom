@@ -113,14 +113,15 @@ def _raise_to_selection(pkg: Package, selection: Selection) -> None:
     pkg.version_conflicts = [{"source": "go.mod require", "version": required, "selected_by": "go.sum build list"}]
 
 
-def apply_pre_117_build_list(go_mod: Path, go_sum: Path, packages: list[Package], replaced: set[str]) -> list[Package]:
+def apply_pre_117_build_list(go_mod: Path, go_sum: Path, packages: list[Package], replace_map: dict[str, tuple[str, str]]) -> list[Package]:
     """Align a pre-1.17 go.mod inventory with the build list and return the graph modules go.mod omits.
 
-    ``replaced`` holds replace sources and targets; their versions are fixed by
-    the replace directive and are neither raised nor supplemented.
+    Replace sources and targets keep the version the replace directive fixes;
+    they are neither raised nor supplemented.
     """
     if not go_sum.exists() or go_mod_lists_full_graph(go_mod):
         return []
+    replaced = set(replace_map) | {target for target, _ in replace_map.values()}
     build_list = go_sum_build_list(go_sum)
     for pkg in packages:
         if pkg.name in build_list and pkg.name not in replaced:
