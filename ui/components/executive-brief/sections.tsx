@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card } from "@/components/card";
-import { type ExecutiveBrief, type SlaTone, briefFindingHref, briefText, briefTimestamp, pathLabel, slaChipLabel, slaPolicyLabel } from "@/lib/executive-brief";
+import { type ExecutiveBrief, type SlaTone, briefComponent, briefFindingHref, briefFindingLabel, briefText, briefTimestamp, pathLabel, slaChipLabel, slaPolicyLabel } from "@/lib/executive-brief";
 
 const SLA_TONE_CLASS: Record<SlaTone, string> = {
   danger: "border-[color:var(--status-danger)] text-[color:var(--status-danger)]",
@@ -20,10 +20,10 @@ export function BriefPriorities({ brief }: { brief: ExecutiveBrief }) {
     <p className="text-sm text-ink-secondary">Canonical overview priorities. Owner and SLA remain attached to each finding occurrence.</p>
     <ul className="divide-y divide-outline">{brief.remediation_priorities.map((row, i) => <li key={`${row.canonical_id ?? row.vulnerability_id}-${i}`} className="space-y-1.5 py-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Link href={briefFindingHref(row)} className="break-words font-medium underline">{row.vulnerability_id} · {row.package ?? "Package not recorded"}</Link>
+        <Link href={briefFindingHref(row)} className="break-words font-medium underline">{briefFindingLabel(row)} · {briefComponent(row)}</Link>
         <SlaChip row={row} />
       </div>
-      <p className="break-words text-sm text-ink-secondary">{row.severity} · Owner: {row.owner ?? "Not recorded"}</p>
+      <p className="break-words text-sm text-ink-secondary">{row.severity} · Owner: {row.owner ?? "Unassigned"}</p>
       <p className="break-words text-xs text-ink-tertiary">SLA due {briefTimestamp(row.sla_due_at)} · Policy: {slaPolicyLabel(row)}</p>
     </li>)}</ul>
     {!brief.remediation_priorities.length ? <p className="text-sm text-ink-secondary">No remediation priorities returned by the current overview.</p> : null}

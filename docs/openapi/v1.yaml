@@ -2212,6 +2212,11 @@ components:
           - type: string
           - type: 'null'
           title: Canonical Id
+        component:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Component
         cvss_score:
           anyOf:
           - type: integer
@@ -2283,6 +2288,11 @@ components:
             type: string
           - type: 'null'
           title: Sla Status
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
         vulnerability_id:
           title: Vulnerability Id
           type: string
@@ -23037,6 +23047,11 @@ components:
           - type: string
           - type: 'null'
           title: Canonical Id
+        component:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Component
         cvss_score:
           anyOf:
           - type: integer
@@ -23093,6 +23108,11 @@ components:
           - type: string
           - type: 'null'
           title: Sla Due At Source
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
         vulnerability_id:
           title: Vulnerability Id
           type: string

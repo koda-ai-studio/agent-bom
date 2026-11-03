@@ -19,6 +19,17 @@ def _text(value: object) -> str:
     return re.sub(r"([\\`*_{}\[\]()#+!|>])", r"\\\1", html.escape(text, quote=False))
 
 
+_ADVISORY_ID = re.compile(r"^(CVE|GHSA|OSV|PYSEC|RUSTSEC|GO|MAL)-", re.I)
+
+
+def _finding_label(row: Mapping[str, Any]) -> str:
+    """Advisory ids read as-is; other findings use their title instead of an internal id."""
+    identifier = str(row.get("vulnerability_id") or "")
+    if _ADVISORY_ID.match(identifier):
+        return identifier
+    return str(row.get("title") or identifier or "Untitled finding")
+
+
 def render_markdown(payload: Mapping[str, Any]) -> str:
     posture, issues, compliance = payload["posture"], payload["issues"], payload["compliance"]
     lines = [
@@ -29,16 +40,23 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         "## Current posture",
         "",
         f"{_text(posture.get('summary'))}",
-        f"Open issues: {_text(issues['total'])} · Critical: {_text(issues['critical'])} · "
+        f"Open issue groups: {_text(issues['total'])} · Critical: {_text(issues['critical'])} · "
         f"High: {_text(issues['high'])} · KEV: {_text(issues.get('kev'))}",
+        "Counts are correlated issue groups, not finding occurrences.",
         "",
         "## Remediation priorities",
         "",
-        "| Finding | Package | Owner | SLA due | SLA source |",
+        "| Finding | Component | Owner | SLA due | SLA basis |",
         "|---|---|---|---|---|",
     ]
     for row in payload["remediation_priorities"]:
-        cells = (row.get("vulnerability_id"), row.get("package"), row.get("owner"), row.get("sla_due_at"), row.get("sla_due_at_source"))
+        cells = (
+            _finding_label(row),
+            row.get("component") or row.get("package") or "—",
+            row.get("owner") or "Unassigned",
+            row.get("sla_due_at") or "—",
+            row.get("sla_policy") or row.get("sla_due_at_source") or "—",
+        )
         lines.append("| " + " | ".join(_text(value) for value in cells) + " |")
     if not payload["remediation_priorities"]:
         lines.append("No remediation priorities returned by the current overview.")

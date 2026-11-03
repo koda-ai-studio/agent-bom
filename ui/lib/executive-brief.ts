@@ -50,6 +50,18 @@ export function slaPolicyLabel(row: Pick<BriefPriority, "sla_due_at_source" | "s
   return row.sla_policy || (source ? POLICY_LABELS[source] ?? source : "Not recorded");
 }
 
+const ADVISORY_ID = /^(CVE|GHSA|OSV|PYSEC|RUSTSEC|GO|MAL)-/i;
+
+/** Advisory ids read as-is; other findings read by title, never by an internal id. */
+export function briefFindingLabel(row: Pick<BriefPriority, "vulnerability_id" | "title">): string {
+  return ADVISORY_ID.test(row.vulnerability_id) ? row.vulnerability_id : row.title || row.vulnerability_id || "Untitled finding";
+}
+
+/** The affected package, or the asset when the finding is not about a package. */
+export function briefComponent(row: Pick<BriefPriority, "component" | "package">): string {
+  return row.component || row.package || "—";
+}
+
 export function briefFindingHref(row: ExecutiveBrief["remediation_priorities"][number]): string {
   const params = new URLSearchParams();
   if (row.canonical_id) params.set("finding", row.canonical_id);
@@ -63,9 +75,10 @@ export function briefMarkdown(brief: ExecutiveBrief): string {
     `# Executive brief${brief.sample_data ? " — Sample data" : ""}`, "",
     `Tenant: ${md(brief.tenant_id)} · Generated: ${md(brief.generated_at)}`, "",
     "## Current posture", "", md(posture.summary),
-    `Open issues: ${md(issues.total)} · Critical: ${md(issues.critical)} · High: ${md(issues.high)} · KEV: ${md(issues.kev)}`, "",
-    "## Remediation priorities", "", "| Finding | Package | Owner | SLA | SLA due | Policy |", "|---|---|---|---|---|---|",
-    ...brief.remediation_priorities.map(row => `| ${[row.vulnerability_id, row.package, row.owner, slaChipLabel(row).label, briefTimestamp(row.sla_due_at), slaPolicyLabel(row)].map(md).join(" | ")} |`),
+    `Open issue groups: ${md(issues.total)} · Critical: ${md(issues.critical)} · High: ${md(issues.high)} · KEV: ${md(issues.kev)}`,
+    "Counts are correlated issue groups, not finding occurrences.", "",
+    "## Remediation priorities", "", "| Finding | Component | Owner | SLA | SLA due | Policy |", "|---|---|---|---|---|---|",
+    ...brief.remediation_priorities.map(row => `| ${[briefFindingLabel(row), briefComponent(row), row.owner ?? "Unassigned", slaChipLabel(row).label, briefTimestamp(row.sla_due_at), slaPolicyLabel(row)].map(md).join(" | ")} |`),
   ];
   if (!brief.remediation_priorities.length) lines.push("No remediation priorities returned by the current overview.");
   lines.push("", "## Ranked exposure paths", "");

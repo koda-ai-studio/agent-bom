@@ -257,9 +257,7 @@ def _server_counts(agent: Any) -> tuple[int, int, int, int]:
 def _payload_counts(agent: dict) -> tuple[int, int, int, int]:
     servers = agent.get("mcp_servers", []) or []
     server_count = sum(1 for server in servers if isinstance(server, dict) and server_dict_counts_as_mcp_server(server))
-    pkg_count = 0
-    cred_count = 0
-    vuln_count = 0
+    pkg_count = cred_count = vuln_count = 0
     for server in servers:
         pkg_count += len(server.get("packages", []) or [])
         cred_count += len(server.get("credential_names", []) or [])

@@ -106,6 +106,7 @@ def _priority(identifier: str, position: int, row: dict[str, Any]) -> dict[str, 
         "asset_id": asset_id,
         "asset_name": asset.get("name") or "Unspecified asset",
         "agent_ids": sorted(_agents(row)),
+        "agent_names": sorted({str(name) for name in row.get("affected_agents") or [] if name}),
         "reported_condition": row.get("description") or "Not recorded",
         "potential_consequence": (
             "Business impact and exploitation are not established by this summary; review applicability and path evidence."

@@ -304,15 +304,6 @@ def output_options(fn):
                 help="With --agent-mode, inline the complete report instead of the bounded summary (large output).",
             ),
             click.option(
-                "--exclude-dev",
-                "--prod-only",
-                "exclude_dev",
-                is_flag=True,
-                default=False,
-                help="Drop packages a lockfile marks as development-only before matching, so findings, gates and "
-                "every export cover production dependencies. Packages with an unknown scope are kept.",
-            ),
-            click.option(
                 "--exclude-unfixable",
                 is_flag=True,
                 default=False,
@@ -348,6 +339,15 @@ def scan_control_options(fn):
                 help="Scan only against local DB — skip all network calls. Use after 'db update'.",
             ),
             click.option("--no-scan", is_flag=True, help="Skip vulnerability scanning (inventory only)"),
+            click.option(
+                "--exclude-dev",
+                "--prod-only",
+                "exclude_dev",
+                is_flag=True,
+                default=False,
+                help="Drop packages a lockfile marks as development-only before matching, so findings, gates and "
+                "every export cover production dependencies. Packages with an unknown scope are kept.",
+            ),
             click.option(
                 "--blast-radius-depth",
                 type=int,

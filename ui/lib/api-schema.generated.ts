@@ -9710,6 +9710,8 @@ export interface components {
             asset_id?: string | null;
             /** Canonical Id */
             canonical_id?: string | null;
+            /** Component */
+            component?: string | null;
             /** Cvss Score */
             cvss_score?: number | null;
             /** Epss Score */
@@ -9736,6 +9738,8 @@ export interface components {
             sla_policy?: string | null;
             /** Sla Status */
             sla_status?: ("overdue" | "due_soon" | "on_track" | "unknown") | null;
+            /** Title */
+            title?: string | null;
             /** Vulnerability Id */
             vulnerability_id: string;
         } & {
@@ -20948,6 +20952,8 @@ export interface components {
             asset_id?: string | null;
             /** Canonical Id */
             canonical_id?: string | null;
+            /** Component */
+            component?: string | null;
             /** Cvss Score */
             cvss_score?: number | null;
             /** Epss Score */
@@ -20970,6 +20976,8 @@ export interface components {
             sla_due_at?: string | null;
             /** Sla Due At Source */
             sla_due_at_source?: string | null;
+            /** Title */
+            title?: string | null;
             /** Vulnerability Id */
             vulnerability_id: string;
         } & {

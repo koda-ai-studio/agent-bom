@@ -41,7 +41,7 @@ function BriefContent() {
         </div>
         <p className="break-words text-xs text-ink-secondary">Tenant: {brief.tenant_id} · Generated: {briefTimestamp(brief.generated_at)}</p>
         <h2 className="text-xl font-semibold">{brief.posture.summary}</h2>
-        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">{[["Open issues", brief.issues.total], ["Critical", brief.issues.critical], ["High", brief.issues.high], ["Known exploited", brief.issues.kev ?? "Unknown"]].map(([label, value]) => <div key={label}><dt className="text-xs text-ink-secondary">{label}</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd></div>)}</dl>
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">{[["Open issue groups", brief.issues.total], ["Critical groups", brief.issues.critical], ["High groups", brief.issues.high], ["Known exploited", brief.issues.kev ?? "Unknown"]].map(([label, value]) => <div key={label}><dt className="text-xs text-ink-secondary">{label}</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd></div>)}</dl>
         {brief.posture.no_data ? <p className="text-sm">Posture evidence is incomplete. Returned issue counts do not establish complete coverage.</p> : null}
         <p className="text-sm leading-6 text-ink-secondary">{brief.evidence_boundary}</p>
       </Card>

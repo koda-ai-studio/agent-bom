@@ -239,6 +239,8 @@ def _finding_top_risk(row: dict[str, Any]) -> dict[str, Any]:
         servers = [asset["name"]]
     return {
         "vulnerability_id": str(row.get("cve_id") or row.get("canonical_id") or row.get("id") or row.get("finding_id") or ""),
+        "title": row.get("title") or None,
+        "component": package or asset.get("name") or None,
         "canonical_id": row.get("canonical_id"),
         "asset_id": asset.get("canonical_id") or asset.get("stable_id"),
         "affected_servers": servers,
