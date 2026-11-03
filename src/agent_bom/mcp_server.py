@@ -96,8 +96,9 @@ Full profile Tools (99):
     create_ticket       — File an ITSM ticket for a finding through a stored connector
     sync_ticket_status  — Refresh a filed ITSM ticket's status through the stored connector
 
-Resources (6):
-    registry://servers  — Browse the 1295-entry server security metadata registry
+Resources (7):
+    profiles://catalog — Task profiles and startup commands
+    registry://servers  — Browse the bundled server security metadata registry
     policy://template   — Default security policy template
     metrics://tools     — MCP tool execution metrics and limits
     schema://inventory-v1 — Canonical pushed-inventory schema contract

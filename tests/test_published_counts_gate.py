@@ -8,6 +8,7 @@ like a count (a scan result, a ring-buffer size) is left alone.
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import sys
@@ -32,6 +33,13 @@ gate = _load()
 
 
 class TestCountsAreDerivedNotStored:
+    def test_server_module_resource_inventory_matches_its_card(self):
+        source = (ROOT / "src" / "agent_bom" / "mcp_server.py").read_text(encoding="utf-8")
+        doc = ast.get_docstring(ast.parse(source))
+        resources = gate._server_card_list("_SERVER_CARD_RESOURCES")
+        assert f"Resources ({len(resources)}):" in doc
+        assert all(resource["uri"] in doc for resource in resources)
+
     def test_registry_entry_count_comes_from_the_bundled_registry(self):
         registry = json.loads((ROOT / "src" / "agent_bom" / "mcp_registry.json").read_text(encoding="utf-8"))
         assert gate.derive_counts()["registry entries"] == len(registry["servers"])
@@ -135,6 +143,14 @@ class TestNumbersThatAreNotClaims:
 
 
 class TestRegistryCountRefresh:
+    def test_registry_growth_does_not_require_python_source_edits(self, monkeypatch):
+        """Weekly data refreshes must not manufacture source-only changes."""
+        monkeypatch.setattr(gate, "SEARCH_ROOTS", (ROOT / "src" / "agent_bom",))
+        counts = gate.derive_counts()
+        counts["registry entries"] += 1
+        counts["registry verified entries"] += 1
+        assert gate.find_stale_claims(counts) == []
+
     def test_refresh_updates_only_contextual_registry_numbers_and_is_idempotent(self, tmp_path, monkeypatch):
         published = tmp_path / "surface.md"
         published.write_text(
