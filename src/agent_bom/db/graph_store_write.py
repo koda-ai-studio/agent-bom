@@ -7,9 +7,11 @@ import sqlite3
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
+from itertools import islice
 from typing import Any
 
 from agent_bom.db.graph_node_aliases import write_node_aliases
+from agent_bom.db.graph_node_search import ensure_search_index, write_node_search_batch
 from agent_bom.db.graph_revision import revision_tokens
 from agent_bom.db.graph_store_correlation import get_correlation_run
 from agent_bom.db.graph_store_schema import _executemany_batched
@@ -128,9 +130,12 @@ def write_nodes_and_aliases(
 def _write_nodes(
     conn: sqlite3.Connection, nodes: Iterable[UnifiedNode], stats: _SnapshotStats, *, scan: str, tenant: str, batch_size: int
 ) -> None:
-    _executemany_batched(
-        conn,
-        """\
+    ensure_search_index(conn)
+    conn.execute("DELETE FROM graph_node_search WHERE tenant_id = ? AND scan_id = ?", (tenant, scan))
+    source = iter(nodes)
+    while batch := list(islice(source, batch_size)):
+        conn.executemany(
+            """\
         INSERT OR REPLACE INTO graph_nodes (
             id, entity_type, label, category_uid, class_uid, type_uid,
             status, risk_score, severity, severity_id,
@@ -138,9 +143,9 @@ def _write_nodes(
             data_sources, dimensions, scan_id, tenant_id
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        _node_rows(nodes, stats, scan=scan, tenant=tenant),
-        batch_size=batch_size,
-    )
+            _node_rows(batch, stats, scan=scan, tenant=tenant),
+        )
+        write_node_search_batch(conn, batch, tenant_id=tenant, scan_id=scan)
 
 
 def _edge_rows(edges: Iterable[UnifiedEdge], stats: _SnapshotStats, *, scan: str, tenant: str, now: str) -> Iterator[tuple[Any, ...]]:

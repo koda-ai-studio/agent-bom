@@ -108,3 +108,46 @@ def test_search_index_content_identical_across_write_paths(tmp_path: Path, monke
     assert len(full_rows) == 1500, "every node must have a search row"
     # search_text is non-empty and lowercased (mirror content preserved).
     assert all(r[5] and r[5] == r[5].lower() for r in full_rows)
+
+
+def test_save_indexes_batches_without_reloading_nodes(tmp_path, monkeypatch):
+    """Persistence already owns the nodes; indexing must not hydrate them again."""
+    import agent_bom.db.graph_node_search as search
+
+    graph = _synthetic_graph("s", 120)
+    node = graph.nodes["n:1"]
+    node.attributes["_agent_bom_canonical_id"] = "storage-only-marker"
+    node.attributes["risk_assessment"] = {"status": "assessed", "basis": "fixture", "scope": "node"}
+    node.attributes["nested"] = {"z": "Mixed Case", "a": [True, None, 3]}
+    node.dimensions.environment = "Test Environment"
+    store = SQLiteGraphStore(tmp_path / "single-pass.db")
+
+    def redundant_read(_row):
+        pytest.fail("search indexing reloaded a node that the writer already owns")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(search, "sqlite_node_from_row", redundant_read)
+        store.save_graph(graph)
+    before = _search_rows(store, "s")
+    assert all("storage-only-marker" not in row[5] for row in before)
+    with sg.open_graph_db(store._db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        refresh_snapshot_search_index(conn, tenant_id="t1", scan_id="s", batch_size=17)
+        conn.commit()
+    assert _search_rows(store, "s") == before
+
+
+def test_failed_stream_preserves_prior_search_rows(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGENT_BOM_GRAPH_WRITE_BATCH_SIZE", "100")
+    store = SQLiteGraphStore(tmp_path / "atomic.db")
+    graph = _synthetic_graph("s", 120)
+    store.save_graph(graph)
+    before = _search_rows(store, "s")
+
+    def interrupted_nodes():
+        yield from _synthetic_graph("replacement", 110).nodes.values()
+        raise ValueError("interrupted producer")
+
+    with pytest.raises(ValueError, match="interrupted producer"):
+        store.save_graph_streaming(scan_id="s", tenant_id="t1", nodes=interrupted_nodes(), edges=[])
+    assert _search_rows(store, "s") == before

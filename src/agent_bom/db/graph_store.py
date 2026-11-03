@@ -19,7 +19,6 @@ from typing import Any, Generator, Iterable, Mapping, Sequence
 
 from agent_bom.db.graph_bootstrap import backfill_edge_metadata
 from agent_bom.db.graph_node_aliases import upgrade_node_alias_key
-from agent_bom.db.graph_node_search import refresh_snapshot_search_index
 from agent_bom.db.graph_revision import ensure_sqlite_revisions
 from agent_bom.db.graph_store_correlation import _correlation_run_from_row as _correlation_run_from_row
 from agent_bom.db.graph_store_correlation import claim_correlation_run_execution as claim_correlation_run_execution
@@ -542,7 +541,6 @@ def save_graph_streaming(
             completed_at=correlation_completed_at or now,
             execution_owner=correlation_execution_owner,
         )
-    refresh_snapshot_search_index(conn, tenant_id=tenant, scan_id=scan, batch_size=batch_size)
     node_count, edge_count = stats.node_count, stats.edge_count
 
     conn.commit()

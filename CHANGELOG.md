@@ -26,6 +26,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ### Fixed
 - Dense graph snapshots open with a labeled connection preview and circular nodes; the full loaded map and every starting point remain available. Phone previews reserve enough scrollable canvas space to keep both endpoints visible.
 - Graph entry pages defer closed evidence inspectors until opened, reducing initial JavaScript loading while preserving the first-useful-paint budget.
+- SQLite graph writes build the search index from bounded node batches, avoiding a second full-node read during cold current-estate projection. Search content and atomic replacement remain unchanged.
 - Findings retain source, occurrence and partial-evidence context across API results and graph investigations; incomplete collection is not presented as a clean result.
 - Push ingestion avoids blocking the API event loop, retains idempotency boundaries and isolates background graph enrichment from mutable report objects.
 - Scheduled scans revalidate leadership and the current tenant-owned schedule before dispatch; deleted, disabled or rescheduled stale entries are skipped.
