@@ -3,6 +3,7 @@ import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphHierarchyLayout } from "@/lib/graph-hierarchy-layout";
 import { readableGraphEdges } from "@/lib/graph-utils";
+import { declutterRelationshipLabels } from "@/lib/graph-label-declutter";
 import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
 
 const node = (id: string, nodeType: LineageNodeData["nodeType"]): Node<LineageNodeData> => ({
@@ -31,8 +32,8 @@ it("separates hosting, applications, identities and data, with findings below th
     expect(byId.get(finding!)!.position.x).toBe(byId.get(owner!)!.position.x);
     expect(byId.get(finding!)!.position.y - byId.get(owner!)!.position.y).toBeGreaterThanOrEqual(324);
   }
-  expect(byId.get("role")!.data.readingLabel).toBe("Identity · permissions role");
-  expect(byId.get("checkout")!.data.readingLabel).toBe("Application workload");
+  expect(byId.get("role")!.data.readingLabel).toBe("Permission role");
+  expect(byId.get("checkout")!.data.readingLabel).toBe("Application");
   expect(result.edges.map(e => [e.source, e.target, e.markerEnd, e.data?.relationship])).toEqual(edges.map(e => [e.source, e.target, e.markerEnd, e.data?.relationship]));
   const captions = readableGraphEdges(result.edges);
   expect(captions.find(e => e.data?.relationship === "authenticates_as")!.label).toBeTruthy();
@@ -66,4 +67,39 @@ it("reserves full captions and separates every node without dropping disconnecte
       expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(324);
     }
   }
+});
+
+it("explains each connection and separates findings from infrastructure entities", () => {
+  const result = graphHierarchyLayout(nodes, edges);
+  const displayed = declutterRelationshipLabels(readableGraphEdges(result.edges));
+  expect(displayed.filter(edge => !["hosts", "contains", "affects", "vulnerable_to"].includes(String(edge.data?.relationship))).every(edge => typeof edge.label === "string" && edge.label.length > 0)).toBe(true);
+  expect(displayed.some(edge => String(edge.label).includes("×"))).toBe(false);
+  expect(result.nodes.find(node => node.id === "grant-finding")!.data.readingFinding).toBe(true);
+  expect(displayed.find(edge => edge.data?.relationship === "authenticates_as")!.label).toContain("Uses role");
+});
+
+
+it("anchors containment counts to their source asset and keeps access links explicit", () => {
+  const result = graphHierarchyLayout(nodes, edges);
+  const cluster = result.nodes.find(n => n.id === "cluster")!;
+  expect(cluster.data.readingConnections).toEqual([{ relationship: "hosts", label: "Hosts ×2", targets: ["checkout", "ledger"] }]);
+  expect(result.nodes.find(n => n.id === "account")!.data.readingConnections).toEqual([{ relationship: "contains", label: "Contains ×2", targets: ["cluster", "gateway"] }]);
+  expect(result.edges.filter(e => e.data?.relationship === "hosts").every(e => e.data?.quietLabel)).toBe(true);
+  expect(result.nodes.find(n => n.id === "role")!.data.readingGroup).toBe("Identities");
+  expect(result.nodes.find(n => n.id === "cve")!.data.readingOwner).toBe("checkout");
+  expect(result.nodes.map(n => n.id)).toEqual(nodes.map(n => n.id));
+});
+
+
+it("distinguishes identity kinds without inventing role semantics or hidden inventory counts", () => {
+  for (const kind of ["serviceAccount", "managedIdentity", "servicePrincipal"] as const) {
+    const result = cloudHierarchyLayout(nodes.map(n => n.id === "role" ? { ...n, data: { ...n.data, nodeType: kind } } : n), edges)!;
+    expect(result.nodes.find(n => n.id === "role")!.data.readingGroup).toBe("Identities");
+    expect(result.edges.find(e => e.data?.relationship === "authenticates_as")!.label).toContain("Uses identity");
+    expect(result.nodes.find(n => n.id === "role")!.data.readingLabel).not.toBe("Permission role");
+  }
+  const hidden = cloudHierarchyLayout(nodes.map(n => n.id === "ledger" ? { ...n, hidden: true } : n), edges)!;
+  expect(hidden.nodes.find(n => n.id === "cluster")!.data.readingConnections).toEqual([]);
+  const duplicates = cloudHierarchyLayout(nodes, [...edges, { ...edges[2]!, id: "duplicate-host-evidence" }])!;
+  expect(duplicates.nodes.find(n => n.id === "cluster")!.data.readingConnections?.[0]?.label).toBe("Hosts ×2");
 });

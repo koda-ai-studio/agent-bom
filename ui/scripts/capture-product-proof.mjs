@@ -3238,9 +3238,9 @@ async function main() {
           await fitReactFlow(p);
           await scrollTo(p, 0);
           if (scope === "cloud") {
-            await expect(p.getByText("Identity · permissions role", { exact: true })).toBeVisible();
-            await expect(p.locator(".graph-relationship-label").filter({ hasText: "Authenticates As" })).toBeVisible();
-            await expect(p.locator(".graph-relationship-label").filter({ hasText: "Has Permission" })).toBeVisible();
+            await expect(p.getByText("Permission role", { exact: true })).toBeVisible();
+            await expect(p.locator(".graph-relationship-label").filter({ hasText: "Uses role" })).toBeVisible();
+            await expect(p.locator(".graph-relationship-label").filter({ hasText: "Permission on" })).toBeVisible();
           }
         }, { expectedText: [/Demo data/i, "Path analysis complete for this snapshot", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp((n.attributes?.display_title || n.label).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[- ]"), "i"))],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],

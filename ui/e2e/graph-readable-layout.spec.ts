@@ -328,14 +328,16 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
     await page.setViewportSize({ width, height: 1000 });
     const workload = (id: string) => ({ ...node(id, "container"), attributes: { container_kind: "workload" } });
-    const entries = [node("account", "account"), node("cluster", "cluster"), node("gateway", "api_gateway"),
+    const entries = [node("account", "account", "prod-workloads"), node("cluster", "cluster", "payments-eks"), node("gateway", "api_gateway", "public-api-gateway"),
       workload("checkout-api"), workload("ledger-worker"), node("role", "role", "checkout-runtime-role"),
       node("bucket", "data_store", "customer-pii-bucket"), node("cve", "vulnerability", "CVE-2025-29927"),
-      node("grant", "misconfiguration", "Role grants broad storage access")];
+      node("grant", "misconfiguration", "Role grants broad storage access"),
+      node("ledger-cve", "vulnerability", "CVE-2023-43804"), node("waf", "misconfiguration", "Public API stage has no WAF association")];
     const links = [edge("account", "cluster", "contains"), edge("account", "gateway", "contains"),
       edge("cluster", "checkout-api", "hosts"), edge("cluster", "ledger-worker", "hosts"), edge("gateway", "checkout-api", "exposed_to"),
       edge("checkout-api", "role", "authenticates_as"), edge("role", "bucket", "has_permission"),
-      edge("checkout-api", "cve", "vulnerable_to"), edge("grant", "role", "affects")];
+      edge("checkout-api", "cve", "vulnerable_to"), edge("grant", "role", "affects"),
+      edge("ledger-worker", "ledger-cve", "vulnerable_to"), edge("waf", "gateway", "affects")];
     await fixture(page, entries, links);
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
@@ -348,15 +350,23 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     }
     await page.locator(".react-flow__controls-fitview").click();
     await settle(page);
-    await expect(page.getByText("Identity · permissions role", { exact: true })).toBeVisible();
+    await expect(page.getByText("Permission role", { exact: true })).toBeVisible();
+    await expect(page.locator("[data-graph-category]")).toHaveCount(5);
+    await expect(page.locator('[data-id="cluster"] [data-asset-connections]')).toHaveText("Hosts ×2");
+    await expect(page.locator('[data-id="account"] [data-asset-connections]')).toHaveText("Contains ×2");
+    const countOffsets = await page.locator("[data-asset-connections]").evaluateAll(chips => chips.map(chip => {
+      const glyph = chip.closest(".graph-entity-glyph")!.getBoundingClientRect(), box = chip.getBoundingClientRect();
+      return { gap: box.left - glyph.right, centered: Math.abs((box.top + box.bottom) / 2 - (glyph.top + glyph.bottom) / 2) };
+    }));
+    expect(countOffsets.every(offset => offset.gap >= 0 && offset.gap <= 10 && offset.centered < 2)).toBe(true);
     expect(await cardOverlaps(page)).toEqual([]);
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
     await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(links.length);
     const labels = await visibleLabelTexts(page);
     if (width >= 640) {
-      expect(labels.some(text => /Authenticates As/i.test(text))).toBe(true);
-      expect(labels.some(text => /Has Permission/i.test(text))).toBe(true);
+      expect(labels.some(text => /Uses role/i.test(text))).toBe(true);
+      expect(labels.some(text => /Permission on/i.test(text))).toBe(true);
     } else {
       // Explicit Fit all provides an overview; the initial mobile camera above stays readable.
       await expect(page.getByRole("group", { name: /Has Permission.*relationship from checkout-runtime-role to customer-pii-bucket/ })).toHaveCount(1);
