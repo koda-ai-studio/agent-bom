@@ -10,22 +10,23 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [0.113.1] - 2026-11-02
 
 ### Highlights
-- Start with a Personal dashboard view for local scans and report previews; select Team or Organization when shared operations or governance are needed.
-- Personal and Team overviews skip optional compliance loading, and the dashboard reuses the shell's posture-count request.
+- Start with a Personal dashboard view for local scans and report previews; select Shared or Governance when shared operations or governance are needed.
+- Personal and Shared overviews skip optional compliance loading, and the dashboard reuses the shell's posture-count request.
 - Discover Continue's user-level YAML MCP configuration while preserving passive discovery and legacy JSON support.
 
 ### Added
-- Personal, Team and Organization dashboard views prioritize relevant navigation without changing permissions or evidence scope. Personal onboarding starts with a local report; shared-source setup remains optional, and tenant compliance is omitted from local report previews.
+- Personal, Shared and Governance dashboard views prioritize relevant navigation without changing permissions or evidence scope. Personal onboarding starts with a local report; shared-source setup remains optional, and tenant compliance is omitted from local report previews.
 
 ### Changed
 - Deployment and first-run guides distinguish individual scans, shared team evidence and optional organization governance. Hosting profiles and observed evidence-source labels are documented separately; a local scan does not require a control plane or compliance setup.
 
 ### Fixed
+- Recorded relationship drill-down and JSON exports accept explicit canonical-node aliases, retain generation checks and identify incomplete endpoint evidence.
 - Continue's `~/.continue/config.yaml` is discovered on macOS, Linux and Windows. Malformed YAML does not hide legacy JSON configurations, and configured commands are not executed during discovery (#6147).
 - Browser coverage explicitly verifies all three product views and expands optional shared setup before testing its controls.
 
 ### Upgrade notes
-- Existing browser sessions start in Personal view unless a product view was already saved. Use the sidebar selector to choose Team or Organization; permissions and evidence scope do not change.
+- Existing browser sessions start in Personal view unless a product view was already saved. Use the sidebar selector to choose Shared or Governance; permissions and evidence scope do not change.
 - See [upgrade guidance](docs/UPGRADING.md) for verification after publication. The release does not introduce a database migration.
 
 ## [0.113.0] - 2026-11-01

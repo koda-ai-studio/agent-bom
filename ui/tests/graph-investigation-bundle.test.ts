@@ -46,3 +46,30 @@ describe("portable graph investigation", () => {
     expect(() => make([page({ snapshot_generation: null })])).toThrow();
   });
 });
+
+it("exports the resolved estate and canonical node while preserving the requested selection", () => {
+  const resolved = page({ scan_id: "current-estate:new", node_id: "canonical", resolved_from: "old-id", node: { ...page().node!, id: "canonical" } });
+  const bundle = buildGraphInvestigationBundle("current-estate:old", "old-id", [resolved, { ...resolved, resolved_from: null }], "https://control.example/graph");
+  expect(bundle.selection).toMatchObject({ scan_id: "current-estate:new", node_id: "canonical", requested_scan_id: "current-estate:old", requested_node_id: "old-id" });
+  expect(bundle.page_receipts[0]?.resolved_from).toBe("old-id");
+  expect(new URL(bundle.return_url).searchParams.get("root")).toBe("canonical");
+  expect(new URL(bundle.return_url).searchParams.get("scan")).toBe("current-estate:new");
+});
+
+it("never treats a partial terminal page as complete evidence", () => {
+  const partial = page({ completeness: { ...page().completeness, status: "truncated", complete: false, truncated: true, reason: "budget" } });
+  expect(make([partial]).scope).toMatchObject({ recorded_relationships_complete: false, collection_coverage: "unknown" });
+});
+
+it("does not claim complete relationships when endpoint records are absent", () => {
+  const bundle = make([page({ nodes: [] })]);
+  expect(bundle.scope.recorded_relationships_complete).toBe(false);
+  expect(bundle.scope.missing_endpoint_ids).toEqual(["vuln:one"]);
+});
+
+it("treats an absent completeness receipt as unknown instead of crashing", () => {
+  const missing = page();
+  delete (missing as Partial<GraphIncidentPage>).completeness;
+  expect(make([missing]).scope.recorded_relationships_complete).toBe(false);
+  expect(make([missing, page()]).scope.recorded_relationships_complete).toBe(false);
+});

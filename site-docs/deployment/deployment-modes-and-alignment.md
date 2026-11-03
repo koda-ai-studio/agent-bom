@@ -83,9 +83,9 @@ Use **Product view** in the expanded sidebar (or the navigation menu on mobile):
 
 - **Personal** is the default. Get started leads with a local command and report
   preview. Governance and Operations stay out of the primary navigation.
-- **Team** brings Operations into the primary navigation for shared scan jobs
+- **Shared** brings Operations into the primary navigation for shared scan jobs
   and integrations. Get started opens the shared-source paths.
-- **Organization** also brings Governance forward, with compliance and executive
+- **Governance** also brings Governance forward, with compliance and executive
   reporting on Overview. Local report previews still omit tenant compliance.
 
 Use **Show all pages** or search to find additional pages. A direct link keeps
@@ -93,6 +93,11 @@ its active group visible. Role, tenant and demo restrictions still apply in
 every view. A view does not grant access, change a scan target, enable a service
 or filter shared evidence down to the current user. Personal does not mean a
 private workspace.
+
+These names describe the work, not company size or a deployment tier. Shared
+was previously labelled Team, and Governance was Organization; existing saved
+preferences keep working. Personal and Shared skip optional compliance loading
+on Overview. Select Governance when that review is useful.
 
 The preference is saved in this browser, not to the control plane. It applies
 across tabs on the same origin; if browser storage is unavailable, it lasts only

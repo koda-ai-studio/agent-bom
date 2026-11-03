@@ -75,3 +75,14 @@ it("switches the selected control and keeps its source evidence together", async
   expect(screen.queryByText("Recorded failed check")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Inspect source evidence" })).toHaveAttribute("href", "/security-graph?lens=estate&node=other&scan=retained");
 });
+
+it("retains scoped control evidence after a canonical alias resolves", async () => {
+  const response = page();
+  response.node_id = "canonical"; response.node = { ...response.node!, id: "canonical" };
+  response.resolved_from = "asset";
+  response.edges = response.edges.map(edge => ({ ...edge, source: edge.source === "asset" ? "canonical" : edge.source, target: edge.target === "asset" ? "canonical" : edge.target }));
+  fetchPage.mockResolvedValue(response);
+  render(<ComponentCompliance assetId="asset" scanId="retained" />);
+  expect(await screen.findByText("Recorded failed check")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Findings" })).toHaveAttribute("href", "/findings?asset=canonical&scan=retained");
+});
