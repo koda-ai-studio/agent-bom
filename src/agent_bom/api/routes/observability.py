@@ -61,7 +61,7 @@ from agent_bom.api.push_cohort_receive import receive_cohort_push
 from agent_bom.api.push_evidence import audit_push_admission
 from agent_bom.api.push_evidence import normalize_pushed_report as _normalize_pushed_report
 from agent_bom.api.push_ingest import accepted_push_receipt, admit_pushed_job, push_ingest_mode
-from agent_bom.api.push_ingest_worker import register_push_commit_listener
+from agent_bom.api.push_ingest_worker import admitted_push_result, register_push_commit_listener
 from agent_bom.api.push_receive import (
     PUSH_ACCEPTED_RESPONSES,
     PUSH_REQUEST_BODY_OPENAPI,
@@ -535,7 +535,7 @@ async def _replay_push(
     if replay is not None:
         return replay
     job = _new_pushed_job(request, body, tenant_id, job_id)
-    job_result = await asyncio.to_thread(_pushed_job_result, body, job)
+    job_result = await asyncio.to_thread(admitted_push_result, body)
     await asyncio.to_thread(partial(admit_pushed_job, job, job_result, actor=_triggered_by(request), request_hash=request_hash))
     return accepted_response(accepted_push_receipt(job.job_id, source_id=source_id))
 
@@ -554,7 +554,7 @@ async def _admit_async_push(
     idempotency_store = _get_idempotency_store()
     job = _new_pushed_job(request, body, tenant_id, job_id)
     try:
-        job_result = await asyncio.to_thread(_pushed_job_result, body, job)
+        job_result = await asyncio.to_thread(admitted_push_result, body)
         await asyncio.to_thread(
             idempotency_store.commit_claim,
             "/v1/results/push",

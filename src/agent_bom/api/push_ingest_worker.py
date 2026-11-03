@@ -14,9 +14,10 @@ from typing import Any
 
 from agent_bom.api.graph_persistence import persist_graph_snapshot
 from agent_bom.api.hub_ingest import ingest_runtime_findings
-from agent_bom.api.models import JobStatus, ScanJob
+from agent_bom.api.models import JobStatus, PushPayload, ScanJob
 from agent_bom.api.observability_events import _logger, _now
 from agent_bom.api.pipeline import register_push_ingest_handler
+from agent_bom.api.push_evidence import normalize_pushed_report
 from agent_bom.api.stores import _get_graph_store, _get_store
 from agent_bom.api.trend_comparison import push_scope_id
 from agent_bom.api.trend_recording import record_scan_trend_best_effort
@@ -106,6 +107,30 @@ def _record_ingest_failure(store: Any, job: ScanJob, result: dict, *, graph_scan
     store.put(job)
 
 
+ADMITTED_STATE = "admitted"
+
+
+def admitted_push_result(body: PushPayload) -> dict[str, Any]:
+    """What the request path stores: the validated payload, normalized later by the worker.
+
+    Normalization (finding collection, summaries, the posture scorecard) is the
+    CPU-heavy part of ingest, so it runs here, off the API process's request path.
+    """
+    return {"pushed": True, "ingest_state": ADMITTED_STATE, "payload": body.model_dump(mode="json", exclude_unset=True)}
+
+
+def _normalized_result(job: ScanJob) -> dict:
+    result: dict = job.result if isinstance(job.result, dict) else {}
+    if result.get("ingest_state") != ADMITTED_STATE:
+        return result
+    body = PushPayload.model_validate(result.get("payload") or {})
+    normalized = normalize_pushed_report(body, fallback_scan_id=job.job_id)
+    normalized["pushed"] = True
+    job.result = normalized
+    job.progress.append(f"Received via push from source={sanitize_text(body.source_id)}")
+    return normalized
+
+
 def run_push_ingest(job: ScanJob) -> None:
     """Persist one admitted push: graph projection, then the terminal job row.
 
@@ -117,7 +142,12 @@ def run_push_ingest(job: ScanJob) -> None:
     current = store.get(job.job_id, tenant_id=job.tenant_id)
     if current is None or not is_push_ingest_job(current):
         return
-    result: dict = current.result if isinstance(current.result, dict) else {}
+    try:
+        result = _normalized_result(current)
+    except Exception as exc:  # noqa: BLE001 - an unparseable admission is recorded as a failed ingest
+        _logger.error("Admitted push could not be normalized: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _record_ingest_failure(store, current, {}, graph_scan_id=current.job_id, generation="", preexisted=True)
+        return
     graph_scan_id = str(result.get("scan_id") or current.job_id)
     preexisted = _graph_snapshot_exists(current.tenant_id, graph_scan_id)
     generation = uuid.uuid4().hex

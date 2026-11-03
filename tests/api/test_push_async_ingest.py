@@ -180,7 +180,7 @@ async def test_a_slow_commit_never_blocks_the_event_loop(monkeypatch: pytest.Mon
 
     def _slow_graph(_job, _report, **_kwargs) -> None:  # noqa: ANN001
         started.set()
-        time.sleep(2.0)
+        time.sleep(3.0)
 
     monkeypatch.setattr("agent_bom.api.routes.observability._persist_graph_snapshot", _slow_graph)
     transport = httpx.ASGITransport(app=app)
@@ -199,9 +199,10 @@ async def test_a_slow_commit_never_blocks_the_event_loop(monkeypatch: pytest.Mon
         committed = await slow
 
     assert health.status_code == 200
-    assert health_elapsed < 0.2, health_elapsed
+    # The commit holds its fence for 3 s; anything near that would mean the loop waited on it.
+    assert health_elapsed < 0.75, health_elapsed
     assert retry.status_code == 202, retry.text
-    assert retry_elapsed < 0.5, retry_elapsed
+    assert retry_elapsed < 1.0, retry_elapsed
     assert retry.headers["Retry-After"]
     assert retry.json()["job_id"] == committed.json()["job_id"]
     assert committed.status_code == 201

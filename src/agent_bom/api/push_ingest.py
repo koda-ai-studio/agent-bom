@@ -70,6 +70,13 @@ def failed_push_receipt(job_id: str, *, source_id: str) -> dict[str, Any]:
     }
 
 
+def _audit_view(job: ScanJob, job_result: dict) -> dict:
+    """Admission audit fields; an admitted payload is normalized only later by the worker."""
+    raw = job_result.get("payload")
+    payload: dict = raw if isinstance(raw, dict) else job_result
+    return {"scan_id": payload.get("scan_id") or job.job_id, "target_scope": payload.get("target_scope")}
+
+
 def admit_pushed_job(job: ScanJob, job_result: dict, *, actor: str, request_hash: str) -> None:
     """Write the admitted report once, as ``pending``, and dispatch it.
 
@@ -87,7 +94,7 @@ def admit_pushed_job(job: ScanJob, job_result: dict, *, actor: str, request_hash
     atomic_enqueue = getattr(store, "put_many_and_enqueue_atomic", None)
     distributed = distributed_scans_enabled() and store_supports_dispatch(store) and callable(atomic_enqueue)
     with tenant_quota_guard(job.tenant_id, lambda: enforce_retained_jobs_quota(job.tenant_id)):
-        audit_push_admission(job, job_result, actor=actor, request_hash=request_hash)
+        audit_push_admission(job, _audit_view(job, job_result), actor=actor, request_hash=request_hash)
         if distributed and callable(atomic_enqueue):
             atomic_enqueue([job], [job])
             return
