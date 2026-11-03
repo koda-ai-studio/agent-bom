@@ -386,6 +386,15 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(await cardOverlaps(page)).toEqual([]);
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
+    // The provider plate must clear the name even at the expanded graph's fit zoom.
+    expect(await page.locator("[data-graph-source-badge]").evaluateAll(badges => badges.flatMap(badge => {
+      const a = badge.getBoundingClientRect();
+      const name = badge.closest("[data-graph-entity]")?.querySelector(":scope > p");
+      return [...(name?.querySelectorAll("span") ?? [])].filter(span => {
+        const b = span.getBoundingClientRect();
+        return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      }).map(span => span.textContent);
+    }))).toEqual([]);
     await expect(page.locator(".react-flow__edge-path[marker-end]")).toHaveCount(links.length);
     const labels = await visibleLabelTexts(page);
     if (width >= 640) {
