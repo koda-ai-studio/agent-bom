@@ -7,6 +7,7 @@ from functools import lru_cache
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
+from agent_bom.evidence.iac_identity import prepare_iac_occurrences
 from agent_bom.redaction.payload import _DEPTH_LIMIT
 from agent_bom.security import sanitize_sensitive_payload
 
@@ -20,6 +21,7 @@ def prepare_iac_path_redaction(report: dict[str, Any]) -> dict[str, Any]:
     Safe relative paths retain their existing IDs. Already redacted legacy
     reports cannot recover lost identity; we do not invent it.
     """
+    report = prepare_iac_occurrences(report)
     section = report.get("iac_findings")
     hits = section.get("findings", []) if isinstance(section, dict) else []
     rows = report.get("findings", [])

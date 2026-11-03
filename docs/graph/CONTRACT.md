@@ -74,6 +74,21 @@ query completeness does not establish complete collection. Finding severity and
 recorded connections do not by themselves establish assessed risk or execution.
 
 
+## IaC occurrence identity
+
+IaC findings at the same rule, file and line can describe different matched
+values. Each complete hit uses the unified finding's canonical occurrence UUID
+in `misconfig:iac:<uuid>`. Equal evidence deduplicates; distinct title/message
+values remain distinct. JSON carries the occurrence key before redaction so
+hiding a private path does not change finding references.
+
+Existing stored snapshots and their links remain unchanged. Current projections
+rebuild under a new projection version; rebuilding a report upgrades legacy
+coordinate references only when its canonical finding ID or a unique source
+coordinate resolves the occurrence. Ambiguous legacy rows are not assigned to
+an arbitrary hit. Export the original snapshot to retain its historical IDs;
+use the rebuilt response's `finding_node_id` for current links.
+
 ## Agent inventory lifecycle view
 
 Open **Agents → an agent → Lifecycle graph** to inspect its configured inventory.

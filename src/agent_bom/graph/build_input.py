@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, TypedDict, cast
 
+from agent_bom.evidence.iac_identity import prepare_iac_occurrences
 from agent_bom.graph.projection_support import _is_repository_inventory, _is_sbom_import
 from agent_bom.graph.recorded_time import normalize_recorded_time
 
@@ -88,6 +89,7 @@ class GraphBuildInput:
 
     @classmethod
     def from_report(cls, report: Mapping[str, Any]) -> GraphBuildInput:
+        report = prepare_iac_occurrences(dict(report))
         evidence = cast(GraphEvidenceSections, {key: report[key] for key in GraphEvidenceSections.__annotations__ if key in report})
         agents = evidence.get("agents", [])
         blast = evidence.get("blast_radius", evidence.get("blast_radii", []))
