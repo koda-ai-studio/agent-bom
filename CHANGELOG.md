@@ -24,6 +24,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Executive briefs emphasize issue groups, severity, remediation ownership and evidence coverage; source and signing details expand on demand. A finding no longer detected by a comparable scan is not labelled a verified remediation.
 
 ### Fixed
+- Dense graph snapshots open with a labeled connection preview and circular nodes; the full loaded map and every starting point remain available. Phone previews reserve enough scrollable canvas space to keep both endpoints visible.
 - Graph entry pages defer closed evidence inspectors until opened, reducing initial JavaScript loading while preserving the first-useful-paint budget.
 - Findings retain source, occurrence and partial-evidence context across API results and graph investigations; incomplete collection is not presented as a clean result.
 - Push ingestion avoids blocking the API event loop, retains idempotency boundaries and isolates background graph enrichment from mutable report objects.

@@ -48,3 +48,10 @@ it("does not grow a desktop or whole-graph frame for a focus card", () => {
   expect(whole.fitAll).toBe(true);
   expect(whole.height).toBeLessThanOrEqual(306);
 });
+
+it("gives a bounded phone preview scrollable height to show both connected nodes", () => {
+  const frame = graphAdaptiveFrame({ width: 356, availableHeight: 240, inspector: false,
+    bounds: { x: 0, y: 0, width: 240, height: 520 }, boundedPreview: true });
+  expect(frame.fitAll).toBe(true);
+  expect(frame.height).toBeGreaterThan(520);
+});

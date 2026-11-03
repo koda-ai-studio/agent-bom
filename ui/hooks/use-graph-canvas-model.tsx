@@ -1,6 +1,7 @@
 "use client";
 
 import { decodeGraphInvestigationParams } from "@/lib/attack-paths";
+import { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
 import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
@@ -369,10 +370,21 @@ export function useGraphCanvasModel(page: GraphPageData) {
   // the broad estate view. Large graphs switch to the WebGL/overview
   // renderers upstream, so ReactFlow only ever lays out small/medium graphs
   // where dagre is the better fit.
+  const [previewChoice, setPreviewChoice] = useState({ scope: "", root: "", expanded: false });
+  const previewExpanded = previewChoice.scope === graphIdentityKey && previewChoice.expanded;
+  const connectionPreview = useMemo(() => {
+    if (investigationMode || selectedAttackPath || selectedScenarioId || rollupNavigationActive || aggregated.nodes.length <= 24) return null;
+    if (decideGraphRenderer({ nodeCount: aggregated.nodes.length, edgeCount: aggregated.edges.length, captureMode }).kind === "webgl") return null;
+    return graphConnectionPreview(aggregated.nodes, aggregated.edges,
+      previewChoice.scope === graphIdentityKey ? previewChoice.root : undefined, narrowViewport ? 2 : 6);
+  }, [aggregated, investigationMode, selectedAttackPath, selectedScenarioId, rollupNavigationActive, captureMode, previewChoice, graphIdentityKey, narrowViewport]);
+  const previewActive = Boolean(connectionPreview) && !previewExpanded;
+  const setPreviewRoot = (root: string) => setPreviewChoice({ scope: graphIdentityKey, root, expanded: false });
+  const setPreviewExpanded = (expanded: boolean) => setPreviewChoice({ scope: graphIdentityKey, root: connectionPreview?.root.id ?? "", expanded });
   const compactGroupedTopology = aggregated.clusters.size > 0 && aggregated.nodes.length <= 6;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
-  const graphLayoutKind = compactMobileTopology && !investigationMode ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode ? "dagre-lr" : "asset-hierarchy";
+  const graphLayoutKind = (compactMobileTopology && !investigationMode || previewActive && narrowViewport) ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode || previewActive ? "dagre-lr" : "asset-hierarchy";
   // "Show more" reads against the root's recorded degree, when the detail read was complete.
   const rootConnections = useMemo(() => {
     const detail = selectedNodeDetail?.response;
@@ -405,7 +417,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   }), [scenarioElements, investigationMode?.rootId, activeSnapshot?.snapshot_kind, selectedAttackPath, selectedScenarioId, rollupNavigationActive]);
   // A short investigation should fit as readable cards, not tiny summary pills
   // separated by the spacing intended for a much larger estate.
-  const investigationLayout = compactInvestigationLayout(Boolean(investigationMode) || (!rollupNavigationActive && flow.nodes.length <= 16), aggregated.nodes.length, Boolean(investigationContext));
+  const investigationLayout = compactInvestigationLayout(previewActive || Boolean(investigationMode) || (!rollupNavigationActive && flow.nodes.length <= 16), previewActive ? connectionPreview!.nodes.length : aggregated.nodes.length, Boolean(investigationContext));
   const compactInvestigationTopology = investigationLayout !== undefined;
   const requestedContextGroup = searchParams.get("context_view");
   const selectedContextGroup = investigationContext?.groups.some(group => group.id === requestedContextGroup)
@@ -433,6 +445,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   }, [investigationContext, selectedNodeId, setCanvasPage, setHoveredNodeId, setPinnedFocusId, setSelectedNode, setSelectedNodeId, setSelectedRelationship]);
   const layoutInput = useMemo(() => {
     const selected = contextElements;
+    if (previewActive && connectionPreview) return { nodes: connectionPreview.nodes, edges: connectionPreview.edges, omittedNodes: 0, pageCount: 1, page: 0, layoutRequired: true };
     // Decide broad-map rendering before paging the focused React Flow canvas.
     // Otherwise the 100-node page can never reach the WebGL threshold.
     const broadMap = !investigationMode && !scenarioContextIds && decideGraphRenderer({
@@ -442,7 +455,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     }).kind === "webgl";
     if (broadMap) return { ...selected, omittedNodes: 0, pageCount: 1, page: 0, layoutRequired: false };
     return { ...boundedGraphElements(selected.nodes, selected.edges, [...(attackPathNodeIds ?? scenarioContextIds ?? [])], canvasPage), layoutRequired: true };
-  }, [contextElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
+  }, [previewActive, connectionPreview, contextElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
   const rankedInvestigationEdges = useMemo(() => investigationContext ? investigationRankEdges(investigationContext, layoutInput.edges) : layoutInput.edges,
     [investigationContext, layoutInput.edges]);
   const { nodes: layoutNodes, edges: rankedLayoutEdges, pending: layoutPending } = useGraphLayout(
@@ -611,7 +624,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     [captureMode, displayEdges.length, displayNodes.length, rollupNavigationActive],
   );
   const [manualCameraScope, setManualCameraScope] = useState<string | null>(null);
-  const cameraScope = JSON.stringify([selectedScanId, filters, selectedNodeId, selectedRelationship?.id, selectedAttackPathKey, investigationMode?.rootId, selectedContextGroup, investigationContext ? displayNodes.map(node => node.id) : null]);
+  const cameraScope = JSON.stringify([selectedScanId, filters, selectedNodeId, selectedRelationship?.id, selectedAttackPathKey, investigationMode?.rootId, selectedContextGroup, connectionPreview?.root.id, previewExpanded, investigationContext ? displayNodes.map(node => node.id) : null]);
   const manualCamera = manualCameraScope === cameraScope;
   const initialViewportRequest = useMemo<ReturnType<typeof graphInitialFitViewOptions>>(() => {
     if (!narrowViewport && compactInvestigationTopology) return { ...viewportOptions, minZoom: COMPACT_GRAPH_MIN_ZOOM, maxZoom: 1 };
@@ -830,7 +843,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     presentationScope, presentation, fitGeneration, fitVisible, fitSelection, compactLayoutKey, autoLayout,
     resetLayout, relationshipEvidenceCount, hasContextualGraph, graphOnlyFindings, graphRenderer, showViewportScope,
     showScopeEvidence, showContextControls, mobileListAvailable, mobileListActive, showChangesEntry, showLegend,
-    graphPanelError, findingNodes,
+    graphPanelError, findingNodes, connectionPreview, previewExpanded, setPreviewRoot, setPreviewExpanded,
   };
 }
 

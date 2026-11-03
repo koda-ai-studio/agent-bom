@@ -15,7 +15,8 @@ export function legibleFitZoom(width: number): number {
 }
 
 /** Geometry, not node count, determines the useful canvas and initial camera. */
-export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, focusHeight = 0, focusPadding = 0.08 }: {
+export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, focusHeight = 0, focusPadding = 0.08, boundedPreview = false }: {
+  boundedPreview?: boolean;
   bounds: Rect;
   width: number;
   availableHeight: number;
@@ -30,7 +31,9 @@ export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, 
   const ceiling = Math.max(240, availableHeight);
   const floor = Math.min(ceiling, inspector ? 432 : 320);
   const readableScale = Math.min(GRAPH_FIT_MAX_ZOOM, width / Math.max(1, bounds.width));
-  const height = Math.round(Math.min(ceiling, Math.max(floor, bounds.height * readableScale + 64)));
+  const height = Math.round(boundedPreview && width < 640
+    ? Math.max(floor, bounds.height * readableScale + 64)
+    : Math.min(ceiling, Math.max(floor, bounds.height * readableScale + 64)));
   const viewport = getViewportForBounds(bounds, width, height, 0.05, 2, 0.08);
   // Zoom-compensated captions stay at 12px or more down to this scale, so the
   // whole graph opens framed. Denser graphs start at a neighbourhood; Fit all

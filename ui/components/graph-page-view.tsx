@@ -11,6 +11,7 @@ import { ScopeBreadcrumbChip } from "@/components/graph-scope-breadcrumb";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import { GraphInvestigationContextControls } from "@/components/graph-investigation-context-controls";
+import { GraphConnectionPreviewControls } from "@/components/graph-connection-preview-controls";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
@@ -103,7 +104,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
     findingNodes, inspectRelationship, onNodeClick, onLargeGraphNodeSelect, onNodeMouseEnter, onNodeMouseLeave,
     selectFindingCard, runSearch, loadRootInvestigation, focusSearchResult, clearInvestigationMode, dismissRollup,
     returnToSummary, navigateRollupBreadcrumb, resetRollupToRoot, drillIntoRollup, investigateRollup, loadBlastRadius,
-    retryGraph, graphTruncated,
+    retryGraph, graphTruncated, connectionPreview, previewExpanded, setPreviewRoot, setPreviewExpanded,
   } = page;
   const relationshipLabels = useRelationshipLabelControl(displayEdges);
   const disclosed = useCloudFindingDisclosure(presentation.nodes, relationshipLabels.edges, selectedNodeId, presentation.storageKey, presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
@@ -223,7 +224,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           data-testid="graph-headline-metrics"
           className="text-xs text-ink-secondary"
         >
-          {formatGraphHeadline(flow.summary, snapshotAttackPathCount)}
+          {formatGraphHeadline(flow.summary, snapshotAttackPathCount, connectionPreview && !previewExpanded ? "loaded scope" : "view")}
           {flow.summary.costUsd30d > 0 && (
             <>
               {" · "}
@@ -634,6 +635,9 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
+          {connectionPreview && <GraphConnectionPreviewControls preview={connectionPreview} expanded={previewExpanded}
+            onRoot={setPreviewRoot} onExpanded={setPreviewExpanded}
+            onExplore={() => void loadRootInvestigation({ rootId: connectionPreview.root.id, rootLabel: connectionPreview.root.data.label })} />}
           {showChangesEntry && viewingCurrentEstate && graphChanges.estateChanges && <GraphScopeChangeStrip changes={graphChanges.estateChanges} onOpen={() => setChangesOpen(true)} />}
           {showChangesEntry && <GraphChangesEntry loading={graphChanges.loading || loadingDiff} error={graphChanges.error ?? diffError}
             headline={viewingCurrentEstate ? graphChanges.headline : snapshotChangesHeadline(graphDiff ? diffCounts : null, Boolean(previousSnapshot))}
@@ -840,6 +844,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               }}
             >
               <GraphCanvasAutoFit
+                boundedPreview={Boolean(connectionPreview) && !previewExpanded}
                 padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
                 navigationIds={selectedAttackPath?.hops ?? (disclosed.available ? disclosed.nodes.filter(node => !node.hidden).map(node => node.id) : undefined)}

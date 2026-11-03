@@ -64,3 +64,8 @@ describe("graph headline counts", () => {
       .toBe("2 findings in view: 1 high, 1 unrated · 1 attack path in snapshot (deduplicated)");
   });
 });
+
+ it("labels preview finding totals as loaded scope, not visible nodes", () => {
+   expect(formatGraphHeadline({ findings: 2, findingSeverity: { critical: 0, high: 2, medium: 0, low: 0, unrated: 0 }, kevListed: 0 }, 1, "loaded scope"))
+     .toBe("2 high findings in loaded scope · 1 attack path in snapshot (deduplicated)");
+ });
