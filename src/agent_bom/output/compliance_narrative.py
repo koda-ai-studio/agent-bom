@@ -142,7 +142,7 @@ def _framework_recommendations(
         for ctrl in failing_controls[:3]:
             top_pkgs.extend(ctrl.affected_packages[:2])
         if top_pkgs:
-            recs.append(f"Prioritise upgrades to: {', '.join(dict.fromkeys(top_pkgs))}")
+            recs.append(f"Fix these affected components first: {', '.join(dict.fromkeys(top_pkgs))}.")
     recs.append(
         f"Export a signed {display_name} evidence bundle from the compliance API "
         f"(`GET /v1/compliance/{slug}/report`, or the all-framework pack at "

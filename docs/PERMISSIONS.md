@@ -145,6 +145,11 @@ exceptions, and each needs an explicit flag or setting.
 - **Never store** credential values — only env var _names_ appear in reports
 - **Never transmit** your file contents, project structure, or inventory to external services unless you explicitly enable a push, export, or integration destination; pushed payloads are sanitized before transmission
 - **Never cache** any personal data to disk (scan history is opt-in via `--save`)
+- **Remembers only identities between local scans**: outside CI, each scan target keeps one small summary
+  under `$AGENT_BOM_STATE_DIR/last-scan/` (default `~/.agent-bom/last-scan/`, owner-only, at most 200 targets)
+  holding advisory ids, package names, and MCP server and tool ids with redacted names, so a rescan can print
+  what changed. It stores no paths, file contents or credential values; `AGENT_BOM_NO_SCAN_MEMORY=1` turns it off.
+  The one-time GitHub star tip writes an empty `hints/star-shown` marker there; `AGENT_BOM_NO_HINTS=1` turns tips off.
 - **Never require** authentication tokens or API keys (NVD key is optional for rate limits only)
 - **Never access** arbitrary files outside the supported discovery surfaces you choose to scan
 - **Never perform** broad recursive filesystem crawls during auto-discovery

@@ -10,6 +10,7 @@ from agent_bom.cli._common import logger
 from agent_bom.cli.agents._output import render_output
 from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
+from agent_bom.cli.agents.scan_pipeline.scan_memory import remember_and_report
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
 from agent_bom.output import print_diff
 
@@ -165,6 +166,7 @@ def _render(opts: ScanOptions, st: ScanState) -> None:
                 agent_mode_full=opts.agent_mode_full,
                 page=opts.page,
                 next_steps_target=_next_steps_target(opts),
+                first_scan_of_target=st.first_scan_of_target,
                 compliance_enabled=opts.compliance,
             )
         finally:
@@ -308,6 +310,7 @@ def run_output(opts: ScanOptions, st: ScanState) -> None:
     """Finalize the canonical projection, render, persist and summarize."""
     _finalize_report(opts, st)
     _print_totals_and_record(opts, st)
+    st.first_scan_of_target = remember_and_report(opts, st)
     _render(opts, st)
     _record_adoption_and_nudge(opts, st)
     _render_posture(opts, st)

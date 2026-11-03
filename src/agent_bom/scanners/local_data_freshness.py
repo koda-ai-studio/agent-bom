@@ -80,14 +80,14 @@ def _condition(snapshot: VulnDataFreshness | None) -> str:
 
 def local_hits_line(count: int, *, offline: bool, prefer_local_db: bool, demo: bool) -> str:
     """Console line for advisories matched locally; never a check mark on outdated data."""
-    noun = "vulnerability found" if count == 1 else "vulnerabilities found"
+    noun = "advisory match" if count == 1 else "advisory matches"
     mode_note = " (offline mode)" if offline else " (local advisory cache)" if prefer_local_db else ""
     if demo:
         return f"  [green]✓[/green] Demo advisory DB: {count} {noun}{mode_note}"
     snapshot = freshness_snapshot(offline)
     if _untrusted(snapshot):
         label = "freshness unknown" if snapshot is None else local_data_age_text(snapshot)
-        return f"  [yellow]⚠[/yellow] Local DB ({label}): {count} {noun}{mode_note}"
+        return f"  [yellow]⚠[/yellow] Local DB ({label}): {count} {noun}{mode_note} — refresh with `agent-bom db update`"
     return f"  [green]✓[/green] Local DB: {count} {noun}{mode_note}"
 
 

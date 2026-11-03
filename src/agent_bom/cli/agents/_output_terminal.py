@@ -13,6 +13,8 @@ from agent_bom.cli._agent_mode import dumps_envelope, success_envelope
 from agent_bom.cli._terminal_sections import print_scan_next_steps, print_section_divider
 from agent_bom.cli.agents._cloud import render_cis_findings_from_context
 from agent_bom.cli.agents._context import ScanContext
+from agent_bom.cli.scan_hints import hints_enabled, print_hints
+from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.output import (
     print_agent_tree,
     print_attack_flow_tree,
@@ -190,7 +192,16 @@ def _emit_console_report(
         print_compact_cis_posture(report)
         print_compact_compliance_section(report, compliance_enabled=bool(kwargs.get("compliance_enabled")))
         print_compact_export_hint(report)
-    print_scan_next_steps(con, report, quiet=quiet, target=str(kwargs.get("next_steps_target") or "."))
+    target = str(kwargs.get("next_steps_target") or ".")
+    print_scan_next_steps(con, report, quiet=quiet, target=target)
+    if hints_enabled(con, quiet=bool(quiet)):
+        print_hints(
+            con,
+            report,
+            target=target,
+            first_scan_of_target=bool(kwargs.get("first_scan_of_target")),
+            scan_succeeded=effective_scan_run(report).outcome is not ScanOutcome.FAILED,
+        )
 
 
 def _emit_stdout_standard(blast_radii: Any, exclude_unfixable: Any, offline_html: Any, output_format: Any, report: Any) -> bool:
