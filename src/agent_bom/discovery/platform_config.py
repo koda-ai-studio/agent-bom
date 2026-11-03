@@ -49,6 +49,12 @@ def _read_json_config_no_symlink(path: Path) -> dict:
     return json.loads(_read_text_no_symlink(path))
 
 
+_WINDSURF_CODEIUM_CONFIGS = (
+    "~/.codeium/windsurf/mcp_config.json",
+    "~/.codeium/windsurf-next/mcp_config.json",
+    "~/.codeium/mcp_config.json",
+)
+
 CONFIG_LOCATIONS: dict[AgentType, dict[str, list[str]]] = {
     AgentType.CLAUDE_DESKTOP: {
         "Darwin": ["~/Library/Application Support/Claude/claude_desktop_config.json"],
@@ -66,14 +72,18 @@ CONFIG_LOCATIONS: dict[AgentType, dict[str, list[str]]] = {
         "Windows": ["~/AppData/Roaming/Cursor/User/globalStorage/cursor.mcp/mcp.json", "~/.cursor/mcp.json"],
     },
     AgentType.WINDSURF: {
-        # ~/.codeium/windsurf/mcp_config.json is the documented Cascade MCP config on every OS.
+        # Documented as of 2026-11-02 (the Windsurf docs redirect to the renamed product's docs):
+        # https://docs.devin.ai/windsurf/plugins/cascade/mcp — stable and Next build files under
+        # ~/.codeium, plus the Cascade config under ~/.config/devin (macOS, Linux) or %AppData%/devin;
+        # https://docs.devin.ai/desktop/devin-desktop-faq — ~/.codeium/mcp_config.json.
         "Darwin": [
-            "~/.codeium/windsurf/mcp_config.json",
+            *_WINDSURF_CODEIUM_CONFIGS,
+            "~/.config/devin/mcp_config.json",
             "~/.windsurf/mcp.json",
             "~/Library/Application Support/Windsurf/User/globalStorage/windsurf.mcp/mcp.json",
         ],
-        "Linux": ["~/.codeium/windsurf/mcp_config.json", "~/.windsurf/mcp.json"],
-        "Windows": ["~/.codeium/windsurf/mcp_config.json", "~/.windsurf/mcp.json"],
+        "Linux": [*_WINDSURF_CODEIUM_CONFIGS, "~/.config/devin/mcp_config.json", "~/.windsurf/mcp.json"],
+        "Windows": [*_WINDSURF_CODEIUM_CONFIGS, "~/AppData/Roaming/devin/mcp_config.json", "~/.windsurf/mcp.json"],
     },
     AgentType.CLINE: {
         # VS Code extension global storage plus the documented Cline CLI settings file.
