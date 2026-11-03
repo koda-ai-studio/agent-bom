@@ -527,17 +527,27 @@ def _definition_identity(project: Path, d: _PythonAgentDef) -> tuple[str, str, d
     return qualified, config_path, metadata
 
 
+def _first_party_frameworks(project: Path) -> frozenset[str]:
+    """Framework keys the scanned repository builds itself (workspace root or member)."""
+    from agent_bom.parsers.workspace_members import first_party_package_names
+
+    first_party = first_party_package_names(project)["pypi"]
+    return frozenset(fkey for pkg_name, (_, fkey, _) in _FRAMEWORKS.items() if normalize_package_name(pkg_name, "pypi") in first_party)
+
+
 def _build_agents(
     project: Path, agent_defs: list[_PythonAgentDef], framework_packages: dict[str, list[Package]], warnings: list[str]
 ) -> list[Agent]:
-    """One Agent per definition; an undeclared framework is warned about once per file."""
+    """One Agent per definition; an undeclared third-party framework is warned about once per file."""
     agents: list[Agent] = []
     undeclared_warned: set[tuple[str, str]] = set()
+    first_party = _first_party_frameworks(project)
     for d in agent_defs:
         pkgs = framework_packages.get(d.framework, [])
 
-        # Include ALL non-AI packages too (for full CVE coverage)
-        if not pkgs:
+        # A first-party framework is the repository's own code: no registry
+        # package to scan and nothing missing from its requirements.
+        if not pkgs and d.framework not in first_party:
             # Framework not in requirements but used in code — add as unknown version
             pkgs = [
                 Package(
