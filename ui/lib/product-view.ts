@@ -7,8 +7,8 @@ export const PRODUCT_VIEW_KEY = "agent-bom.product-view";
 const CHANGE_EVENT = "agent-bom:product-view";
 export const PRODUCT_VIEWS: Record<ProductView, { label: string; description: string }> = {
   personal: { label: "Personal", description: "Scan a project, investigate findings and verify fixes." },
-  team: { label: "Team", description: "Review shared inventory, retained scans and runtime evidence." },
-  organization: { label: "Organization", description: "Add governance, compliance and audit review to shared evidence." },
+  team: { label: "Shared", description: "Review shared inventory, retained scans and runtime evidence." },
+  organization: { label: "Governance", description: "Add governance, compliance and audit review to shared evidence." },
 };
 
 export function parseProductView(value: unknown): ProductView {

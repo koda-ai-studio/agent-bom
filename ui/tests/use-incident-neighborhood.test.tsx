@@ -123,3 +123,34 @@ it("resolves current estate on the first page and pins its continuation", async 
   expect(result.current.stale).toBe(true);
   expect(result.current.nodes).toHaveLength(0);
 });
+
+it("accepts the server's explicit alias resolution and pins subsequent pages to the canonical identity", async () => {
+  fetchPage.mockResolvedValueOnce({ ...page("canonical", "next"), resolved_from: "old-id" }).mockResolvedValueOnce(page("canonical"));
+  const { result } = renderHook(() => useIncidentNeighborhood("persisted-scan", "old-id", "both", "tenant-a"));
+  await waitFor(() => expect(result.current.pages).toHaveLength(1));
+  expect(result.current.nodes.map(n => n.id)).toContain("canonical");
+  expect(result.current.stale).toBe(false);
+  await act(() => result.current.load("old-id", "next"));
+  expect(fetchPage).toHaveBeenLastCalledWith("canonical", expect.objectContaining({ cursor: "next", snapshotGeneration: generation }));
+  expect(result.current.pages).toHaveLength(2);
+  act(() => result.current.collapse("canonical"));
+  expect(result.current.pages).toHaveLength(2);
+});
+
+it.each([undefined, "unrelated-id"])("rejects a changed identity without an exact alias receipt (%s)", async resolved_from => {
+  fetchPage.mockResolvedValue({ ...page("other-id"), ...(resolved_from ? { resolved_from } : {}) });
+  const { result } = renderHook(() => useIncidentNeighborhood("persisted-scan", "old-id", "both", "tenant-a"));
+  await waitFor(() => expect(result.current.stale).toBe(true));
+  expect(result.current.nodes).toHaveLength(0);
+});
+
+it.each([
+  { scan_id: "other-snapshot" },
+  { direction: "out" as const },
+  { node: { ...page("canonical").node!, id: "wrong-node" } },
+])("rejects alias receipts with mismatched scope or node payload %j", async mismatch => {
+  fetchPage.mockResolvedValue({ ...page("canonical"), resolved_from: "old-id", ...mismatch });
+  const { result } = renderHook(() => useIncidentNeighborhood("persisted-scan", "old-id", "both", "tenant-a"));
+  await waitFor(() => expect(result.current.stale).toBe(true));
+  expect(result.current.nodes).toHaveLength(0);
+});

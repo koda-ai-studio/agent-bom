@@ -490,6 +490,7 @@ export interface RiskCampaignTicketSyncResult {
 
 /** A page of recorded relationships; totals and source coverage remain unknown. */
 export interface GraphIncidentPage {
+  resolved_from?: string | null;
   evidence_scope?: "current_estate" | "historical_scan" | null;
   scan_id: string;
   snapshot_generation: string | null;

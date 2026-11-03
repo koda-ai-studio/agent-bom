@@ -52,7 +52,7 @@ adopting an organization-wide control plane.
 
 "Local" describes where work or collection happens, not who owns it: a team
 can retain local scans, and one developer can inspect a cloud workload. The
-dashboard offers Personal, Team and Organization views to prioritize relevant
+dashboard offers Personal, Shared and Governance views to prioritize relevant
 pages. The view is a browser preference; it does not change access or evidence
 scope.
 See [Modes and alignment](deployment-modes-and-alignment.md)

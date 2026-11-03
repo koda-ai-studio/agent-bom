@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Download, Network, ShieldCheck } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
 import { SeverityBadge } from "@/components/severity-badge";
+import { incidentPagesComplete } from "@/lib/graph-incident-scope";
 import { useIncidentNeighborhood } from "@/hooks/use-incident-neighborhood";
 import { FINDING_ENTITY_TYPES, type UnifiedEdge, type UnifiedNode } from "@/lib/graph-schema";
 import { buildGraphInvestigationBundle, downloadGraphInvestigation } from "@/lib/graph-investigation-bundle";
@@ -57,15 +58,17 @@ function FindingCard({ finding, component, edges, scanId }: { finding: UnifiedNo
 
 function ComponentFindingEvidence({ assetId, scanId, owner }: { assetId: string; scanId: string; owner: string }) {
   const graph = useIncidentNeighborhood(scanId, assetId, "both", owner);
+  const readId = graph.pages[0]?.node_id ?? assetId;
+  const readScanId = graph.pages[0]?.scan_id ?? scanId;
   const [exportError, setExportError] = useState(false);
-  const component = graph.nodes.find(node => node.id === assetId);
+  const component = graph.nodes.find(node => node.id === readId);
   const ComponentIcon = assetIcon({ entityType: component?.entity_type, attributes: component?.attributes });
-  const adjacent = new Set(graph.edges.flatMap(edge => edge.source === assetId ? [edge.target] : edge.target === assetId ? [edge.source] : []));
-  const neighbors = graph.nodes.filter(node => node.id !== assetId && adjacent.has(node.id));
+  const adjacent = new Set(graph.edges.flatMap(edge => edge.source === readId ? [edge.target] : edge.target === readId ? [edge.source] : []));
+  const neighbors = graph.nodes.filter(node => node.id !== readId && adjacent.has(node.id));
   const findings = neighbors.filter(isFinding);
   const context = neighbors.filter(node => !isFinding(node));
   const last = graph.pages.at(-1);
-  const hasGaps = graph.pages.some(page => (page.completeness.missing_endpoint_count ?? 0) > 0);
+  const hasGaps = graph.pages.some(page => (page.completeness?.missing_endpoint_count ?? 0) > 0);
   return <div className="mx-auto max-w-6xl space-y-5 px-4 py-5 sm:p-6">
     <header className="space-y-3 border-b border-outline pb-5">
       <Link href="/findings" className="text-xs text-ink-secondary underline underline-offset-4">All findings</Link>
@@ -73,11 +76,11 @@ function ComponentFindingEvidence({ assetId, scanId, owner }: { assetId: string;
         <div className="flex min-w-0 items-start gap-3">
           <span className="rounded-xl border border-outline bg-surface p-3"><ComponentIcon className="h-6 w-6 text-[color:var(--accent)]" aria-hidden="true" /></span>
           <div className="min-w-0"><p className="text-xs uppercase tracking-wide text-ink-secondary">Component finding evidence</p>
-            <h1 className="mt-1 break-words text-2xl font-semibold">{component?.label || assetId}</h1>
+            <h1 className="mt-1 break-words text-2xl font-semibold">{component?.label || readId}</h1>
             <p className="mt-1 text-sm text-ink-secondary">What is linked to this component, why it matters, and where to investigate next.</p>
           </div>
         </div>
-        <Link className={`${actionClass} bg-[color:var(--accent)]/10`} href={graphHref(assetId, scanId)}><Network className="h-4 w-4" aria-hidden="true" />Investigate the component chain<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        <Link className={`${actionClass} bg-[color:var(--accent)]/10`} href={graphHref(readId, readScanId)}><Network className="h-4 w-4" aria-hidden="true" />Investigate the component chain<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
       </div>
     </header>
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -87,33 +90,33 @@ function ComponentFindingEvidence({ assetId, scanId, owner }: { assetId: string;
         </div>
         {graph.error && <div role="alert" className="space-y-2 rounded-lg border border-outline p-4">
           <p>{graph.error}</p>
-          <button type="button" className={actionClass} disabled={graph.busy} onClick={() => graph.stale ? graph.restart() : void graph.load(assetId, last?.next_cursor ?? undefined)}>Retry component evidence</button>
+          <button type="button" className={actionClass} disabled={graph.busy} onClick={() => graph.stale ? graph.restart() : void graph.load(readId, last?.next_cursor ?? undefined)}>Retry component evidence</button>
         </div>}
         {hasGaps && <p className="text-sm text-ink-secondary">Some relationship endpoints are missing. Finding coverage is incomplete.</p>}
         <ul aria-label="Component finding records" className="space-y-3">
-          {findings.map(finding => <FindingCard key={finding.id} finding={finding} component={component} scanId={scanId}
-            edges={graph.edges.filter(edge => (edge.source === assetId && edge.target === finding.id) || (edge.target === assetId && edge.source === finding.id))} />)}
+          {findings.map(finding => <FindingCard key={finding.id} finding={finding} component={component} scanId={readScanId}
+            edges={graph.edges.filter(edge => (edge.source === readId && edge.target === finding.id) || (edge.target === readId && edge.source === finding.id))} />)}
         </ul>
         {last && !graph.error && findings.length === 0 && <p className="rounded-xl border border-outline p-4 text-sm">No finding records are linked in the loaded pages. This does not establish a clean component.</p>}
         {last?.next_cursor && !graph.error && <button type="button" className={`${actionClass} disabled:opacity-50`} disabled={graph.busy || graph.capped}
-          onClick={() => void graph.load(assetId, last.next_cursor!)}>{graph.busy ? "Loading…" : "Load more component relationships"}</button>}
+          onClick={() => void graph.load(readId, last.next_cursor!)}>{graph.busy ? "Loading…" : "Load more component relationships"}</button>}
         {graph.capped && last?.next_cursor && <p className="text-sm">Display limit reached. Continue in the component chain to inspect connected entities.</p>}
       </section>
       <aside aria-label="Component context and next steps" className="min-w-0 space-y-4 rounded-xl border border-outline bg-surface p-4">
         <section className="space-y-2"><h2 className="font-semibold">Next steps</h2>
-          <Link className={`${actionClass} w-full justify-start`} href={`/remediation?${new URLSearchParams({ scan: scanId })}`}><ArrowRight className="h-4 w-4" aria-hidden="true" />Review snapshot remediation</Link>
-          <Link className={`${actionClass} w-full justify-start`} href={`/compliance?${new URLSearchParams({ asset: assetId, scan: scanId })}`}><ShieldCheck className="h-4 w-4" aria-hidden="true" />Inspect control evidence</Link>
+          <Link className={`${actionClass} w-full justify-start`} href={`/remediation?${new URLSearchParams({ scan: readScanId })}`}><ArrowRight className="h-4 w-4" aria-hidden="true" />Review snapshot remediation</Link>
+          <Link className={`${actionClass} w-full justify-start`} href={`/compliance?${new URLSearchParams({ asset: readId, scan: readScanId })}`}><ShieldCheck className="h-4 w-4" aria-hidden="true" />Inspect control evidence</Link>
         </section>
         <section className="space-y-2 border-t border-outline pt-4"><h2 className="text-sm font-semibold">Connected context</h2>
           <p className="text-xs text-ink-secondary">Direct neighbors in the loaded evidence. Explore the chain for wider reach.</p>
-          {context.length ? <ul className="space-y-2">{context.slice(0, 6).map(node => <li key={node.id} className="flex flex-wrap items-center justify-between gap-1 text-sm"><Link href={graphHref(node.id, scanId)} className="break-words underline underline-offset-4">{node.label || node.id}</Link><span className="text-xs text-ink-secondary">{humanizeEnum(node.entity_type)}</span></li>)}</ul>
+          {context.length ? <ul className="space-y-2">{context.slice(0, 6).map(node => <li key={node.id} className="flex flex-wrap items-center justify-between gap-1 text-sm"><Link href={graphHref(node.id, readScanId)} className="break-words underline underline-offset-4">{node.label || node.id}</Link><span className="text-xs text-ink-secondary">{humanizeEnum(node.entity_type)}</span></li>)}</ul>
             : <p className="text-xs text-ink-secondary">No other connected components in the loaded pages.</p>}
-          {context.length > 6 && <Link href={graphHref(assetId, scanId)} className="text-xs underline">Explore all {context.length} loaded neighbors</Link>}
+          {context.length > 6 && <Link href={graphHref(readId, readScanId)} className="text-xs underline">Explore all {context.length} loaded neighbors</Link>}
         </section>
         <section className="space-y-2 border-t border-outline pt-4"><h2 className="text-sm font-semibold">Evidence scope</h2>
-          <dl className="space-y-2 text-xs"><div><dt className="text-ink-secondary">Component</dt><dd className="break-all font-mono">{assetId}</dd></div><div><dt className="text-ink-secondary">Snapshot</dt><dd className="break-all">{scanId.startsWith("current-estate:") ? "Current tenant estate" : scanId}</dd></div></dl>
+          <dl className="space-y-2 text-xs"><div><dt className="text-ink-secondary">Component</dt><dd className="break-all font-mono">{readId}</dd></div><div><dt className="text-ink-secondary">Snapshot</dt><dd className="break-all">{readScanId.startsWith("current-estate:") ? "Current tenant estate" : readScanId}</dd></div></dl>
           <p className="text-xs leading-relaxed text-ink-secondary">Only findings directly linked to this component are listed. Recorded associations do not establish runtime exploitation.</p>
-          {last && !last.next_cursor && !graph.error && <p className="text-xs text-ink-secondary">End of recorded relationship pages. Source collection coverage remains unknown.</p>}
+          {last && !last.next_cursor && !graph.error && <p className="text-xs text-ink-secondary">{incidentPagesComplete(graph.pages) ? "End of recorded relationship pages. Source collection coverage remains unknown." : "End of available pages; relationship evidence is incomplete."}</p>}
         </section>
         <details className="border-t border-outline pt-4 text-sm"><summary className="cursor-pointer font-medium">Export component evidence</summary>
           <p className="my-2 text-xs text-ink-secondary">An unsigned local bundle of loaded relationships, finding nodes, source metadata, snapshot generation and completeness receipts.</p>

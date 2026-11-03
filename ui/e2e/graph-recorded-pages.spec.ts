@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 const root = "agent:endpoint-a:desktop";
 const server = "server:endpoint-a:files";
@@ -8,10 +9,11 @@ const service = node(server, "server", "File server");
 const edge = { id: "recorded", source: root, target: server, relationship: "uses", direction: "bidirectional", weight: 1, evidence: { basis: "configured" } };
 const session = { authenticated: true, auth_required: false, tenant_id: "fixture", auth_method: "anonymous", role: "admin", configured_modes: [], recommended_ui_mode: "no_auth", memberships: [] };
 
-for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
-  test(`recorded relationship pages reject mixed generations ${theme} ${width}`, async ({ page }, testInfo) => {
+for (const alias of [false, true]) for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
+  test(`recorded relationship pages reject mixed generations ${alias ? "resolved alias" : "exact ID"} ${theme} ${width}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    const canonical = alias ? "agent:canonical:desktop" : root;
     const requests: URL[] = [];
     const queries: Array<{ scan_id: string; roots: string[] }> = [];
     let replaced = false;
@@ -29,7 +31,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       if (url.pathname === "/v1/graph/incident-edges") {
         requests.push(url);
         if (url.searchParams.has("cursor")) { replaced = true; return route.fulfill({ status: 409, json: { detail: "Snapshot replaced" } }); }
-        return route.fulfill({ json: { scan_id: "snapshot", snapshot_generation: replaced ? "b".repeat(32) : generation, node_id: root, found: true, direction: "both", limit: 24, node: agent, nodes: [service], edges: [edge], next_cursor: replaced ? null : "next", completeness: { complete: replaced, truncated: !replaced, sampled: false, status: replaced ? "complete" : "partial", total: null, returned: 1, missing_endpoint_count: 0, scope: "incident_edge_page" } } });
+        return route.fulfill({ json: { scan_id: "snapshot", snapshot_generation: replaced ? "b".repeat(32) : generation, node_id: canonical, resolved_from: alias ? root : null, found: true, direction: "both", limit: 24, node: { ...agent, id: canonical }, nodes: [service], edges: [{ ...edge, source: canonical }], next_cursor: replaced ? null : "next", completeness: { complete: replaced, truncated: !replaced, sampled: false, status: replaced ? "complete" : "partial", total: null, returned: 1, missing_endpoint_count: 0, scope: "incident_edge_page" } } });
       }
       if (/^\/v1\/scan\//.test(url.pathname)) fullReports++;
       return route.fulfill({ status: 404, json: { detail: "Outside fixture scope" } });
@@ -42,10 +44,20 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await inspector.getByRole("tab", { name: "Relationships", exact: true }).click();
     await expect(inspector.getByRole("button", { name: "File server", exact: true })).toBeVisible();
     await expect(inspector.getByText("Bidirectional ↔ · Uses · configured", { exact: true })).toBeVisible();
+    await inspector.getByText("Export investigation", { exact: true }).click();
+    const downloadReady = page.waitForEvent("download");
+    await inspector.getByRole("button", { name: "Download investigation JSON" }).click();
+    const download = await downloadReady;
+    const bundle = JSON.parse(await readFile((await download.path())!, "utf8"));
+    expect(bundle.selection).toMatchObject({ node_id: canonical, requested_node_id: root, snapshot_generation: generation });
+    expect(bundle.relationships[0].source).toBe(canonical);
+    expect(bundle.scope.recorded_relationships_complete).toBe(false);
+    expect(new URL(bundle.return_url).searchParams.get("root")).toBe(canonical);
     await inspector.getByRole("button", { name: "Load more recorded relationships" }).click();
     await expect(inspector.getByRole("alert")).toContainText("Snapshot changed");
     await expect(inspector.getByRole("button", { name: "File server", exact: true })).toHaveCount(0);
     expect(requests[1]?.searchParams.get("snapshot_generation")).toBe(generation);
+    expect(requests[1]?.searchParams.get("node_id")).toBe(canonical);
     await inspector.getByRole("button", { name: "Retry relationships" }).click();
     await expect(inspector.getByRole("button", { name: "File server", exact: true })).toBeVisible();
     expect(requests[2]?.searchParams.get("snapshot_generation")).toBeNull();
