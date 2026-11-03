@@ -1002,7 +1002,11 @@ class TestIaCNodes:
         assert any(anchor.label == "deploy/k8s/api.yaml" for anchor in anchors)
         anchor = next(anchor for anchor in anchors if anchor.label == "deploy/k8s/api.yaml")
         assert anchor.attributes["target_type"] == "iac_file"
-        assert g.has_edge("misconfig:iac:K8S-007:deploy/k8s/api.yaml:27", "iac_target:kubernetes:deploy/k8s/api.yaml")
+        from agent_bom.finding import iac_finding_to_finding
+
+        occurrence = iac_finding_to_finding(report["iac_findings"]["findings"][0]).id
+        assert misconfigs[0].id == f"misconfig:iac:{occurrence}"
+        assert g.has_edge(misconfigs[0].id, "iac_target:kubernetes:deploy/k8s/api.yaml")
 
 
 class TestSkillAuditNodes:
