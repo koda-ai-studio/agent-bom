@@ -208,6 +208,11 @@ const VENDOR_DEFAULT: Record<string, AssetKind> = {
   vercel: "application", cloudflare: "network",
 };
 
+/** Collector metadata may name any string; inherited object properties are not registry entries. */
+function ownEntry<T>(values: Record<string, T> | undefined, key: string): T | undefined {
+  return values && Object.hasOwn(values, key) ? values[key] : undefined;
+}
+
 function vendorOf(attributes: Record<string, unknown> | undefined): string {
   for (const key of ["cloud_provider", "provider", "vendor"]) {
     const value = attributes?.[key];
@@ -226,11 +231,11 @@ export function normalizeResourceType(value: string): string {
 export function kindForResourceType(value: string, vendor = ""): AssetKind | null {
   const word = normalizeResourceType(value);
   if (!word) return null;
-  const vendorKind = VENDOR_EXACT[vendor]?.[word];
+  const vendorKind = ownEntry(ownEntry(VENDOR_EXACT, vendor), word);
   if (vendorKind) return vendorKind;
-  let kind: AssetKind | null = EXACT[word] ?? null;
+  let kind: AssetKind | null = ownEntry(EXACT, word) ?? null;
   if (!kind) for (const [pattern, ruled] of RULES) if (pattern.test(word)) { kind = ruled; break; }
-  return kind ? VENDOR_REMAP[vendor]?.[kind] ?? kind : null;
+  return kind ? ownEntry(VENDOR_REMAP, vendor)?.[kind] ?? kind : null;
 }
 
 export interface AssetKindInput {
@@ -269,7 +274,7 @@ export function resolveAssetKind({ entityType, nodeType, attributes, provider }:
     if (kind) return { kind, basis: "subtype" };
   }
   if (!subtypes.length) return { kind: entityKind, basis: "entity" };
-  return { kind: VENDOR_DEFAULT[vendor] ?? entityKind, basis: "fallback" };
+  return { kind: ownEntry(VENDOR_DEFAULT, vendor) ?? entityKind, basis: "fallback" };
 }
 
 export function assetKind(input: AssetKindInput): AssetKind {
@@ -300,7 +305,7 @@ export function assetKindLabel(input: AssetKindInput): string {
   if (service) return service;
   if (resolved.basis === "subtype") return ASSET_KINDS[resolved.kind].label;
   const type = input.entityType && Object.hasOwn(ENTITY_KIND, input.entityType) ? input.entityType : input.nodeType ?? "";
-  return ENTITY_LABEL[type] ?? ASSET_KINDS[resolved.kind].label;
+  return ownEntry(ENTITY_LABEL, type) ?? ASSET_KINDS[resolved.kind].label;
 }
 
 /** The kind label only when a recorded subtype refines the entity (a server that is an endpoint, a container that is an image). */
@@ -308,7 +313,7 @@ export function assetSubtypeLabel(input: AssetKindInput): string | undefined {
   const resolved = resolveAssetKind(input);
   const type = input.entityType && Object.hasOwn(ENTITY_KIND, input.entityType) ? input.entityType : input.nodeType ?? "";
   if (resolved.basis !== "subtype") return undefined;
-  const generic = ENTITY_LABEL[type] ?? ASSET_KINDS[ENTITY_KIND[type] ?? "unknown"].label;
+  const generic = ownEntry(ENTITY_LABEL, type) ?? ASSET_KINDS[ownEntry(ENTITY_KIND, type) ?? "unknown"].label;
   const label = ASSET_KINDS[resolved.kind].label;
   return label === generic ? undefined : label;
 }
