@@ -11,7 +11,7 @@ export function readableGraphNodeStyle(zoom: number, boundedContext = false, roo
     "--graph-node-card-width": roomyCaptions ? "clamp(220px, 30vw, 340px)" : "220px",
     "--graph-node-label-size": `${Math.min(roomyCaptions ? 36 : 30, Math.max(18, 15 / scale))}px`,
     "--graph-node-glyph-size": `${Math.min(128, Math.max(72, 64 / scale))}px`,
-    "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / scale))}px`,
+    "--graph-node-icon-size": `${Math.min(56, Math.max(36, 34 / scale))}px`,
     "--graph-node-meta-size": `${Math.min(roomyCaptions ? 32 : 30, Math.max(12, 12 / scale))}px`,
     "--graph-group-label-size": `${Math.min(75, Math.max(18, 12 / scale))}px`,
   } as CSSProperties;

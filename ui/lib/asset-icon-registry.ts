@@ -1,11 +1,13 @@
 import type { ComponentType, CSSProperties } from "react";
 import { McpGlyph } from "@/components/graph-mcp-glyph";
+import { BucketGlyph, VirtualMachineGlyph } from "@/components/graph-resource-glyphs";
+import { recordedServiceLabel } from "@/lib/graph-service-identity";
 import {
-  Activity, AppWindow, Archive, BadgeCheck, Blocks, Bot, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
-  Cable, CalendarClock, Cloud, CloudCog, Container, Cpu, Database, Disc3, DraftingCompass, Earth, FileCode, FileCog,
-  FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderInput, FolderOutput, Gpu, Handshake, HardDrive, IdCard, Inbox, KeyRound,
-  Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, PlugZap, ScrollText, Share2,
-  ShieldAlert, ShieldCheck, ShipWheel, Siren, Sparkles, SquareFunction, Store, Table, Ticket, User, UserCog, Users, Vault,
+  Activity, AppWindow, BadgeCheck, Blocks, Bot, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
+  Cable, CalendarClock, Cloud, CloudCog, Container, Database, Disc3, DraftingCompass, Earth, FileCode, FileCog,
+  FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderInput, FolderOutput, Globe, Gpu, Handshake, HardDrive, Inbox, KeyRound,
+  Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, ScrollText, Share2,
+  ShieldAlert, ShieldCheck, ShieldUser, ShipWheel, Siren, Sparkles, SquareFunction, Store, Table, Ticket, User, UserCog, Users, Vault,
   Unplug, Warehouse, Webhook, Workflow, Wrench, Zap,
 } from "lucide-react";
 
@@ -27,7 +29,7 @@ export const ASSET_KINDS = {
   environment: { label: "Env", icon: Earth },
   fleet: { label: "Fleet", icon: MonitorSmartphone },
   cluster: { label: "Cluster", icon: ShipWheel },
-  vm: { label: "VM", icon: Cpu },
+  vm: { label: "VM", icon: VirtualMachineGlyph },
   gpu_compute: { label: "GPU compute", icon: Gpu },
   function: { label: "Function", icon: SquareFunction },
   workload: { label: "Workload", icon: Container },
@@ -37,7 +39,7 @@ export const ASSET_KINDS = {
   api_gateway: { label: "Gateway", icon: Webhook },
   network: { label: "Network", icon: Network },
   firewall: { label: "Firewall", icon: BrickWall },
-  bucket: { label: "Bucket", icon: Archive },
+  bucket: { label: "Bucket", icon: BucketGlyph },
   stage: { label: "Stage", icon: FolderInput },
   database: { label: "Database", icon: Database },
   warehouse: { label: "Warehouse", icon: Warehouse },
@@ -50,7 +52,7 @@ export const ASSET_KINDS = {
   integration: { label: "Integration", icon: Cable },
   data_connection: { label: "Data connection", icon: Unplug },
   model: { label: "Model", icon: BrainCircuit },
-  endpoint: { label: "Endpoint", icon: PlugZap },
+  endpoint: { label: "Endpoint", icon: Globe },
   ai_service: { label: "AI service", icon: Sparkles },
   ml_workspace: { label: "ML workspace", icon: FlaskConical },
   dataset: { label: "Dataset", icon: FileStack },
@@ -64,7 +66,7 @@ export const ASSET_KINDS = {
   framework: { label: "Framework", icon: Library },
   user: { label: "User", icon: User },
   group: { label: "Group", icon: Users },
-  role: { label: "Role", icon: IdCard },
+  role: { label: "Role", icon: ShieldUser },
   policy: { label: "Policy", icon: ScrollText },
   service_account: { label: "Service account", icon: UserCog },
   service_principal: { label: "Principal", icon: Fingerprint },
@@ -278,6 +280,10 @@ export function assetIcon(input: AssetKindInput): EntityIcon {
   return ASSET_KINDS[assetKind(input)].icon;
 }
 
+export function assetServiceLabel(input: AssetKindInput): string | undefined {
+  return recordedServiceLabel(input, assetKind(input), subtypeValues(input.attributes).map(normalizeResourceType));
+}
+
 export function assetKindLabel(input: AssetKindInput): string {
   const subtype = input.attributes?.subtype;
   if (input.entityType === "ci_job" || input.nodeType === "ciJob") {
@@ -290,6 +296,8 @@ export function assetKindLabel(input: AssetKindInput): string {
   if ((input.entityType === "code_module" || input.nodeType === "codeModule") && input.attributes?.subtype === "workspace_package") return "Workspace package";
   if ((input.entityType ?? input.nodeType) === "misconfiguration" && input.attributes?.finding_kind === "iac") return "IaC finding";
   const resolved = resolveAssetKind(input);
+  const service = recordedServiceLabel(input, resolved.kind, subtypeValues(input.attributes).map(normalizeResourceType));
+  if (service) return service;
   if (resolved.basis === "subtype") return ASSET_KINDS[resolved.kind].label;
   const type = input.entityType && Object.hasOwn(ENTITY_KIND, input.entityType) ? input.entityType : input.nodeType ?? "";
   return ENTITY_LABEL[type] ?? ASSET_KINDS[resolved.kind].label;
