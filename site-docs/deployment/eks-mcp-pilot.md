@@ -41,7 +41,7 @@ Use the packaged control-plane chart with the focused pilot values file:
 Install:
 
 ```bash
-helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
   -n agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml
 ```
@@ -210,7 +210,7 @@ kubectl -n agent-bom create secret generic agent-bom-evidence-signing \
 rm /tmp/evidence-priv.pem
 
 # 3. Helm install with the focused pilot values
-helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
   -n agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml
 ```
@@ -269,7 +269,7 @@ cp deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml my-upstreams.ya
 $EDITOR my-upstreams.yaml
 
 # Turn on the gateway via Helm — pass the YAML inline via --set-file
-helm upgrade agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+helm upgrade agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
   -n agent-bom --reuse-values \
   --set gateway.enabled=true \
   --set-file gateway.upstreamsYaml=my-upstreams.yaml

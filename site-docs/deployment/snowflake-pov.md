@@ -67,7 +67,7 @@ store, or External Secrets. Do not commit the real URL.
 For a focused EKS POV with BYO Postgres:
 
 ```bash
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml \
   -f deploy/helm/agent-bom/examples/byo-postgres-values.yaml
@@ -76,7 +76,7 @@ helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom -
 For a production-shaped EKS profile:
 
 ```bash
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```

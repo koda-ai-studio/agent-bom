@@ -76,7 +76,7 @@ helm install keda kedacore/keda --namespace keda --create-namespace
 kubectl get crd scaledobjects.keda.sh   # should exist
 
 # 2. Render the agent-bom chart with the KEDA preset on top of production.
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml \
   -f deploy/helm/agent-bom/examples/eks-keda-values.yaml \

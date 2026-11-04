@@ -103,7 +103,7 @@ Update:
 ## 4. Install
 
 ```bash
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
   --namespace agent-bom \
   --create-namespace \
   -f ./agent-bom-eks-vanilla-values.yaml
