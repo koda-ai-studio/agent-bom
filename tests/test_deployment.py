@@ -118,27 +118,21 @@ def test_retired_deploy_manifests_stay_removed_and_unreferenced():
 
 
 def test_procfile_exists():
-    """Procfile serves the hosted public read-only tier over streamable HTTP."""
+    """Procfile preserves operator-configured authentication over streamable HTTP."""
     f = ROOT / "deploy" / "Procfile"
     assert f.exists(), "deploy/Procfile is missing"
     content = f.read_text().strip()
     assert content.startswith("web:")
     assert "mcp" in content and "server" in content
     assert "streamable-http" in content
-    assert "--public-readonly" in content
+    assert "--public-readonly" not in content
     assert "--allow-insecure-no-auth" not in content
 
 
-def test_railway_start_command_opts_into_the_public_tier_only_for_railway():
-    """Railway overrides the shared image CMD; exec form would not expand $PORT."""
+def test_railway_start_command_preserves_the_authenticated_image_default():
+    """Railway inherits the image CMD and must not override configured OAuth."""
     data = json.loads((ROOT / "railway.json").read_text())
-    command = data["deploy"]["startCommand"]
-    assert command.startswith(
-        '/bin/sh -c "exec env AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS=1 agent-bom mcp server --transport streamable-http'
-    )
-    assert "--public-readonly" in command and "${PORT:-8423}" in command
-    assert "AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS=1" in command
-    assert "--allow-insecure-no-auth" not in command
+    assert "startCommand" not in data["deploy"]
 
 
 def test_dockerfile_sse_does_not_opt_into_insecure_public_mode():
@@ -541,13 +535,13 @@ def test_health_endpoint_fields():
     assert "tool_count" in summary
 
 
-def test_deployment_freshness_workflow_probes_public_tier_and_parses_tool_count():
-    """Railway serves the anonymous tier: the probe needs no credential and must see 401s."""
+def test_deployment_freshness_workflow_probes_auth_and_parses_tool_count():
+    """Railway verifies authorized access and anonymous rejection with a managed credential."""
     workflow = (ROOT / ".github" / "workflows" / "deployment-freshness.yml").read_text()
     railway = workflow.split("- name: Check Railway deployment", 1)[1].split("- name: Check Smithery", 1)[0]
-    assert "RAILWAY_MCP_BEARER_TOKEN" not in railway
-    assert "python3 -m agent_bom.deployment_probe" in railway
-    assert "--require-public-readonly" in railway
+    assert "RAILWAY_MCP_BEARER_TOKEN" in railway
+    assert "python3 scripts/deploy/probe_with_oauth.py --" in railway
+    assert "--require-mcp-auth" in railway
     assert "SMITHERY_SERVER_QUALIFIED_NAME" in workflow
     assert "--surface smithery" in workflow
     assert "tool_count" in workflow
@@ -923,12 +917,12 @@ def test_refresh_latest_keyless_signs_and_verifies_every_published_digest():
         assert job.index("cosign sign --yes") < job.index("cosign verify")
 
 
-def test_deploy_mcp_sse_workflow_probes_the_public_tier_contract():
-    """Post-deploy verification proves anonymous lookups work and other tools are 401."""
+def test_deploy_mcp_sse_workflow_probes_the_authenticated_contract():
+    """Post-deploy verification preserves OAuth and rejects anonymous MCP access."""
     workflow = (ROOT / ".github" / "workflows" / "deploy-mcp-sse.yml").read_text()
-    assert "RAILWAY_MCP_BEARER_TOKEN" not in workflow
-    assert "python3 -m agent_bom.deployment_probe" in workflow
-    assert "--server-card --require-public-readonly" in workflow
+    assert "RAILWAY_MCP_BEARER_TOKEN" in workflow
+    assert "python3 scripts/deploy/probe_with_oauth.py --" in workflow
+    assert "--server-card --require-mcp-auth" in workflow
     assert "--attempts 5" in workflow
 
 

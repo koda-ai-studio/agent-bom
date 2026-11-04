@@ -482,7 +482,7 @@ def test_public_probe_rejects_insecure_origins(monkeypatch):
             verify_public_readonly(url, expected_version="0.1.0", timeout=1)
 
 
-def test_railway_workflows_probe_the_public_tier():
+def test_railway_workflows_probe_configured_authentication():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
@@ -490,8 +490,10 @@ def test_railway_workflows_probe_the_public_tier():
     freshness = (root / ".github/workflows/deployment-freshness.yml").read_text()
     railway = freshness.split("- name: Check Railway deployment", 1)[1].split("- name: Check Smithery", 1)[0]
     for text in (deploy, railway):
-        assert "--server-card --require-public-readonly" in text
-    assert railway.index("--require-public-readonly") < railway.index('echo "probe_failed=false"')
+        assert "--server-card --require-mcp-auth" in text
+        assert "MCP_PROBE_OAUTH_CLIENT_SECRET" in text
+        assert "scripts/deploy/probe_with_oauth.py --" in text
+    assert railway.index("--require-mcp-auth") < railway.index('echo "probe_failed=false"')
 
 
 def test_public_readonly_probe_requires_http_401_not_a_jsonrpc_error(monkeypatch, tmp_path):

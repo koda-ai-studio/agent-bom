@@ -7,6 +7,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.113.2] - 2026-11-03
+
+### Fixed
+- Current-estate graph reads retain their previous complete generation while a background worker promotes new evidence, avoiding a transient unavailable response during ingestion refresh. The response labels retained evidence as the previous generation.
+- Hosted MCP startup preserves configured OAuth instead of forcing an incompatible public read-only tier. Railway and Procfile deployments use the authenticated default.
+- Release and deployment-freshness checks use the configured managed credential, verify the exact release contract, and reject anonymous MCP access.
+- Release checks distinguish an accepted deployment upload from a verified rollout. Failed startup, stale deployment evidence, and unavailable probe credentials cannot report a successful rollout.
+
+### Upgrade notes
+- Keep the existing OAuth issuer, audience and subject configuration. Do not combine OAuth with the optional public read-only tier.
+- An unavailable identity provider leaves deployment verification failed; rerun verification after provider recovery.
+
 ## [0.113.1] - 2026-11-03
 
 ### Highlights
@@ -4567,7 +4579,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.1...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.2...HEAD
+[0.113.2]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.1...v0.113.2
 [0.113.1]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.0...v0.113.1
 [0.113.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.112.1...v0.113.0
 [0.112.1]: https://github.com/koda-ai-studio/agent-bom/compare/v0.111.0...v0.112.1

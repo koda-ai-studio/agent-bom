@@ -150,3 +150,25 @@ def test_main_flags_a_missing_probe_credential_as_configuration(monkeypatch, tmp
 
     assert "probe_outcome=probe_configuration\n" in output.read_text()
     assert "RAILWAY_MCP_BEARER_TOKEN is empty" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("outcome", ["auth_provider_unavailable", "credential_rejected", "probe_configuration", "probe_failed"])
+def test_unverified_rollout_never_reports_success(outcome, tmp_path):
+    import os
+    import subprocess
+
+    import yaml
+
+    workflow = yaml.safe_load((Path(__file__).parents[1] / ".github/workflows/deploy-mcp-sse.yml").read_text())
+    step = next(s for s in workflow["jobs"]["deploy"]["steps"] if s.get("name", "").startswith("Classify a failed post-deploy probe"))
+    summary = tmp_path / "summary.md"
+    result = subprocess.run(
+        ["bash", "-c", step["run"]],
+        env={**os.environ, "OUTCOME": outcome, "DETAIL": "test probe unavailable", "VERSION": "0.0.0", "GITHUB_STEP_SUMMARY": str(summary)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1
+    assert "Rollout remains unverified" in summary.read_text()
+    assert "Deploy succeeded" not in result.stdout

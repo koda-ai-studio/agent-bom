@@ -11,6 +11,7 @@ import shutil
 import sys
 import tempfile
 import types
+from concurrent.futures import wait
 from pathlib import Path
 from typing import Any
 
@@ -574,6 +575,13 @@ def _drain_graph_warmups() -> None:
         module = sys.modules.get(name)
         if module is not None:
             assert module.wait_idle(10), f"Background graph warm-up did not finish: {name}"
+    # Current-estate refresh has its own queue. Drain it before fixture cleanup
+    # restores store pointers or another performance test starts measuring.
+    module = sys.modules.get("agent_bom.api.current_graph_builds")
+    if module is not None:
+        with module._QUEUE.lock:
+            pending = list(module._QUEUE.pending.values())
+        assert not wait(pending, timeout=10).not_done, "Current graph projection build did not finish"
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)

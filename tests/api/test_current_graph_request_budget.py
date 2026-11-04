@@ -144,3 +144,32 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
     assert fresh.status_code == 200, fresh.text
     assert fresh.json()["scan_id"] != old
     assert "freshness" not in fresh.json()["collection_coverage"]
+
+
+@pytest.mark.parametrize("completed", [False, True])
+def test_refresh_keeps_previous_generation_when_worker_promotes_during_wait(estate, monkeypatch, completed):  # noqa: F811
+    """A timed-out read retains its fallback even if the worker promotes newer evidence."""
+    from agent_bom.api import current_graph_builds
+
+    record(estate, 8, "repo-a", "old-package")
+    store = CurrentGraphStore(estate[1], estate[0])
+    old = store.latest_snapshot_id(tenant_id=TENANT)
+    record(estate, 9, "repo-a", "middle-package")
+    promoted = []
+
+    def promote_after_reader_captured_evidence(*args, **kwargs):
+        record(estate, 10 + len(promoted), "repo-a", "newest-package")
+        # A separate worker owns a fresh evidence scope, just like the build queue.
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            promoted.append(workers.submit(store.latest_snapshot_id, tenant_id=TENANT).result(timeout=5))
+        return promoted[0] if completed and len(promoted) == 1 else None
+
+    monkeypatch.setattr(current_graph_builds, "await_current_build", promote_after_reader_captured_evidence)
+    with estate_read_boundary(), finding_read_scope():
+        served = store.latest_snapshot_id(tenant_id=TENANT)
+        assert served == old
+        assert promoted[0] != old
+        assert set(store.load_graph(tenant_id=TENANT).nodes) == {"old-package"}
+        assert store.snapshot_stats(tenant_id=TENANT)["collection_coverage"]["freshness"] == "previous_generation"
+    assert not store._pins
+    assert set(store.load_graph(tenant_id=TENANT).nodes) == {"newest-package"}
