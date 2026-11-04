@@ -1423,6 +1423,7 @@ def test_pr_browser_smoke_covers_graph_drawer_readability() -> None:
     command = next(step["run"] for step in steps if step.get("name") == "UI E2E smoke")
     assert "e2e/graph-efficient-workspace.spec.ts" in command
     assert "e2e/graph-real-topology.spec.ts" in command
+    assert "e2e/graph-service-identity.spec.ts" in command
 
 
 def test_release_ui_context_aggregates_every_playwright_shard() -> None:
