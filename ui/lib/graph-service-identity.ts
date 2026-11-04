@@ -41,7 +41,7 @@ export function recordedServiceLabel(input: AssetKindInput, kind: AssetKind, nat
   const vendors = [input.provider, attributes.cloud_provider, attributes.provider, attributes.vendor]
     .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
     .map(value => value.trim().toLowerCase());
-  if (!vendors.length || new Set(vendors).size !== 1) return undefined;
+  if (!vendors.length || new Set(vendors).size !== 1 || !Object.hasOwn(SERVICES, vendors[0]!)) return undefined;
   const labels = new Set(SERVICES[vendors[0]!]?.filter(([expectedKind, pattern]) =>
     expectedKind === kind && nativeTypes.some(value => pattern.test(value))).map(([, , label]) => label));
   return labels.size === 1 ? [...labels][0] : undefined;

@@ -38,6 +38,10 @@ describe("recorded service identity on graph nodes", () => {
     expect(assetKindLabel({ entityType: "data_store", attributes: { cloud_provider: "aws", resource_type: "rds", service: "dynamodb" } })).toBe("Database");
   });
 
+  it.each(["constructor", "__proto__", "toString"])("keeps an unrecognized provider %s generic", provider => {
+    expect(assetKindLabel({ entityType: "data_store", attributes: { cloud_provider: provider, resource_type: "s3" } })).toBe("Bucket");
+  });
+
   it("keeps findings and code distinct from the service described in their evidence", () => {
     expect(assetKindLabel({ entityType: "misconfiguration", attributes: { cloud_provider: "aws", resource_type: "s3" } })).toBe("Finding");
     expect(assetKindLabel({ entityType: "package", attributes: { cloud_provider: "aws", resource_type: "s3" } })).toBe("Package");
