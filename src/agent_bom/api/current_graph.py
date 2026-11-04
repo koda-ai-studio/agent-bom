@@ -435,7 +435,9 @@ class CurrentGraphStore:
             if live := self._cached_live_id(tenant, evidence[3]):
                 return self._pin(live)
             cached = self._cache.get(tenant)
-            previous = cached[2] if cached and self._live(tenant, cached[2]) else ""
+            # Keep the fallback alive across the unlocked background-build wait.
+            # A worker may promote a different evidence revision during that wait.
+            previous = self._pin(cached[2]) if cached and self._live(tenant, cached[2]) else ""
         if inside_estate_read_boundary():
             # A request may wait briefly for read-your-writes, but never owns
             # an unbounded build. Worker reads retain the synchronous path.

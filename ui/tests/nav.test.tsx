@@ -70,7 +70,7 @@ vi.mock('@/lib/api', () => ({
       scan_sources: [],
       scan_count: 0,
     }),
-    health: vi.fn().mockResolvedValue({ status: 'ok', version: '0.113.1' }),
+    health: vi.fn().mockResolvedValue({ status: 'ok', version: '0.113.2' }),
   },
 }))
 
@@ -855,6 +855,6 @@ describe('control plane status without a reported version', () => {
     })
     expect(summary.getAttribute('aria-label')).toBe('Control plane online')
     expect(summary.textContent).not.toMatch(/(^|\W)v(\W|$)/)
-    vi.mocked(api.health).mockResolvedValue({ status: 'ok', version: '0.113.1' })
+    vi.mocked(api.health).mockResolvedValue({ status: 'ok', version: '0.113.2' })
   })
 })

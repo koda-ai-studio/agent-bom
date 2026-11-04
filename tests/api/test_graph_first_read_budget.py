@@ -204,7 +204,7 @@ def test_ingest_keeps_health_and_bounded_evidence_reads_responsive(empty_estate_
     final_deadline = time.monotonic() + 15
     while True:
         final = client.get("/v1/graph?limit=100&view=canvas", headers=headers)
-        assert final.status_code == 200
+        assert final.status_code == 200, final.text
         if final.json()["snapshot_generation"] != prior_generation or time.monotonic() > final_deadline:
             break
         assert final.json()["collection_coverage"]["freshness"] == "previous_generation"

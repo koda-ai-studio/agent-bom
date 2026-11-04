@@ -170,3 +170,36 @@ async def test_api_reset_discards_previous_agents_response(monkeypatch) -> None:
     assert await discovery.list_agents(None, refresh=False) == old
     conftest._reset_api_runtime_state()
     assert await discovery.list_agents(None, refresh=False) == current
+
+
+def test_graph_drain_waits_for_current_projection_workers(monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    from agent_bom.api import current_graph_builds
+
+    entered, release = threading.Event(), threading.Event()
+
+    class Store:
+        def _current_id(self, tenant):
+            entered.set()
+            assert release.wait(5)
+            return tenant
+
+    queue = current_graph_builds.CurrentBuildQueue(workers=1)
+    monkeypatch.setattr(current_graph_builds, "_QUEUE", queue)
+    try:
+        pending = queue.submit(Store(), "isolation-test")
+        assert entered.wait(5)
+        with ThreadPoolExecutor(max_workers=1) as workers:
+            drained = workers.submit(conftest._drain_graph_warmups)
+            try:
+                time.sleep(0.05)
+                assert not drained.done(), "current projection outlived the test drain"
+            finally:
+                release.set()
+            drained.result(timeout=5)
+        assert pending.done()
+    finally:
+        release.set()
+        queue.executor.shutdown(wait=True)

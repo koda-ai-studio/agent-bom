@@ -66,8 +66,8 @@ def probe_environment(environ: dict[str, str]) -> dict[str, str]:
     return env
 
 
-# Outcome classes the deploy job reads back: only an identity-provider outage
-# is "deploy succeeded, probe deferred"; everything else fails the check.
+# Outcome classes the deploy job reads back. An identity-provider outage leaves
+# verification deferred; every unverified rollout still fails the deploy check.
 OUTCOME_AUTH_PROVIDER_UNAVAILABLE = "auth_provider_unavailable"
 OUTCOME_CREDENTIAL_REJECTED = "credential_rejected"
 OUTCOME_PROBE_CONFIGURATION = "probe_configuration"

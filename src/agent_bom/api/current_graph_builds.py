@@ -129,7 +129,7 @@ def resolve_request_current(store: Any, tenant: str, epoch: str, evidence: tuple
     # A coalesced worker may have prepared an older evidence revision. Queue
     # this reader's revision too; do not silently present the older one as fresh.
     if completed:
-        previous = completed
+        previous = previous or completed
         await_current_build(store, tenant, seconds=0, prepared=prepared)
     with store._lock.shared():
         if previous and store._live(tenant, previous) and not cached_read((f"current-count-evidence:{id(store)}", tenant)):

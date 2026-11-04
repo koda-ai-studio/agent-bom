@@ -539,3 +539,13 @@ normal scrypt verification; it never grants access. Failed verifications are not
 cached. Cache entries remain bounded by `AGENT_BOM_API_KEY_VERIFY_CACHE_MAX_ENTRIES`;
 setting that limit or `AGENT_BOM_API_KEY_VERIFY_CACHE_TTL_SECONDS` to zero disables
 the optimization.
+
+## Current graph refresh
+
+A current-estate request retains the previous complete generation while waiting
+for a background refresh. A concurrent promotion cannot delete that generation
+until the request's read scope ends. Responses using retained evidence declare
+`freshness: previous_generation`; they do not claim the latest source evidence.
+A cold request with no complete generation still returns a bounded, retryable
+503 while building. Explicit stale generation continuations still fail with 409,
+and generation retention does not cross tenant boundaries.
