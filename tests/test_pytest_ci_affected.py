@@ -211,3 +211,29 @@ def test_cli_matrix_and_selection_include_identical_contracts(tmp_path: Path) ->
     matrix = subprocess.run([*command, "--matrix"], cwd=tmp_path, capture_output=True, text=True, check=True)
     assert selection.stdout.splitlines() == sorted(SMOKE_TESTS)
     assert json.loads(matrix.stdout) == list(range(12))
+
+
+def test_correctness_selection_does_not_create_a_performance_only_shard(tmp_path: Path) -> None:
+    import json
+
+    from scripts.pytest_ci_plan import plan_shards
+
+    budgets = {"tests/api/test_graph_first_read_budget.py", "tests/test_push_ingest_perf_budget.py"}
+    correctness = "tests/test_example.py"
+    for name in {*budgets, correctness}:
+        _write(tmp_path / name)
+    command = [
+        sys.executable,
+        str(ROOT / "scripts/pytest_ci_affected.py"),
+        "--root",
+        ".",
+        "--correctness",
+        *sorted(budgets),
+        correctness,
+    ]
+    selection = subprocess.run(command, cwd=tmp_path, capture_output=True, text=True, check=True)
+    matrix = subprocess.run([*command, "--matrix"], cwd=tmp_path, capture_output=True, text=True, check=True)
+    assert selection.stdout.splitlines() == [correctness]
+    assert json.loads(matrix.stdout) == [0]
+    shards = plan_shards([tmp_path / name for name in selection.stdout.splitlines()], total=len(json.loads(matrix.stdout)))
+    assert shards == [[tmp_path / correctness]]

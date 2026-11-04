@@ -10,7 +10,7 @@ import pytest
 from starlette.testclient import TestClient
 
 from agent_bom.demo_estate.showcase_graph import SHOWCASE_BASELINE_SCAN_ID
-from tests._demo_estate_fixtures import VIEWER, demo_graph_get
+from tests._demo_estate_fixtures import VIEWER, _wait_for_current_graph, demo_graph_get
 
 
 def test_demo_bootstrap_log_does_not_emit_raw_graph_owner_scan_id() -> None:
@@ -267,6 +267,7 @@ def test_demo_estate_reseeds_when_marker_job_has_no_findings(
 
     after = demo_estate_client.get("/v1/findings", headers=VIEWER, params={"limit": 1}).json()
     assert after.get("total", 0) > 0
+    _wait_for_current_graph(demo_estate_client)
 
 
 def test_demo_estate_survives_job_ttl_cleanup(demo_estate_client: TestClient) -> None:
@@ -294,6 +295,9 @@ def test_demo_estate_survives_job_ttl_cleanup(demo_estate_client: TestClient) ->
         store.put(job)
     findings = demo_estate_client.get("/v1/findings", headers=VIEWER, params={"limit": 1}).json()
     assert findings.get("total", 0) > 0
+    # A findings read can return the previous generation while rebuilding the
+    # revised jobs. Verify the new generation before fixture stores are reset.
+    _wait_for_current_graph(demo_estate_client)
 
 
 def test_demo_estate_agents_fall_back_to_demo_inventory(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -363,6 +367,7 @@ def test_demo_estate_scan_findings_restored_after_restart(
 
     after = demo_estate_client.get("/v1/findings", headers=VIEWER, params={"limit": 3}).json()
     assert after.get("total", 0) == before.get("total", 0), (before.get("total"), after.get("total"))
+    _wait_for_current_graph(demo_estate_client)
 
 
 # ── Enterprise estate projected into the graph ────────────────────────────

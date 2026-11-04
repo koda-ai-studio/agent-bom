@@ -47,6 +47,14 @@ SMOKE_TESTS = (
     "tests/test_atlas_fetch.py",
 )
 
+# Both modules run unconditionally on shard zero, without xdist. They contain
+# only graph_performance tests, so assigning them to the filtered correctness
+# lane can create a shard with zero collected tests (pytest exit 5).
+ISOLATED_GRAPH_BUDGETS = (
+    "tests/api/test_graph_first_read_budget.py",
+    "tests/test_push_ingest_perf_budget.py",
+)
+
 
 def _module_patterns(path: PurePosixPath) -> tuple[str, list[re.Pattern[str]]]:
     """Return a cheap prefilter token and the import/reference patterns for a Python file."""
@@ -144,6 +152,7 @@ def main() -> int:
     parser.add_argument("--root", type=Path, default=Path("."), help="repository root")
     parser.add_argument("--matrix", action="store_true", help="print duration-sized shard indices as JSON")
     parser.add_argument("--include-smoke", action="store_true", help="include mandatory contract modules")
+    parser.add_argument("--correctness", action="store_true", help="reserve graph timing modules for the isolated budget step")
     parser.add_argument("changed_files", nargs="*", type=Path)
     args = parser.parse_args()
     cwd = Path.cwd().resolve()
@@ -151,6 +160,8 @@ def main() -> int:
     selected = set(select_affected_tests(changed_files=args.changed_files, root=root))
     if args.include_smoke:
         selected.update(root / path for path in SMOKE_TESTS)
+    if args.correctness:
+        selected.difference_update(root / path for path in ISOLATED_GRAPH_BUDGETS)
     if args.matrix:
         count = affected_shard_count(selected, durations=load_durations(root / "tests/.ci-durations.json"))
         print(json.dumps(list(range(count))))
