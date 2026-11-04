@@ -115,11 +115,11 @@ def test_affected_job_is_bounded_and_reports_slow_tests() -> None:
     assert job["strategy"]["fail-fast"] is False
     assert job["timeout-minutes"] <= 15
     run = _step(job, AFFECTED_STEP)["run"]
-    assert 'scripts/pytest_ci_affected.py --root . --include-smoke "${CHANGED[@]}"' in run
+    assert 'scripts/pytest_ci_affected.py --root . --include-smoke --correctness "${CHANGED[@]}"' in run
     assert '--total "${{ strategy.job-total }}" --files "${TESTS[@]}"' in run
     assert "--durations=50" in run
     plan = _step(_ci()["jobs"]["changes"], "Plan affected-test shards")["run"]
-    assert '--matrix --include-smoke "${CHANGED[@]}"' in plan
+    assert '--matrix --include-smoke --correctness "${CHANGED[@]}"' in plan
     assert "mapfile -t CHANGED < <(" not in plan + run
 
 
