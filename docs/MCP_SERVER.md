@@ -224,12 +224,18 @@ agent-bom mcp server --transport streamable-http --host 0.0.0.0 --public-readonl
 #   AGENT_BOM_MCP_BEARER_TOKEN + AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT (bounded, as above)
 ```
 
-The hosted `https://agent-bom-mcp.up.railway.app/mcp` endpoint runs this tier
-(`railway.json` start command); it is listed as a `streamable-http` remote in the
-MCP Registry manifest. The shared `Dockerfile.sse` image stays
-bearer-only unless you set the variable. Release deploys verify the tier with
-`python -m agent_bom.deployment_probe --server-card --require-public-readonly`,
-which needs no credential and fails unless an out-of-tier anonymous call is a 401.
+The hosted `https://agent-bom-mcp.up.railway.app/mcp` endpoint uses configured
+OAuth authentication and is listed as a `streamable-http` remote in the MCP
+Registry manifest. Railway inherits the shared `Dockerfile.sse` startup command;
+it does not enable the optional public tier or replace the operator's auth mode.
+Release deploys use `scripts/deploy/probe_with_oauth.py --` with
+`--server-card --require-mcp-auth` to verify the exact version, tool schemas,
+authorized initialization and anonymous rejection. The probe obtains a short-lived
+read token from the configured issuer, or uses the managed static bearer credential.
+Do not enable `--public-readonly` on an OAuth deployment: that combination refuses
+startup. For a separately configured public-tier deployment, use
+`python -m agent_bom.deployment_probe --server-card --require-public-readonly`;
+that check requires anonymous lookups and HTTP 401 for out-of-tier calls.
 Threat model: [THREAT_MODEL.md](THREAT_MODEL.md#anonymous-public-mcp-tier).
 
 

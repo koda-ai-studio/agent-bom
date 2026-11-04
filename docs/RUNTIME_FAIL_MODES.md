@@ -518,6 +518,11 @@ an invalid, expired or unrecognised bearer token is 401 rather than a fallback
 to anonymous access. An unparseable `AGENT_BOM_MCP_PUBLIC_READONLY` value
 refuses startup, as does combining the tier with MCP OAuth or SSE. Rate-limit
 state is in process memory, so it cannot be unavailable; a restart resets it.
+Railway and the Procfile preserve the authenticated image default; neither forces
+this optional tier on a deployment that already uses OAuth. Release verification
+uses the configured managed credential and rejects anonymous access. An upload is
+not proof of a successful rollout: failed startup or stale version/schema evidence
+keeps deployment verification failed.
 See [MCP server](MCP_SERVER.md#public-read-only-tier).
 
 ## API-key verification cache

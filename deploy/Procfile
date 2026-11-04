@@ -1,1 +1,1 @@
-web: AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS=${AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS:-1} agent-bom mcp server --transport streamable-http --host 0.0.0.0 --port ${PORT:-8423} --public-readonly
+web: agent-bom mcp server --transport streamable-http --host 0.0.0.0 --port ${PORT:-8423}
