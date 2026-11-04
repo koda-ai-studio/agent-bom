@@ -110,6 +110,23 @@ def test_script_changes_select_tests_that_load_the_script(tmp_path: Path) -> Non
     assert select_affected_tests(changed_files=[Path("scripts/check_thing.py")], root=tmp_path) == [importer, loader]
 
 
+@pytest.mark.parametrize("suffix", ["yml", "yaml"])
+def test_workflow_changes_select_filename_contracts(tmp_path: Path, suffix: str) -> None:
+    workflow = f"publish-registries.{suffix}"
+    _write(tmp_path / ".github/workflows" / workflow, "jobs: {}\n")
+    contract = _write(tmp_path / "tests/test_registry_contract.py", f'WORKFLOW = ROOT / ".github" / "workflows" / "{workflow}"\n')
+    _write(tmp_path / "tests/test_unrelated.py", f'WORKFLOW = ROOT / "other-{workflow}"\n')
+    selected = select_affected_tests(changed_files=[Path(".github/workflows") / workflow], root=tmp_path)
+    assert contract in selected
+    assert tmp_path / "tests/test_unrelated.py" not in selected
+
+
+def test_registry_workflow_selects_release_schema_and_reconciliation_contracts() -> None:
+    selected = select_affected_tests(changed_files=[Path(".github/workflows/publish-registries.yml")], root=ROOT)
+    assert ROOT / "tests/test_release_mcp_contract.py" in selected
+    assert ROOT / "tests/test_publish_registries_glama_gate.py" in selected
+
+
 def test_conftest_selects_every_test_below_its_directory(tmp_path: Path) -> None:
     _write(tmp_path / "tests/api/conftest.py")
     inside = [_write(tmp_path / "tests/api/test_one.py"), _write(tmp_path / "tests/api/nested/test_two.py")]

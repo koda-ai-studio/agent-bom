@@ -91,6 +91,10 @@ def _fixture_patterns(path: PurePosixPath) -> tuple[str, list[re.Pattern[str]]]:
 
 def _references(changed: PurePosixPath) -> tuple[str, list[re.Pattern[str]]] | None:
     top = changed.parts[0] if changed.parts else ""
+    if changed.parent == PurePosixPath(".github/workflows") and changed.suffix in {".yml", ".yaml"}:
+        # Workflow contracts often assemble paths from separate components or
+        # loop over filenames, so a full-path match misses their dependencies.
+        return changed.name, [re.compile(rf"(?<![\w.-]){re.escape(changed.name)}(?![\w.-])")]
     if changed.suffix == ".py":
         if top in {"src", "scripts"} or (top == "tests" and not changed.name.startswith("test_") and changed.name != "conftest.py"):
             return _module_patterns(changed)
