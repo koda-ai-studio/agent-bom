@@ -69,9 +69,10 @@ def test_registry_workflows_never_use_hosted_card_as_schema_oracle():
         assert "--write-tool-contract" not in text
         assert "server-card.json > /tmp/smithery-expected-tool-contract.json" not in text
     publish = (ROOT / ".github/workflows/publish-registries.yml").read_text()
-    assert (
-        "--compare-tool-contract-files /tmp/smithery-expected-tool-contract.json /tmp/smithery-actual-server-card-contract.json" in publish
-    )
+    assert "smithery" not in yaml.safe_load(publish)["jobs"]
+    assert "--expected-tool-contract-file /tmp/glama-expected-tool-contract.json" in publish
+    deployment = (ROOT / ".github/workflows/deployment-freshness.yml").read_text()
+    assert "--compare-tool-contract-files /tmp/deployment-expected-tool-contract.json /tmp/railway-actual-tool-contract.json" in deployment
 
 
 @pytest.mark.parametrize("schema_drift", [False, True])
