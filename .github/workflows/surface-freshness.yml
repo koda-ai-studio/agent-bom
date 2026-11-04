@@ -101,7 +101,7 @@ jobs:
             --expected "${{ steps.expected.outputs.version }}" \
             --expected-tool-names-file /tmp/surface-expected-tool-names.json \
             --out /tmp/surface-expected-tool-contract.json
-          PYTHONPATH=src python3 scripts/check_surface_freshness.py \
+          PYTHONPATH=src python3 scripts/check_surface_freshness.py --retired-smithery \
             --expected "$EXPECTED_VERSION" \
             --mcp-registry-manifest /tmp/surface-mcp-registry.json \
             --expected-tool-count "${{ steps.expected.outputs.tool_count }}" \
