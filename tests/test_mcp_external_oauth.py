@@ -192,3 +192,38 @@ def test_server_card_advertises_oauth_when_the_issuer_protects_the_transport(oau
         assert card["authentication"] == {"required": True, "schemes": ["oauth2"], "public_readonly": False, "anonymous_tools": []}
         assert client.get("/.well-known/oauth-protected-resource/mcp").json()["authorization_servers"] == [ISSUER]
         assert client.post("/mcp", json={}).status_code == 401
+
+
+@pytest.mark.parametrize("deployment", ["railway", "procfile"])
+def test_hosted_startup_preserves_configured_oauth(deployment, oauth_env, monkeypatch, tmp_path, verifier, signing_key):
+    """The shipped startup command must work with an existing OAuth deployment."""
+    from pathlib import Path
+
+    from agent_bom.mcp_server import create_mcp_server
+
+    root = Path(__file__).resolve().parents[1]
+    if deployment == "railway":
+        manifest = json.loads((root / "railway.json").read_text())
+        command = manifest["deploy"].get("startCommand")
+        if command is None:
+            command = next(line for line in (root / "deploy/docker/Dockerfile.sse").read_text().splitlines() if line.startswith("CMD "))
+    else:
+        command = (root / "deploy/Procfile").read_text()
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
+    monkeypatch.setenv("AGENT_BOM_MCP_PUBLIC_READONLY", "1" if "--public-readonly" in command else "0")
+    monkeypatch.setattr("agent_bom.mcp_tools.oauth.OAuthTokenVerifier", lambda config: verifier)
+    server = create_mcp_server(host="0.0.0.0", port=8000, bearer_token=None, oauth_enabled=True)
+    with TestClient(server.streamable_http_app(host="0.0.0.0"), base_url="https://mcp.example") as client:
+        card = client.get("/.well-known/mcp/server-card.json").json()
+        assert card["authentication"]["schemes"] == ["oauth2"]
+        assert card["authentication"]["public_readonly"] is False
+        message = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "test", "version": "1"}},
+        }
+        headers = {"Accept": "application/json, text/event-stream"}
+        assert client.post("/mcp", json=message, headers=headers).status_code == 401
+        headers["Authorization"] = "Bearer " + token(signing_key)
+        assert client.post("/mcp", json=message, headers=headers).status_code == 200
