@@ -17,7 +17,7 @@ supported-markers = [
 
 [[package]]
 name = "agent-bom"
-version = "0.113.0"
+version = "0.113.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -47,9 +47,9 @@ dependencies = [
     { name = "tree-sitter-typescript" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cf/f7/c0ebe5c94da0fca7038f46fb86f382d8fc69796b86fbd0e0a62e872ca697/agent_bom-0.113.0.tar.gz", hash = "sha256:7f41bd1ac0d7d553dea5757fde17fb5b97506955aa770ba97cf2128a8a64a901", size = 12628364, upload-time = "2026-11-02T18:40:38.187Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/66/11/3468e2df4cf34a7a6650548010c10f483d7f8fba0aca88e52e6408eb3134/agent_bom-0.113.1.tar.gz", hash = "sha256:e27e79cbfd73590e56cdaaa5667cc9988b82e5375d6d9f1ae8a269072b920589", size = 12834295, upload-time = "2026-11-03T23:44:58.915Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3e/5f/e752348650eba5372f9a9cc81f5b7f022d4ad9bda120c5dbb7a5b2b1e70c/agent_bom-0.113.0-py3-none-any.whl", hash = "sha256:01e071b21831091eace3832101b027c7f17fff467590be7ba88ebff41309dd25", size = 10149111, upload-time = "2026-11-02T18:40:34.796Z" },
+    { url = "https://files.pythonhosted.org/packages/50/1f/a80b815a4ed4a9a6289b51147fdc0b1d9bc782b691172cdfd2ba313561b5/agent_bom-0.113.1-py3-none-any.whl", hash = "sha256:45a8f114d2172cf810ec28de10a66d4d7d823deaeb7b40f482343ae393cf1b92", size = 10297606, upload-time = "2026-11-03T23:44:55.4Z" },
 ]
 
 [[package]]
@@ -61,7 +61,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "agent-bom", specifier = "==0.113.0" }]
+requires-dist = [{ name = "agent-bom", specifier = "==0.113.1" }]
 
 [[package]]
 name = "annotated-types"
