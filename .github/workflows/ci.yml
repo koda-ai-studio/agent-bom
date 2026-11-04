@@ -258,7 +258,7 @@ jobs:
             CHANGED_PATHS=$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")
           fi
           mapfile -t CHANGED <<< "$CHANGED_PATHS"
-          SHARDS=$(python3 scripts/pytest_ci_affected.py --root . --matrix --include-smoke "${CHANGED[@]}")
+          SHARDS=$(python3 scripts/pytest_ci_affected.py --root . --matrix --include-smoke --correctness "${CHANGED[@]}")
           echo "shards=$SHARDS" >> "$GITHUB_OUTPUT"
           echo "Affected-test shards: $SHARDS" >> "$GITHUB_STEP_SUMMARY"
 
@@ -1321,7 +1321,7 @@ jobs:
             CHANGED_PATHS=$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")
           fi
           mapfile -t CHANGED <<< "$CHANGED_PATHS"
-          AFFECTED_SELECTION=$(uv run python scripts/pytest_ci_affected.py --root . --include-smoke "${CHANGED[@]}")
+          AFFECTED_SELECTION=$(uv run python scripts/pytest_ci_affected.py --root . --include-smoke --correctness "${CHANGED[@]}")
           mapfile -t TESTS <<< "$AFFECTED_SELECTION"
           # Keep the full selected set, assigning each module to exactly one job.
           SELECTION=$(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total "${{ strategy.job-total }}" --files "${TESTS[@]}")

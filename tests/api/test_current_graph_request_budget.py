@@ -7,6 +7,7 @@ import pytest
 from starlette.exceptions import HTTPException
 
 from agent_bom.api.current_graph import CurrentGraphStore
+from agent_bom.api.current_graph_builds import await_current_build
 from agent_bom.api.finding_read_context import finding_read_scope
 from agent_bom.core.estate_read_boundary import estate_read_boundary
 from tests.api.test_current_graph_estate import estate, record  # noqa: F401
@@ -53,10 +54,10 @@ def test_request_releases_slow_build_and_reports_state(estate, monkeypatch, prev
         assert result.status_code == 503
         assert result.detail["code"] == "current_estate_building"
         assert result.headers["Retry-After"] == "1"
-    # Internal/commit warmers still wait for a complete generation. The queued
-    # work and a concurrent warmer must coalesce through the existing build gate.
-    final = store.latest_snapshot_id(tenant_id=TENANT)
-    assert final != old
+    # Explicitly join the queued build: a normal unpinned store read can still
+    # serve the previous generation until the released worker finishes.
+    final = await_current_build(store, TENANT, seconds=10)
+    assert final and final != old
     assert set(store.load_graph(tenant_id=TENANT).nodes) == {"new-package"}
 
 
@@ -133,13 +134,13 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
     entered, release = _hold_materialize(store)
     try:
         response = client.get(path, headers=headers)
-        assert entered.is_set()
+        assert entered.wait(5)
         assert response.status_code == 200, response.text
         assert response.json()["scan_id"] == old
         assert response.json()["collection_coverage"]["freshness"] == "previous_generation"
     finally:
         release.set()
-    store.latest_snapshot_id(tenant_id=TENANT)
+    assert await_current_build(store, TENANT, seconds=10) is not None
     fresh = client.get(path, headers=headers)
     assert fresh.status_code == 200, fresh.text
     assert fresh.json()["scan_id"] != old

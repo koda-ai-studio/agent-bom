@@ -110,6 +110,30 @@ exit 70
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is required")
+@pytest.mark.parametrize("stale_status", ["queued", "in_progress", "unknown"])
+def test_cancel_helper_accepts_completed_rejection_despite_stale_status(tmp_path: Path, stale_status: str) -> None:
+    bin_dir = _gh_stub(
+        tmp_path,
+        f"""#!/usr/bin/env bash
+if [ "$1 $2" = "run cancel" ]; then
+  echo "Cannot cancel a workflow run that is completed" >&2
+  exit 1
+fi
+if [ "$1 $2" = "run view" ]; then
+  echo {stale_status}
+  exit 0
+fi
+echo "unexpected escalation: $*" >&2
+exit 70
+""",
+    )
+    result = _run_cancel_helper(bin_dir)
+    assert result.returncode == 0, result.stderr
+    assert "requesting force-cancel" not in result.stdout
+    assert "unexpected escalation" not in result.stderr
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is required")
 def test_cancel_helper_waits_out_a_pending_cancellation_after_force_cancel_409(tmp_path: Path) -> None:
     """The accepted cancel is still winding down: force-cancel gets 409 and status lags.
 

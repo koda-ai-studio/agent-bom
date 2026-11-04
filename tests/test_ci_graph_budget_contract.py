@@ -33,3 +33,14 @@ def test_diff_classification_keeps_ancestry_without_historical_blobs(workflow, j
     checkout = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/checkout@"))
     assert checkout["with"]["fetch-depth"] == 0
     assert checkout["with"]["filter"] == "blob:none"
+
+
+def test_affected_matrix_and_execution_partition_the_same_isolated_budgets():
+    jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
+    for job_name in ("changes", "test-smoke"):
+        selection = next(step["run"] for step in jobs[job_name]["steps"] if "pytest_ci_affected.py" in step.get("run", ""))
+        assert "--correctness" in selection
+    from scripts.pytest_ci_affected import ISOLATED_GRAPH_BUDGETS
+
+    isolated = next(step["run"] for step in jobs["test-smoke"]["steps"] if "-m graph_performance" in step.get("run", ""))
+    assert set(ISOLATED_GRAPH_BUDGETS) == {word for word in isolated.split() if word.startswith("tests/")}

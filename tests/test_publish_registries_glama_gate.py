@@ -30,10 +30,13 @@ def test_dispatch_does_not_expose_an_unsupported_glama_trigger() -> None:
 
 def test_registry_reconciliation_retries_every_idempotent_registry_automatically() -> None:
     text = WORKFLOW.read_text(encoding="utf-8")
-    triggers = _workflow()[True]
+    workflow = _workflow()
+    triggers = workflow[True]
 
     assert triggers["schedule"] == [{"cron": "17 */6 * * *"}]
-    assert text.count("github.event_name == 'schedule'") == 4
+    assert set(workflow["jobs"]) == {"release", "glama", "clawhub"}
+    for job in workflow["jobs"].values():
+        assert "github.event_name == 'schedule'" in job["if"]
     clawhub = text.split("  clawhub:\n", 1)[1]
     assert "github.event_name == 'schedule'" in clawhub
     assert "already published" in clawhub

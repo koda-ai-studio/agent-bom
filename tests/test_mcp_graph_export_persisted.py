@@ -76,8 +76,13 @@ def test_tenant_bound_text_formats_render_the_persisted_graph(export, monkeypatc
 
 
 def test_tenant_bound_without_a_persisted_graph_refuses_instead_of_scanning_the_host(export, monkeypatch):
+    from agent_bom.mcp_tools.storage import default_graph_store
+
     _store, call = export
     monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", TENANT)
+    # Assert the settled empty-estate response; a cold request may correctly
+    # return retryable building while its bounded background work completes.
+    default_graph_store().latest_snapshot_id(tenant_id=TENANT)
     body, scans = call(scan=_no_host_scan)
     assert scans == []
     assert body["error"]["code"] == "AGENTBOM_MCP_NOT_FOUND_RESOURCE", body
@@ -91,6 +96,33 @@ def test_unbound_local_server_without_a_store_keeps_the_host_export(export, monk
     body, scans = call()
     assert scans == ["host"]
     assert "error" not in body, body
+
+
+def test_tenant_bound_cold_export_reports_building_then_not_found_without_host_scan(export, monkeypatch):
+    from agent_bom.api.current_graph_builds import _QUEUE
+    from agent_bom.mcp_tools.storage import default_graph_store
+    from tests.api.test_current_graph_unpinned_reads import _hold_materialize
+
+    _store, call = export
+    monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", TENANT)
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS", "20")
+    current = default_graph_store()
+    entered, release = _hold_materialize(current)
+    try:
+        body, scans = call(scan=_no_host_scan)
+        assert entered.wait(5)
+        assert scans == []
+        assert body["error"]["code"] == "AGENTBOM_MCP_UPSTREAM_UNAVAILABLE", body
+        assert body["error"]["details"]["reason"] == "current_estate_building"
+        with _QUEUE.lock:
+            build = _QUEUE.pending[(current, TENANT)]
+    finally:
+        release.set()
+    build.result(timeout=10)
+    body, scans = call(scan=_no_host_scan)
+    assert scans == []
+    assert body["error"]["code"] == "AGENTBOM_MCP_NOT_FOUND_RESOURCE", body
+    assert body["error"]["details"]["tenant_id"] == TENANT
 
 
 def test_export_fixture_isolates_completed_jobs_from_other_tests(request, monkeypatch):

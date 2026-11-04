@@ -110,6 +110,23 @@ def test_script_changes_select_tests_that_load_the_script(tmp_path: Path) -> Non
     assert select_affected_tests(changed_files=[Path("scripts/check_thing.py")], root=tmp_path) == [importer, loader]
 
 
+@pytest.mark.parametrize("suffix", ["yml", "yaml"])
+def test_workflow_changes_select_filename_contracts(tmp_path: Path, suffix: str) -> None:
+    workflow = f"publish-registries.{suffix}"
+    _write(tmp_path / ".github/workflows" / workflow, "jobs: {}\n")
+    contract = _write(tmp_path / "tests/test_registry_contract.py", f'WORKFLOW = ROOT / ".github" / "workflows" / "{workflow}"\n')
+    _write(tmp_path / "tests/test_unrelated.py", f'WORKFLOW = ROOT / "other-{workflow}"\n')
+    selected = select_affected_tests(changed_files=[Path(".github/workflows") / workflow], root=tmp_path)
+    assert contract in selected
+    assert tmp_path / "tests/test_unrelated.py" not in selected
+
+
+def test_registry_workflow_selects_release_schema_and_reconciliation_contracts() -> None:
+    selected = select_affected_tests(changed_files=[Path(".github/workflows/publish-registries.yml")], root=ROOT)
+    assert ROOT / "tests/test_release_mcp_contract.py" in selected
+    assert ROOT / "tests/test_publish_registries_glama_gate.py" in selected
+
+
 def test_conftest_selects_every_test_below_its_directory(tmp_path: Path) -> None:
     _write(tmp_path / "tests/api/conftest.py")
     inside = [_write(tmp_path / "tests/api/test_one.py"), _write(tmp_path / "tests/api/nested/test_two.py")]
@@ -211,3 +228,29 @@ def test_cli_matrix_and_selection_include_identical_contracts(tmp_path: Path) ->
     matrix = subprocess.run([*command, "--matrix"], cwd=tmp_path, capture_output=True, text=True, check=True)
     assert selection.stdout.splitlines() == sorted(SMOKE_TESTS)
     assert json.loads(matrix.stdout) == list(range(12))
+
+
+def test_correctness_selection_does_not_create_a_performance_only_shard(tmp_path: Path) -> None:
+    import json
+
+    from scripts.pytest_ci_plan import plan_shards
+
+    budgets = {"tests/api/test_graph_first_read_budget.py", "tests/test_push_ingest_perf_budget.py"}
+    correctness = "tests/test_example.py"
+    for name in {*budgets, correctness}:
+        _write(tmp_path / name)
+    command = [
+        sys.executable,
+        str(ROOT / "scripts/pytest_ci_affected.py"),
+        "--root",
+        ".",
+        "--correctness",
+        *sorted(budgets),
+        correctness,
+    ]
+    selection = subprocess.run(command, cwd=tmp_path, capture_output=True, text=True, check=True)
+    matrix = subprocess.run([*command, "--matrix"], cwd=tmp_path, capture_output=True, text=True, check=True)
+    assert selection.stdout.splitlines() == [correctness]
+    assert json.loads(matrix.stdout) == [0]
+    shards = plan_shards([tmp_path / name for name in selection.stdout.splitlines()], total=len(json.loads(matrix.stdout)))
+    assert shards == [[tmp_path / correctness]]
