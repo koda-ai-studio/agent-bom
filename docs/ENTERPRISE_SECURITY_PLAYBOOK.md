@@ -431,7 +431,7 @@ cp deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml my-upstreams.ya
 # edit my-upstreams.yaml — replace hostnames + token_env names with yours.
 
 # ─── 2. Helm install: control plane + gateway + scanner CronJob in one go
-helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
   -n agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml \
   --set gateway.enabled=true \

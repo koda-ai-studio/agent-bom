@@ -19,7 +19,7 @@
 #    tokens are pulled from env vars at runtime via `token_env`).
 # 3. Point Helm at your customised file:
 #
-#      helm upgrade agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 \
+#      helm upgrade agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
 #        --reuse-values \
 #        --set gateway.enabled=true \
 #        --set-file gateway.upstreamsYaml=./my-upstreams.yaml

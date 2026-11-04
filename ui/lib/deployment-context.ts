@@ -171,7 +171,7 @@ const SURFACE_DEFINITIONS: Record<DeploymentSurface, DeploymentSurfaceDefinition
     navHref: "/gateway",
     isAvailable: (counts) => bool(counts?.has_gateway),
     requirement: "Gateway policy usage or managed runtime policy state",
-    command: "helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.0 --set gateway.enabled=true",
+    command: "helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 --set gateway.enabled=true",
     capabilities: [
       "Central gateway policy inventory and evaluation",
       "Gateway audit entries tied to runtime enforcement",
