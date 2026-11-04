@@ -82,7 +82,7 @@ curl -fsS "https://mcp-auth.acme.internal/.well-known/openid-configuration" | jq
 Use the packaged example:
 
 ```bash
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
   -f deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml \
   -f deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml \
   -f deploy/helm/agent-bom/examples/oidc-discovery-shim-values.yaml
