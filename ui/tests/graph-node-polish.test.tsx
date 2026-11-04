@@ -78,8 +78,8 @@ describe("vendor badge and environment chip on asset nodes", () => {
 
   it("names the asset by its canonical kind and glyph", () => {
     const root = renderNode("dataStoreNode", bucket);
-    expect(visibleText(root)).toContain("Bucket");
-    expect(root.querySelector(".graph-entity-glyph svg")?.getAttribute("class")).toContain("lucide-archive");
+    expect(visibleText(root)).toContain("Amazon S3 bucket");
+    expect(root.querySelector('.graph-entity-glyph svg[data-asset-glyph="bucket"]')).not.toBeNull();
   });
 
   it("labels a container by its recorded subtype", () => {

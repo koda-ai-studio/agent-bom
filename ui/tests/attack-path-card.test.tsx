@@ -183,7 +183,7 @@ describe('AttackPathCard', () => {
       { type: 'entity' as const, label: 'unrecorded' },
     ]} />)
     const glyphs = [...container.querySelectorAll('svg.lucide')].map((svg) => svg.getAttribute('class'))
-    expect(glyphs.some((name) => name?.includes('lucide-archive'))).toBe(true)
+    expect(container.querySelector('svg[data-asset-glyph="bucket"]')).toBeInTheDocument()
     expect(glyphs.some((name) => name?.includes('lucide-ship-wheel'))).toBe(true)
     expect(glyphs.some((name) => name?.includes('lucide-shield-alert'))).toBe(false)
   })
