@@ -44,6 +44,7 @@ import {
   Move,
 } from "lucide-react";
 import { useGraphLayout } from "@/lib/use-graph-layout";
+import { usePipelineNodeMeasurements } from "@/lib/use-pipeline-node-measurements";
 import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 import type { StepStatus, StepEvent } from "@/lib/api";
 import {
@@ -366,6 +367,7 @@ function ScanPipelineInner({
       rowGap: 16,
     },
   });
+  const { measuredNodes, onNodesChange } = usePipelineNodeMeasurements(nodes, overview);
   const displayEdges = useMemo(
     () =>
       readableGraphEdges(edges as Edge[], undefined, {
@@ -449,7 +451,8 @@ function ScanPipelineInner({
   return (
     <div ref={frameRef} className={`relative h-[180px] ${className ?? ""}`}>
       <ReactFlow
-        nodes={nodes}
+        nodes={measuredNodes}
+        onNodesChange={onNodesChange}
         edges={displayEdges}
         nodeTypes={nodeTypes}
         // The default viewport is framed after node measurement above.
