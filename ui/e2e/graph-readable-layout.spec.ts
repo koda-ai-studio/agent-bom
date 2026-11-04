@@ -387,7 +387,9 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     }
     await page.locator(".react-flow__controls-fitview").click();
     await settle(page);
-    await expect(page.getByText("Permission role", { exact: true })).toBeVisible();
+    for (const caption of ["AWS IAM role", "Amazon EKS", "Amazon S3 bucket"]) {
+      await expect(page.getByText(caption, { exact: true })).toBeVisible();
+    }
     await expect(page.locator("[data-graph-category]")).toHaveCount(0);
     // Counts for children already visible are tooltip details, never extra pills.
     await expect(page.locator("[data-asset-connections]")).toHaveCount(0);
