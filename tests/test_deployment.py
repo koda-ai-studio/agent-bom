@@ -538,14 +538,14 @@ def test_health_endpoint_fields():
 def test_deployment_freshness_workflow_probes_auth_and_parses_tool_count():
     """Railway verifies authorized access and anonymous rejection with a managed credential."""
     workflow = (ROOT / ".github" / "workflows" / "deployment-freshness.yml").read_text()
-    railway = workflow.split("- name: Check Railway deployment", 1)[1].split("- name: Check Smithery", 1)[0]
+    railway = workflow.split("- name: Check Railway deployment", 1)[1].split("- name: Record Smithery", 1)[0]
     assert "RAILWAY_MCP_BEARER_TOKEN" in railway
     assert "python3 scripts/deploy/probe_with_oauth.py --" in railway
     assert "--require-mcp-auth" in railway
     assert "SMITHERY_SERVER_QUALIFIED_NAME" in workflow
     assert "--surface smithery" in workflow
     assert "tool_count" in workflow
-    assert "smithery-oauth" in workflow
+    assert "--retired-smithery" in workflow
     assert "probe_failed=true" in workflow
     assert 'e.RAILWAY_PROBE_FAILED === "false"' in workflow
     assert "--server-card" in workflow
@@ -565,14 +565,14 @@ def test_deployment_freshness_targets_exact_published_server_card_contract():
     assert 'fresh ? "closed" : "open"' in workflow
 
 
-def test_deployment_freshness_marks_smithery_tool_count_drift() -> None:
+def test_deployment_freshness_records_smithery_retirement() -> None:
     workflow = (ROOT / ".github" / "workflows" / "deployment-freshness.yml").read_text()
 
     assert "EXPECTED_TOOL_COUNT: ${{ steps.expected.outputs.tool_count }}" in workflow
     assert '--expected-tool-count "$EXPECTED_TOOL_COUNT"' in workflow
     assert "--expected-tool-contract-file" in workflow
     assert 'echo "stale=true" >> "$GITHUB_OUTPUT"' in workflow
-    assert "Smithery catalog differs from the published tool-name and input-schema contract" in workflow
+    assert "Smithery retirement status could not be recorded" in workflow
 
 
 def test_publishing_guide_does_not_pin_a_stale_mcp_tool_count() -> None:
@@ -710,20 +710,10 @@ def test_postgres_ci_upgrade_checks_preserved_queue_through_scoped_maintenance_r
 
 
 def test_publish_registries_workflow_validates_registry_gates_and_curated_clawhub_set():
-    """Smithery publishing must never use Smithery's proxy as its upstream."""
+    """Active registry jobs remain required after retiring Smithery publishing."""
     workflow = (ROOT / ".github" / "workflows" / "publish-registries.yml").read_text()
-    assert "SMITHERY_MCP_URL" in workflow
-    assert "server.smithery.ai" in workflow
-    assert "avoid publishing the proxy back to itself" in workflow
-    assert "--forbid-auth-required" not in workflow
-    # Smithery's marketplace model manages per-user OAuth on the publisher's
-    # behalf; agent-bom's single operator bearer token cannot honestly satisfy
-    # that yet. The smithery job is deliberately continue-on-error so it no
-    # longer gates the release, but its own verification stays fail-closed —
-    # and no OTHER job may silently gain the same escape hatch.
-    smithery_job = workflow.split("  smithery:\n", 1)[1].split("  glama:\n", 1)[0]
-    assert "continue-on-error: true" in smithery_job
-    assert workflow.count("continue-on-error: true") == 1
+    assert "SMITHERY_API_TOKEN" not in workflow
+    assert "continue-on-error: true" not in workflow
     assert "integrations/openclaw/scan" in workflow
     assert "integrations/openclaw/compliance" in workflow
     assert "integrations/openclaw/registry" in workflow
@@ -741,8 +731,8 @@ def test_publish_registries_workflow_validates_registry_gates_and_curated_clawhu
     # ClawHub job stages regular-file assets from the verified release object
     # without executing or checking out that tree.
     assert "ref: ${{ needs.release.outputs.release_sha }}" not in workflow
-    assert workflow.count("ref: ${{ github.event.repository.default_branch }}") == 4
-    assert workflow.count("persist-credentials: false") == 4
+    assert workflow.count("ref: ${{ github.event.repository.default_branch }}") == 3
+    assert workflow.count("persist-credentials: false") == 3
     assert "Stage exact release ClawHub assets" in workflow
     assert 'git ls-tree -r "$RELEASE_SHA" -- integrations/openclaw' in workflow
     assert 'git archive --format=tar "$RELEASE_SHA" -- integrations/openclaw' in workflow
@@ -763,7 +753,7 @@ def test_publish_registries_manual_repair_resolves_latest_release_only():
     assert "Resolve published release" in workflow
     assert "repos/${GITHUB_REPOSITORY}/releases/latest" in workflow
     assert "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}" in workflow
-    assert workflow.count("needs: release") == 3
+    assert workflow.count("needs: release") == 2
     assert "release_tag:" not in workflow
     assert "REQUESTED_TAG" not in workflow
     assert "releases/tags/${REQUESTED_TAG}" not in workflow
@@ -801,26 +791,6 @@ def test_glama_publication_uses_supported_provider_sync_and_strict_verification(
     assert "Glama syncs linked GitHub repositories automatically at least daily" in glama_job
     assert "Sync Server" in glama_job
     assert "exit 1" in workflow
-
-
-def test_smithery_publish_is_gated_on_server_card_and_catalog_parity():
-    """A 202 response alone must not be reported as a fresh marketplace listing."""
-    workflow = (ROOT / ".github" / "workflows" / "publish-registries.yml").read_text()
-
-    assert "Validate Smithery public server card" in workflow
-    assert "(.tools | length) == $tool_count" in workflow
-    assert '(.inputSchema | type == "object")' in workflow
-    assert '(.authentication.schemes | index("oauth2") != null)' in workflow
-    assert "Check Smithery catalog parity" in workflow
-    assert "smithery_catalog.outputs.fresh != 'true'" in workflow
-    assert "smithery-expected-tool-names.json" in workflow
-    assert "smithery-actual-tool-names.json" in workflow
-    assert "Wait for Smithery release" in workflow
-    assert "AUTH_REQUIRED)" in workflow
-    assert "FAILURE|FAILURE_SCAN|AUTH_TIMEOUT|CANCELLED|INTERNAL_ERROR" in workflow
-    assert "caller-supplied bearerToken by design" not in workflow
-    assert "Verify Smithery catalog inventory" in workflow
-    assert "cmp -s /tmp/smithery-expected-tool-names.json /tmp/smithery-actual-tool-names.json" in workflow
 
 
 def test_refresh_latest_container_keeps_release_code_but_applies_runtime_security_overlay():
@@ -1209,13 +1179,10 @@ def test_deployment_workflow_verdict_requires_explicit_success(overrides, expect
     assert "e.PUBLIC_" not in fresh
 
 
-def test_smithery_recovery_guidance_requires_external_authorization() -> None:
-    guide = (ROOT / "docs" / "RELEASE_VERIFICATION.md").read_text()
-    helper = (ROOT / "scripts" / "authorize_smithery_release.py").read_text()
-    assert "authorized external OAuth upstream" in guide
-    assert "does not issue tokens or grant client access" in guide
-    assert "does not issue tokens or grant client access" in helper
-    assert "a valid registered PKCE client is granted" not in helper
+def test_smithery_retirement_removes_obsolete_authorization_helper() -> None:
+    guide = (ROOT / "docs/RELEASE_VERIFICATION.md").read_text()
+    assert "October 31, 2026" in guide
+    assert not (ROOT / "scripts/authorize_smithery_release.py").exists()
 
 
 def test_source_built_images_copy_the_declared_package_readme():

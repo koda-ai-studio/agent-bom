@@ -56,17 +56,9 @@ DEFAULT_BACKOFF = 5.0
 
 OK_STATUSES = {"fresh"}
 
-# Smithery's marketplace model manages per-user OAuth on the publisher's
-# behalf; agent-bom's single operator-provisioned bearer token cannot
-# honestly satisfy that until real per-user OAuth is built (separate,
-# larger backlog item). That makes Smithery catalog staleness a known,
-# accepted, structural limitation rather than a real regression -- the
-# release gate already treats it that way (`continue-on-error` on the
-# Smithery job in publish-registries.yml, PR #5317). This mirrors that
-# policy here: Smithery's real probe result still appears in `surfaces`
-# for visibility, but it never counts toward `drift`/`all_required_fresh`, so it can
-# never block, (re)open, or fail a freshness gate on its own. Every other
-# surface keeps gating exactly as before.
+# Smithery retired its API and proxy on 2026-10-31. Scheduled callers report
+# retirement without probing it. Explicit legacy diagnostics stay advisory;
+# active distribution surfaces remain required and fail closed on drift.
 NON_BLOCKING_SURFACES = {"Smithery"}
 
 
@@ -632,6 +624,9 @@ def main(argv: list[str] | None = None) -> int:
         "--write-smithery-tool-contract", type=Path, help="Write complete public schemas after checking catalog consistency."
     )
     parser.add_argument("--compare-tool-contract-files", type=Path, nargs=2, metavar=("EXPECTED", "ACTUAL"))
+    parser.add_argument(
+        "--retired-smithery", action="store_true", help="Report the 2026-10-31 provider retirement without network requests."
+    )
     parser.add_argument("--surface", choices=["all", "smithery"], default="all")
     parser.add_argument("--mcp-registry-manifest", type=Path, default=ROOT / "integrations/mcp-registry/server.json")
     parser.add_argument("--docker-image", default=_env_or("DOCKER_IMAGE", DEFAULT_DOCKER_IMAGE))
@@ -650,6 +645,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     args = parser.parse_args(argv)
+    if args.retired_smithery and args.write_smithery_tool_contract:
+        parser.error("retired Smithery cannot export a live provider contract")
 
     if args.compare_tool_contract_files:
         try:
@@ -722,16 +719,28 @@ def main(argv: list[str] | None = None) -> int:
                 ),
             ]
         )
-    surfaces.append(
-        probe_smithery(
-            expected,
-            args.smithery_server,
-            expected_tool_count=tool_count,
-            expected_tool_names=expected_tool_names,
-            expected_tool_contract=contract,
-            **kw,
+    if args.retired_smithery:
+        surfaces.append(
+            {
+                "surface": "Smithery",
+                "status": "retired",
+                "expected": expected,
+                "retired_at": "2026-10-31",
+                "notice_url": "https://www.smithery.ai/future",
+                "reason": "Provider API, accounts, proxy, and CLI retired; use the direct MCP origin.",
+            }
         )
-    )
+    else:
+        surfaces.append(
+            probe_smithery(
+                expected,
+                args.smithery_server,
+                expected_tool_count=tool_count,
+                expected_tool_names=expected_tool_names,
+                expected_tool_contract=contract,
+                **kw,
+            )
+        )
 
     for surface in surfaces:
         surface["required"] = surface["surface"] not in NON_BLOCKING_SURFACES

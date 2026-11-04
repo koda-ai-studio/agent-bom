@@ -326,7 +326,7 @@ Check a dependency before installing it with
 `uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
 [pre-commit and CI setup](docs/FIRST_RUN.md#pre-commit-hook) for repeated checks.
 
-[Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/CLOUD_CONNECT.md) · [MCP client setup](docs/MCP_SERVER.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
+[Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/CLOUD_CONNECT.md) · [MCP client setup](docs/MCP_SERVER.md) · [Smithery migration](site-docs/integrations/smithery.md)
 
 </details>
 

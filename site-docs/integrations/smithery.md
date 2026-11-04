@@ -1,20 +1,32 @@
-# Smithery Manifest
+# Smithery retirement and direct MCP setup
 
-agent-bom ships a Smithery-compatible manifest at `integrations/smithery.yaml`.
-This page documents the field-naming convention used by Smithery's session config
-and how those values map to the environment variables the agent-bom MCP server
-actually reads.
+Smithery shut down its proxy, accounts, API, CLI, and connection management on
+**October 31, 2026**. Its remaining public directory is curated and uses direct
+vendor URLs. See the [provider retirement notice](https://www.smithery.ai/future).
+Agent-Bom no longer publishes to the retired Smithery API. Monitoring records
+this surface as **retired**, never as verified fresh.
 
-The manifest and release workflow are ready for Smithery publication. The public
-catalog entry is considered live when Smithery's catalog API lists
-`agentbom/agent-bom` as a remote server with a deployment URL and the exact
-released tool names and input schemas. Smithery-hosted remotes are OAuth-gated by Smithery, so they do not
-expose agent-bom's raw `/health` route.
+For a local MCP client, install Agent-Bom and configure its stdio command:
 
-The external Streamable HTTP release is separate from the managed stdio manifest
-below. It advertises OAuth2 through the public server card and OAuth discovery;
-the release does not ask users or Smithery to supply the deployment's bearer
-token as session configuration.
+```bash
+pip install 'agent-bom[mcp-server]'
+agent-bom mcp server
+```
+
+The client receives the default scan-profile tools. Connect the client to the
+stdio process, then call `check` on a package before installing it. See the
+[MCP tools reference](../reference/mcp-tools.md) for arguments.
+
+For the hosted OAuth service, use the direct endpoint
+`https://agent-bom-mcp.up.railway.app/mcp` with an authorized client. Authentication
+is required; the former `run.tools` and `server.smithery.ai` proxy URLs are retired.
+For a customer-controlled deployment, follow the [deployment guide](../deployment/overview.md).
+
+## Historical manifest compatibility
+
+`integrations/smithery.yaml` is retained for existing configuration readers.
+The mapping below describes that legacy contract; it is not a supported
+Smithery publishing or provisioning path.
 
 ## Why two naming conventions exist
 
@@ -72,19 +84,6 @@ controlPlane:
       - name: AGENT_BOM_CLICKHOUSE_URL
         value: "http://clickhouse:8123"
 ```
-
-## Adding new Smithery config fields
-
-When a new env var becomes operator-tunable through Smithery:
-
-1. Add the field to `integrations/smithery.yaml` `configSchema.properties` using
-   **camelCase** (Smithery convention).
-2. Add a row to the [Mapping table](#mapping-table) above with the snake-case env
-   var, the consuming module, and the effect.
-3. Confirm the agent-bom code path reads the env var via `os.environ` (not the
-   camelCase key), so self-hosted and Smithery-hosted deployments behave identically.
-4. Smoke-test the Smithery deployment by setting the field via Smithery's UI and
-   confirming the runtime reads the promoted env var.
 
 ## Related references
 

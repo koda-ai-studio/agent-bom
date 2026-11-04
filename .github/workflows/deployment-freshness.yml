@@ -1,8 +1,7 @@
 name: Deployment Freshness
 
 # Checks that the protected Railway surface serves the exact latest release
-# version and MCP tool-schema inventory, and that
-# the Smithery catalog matches released tool names and input schemas. Runs
+# version and MCP tool-schema inventory. Records Smithery provider retirement. Runs
 # daily and on-demand. Opens an issue if stale or misconfigured.
 #
 # The public sample demo is static GitHub Pages content. docs-build.yml runs
@@ -134,7 +133,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Railway contract: v${DEPLOYED}, ${TOOL_COUNT} tools"
 
-      - name: Check Smithery catalog listing
+      - name: Record Smithery provider retirement
         shell: bash
         id: public
         continue-on-error: true
@@ -147,7 +146,7 @@ jobs:
           # Stay fail-closed if contract extraction or probing exits early.
           echo "probe_failed=true" >> "$GITHUB_OUTPUT"
           python3 scripts/check_surface_freshness.py \
-            --surface smithery \
+            --surface smithery --retired-smithery \
             --expected "${{ steps.expected.outputs.version }}" \
             --expected-tool-count "$EXPECTED_TOOL_COUNT" \
             --expected-tool-names-file /tmp/deployment-expected-tool-names.json \
@@ -158,13 +157,13 @@ jobs:
           {
             echo "public_version=$STATE"
             echo "tool_count=$TOOL_COUNT"
-            echo "auth_required=smithery-oauth"
+            echo "auth_required=retired"
           } >> "$GITHUB_OUTPUT"
-          if [ "$STATE" = "fresh" ]; then
+          if [ "$STATE" = "retired" ]; then
             echo "probe_failed=false" >> "$GITHUB_OUTPUT"
           else
             echo "stale=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::Smithery catalog differs from the published tool-name and input-schema contract"
+            echo "::warning::Smithery retirement status could not be recorded"
           fi
 
       # Railway remains the required freshness gate. Smithery status is recorded
@@ -259,9 +258,8 @@ jobs:
             echo "::error::Deployment freshness failed; recording an incident does not make a failed or missing probe pass"
             exit 1
           fi
-          # Smithery/"public" is a known, accepted, structural OAuth gap (see
-          # PR #5317) and must never fail this gate -- only Railway does. Still
-          # surface it loudly so it stays visible, never silently swallowed.
-          if [ "$PUBLIC_OUTCOME" != "success" ] || [ "$PUBLIC_PROBE_FAILED" != "false" ] || [ "$PUBLIC_VERSION" != "fresh" ]; then
-            echo "::warning::Smithery/public marketplace is not verified fresh (structural OAuth gap, non-blocking; see PR #5317)"
+          if [ "$PUBLIC_VERSION" = "retired" ]; then
+            echo "Smithery publishing retired on 2026-10-31: https://www.smithery.ai/future"
+          else
+            echo "::warning::Smithery retirement status was not recorded"
           fi
