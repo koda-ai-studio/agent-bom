@@ -166,7 +166,7 @@ def test_public_docs_do_not_overclaim_smithery_catalog_liveness() -> None:
     smithery_doc = (ROOT / "site-docs/integrations/smithery.md").read_text(encoding="utf-8")
     assert "agent-bom is published in the [Smithery]" not in smithery_doc
     assert "Also on [Glama]" not in readme
-    assert "[Smithery setup and manifest](site-docs/integrations/smithery.md)" in readme
+    assert "[Smithery migration](site-docs/integrations/smithery.md)" in readme
 
 
 def test_release_prep_does_not_call_unpublished_version_current() -> None:

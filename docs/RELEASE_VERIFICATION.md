@@ -53,8 +53,8 @@ Freshness reports that mismatch separately. Reconcile the hosted artifact to
 the published release before retrying; do not publish a candidate to silence it.
 
 The JSON report distinguishes `all_fresh` from `all_required_fresh`. Smithery
-remains advisory under the existing OAuth publication policy; its actual result
-stays visible. A Glama API inventory that contradicts its public schema remains
+is reported as retired following the provider shutdown on October 31, 2026;
+retirement never counts as verified freshness. A Glama API inventory that contradicts its public schema remains
 a required failure even when the indexed release description matches. Use the
 provider's supported Sync Server control and rerun verification; unresolved
 Directory API discrepancies require provider repair, not a local bypass.
@@ -81,13 +81,9 @@ update its clients, and restart the process through the operator's credential
 workflow. Ordinary restarts must retain the original deadline. See
 [MCP authentication](MCP_SERVER.md#sse-transport-remote--multi-client).
 
-[Smithery protected URL publishing](https://smithery.ai/docs/build/publish)
-requires OAuth. The bearer-only MCP server does not supply an OAuth issuer;
-a metadata declaration cannot supply that capability. Configure an authorized
-OAuth-compatible upstream and prove its login/token/refresh flow before running
-`gh workflow run publish-registries.yml`. Missing configuration fails manual,
-scheduled, and release-triggered runs. Do not disable authentication or restore
-an automatic grant just to make a catalog scan pass.
+Smithery retired its publishing API, proxy, accounts and CLI on October 31, 2026.
+Use the [direct MCP setup and retirement guide](../site-docs/integrations/smithery.md).
+Active registry verification never removes authentication to satisfy a catalog scan.
 
 ### Source-to-published storefront transition
 
@@ -329,91 +325,21 @@ How to publish agent-bom to each MCP ecosystem platform.
 
 ---
 
-### 1. Smithery
+### 1. Smithery (retired)
 
-Smithery runs agent-bom as a Smithery-managed remote MCP surface. Its public
-catalog API exposes the listing, deployment URL, and tool inventory; the remote
-transport itself is OAuth-gated by Smithery and does not expose agent-bom's raw
-`/health` route. Do not use `https://server.smithery.ai/.../mcp` as an upstream
-publish URL or health endpoint.
+Smithery shut down its API, accounts, managed proxy and CLI on October 31, 2026.
+See the [provider notice](https://www.smithery.ai/future). Automated publication
+and authorization recovery have been removed. Do not submit the old API token,
+create replacement releases, or weaken the direct MCP endpoint's authentication.
 
-#### Step 1: Keep the protected MCP deployment healthy
+Scheduled deployment and surface monitors pass `--retired-smithery` and record
+`status: retired` without contacting Smithery. This is distinct from `fresh`.
+The remaining public directory is curated by the provider; its listing does not
+prove an Agent-Bom deployment exists. Use the
+[direct MCP setup](../site-docs/integrations/smithery.md) instead.
 
-The primary SSE/streamable-http server is deployed on Railway at
-`https://agent-bom-mcp.up.railway.app` (automated via `deploy-mcp-sse.yml`).
-Remote deployments require `AGENT_BOM_MCP_BEARER_TOKEN` and
-`AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT` in the service's secure environment. The
-expiry must include a timezone and fall within the next hour. Provision a new
-credential and deadline through your own credential-management workflow (Agent-Bom
-does not issue them), update the client through
-its supported secure credential settings, and restart to load the replacement.
-Do not generate a new expiry at boot for an unchanged token. The MCP server does
-not expose an embedded OAuth issuer; registry capability inspection must use an
-operator-provisioned credential. Keep TLS at your ingress or platform edge.
-
-The daily deployment-freshness workflow requires an authenticated MCP `initialize`
-exchange with the configured bearer token and a 401/403 rejection for the same
-anonymous request, then checks the public server card
-against the exact published tool schemas. Public health or metadata alone cannot
-close a protected-deployment drift alert. It also probes Smithery through
-`https://api.smithery.ai/servers/agentbom/agent-bom` for catalog liveness,
-remote deployment metadata, and the exact released tool inventory.
-
-#### Step 2: Publish to Smithery
-
-**Option A — Web UI**:
-1. Go to https://smithery.ai/servers/new
-2. Namespace: `agentbom`
-3. Server ID: `agent-bom`
-4. Follow Smithery's managed remote flow for the `agentbom/agent-bom` listing.
-5. Click **Continue**
-
-**Option B — Automated**:
-The `publish-registries.yml` workflow parses the static server-card tool names
-from the immutable release commit, then compares that contract with both the
-live server card and Smithery's public catalog before publishing. It also
-compares the catalog's input schemas and public description with the live
-release-bound server card. If names, schemas, description, and the latest
-successful upstream URL already match, the workflow skips a duplicate
-deployment. If capabilities, listing metadata, or the upstream changed, it
-creates an external release using:
-- `SMITHERY_API_TOKEN`: a publisher token belonging to the account that owns the
-  `agentbom` namespace. Store it as a GitHub Actions secret; never put it in
-  source files or use the protected MCP deployment bearer token here.
-
-`SMITHERY_MCP_URL` is retained only for the external-upstream publish mode. It
-must never point at Smithery's hosted proxy URL. Freshness monitoring no longer
-depends on that variable; it uses the Smithery catalog API directly.
-
-Protected URL publishing requires an authorized external OAuth upstream.
-Agent-Bom's bearer-only MCP transport does not supply an OAuth issuer; dashboard
-SSO and discovery metadata do not provide this client authorization flow.
-Configure and verify the upstream's approved client, scopes, token audience,
-expiry and refresh behavior before running `gh workflow run publish-registries.yml`.
-Do not add the upstream bearer token to Smithery `configSchema`: Smithery reserves
-the `Authorization` header for OAuth. See the
-[protected MCP recovery checks](RELEASE_VERIFICATION.md#protected-mcp-deployment-and-registry-recovery).
-
-If a capability scan pauses as `AUTH_REQUIRED`, the workflow reads the release
-through Smithery's authenticated API and attempts a bounded callback through
-`scripts/authorize_smithery_release.py`. This helper does not issue tokens or grant client access.
-It can complete only an already-authorized flow that exposes `/oauth/authorize`
-on the configured upstream HTTPS origin and redirects directly to
-`https://server.smithery.ai/oauth/callback`. Interactive login, additional
-redirects, and authorization endpoints on another origin are unsupported by this
-helper; use the upstream's approved authorization process and verify its result.
-Never add automatic grants to satisfy the helper. OAuth state is not logged.
-The workflow avoids duplicate active releases and fails if authorization remains
-required or the exact released catalog does not converge.
-
-#### Verification
-
-After publishing, check:
-
-```bash
-curl -fsSL https://api.smithery.ai/servers/agentbom/agent-bom \
-  | jq '{qualifiedName, remote, deploymentUrl, tool_count: (.tools | length)}'
-```
+The protected Railway endpoint remains a required gate: exact published version,
+default tool schemas, authenticated calls, and anonymous rejection.
 
 ---
 
@@ -602,7 +528,7 @@ git push origin v0.113.2
 This triggers:
 1. **release.yml** → PyPI + Docker Hub + Sigstore signing + SBOM + provenance + GitHub Release
 2. **publish-mcp.yml** → GHCR stdio + SSE containers (via workflow_run)
-3. **publish-registries.yml** → Smithery + ClawHub (via workflow_run)
+3. **publish-registries.yml** → Glama verification + ClawHub (via workflow_run)
 4. **publish-mcp-registry.yml** → Official MCP Registry (via workflow_run)
 5. **deploy-mcp-sse.yml** → Railway deployment (called from the release workflow)
 
@@ -736,7 +662,7 @@ For dependency-heavy or security-driven releases, also verify:
 | **GHCR (API/CLI mirror)** | `Dockerfile` | release.yml | tag push |
 | **GHCR (stdio)** | `deploy/docker/Dockerfile.mcp` | publish-mcp.yml | workflow_run |
 | **GHCR (SSE)** | `deploy/docker/Dockerfile.sse` | publish-mcp.yml | workflow_run |
-| **Smithery** | workflow API | publish-registries.yml | workflow_run |
+| **Smithery** | retired 2026-10-31 | provider notice | no publishing |
 | **Glama directory** | `glama.json` + `integrations/glama/Dockerfile` | provider sync + strict verification | provider daily sync / publish-registries.yml every 6 hours |
 | **ClawHub** | curated `integrations/openclaw/*/SKILL.md` set | publish-registries.yml | workflow_run |
 | **MCP Registry** | `integrations/mcp-registry/server.json` | publish-mcp-registry.yml | workflow_run |
@@ -756,10 +682,6 @@ deployment, it retries old-version responses and incomplete contracts within the
 same bounded attempt budget as transport failures. An HTTP 200 alone does not
 pass the gate: the exact version, tool count, and schemas must match before the
 budget is exhausted.
-Smithery's catalog API omits some root schema fields. The checker verifies those
-constraints from the complete schemas embedded in Smithery's public page, while
-requiring its server identity, tool names, and shared schema fields to agree with
-the catalog. Missing or inconsistent complete evidence counts as drift even when
-all tool names match. If the server card is unavailable or cannot be
-bound to the release, the monitors do not close the drift issue. This is catalog
-evidence; it does not replace an authenticated MCP protocol check.
+Legacy Smithery catalog parsing remains available for explicitly requested
+historical diagnostics; scheduled checks use `--retired-smithery` and perform no
+Smithery request. No retired surface is reported as freshly verified.

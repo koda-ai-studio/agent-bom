@@ -1400,15 +1400,6 @@ def test_smithery_contract_comparison_preserves_types_and_numeric_values():
     assert script._contract_json({"type": "integer"}) != script._contract_json({"type": "number"})
 
 
-def test_smithery_publisher_uses_complete_public_schema_evidence():
-    workflow = (ROOT / ".github/workflows/publish-registries.yml").read_text()
-    assert workflow.count("--write-smithery-tool-contract /tmp/smithery-actual-tool-contract.json") == 2
-    assert (
-        workflow.count("--compare-tool-contract-files /tmp/smithery-expected-tool-contract.json /tmp/smithery-actual-tool-contract.json")
-        == 2
-    )
-
-
 @pytest.mark.parametrize("default, expected", [(None, ["check", "scan"]), (["scan"], ["scan"])])
 def test_released_profile_is_read_inertly_with_legacy_fallback(monkeypatch, default, expected):
     script = _load_script("check_glama_listing.py")

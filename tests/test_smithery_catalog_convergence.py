@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import importlib.util
-import re
 from pathlib import Path
 
 import pytest
-import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github" / "workflows" / "publish-registries.yml"
 
 
 @pytest.fixture
@@ -55,18 +52,3 @@ def test_unavailable_reason_is_bounded_to_one_line(freshness, monkeypatch, tmp_p
     message = str(exc.value.code)
     assert "\n" not in message
     assert len(message) < 400
-
-
-def test_post_publish_verification_allows_smithery_propagation() -> None:
-    job = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["smithery"]
-    step = next(step for step in job["steps"] if step.get("name") == "Verify Smithery catalog inventory")
-    script = step["run"]
-
-    attempts = int(re.search(r"for ATTEMPT in \$\(seq 1 (\d+)\)", script).group(1))
-    delay = int(re.search(r"sleep (\d+)", script).group(1))
-    # A fresh deployment updates the catalog API before the public page; the
-    # two must agree before the schema evidence is trusted.
-    assert attempts * delay >= 600
-    assert f"attempt ${{ATTEMPT}}/{attempts}" in script
-    assert job["timeout-minutes"] >= 45
-    assert job["continue-on-error"] is True
