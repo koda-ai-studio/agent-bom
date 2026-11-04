@@ -3,7 +3,6 @@
 import { useCloudFindingDisclosure } from "@/hooks/use-cloud-finding-disclosure";
 import { ASSET_BASE } from "@/lib/asset-base";
 import { useRelationshipLabelControl } from "@/components/relationship-label-control";
-import { GraphFocusedPathDecision } from "@/components/graph-focused-path-decision";
 import { AlertTriangle } from "lucide-react";
 import { GraphConnectionsList } from "@/components/graph-connections-list";
 import { GraphPathList } from "@/components/graph-path-list";
@@ -27,7 +26,6 @@ import { GraphAnalysisStatusBanner } from "@/components/graph-analysis-status";
 import { GraphEvidenceExportButton, FullscreenButton, GraphInteractionToolbar, GraphLegendDock } from "@/components/graph-chrome";
 import { GraphDriftTimeline } from "@/components/graph-drift-timeline";
 import { GraphLensSwitcher } from "@/components/graph-lens-switcher";
-import { GraphScenarioAuthoring, GraphScenarioComparisonPanel, GraphScenarioSelector } from "@/components/graph-scenario-comparison";
 import { GraphScopeOverview } from "@/components/graph-scope-overview";
 import { GraphEmptyState, GraphFindingsFallback, GraphPanelSkeleton, GraphRefreshOverlay } from "@/components/graph-state-panels";
 import { GraphViewControls } from "@/components/graph-view-controls";
@@ -48,12 +46,16 @@ import { snapshotLabel, snapshotOptionLabel } from "@/lib/snapshot-label";
 import { estateIssueLine } from "@/lib/graph-issue-labels";
 import { GraphPulseStyles as PulseStyles } from "@/components/graph-pulse-styles";
 import { RollupNavigationPanel } from "@/components/graph-rollup-navigation-panel";
-import { GraphOperatorTools } from "@/components/graph-operator-tools";
-import { GraphAttackPathQueue } from "@/components/graph-attack-path-queue";
 import type { GraphPageData } from "@/hooks/use-graph-page-data";
 import type { GraphCanvasModel } from "@/hooks/use-graph-canvas-model";
 import type { GraphPageActions } from "@/hooks/use-graph-page-actions";
 
+const GraphFocusedPathDecision = dynamic(() => import("@/components/graph-focused-path-decision").then(mod => mod.GraphFocusedPathDecision), { ssr: false });
+const GraphScenarioAuthoring = dynamic(() => import("@/components/graph-scenario-comparison").then(mod => mod.GraphScenarioAuthoring), { ssr: false });
+const GraphScenarioComparisonPanel = dynamic(() => import("@/components/graph-scenario-comparison").then(mod => mod.GraphScenarioComparisonPanel), { ssr: false });
+const GraphScenarioSelector = dynamic(() => import("@/components/graph-scenario-comparison").then(mod => mod.GraphScenarioSelector), { ssr: false });
+const GraphOperatorTools = dynamic(() => import("@/components/graph-operator-tools").then(mod => mod.GraphOperatorTools), { ssr: false });
+const GraphAttackPathQueue = dynamic(() => import("@/components/graph-attack-path-queue").then(mod => mod.GraphAttackPathQueue), { ssr: false });
 // Load evidence inspectors only when opened, keeping their code off the first-paint path.
 const GraphEntityDrawer = dynamic(() => import("@/components/graph-entity-drawer").then(mod => mod.GraphEntityDrawer), { ssr: false });
 const GraphChangesPanel = dynamic(() => import("@/components/graph-changes-panel").then(mod => mod.GraphChangesPanel), { ssr: false });

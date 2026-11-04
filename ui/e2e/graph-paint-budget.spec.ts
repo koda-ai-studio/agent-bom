@@ -113,3 +113,26 @@ test("loads node evidence code only when the inspector is opened", async ({ page
   await expect(page.getByRole("tablist", { name: "Node detail sections" })).toBeVisible();
   expect(requested.some(path => path.endsWith(chunk!))).toBe(true);
 });
+
+
+test("loads scenario and operator code only after view controls open", async ({ page }) => {
+  const manifest = JSON.parse(readFileSync(".next/react-loadable-manifest.json", "utf8"));
+  const chunks = ["graph-scenario-comparison", "graph-operator-tools"].map(module => {
+    const entry = manifest[`components/graph-page-view.tsx -> @/components/${module}`];
+    expect(entry, `${module} must have an on-demand production chunk`).toBeDefined();
+    return entry.files.at(-1) as string;
+  });
+  const requested: string[] = [];
+  page.on("request", request => requested.push(new URL(request.url()).pathname));
+  await fixture(page, 120);
+  await page.goto("/graph?scan=paint&rollup=0&layers=agent,server");
+  await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
+  for (const chunk of chunks) expect(requested.some(path => path.endsWith(chunk))).toBe(false);
+  await page.getByRole("button", { name: "View & layers", exact: true }).click();
+  await expect(page.getByLabel("Architecture scenario", { exact: true })).toBeVisible();
+  await page.getByText("Advanced controls", { exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Evidence, drift, and operator tools" })).toBeVisible();
+  for (const chunk of chunks) expect(requested.some(path => path.endsWith(chunk))).toBe(true);
+  await page.getByText("How to read this graph", { exact: true }).click();
+  await expect(page.getByText("Arrows show recorded direction, not proven access or exploitation.", { exact: true })).toBeVisible();
+});
