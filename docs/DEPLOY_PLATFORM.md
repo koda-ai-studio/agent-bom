@@ -26,8 +26,8 @@ Run the pilot from a release tag checkout and set `AGENT_BOM_IMAGE_TAG` to that
 tag, so the containers run the same release as the checked-out files:
 
 ```bash
-git clone --depth 1 --branch v0.113.1 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
-AGENT_BOM_IMAGE_TAG=0.113.1 scripts/deploy/install.sh pilot
+git clone --depth 1 --branch v0.113.2 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
+AGENT_BOM_IMAGE_TAG=0.113.2 scripts/deploy/install.sh pilot
 # Dashboard → http://localhost:3000
 # API       → http://localhost:8422/docs
 ```
@@ -353,7 +353,7 @@ If you manage cluster provisioning yourself (any Kubernetes, not just EKS),
 install the chart directly:
 
 ```bash
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
   --namespace agent-bom --create-namespace \
   --values deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```

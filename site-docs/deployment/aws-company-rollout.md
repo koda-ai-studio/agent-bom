@@ -227,7 +227,7 @@ maintenance, migration/admin, and auth Kubernetes Secrets described in
 [Control Plane Helm](control-plane-helm.md), then use the packaged chart:
 
 ```bash
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
   --namespace agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```
@@ -310,8 +310,8 @@ through a managed tap instead of direct package upload.
 
 ```bash
 python3 scripts/render_homebrew_formula.py \
-  --version 0.113.1 \
-  --url https://github.com/koda-ai-studio/agent-bom/archive/refs/tags/v0.113.1.tar.gz \
+  --version 0.113.2 \
+  --url https://github.com/koda-ai-studio/agent-bom/archive/refs/tags/v0.113.2.tar.gz \
   --sha256 <release-sha256>
 ```
 

@@ -14,7 +14,7 @@
 #   aws secretsmanager create-secret --name agent-bom/snowflake-key --secret-string file://rsa_key.p8
 #
 # Usage:
-#   helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.1 \
+#   helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
 #     -n agent-bom --create-namespace \
 #     -f deploy/helm/agent-bom/examples/eks-snowflake-values.yaml
 

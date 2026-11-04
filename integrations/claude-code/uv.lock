@@ -17,7 +17,7 @@ supported-markers = [
 
 [[package]]
 name = "agent-bom"
-version = "0.113.1"
+version = "0.113.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -47,9 +47,9 @@ dependencies = [
     { name = "tree-sitter-typescript" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/11/3468e2df4cf34a7a6650548010c10f483d7f8fba0aca88e52e6408eb3134/agent_bom-0.113.1.tar.gz", hash = "sha256:e27e79cbfd73590e56cdaaa5667cc9988b82e5375d6d9f1ae8a269072b920589", size = 12834295, upload-time = "2026-11-03T23:44:58.915Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/28/44/181aa0410227e5e130a0c69bd013a92327e3c03697f43e5072ee91454f4f/agent_bom-0.113.2.tar.gz", hash = "sha256:f3e95fd8a435aa6631e0ea02f647e437da9bb50bae265ed7f0ba9369b1bb4a5b", size = 12842908, upload-time = "2026-11-04T14:24:11.867Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/1f/a80b815a4ed4a9a6289b51147fdc0b1d9bc782b691172cdfd2ba313561b5/agent_bom-0.113.1-py3-none-any.whl", hash = "sha256:45a8f114d2172cf810ec28de10a66d4d7d823deaeb7b40f482343ae393cf1b92", size = 10297606, upload-time = "2026-11-03T23:44:55.4Z" },
+    { url = "https://files.pythonhosted.org/packages/c3/e3/89a5df614c9272f1eb1017e93c77c5296c7dfb4362fa2b512ca76241b47e/agent_bom-0.113.2-py3-none-any.whl", hash = "sha256:603fd5c85452e4b36637624e52b86e87a99c4faa28aee9c6d5019c9cb10edf11", size = 10310462, upload-time = "2026-11-04T14:24:08.4Z" },
 ]
 
 [[package]]
@@ -61,7 +61,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "agent-bom", specifier = "==0.113.1" }]
+requires-dist = [{ name = "agent-bom", specifier = "==0.113.2" }]
 
 [[package]]
 name = "annotated-types"
@@ -1115,14 +1115,14 @@ wheels = [
 
 [[package]]
 name = "typing-inspection"
-version = "0.4.4"
+version = "0.4.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/26/b09b8010994eccc3c09092e6b34058f36a460eea2d4c3e8b910c695975a0/typing_inspection-0.4.4.tar.gz", hash = "sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47", size = 76928, upload-time = "2026-08-12T12:37:25.997Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/50/0195198eb1d75bab716bb0a813abea4cc394bfa17a92a189f021a34859af/typing_inspection-0.4.5.tar.gz", hash = "sha256:7f16c411e7930dc79596d42ab44672a3fe5f60eb34b781a1647e7872363120c7", size = 81194, upload-time = "2026-11-04T14:13:23.774Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl", hash = "sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147", size = 14750, upload-time = "2026-08-12T12:37:24.648Z" },
+    { url = "https://files.pythonhosted.org/packages/de/0c/ea2544850a7c135e15033a5c7a8e7211136184b7ae63e2239d557c2b3019/typing_inspection-0.4.5-py3-none-any.whl", hash = "sha256:bc210535442b39e1bf2805e0c7a17dfd6a4ace760c84c7f7d16245d23a6b1c39", size = 14874, upload-time = "2026-11-04T14:13:22.616Z" },
 ]
 
 [[package]]
