@@ -97,15 +97,19 @@ test("loads node evidence code only when the inspector is opened", async ({ page
   const manifest = JSON.parse(readFileSync(".next/react-loadable-manifest.json", "utf8"));
   const entry = manifest["components/graph-page-view.tsx -> @/components/graph-entity-drawer"];
   expect(entry, "Node evidence must have an on-demand production chunk").toBeDefined();
-  const chunk = entry.files.at(-1) as string;
+  // A loadable manifest also lists shared/transitive chunks; their order does
+  // not identify the inspector module. Observe the chunk exporting the drawer.
+  const chunk = (entry.files as string[]).find(file =>
+    readFileSync(`.next/${file}`, "utf8").includes("GraphEntityDrawer:"));
+  expect(chunk, "The deferred chunk must export the node evidence drawer").toBeDefined();
   expect(chunk).toMatch(/\.js$/);
   const requested: string[] = [];
   page.on("request", request => requested.push(new URL(request.url()).pathname));
   await fixture(page, 120);
   await page.goto("/graph?scan=paint&rollup=0&layers=agent,server");
   await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
-  expect(requested.some(path => path.endsWith(chunk))).toBe(false);
+  expect(requested.some(path => path.endsWith(chunk!))).toBe(false);
   await page.locator(".react-flow__node-agentNode").click();
   await expect(page.getByRole("tablist", { name: "Node detail sections" })).toBeVisible();
-  expect(requested.some(path => path.endsWith(chunk))).toBe(true);
+  expect(requested.some(path => path.endsWith(chunk!))).toBe(true);
 });
