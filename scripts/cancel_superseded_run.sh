@@ -14,7 +14,16 @@ fi
 REPO="$1"
 RUN_ID="$2"
 
-if ! gh run cancel "${RUN_ID}" --repo "${REPO}"; then
+if cancel_output="$(gh run cancel "${RUN_ID}" --repo "${REPO}" 2>&1)"; then
+  printf '%s\n' "${cancel_output}"
+else
+  printf '%s\n' "${cancel_output}" >&2
+  # The cancellation command can confirm completion before the status read
+  # catches up. Only this exact terminal response is success; other rejected
+  # requests still require completion evidence or fail below.
+  if [ "${cancel_output}" = "Cannot cancel a workflow run that is completed" ]; then
+    exit 0
+  fi
   # The run can finish between the caller listing it as active and this
   # request landing; GitHub then rejects the cancel ("Cannot cancel a
   # workflow run that is completed"). That is the end state we wanted, so
