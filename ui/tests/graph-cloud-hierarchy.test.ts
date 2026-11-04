@@ -21,6 +21,16 @@ const edges = [edge("account", "cluster", "contains"), edge("account", "gateway"
   edge("checkout", "role", "authenticates_as"), edge("role", "bucket", "has_permission"),
   edge("checkout", "cve", "vulnerable_to"), edge("grant-finding", "role", "affects")];
 
+it("preserves recorded service names in the readable cloud view", () => {
+  const services: Record<string, string> = { cluster: "eks", gateway: "api_gateway", role: "iam_role", bucket: "s3" };
+  const recorded = nodes.map(n => services[n.id] ? { ...n, data: { ...n.data, attributes: { cloud_provider: "aws", service: services[n.id] } } } : n);
+  const result = cloudHierarchyLayout(recorded, edges)!;
+  const captions = Object.fromEntries(result.nodes.map(n => [n.id, n.data.readingLabel]));
+  expect(captions).toMatchObject({ cluster: "Amazon EKS", gateway: "Amazon API Gateway", role: "AWS IAM role", bucket: "Amazon S3 bucket" });
+  expect(captions.checkout).toBe("Application");
+  expect(captions.cve).toBe("Vulnerability");
+});
+
 it("branches recorded findings from their assets while preserving access order", () => {
   const result = graphHierarchyLayout(nodes, edges);
   const byId = new Map(result.nodes.map(n => [n.id, n]));

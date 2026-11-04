@@ -385,3 +385,30 @@ for (const theme of ["light", "dark"] as const) {
     });
   });
 }
+
+test("pipeline nodes remain measured after capture navigation and reload", async ({ page }, info) => {
+  await routeJobs(page);
+  await page.setViewportSize({ width: 1440, height: 980 });
+  await page.clock.setFixedTime(new Date("2026-06-03T16:00:00Z"));
+  for (let visit = 0; visit < 10; visit++) {
+    await page.goto("/jobs?capture=1");
+    await page.reload({ waitUntil: "load" });
+    const panel = page.getByTestId("job-pipeline-job-prod-cloud");
+    try {
+      await expect(panel.locator(".react-flow__node:visible")).toHaveCount(10);
+      await expect(panel.locator(".react-flow__edge")).toHaveCount(13);
+    } finally {
+      await info.attach(`pipeline-layout-${visit}`, {
+        contentType: "application/json",
+        body: JSON.stringify(await panel.locator(".react-flow").evaluate(frame => ({
+          frame: frame.getBoundingClientRect().toJSON(),
+          viewport: frame.querySelector(".react-flow__viewport")?.getAttribute("style"),
+          nodes: [...frame.querySelectorAll(".react-flow__node")].map(node => ({
+            id: node.getAttribute("data-id"), style: node.getAttribute("style"),
+            box: node.getBoundingClientRect().toJSON(),
+          })),
+        }))),
+      });
+    }
+  }
+});

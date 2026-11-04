@@ -3244,7 +3244,9 @@ async function main() {
           await fitReactFlow(p);
           await scrollTo(p, 0);
           if (scope === "cloud") {
-            await expect(p.getByText("Permission role", { exact: true })).toBeVisible();
+            for (const caption of ["AWS IAM role", "Amazon EKS", "Amazon S3 bucket"]) {
+              await expect(p.getByText(caption, { exact: true })).toBeVisible();
+            }
             await expect(p.getByRole("group", { name: /Has Permission.*relationship from checkout-runtime-role to customer-pii-bucket/ })).toHaveCount(1);
           }
         }, { expectedText: [/Demo data/i, "Path analysis complete for this snapshot", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp((n.attributes?.display_title || n.label).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[- ]"), "i"))],

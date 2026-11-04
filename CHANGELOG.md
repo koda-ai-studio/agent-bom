@@ -10,6 +10,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [0.113.2] - 2026-11-03
 
 ### Fixed
+- Scan pipeline nodes remain visible when stage telemetry refreshes during initialization, preserving measured geometry separately for readable and overview layouts.
+- Graph captions retain recorded cloud-service identities, including Amazon EKS, AWS IAM roles and Azure Blob containers. Clearer resource glyphs and provider badges distinguish mixed-vendor connections; missing or conflicting metadata keeps a generic caption.
 - Current-estate graph reads retain their previous complete generation while a background worker promotes new evidence, avoiding a transient unavailable response during ingestion refresh. The response labels retained evidence as the previous generation.
 - Hosted MCP startup preserves configured OAuth instead of forcing an incompatible public read-only tier. Railway and Procfile deployments use the authenticated default.
 - Release and deployment-freshness checks use the configured managed credential, verify the exact release contract, and reject anonymous MCP access.

@@ -1,7 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
-import { assetKindLabel } from "@/lib/asset-icon-registry";
+import { assetKindLabel, assetServiceLabel } from "@/lib/asset-icon-registry";
 
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
 const LANES: Record<string, number> = { account: 0, cluster: 1, apiGateway: 1, container: 2,
@@ -13,6 +13,15 @@ const CAPTIONS: Record<string, string> = { account: "Account", cluster: "Cluster
   dataStore: "Data resource", vulnerability: "Vulnerability", misconfiguration: "Configuration finding", driftIncident: "Drift finding" };
 const VERBS: Record<string, string> = { contains: "Contains", hosts: "Hosts application", authenticates_as: "Uses role",
   has_permission: "Permission on", exposed_to: "Exposure link", vulnerable_to: "Has vulnerability", affects: "Finding on" };
+
+function cloudCaption(data: LineageNodeData): string | undefined {
+  const input = { nodeType: data.nodeType, entityType: data.entityType, attributes: data.attributes, provider: data.dimensions?.cloud_provider };
+  const service = assetServiceLabel(input);
+  if (service) return service;
+  if (data.nodeType !== "dataStore") return CAPTIONS[data.nodeType];
+  const label = assetKindLabel(input);
+  return label === "Data" ? "Data resource" : label;
+}
 
 /** A bounded cloud view groups recorded entity roles, not inferred execution.
  * Ambiguous/shared findings and other graph kinds retain the general layout.
@@ -94,10 +103,7 @@ export function cloudHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   return {
     nodes: nodes.map(n => ({ ...n, position: positions.get(n.id) ?? n.position, style: { ...n.style, minHeight: 300, paddingTop: 0 },
       data: { ...n.data, readingGroup: GROUPS[LANES[n.data.nodeType] ?? LANES[byId.get(owners.get(n.id) ?? "")?.data.nodeType ?? ""]!],
-        readingConnections: connectionSummaries.get(n.id), readingOwner: owners.get(n.id), readingFinding: FINDINGS.has(n.data.nodeType), readingLabel: n.data.nodeType === "dataStore"
-        ? assetKindLabel({ nodeType: n.data.nodeType, entityType: n.data.entityType, attributes: n.data.attributes }) === "Data"
-          ? "Data resource" : assetKindLabel({ nodeType: n.data.nodeType, entityType: n.data.entityType, attributes: n.data.attributes })
-        : CAPTIONS[n.data.nodeType] } })),
+        readingConnections: connectionSummaries.get(n.id), readingOwner: owners.get(n.id), readingFinding: FINDINGS.has(n.data.nodeType), readingLabel: cloudCaption(n.data) } })),
     edges: edges.map((e): Edge => {
       const relationship = String(e.data?.relationship ?? "");
       const qualifier = accessEvidenceQualifier(relationship, e.data);

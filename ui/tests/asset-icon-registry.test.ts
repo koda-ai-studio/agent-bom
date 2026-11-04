@@ -20,6 +20,17 @@ it("labels static pipeline and implementation artifacts without implying a live 
   expect(assetKindLabel({entityType:"code_module",attributes:{subtype:"agent_implementation"}})).toBe("Agent declaration");
 });
 
+it.each([
+  { entityType: "cloud_resource", attributes: { cloud_provider: "aws", resource_type: "constructor" }, label: "Cloud", kind: "cloud_resource" },
+  { entityType: "data_store", attributes: { cloud_provider: "constructor", resource_type: "unmapped_resource" }, label: "Data", kind: "database" },
+  { entityType: "data_store", attributes: { cloud_provider: "__proto__", resource_type: "unmapped_resource" }, label: "Data", kind: "database" },
+  { nodeType: "constructor", label: "Entity", kind: "unknown" },
+])("only resolves declared registry entries for $label", ({ label, kind, ...input }) => {
+  expect(assetKind(input)).toBe(kind);
+  expect(assetKindLabel(input)).toBe(label);
+  expect(assetIcon(input)).toBe(ASSET_KINDS[kind as AssetKind].icon);
+});
+
 // Every (entity_type, resource_type) pair the demo estate API emits, collected
 // from GET /v1/graph on the seeded demo estate.
 const DEMO_PAIRS: Array<[string, string]> = [

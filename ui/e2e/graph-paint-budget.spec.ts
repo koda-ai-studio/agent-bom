@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import os from "node:os";
+import { installGraphPaintMeasurement } from "./helpers/graph-paint-measurement";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const stamp = "2026-10-15T00:00:00Z";
@@ -42,6 +43,7 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
       if(condition==="fresh_context" && sample>0){await context.close();context=await browser.newContext({viewport:{width:1440,height:1000}});}
       const page=await context.newPage();
       basis=await fixture(page,agents);
+      await page.addInitScript(installGraphPaintMeasurement);
       await page.goto("/graph?scan=paint&rollup=0&layers=agent,server",{waitUntil:"domcontentloaded"});
       await expect(page.locator(".react-flow__node .graph-entity-glyph").first()).toBeVisible();
       await expect(page.locator(".react-flow__edge").first()).toBeVisible();
@@ -67,7 +69,9 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
         const resources=performance.getEntriesByType("resource").filter(r=>r.name.includes("/v1/graph?")).map(r=>({ms:r.duration}));
         const scripts = performance.getEntriesByType("resource").filter((entry): entry is PerformanceResourceTiming =>
           entry instanceof PerformanceResourceTiming && entry.initiatorType === "script");
-        return {ms:performance.now(),resources,scriptCount:scripts.length,
+        const readyAt = (window as Window & { graphPaintReadyAt?: number }).graphPaintReadyAt;
+        if (readyAt === undefined) throw new Error("Browser did not record a fully visible, settled graph");
+        return {ms:readyAt,assertionsCompletedMs:performance.now(),resources,scriptCount:scripts.length,
           scriptBytes:scripts.reduce((total,entry)=>total+entry.decodedBodySize,0)};
       });
       records.push({condition,...result});
@@ -82,7 +86,7 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
   }));
   const receipt=info.outputPath("paint-budget.json");
   writeFileSync(receipt,JSON.stringify({basis,records,summary,platform:os.platform(),arch:os.arch(),cpus:os.cpus()[0]?.model,memory:os.totalmem(),
-    conditions:"Production JavaScript; deterministic intercepted API page. Fresh/reused browser contexts; Playwright routing disables HTTP cache. Settled camera and two animation frames required. No backend build or external network latency is included."},null,2));
+    conditions:"Production JavaScript; deterministic intercepted API page. Fresh/reused browser contexts; Playwright routing disables HTTP cache. Browser readiness requires the same node/edge counts, visible contained nodes, centered framing, settled camera and two further animation frames. Driver assertion completion is recorded separately. No backend build or external network latency is included."},null,2));
   await info.attach("paint-budget.json",{path:receipt,contentType:"application/json"});
   expect(Math.max(...records.map(r=>r.ms)),JSON.stringify(summary)).toBeLessThan(2000);
 });
@@ -93,15 +97,42 @@ test("loads node evidence code only when the inspector is opened", async ({ page
   const manifest = JSON.parse(readFileSync(".next/react-loadable-manifest.json", "utf8"));
   const entry = manifest["components/graph-page-view.tsx -> @/components/graph-entity-drawer"];
   expect(entry, "Node evidence must have an on-demand production chunk").toBeDefined();
-  const chunk = entry.files.at(-1) as string;
+  // A loadable manifest also lists shared/transitive chunks; their order does
+  // not identify the inspector module. Observe the chunk exporting the drawer.
+  const chunk = (entry.files as string[]).find(file =>
+    readFileSync(`.next/${file}`, "utf8").includes("GraphEntityDrawer:"));
+  expect(chunk, "The deferred chunk must export the node evidence drawer").toBeDefined();
   expect(chunk).toMatch(/\.js$/);
   const requested: string[] = [];
   page.on("request", request => requested.push(new URL(request.url()).pathname));
   await fixture(page, 120);
   await page.goto("/graph?scan=paint&rollup=0&layers=agent,server");
   await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
-  expect(requested.some(path => path.endsWith(chunk))).toBe(false);
+  expect(requested.some(path => path.endsWith(chunk!))).toBe(false);
   await page.locator(".react-flow__node-agentNode").click();
   await expect(page.getByRole("tablist", { name: "Node detail sections" })).toBeVisible();
-  expect(requested.some(path => path.endsWith(chunk))).toBe(true);
+  expect(requested.some(path => path.endsWith(chunk!))).toBe(true);
+});
+
+
+test("loads scenario and operator code only after view controls open", async ({ page }) => {
+  const manifest = JSON.parse(readFileSync(".next/react-loadable-manifest.json", "utf8"));
+  const chunks = ["graph-scenario-comparison", "graph-operator-tools"].map(module => {
+    const entry = manifest[`components/graph-page-view.tsx -> @/components/${module}`];
+    expect(entry, `${module} must have an on-demand production chunk`).toBeDefined();
+    return entry.files.at(-1) as string;
+  });
+  const requested: string[] = [];
+  page.on("request", request => requested.push(new URL(request.url()).pathname));
+  await fixture(page, 120);
+  await page.goto("/graph?scan=paint&rollup=0&layers=agent,server");
+  await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
+  for (const chunk of chunks) expect(requested.some(path => path.endsWith(chunk))).toBe(false);
+  await page.getByRole("button", { name: "View & layers", exact: true }).click();
+  await expect(page.getByLabel("Architecture scenario", { exact: true })).toBeVisible();
+  await page.getByText("Advanced controls", { exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Evidence, drift, and operator tools" })).toBeVisible();
+  for (const chunk of chunks) expect(requested.some(path => path.endsWith(chunk))).toBe(true);
+  await page.getByText("How to read this graph", { exact: true }).click();
+  await expect(page.getByText("Arrows show recorded direction, not proven access or exploitation.", { exact: true })).toBeVisible();
 });

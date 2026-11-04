@@ -122,9 +122,17 @@ export function useGraphLayout(
     resolvedKind === "dagre" ? inputEdges : EMPTY_EDGES,
     dagreOptions,
   );
+  const peerRowPitch = Math.max(LINEAGE_NODE_HEIGHT + GRAPH_NODE_MIN_GAP,
+    (options.dagreLr?.minSeparation?.height ?? 0) + (options.dagreLr?.minSeparation?.gap ?? 0));
+  const peerPreview = useMemo(
+    () => enabled && resolvedKind === "dagre-lr"
+      ? peerPreviewLayout(nodes as Node<LineageNodeData>[], edges, peerRowPitch)
+      : null,
+    [enabled, resolvedKind, nodes, edges, peerRowPitch],
+  );
   const dagreLr = useDagreLrLayout(
-    resolvedKind === "dagre-lr" ? inputNodes : EMPTY_NODES,
-    resolvedKind === "dagre-lr" ? inputEdges : EMPTY_EDGES,
+    resolvedKind === "dagre-lr" && !peerPreview ? inputNodes : EMPTY_NODES,
+    resolvedKind === "dagre-lr" && !peerPreview ? inputEdges : EMPTY_EDGES,
     options.dagreLr,
   );
   const sankey = useSankeyLayout(
@@ -134,14 +142,6 @@ export function useGraphLayout(
   );
 
   const hierarchyOptionsKey = JSON.stringify(options.dagreLr ?? {});
-  const peerRowPitch = Math.max(LINEAGE_NODE_HEIGHT + GRAPH_NODE_MIN_GAP,
-    (options.dagreLr?.minSeparation?.height ?? 0) + (options.dagreLr?.minSeparation?.gap ?? 0));
-  const peerPreview = useMemo(
-    () => enabled && resolvedKind === "dagre-lr"
-      ? peerPreviewLayout(nodes as Node<LineageNodeData>[], edges, peerRowPitch)
-      : null,
-    [enabled, resolvedKind, nodes, edges, peerRowPitch],
-  );
   const hierarchy = useMemo(
     () => enabled && resolvedKind === "asset-hierarchy"
       ? graphHierarchyLayout(nodes as Node<LineageNodeData>[], edges, JSON.parse(hierarchyOptionsKey) as LayoutOptions)

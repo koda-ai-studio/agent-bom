@@ -82,7 +82,7 @@ exports[`lineage inspector rendering before extraction > preserves the policy ov
 
 exports[`lineage inspector rendering before extraction > preserves the provider overview DOM 1`] = `"63c717eb29dfbabf6e2ee6e7d9dd5e7a25ca0805fe9a02f8f37c060649342eb4"`;
 
-exports[`lineage inspector rendering before extraction > preserves the role overview DOM 1`] = `"f5512316fb0375894c806fcd9a358cf1c5ea5fcc4f945db7f2d18f8b43b8d04a"`;
+exports[`lineage inspector rendering before extraction > preserves the role overview DOM 1`] = `"e1952d4063399e09de40b1d05759e71b0433a288b9e1231c9a82b3b39fce52e2"`;
 
 exports[`lineage inspector rendering before extraction > preserves the server overview DOM 1`] = `"d576a899a5bb6220bd8aab38696eb8d840e9d4edf1e4b8bdd2e8d20d777394aa"`;
 
