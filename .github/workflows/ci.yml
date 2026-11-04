@@ -951,7 +951,7 @@ jobs:
           GRAPH_SCAN_ARTIFACT: ""
         run: |
           cd ui
-          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts e2e/lineage-graph-readability.spec.ts e2e/graph-efficient-workspace.spec.ts e2e/graph-paint-budget.spec.ts e2e/graph-real-topology.spec.ts e2e/graph-service-identity.spec.ts e2e/jobs-workflow.spec.ts
+          npm run test:e2e -- e2e/route-catalog-smoke.spec.ts e2e/route-catalog-accessibility.spec.ts e2e/lineage-graph-readability.spec.ts e2e/graph-efficient-workspace.spec.ts e2e/graph-paint-budget.spec.ts e2e/graph-real-topology.spec.ts e2e/graph-service-identity.spec.ts e2e/graph-readable-layout.spec.ts e2e/jobs-workflow.spec.ts
 
       - name: Retain UI failure diagnostics
         if: ${{ failure() || cancelled() }}

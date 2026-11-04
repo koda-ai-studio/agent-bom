@@ -1424,6 +1424,7 @@ def test_pr_browser_smoke_covers_graph_drawer_readability() -> None:
     assert "e2e/graph-efficient-workspace.spec.ts" in command
     assert "e2e/graph-real-topology.spec.ts" in command
     assert "e2e/graph-service-identity.spec.ts" in command
+    assert "e2e/graph-readable-layout.spec.ts" in command
     assert "e2e/jobs-workflow.spec.ts" in command
 
 
