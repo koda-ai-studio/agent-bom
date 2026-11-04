@@ -1,10 +1,15 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import type { Node, NodeChange } from "@xyflow/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useUpdateNodeInternals, type Node, type NodeChange } from "@xyflow/react";
 
 /** Keep controlled nodes measured across telemetry updates with unchanged DOM sizes. */
 export function usePipelineNodeMeasurements(nodes: Node[], compact: boolean) {
+  const updateNodeInternals = useUpdateNodeInternals();
+  // A controlled-data refresh can reset handle bounds before a pending native
+  // resize notification is applied. Refresh after the new DOM commits even
+  // when its dimensions are unchanged, so edges cannot remain uninitialized.
+  useEffect(() => { updateNodeInternals(nodes.map(node => node.id)); }, [nodes, updateNodeInternals]);
   const [sizes, setSizes] = useState(new Map<string, { width: number; height: number }>());
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     setSizes(previous => {

@@ -6,6 +6,7 @@ import type { StepEvent } from "@/lib/api";
 const flow = vi.hoisted(() => ({
   nodes: [] as Node[],
   onNodesChange: undefined as ((changes: NodeChange[]) => void) | undefined,
+  updateNodeInternals: vi.fn(),
   api: { fitView: vi.fn(), getNode: vi.fn(), setViewport: vi.fn(), viewportInitialized: false },
 }));
 vi.mock("@xyflow/react", async importOriginal => ({
@@ -17,6 +18,7 @@ vi.mock("@xyflow/react", async importOriginal => ({
     return <div />;
   },
   useReactFlow: () => flow.api,
+  useUpdateNodeInternals: () => flow.updateNodeInternals,
 }));
 import { ScanPipeline } from "@/components/scan-pipeline";
 
@@ -25,7 +27,7 @@ const steps = (message: string) => new Map<string, StepEvent>([
 ]);
 
 describe("controlled pipeline node measurements", () => {
-  beforeEach(() => { flow.nodes = []; flow.onNodesChange = undefined; });
+  beforeEach(() => { flow.nodes = []; flow.onNodesChange = undefined; flow.updateNodeInternals.mockClear(); });
   it("retains measured geometry when stage telemetry refreshes", () => {
     const { rerender } = render(<ScanPipeline steps={steps("First event")} />);
     act(() => flow.onNodesChange?.([{ id: "discovery", type: "dimensions", dimensions: { width: 240, height: 126 } }]));
@@ -35,6 +37,12 @@ describe("controlled pipeline node measurements", () => {
     expect(discovery.measured).toEqual({ width: 240, height: 126 });
     act(() => flow.onNodesChange?.([{ id: "discovery", type: "dimensions", dimensions: { width: 240, height: 150 } }]));
     expect(flow.nodes.find(node => node.id === "discovery")!.measured).toEqual({ width: 240, height: 150 });
+  });
+  it("refreshes connection handles when controlled node data changes", () => {
+    const { rerender } = render(<ScanPipeline steps={steps("First event")} />);
+    flow.updateNodeInternals.mockClear();
+    rerender(<ScanPipeline steps={steps("Updated event")} />);
+    expect(flow.updateNodeInternals).toHaveBeenCalledWith(flow.nodes.map(node => node.id));
   });
   it("keeps compact and readable measurements separate", () => {
     const { getByRole } = render(<ScanPipeline steps={steps("Ready")} />);
