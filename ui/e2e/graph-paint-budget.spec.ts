@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import os from "node:os";
+import { installGraphPaintMeasurement } from "./helpers/graph-paint-measurement";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const stamp = "2026-10-15T00:00:00Z";
@@ -42,6 +43,7 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
       if(condition==="fresh_context" && sample>0){await context.close();context=await browser.newContext({viewport:{width:1440,height:1000}});}
       const page=await context.newPage();
       basis=await fixture(page,agents);
+      await page.addInitScript(installGraphPaintMeasurement);
       await page.goto("/graph?scan=paint&rollup=0&layers=agent,server",{waitUntil:"domcontentloaded"});
       await expect(page.locator(".react-flow__node .graph-entity-glyph").first()).toBeVisible();
       await expect(page.locator(".react-flow__edge").first()).toBeVisible();
@@ -67,7 +69,9 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
         const resources=performance.getEntriesByType("resource").filter(r=>r.name.includes("/v1/graph?")).map(r=>({ms:r.duration}));
         const scripts = performance.getEntriesByType("resource").filter((entry): entry is PerformanceResourceTiming =>
           entry instanceof PerformanceResourceTiming && entry.initiatorType === "script");
-        return {ms:performance.now(),resources,scriptCount:scripts.length,
+        const readyAt = (window as Window & { graphPaintReadyAt?: number }).graphPaintReadyAt;
+        if (readyAt === undefined) throw new Error("Browser did not record a fully visible, settled graph");
+        return {ms:readyAt,assertionsCompletedMs:performance.now(),resources,scriptCount:scripts.length,
           scriptBytes:scripts.reduce((total,entry)=>total+entry.decodedBodySize,0)};
       });
       records.push({condition,...result});
@@ -82,7 +86,7 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
   }));
   const receipt=info.outputPath("paint-budget.json");
   writeFileSync(receipt,JSON.stringify({basis,records,summary,platform:os.platform(),arch:os.arch(),cpus:os.cpus()[0]?.model,memory:os.totalmem(),
-    conditions:"Production JavaScript; deterministic intercepted API page. Fresh/reused browser contexts; Playwright routing disables HTTP cache. Settled camera and two animation frames required. No backend build or external network latency is included."},null,2));
+    conditions:"Production JavaScript; deterministic intercepted API page. Fresh/reused browser contexts; Playwright routing disables HTTP cache. Browser readiness requires the same node/edge counts, visible contained nodes, centered framing, settled camera and two further animation frames. Driver assertion completion is recorded separately. No backend build or external network latency is included."},null,2));
   await info.attach("paint-budget.json",{path:receipt,contentType:"application/json"});
   expect(Math.max(...records.map(r=>r.ms)),JSON.stringify(summary)).toBeLessThan(2000);
 });
