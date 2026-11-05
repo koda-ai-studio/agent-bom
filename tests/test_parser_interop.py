@@ -83,13 +83,11 @@ class TestPoetryLock:
         assert parse_poetry_lock(tmp_path) == []
 
     def test_integrated_via_parse_pip_packages(self, tmp_path):
-        """parse_pip_packages() should prefer poetry.lock over requirements.txt."""
+        """Independent exact requirements remain inventory alongside the lock."""
         (tmp_path / "poetry.lock").write_text(POETRY_LOCK)
         (tmp_path / "requirements.txt").write_text("requests==2.25.0\n")
         pkgs = parse_pip_packages(tmp_path)
-        by_name = {p.name: p for p in pkgs}
-        # poetry.lock wins — version from poetry, not requirements.txt
-        assert by_name["requests"].version == "2.31.0"
+        assert {p.version for p in pkgs if p.name == "requests"} == {"2.31.0", "2.25.0"}
 
     def test_poetry_declarations_are_used_without_lock(self, tmp_path):
         (tmp_path / "pyproject.toml").write_text('[tool.poetry.dependencies]\npython = "^3.11"\nrequests = "^2.31"\n')
@@ -204,8 +202,7 @@ class TestUvLock:
         (tmp_path / "uv.lock").write_text(UV_LOCK)
         (tmp_path / "requirements.txt").write_text("httpx==0.26.0\n")
         pkgs = parse_pip_packages(tmp_path)
-        by_name = {p.name: p for p in pkgs}
-        assert by_name["httpx"].version == "0.27.0"  # uv.lock wins
+        assert {p.version for p in pkgs if p.name == "httpx"} == {"0.27.0", "0.26.0"}
 
 
 # ── conda environment.yml ─────────────────────────────────────────────────────
