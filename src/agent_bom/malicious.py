@@ -130,6 +130,8 @@ _ESTABLISHED: dict[str, frozenset[str]] = {eco: frozenset(names) for eco, names 
 _KNOWN_LEGITIMATE: dict[str, frozenset[str]] = {
     "npm": frozenset(
         {
+            # Stylus CSS library published since 2013; one edit from ``axios``.
+            "axis",
             # Scoped packages whose genuine leaves resemble unscoped projects.
             "@radix-ui/rect",
             "@npmcli/redact",
@@ -181,6 +183,17 @@ _KNOWN_LEGITIMATE: dict[str, frozenset[str]] = {
 # Below this, one edited character is too weak a signal (``core`` vs ``cors``,
 # ``flask`` vs ``flash``) and would create false positives on real packages.
 _EDIT1_MIN_LEN = 6
+# Swapping two adjacent letters rarely yields another real name (``axois``), so
+# it stays a strong signal one character below the substitution floor.
+_TRANSPOSITION_MIN_LEN = 5
+
+
+def _adjacent_transposition(a: str, b: str) -> bool:
+    """Return True when equal-length ``a`` and ``b`` differ by exactly one swap of adjacent letters."""
+    if len(a) != len(b):
+        return False
+    diffs = [i for i, (ca, cb) in enumerate(zip(a, b)) if ca != cb]
+    return len(diffs) == 2 and diffs[1] == diffs[0] + 1 and a[diffs[0]] == b[diffs[1]] and a[diffs[1]] == b[diffs[0]]
 
 
 def _single_substitution(a: str, b: str) -> bool:
@@ -192,10 +205,7 @@ def _single_substitution(a: str, b: str) -> bool:
     """
     if len(a) != len(b):
         return False
-    diffs = [i for i, (ca, cb) in enumerate(zip(a, b)) if ca != cb]
-    if len(diffs) == 1:
-        return True
-    return len(diffs) == 2 and diffs[1] == diffs[0] + 1 and a[diffs[0]] == b[diffs[1]] and a[diffs[1]] == b[diffs[0]]
+    return sum(ca != cb for ca, cb in zip(a, b)) == 1 or _adjacent_transposition(a, b)
 
 
 # Real squats are one or two edits from their target (``urlib3``, ``reqeusts``,
@@ -288,6 +298,8 @@ def typosquat_target(
     # would pull in genuine near-neighbours).
     if len(name) >= _EDIT1_MIN_LEN:
         return next((c for c in same_length if _single_substitution(name, c)), None)
+    if len(name) >= _TRANSPOSITION_MIN_LEN:
+        return next((c for c in same_length if _adjacent_transposition(name, c)), None)
     return None
 
 

@@ -19,6 +19,8 @@ from agent_bom.malicious import (
     _KNOWN_LEGITIMATE,
     _MAX_EDITS,
     _POPULAR_PACKAGES,
+    _TRANSPOSITION_MIN_LEN,
+    _adjacent_transposition,
     _edit_distance,
     _extends,
     _single_substitution,
@@ -45,6 +47,8 @@ def _reference_target(name: str, popular: frozenset[str], legitimate: frozenset[
         return best_match
     if len(name) >= _EDIT1_MIN_LEN:
         return next((c for c in sorted(popular) if _single_substitution(name, c)), None)
+    if len(name) >= _TRANSPOSITION_MIN_LEN:
+        return next((c for c in sorted(popular) if _adjacent_transposition(name, c)), None)
     return None
 
 

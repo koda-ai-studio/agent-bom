@@ -34,11 +34,12 @@ def test_store_reset_reopens_wrapped_pool_and_keeps_retention_override(migrated_
 def test_save_purges_only_expired_owned_history_on_real_psycopg(migrated_fresh_database, monkeypatch, fail_cleanup):  # noqa: F811
     import psycopg
 
-    from agent_bom.api import postgres_graph_snapshots
+    from agent_bom.api import postgres_graph_snapshots, tenant_graph_retention_store
     from agent_bom.api.postgres_common import _tenant_connection, reset_current_tenant, set_current_tenant
     from agent_bom.api.postgres_graph import PostgresGraphStore
     from scripts.profile_graph_snapshot_storage import _snapshot
 
+    monkeypatch.setattr(tenant_graph_retention_store, "_tenant_graph_retention_store", None)
     now = datetime.now(timezone.utc)
     store = PostgresGraphStore()
     for tenant in ("retention-a", "retention-b"):

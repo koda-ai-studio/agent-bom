@@ -74,7 +74,8 @@ function contextHandles(e: Edge, positions: Map<string, { x: number; y: number }
 
 /** Layout changes reading order, never relationship direction, reachability or finding identity. */
 export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Edge[], requested: InvestigationFlow, narrowViewport = false) {
-  const shortCaptions = input.every(n => String(n.data.label).length <= 28);
+  // Captions wrap inside a fixed-width card, so moderate labels do not need a wider column.
+  const shortCaptions = input.every(n => String(n.data.label).length <= 36);
   const columnGap = shortCaptions ? 420 : 520;
   const rowGap = narrowViewport ? 440 : shortCaptions ? 300 : 340;
   const contextGap = narrowViewport ? 880 : shortCaptions ? 480 : 680;
@@ -110,7 +111,8 @@ export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Ed
       const relationship = String(e.data?.relationship);
       const reverse = scenario === "inventory" && ["hosted_on", "part_of", "belongs_to"].includes(relationship);
       const source = reverse ? e.target : e.source, target = reverse ? e.source : e.target;
-      if (source !== n.id || !(scenario === "inventory" ? CONTEXT : FLOW).has(relationship) || !byId.has(target) || rank.has(target)) continue;
+      const followsExposedHost = scenario === "exposure" && relationship === "hosts";
+      if (source !== n.id || !(followsExposedHost || (scenario === "inventory" ? CONTEXT : FLOW).has(relationship)) || !byId.has(target) || rank.has(target)) continue;
       if (scenario === "vulnerability" && ["assumes", "authenticates_as", "has_permission"].includes(relationship)) continue;
       rank.set(target, rank.get(n.id)! + 1); queue.push(byId.get(target)!);
     }
