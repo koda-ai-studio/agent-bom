@@ -173,6 +173,12 @@ def test_windows_separators_never_reach_a_uri() -> None:
     assert _sarif_location("k8s\\pod.yaml", 3)["physicalLocation"]["artifactLocation"]["uri"] == "k8s/pod.yaml"
 
 
+def test_a_path_above_the_working_directory_keeps_only_its_file_name() -> None:
+    from agent_bom.output.sarif_common import _sarif_location
+
+    assert _sarif_location("../repo/CLAUDE.md", 1)["physicalLocation"]["artifactLocation"]["uri"] == "CLAUDE.md"
+
+
 def test_check_command_sarif_uses_a_relative_uri() -> None:
     from agent_bom.cli._check_support import _check_payload_to_sarif
 

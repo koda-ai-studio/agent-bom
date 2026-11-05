@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections import Counter
-from pathlib import Path
 from typing import Any
 
 from agent_bom.asset_provenance import agent_discovery_provenance, sanitize_discovery_provenance
@@ -36,7 +34,6 @@ from agent_bom.output.possibly_affected import add_sarif_results as add_possibly
 from agent_bom.output.sarif_common import (
     _SARIF_SEVERITY_MAP,
     _SECURITY_SEVERITY_SCORE,
-    _ecosystem_from_purl,
     _sanitize_sarif_property,
     _sarif_fingerprint_fields,
     _sarif_invocation,
@@ -44,11 +41,10 @@ from agent_bom.output.sarif_common import (
     _sarif_run_properties,
     _sarif_severity,
     _SarifCatalog,
-    _to_relative_path,
     enforce_physical_locations,
     identity_uri,
-    scan_root_path,
 )
+from agent_bom.output.sarif_finding_identity import finding_file_uri, number_repeated_identities, unified_identity
 from agent_bom.output.sarif_scanners import (
     _DEDICATED_CIS_PROVIDERS,
     _add_ai_inventory_results,
@@ -67,13 +63,10 @@ from agent_bom.output.sarif_taxonomy import (
 )
 from agent_bom.output.source_locations import (
     SourceIndex,
-    _relative_uri,
-    evidence_relative_path,
     finding_image_reference,
     finding_package_location,
     package_source_index,
 )
-from agent_bom.scan_delta import canonical_identity_text
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
 _UNIFIED_RULE_HELP_URI = "https://github.com/koda-ai-studio/agent-bom#readme"
@@ -377,6 +370,28 @@ def _ai_assessment_result_properties(assessment: Any) -> dict[str, Any]:
     return props
 
 
+def _package_provenance_properties(finding: Finding) -> dict[str, Any]:
+    props: dict[str, Any] = {}
+    package_provenance = evidence(finding, "package_discovery_provenance")
+    if package_provenance:
+        props["package_discovery_provenance"] = _sanitize_sarif_property(package_provenance)
+    version_provenance = evidence(finding, "package_version_provenance")
+    if version_provenance is not None:
+        props["package_version_provenance"] = _sanitize_sarif_property(version_provenance)
+    for verdict_key in (
+        "package_integrity_verified",
+        "package_provenance_attested",
+        "package_provenance_source",
+        "package_provenance_status",
+    ):
+        # --verify-integrity verdict. Omitted when the check never ran, so a
+        # missing key never reads as "verification failed".
+        verdict_value = evidence(finding, verdict_key, None)
+        if verdict_value is not None:
+            props[verdict_key] = verdict_value
+    return props
+
+
 def _cve_sarif_result(
     report: AIBOMReport,
     finding: Finding,
@@ -472,23 +487,7 @@ def _cve_sarif_result(
     if scanned_artifact:
         result_properties["scanned_artifact"] = scanned_artifact
     result_properties.update({key: value for key in ("vex_status", "vex_justification", "vex_source") if (value := evidence(finding, key))})
-    package_provenance = evidence(finding, "package_discovery_provenance")
-    if package_provenance:
-        result_properties["package_discovery_provenance"] = _sanitize_sarif_property(package_provenance)
-    version_provenance = evidence(finding, "package_version_provenance")
-    if version_provenance is not None:
-        result_properties["package_version_provenance"] = _sanitize_sarif_property(version_provenance)
-    for verdict_key in (
-        "package_integrity_verified",
-        "package_provenance_attested",
-        "package_provenance_source",
-        "package_provenance_status",
-    ):
-        # --verify-integrity verdict. Omitted when the check never ran, so a
-        # missing key never reads as "verification failed".
-        verdict_value = evidence(finding, verdict_key, None)
-        if verdict_value is not None:
-            result_properties[verdict_key] = verdict_value
+    result_properties.update(_package_provenance_properties(finding))
     agent_provenance = _agent_discovery_provenance_from_report(report, list(finding.affected_agents))
     if agent_provenance:
         result_properties["agent_discovery_provenance"] = _sanitize_sarif_property(agent_provenance)
@@ -670,64 +669,11 @@ def _unified_finding_properties(finding: Finding, rule_id: str, evidence: dict[s
     }
 
 
-def _report_root_labels(report: AIBOMReport) -> set[str]:
-    labels = {agent.name.removeprefix("project:") for agent in report.agents if agent.name.startswith("project:")}
-    root = scan_root_path(report)
-    return {*labels, Path(root).name} - {""} if root else labels
-
-
-def _unified_identity(finding: Finding, rule_id: str, file_path: str | None, report: AIBOMReport) -> str:
-    """Stable result identity: the same rule, file and text on any checkout, at any line.
-
-    ``finding.id`` and ``asset.stable_id`` hash the absolute path or the agent name for
-    several finding kinds, so they cannot identify a finding across checkouts. Repeats in
-    one file are told apart in :func:`_number_repeated_identities`.
-    """
-    roots = _report_root_labels(report)
-    return ":".join(
-        [
-            rule_id,
-            identity_uri(file_path, report) if file_path else finding.asset.asset_type,
-            canonical_identity_text(finding.title or "", roots),
-            canonical_identity_text(finding.description or "", roots),
-        ]
-    )
-
-
-def _is_path_like(value: str | None) -> bool:
-    """False for a redacted label, a launch command or a URL, none of which name a file."""
-    return bool(value) and not str(value).startswith("<") and "://" not in str(value) and not any(ch.isspace() for ch in str(value))
-
-
-def _agent_config_uri(finding: Finding, report: AIBOMReport) -> str | None:
-    """The MCP config behind an agent-scoped finding: it declares what the agent can reach."""
-    if finding.asset.asset_type != "agent":
-        return None
-    agent = next((agent for agent in report.agents if agent.name == finding.asset.name), None)
-    for server in agent.mcp_servers if agent else []:
-        if _is_path_like(server.config_path) and Path(str(server.config_path)).is_file():
-            uri = _relative_uri(str(server.config_path), scan_root_path(report))
-            if uri:
-                return uri
-    return None
-
-
-def _finding_file_uri(finding: Finding, report: AIBOMReport) -> str | None:
-    """The source file that produced a finding, or None when none is known."""
-    location, identifier = finding.asset.location, finding.asset.identifier
-    if _is_path_like(location):
-        return _to_relative_path(str(location), _ecosystem_from_purl(identifier))
-    uri = evidence_relative_path(finding.evidence)
-    if uri is None and _is_path_like(identifier) and Path(str(identifier)).is_file():
-        uri = _relative_uri(str(identifier), scan_root_path(report))
-    return uri or _agent_config_uri(finding, report)
-
-
 def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence: dict[str, Any], report: AIBOMReport) -> dict[str, Any]:
-    file_path = _finding_file_uri(finding, report)
+    file_path = finding_file_uri(finding, report)
     raw_start_line = finding.evidence.get("line_number") or finding.evidence.get("line") or finding.evidence.get("source_line")
     start_line = raw_start_line if isinstance(raw_start_line, int) and raw_start_line > 0 else 1
-    fp_input = _unified_identity(finding, rule_id, file_path, report)
+    fp_input = unified_identity(finding, rule_id, file_path, report)
     finding_result: dict = {
         "ruleId": rule_id,
         "level": level,
@@ -753,18 +699,6 @@ def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence
     return finding_result
 
 
-def _number_repeated_identities(results: list[dict[str, Any]]) -> None:
-    """Keep one identity per result when a file repeats the same finding on several lines."""
-    seen: Counter[str] = Counter()
-    for result in results:
-        fingerprints = result.get("fingerprints") or {}
-        value = fingerprints.get("agent-bom/v1")
-        if value:
-            seen[value] += 1
-            if seen[value] > 1:
-                fingerprints["agent-bom/v1"] = hashlib.sha256(f"{value}#{seen[value]}".encode()).hexdigest()
-
-
 def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
     """Unified non-CVE findings, including MCP intelligence/blocklist matches."""
     for finding in apply_workload_runtime_evidence_for_export(list(report.to_findings())):
@@ -778,7 +712,7 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
         elif finding.cwe_ids:
             _merge_rule_cwe_tags(catalog.rules, rule_id, finding.cwe_ids)
         catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence, report))
-    _number_repeated_identities(catalog.results)
+    number_repeated_identities(catalog.results)
 
 
 def _build_sarif_run(report: AIBOMReport, catalog: _SarifCatalog, scan_run: ScanRun) -> dict[str, Any]:

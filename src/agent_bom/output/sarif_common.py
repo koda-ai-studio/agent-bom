@@ -8,7 +8,7 @@ import hashlib
 import re
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.evidence.scan_run import ScanOutcome, ScanRun
@@ -228,7 +228,7 @@ _LOGICAL_URI_PREFIXES = ("self-scan://", "pkg:", "package:")
 def virtual_artifact_uri(kind: str, name: str) -> str:
     """Relative URI for a finding that has no file; stable for one kind and name."""
     token = re.sub(r"^(?:pkg:|package:)", "", str(name)).replace("://", "/")
-    parts = [quote(part, safe="@") for part in token.split("/") if part and part != ".."]
+    parts = [quote(unquote(part), safe="@") for part in token.split("/") if part and part != ".."]
     return VIRTUAL_ARTIFACT_PREFIX + "/".join([quote(str(kind) or "finding", safe=""), *(parts or ["unnamed"])])
 
 
@@ -240,7 +240,10 @@ def _sarif_location(uri: str, start_line: Any, *, scanned_artifact: str | None =
             "physicalLocation": {"artifactLocation": {"uri": anchor, "uriBaseId": "%SRCROOT%"}},
             "logicalLocations": [{"fullyQualifiedName": uri}],
         }
-    location: dict[str, Any] = {"artifactLocation": {"uri": uri.replace("\\", "/"), "uriBaseId": "%SRCROOT%"}}
+    uri = uri.replace("\\", "/")
+    if ".." in uri.split("/"):  # a scan root above the working directory: GitHub cannot resolve it
+        uri = uri.rsplit("/", 1)[-1]
+    location: dict[str, Any] = {"artifactLocation": {"uri": uri, "uriBaseId": "%SRCROOT%"}}
     if type(start_line) is int and start_line > 0:
         location["region"] = {"startLine": start_line, "startColumn": 1}
     return {"physicalLocation": location}

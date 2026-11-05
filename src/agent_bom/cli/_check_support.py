@@ -12,6 +12,7 @@ import click
 
 from agent_bom import __version__
 from agent_bom.core.severity import severity_at_or_above
+from agent_bom.output.sarif_common import virtual_artifact_uri
 
 
 def _response_has_version(response, ecosystem: str, version: str) -> bool:
@@ -208,8 +209,6 @@ def _check_sarif_result(
 
 
 def _check_artifact_uri(ecosystems: list, package: str, version: str) -> str:
-    from agent_bom.output.sarif_common import virtual_artifact_uri
-
     return virtual_artifact_uri("package", f"{ecosystems[0] if ecosystems else 'generic'}/{package}@{version}")
 
 

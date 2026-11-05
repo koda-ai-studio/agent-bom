@@ -92,7 +92,8 @@ entry point. `compliance_narrative_models.py` owns serializable contracts,
 
 SARIF exports retain `output/sarif.py` as their public entry point for CVE and
 unified findings. `sarif_common.py` owns shared severity, location, redaction and
-catalog helpers; `sarif_scanners.py` projects IaC, AI inventory and cloud CIS
+catalog helpers; `sarif_finding_identity.py` resolves a unified finding's source file
+and checkout-independent identity; `sarif_scanners.py` projects IaC, AI inventory and cloud CIS
 results into that same catalog.
 
 ## Layering rules in plain language

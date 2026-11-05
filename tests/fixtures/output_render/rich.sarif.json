@@ -1299,7 +1299,7 @@
             "text": "Hardcoded AWS secret key"
           },
           "fingerprints": {
-            "agent-bom/v1": "b88c536ce77335eeb0ba6782384ef75eb77d4f02138255377dcd26996523b8a4"
+            "agent-bom/v1": "f570bd757f440119eabbb6a21edfe51bf1abdeb1693d46b8882f88fd6490d2d0"
           },
           "properties": {
             "advisory_id": "finding/CREDENTIAL_EXPOSURE",
@@ -1346,7 +1346,7 @@
             "text": "SQL string construction"
           },
           "fingerprints": {
-            "agent-bom/v1": "92b1058aaee57c43fee005812155fa67066e1f68d25ddd9d9381213dd5cf0bfd"
+            "agent-bom/v1": "ee5af4731c43c8314e78a271f0d2a0e5706eb28e0cb693aa319939fbe342a40e"
           },
           "properties": {
             "advisory_id": "finding/SAST/AB-SAST-002",
@@ -1421,7 +1421,7 @@
             "text": "Agent exposes a production credential"
           },
           "fingerprints": {
-            "agent-bom/v1": "39784dc3f564c25d3667e5ad61a0940d65d136e776b415d0ec5f42170d5666d3"
+            "agent-bom/v1": "99f66983219bfbc07914e7922914e56618f2a788400b7080b9c99a410e3e0d8a"
           },
           "properties": {
             "advisory_id": "finding/CREDENTIAL_EXPOSURE/agent_credential_exposure",
@@ -1483,7 +1483,7 @@
             "text": "Imported advisory without a package"
           },
           "fingerprints": {
-            "agent-bom/v1": "3b805b1afc6d8894e4747d4799aa3c83bd2642484c7952e797e91f89c9fa047e"
+            "agent-bom/v1": "6443f9eec0c4bd0f5c2afee8680deb2bf1a2d75bf4b973df773266871fc27008"
           },
           "properties": {
             "advisory_id": "finding/CVE",
@@ -1533,7 +1533,7 @@
             "text": "Databricks CIS check"
           },
           "fingerprints": {
-            "agent-bom/v1": "c6a91eda182152aeb70341061f4b53bcbc55a3269cb68cdcb19c61beed7ae329"
+            "agent-bom/v1": "8ca3b500e6edb6b54918d8eafe0716fca34c4740de62ecdb32a8258c8cad82b4"
           },
           "properties": {
             "advisory_id": "finding/CIS_FAIL",

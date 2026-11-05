@@ -75,11 +75,6 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
                     "baseline_path": _baseline_path,
                     "baseline_scan_outcome": baseline_scan_outcome(_baseline_data),
                 }
-                if st.report.delta_data["baseline_scan_outcome"] != "complete":
-                    logger.warning(
-                        "Delta baseline scan was %s: findings it missed are reported as new.",
-                        st.report.delta_data["baseline_scan_outcome"],
-                    )
 
                 _new_keys = {(d.get("vulnerability_id", "").upper(), d.get("package", "")) for d in _delta_result.new_items}
                 st.blast_radii = [

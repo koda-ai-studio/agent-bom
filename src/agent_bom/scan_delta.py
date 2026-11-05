@@ -19,11 +19,12 @@ import json
 import logging
 import re
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Mapping
 from pathlib import Path
 from typing import Any, Optional
 
 from agent_bom.package_utils import vulnerability_occurrence_key
+from agent_bom.parsers.prompt_scanner import prompt_scan_data_to_findings
 from agent_bom.storage import state_home
 
 _logger = logging.getLogger(__name__)
@@ -84,8 +85,10 @@ def load_baseline(path: str | Path) -> dict:
 def baseline_scan_outcome(baseline: Mapping[str, Any]) -> str:
     """The baseline scan's own outcome, ``unknown`` when the report predates it."""
     scan_run = baseline.get("scan_run")
-    outcome = scan_run.get("outcome") if isinstance(scan_run, Mapping) else None
-    return str(outcome) if outcome else "unknown"
+    outcome = str((scan_run.get("outcome") if isinstance(scan_run, Mapping) else None) or "unknown")
+    if outcome != "complete":
+        _logger.warning("Delta baseline scan was %s: findings it missed are reported as new.", outcome)
+    return outcome
 
 
 def save_baseline(scan_json: dict, path: str | Path | None = None) -> Path:
@@ -262,7 +265,7 @@ def scan_root_labels(report: Mapping[str, Any]) -> set[str]:
     return {label for label in labels if label and label != "."}
 
 
-def canonical_identity_text(text: str, roots: Iterable[str] = ()) -> str:
+def canonical_identity_text(text: str, roots: Collection[str] = ()) -> str:
     """Remove the checkout folder and line references from text used as identity.
 
     Only the ``project:<root>`` agent name, its ``<path:<root>>`` label and the
@@ -273,11 +276,12 @@ def canonical_identity_text(text: str, roots: Iterable[str] = ()) -> str:
     for root in sorted(roots, key=len, reverse=True):
         text = re.sub(rf"(?<![\w.-])project:{re.escape(root)}(?![\w.-])", "project:<scan-root>", text)
         text = text.replace(f"<path:{root}>", "<path:scan-root>")
-    text = _PROJECT_NAME.sub("project:<scan-root>", text)
+    if not roots:  # a report that names no root: a cloud "project:prod" is only rewritten then
+        text = _PROJECT_NAME.sub("project:<scan-root>", text)
     return _without_line_refs(_CONFIG_PATH_HASH.sub("cfg", text))
 
 
-def _asset_identity(asset: Mapping[str, Any], roots: Iterable[str]) -> str:
+def _asset_identity(asset: Mapping[str, Any], roots: Collection[str]) -> str:
     identifier = str(asset.get("identifier") or "")
     # A UUID identifier is derived from the asset's name and path, so it carries the folder.
     usable_identifier = "" if _DERIVED_UUID.fullmatch(identifier) else identifier
@@ -290,7 +294,7 @@ def _asset_identity(asset: Mapping[str, Any], roots: Iterable[str]) -> str:
     return canonical_identity_text(location, roots)
 
 
-def finding_delta_key(finding: Mapping[str, Any], roots: Iterable[str] = ()) -> FindingDeltaKey | None:
+def finding_delta_key(finding: Mapping[str, Any], roots: Collection[str] = ()) -> FindingDeltaKey | None:
     """Return the line- and checkout-independent delta key of a serialized unified finding.
 
     ``roots`` are the folder names of the scan the finding came from. CVE
@@ -318,7 +322,7 @@ class FindingDelta:
         self.pre_existing_ids = pre_existing_ids
 
 
-def compute_finding_delta(current_findings: list[dict], baseline: dict, *, current_roots: Iterable[str] = ()) -> FindingDelta:
+def compute_finding_delta(current_findings: list[dict], baseline: dict, *, current_roots: Collection[str] = ()) -> FindingDelta:
     """Split current non-CVE findings into new and pre-existing by delta key.
 
     Matching is a multiset: two identical occurrences against one baseline
@@ -375,7 +379,6 @@ def prune_pre_existing_findings(report: Any, pre_existing_ids: set[str]) -> int:
     if not pre_existing_ids:
         return 0
     from agent_bom.finding import iac_finding_to_finding, secret_dict_to_finding
-    from agent_bom.parsers.prompt_scanner import prompt_scan_data_to_findings
 
     report.delta_pruned_finding_ids = set(pre_existing_ids)
     report.findings = [finding for finding in report.findings if str(finding.id) not in pre_existing_ids]

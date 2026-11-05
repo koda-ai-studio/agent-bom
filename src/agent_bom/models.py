@@ -681,8 +681,7 @@ class AIBOMReport:
         from agent_bom.domain.finding_merge import merge_external_code_findings
 
         base = merge_external_code_findings(base)
-        if self.delta_pruned_finding_ids:
-            base = [finding for finding in base if str(finding.id) not in self.delta_pruned_finding_ids]
+        base = [finding for finding in base if str(finding.id) not in self.delta_pruned_finding_ids]
         if self.codeowners:
             apply_codeowners(base, self.codeowners)
         return base

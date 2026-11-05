@@ -208,6 +208,16 @@ def test_key_ignores_folder_name_and_derived_asset_ids() -> None:
     assert finding_delta_key(base, {"base"}) == finding_delta_key(_combination("head"), {"head"})
 
 
+def test_cloud_project_names_stay_distinct_when_the_report_names_its_root() -> None:
+    finding = {"finding_type": "CIS_FAIL", "id": "x", "title": "Open bucket in project:prod", "description": "d", "asset": {"name": "b"}}
+    other = {**finding, "title": "Open bucket in project:staging"}
+    assert finding_delta_key(finding, {"base"}) != finding_delta_key(other, {"base"})
+
+
+def test_a_report_naming_no_root_falls_back_to_the_project_token() -> None:
+    assert finding_delta_key(_combination("base")) == finding_delta_key(_combination("head"))
+
+
 def test_key_keeps_other_differences() -> None:
     other = _combination("head")
     other["title"] = other["title"].replace("remote-bridge", "other-bridge")

@@ -2,9 +2,9 @@
  "demo": {
   "html": "bd9fb4420c16274ec84212cce2f7134ce7ed4729a439c025531b34a471f00836",
   "html_offline": "4c58e59e8176dedda4fef0a66b15a58790330a6172e7a583fbacd2dd9793f5bd",
-  "sarif_exclude_unfixable": "230ac40264c7dc9ce18f37bd2109368a3d0706e6d6912826a2b09fa561f39016",
-  "sarif_file": "70b3914b673ef0a050cc6288007b31ce14a808eb11155dccb17bb6a60371a34d",
-  "sarif_stdout": "230ac40264c7dc9ce18f37bd2109368a3d0706e6d6912826a2b09fa561f39016"
+  "sarif_exclude_unfixable": "091d024058a2edd5a48e3265ceffed9f4e967b5cf3e63fbd0320e2ec4e4ede6e",
+  "sarif_file": "362a3b3e6f22b67956d0990f17a4b4a5381b192030a1d8cb231509923e16135e",
+  "sarif_stdout": "091d024058a2edd5a48e3265ceffed9f4e967b5cf3e63fbd0320e2ec4e4ede6e"
  },
  "empty": {
   "html": "3321190785358c1da3add462aa460a4f8473c103bfd4ada21eaca3163704133b",
@@ -16,8 +16,8 @@
  "rich": {
   "html": "681906ee7a76e77c662c3679088d4be5dbf91114bee0db01073bcbe23945afac",
   "html_offline": "4e3d9d1c26dcdfe2601e8437ef3a3c23d2fc7082cc0642227e90230868739df2",
-  "sarif_exclude_unfixable": "9f5fecd80741b9bc723bd94760a8bcb2d3eacc5f8b54df2707bc2c8e0373c29b",
-  "sarif_file": "443b1ebb8cb6dcfa823629b72e07d7b25a63d0322c741a6926c80eccbe8a462e",
-  "sarif_stdout": "ffd8fee8176bd64662576d0cbc591faab2377b01c4ae265600d3c469bf3ce8d5"
+  "sarif_exclude_unfixable": "81b05374ef6ac44923058aa738b60181466b5caa60292c98fb4e48f7b119f91f",
+  "sarif_file": "c1c0a43b7dca73360c0671ae37958a004f2862eb6ab7e907ea386ac6d5db8164",
+  "sarif_stdout": "b3b84cd4c9fd571e8dd64ed38c0173137a968cf06b9baf67662928188ffabb68"
  }
 }

@@ -68,7 +68,7 @@ def test_tarball_scan_location_names_the_tarball_without_its_local_directory() -
     report = _image_report(config_path="oci-tar:///home/runner/work/private dir/app image.tar", name="image-tar:app image.tar")
     location = to_sarif(report)["runs"][0]["results"][0]["locations"][0]
 
-    assert location["physicalLocation"]["artifactLocation"]["uri"] == "agent-bom-findings/image/oci-tar/app%2520image.tar"
+    assert location["physicalLocation"]["artifactLocation"]["uri"] == "agent-bom-findings/image/oci-tar/app%20image.tar"
     assert "runner" not in json.dumps(location)
 
 
