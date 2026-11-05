@@ -162,6 +162,14 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.getByRole("button", { name:"Expand 3 findings for Warehouse MCP" })).toBeVisible();
     await expect(page.locator('[data-graph-adaptive-frame]')).toHaveAttribute("data-graph-camera-settled","true");
     await page.locator('.react-flow').scrollIntoViewIfNeeded();
+    const nodesOutsideFrame = () => page.locator(".react-flow").evaluate(canvas => {
+      const frame = canvas.getBoundingClientRect();
+      return [...canvas.querySelectorAll(".react-flow__node")].filter(node => {
+        const box = node.getBoundingClientRect();
+        return box.left < frame.left - 1 || box.right > frame.right + 1 || box.top < frame.top - 1 || box.bottom > frame.bottom + 1;
+      }).length;
+    });
+    if (width === 1440) await expect.poll(nodesOutsideFrame).toBe(0);
     await page.screenshot({ path:info.outputPath(`mixed-collapsed-${theme}-${width}.png`),fullPage:true });
     // The toolbar remains available when the owner is outside a phone's focused viewport.
     await page.getByRole("button", { name:"Expand findings (3 grouped)",exact:true }).click();
@@ -170,6 +178,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page.locator('.react-flow__edge[data-id="config:affects:mcp"]')).toHaveCount(1);
     await expect(page.locator('[data-graph-adaptive-frame]')).toHaveAttribute("data-graph-camera-settled","true");
     if (width === 1440) {
+      await expect.poll(nodesOutsideFrame).toBe(0);
       await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
         const marks = [...canvas.querySelectorAll(".graph-provider-mark-node")].map(mark => mark.getBoundingClientRect());
         return [...canvas.querySelectorAll<SVGPathElement>(".react-flow__edge-path")].filter(path => {

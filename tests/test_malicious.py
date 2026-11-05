@@ -334,3 +334,22 @@ def test_typosquat_far_edits_on_long_names_are_not_squats():
     # A long shared prefix pushes the ratio past 0.85 even when three or more
     # characters differ; real squats are one or two edits away.
     assert check_typosquat("eslint-plugin-vitest", "npm") is None
+
+
+@pytest.mark.parametrize(("name", "target"), [("axois", "axios"), ("lodahs", "lodash"), ("recat", "react")])
+def test_adjacent_transposition_is_a_typosquat_from_five_letters(name, target):
+    assert check_typosquat(name, "npm") == target
+
+
+@pytest.mark.parametrize("name", ["axis", "yup", "vue", "flash", "core"])
+def test_short_or_single_substitution_names_stay_unflagged(name):
+    assert check_typosquat(name, "npm") is None
+    assert check_typosquat(name, "pypi") is None
+
+
+def test_every_popular_and_established_name_stays_clean_with_a_five_letter_transposition_floor():
+    from agent_bom.malicious import _ESTABLISHED, _KNOWN_LEGITIMATE, _POPULAR_PACKAGES
+
+    for ecosystem, names in _POPULAR_PACKAGES.items():
+        legit = names | _KNOWN_LEGITIMATE.get(ecosystem, frozenset()) | _ESTABLISHED.get(ecosystem, frozenset())
+        assert [name for name in legit if check_typosquat(name, ecosystem)] == []
