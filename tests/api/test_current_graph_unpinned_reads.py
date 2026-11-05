@@ -9,6 +9,7 @@ an older consistent generation is still live. Pinned continuations keep their
 from __future__ import annotations
 
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -232,6 +233,12 @@ def test_get_graph_answers_rotation_with_503_and_a_stale_pin_with_409(estate):
     assert first.status_code == 200, first.text
     generation = first.json()["snapshot_generation"]
     record(estate, 9, "repo-a", "package-b", tenant="default")
+    # A refresh keeps serving the previous generation until its rebuild lands, so
+    # the pin only goes stale once an unpinned read reports the new generation.
+    deadline = time.monotonic() + 30
+    while client.get("/v1/graph", params={"limit": 10}).json().get("snapshot_generation") == generation:
+        assert time.monotonic() < deadline, "the rebuild never promoted a new generation"
+        time.sleep(0.05)
     stale = client.get("/v1/graph", params={"limit": 10, "offset": 10, "snapshot_generation": generation})
     assert stale.status_code == 409
     assert "Retry-After" not in stale.headers

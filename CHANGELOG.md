@@ -15,6 +15,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `--auto-update-db` prints the time each source took.
 
 ### Fixed
+- Typosquat detection now flags an adjacent-letter swap from five letters (`axois` as `axios`); single-letter substitutions keep their six-letter floor.
+- Investigation graph: an exposure flow now continues through the workloads an exposed host runs, so the path to identities and data opens framed on one screen. Edges between adjacent entities no longer arc over nothing.
 - A synchronous push interrupted by a process kill under distributed dispatch no longer stays `running` forever. The request now heartbeats a lease, and once that lease expires any replica marks the job `failed`, so the client can resubmit under the same idempotency key. A long push with a live lease is never failed for its age, and pushes already stranded by earlier releases are failed after the stuck-job timeout.
 - A dispatched job that keeps crashing its workers now fails after `AGENT_BOM_API_SCAN_MAX_ATTEMPTS` claims (default 5) with an error naming the count, instead of being redelivered forever. Migration `20261105_02` adds the attempt count. Resubmitting the push starts a new budget.
 - A worker run that raises or is cancelled before recording an outcome, such as a store error during ingest, no longer removes its job from the dispatch queue, which left it `pending` forever. The job is redelivered when the lease expires, and a brief store error during ingest is retried in place without failing the report.

@@ -19,7 +19,10 @@ it("keeps branch endpoints and puts the relationship label on the smooth curve",
 it("keeps direct finding connections above the main chain and leaves reverse links to their directional router", () => {
   const far = { ...target, x: 1104, y: 96 };
   const direct = { ...edge, targetX: 1234, targetY: 132 };
-  expect(mcpBranchPath(direct, source, far)![2]).toBeLessThan(source.y);
+  const between = { x: 500, y: 96, width: 260, height: 188 };
+  expect(mcpBranchPath(direct, source, far, [between])![2]).toBeLessThan(source.y);
+  expect(mcpBranchPath(direct, source, far)![2]).toBe(direct.sourceY);
+  expect(mcpBranchPath(direct, source, far, [{ ...between, y: 600 }])![2]).toBe(direct.sourceY);
   expect(mcpBranchPath(edge, target, source)).toBeNull();
   expect(mcpBranchPath({ ...edge, sourceX: NaN }, source, target)).toBeNull();
 });

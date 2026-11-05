@@ -13,7 +13,9 @@ export function mcpBranchPath(edge: Link, source: Box, target: Box, obstacles: B
   const reach = Math.max(48, gap * 0.7);
   let c1x = Math.max(sx + span * 0.45, source.x + source.width + reach), c1y = sy;
   let c2x = Math.min(tx - span * 0.45, target.x - reach), c2y = ty;
-  if (target.x - source.x > 500) {
+  const skipsAnEntity = obstacles.some(box => box.x >= source.x + source.width && box.x + box.width <= target.x
+    && box.y <= Math.max(sy, ty) && box.y + box.height >= Math.min(sy, ty));
+  if (target.x - source.x > 500 && skipsAnEntity) {
     // A direct finding link bypasses the intermediate entities above their
     // glyphs, rather than sharing their ports or looping below the whole estate.
     const top = Math.min(source.y, target.y) - 64;
