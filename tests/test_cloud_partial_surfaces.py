@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import io
 import json
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
 
 import pytest
 from rich.console import Console
@@ -261,7 +262,10 @@ def test_gcp_discover_with_only_disabled_apis_returns_no_real_warnings(monkeypat
     for name in ("_discover_vertex_ai", "_discover_cloud_functions", "_discover_gke_clusters", "_discover_cloud_run"):
         monkeypatch.setattr(gcp, name, disabled)
     monkeypatch.setattr(gcp, "attach_envelope_to_agents", lambda *_a, **_k: None)
-    monkeypatch.setitem(__import__("sys").modules, "google.cloud.run_v2", SimpleNamespace())
+    for module in ("google", "google.cloud", "google.cloud.run_v2"):
+        stub = ModuleType(module)
+        stub.__path__ = []
+        monkeypatch.setitem(sys.modules, module, stub)
     agents, warnings = gcp.discover(project_id="fixture-project")
     assert agents == []
     real, notices = _split_not_in_use("gcp", warnings)
