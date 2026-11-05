@@ -201,6 +201,11 @@ esac
 
 ## GitHub Action `action.yml` outputs
 
+With `severity-threshold: ''` the Action step is report-only: `exit-code` still
+reports what the scanner returned, but severity findings and a partial scan do not
+fail the step. A malicious package, a failed scan and an explicit `policy` or
+`fail-on-kev` gate still do. The CLI's own default is unchanged.
+
 The composite action surfaces the CLI exit code, parsed scan status, artifact
 paths, and AI-specific posture counts so downstream workflow steps can gate
 without re-parsing logs.
@@ -209,7 +214,7 @@ without re-parsing logs.
 |---|---|---|---|
 | `sarif-file` | string | computed | Path to the SARIF report when `format: sarif` was selected. |
 | `exit-code` | string | propagated CLI exit code | Same value documented in [CLI exit-code contract](#cli-exit-code-contract). |
-| `scan-status` | string | parsed from exit code + findings | `clean`, `violations`, `usage_error` (exit `2`), `stale_data` (exit `3`), or `error`. |
+| `scan-status` | string | parsed from exit code + findings | `clean`, `violations`, `partial` (report-only step with incomplete coverage), `usage_error` (exit `2`), `stale_data` (exit `3`), or `error`. |
 | `vulnerability-count` | string | parsed from SARIF or skills JSON | Number of vulnerability findings, or skill findings for `scan-type: skills`. |
 | `badge-file` | string | computed | Path to generated shields.io badge JSON when `badge` is set. |
 | `sbom-file` | string | computed | Path to the SBOM / AI-BOM artifact when `sbom-artifact` is `cyclonedx` or `spdx`. |

@@ -10,6 +10,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- SARIF uploads are accepted by GitHub code scanning: every result and related location has a physical location, and findings with no repository file use a marked `agent-bom-findings/` path with `properties.no_source_file` instead of a logical-only or `docker://` location. The upload action computes the line hash, so its per-result fingerprint warnings stop. Combination and prompt findings point at the MCP config and instruction file.
+- The GitHub Action treats an empty `severity-threshold` as report-only, as documented. A partial scan warns and reports `scan-status: partial` rather than stopping the baseline step; malicious packages, failed scans and explicit policy or KEV gates still fail it.
+- `--baseline --delta` and `agent-bom/v1` fingerprints no longer depend on the checkout folder name, so a docs-only pull request passes the documented gate. Older baselines still match.
+- The Action's job summary, annotations, pull request comment and MCP gate write UTF-8 on Windows runners instead of failing on `→`.
 - File-backed registries, configuration and reports use explicit UTF-8, restoring MCP startup and Unicode evidence on Windows systems with a legacy default encoding.
 - Container binary probes search in small chunks while retaining Go metadata beyond the first window; OCI changes always select the memory-bound regression suite in CI.
 - Mixed Python requirements retain exact pins when resolving ranges; framework discovery no longer treats range bounds as installed versions. Independent requirements pins remain visible alongside Poetry and uv lockfiles.

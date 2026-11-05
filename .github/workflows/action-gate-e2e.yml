@@ -1,0 +1,137 @@
+name: Action Gate E2E
+
+# Runs the documented "new findings only" pull request flow through the composite
+# action on Linux and Windows and asserts the results, so a SARIF file GitHub would
+# reject or a gate that always fails cannot ship again. The fixture is generated
+# here: its old pins would otherwise fail this repository's own dependency scan.
+# Nothing is uploaded, so fixture findings never reach this repository's Security tab.
+on:
+  pull_request:
+    paths:
+      - action.yml
+      - scripts/action_*.py
+      - scripts/check_sarif_locations.py
+      - scripts/emit_github_annotations.py
+      - src/agent_bom/output/possibly_affected.py
+      - src/agent_bom/output/sarif*.py
+      - src/agent_bom/output/source_locations.py
+      - src/agent_bom/scan_delta.py
+      - .github/workflows/action-gate-e2e.yml
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: action-gate-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Action gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Write identical base and head checkouts
+        shell: bash
+        run: |
+          mkdir -p base/.cursor base/i18n/es
+          cat > base/.cursor/mcp.json <<'JSON'
+          {"mcpServers":{"remote-bridge":{"command":"npx","args":["-y","mcp-remote@0.1.15","https://example.com/mcp"],"env":{"BRIDGE_API_KEY":"${BRIDGE_API_KEY}"}}}}
+          JSON
+          printf '# Instrucciones\n\nInstall the SDK, then run the server.\n' > base/i18n/es/instructions.md
+          printf 'idna==3.10\n' > base/requirements.txt
+          cp -R base head
+
+      - name: Baseline from the base checkout (report-only)
+        id: baseline
+        uses: ./
+        with:
+          scan-ref: base
+          format: json
+          output: baseline.json
+          severity-threshold: ''
+          annotations: 'false'
+          pr-comment: 'false'
+          auto-update-db: 'false'
+          install-from-source: 'true'
+
+      - name: Full SARIF of the head checkout (report-only)
+        uses: ./
+        with:
+          scan-ref: head
+          output: full.sarif
+          severity-threshold: ''
+          pr-comment: 'false'
+          auto-update-db: 'false'
+          install-from-source: 'true'
+
+      - name: Gate with identical base and head must pass
+        id: gate-identical
+        uses: ./
+        with:
+          scan-ref: head
+          baseline: baseline.json
+          output: gate-identical.sarif
+          pr-comment: 'false'
+          auto-update-db: 'false'
+          install-from-source: 'true'
+
+      - name: Add one vulnerable pin to the head checkout
+        shell: bash
+        run: printf 'urllib3==1.26.4\n' >> head/requirements.txt
+
+      - name: Gate with the vulnerable pin must fail
+        id: gate-vulnerable
+        continue-on-error: true
+        uses: ./
+        with:
+          scan-ref: head
+          baseline: baseline.json
+          output: gate-vulnerable.sarif
+          pr-comment: 'false'
+          auto-update-db: 'false'
+          install-from-source: 'true'
+
+      - name: Assert the gate verdicts
+        shell: bash
+        env:
+          BASELINE_STATUS: ${{ steps.baseline.outputs.scan-status }}
+          IDENTICAL_EXIT: ${{ steps.gate-identical.outputs.exit-code }}
+          VULNERABLE_OUTCOME: ${{ steps.gate-vulnerable.outcome }}
+          VULNERABLE_EXIT: ${{ steps.gate-vulnerable.outputs.exit-code }}
+        run: |
+          echo "baseline=$BASELINE_STATUS identical-exit=$IDENTICAL_EXIT vulnerable=$VULNERABLE_OUTCOME/$VULNERABLE_EXIT"
+          test -s baseline.json
+          test "$IDENTICAL_EXIT" = "0"
+          test "$VULNERABLE_OUTCOME" = "failure"
+          test "$VULNERABLE_EXIT" = "1"
+
+      - name: Assert the SARIF structure
+        shell: bash
+        run: |
+          python3 scripts/check_sarif_locations.py full.sarif --require-results
+          python3 scripts/check_sarif_locations.py gate-identical.sarif --require-empty
+          python3 scripts/check_sarif_locations.py gate-vulnerable.sarif --only-package urllib3
+
+      - name: Assert the reports render on this runner's console
+        shell: bash
+        run: |
+          python3 scripts/action_report.py summary full.sarif --exit-code 1 > summary.md
+          grep -q 'agent-bom scan summary' summary.md
+          python3 scripts/action_report.py comment full.sarif --exit-code 1 > comment.md
+          grep -q 'agent-bom-scan-comment' comment.md
+          python3 scripts/emit_github_annotations.py full.sarif --max -1 > annotations.txt 2> annotations.err
+          grep -q 'agent-bom' annotations.txt
+          if grep -q 'emission failed' annotations.err; then cat annotations.err; exit 1; fi

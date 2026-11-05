@@ -44,6 +44,9 @@ the SARIF file exists.
 | `Resource not accessible by integration` | Pull request comes from a fork or the token lacks upload permission. | Run SARIF upload on `push` to a trusted branch, or keep fork PRs as artifact/PR-comment only. |
 | Upload fails with path errors | The configured SARIF path does not match the generated report path. | Use the action output path, or keep the default `agent-bom-results.sarif`. |
 | Alerts overwrite another scanner category | Multiple uploads share the same category. | Give each scanner a stable unique category when using manual `upload-sarif`. |
+| Upload fails with `expected physical location` or `expected a physical location` | SARIF from agent-bom 0.113.2 or earlier has results or related locations with only logical locations. | Upgrade agent-bom. `python scripts/check_sarif_locations.py <file>` from this repository lists every location GitHub would reject. |
+| Alert path starts with `agent-bom-findings/` and has no code link | The finding has no repository file, for example a package read from an image. This is not a real file. | Read `logicalLocations` and `properties` on the result. `properties.no_source_file` is `true`. |
+| Duplicate alerts after uploading through the REST API | agent-bom leaves `partialFingerprints.primaryLocationLineHash` to the uploader. `github/codeql-action/upload-sarif` computes it from the file; the REST API does not. | Use `upload-sarif`, or compute the hash as GitHub's `fingerprints.ts` does before calling the API. |
 | Private repository shows no code scanning view | Code scanning may be unavailable for the plan or repository settings. | Check repository Security settings and GitHub Advanced Security availability. |
 
 ## Debug checklist
