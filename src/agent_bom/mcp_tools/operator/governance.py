@@ -6,6 +6,8 @@ from typing import Annotated
 
 from pydantic import Field
 
+from agent_bom.mcp_tools.tool_annotations import LOCAL_READ_ONLY
+
 from .bindings import OperatorToolBindings
 
 
@@ -110,7 +112,7 @@ def register_audit_integrity(bindings: OperatorToolBindings) -> None:
 
     mcp = bindings.mcp
 
-    @mcp.tool(annotations=bindings.read_only, title="Audit Integrity")
+    @mcp.tool(annotations=LOCAL_READ_ONLY, title="Audit Integrity")
     async def audit_integrity(
         tenant_id: Annotated[
             str,

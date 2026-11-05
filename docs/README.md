@@ -77,6 +77,8 @@ the [documentation site](../site-docs/index.md) owns onboarding walkthroughs.
 
 - [TRUST.md](TRUST.md)
 - [PERMISSIONS.md](PERMISSIONS.md)
+- [PLUGIN_SUBMISSION.md](PLUGIN_SUBMISSION.md)
+- [PLUGIN_REVIEW_CASES.md](PLUGIN_REVIEW_CASES.md)
 
 <details>
 <summary>Focused references and contracts</summary>

@@ -324,6 +324,11 @@ _CREDENTIAL_COMPOUND_NAMES = frozenset(
 )
 
 
+def is_blank_env_value(value: object) -> bool:
+    """A variable set to nothing, such as one blanked to keep a token out of a server, holds no credential."""
+    return value is None or (isinstance(value, str) and not value.strip())
+
+
 def is_credential_key(name: str) -> bool:
     """Return whether an environment-variable name denotes a credential.
 

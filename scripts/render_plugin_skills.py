@@ -102,6 +102,8 @@ def render_claude_skill(current: str, spec: dict[str, Any]) -> str:
 def render_overlay(root_manifest: dict[str, Any]) -> str:
     overlay = {key: root_manifest[key] for key in OVERLAY_KEYS if key in root_manifest}
     overlay["skills"] = "./skills/"
+    if root_manifest["extensions"]["com.openai"].get("requires_local_executor"):
+        overlay["requires_local_executor"] = True
     overlay["interface"] = root_manifest["extensions"]["com.openai"]["interface"]
     return json.dumps(overlay, indent=2, ensure_ascii=False) + "\n"
 

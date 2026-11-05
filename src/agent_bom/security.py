@@ -12,6 +12,7 @@ import re
 from typing import Any
 from urllib.parse import unquote, urlsplit, urlunsplit
 
+from agent_bom.constants import is_blank_env_value
 from agent_bom.core.security_validation import (
     _CLOUD_METADATA_HOSTS as _CLOUD_METADATA_HOSTS,
 )
@@ -295,7 +296,8 @@ def sanitize_env_vars(env: dict[str, Any]) -> dict[str, str]:
     sanitized = {}
     for key, value in env.items():
         if env_key_is_credential(key):
-            sanitized[key] = "***REDACTED***"
+            # A blanked variable has no secret to hide; redacting it would invent a credential.
+            sanitized[key] = "" if is_blank_env_value(value) else "***REDACTED***"
         elif isinstance(value, dict | list | tuple | set):
             secret = container_has_secret(value, _looks_sensitive_value, env_key_is_credential)
             sanitized[key] = "***REDACTED***" if secret else str(value)

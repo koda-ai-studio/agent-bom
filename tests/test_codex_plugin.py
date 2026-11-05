@@ -80,7 +80,14 @@ def test_claude_servers_run_the_locked_launcher_from_the_plugin_root() -> None:
     # MCP path arguments may resolve under HOME or AGENT_BOM_MCP_WORKSPACE_ROOTS;
     # the project dir is often elsewhere (/tmp, /workspaces, /srv, /Volumes).
     # Live introspection stays off unless the user declares their own server.
-    env = {"AGENT_BOM_MCP_WORKSPACE_ROOTS": "${CLAUDE_PROJECT_DIR}", "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0"}
+    # Ambient tokens stay out of the servers: blank values override what the client inherited.
+    env = {
+        "AGENT_BOM_MCP_WORKSPACE_ROOTS": "${CLAUDE_PROJECT_DIR}",
+        "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0",
+        "GITHUB_TOKEN": "",
+        "GH_TOKEN": "",
+        "NVD_API_KEY": "",
+    }
     assert servers["agent-bom"] == {"command": "uv", "args": LAUNCH, "env": env}
     assert servers["agent-bom-audit"] == {"command": "uv", "args": [*LAUNCH, "--profile", "audit"], "env": env}
 
@@ -96,7 +103,7 @@ def test_codex_servers_are_the_claude_servers_rooted_by_cwd() -> None:
             "args": ["." if arg == "${CLAUDE_PLUGIN_ROOT}" else arg for arg in spec["args"]],
             "cwd": ".",
             "env_vars": ["AGENT_BOM_MCP_WORKSPACE_ROOTS"],
-            "env": {"AGENT_BOM_MCP_LIVE_INTROSPECTION": "0"},
+            "env": {"AGENT_BOM_MCP_LIVE_INTROSPECTION": "0", "GITHUB_TOKEN": "", "GH_TOKEN": "", "NVD_API_KEY": ""},
         }
         for name, spec in claude.items()
     }

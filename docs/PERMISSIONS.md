@@ -174,6 +174,17 @@ contents or credential values are included in those requests.
 | npm registry | `https://registry.npmjs.org/{pkg}/{version}` | Package name + version | Package metadata | None |
 | PyPI | `https://pypi.org/pypi/{pkg}/{version}/json` | Package name + version | Package metadata | None |
 | OpenSSF Scorecard | `https://api.securityscorecards.dev/projects/github.com/{owner}/{repo}` | GitHub owner/repo | Scorecard scores | None |
+| GitHub Security Advisories | `https://api.github.com/advisories` | Package names, or a time window during `db update --source ghsa` | Advisories | Optional (`GITHUB_TOKEN` or `GH_TOKEN`, sent only here) |
+| deps.dev | `https://api.deps.dev/` | Package name + version | License and project metadata | None |
+| Go module proxy and checksum database | `https://proxy.golang.org/`, `https://sum.golang.org/` | Module path + version | Module versions, checksums | None |
+| EPSS bulk feed | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` (older address `epss.cyentia.com`, followed only as a redirect) | _(none — full download during `db update` or an advisory lookup)_ | EPSS scores | None |
+| Alpine security database | `https://secdb.alpinelinux.org` | _(none — full download during `db update`)_ | Alpine advisories | None |
+| Debian security tracker | `https://security-tracker.debian.org/tracker/data/json` | _(none — full download during `db update`)_ | Debian advisories | None |
+| Debian extended LTS tracker | `https://deb.freexian.com/extended-lts/tracker/data/json` | _(none — full download during `db update`)_ | Debian ELTS advisories | None |
+| Package downloads for the plugin launchers | `https://files.pythonhosted.org/`, `https://github.com/` (a managed Python, or a repository you name) | Package file requests | The pinned release and locked dependencies | None |
+
+`src/agent_bom/core/egress_hosts.py` is the list the plugin READMEs are checked against.
+
 The control plane's KEV catalog sync adds no destination. It reads the catalog that
 `agent-bom db update` and a scan's KEV join already downloaded from the CISA URL
 above; its cleanup tick makes no request.
@@ -442,6 +453,23 @@ Without `--push`, no report is sent. Source collection completeness remains
 unknown; imports do not resolve absent findings or prove exploitability.
 See [lake ingestion](../site-docs/deployment/lake-evidence-ingestion.md).
 
+## Plugin hook and tool hints
+
+`agent-bom-guard` runs one Claude Code `PreToolUse` hook on the Bash tool. Claude Code
+passes it each Bash command as text; it finds package installs in that text without
+running anything, stores nothing, and sends only package name, ecosystem and pinned
+version to `api.osv.dev` (a private package name included, unless `osv_lookup` is off).
+Its [README](../integrations/agent-bom-guard/README.md) has the full contract.
+
+The tool hints in the two plugin profiles match what the tools do:
+
+| Tools | `readOnlyHint` | `openWorldHint` | Why |
+|-------|----------------|-----------------|-----|
+| `scan` | false | true | Keeps a redacted result under `~/.agent-bom` for a later page, and `auto_update_db` refreshes the local advisory database. Its target is unchanged, so `destructiveHint` is false. |
+| `check`, `intel_lookup`, `policy_check`, `compliance`, `generate_sbom`, `remediate` | true | true | Look up advisories or run a scan without keeping a result; lookup caches are the only local writes. |
+| `inventory`, `skill_scan`, `skill_trust`, `prompt_scan`, `audit_integrity`, `exposure_paths`, `executive_brief` | true | false | Read local files or the local store and open no socket; `exposure_paths` and `executive_brief` rebuild a derived cache under `~/.agent-bom`. |
+| `tool_risk_assessment` | false | true | `live=true` can contact or launch a server, so `destructiveHint` is true. The plugins start it with `AGENT_BOM_MCP_LIVE_INTROSPECTION=0`, which refuses that. |
+
 ## Directory and hosted OAuth boundaries
 
 The directory skills and `audit` MCP profile exclude `agent_activity` and chat
@@ -450,9 +478,10 @@ operator-selected surface. Directory pins must reference a release containing
 this exclusion before submission; updating skill files does not change an
 already published executable.
 
-OAuth MCP deployments expose only cataloged read-only tools, excluding process
-launching and history inspection. Read-only describes target-system behavior:
-scans can still retain redacted results in the tenant/caller-bound result store.
+OAuth MCP deployments expose only tools that leave target systems unchanged,
+excluding process launching and history inspection. `scan` is among them and can
+retain redacted results in the tenant/caller-bound result store, so it reports
+`readOnlyHint: false`.
 Its default readable TTL is 1,800 seconds and its default bound is four rows per
 tenant; expired rows are deleted during subsequent writes, not by a guaranteed
 wall-clock deletion job. Token rotation deliberately loses access to the prior

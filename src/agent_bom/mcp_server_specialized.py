@@ -9,6 +9,7 @@ from pydantic import Field
 
 from agent_bom.mcp_errors import CODE_INTERNAL_UNEXPECTED, mcp_error_json
 from agent_bom.mcp_tools.dispatch import resolve_tool_path
+from agent_bom.mcp_tools.tool_annotations import LOCAL_READ_ONLY
 from agent_bom.security import sanitize_error  # noqa: F401 — kept for downstream importers
 
 __all__ = ["register_specialized_ai_tools", "sanitize_error"]
@@ -191,7 +192,7 @@ def register_specialized_ai_tools(
             _truncate_response=truncate_response,
         )
 
-    @mcp.tool(annotations=read_only, title="Prompt Template Scan")
+    @mcp.tool(annotations=LOCAL_READ_ONLY, title="Prompt Template Scan")
     async def prompt_scan(
         directory: Annotated[
             str,

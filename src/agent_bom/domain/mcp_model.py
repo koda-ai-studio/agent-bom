@@ -13,7 +13,7 @@ from agent_bom.canonical_ids import (
     canonical_mcp_tool_id,
     mcp_server_fingerprint,
 )
-from agent_bom.constants import is_credential_key
+from agent_bom.constants import is_blank_env_value, is_credential_key
 from agent_bom.core.packages import normalize_package_name as normalize_package_name
 from agent_bom.core.severity import Severity as Severity
 from agent_bom.domain.inventory_types import ServerSurface, TransportType
@@ -360,8 +360,8 @@ class MCPServer:
 
     @property
     def env_credential_names(self) -> list[str]:
-        """Names of env vars that look like credentials."""
-        return [key for key in self.env if is_credential_key(key)]
+        """Names of env vars that look like credentials and hold a value."""
+        return [key for key, value in self.env.items() if is_credential_key(key) and not is_blank_env_value(value)]
 
     @property
     def embedded_credential_names(self) -> list[str]:

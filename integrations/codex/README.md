@@ -1,6 +1,6 @@
 # agent-bom for Codex (skills-only)
 
-This is the agent-bom package for the public Codex plugin directory. It has ten
+This is the agent-bom package for the public Codex plugin directory. It has nine
 skills and no MCP server: the directory lists local plugins as skills-only, so
 each skill runs a pinned agent-bom release from your shell and reads its JSON
 output. Every skill is read-only by default. Anything that would change a file
@@ -12,7 +12,9 @@ That plugin is named `agent-bom-local`, so its skills (`agent-bom-local:scan`)
 never shadow this package's (`agent-bom:scan`). Both do the same jobs, so
 install one.
 
-You need [uv](https://docs.astral.sh/uv/) on `PATH`. No account or API key is needed.
+You need [uv](https://docs.astral.sh/uv/) on `PATH`, so the package needs a desktop
+that can run local programs and declares `requires_local_executor`. No account or
+API key is needed.
 
 | Skill | What it does |
 |---|---|
@@ -77,8 +79,8 @@ from the CLI of the pinned release:
   you name; skill and instruction files under a path you name; and any image,
   SBOM or repository you name. Credential values
   found in configs are redacted; only their names and locations are reported.
-- **Sends** package names and versions, never file contents or credentials, to
-  public vulnerability and package sources. `inventory` and `audit-skills`
+- **Sends** package names and versions, never file contents, to public
+  vulnerability and package sources. `inventory` and `audit-skills`
   make no network calls. `checkup`, `scan`, `check`, `affected`,
   `fix`, `audit-mcp` and `bom` use:
   - `api.osv.dev`: vulnerability and malicious-package lookups
@@ -101,10 +103,18 @@ from the CLI of the pinned release:
   - `api.deps.dev`: license and project metadata a package registry does not
     provide
   - `proxy.golang.org` and `sum.golang.org`: Go module versions and checksums
+  - `osv-vulnerabilities.storage.googleapis.com`, `secdb.alpinelinux.org`,
+    `security-tracker.debian.org`, `deb.freexian.com` and `epss.cyentia.com`
+    (a redirect): only when the local advisory database is refreshed, which no
+    skill does
   - container registries, git hosts and cloud provider APIs that you name, such
     as an image to scan or an account for a cloud BOM; a cloud BOM uses the
     credentials already configured for that provider's CLI, and the skills never
     ask you to paste keys
+
+  A `GITHUB_TOKEN` or `GH_TOKEN` already in your environment goes only to
+  `api.github.com`, and `NVD_API_KEY` only to `services.nvd.nist.gov`, to raise rate
+  limits. The skills never ask for them, read them or print them.
 
   The CLI checks `pypi.org` for a newer release at most once a day, and never in
   quiet or JSON runs, which every skill command uses.
@@ -120,8 +130,10 @@ agent-bom has no hosted service in this package and collects nothing. All
 analysis runs on your machine. The only data that leaves it is listed above:
 package names and versions sent to public advisory and package registries, the
 uv download of the pinned release from PyPI, and, only when you ask, a public
-repository clone or read-only calls to your own cloud account. Credential
-values, file contents, prompts and session transcripts are never sent anywhere.
+repository clone or read-only calls to your own cloud account. Credential values
+found in files, file contents, prompts and session transcripts are never sent
+anywhere; the only credentials ever sent are the optional tokens described above,
+each to its own service.
 Results stay in local files you control.
 
 ## Building the directory ZIP

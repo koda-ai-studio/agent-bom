@@ -6,6 +6,7 @@ import inspect
 import pytest
 
 from agent_bom.mcp_server_operator_tools import register_operator_tools
+from agent_bom.mcp_tools.tool_annotations import LOCAL_READ_ONLY
 
 # Public order, annotation and dispatch scopes before registration extraction.
 CONTRACTS = [
@@ -48,7 +49,7 @@ CONTRACTS = [
     ("identity_revoke_jit", "write_action", "identity:write", True),
     ("firewall_check", "read_only", None, False),
     ("audit_query", "read_only", None, False),
-    ("audit_integrity", "read_only", None, False),
+    ("audit_integrity", LOCAL_READ_ONLY, None, False),
     ("cost_forecast", "read_only", None, False),
     ("cost_allocation", "read_only", None, False),
     ("credential_expiry", "read_only", None, False),
