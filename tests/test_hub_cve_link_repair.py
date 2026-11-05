@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
 import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
@@ -242,3 +243,49 @@ def test_postgres_marking_is_repeatable_and_scoped_to_blank_rows(pg_store, pg_te
     pending = {str(row[0]): row[1] for row in rows}
     assert pending["policy"] is None
     assert pending["linked"] is not None
+
+
+def test_no_row_lock_page_is_an_in_subquery() -> None:
+    """A locking LIMIT subquery under IN can be rescanned, which moves the page mid-statement."""
+    pattern = re.compile(r'\bIN\s*\(\s*"?\s*"?\s*SELECT\b.{0,400}?\bLIMIT\b.{0,80}?\bFOR UPDATE\b', re.IGNORECASE | re.DOTALL)
+    roots = [Path(__file__).resolve().parents[1] / "src" / "agent_bom", VERSIONS]
+    offenders = [str(path) for root in roots for path in root.rglob("*.py") if pattern.search(path.read_text(encoding="utf-8"))]
+    assert offenders == []
+
+
+def _insert_blank_rows(conn: Any, keys: list[str]) -> None:
+    for key in keys:
+        conn.execute(
+            "INSERT INTO hub_findings_current (tenant_id, canonical_id, first_seen, last_seen, status, severity, severity_rank, "
+            "cvss_score, effective_reach_score, scan_count, updated_at, payload, origin, scan_id, ledger_ordinal, kev_direct, "
+            "intel_ref, lens_mask, frameworks_csv, issue_group_id) "
+            "VALUES ('t', %s, 'x', 'x', 'open', 'high', 1, 0, 0, 1, 'x', '{}', 'o', 's', 0, FALSE, '', 0, '', 'group')",
+            (key,),
+        )
+
+
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_ADMIN_URL"), reason="requires admin role")
+def test_postgres_marking_never_passes_a_row_it_did_not_mark() -> None:
+    """Stats from a nearly empty table pick a plan that rescans the page per outer row."""
+    psycopg = pytest.importorskip("psycopg")
+    from agent_bom.api.storage.sql import connection_session
+
+    keys = [f"key-{index:02d}" for index in range(12)]
+    # Heap order puts the row the walk would pass ahead of the first page.
+    heap = [keys[2], keys[0], keys[1], *keys[3:]]
+    with psycopg.connect(os.environ["AGENT_BOM_POSTGRES_ADMIN_URL"]) as conn:
+        conn.execute("CREATE TEMP TABLE hub_findings_current (LIKE public.hub_findings_current INCLUDING INDEXES) ON COMMIT DROP")
+        _insert_blank_rows(conn, heap[:1])
+        conn.execute("ANALYZE hub_findings_current")
+        _insert_blank_rows(conn, heap[1:])
+        session = connection_session(conn, "postgres")
+        after: Any = START
+        marked = 0
+        while after is not None:
+            after, count = mark_unlinked_rows_pending(session, after=after, limit=2)
+            assert count <= 2
+            marked += count
+        left = conn.execute("SELECT canonical_id FROM hub_findings_current WHERE issue_group_id IS NOT NULL ORDER BY 1").fetchall()
+        conn.rollback()
+    assert [row[0] for row in left] == []
+    assert marked == len(keys)
