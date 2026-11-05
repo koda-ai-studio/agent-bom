@@ -78,10 +78,27 @@ it("keeps an ingress and its routed Service in sequence before the pod", () => {
   expect(x("service")).toBeLessThan(x("pod"));
 });
 it("routes an upward deployment-context edge from the top of the node, clear of the provider mark", () => {
-  const flow = [n("endpoint", "apiGateway", { resource_id: "api-1" }), n("host", "cloudResource"), n("server", "server")];
-  const result = investigationFlow(flow, [e("endpoint", "host", "exposed_to"), e("host", "server", "hosts")], "exposure");
+  const flow = [n("endpoint", "apiGateway", { resource_id: "api-1" }), n("target", "cloudResource"), n("host", "cloudResource"), n("server", "server")];
+  const result = investigationFlow(flow, [e("endpoint", "target", "exposed_to"), e("target", "host", "part_of"), e("host", "server", "hosts")], "exposure");
   const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
-  expect(at("server").y).toBeLessThan(at("host").y);
-  expect(result.edges.find(edge => edge.id === "host-server")).toMatchObject({ sourceHandle: "context-up" });
-  expect(result.edges.find(edge => edge.id === "endpoint-host")?.sourceHandle).toBeUndefined();
+  expect(at("server").y).toBeLessThan(at("target").y);
+  expect(result.edges.filter(edge => edge.sourceHandle === "context-up").length).toBeGreaterThan(0);
+  expect(result.edges.find(edge => edge.id === "endpoint-target")?.sourceHandle).toBeUndefined();
+});
+it("continues an exposure flow through a workload the exposed host runs", () => {
+  const flow = [n("endpoint", "apiGateway", { resource_id: "api-1" }), n("host", "cloudResource"), n("server", "server"), n("role", "role"), n("data", "dataStore")];
+  const links = [e("endpoint", "host", "exposed_to"), e("host", "server", "hosts"), e("server", "role", "authenticates_as"), e("role", "data", "has_permission")];
+  const result = investigationFlow(flow, links, "exposure");
+  const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
+  expect(["endpoint", "host", "server", "role", "data"].map(id => at(id).y)).toEqual([0, 0, 0, 0, 0]);
+  const xs = ["endpoint", "host", "server", "role", "data"].map(id => at(id).x);
+  expect(xs).toEqual([...xs].sort((a, b) => a - b));
+  expect(new Set(xs).size).toBe(5);
+  expect(result.edges.map(edge => [edge.source, edge.target])).toEqual(links.map(edge => [edge.source, edge.target]));
+});
+it("keeps a workload outside the entry flow when no exposed host reaches it", () => {
+  const flow = [n("endpoint", "apiGateway", { resource_id: "api-1" }), n("target", "cloudResource"), n("other", "cloudResource"), n("server", "server")];
+  const result = investigationFlow(flow, [e("endpoint", "target", "exposed_to"), e("other", "server", "hosts")], "exposure");
+  const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
+  expect(at("server").y).not.toBe(at("target").y);
 });

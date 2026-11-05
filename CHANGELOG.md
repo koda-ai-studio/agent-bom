@@ -15,6 +15,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `--auto-update-db` prints the time each source took.
 
 ### Fixed
+- Investigation graph: an exposure flow now continues through the workloads an exposed host runs, so the path to identities and data opens framed on one screen. Edges between adjacent entities no longer arc over nothing.
 - Investigation graph: an upward deployment-context edge now leaves from the top of the node instead of running through the cloud provider mark.
 - Every finding now has a scan-driven lifecycle on both ingest paths: `status`, `first_seen`, `last_seen`, `resolved_at`, `reopened_at`, `last_resolved_at` and `status_updated_at`. A pushed scan that no longer reports a finding resolves it instead of dropping it, `status=resolved` retrieves it, and a returning finding reopens with its original `first_seen`. Partial, failed, inventory-only and differently scoped scans resolve nothing. See `docs/FINDING_LIFECYCLE.md`.
 - `POST /v1/findings/bulk` with `reconcile_absent` no longer resolves other assets of the same source: it covers the assets the batch names or lists in `scanned_assets`, unless `reconcile_scope: "source"` asserts a full snapshot. A complete empty batch can now resolve, a non-complete `scan_run` skips reconciliation, and an unusable `observed_at` is rejected with 422 on bulk and compliance ingest.
