@@ -11,7 +11,10 @@ rules:
   # admission collectors. No secrets, no mutation verbs, and no nodes/proxy —
   # the native transport never proxies the kubelet.
   - apiGroups: [""]
-    resources: ["pods", "namespaces", "nodes", "serviceaccounts"]
+    resources: ["pods", "namespaces", "nodes", "serviceaccounts", "services"]
+    verbs: ["get", "list"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
     verbs: ["get", "list"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
@@ -20,7 +23,7 @@ rules:
     resources: ["jobs", "cronjobs"]
     verbs: ["get", "list"]
   - apiGroups: ["networking.k8s.io"]
-    resources: ["networkpolicies"]
+    resources: ["networkpolicies", "ingresses"]
     verbs: ["get", "list"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["clusterroles", "clusterrolebindings", "roles", "rolebindings"]

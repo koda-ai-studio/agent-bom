@@ -61,6 +61,8 @@ for (const theme of ["light", "dark"]) test(`distinct flows, finding drilldown a
   await expect(finding).toBeVisible();
   await finding.click();
   await expect(page.getByText("CVE-2099-0001", { exact: true }).last()).toBeVisible();
+  await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
+  await settle(page);
   await page.screenshot({ path: testInfo.outputPath(`finding-${theme}.png`), fullPage: false });
   for (const scenario of ["identity", "vulnerability", "inventory"]) {
     await flow.selectOption(scenario);
