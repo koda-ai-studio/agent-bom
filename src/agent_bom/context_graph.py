@@ -22,6 +22,7 @@ from enum import Enum
 from typing import Iterable, Optional
 from urllib.parse import urlsplit
 
+from agent_bom.constants import is_blank_env_value
 from agent_bom.constants import is_credential_key as _is_credential_key
 from agent_bom.graph import (
     EDGE_KIND_TO_RELATIONSHIP as _EDGE_KIND_TO_RELATIONSHIP,
@@ -328,7 +329,7 @@ def build_context_graph(
             cred_keys = list(srv_dict.get("credential_env_vars", []))
             embedded = srv_dict.get("embedded_credential_names", [])
             cred_keys += [key for key in embedded if isinstance(key, str) and key.strip()] if isinstance(embedded, list) else []
-            cred_keys += [k for k in srv_dict.get("env", {}) if _is_credential_key(k)]
+            cred_keys += [k for k, v in srv_dict.get("env", {}).items() if _is_credential_key(k) and not is_blank_env_value(v)]
             for env_key in dict.fromkeys(cred_keys):
                 # The report carries only a credential env-var name, not proof
                 # that two servers resolve it to the same secret.  Keep each

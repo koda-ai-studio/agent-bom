@@ -119,7 +119,7 @@ _ENCODED_PASSWORD = base64.b64encode(b"password=correct-horse-battery-staple").d
     ("key", "value", "expected"),
     [
         ("API_TOKEN", "anything", REDACTED),
-        ("DB_PASSWORD", "", REDACTED),
+        ("DB_PASSWORD", "", ""),
         ("CUSTOM", _GITHUB_SHAPED, REDACTED),
         ("CUSTOM", _OPENAI_SHAPED, REDACTED),
         ("CUSTOM", _HIGH_ENTROPY, REDACTED),
