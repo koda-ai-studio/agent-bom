@@ -9,12 +9,12 @@ scan sighting inserts into the log (L2).
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from agent_bom.api.finding_rank import compute_effective_reach_score
 from agent_bom.api.storage.hub_filters import _cvss_value, _severity_rank
-from agent_bom.canonical_ids import canonical_finding_id
+from agent_bom.canonical_ids import canonical_finding_id, canonical_id
 from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 
 __all__ = [
@@ -28,11 +28,15 @@ __all__ = [
     "apply_observation_to_current",
     "collect_present_canonical_ids",
     "enriched_finding_payload",
+    "ingest_asset_key",
+    "ingest_asset_scope",
+    "lifecycle_fields",
     "lifecycle_metrics",
     "merge_status_on_observation",
     "normalize_observed_at",
     "observation_at_least",
     "resolve_canonical_id",
+    "validated_observed_at",
 ]
 
 FindingLifecycleMetrics = dict[str, Any]
@@ -63,6 +67,30 @@ def normalize_observed_at(value: str | datetime | None) -> str:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+_MAX_FUTURE_OBSERVATION = timedelta(days=1)
+
+
+def validated_observed_at(value: Any) -> str:
+    """A client's observation time, or ``ValueError``.
+
+    An unparseable time cannot be compared and would never resolve; one far in
+    the future would outrank every later scan. Clock skew up to a day is tolerated.
+    """
+    if value in (None, ""):
+        return normalize_observed_at(None)
+    if not isinstance(value, str):
+        raise ValueError("observed_at must be an ISO-8601 timestamp string")
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("observed_at must be an ISO-8601 timestamp") from exc
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    if parsed > datetime.now(timezone.utc) + _MAX_FUTURE_OBSERVATION:
+        raise ValueError("observed_at cannot be more than one day in the future")
+    return normalize_observed_at(parsed)
 
 
 def resolve_canonical_id(payload: dict[str, Any], *, source: str = "") -> str:
@@ -99,6 +127,32 @@ def resolve_canonical_id(payload: dict[str, Any], *, source: str = "") -> str:
     if source and not payload.get("asset"):
         return canonical_finding_id(source, str(rule), str(location), str(package))
     return canonical_finding_id(str(asset_stable), str(rule), str(package), pkg_version, str(location))
+
+
+def lifecycle_fields(status: str, *, first_seen: str, resolved_at: str | None, reopened_at: str | None) -> dict[str, Any]:
+    """Public lifecycle fields; ``resolved_at`` names a resolution still in force."""
+    resolved = status == "resolved"
+    return {
+        "status": status,
+        "resolved_at": resolved_at if resolved else None,
+        "last_resolved_at": resolved_at,
+        "reopened_at": reopened_at,
+        "status_updated_at": resolved_at if resolved else (reopened_at if status == "reopened" else first_seen),
+    }
+
+
+def ingest_asset_scope(identifier: str) -> str:
+    """An opaque reconcile key, so a private asset identifier never reaches a stored overlay."""
+    return canonical_id("ingest-asset", identifier) if identifier else ""
+
+
+def ingest_asset_key(payload: dict[str, Any]) -> str:
+    """The asset a finding was reported on, compared to a batch's scanned assets; empty when none."""
+    raw_asset = payload.get("asset")
+    asset = raw_asset if isinstance(raw_asset, dict) else {}
+    return ingest_asset_scope(
+        str(asset.get("identifier") or asset.get("name") or asset.get("stable_id") or asset.get("canonical_id") or "")
+    )
 
 
 def lifecycle_metrics(payload: dict[str, Any]) -> FindingLifecycleMetrics:
@@ -264,10 +318,14 @@ def enriched_finding_payload(current_row: dict[str, Any]) -> dict[str, Any]:
     canonical = current_row.get("canonical_id")
     if canonical:
         payload["canonical_id"] = canonical
-    if current_row.get("resolved_at"):
-        payload["resolved_at"] = current_row["resolved_at"]
-    if current_row.get("reopened_at"):
-        payload["reopened_at"] = current_row["reopened_at"]
+    payload.update(
+        lifecycle_fields(
+            str(current_row.get("status") or "open"),
+            first_seen=str(current_row.get("first_seen") or ""),
+            resolved_at=current_row.get("resolved_at"),
+            reopened_at=current_row.get("reopened_at"),
+        )
+    )
     return payload
 
 

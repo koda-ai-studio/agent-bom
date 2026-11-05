@@ -684,13 +684,11 @@ class AgentBomClient(GraphClientMixin, EndpointClientMixin, GovernanceClientMixi
         observed_at: str | None = None,
         reconcile_absent: bool = False,
         idempotency_key: str | None = None,
+        reconcile_options: Mapping[str, JsonValue] | None = None,
     ) -> JsonObject:
-        """Post normalized findings directly into the control plane."""
+        """Post normalized findings; ``reconcile_options`` carries ``reconcile_scope`` and ``scanned_assets``."""
 
-        extra_headers: dict[str, str] = {}
-        if idempotency_key:
-            extra_headers["Idempotency-Key"] = idempotency_key
-
+        extra_headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
         return self._request(
             "POST",
             "/v1/findings/bulk",
@@ -703,9 +701,10 @@ class AgentBomClient(GraphClientMixin, EndpointClientMixin, GovernanceClientMixi
                     "tenant_id": tenant_id or self.tenant_id,
                     "observed_at": observed_at,
                     "reconcile_absent": reconcile_absent or None,
+                    **dict(reconcile_options or {}),
                 }
             ),
-            extra_headers=extra_headers or None,
+            extra_headers=extra_headers,
         )
 
     def agent_manifest(self, *, tenant_id: str | None = None) -> JsonObject:

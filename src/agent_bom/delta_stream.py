@@ -336,7 +336,7 @@ def capture_hub_snapshots(store: Any, tenant_id: str, *, source: str) -> dict[st
             include_total=cursor is None,
         )
         for row in page:
-            if str(row.get("source") or "") != source:
+            if str(row.get("ingest_source") or row.get("source") or "") != source:
                 continue
             if str(row.get("status") or "open") not in ("open", "reopened"):
                 continue
@@ -348,8 +348,13 @@ def capture_hub_snapshots(store: Any, tenant_id: str, *, source: str) -> dict[st
     return snapshots
 
 
-def resolved_canonical_ids(prior: dict[str, FindingSnapshot], present: set[str]) -> set[str]:
-    return {cid for cid in prior if cid not in present}
+def resolved_canonical_ids(prior: dict[str, FindingSnapshot], present: set[str], scope_assets: set[str] | None = None) -> set[str]:
+    """The prior findings a batch resolved: absent from it and on an asset it scanned."""
+    return {
+        cid
+        for cid, snapshot in prior.items()
+        if cid not in present and (scope_assets is None or str(snapshot.finding.get("ingest_asset") or "") in scope_assets)
+    }
 
 
 def _format_delta_payload(events: list[FindingDeltaEvent], *, fmt: DeltaFormat) -> dict[str, Any]:

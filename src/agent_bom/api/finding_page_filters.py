@@ -21,7 +21,7 @@ from agent_bom.api.finding_walk_cache import walk_rows as _walk_scan_rows
 from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant as _bulk_ingested_findings_for_tenant
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant as _completed_jobs_for_tenant
 from agent_bom.api.scan_finding_read import _current_scan_rows as _current_scan_rows
-from agent_bom.api.scan_finding_read import scan_rows_inputs
+from agent_bom.api.scan_finding_read import current_scan_rows_with_lifecycle, scan_rows_inputs
 from agent_bom.api.stores import _get_store
 
 
@@ -30,7 +30,7 @@ def _filter_finding_rows(rows: list[dict[str, Any]], query: _FindingListQuery) -
     if query.severity:
         normalized = query.severity.lower()
         rows = [item for item in rows if str(item.get("severity", "")).lower() == normalized]
-    # Scan findings carry no lifecycle status, so they count as ``open``.
+    # A scan row without a replayed lifecycle counts as ``open``.
     rows = [item for item in rows if compliance_hub_store.status_matches(item, query.status_key)]
     if query.scope_filters:
         rows = [item for item in rows if _row_matches_scope(item, query.scope_filters)]
@@ -56,7 +56,7 @@ def _scan_half_rows(query: _FindingListQuery, store: Any, warnings: list[str]) -
         return []
 
     def load() -> list[dict[str, Any]]:
-        rows = _current_scan_rows(query.tenant_id, query.window_since, query.scan_id)
+        rows = current_scan_rows_with_lifecycle(query.tenant_id, query.window_since, query.scan_id)
         rows = findings_current.scan_only_findings(rows, query.tenant_id, hub=store, scan_id=query.scan_id)
         rows = _filter_finding_rows(rows, query)
         rows.sort(key=lambda row: _finding_sort_key(row, query.sort_key))

@@ -370,13 +370,13 @@ def register_specialized_ai_tools(
         source: Annotated[str, Field(description="Source label stored on ingested findings.")] = "external_scan",
         reconcile_absent: Annotated[
             bool,
-            Field(description="When pushing, mark findings absent from this batch as resolved."),
+            Field(description="When pushing, treat this as a complete scan: resolve absent open findings on assets it names."),
         ] = False,
     ) -> str:
         """Ingest external SARIF, SBOM, or scanner JSON without executing its producer.
 
         This tool mutates the control plane when ``parse_only`` is false: it bulk-ingests
-        findings and, with ``reconcile_absent``, resolves open findings absent from the batch.
+        findings and, with ``reconcile_absent``, resolves this source's open findings absent from the batch on the assets it names.
         That write path is gated as a destructive action requiring the ``findings:write`` scope.
         ``parse_only`` requests parse locally only and stay a read.
         """

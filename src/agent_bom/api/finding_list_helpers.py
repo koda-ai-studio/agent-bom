@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from agent_bom.api.finding_group_lifecycle import GROUP_LIFECYCLE_KEYS
 from agent_bom.api.finding_list_projection import project_list_row
 from agent_bom.core.severity import normalize_severity
 from agent_bom.finding_scope import FINDING_SEVERITY_FILTERS
@@ -108,6 +109,9 @@ def _finding_occurrence_summary(row: dict[str, Any]) -> dict[str, Any]:
             "package_version",
             "scan_id",
             "status",
+            "first_seen",
+            "resolved_at",
+            "reopened_at",
             "owner",
             "sla_due_at",
             "sla_due_at_source",
@@ -149,6 +153,8 @@ def _serialize_finding_group(group: dict[str, Any]) -> dict[str, Any]:
     public["occurrence_count"] = int(group.get("occurrence_count") or 0)
     public["unreconfirmed_occurrence_count"] = int(group.get("unreconfirmed_occurrence_count") or 0)
     public["occurrences_truncated"] = bool(group.get("occurrences_truncated"))
+    for key in GROUP_LIFECYCLE_KEYS:
+        public[key] = group.get(key)
     versions = group.get("package_versions")
     public["package_versions"] = [str(v) for v in versions] if isinstance(versions, list) else []
     version_set = group.get("_package_version_set")

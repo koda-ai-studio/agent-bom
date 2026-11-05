@@ -133,6 +133,7 @@ class InMemoryComplianceHubStore:
         source: str,
         reconcile_absent: bool,
         present_canonical_ids: set[str],
+        scope_assets: set[str] | None = None,
     ) -> tuple[int, int]:
         """Ledger append + current upsert (+ reconcile) as one atomic unit.
 
@@ -174,6 +175,7 @@ class InMemoryComplianceHubStore:
                         present_canonical_ids=present_canonical_ids,
                         observed_at=observed_at,
                         scope_source=source,
+                        scope_assets=scope_assets,
                     )
             except Exception:
                 self._by_tenant[tenant_id] = snap_bucket
@@ -554,6 +556,7 @@ class InMemoryComplianceHubStore:
         present_canonical_ids: set[str],
         observed_at: str,
         scope_source: str | None = None,
+        scope_assets: set[str] | None = None,
     ) -> int:
         """Resolve absent open findings. Caller MUST hold ``self._lock``."""
         now = _now_utc_iso()
@@ -570,11 +573,9 @@ class InMemoryComplianceHubStore:
             payload_scope = str(payload.get("ingest_source") or payload.get("source") or "")
             if scope_source is not None and payload_scope != scope_source:
                 continue
-            merged = dict(row)
-            merged["status"] = "resolved"
-            merged["resolved_at"] = observed_at
-            merged["updated_at"] = now
-            current[canonical_id] = merged
+            if scope_assets is not None and str(payload.get("ingest_asset") or "") not in scope_assets:
+                continue
+            current[canonical_id] = {**row, "status": "resolved", "resolved_at": observed_at, "updated_at": now}
             updated += 1
         return updated
 

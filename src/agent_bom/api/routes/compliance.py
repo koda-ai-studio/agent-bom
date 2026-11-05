@@ -866,9 +866,9 @@ async def ingest_compliance_findings(request: Request) -> dict:
             payload["applicable_frameworks"] = [normalize_framework_slug(str(slug)) for slug in frameworks if slug]
     tenant_id = _tenant_id(request)
     store = get_compliance_hub_store()
-    from agent_bom.api.finding_lifecycle import normalize_observed_at
+    from agent_bom.api.hub_ingest import observed_at_or_422
 
-    observed_at = normalize_observed_at(body.get("observed_at"))
+    observed_at = observed_at_or_422(body.get("observed_at"))
     # Deterministic batch id keyed on the Idempotency-Key header (if any) or the
     # request-content fingerprint, so re-POSTing the same document collapses onto
     # one observation batch instead of inflating ``scan_count`` on every resend

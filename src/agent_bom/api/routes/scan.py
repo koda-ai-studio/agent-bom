@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 
 from agent_bom.api import job_status_count_cache
-from agent_bom.api.bulk_findings_ingest import BulkFindingsRequest, PackageCheckRequest, _normalized_bulk_finding
+from agent_bom.api.bulk_findings_ingest import BulkFindingsRequest, PackageCheckRequest, _normalized_bulk_finding, reconcile_plan
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_facets import _FACET_DEADLINE_SECONDS as _FACET_DEADLINE_SECONDS
 from agent_bom.api.finding_facets import _FACET_SCAN_BUDGET as _FACET_SCAN_BUDGET
@@ -62,6 +62,7 @@ from agent_bom.api.finding_view_filters import _view_filtered_row as _view_filte
 from agent_bom.api.finding_view_filters import _view_filters as _view_filters
 from agent_bom.api.finding_view_filters import _ViewWalk as _ViewWalk
 from agent_bom.api.finding_view_filters import _walk_view_filtered_findings as _walk_view_filtered_findings
+from agent_bom.api.hub_ingest import observed_at_or_422
 from agent_bom.api.idempotency_store import (
     IdempotencyConflictError,
     IdempotencyReservationHeartbeat,
@@ -732,10 +733,9 @@ async def ingest_bulk_findings(request: Request, body: BulkFindingsRequest) -> d
     payloads = [
         _normalized_bulk_finding(row, source=body.source, batch_id=batch_id, ordinal=idx) for idx, row in enumerate(body.findings, start=1)
     ]
-    from agent_bom.api.finding_lifecycle import normalize_observed_at
-
-    observed_at = normalize_observed_at(body.observed_at or body.metadata.get("observed_at"))
+    observed_at = observed_at_or_422(body.observed_at or body.metadata.get("observed_at"))
     hub_store = get_compliance_hub_store()
+    plan = reconcile_plan(body, payloads)
 
     # Offload the blocking psycopg write sequence (ledger append + current-state upsert + reconcile + delta emission) to a worker thread so
     # concurrent bulk ingest cannot freeze the event loop and unrelated requests (mirrors the read path). See ``_bulk_ingest_store_writes``
@@ -754,7 +754,7 @@ async def ingest_bulk_findings(request: Request, body: BulkFindingsRequest) -> d
             observed_at=observed_at,
             batch_id=batch_id,
             source=body.source,
-            reconcile_absent=body.reconcile_absent,
+            **plan.store_kwargs,
         )
     except ObservationPartitionRangeError as exc:
         # observed_at is so far past/future it is almost certainly bad data — a clean 4xx instead of a raw partition CheckViolation 500.
@@ -787,8 +787,7 @@ async def ingest_bulk_findings(request: Request, body: BulkFindingsRequest) -> d
         "observed_at": observed_at,
         "warnings": warnings,
     }
-    if body.reconcile_absent:
-        response["reconciled"] = reconciled
+    response.update(plan.receipt(reconciled))
     if delta_results:
         delivered = sum(
             1

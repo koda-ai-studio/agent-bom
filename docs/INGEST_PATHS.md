@@ -13,10 +13,16 @@ path normalizes into the same `Finding` / blast-radius model; the difference is
 | VM / registry image only | external image scanner → agent-bom (below) | Same as row above | See [VM and registry matrix](#vm-and-registry-matrix) |
 
 For direct `POST /v1/findings/bulk`, `reconcile_absent` defaults to `false`.
-Send the JSON boolean `true` only for a complete source-scoped snapshot: it
-resolves open findings absent from the batch. Strings, numbers and `null` are
+Send the JSON boolean `true` only for a complete scan: it resolves that source's
+open findings absent from the batch, on the assets the batch names or lists in
+`scanned_assets`. Set `reconcile_scope: "source"` only when the batch covers
+everything from the source. An empty batch is accepted only with
+`reconcile_absent` and a declared scope, so a clean rescan can resolve. A
+`scan_run` receipt that is partial, failed or advisory-degraded reconciles
+nothing and is reported as `reconcile_skipped`. Strings, numbers and `null` are
 rejected before ingestion, so a malformed flag cannot trigger reconciliation.
-Incremental or partial batches should leave it `false`.
+Incremental or partial batches should leave it `false`. See
+[Finding lifecycle](FINDING_LIFECYCLE.md).
 
 Finding lifecycle follows observation time. An older observation can extend
 `first_seen` and increment the distinct scan count, but cannot replace a newer

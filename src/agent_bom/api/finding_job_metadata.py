@@ -216,6 +216,16 @@ def _advisory_data_warning(issue: dict[str, Any]) -> bool:
     return issue.get("source") == "vulnerability-data" and issue.get("code") == "scanner_warning"
 
 
+def advisory_data_degraded(job: _ScanJobLike) -> bool:
+    """A coverage-affecting advisory warning: inventory stands, but absent CVEs prove nothing."""
+    raw = (job.result or {}).get("scan_run") if isinstance(job.result, dict) else None
+    issues = raw.get("issues") if isinstance(raw, dict) else None
+    return any(
+        isinstance(issue, dict) and _advisory_data_warning(issue) and issue.get("affects_coverage") is not False
+        for issue in (issues if isinstance(issues, list) else [])
+    )
+
+
 def scan_collection_incomplete_reasons(job: _ScanJobLike) -> list[str]:
     """Read explicit coverage receipts; absent legacy metadata proves nothing."""
     if isinstance(job, FindingHistoryJob):
