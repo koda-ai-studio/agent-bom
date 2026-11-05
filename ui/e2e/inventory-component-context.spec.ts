@@ -74,6 +74,25 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByRole("link", { name: "Findings Recorded component evidence" }).click();
     await expect(page).toHaveURL(url => url.searchParams.get("asset") === asset.id && url.searchParams.get("scan") === scan);
     await expect(page.getByRole("list", { name: "Component finding records" }).getByRole("link", { name: "Dependency vulnerability", exact: true })).toBeVisible();
+    const backLink = page.getByRole("link", { name: "All findings", exact: true });
+    const header = page.locator("header").filter({ has: backLink });
+    const identity = header.getByText("Component finding evidence", { exact: true });
+    const backBox = await backLink.boundingBox();
+    const identityBox = await identity.boundingBox();
+    expect(backBox).not.toBeNull();
+    expect(identityBox).not.toBeNull();
+    expect(identityBox!.y - (backBox!.y + backBox!.height)).toBeGreaterThanOrEqual(16);
+    // The app shell owns the page inset; nested evidence pages should not add it again.
+    const shellBox = await page.locator("main > div").first().boundingBox();
+    expect(backBox!.y - shellBox!.y).toBeLessThanOrEqual(28);
+    const investigate = header.getByRole("link", { name: "Investigate the component chain" });
+    await expect(investigate).toBeInViewport();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    if (viewport.width < 640) {
+      const titleBox = await header.getByRole("heading", { level: 1 }).boundingBox();
+      const actionBox = await investigate.boundingBox();
+      expect(actionBox!.y).toBeGreaterThan(titleBox!.y + titleBox!.height);
+    }
     await page.screenshot({ path: testInfo.outputPath(`component-findings-${theme}.png`), animations: "disabled" });
     await page.getByRole("link", { name: "Inspect control evidence" }).click();
     await expect(page).toHaveURL(url => url.pathname === "/compliance" && url.searchParams.get("asset") === asset.id && url.searchParams.get("scan") === scan);
