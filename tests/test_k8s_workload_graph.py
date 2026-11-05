@@ -39,7 +39,12 @@ def _objects(*, automount: bool | None = None) -> list[dict[str, Any]]:
         {"kind": "Deployment", "metadata": {"name": "web", "namespace": "shop", "uid": "dep-1"}, "spec": {"template": {"spec": pod_spec}}},
         {
             "kind": "ReplicaSet",
-            "metadata": {"name": "web-1", "namespace": "shop", "ownerReferences": [{"kind": "Deployment", "name": "web"}]},
+            "metadata": {
+                "name": "web-1",
+                "namespace": "shop",
+                "uid": "rs-1",
+                "ownerReferences": [{"kind": "Deployment", "name": "web", "uid": "dep-1", "controller": True}],
+            },
             "spec": {"template": {"spec": pod_spec}},
         },
         {
@@ -48,7 +53,7 @@ def _objects(*, automount: bool | None = None) -> list[dict[str, Any]]:
                 "name": "web-1-a",
                 "namespace": "shop",
                 "uid": "pod-a",
-                "ownerReferences": [{"kind": "ReplicaSet", "name": "web-1"}],
+                "ownerReferences": [{"kind": "ReplicaSet", "name": "web-1", "uid": "rs-1", "controller": True}],
             },
             "spec": pod_spec,
             "status": {"phase": "Running", "containerStatuses": [{"name": "app", "imageID": f"docker-pullable://{_PINNED}"}]},
