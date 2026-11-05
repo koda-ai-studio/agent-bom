@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
 from pydantic import BaseModel, ConfigDict
@@ -12,6 +12,7 @@ from agent_bom.api.models import JobStatus
 from agent_bom.evidence.finding_observation import ReconfirmationReason
 
 HistoryKey = tuple[str, str, str, str]
+_MAX_EVIDENCE_LEAD = timedelta(days=1)
 
 
 class FindingHistoryJob(BaseModel):
@@ -114,6 +115,9 @@ def scan_evidence_authority_key(job: _ScanJobLike) -> tuple[str, str, str]:
         scan_run.get("generated_at"),
         completed_at,
     )
+    # A report claiming to be from the future would outrank every real scan after it.
+    if evidence_at and completed_at and datetime.fromisoformat(evidence_at) > datetime.fromisoformat(completed_at) + _MAX_EVIDENCE_LEAD:
+        evidence_at = completed_at
     return evidence_at, completed_at, str(getattr(job, "job_id", ""))
 
 
@@ -260,7 +264,8 @@ def scan_collection_incomplete_reasons(job: _ScanJobLike) -> list[str]:
 
 def _retained_finding_key(job: _ScanJobLike, row: dict[str, Any], *, scope: str | None = None) -> tuple[str, str, str, str] | None:
     """Bind history to an explicit canonical occurrence, never a display fallback."""
-    identity = row.get("canonical_id")
+    # History keys already name the scope, so they stay on the id the report used.
+    identity = row.get("report_canonical_id") or row.get("canonical_id")
     if not isinstance(identity, str) or not identity.strip():
         return None
     asset = row.get("asset")

@@ -6,6 +6,7 @@ import pytest
 
 from agent_bom.api.findings_current import current_scan_findings
 from agent_bom.api.routes.scan import iter_tenant_scan_spine_findings
+from agent_bom.evidence.finding_project import project_finding_id
 from tests.api.test_scan_job_sla_history import get_rows, job
 from tests.api.test_scan_job_sla_history import scan_store as history_store  # noqa: F401
 
@@ -59,9 +60,10 @@ def test_partial_positive_observation_does_not_refresh_other_findings(scan_store
     scan_store.put(candidate)
     rows = {row["id"]: row for row in get_rows()}
     assert len(rows) == 2
-    assert rows["new-finding"]["observation_status"] == "observed"
-    assert "reconfirmation" not in rows["new-finding"]
-    assert rows[baseline.result["findings"][0]["id"]]["observation_status"] == "unreconfirmed"
+    new_finding = rows[project_finding_id(candidate, "new-finding")]
+    assert new_finding["observation_status"] == "observed"
+    assert "reconfirmation" not in new_finding
+    assert rows[project_finding_id(baseline, baseline.result["findings"][0]["id"])]["observation_status"] == "unreconfirmed"
 
 
 def test_reobserved_finding_uses_candidate_provenance(scan_store):

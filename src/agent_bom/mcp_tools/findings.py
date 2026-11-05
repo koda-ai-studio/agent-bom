@@ -40,6 +40,8 @@ _SUMMARY_FIELDS = (
     "reachability",
     "status",
     "lifecycle_status",
+    "resolution_reason",
+    "stale",
     "finding_node_id",
     "owner",
     "sla_due_at",

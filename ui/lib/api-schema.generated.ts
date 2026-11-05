@@ -14548,6 +14548,8 @@ export interface components {
             remediation_versions?: string[] | null;
             /** Reopened At */
             reopened_at?: string | null;
+            /** Resolution Reason */
+            resolution_reason?: ("no_longer_detected" | "asset_deleted") | null;
             /** Resolved At */
             resolved_at?: string | null;
             /** Resolved Occurrence Count */
@@ -14572,6 +14574,8 @@ export interface components {
             sla_due_at_source?: string | null;
             /** Source */
             source?: string | null;
+            /** Stale */
+            stale?: boolean | null;
             /** Status */
             status?: string | null;
             /** Status Updated At */
@@ -22292,7 +22296,7 @@ export interface components {
              * @default open
              * @enum {string}
              */
-            status: "open" | "resolved" | "all";
+            status: "open" | "stale" | "resolved" | "all";
             /** Window Days */
             window_days?: number | null;
         };

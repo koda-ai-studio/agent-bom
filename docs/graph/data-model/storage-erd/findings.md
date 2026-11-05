@@ -5,7 +5,7 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-25 tables.
+28 tables.
 
 Tables from other domains drawn for their relations: `scan_jobs`, `scan_runs`, `teams`.
 
@@ -35,6 +35,21 @@ erDiagram
     text tenant_id PK
     text job_id PK
     integer ordinal PK
+  }
+  finding_lifecycle {
+    text tenant_id PK
+    text scope_hash PK
+    text finding_key PK
+    text canonical_id
+    text report_canonical_id
+  }
+  finding_lifecycle_backfill {
+    text tenant_id PK
+  }
+  finding_lifecycle_scans {
+    text tenant_id PK
+    text scope_hash PK
+    text job_id PK
   }
   findings {
     text finding_id PK
@@ -138,9 +153,11 @@ erDiagram
     text team_id PK
   }
   finding_history_jobs ||..o{ finding_history_rows : "logical job_id"
+  finding_history_jobs ||..o{ finding_lifecycle_scans : "logical job_id"
   findings_feed_runs ||..o{ findings_feed : "logical run_id"
   findings_feed_runs ||..o{ findings_feed_staged : "logical run_id"
   hub_cve_intel ||..o{ findings : "logical cve_id"
+  hub_findings_current ||..o{ finding_lifecycle : "logical canonical_id"
   hub_findings_current ||..o{ hub_findings_current_observations : "logical canonical_id"
   hub_findings_current ||..o{ scan_findings : "logical canonical_id"
   scan_jobs ||--o{ findings : "scan_run_id"
@@ -154,9 +171,11 @@ erDiagram
 | Parent | Child | Column | Kind |
 |---|---|---|---|
 | `finding_history_jobs` | `finding_history_rows` | `job_id` | logical |
+| `finding_history_jobs` | `finding_lifecycle_scans` | `job_id` | logical |
 | `findings_feed_runs` | `findings_feed` | `run_id` | logical |
 | `findings_feed_runs` | `findings_feed_staged` | `run_id` | logical |
 | `hub_cve_intel` | `findings` | `cve_id` | logical |
+| `hub_findings_current` | `finding_lifecycle` | `canonical_id` | logical |
 | `hub_findings_current` | `hub_findings_current_observations` | `canonical_id` | logical |
 | `hub_findings_current` | `scan_findings` | `canonical_id` | logical |
 | `scan_jobs` | `findings` | `scan_run_id → scan_jobs.job_id` | declared FK |
@@ -187,6 +206,9 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `exceptions` | Postgres, SQLite, Snowflake | 20 |  | persistent |
 | `finding_history_jobs` | Postgres | 4 |  | persistent |
 | `finding_history_rows` | Postgres | 7 |  | persistent |
+| `finding_lifecycle` | Postgres | 20 |  | persistent |
+| `finding_lifecycle_backfill` | Postgres | 2 |  | persistent |
+| `finding_lifecycle_scans` | Postgres | 5 |  | persistent |
 | `findings` | Postgres | 26 |  | persistent |
 | `findings_by_framework` | Snowflake | 9 |  | persistent |
 | `findings_feed` | ClickHouse | 18 | yes | persistent |

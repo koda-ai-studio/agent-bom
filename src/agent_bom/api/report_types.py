@@ -32,7 +32,7 @@ class ReportJobRequest(BaseModel):
     sla: Literal["overdue", "due", "unassigned"] | None = None
     lane: str | None = Field(default=None, max_length=32)
     finding_class: FindingClass | None = None
-    status: Literal["open", "resolved", "all"] = "open"
+    status: Literal["open", "stale", "resolved", "all"] = "open"
     window_days: int | None = Field(default=None, ge=0, le=3650)
 
     @field_validator("severity", mode="before")

@@ -28,6 +28,7 @@ from agent_bom.api.storage.hub_contract import (
 from agent_bom.core.settings import env_raw
 from agent_bom.core.severity import severity_policy_rank
 from agent_bom.evidence.finding_reach_sources import SERVER_STAMPED_REACH_FIELDS, without_fields
+from agent_bom.evidence.finding_stale import is_stale, stale_cutoff_text
 
 
 def scope_filter_batch_size(page_limit: int) -> int:
@@ -66,7 +67,7 @@ def normalize_status_filter(status: str | None) -> str | None:
     """Canonicalize a lifecycle-status filter.
 
     ``None`` -> ``None`` (no predicate; legacy all-history behavior). ``open`` /
-    ``resolved`` / ``all`` pass through. An unrecognized value collapses to
+    ``stale`` / ``resolved`` / ``all`` pass through. An unrecognized value collapses to
     ``None`` (never silently HIDES rows — the route validates + 422s the user).
     """
     if status is None:
@@ -78,8 +79,9 @@ def normalize_status_filter(status: str | None) -> str | None:
 def status_sql_predicate(status: str | None, placeholder: str = "?") -> tuple[str, list[Any]]:
     """SQL fragment + params for the lifecycle-status filter over ``status``.
 
-    ``open`` (live posture) -> ``status IN (open, reopened)``; ``resolved`` ->
-    ``status = resolved``; ``None`` / ``all`` -> no predicate. Rides the
+    ``open`` (live posture) -> ``status IN (open, reopened)``; ``stale`` -> the
+    open rows not seen within the stale period; ``resolved`` -> ``status =
+    resolved``; ``None`` / ``all`` -> no predicate. Rides the
     ``status`` column (and the open partial index for the default sort/COUNT), so
     it stays sargable — no filesort.
     """
@@ -88,6 +90,8 @@ def status_sql_predicate(status: str | None, placeholder: str = "?") -> tuple[st
         return f"status IN ({placeholder}, {placeholder})", ["open", "reopened"]
     if normalized == "resolved":
         return f"status = {placeholder}", ["resolved"]
+    if normalized == "stale":
+        return f"status IN ({placeholder}, {placeholder}) AND last_seen < {placeholder}", ["open", "reopened", stale_cutoff_text()]
     return "", []
 
 
@@ -105,6 +109,8 @@ def status_matches(row: Mapping[str, Any], status: str | None) -> bool:
     row_status = str(row.get("status") or (payload or {}).get("status") or "open").strip().lower() or "open"
     if normalized == "open":
         return row_status in _LIVE_STATUSES and row.get("suppressed") is not True  # suppressed: evidence, not live
+    if normalized == "stale":
+        return row_status in _LIVE_STATUSES and row.get("suppressed") is not True and is_stale(row)
     return row_status == "resolved"
 
 
@@ -327,6 +333,7 @@ def _redact_finding(payload: dict[str, Any]) -> dict[str, Any]:
     # space and can drift from the canonical classifiers after an upgrade.
     clean.pop("finding_class", None)
     clean.pop("lane", None)
+    clean.pop("stale", None)
     # Response defaults are not stored evidence: compact current-state overlays
     # and legacy ledger rows omit context. Preserve explicit classifications.
     if clean.get("path_context") == "unclassified" and "path_context" not in payload:

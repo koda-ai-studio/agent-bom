@@ -80,7 +80,8 @@ def _print_findings_table(payload: JsonObject) -> None:
     if not isinstance(rows, list):
         rows = []
     click.echo(
-        "id\tseverity\tstatus\towner\tpackage\tfirst_seen\tlast_seen\tsla_due_at\ttitle\tresolved_at\treopened_at\tobservation_status"
+        "id\tseverity\tstatus\towner\tpackage\tfirst_seen\tlast_seen\tsla_due_at\ttitle\tresolved_at\treopened_at\tresolution_reason\tstale"
+        "\tobservation_status"
     )
     for item in rows:
         if not isinstance(item, dict):
@@ -99,6 +100,8 @@ def _print_findings_table(payload: JsonObject) -> None:
                     _string(item.get("title") or item.get("summary") or item.get("message")),
                     _string(item.get("resolved_at")),
                     _string(item.get("reopened_at")),
+                    _string(item.get("resolution_reason")),
+                    "stale" if item.get("stale") else "",
                     _string(item.get("observation_status")) or "unavailable",
                 ]
             )
@@ -224,7 +227,11 @@ def push_findings_cmd(
     type=click.Choice(["vulnerability", "misconfiguration", "secret", "identity", "unclassified"]),
     help="Canonical finding class.",
 )
-@click.option("--status", type=click.Choice(["open", "resolved", "all"]), help="Lifecycle status scope.")
+@click.option(
+    "--status",
+    type=click.Choice(["open", "stale", "resolved", "all"]),
+    help="Lifecycle status scope; stale is open findings whose asset was not re-checked recently.",
+)
 @click.option("--kev", is_flag=True, default=None, help="Return only CISA KEV findings.")
 @click.option("--window-days", type=click.IntRange(min=0, max=3650), help="Current-state lookback; 0 means all retained history.")
 @click.option("--framework", help="Compliance framework drill-through (e.g. soc2, nist-csf).")

@@ -26,6 +26,7 @@ launched.
 | Data class | Control | Default | Code path |
 |---|---|---|---|
 | API scan jobs and result evidence | `AGENT_BOM_API_JOB_TTL` | `7776000` seconds (90 days) | `src/agent_bom/config.py`, `src/agent_bom/api/server.py`, store `cleanup_expired()` |
+| Per-finding lifecycle dates and the last redacted finding row (`finding_lifecycle`), plus one row per scan (`finding_lifecycle_scans`) | no TTL: removed by tenant data deletion, or with the scan when an explicit scan delete removes the only scan reporting a finding | kept past `AGENT_BOM_API_JOB_TTL` | `src/agent_bom/api/storage/finding_lifecycle.py`, `DELETE /v1/tenant/{id}/data` |
 | Retained scan jobs per tenant | `AGENT_BOM_API_MAX_RETAINED_JOBS_PER_TENANT` | `500` | `src/agent_bom/config.py`, `src/agent_bom/api/tenant_quota.py` |
 | Scan cache | `AGENT_BOM_SCAN_CACHE`, `AGENT_BOM_SCAN_CACHE_MAX_ENTRIES` | local cache, `100000` entries | `src/agent_bom/scan_cache.py`, `src/agent_bom/config.py` |
 | Enrichment cache | `AGENT_BOM_ENRICHMENT_TTL`, `AGENT_BOM_ENRICHMENT_MAX_CACHE` | `604800` seconds, `10000` entries | `src/agent_bom/enrichment.py`, `src/agent_bom/config.py` |

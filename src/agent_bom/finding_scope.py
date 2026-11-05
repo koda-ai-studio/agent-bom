@@ -547,6 +547,7 @@ _CANONICAL_NULLABLE_FINDING_FIELDS: tuple[str, ...] = (
     "package_provenance_status",
 )
 
+_PRIVATE_ROW_KEYS = frozenset({"ingest_asset", "report_canonical_id"})
 _FINDING_RESPONSE_TIMESTAMPS = (
     "first_seen",
     "last_seen",
@@ -666,7 +667,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     from agent_bom.security import mask_email
 
     redacted = redact_for_persistence(dict(row), EvidenceTier.SAFE_TO_STORE)
-    payload = {key: value for key, value in redacted.items() if key != "ingest_asset"} if isinstance(redacted, dict) else {}
+    payload = {key: value for key, value in redacted.items() if key not in _PRIVATE_ROW_KEYS} if isinstance(redacted, dict) else {}
     restore_atlas_receipts(payload, row)
     payload.update(cve_alias_metadata(row.get("aliases")))
     payload.update(safe_upstream_enrichment_metadata(row))

@@ -190,6 +190,24 @@ Independent collector/provider records and externally retained checkpoints are
 needed for stronger integrity claims. Missing events, truncation or a broken
 chain indicate missing/unverifiable evidence, not proven malicious intent.
 
+## Finding lifecycle evidence
+
+Pushed reports decide when a finding resolves and whether its asset counts as
+deleted. Assets: the accuracy of open counts and the tenant's durable finding
+history. Actor: a holder of a tenant's push credential, or a compromised collector.
+Trust boundary: `POST /v1/results/push`, whose report content the producer controls.
+Design and tests: [Finding lifecycle](FINDING_LIFECYCLE.md),
+`src/agent_bom/evidence/asset_coverage.py`, `tests/api/test_finding_durable_lifecycle.py`.
+
+| STRIDE | Attack | Mitigation | Regression test | Residual risk |
+|---|---|---|---|---|
+| Spoofing | Push another tenant's scope or another source's id to resolve its findings. | State is keyed by authenticated tenant, then scope and source; RLS is forced on the tables. | `test_another_tenants_inventory_cannot_delete_this_tenants_asset`, `test_another_sources_inventory_cannot_delete_this_sources_asset` | `source_id` is not bound to a credential, so a push key can claim any source inside its own tenant. |
+| Tampering | Fake a complete inventory to resolve findings as `asset_deleted`; claim `complete` over a permission error; send a future report time to outrank later scans. | The server recomputes outcome from the inventory; a missing permission, warning or failed region voids it. Coverage needs the exact account, region and service. Report times beyond a day of skew fall back to the stored time. | `test_forged_complete_outcome_cannot_hide_a_permission_error`, `test_nothing_short_of_complete_coverage_touches_the_finding`, `test_future_dated_report_cannot_freeze_later_scans` | A push credential can still send a consistent, false, fully complete inventory. That resolves findings only in that tenant, source and scope, and the next real scan reopens them with the original `first_seen`. |
+| Repudiation | Deny the push that resolved a finding. | Every push is audited on admission; the scan ledger records each job and its evidence time. | `test_duplicate_delivery_of_one_job_counts_once` | Reads do not name the resolving job. |
+| Information disclosure | Read a scope hash, an asset identifier or another tenant's history from a response or the table. | Scope and asset keys are one-way hashes and are never serialized; stored rows pass the same redaction as hub rows; every index and query leads with the tenant. | `test_project_identity_is_stable_and_never_exposes_the_scope`, `test_project_identity_does_not_join_tenants` | The table keeps redacted finding rows until tenant deletion, past scan retention. |
+| Denial of service | Flood unique findings or unscoped pushes to grow the table; hold a scope lock. | Pushes are authenticated and quota-bound; unscoped pushes share one track per source; the lock covers one scope for one transaction. | `test_concurrent_scans_of_one_scope_converge` | Distinct finding ids still add rows, with no per-tenant cap on this table. |
+| Elevation of privilege | Use a backfill or purge to reach another tenant. | Sessions bind the named tenant before any statement; the backfill replays only that tenant's jobs. | `test_tenant_data_deletion_removes_durable_history`, `test_backfill_recovers_dates_from_retained_scans` | None known. |
+
 ## Resource exhaustion and fail modes
 
 Input limits cover compressed stored job/hub payloads, image blobs/layers,

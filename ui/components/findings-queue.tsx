@@ -1,6 +1,6 @@
 "use client";
 
-import { LifecycleDate, openOccurrenceLabel } from "@/components/finding-lifecycle";
+import { LifecycleDate, lifecycleSummary, openOccurrenceLabel, resolutionReasonLabel } from "@/components/finding-lifecycle";
 import { ASSET_BASE } from "@/lib/asset-base";
 import { packageVersionLabel } from "@/lib/package-version-label";
 import { agentDisplayName } from "@/lib/display-name";
@@ -330,7 +330,7 @@ function MobileFindingCard({
     asset: [...vuln.packages.map((name, index) => index === 0 ? packageVersionLabel(vuln) : name), ...vuln.agents, ...vuln.affected_servers].slice(0, 2).join(", ") || "Unavailable",
     detection: <DetectionEvidence vuln={vuln} />,
     observed: <ObservedEvidence vuln={vuln} />,
-    remediation: [vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided", remediationLifecycle(vuln)].filter(Boolean).join(" · "),
+    remediation: [vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided", lifecycleSummary(vuln)].filter(Boolean).join(" · "),
     reach: vuln.graph_reachable === true ? `Reachable · ${exploit}` : vuln.graph_reachable === false ? `Unreachable · ${exploit}` : exploit,
     owner: `${vuln.owner || triage?.assignee || "Unassigned"} · ${due?.label ?? "SLA unavailable"}`,
     controls: controls.join(", ") || "Unavailable",
@@ -546,7 +546,7 @@ function OccurrenceList({ vuln }: { vuln: EnrichedVuln }) {
                 {asset?.name || asset?.stable_id || "Asset unavailable"}
               </span>
               <span className="mt-0.5 block truncate text-ink-tertiary">
-                {[occurrence.status, asset?.asset_type, occurrence.package_version, occurrence.owner]
+                {[occurrence.status, occurrence.stale ? "stale" : null, occurrence.resolution_reason ? resolutionReasonLabel(occurrence.resolution_reason) : null, asset?.asset_type, occurrence.package_version, occurrence.owner]
                   .filter((value): value is string => Boolean(value))
                   .join(" · ") || "Evidence retained"}
               </span>
@@ -647,7 +647,7 @@ function EngineeringCells({
           <span className={vuln.fixed_version ? "font-mono text-emerald-700 dark:text-emerald-300" : "text-ink-tertiary"}>
             {vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided"}
           </span>
-          {remediationLifecycle(vuln) ? <span className="text-ink-secondary">{remediationLifecycle(vuln)}</span> : null}
+          {lifecycleSummary(vuln) ? <span className="text-ink-secondary">{lifecycleSummary(vuln)}</span> : null}
           {verifyCommand ? (
             <span className="max-w-[14rem] truncate font-mono text-[11px] text-ink-tertiary" title={`Verify: ${verifyCommand}`}>
               {`Verify: ${verifyCommand}`}
@@ -750,15 +750,6 @@ function EngineeringCells({
   return <>{[...columns, "action" as const].map((key) => <Fragment key={key}>{cells[key]}</Fragment>)}</>;
 }
 
-function remediationLifecycle(vuln: EnrichedVuln): string | null {
-  switch (vuln.lifecycle_status) {
-    case "open": return "Open";
-    case "reopened": return "Reopened";
-    case "resolved": return vuln.resolved_at ? "Resolved · absent from a later complete scan" : "Reported resolved · verification not provided";
-    case "suppressed": return "Suppressed · not verified fixed";
-    default: return null;
-  }
-}
 function ObservedEvidence({ vuln }: { vuln: EnrichedVuln }) {
   const last = vuln.last_observed ?? vuln.last_seen;
   return <span className="flex flex-col gap-1"><ObservationDate label="First" value={vuln.first_seen} /><ObservationDate label="Last" value={last} /><LifecycleDate label="Resolved" value={vuln.resolved_at} /><LifecycleDate label="Reopened" value={vuln.reopened_at} /></span>;

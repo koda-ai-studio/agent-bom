@@ -31,6 +31,7 @@ from agent_bom.api.dev_auth_state import set_dev_api_key
 from agent_bom.api.docs_ui import configure_docs
 from agent_bom.api.error_envelope import ERROR_RESPONSES, install_error_envelope
 from agent_bom.api.experimental_gate import ExperimentalFeatureHealth, SystemHealthResponse
+from agent_bom.api.finding_lifecycle_tick import run_finding_lifecycle_tick
 from agent_bom.api.foreground_activity import ForegroundActivityMiddleware
 from agent_bom.api.hub_materialization import run_materialization_tick
 from agent_bom.api.middleware import (
@@ -654,6 +655,10 @@ async def _cleanup_loop() -> None:
         await asyncio.to_thread(poll_campaign_reconciliation)
         await asyncio.sleep(60)
         await _cleanup_tick()
+        # Fail-open like the rest of the loop; the next tick resumes where this one stopped.
+        outcome = (await asyncio.gather(asyncio.to_thread(run_finding_lifecycle_tick), return_exceptions=True))[0]
+        if isinstance(outcome, BaseException):
+            _logger.warning("finding lifecycle backfill tick failed: %s", type(outcome).__name__)
 
 
 async def _cleanup_tick() -> None:

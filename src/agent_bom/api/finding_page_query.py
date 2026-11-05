@@ -37,6 +37,7 @@ class _FindingListQuery(NamedTuple):
     approximate_total: bool
     cached_bulk_total: int | None
     include_bulk_total: bool
+    explicit_window_since: str | None = None
 
     @property
     def scan_start(self) -> int:
@@ -160,6 +161,8 @@ def _finding_list_query(
         merged_cursor=merged_cursor,
         window_days=resolved_window,
         window_since=window_since,
+        # The default window bounds what a read scans for; it must not hide a finding that is still open.
+        explicit_window_since=window_since if window_days is not None else None,
         scope_filters={},
         approximate_total=approximate,
         cached_bulk_total=cached_bulk_total,
