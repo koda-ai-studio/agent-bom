@@ -66,6 +66,10 @@ export interface EnrichedVuln extends Vulnerability {
   last_seen?: string | undefined;
   resolved_at?: string | undefined;
   reopened_at?: string | undefined;
+  last_resolved_at?: string | undefined;
+  status_updated_at?: string | undefined;
+  open_occurrence_count?: number | undefined;
+  resolved_occurrence_count?: number | undefined;
   scan_count?: number | undefined;
   /** Canonical timestamp of the most recent observation, when available. */
   last_observed?: string | undefined;

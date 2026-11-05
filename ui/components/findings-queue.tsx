@@ -1,5 +1,6 @@
 "use client";
 
+import { LifecycleDate, openOccurrenceLabel } from "@/components/finding-lifecycle";
 import { ASSET_BASE } from "@/lib/asset-base";
 import { packageVersionLabel } from "@/lib/package-version-label";
 import { agentDisplayName } from "@/lib/display-name";
@@ -520,6 +521,7 @@ function OccurrenceDisclosure({
         {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         {count} findings
       </button>
+      {openOccurrenceLabel(vuln.open_occurrence_count, vuln.resolved_occurrence_count) ? <span className="ml-2 text-[11px] text-ink-tertiary">{openOccurrenceLabel(vuln.open_occurrence_count, vuln.resolved_occurrence_count)}</span> : null}
       {expanded && showDetails ? <OccurrenceList vuln={vuln} /> : null}
     </div>
   );
@@ -544,7 +546,7 @@ function OccurrenceList({ vuln }: { vuln: EnrichedVuln }) {
                 {asset?.name || asset?.stable_id || "Asset unavailable"}
               </span>
               <span className="mt-0.5 block truncate text-ink-tertiary">
-                {[asset?.asset_type, occurrence.package_version, occurrence.owner]
+                {[occurrence.status, asset?.asset_type, occurrence.package_version, occurrence.owner]
                   .filter((value): value is string => Boolean(value))
                   .join(" · ") || "Evidence retained"}
               </span>
@@ -752,14 +754,14 @@ function remediationLifecycle(vuln: EnrichedVuln): string | null {
   switch (vuln.lifecycle_status) {
     case "open": return "Open";
     case "reopened": return "Reopened";
-    case "resolved": return "Reported resolved · verification not provided";
+    case "resolved": return vuln.resolved_at ? "Resolved · absent from a later complete scan" : "Reported resolved · verification not provided";
     case "suppressed": return "Suppressed · not verified fixed";
     default: return null;
   }
 }
 function ObservedEvidence({ vuln }: { vuln: EnrichedVuln }) {
   const last = vuln.last_observed ?? vuln.last_seen;
-  return <span className="flex flex-col gap-1"><ObservationDate label="First" value={vuln.first_seen} /><ObservationDate label="Last" value={last} /></span>;
+  return <span className="flex flex-col gap-1"><ObservationDate label="First" value={vuln.first_seen} /><ObservationDate label="Last" value={last} /><LifecycleDate label="Resolved" value={vuln.resolved_at} /><LifecycleDate label="Reopened" value={vuln.reopened_at} /></span>;
 }
 function ObservationDate({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value || Number.isNaN(Date.parse(value))) return <span>{label}: Unavailable</span>;
