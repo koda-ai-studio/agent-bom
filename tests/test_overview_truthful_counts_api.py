@@ -223,6 +223,14 @@ def test_pending_rows_label_kev_approximate_until_the_tick_finishes(hub) -> None
     assert (settled["finding_counts"]["kev"], settled["finding_counts"]["kev_approximate"]) == (6, False)
 
 
+def test_a_failing_backfill_tick_cannot_skip_partition_retention() -> None:
+    source = (ROOT / "src/agent_bom/api/server.py").read_text()
+
+    assert source.index("await asyncio.to_thread(run_partition_retention)") < source.index(
+        "await asyncio.to_thread(run_materialization_tick)"
+    )
+
+
 def _counts(**values: int) -> dict[str, int]:
     return {"critical": 0, "high": 0, "medium": 0, "low": 0, "unrated": 0, "info": 0, "unknown": 0, "total": 0, "kev": 0, **values}
 

@@ -710,7 +710,6 @@ async def _cleanup_tick() -> None:
     try:
         from agent_bom.api.partition_maintenance import run_partition_retention
 
-        await asyncio.to_thread(run_materialization_tick)
         partition_results = await asyncio.to_thread(run_partition_retention)
         for table, (partitions_created, partitions_dropped) in partition_results.items():
             _logger.info(
@@ -719,6 +718,7 @@ async def _cleanup_tick() -> None:
                 partitions_created,
                 partitions_dropped,
             )
+        await asyncio.to_thread(run_materialization_tick)
     except Exception:  # noqa: BLE001
         _logger.debug("partition maintenance skipped", exc_info=False)
     # NHI lifecycle enforcement (#nhi): expire lingering JIT grants, opt-in
