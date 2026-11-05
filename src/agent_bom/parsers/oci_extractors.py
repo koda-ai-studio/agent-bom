@@ -186,7 +186,7 @@ def _extract_dpkg_status(scan: _LayerScan) -> None:
     # database. Read only direct children through the same safe tar boundary.
     for path in sorted(scan.names):
         normalized = path.removeprefix("./")
-        if normalized.startswith("var/lib/dpkg/status.d/") and normalized.count("/") == 4:
+        if normalized.startswith("var/lib/dpkg/status.d/") and normalized.count("/") == 4 and not normalized.endswith(".md5sums"):
             _extract_stanza_database(scan, (path,), _add_dpkg_entries, "Failed to parse dpkg status fragment")
 
 

@@ -36,3 +36,11 @@ def test_oversized_go_candidate_reports_inventory_gap(tmp_path, monkeypatch):
     result = parse_oci_tarball(_docker_save_tar(tmp_path, "server/github-mcp-server", blob))
     assert result.packages == []
     assert any(w.path == "server/github-mcp-server" for w in result.coverage_warnings)
+
+
+@pytest.mark.parametrize("filename, expected_gap", [("libc6.md5sums", False), ("libc6", True)])
+def test_distroless_checksums_are_not_status_records(tmp_path, filename, expected_gap):
+    blob = b"d41d8cd98f00b204e9800998ecf8427e  usr/share/doc/libc6/copyright\n"
+    result = parse_oci_tarball(_docker_save_tar(tmp_path, f"var/lib/dpkg/status.d/{filename}", blob))
+    assert result.packages == []
+    assert bool(result.coverage_warnings) is expected_gap
