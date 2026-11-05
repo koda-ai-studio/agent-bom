@@ -219,7 +219,8 @@ def test_postgres_repair_resumes_and_the_tick_finishes_it(pg_store, pg_tenant, m
 
     assert pg_store.current_materialization_pending(pg_tenant) is False
     refs = _pg_refs(pg_store, pg_tenant)
-    assert refs.pop("policy") == ""
+    policy_ref = refs.pop("policy")
+    assert policy_ref == ""
     assert set(refs.values()) == {CVE}
     assert _kev(pg_store, pg_tenant) == 6
     assert len(_drill(pg_store, pg_tenant)) == 6
