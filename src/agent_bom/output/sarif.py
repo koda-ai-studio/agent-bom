@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -45,6 +46,8 @@ from agent_bom.output.sarif_common import (
     _SarifCatalog,
     _to_relative_path,
     enforce_physical_locations,
+    identity_uri,
+    scan_root_path,
 )
 from agent_bom.output.sarif_scanners import (
     _DEDICATED_CIS_PROVIDERS,
@@ -70,6 +73,7 @@ from agent_bom.output.source_locations import (
     finding_package_location,
     package_source_index,
 )
+from agent_bom.scan_delta import canonical_identity_text
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
 _UNIFIED_RULE_HELP_URI = "https://github.com/koda-ai-studio/agent-bom#readme"
@@ -397,7 +401,7 @@ def _cve_sarif_result(
 
     config_path, start_line = finding_package_location(finding, source_index or {})
     scanned_artifact = finding_image_reference(finding, report)
-    fp_input = f"{rule_id}:{pkg_name}:{pkg_version}:{config_path}"
+    fp_input = f"{rule_id}:{pkg_name}:{pkg_version}:{identity_uri(config_path, report)}"
     kind = "informational" if sev == Severity.NONE else "fail"
     result: dict = {
         "ruleId": rule_id,
@@ -666,9 +670,28 @@ def _unified_finding_properties(finding: Finding, rule_id: str, evidence: dict[s
     }
 
 
-def _scan_root_path(report: AIBOMReport) -> str:
-    inventory = report.project_inventory_data if isinstance(report.project_inventory_data, dict) else {}
-    return str(inventory.get("root") or "")
+def _report_root_labels(report: AIBOMReport) -> set[str]:
+    labels = {agent.name.removeprefix("project:") for agent in report.agents if agent.name.startswith("project:")}
+    root = scan_root_path(report)
+    return {*labels, Path(root).name} - {""} if root else labels
+
+
+def _unified_identity(finding: Finding, rule_id: str, file_path: str | None, report: AIBOMReport) -> str:
+    """Stable result identity: the same rule, file and text on any checkout, at any line.
+
+    ``finding.id`` and ``asset.stable_id`` hash the absolute path or the agent name for
+    several finding kinds, so they cannot identify a finding across checkouts. Repeats in
+    one file are told apart in :func:`_number_repeated_identities`.
+    """
+    roots = _report_root_labels(report)
+    return ":".join(
+        [
+            rule_id,
+            identity_uri(file_path, report) if file_path else finding.asset.asset_type,
+            canonical_identity_text(finding.title or "", roots),
+            canonical_identity_text(finding.description or "", roots),
+        ]
+    )
 
 
 def _is_path_like(value: str | None) -> bool:
@@ -683,7 +706,7 @@ def _agent_config_uri(finding: Finding, report: AIBOMReport) -> str | None:
     agent = next((agent for agent in report.agents if agent.name == finding.asset.name), None)
     for server in agent.mcp_servers if agent else []:
         if _is_path_like(server.config_path) and Path(str(server.config_path)).is_file():
-            uri = _relative_uri(str(server.config_path), _scan_root_path(report))
+            uri = _relative_uri(str(server.config_path), scan_root_path(report))
             if uri:
                 return uri
     return None
@@ -696,7 +719,7 @@ def _finding_file_uri(finding: Finding, report: AIBOMReport) -> str | None:
         return _to_relative_path(str(location), _ecosystem_from_purl(identifier))
     uri = evidence_relative_path(finding.evidence)
     if uri is None and _is_path_like(identifier) and Path(str(identifier)).is_file():
-        uri = _relative_uri(str(identifier), _scan_root_path(report))
+        uri = _relative_uri(str(identifier), scan_root_path(report))
     return uri or _agent_config_uri(finding, report)
 
 
@@ -704,7 +727,7 @@ def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence
     file_path = _finding_file_uri(finding, report)
     raw_start_line = finding.evidence.get("line_number") or finding.evidence.get("line") or finding.evidence.get("source_line")
     start_line = raw_start_line if isinstance(raw_start_line, int) and raw_start_line > 0 else 1
-    fp_input = f"{finding.id}:{file_path or finding.asset.asset_type}:{finding.asset.stable_id}"
+    fp_input = _unified_identity(finding, rule_id, file_path, report)
     finding_result: dict = {
         "ruleId": rule_id,
         "level": level,
@@ -730,6 +753,18 @@ def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence
     return finding_result
 
 
+def _number_repeated_identities(results: list[dict[str, Any]]) -> None:
+    """Keep one identity per result when a file repeats the same finding on several lines."""
+    seen: Counter[str] = Counter()
+    for result in results:
+        fingerprints = result.get("fingerprints") or {}
+        value = fingerprints.get("agent-bom/v1")
+        if value:
+            seen[value] += 1
+            if seen[value] > 1:
+                fingerprints["agent-bom/v1"] = hashlib.sha256(f"{value}#{seen[value]}".encode()).hexdigest()
+
+
 def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
     """Unified non-CVE findings, including MCP intelligence/blocklist matches."""
     for finding in apply_workload_runtime_evidence_for_export(list(report.to_findings())):
@@ -743,6 +778,7 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
         elif finding.cwe_ids:
             _merge_rule_cwe_tags(catalog.rules, rule_id, finding.cwe_ids)
         catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence, report))
+    _number_repeated_identities(catalog.results)
 
 
 def _build_sarif_run(report: AIBOMReport, catalog: _SarifCatalog, scan_run: ScanRun) -> dict[str, Any]:

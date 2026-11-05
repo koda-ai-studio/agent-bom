@@ -13,6 +13,7 @@ from agent_bom.output.sarif_common import (
     _sarif_severity,
     _SarifCatalog,
     _to_relative_path,
+    identity_uri,
 )
 from agent_bom.output.sarif_iac import iac_rule, iac_rule_id, iac_shared_compliance, iac_suppressions
 from agent_bom.security import sanitize_url
@@ -125,7 +126,7 @@ def _add_ai_inventory_results(catalog: _SarifCatalog, report: AIBOMReport) -> No
 
         file_path = _to_relative_path(comp.get("file", "unknown") or "unknown")
         line_num = int(comp.get("line", 1) or 1)
-        fp_input = f"{rule_id}:{file_path}:{line_num}"
+        fp_input = f"{rule_id}:{identity_uri(file_path, report)}:{line_num}"
         desc = sanitize_advisory_text("description", comp.get("description", ""), fallback=f"{comp_type.replace('_', ' ')}: {name}")
         catalog.results.append(
             {

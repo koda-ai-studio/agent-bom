@@ -109,7 +109,10 @@ def _append_side_findings(findings: list[dict[str, Any]], report: "AIBOMReport")
     if report.prompt_scan_data and not any(finding.get("source") == "PROMPT_SCAN" for finding in findings if isinstance(finding, dict)):
         findings.extend(stamp_finding_node_ids(_prompt_scan_findings(report.prompt_scan_data)))
     if report.browser_extensions:
-        findings.extend(stamp_finding_node_ids(_browser_extension_findings(report.browser_extensions)))
+        rows = [
+            row for row in _browser_extension_findings(report.browser_extensions) if str(row["id"]) not in report.delta_pruned_finding_ids
+        ]
+        findings.extend(stamp_finding_node_ids(rows))
 
 
 __all__ = ["_append_side_findings", "stamp_finding_node_ids"]

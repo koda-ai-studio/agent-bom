@@ -197,6 +197,26 @@ def _sarif_run_properties(report: Any, scan_run: ScanRun) -> dict[str, Any]:
     }
 
 
+def scan_root_path(report: Any) -> str:
+    inventory = getattr(report, "project_inventory_data", None)
+    return str(inventory.get("root") or "") if isinstance(inventory, dict) else ""
+
+
+def identity_uri(uri: str, report: Any) -> str:
+    """A file URI relative to the scan root, so the checkout folder is not part of identity.
+
+    The emitted URI stays relative to the working directory, which is what GitHub resolves.
+    """
+    root = scan_root_path(report)
+    if not root:
+        return uri
+    try:
+        prefix = Path(root).resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except (ValueError, OSError):
+        return uri
+    return uri.removeprefix(f"{prefix}/") if prefix != "." else uri
+
+
 # Findings with no repository file (a package identity, a scanned image, an agent)
 # sit under this prefix. It is never a real file: GitHub requires a repository-relative
 # physical location on every result, and these paths let it render the alert without
