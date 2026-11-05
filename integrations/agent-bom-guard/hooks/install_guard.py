@@ -34,6 +34,7 @@ MAX_DETAILS = 6
 MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 TYPOSQUAT_THRESHOLD = 0.85
 EDIT1_MIN_LEN = 6
+TRANSPOSITION_MIN_LEN = 5
 MAX_EDITS = 2
 MALWARE_CWE = "CWE-506"
 SEVERITY_RANK = {"critical": 0, "high": 1, "moderate": 2, "medium": 2, "low": 3}
@@ -52,13 +53,17 @@ def _data() -> dict[str, Any]:
 # --- typosquat check: a port of agent_bom.malicious.check_typosquat over the bundled data ---
 
 
-def _single_substitution(a: str, b: str) -> bool:
+def _adjacent_transposition(a: str, b: str) -> bool:
     if len(a) != len(b):
         return False
     diffs = [i for i, (x, y) in enumerate(zip(a, b)) if x != y]
-    if len(diffs) == 1:
-        return True
     return len(diffs) == 2 and diffs[1] == diffs[0] + 1 and a[diffs[0]] == b[diffs[1]] and a[diffs[1]] == b[diffs[0]]
+
+
+def _single_substitution(a: str, b: str) -> bool:
+    if len(a) != len(b):
+        return False
+    return sum(x != y for x, y in zip(a, b)) == 1 or _adjacent_transposition(a, b)
 
 
 def _edit_distance(a: str, b: str, limit: int) -> int:
@@ -98,6 +103,8 @@ def _target(name: str, popular: list[str], legitimate: set[str]) -> str | None:
         return best
     if len(name) >= EDIT1_MIN_LEN:
         return next((c for c in sorted(popular) if _single_substitution(name, c)), None)
+    if len(name) >= TRANSPOSITION_MIN_LEN:
+        return next((c for c in sorted(popular) if _adjacent_transposition(name, c)), None)
     return None
 
 

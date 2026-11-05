@@ -201,6 +201,7 @@
    "@prettier/sync",
    "@radix-ui/rect",
    "app",
+   "axis",
    "bcryptjs",
    "client",
    "expresso",
