@@ -50,6 +50,9 @@ def location_violations(document: dict[str, Any]) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # GitHub reads workflow commands and summaries as UTF-8; a Windows console defaults to cp1252.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("sarif", type=Path)
     parser.add_argument("--require-results", action="store_true", help="Fail when the file has no results.")
