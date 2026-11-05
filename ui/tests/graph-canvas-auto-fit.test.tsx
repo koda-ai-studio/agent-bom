@@ -311,3 +311,59 @@ it("offers next-node navigation for an ordinary phone graph without path IDs", a
   expect(flow.fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: "server" }] }));
   expect(view.getByText("Canvas target · 2 of 2")).toBeTruthy();
 });
+
+it("reconsiders the whole graph after the first fit settles stale caption dimensions", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  flow.zoom = 0.1;
+  flow.fitView.mockImplementationOnce(async () => { flow.zoom = 0.5; return true; });
+  render(<GraphCanvasAutoFit enabled layoutKey="changing-caption-size" anchorId="asset" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect((flow.fitView.mock.calls.at(-1)![0] as { nodes?: unknown }).nodes).toBeUndefined();
+});
+
+it("refits the restored width after an intervening resize interrupts settling", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  const onLayoutAspect = vi.fn();
+  const view = () => <GraphCanvasAutoFit enabled layoutKey="resize-race" inspector={false} preserveViewport={false} onLayoutAspect={onLayoutAspect} />;
+  const rendered = render(view());
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  flow.width = 500;
+  flow.fitView.mockImplementationOnce(() => new Promise<boolean>(() => {}));
+  rendered.rerender(view());
+  await act(() => vi.advanceTimersByTimeAsync(10));
+  const before = flow.fitView.mock.calls.length;
+  flow.width = 900;
+  rendered.rerender(view());
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  expect(flow.fitView.mock.calls.length).toBeGreaterThan(before);
+});
+
+it("waits for the store dimensions to match the mounted canvas before fitting", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  Object.defineProperty(flow.frame, "clientWidth", { value: 1200 });
+  flow.width = 500;
+  const onLayoutAspect = vi.fn();
+  const view = () => <GraphCanvasAutoFit enabled layoutKey="mounted-width" inspector={false} preserveViewport={false} onLayoutAspect={onLayoutAspect} />;
+  const rendered = render(view());
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  expect(flow.fitView).not.toHaveBeenCalled();
+  flow.width = 1200;
+  rendered.rerender(view());
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  expect(flow.fitView).toHaveBeenCalled();
+});

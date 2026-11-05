@@ -42,3 +42,21 @@ it("keeps manual positions when the operator has a saved or edited layout", () =
   const result = cloudFindingDisclosure(cloudNodes, cloudEdges, new Set(["owner"]), () => {}, true);
   expect(result.nodes.map(n => n.position)).toEqual(cloudNodes.map(n => n.position));
 });
+
+it("offers a separate finding group with original findings available on expansion", () => {
+  const collapsed = cloudFindingDisclosure(nodes, edges, new Set(), () => {});
+  const group = collapsed.nodes.find(n => n.type === "findingGroupNode");
+  expect(group?.data.label).toBe("Findings");
+  expect(group?.data.readingFindings?.count).toBe(1);
+  expect(group?.data.displayOnly).toBe(true);
+  const expanded = cloudFindingDisclosure(nodes, edges, new Set(["owner"]), () => {});
+  expect(expanded.nodes.some(n => n.type === "findingGroupNode")).toBe(false);
+  expect(expanded.nodes.find(n => n.id === "finding")?.hidden).toBe(false);
+});
+
+it("keeps finding disclosure available when an asset uses the display ID prefix", () => {
+  const collision = { ...nodes[0]!, id: "display:findings:owner" };
+  const result = cloudFindingDisclosure([...nodes, collision], edges, new Set(), () => {});
+  expect(result.nodes.filter(n => n.type === "findingGroupNode")).toHaveLength(1);
+  expect(new Set(result.nodes.map(n => n.id)).size).toBe(result.nodes.length);
+});

@@ -167,7 +167,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `source_file` → `package`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/dbt_overlay.py`, `graph/framework_topology_projection.py`, `graph/gpu_projection.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/pipeline_overlay.py`, `graph/repo_structure_overlay.py`, `graph/repository_artifacts.py`, `graph/side_scan_projection.py`, `graph/vercel_projection.py`, `graph/workspace_overlay.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_finding_nodes.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/dbt_overlay.py`, `graph/framework_topology_projection.py`, `graph/gpu_projection.py`, `graph/kubernetes_context.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/pipeline_overlay.py`, `graph/repo_structure_overlay.py`, `graph/repository_artifacts.py`, `graph/side_scan_projection.py`, `graph/vercel_projection.py`, `graph/workspace_overlay.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_finding_nodes.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `correlates_with`
 
@@ -244,16 +244,16 @@ Emitted by: `graph/package_projection.py`; demo fixtures: `demo_estate/showcase_
 
 ## `exposed_to`
 
-Class `exposure` · directed · traversable · required evidence `source`, `tier` · 20 pairs
+Class `exposure` · directed · traversable · required evidence `source`, `tier` · 21 pairs
 
 - `agent` → `cloud_resource`, `data_store`, `resource`
 - `api_gateway` → `cloud_resource`, `data_store`, `resource`
-- `cloud_resource` → `cloud_resource`, `data_store`, `resource`
+- `cloud_resource` → `cloud_resource`, `container`, `data_store`, `resource`
 - `container` → `cloud_resource`, `data_store`, `resource`
 - `data_store` → `account`, `cloud_resource`, `data_store`, `resource`
 - `server` → `agent`, `cloud_resource`, `data_store`, `resource`
 
-Emitted by: `graph/builder_network_exposure.py`, `graph/builder_snowflake_data_movement.py`, `graph/cnapp_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_network_exposure.py`, `graph/builder_snowflake_data_movement.py`, `graph/cnapp_overlay.py`, `graph/kubernetes_context.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `exposes_cred`
 

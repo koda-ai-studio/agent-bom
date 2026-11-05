@@ -411,7 +411,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         (E.CLOUD_RESOURCE, E.RESOURCE, E.DATA_STORE),
         # A front door (firewall, Kubernetes Service) exposing the workload behind
         # it, and a data share exposing data to an external account.
-        extra=((E.SERVER, E.AGENT), (E.DATA_STORE, E.ACCOUNT)),
+        extra=((E.SERVER, E.AGENT), (E.DATA_STORE, E.ACCOUNT), (E.CLOUD_RESOURCE, E.CONTAINER)),
     ),
     _spec(R.STORES, T.STRUCTURAL, "exposure", (E.CLOUD_RESOURCE, E.RESOURCE, E.DATA_STORE, E.SERVER), (E.DATASET, E.DATA_STORE)),
     _spec(

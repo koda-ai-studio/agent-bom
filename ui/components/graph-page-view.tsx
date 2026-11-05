@@ -1,5 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { investigationFlow, type InvestigationFlow } from "@/lib/graph-investigation-flow";
+import { useDisplayNodeMeasurements } from "@/hooks/use-display-node-measurements";
 import { useCloudFindingDisclosure } from "@/hooks/use-cloud-finding-disclosure";
 import { ASSET_BASE } from "@/lib/asset-base";
 import { useRelationshipLabelControl } from "@/components/relationship-label-control";
@@ -109,7 +112,16 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
     retryGraph, graphTruncated, connectionPreview, previewExpanded, setPreviewRoot, setPreviewExpanded,
   } = page;
   const relationshipLabels = useRelationshipLabelControl(displayEdges);
-  const disclosed = useCloudFindingDisclosure(presentation.nodes, relationshipLabels.edges, selectedNodeId, presentation.storageKey, presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
+  const [investigationFlowKind, setInvestigationFlowKind] = useState<InvestigationFlow>("auto");
+  const useCaseEnabled = !selectedAttackPath && !selectedScenarioId && !rollupNavigationActive
+    && !presentation.editing && !presentation.hasPositionOverrides;
+  const scenarioFlow = useMemo(() => useCaseEnabled
+    ? investigationFlow(presentation.nodes, relationshipLabels.edges, investigationFlowKind)
+    : { nodes: presentation.nodes, edges: relationshipLabels.edges, scenario: "inventory" },
+    [useCaseEnabled, presentation.nodes, relationshipLabels.edges, investigationFlowKind]);
+  const disclosed = useCloudFindingDisclosure(scenarioFlow.nodes, scenarioFlow.edges, selectedNodeId,
+    `${presentation.storageKey}:${investigationFlowKind}`, useCaseEnabled || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
+  const measuredDisplay = useDisplayNodeMeasurements(disclosed.nodes, presentation.onNodesChange);
   const toggleFindingGroups = () => {
     if (!disclosed.collapsed) {
       if (presentation.nodes.find(node => node.id === selectedNodeId)?.data.readingOwner) {
@@ -623,10 +635,17 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           {/* One status bar: counts, evidence, context and legend, instead of four stacked bands. */}
           {!firstFramePending && (showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
           {graphHeadline}
+          {useCaseEnabled && <label className="flex items-center gap-2 text-xs text-muted-foreground">Flow
+            <select aria-label="Investigation flow" value={investigationFlowKind} onChange={e => { setInvestigationFlowKind(e.target.value as InvestigationFlow); setManualCameraScope(null); setSelectedNode(null); setSelectedNodeId(null); setSelectedRelationship(null); setPinnedFocusId(null); setHoveredNodeId(null); setReachabilitySummary(null); setBlastRadius(null); }}
+              className="rounded-md border border-outline bg-background px-2 py-1 text-foreground">
+              <option value="auto">Automatic · {scenarioFlow.scenario}</option><option value="exposure">Exposure</option>
+              <option value="identity">Identity and access</option><option value="vulnerability">Vulnerability</option><option value="inventory">Inventory</option>
+            </select>
+          </label>}
           {showViewportScope && (
             <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
               {disclosed.collapsed ? <span title={`${displayNodes.length} total nodes and ${displayEdges.length} total relationships loaded`}>
-                Graph · {disclosed.nodes.filter(node => !node.hidden).length} visible nodes · {disclosed.collapsed} grouped findings
+                Graph · {disclosed.nodes.filter(node => !node.hidden).length} visible items · {disclosed.collapsed} grouped findings
               </span> : <span>{scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}{scenarioElements.unconnected.length > 0 && ` · ${scenarioElements.unconnected.length} unconnected items`}</span>}
               {selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode && <button type="button" onClick={() => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId)} className="text-foreground underline underline-offset-4">{scenarioExpanded ? "Focus changes" : "Show full graph"}</button>}
               {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
@@ -784,8 +803,8 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport),
                 ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": `${Math.min(156, 64 / Math.max(graphViewport.zoom, 0.1))}px` } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
-              key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
-              nodes={disclosed.nodes}
+              key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${investigationFlowKind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
+              nodes={measuredDisplay.nodes}
               edges={disclosed.edges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
@@ -823,10 +842,17 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 const edge = id ? displayEdges.find(item => item.id === id) : undefined;
                 if (edge) { event.preventDefault(); event.stopPropagation(); inspectRelationship(edge); }
               }}
-              onNodeClick={onNodeClick}
+              onNodeClick={(event, node) => {
+                if (node.data.displayOnly) {
+                  if (node.data.readingFindings) node.data.readingFindings.toggle();
+                  else { const target = presentation.nodes.find(n => n.id === node.data.displayTargetId); if (target) onNodeClick(event, target); }
+                  return;
+                }
+                onNodeClick(event, node);
+              }}
               onNodeMouseEnter={(event, node) => { if (!node.data.readingGroup) onNodeMouseEnter(event, node); }}
               onNodeMouseLeave={onNodeMouseLeave}
-              onNodesChange={presentation.onNodesChange}
+              onNodesChange={measuredDisplay.onNodesChange}
               onNodeDragStop={presentation.onNodeDragStop}
               onMoveStart={(event) => { if (event) fitGeneration.current += 1; }}
               onMoveEnd={presentation.onMoveEnd}
@@ -849,12 +875,12 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 boundedPreview={Boolean(connectionPreview) && !previewExpanded}
                 padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
-                navigationIds={selectedAttackPath?.hops ?? (disclosed.available ? disclosed.nodes.filter(node => !node.hidden).map(node => node.id) : undefined)}
+                navigationIds={selectedAttackPath?.hops ?? (disclosed.available ? disclosed.nodes.filter(node => !node.hidden).sort((a, b) => a.position.x - b.position.x || a.position.y - b.position.y).map(node => node.id) : undefined)}
                 enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
-                layoutKey={`${compactLayoutKey}:${disclosed.key}`}
-                anchorId={selectedNodeId ?? investigationMode?.rootId}
+                layoutKey={`${compactLayoutKey}:${investigationFlowKind}:${disclosed.key}`}
+                anchorId={selectedNodeId ?? investigationMode?.rootId ?? (useCaseEnabled ? scenarioFlow.nodes.find(n => !n.hidden && n.position.x === 0 && n.position.y === 0)?.id : undefined)}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
-                preserveViewport={manualCamera || presentation.restoredSavedState}
+                preserveViewport={manualCamera || investigationFlowKind === "auto" && presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
