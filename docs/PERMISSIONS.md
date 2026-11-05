@@ -441,3 +441,41 @@ using `AGENT_BOM_PUSH_API_KEY` and the existing outbound URL/sanitization policy
 Without `--push`, no report is sent. Source collection completeness remains
 unknown; imports do not resolve absent findings or prove exploitability.
 See [lake ingestion](../site-docs/deployment/lake-evidence-ingestion.md).
+
+## Directory and hosted OAuth boundaries
+
+The directory skills and `audit` MCP profile exclude `agent_activity` and chat
+history review. The standalone full compatibility profile remains a separate
+operator-selected surface. Directory pins must reference a release containing
+this exclusion before submission; updating skill files does not change an
+already published executable.
+
+OAuth MCP deployments expose only cataloged read-only tools, excluding process
+launching and history inspection. Read-only describes target-system behavior:
+scans can still retain redacted results in the tenant/caller-bound result store.
+Its default readable TTL is 1,800 seconds and its default bound is four rows per
+tenant; expired rows are deleted during subsequent writes, not by a guaranteed
+wall-clock deletion job. Token rotation deliberately loses access to the prior
+token's cached results. Local report files, persisted graph/audit evidence,
+backups and external hosting logs have separate operator-controlled retention.
+Recent MCP request traces are in-memory and bounded to 256 entries by default.
+
+The external authorization server owns login, consent, client registration and
+refresh-token storage/rotation. The MCP service checks signatures, issuer,
+audience, approved subject, time limits, `read` scope and an exact signed
+`tenant_id` matching the explicitly configured deployment tenant. An untrusted
+tenant header or tool argument cannot move a request to another tenant.
+
+The configured issuer is the sole OAuth network destination: public JWKS GETs
+and authenticated RFC 7662 introspection POSTs to that same HTTPS origin.
+Introspection sends the presented access token and confidential resource-client
+credentials to its intended issuer, not to a tool, package service or new
+telemetry destination. Responses are bounded to 256 KiB, requests time out after
+five seconds, redirects are refused and TLS is verified. The service never
+issues OAuth tokens or receives a password-login form submission. Issuer and
+hosting retention must be documented by the service owner.
+
+See [MCP OAuth setup](MCP_OAUTH.md) and the
+[OAuth failure modes and STRIDE assessment](RUNTIME_FAIL_MODES.md#hosted-mcp-oauth).
+The draft [privacy](../site-docs/privacy.md) and [terms](../site-docs/terms.md)
+pages require owner review before publication; they make no certification claim.

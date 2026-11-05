@@ -38,6 +38,12 @@ request_context: ContextVar[Any] = ContextVar("agent_bom_mcp_request")
 
 async def request_identity_context(ctx: ServerRequestContext[Any, Any], call_next: CallNext) -> HandlerResult:
     """Bind the SDK-verified identity to this request, including stateless calls."""
+    identity = verified_access_token(ctx)
+    if identity is not None and identity.claims and "tenant_id" in identity.claims and ctx.method == "tools/call":
+        arguments = (ctx.params or {}).get("arguments") or {}
+        requested = arguments.get("tenant_id") if isinstance(arguments, dict) else None
+        if requested not in (None, "", "default", identity.claims["tenant_id"]):
+            return {"isError": True, "content": [{"type": "text", "text": "MCP token does not authorize the requested tenant"}]}
     token = request_context.set(ctx)
     try:
         return await call_next(ctx)

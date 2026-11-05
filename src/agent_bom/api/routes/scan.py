@@ -16,6 +16,7 @@ from fastapi.responses import Response
 from agent_bom.api import job_status_count_cache
 from agent_bom.api.bulk_findings_ingest import BulkFindingsRequest, PackageCheckRequest, _normalized_bulk_finding, reconcile_plan
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
+from agent_bom.api.finding_blast_row import _finding_from_blast_radius as _finding_from_blast_radius
 from agent_bom.api.finding_facets import _FACET_DEADLINE_SECONDS as _FACET_DEADLINE_SECONDS
 from agent_bom.api.finding_facets import _FACET_SCAN_BUDGET as _FACET_SCAN_BUDGET
 from agent_bom.api.finding_facets import _FACET_SEVERITY_BANDS as _FACET_SEVERITY_BANDS
@@ -78,7 +79,6 @@ from agent_bom.api.read_models.scan import ScanDriversResponse, ScanStatusRespon
 from agent_bom.api.request_contract import reject_unknown_query_params
 from agent_bom.api.routes.scan_exports import router as exports_router
 from agent_bom.api.scan_cohorts import correlation_cohort_id as correlation_cohort_id
-from agent_bom.api.scan_finding_projection import _finding_from_blast_radius as _finding_from_blast_radius
 from agent_bom.api.scan_finding_projection import _iter_scan_findings as _iter_scan_findings
 from agent_bom.api.scan_finding_projection import _project_finding_owners_and_suppressions as _project_finding_owners_and_suppressions
 from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant as _bulk_ingested_findings_for_tenant

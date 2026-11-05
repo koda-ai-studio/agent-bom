@@ -25,7 +25,6 @@ You need [uv](https://docs.astral.sh/uv/) on `PATH`. No account or API key is ne
 | `inventory` | AI estate inventory: agents, MCP servers, tools, packages and how they connect. No CVE lookups. |
 | `audit-mcp` | Configuration audit of MCP servers: credentials in config, unpinned launchers, unauthenticated or non-TLS remote servers. |
 | `audit-skills` | Audit skills and instruction files (SKILL.md, CLAUDE.md, AGENTS.md, rules files) for prompt injection, exfiltration and broad tool grants. |
-| `activity` | Review what Claude Code and Codex did: MCP servers and tools used, unused servers, risky actions, installed packages. |
 
 ## What it can and cannot do compared with the MCP plugin
 
@@ -42,9 +41,8 @@ from the CLI of the pinned release:
   present on this machine. `db advisory match` and possibly-affected distro
   rows are available only on agent-bom releases after 0.110.0; on 0.110.0 the
   skill skips that step and says so.
-- `audit-mcp` reports coding-agent permission findings, and `activity` works,
-  only on agent-bom releases after 0.110.0. On 0.110.0, `activity` says the
-  command is not available and stops.
+- `audit-mcp` reports coding-agent permission findings only on agent-bom
+  releases after 0.110.0. Directory skills do not read chat or session history.
 - `scan` lists the ten highest-ranked findings from the bounded `--agent-mode`
   summary; the totals cover everything.
 
@@ -59,7 +57,6 @@ from the CLI of the pinned release:
   - `check` (`check`)
   - `remediate` without `--apply` (`fix`)
   - `skills scan` (`audit-skills`)
-  - `activity` without `--check-packages` (`activity`)
   - `image` (`bom`)
   - `cloud aws`, `cloud azure` and `cloud gcp`, from the `agent-bom[aws]`,
     `[azure]` or `[gcp]` extra (`bom`, only when you ask for a cloud BOM)
@@ -78,14 +75,11 @@ from the CLI of the pinned release:
   Desktop, Cursor, Codex and other supported clients) to find agents, servers
   and the packages they launch; project manifests and lockfiles in a directory
   you name; skill and instruction files under a path you name; and any image,
-  SBOM or repository you name. `activity` reads local Claude Code
-  (`~/.claude/projects`) and Codex (`~/.codex/sessions`) session history, with
-  file, line and byte caps; prompts, responses and file contents are never put
-  in its output, and command and path evidence is redacted. Credential values
+  SBOM or repository you name. Credential values
   found in configs are redacted; only their names and locations are reported.
 - **Sends** package names and versions, never file contents or credentials, to
-  public vulnerability and package sources. `inventory`, `audit-skills` and
-  `activity` make no network calls. `checkup`, `scan`, `check`, `affected`,
+  public vulnerability and package sources. `inventory` and `audit-skills`
+  make no network calls. `checkup`, `scan`, `check`, `affected`,
   `fix`, `audit-mcp` and `bom` use:
   - `api.osv.dev`: vulnerability and malicious-package lookups
   - `api.github.com`: GitHub security advisories

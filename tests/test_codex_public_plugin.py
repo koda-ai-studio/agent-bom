@@ -26,7 +26,7 @@ CODEX = ROOT / "integrations" / "codex"
 CLAUDE = ROOT / "integrations" / "claude-code"
 SPEC = ROOT / "integrations" / "shared" / "skills.toml"
 PUBLISHED = (ROOT / "PUBLISHED_VERSION").read_text(encoding="utf-8").strip()
-JOBS = ["activity", "affected", "audit-mcp", "audit-skills", "bom", "check", "checkup", "fix", "inventory", "scan"]
+JOBS = ["affected", "audit-mcp", "audit-skills", "bom", "check", "checkup", "fix", "inventory", "scan"]
 _PINNED_CMD = re.compile(r"`uvx --from '?agent-bom(?:\[[a-z]+\])?==(\d+\.\d+\.\d+)'? agent-bom ([^`]+)`")
 
 
@@ -172,7 +172,8 @@ def test_every_flag_fragment_belongs_to_a_command_the_skill_runs() -> None:
             for flag in re.findall(r"(?<![\w-])(--?[a-z][a-z-]*)", fragment):
                 assert flag in options, f"{job}: `{fragment}` cites {flag}, which none of its commands accept"
             checked += 1
-    assert checked >= 20
+    # The activity skill and its three flag fragments are excluded from directory builds.
+    assert checked == 17
 
 
 def test_codex_skills_never_cite_write_or_launch_flags_as_commands() -> None:

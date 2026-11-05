@@ -71,12 +71,13 @@ def test_cli_rejects_bad_window(local_home):
     assert result.exit_code == 2 and "30d" in result.output
 
 
-def test_mcp_tool_is_on_audit_profile_local_and_read_only(local_home):
+def test_mcp_activity_is_only_in_full_compatibility_profile(local_home):
     from agent_bom.mcp_server import create_mcp_server
     from agent_bom.mcp_tools.profiles import get_profile
 
-    assert "agent_activity" in get_profile("audit").tools
-    server = create_mcp_server(profile="audit")
+    assert "agent_activity" not in get_profile("audit").tools
+    assert "agent_activity" not in {tool.name for tool in asyncio.run(create_mcp_server(profile="audit").list_tools())}
+    server = create_mcp_server(profile="full")
     tool = {t.name: t for t in asyncio.run(server.list_tools())}["agent_activity"]
     assert tool.annotations.read_only_hint is True
     assert tool.annotations.open_world_hint is False

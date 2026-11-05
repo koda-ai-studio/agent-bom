@@ -101,7 +101,8 @@ def test_explicitly_deleting_the_only_scan_removes_its_finding(push_estate):
     push_estate.scan("asset-a", [VULN], T[1])
     job = _tenant_jobs(push_estate.tenant)[0]
     with tenant_bound_context(push_estate.tenant):
-        assert stores._get_store().delete(job["job_id"], tenant_id=push_estate.tenant)
+        deleted = stores._get_store().delete(job["job_id"], tenant_id=push_estate.tenant)
+    assert deleted
     assert push_estate.rows("all") == []
 
 
@@ -326,12 +327,12 @@ def test_concurrent_scans_of_one_scope_converge(store_kind, client):
     if store_kind == "sqlite":
         pytest.skip("the SQLite job store serializes writers")
     estate = Estate(client, "push", f"lifecycle-{uuid4().hex[:10]}")
-    errors: list[BaseException] = []
+    errors: list[Exception] = []
 
     def push(day: int, present: bool) -> None:
         try:
             estate.scan("asset-a", [VULN] if present else [], T[day])
-        except BaseException as exc:  # noqa: BLE001  # surfaced by the assertion below
+        except Exception as exc:  # noqa: BLE001  # surfaced by the assertion below
             errors.append(exc)
 
     workers = [threading.Thread(target=push, args=(day, day % 4 != 0)) for day in range(1, 9)]

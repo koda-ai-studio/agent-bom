@@ -5,7 +5,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from agent_bom.api.finding_blast_row import _finding_from_blast_radius as _finding_from_blast_radius
 from agent_bom.api.finding_collection import collect_scan_findings, merge_finding_representations
 from agent_bom.api.finding_read_context import read_once
 from agent_bom.api.finding_row_shapes import _normalize_finding_identifiers

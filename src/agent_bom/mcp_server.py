@@ -593,7 +593,7 @@ def create_mcp_server(
         ),
     )
 
-    configure_registration(mcp, profile)
+    configure_registration(mcp, profile, read_only=oauth_enabled)
 
     # Import tool implementations
     from agent_bom.mcp_tools.inventory import inventory_list_impl, inventory_summary_impl
