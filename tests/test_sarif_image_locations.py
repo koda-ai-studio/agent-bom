@@ -54,7 +54,10 @@ def test_every_image_scan_result_has_a_physical_location() -> None:
     assert [result["ruleId"] for result in results] == ["CVE-2026-85091"]
     assert all(_primary_uris(document)), _primary_uris(document)
     location = results[0]["locations"][0]
-    assert location["physicalLocation"]["artifactLocation"] == {"uri": IMAGE_URI}
+    # A docker:// URI does not match the checkout's file:// root, which GitHub rejects.
+    uri = location["physicalLocation"]["artifactLocation"]["uri"]
+    assert uri.startswith("agent-bom-findings/image/docker/")
+    assert results[0]["properties"]["scanned_artifact"] == IMAGE_URI
     assert "region" not in location["physicalLocation"]  # no invented line inside an image
     assert location["logicalLocations"] == [{"fullyQualifiedName": PURL}]
     schema = json.loads((ROOT / "tests/fixtures/sarif-schema-2.1.0.json").read_text())
@@ -65,7 +68,7 @@ def test_tarball_scan_location_names_the_tarball_without_its_local_directory() -
     report = _image_report(config_path="oci-tar:///home/runner/work/private dir/app image.tar", name="image-tar:app image.tar")
     location = to_sarif(report)["runs"][0]["results"][0]["locations"][0]
 
-    assert location["physicalLocation"]["artifactLocation"] == {"uri": "oci-tar://app%20image.tar"}
+    assert location["physicalLocation"]["artifactLocation"]["uri"] == "agent-bom-findings/image/oci-tar/app%2520image.tar"
     assert "runner" not in json.dumps(location)
 
 
