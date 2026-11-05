@@ -64,7 +64,7 @@ def cloud():
     \b
     Docs: https://koda-ai-studio.github.io/agent-bom/
     """
-    pass
+    click.get_current_context().meta["cloud_inventory_providers"] = ()
 
 
 # ── Register cloud provider commands (reuse from _cloud_group.py) ────────────
@@ -105,6 +105,8 @@ def snowflake_cmd(output_format: str, output_path: Optional[str], cis: bool, no_
     invoke_forwarding(
         ctx,
         scan,
+        no_discover=True,
+        no_skill=True,
         snowflake_flag=True,
         snowflake_cis_benchmark=cis and not no_cis,
         output_format=output_format,
@@ -125,6 +127,8 @@ def databricks_cmd(output_format: str, output_path: Optional[str], quiet: bool) 
     invoke_forwarding(
         ctx,
         scan,
+        no_discover=True,
+        no_skill=True,
         databricks_flag=True,
         databricks_security=True,
         output_format=output_format,
@@ -146,6 +150,8 @@ def huggingface_cmd(verify_hashes: bool, output_format: str, output_path: Option
     invoke_forwarding(
         ctx,
         scan,
+        no_discover=True,
+        no_skill=True,
         hf_flag=True,
         verify_model_hashes=verify_hashes,
         output_format=output_format,
@@ -166,6 +172,8 @@ def ollama_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> N
     invoke_forwarding(
         ctx,
         scan,
+        no_discover=True,
+        no_skill=True,
         ollama_flag=True,
         output_format=output_format,
         output=output_path,
@@ -190,6 +198,8 @@ def posture_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> 
     invoke_forwarding(
         ctx,
         scan,
+        no_discover=True,
+        no_skill=True,
         aws=bool(shutil.which("aws")),
         azure_flag=bool(shutil.which("az")),
         gcp_flag=bool(shutil.which("gcloud")),

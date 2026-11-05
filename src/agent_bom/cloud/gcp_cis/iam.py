@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
-from agent_bom.cloud.normalization import sanitize_discovery_warning
 
 from ._base import (
     _IAM_SECTION,
+    _check_failure_evidence,
+    _check_failure_status,
     _seams,
 )
 
@@ -47,8 +48,8 @@ def _check_1_1(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check IAM policy for gmail accounts: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check IAM policy for gmail accounts: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -118,8 +119,8 @@ def _check_1_4(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check service account keys: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check service account keys: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -160,8 +161,8 @@ def _check_1_5(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check IAM policy: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check IAM policy: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -203,8 +204,8 @@ def _check_1_6(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check service account admin privileges: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check service account admin privileges: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -251,8 +252,8 @@ def _check_1_7(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check user-managed service account admin privileges: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check user-managed service account admin privileges: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -300,6 +301,6 @@ def _check_1_8(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check service account key rotation: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check service account key rotation: {_check_failure_evidence(exc)}"
     return result

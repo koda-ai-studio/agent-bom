@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
-from agent_bom.cloud.normalization import sanitize_discovery_warning
 
 from ._base import (
     _LOGGING_SECTION,
+    _check_failure_evidence,
+    _check_failure_status,
     _creds_kwargs,
     _gcp_managed_zones,
     _seams,
@@ -51,8 +52,8 @@ def _check_2_1(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check audit log configuration: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check audit log configuration: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -70,7 +71,7 @@ def _check_2_2(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.config_service_v2")
 
         client = logging_v2.ConfigServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -92,8 +93,8 @@ def _check_2_2(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed. Install with: pip install google-cloud-logging"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log sinks: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log sinks: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -108,7 +109,7 @@ def _check_2_3(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -127,8 +128,8 @@ def _check_2_3(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -143,7 +144,7 @@ def _check_2_4(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -162,8 +163,8 @@ def _check_2_4(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -178,7 +179,7 @@ def _check_2_5(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -197,8 +198,8 @@ def _check_2_5(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -213,7 +214,7 @@ def _check_2_6(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -232,8 +233,8 @@ def _check_2_6(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -248,7 +249,7 @@ def _check_2_7(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -267,8 +268,8 @@ def _check_2_7(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -283,7 +284,7 @@ def _check_2_8(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -302,8 +303,8 @@ def _check_2_8(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -318,7 +319,7 @@ def _check_2_9(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -337,8 +338,8 @@ def _check_2_9(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -353,7 +354,7 @@ def _check_2_10(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -372,8 +373,8 @@ def _check_2_10(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -388,7 +389,7 @@ def _check_2_11(project_id: str) -> CISCheckResult:
         cis_section=_LOGGING_SECTION,
     )
     try:
-        logging_v2 = _seams()._import_google_cloud_module("logging_v2")
+        logging_v2 = _seams()._import_google_cloud_module("logging_v2.services.metrics_service_v2")
 
         client = logging_v2.MetricsServiceV2Client(**_creds_kwargs())
         parent = f"projects/{project_id}"
@@ -407,8 +408,8 @@ def _check_2_11(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-logging not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log metrics: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check log metrics: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -446,6 +447,6 @@ def _check_2_12(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Cloud DNS logging: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check Cloud DNS logging: {_check_failure_evidence(exc)}"
     return result

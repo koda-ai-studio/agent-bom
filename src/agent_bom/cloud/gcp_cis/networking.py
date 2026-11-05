@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
-from agent_bom.cloud.normalization import sanitize_discovery_warning
 
 from ._base import (
     _NETWORK_SECTION,
+    _check_failure_evidence,
+    _check_failure_status,
     _creds_kwargs,
     _gcp_managed_zones,
     _seams,
@@ -45,8 +46,8 @@ def _check_3_1(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check VPC networks: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check VPC networks: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -83,8 +84,8 @@ def _check_3_2(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check for legacy networks: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check for legacy networks: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -122,8 +123,8 @@ def _check_3_3(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check DNSSEC configuration: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check DNSSEC configuration: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -160,8 +161,8 @@ def _check_3_4(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check DNSSEC key-signing algorithm: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check DNSSEC key-signing algorithm: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -198,8 +199,8 @@ def _check_3_5(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check DNSSEC zone-signing algorithm: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check DNSSEC zone-signing algorithm: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -244,8 +245,8 @@ def _check_3_8(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check firewall rules: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check firewall rules: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -284,8 +285,8 @@ def _check_3_10(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Private Google Access: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check Private Google Access: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -325,8 +326,8 @@ def _check_3_9(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check VPC Flow Logs: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check VPC Flow Logs: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -372,8 +373,8 @@ def _check_3_6(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check firewall rules: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check firewall rules: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -419,6 +420,6 @@ def _check_3_7(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check firewall rules: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check firewall rules: {_check_failure_evidence(exc)}"
     return result

@@ -6,6 +6,16 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from agent_bom.cloud.base import CloudDiscoveryError
+from agent_bom.security import sanitize_error
+
+
+def discovery_error_hint(exc: Exception) -> str:
+    """Keep SDK details private while exposing the operator's authentication recovery."""
+    return (
+        f"{sanitize_error(exc, generic=True)} "
+        "If OAuth login expired, run `databricks auth login --host <workspace-url>`. "
+        "For personal access token authentication, replace DATABRICKS_TOKEN with a valid token."
+    )
 
 
 def sdk_value(value: Any) -> str:
