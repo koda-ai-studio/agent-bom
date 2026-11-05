@@ -86,3 +86,24 @@ def test_package_coverage_still_flags_scope_lookalike():
     _flag_suspicious_packages([pkg])
     assert pkg.is_malicious is True
     assert pkg.malicious_reason == "Possible typosquat of 'rollup-plugin-babel'"
+
+
+@pytest.mark.parametrize("scope", ["typse", "typpes", "typez"])
+def test_lookalike_namespace_with_exact_known_scoped_leaf_is_detected(monkeypatch, scope):
+    from agent_bom import malicious
+
+    monkeypatch.setitem(malicious._POPULAR_PACKAGES, "npm", frozenset({"@types/node", "node"}))
+    assert check_typosquat(f"@{scope}/node", "npm") == "@types/node"
+
+
+@pytest.mark.parametrize("name", ["@independent/node", "@types/node", "@types/react", "@typse/unrelated"])
+def test_scoped_target_needs_namespace_and_leaf_evidence(monkeypatch, name):
+    from agent_bom import malicious
+
+    monkeypatch.setitem(malicious._POPULAR_PACKAGES, "npm", frozenset({"@types/node", "node"}))
+    assert check_typosquat(name, "npm") is None
+
+
+def test_bundled_reference_detects_scoped_target_without_leaf_fallback():
+    assert check_typosquat("@typse/node", "npm") == "@types/node"
+    assert check_typosquat("@independent/node", "npm") is None
