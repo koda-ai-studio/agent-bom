@@ -376,13 +376,30 @@ def _extract_jars(scan: _LayerScan) -> None:
             scan.gap(member_name)
 
 
+def _go_buildinfo_window(stream: IO[bytes]) -> bytes:
+    """Find build metadata beyond the binary's text segment with bounded memory.
+
+    The caller enforces the metadata member size limit. Retain a marker-sized
+    overlap so a header spanning two read windows is not lost.
+    """
+    overlap = b""
+    while chunk := stream.read(_GO_BIN_MAX_READ):
+        chunk = overlap + chunk
+        position = chunk.find(_GO_BUILDINFO_MAGIC)
+        if position >= 0:
+            metadata = chunk[position:][:_GO_BIN_MAX_READ]
+            return metadata + stream.read(_GO_BIN_MAX_READ - len(metadata))
+        overlap = chunk[-(len(_GO_BUILDINFO_MAGIC) - 1) :]
+    return b""
+
+
 def _add_go_buildinfo(scan: _LayerScan, member_name: str, member: tarfile.TarInfo) -> None:
-    f = scan.layer_tf.extractfile(member)
+    f = _safe_extractfile(scan.layer_tf, member_name)
     if f is None:
+        scan.gap(member_name)
         return
-    chunk = f.read(_GO_BIN_MAX_READ)
-    if _GO_BUILDINFO_MAGIC not in chunk:
-        return
+    with f:
+        chunk = _go_buildinfo_window(f)
     for m in _GO_DEP_LINE_RE.finditer(chunk):
         mod_path = m.group(1).decode("utf-8", errors="ignore").strip()
         mod_ver = m.group(2).decode("utf-8", errors="ignore").strip()
