@@ -74,6 +74,7 @@ class SyncSession:
         self.close(exc)
 
     def close(self, exc: BaseException | None) -> None:
+        publish = self._build is not None and self._worth_publishing(exc)
         # Fold the (potentially large) -wal back into the main DB so concurrent readers don't race a big write-ahead log right after a sync.
         try:
             self.conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
@@ -82,12 +83,22 @@ class SyncSession:
         self.conn.close()
         if self._build is None:
             return
-        # Network and parsing failures leave whole committed sources worth keeping, as an
-        # in-place sync does. A database error or an interrupt leaves nothing to trust.
-        if exc is None or (isinstance(exc, Exception) and not isinstance(exc, sqlite3.Error)):
+        if publish:
             self._publish(self._build)
         else:
             _unlink_quietly(self._build)
+
+    def _worth_publishing(self, exc: BaseException | None) -> bool:
+        """A network or parsing failure leaves finished sources worth keeping, as an in-place sync does.
+
+        A database error or an interrupt leaves nothing to trust. With no finished
+        source there is nothing to keep, and the next run should build aside again.
+        """
+        if exc is None:
+            return True
+        if not isinstance(exc, Exception) or isinstance(exc, sqlite3.Error):
+            return False
+        return self.conn.execute("SELECT 1 FROM sync_meta LIMIT 1").fetchone() is not None
 
     def _publish(self, build: Path) -> None:
         try:

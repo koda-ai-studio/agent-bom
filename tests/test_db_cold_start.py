@@ -111,6 +111,22 @@ def test_failed_source_still_publishes_the_sources_that_completed(tmp_path, monk
 
 
 @pytest.mark.real_vuln_db_sync
+def test_a_build_with_no_finished_source_is_not_published_so_the_next_run_builds_again(tmp_path, monkeypatch) -> None:
+    db_path = tmp_path / "vulns.db"
+
+    def unreachable(*_args, **_kwargs) -> int:
+        raise ConnectionError("feed unreachable")
+
+    monkeypatch.setattr(sync_module, "sync_kev", unreachable)
+
+    with pytest.raises(ConnectionError):
+        sync_module.sync_db(path=db_path, sources=["kev"])
+
+    assert not db_path.exists()
+    assert build_files(db_path) == []
+
+
+@pytest.mark.real_vuln_db_sync
 @pytest.mark.parametrize("failure", [sqlite3.OperationalError("disk I/O error"), KeyboardInterrupt()])
 def test_database_error_or_interrupt_never_publishes_a_build(tmp_path, monkeypatch, failure: BaseException) -> None:
     db_path = tmp_path / "vulns.db"
