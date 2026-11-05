@@ -80,7 +80,8 @@ def finding_free_posture(report: Any) -> tuple[str, str]:
     """Zero findings earn no clean verdict without package or evaluated-control evidence."""
     if has_unresolved_advisories(report):
         return "#d97706", "REVIEW REQUIRED"
-    if cloud_posture(report).partial:
+    cloud = cloud_posture(report)
+    if cloud.partial and cloud.evaluated:
         return "#d97706", "PARTIAL COVERAGE"
     bundles = (
         getattr(report, name, None) or {}

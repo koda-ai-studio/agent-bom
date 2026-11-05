@@ -407,18 +407,18 @@ def test_azure_storage_logging_checks_are_not_passed_without_data_plane_evidence
         assert check(client).status == CheckStatus.NO_DATA
 
 
-def test_azure_zero_resources_is_no_data_not_pass() -> None:
+def test_azure_zero_resources_is_not_applicable_not_pass() -> None:
     from agent_bom.cloud.azure_cis_benchmark import _check_3_1, _check_4_2_1, _check_7_1
 
     sql = MagicMock()
     sql.servers.list.return_value = []
-    assert _check_4_2_1(sql).status == CheckStatus.NO_DATA
+    assert _check_4_2_1(sql).status == CheckStatus.NOT_APPLICABLE
     storage = MagicMock()
     storage.storage_accounts.list.return_value = []
-    assert _check_3_1(storage).status == CheckStatus.NO_DATA
+    assert _check_3_1(storage).status == CheckStatus.NOT_APPLICABLE
     compute = MagicMock()
     compute.virtual_machines.list_all.return_value = []
-    assert _check_7_1(compute).status == CheckStatus.NO_DATA
+    assert _check_7_1(compute).status == CheckStatus.NOT_APPLICABLE
 
 
 def test_azure_report_counts_no_data() -> None:

@@ -69,7 +69,7 @@ class CloudPosture:
 
     @property
     def partial(self) -> bool:
-        return self.incomplete or self.evaluated < self.applicable
+        return self.present and (self.incomplete or self.evaluated < self.applicable)
 
     @property
     def gradeable(self) -> bool:
@@ -153,8 +153,12 @@ def cloud_posture(report: Any) -> CloudPosture:
         if not getattr(issue, "affects_coverage", True):
             continue
         code = getattr(issue, "code", "")
-        if code == "cloud_collection_incomplete" or (code in _PROVIDER_ISSUE_CODES and getattr(issue, "source", "") in _GRADED_PROVIDERS):
+        if code == "cloud_collection_incomplete":
             result.present = result.incomplete = True
+        elif code in _PROVIDER_ISSUE_CODES and getattr(issue, "source", "") in _GRADED_PROVIDERS:
+            # Marks graded controls as partial; a failed collector alone does not
+            # turn a scan with local evidence into a cloud-graded one.
+            result.incomplete = True
     return result
 
 

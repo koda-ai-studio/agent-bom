@@ -281,7 +281,7 @@ def canonical_posture_payload(
     from agent_bom.api.routes.overview import _build_overview
 
     exec_posture = _build_overview(request).get("posture") or {}
-    payload: dict[str, Any] = dict(scorecard)
+    payload: dict[str, Any] = {key: value for key, value in scorecard.items() if key != "grade_basis"}
     payload["scan_scorecard"] = {key: scorecard.get(key) for key in ("grade", "score", "summary") if key in scorecard}
     for key in _EXEC_FIELDS:
         if key in exec_posture:
