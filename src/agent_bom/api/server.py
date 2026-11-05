@@ -794,6 +794,10 @@ def _fail_stuck_running_jobs(store: Any, now: _datetime.datetime) -> None:
     Synchronous by design — ``store.put`` is a DB write, so the caller runs
     this in a worker thread.
     """
+    from agent_bom.api.scan_queue import distributed_scans_enabled, store_supports_dispatch
+
+    if distributed_scans_enabled() and store_supports_dispatch(store):
+        return
     stuck_jobs: list[Any] = []
     with _jobs_lock:
         for job in list(_jobs.values()):

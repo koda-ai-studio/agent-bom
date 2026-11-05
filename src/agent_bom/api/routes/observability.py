@@ -393,8 +393,7 @@ async def receive_push(request: Request, body: PushPayload) -> dict | Response:
         )
         idempotency_heartbeat.__enter__()
     job = _new_pushed_job(request, body, tenant_id, reserved_job_id or str(uuid.uuid4()))
-    job.status = JobStatus.DONE
-    job.completed_at = _now()
+    job.status = JobStatus.RUNNING
 
     def _persist() -> dict:
         if idempotency_heartbeat is not None:
@@ -428,7 +427,9 @@ async def receive_push(request: Request, body: PushPayload) -> dict | Response:
                     fleet_store.put_endpoint(endpoint)
                     endpoint_persisted = True
                 _persist_graph_snapshot(job, job_result, write_generation=graph_write_generation)
-                # Publish the graph receipt before committing idempotency.
+                # Completion is visible only after the graph commit succeeds.
+                job.status = JobStatus.DONE
+                job.completed_at = _now()
                 _store_pushed_job(job_store, job)
                 _record_push_trend(job, job_result, source_id=body.source_id, target_scope=body.target_scope)
             except Exception:

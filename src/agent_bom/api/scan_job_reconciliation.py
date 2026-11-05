@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.api.models import JobStatus, ScanJob
+from agent_bom.api.scan_queue import distributed_scans_enabled, store_supports_dispatch
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
@@ -78,7 +79,12 @@ def fail_stale_active_scan_jobs(
     now: datetime | None = None,
     reason: str = "Timed out (stuck in active scan state)",
 ) -> int:
-    """Mark active jobs older than timeout_seconds as failed."""
+    """Fail expired local work; distributed dispatch owns lease-based recovery."""
+    # Creation age is not a liveness signal. A queued or reclaimed job can be
+    # old while its current owner is renewing a valid lease. Only the queue's
+    # fenced lease reclaimer may recover distributed work.
+    if distributed_scans_enabled() and store_supports_dispatch(store):
+        return 0
     current = now or datetime.now(timezone.utc)
     failed = 0
     for job in _active_jobs(store):
@@ -109,8 +115,6 @@ def fail_orphaned_active_scan_jobs(
     owns pending jobs and running leases across replicas; a newly started
     replica must leave those jobs to the current worker or lease reclaimer.
     """
-    from agent_bom.api.scan_queue import distributed_scans_enabled, store_supports_dispatch
-
     if distributed_scans_enabled() and store_supports_dispatch(store):
         return 0
     now = datetime.now(timezone.utc)

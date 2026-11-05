@@ -92,8 +92,10 @@ def _public_graph_receipt(result: dict) -> dict[str, Any]:
 
 
 def _pushed_job_has_persisted_graph(job: ScanJob) -> bool:
-    """Return whether the durable job records a completed graph projection."""
+    """Require terminal success and durable graph evidence for a stored replay."""
 
+    if job.status is not JobStatus.DONE:
+        return False
     result = job.result if isinstance(job.result, dict) else {}
     graph_persistence = result.get("graph_persistence")
     return isinstance(graph_persistence, dict) and graph_persistence.get("status") == "persisted"
