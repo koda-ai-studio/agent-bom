@@ -30,6 +30,8 @@ UI = pathlib.Path(__file__).resolve().parents[2] / "ui"
 GRAPH_PAGE_ENTRY = UI / "app" / "graph" / "page.tsx"
 # Reads in the graph page's modules that are not reads of the canvas payload.
 NOT_CANVAS_READS = {
+    # Nested ingress assessment target, not the dropped top-level edge alias.
+    ("target_id", "lib/graph-investigation-flow.ts"),
     # Reads the selection refetch (detail.node), not the canvas node.
     ("evidence_provenance", "lib/graph-entity-detail.ts"),
     # Reads /v1/graph/edges/changes rows, a different response.
@@ -183,3 +185,11 @@ def test_no_graph_page_module_reads_a_field_the_canvas_view_drops() -> None:
 def test_the_graph_page_requests_the_canvas_view() -> None:
     hook = (UI / "hooks" / "use-graph-page-data.tsx").read_text(encoding="utf-8")
     assert 'view: "canvas"' in hook
+
+
+def test_canvas_retains_target_bound_network_assessments() -> None:
+    from agent_bom.api.routes.graph_routes.canvas_view import canvas_projection
+
+    assessment = {"target_id": "api-1", "complete": True, "evidence_refs": ["receipt-1"]}
+    payload = {"nodes": [{"id": "api", "attributes": {"network_reachability_assessment": assessment}}], "edges": []}
+    assert canvas_projection(payload)["nodes"][0]["attributes"]["network_reachability_assessment"] == assessment

@@ -249,6 +249,7 @@ export function useGraphPresentation<T extends Node>({
     nodes: presentedNodes,
     editing,
     hasSavedState,
+    hasPositionOverrides: Object.keys(positionOverridesRef.current).length > 0,
     restoredSavedState,
     restoredViewport: restoredSavedState ? initialState?.viewport : undefined,
     viewport,

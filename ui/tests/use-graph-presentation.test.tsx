@@ -58,6 +58,7 @@ describe("useGraphPresentation", () => {
 
     expect(result.current.hasSavedState).toBe(true);
     expect(result.current.restoredSavedState).toBe(true);
+    expect(result.current.hasPositionOverrides).toBe(true);
     expect(result.current.viewport).toEqual({ x: -20, y: 15, zoom: 1.4 });
     expect(result.current.nodes[0]?.position).toEqual({ x: 120, y: 240 });
     expect(result.current.nodes[0]?.ariaLabel).toBe("Package A");
@@ -72,6 +73,7 @@ describe("useGraphPresentation", () => {
     rerender({ currentNodes: nodes.map((node) => ({ ...node, data: { ...node.data, highlighted: true } })) });
     expect(result.current.hasSavedState).toBe(true);
     expect(result.current.restoredSavedState).toBe(false);
+    expect(result.current.hasPositionOverrides).toBe(false);
     expect(result.current.restoredViewport).toBeUndefined();
   });
 

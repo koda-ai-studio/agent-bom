@@ -24,10 +24,15 @@ _POD_SPEC = {
 }
 _RECORDED: dict[str, list[dict[str, Any]]] = {
     "namespaces": [{"metadata": {"name": "shop"}}],
-    "deployments": [{"metadata": {"name": "web", "namespace": "shop"}, "spec": {"template": {"spec": _POD_SPEC}}}],
+    "deployments": [{"metadata": {"name": "web", "namespace": "shop", "uid": "dep-1"}, "spec": {"template": {"spec": _POD_SPEC}}}],
     "pods": [
         {
-            "metadata": {"name": "web-a", "namespace": "shop", "uid": "pod-a", "ownerReferences": [{"kind": "Deployment", "name": "web"}]},
+            "metadata": {
+                "name": "web-a",
+                "namespace": "shop",
+                "uid": "pod-a",
+                "ownerReferences": [{"kind": "Deployment", "name": "web", "uid": "dep-1", "controller": True}],
+            },
             "spec": _POD_SPEC,
             "status": {"containerStatuses": [{"name": "app", "imageID": _PINNED}]},
         }

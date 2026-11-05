@@ -19,48 +19,13 @@ from typing import Any
 from agent_bom.core.image_ref import image_repository
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.image_projection import image_node_id
+from agent_bom.graph.kubernetes_context import project_context
+from agent_bom.graph.kubernetes_scope import KubernetesScope as _Scope
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
 E, R = EntityType, RelationshipType
-_LIVE_SOURCE, _MANIFEST_SOURCE = "kubernetes", "kubernetes-manifest"
-
-
-class _Scope:
-    def __init__(self, inventory: Mapping[str, Any]) -> None:
-        self.cluster = str(inventory.get("cluster") or "")
-        self.live = inventory.get("source") == "live"
-        self.source = _LIVE_SOURCE if self.live else _MANIFEST_SOURCE
-        self.tier = "recorded" if self.live else "static_scan"
-        self.dims = NodeDimensions(surface="kubernetes")
-
-    def key(self, *parts: str) -> str:
-        return "/".join((self.cluster, *parts) if self.cluster else parts)
-
-    def evidence(self, basis: str, **extra: Any) -> dict[str, Any]:
-        return edge_evidence(self.source, self.tier, basis, **extra)
-
-    def node(self, node_id: str, entity: EntityType, label: str, **attributes: Any) -> UnifiedNode:
-        return UnifiedNode(
-            id=node_id,
-            entity_type=entity,
-            label=label,
-            attributes={"cluster": self.cluster, **attributes},
-            data_sources=[self.source],
-            dimensions=self.dims,
-        )
-
-    def ids(self) -> dict[str, Any]:
-        return {
-            "cluster": f"cluster:k8s:{self.cluster}" if self.cluster else "",
-            "namespace": lambda ns: f"resource:k8s:namespace:{self.key(ns)}",
-            "workload": lambda w: f"container:k8s:workload:{self.key(w['namespace'], w['kind'].lower(), w['name'])}",
-            "service_account": lambda ns, name: f"service_account:k8s:{self.key(ns, name)}",
-            "role": lambda kind, ns, name: f"role:k8s:{self.key(ns or '_cluster', kind.lower(), name)}",
-            "secret": lambda ns, name: f"credential:k8s:secret:{self.key(ns, name)}",
-        }
 
 
 def _edge(
@@ -283,4 +248,5 @@ def project_kubernetes_inventory(graph: UnifiedGraph, section: Any) -> None:
         for workload in inventory.get("workloads") or []:
             workload_id = _project_workload(graph, scope, workload)
             _link_hosted_servers(graph, scope, workload, workload_id, hosted)
+        project_context(graph, scope, inventory, _project_image)
         _project_grants(graph, scope, inventory)

@@ -18,6 +18,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from agent_bom.core.image_ref import digest_in_ref, is_image_digest
+from agent_bom.kubernetes.inventory_context import investigation_context, recorded_owner
 from agent_bom.kubernetes.inventory_rbac import binding_record, resolve_grants, role_record
 
 WORKLOAD_KINDS = ("Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job", "CronJob", "Pod")
@@ -51,13 +52,6 @@ def pod_spec(obj: Mapping[str, Any]) -> Mapping[str, Any]:
     if obj.get("kind") == "CronJob":
         spec = _mapping(_mapping(spec.get("jobTemplate")).get("spec"))
     return _mapping(_mapping(spec.get("template")).get("spec"))
-
-
-def _owner(obj: Mapping[str, Any]) -> tuple[str, str] | None:
-    for ref in _meta(obj).get("ownerReferences") or []:
-        if isinstance(ref, Mapping) and ref.get("kind") and ref.get("name"):
-            return str(ref["kind"]), str(ref["name"])
-    return None
 
 
 def _secret_refs(spec: Mapping[str, Any]) -> list[dict[str, str]]:
@@ -124,13 +118,14 @@ def _token_mounted(spec: Mapping[str, Any], sa_automount: bool | None) -> bool:
 
 
 def _top_owner(obj: Mapping[str, Any], by_key: dict[tuple[str, str, str], Mapping[str, Any]]) -> Mapping[str, Any]:
-    current, namespace = obj, str(_meta(obj).get("namespace") or "")
-    for _ in range(4):
-        owner = _owner(current)
-        parent = by_key.get((owner[0], namespace, owner[1])) if owner else None
-        if parent is None:
+    current = obj
+    seen: set[str] = set()
+    for _ in range(8):
+        owner = recorded_owner(current, by_key)
+        if owner is None or owner["uid"] in seen:
             return current
-        current = parent
+        seen.add(owner["uid"])
+        current = by_key[(owner["kind"], owner["namespace"], owner["name"])]
     return current
 
 
@@ -233,6 +228,7 @@ def build_k8s_inventory(objects: Iterable[Any], *, source: str, cluster: str = "
     roles = [role_record(obj) for obj in items if obj.get("kind") in {"Role", "ClusterRole"}]
     bindings = [binding_record(obj) for obj in items if obj.get("kind") in {"RoleBinding", "ClusterRoleBinding"}]
     inventory: dict[str, Any] = {
+        **investigation_context(items, _containers),
         "source": source,
         "cluster": cluster,
         "namespaces": _namespaces(items, workloads),

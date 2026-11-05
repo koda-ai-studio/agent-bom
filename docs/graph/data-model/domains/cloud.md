@@ -62,7 +62,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `po
 | `can_access` | `authority` | yes | `cloud_resource`, `cluster`, `container`, `model` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource` |
 | `contains` | `structural` | yes | `cloud_resource`, `cluster`, `container`, `data_store`, `environment`, `fleet`, `resource` | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `model`, `resource` |
 | `depends_on` | `dependency` | yes | `cloud_resource`, `container`, `data_store` | `cloud_resource`, `container`, `data_store` |
-| `exposed_to` | `exposure` | yes | `api_gateway`, `cloud_resource`, `container`, `data_store` | `cloud_resource`, `data_store`, `resource` |
+| `exposed_to` | `exposure` | yes | `api_gateway`, `cloud_resource`, `container`, `data_store` | `cloud_resource`, `container`, `data_store`, `resource` |
 | `hosted_on` | `dependency` | yes | `container` | `cloud_resource`, `cluster`, `container`, `fleet` |
 | `hosts` | `structural` | yes | `cloud_resource`, `environment`, `fleet`, `provider` | `cloud_resource` |
 | `part_of` | `structural` | yes | `cloud_resource`, `container`, `resource` | `cloud_resource`, `cluster`, `environment`, `fleet`, `resource` |

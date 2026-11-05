@@ -1,5 +1,6 @@
 "use client";
 
+import { GraphFindingGroupNode } from "@/components/graph-finding-group-node";
 import { agentExecutionCaption, type AgentContext } from "@/lib/graph-agent-context";
 import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
 
@@ -44,6 +45,8 @@ export type RuntimeEvidenceTier = "static_scan" | "runtime_observed" | "runtime_
 export type LineageNodeData = {
   label: string;
   evidenceFlow?: boolean;
+  displayOnly?: boolean;
+  displayTargetId?: string;
   evidenceFlowContext?: string | undefined;
   rollup?: GraphRollupContainer | undefined;
   rollupCompact?: boolean | undefined;
@@ -59,6 +62,7 @@ export type LineageNodeData = {
   /** Distinguishes same-image container occurrences (inventory vs deployment). */
   occurrenceRole?: string | undefined;
   /** Presentation of recorded roles in a bounded cloud hierarchy. */
+  readingFindingsGroup?: boolean;
   readingFindings?: { count: number; expanded: boolean; severity?: string | undefined; toggle: () => void } | undefined;
   readingLabel?: string | undefined;
   readingFinding?: boolean | undefined;
@@ -235,7 +239,7 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
-        {data.readingFindings && !data.readingFindings.expanded && <span className="absolute -left-5 -top-3"><GraphCountHint text={`${data.label}: ${data.readingFindings.count} linked finding${data.readingFindings.count === 1 ? "" : "s"}${data.readingFindings.severity ? ` · highest severity: ${data.readingFindings.severity}` : " · severity not rated"}. Click to ${data.readingFindings.expanded ? "collapse" : "expand"}.`}><button type="button" data-finding-disclosure
+        {data.readingFindings && !data.readingFindingsGroup && !data.readingFindings.expanded && <span className="absolute -left-5 -top-3"><GraphCountHint text={`${data.label}: ${data.readingFindings.count} linked finding${data.readingFindings.count === 1 ? "" : "s"}${data.readingFindings.severity ? ` · highest severity: ${data.readingFindings.severity}` : " · severity not rated"}. Click to ${data.readingFindings.expanded ? "collapse" : "expand"}.`}><button type="button" data-finding-disclosure
           aria-label={`${data.readingFindings.expanded ? "Collapse" : "Expand"} ${data.readingFindings.count} finding${data.readingFindings.count === 1 ? "" : "s"} for ${data.label}`}
           aria-expanded={data.readingFindings.expanded}
           title=""
@@ -865,6 +869,7 @@ function AdaptiveLineageNode({ data }: { data: LineageNodeData }) {
 }
 
 export const lineageNodeTypesAdaptive = {
+  findingGroupNode: GraphFindingGroupNode,
   providerNode: AdaptiveLineageNode,
   agentNode: AdaptiveLineageNode,
   userNode: AdaptiveLineageNode,
@@ -895,6 +900,7 @@ export const lineageNodeTypesAdaptive = {
 
 /** Detail renderers used by bounded investigations, with evidence metadata. */
 export const lineageNodeTypes = {
+  findingGroupNode: GraphFindingGroupNode,
   providerNode: ProviderNode,
   agentNode: AgentNode,
   userNode: UserNode,

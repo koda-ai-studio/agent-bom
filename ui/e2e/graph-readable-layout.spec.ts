@@ -351,7 +351,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await fixture(page, entries, links, false, { stats: showcase.stats, attack_paths: showcase.attack_paths });
     await page.goto("/graph?scan=snapshot&rollup=0&capture=1&layers=account,cluster,apiGateway,container,role,dataStore,vulnerability,misconfiguration");
     if (width < 640) await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
-    await expect(page.locator(".react-flow__node")).toHaveCount(7);
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(7);
+    await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(4);
     if (width >= 640) await expect(page.getByLabel("Visible relationship evidence")).toContainText("Modeled 7");
     await settle(page);
     await page.screenshot({ path: info.outputPath(`cloud-branches-${theme}-${width}.png`), animations: "disabled" });
@@ -434,7 +435,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       await expect(page.getByTestId("graph-entity-drawer")).toContainText("Public API stage has no WAF association");
       await page.screenshot({ path: info.outputPath(`cloud-finding-inspector-${theme}.png`), animations: "disabled" });
       await page.getByRole("button", { name: "Collapse findings", exact: true }).click();
-      await expect(page.locator(".react-flow__node")).toHaveCount(7);
+      await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(7);
+      await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(4);
       await expect(page.getByTestId("graph-entity-drawer")).toHaveCount(0);
     }
   });
