@@ -50,10 +50,9 @@ def _apply_offline_mode(opts: ScanOptions, st: ScanState) -> None:
             import os
             import time
 
-            from agent_bom.db.schema import DB_PATH
-
-            if DB_PATH.exists():
-                _age_days = (time.time() - os.path.getmtime(DB_PATH)) / 86400
+            db_path = _db_schema.DB_PATH
+            if db_path.exists():
+                _age_days = (time.time() - os.path.getmtime(db_path)) / 86400
                 if _age_days <= 1:
                     st.prefer_local_db = True
                     logger.debug("Local DB is %.1f day(s) old — preferring local DB over network", _age_days)
