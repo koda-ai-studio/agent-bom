@@ -133,19 +133,35 @@ def assert_at(value: Any, expected: str) -> None:
     assert _instant(value) == _instant(expected)
 
 
+@pytest.fixture(scope="module")
+def client():
+    # Starting the app is most of this suite's cost, and CI's Postgres job has a fixed budget.
+    # The app's stores hold the Postgres pool for the module, so it opens and closes with the client.
+    postgres = bool(os.environ.get("AGENT_BOM_POSTGRES_URL"))
+    if postgres:
+        from agent_bom.api import postgres_common
+
+        postgres_common.reset_pool()
+    with TestClient(app) as shared:
+        yield shared
+    if postgres:
+        pool = postgres_common._pool
+        if pool is not None:
+            pool.close()
+        postgres_common.reset_pool()
+
+
 @pytest.fixture(params=["sqlite", "postgres"])
-def store_kind(request, tmp_path, monkeypatch):
+def store_kind(request, tmp_path, monkeypatch, client):
     original = stores._store
     monkeypatch.setattr("agent_bom.api.campaign_reconciliation.poll_campaign_reconciliation", lambda: None)
     monkeypatch.setenv("AGENT_BOM_NO_UPDATE_CHECK", "1")
     if request.param == "postgres":
         if not os.environ.get("AGENT_BOM_POSTGRES_URL"):
             pytest.skip("AGENT_BOM_POSTGRES_URL is required for the Postgres lifecycle sequences")
-        from agent_bom.api import postgres_common
         from agent_bom.api.postgres_compliance_hub import PostgresComplianceHubStore
         from agent_bom.api.postgres_job_store import PostgresJobStore
 
-        postgres_common.reset_pool()
         stores.set_job_store(PostgresJobStore())
         set_compliance_hub_store(PostgresComplianceHubStore())
     else:
@@ -161,19 +177,11 @@ def store_kind(request, tmp_path, monkeypatch):
     stores.set_job_store(original)
     set_compliance_hub_store(None)
     disable_trusted_proxy_env()
-    if request.param == "postgres":
-        from agent_bom.api import postgres_common
-
-        pool = postgres_common._pool
-        if pool is not None:
-            pool.close()
-        postgres_common.reset_pool()
 
 
 @pytest.fixture(params=["push", "bulk"])
-def estate(request, store_kind):
-    with TestClient(app) as client:
-        yield Estate(client, request.param, f"lifecycle-{uuid4().hex[:10]}")
+def estate(request, store_kind, client):
+    return Estate(client, request.param, f"lifecycle-{uuid4().hex[:10]}")
 
 
 # ── Sequences 1-5: appear, persist, resolve, change version, reopen ──────────
@@ -436,9 +444,8 @@ def test_non_cve_findings_follow_the_same_lifecycle(estate, finding_type, rule):
 
 
 @pytest.fixture
-def push_estate(store_kind):
-    with TestClient(app) as client:
-        yield Estate(client, "push", f"lifecycle-{uuid4().hex[:10]}")
+def push_estate(store_kind, client):
+    return Estate(client, "push", f"lifecycle-{uuid4().hex[:10]}")
 
 
 _ADVISORY_OUTAGE = {
@@ -494,9 +501,8 @@ def test_overview_drops_resolved_findings(push_estate):
 
 
 @pytest.fixture
-def bulk_estate(store_kind):
-    with TestClient(app) as client:
-        yield Estate(client, "bulk", f"lifecycle-{uuid4().hex[:10]}")
+def bulk_estate(store_kind, client):
+    return Estate(client, "bulk", f"lifecycle-{uuid4().hex[:10]}")
 
 
 def test_bulk_rejects_an_unparseable_observed_at(bulk_estate):
@@ -623,3 +629,62 @@ def test_manual_exception_survives_resolve_and_reopen(estate):
         assert_at(row["first_seen"], T[1])
     finally:
         stores.set_exception_store(previous)
+
+
+# ── Compressed payloads: SQL cannot read keys inside a zstd-wrapped overlay ──
+
+
+def _stored_payload(tenant: str, canonical_fragment: str) -> Any:
+    """The raw stored payload of the one current row whose canonical id holds the fragment."""
+    from agent_bom.api.compliance_hub_store import get_compliance_hub_store
+
+    store = get_compliance_hub_store()
+    query = "SELECT canonical_id, payload FROM hub_findings_current WHERE tenant_id = {}"
+    if hasattr(store, "_conn"):
+        rows = store._conn.execute(query.format("?"), (tenant,)).fetchall()
+    else:
+        from agent_bom.api.postgres_common import _tenant_connection
+        from agent_bom.api.tenant_worker import tenant_bound_context
+
+        with tenant_bound_context(tenant), _tenant_connection(store._pool) as conn:
+            rows = conn.execute(query.format("%s"), (tenant,)).fetchall()
+    return next(row[1] for row in rows if canonical_fragment in str(row[0]))
+
+
+def test_reconcile_scopes_asset_and_source_inside_compressed_payloads(bulk_estate):
+    """Overlays of 512 bytes or more are wrapped, so scope must not depend on a SQL key read."""
+    from agent_bom.api.hub_payload_codec import HUB_PAYLOAD_MARKER
+
+    def row(asset: str, cve: str) -> dict[str, Any]:
+        return {**_finding(asset, cve, "urllib3", "1.26.4", "high"), "id": f"{asset}-{cve}-" + "x" * 700}
+
+    def post(asset: str, rows: list[dict[str, Any]], at: str, source: str = "long-source") -> dict[str, Any]:
+        body = {"findings": rows, "source": source, "observed_at": at, "reconcile_absent": True, "scanned_assets": [asset]}
+        response = bulk_estate.client.post("/v1/findings/bulk", json=body, headers=bulk_estate.headers)
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    post("asset-a", [row("asset-a", "CVE-2024-1111")], T[1])
+    post("asset-b", [row("asset-b", "CVE-2024-2222")], T[1])
+    stored = _stored_payload(bulk_estate.tenant, "asset-a-CVE-2024-1111")
+    assert HUB_PAYLOAD_MARKER in str(stored), "the fixture must exercise a wrapped overlay"
+
+    # Another source, then another asset of this source, resolve nothing.
+    assert post("asset-a", [], T[2], source="other-source")["reconciled"] == 0
+    assert post("asset-c", [], T[2])["reconciled"] == 0
+    assert bulk_estate.cves("open") == {"CVE-2024-1111", "CVE-2024-2222"}
+    # The scanned asset resolves its own wrapped row only.
+    assert post("asset-a", [], T[3])["reconciled"] == 1
+    assert bulk_estate.cves("resolved") == {"CVE-2024-1111"}
+    assert bulk_estate.cves("open") == {"CVE-2024-2222"}
+
+
+def test_batch_never_resolves_itself_when_a_client_sends_its_own_canonical_id(bulk_estate):
+    """The store ignores a client canonical_id, so the present set must identify rows the same way."""
+    row = {**_finding("asset-a", *VULN), "id": "client-id", "canonical_id": "client-canonical"}
+    body = {"findings": [row], "source": "ci", "observed_at": T[1], "reconcile_absent": True}
+    for at in (T[1], T[2]):
+        response = bulk_estate.client.post("/v1/findings/bulk", json={**body, "observed_at": at}, headers=bulk_estate.headers)
+        assert response.status_code == 201, response.text
+        assert response.json()["reconciled"] == 0
+    assert bulk_estate.one(VULN[0], "open")["status"] == "open"

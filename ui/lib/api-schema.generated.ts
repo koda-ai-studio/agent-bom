@@ -14528,6 +14528,8 @@ export interface components {
             resolved_occurrence_count?: number | null;
             /** Risk Score */
             risk_score?: number | null;
+            /** Scan Count */
+            scan_count?: number | null;
             /** Scan Id */
             scan_id?: string | null;
             /** Scan Sources */

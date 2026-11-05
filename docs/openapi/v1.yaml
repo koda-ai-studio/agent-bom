@@ -10830,6 +10830,11 @@ components:
           - type: number
           - type: 'null'
           title: Risk Score
+        scan_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Scan Count
         scan_id:
           anyOf:
           - type: string

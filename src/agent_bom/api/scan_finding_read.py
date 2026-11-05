@@ -21,6 +21,7 @@ from agent_bom.api.scan_finding_projection import _iter_scan_findings as _iter_s
 from agent_bom.api.scan_finding_projection import scan_row_sources
 from agent_bom.api.stores import _get_exception_store, _get_store
 from agent_bom.api.suppression_approval import suppression_active
+from agent_bom.core.settings import env_flag
 
 
 def _completed_jobs_for_tenant(tenant_id: str) -> list[ScanJob]:
@@ -197,11 +198,12 @@ def _with_lifecycle(rows: list[dict[str, Any]], jobs: list[Any], since: str | No
 def current_scan_rows_with_lifecycle(tenant_id: str, window_since: str | None, scan_id: str | None) -> list[dict[str, Any]]:
     """The current rows plus open/resolved state; a pinned scan stays that scan's snapshot.
 
-    The opt-in projected read keeps its selected-reports-only contract, so it
-    serves the snapshot without replaying history.
+    The opt-in fast read keeps its selected-reports-only contract, so it serves
+    the snapshot without replaying history. Differential qualification reads
+    retained jobs anyway and must answer exactly as the default read does.
     """
     rows = _current_scan_rows(tenant_id, window_since, scan_id)
-    if scan_id or history_ledger_reads_enabled():
+    if scan_id or env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS"):
         return rows
     jobs = _completed_jobs_for_tenant(tenant_id)
     return read_once(

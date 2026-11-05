@@ -61,6 +61,7 @@ class FindingRow(ReadModel):
     last_resolved_at: str | None = None
     reopened_at: str | None = None
     status_updated_at: str | None = None
+    scan_count: int | None = None
     open_occurrence_count: int | None = None
     resolved_occurrence_count: int | None = None
     owner: str | None = None

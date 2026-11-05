@@ -146,7 +146,7 @@ def write_current_batch(
     tx.executemany(current_upsert(dialect, has_ledger), rows)
 
 
-def _wrapped_payload_scope(raw_payload: Any) -> tuple[str | None, str]:
+def _payload_scope(raw_payload: Any) -> tuple[str | None, str]:
     payload = decode_hub_payload(raw_payload)
     source = payload.get("ingest_source")
     source = source if source is not None else payload.get("source")
@@ -156,21 +156,21 @@ def _wrapped_payload_scope(raw_payload: Any) -> tuple[str | None, str]:
 def _open_rows_in_scope(
     tx: SqlSession, dialect: Dialect, tenant: str, scope_source: str | None, scope_assets: set[str] | None
 ) -> list[Any]:
-    """Open rows for one source and, when given, its scanned assets; compressed payloads filter in Python."""
+    """Open rows for one source; asset scoping decodes in Python, since SQL cannot read a compressed payload."""
     base = "tenant_id = ? AND status IN ('open', 'reopened')"
     if scope_source is None:
         return list(tx.execute(f"SELECT canonical_id, last_seen FROM hub_findings_current WHERE {base}", (tenant,)).fetchall())  # nosec B608
     wrapped = f"{json_text(dialect, 'payload', HUB_PAYLOAD_MARKER)} IS NOT NULL"
     source = f"COALESCE({json_text(dialect, 'payload', 'ingest_source')}, {json_text(dialect, 'payload', 'source')})"
-    asset = json_text(dialect, "payload", "ingest_asset")
+    decoded = "payload" if scope_assets is not None else f"CASE WHEN {wrapped} THEN payload END"
     rows = tx.execute(
-        f"SELECT canonical_id, last_seen, CASE WHEN {wrapped} THEN payload END, {asset} FROM hub_findings_current "  # nosec B608
+        f"SELECT canonical_id, last_seen, {decoded} FROM hub_findings_current "  # nosec B608
         f"WHERE {base} AND ({source} = ? OR {wrapped})",
         (tenant, scope_source),
     ).fetchall()
     kept = []
     for row in rows:
-        row_source, row_asset = _wrapped_payload_scope(row[2]) if row[2] is not None else (scope_source, str(row[3] or ""))
+        row_source, row_asset = _payload_scope(row[2]) if row[2] is not None else (scope_source, "")
         if row_source == scope_source and (scope_assets is None or row_asset in scope_assets):
             kept.append(row)
     return kept

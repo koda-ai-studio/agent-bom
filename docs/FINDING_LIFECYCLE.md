@@ -88,9 +88,9 @@ history, so both survive a resolve and reopen.
   continuously present finding expires, `first_seen` moves to the oldest retained
   scan unless the producer supplied an earlier one, and a resolved finding leaves
   the list when its scans expire. Bulk findings are stored and have no such limit.
-- **The opt-in projected read** (`AGENT_BOM_SCAN_SNAPSHOT_READS`,
-  `AGENT_BOM_SCAN_SNAPSHOT_FAST_READS`) loads only selected reports, so it serves
-  the current snapshot without replayed status or resolved rows.
+- **The opt-in fast read** (`AGENT_BOM_SCAN_SNAPSHOT_FAST_READS`) loads only
+  selected reports, so it serves the current snapshot without replayed status or
+  resolved rows.
 - **The warehouse findings feed** (ClickHouse and Snowflake) carries `status`,
   `first_seen` and `last_seen` but not `resolved_at`; its table shape is unchanged.
 - **Pinned reads** (`scan_id=`) return that scan's rows as reported.

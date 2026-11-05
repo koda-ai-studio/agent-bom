@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from agent_bom.api.finding_rank import compute_effective_reach_score
-from agent_bom.api.storage.hub_filters import _cvss_value, _severity_rank
+from agent_bom.api.storage.hub_filters import _cvss_value, _redact_finding, _severity_rank
 from agent_bom.canonical_ids import canonical_finding_id, canonical_id
 from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 
@@ -299,8 +299,8 @@ def collect_present_canonical_ids(
     *,
     source: str = "",
 ) -> set[str]:
-    """Return canonical ids observed in a scan batch for resolve-reconcile."""
-    return {resolve_canonical_id(payload, source=source) for payload in findings}
+    """Canonical ids of a batch, identified as the store will: after redaction, without a client canonical_id."""
+    return {resolve_canonical_id(_redact_finding(payload), source=source) for payload in findings}
 
 
 def enriched_finding_payload(current_row: dict[str, Any]) -> dict[str, Any]:
