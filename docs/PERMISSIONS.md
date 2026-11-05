@@ -173,6 +173,10 @@ contents or credential values are included in those requests.
 | npm registry | `https://registry.npmjs.org/{pkg}/{version}` | Package name + version | Package metadata | None |
 | PyPI | `https://pypi.org/pypi/{pkg}/{version}/json` | Package name + version | Package metadata | None |
 | OpenSSF Scorecard | `https://api.securityscorecards.dev/projects/github.com/{owner}/{repo}` | GitHub owner/repo | Scorecard scores | None |
+The control plane's KEV catalog sync adds no destination. It reads the catalog that
+`agent-bom db update` and a scan's KEV join already downloaded from the CISA URL
+above; its cleanup tick makes no request.
+
 ## Explicit Push, Export, and Integration Destinations
 
 The destinations below are not hidden telemetry. They are only used when an

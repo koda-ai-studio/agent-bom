@@ -21,6 +21,7 @@ from agent_bom.api.hub_reference_store import (
     hydrate_finding_payloads_postgres,
 )
 from agent_bom.api.postgres_common import ConnectionPool, _ensure_tenant_rls, _get_pool, _tenant_connection
+from agent_bom.api.storage.cve_intel_reconcile import Cursor, IntelPage, link_cve_rows_batch, reconcile_intel_batch
 from agent_bom.api.storage.finding_current_reads import CurrentFindingAggregates, SqlCurrentFindingReads
 from agent_bom.api.storage.finding_current_writes import current_ledger_candidates, reconcile_current, write_current_batch
 from agent_bom.api.storage.finding_ingest_state import INGEST_STATE_DDL, LedgerIngestState, read_ingest_state, write_ingest_state
@@ -42,6 +43,7 @@ from agent_bom.api.storage.hub_schema import _now_utc_iso
 from agent_bom.api.storage.sql import PostgresBackend
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id
+from agent_bom.db.kev_catalog import KevCatalog
 
 
 def _invalidate_overview_severity(tenant_id: str) -> None:
@@ -663,6 +665,27 @@ class PostgresComplianceHubStore(CurrentFindingAggregates):
                 tx,
                 "postgres",
                 limit=limit,
+                bump_revision=lambda session, tenant: session.execute(
+                    "INSERT INTO hub_overview_revisions (tenant_id, revision) VALUES (?, 1) "
+                    "ON CONFLICT (tenant_id) DO UPDATE SET revision = hub_overview_revisions.revision + 1",
+                    (tenant,),
+                ),
+            )
+
+    def link_cve_rows_batch(self, after: Cursor, limit: int) -> tuple[Cursor | None, int]:
+        """Create CVE records current findings reference, across tenants, on the maintenance role."""
+        with PostgresBackend(self._pool).transaction(all_tenants=True) as tx:
+            return link_cve_rows_batch(tx, "postgres", after=after, limit=limit)
+
+    def reconcile_cve_intel_batch(self, after: Cursor, limit: int, catalog: KevCatalog | None) -> IntelPage:
+        """Reconcile one page of CVE records, each under its own tenant, on the maintenance role."""
+        with PostgresBackend(self._pool).transaction(all_tenants=True) as tx:
+            return reconcile_intel_batch(
+                tx,
+                "postgres",
+                after=after,
+                limit=limit,
+                catalog=catalog,
                 bump_revision=lambda session, tenant: session.execute(
                     "INSERT INTO hub_overview_revisions (tenant_id, revision) VALUES (?, 1) "
                     "ON CONFLICT (tenant_id) DO UPDATE SET revision = hub_overview_revisions.revision + 1",

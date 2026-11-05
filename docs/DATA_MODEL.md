@@ -482,8 +482,12 @@ tables; list/current read paths hydrate before API responses.
 | `AGENT_BOM_HUB_REFERENCE_NORMALIZE=1` (default) | Extract shared blobs on ingest |
 | `AGENT_BOM_HUB_REFERENCE_NORMALIZE=0` | Rollback: stop new extractions; reads still hydrate existing refs |
 
-Legacy inline payloads continue to work without migration. SQLite and
-Postgres profiles create reference tables on store init.
+Legacy inline payloads continue to work without migration, and a finding that
+names a CVE hydrates from that CVE's record even with no stored `intel_ref`. When
+a record states a KEV verdict it overrides any copy on the finding. Every CVE a
+batch names gets a record, empty if the batch carries no intel fields. SQLite and
+Postgres profiles create reference tables on store init. KEV sync rules live in
+[STORAGE_BACKENDS.md](STORAGE_BACKENDS.md#kev-follows-the-cisa-catalog).
 
 ### Snowflake — `src/agent_bom/api/snowflake_store.py`
 
