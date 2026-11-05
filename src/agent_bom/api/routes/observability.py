@@ -57,11 +57,10 @@ from agent_bom.api.pipeline import _persist_graph_snapshot
 from agent_bom.api.push_cohort_receive import receive_cohort_push
 from agent_bom.api.push_evidence import audit_push_admission
 from agent_bom.api.push_evidence import normalize_pushed_report as _normalize_pushed_report
-from agent_bom.api.push_ingest import accepted_push_receipt, admit_pushed_job, push_ingest_mode
+from agent_bom.api.push_ingest import RequestPushLease, accepted_push_receipt, admit_pushed_job, push_ingest_mode
 from agent_bom.api.push_ingest_worker import (
     _graph_snapshot_exists,
     _record_push_trend,
-    _store_pushed_job,
     admitted_push_result,
     register_push_commit_listener,
 )
@@ -418,10 +417,10 @@ async def receive_push(request: Request, body: PushPayload) -> dict | Response:
         # compensating transaction. Graph persistence is last and atomic within
         # its backend; a failure restores the prior endpoint and removes the job,
         # so retained-job quota cannot diverge from visible evidence.
-        with tenant_quota_guard(tenant_id, lambda: enforce_retained_jobs_quota(tenant_id)):
+        with tenant_quota_guard(tenant_id, lambda: enforce_retained_jobs_quota(tenant_id)), RequestPushLease(job_store, job) as lease:
             audit_push_admission(job, job_result, actor=_triggered_by(request), request_hash=request_hash)
             try:
-                _store_pushed_job(job_store, job)
+                lease.store_job()
                 job_persisted = True
                 if endpoint is not None:
                     fleet_store.put_endpoint(endpoint)
@@ -430,7 +429,8 @@ async def receive_push(request: Request, body: PushPayload) -> dict | Response:
                 # Completion is visible only after the graph commit succeeds.
                 job.status = JobStatus.DONE
                 job.completed_at = _now()
-                _store_pushed_job(job_store, job)
+                lease.store_job()
+                lease.release()
                 _record_push_trend(job, job_result, source_id=body.source_id, target_scope=body.target_scope)
             except Exception:
                 if graph_snapshot_preexisted:

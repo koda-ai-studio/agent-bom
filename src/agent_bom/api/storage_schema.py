@@ -53,7 +53,7 @@ CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
             "finding_history_jobs",
             "finding_history_rows",
         ),
-        version=4,
+        version=5,
     ),
     StorageSchemaComponent("report_jobs", "sqlite/postgres", ("report_jobs",)),
     StorageSchemaComponent("api_keys", "sqlite/postgres", ("api_keys",)),
