@@ -1,14 +1,14 @@
 {
-  "cases": 91,
+  "cases": 93,
   "benign_cases": 42,
-  "risky_cases": 49,
-  "risky_detected": 49,
-  "benign_clean": 41,
+  "risky_cases": 51,
+  "risky_detected": 51,
+  "benign_clean": 42,
   "overall": {
-    "true_positive": 63,
-    "false_positive": 1,
+    "true_positive": 65,
+    "false_positive": 0,
     "false_negative": 0,
-    "precision": 0.9844,
+    "precision": 1.0,
     "recall": 1.0
   },
   "categories": {
@@ -146,10 +146,10 @@
       "recall": 1.0
     },
     "prompt_coercion": {
-      "true_positive": 12,
-      "false_positive": 1,
+      "true_positive": 14,
+      "false_positive": 0,
       "false_negative": 0,
-      "precision": 0.9231,
+      "precision": 1.0,
       "recall": 1.0
     },
     "remote_code_execution": {
@@ -189,13 +189,13 @@
     }
   },
   "packages": {
-    "true_positive": 14,
+    "true_positive": 17,
     "false_positive": 0,
-    "false_negative": 2,
+    "false_negative": 0,
     "precision": 1.0,
-    "recall": 0.875
+    "recall": 1.0
   },
   "package_version_mismatches": 0,
-  "must_not_violations": 1,
-  "unscored_low_findings": 14
+  "must_not_violations": 0,
+  "unscored_low_findings": 15
 }

@@ -44,6 +44,11 @@ def _first_actionable_match(pattern: re.Pattern, content: str) -> tuple[re.Match
     return demoted, demoted is not None
 
 
+def _hidden_from_readers(evidence_source: str, raw_hits: list) -> bool:
+    """Text that only matches once de-obfuscated was hidden, so it earns no documentation reading."""
+    return evidence_source == "normalized_text" and not raw_hits
+
+
 def _scan_behavioral_risks(raw_content: dict[str, str]) -> list[SkillFinding]:
     """Scan full skill file text for behavioral risk patterns.
 
@@ -81,9 +86,9 @@ def _scan_behavioral_risks(raw_content: dict[str, str]) -> list[SkillFinding]:
             candidates: list[tuple[re.Match, bool, str, str, str]] = []
             for text, evidence_source in passes:
                 found, demoted = _first_actionable_match(bp.pattern, text)
+                demoted = demoted and not _hidden_from_readers(evidence_source, candidates)
                 severity = bp.severity
                 confidence = "high" if bp.severity in {"critical", "high"} else "medium"
-
                 if found is None and bp.weak_pattern is not None:
                     # Only a low-confidence keyword/heuristic matched. Keep the
                     # finding visible but demote it so a lone descriptive keyword

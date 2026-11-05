@@ -30,7 +30,7 @@ UNIMPLEMENTED_CATEGORIES: frozenset[str] = frozenset()
 
 # Every case that currently breaks a must_not, named so a new violation shows
 # up as an identity, not just as a count moving.
-KNOWN_MUST_NOT_VIOLATIONS = frozenset({"benign-security-review-quoted-injection"})
+KNOWN_MUST_NOT_VIOLATIONS: frozenset[str] = frozenset()
 
 # The regressions that were found by accident, each pinned to the case that
 # reproduces it. These must stay clean with no tolerance at all.
@@ -40,6 +40,9 @@ ZERO_TOLERANCE_CASES = {
     "benign-frontmatter-bins-list": "'- npx' then 'optional_bins:' read as an npm package",
     "benign-untrusted-config-report-guidance": "quoted 'ignore previous instructions' guidance read as coercion",
     "benign-claude-md-project-conventions": "uv run <command> read as a PyPI package",
+    "benign-security-review-quoted-injection": "quoted phrases a security review reports read as coercion",
+    "benign-verified-mcp-config": "npx package in an MCP JSON block never reached the inventory",
+    "risky-hardcoded-key-in-mcp-env": "uvx package in an MCP JSON block never reached the inventory",
 }
 
 
@@ -119,14 +122,14 @@ def test_must_not_violations_are_the_known_set(result) -> None:
 
 def test_the_gate_detects_a_launcher_flag_regression(harness, cases) -> None:
     """Mutation: restore the pattern that read ``-y`` as a package."""
-    from agent_bom.parsers import skills
+    from agent_bom.parsers import skill_launchers
 
-    original = skills._NPX_RE
+    original = skill_launchers._NPX_RE
     try:
-        skills._NPX_RE = re.compile(r"(?:npx|bunx)\s+(?:-[yYp]\s+)*(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)")
+        skill_launchers._NPX_RE = re.compile(r"(?:npx|bunx)\s+(?:-[yYp]\s+)*(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)")
         mutated = harness.score(cases)
     finally:
-        skills._NPX_RE = original
+        skill_launchers._NPX_RE = original
 
     assert mutated.packages.false_positive > 0
     assert any("forbidden package npm:-y" in line for line in mutated.must_not_violations)

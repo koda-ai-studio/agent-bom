@@ -23,6 +23,48 @@ def test_parse_npx_commands(tmp_path):
         assert pkg.ecosystem == "npm"
 
 
+def test_mcp_config_launchers_yield_their_packages(tmp_path):
+    """An MCP JSON block names packages exactly as a shell command does."""
+    md = tmp_path / "skill.md"
+    md.write_text(
+        '```json\n{"mcpServers": {'
+        '"a": {"command": "npx", "args": ["-y", "@scope/server-a@1.2.3"]}, '
+        '"b": {"command": "/usr/local/bin/npx", "args": ["--yes", "server-b@2.0.0"]}, '
+        '"c": {"command": "uvx", "args": ["server-c==3.0.0", "--flag"]}, '
+        '"d": {"command": "node", "args": ["npx", "not-a-package"]}, '
+        '"e": {"command": "npx", "args": [7, "-y"]}'
+        "}}\n```\n"
+    )
+    result = parse_skill_file(md)
+    assert sorted((p.name, p.ecosystem, p.version) for p in result.packages) == [
+        ("@scope/server-a", "npm", "1.2.3"),
+        ("server-b", "npm", "2.0.0"),
+        ("server-c", "pypi", "3.0.0"),
+    ]
+    assert [server.name for server in result.servers] == ["a", "b", "c", "d", "e"]
+
+
+def test_mcp_config_launcher_names_on_windows_and_uv(tmp_path):
+    md = tmp_path / "skill.md"
+    md.write_text(
+        '```json\n{"mcpServers": {'
+        '"a": {"command": "npx.cmd", "args": ["-y", "win-a@1.0.0"]}, '
+        '"b": {"command": "C:\\\\node\\\\npx.cmd", "args": ["-y", "win-b@1.0.0"]}, '
+        '"c": {"command": "uv", "args": ["tool", "run", "uv-c==1.0.0"]}, '
+        '"d": {"command": "uv", "args": ["run", "not-a-package"]}'
+        "}}\n```\n"
+    )
+    assert sorted(p.name for p in parse_skill_file(md).packages) == ["uv-c", "win-a", "win-b"]
+
+
+def test_mcp_config_and_shell_command_count_one_package(tmp_path):
+    md = tmp_path / "skill.md"
+    md.write_text(
+        '```bash\nnpx -y same@1.0.0\n```\n\n```json\n{"mcpServers": {"s": {"command": "npx", "args": ["-y", "same@1.0.0"]}}}\n```\n'
+    )
+    assert [(p.name, p.version) for p in parse_skill_file(md).packages] == [("same", "1.0.0")]
+
+
 def test_parse_uvx_commands(tmp_path):
     """Extracts uvx package references."""
     md = tmp_path / "skill.md"

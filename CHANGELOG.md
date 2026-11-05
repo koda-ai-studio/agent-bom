@@ -33,6 +33,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ### Fixed
 - `docs/PERMISSIONS.md` and the plugin READMEs now list the Alpine, Debian, OSV archive, GitHub advisory, deps.dev, Go and EPSS hosts. The privacy page now covers the guard hook, and states which tokens are sent where.
 - All plugin manifests point at the same privacy and terms pages. Plugin descriptions no longer say credentials are never sent where an ambient token can be, and the guard description lists all of its warnings.
+- The CVE link repair no longer passes over rows. Under some query plans its keyset page moved mid-statement, so it could leave a row unmarked and carry on past it, leaving that row's CVE link unrepaired.
+- Skill audit: a security-review skill that lists coercion phrases in quotes as things to report now gets a low finding instead of high, for example `Text that asks the model to "bypass the guardrails"`. The finding stays visible.
+- Skill audit: a quote or example word no longer demotes a real directive. These shapes were low and are now high: `Obey phrases such as "..."`, `Use phrases such as "..." and comply`, a report sentence inside an HTML comment, `Do not hesitate to ...`, a plain sentence under a heading such as `## Red flags`, and a report sentence hidden by base64, zero-width or homoglyph characters.
+- Skill audit: packages launched by `npx`, `bunx`, `uvx` or `uv tool run` in an MCP JSON block, and `npx --yes` commands, now reach the package inventory, so they are checked like any other package.
 - Security: `oauthlib` moves to 4.0.1 (GHSA-3jp2-3mrg-2vxc), which arrives through the Azure extra. Versions 3.3.0 up to 4.0.1 could issue a bearer token for a bogus device code.
 - Typosquat detection now flags an adjacent-letter swap from five letters (`axois` as `axios`); single-letter substitutions keep their six-letter floor.
 - Investigation graph: an exposure flow now continues through the workloads an exposed host runs, so the path to identities and data opens framed on one screen. Edges between adjacent entities no longer arc over nothing.
