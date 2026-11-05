@@ -75,7 +75,7 @@ def save_report(report_json: dict, label: Optional[str] = None) -> Path:
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     stem = f"{ts}-{label}" if label else ts
     path = history_dir() / f"{stem}.json"
-    path.write_text(json.dumps(report_json, indent=2))
+    path.write_text(json.dumps(report_json, indent=2), encoding="utf-8")
     from agent_bom.db.adoption_events import adoption_channel, record_adoption_event_best_effort
 
     record_adoption_event_best_effort("artifact_created", channel=adoption_channel(), artifact_type="json")

@@ -218,7 +218,7 @@ def main() -> None:
     except ImportError:
         parser.error("PostgreSQL recovery requires the postgres extra: pip install 'agent-bom[postgres]'")
     try:
-        receipt = import_registries(args.source, json.loads(args.tenant_map.read_text()), args.table, apply=args.apply)
+        receipt = import_registries(args.source, json.loads(args.tenant_map.read_text(encoding="utf-8")), args.table, apply=args.apply)
     except (OSError, ValueError, TypeError, sqlite3.Error, PostgresError) as exc:
         sys.stderr.write(sanitize_error(exc, generic=True) + "\n")
         raise SystemExit(1) from None

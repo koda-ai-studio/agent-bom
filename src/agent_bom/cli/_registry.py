@@ -34,7 +34,7 @@ def schedule_add(name: str, cron: str, config: Optional[str]):
 
     scan_config: dict = {}
     if config:
-        scan_config = json.loads(Path(config).read_text())
+        scan_config = json.loads(Path(config).read_text(encoding="utf-8"))
 
     from datetime import datetime, timezone
 

@@ -175,7 +175,7 @@ def _plan_to_json(plan_items: list[dict], blocked_servers: list[dict] | None = N
 def _emit_json(payload: dict, output_path: Optional[str]) -> None:
     text = json.dumps(payload, indent=2)
     if output_path:
-        Path(output_path).write_text(text)
+        Path(output_path).write_text(text, encoding="utf-8")
     else:
         click.echo(text)
 
@@ -417,7 +417,7 @@ def remediate_cmd(
     elif output_format == "markdown":
         md = _render_markdown(plan, blast_radii)
         if output_path:
-            Path(output_path).write_text(md)
+            Path(output_path).write_text(md, encoding="utf-8")
             if not quiet:
                 output_console.print(f"[green]Remediation report written[/green] -> {output_path}", soft_wrap=True)
         else:

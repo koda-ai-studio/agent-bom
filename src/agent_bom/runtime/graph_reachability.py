@@ -243,7 +243,7 @@ def load_reachability_map(path: str | Path | None) -> ReachabilityMap:
     try:
         if not file_path.is_file():
             return ReachabilityMap(by_agent={})
-        payload = json.loads(file_path.read_text())
+        payload = json.loads(file_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return ReachabilityMap(by_agent={})
     return reachability_map_from_report_data(payload)

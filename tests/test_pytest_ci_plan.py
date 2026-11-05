@@ -1034,6 +1034,17 @@ def test_committed_timings_cover_most_test_modules() -> None:
     assert sum(path.resolve() in durations for path in modules) >= 0.8 * len(modules)
 
 
+@pytest.mark.parametrize("source", ["parsers/oci_extractors.py", "parsers/oci_stream.py", "oci_parser.py"])
+def test_oci_changes_always_select_memory_and_inventory_contracts(source):
+    from scripts.pytest_ci_plan import select_targeted_tests
+
+    root = Path(__file__).resolve().parents[1]
+    selected = select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=root)
+    assert {"test_oci_bounded_scan.py", "test_oci_candidate_coverage.py", "test_additional_container_inventory.py"} <= {
+        path.name for path in selected
+    }
+
+
 @pytest.mark.parametrize(
     "source",
     [

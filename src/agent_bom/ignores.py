@@ -77,7 +77,7 @@ def load_ignore_file(path: str | Path | None = None) -> list[dict[str, Any]]:
         return []
 
     try:
-        text = target.read_text()
+        text = target.read_text(encoding="utf-8")
     except OSError as exc:
         raise ValueError(f"Could not read ignore file {target}: {exc}") from exc
 
@@ -171,7 +171,7 @@ def _parse_flat_id_list(text: str) -> list[dict[str, Any]]:
 def _parse_minimal_yaml(path: Path) -> list[dict[str, Any]]:
     """Fallback parser for simple ignore files when PyYAML is not installed."""
     try:
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         # Try JSON as last resort
         if text.strip().startswith("{") or text.strip().startswith("["):
             data = json.loads(text)

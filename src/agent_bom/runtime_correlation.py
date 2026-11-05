@@ -139,7 +139,7 @@ def load_audit_log(path: str | Path) -> list[ToolCallRecord]:
         raise FileNotFoundError(f"Audit log not found: {path}")
 
     records: list[ToolCallRecord] = []
-    for line_num, line in enumerate(path.read_text().splitlines(), 1):
+    for line_num, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = line.strip()
         if not line:
             continue

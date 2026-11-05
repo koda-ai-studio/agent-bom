@@ -322,7 +322,7 @@ def graph_cmd(
         output = json.dumps(to_json(graph), indent=2)
 
     if output_path:
-        Path(output_path).write_text(output)
+        Path(output_path).write_text(output, encoding="utf-8")
         if not quiet:
             _con.print(f"[green]Graph exported[/green] ({graph.node_count()} nodes, {graph.edge_count()} edges) → {output_path}")
     else:
@@ -337,7 +337,7 @@ def graph_cmd(
 
         evaluation_json = json.dumps(evaluation.to_dict(), indent=2, sort_keys=True)
         if eval_output_path:
-            Path(eval_output_path).write_text(evaluation_json)
+            Path(eval_output_path).write_text(evaluation_json, encoding="utf-8")
             if not quiet:
                 _err_con.print(
                     "[green]Graph evaluated[/green] "
@@ -495,7 +495,7 @@ def mesh_cmd(scan_file: Optional[str], project_dir: Optional[str], fmt: str, out
     if fmt == "json":
         output = json.dumps(mesh, indent=2)
         if output_path:
-            Path(output_path).write_text(output)
+            Path(output_path).write_text(output, encoding="utf-8")
             if not quiet:
                 con.print(f"[green]Mesh exported[/green] → {output_path}", soft_wrap=True)
         else:
@@ -503,7 +503,7 @@ def mesh_cmd(scan_file: Optional[str], project_dir: Optional[str], fmt: str, out
         return
 
     if output_path:
-        Path(output_path).write_text(_mesh_summary_text(agents_data, mesh, scope_label=scope_label, quiet=quiet))
+        Path(output_path).write_text(_mesh_summary_text(agents_data, mesh, scope_label=scope_label, quiet=quiet), encoding="utf-8")
         if not quiet:
             con.print(f"[green]Mesh summary exported[/green] → {output_path}", soft_wrap=True)
         return

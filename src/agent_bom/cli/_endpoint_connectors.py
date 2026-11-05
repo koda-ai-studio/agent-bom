@@ -32,7 +32,7 @@ def create_cmd(
     config: Path, secret_env: str, api_url: str | None, api_key: str | None, bearer_token: str | None, tenant_id: str | None
 ) -> None:
     try:
-        body = json.loads(config.read_text())
+        body = json.loads(config.read_text(encoding="utf-8"))
         body["client_secret"] = os.environ.get(secret_env, "")
         validated = ConnectionCreate.model_validate(body)
     except (OSError, ValueError, TypeError):

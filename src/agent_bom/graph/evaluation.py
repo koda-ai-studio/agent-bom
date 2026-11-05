@@ -116,7 +116,7 @@ def load_expected_graph_spec(path: str | Path) -> dict[str, Any]:
     """Load an expected graph fixture from JSON."""
 
     try:
-        data = json.loads(Path(path).read_text())
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise ValueError(f"invalid graph evaluation spec JSON: {exc}") from exc
     if not isinstance(data, dict):

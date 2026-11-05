@@ -147,7 +147,7 @@ def _parse_dpkg_status_file(path: Path, packages: list[Package]) -> None:
             objects to (mutated in-place).
     """
     try:
-        content = path.read_text(errors="ignore")
+        content = path.read_text(errors="ignore", encoding="utf-8")
     except OSError:
         _logger.debug("Cannot read dpkg status: %s", path)
         return
@@ -347,7 +347,7 @@ def parse_apk_packages(root: Path = Path("/")) -> list[Package]:
     installed_db = root / "lib/apk/db/installed"
     if installed_db.is_file():
         try:
-            content = installed_db.read_text(errors="ignore")
+            content = installed_db.read_text(errors="ignore", encoding="utf-8")
             pkg_name = pkg_version = ""
             source_package = None
             for line in content.splitlines():
@@ -403,7 +403,7 @@ def detect_os_type(root: Path = Path("/")) -> str | None:
     if not os_release.is_file():
         return None
     try:
-        content = os_release.read_text(errors="ignore")
+        content = os_release.read_text(errors="ignore", encoding="utf-8")
         for line in content.splitlines():
             if line.startswith("ID="):
                 os_id = line.split("=", 1)[1].strip().strip('"').lower()

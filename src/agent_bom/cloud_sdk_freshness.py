@@ -562,7 +562,7 @@ def load_sdk_reference(path: Path | None = None) -> dict[str, Any]:
     """
     ref_path = path or REFERENCE_PATH
     try:
-        data = json.loads(ref_path.read_text())
+        data = json.loads(ref_path.read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001 - reference is advisory, never fatal
         return {}
     if not isinstance(data, dict) or not isinstance(data.get("sdks"), list):
@@ -755,7 +755,7 @@ def pyproject_sdk_floors(pyproject_path: Path | None = None) -> dict[str, str]:
     anchors = {f.distribution for f in RECOMMENDED_FLOORS}
     floors: dict[str, str] = {}
     try:
-        data = tomllib.loads(root.read_text())
+        data = tomllib.loads(root.read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
         return {}
     extras = data.get("project", {}).get("optional-dependencies", {})

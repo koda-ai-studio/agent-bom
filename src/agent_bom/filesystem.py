@@ -52,7 +52,7 @@ def read_os_release_metadata(root: Path) -> tuple[str | None, str | None]:
     distro_name: str | None = None
     distro_version: str | None = None
     try:
-        for line in os_release.read_text(errors="replace").splitlines():
+        for line in os_release.read_text(errors="replace", encoding="utf-8").splitlines():
             if line.startswith("ID="):
                 distro_name = line.split("=", 1)[1].strip().strip('"').strip("'").lower() or None
             elif line.startswith("VERSION_ID="):
@@ -208,7 +208,7 @@ def parse_dpkg_status(status_file: Path) -> list[Package]:
     packages: list[Package] = []
     current: dict[str, str] = {}
 
-    for raw_line in status_file.read_text(errors="replace").splitlines():
+    for raw_line in status_file.read_text(errors="replace", encoding="utf-8").splitlines():
         if raw_line.strip() == "":
             # End of a stanza — commit if it's a fully-installed package
             if current.get("Package") and current.get("Version"):
@@ -255,7 +255,7 @@ def parse_apk_installed(installed_file: Path) -> list[Package]:
     packages: list[Package] = []
     current: dict[str, str] = {}
 
-    for raw_line in installed_file.read_text(errors="replace").splitlines():
+    for raw_line in installed_file.read_text(errors="replace", encoding="utf-8").splitlines():
         if raw_line.strip() == "":
             if current.get("P") and current.get("V"):
                 name = current["P"]
@@ -478,7 +478,7 @@ def parse_site_packages(site_packages_dir: Path) -> list[Package]:
         name = ""
         version = ""
         try:
-            for line in metadata_file.read_text(errors="replace").splitlines():
+            for line in metadata_file.read_text(errors="replace", encoding="utf-8").splitlines():
                 if line.startswith("Name:"):
                     name = line.split(":", 1)[1].strip()
                 elif line.startswith("Version:"):

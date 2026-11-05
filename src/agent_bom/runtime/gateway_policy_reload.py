@@ -27,7 +27,7 @@ class GatewayPolicyState(Generic[PolicyT]):
 
 
 def _load_policy_file(policy_path: Path) -> dict[str, Any]:
-    payload = json.loads(policy_path.read_text())
+    payload = json.loads(policy_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError("gateway policy file must contain a JSON object")
     return payload

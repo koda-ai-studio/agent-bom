@@ -95,7 +95,7 @@ def activate_project(*, project: Path, evidence_dir: Path | None, offline: bool,
     partial = False
     if result.returncode == 1:
         try:
-            payload = json.loads(report.read_text())
+            payload = json.loads(report.read_text(encoding="utf-8"))
             partial = (
                 isinstance(payload, dict) and isinstance(payload.get("scan_run"), dict) and payload["scan_run"].get("outcome") == "partial"
             )

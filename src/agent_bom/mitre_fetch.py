@@ -162,7 +162,7 @@ def _load_catalog_file(path: Path) -> Optional[dict]:
 
 def _parse_catalog_file(path: Path) -> Optional[dict]:
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         logger.warning("Failed to read MITRE catalog %s: %s", path, exc)
         return None
@@ -414,7 +414,7 @@ def _normalize_catalog(
 
 def _write_catalog(catalog: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(catalog, separators=(",", ":")))
+    path.write_text(json.dumps(catalog, separators=(",", ":")), encoding="utf-8")
 
 
 def _refresh_from_upstream(source: str) -> Optional[dict]:

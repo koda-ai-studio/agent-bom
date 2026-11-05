@@ -34,7 +34,7 @@ def advisory_group() -> None:
 def advisory_add(file_path: Path) -> None:
     """Declare (or replace) an operator advisory from a JSON file."""
     try:
-        advisory = OperatorAdvisory.model_validate(json.loads(file_path.read_text()))
+        advisory = OperatorAdvisory.model_validate(json.loads(file_path.read_text(encoding="utf-8")))
     except (ValidationError, json.JSONDecodeError) as exc:
         raise click.ClickException(f"invalid advisory: {exc.__class__.__name__}: {str(exc).splitlines()[0]}") from exc
     save_local_advisory(advisory)

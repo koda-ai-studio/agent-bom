@@ -109,7 +109,7 @@ def _load_catalog_file(path: Path) -> Optional[dict]:
 def _cached_catalog(path: Path, mtime_ns: int, ctime_ns: int, size: int, synced: bool) -> Optional[dict]:
     """File metadata forms the cache key; catalog payloads remain unchanged."""
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         logger.warning("MITRE ATLAS catalog is unreadable or invalid JSON")
         return None
@@ -229,7 +229,7 @@ def _normalize_catalog(
 
 def _write_catalog(catalog: dict, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n")
+    path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def sync_catalog(output_path: Path | None = None) -> dict:

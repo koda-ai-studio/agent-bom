@@ -71,7 +71,7 @@ def to_badge(report: AIBOMReport) -> dict:
 def export_badge(report: AIBOMReport, output_path: str) -> None:
     """Export shields.io endpoint badge JSON to file."""
     data = to_badge(report)
-    Path(output_path).write_text(json.dumps(data, indent=2))
+    Path(output_path).write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 def to_rsp_badge(report: AIBOMReport) -> dict:

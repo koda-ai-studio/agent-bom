@@ -37,7 +37,7 @@ def _load_registry() -> dict:
     if not registry_path.exists():
         return {}
     try:
-        data = json.loads(registry_path.read_text())
+        data = json.loads(registry_path.read_text(encoding="utf-8"))
         servers = data.get("servers", {})
         # Handle both dict-keyed and list-based registry formats
         if isinstance(servers, dict):

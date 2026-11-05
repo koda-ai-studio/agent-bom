@@ -73,7 +73,7 @@ def _credential(path: Path, output: Path) -> dict[str, Any]:
         raise ValueError("Invalid credential/output paths")
     if os.name != "nt" and path.stat().st_mode & 0o077:
         raise ValueError("Credential file must have mode 0600")
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("Credential file must contain an object")
     return data

@@ -105,7 +105,7 @@ class AuditLog:
 def parse_audit_log(path: Path) -> AuditLog:
     """Parse a proxy JSONL audit log into structured entries."""
     log = AuditLog()
-    for lineno, raw_line in enumerate(path.read_text().splitlines(), 1):
+    for lineno, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         raw_line = raw_line.strip()
         if not raw_line:
             continue

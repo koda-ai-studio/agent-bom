@@ -367,7 +367,7 @@ def _get_ollama_manifest_file(model_name: str, tag: str) -> dict | None:
     if not manifest_path.is_file():
         return None
     try:
-        return json.loads(manifest_path.read_text())
+        return json.loads(manifest_path.read_text(encoding="utf-8"))
     except Exception:
         return None
 

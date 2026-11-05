@@ -819,13 +819,13 @@ async def execute_tool_sync_async(
 
 def get_registry_data(registry_cache: dict | None, registry_path: Path) -> dict:
     if registry_cache is None:
-        return json.loads(registry_path.read_text())
+        return json.loads(registry_path.read_text(encoding="utf-8"))
     return registry_cache
 
 
 def get_registry_data_raw(registry_raw_cache: str | None, registry_path: Path) -> str:
     if registry_raw_cache is None:
-        return registry_path.read_text()
+        return registry_path.read_text(encoding="utf-8")
     return registry_raw_cache
 
 

@@ -110,6 +110,22 @@ def _names(packages) -> set[str]:
     return {package.name for package in packages}
 
 
+def test_go_marker_search_uses_small_reads_for_non_go_files():
+    from agent_bom.parsers.oci_extractors import _go_buildinfo_window
+
+    class Probe(_Stream):
+        largest_read = 0
+
+        def read(self, n=-1):
+            self.largest_read = max(self.largest_read, n)
+            return super().read(n)
+
+    source = Probe(_FILLER_BYTES, random=False)
+    assert _go_buildinfo_window(source) == b""
+    assert source.left == 0
+    assert source.largest_read <= _MIB
+
+
 @pytest.mark.parametrize("gz", [False, True], ids=["uncompressed-layer", "gzip-layer"])
 def test_docker_save_layer_is_streamed_not_buffered(tmp_path: Path, gz: bool) -> None:
     layer = tmp_path / "layer.tar"

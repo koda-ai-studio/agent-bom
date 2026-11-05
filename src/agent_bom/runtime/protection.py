@@ -337,7 +337,7 @@ class ProtectionEngine:
             }
             path = self._state_path()
             tmp = path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(state))
+            tmp.write_text(json.dumps(state), encoding="utf-8")
             tmp.replace(path)  # atomic
         except OSError:
             logger.debug("Could not persist kill-switch state (non-fatal)")
@@ -348,7 +348,7 @@ class ProtectionEngine:
             path = self._state_path()
             if not path.exists():
                 return
-            state = json.loads(path.read_text())
+            state = json.loads(path.read_text(encoding="utf-8"))
             if state.get("blocked"):
                 self._blocked = True
                 self._threat_level = ThreatLevel(state.get("threat_level", ThreatLevel.CRITICAL.value))

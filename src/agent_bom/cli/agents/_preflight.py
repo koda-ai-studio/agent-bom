@@ -301,7 +301,7 @@ def run_iac_only_scan(
     if output_format == "json" or (output and output_format == "console"):
         out_data = json.dumps(iac_report.iac_findings_data, indent=2)
         if output and output != "-":
-            Path(output).write_text(out_data)
+            Path(output).write_text(out_data, encoding="utf-8")
             con.print(f"\n[green]IaC report written[/green] → {output}", soft_wrap=True)
         else:
             click.echo(out_data)

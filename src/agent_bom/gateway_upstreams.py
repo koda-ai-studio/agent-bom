@@ -293,7 +293,7 @@ class UpstreamRegistry:
         if not path.exists():
             raise UpstreamConfigError(f"upstreams config not found: {path}")
         try:
-            data = yaml.safe_load(path.read_text()) or {}
+            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError as exc:
             raise UpstreamConfigError(f"malformed YAML in {path}: {exc}") from exc
 

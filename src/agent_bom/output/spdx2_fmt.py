@@ -327,4 +327,4 @@ def to_spdx2_tagvalue(report: AIBOMReport, version: str = "2.3") -> str:
 
 def export_spdx2_tagvalue(report: AIBOMReport, output_path: str, version: str = "2.3") -> None:
     """Export report as an SPDX 2.x tag-value file."""
-    Path(output_path).write_text(to_spdx2_tagvalue(report, version=version))
+    Path(output_path).write_text(to_spdx2_tagvalue(report, version=version), encoding="utf-8")

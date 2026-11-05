@@ -59,7 +59,7 @@ def scan_auth_headers(server: Any) -> dict[str, str]:
     path = Path(filename)
     if path.stat().st_size > 65536:
         raise ValueError("MCP scan auth file exceeds 64 KiB")
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, dict):
         raise ValueError("MCP scan auth file must be an object")
     entry = data.get(server.canonical_id)

@@ -212,7 +212,7 @@ def _top_level_iac_files(cwd: Path) -> list[str]:
         _auto_iac.append(str(f))
     for f in cwd.glob("*.yaml"):
         try:
-            head = f.read_text(errors="replace")[:200]
+            head = f.read_text(errors="replace", encoding="utf-8")[:200]
             if "apiVersion:" in head and "kind:" in head:
                 _auto_iac.append(str(f))
         except OSError:

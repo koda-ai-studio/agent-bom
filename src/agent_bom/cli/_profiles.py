@@ -289,7 +289,8 @@ def write_profile_template(path: Path, name: str, *, force: bool = False) -> Non
                 'clickhouse_url = ""',
                 "",
             ]
-        )
+        ),
+        encoding="utf-8",
     )
 
 
@@ -301,13 +302,13 @@ def set_current_profile(path: Path, name: str) -> None:
     profiles = _profiles(data)
     if name not in profiles:
         raise click.ClickException(_missing_profile_message(name, path, profiles))
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     line = f'current_profile = "{name}"'
     if re.search(r"(?m)^current_profile\s*=", text):
         text = re.sub(r'(?m)^current_profile\s*=\s*["\'][^"\']*["\']\s*$', line, text, count=1)
     else:
         text = f"{line}\n{text}"
-    path.write_text(text)
+    path.write_text(text, encoding="utf-8")
 
 
 @click.group("profiles", cls=SuggestingGroup)

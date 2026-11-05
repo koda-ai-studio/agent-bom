@@ -35,7 +35,7 @@ def discover_docker_mcp() -> Optional[Agent]:
         return None
 
     try:
-        registry_data = yaml.safe_load(registry_path.read_text())
+        registry_data = yaml.safe_load(registry_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
 
