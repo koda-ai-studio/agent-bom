@@ -27,8 +27,9 @@ __all__ = [
 _ALLOWED_FINDING_SORTS = ("effective_reach", "cvss", "severity")
 # Lifecycle-status filter (default ``open`` = live posture). ``open`` maps to
 # status IN (open, reopened) in the store; ``resolved`` to status = resolved;
+# ``stale`` narrows open to findings not re-checked within the stale period;
 # ``all`` applies no lifecycle predicate.
-_ALLOWED_FINDING_STATUSES = ("open", "resolved", "all")
+_ALLOWED_FINDING_STATUSES = ("open", "stale", "resolved", "all")
 _DEFAULT_FINDING_STATUS = "open"
 _ALLOWED_FINDING_SEVERITIES = FINDING_SEVERITY_FILTERS
 

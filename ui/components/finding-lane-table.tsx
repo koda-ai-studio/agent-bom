@@ -1,4 +1,5 @@
 "use client";
+import { lifecycleSummary } from "@/components/finding-lifecycle";
 import { severityColor } from "@/lib/api";
 import { vulnRowKey, type EnrichedVuln } from "@/lib/findings-view";
 import type { FindingLane } from "@/lib/finding-lanes";
@@ -25,10 +26,12 @@ export function FindingLaneTable({ lane, findings, onSelect }: { lane: FindingLa
         const evidence = finding.lane_evidence ?? {};
         const count = finding.occurrence_count ?? 1;
         const checkResult = lane === "cloud" ? CLOUD_CHECK_RESULTS[finding.finding_type ?? ""] ?? "Unreported" : null;
+        const lifecycle = finding.lifecycle_status === "open" && !finding.stale ? null : lifecycleSummary(finding);
         return <li key={vulnRowKey(finding)} className="grid gap-3 p-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.5fr)_minmax(0,2fr)_7rem] lg:gap-4">
           <div className="min-w-0 space-y-2">
             <p className="break-words text-sm font-medium text-foreground">{finding.summary || finding.id}</p>
             <p className="flex flex-wrap items-center gap-1.5 text-xs">{checkResult && <span aria-label={`Check result: ${checkResult}`} className="rounded border border-outline px-1.5 py-0.5 font-medium text-foreground">{checkResult}</span>}<span className={`rounded border px-1.5 py-0.5 capitalize ${severityColor(finding.severity)}`}>{finding.severity === "none" ? "Unrated" : finding.severity}</span><span className="text-ink-tertiary">{finding.severity_source === "benchmark-mapped" ? "Benchmark mapping" : finding.severity_source || "Source unreported"}</span></p>
+            {lifecycle && <p className="text-xs text-ink-secondary">{lifecycle}</p>}
             {count > 1 && <details className="text-xs text-ink-secondary"><summary className="cursor-pointer">{count} resource findings</summary><ul className="mt-2 space-y-1">{(finding.occurrences ?? []).map((occurrence, i) => <li className="break-words" key={occurrence.finding_id ?? i}>{occurrence.asset?.name || "Resource identity withheld"}</li>)}</ul>{finding.occurrences_truncated && <p>Showing a bounded resource sample.</p>}</details>}
           </div>
           <div className="min-w-0 space-y-1 text-xs text-ink-secondary">

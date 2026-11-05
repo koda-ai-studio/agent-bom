@@ -162,6 +162,7 @@
       "default": "open",
       "enum": [
         "open",
+        "stale",
         "resolved",
         "all"
       ],

@@ -54,7 +54,7 @@ so they cannot regress silently, but they are not part of this reference.
 | `AGENT_BOM_BODY_MIN_BPS` | `int` | `256` | Slowloris throughput floor (audit-5 PR-C): minimum sustained body bytes/second once a request body crosses the warmup threshold inside MaxBodySizeMiddleware. 0 disables the floor entirely (escape hatch for legitimate slow clients in restric |
 | `AGENT_BOM_CONNECTIONS_SCHEDULER_MAX_CONCURRENCY` | `int` | `4` | — |
 | `AGENT_BOM_CONNECTIONS_SCHEDULER_MIN_INTERVAL_MINUTES` | `int` | `15` | — |
-| `AGENT_BOM_CONNECTIONS_SCHEDULER_POLL_SECONDS` | `int` | `60` | Cloud-connection scan scheduler (Phase B.2). The background loop re-scans cloud connections that carry an interval, so "connect once, keeps evaluating" is automatic. Disabled by default (AGENT_BOM_CONNECTIONS_SCHEDULER, read live) so it nev |
+| `AGENT_BOM_CONNECTIONS_SCHEDULER_POLL_SECONDS` | `int` | `60` | Cloud-connection scan scheduler: re-scans connections that carry an interval. Disabled by default (AGENT_BOM_CONNECTIONS_SCHEDULER, read live) so it never runs in CLI/dev. The minimum per-connection interval guards against hammering a custo |
 | `AGENT_BOM_FINDINGS_APPROXIMATE_TOTAL_THRESHOLD` | `int` | `50000` | Skip exact COUNT(*) on /v1/findings once cached total exceeds this threshold (0 = disabled). |
 | `AGENT_BOM_GCP_EVENT_MAX_BATCHES` | `int` | `10` | — |
 | `AGENT_BOM_GCP_EVENT_MAX_MESSAGES` | `int` | `10` | Event-driven GCP posture ingestion. When an operator wires Cloud Asset Inventory feed / audit logs → a Pub/Sub subscription (opt-in via AGENT_BOM_GCP_EVENT_SUBSCRIPTION, read live, default off), the bounded Pub/Sub consumer drains change ev |
@@ -156,6 +156,7 @@ so they cannot regress silently, but they are not part of this reference.
 ## Default Read Window
 | Env var | Type | Default | Description |
 |---|---|---|---|
+| `AGENT_BOM_FINDING_STALE_DAYS` | `int` | `30` | open findings unobserved this long read as stale |
 | `AGENT_BOM_RETENTION_DAYS` | `int` | `90` | Default time-window (days) applied to list / graph / snapshot read surfaces. Views default to the last ``RETENTION_DAYS`` so counts are honestly scoped to a recent window at scale; callers widen or clear the window with ``?window_days=`` (` |
 
 ## Demo Estate

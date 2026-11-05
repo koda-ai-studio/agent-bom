@@ -11,8 +11,14 @@ from typing import Any, Protocol, cast
 from agent_bom.api.posture_counts_cache import announce_scan_evidence
 from agent_bom.api.scan_snapshot_store import discard_job_snapshot
 from agent_bom.api.storage.campaign_revisions import initialize_sqlite_campaign_evidence
-from agent_bom.api.storage.finding_history_adapters import sqlite_history_backfill, sqlite_history_read
+from agent_bom.api.storage.finding_history_adapters import (
+    sqlite_history_backfill,
+    sqlite_history_read,
+    sqlite_lifecycle_session,
+    sqlite_unbackfilled_tenants,
+)
 from agent_bom.api.storage.finding_history_schema import initialize_sqlite_finding_history
+from agent_bom.api.storage.finding_lifecycle_schema import forget_job_evidence, initialize_sqlite_finding_lifecycle
 from agent_bom.api.storage.job_detail_reads import memory_status_view, sqlite_detail_projection, sqlite_status_view
 from agent_bom.api.storage.job_read_projections import sqlite_demo_exists, sqlite_job_revision
 from agent_bom.api.storage.job_search_text import _job_search_text, _job_summary_search_text
@@ -131,6 +137,7 @@ class InMemoryJobStore:
 
     def __init__(self, *, max_retained_jobs: int | None = API_MAX_IN_MEMORY_JOBS) -> None:
         self._jobs: dict[tuple[str, str], ScanJob] = {}
+        self.finding_evidence_cache: dict[Any, Any] = {}
         self._lock = threading.Lock()
         self._max_retained_jobs = max_retained_jobs
 
@@ -321,6 +328,9 @@ class SQLiteJobStore:
 
     finding_history_read = sqlite_history_read
     backfill_finding_history = sqlite_history_backfill
+    finding_lifecycle_dialect = "sqlite"
+    finding_lifecycle_session = sqlite_lifecycle_session
+    finding_lifecycle_unbackfilled_tenants = sqlite_unbackfilled_tenants
     has_usable_demo_job = sqlite_demo_exists
     get_status_view = sqlite_status_view
     get_detail_projection = sqlite_detail_projection
@@ -393,6 +403,7 @@ class SQLiteJobStore:
                     )
             migrate_sqlite_job_key(self._conn)
             initialize_sqlite_finding_history(self._conn)
+            initialize_sqlite_finding_lifecycle(self._conn)
             self._conn.execute("DROP TRIGGER IF EXISTS jobs_overview_replace")
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_completed ON jobs(completed_at)")
@@ -513,6 +524,7 @@ class SQLiteJobStore:
                     "DELETE FROM jobs WHERE job_id = ? AND tenant_id = ?",
                     (job_id, tenant_id),
                 )
+            forget_job_evidence(connection_session(self._conn, "sqlite"), deleted_tenants if tenant_id is None else [tenant_id], job_id)
             self._conn.commit()
             if tenant_id is None:
                 for owner in deleted_tenants:

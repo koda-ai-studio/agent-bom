@@ -389,7 +389,7 @@ class ReportJob(BaseModel):
     sla: Literal["overdue", "due", "unassigned"] | None = None
     lane: str | None = Field(default=None, max_length=32)
     finding_class: FindingClass | None = None
-    finding_status: Literal["open", "resolved", "all"] = "open"
+    finding_status: Literal["open", "stale", "resolved", "all"] = "open"
     window_days: int | None = None
     created_at: str
     started_at: str | None = None

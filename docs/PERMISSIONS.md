@@ -308,6 +308,13 @@ This is an open-source tool — you can verify every claim above:
 
 ---
 
+## Removing a Permission
+
+Removing a read permission never marks anything deleted. An AWS inventory with a
+missing permission, a warning or a failed region proves nothing, so findings on
+its assets stay open and age to stale. See
+[Deleted assets](FINDING_LIFECYCLE.md#deleted-assets).
+
 ## Least Privilege — API Server
 
 When running `agent-bom api`, the HTTP server adds these headers to every response:

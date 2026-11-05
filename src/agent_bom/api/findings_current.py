@@ -86,7 +86,8 @@ def scan_only_findings(
     lookup = getattr(hub, "lookup_current_ids", None)
     if not callable(lookup):
         return retained
-    keys = [resolve_canonical_id(row) for row in retained]
+    # The hub knows a finding by the id its report used, whichever project it came from.
+    keys = [str(row.get("report_canonical_id") or resolve_canonical_id(row)) for row in retained]
     owned = lookup(tenant_id, keys, scan_id=scan_id, origin=origin)
     return [row for row, key in zip(retained, keys) if key not in owned]
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from agent_bom.api.finding_blast_row import _finding_from_blast_radius
 from agent_bom.api.finding_row_shapes import (
     _backfill_supplementary_fields,
     _iter_package_findings,
@@ -70,8 +71,6 @@ def _matching_key(row: dict, key: str, grouped: dict, package_groups: dict) -> s
 
 def finding_representations(job: ScanJob) -> list[dict[str, Any]]:
     """Preserve source order and duplicates so enrichment precedes merging."""
-
-    from agent_bom.api.scan_finding_projection import _finding_from_blast_radius
 
     result = job.result or {}
     rows: list[dict[str, Any]] = []

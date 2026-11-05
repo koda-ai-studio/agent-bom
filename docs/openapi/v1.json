@@ -15974,6 +15974,21 @@
             ],
             "title": "Reopened At"
           },
+          "resolution_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_longer_detected",
+                  "asset_deleted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Reason"
+          },
           "resolved_at": {
             "anyOf": [
               {
@@ -16104,6 +16119,17 @@
               }
             ],
             "title": "Source"
+          },
+          "stale": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale"
           },
           "status": {
             "anyOf": [
@@ -37650,6 +37676,7 @@
             "default": "open",
             "enum": [
               "open",
+              "stale",
               "resolved",
               "all"
             ],

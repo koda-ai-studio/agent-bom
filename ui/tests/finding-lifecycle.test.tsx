@@ -1,7 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { FindingStatusSelect, LifecycleDate, openOccurrenceLabel, parseFindingStatus } from "@/components/finding-lifecycle";
+import {
+  FindingStatusSelect,
+  LifecycleDate,
+  lifecycleSummary,
+  openOccurrenceLabel,
+  parseFindingStatus,
+  resolutionReasonLabel,
+} from "@/components/finding-lifecycle";
+import { FindingLaneTable } from "@/components/finding-lane-table";
 import { collectUnifiedFindings } from "@/lib/findings-adapter";
 
 describe("finding lifecycle controls", () => {
@@ -10,13 +18,40 @@ describe("finding lifecycle controls", () => {
     expect(parseFindingStatus("nonsense")).toBe("open");
     expect(parseFindingStatus("resolved")).toBe("resolved");
     expect(parseFindingStatus("all")).toBe("all");
+    expect(parseFindingStatus("stale")).toBe("stale");
   });
 
-  it("offers open, resolved and all", () => {
+  it("names why a finding resolved, and nothing for an unknown reason", () => {
+    expect(resolutionReasonLabel("no_longer_detected")).toBe("No longer detected");
+    expect(resolutionReasonLabel("asset_deleted")).toBe("Asset deleted");
+    expect(resolutionReasonLabel(null)).toBeNull();
+    expect(resolutionReasonLabel("other")).toBeNull();
+  });
+
+  it("summarizes status with the resolution reason", () => {
+    expect(lifecycleSummary({ lifecycle_status: "resolved", resolved_at: "2026-10-03T10:00:00+00:00", resolution_reason: "asset_deleted" })).toBe("Resolved · asset deleted");
+    expect(lifecycleSummary({ lifecycle_status: "resolved", resolved_at: "2026-10-03T10:00:00+00:00", resolution_reason: "no_longer_detected" })).toBe("Resolved · no longer detected");
+    expect(lifecycleSummary({ lifecycle_status: "open", stale: true })).toBe("Open · stale");
+    expect(lifecycleSummary({ lifecycle_status: "reopened" })).toBe("Reopened");
+    expect(lifecycleSummary({ lifecycle_status: "suppressed" })).toBe("Suppressed · not verified fixed");
+    expect(lifecycleSummary({})).toBeNull();
+  });
+
+  it("shows why a cloud finding left the open queue, and stays quiet for a plain open one", () => {
+    const base = { id: "f-1", summary: "CIS-5.2", severity: "high", finding_type: "CIS_FAIL", affected_agents: [], affected_servers: [], affected_packages: [], packages: [] };
+    const { rerender } = render(<FindingLaneTable lane="cloud" onSelect={vi.fn()} findings={[{ ...base, lifecycle_status: "resolved", resolved_at: "2026-10-03T10:00:00+00:00", resolution_reason: "asset_deleted" }] as never} />);
+    expect(screen.getByText("Resolved · asset deleted")).toBeInTheDocument();
+    rerender(<FindingLaneTable lane="cloud" onSelect={vi.fn()} findings={[{ ...base, lifecycle_status: "open", stale: true }] as never} />);
+    expect(screen.getByText("Open · stale")).toBeInTheDocument();
+    rerender(<FindingLaneTable lane="cloud" onSelect={vi.fn()} findings={[{ ...base, lifecycle_status: "open" }] as never} />);
+    expect(screen.queryByText(/^Open/)).toBeNull();
+  });
+
+  it("offers open, stale, resolved and all", () => {
     const onChange = vi.fn();
     render(<FindingStatusSelect value="open" onChange={onChange} />);
     const select = screen.getByRole("combobox", { name: "Finding status" });
-    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["Open", "Resolved", "All statuses"]);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(["Open", "Stale", "Resolved", "All statuses"]);
     fireEvent.change(select, { target: { value: "resolved" } });
     expect(onChange).toHaveBeenCalledWith("resolved");
   });
@@ -51,10 +86,13 @@ describe("finding lifecycle controls", () => {
         status_updated_at: "2026-10-05T10:00:00+00:00",
         open_occurrence_count: 1,
         resolved_occurrence_count: 1,
+        stale: true,
+        resolution_reason: null,
       },
     ] as never);
     expect(row).toMatchObject({
       lifecycle_status: "reopened",
+      stale: true,
       last_resolved_at: "2026-10-03T10:00:00+00:00",
       status_updated_at: "2026-10-05T10:00:00+00:00",
       open_occurrence_count: 1,
