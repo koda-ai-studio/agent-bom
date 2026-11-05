@@ -185,7 +185,11 @@ class DistributedScanWorker:
             claims = dict(self._inflight)
         if claims:
             self._store.renew_leases(claims, self._lease)
-        # Reclaim jobs orphaned by dead replicas (lease expired, status running).
+        # End what cannot be redelivered, then reclaim jobs orphaned by dead
+        # replicas (lease expired, status running, attempts left).
+        from agent_bom.api.scan_job_reconciliation import fail_unrecoverable_dispatch_jobs
+
+        fail_unrecoverable_dispatch_jobs(self._store)
         reclaimed = self._store.requeue_expired_leases()
         if reclaimed:
             _logger.info("Distributed scan worker reclaimed %d orphaned job(s)", reclaimed)
@@ -209,7 +213,10 @@ class DistributedScanWorker:
             _logger.info("Claimed scan job=%s tenant=%s worker=%s", job.job_id, job.tenant_id, self._worker_id)
             try:
                 submit_claimed_scan_job(
-                    job, lambda job_id, owner=claim_owner, tenant=job.tenant_id: self._on_complete(job_id, owner, tenant)
+                    job,
+                    lambda job_id, owner=claim_owner, tenant=job.tenant_id, abandoned=False: self._on_complete(
+                        job_id, owner, tenant, abandoned=abandoned
+                    ),
                 )
             except Exception:  # noqa: BLE001
                 # Could not hand off locally (e.g. executor draining): drop the
@@ -220,11 +227,16 @@ class DistributedScanWorker:
                 _logger.error("Failed to submit claimed job=%s; will be reclaimed", job.job_id)
                 break
 
-    def _on_complete(self, job_id: str, claim_owner: str, tenant_id: str) -> None:
+    def _on_complete(self, job_id: str, claim_owner: str, tenant_id: str, *, abandoned: bool = False) -> None:
         key = (tenant_id, job_id)
         with self._inflight_lock:
             if self._inflight.get(key) == claim_owner:
                 self._inflight.pop(key)
+        if abandoned:
+            # The run died before an outcome was durable. Heartbeats stop here, so
+            # the lease expires and the job is redelivered, bounded by its attempts.
+            _logger.warning("Claimed job=%s ended without an outcome; leaving it for redelivery", job_id)
+            return
         try:
             self._store.complete_dispatch(job_id, tenant_id=tenant_id, claim_owner=claim_owner)
         except Exception:  # noqa: BLE001

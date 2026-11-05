@@ -558,14 +558,36 @@ receipt; `stored` requires a recorded persisted graph. A legacy `done` row with
 no graph receipt reports `failed` and can be retried with its original
 idempotency key. A process exit between writes cannot certify completion.
 
-Distributed scan and push jobs use dispatch leases for recovery. The periodic
-creation-age reaper leaves these jobs to the queue, including old admissions
-reclaimed by another worker. Live owners renew their leases; expired leases
-can be reclaimed, and stale tokens cannot acknowledge successor claims. Local
-in-process jobs retain the age timeout and restart cleanup. Lease renewal is
-worker liveness evidence, not proof of forward progress; a live but stalled
-worker still requires operational diagnosis. These rules preserve tenant
-scoping and fail closed on completion claims without persistence evidence.
+Distributed scan and push jobs use dispatch leases for recovery. Creation age
+never fails a job that holds a queue row, including old admissions reclaimed by
+another worker. Live owners renew their leases; expired leases can be reclaimed,
+and stale tokens cannot acknowledge successor claims. Local in-process jobs
+retain the age timeout and restart cleanup. Lease renewal is worker liveness
+evidence, not proof of forward progress; a live but stalled worker still
+requires operational diagnosis. These rules preserve tenant scoping and fail
+closed on completion claims without persistence evidence.
+
+Three outcomes end a distributed job that nothing else would finish. Each leaves
+it `failed`, which the client resubmits under the same idempotency key:
+
+- **A dispatched job out of attempts.** Each claim counts against
+  `AGENT_BOM_API_SCAN_MAX_ATTEMPTS` (default 5). Once the last claim's lease
+  expires the job fails with the attempt count instead of being redelivered, so
+  a report that crashes every worker cannot loop. The new admission starts over.
+  A rolling restart also uses up an attempt for each job it interrupts.
+- **A synchronous push whose replica died.** The request heartbeats a lease in
+  the same queue table for as long as it runs, however long that is. When that
+  lease (at most 120 seconds) expires, any replica fails the job. It is not
+  replayed, because only the request held an endpoint inventory. A retry can run
+  as soon as the idempotency reservation lapses, even before the job is failed.
+- **A pushed job with no queue row at all**, older than the 30-minute stuck-job
+  timeout. Current writers never leave one; earlier releases could.
+
+A run that raises or is cancelled before recording an outcome, such as a store
+outage during ingest, keeps its queue row so the lease can expire and the job can
+be redelivered. Worker reads retry briefly first, and a store error never marks
+the report failed. Without distributed dispatch the job stays `pending`: a resubmit
+re-offers it, and the age timeout or next restart fails it otherwise.
 
 ## Hosted MCP OAuth
 
