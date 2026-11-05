@@ -17,7 +17,7 @@ from pydantic import ValidationError
 from starlette.responses import JSONResponse
 
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob
-from agent_bom.api.observability_push_receipts import _pushed_job_receipt
+from agent_bom.api.observability_push_receipts import _pushed_job_has_persisted_graph, _pushed_job_receipt
 from agent_bom.api.push_ingest import (
     PUSH_RETRY_AFTER_SECONDS,
     accepted_push_receipt,
@@ -102,6 +102,10 @@ async def committed_push_response(job_id: str, *, tenant_id: str, source_id: str
         job = await asyncio.to_thread(_load_job, job_id, tenant_id)
         if job is None:  # pragma: no cover - deleted between the two reads
             raise HTTPException(status_code=409, detail="The pushed result for this idempotency key is no longer retained; push again.")
+        # Older writers published DONE before graph commit. Missing completion
+        # evidence must remain retryable, never become a successful replay.
+        if not _pushed_job_has_persisted_graph(job):
+            return None
         return _pushed_job_receipt(job)
     if status in _ACTIVE_STATUSES:
         job = await asyncio.to_thread(_load_job, job_id, tenant_id)
@@ -125,7 +129,7 @@ async def push_status_receipt(job_id: str, *, tenant_id: str) -> dict:
     result = job.result if isinstance(job.result, dict) else {}
     if not result.get("pushed"):
         raise HTTPException(status_code=404, detail="Pushed result not found")
-    if job.status is JobStatus.DONE:
+    if job.status is JobStatus.DONE and _pushed_job_has_persisted_graph(job):
         receipt = _pushed_job_receipt(job)
         receipt["status_url"] = push_status_url(job_id)
         return receipt

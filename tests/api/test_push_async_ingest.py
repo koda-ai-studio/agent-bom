@@ -206,3 +206,77 @@ async def test_a_slow_commit_never_blocks_the_event_loop(monkeypatch: pytest.Mon
     assert retry.headers["Retry-After"]
     assert retry.json()["job_id"] == committed.json()["job_id"]
     assert committed.status_code == 201
+
+
+def test_sync_push_publishes_completion_only_after_graph_commit(monkeypatch):
+    from agent_bom.api.routes import observability
+
+    during_commit = []
+
+    def persist(job, report, **_kwargs):
+        durable = stores._get_store().get(job.job_id, tenant_id=job.tenant_id)
+        during_commit.append((durable.status, durable.completed_at))
+        report["graph_persistence"] = {"status": "persisted", "scan_id": job.job_id}
+
+    monkeypatch.setattr(observability, "_persist_graph_snapshot", persist)
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post("/v1/results/push", json=_payload("sync-commit"))
+    assert response.status_code == 201
+    assert during_commit == [(JobStatus.RUNNING, None)]
+    receipt = client.get(f"/v1/results/push/{response.json()['job_id']}").json()
+    assert receipt["status"] == "stored"
+    assert receipt["graph_persistence"]["status"] == "persisted"
+
+
+def test_legacy_done_push_without_graph_is_not_a_stored_receipt(monkeypatch):
+    from agent_bom.api.models import ScanJob, ScanRequest
+    from agent_bom.api.push_receive import committed_push_response
+
+    job = ScanJob(
+        job_id="interrupted-sync",
+        status=JobStatus.DONE,
+        created_at="2026-11-01T00:00:00Z",
+        request=ScanRequest(),
+        result={"pushed": True},
+        source_id="host",
+    )
+    stores._get_store().put(job)
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.get("/v1/results/push/interrupted-sync")
+    assert response.status_code == 200
+    assert response.json()["status"] == "failed"
+    assert asyncio.run(committed_push_response(job.job_id, tenant_id=job.tenant_id, source_id="host")) is None
+
+
+@pytest.mark.parametrize("status", [JobStatus.PENDING, JobStatus.RUNNING, JobStatus.FAILED])
+def test_graph_receipt_without_terminal_success_does_not_authorize_stored_replay(status):
+    from agent_bom.api.models import ScanJob, ScanRequest
+    from agent_bom.api.observability_push_receipts import _pushed_job_has_persisted_graph
+
+    job = ScanJob(
+        job_id="uncommitted-graph",
+        status=status,
+        created_at="2026-11-01T00:00:00Z",
+        request=ScanRequest(),
+        result={"pushed": True, "graph_persistence": {"status": "persisted", "scan_id": "uncommitted-graph"}},
+    )
+    assert not _pushed_job_has_persisted_graph(job)
+
+
+def test_sync_push_stored_receipt_matches_real_sqlite_graph(tmp_path, monkeypatch):
+    from agent_bom.api.graph_store import SQLiteGraphStore
+
+    graph = SQLiteGraphStore(tmp_path / "receipt-graph.db")
+    monkeypatch.setattr(stores, "_graph_store", graph)
+    payload = _payload("real-graph")
+    payload["agents"][0]["mcp_servers"] = [{"name": "files", "command": "npx", "args": [], "packages": []}]
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post("/v1/results/push", json=payload)
+    assert response.status_code == 201, response.text
+    receipt = response.json()
+    assert receipt["status"] == "stored"
+    projection = receipt["graph_persistence"]
+    assert projection["status"] == "persisted"
+    assert projection["nodes"] >= 2 and projection["edges"] >= 1
+    assert graph.snapshot_identity(tenant_id="default", scan_id=projection["scan_id"])[1]
+    assert client.get(f"/v1/results/push/{receipt['job_id']}").json()["graph_persistence"] == projection

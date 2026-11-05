@@ -237,3 +237,28 @@ def test_cross_tenant_reconciliation_rebinds_each_job_before_write(cleanup) -> N
         ("tenant-a-job", "tenant-a"),
         ("tenant-b-job", "tenant-b"),
     ]
+
+
+@pytest.mark.parametrize("status", [JobStatus.PENDING, JobStatus.RUNNING])
+def test_periodic_reaper_leaves_distributed_jobs_to_lease_recovery(monkeypatch, status):
+    from datetime import datetime, timezone
+
+    from agent_bom.api import server
+    from agent_bom.api.postgres_job_store import PostgresJobStore
+
+    monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgres://unused/dispatch-test")
+    monkeypatch.setenv("AGENT_BOM_DISTRIBUTED_SCANS", "1")
+    store = object.__new__(PostgresJobStore)
+    job = _job("live-lease", status)
+    writes = []
+    monkeypatch.setattr(
+        store, "list_summary", lambda **kw: [{"job_id": job.job_id, "tenant_id": job.tenant_id}] if kw["status"] == status else []
+    )
+    monkeypatch.setattr(store, "get", lambda *a, **kw: job)
+    monkeypatch.setattr(store, "put", lambda job: writes.append(job.status))
+    monkeypatch.setattr(server, "_jobs", {job.job_id: job})
+    now = datetime(2026, 4, 29, tzinfo=timezone.utc)
+    assert fail_stale_active_scan_jobs(store, timeout_seconds=1800, now=now) == 0
+    server._fail_stuck_running_jobs(store, now)
+    assert job.status == status
+    assert writes == []
