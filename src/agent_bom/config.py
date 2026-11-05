@@ -513,12 +513,12 @@ CLOUD_CIS_TIMEOUT_SECONDS = min(max(_float("AGENT_BOM_CLOUD_CIS_TIMEOUT_SECONDS"
 # reclaim it (the owning node renews the lease each poll while the job runs).
 API_SCAN_LEASE_SECONDS = _int("AGENT_BOM_API_SCAN_LEASE_SECONDS", 600)
 API_SCAN_CLAIM_POLL_SECONDS = _int("AGENT_BOM_API_SCAN_CLAIM_POLL_SECONDS", 3)
-# Cloud-connection scan scheduler (Phase B.2). The background loop re-scans
-# cloud connections that carry an interval, so "connect once, keeps evaluating"
-# is automatic. Disabled by default (AGENT_BOM_CONNECTIONS_SCHEDULER, read live)
-# so it never runs in CLI/dev. The minimum per-connection interval guards
-# against hammering a customer account; concurrency bounds how many brokered
-# scans run at once; poll seconds is how often the loop re-checks for due work.
+API_SCAN_MAX_ATTEMPTS = _int("AGENT_BOM_API_SCAN_MAX_ATTEMPTS", 5)  # Claims before a job that keeps losing workers fails; below 1 means 1
+# Cloud-connection scan scheduler: re-scans connections that carry an interval.
+# Disabled by default (AGENT_BOM_CONNECTIONS_SCHEDULER, read live) so it never
+# runs in CLI/dev. The minimum per-connection interval guards against hammering
+# a customer account; concurrency bounds how many brokered scans run at once;
+# poll seconds is how often the loop re-checks for due work.
 CONNECTIONS_SCHEDULER_POLL_SECONDS = _int("AGENT_BOM_CONNECTIONS_SCHEDULER_POLL_SECONDS", 60)
 CONNECTIONS_SCHEDULER_MIN_INTERVAL_MINUTES = _int("AGENT_BOM_CONNECTIONS_SCHEDULER_MIN_INTERVAL_MINUTES", 15)
 CONNECTIONS_SCHEDULER_MAX_CONCURRENCY = _int("AGENT_BOM_CONNECTIONS_SCHEDULER_MAX_CONCURRENCY", 4)

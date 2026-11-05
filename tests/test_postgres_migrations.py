@@ -55,7 +55,7 @@ _FORK_GUARD_INDEX_CANON = "createuniqueindexifnotexistsaudit_log_team_prevsig_un
 
 # The newest migration. One place to update when a revision lands, so the
 # single-head property and the head's identity do not drift apart.
-ALEMBIC_HEAD = "20261105_02"
+ALEMBIC_HEAD = "20261105_03"
 
 
 def _canonical_sql(text: str) -> str:
@@ -1052,8 +1052,8 @@ def test_finding_lifecycle_migration_matches_bootstrap_with_rls_and_a_tenant_key
 
     statements = []
     monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(op=SimpleNamespace(execute=statements.append)))
-    migration = _load_module(VERSIONS_DIR / "20261105_02_finding_lifecycle.py", "finding_lifecycle_upgrade")
-    assert (migration.revision, migration.down_revision) == ("20261105_02", "20261105_01")
+    migration = _load_module(VERSIONS_DIR / "20261105_03_finding_lifecycle.py", "finding_lifecycle_upgrade")
+    assert (migration.revision, migration.down_revision) == ("20261105_03", "20261105_02")
     migration.upgrade()
     assert statements == [POSTGRES_FINDING_LIFECYCLE_V1]
     assert POSTGRES_FINDING_LIFECYCLE_V1 in RUNTIME_SCHEMA_SQL.read_text()

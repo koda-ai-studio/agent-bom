@@ -112,3 +112,63 @@ def test_contract_note_reaches_real_cli_output():
     assert result.exit_code == 1, result.output
     assert "not a scanner error" in result.output
     assert EXIT_CODE_CONTRACT_URL in result.output
+
+
+def _compute_with_push(monkeypatch, delivered, *, quiet: bool = False, report: AIBOMReport | None = None, fail_on: str | None = None):
+    def fake_push(url, results, **kwargs):
+        if isinstance(delivered, Exception):
+            raise delivered
+        return delivered
+
+    monkeypatch.setattr("agent_bom.push.push_results", fake_push)
+    console, buffer = _console()
+    ctx = ScanContext(con=console)
+    ctx.report = report or AIBOMReport()
+    code = compute_exit_code(
+        ctx,
+        fail_on_severity=fail_on,
+        warn_on_severity=None,
+        fail_on_kev=False,
+        fail_if_ai_risk=False,
+        push_url="https://control-plane.example/v1/results/push",
+        push_api_key=None,
+        quiet=quiet,
+    )
+    return code, ctx, buffer.getvalue()
+
+
+def test_delivered_push_leaves_a_clean_scan_at_zero(monkeypatch):
+    code, ctx, output = _compute_with_push(monkeypatch, True)
+    assert code == 0
+    assert ctx.exit_code == 0
+    assert "Results pushed" in output
+
+
+def test_undelivered_push_fails_a_clean_scan_and_names_the_cause(monkeypatch):
+    code, ctx, output = _compute_with_push(monkeypatch, False)
+    assert code == 1
+    assert ctx.exit_code == 1
+    assert "not delivered" in output
+    assert "not a scanner error" not in output
+
+
+def test_quiet_still_reports_an_undelivered_push_on_stderr(monkeypatch, capsys):
+    code, _, output = _compute_with_push(monkeypatch, False, quiet=True)
+    assert code == 1
+    assert output == ""
+    assert "not delivered" in capsys.readouterr().err
+
+
+def test_push_exception_fails_the_scan_without_leaking_the_credential(monkeypatch):
+    secret = "postgresql://user:hunter2@internal.example/db"
+    code, _, output = _compute_with_push(monkeypatch, RuntimeError(f"cannot reach {secret}"))
+    assert code == 1
+    assert "hunter2" not in output
+    assert "not delivered" in output
+
+
+def test_undelivered_push_does_not_hide_a_scan_verdict(monkeypatch):
+    code, _, output = _compute_with_push(monkeypatch, False, report=_report_with_high_finding(), fail_on="high")
+    assert code == 1
+    assert "not delivered" in output
+    assert "not a scanner error" in output

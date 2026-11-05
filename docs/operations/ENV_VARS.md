@@ -41,6 +41,7 @@ so they cannot regress silently, but they are not part of this reference.
 | `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` | `int` | `192 * 1024 * 1024` | Decoded POST /v1/results/push budget (10k-package estate: 154 MB raw, 8.7 MB gzip); the API clamps it to 240 MiB (jsonb limit). |
 | `AGENT_BOM_API_SCAN_CLAIM_POLL_SECONDS` | `int` | `3` | — |
 | `AGENT_BOM_API_SCAN_LEASE_SECONDS` | `int` | `600` | Distributed scan dispatch (multi-replica work-stealing). When enabled, scan jobs are enqueued to a shared Postgres dispatch queue and any control-plane replica claims them via FOR UPDATE SKIP LOCKED, so scan throughput scales with replicas  |
+| `AGENT_BOM_API_SCAN_MAX_ATTEMPTS` | `int` | `5` | Claims before a job that keeps losing workers fails; below 1 means 1 |
 | `AGENT_BOM_API_SCAN_WORKERS` | `int` | `min(4, os.cpu_count() or 2)` | — |
 | `AGENT_BOM_API_SCAN_WORKER_RECYCLE_JOBS` | `int` | `10` | — |
 | `AGENT_BOM_AWS_EVENT_MAX_BATCHES` | `int` | `10` | — |
@@ -53,7 +54,7 @@ so they cannot regress silently, but they are not part of this reference.
 | `AGENT_BOM_BODY_MIN_BPS` | `int` | `256` | Slowloris throughput floor (audit-5 PR-C): minimum sustained body bytes/second once a request body crosses the warmup threshold inside MaxBodySizeMiddleware. 0 disables the floor entirely (escape hatch for legitimate slow clients in restric |
 | `AGENT_BOM_CONNECTIONS_SCHEDULER_MAX_CONCURRENCY` | `int` | `4` | — |
 | `AGENT_BOM_CONNECTIONS_SCHEDULER_MIN_INTERVAL_MINUTES` | `int` | `15` | — |
-| `AGENT_BOM_CONNECTIONS_SCHEDULER_POLL_SECONDS` | `int` | `60` | Cloud-connection scan scheduler (Phase B.2). The background loop re-scans cloud connections that carry an interval, so "connect once, keeps evaluating" is automatic. Disabled by default (AGENT_BOM_CONNECTIONS_SCHEDULER, read live) so it nev |
+| `AGENT_BOM_CONNECTIONS_SCHEDULER_POLL_SECONDS` | `int` | `60` | Cloud-connection scan scheduler: re-scans connections that carry an interval. Disabled by default (AGENT_BOM_CONNECTIONS_SCHEDULER, read live) so it never runs in CLI/dev. The minimum per-connection interval guards against hammering a custo |
 | `AGENT_BOM_FINDINGS_APPROXIMATE_TOTAL_THRESHOLD` | `int` | `50000` | Skip exact COUNT(*) on /v1/findings once cached total exceeds this threshold (0 = disabled). |
 | `AGENT_BOM_GCP_EVENT_MAX_BATCHES` | `int` | `10` | — |
 | `AGENT_BOM_GCP_EVENT_MAX_MESSAGES` | `int` | `10` | Event-driven GCP posture ingestion. When an operator wires Cloud Asset Inventory feed / audit logs → a Pub/Sub subscription (opt-in via AGENT_BOM_GCP_EVENT_SUBSCRIPTION, read live, default off), the bounded Pub/Sub consumer drains change ev |

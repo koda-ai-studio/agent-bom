@@ -4,16 +4,16 @@ Empty tables only, so the upgrade is brief. The control plane's cleanup tick see
 existing dates from retained scans in bounded batches; reads answer from the
 retained reports until it finishes.
 
-Revision ID: 20261105_02
-Revises: 20261105_01
+Revision ID: 20261105_03
+Revises: 20261105_02
 """
 
 from alembic import op
 
 from agent_bom.api.storage.finding_lifecycle_schema import POSTGRES_FINDING_LIFECYCLE_V1
 
-revision = "20261105_02"
-down_revision = "20261105_01"
+revision = "20261105_03"
+down_revision = "20261105_02"
 branch_labels = None
 depends_on = None
 

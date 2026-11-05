@@ -136,6 +136,7 @@ _DISPATCH_QUEUE_ALLOWED_COLUMNS = {
     "status",
     "claimed_by",
     "lease_expires_at",
+    "attempts",
 }
 
 

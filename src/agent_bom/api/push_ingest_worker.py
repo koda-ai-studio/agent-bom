@@ -14,6 +14,7 @@ from typing import Any
 
 from agent_bom.api.graph_persistence import persist_graph_snapshot
 from agent_bom.api.hub_ingest import ingest_runtime_findings
+from agent_bom.api.job_read_retry import read_job_riding_out_blips
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob
 from agent_bom.api.observability_events import _logger, _now
 from agent_bom.api.pipeline import register_push_ingest_handler
@@ -139,7 +140,7 @@ def run_push_ingest(job: ScanJob) -> None:
     """
 
     store = _get_store()
-    current = store.get(job.job_id, tenant_id=job.tenant_id)
+    current = read_job_riding_out_blips(store, job)
     if current is None or not is_push_ingest_job(current):
         return
     try:

@@ -28,10 +28,19 @@ from agent_bom.api.storage.job_read_projections import postgres_demo_exists, pos
 from agent_bom.api.storage.job_revisions import POSTGRES_JOB_REVISIONS_V1, read_postgres_job_revision
 from agent_bom.api.storage.jobs import put_job, require_job_tenant
 from agent_bom.api.storage.jobs_schema import JOBS_SCHEMA_VERSION, POSTGRES_TENANT_KEYS
+from agent_bom.api.storage.postgres_job_dispatch import (
+    ENQUEUE_DISPATCH_SQL,
+    POSTGRES_DISPATCH_QUEUE,
+    postgres_fail_dispatch_job,
+    postgres_put_with_request_lease,
+    postgres_stranded_pushed_jobs,
+    postgres_unrecoverable_dispatch_rows,
+)
 from agent_bom.api.storage.sql import connection_session
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.api.store import DEMO_ESTATE_TRIGGERED_BY, _literal_like_pattern, _require_tenant_scope
 from agent_bom.config import API_JOB_TTL_SECONDS as _JOB_TTL_SECONDS
+from agent_bom.config import API_SCAN_MAX_ATTEMPTS
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -47,6 +56,10 @@ class PostgresJobStore(PostgresFindingLifecycle):
     backfill_finding_history = postgres_history_backfill
     has_usable_demo_job = postgres_demo_exists
     pending_dispatch_count = postgres_pending_dispatch_count
+    put_with_request_lease = postgres_put_with_request_lease
+    unrecoverable_dispatch_rows = postgres_unrecoverable_dispatch_rows
+    stranded_pushed_jobs = postgres_stranded_pushed_jobs
+    fail_dispatch_job = postgres_fail_dispatch_job
     get_status_view = postgres_status_view
     get_detail_projection = postgres_detail_projection
     retains_job_objects_in_memory = False
@@ -185,17 +198,7 @@ class PostgresJobStore(PostgresFindingLifecycle):
                 "ON cis_benchmark_checks(team_id, cloud, status, priority, measured_at DESC)"
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_cis_checks_scan ON cis_benchmark_checks(scan_id)")
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS scan_dispatch_queue (
-                    job_id           TEXT PRIMARY KEY REFERENCES scan_jobs(job_id) ON DELETE CASCADE,
-                    tenant_id        TEXT NOT NULL,
-                    created_at       TEXT NOT NULL,
-                    status           TEXT NOT NULL DEFAULT 'pending',
-                    claimed_by       TEXT,
-                    lease_expires_at TEXT
-                )
-            """)
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_dispatch_pending ON scan_dispatch_queue(status, created_at)")
+            conn.execute(POSTGRES_DISPATCH_QUEUE)
             conn.execute(POSTGRES_TENANT_KEYS)
             _ensure_tenant_rls(conn, "scan_jobs", "team_id")
             _ensure_tenant_rls(conn, "cis_benchmark_checks", "team_id")
@@ -268,12 +271,7 @@ class PostgresJobStore(PostgresFindingLifecycle):
             for job in jobs:
                 self._put_on_connection(conn, job)
             for job in dispatch_jobs:
-                conn.execute(
-                    """INSERT INTO scan_dispatch_queue (job_id, tenant_id, created_at, status)
-                       VALUES (%s, %s, %s, 'pending')
-                       ON CONFLICT (tenant_id, job_id) DO NOTHING""",
-                    (job.job_id, job.tenant_id, job.created_at),
-                )
+                conn.execute(ENQUEUE_DISPATCH_SQL, (job.job_id, job.tenant_id, job.created_at))
             conn.commit()
         job_status_count_cache.invalidate_tenant(tenant_id)
 
@@ -623,23 +621,18 @@ class PostgresJobStore(PostgresFindingLifecycle):
         token = set_current_tenant(tenant_id)
         try:
             with _tenant_connection(self._pool) as conn:
-                conn.execute(
-                    """INSERT INTO scan_dispatch_queue (job_id, tenant_id, created_at, status)
-                       VALUES (%s, %s, %s, 'pending')
-                       ON CONFLICT (tenant_id, job_id) DO NOTHING""",
-                    (job.job_id, tenant_id, job.created_at),
-                )
+                conn.execute(ENQUEUE_DISPATCH_SQL, (job.job_id, tenant_id, job.created_at))
                 conn.commit()
         finally:
             reset_current_tenant(token)
 
-    def claim_next(self, worker_id: str, lease_seconds: int) -> ScanJob | None:
+    def claim_next(self, worker_id: str, lease_seconds: int, max_attempts: int = API_SCAN_MAX_ATTEMPTS) -> ScanJob | None:
         """Atomically claim the oldest claimable job and return its full ScanJob.
 
         Claims a ``pending`` row, or a ``running`` row whose lease has expired
-        (the owning node died), using ``FOR UPDATE SKIP LOCKED`` so concurrent
-        claimers on other replicas never block or double-claim. Returns ``None``
-        when nothing is claimable.
+        (the owning node died) and which has attempts left, using
+        ``FOR UPDATE SKIP LOCKED`` so concurrent claimers on other replicas never
+        block or double-claim. Returns ``None`` when nothing is claimable.
         """
         claim_owner = f"{worker_id}:{uuid4().hex}"
         # Dispatch polling is a high-frequency internal maintenance loop. The
@@ -652,10 +645,12 @@ class PostgresJobStore(PostgresFindingLifecycle):
                         WHERE status = 'pending'
                            OR (status = 'running'
                                AND lease_expires_at IS NOT NULL
-                               AND lease_expires_at < {self._NOW_ISO})
+                               AND lease_expires_at < {self._NOW_ISO}
+                               AND attempts < %s)
                         ORDER BY created_at ASC
                         FOR UPDATE SKIP LOCKED
                         LIMIT 1""",  # nosec B608 - _NOW_ISO is a fixed SQL fragment, no user input
+                    (int(max_attempts),),
                 ).fetchone()
                 if row is None:
                     conn.commit()
@@ -663,7 +658,7 @@ class PostgresJobStore(PostgresFindingLifecycle):
                 job_id, tenant_id = row[0], row[1]
                 conn.execute(
                     f"""UPDATE scan_dispatch_queue
-                        SET status = 'running', claimed_by = %s, lease_expires_at = {self._LEASE_ISO}
+                        SET status = 'running', claimed_by = %s, lease_expires_at = {self._LEASE_ISO}, attempts = attempts + 1
                         WHERE job_id = %s AND tenant_id = %s""",  # nosec B608 - _LEASE_ISO is a fixed SQL fragment
                     (claim_owner, int(lease_seconds), job_id, tenant_id),
                 )
@@ -697,7 +692,7 @@ class PostgresJobStore(PostgresFindingLifecycle):
                 conn.execute(
                     f"""UPDATE scan_dispatch_queue
                         SET lease_expires_at = {self._LEASE_ISO}
-                        WHERE status = 'running' AND (tenant_id, job_id, claimed_by) IN
+                        WHERE status IN ('running', 'request') AND (tenant_id, job_id, claimed_by) IN
                             (SELECT * FROM unnest(%s::text[], %s::text[], %s::text[]))""",  # nosec B608 - fixed fragment
                     (int(lease_seconds), [key[0] for key in claims], [key[1] for key in claims], list(claims.values())),
                 )
@@ -716,8 +711,8 @@ class PostgresJobStore(PostgresFindingLifecycle):
                 )
                 conn.commit()
 
-    def requeue_expired_leases(self) -> int:
-        """Reset jobs whose lease expired (dead node) back to pending. Returns count."""
+    def requeue_expired_leases(self, max_attempts: int = API_SCAN_MAX_ATTEMPTS) -> int:
+        """Reset jobs whose lease expired (dead node) and that have attempts left. Returns count."""
         with bypass_tenant_rls(audit=False, warn=False):
             with _maintenance_connection(self._maintenance_pool) as conn:
                 cursor = conn.execute(
@@ -725,7 +720,9 @@ class PostgresJobStore(PostgresFindingLifecycle):
                         SET status = 'pending', claimed_by = NULL, lease_expires_at = NULL
                         WHERE status = 'running'
                           AND lease_expires_at IS NOT NULL
-                          AND lease_expires_at < {self._NOW_ISO}""",  # nosec B608 - fixed fragment
+                          AND lease_expires_at < {self._NOW_ISO}
+                          AND attempts < %s""",  # nosec B608 - fixed fragment
+                    (int(max_attempts),),
                 )
                 conn.commit()
                 return int(cursor.rowcount)

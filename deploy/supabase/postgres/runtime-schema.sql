@@ -843,6 +843,11 @@ END $$;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('scan_jobs',4,now())
 ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,4);
 
+-- Bounded redelivery of dispatched jobs v5
+ALTER TABLE scan_dispatch_queue ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
+INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('scan_jobs',5,now())
+ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,5);
+
 -- Resumable provider collection v1
 CREATE TABLE IF NOT EXISTS trace_collection_checkpoints (
     tenant_id TEXT NOT NULL, connection_id TEXT NOT NULL, data TEXT NOT NULL,
@@ -915,7 +920,7 @@ END $$;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('gateway_audit_outbox',1,now())
 ON CONFLICT(component) DO NOTHING;
 
--- Durable finding lifecycle (migration 20261105_02).
+-- Durable finding lifecycle (migration 20261105_03).
 CREATE TABLE IF NOT EXISTS finding_lifecycle (
         tenant_id TEXT NOT NULL,
         scope_hash TEXT NOT NULL,
