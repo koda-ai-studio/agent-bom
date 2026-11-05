@@ -18,6 +18,8 @@ from urllib.parse import quote
 
 from rich.markup import escape
 
+from agent_bom.output.sarif_common import _sarif_location
+
 SARIF_RULE_ID = "agent-bom/possibly-affected"
 _REGISTRY_SELECTED = "registry_selected_version"
 _NVD_URL = "https://nvd.nist.gov/vuln/detail/"
@@ -94,8 +96,7 @@ def _sarif_rule() -> dict[str, Any]:
 
 def _sarif_result(row: dict[str, Any]) -> dict[str, Any]:
     purl = row["package"]["purl"] or f"pkg:{row['package']['ecosystem']}/{row['package']['name']}@{row['package']['version']}"
-    logical = {"logicalLocations": [{"fullyQualifiedName": purl}]}
-    location = {"physicalLocation": {"artifactLocation": {"uri": row["images"][0]}}, **logical} if row["images"] else logical
+    location = _sarif_location(purl, None, scanned_artifact=row["images"][0] if row["images"] else None)
     fingerprint = hashlib.sha256(f"{SARIF_RULE_ID}:{row['id']}:{row['package']['stable_id']}".encode()).hexdigest()
     fix = f" Upstream fix: {row['upstream_fixed_version']}." if row.get("upstream_fixed_version") else ""
     return {
@@ -118,6 +119,7 @@ def _sarif_result(row: dict[str, Any]) -> dict[str, Any]:
             "upstream_fixed_version": row.get("upstream_fixed_version"),
             "advisory_severity": row.get("severity"),
             "affected_agents": list(row["agents"]),
+            **({"scanned_artifact": row["images"][0]} if row["images"] else {}),
         },
     }
 

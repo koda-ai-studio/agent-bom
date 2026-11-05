@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from pathlib import Path
 from typing import Any
 
 from agent_bom.asset_provenance import agent_discovery_provenance, sanitize_discovery_provenance
@@ -43,6 +44,7 @@ from agent_bom.output.sarif_common import (
     _sarif_severity,
     _SarifCatalog,
     _to_relative_path,
+    enforce_physical_locations,
 )
 from agent_bom.output.sarif_scanners import (
     _DEDICATED_CIS_PROVIDERS,
@@ -62,6 +64,7 @@ from agent_bom.output.sarif_taxonomy import (
 )
 from agent_bom.output.source_locations import (
     SourceIndex,
+    _relative_uri,
     evidence_relative_path,
     finding_image_reference,
     finding_package_location,
@@ -393,6 +396,7 @@ def _cve_sarif_result(
         message_text += f" Exposure path: {exposure_chain}. Blast radius: {exposure_path_blast_summary(exposure_path)}."
 
     config_path, start_line = finding_package_location(finding, source_index or {})
+    scanned_artifact = finding_image_reference(finding, report)
     fp_input = f"{rule_id}:{pkg_name}:{pkg_version}:{config_path}"
     kind = "informational" if sev == Severity.NONE else "fail"
     result: dict = {
@@ -400,8 +404,8 @@ def _cve_sarif_result(
         "level": level,
         "kind": kind,
         "message": {"text": sanitize_advisory_text("title", message_text, fallback=f"{rule_id} package vulnerability")},
-        **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=config_path, start_line=start_line),
-        "locations": [_sarif_location(config_path, start_line, scanned_artifact=finding_image_reference(finding, report))],
+        **_sarif_fingerprint_fields(stable_input=fp_input),
+        "locations": [_sarif_location(config_path, start_line, scanned_artifact=scanned_artifact)],
     }
     related_locations = _exposure_related_locations(exposure_path)
     if related_locations:
@@ -461,6 +465,8 @@ def _cve_sarif_result(
     }
     if finding.fixed_version:
         result_properties["fixed_version"] = finding.fixed_version
+    if scanned_artifact:
+        result_properties["scanned_artifact"] = scanned_artifact
     result_properties.update({key: value for key in ("vex_status", "vex_justification", "vex_source") if (value := evidence(finding, key))})
     package_provenance = evidence(finding, "package_discovery_provenance")
     if package_provenance:
@@ -660,22 +666,45 @@ def _unified_finding_properties(finding: Finding, rule_id: str, evidence: dict[s
     }
 
 
-def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence: dict[str, Any]) -> dict[str, Any]:
-    location = finding.asset.location
-    file_path = _to_relative_path(location, _ecosystem_from_purl(finding.asset.identifier)) if location else None
-    if file_path is None or file_path.startswith("<"):  # a redacted <path:...> label is not a URI
-        file_path = evidence_relative_path(finding.evidence)
+def _scan_root_path(report: AIBOMReport) -> str:
+    inventory = report.project_inventory_data if isinstance(report.project_inventory_data, dict) else {}
+    return str(inventory.get("root") or "")
+
+
+def _is_path_like(value: str | None) -> bool:
+    """False for a redacted label, a launch command or a URL, none of which name a file."""
+    return bool(value) and not str(value).startswith("<") and "://" not in str(value) and not any(ch.isspace() for ch in str(value))
+
+
+def _agent_config_uri(finding: Finding, report: AIBOMReport) -> str | None:
+    """The MCP config behind an agent-scoped finding: it declares what the agent can reach."""
+    if finding.asset.asset_type != "agent":
+        return None
+    agent = next((agent for agent in report.agents if agent.name == finding.asset.name), None)
+    for server in agent.mcp_servers if agent else []:
+        if _is_path_like(server.config_path) and Path(str(server.config_path)).is_file():
+            uri = _relative_uri(str(server.config_path), _scan_root_path(report))
+            if uri:
+                return uri
+    return None
+
+
+def _finding_file_uri(finding: Finding, report: AIBOMReport) -> str | None:
+    """The source file that produced a finding, or None when none is known."""
+    location, identifier = finding.asset.location, finding.asset.identifier
+    if _is_path_like(location):
+        return _to_relative_path(str(location), _ecosystem_from_purl(identifier))
+    uri = evidence_relative_path(finding.evidence)
+    if uri is None and _is_path_like(identifier) and Path(str(identifier)).is_file():
+        uri = _relative_uri(str(identifier), _scan_root_path(report))
+    return uri or _agent_config_uri(finding, report)
+
+
+def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence: dict[str, Any], report: AIBOMReport) -> dict[str, Any]:
+    file_path = _finding_file_uri(finding, report)
     raw_start_line = finding.evidence.get("line_number") or finding.evidence.get("line") or finding.evidence.get("source_line")
     start_line = raw_start_line if isinstance(raw_start_line, int) and raw_start_line > 0 else 1
-    fingerprint_uri = file_path or f"{finding.asset.asset_type}:{finding.asset.stable_id}"
-    fp_input = f"{finding.id}:{fingerprint_uri}:{finding.asset.stable_id}"
-    fingerprint_fields = _sarif_fingerprint_fields(
-        stable_input=fp_input,
-        artifact_uri=fingerprint_uri,
-        start_line=start_line,
-    )
-    if file_path is None:
-        fingerprint_fields.pop("partialFingerprints", None)
+    fp_input = f"{finding.id}:{file_path or finding.asset.asset_type}:{finding.asset.stable_id}"
     finding_result: dict = {
         "ruleId": rule_id,
         "level": level,
@@ -687,7 +716,7 @@ def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence
                 fallback=_sanitize_scanner_text("description", finding.description, fallback=finding.finding_type.value),
             )
         },
-        **fingerprint_fields,
+        **_sarif_fingerprint_fields(stable_input=fp_input),
         "properties": _unified_finding_properties(finding, rule_id, evidence),
     }
     if file_path is not None:
@@ -713,7 +742,7 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
             catalog.rules.append(_unified_finding_rule(finding, rule_id, level, security_severity))
         elif finding.cwe_ids:
             _merge_rule_cwe_tags(catalog.rules, rule_id, finding.cwe_ids)
-        catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence))
+        catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence, report))
 
 
 def _build_sarif_run(report: AIBOMReport, catalog: _SarifCatalog, scan_run: ScanRun) -> dict[str, Any]:
@@ -765,6 +794,7 @@ def to_sarif(
     _add_ai_inventory_results(catalog, report)
     _add_cis_benchmark_results(catalog, report)
     add_possibly_affected_sarif(catalog.rules, catalog.results, report)
+    enforce_physical_locations(catalog.results)
     document: dict[str, Any] = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
         "version": "2.1.0",

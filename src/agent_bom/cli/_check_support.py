@@ -198,13 +198,19 @@ def _check_sarif_result(
         "locations": [
             {
                 "physicalLocation": {
-                    "artifactLocation": {"uri": f"pkg:{ecosystems[0] if ecosystems else 'generic'}/{package}@{version}"},
+                    "artifactLocation": {"uri": _check_artifact_uri(ecosystems, package, version), "uriBaseId": "%SRCROOT%"},
                     "region": {"startLine": 1, "startColumn": 1},
                 }
             }
         ],
         "properties": properties,
     }
+
+
+def _check_artifact_uri(ecosystems: list, package: str, version: str) -> str:
+    from agent_bom.output.sarif_common import virtual_artifact_uri
+
+    return virtual_artifact_uri("package", f"{ecosystems[0] if ecosystems else 'generic'}/{package}@{version}")
 
 
 def _check_payload_to_sarif(payload: dict) -> dict:

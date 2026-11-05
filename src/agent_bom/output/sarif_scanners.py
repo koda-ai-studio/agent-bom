@@ -72,7 +72,7 @@ def _add_iac_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
                     fallback=sanitize_advisory_text("title", iac_finding.get("title", "IaC misconfiguration")),
                 )
             },
-            **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
+            **_sarif_fingerprint_fields(stable_input=fp_input),
             "locations": [_sarif_location(file_path, line_num)],
             "properties": {"compliance": list(iac_finding.get("compliance") or [])},
         }
@@ -133,7 +133,7 @@ def _add_ai_inventory_results(catalog: _SarifCatalog, report: AIBOMReport) -> No
                 "level": level,
                 "kind": "fail",
                 "message": {"text": desc},
-                **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
+                **_sarif_fingerprint_fields(stable_input=fp_input),
                 "locations": [_sarif_location(file_path, comp.get("line", 1))],
             }
         )
@@ -219,7 +219,7 @@ def _cis_result(check: dict[str, Any], cloud_key: str, rule_id: str, level: str)
                 fallback=rule_id,
             )
         },
-        **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=artifact_uri, start_line=1),
+        **_sarif_fingerprint_fields(stable_input=fp_input),
         "locations": [_sarif_location(artifact_uri, 1)],
         "properties": _cis_result_properties(check),
     }

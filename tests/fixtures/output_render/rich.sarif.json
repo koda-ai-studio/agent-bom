@@ -430,6 +430,12 @@
           },
           "locations": [
             {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              },
               "logicalLocations": [
                 {
                   "fullyQualifiedName": "package:npm/express@4.17.1"
@@ -448,6 +454,12 @@
               ],
               "message": {
                 "text": "claude-desktop"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -460,6 +472,12 @@
               ],
               "message": {
                 "text": "filesystem"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -472,6 +490,12 @@
               ],
               "message": {
                 "text": "express@4.17.1"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -484,6 +508,12 @@
               ],
               "message": {
                 "text": "CVE-2026-1001"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -496,6 +526,12 @@
               ],
               "message": {
                 "text": "read_file"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -508,6 +544,12 @@
               ],
               "message": {
                 "text": "API_TOKEN"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             }
           ],
@@ -700,7 +742,8 @@
             ],
             "attack_tags": [
               "T1190"
-            ]
+            ],
+            "no_source_file": true
           },
           "taxa": [
             {
@@ -737,6 +780,12 @@
           },
           "locations": [
             {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              },
               "logicalLocations": [
                 {
                   "fullyQualifiedName": "package:npm/express@4.17.1"
@@ -755,6 +804,12 @@
               ],
               "message": {
                 "text": "claude-desktop"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -767,6 +822,12 @@
               ],
               "message": {
                 "text": "filesystem"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -779,6 +840,12 @@
               ],
               "message": {
                 "text": "express@4.17.1"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -791,6 +858,12 @@
               ],
               "message": {
                 "text": "CVE-2026-1002"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/npm/express@4.17.1",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             }
           ],
@@ -942,7 +1015,8 @@
                 ],
                 "confidence": "medium"
               }
-            ]
+            ],
+            "no_source_file": true
           },
           "taxa": [
             {
@@ -967,6 +1041,12 @@
           },
           "locations": [
             {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/pypi/requests@2.19.0",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              },
               "logicalLocations": [
                 {
                   "fullyQualifiedName": "package:pypi/requests@2.19.0"
@@ -985,6 +1065,12 @@
               ],
               "message": {
                 "text": "cursor"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/pypi/requests@2.19.0",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -997,6 +1083,12 @@
               ],
               "message": {
                 "text": "fetcher"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/pypi/requests@2.19.0",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -1009,6 +1101,12 @@
               ],
               "message": {
                 "text": "requests@2.19.0"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/pypi/requests@2.19.0",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             },
             {
@@ -1021,6 +1119,12 @@
               ],
               "message": {
                 "text": "GHSA-aaaa-bbbb-cccc"
+              },
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/pypi/requests@2.19.0",
+                  "uriBaseId": "%SRCROOT%"
+                }
               }
             }
           ],
@@ -1171,7 +1275,8 @@
                 ],
                 "confidence": "medium"
               }
-            ]
+            ],
+            "no_source_file": true
           },
           "suppressions": [
             {
@@ -1195,9 +1300,6 @@
           },
           "fingerprints": {
             "agent-bom/v1": "b88c536ce77335eeb0ba6782384ef75eb77d4f02138255377dcd26996523b8a4"
-          },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "897da58c5dc46e143bd2f776f243f819fbf54ef23f96ffec38b4d316f03d7ac8"
           },
           "properties": {
             "advisory_id": "finding/CREDENTIAL_EXPOSURE",
@@ -1245,9 +1347,6 @@
           },
           "fingerprints": {
             "agent-bom/v1": "92b1058aaee57c43fee005812155fa67066e1f68d25ddd9d9381213dd5cf0bfd"
-          },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "5dca059b276d25d5982f27206746e245e420fe6810693b4e268c55c4a7252d86"
           },
           "properties": {
             "advisory_id": "finding/SAST/AB-SAST-002",
@@ -1322,7 +1421,7 @@
             "text": "Agent exposes a production credential"
           },
           "fingerprints": {
-            "agent-bom/v1": "0d64d2636f784a559942b3e5eec5af2fec76bbf45129ab71d89e8a9c3d3d4269"
+            "agent-bom/v1": "39784dc3f564c25d3667e5ad61a0940d65d136e776b415d0ec5f42170d5666d3"
           },
           "properties": {
             "advisory_id": "finding/CREDENTIAL_EXPOSURE/agent_credential_exposure",
@@ -1346,7 +1445,8 @@
             "ai_risk_context": null,
             "ai_summary": null,
             "attack_vector_summary": null,
-            "suppressed": true
+            "suppressed": true,
+            "no_source_file": true
           },
           "locations": [
             {
@@ -1355,7 +1455,13 @@
                   "name": "payments-agent",
                   "kind": "agent"
                 }
-              ]
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/agent/payments-agent",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
             }
           ],
           "suppressions": [
@@ -1377,7 +1483,7 @@
             "text": "Imported advisory without a package"
           },
           "fingerprints": {
-            "agent-bom/v1": "7575fab8631b4999b4c263d8c0a3fc3b99414930c311679338891e2989911ecb"
+            "agent-bom/v1": "3b805b1afc6d8894e4747d4799aa3c83bd2642484c7952e797e91f89c9fa047e"
           },
           "properties": {
             "advisory_id": "finding/CVE",
@@ -1399,7 +1505,8 @@
             "ai_risk_context": null,
             "ai_summary": null,
             "attack_vector_summary": null,
-            "suppressed": false
+            "suppressed": false,
+            "no_source_file": true
           },
           "locations": [
             {
@@ -1408,7 +1515,13 @@
                   "name": "imported-advisory",
                   "kind": "package"
                 }
-              ]
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/package/imported-advisory",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
             }
           ]
         },
@@ -1420,7 +1533,7 @@
             "text": "Databricks CIS check"
           },
           "fingerprints": {
-            "agent-bom/v1": "a871ac8527e3499e0ab668047fd13903df022227043706db706faaafabe267c1"
+            "agent-bom/v1": "c6a91eda182152aeb70341061f4b53bcbc55a3269cb68cdcb19c61beed7ae329"
           },
           "properties": {
             "advisory_id": "finding/CIS_FAIL",
@@ -1444,7 +1557,8 @@
             "ai_risk_context": null,
             "ai_summary": null,
             "attack_vector_summary": null,
-            "suppressed": false
+            "suppressed": false,
+            "no_source_file": true
           },
           "locations": [
             {
@@ -1453,7 +1567,13 @@
                   "name": "workspace",
                   "kind": "cloud_resource"
                 }
-              ]
+              ],
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "agent-bom-findings/cloud_resource/workspace",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
             }
           ]
         },
@@ -1466,9 +1586,6 @@
           },
           "fingerprints": {
             "agent-bom/v1": "71ed8dc0af25e29b4351dc7141e5e7e97f68859254e03c755f12ded838582788"
-          },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "543d122c9c49b4ef31f02b9400fad91476dfd4ebe669838d31c748a4621a4d96"
           },
           "locations": [
             {
@@ -1500,9 +1617,6 @@
           "fingerprints": {
             "agent-bom/v1": "17ca5150d081457a7264fb3e1926d7c41d933ade540c296d81a69d477481c5c0"
           },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "03a7f2bb82e0570cf7de0c0c55bbeb4886d8525e8735fd880c3951693086c4b5"
-          },
           "locations": [
             {
               "physicalLocation": {
@@ -1530,9 +1644,6 @@
           },
           "fingerprints": {
             "agent-bom/v1": "302edbfaa80607bf25d2d29a2d08dfdc64d09fd894e0c716bef400dec5b6b916"
-          },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "6c6dead756e33d34cd6a4a9ddcaaec23e1ba9e9f1ff73c8924211f471d410736"
           },
           "locations": [
             {
@@ -1562,9 +1673,6 @@
           "fingerprints": {
             "agent-bom/v1": "f6901527b0efb72326a768c0f0fd6f7f3c59fcc661486dc821d39daac9c1ebbe"
           },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "40db31dbd0f93104082db50de301a336fa928b400d2e43b5a84fb19d59b9a4f5"
-          },
           "locations": [
             {
               "physicalLocation": {
@@ -1590,9 +1698,6 @@
           "fingerprints": {
             "agent-bom/v1": "d944496de8983bd9d6d0f2fdf10aa905669d8e6aa261f2fcf0765a0f5ba83a38"
           },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "ae4eb3b0c9679ba932f3a6d202449d8720e135e54c9740c686a2f1f759821beb"
-          },
           "locations": [
             {
               "physicalLocation": {
@@ -1617,9 +1722,6 @@
           },
           "fingerprints": {
             "agent-bom/v1": "5800682275341f6a9f3cea6490febc6619c4a418b27e30d381080e68392e3a27"
-          },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "611d74562f9004905610817ea09cbf0d8f15c4e2c05a6c47e469f891429cc58d"
           },
           "locations": [
             {
@@ -1670,9 +1772,6 @@
           },
           "fingerprints": {
             "agent-bom/v1": "3de46e2f8728e010384f3442d5bc4a05f112a5ad7952c926eb37d8004e057cad"
-          },
-          "partialFingerprints": {
-            "primaryLocationLineHash": "41fa6c2bc4fc9540312277d47256cb0e7e34b89e764c417b034dcbcfe8476585"
           },
           "locations": [
             {
