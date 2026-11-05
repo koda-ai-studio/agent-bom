@@ -88,13 +88,13 @@ def test_privileged_guest_identity_check_is_unevaluable_without_graph(check, rol
 
 
 @pytest.mark.parametrize("check", [_check_1_1, _check_1_2])
-def test_privileged_guest_identity_check_passes_when_no_matching_assignments(check):
+def test_privileged_guest_identity_check_not_applicable_when_no_matching_assignments(check):
     auth_client = MagicMock()
     auth_client.role_assignments.list_for_scope.return_value = []
 
     result = check(auth_client, "sub-123")
 
-    assert result.status == CheckStatus.PASS
+    assert result.status == CheckStatus.NOT_APPLICABLE
     assert "No " in result.evidence
 
 

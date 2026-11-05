@@ -116,7 +116,7 @@ def benchmark_results():
     outcomes = {}
     for key, result in results.items():
         check = "-".join(key.split("-")[:2])
-        outcome = {field: result.pop(field) for field in ("status", "evidence", "resource_ids")}
+        outcome = {field: result.pop(field) for field in ("status", "evidence", "resource_ids", "vacuous")}
         if check in catalog:
             assert catalog[check] == result
         catalog[check] = result

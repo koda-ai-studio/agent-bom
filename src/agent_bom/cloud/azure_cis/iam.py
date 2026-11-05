@@ -6,7 +6,7 @@ from typing import Any
 
 from agent_bom.security import sanitize_error
 
-from ..aws_cis_benchmark import CheckStatus, CISCheckResult
+from ..aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 from ..azure_graph import (
     ACCESS_REVIEW_DEFINITIONS_PATH,
     AZURE_MANAGEMENT_APP_ID,
@@ -64,6 +64,7 @@ def _check_1_1(auth_client: Any, subscription_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No Owner role assignments found on subscription."
+            not_applicable_if_empty(result, len(assignments), "role assignment")
 
     except Exception as exc:
         result.status = CheckStatus.ERROR
@@ -103,6 +104,7 @@ def _check_1_2(auth_client: Any, subscription_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No subscription-level Contributor role assignments found."
+            not_applicable_if_empty(result, len(assignments), "role assignment")
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not read Contributor role assignments: {sanitize_error(exc, generic=True)}"

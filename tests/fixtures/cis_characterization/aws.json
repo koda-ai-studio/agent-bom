@@ -74,7 +74,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Account contact details kept current"
+     "title": "Account contact details kept current",
+     "vacuous": false
     }
    },
    "_check_1_10": {
@@ -117,7 +118,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Support role exists for AWS Support incidents"
+     "title": "Support role exists for AWS Support incidents",
+     "vacuous": false
     }
    },
    "_check_1_19": {
@@ -132,7 +134,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Instance roles used for resource access"
+     "title": "Instance roles used for resource access",
+     "vacuous": false
     }
    },
    "_check_1_2": {
@@ -147,7 +150,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Security contact information registered"
+     "title": "Security contact information registered",
+     "vacuous": false
     }
    },
    "_check_1_20": {
@@ -162,7 +166,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "IAM Access Analyzer enabled in all regions"
+     "title": "IAM Access Analyzer enabled in all regions",
+     "vacuous": false
     }
    },
    "_check_1_22": {
@@ -177,7 +182,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "AWSCloudShellFullAccess access restricted"
+     "title": "AWSCloudShellFullAccess access restricted",
+     "vacuous": false
     }
    },
    "_check_1_3": {
@@ -192,7 +198,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "not_applicable",
-     "title": "Root not reliant on security questions alone"
+     "title": "Root not reliant on security questions alone",
+     "vacuous": false
     }
    },
    "_check_1_4": {
@@ -247,7 +254,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "EBS default volume encryption enabled"
+     "title": "EBS default volume encryption enabled",
+     "vacuous": false
     }
    },
    "_check_2_3_1": {
@@ -278,7 +286,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "S3 object-level write-event logging enabled"
+     "title": "S3 object-level write-event logging enabled",
+     "vacuous": false
     }
    },
    "_check_3_11": {
@@ -293,7 +302,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "S3 object-level read-event logging enabled"
+     "title": "S3 object-level read-event logging enabled",
+     "vacuous": false
     }
    },
    "_check_3_2": {
@@ -336,7 +346,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for unauthorized API calls"
+     "title": "Metric filter and alarm for unauthorized API calls",
+     "vacuous": false
     }
    },
    "_check_4_10": {
@@ -351,7 +362,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for security group changes"
+     "title": "Metric filter and alarm for security group changes",
+     "vacuous": false
     }
    },
    "_check_4_11": {
@@ -366,7 +378,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for NACL changes"
+     "title": "Metric filter and alarm for NACL changes",
+     "vacuous": false
     }
    },
    "_check_4_12": {
@@ -381,7 +394,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for network gateway changes"
+     "title": "Metric filter and alarm for network gateway changes",
+     "vacuous": false
     }
    },
    "_check_4_13": {
@@ -396,7 +410,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for route table changes"
+     "title": "Metric filter and alarm for route table changes",
+     "vacuous": false
     }
    },
    "_check_4_14": {
@@ -411,7 +426,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for VPC changes"
+     "title": "Metric filter and alarm for VPC changes",
+     "vacuous": false
     }
    },
    "_check_4_15": {
@@ -426,7 +442,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for AWS Organizations changes"
+     "title": "Metric filter and alarm for AWS Organizations changes",
+     "vacuous": false
     }
    },
    "_check_4_16": {
@@ -441,7 +458,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "AWS Security Hub enabled"
+     "title": "AWS Security Hub enabled",
+     "vacuous": false
     }
    },
    "_check_4_2": {
@@ -456,7 +474,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for console sign-in without MFA"
+     "title": "Metric filter and alarm for console sign-in without MFA",
+     "vacuous": false
     }
    },
    "_check_4_3": {
@@ -471,7 +490,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Metric filter and alarm for root account usage"
+     "title": "Metric filter and alarm for root account usage",
+     "vacuous": false
     }
    },
    "_check_4_4": {
@@ -486,7 +506,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for IAM policy changes"
+     "title": "Metric filter and alarm for IAM policy changes",
+     "vacuous": false
     }
    },
    "_check_4_5": {
@@ -501,7 +522,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for CloudTrail config changes"
+     "title": "Metric filter and alarm for CloudTrail config changes",
+     "vacuous": false
     }
    },
    "_check_4_6": {
@@ -516,7 +538,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for console auth failures"
+     "title": "Metric filter and alarm for console auth failures",
+     "vacuous": false
     }
    },
    "_check_4_7": {
@@ -531,7 +554,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for CMK disable or deletion"
+     "title": "Metric filter and alarm for CMK disable or deletion",
+     "vacuous": false
     }
    },
    "_check_4_8": {
@@ -546,7 +570,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for S3 bucket policy changes"
+     "title": "Metric filter and alarm for S3 bucket policy changes",
+     "vacuous": false
     }
    },
    "_check_4_9": {
@@ -561,7 +586,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for AWS Config changes"
+     "title": "Metric filter and alarm for AWS Config changes",
+     "vacuous": false
     }
    },
    "_check_5_1": {
@@ -576,7 +602,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "No NACL allows unrestricted ingress to admin ports"
+     "title": "No NACL allows unrestricted ingress to admin ports",
+     "vacuous": false
     }
    },
    "_check_5_2": {
@@ -599,7 +626,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "VPC peering route tables least-privilege"
+     "title": "VPC peering route tables least-privilege",
+     "vacuous": false
     }
    },
    "_check_5_5": {
@@ -620,7 +648,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Account contact details kept current"
+     "title": "Account contact details kept current",
+     "vacuous": false
     }
    },
    "_check_1_10": {
@@ -628,14 +657,15 @@
      "account_id": "",
      "check_id": "1.10",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All console users have MFA enabled.",
+     "evidence": "No console-access IAM user(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable MFA for all console users via IAM > Users > Security credentials.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "MFA on all console-access IAM users"
+     "status": "not_applicable",
+     "title": "MFA on all console-access IAM users",
+     "vacuous": true
     }
    },
    "_check_1_11": {
@@ -651,14 +681,15 @@
      "account_id": "",
      "check_id": "1.13",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All IAM users have at most one active access key.",
+     "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove extra active access keys so each user has at most one.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "At most one active access key per IAM user"
+     "status": "not_applicable",
+     "title": "At most one active access key per IAM user",
+     "vacuous": true
     }
    },
    "_check_1_14": {
@@ -666,14 +697,15 @@
      "account_id": "",
      "check_id": "1.14",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All active access keys are younger than 90 days.",
+     "evidence": "No active access key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Rotate access keys older than 90 days via IAM > Users > Security credentials.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Access keys rotated within 90 days"
+     "status": "not_applicable",
+     "title": "Access keys rotated within 90 days",
+     "vacuous": true
     }
    },
    "_check_1_15": {
@@ -681,14 +713,15 @@
      "account_id": "",
      "check_id": "1.15",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All users receive permissions via groups/roles only.",
+     "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove inline and directly attached policies from IAM users; use groups instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "IAM permissions granted via groups or roles only"
+     "status": "not_applicable",
+     "title": "IAM permissions granted via groups or roles only",
+     "vacuous": true
     }
    },
    "_check_1_16": {
@@ -696,14 +729,15 @@
      "account_id": "",
      "check_id": "1.16",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No policy(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No policy(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove or scope down policies that grant '*' on '*' resources.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "no_data",
-     "title": "No full-admin IAM policies attached"
+     "status": "not_applicable",
+     "title": "No full-admin IAM policies attached",
+     "vacuous": true
     }
    },
    "_check_1_17": {
@@ -718,7 +752,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Support role exists for AWS Support incidents"
+     "title": "Support role exists for AWS Support incidents",
+     "vacuous": false
     }
    },
    "_check_1_19": {
@@ -726,14 +761,15 @@
      "account_id": "",
      "check_id": "1.19",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All running EC2 instances have IAM instance profiles.",
+     "evidence": "No EC2 instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Attach IAM instance profiles to all EC2 instances instead of embedding credentials.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Instance roles used for resource access"
+     "status": "not_applicable",
+     "title": "Instance roles used for resource access",
+     "vacuous": true
     }
    },
    "_check_1_2": {
@@ -748,7 +784,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Security contact information registered"
+     "title": "Security contact information registered",
+     "vacuous": false
     }
    },
    "_check_1_20": {
@@ -763,7 +800,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "IAM Access Analyzer enabled in all regions"
+     "title": "IAM Access Analyzer enabled in all regions",
+     "vacuous": false
     }
    },
    "_check_1_22": {
@@ -778,7 +816,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "AWSCloudShellFullAccess access restricted"
+     "title": "AWSCloudShellFullAccess access restricted",
+     "vacuous": false
     }
    },
    "_check_1_3": {
@@ -793,7 +832,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "not_applicable",
-     "title": "Root not reliant on security questions alone"
+     "title": "Root not reliant on security questions alone",
+     "vacuous": false
     }
    },
    "_check_1_4": {
@@ -808,7 +848,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "pass",
-     "title": "No root account access keys"
+     "title": "No root account access keys",
+     "vacuous": false
     }
    },
    "_check_1_5": {
@@ -825,7 +866,8 @@
      ],
      "severity": "critical",
      "status": "fail",
-     "title": "Root account MFA enabled"
+     "title": "Root account MFA enabled",
+     "vacuous": false
     }
    },
    "_check_1_6": {
@@ -842,7 +884,8 @@
      ],
      "severity": "critical",
      "status": "fail",
-     "title": "Hardware MFA for root account"
+     "title": "Hardware MFA for root account",
+     "vacuous": false
     }
    },
    "_check_1_7": {
@@ -861,7 +904,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "IAM password policy minimum length >= 14"
+     "title": "IAM password policy minimum length >= 14",
+     "vacuous": false
     }
    },
    "_check_1_9": {
@@ -876,7 +920,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "IAM password policy blocks password reuse"
+     "title": "IAM password policy blocks password reuse",
+     "vacuous": false
     }
    },
    "_check_2_1_1": {
@@ -891,7 +936,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "fail",
-     "title": "S3 account-level public access block configured"
+     "title": "S3 account-level public access block configured",
+     "vacuous": false
     }
    },
    "_check_2_1_2": {
@@ -899,14 +945,15 @@
      "account_id": "",
      "check_id": "2.1.2",
      "cis_section": "2 - Storage",
-     "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable default encryption (SSE-S3 or SSE-KMS) on all S3 buckets.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "S3 bucket server-side encryption enabled"
+     "status": "not_applicable",
+     "title": "S3 bucket server-side encryption enabled",
+     "vacuous": true
     }
    },
    "_check_2_1_3": {
@@ -914,14 +961,15 @@
      "account_id": "",
      "check_id": "2.1.3",
      "cis_section": "2 - Storage",
-     "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable MFA Delete on S3 bucket versioning configuration.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "S3 bucket MFA Delete enabled"
+     "status": "not_applicable",
+     "title": "S3 bucket MFA Delete enabled",
+     "vacuous": true
     }
    },
    "_check_2_1_4": {
@@ -929,14 +977,15 @@
      "account_id": "",
      "check_id": "2.1.4",
      "cis_section": "2 - Storage",
-     "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable versioning on all S3 buckets for data protection.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "S3 bucket versioning enabled"
+     "status": "not_applicable",
+     "title": "S3 bucket versioning enabled",
+     "vacuous": true
     }
    },
    "_check_2_2_1": {
@@ -951,7 +1000,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "EBS default volume encryption enabled"
+     "title": "EBS default volume encryption enabled",
+     "vacuous": false
     }
    },
    "_check_2_3_1": {
@@ -959,14 +1009,15 @@
      "account_id": "",
      "check_id": "2.3.1",
      "cis_section": "2 - Storage",
-     "evidence": "All RDS instances have encryption at rest enabled (or no instances found).",
+     "evidence": "No RDS instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable encryption at rest when creating RDS instances (cannot be changed post-creation).",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "RDS encryption at rest enabled"
+     "status": "not_applicable",
+     "title": "RDS encryption at rest enabled",
+     "vacuous": true
     }
    },
    "_check_2_3_2": {
@@ -974,14 +1025,15 @@
      "account_id": "",
      "check_id": "2.3.2",
      "cis_section": "2 - Storage",
-     "evidence": "All RDS instances have auto minor version upgrade enabled (or no instances found).",
+     "evidence": "No RDS instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable auto minor version upgrade on all RDS instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "RDS auto minor version upgrade enabled"
+     "status": "not_applicable",
+     "title": "RDS auto minor version upgrade enabled",
+     "vacuous": true
     }
    },
    "_check_2_4_1": {
@@ -989,14 +1041,15 @@
      "account_id": "",
      "check_id": "2.4.1",
      "cis_section": "2 - Storage",
-     "evidence": "No KMS key(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No customer-managed KMS key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable automatic key rotation for all customer-managed KMS keys.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "Customer-managed KMS key rotation enabled"
+     "status": "not_applicable",
+     "title": "Customer-managed KMS key rotation enabled",
+     "vacuous": true
     }
    },
    "_check_3_1": {
@@ -1011,7 +1064,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "fail",
-     "title": "CloudTrail enabled in all regions"
+     "title": "CloudTrail enabled in all regions",
+     "vacuous": false
     }
    },
    "_check_3_10": {
@@ -1026,7 +1080,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "S3 object-level write-event logging enabled"
+     "title": "S3 object-level write-event logging enabled",
+     "vacuous": false
     }
    },
    "_check_3_11": {
@@ -1041,7 +1096,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "S3 object-level read-event logging enabled"
+     "title": "S3 object-level read-event logging enabled",
+     "vacuous": false
     }
    },
    "_check_3_2": {
@@ -1056,7 +1112,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "CloudTrail log file validation enabled"
+     "title": "CloudTrail log file validation enabled",
+     "vacuous": false
     }
    },
    "_check_3_3": {
@@ -1071,7 +1128,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "not_applicable",
-     "title": "CloudTrail S3 bucket not publicly accessible"
+     "title": "CloudTrail S3 bucket not publicly accessible",
+     "vacuous": true
     }
    },
    "_check_3_4": {
@@ -1086,7 +1144,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "CloudTrail integrated with CloudWatch Logs"
+     "title": "CloudTrail integrated with CloudWatch Logs",
+     "vacuous": false
     }
    },
    "_check_3_5": {
@@ -1101,7 +1160,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "CloudTrail records management events in all regions"
+     "title": "CloudTrail records management events in all regions",
+     "vacuous": false
     }
    },
    "_check_3_6": {
@@ -1116,7 +1176,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "not_applicable",
-     "title": "Access logging enabled on CloudTrail S3 bucket"
+     "title": "Access logging enabled on CloudTrail S3 bucket",
+     "vacuous": true
     }
    },
    "_check_3_7": {
@@ -1131,7 +1192,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "CloudTrail logs encrypted with KMS CMK"
+     "title": "CloudTrail logs encrypted with KMS CMK",
+     "vacuous": false
     }
    },
    "_check_3_9": {
@@ -1146,7 +1208,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "not_applicable",
-     "title": "VPC flow logging enabled in all VPCs"
+     "title": "VPC flow logging enabled in all VPCs",
+     "vacuous": true
     }
    },
    "_check_4_1": {
@@ -1161,7 +1224,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for unauthorized API calls"
+     "title": "Metric filter and alarm for unauthorized API calls",
+     "vacuous": false
     }
    },
    "_check_4_10": {
@@ -1176,7 +1240,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for security group changes"
+     "title": "Metric filter and alarm for security group changes",
+     "vacuous": false
     }
    },
    "_check_4_11": {
@@ -1191,7 +1256,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for NACL changes"
+     "title": "Metric filter and alarm for NACL changes",
+     "vacuous": false
     }
    },
    "_check_4_12": {
@@ -1206,7 +1272,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for network gateway changes"
+     "title": "Metric filter and alarm for network gateway changes",
+     "vacuous": false
     }
    },
    "_check_4_13": {
@@ -1221,7 +1288,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for route table changes"
+     "title": "Metric filter and alarm for route table changes",
+     "vacuous": false
     }
    },
    "_check_4_14": {
@@ -1236,7 +1304,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for VPC changes"
+     "title": "Metric filter and alarm for VPC changes",
+     "vacuous": false
     }
    },
    "_check_4_15": {
@@ -1251,7 +1320,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for AWS Organizations changes"
+     "title": "Metric filter and alarm for AWS Organizations changes",
+     "vacuous": false
     }
    },
    "_check_4_16": {
@@ -1266,7 +1336,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "AWS Security Hub enabled"
+     "title": "AWS Security Hub enabled",
+     "vacuous": false
     }
    },
    "_check_4_2": {
@@ -1281,7 +1352,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for console sign-in without MFA"
+     "title": "Metric filter and alarm for console sign-in without MFA",
+     "vacuous": false
     }
    },
    "_check_4_3": {
@@ -1296,7 +1368,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "fail",
-     "title": "Metric filter and alarm for root account usage"
+     "title": "Metric filter and alarm for root account usage",
+     "vacuous": false
     }
    },
    "_check_4_4": {
@@ -1311,7 +1384,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for IAM policy changes"
+     "title": "Metric filter and alarm for IAM policy changes",
+     "vacuous": false
     }
    },
    "_check_4_5": {
@@ -1326,7 +1400,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for CloudTrail config changes"
+     "title": "Metric filter and alarm for CloudTrail config changes",
+     "vacuous": false
     }
    },
    "_check_4_6": {
@@ -1341,7 +1416,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for console auth failures"
+     "title": "Metric filter and alarm for console auth failures",
+     "vacuous": false
     }
    },
    "_check_4_7": {
@@ -1356,7 +1432,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for CMK disable or deletion"
+     "title": "Metric filter and alarm for CMK disable or deletion",
+     "vacuous": false
     }
    },
    "_check_4_8": {
@@ -1371,7 +1448,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for S3 bucket policy changes"
+     "title": "Metric filter and alarm for S3 bucket policy changes",
+     "vacuous": false
     }
    },
    "_check_4_9": {
@@ -1386,7 +1464,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for AWS Config changes"
+     "title": "Metric filter and alarm for AWS Config changes",
+     "vacuous": false
     }
    },
    "_check_5_1": {
@@ -1394,14 +1473,15 @@
      "account_id": "",
      "check_id": "5.1",
      "cis_section": "5 - Networking",
-     "evidence": "No Network ACLs allow unrestricted ingress to admin ports.",
+     "evidence": "No network ACL(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Restrict NACLs to deny ingress from 0.0.0.0/0 and ::/0 to ports 22 and 3389.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "No NACL allows unrestricted ingress to admin ports"
+     "status": "not_applicable",
+     "title": "No NACL allows unrestricted ingress to admin ports",
+     "vacuous": true
     }
    },
    "_check_5_2": {
@@ -1409,14 +1489,15 @@
      "account_id": "",
      "check_id": "5.2",
      "cis_section": "5 - Networking",
-     "evidence": "No security groups allow unrestricted ingress to SSH/RDP.",
+     "evidence": "No security group(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Restrict SSH (22) and RDP (3389) to specific IP ranges.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "No unrestricted ingress to admin ports (22, 3389)"
+     "status": "not_applicable",
+     "title": "No unrestricted ingress to admin ports (22, 3389)",
+     "vacuous": true
     }
    },
    "_check_5_3": {
@@ -1424,14 +1505,15 @@
      "account_id": "",
      "check_id": "5.3",
      "cis_section": "5 - Networking",
-     "evidence": "All default security groups restrict all traffic.",
+     "evidence": "No default security group(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove all inbound and outbound rules from default security groups.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Default security group restricts all traffic"
+     "status": "not_applicable",
+     "title": "Default security group restricts all traffic",
+     "vacuous": true
     }
    },
    "_check_5_4": {
@@ -1439,14 +1521,15 @@
      "account_id": "",
      "check_id": "5.4",
      "cis_section": "5 - Networking",
-     "evidence": "All VPC peering routes use specific CIDR ranges.",
+     "evidence": "No VPC peering route(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Ensure VPC peering route table entries do not use overly broad CIDR ranges (e.g. 0.0.0.0/0).",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "VPC peering route tables least-privilege"
+     "status": "not_applicable",
+     "title": "VPC peering route tables least-privilege",
+     "vacuous": true
     }
    },
    "_check_5_5": {
@@ -1454,14 +1537,15 @@
      "account_id": "",
      "check_id": "5.5",
      "cis_section": "5 - Networking",
-     "evidence": "No security groups allow unrestricted ingress to all ports.",
+     "evidence": "No security group(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove security group rules that allow unrestricted ingress to all ports.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "No security group allows all-ports ingress from any IP"
+     "status": "not_applicable",
+     "title": "No security group allows all-ports ingress from any IP",
+     "vacuous": true
     }
    }
   },
@@ -1478,7 +1562,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Account contact details kept current"
+     "title": "Account contact details kept current",
+     "vacuous": false
     }
    },
    "_check_1_10": {
@@ -1521,7 +1606,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Support role exists for AWS Support incidents"
+     "title": "Support role exists for AWS Support incidents",
+     "vacuous": false
     }
    },
    "_check_1_19": {
@@ -1536,7 +1622,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Instance roles used for resource access"
+     "title": "Instance roles used for resource access",
+     "vacuous": false
     }
    },
    "_check_1_2": {
@@ -1551,7 +1638,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Security contact information registered"
+     "title": "Security contact information registered",
+     "vacuous": false
     }
    },
    "_check_1_20": {
@@ -1566,7 +1654,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "IAM Access Analyzer enabled in all regions"
+     "title": "IAM Access Analyzer enabled in all regions",
+     "vacuous": false
     }
    },
    "_check_1_22": {
@@ -1581,7 +1670,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "AWSCloudShellFullAccess access restricted"
+     "title": "AWSCloudShellFullAccess access restricted",
+     "vacuous": false
     }
    },
    "_check_1_3": {
@@ -1596,7 +1686,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "not_applicable",
-     "title": "Root not reliant on security questions alone"
+     "title": "Root not reliant on security questions alone",
+     "vacuous": false
     }
    },
    "_check_1_4": {
@@ -1651,7 +1742,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "EBS default volume encryption enabled"
+     "title": "EBS default volume encryption enabled",
+     "vacuous": false
     }
    },
    "_check_2_3_1": {
@@ -1682,7 +1774,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "S3 object-level write-event logging enabled"
+     "title": "S3 object-level write-event logging enabled",
+     "vacuous": false
     }
    },
    "_check_3_11": {
@@ -1697,7 +1790,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "S3 object-level read-event logging enabled"
+     "title": "S3 object-level read-event logging enabled",
+     "vacuous": false
     }
    },
    "_check_3_2": {
@@ -1740,7 +1834,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for unauthorized API calls"
+     "title": "Metric filter and alarm for unauthorized API calls",
+     "vacuous": false
     }
    },
    "_check_4_10": {
@@ -1755,7 +1850,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for security group changes"
+     "title": "Metric filter and alarm for security group changes",
+     "vacuous": false
     }
    },
    "_check_4_11": {
@@ -1770,7 +1866,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for NACL changes"
+     "title": "Metric filter and alarm for NACL changes",
+     "vacuous": false
     }
    },
    "_check_4_12": {
@@ -1785,7 +1882,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for network gateway changes"
+     "title": "Metric filter and alarm for network gateway changes",
+     "vacuous": false
     }
    },
    "_check_4_13": {
@@ -1800,7 +1898,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for route table changes"
+     "title": "Metric filter and alarm for route table changes",
+     "vacuous": false
     }
    },
    "_check_4_14": {
@@ -1815,7 +1914,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for VPC changes"
+     "title": "Metric filter and alarm for VPC changes",
+     "vacuous": false
     }
    },
    "_check_4_15": {
@@ -1830,7 +1930,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for AWS Organizations changes"
+     "title": "Metric filter and alarm for AWS Organizations changes",
+     "vacuous": false
     }
    },
    "_check_4_16": {
@@ -1845,7 +1946,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "AWS Security Hub enabled"
+     "title": "AWS Security Hub enabled",
+     "vacuous": false
     }
    },
    "_check_4_2": {
@@ -1860,7 +1962,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for console sign-in without MFA"
+     "title": "Metric filter and alarm for console sign-in without MFA",
+     "vacuous": false
     }
    },
    "_check_4_3": {
@@ -1875,7 +1978,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Metric filter and alarm for root account usage"
+     "title": "Metric filter and alarm for root account usage",
+     "vacuous": false
     }
    },
    "_check_4_4": {
@@ -1890,7 +1994,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for IAM policy changes"
+     "title": "Metric filter and alarm for IAM policy changes",
+     "vacuous": false
     }
    },
    "_check_4_5": {
@@ -1905,7 +2010,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for CloudTrail config changes"
+     "title": "Metric filter and alarm for CloudTrail config changes",
+     "vacuous": false
     }
    },
    "_check_4_6": {
@@ -1920,7 +2026,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for console auth failures"
+     "title": "Metric filter and alarm for console auth failures",
+     "vacuous": false
     }
    },
    "_check_4_7": {
@@ -1935,7 +2042,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for CMK disable or deletion"
+     "title": "Metric filter and alarm for CMK disable or deletion",
+     "vacuous": false
     }
    },
    "_check_4_8": {
@@ -1950,7 +2058,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for S3 bucket policy changes"
+     "title": "Metric filter and alarm for S3 bucket policy changes",
+     "vacuous": false
     }
    },
    "_check_4_9": {
@@ -1965,7 +2074,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Metric filter and alarm for AWS Config changes"
+     "title": "Metric filter and alarm for AWS Config changes",
+     "vacuous": false
     }
    },
    "_check_5_1": {
@@ -1980,7 +2090,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "No NACL allows unrestricted ingress to admin ports"
+     "title": "No NACL allows unrestricted ingress to admin ports",
+     "vacuous": false
     }
    },
    "_check_5_2": {
@@ -2003,7 +2114,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "VPC peering route tables least-privilege"
+     "title": "VPC peering route tables least-privilege",
+     "vacuous": false
     }
    },
    "_check_5_5": {
@@ -2024,7 +2136,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "Account contact details kept current"
+     "title": "Account contact details kept current",
+     "vacuous": false
     }
    },
    "_check_1_10": {
@@ -2032,14 +2145,15 @@
      "account_id": "",
      "check_id": "1.10",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All console users have MFA enabled.",
+     "evidence": "No console-access IAM user(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable MFA for all console users via IAM > Users > Security credentials.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "MFA on all console-access IAM users"
+     "status": "not_applicable",
+     "title": "MFA on all console-access IAM users",
+     "vacuous": true
     }
    },
    "_check_1_11": {
@@ -2055,14 +2169,15 @@
      "account_id": "",
      "check_id": "1.13",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All IAM users have at most one active access key.",
+     "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove extra active access keys so each user has at most one.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "At most one active access key per IAM user"
+     "status": "not_applicable",
+     "title": "At most one active access key per IAM user",
+     "vacuous": true
     }
    },
    "_check_1_14": {
@@ -2070,14 +2185,15 @@
      "account_id": "",
      "check_id": "1.14",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All active access keys are younger than 90 days.",
+     "evidence": "No active access key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Rotate access keys older than 90 days via IAM > Users > Security credentials.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Access keys rotated within 90 days"
+     "status": "not_applicable",
+     "title": "Access keys rotated within 90 days",
+     "vacuous": true
     }
    },
    "_check_1_15": {
@@ -2085,14 +2201,15 @@
      "account_id": "",
      "check_id": "1.15",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All users receive permissions via groups/roles only.",
+     "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove inline and directly attached policies from IAM users; use groups instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "IAM permissions granted via groups or roles only"
+     "status": "not_applicable",
+     "title": "IAM permissions granted via groups or roles only",
+     "vacuous": true
     }
    },
    "_check_1_16": {
@@ -2100,14 +2217,15 @@
      "account_id": "",
      "check_id": "1.16",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No policy(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No policy(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove or scope down policies that grant '*' on '*' resources.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "no_data",
-     "title": "No full-admin IAM policies attached"
+     "status": "not_applicable",
+     "title": "No full-admin IAM policies attached",
+     "vacuous": true
     }
    },
    "_check_1_17": {
@@ -2122,7 +2240,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "Support role exists for AWS Support incidents"
+     "title": "Support role exists for AWS Support incidents",
+     "vacuous": false
     }
    },
    "_check_1_19": {
@@ -2130,14 +2249,15 @@
      "account_id": "",
      "check_id": "1.19",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All running EC2 instances have IAM instance profiles.",
+     "evidence": "No EC2 instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Attach IAM instance profiles to all EC2 instances instead of embedding credentials.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Instance roles used for resource access"
+     "status": "not_applicable",
+     "title": "Instance roles used for resource access",
+     "vacuous": true
     }
    },
    "_check_1_2": {
@@ -2152,7 +2272,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "Security contact information registered"
+     "title": "Security contact information registered",
+     "vacuous": false
     }
    },
    "_check_1_20": {
@@ -2167,7 +2288,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "IAM Access Analyzer enabled in all regions"
+     "title": "IAM Access Analyzer enabled in all regions",
+     "vacuous": false
     }
    },
    "_check_1_22": {
@@ -2182,7 +2304,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "AWSCloudShellFullAccess access restricted"
+     "title": "AWSCloudShellFullAccess access restricted",
+     "vacuous": false
     }
    },
    "_check_1_3": {
@@ -2197,7 +2320,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "not_applicable",
-     "title": "Root not reliant on security questions alone"
+     "title": "Root not reliant on security questions alone",
+     "vacuous": false
     }
    },
    "_check_1_4": {
@@ -2216,7 +2340,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "pass",
-     "title": "Root account MFA enabled"
+     "title": "Root account MFA enabled",
+     "vacuous": false
     }
    },
    "_check_1_6": {
@@ -2231,7 +2356,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "pass",
-     "title": "Hardware MFA for root account"
+     "title": "Hardware MFA for root account",
+     "vacuous": false
     }
    },
    "_check_1_7": {
@@ -2258,7 +2384,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "pass",
-     "title": "S3 account-level public access block configured"
+     "title": "S3 account-level public access block configured",
+     "vacuous": false
     }
    },
    "_check_2_1_2": {
@@ -2266,14 +2393,15 @@
      "account_id": "",
      "check_id": "2.1.2",
      "cis_section": "2 - Storage",
-     "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable default encryption (SSE-S3 or SSE-KMS) on all S3 buckets.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "S3 bucket server-side encryption enabled"
+     "status": "not_applicable",
+     "title": "S3 bucket server-side encryption enabled",
+     "vacuous": true
     }
    },
    "_check_2_1_3": {
@@ -2281,14 +2409,15 @@
      "account_id": "",
      "check_id": "2.1.3",
      "cis_section": "2 - Storage",
-     "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable MFA Delete on S3 bucket versioning configuration.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "S3 bucket MFA Delete enabled"
+     "status": "not_applicable",
+     "title": "S3 bucket MFA Delete enabled",
+     "vacuous": true
     }
    },
    "_check_2_1_4": {
@@ -2296,14 +2425,15 @@
      "account_id": "",
      "check_id": "2.1.4",
      "cis_section": "2 - Storage",
-     "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable versioning on all S3 buckets for data protection.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "S3 bucket versioning enabled"
+     "status": "not_applicable",
+     "title": "S3 bucket versioning enabled",
+     "vacuous": true
     }
    },
    "_check_2_2_1": {
@@ -2318,7 +2448,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "EBS default volume encryption enabled"
+     "title": "EBS default volume encryption enabled",
+     "vacuous": false
     }
    },
    "_check_2_3_1": {
@@ -2326,14 +2457,15 @@
      "account_id": "",
      "check_id": "2.3.1",
      "cis_section": "2 - Storage",
-     "evidence": "All RDS instances have encryption at rest enabled (or no instances found).",
+     "evidence": "No RDS instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable encryption at rest when creating RDS instances (cannot be changed post-creation).",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "RDS encryption at rest enabled"
+     "status": "not_applicable",
+     "title": "RDS encryption at rest enabled",
+     "vacuous": true
     }
    },
    "_check_2_3_2": {
@@ -2341,14 +2473,15 @@
      "account_id": "",
      "check_id": "2.3.2",
      "cis_section": "2 - Storage",
-     "evidence": "All RDS instances have auto minor version upgrade enabled (or no instances found).",
+     "evidence": "No RDS instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable auto minor version upgrade on all RDS instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "RDS auto minor version upgrade enabled"
+     "status": "not_applicable",
+     "title": "RDS auto minor version upgrade enabled",
+     "vacuous": true
     }
    },
    "_check_2_4_1": {
@@ -2356,14 +2489,15 @@
      "account_id": "",
      "check_id": "2.4.1",
      "cis_section": "2 - Storage",
-     "evidence": "No KMS key(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No customer-managed KMS key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable automatic key rotation for all customer-managed KMS keys.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "Customer-managed KMS key rotation enabled"
+     "status": "not_applicable",
+     "title": "Customer-managed KMS key rotation enabled",
+     "vacuous": true
     }
    },
    "_check_3_1": {
@@ -2378,7 +2512,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "fail",
-     "title": "CloudTrail enabled in all regions"
+     "title": "CloudTrail enabled in all regions",
+     "vacuous": false
     }
    },
    "_check_3_10": {
@@ -2393,7 +2528,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "S3 object-level write-event logging enabled"
+     "title": "S3 object-level write-event logging enabled",
+     "vacuous": false
     }
    },
    "_check_3_11": {
@@ -2408,7 +2544,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "S3 object-level read-event logging enabled"
+     "title": "S3 object-level read-event logging enabled",
+     "vacuous": false
     }
    },
    "_check_3_2": {
@@ -2423,7 +2560,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "CloudTrail log file validation enabled"
+     "title": "CloudTrail log file validation enabled",
+     "vacuous": false
     }
    },
    "_check_3_3": {
@@ -2431,14 +2569,15 @@
      "account_id": "",
      "check_id": "3.3",
      "cis_section": "3 - Logging",
-     "evidence": "No CloudTrail bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No CloudTrail bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove public access from CloudTrail S3 bucket policies and enable public access blocks.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "no_data",
-     "title": "CloudTrail S3 bucket not publicly accessible"
+     "status": "not_applicable",
+     "title": "CloudTrail S3 bucket not publicly accessible",
+     "vacuous": true
     }
    },
    "_check_3_4": {
@@ -2453,7 +2592,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "CloudTrail integrated with CloudWatch Logs"
+     "title": "CloudTrail integrated with CloudWatch Logs",
+     "vacuous": false
     }
    },
    "_check_3_5": {
@@ -2468,7 +2608,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "CloudTrail records management events in all regions"
+     "title": "CloudTrail records management events in all regions",
+     "vacuous": false
     }
    },
    "_check_3_6": {
@@ -2476,14 +2617,15 @@
      "account_id": "",
      "check_id": "3.6",
      "cis_section": "3 - Logging",
-     "evidence": "No CloudTrail bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No CloudTrail bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable S3 server access logging on CloudTrail destination buckets.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "no_data",
-     "title": "Access logging enabled on CloudTrail S3 bucket"
+     "status": "not_applicable",
+     "title": "Access logging enabled on CloudTrail S3 bucket",
+     "vacuous": true
     }
    },
    "_check_3_7": {
@@ -2498,7 +2640,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "CloudTrail logs encrypted with KMS CMK"
+     "title": "CloudTrail logs encrypted with KMS CMK",
+     "vacuous": false
     }
    },
    "_check_3_9": {
@@ -2513,7 +2656,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "VPC flow logging enabled in all VPCs"
+     "title": "VPC flow logging enabled in all VPCs",
+     "vacuous": false
     }
    },
    "_check_4_1": {
@@ -2528,7 +2672,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for unauthorized API calls"
+     "title": "Metric filter and alarm for unauthorized API calls",
+     "vacuous": false
     }
    },
    "_check_4_10": {
@@ -2543,7 +2688,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for security group changes"
+     "title": "Metric filter and alarm for security group changes",
+     "vacuous": false
     }
    },
    "_check_4_11": {
@@ -2558,7 +2704,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for NACL changes"
+     "title": "Metric filter and alarm for NACL changes",
+     "vacuous": false
     }
    },
    "_check_4_12": {
@@ -2573,7 +2720,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for network gateway changes"
+     "title": "Metric filter and alarm for network gateway changes",
+     "vacuous": false
     }
    },
    "_check_4_13": {
@@ -2588,7 +2736,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for route table changes"
+     "title": "Metric filter and alarm for route table changes",
+     "vacuous": false
     }
    },
    "_check_4_14": {
@@ -2603,7 +2752,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for VPC changes"
+     "title": "Metric filter and alarm for VPC changes",
+     "vacuous": false
     }
    },
    "_check_4_15": {
@@ -2618,7 +2768,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for AWS Organizations changes"
+     "title": "Metric filter and alarm for AWS Organizations changes",
+     "vacuous": false
     }
    },
    "_check_4_16": {
@@ -2633,7 +2784,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "AWS Security Hub enabled"
+     "title": "AWS Security Hub enabled",
+     "vacuous": false
     }
    },
    "_check_4_2": {
@@ -2648,7 +2800,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for console sign-in without MFA"
+     "title": "Metric filter and alarm for console sign-in without MFA",
+     "vacuous": false
     }
    },
    "_check_4_3": {
@@ -2663,7 +2816,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "fail",
-     "title": "Metric filter and alarm for root account usage"
+     "title": "Metric filter and alarm for root account usage",
+     "vacuous": false
     }
    },
    "_check_4_4": {
@@ -2678,7 +2832,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for IAM policy changes"
+     "title": "Metric filter and alarm for IAM policy changes",
+     "vacuous": false
     }
    },
    "_check_4_5": {
@@ -2693,7 +2848,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for CloudTrail config changes"
+     "title": "Metric filter and alarm for CloudTrail config changes",
+     "vacuous": false
     }
    },
    "_check_4_6": {
@@ -2708,7 +2864,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for console auth failures"
+     "title": "Metric filter and alarm for console auth failures",
+     "vacuous": false
     }
    },
    "_check_4_7": {
@@ -2723,7 +2880,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for CMK disable or deletion"
+     "title": "Metric filter and alarm for CMK disable or deletion",
+     "vacuous": false
     }
    },
    "_check_4_8": {
@@ -2738,7 +2896,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for S3 bucket policy changes"
+     "title": "Metric filter and alarm for S3 bucket policy changes",
+     "vacuous": false
     }
    },
    "_check_4_9": {
@@ -2753,7 +2912,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Metric filter and alarm for AWS Config changes"
+     "title": "Metric filter and alarm for AWS Config changes",
+     "vacuous": false
     }
    },
    "_check_5_1": {
@@ -2761,14 +2921,15 @@
      "account_id": "",
      "check_id": "5.1",
      "cis_section": "5 - Networking",
-     "evidence": "No Network ACLs allow unrestricted ingress to admin ports.",
+     "evidence": "No network ACL(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Restrict NACLs to deny ingress from 0.0.0.0/0 and ::/0 to ports 22 and 3389.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "No NACL allows unrestricted ingress to admin ports"
+     "status": "not_applicable",
+     "title": "No NACL allows unrestricted ingress to admin ports",
+     "vacuous": true
     }
    },
    "_check_5_2": {
@@ -2776,14 +2937,15 @@
      "account_id": "",
      "check_id": "5.2",
      "cis_section": "5 - Networking",
-     "evidence": "No security groups allow unrestricted ingress to SSH/RDP.",
+     "evidence": "No security group(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Restrict SSH (22) and RDP (3389) to specific IP ranges.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "No unrestricted ingress to admin ports (22, 3389)"
+     "status": "not_applicable",
+     "title": "No unrestricted ingress to admin ports (22, 3389)",
+     "vacuous": true
     }
    },
    "_check_5_3": {
@@ -2791,14 +2953,15 @@
      "account_id": "",
      "check_id": "5.3",
      "cis_section": "5 - Networking",
-     "evidence": "All default security groups restrict all traffic.",
+     "evidence": "No default security group(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove all inbound and outbound rules from default security groups.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Default security group restricts all traffic"
+     "status": "not_applicable",
+     "title": "Default security group restricts all traffic",
+     "vacuous": true
     }
    },
    "_check_5_4": {
@@ -2806,14 +2969,15 @@
      "account_id": "",
      "check_id": "5.4",
      "cis_section": "5 - Networking",
-     "evidence": "All VPC peering routes use specific CIDR ranges.",
+     "evidence": "No VPC peering route(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Ensure VPC peering route table entries do not use overly broad CIDR ranges (e.g. 0.0.0.0/0).",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "VPC peering route tables least-privilege"
+     "status": "not_applicable",
+     "title": "VPC peering route tables least-privilege",
+     "vacuous": true
     }
    },
    "_check_5_5": {
@@ -2821,14 +2985,15 @@
      "account_id": "",
      "check_id": "5.5",
      "cis_section": "5 - Networking",
-     "evidence": "No security groups allow unrestricted ingress to all ports.",
+     "evidence": "No security group(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove security group rules that allow unrestricted ingress to all ports.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "No security group allows all-ports ingress from any IP"
+     "status": "not_applicable",
+     "title": "No security group allows all-ports ingress from any IP",
+     "vacuous": true
     }
    }
   }
@@ -4664,7 +4829,7 @@
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All console users have MFA enabled.",
+      "evidence": "No console-access IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable MFA for all console users via IAM > Users > Security credentials.",
       "remediation": {
@@ -4684,7 +4849,7 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "MFA on all console-access IAM users"
      },
      {
@@ -4738,7 +4903,7 @@
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All IAM users have at most one active access key.",
+      "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove extra active access keys so each user has at most one.",
       "remediation": {
@@ -4758,7 +4923,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "At most one active access key per IAM user"
      },
      {
@@ -4766,7 +4931,7 @@
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All active access keys are younger than 90 days.",
+      "evidence": "No active access key(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Rotate access keys older than 90 days via IAM > Users > Security credentials.",
       "remediation": {
@@ -4785,7 +4950,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Access keys rotated within 90 days"
      },
      {
@@ -4793,7 +4958,7 @@
       "attack_techniques": [],
       "check_id": "1.15",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All users receive permissions via groups/roles only.",
+      "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove inline and directly attached policies from IAM users; use groups instead.",
       "remediation": {
@@ -4813,7 +4978,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "IAM permissions granted via groups or roles only"
      },
      {
@@ -4821,7 +4986,7 @@
       "attack_techniques": [],
       "check_id": "1.16",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No policy(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No policy(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove or scope down policies that grant '*' on '*' resources.",
       "remediation": {
@@ -4841,7 +5006,7 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "No full-admin IAM policies attached"
      },
      {
@@ -4877,7 +5042,7 @@
       "attack_techniques": [],
       "check_id": "1.19",
       "cis_section": "",
-      "evidence": "All running EC2 instances have IAM instance profiles.; [eu-west-1] All running EC2 instances have IAM instance profiles.",
+      "evidence": "No EC2 instance(s) found; this control has nothing to evaluate.; [eu-west-1] No EC2 instance(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -4892,7 +5057,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Instance roles used for resource access"
      },
      {
@@ -4981,7 +5146,7 @@
       "attack_techniques": [],
       "check_id": "2.1.2",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable default encryption (SSE-S3 or SSE-KMS) on all S3 buckets.",
       "remediation": {
@@ -4999,7 +5164,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket server-side encryption enabled"
      },
      {
@@ -5007,7 +5172,7 @@
       "attack_techniques": [],
       "check_id": "2.1.3",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable MFA Delete on S3 bucket versioning configuration.",
       "remediation": {
@@ -5025,7 +5190,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket MFA Delete enabled"
      },
      {
@@ -5033,7 +5198,7 @@
       "attack_techniques": [],
       "check_id": "2.1.4",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable versioning on all S3 buckets for data protection.",
       "remediation": {
@@ -5051,7 +5216,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket versioning enabled"
      },
      {
@@ -5082,7 +5247,7 @@
       "attack_techniques": [],
       "check_id": "2.3.1",
       "cis_section": "",
-      "evidence": "All RDS instances have encryption at rest enabled (or no instances found).; [eu-west-1] All RDS instances have encryption at rest enabled (or no instances found).",
+      "evidence": "No RDS instance(s) found; this control has nothing to evaluate.; [eu-west-1] No RDS instance(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -5097,7 +5262,7 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "RDS encryption at rest enabled"
      },
      {
@@ -5105,7 +5270,7 @@
       "attack_techniques": [],
       "check_id": "2.3.2",
       "cis_section": "",
-      "evidence": "All RDS instances have auto minor version upgrade enabled (or no instances found).; [eu-west-1] All RDS instances have auto minor version upgrade enabled (or no instances found).",
+      "evidence": "No RDS instance(s) found; this control has nothing to evaluate.; [eu-west-1] No RDS instance(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -5120,7 +5285,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "RDS auto minor version upgrade enabled"
      },
      {
@@ -5128,7 +5293,7 @@
       "attack_techniques": [],
       "check_id": "2.4.1",
       "cis_section": "",
-      "evidence": "No KMS key(s) were discovered; this check has no data and cannot report PASS.; [eu-west-1] No KMS key(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No customer-managed KMS key(s) found; this control has nothing to evaluate.; [eu-west-1] No customer-managed KMS key(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -5143,7 +5308,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "Customer-managed KMS key rotation enabled"
      },
      {
@@ -5201,7 +5366,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "3 - Logging",
-      "evidence": "No CloudTrail bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No CloudTrail bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove public access from CloudTrail S3 bucket policies and enable public access blocks.",
       "remediation": {
@@ -5219,7 +5384,7 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "CloudTrail S3 bucket not publicly accessible"
      },
      {
@@ -5277,7 +5442,7 @@
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "3 - Logging",
-      "evidence": "No CloudTrail bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No CloudTrail bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable S3 server access logging on CloudTrail destination buckets.",
       "remediation": {
@@ -5295,7 +5460,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "Access logging enabled on CloudTrail S3 bucket"
      },
      {
@@ -5831,7 +5996,7 @@
       "attack_techniques": [],
       "check_id": "5.1",
       "cis_section": "",
-      "evidence": "No Network ACLs allow unrestricted ingress to admin ports.; [eu-west-1] No Network ACLs allow unrestricted ingress to admin ports.",
+      "evidence": "No network ACL(s) found; this control has nothing to evaluate.; [eu-west-1] No network ACL(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -5846,7 +6011,7 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "No NACL allows unrestricted ingress to admin ports"
      },
      {
@@ -5854,7 +6019,7 @@
       "attack_techniques": [],
       "check_id": "5.2",
       "cis_section": "",
-      "evidence": "No security groups allow unrestricted ingress to SSH/RDP.; [eu-west-1] No security groups allow unrestricted ingress to SSH/RDP.",
+      "evidence": "No security group(s) found; this control has nothing to evaluate.; [eu-west-1] No security group(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -5869,7 +6034,7 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "No unrestricted ingress to admin ports (22, 3389)"
      },
      {
@@ -5877,7 +6042,7 @@
       "attack_techniques": [],
       "check_id": "5.3",
       "cis_section": "",
-      "evidence": "All default security groups restrict all traffic.; [eu-west-1] All default security groups restrict all traffic.",
+      "evidence": "No default security group(s) found; this control has nothing to evaluate.; [eu-west-1] No default security group(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -5892,7 +6057,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Default security group restricts all traffic"
      },
      {
@@ -5900,7 +6065,7 @@
       "attack_techniques": [],
       "check_id": "5.4",
       "cis_section": "",
-      "evidence": "All VPC peering routes use specific CIDR ranges.; [eu-west-1] All VPC peering routes use specific CIDR ranges.",
+      "evidence": "No VPC peering route(s) found; this control has nothing to evaluate.; [eu-west-1] No VPC peering route(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -5915,7 +6080,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "VPC peering route tables least-privilege"
      },
      {
@@ -5923,7 +6088,7 @@
       "attack_techniques": [],
       "check_id": "5.5",
       "cis_section": "",
-      "evidence": "No security groups allow unrestricted ingress to all ports.; [eu-west-1] No security groups allow unrestricted ingress to all ports.",
+      "evidence": "No security group(s) found; this control has nothing to evaluate.; [eu-west-1] No security group(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "",
       "remediation": {
@@ -5938,18 +6103,18 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "No security group allows all-ports ingress from any IP"
      }
     ],
     "completeness": "partial",
     "errored": 6,
-    "evaluated": 45,
+    "evaluated": 33,
     "failed": 20,
-    "no_data": 7,
-    "not_applicable": 1,
-    "pass_rate": 55.6,
-    "passed": 25,
+    "no_data": 0,
+    "not_applicable": 20,
+    "pass_rate": 39.4,
+    "passed": 13,
     "region": "multi:us-east-1,eu-west-1",
     "regions_scanned": [
      "us-east-1",
@@ -10090,7 +10255,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "3 - Logging",
-      "evidence": "No CloudTrail trails configured.",
+      "evidence": "AWS account identity could not be verified with STS GetCallerIdentity; PASS withheld because the evaluated account boundary is unknown.",
       "network_exposure": [],
       "recommendation": "Remove public access from CloudTrail S3 bucket policies and enable public access blocks.",
       "remediation": {
@@ -10108,7 +10273,7 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "not_applicable",
+      "status": "error",
       "title": "CloudTrail S3 bucket not publicly accessible"
      },
      {
@@ -10176,7 +10341,7 @@
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "3 - Logging",
-      "evidence": "No CloudTrail trails configured.",
+      "evidence": "AWS account identity could not be verified with STS GetCallerIdentity; PASS withheld because the evaluated account boundary is unknown.",
       "network_exposure": [],
       "recommendation": "Enable S3 server access logging on CloudTrail destination buckets.",
       "remediation": {
@@ -10194,7 +10359,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "not_applicable",
+      "status": "error",
       "title": "Access logging enabled on CloudTrail S3 bucket"
      },
      {
@@ -10235,7 +10400,7 @@
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "3 - Logging",
-      "evidence": "No VPCs found.",
+      "evidence": "AWS account identity could not be verified with STS GetCallerIdentity; PASS withheld because the evaluated account boundary is unknown.",
       "network_exposure": [],
       "recommendation": "Enable VPC Flow Logs for all VPCs (reject or all traffic).",
       "remediation": {
@@ -10253,7 +10418,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "not_applicable",
+      "status": "error",
       "title": "VPC flow logging enabled in all VPCs"
      },
      {
@@ -10939,11 +11104,11 @@
      }
     ],
     "completeness": "unavailable",
-    "errored": 22,
+    "errored": 25,
     "evaluated": 33,
     "failed": 33,
     "no_data": 0,
-    "not_applicable": 4,
+    "not_applicable": 1,
     "pass_rate": 0.0,
     "passed": 0,
     "region": "us-east-1",
@@ -10954,7 +11119,7 @@
     "total": 59,
     "warnings": [
      "AWS account identity could not be verified; affirmative CIS results were withheld.",
-     "CIS evidence coverage is incomplete: 22 check(s) could not be evaluated."
+     "CIS evidence coverage is incomplete: 25 check(s) could not be evaluated."
     ]
    }
   },
@@ -11349,7 +11514,7 @@
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All console users have MFA enabled.",
+      "evidence": "No console-access IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable MFA for all console users via IAM > Users > Security credentials.",
       "remediation": {
@@ -11369,7 +11534,7 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "MFA on all console-access IAM users"
      },
      {
@@ -11423,7 +11588,7 @@
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All IAM users have at most one active access key.",
+      "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove extra active access keys so each user has at most one.",
       "remediation": {
@@ -11443,7 +11608,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "At most one active access key per IAM user"
      },
      {
@@ -11451,7 +11616,7 @@
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All active access keys are younger than 90 days.",
+      "evidence": "No active access key(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Rotate access keys older than 90 days via IAM > Users > Security credentials.",
       "remediation": {
@@ -11470,7 +11635,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Access keys rotated within 90 days"
      },
      {
@@ -11478,7 +11643,7 @@
       "attack_techniques": [],
       "check_id": "1.15",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All users receive permissions via groups/roles only.",
+      "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove inline and directly attached policies from IAM users; use groups instead.",
       "remediation": {
@@ -11498,7 +11663,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "IAM permissions granted via groups or roles only"
      },
      {
@@ -11506,7 +11671,7 @@
       "attack_techniques": [],
       "check_id": "1.16",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No policy(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No policy(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove or scope down policies that grant '*' on '*' resources.",
       "remediation": {
@@ -11526,7 +11691,7 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "No full-admin IAM policies attached"
      },
      {
@@ -11693,7 +11858,7 @@
       "attack_techniques": [],
       "check_id": "2.1.2",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable default encryption (SSE-S3 or SSE-KMS) on all S3 buckets.",
       "remediation": {
@@ -11711,7 +11876,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket server-side encryption enabled"
      },
      {
@@ -11719,7 +11884,7 @@
       "attack_techniques": [],
       "check_id": "2.1.3",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable MFA Delete on S3 bucket versioning configuration.",
       "remediation": {
@@ -11737,7 +11902,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket MFA Delete enabled"
      },
      {
@@ -11745,7 +11910,7 @@
       "attack_techniques": [],
       "check_id": "2.1.4",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable versioning on all S3 buckets for data protection.",
       "remediation": {
@@ -11763,7 +11928,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket versioning enabled"
      },
      {
@@ -11859,7 +12024,7 @@
       "attack_techniques": [],
       "check_id": "2.4.1",
       "cis_section": "2 - Storage",
-      "evidence": "No KMS key(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "Only one selected region was evaluated. Run the enabled-region benchmark before certifying regional CIS controls across all enabled AWS regions.",
       "network_exposure": [],
       "recommendation": "Enable automatic key rotation for all customer-managed KMS keys.",
       "remediation": {
@@ -11877,7 +12042,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "error",
       "title": "Customer-managed KMS key rotation enabled"
      },
      {
@@ -12090,7 +12255,7 @@
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "3 - Logging",
-      "evidence": "No VPCs found.",
+      "evidence": "Only one selected region was evaluated. Run the enabled-region benchmark before certifying regional CIS controls across all enabled AWS regions.",
       "network_exposure": [],
       "recommendation": "Enable VPC Flow Logs for all VPCs (reject or all traffic).",
       "remediation": {
@@ -12108,7 +12273,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "not_applicable",
+      "status": "error",
       "title": "VPC flow logging enabled in all VPCs"
      },
      {
@@ -12794,13 +12959,13 @@
      }
     ],
     "completeness": "partial",
-    "errored": 11,
-    "evaluated": 39,
+    "errored": 13,
+    "evaluated": 35,
     "failed": 33,
-    "no_data": 5,
-    "not_applicable": 4,
-    "pass_rate": 15.4,
-    "passed": 6,
+    "no_data": 0,
+    "not_applicable": 11,
+    "pass_rate": 5.7,
+    "passed": 2,
     "region": "us-east-1",
     "regions_scanned": [
      "us-east-1"
@@ -12808,7 +12973,7 @@
     "scope": "selected-region",
     "total": 59,
     "warnings": [
-     "CIS evidence coverage is incomplete: 11 check(s) could not be evaluated."
+     "CIS evidence coverage is incomplete: 13 check(s) could not be evaluated."
     ]
    }
   },
@@ -18038,7 +18203,7 @@
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All console users have MFA enabled.",
+      "evidence": "No console-access IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable MFA for all console users via IAM > Users > Security credentials.",
       "remediation": {
@@ -18058,7 +18223,7 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "MFA on all console-access IAM users"
      },
      {
@@ -18112,7 +18277,7 @@
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All IAM users have at most one active access key.",
+      "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove extra active access keys so each user has at most one.",
       "remediation": {
@@ -18132,7 +18297,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "At most one active access key per IAM user"
      },
      {
@@ -18140,7 +18305,7 @@
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All active access keys are younger than 90 days.",
+      "evidence": "No active access key(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Rotate access keys older than 90 days via IAM > Users > Security credentials.",
       "remediation": {
@@ -18159,7 +18324,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Access keys rotated within 90 days"
      },
      {
@@ -18167,7 +18332,7 @@
       "attack_techniques": [],
       "check_id": "1.15",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All users receive permissions via groups/roles only.",
+      "evidence": "No IAM user(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove inline and directly attached policies from IAM users; use groups instead.",
       "remediation": {
@@ -18187,7 +18352,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "IAM permissions granted via groups or roles only"
      },
      {
@@ -18195,7 +18360,7 @@
       "attack_techniques": [],
       "check_id": "1.16",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No policy(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No policy(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove or scope down policies that grant '*' on '*' resources.",
       "remediation": {
@@ -18215,7 +18380,7 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "No full-admin IAM policies attached"
      },
      {
@@ -18368,7 +18533,7 @@
       "attack_techniques": [],
       "check_id": "2.1.2",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable default encryption (SSE-S3 or SSE-KMS) on all S3 buckets.",
       "remediation": {
@@ -18386,7 +18551,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket server-side encryption enabled"
      },
      {
@@ -18394,7 +18559,7 @@
       "attack_techniques": [],
       "check_id": "2.1.3",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable MFA Delete on S3 bucket versioning configuration.",
       "remediation": {
@@ -18412,7 +18577,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket MFA Delete enabled"
      },
      {
@@ -18420,7 +18585,7 @@
       "attack_techniques": [],
       "check_id": "2.1.4",
       "cis_section": "2 - Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable versioning on all S3 buckets for data protection.",
       "remediation": {
@@ -18438,7 +18603,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "S3 bucket versioning enabled"
      },
      {
@@ -18524,7 +18689,7 @@
       "attack_techniques": [],
       "check_id": "2.4.1",
       "cis_section": "2 - Storage",
-      "evidence": "No KMS key(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "Only one selected region was evaluated. Run the enabled-region benchmark before certifying regional CIS controls across all enabled AWS regions.",
       "network_exposure": [],
       "recommendation": "Enable automatic key rotation for all customer-managed KMS keys.",
       "remediation": {
@@ -18542,7 +18707,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "error",
       "title": "Customer-managed KMS key rotation enabled"
      },
      {
@@ -18606,7 +18771,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "3 - Logging",
-      "evidence": "No CloudTrail bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No CloudTrail bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Remove public access from CloudTrail S3 bucket policies and enable public access blocks.",
       "remediation": {
@@ -18624,7 +18789,7 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "CloudTrail S3 bucket not publicly accessible"
      },
      {
@@ -18688,7 +18853,7 @@
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "3 - Logging",
-      "evidence": "No CloudTrail bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No CloudTrail bucket(s) found; this control has nothing to evaluate.",
       "network_exposure": [],
       "recommendation": "Enable S3 server access logging on CloudTrail destination buckets.",
       "remediation": {
@@ -18706,7 +18871,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "Access logging enabled on CloudTrail S3 bucket"
      },
      {
@@ -19440,13 +19605,13 @@
      }
     ],
     "completeness": "partial",
-    "errored": 20,
-    "evaluated": 31,
+    "errored": 21,
+    "evaluated": 27,
     "failed": 20,
-    "no_data": 7,
-    "not_applicable": 1,
-    "pass_rate": 35.5,
-    "passed": 11,
+    "no_data": 0,
+    "not_applicable": 11,
+    "pass_rate": 25.9,
+    "passed": 7,
     "region": "us-east-1",
     "regions_scanned": [
      "us-east-1"
@@ -19454,7 +19619,7 @@
     "scope": "selected-region",
     "total": 59,
     "warnings": [
-     "CIS evidence coverage is incomplete: 20 check(s) could not be evaluated."
+     "CIS evidence coverage is incomplete: 21 check(s) could not be evaluated."
     ]
    }
   }

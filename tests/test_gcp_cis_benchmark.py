@@ -267,10 +267,10 @@ def test_check_3_7_rdp_exposed():
     assert "allow-rdp" in result.evidence
 
 
-def test_check_3_7_no_rdp_exposure():
+def test_check_3_7_no_rules_is_not_applicable():
     _install_mock_gcp_compute(firewalls_list=[])
     result = _check_3_7("my-project")
-    assert result.status == CheckStatus.PASS
+    assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -872,14 +872,14 @@ def test_check_3_3_fail_dnssec_not_enabled():
     assert "insecure-zone" in result.evidence
 
 
-def test_check_3_3_pass_private_zone_ignored():
+def test_check_3_3_not_applicable_private_zone_ignored():
     zones = [
         {"name": "private-zone", "visibility": "private", "dnssecConfig": {"state": "off"}},
     ]
     mock_dns = _mock_dns_with_zones(zones)
     with patch("googleapiclient.discovery.build", return_value=mock_dns):
         result = _check_3_3("my-project")
-    assert result.status == CheckStatus.PASS
+    assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 def test_check_3_3_fail_no_dnssec_config():
@@ -1072,11 +1072,11 @@ def test_check_7_1_fail_allauthenticatedusers_access():
     assert "semi_public" in result.evidence
 
 
-def test_check_7_1_pass_empty_datasets():
+def test_check_7_1_not_applicable_empty_datasets():
     mock_bq = _mock_bigquery_with_datasets([], dataset_details=[])
     with patch("googleapiclient.discovery.build", return_value=mock_bq):
         result = _check_7_1("my-project")
-    assert result.status == CheckStatus.PASS
+    assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------

@@ -74,7 +74,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Corporate login credentials used"
+     "title": "Corporate login credentials used",
+     "vacuous": false
     }
    },
    "_check_1_10": {
@@ -89,7 +90,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "KMS keys rotated within 90 days"
+     "title": "KMS keys rotated within 90 days",
+     "vacuous": false
     }
    },
    "_check_1_11": {
@@ -104,7 +106,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Separation of duties for KMS role assignment"
+     "title": "Separation of duties for KMS role assignment",
+     "vacuous": false
     }
    },
    "_check_1_12": {
@@ -119,7 +122,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "API keys restricted to needed APIs"
+     "title": "API keys restricted to needed APIs",
+     "vacuous": false
     }
    },
    "_check_1_13": {
@@ -134,7 +138,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "API keys restricted to specific hosts and apps"
+     "title": "API keys restricted to specific hosts and apps",
+     "vacuous": false
     }
    },
    "_check_1_14": {
@@ -149,7 +154,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "API keys rotated within 90 days"
+     "title": "API keys rotated within 90 days",
+     "vacuous": false
     }
    },
    "_check_1_15": {
@@ -164,7 +170,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Essential contacts configured for the org"
+     "title": "Essential contacts configured for the org",
+     "vacuous": false
     }
    },
    "_check_1_2": {
@@ -179,7 +186,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "not_applicable",
-     "title": "MFA enforced for all users"
+     "title": "MFA enforced for all users",
+     "vacuous": false
     }
    },
    "_check_1_3": {
@@ -194,7 +202,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "not_applicable",
-     "title": "Security Key enforcement for admin accounts"
+     "title": "Security Key enforcement for admin accounts",
+     "vacuous": false
     }
    },
    "_check_1_4": {
@@ -209,7 +218,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "No user-managed service account keys"
+     "title": "No user-managed service account keys",
+     "vacuous": false
     }
    },
    "_check_1_5": {
@@ -224,7 +234,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "No primitive roles (Owner/Editor) at project level"
+     "title": "No primitive roles (Owner/Editor) at project level",
+     "vacuous": false
     }
    },
    "_check_1_6": {
@@ -239,7 +250,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Service accounts lack admin privileges"
+     "title": "Service accounts lack admin privileges",
+     "vacuous": false
     }
    },
    "_check_1_7": {
@@ -254,7 +266,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "User-managed service accounts lack admin privileges"
+     "title": "User-managed service accounts lack admin privileges",
+     "vacuous": false
     }
    },
    "_check_1_8": {
@@ -269,7 +282,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "User-managed service account keys rotated within 90 days"
+     "title": "User-managed service account keys rotated within 90 days",
+     "vacuous": false
     }
    },
    "_check_1_9": {
@@ -284,7 +298,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "error",
-     "title": "Cloud KMS keys not publicly accessible"
+     "title": "Cloud KMS keys not publicly accessible",
+     "vacuous": false
     }
    },
    "_check_2_1": {
@@ -299,7 +314,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud Audit Logs configured for all services"
+     "title": "Cloud Audit Logs configured for all services",
+     "vacuous": false
     }
    },
    "_check_2_10": {
@@ -314,7 +330,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for SQL instance config changes"
+     "title": "Log metric filter and alerts for SQL instance config changes",
+     "vacuous": false
     }
    },
    "_check_2_11": {
@@ -329,7 +346,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for DNS zone changes"
+     "title": "Log metric filter and alerts for DNS zone changes",
+     "vacuous": false
     }
    },
    "_check_2_12": {
@@ -344,7 +362,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud DNS logging enabled for all VPC networks"
+     "title": "Cloud DNS logging enabled for all VPC networks",
+     "vacuous": false
     }
    },
    "_check_2_2": {
@@ -359,7 +378,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log sink exports all log entries"
+     "title": "Log sink exports all log entries",
+     "vacuous": false
     }
    },
    "_check_2_3": {
@@ -374,7 +394,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for Project Ownership changes"
+     "title": "Log metric filter and alerts for Project Ownership changes",
+     "vacuous": false
     }
    },
    "_check_2_4": {
@@ -389,7 +410,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for Audit Configuration changes"
+     "title": "Log metric filter and alerts for Audit Configuration changes",
+     "vacuous": false
     }
    },
    "_check_2_5": {
@@ -404,7 +426,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for Custom Role changes"
+     "title": "Log metric filter and alerts for Custom Role changes",
+     "vacuous": false
     }
    },
    "_check_2_6": {
@@ -419,7 +442,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for VPC firewall rule changes"
+     "title": "Log metric filter and alerts for VPC firewall rule changes",
+     "vacuous": false
     }
    },
    "_check_2_7": {
@@ -434,7 +458,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for VPC route changes"
+     "title": "Log metric filter and alerts for VPC route changes",
+     "vacuous": false
     }
    },
    "_check_2_8": {
@@ -449,7 +474,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for VPC network changes"
+     "title": "Log metric filter and alerts for VPC network changes",
+     "vacuous": false
     }
    },
    "_check_2_9": {
@@ -464,7 +490,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for Cloud Storage IAM changes"
+     "title": "Log metric filter and alerts for Cloud Storage IAM changes",
+     "vacuous": false
     }
    },
    "_check_3_1": {
@@ -479,7 +506,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "No default VPC network in the project"
+     "title": "No default VPC network in the project",
+     "vacuous": false
     }
    },
    "_check_3_10": {
@@ -494,7 +522,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Private Google Access enabled on all subnets"
+     "title": "Private Google Access enabled on all subnets",
+     "vacuous": false
     }
    },
    "_check_3_2": {
@@ -509,7 +538,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "No legacy networks in the project"
+     "title": "No legacy networks in the project",
+     "vacuous": false
     }
    },
    "_check_3_3": {
@@ -524,7 +554,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "DNSSEC enabled for Cloud DNS"
+     "title": "DNSSEC enabled for Cloud DNS",
+     "vacuous": false
     }
    },
    "_check_3_4": {
@@ -539,7 +570,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "RSASHA1 not used for DNSSEC key-signing key"
+     "title": "RSASHA1 not used for DNSSEC key-signing key",
+     "vacuous": false
     }
    },
    "_check_3_5": {
@@ -554,7 +586,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "RSASHA1 not used for DNSSEC zone-signing key"
+     "title": "RSASHA1 not used for DNSSEC zone-signing key",
+     "vacuous": false
     }
    },
    "_check_3_6": {
@@ -569,7 +602,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "error",
-     "title": "SSH (port 22) restricted from the internet"
+     "title": "SSH (port 22) restricted from the internet",
+     "vacuous": false
     }
    },
    "_check_3_7": {
@@ -584,7 +618,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "error",
-     "title": "RDP (port 3389) restricted from the internet"
+     "title": "RDP (port 3389) restricted from the internet",
+     "vacuous": false
     }
    },
    "_check_3_8": {
@@ -599,7 +634,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "ICMP firewall rules not open to the world"
+     "title": "ICMP firewall rules not open to the world",
+     "vacuous": false
     }
    },
    "_check_3_9": {
@@ -614,7 +650,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "VPC Flow Logs enabled on every subnet"
+     "title": "VPC Flow Logs enabled on every subnet",
+     "vacuous": false
     }
    },
    "_check_4_1": {
@@ -629,7 +666,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Instances not using default service account"
+     "title": "Instances not using default service account",
+     "vacuous": false
     }
    },
    "_check_4_11": {
@@ -644,7 +682,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Confidential Computing enabled on instances"
+     "title": "Confidential Computing enabled on instances",
+     "vacuous": false
     }
    },
    "_check_4_2": {
@@ -659,7 +698,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Instances not using default service account with full API access"
+     "title": "Instances not using default service account with full API access",
+     "vacuous": false
     }
    },
    "_check_4_3": {
@@ -674,7 +714,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Block Project-wide SSH Keys enabled on VMs"
+     "title": "Block Project-wide SSH Keys enabled on VMs",
+     "vacuous": false
     }
    },
    "_check_4_4": {
@@ -689,7 +730,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "OS Login enabled for the project"
+     "title": "OS Login enabled for the project",
+     "vacuous": false
     }
    },
    "_check_4_5": {
@@ -704,7 +746,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Serial-port connection disabled on VMs"
+     "title": "Serial-port connection disabled on VMs",
+     "vacuous": false
     }
    },
    "_check_4_6": {
@@ -719,7 +762,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "IP forwarding disabled on instances"
+     "title": "IP forwarding disabled on instances",
+     "vacuous": false
     }
    },
    "_check_4_7": {
@@ -734,7 +778,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Critical VM disks encrypted with CSEK"
+     "title": "Critical VM disks encrypted with CSEK",
+     "vacuous": false
     }
    },
    "_check_4_8": {
@@ -749,7 +794,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Compute instances launched with Shielded VM"
+     "title": "Compute instances launched with Shielded VM",
+     "vacuous": false
     }
    },
    "_check_4_9": {
@@ -764,7 +810,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Compute instances lack public IP addresses"
+     "title": "Compute instances lack public IP addresses",
+     "vacuous": false
     }
    },
    "_check_5_1": {
@@ -779,7 +826,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Cloud Storage buckets not publicly accessible"
+     "title": "Cloud Storage buckets not publicly accessible",
+     "vacuous": false
     }
    },
    "_check_5_2": {
@@ -794,7 +842,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Uniform bucket-level access enabled on buckets"
+     "title": "Uniform bucket-level access enabled on buckets",
+     "vacuous": false
     }
    },
    "_check_6_1": {
@@ -809,7 +858,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Cloud SQL requires SSL for all connections"
+     "title": "Cloud SQL requires SSL for all connections",
+     "vacuous": false
     }
    },
    "_check_6_2": {
@@ -824,7 +874,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Cloud SQL instances lack public IPs"
+     "title": "Cloud SQL instances lack public IPs",
+     "vacuous": false
     }
    },
    "_check_6_3": {
@@ -839,7 +890,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Cloud SQL automated backups enabled"
+     "title": "Cloud SQL automated backups enabled",
+     "vacuous": false
     }
    },
    "_check_6_4": {
@@ -854,7 +906,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter"
+     "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter",
+     "vacuous": false
     }
    },
    "_check_6_5": {
@@ -869,7 +922,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud SQL PostgreSQL log_connections flag on"
+     "title": "Cloud SQL PostgreSQL log_connections flag on",
+     "vacuous": false
     }
    },
    "_check_6_6": {
@@ -884,7 +938,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud SQL PostgreSQL log_disconnections flag on"
+     "title": "Cloud SQL PostgreSQL log_disconnections flag on",
+     "vacuous": false
     }
    },
    "_check_6_7": {
@@ -899,7 +954,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1"
+     "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1",
+     "vacuous": false
     }
    },
    "_check_7_1": {
@@ -914,7 +970,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "BigQuery datasets not publicly accessible"
+     "title": "BigQuery datasets not publicly accessible",
+     "vacuous": false
     }
    },
    "_check_7_2": {
@@ -929,7 +986,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Default CMEK specified for BigQuery datasets"
+     "title": "Default CMEK specified for BigQuery datasets",
+     "vacuous": false
     }
    },
    "_check_7_3": {
@@ -944,7 +1002,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "BigQuery tables encrypted with CMEK"
+     "title": "BigQuery tables encrypted with CMEK",
+     "vacuous": false
     }
    }
   },
@@ -954,14 +1013,15 @@
      "account_id": "",
      "check_id": "1.1",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No gmail.com accounts found in project IAM policy.",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove IAM bindings for members using gmail.com accounts. Use corporate/organisational login credentials instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Corporate login credentials used"
+     "status": "not_applicable",
+     "title": "Corporate login credentials used",
+     "vacuous": true
     }
    },
    "_check_1_10": {
@@ -969,14 +1029,15 @@
      "account_id": "",
      "check_id": "1.10",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All KMS encryption keys have rotation periods within 90 days.",
+     "evidence": "No KMS key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set a rotation period of 90 days or less on all Cloud KMS encryption keys.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "KMS keys rotated within 90 days"
+     "status": "not_applicable",
+     "title": "KMS keys rotated within 90 days",
+     "vacuous": true
     }
    },
    "_check_1_11": {
@@ -984,14 +1045,15 @@
      "account_id": "",
      "check_id": "1.11",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No members have both KMS admin and crypto encrypter/decrypter roles.",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Ensure no user has both cloudkms.admin and any of cloudkms.cryptoKeyEncrypterDecrypter, cloudkms.cryptoKeyEncrypter, or cloudkms.cryptoKeyDecrypter roles.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Separation of duties for KMS role assignment"
+     "status": "not_applicable",
+     "title": "Separation of duties for KMS role assignment",
+     "vacuous": true
     }
    },
    "_check_1_12": {
@@ -999,14 +1061,15 @@
      "account_id": "",
      "check_id": "1.12",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All 0 API key(s) are restricted to specific APIs.",
+     "evidence": "No API key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Restrict each API key to only the specific APIs required by the application.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "API keys restricted to needed APIs"
+     "status": "not_applicable",
+     "title": "API keys restricted to needed APIs",
+     "vacuous": true
     }
    },
    "_check_1_13": {
@@ -1014,14 +1077,15 @@
      "account_id": "",
      "check_id": "1.13",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All 0 API key(s) are restricted to specific hosts or apps.",
+     "evidence": "No API key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Add application restrictions (HTTP referrers, IP addresses, Android/iOS apps) to each API key.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "API keys restricted to specific hosts and apps"
+     "status": "not_applicable",
+     "title": "API keys restricted to specific hosts and apps",
+     "vacuous": true
     }
    },
    "_check_1_14": {
@@ -1029,14 +1093,15 @@
      "account_id": "",
      "check_id": "1.14",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All 0 API key(s) are within 90-day rotation.",
+     "evidence": "No API key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Rotate API keys every 90 days or less to reduce the impact of compromised keys.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "API keys rotated within 90 days"
+     "status": "not_applicable",
+     "title": "API keys rotated within 90 days",
+     "vacuous": true
     }
    },
    "_check_1_15": {
@@ -1051,7 +1116,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Essential contacts configured for the org"
+     "title": "Essential contacts configured for the org",
+     "vacuous": false
     }
    },
    "_check_1_2": {
@@ -1066,7 +1132,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "not_applicable",
-     "title": "MFA enforced for all users"
+     "title": "MFA enforced for all users",
+     "vacuous": false
     }
    },
    "_check_1_3": {
@@ -1081,7 +1148,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "not_applicable",
-     "title": "Security Key enforcement for admin accounts"
+     "title": "Security Key enforcement for admin accounts",
+     "vacuous": false
     }
    },
    "_check_1_4": {
@@ -1089,14 +1157,15 @@
      "account_id": "",
      "check_id": "1.4",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No user-managed keys found across 0 service account(s).",
+     "evidence": "No service account(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Delete user-managed service account keys and use short-lived credentials via Workload Identity or impersonation instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "No user-managed service account keys"
+     "status": "not_applicable",
+     "title": "No user-managed service account keys",
+     "vacuous": true
     }
    },
    "_check_1_5": {
@@ -1104,14 +1173,15 @@
      "account_id": "",
      "check_id": "1.5",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No primitive Owner/Editor roles assigned to user accounts at project level.",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Replace primitive Owner/Editor bindings with predefined or custom roles following least privilege.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "No primitive roles (Owner/Editor) at project level"
+     "status": "not_applicable",
+     "title": "No primitive roles (Owner/Editor) at project level",
+     "vacuous": true
     }
    },
    "_check_1_6": {
@@ -1119,14 +1189,15 @@
      "account_id": "",
      "check_id": "1.6",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No service accounts have admin privileges (owner/editor/iam.admin).",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove roles/owner, roles/editor, and roles/iam.admin from service accounts. Use fine-grained predefined roles instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Service accounts lack admin privileges"
+     "status": "not_applicable",
+     "title": "Service accounts lack admin privileges",
+     "vacuous": true
     }
    },
    "_check_1_7": {
@@ -1134,14 +1205,15 @@
      "account_id": "",
      "check_id": "1.7",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No user-managed service accounts have serviceAccountAdmin, serviceAccountKeyAdmin, or compute.admin roles.",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove roles/iam.serviceAccountAdmin, roles/iam.serviceAccountKeyAdmin, and roles/compute.admin from user-managed service accounts.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "User-managed service accounts lack admin privileges"
+     "status": "not_applicable",
+     "title": "User-managed service accounts lack admin privileges",
+     "vacuous": true
     }
    },
    "_check_1_8": {
@@ -1149,14 +1221,15 @@
      "account_id": "",
      "check_id": "1.8",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All user-managed service account keys across 0 account(s) are within 90-day rotation.",
+     "evidence": "No user-managed service account key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Rotate user-managed service account keys every 90 days or less. Prefer short-lived credentials via Workload Identity.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "User-managed service account keys rotated within 90 days"
+     "status": "not_applicable",
+     "title": "User-managed service account keys rotated within 90 days",
+     "vacuous": true
     }
    },
    "_check_1_9": {
@@ -1164,14 +1237,15 @@
      "account_id": "",
      "check_id": "1.9",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No KMS encryption keys are anonymously or publicly accessible.",
+     "evidence": "No KMS key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove allUsers and allAuthenticatedUsers from Cloud KMS key IAM policies.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "pass",
-     "title": "Cloud KMS keys not publicly accessible"
+     "status": "not_applicable",
+     "title": "Cloud KMS keys not publicly accessible",
+     "vacuous": true
     }
    },
    "_check_2_1": {
@@ -1186,7 +1260,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Cloud Audit Logs configured for all services"
+     "title": "Cloud Audit Logs configured for all services",
+     "vacuous": false
     }
    },
    "_check_2_10": {
@@ -1201,7 +1276,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for SQL instance config changes"
+     "title": "Log metric filter and alerts for SQL instance config changes",
+     "vacuous": false
     }
    },
    "_check_2_11": {
@@ -1216,7 +1292,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for DNS zone changes"
+     "title": "Log metric filter and alerts for DNS zone changes",
+     "vacuous": false
     }
    },
    "_check_2_12": {
@@ -1224,14 +1301,15 @@
      "account_id": "",
      "check_id": "2.12",
      "cis_section": "2 - Logging",
-     "evidence": "Cloud DNS logging is enabled for all 0 managed zone(s).",
+     "evidence": "No private DNS zone(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable DNS logging on all Cloud DNS managed zones by setting the logging configuration.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud DNS logging enabled for all VPC networks"
+     "status": "not_applicable",
+     "title": "Cloud DNS logging enabled for all VPC networks",
+     "vacuous": true
     }
    },
    "_check_2_2": {
@@ -1246,7 +1324,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log sink exports all log entries"
+     "title": "Log sink exports all log entries",
+     "vacuous": false
     }
    },
    "_check_2_3": {
@@ -1261,7 +1340,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for Project Ownership changes"
+     "title": "Log metric filter and alerts for Project Ownership changes",
+     "vacuous": false
     }
    },
    "_check_2_4": {
@@ -1276,7 +1356,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for Audit Configuration changes"
+     "title": "Log metric filter and alerts for Audit Configuration changes",
+     "vacuous": false
     }
    },
    "_check_2_5": {
@@ -1291,7 +1372,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for Custom Role changes"
+     "title": "Log metric filter and alerts for Custom Role changes",
+     "vacuous": false
     }
    },
    "_check_2_6": {
@@ -1306,7 +1388,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for VPC firewall rule changes"
+     "title": "Log metric filter and alerts for VPC firewall rule changes",
+     "vacuous": false
     }
    },
    "_check_2_7": {
@@ -1321,7 +1404,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for VPC route changes"
+     "title": "Log metric filter and alerts for VPC route changes",
+     "vacuous": false
     }
    },
    "_check_2_8": {
@@ -1336,7 +1420,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for VPC network changes"
+     "title": "Log metric filter and alerts for VPC network changes",
+     "vacuous": false
     }
    },
    "_check_2_9": {
@@ -1351,7 +1436,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for Cloud Storage IAM changes"
+     "title": "Log metric filter and alerts for Cloud Storage IAM changes",
+     "vacuous": false
     }
    },
    "_check_3_1": {
@@ -1359,14 +1445,15 @@
      "account_id": "",
      "check_id": "3.1",
      "cis_section": "3 - Networking",
-     "evidence": "The 'default' VPC network has been deleted. Custom networks in use.",
+     "evidence": "No 'default' VPC network exists in this project.",
      "network_exposure": [],
      "recommendation": "Delete the 'default' VPC network and create custom VPC networks with explicit firewall rules.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "No default VPC network in the project"
+     "title": "No default VPC network in the project",
+     "vacuous": false
     }
    },
    "_check_3_10": {
@@ -1374,14 +1461,15 @@
      "account_id": "",
      "check_id": "3.10",
      "cis_section": "3 - Networking",
-     "evidence": "Private Google Access enabled on all 0 subnet(s).",
+     "evidence": "No subnet(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable Private Google Access on all subnets to allow VMs without external IPs to reach Google APIs.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Private Google Access enabled on all subnets"
+     "status": "not_applicable",
+     "title": "Private Google Access enabled on all subnets",
+     "vacuous": true
     }
    },
    "_check_3_2": {
@@ -1396,7 +1484,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "No legacy networks in the project"
+     "title": "No legacy networks in the project",
+     "vacuous": false
     }
    },
    "_check_3_3": {
@@ -1404,14 +1493,15 @@
      "account_id": "",
      "check_id": "3.3",
      "cis_section": "3 - Networking",
-     "evidence": "DNSSEC is enabled on all 0 public DNS zone(s).",
+     "evidence": "No public DNS zone(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable DNSSEC on all public Cloud DNS managed zones.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "DNSSEC enabled for Cloud DNS"
+     "status": "not_applicable",
+     "title": "DNSSEC enabled for Cloud DNS",
+     "vacuous": true
     }
    },
    "_check_3_4": {
@@ -1419,14 +1509,15 @@
      "account_id": "",
      "check_id": "3.4",
      "cis_section": "3 - Networking",
-     "evidence": "No DNS zones use RSASHA1 for key-signing.",
+     "evidence": "No DNSSEC-enabled zone(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Use RSASHA256, RSASHA512, or ECDSAP256SHA256 for DNSSEC key-signing keys instead of RSASHA1.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "RSASHA1 not used for DNSSEC key-signing key"
+     "status": "not_applicable",
+     "title": "RSASHA1 not used for DNSSEC key-signing key",
+     "vacuous": true
     }
    },
    "_check_3_5": {
@@ -1434,14 +1525,15 @@
      "account_id": "",
      "check_id": "3.5",
      "cis_section": "3 - Networking",
-     "evidence": "No DNS zones use RSASHA1 for zone-signing.",
+     "evidence": "No DNSSEC-enabled zone(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Use RSASHA256, RSASHA512, or ECDSAP256SHA256 for DNSSEC zone-signing keys instead of RSASHA1.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "RSASHA1 not used for DNSSEC zone-signing key"
+     "status": "not_applicable",
+     "title": "RSASHA1 not used for DNSSEC zone-signing key",
+     "vacuous": true
     }
    },
    "_check_3_6": {
@@ -1449,14 +1541,15 @@
      "account_id": "",
      "check_id": "3.6",
      "cis_section": "3 - Networking",
-     "evidence": "No firewall rules allow SSH (22) from 0.0.0.0/0 or ::/0.",
+     "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove or restrict firewall rules that allow TCP port 22 from 0.0.0.0/0 or ::/0.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "pass",
-     "title": "SSH (port 22) restricted from the internet"
+     "status": "not_applicable",
+     "title": "SSH (port 22) restricted from the internet",
+     "vacuous": true
     }
    },
    "_check_3_7": {
@@ -1464,14 +1557,15 @@
      "account_id": "",
      "check_id": "3.7",
      "cis_section": "3 - Networking",
-     "evidence": "No firewall rules allow RDP (3389) from 0.0.0.0/0 or ::/0.",
+     "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove or restrict firewall rules that allow TCP port 3389 from 0.0.0.0/0 or ::/0.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "pass",
-     "title": "RDP (port 3389) restricted from the internet"
+     "status": "not_applicable",
+     "title": "RDP (port 3389) restricted from the internet",
+     "vacuous": true
     }
    },
    "_check_3_8": {
@@ -1479,14 +1573,15 @@
      "account_id": "",
      "check_id": "3.8",
      "cis_section": "3 - Networking",
-     "evidence": "No firewall rules allow ICMP from 0.0.0.0/0 or ::/0.",
+     "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove or restrict firewall rules that allow ICMP from 0.0.0.0/0 or ::/0.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "ICMP firewall rules not open to the world"
+     "status": "not_applicable",
+     "title": "ICMP firewall rules not open to the world",
+     "vacuous": true
     }
    },
    "_check_3_9": {
@@ -1494,14 +1589,15 @@
      "account_id": "",
      "check_id": "3.9",
      "cis_section": "3 - Networking",
-     "evidence": "VPC Flow Logs enabled on all 0 subnet(s).",
+     "evidence": "No subnet(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable VPC Flow Logs on all subnets for network monitoring and forensics.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "VPC Flow Logs enabled on every subnet"
+     "status": "not_applicable",
+     "title": "VPC Flow Logs enabled on every subnet",
+     "vacuous": true
     }
    },
    "_check_4_1": {
@@ -1509,14 +1605,15 @@
      "account_id": "",
      "check_id": "4.1",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances using default service account across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Create and assign a custom service account to each VM instance instead of using the default Compute Engine service account.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Instances not using default service account"
+     "status": "not_applicable",
+     "title": "Instances not using default service account",
+     "vacuous": true
     }
    },
    "_check_4_11": {
@@ -1524,14 +1621,15 @@
      "account_id": "",
      "check_id": "4.11",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "All 0 instance(s) have Confidential Computing enabled.",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable Confidential Computing on Compute instances for memory encryption.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Confidential Computing enabled on instances"
+     "status": "not_applicable",
+     "title": "Confidential Computing enabled on instances",
+     "vacuous": true
     }
    },
    "_check_4_2": {
@@ -1539,14 +1637,15 @@
      "account_id": "",
      "check_id": "4.2",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances use the default service account with full API access across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove the default service account or restrict its scopes. Do not use https://www.googleapis.com/auth/cloud-platform scope with the default SA.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Instances not using default service account with full API access"
+     "status": "not_applicable",
+     "title": "Instances not using default service account with full API access",
+     "vacuous": true
     }
    },
    "_check_4_3": {
@@ -1554,14 +1653,15 @@
      "account_id": "",
      "check_id": "4.3",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "All 0 instance(s) have 'block-project-ssh-keys' enabled.",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the 'block-project-ssh-keys' metadata key to 'true' on each VM instance to prevent project-wide SSH key access.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Block Project-wide SSH Keys enabled on VMs"
+     "status": "not_applicable",
+     "title": "Block Project-wide SSH Keys enabled on VMs",
+     "vacuous": true
     }
    },
    "_check_4_4": {
@@ -1576,7 +1676,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "OS Login enabled for the project"
+     "title": "OS Login enabled for the project",
+     "vacuous": false
     }
    },
    "_check_4_5": {
@@ -1584,14 +1685,15 @@
      "account_id": "",
      "check_id": "4.5",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances have serial port access enabled across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set 'serial-port-enable' metadata to 'false' or remove it from all VM instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Serial-port connection disabled on VMs"
+     "status": "not_applicable",
+     "title": "Serial-port connection disabled on VMs",
+     "vacuous": true
     }
    },
    "_check_4_6": {
@@ -1599,14 +1701,15 @@
      "account_id": "",
      "check_id": "4.6",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances have IP forwarding enabled across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Disable IP forwarding on instances unless explicitly required for NAT or routing functions.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "IP forwarding disabled on instances"
+     "status": "not_applicable",
+     "title": "IP forwarding disabled on instances",
+     "vacuous": true
     }
    },
    "_check_4_7": {
@@ -1614,14 +1717,15 @@
      "account_id": "",
      "check_id": "4.7",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "All 0 disk(s) are encrypted with CSEK.",
+     "evidence": "No disk(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Encrypt VM disks with Customer-Supplied Encryption Keys (CSEK) for critical workloads.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Critical VM disks encrypted with CSEK"
+     "status": "not_applicable",
+     "title": "Critical VM disks encrypted with CSEK",
+     "vacuous": true
     }
    },
    "_check_4_8": {
@@ -1629,14 +1733,15 @@
      "account_id": "",
      "check_id": "4.8",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "All 0 instance(s) have Shielded VM enabled.",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable Shielded VM features (vTPM and Integrity Monitoring) on all Compute instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Compute instances launched with Shielded VM"
+     "status": "not_applicable",
+     "title": "Compute instances launched with Shielded VM",
+     "vacuous": true
     }
    },
    "_check_4_9": {
@@ -1644,14 +1749,15 @@
      "account_id": "",
      "check_id": "4.9",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances have public IP addresses across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove external IP addresses from Compute instances. Use Cloud NAT or IAP for outbound/inbound access.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Compute instances lack public IP addresses"
+     "status": "not_applicable",
+     "title": "Compute instances lack public IP addresses",
+     "vacuous": true
     }
    },
    "_check_5_1": {
@@ -1659,14 +1765,15 @@
      "account_id": "",
      "check_id": "5.1",
      "cis_section": "5 - Cloud Storage",
-     "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove allUsers and allAuthenticatedUsers from bucket IAM policies.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "no_data",
-     "title": "Cloud Storage buckets not publicly accessible"
+     "status": "not_applicable",
+     "title": "Cloud Storage buckets not publicly accessible",
+     "vacuous": true
     }
    },
    "_check_5_2": {
@@ -1674,14 +1781,15 @@
      "account_id": "",
      "check_id": "5.2",
      "cis_section": "5 - Cloud Storage",
-     "evidence": "All 0 bucket(s) have uniform bucket-level access enabled.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable uniform bucket-level access on all Cloud Storage buckets to use IAM exclusively for access control.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Uniform bucket-level access enabled on buckets"
+     "status": "not_applicable",
+     "title": "Uniform bucket-level access enabled on buckets",
+     "vacuous": true
     }
    },
    "_check_6_1": {
@@ -1689,14 +1797,15 @@
      "account_id": "",
      "check_id": "6.1",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All 0 Cloud SQL instance(s) require SSL connections.",
+     "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable 'Require SSL' (requireSsl) on all Cloud SQL instances to encrypt connections in transit.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Cloud SQL requires SSL for all connections"
+     "status": "not_applicable",
+     "title": "Cloud SQL requires SSL for all connections",
+     "vacuous": true
     }
    },
    "_check_6_2": {
@@ -1704,14 +1813,15 @@
      "account_id": "",
      "check_id": "6.2",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "No Cloud SQL instances have public IP addresses across 0 instance(s).",
+     "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove public IP addresses from Cloud SQL instances and use private IP or Cloud SQL Proxy instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Cloud SQL instances lack public IPs"
+     "status": "not_applicable",
+     "title": "Cloud SQL instances lack public IPs",
+     "vacuous": true
     }
    },
    "_check_6_3": {
@@ -1719,14 +1829,15 @@
      "account_id": "",
      "check_id": "6.3",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All 0 Cloud SQL instance(s) have automated backups enabled.",
+     "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable automated backups on all Cloud SQL instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Cloud SQL automated backups enabled"
+     "status": "not_applicable",
+     "title": "Cloud SQL automated backups enabled",
+     "vacuous": true
     }
    },
    "_check_6_4": {
@@ -1734,14 +1845,15 @@
      "account_id": "",
      "check_id": "6.4",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All PostgreSQL instances have log_error_verbosity set to DEFAULT or stricter.",
+     "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the log_error_verbosity database flag to DEFAULT or TERSE on PostgreSQL instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter"
+     "status": "not_applicable",
+     "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter",
+     "vacuous": true
     }
    },
    "_check_6_5": {
@@ -1749,14 +1861,15 @@
      "account_id": "",
      "check_id": "6.5",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All PostgreSQL instances have log_connections enabled.",
+     "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the log_connections database flag to 'on' on all PostgreSQL instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud SQL PostgreSQL log_connections flag on"
+     "status": "not_applicable",
+     "title": "Cloud SQL PostgreSQL log_connections flag on",
+     "vacuous": true
     }
    },
    "_check_6_6": {
@@ -1764,14 +1877,15 @@
      "account_id": "",
      "check_id": "6.6",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All PostgreSQL instances have log_disconnections enabled.",
+     "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the log_disconnections database flag to 'on' on all PostgreSQL instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud SQL PostgreSQL log_disconnections flag on"
+     "status": "not_applicable",
+     "title": "Cloud SQL PostgreSQL log_disconnections flag on",
+     "vacuous": true
     }
    },
    "_check_6_7": {
@@ -1779,14 +1893,15 @@
      "account_id": "",
      "check_id": "6.7",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All PostgreSQL instances have log_min_duration_statement set to -1.",
+     "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the log_min_duration_statement database flag to '-1' to disable logging of statement durations (prevents sensitive data leakage).",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1"
+     "status": "not_applicable",
+     "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1",
+     "vacuous": true
     }
    },
    "_check_7_1": {
@@ -1794,14 +1909,15 @@
      "account_id": "",
      "check_id": "7.1",
      "cis_section": "7 - BigQuery",
-     "evidence": "No BigQuery datasets are publicly accessible across 0 dataset(s).",
+     "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove allUsers and allAuthenticatedUsers from BigQuery dataset IAM policies.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "BigQuery datasets not publicly accessible"
+     "status": "not_applicable",
+     "title": "BigQuery datasets not publicly accessible",
+     "vacuous": true
     }
    },
    "_check_7_2": {
@@ -1809,14 +1925,15 @@
      "account_id": "",
      "check_id": "7.2",
      "cis_section": "7 - BigQuery",
-     "evidence": "All 0 BigQuery dataset(s) have default table expiration configured.",
+     "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set a default table expiration on all BigQuery datasets to automatically clean up unused tables.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Default CMEK specified for BigQuery datasets"
+     "status": "not_applicable",
+     "title": "Default CMEK specified for BigQuery datasets",
+     "vacuous": true
     }
    },
    "_check_7_3": {
@@ -1824,14 +1941,15 @@
      "account_id": "",
      "check_id": "7.3",
      "cis_section": "7 - BigQuery",
-     "evidence": "All 0 BigQuery dataset(s) are encrypted with CMEK.",
+     "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set a default KMS key on all BigQuery datasets so that new tables are automatically encrypted with CMEK.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "BigQuery tables encrypted with CMEK"
+     "status": "not_applicable",
+     "title": "BigQuery tables encrypted with CMEK",
+     "vacuous": true
     }
    }
   },
@@ -1848,7 +1966,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Corporate login credentials used"
+     "title": "Corporate login credentials used",
+     "vacuous": false
     }
    },
    "_check_1_10": {
@@ -1863,7 +1982,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "KMS keys rotated within 90 days"
+     "title": "KMS keys rotated within 90 days",
+     "vacuous": false
     }
    },
    "_check_1_11": {
@@ -1878,7 +1998,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Separation of duties for KMS role assignment"
+     "title": "Separation of duties for KMS role assignment",
+     "vacuous": false
     }
    },
    "_check_1_12": {
@@ -1893,7 +2014,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "API keys restricted to needed APIs"
+     "title": "API keys restricted to needed APIs",
+     "vacuous": false
     }
    },
    "_check_1_13": {
@@ -1908,7 +2030,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "API keys restricted to specific hosts and apps"
+     "title": "API keys restricted to specific hosts and apps",
+     "vacuous": false
     }
    },
    "_check_1_14": {
@@ -1923,7 +2046,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "API keys rotated within 90 days"
+     "title": "API keys rotated within 90 days",
+     "vacuous": false
     }
    },
    "_check_1_15": {
@@ -1938,7 +2062,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Essential contacts configured for the org"
+     "title": "Essential contacts configured for the org",
+     "vacuous": false
     }
    },
    "_check_1_2": {
@@ -1953,7 +2078,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "not_applicable",
-     "title": "MFA enforced for all users"
+     "title": "MFA enforced for all users",
+     "vacuous": false
     }
    },
    "_check_1_3": {
@@ -1968,7 +2094,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "not_applicable",
-     "title": "Security Key enforcement for admin accounts"
+     "title": "Security Key enforcement for admin accounts",
+     "vacuous": false
     }
    },
    "_check_1_4": {
@@ -1983,7 +2110,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "No user-managed service account keys"
+     "title": "No user-managed service account keys",
+     "vacuous": false
     }
    },
    "_check_1_5": {
@@ -1998,7 +2126,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "No primitive roles (Owner/Editor) at project level"
+     "title": "No primitive roles (Owner/Editor) at project level",
+     "vacuous": false
     }
    },
    "_check_1_6": {
@@ -2013,7 +2142,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Service accounts lack admin privileges"
+     "title": "Service accounts lack admin privileges",
+     "vacuous": false
     }
    },
    "_check_1_7": {
@@ -2028,7 +2158,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "User-managed service accounts lack admin privileges"
+     "title": "User-managed service accounts lack admin privileges",
+     "vacuous": false
     }
    },
    "_check_1_8": {
@@ -2043,7 +2174,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "User-managed service account keys rotated within 90 days"
+     "title": "User-managed service account keys rotated within 90 days",
+     "vacuous": false
     }
    },
    "_check_1_9": {
@@ -2058,7 +2190,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "error",
-     "title": "Cloud KMS keys not publicly accessible"
+     "title": "Cloud KMS keys not publicly accessible",
+     "vacuous": false
     }
    },
    "_check_2_1": {
@@ -2073,7 +2206,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud Audit Logs configured for all services"
+     "title": "Cloud Audit Logs configured for all services",
+     "vacuous": false
     }
    },
    "_check_2_10": {
@@ -2088,7 +2222,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for SQL instance config changes"
+     "title": "Log metric filter and alerts for SQL instance config changes",
+     "vacuous": false
     }
    },
    "_check_2_11": {
@@ -2103,7 +2238,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for DNS zone changes"
+     "title": "Log metric filter and alerts for DNS zone changes",
+     "vacuous": false
     }
    },
    "_check_2_12": {
@@ -2118,7 +2254,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud DNS logging enabled for all VPC networks"
+     "title": "Cloud DNS logging enabled for all VPC networks",
+     "vacuous": false
     }
    },
    "_check_2_2": {
@@ -2133,7 +2270,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log sink exports all log entries"
+     "title": "Log sink exports all log entries",
+     "vacuous": false
     }
    },
    "_check_2_3": {
@@ -2148,7 +2286,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for Project Ownership changes"
+     "title": "Log metric filter and alerts for Project Ownership changes",
+     "vacuous": false
     }
    },
    "_check_2_4": {
@@ -2163,7 +2302,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for Audit Configuration changes"
+     "title": "Log metric filter and alerts for Audit Configuration changes",
+     "vacuous": false
     }
    },
    "_check_2_5": {
@@ -2178,7 +2318,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for Custom Role changes"
+     "title": "Log metric filter and alerts for Custom Role changes",
+     "vacuous": false
     }
    },
    "_check_2_6": {
@@ -2193,7 +2334,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for VPC firewall rule changes"
+     "title": "Log metric filter and alerts for VPC firewall rule changes",
+     "vacuous": false
     }
    },
    "_check_2_7": {
@@ -2208,7 +2350,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for VPC route changes"
+     "title": "Log metric filter and alerts for VPC route changes",
+     "vacuous": false
     }
    },
    "_check_2_8": {
@@ -2223,7 +2366,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for VPC network changes"
+     "title": "Log metric filter and alerts for VPC network changes",
+     "vacuous": false
     }
    },
    "_check_2_9": {
@@ -2238,7 +2382,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Log metric filter and alerts for Cloud Storage IAM changes"
+     "title": "Log metric filter and alerts for Cloud Storage IAM changes",
+     "vacuous": false
     }
    },
    "_check_3_1": {
@@ -2253,7 +2398,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "No default VPC network in the project"
+     "title": "No default VPC network in the project",
+     "vacuous": false
     }
    },
    "_check_3_10": {
@@ -2268,7 +2414,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Private Google Access enabled on all subnets"
+     "title": "Private Google Access enabled on all subnets",
+     "vacuous": false
     }
    },
    "_check_3_2": {
@@ -2283,7 +2430,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "No legacy networks in the project"
+     "title": "No legacy networks in the project",
+     "vacuous": false
     }
    },
    "_check_3_3": {
@@ -2298,7 +2446,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "DNSSEC enabled for Cloud DNS"
+     "title": "DNSSEC enabled for Cloud DNS",
+     "vacuous": false
     }
    },
    "_check_3_4": {
@@ -2313,7 +2462,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "RSASHA1 not used for DNSSEC key-signing key"
+     "title": "RSASHA1 not used for DNSSEC key-signing key",
+     "vacuous": false
     }
    },
    "_check_3_5": {
@@ -2328,7 +2478,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "RSASHA1 not used for DNSSEC zone-signing key"
+     "title": "RSASHA1 not used for DNSSEC zone-signing key",
+     "vacuous": false
     }
    },
    "_check_3_6": {
@@ -2343,7 +2494,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "error",
-     "title": "SSH (port 22) restricted from the internet"
+     "title": "SSH (port 22) restricted from the internet",
+     "vacuous": false
     }
    },
    "_check_3_7": {
@@ -2358,7 +2510,8 @@
      "resource_ids": [],
      "severity": "critical",
      "status": "error",
-     "title": "RDP (port 3389) restricted from the internet"
+     "title": "RDP (port 3389) restricted from the internet",
+     "vacuous": false
     }
    },
    "_check_3_8": {
@@ -2373,7 +2526,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "ICMP firewall rules not open to the world"
+     "title": "ICMP firewall rules not open to the world",
+     "vacuous": false
     }
    },
    "_check_3_9": {
@@ -2388,7 +2542,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "VPC Flow Logs enabled on every subnet"
+     "title": "VPC Flow Logs enabled on every subnet",
+     "vacuous": false
     }
    },
    "_check_4_1": {
@@ -2403,7 +2558,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Instances not using default service account"
+     "title": "Instances not using default service account",
+     "vacuous": false
     }
    },
    "_check_4_11": {
@@ -2418,7 +2574,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Confidential Computing enabled on instances"
+     "title": "Confidential Computing enabled on instances",
+     "vacuous": false
     }
    },
    "_check_4_2": {
@@ -2433,7 +2590,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Instances not using default service account with full API access"
+     "title": "Instances not using default service account with full API access",
+     "vacuous": false
     }
    },
    "_check_4_3": {
@@ -2448,7 +2606,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Block Project-wide SSH Keys enabled on VMs"
+     "title": "Block Project-wide SSH Keys enabled on VMs",
+     "vacuous": false
     }
    },
    "_check_4_4": {
@@ -2463,7 +2622,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "OS Login enabled for the project"
+     "title": "OS Login enabled for the project",
+     "vacuous": false
     }
    },
    "_check_4_5": {
@@ -2478,7 +2638,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Serial-port connection disabled on VMs"
+     "title": "Serial-port connection disabled on VMs",
+     "vacuous": false
     }
    },
    "_check_4_6": {
@@ -2493,7 +2654,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "IP forwarding disabled on instances"
+     "title": "IP forwarding disabled on instances",
+     "vacuous": false
     }
    },
    "_check_4_7": {
@@ -2508,7 +2670,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Critical VM disks encrypted with CSEK"
+     "title": "Critical VM disks encrypted with CSEK",
+     "vacuous": false
     }
    },
    "_check_4_8": {
@@ -2523,7 +2686,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Compute instances launched with Shielded VM"
+     "title": "Compute instances launched with Shielded VM",
+     "vacuous": false
     }
    },
    "_check_4_9": {
@@ -2538,7 +2702,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Compute instances lack public IP addresses"
+     "title": "Compute instances lack public IP addresses",
+     "vacuous": false
     }
    },
    "_check_5_1": {
@@ -2553,7 +2718,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Cloud Storage buckets not publicly accessible"
+     "title": "Cloud Storage buckets not publicly accessible",
+     "vacuous": false
     }
    },
    "_check_5_2": {
@@ -2568,7 +2734,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Uniform bucket-level access enabled on buckets"
+     "title": "Uniform bucket-level access enabled on buckets",
+     "vacuous": false
     }
    },
    "_check_6_1": {
@@ -2583,7 +2750,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Cloud SQL requires SSL for all connections"
+     "title": "Cloud SQL requires SSL for all connections",
+     "vacuous": false
     }
    },
    "_check_6_2": {
@@ -2598,7 +2766,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Cloud SQL instances lack public IPs"
+     "title": "Cloud SQL instances lack public IPs",
+     "vacuous": false
     }
    },
    "_check_6_3": {
@@ -2613,7 +2782,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "Cloud SQL automated backups enabled"
+     "title": "Cloud SQL automated backups enabled",
+     "vacuous": false
     }
    },
    "_check_6_4": {
@@ -2628,7 +2798,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter"
+     "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter",
+     "vacuous": false
     }
    },
    "_check_6_5": {
@@ -2643,7 +2814,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud SQL PostgreSQL log_connections flag on"
+     "title": "Cloud SQL PostgreSQL log_connections flag on",
+     "vacuous": false
     }
    },
    "_check_6_6": {
@@ -2658,7 +2830,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud SQL PostgreSQL log_disconnections flag on"
+     "title": "Cloud SQL PostgreSQL log_disconnections flag on",
+     "vacuous": false
     }
    },
    "_check_6_7": {
@@ -2673,7 +2846,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1"
+     "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1",
+     "vacuous": false
     }
    },
    "_check_7_1": {
@@ -2688,7 +2862,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "error",
-     "title": "BigQuery datasets not publicly accessible"
+     "title": "BigQuery datasets not publicly accessible",
+     "vacuous": false
     }
    },
    "_check_7_2": {
@@ -2703,7 +2878,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "Default CMEK specified for BigQuery datasets"
+     "title": "Default CMEK specified for BigQuery datasets",
+     "vacuous": false
     }
    },
    "_check_7_3": {
@@ -2718,7 +2894,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "error",
-     "title": "BigQuery tables encrypted with CMEK"
+     "title": "BigQuery tables encrypted with CMEK",
+     "vacuous": false
     }
    }
   },
@@ -2728,14 +2905,15 @@
      "account_id": "",
      "check_id": "1.1",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No gmail.com accounts found in project IAM policy.",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove IAM bindings for members using gmail.com accounts. Use corporate/organisational login credentials instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Corporate login credentials used"
+     "status": "not_applicable",
+     "title": "Corporate login credentials used",
+     "vacuous": true
     }
    },
    "_check_1_10": {
@@ -2743,14 +2921,15 @@
      "account_id": "",
      "check_id": "1.10",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All KMS encryption keys have rotation periods within 90 days.",
+     "evidence": "No KMS key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set a rotation period of 90 days or less on all Cloud KMS encryption keys.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "KMS keys rotated within 90 days"
+     "status": "not_applicable",
+     "title": "KMS keys rotated within 90 days",
+     "vacuous": true
     }
    },
    "_check_1_11": {
@@ -2758,14 +2937,15 @@
      "account_id": "",
      "check_id": "1.11",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No members have both KMS admin and crypto encrypter/decrypter roles.",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Ensure no user has both cloudkms.admin and any of cloudkms.cryptoKeyEncrypterDecrypter, cloudkms.cryptoKeyEncrypter, or cloudkms.cryptoKeyDecrypter roles.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Separation of duties for KMS role assignment"
+     "status": "not_applicable",
+     "title": "Separation of duties for KMS role assignment",
+     "vacuous": true
     }
    },
    "_check_1_12": {
@@ -2773,14 +2953,15 @@
      "account_id": "",
      "check_id": "1.12",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All 0 API key(s) are restricted to specific APIs.",
+     "evidence": "No API key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Restrict each API key to only the specific APIs required by the application.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "API keys restricted to needed APIs"
+     "status": "not_applicable",
+     "title": "API keys restricted to needed APIs",
+     "vacuous": true
     }
    },
    "_check_1_13": {
@@ -2788,14 +2969,15 @@
      "account_id": "",
      "check_id": "1.13",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All 0 API key(s) are restricted to specific hosts or apps.",
+     "evidence": "No API key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Add application restrictions (HTTP referrers, IP addresses, Android/iOS apps) to each API key.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "API keys restricted to specific hosts and apps"
+     "status": "not_applicable",
+     "title": "API keys restricted to specific hosts and apps",
+     "vacuous": true
     }
    },
    "_check_1_14": {
@@ -2803,14 +2985,15 @@
      "account_id": "",
      "check_id": "1.14",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All 0 API key(s) are within 90-day rotation.",
+     "evidence": "No API key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Rotate API keys every 90 days or less to reduce the impact of compromised keys.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "API keys rotated within 90 days"
+     "status": "not_applicable",
+     "title": "API keys rotated within 90 days",
+     "vacuous": true
     }
    },
    "_check_1_15": {
@@ -2825,7 +3008,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Essential contacts configured for the org"
+     "title": "Essential contacts configured for the org",
+     "vacuous": false
     }
    },
    "_check_1_2": {
@@ -2840,7 +3024,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "not_applicable",
-     "title": "MFA enforced for all users"
+     "title": "MFA enforced for all users",
+     "vacuous": false
     }
    },
    "_check_1_3": {
@@ -2855,7 +3040,8 @@
      "resource_ids": [],
      "severity": "high",
      "status": "not_applicable",
-     "title": "Security Key enforcement for admin accounts"
+     "title": "Security Key enforcement for admin accounts",
+     "vacuous": false
     }
    },
    "_check_1_4": {
@@ -2863,14 +3049,15 @@
      "account_id": "",
      "check_id": "1.4",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No user-managed keys found across 0 service account(s).",
+     "evidence": "No service account(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Delete user-managed service account keys and use short-lived credentials via Workload Identity or impersonation instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "No user-managed service account keys"
+     "status": "not_applicable",
+     "title": "No user-managed service account keys",
+     "vacuous": true
     }
    },
    "_check_1_5": {
@@ -2878,14 +3065,15 @@
      "account_id": "",
      "check_id": "1.5",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No primitive Owner/Editor roles assigned to user accounts at project level.",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Replace primitive Owner/Editor bindings with predefined or custom roles following least privilege.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "No primitive roles (Owner/Editor) at project level"
+     "status": "not_applicable",
+     "title": "No primitive roles (Owner/Editor) at project level",
+     "vacuous": true
     }
    },
    "_check_1_6": {
@@ -2893,14 +3081,15 @@
      "account_id": "",
      "check_id": "1.6",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No service accounts have admin privileges (owner/editor/iam.admin).",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove roles/owner, roles/editor, and roles/iam.admin from service accounts. Use fine-grained predefined roles instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Service accounts lack admin privileges"
+     "status": "not_applicable",
+     "title": "Service accounts lack admin privileges",
+     "vacuous": true
     }
    },
    "_check_1_7": {
@@ -2908,14 +3097,15 @@
      "account_id": "",
      "check_id": "1.7",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No user-managed service accounts have serviceAccountAdmin, serviceAccountKeyAdmin, or compute.admin roles.",
+     "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove roles/iam.serviceAccountAdmin, roles/iam.serviceAccountKeyAdmin, and roles/compute.admin from user-managed service accounts.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "User-managed service accounts lack admin privileges"
+     "status": "not_applicable",
+     "title": "User-managed service accounts lack admin privileges",
+     "vacuous": true
     }
    },
    "_check_1_8": {
@@ -2923,14 +3113,15 @@
      "account_id": "",
      "check_id": "1.8",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "All user-managed service account keys across 0 account(s) are within 90-day rotation.",
+     "evidence": "No user-managed service account key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Rotate user-managed service account keys every 90 days or less. Prefer short-lived credentials via Workload Identity.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "User-managed service account keys rotated within 90 days"
+     "status": "not_applicable",
+     "title": "User-managed service account keys rotated within 90 days",
+     "vacuous": true
     }
    },
    "_check_1_9": {
@@ -2938,14 +3129,15 @@
      "account_id": "",
      "check_id": "1.9",
      "cis_section": "1 - Identity and Access Management",
-     "evidence": "No KMS encryption keys are anonymously or publicly accessible.",
+     "evidence": "No KMS key(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove allUsers and allAuthenticatedUsers from Cloud KMS key IAM policies.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "pass",
-     "title": "Cloud KMS keys not publicly accessible"
+     "status": "not_applicable",
+     "title": "Cloud KMS keys not publicly accessible",
+     "vacuous": true
     }
    },
    "_check_2_1": {
@@ -2960,7 +3152,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Cloud Audit Logs configured for all services"
+     "title": "Cloud Audit Logs configured for all services",
+     "vacuous": false
     }
    },
    "_check_2_10": {
@@ -2975,7 +3168,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for SQL instance config changes"
+     "title": "Log metric filter and alerts for SQL instance config changes",
+     "vacuous": false
     }
    },
    "_check_2_11": {
@@ -2990,7 +3184,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for DNS zone changes"
+     "title": "Log metric filter and alerts for DNS zone changes",
+     "vacuous": false
     }
    },
    "_check_2_12": {
@@ -2998,14 +3193,15 @@
      "account_id": "",
      "check_id": "2.12",
      "cis_section": "2 - Logging",
-     "evidence": "Cloud DNS logging is enabled for all 0 managed zone(s).",
+     "evidence": "No private DNS zone(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable DNS logging on all Cloud DNS managed zones by setting the logging configuration.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud DNS logging enabled for all VPC networks"
+     "status": "not_applicable",
+     "title": "Cloud DNS logging enabled for all VPC networks",
+     "vacuous": true
     }
    },
    "_check_2_2": {
@@ -3020,7 +3216,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log sink exports all log entries"
+     "title": "Log sink exports all log entries",
+     "vacuous": false
     }
    },
    "_check_2_3": {
@@ -3035,7 +3232,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for Project Ownership changes"
+     "title": "Log metric filter and alerts for Project Ownership changes",
+     "vacuous": false
     }
    },
    "_check_2_4": {
@@ -3050,7 +3248,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for Audit Configuration changes"
+     "title": "Log metric filter and alerts for Audit Configuration changes",
+     "vacuous": false
     }
    },
    "_check_2_5": {
@@ -3065,7 +3264,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for Custom Role changes"
+     "title": "Log metric filter and alerts for Custom Role changes",
+     "vacuous": false
     }
    },
    "_check_2_6": {
@@ -3080,7 +3280,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for VPC firewall rule changes"
+     "title": "Log metric filter and alerts for VPC firewall rule changes",
+     "vacuous": false
     }
    },
    "_check_2_7": {
@@ -3095,7 +3296,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for VPC route changes"
+     "title": "Log metric filter and alerts for VPC route changes",
+     "vacuous": false
     }
    },
    "_check_2_8": {
@@ -3110,7 +3312,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for VPC network changes"
+     "title": "Log metric filter and alerts for VPC network changes",
+     "vacuous": false
     }
    },
    "_check_2_9": {
@@ -3125,7 +3328,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "Log metric filter and alerts for Cloud Storage IAM changes"
+     "title": "Log metric filter and alerts for Cloud Storage IAM changes",
+     "vacuous": false
     }
    },
    "_check_3_1": {
@@ -3133,14 +3337,15 @@
      "account_id": "",
      "check_id": "3.1",
      "cis_section": "3 - Networking",
-     "evidence": "The 'default' VPC network has been deleted. Custom networks in use.",
+     "evidence": "No 'default' VPC network exists in this project.",
      "network_exposure": [],
      "recommendation": "Delete the 'default' VPC network and create custom VPC networks with explicit firewall rules.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "No default VPC network in the project"
+     "title": "No default VPC network in the project",
+     "vacuous": false
     }
    },
    "_check_3_10": {
@@ -3148,14 +3353,15 @@
      "account_id": "",
      "check_id": "3.10",
      "cis_section": "3 - Networking",
-     "evidence": "Private Google Access enabled on all 0 subnet(s).",
+     "evidence": "No subnet(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable Private Google Access on all subnets to allow VMs without external IPs to reach Google APIs.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Private Google Access enabled on all subnets"
+     "status": "not_applicable",
+     "title": "Private Google Access enabled on all subnets",
+     "vacuous": true
     }
    },
    "_check_3_2": {
@@ -3170,7 +3376,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "pass",
-     "title": "No legacy networks in the project"
+     "title": "No legacy networks in the project",
+     "vacuous": false
     }
    },
    "_check_3_3": {
@@ -3178,14 +3385,15 @@
      "account_id": "",
      "check_id": "3.3",
      "cis_section": "3 - Networking",
-     "evidence": "DNSSEC is enabled on all 0 public DNS zone(s).",
+     "evidence": "No public DNS zone(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable DNSSEC on all public Cloud DNS managed zones.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "DNSSEC enabled for Cloud DNS"
+     "status": "not_applicable",
+     "title": "DNSSEC enabled for Cloud DNS",
+     "vacuous": true
     }
    },
    "_check_3_4": {
@@ -3193,14 +3401,15 @@
      "account_id": "",
      "check_id": "3.4",
      "cis_section": "3 - Networking",
-     "evidence": "No DNS zones use RSASHA1 for key-signing.",
+     "evidence": "No DNSSEC-enabled zone(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Use RSASHA256, RSASHA512, or ECDSAP256SHA256 for DNSSEC key-signing keys instead of RSASHA1.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "RSASHA1 not used for DNSSEC key-signing key"
+     "status": "not_applicable",
+     "title": "RSASHA1 not used for DNSSEC key-signing key",
+     "vacuous": true
     }
    },
    "_check_3_5": {
@@ -3208,14 +3417,15 @@
      "account_id": "",
      "check_id": "3.5",
      "cis_section": "3 - Networking",
-     "evidence": "No DNS zones use RSASHA1 for zone-signing.",
+     "evidence": "No DNSSEC-enabled zone(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Use RSASHA256, RSASHA512, or ECDSAP256SHA256 for DNSSEC zone-signing keys instead of RSASHA1.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "RSASHA1 not used for DNSSEC zone-signing key"
+     "status": "not_applicable",
+     "title": "RSASHA1 not used for DNSSEC zone-signing key",
+     "vacuous": true
     }
    },
    "_check_3_6": {
@@ -3223,14 +3433,15 @@
      "account_id": "",
      "check_id": "3.6",
      "cis_section": "3 - Networking",
-     "evidence": "No firewall rules allow SSH (22) from 0.0.0.0/0 or ::/0.",
+     "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove or restrict firewall rules that allow TCP port 22 from 0.0.0.0/0 or ::/0.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "pass",
-     "title": "SSH (port 22) restricted from the internet"
+     "status": "not_applicable",
+     "title": "SSH (port 22) restricted from the internet",
+     "vacuous": true
     }
    },
    "_check_3_7": {
@@ -3238,14 +3449,15 @@
      "account_id": "",
      "check_id": "3.7",
      "cis_section": "3 - Networking",
-     "evidence": "No firewall rules allow RDP (3389) from 0.0.0.0/0 or ::/0.",
+     "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove or restrict firewall rules that allow TCP port 3389 from 0.0.0.0/0 or ::/0.",
      "remediation": {},
      "resource_ids": [],
      "severity": "critical",
-     "status": "pass",
-     "title": "RDP (port 3389) restricted from the internet"
+     "status": "not_applicable",
+     "title": "RDP (port 3389) restricted from the internet",
+     "vacuous": true
     }
    },
    "_check_3_8": {
@@ -3253,14 +3465,15 @@
      "account_id": "",
      "check_id": "3.8",
      "cis_section": "3 - Networking",
-     "evidence": "No firewall rules allow ICMP from 0.0.0.0/0 or ::/0.",
+     "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove or restrict firewall rules that allow ICMP from 0.0.0.0/0 or ::/0.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "ICMP firewall rules not open to the world"
+     "status": "not_applicable",
+     "title": "ICMP firewall rules not open to the world",
+     "vacuous": true
     }
    },
    "_check_3_9": {
@@ -3268,14 +3481,15 @@
      "account_id": "",
      "check_id": "3.9",
      "cis_section": "3 - Networking",
-     "evidence": "VPC Flow Logs enabled on all 0 subnet(s).",
+     "evidence": "No subnet(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable VPC Flow Logs on all subnets for network monitoring and forensics.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "VPC Flow Logs enabled on every subnet"
+     "status": "not_applicable",
+     "title": "VPC Flow Logs enabled on every subnet",
+     "vacuous": true
     }
    },
    "_check_4_1": {
@@ -3283,14 +3497,15 @@
      "account_id": "",
      "check_id": "4.1",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances using default service account across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Create and assign a custom service account to each VM instance instead of using the default Compute Engine service account.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Instances not using default service account"
+     "status": "not_applicable",
+     "title": "Instances not using default service account",
+     "vacuous": true
     }
    },
    "_check_4_11": {
@@ -3298,14 +3513,15 @@
      "account_id": "",
      "check_id": "4.11",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "All 0 instance(s) have Confidential Computing enabled.",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable Confidential Computing on Compute instances for memory encryption.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Confidential Computing enabled on instances"
+     "status": "not_applicable",
+     "title": "Confidential Computing enabled on instances",
+     "vacuous": true
     }
    },
    "_check_4_2": {
@@ -3313,14 +3529,15 @@
      "account_id": "",
      "check_id": "4.2",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances use the default service account with full API access across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove the default service account or restrict its scopes. Do not use https://www.googleapis.com/auth/cloud-platform scope with the default SA.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Instances not using default service account with full API access"
+     "status": "not_applicable",
+     "title": "Instances not using default service account with full API access",
+     "vacuous": true
     }
    },
    "_check_4_3": {
@@ -3328,14 +3545,15 @@
      "account_id": "",
      "check_id": "4.3",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "All 0 instance(s) have 'block-project-ssh-keys' enabled.",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the 'block-project-ssh-keys' metadata key to 'true' on each VM instance to prevent project-wide SSH key access.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Block Project-wide SSH Keys enabled on VMs"
+     "status": "not_applicable",
+     "title": "Block Project-wide SSH Keys enabled on VMs",
+     "vacuous": true
     }
    },
    "_check_4_4": {
@@ -3350,7 +3568,8 @@
      "resource_ids": [],
      "severity": "medium",
      "status": "fail",
-     "title": "OS Login enabled for the project"
+     "title": "OS Login enabled for the project",
+     "vacuous": false
     }
    },
    "_check_4_5": {
@@ -3358,14 +3577,15 @@
      "account_id": "",
      "check_id": "4.5",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances have serial port access enabled across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set 'serial-port-enable' metadata to 'false' or remove it from all VM instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Serial-port connection disabled on VMs"
+     "status": "not_applicable",
+     "title": "Serial-port connection disabled on VMs",
+     "vacuous": true
     }
    },
    "_check_4_6": {
@@ -3373,14 +3593,15 @@
      "account_id": "",
      "check_id": "4.6",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances have IP forwarding enabled across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Disable IP forwarding on instances unless explicitly required for NAT or routing functions.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "IP forwarding disabled on instances"
+     "status": "not_applicable",
+     "title": "IP forwarding disabled on instances",
+     "vacuous": true
     }
    },
    "_check_4_7": {
@@ -3388,14 +3609,15 @@
      "account_id": "",
      "check_id": "4.7",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "All 0 disk(s) are encrypted with CSEK.",
+     "evidence": "No disk(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Encrypt VM disks with Customer-Supplied Encryption Keys (CSEK) for critical workloads.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Critical VM disks encrypted with CSEK"
+     "status": "not_applicable",
+     "title": "Critical VM disks encrypted with CSEK",
+     "vacuous": true
     }
    },
    "_check_4_8": {
@@ -3403,14 +3625,15 @@
      "account_id": "",
      "check_id": "4.8",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "All 0 instance(s) have Shielded VM enabled.",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable Shielded VM features (vTPM and Integrity Monitoring) on all Compute instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Compute instances launched with Shielded VM"
+     "status": "not_applicable",
+     "title": "Compute instances launched with Shielded VM",
+     "vacuous": true
     }
    },
    "_check_4_9": {
@@ -3418,14 +3641,15 @@
      "account_id": "",
      "check_id": "4.9",
      "cis_section": "4 - Virtual Machines",
-     "evidence": "No instances have public IP addresses across 0 instance(s).",
+     "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove external IP addresses from Compute instances. Use Cloud NAT or IAP for outbound/inbound access.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Compute instances lack public IP addresses"
+     "status": "not_applicable",
+     "title": "Compute instances lack public IP addresses",
+     "vacuous": true
     }
    },
    "_check_5_1": {
@@ -3433,14 +3657,15 @@
      "account_id": "",
      "check_id": "5.1",
      "cis_section": "5 - Cloud Storage",
-     "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove allUsers and allAuthenticatedUsers from bucket IAM policies.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "no_data",
-     "title": "Cloud Storage buckets not publicly accessible"
+     "status": "not_applicable",
+     "title": "Cloud Storage buckets not publicly accessible",
+     "vacuous": true
     }
    },
    "_check_5_2": {
@@ -3448,14 +3673,15 @@
      "account_id": "",
      "check_id": "5.2",
      "cis_section": "5 - Cloud Storage",
-     "evidence": "All 0 bucket(s) have uniform bucket-level access enabled.",
+     "evidence": "No bucket(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable uniform bucket-level access on all Cloud Storage buckets to use IAM exclusively for access control.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Uniform bucket-level access enabled on buckets"
+     "status": "not_applicable",
+     "title": "Uniform bucket-level access enabled on buckets",
+     "vacuous": true
     }
    },
    "_check_6_1": {
@@ -3463,14 +3689,15 @@
      "account_id": "",
      "check_id": "6.1",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All 0 Cloud SQL instance(s) require SSL connections.",
+     "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable 'Require SSL' (requireSsl) on all Cloud SQL instances to encrypt connections in transit.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Cloud SQL requires SSL for all connections"
+     "status": "not_applicable",
+     "title": "Cloud SQL requires SSL for all connections",
+     "vacuous": true
     }
    },
    "_check_6_2": {
@@ -3478,14 +3705,15 @@
      "account_id": "",
      "check_id": "6.2",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "No Cloud SQL instances have public IP addresses across 0 instance(s).",
+     "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove public IP addresses from Cloud SQL instances and use private IP or Cloud SQL Proxy instead.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Cloud SQL instances lack public IPs"
+     "status": "not_applicable",
+     "title": "Cloud SQL instances lack public IPs",
+     "vacuous": true
     }
    },
    "_check_6_3": {
@@ -3493,14 +3721,15 @@
      "account_id": "",
      "check_id": "6.3",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All 0 Cloud SQL instance(s) have automated backups enabled.",
+     "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Enable automated backups on all Cloud SQL instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "Cloud SQL automated backups enabled"
+     "status": "not_applicable",
+     "title": "Cloud SQL automated backups enabled",
+     "vacuous": true
     }
    },
    "_check_6_4": {
@@ -3508,14 +3737,15 @@
      "account_id": "",
      "check_id": "6.4",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All PostgreSQL instances have log_error_verbosity set to DEFAULT or stricter.",
+     "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the log_error_verbosity database flag to DEFAULT or TERSE on PostgreSQL instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter"
+     "status": "not_applicable",
+     "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter",
+     "vacuous": true
     }
    },
    "_check_6_5": {
@@ -3523,14 +3753,15 @@
      "account_id": "",
      "check_id": "6.5",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All PostgreSQL instances have log_connections enabled.",
+     "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the log_connections database flag to 'on' on all PostgreSQL instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud SQL PostgreSQL log_connections flag on"
+     "status": "not_applicable",
+     "title": "Cloud SQL PostgreSQL log_connections flag on",
+     "vacuous": true
     }
    },
    "_check_6_6": {
@@ -3538,14 +3769,15 @@
      "account_id": "",
      "check_id": "6.6",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All PostgreSQL instances have log_disconnections enabled.",
+     "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the log_disconnections database flag to 'on' on all PostgreSQL instances.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud SQL PostgreSQL log_disconnections flag on"
+     "status": "not_applicable",
+     "title": "Cloud SQL PostgreSQL log_disconnections flag on",
+     "vacuous": true
     }
    },
    "_check_6_7": {
@@ -3553,14 +3785,15 @@
      "account_id": "",
      "check_id": "6.7",
      "cis_section": "6 - Cloud SQL",
-     "evidence": "All PostgreSQL instances have log_min_duration_statement set to -1.",
+     "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set the log_min_duration_statement database flag to '-1' to disable logging of statement durations (prevents sensitive data leakage).",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1"
+     "status": "not_applicable",
+     "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1",
+     "vacuous": true
     }
    },
    "_check_7_1": {
@@ -3568,14 +3801,15 @@
      "account_id": "",
      "check_id": "7.1",
      "cis_section": "7 - BigQuery",
-     "evidence": "No BigQuery datasets are publicly accessible across 0 dataset(s).",
+     "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Remove allUsers and allAuthenticatedUsers from BigQuery dataset IAM policies.",
      "remediation": {},
      "resource_ids": [],
      "severity": "high",
-     "status": "pass",
-     "title": "BigQuery datasets not publicly accessible"
+     "status": "not_applicable",
+     "title": "BigQuery datasets not publicly accessible",
+     "vacuous": true
     }
    },
    "_check_7_2": {
@@ -3583,14 +3817,15 @@
      "account_id": "",
      "check_id": "7.2",
      "cis_section": "7 - BigQuery",
-     "evidence": "All 0 BigQuery dataset(s) have default table expiration configured.",
+     "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set a default table expiration on all BigQuery datasets to automatically clean up unused tables.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "Default CMEK specified for BigQuery datasets"
+     "status": "not_applicable",
+     "title": "Default CMEK specified for BigQuery datasets",
+     "vacuous": true
     }
    },
    "_check_7_3": {
@@ -3598,14 +3833,15 @@
      "account_id": "",
      "check_id": "7.3",
      "cis_section": "7 - BigQuery",
-     "evidence": "All 0 BigQuery dataset(s) are encrypted with CMEK.",
+     "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
      "network_exposure": [],
      "recommendation": "Set a default KMS key on all BigQuery datasets so that new tables are automatically encrypted with CMEK.",
      "remediation": {},
      "resource_ids": [],
      "severity": "medium",
-     "status": "pass",
-     "title": "BigQuery tables encrypted with CMEK"
+     "status": "not_applicable",
+     "title": "BigQuery tables encrypted with CMEK",
+     "vacuous": true
     }
    }
   }
@@ -5287,7 +5523,7 @@
       "attack_techniques": [],
       "check_id": "1.1",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No gmail.com accounts found in project IAM policy.",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove IAM bindings for members using gmail.com accounts. Use corporate/organisational login credentials instead.",
       "remediation": {
@@ -5307,7 +5543,7 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Corporate login credentials used"
      },
      {
@@ -5368,7 +5604,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No user-managed keys found across 0 service account(s).",
+      "evidence": "No service account(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Delete user-managed service account keys and use short-lived credentials via Workload Identity or impersonation instead.",
       "remediation": {
@@ -5388,14 +5624,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "No user-managed service account keys"
      },
      {
       "attack_techniques": [],
       "check_id": "1.5",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No primitive Owner/Editor roles assigned to user accounts at project level.",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Replace primitive Owner/Editor bindings with predefined or custom roles following least privilege.",
       "remediation": {
@@ -5415,14 +5651,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "No primitive roles (Owner/Editor) at project level"
      },
      {
       "attack_techniques": [],
       "check_id": "1.6",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No service accounts have admin privileges (owner/editor/iam.admin).",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove roles/owner, roles/editor, and roles/iam.admin from service accounts. Use fine-grained predefined roles instead.",
       "remediation": {
@@ -5442,14 +5678,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Service accounts lack admin privileges"
      },
      {
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No user-managed service accounts have serviceAccountAdmin, serviceAccountKeyAdmin, or compute.admin roles.",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove roles/iam.serviceAccountAdmin, roles/iam.serviceAccountKeyAdmin, and roles/compute.admin from user-managed service accounts.",
       "remediation": {
@@ -5469,14 +5705,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "User-managed service accounts lack admin privileges"
      },
      {
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All user-managed service account keys across 0 account(s) are within 90-day rotation.",
+      "evidence": "No user-managed service account key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Rotate user-managed service account keys every 90 days or less. Prefer short-lived credentials via Workload Identity.",
       "remediation": {
@@ -5496,14 +5732,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "User-managed service account keys rotated within 90 days"
      },
      {
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No KMS encryption keys are anonymously or publicly accessible.",
+      "evidence": "No KMS key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove allUsers and allAuthenticatedUsers from Cloud KMS key IAM policies.",
       "remediation": {
@@ -5523,14 +5759,14 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud KMS keys not publicly accessible"
      },
      {
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All KMS encryption keys have rotation periods within 90 days.",
+      "evidence": "No KMS key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set a rotation period of 90 days or less on all Cloud KMS encryption keys.",
       "remediation": {
@@ -5550,14 +5786,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "KMS keys rotated within 90 days"
      },
      {
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No members have both KMS admin and crypto encrypter/decrypter roles.",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Ensure no user has both cloudkms.admin and any of cloudkms.cryptoKeyEncrypterDecrypter, cloudkms.cryptoKeyEncrypter, or cloudkms.cryptoKeyDecrypter roles.",
       "remediation": {
@@ -5577,14 +5813,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Separation of duties for KMS role assignment"
      },
      {
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All 0 API key(s) are restricted to specific APIs.",
+      "evidence": "No API key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Restrict each API key to only the specific APIs required by the application.",
       "remediation": {
@@ -5604,14 +5840,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "API keys restricted to needed APIs"
      },
      {
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All 0 API key(s) are restricted to specific hosts or apps.",
+      "evidence": "No API key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Add application restrictions (HTTP referrers, IP addresses, Android/iOS apps) to each API key.",
       "remediation": {
@@ -5631,14 +5867,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "API keys restricted to specific hosts and apps"
      },
      {
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All 0 API key(s) are within 90-day rotation.",
+      "evidence": "No API key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Rotate API keys every 90 days or less to reduce the impact of compromised keys.",
       "remediation": {
@@ -5658,7 +5894,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "API keys rotated within 90 days"
      },
      {
@@ -6018,7 +6254,7 @@
       "attack_techniques": [],
       "check_id": "2.12",
       "cis_section": "2 - Logging",
-      "evidence": "Cloud DNS logging is enabled for all 0 managed zone(s).",
+      "evidence": "No private DNS zone(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable DNS logging on all Cloud DNS managed zones by setting the logging configuration.",
       "remediation": {
@@ -6036,14 +6272,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud DNS logging enabled for all VPC networks"
      },
      {
       "attack_techniques": [],
       "check_id": "3.1",
       "cis_section": "3 - Networking",
-      "evidence": "The 'default' VPC network has been deleted. Custom networks in use.",
+      "evidence": "No 'default' VPC network exists in this project.",
       "project_id": "",
       "recommendation": "Delete the 'default' VPC network and create custom VPC networks with explicit firewall rules.",
       "remediation": {
@@ -6095,7 +6331,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "3 - Networking",
-      "evidence": "DNSSEC is enabled on all 0 public DNS zone(s).",
+      "evidence": "No public DNS zone(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable DNSSEC on all public Cloud DNS managed zones.",
       "remediation": {
@@ -6114,14 +6350,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "DNSSEC enabled for Cloud DNS"
      },
      {
       "attack_techniques": [],
       "check_id": "3.4",
       "cis_section": "3 - Networking",
-      "evidence": "No DNS zones use RSASHA1 for key-signing.",
+      "evidence": "No DNSSEC-enabled zone(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Use RSASHA256, RSASHA512, or ECDSAP256SHA256 for DNSSEC key-signing keys instead of RSASHA1.",
       "remediation": {
@@ -6140,14 +6376,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "RSASHA1 not used for DNSSEC key-signing key"
      },
      {
       "attack_techniques": [],
       "check_id": "3.5",
       "cis_section": "3 - Networking",
-      "evidence": "No DNS zones use RSASHA1 for zone-signing.",
+      "evidence": "No DNSSEC-enabled zone(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Use RSASHA256, RSASHA512, or ECDSAP256SHA256 for DNSSEC zone-signing keys instead of RSASHA1.",
       "remediation": {
@@ -6166,14 +6402,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "RSASHA1 not used for DNSSEC zone-signing key"
      },
      {
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "3 - Networking",
-      "evidence": "No firewall rules allow SSH (22) from 0.0.0.0/0 or ::/0.",
+      "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove or restrict firewall rules that allow TCP port 22 from 0.0.0.0/0 or ::/0.",
       "remediation": {
@@ -6192,14 +6428,14 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "SSH (port 22) restricted from the internet"
      },
      {
       "attack_techniques": [],
       "check_id": "3.7",
       "cis_section": "3 - Networking",
-      "evidence": "No firewall rules allow RDP (3389) from 0.0.0.0/0 or ::/0.",
+      "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove or restrict firewall rules that allow TCP port 3389 from 0.0.0.0/0 or ::/0.",
       "remediation": {
@@ -6218,14 +6454,14 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "RDP (port 3389) restricted from the internet"
      },
      {
       "attack_techniques": [],
       "check_id": "3.8",
       "cis_section": "3 - Networking",
-      "evidence": "No firewall rules allow ICMP from 0.0.0.0/0 or ::/0.",
+      "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove or restrict firewall rules that allow ICMP from 0.0.0.0/0 or ::/0.",
       "remediation": {
@@ -6244,14 +6480,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "ICMP firewall rules not open to the world"
      },
      {
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "3 - Networking",
-      "evidence": "VPC Flow Logs enabled on all 0 subnet(s).",
+      "evidence": "No subnet(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable VPC Flow Logs on all subnets for network monitoring and forensics.",
       "remediation": {
@@ -6270,14 +6506,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "VPC Flow Logs enabled on every subnet"
      },
      {
       "attack_techniques": [],
       "check_id": "3.10",
       "cis_section": "3 - Networking",
-      "evidence": "Private Google Access enabled on all 0 subnet(s).",
+      "evidence": "No subnet(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable Private Google Access on all subnets to allow VMs without external IPs to reach Google APIs.",
       "remediation": {
@@ -6296,14 +6532,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Private Google Access enabled on all subnets"
      },
      {
       "attack_techniques": [],
       "check_id": "4.1",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances using default service account across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Create and assign a custom service account to each VM instance instead of using the default Compute Engine service account.",
       "remediation": {
@@ -6320,14 +6556,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Instances not using default service account"
      },
      {
       "attack_techniques": [],
       "check_id": "4.2",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances use the default service account with full API access across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove the default service account or restrict its scopes. Do not use https://www.googleapis.com/auth/cloud-platform scope with the default SA.",
       "remediation": {
@@ -6344,14 +6580,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Instances not using default service account with full API access"
      },
      {
       "attack_techniques": [],
       "check_id": "4.3",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "All 0 instance(s) have 'block-project-ssh-keys' enabled.",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the 'block-project-ssh-keys' metadata key to 'true' on each VM instance to prevent project-wide SSH key access.",
       "remediation": {
@@ -6368,7 +6604,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Block Project-wide SSH Keys enabled on VMs"
      },
      {
@@ -6399,7 +6635,7 @@
       "attack_techniques": [],
       "check_id": "4.5",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances have serial port access enabled across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set 'serial-port-enable' metadata to 'false' or remove it from all VM instances.",
       "remediation": {
@@ -6416,14 +6652,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Serial-port connection disabled on VMs"
      },
      {
       "attack_techniques": [],
       "check_id": "4.6",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances have IP forwarding enabled across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Disable IP forwarding on instances unless explicitly required for NAT or routing functions.",
       "remediation": {
@@ -6440,14 +6676,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "IP forwarding disabled on instances"
      },
      {
       "attack_techniques": [],
       "check_id": "4.7",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "All 0 disk(s) are encrypted with CSEK.",
+      "evidence": "No disk(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Encrypt VM disks with Customer-Supplied Encryption Keys (CSEK) for critical workloads.",
       "remediation": {
@@ -6464,14 +6700,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Critical VM disks encrypted with CSEK"
      },
      {
       "attack_techniques": [],
       "check_id": "4.8",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "All 0 instance(s) have Shielded VM enabled.",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable Shielded VM features (vTPM and Integrity Monitoring) on all Compute instances.",
       "remediation": {
@@ -6488,14 +6724,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Compute instances launched with Shielded VM"
      },
      {
       "attack_techniques": [],
       "check_id": "4.9",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances have public IP addresses across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove external IP addresses from Compute instances. Use Cloud NAT or IAP for outbound/inbound access.",
       "remediation": {
@@ -6512,14 +6748,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Compute instances lack public IP addresses"
      },
      {
       "attack_techniques": [],
       "check_id": "4.11",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "All 0 instance(s) have Confidential Computing enabled.",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable Confidential Computing on Compute instances for memory encryption.",
       "remediation": {
@@ -6536,14 +6772,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Confidential Computing enabled on instances"
      },
      {
       "attack_techniques": [],
       "check_id": "5.1",
       "cis_section": "5 - Cloud Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove allUsers and allAuthenticatedUsers from bucket IAM policies.",
       "remediation": {
@@ -6561,14 +6797,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "Cloud Storage buckets not publicly accessible"
      },
      {
       "attack_techniques": [],
       "check_id": "5.2",
       "cis_section": "5 - Cloud Storage",
-      "evidence": "All 0 bucket(s) have uniform bucket-level access enabled.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable uniform bucket-level access on all Cloud Storage buckets to use IAM exclusively for access control.",
       "remediation": {
@@ -6587,14 +6823,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Uniform bucket-level access enabled on buckets"
      },
      {
       "attack_techniques": [],
       "check_id": "6.1",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All 0 Cloud SQL instance(s) require SSL connections.",
+      "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable 'Require SSL' (requireSsl) on all Cloud SQL instances to encrypt connections in transit.",
       "remediation": {
@@ -6609,14 +6845,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL requires SSL for all connections"
      },
      {
       "attack_techniques": [],
       "check_id": "6.2",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "No Cloud SQL instances have public IP addresses across 0 instance(s).",
+      "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove public IP addresses from Cloud SQL instances and use private IP or Cloud SQL Proxy instead.",
       "remediation": {
@@ -6631,14 +6867,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL instances lack public IPs"
      },
      {
       "attack_techniques": [],
       "check_id": "6.3",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All 0 Cloud SQL instance(s) have automated backups enabled.",
+      "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable automated backups on all Cloud SQL instances.",
       "remediation": {
@@ -6653,14 +6889,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL automated backups enabled"
      },
      {
       "attack_techniques": [],
       "check_id": "6.4",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All PostgreSQL instances have log_error_verbosity set to DEFAULT or stricter.",
+      "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the log_error_verbosity database flag to DEFAULT or TERSE on PostgreSQL instances.",
       "remediation": {
@@ -6675,14 +6911,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter"
      },
      {
       "attack_techniques": [],
       "check_id": "6.5",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All PostgreSQL instances have log_connections enabled.",
+      "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the log_connections database flag to 'on' on all PostgreSQL instances.",
       "remediation": {
@@ -6697,14 +6933,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL PostgreSQL log_connections flag on"
      },
      {
       "attack_techniques": [],
       "check_id": "6.6",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All PostgreSQL instances have log_disconnections enabled.",
+      "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the log_disconnections database flag to 'on' on all PostgreSQL instances.",
       "remediation": {
@@ -6719,14 +6955,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL PostgreSQL log_disconnections flag on"
      },
      {
       "attack_techniques": [],
       "check_id": "6.7",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All PostgreSQL instances have log_min_duration_statement set to -1.",
+      "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the log_min_duration_statement database flag to '-1' to disable logging of statement durations (prevents sensitive data leakage).",
       "remediation": {
@@ -6741,14 +6977,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1"
      },
      {
       "attack_techniques": [],
       "check_id": "7.1",
       "cis_section": "7 - BigQuery",
-      "evidence": "No BigQuery datasets are publicly accessible across 0 dataset(s).",
+      "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove allUsers and allAuthenticatedUsers from BigQuery dataset IAM policies.",
       "remediation": {
@@ -6763,14 +6999,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "BigQuery datasets not publicly accessible"
      },
      {
       "attack_techniques": [],
       "check_id": "7.2",
       "cis_section": "7 - BigQuery",
-      "evidence": "All 0 BigQuery dataset(s) have default table expiration configured.",
+      "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set a default table expiration on all BigQuery datasets to automatically clean up unused tables.",
       "remediation": {
@@ -6785,14 +7021,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Default CMEK specified for BigQuery datasets"
      },
      {
       "attack_techniques": [],
       "check_id": "7.3",
       "cis_section": "7 - BigQuery",
-      "evidence": "All 0 BigQuery dataset(s) are encrypted with CMEK.",
+      "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set a default KMS key on all BigQuery datasets so that new tables are automatically encrypted with CMEK.",
       "remediation": {
@@ -6807,17 +7043,17 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "BigQuery tables encrypted with CMEK"
      }
     ],
     "errored": 1,
-    "evaluated": 55,
+    "evaluated": 14,
     "failed": 12,
-    "no_data": 1,
-    "not_applicable": 2,
-    "pass_rate": 78.2,
-    "passed": 43,
+    "no_data": 0,
+    "not_applicable": 44,
+    "pass_rate": 14.3,
+    "passed": 2,
     "project_id": "characterization-project",
     "projects_scanned": [],
     "total": 59,
@@ -8500,7 +8736,7 @@
       "attack_techniques": [],
       "check_id": "1.1",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No gmail.com accounts found in project IAM policy.",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove IAM bindings for members using gmail.com accounts. Use corporate/organisational login credentials instead.",
       "remediation": {
@@ -8520,7 +8756,7 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Corporate login credentials used"
      },
      {
@@ -8581,7 +8817,7 @@
       "attack_techniques": [],
       "check_id": "1.4",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No user-managed keys found across 0 service account(s).",
+      "evidence": "No service account(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Delete user-managed service account keys and use short-lived credentials via Workload Identity or impersonation instead.",
       "remediation": {
@@ -8601,14 +8837,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "No user-managed service account keys"
      },
      {
       "attack_techniques": [],
       "check_id": "1.5",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No primitive Owner/Editor roles assigned to user accounts at project level.",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Replace primitive Owner/Editor bindings with predefined or custom roles following least privilege.",
       "remediation": {
@@ -8628,14 +8864,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "No primitive roles (Owner/Editor) at project level"
      },
      {
       "attack_techniques": [],
       "check_id": "1.6",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No service accounts have admin privileges (owner/editor/iam.admin).",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove roles/owner, roles/editor, and roles/iam.admin from service accounts. Use fine-grained predefined roles instead.",
       "remediation": {
@@ -8655,14 +8891,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Service accounts lack admin privileges"
      },
      {
       "attack_techniques": [],
       "check_id": "1.7",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No user-managed service accounts have serviceAccountAdmin, serviceAccountKeyAdmin, or compute.admin roles.",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove roles/iam.serviceAccountAdmin, roles/iam.serviceAccountKeyAdmin, and roles/compute.admin from user-managed service accounts.",
       "remediation": {
@@ -8682,14 +8918,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "User-managed service accounts lack admin privileges"
      },
      {
       "attack_techniques": [],
       "check_id": "1.8",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All user-managed service account keys across 0 account(s) are within 90-day rotation.",
+      "evidence": "No user-managed service account key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Rotate user-managed service account keys every 90 days or less. Prefer short-lived credentials via Workload Identity.",
       "remediation": {
@@ -8709,14 +8945,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "User-managed service account keys rotated within 90 days"
      },
      {
       "attack_techniques": [],
       "check_id": "1.9",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No KMS encryption keys are anonymously or publicly accessible.",
+      "evidence": "No KMS key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove allUsers and allAuthenticatedUsers from Cloud KMS key IAM policies.",
       "remediation": {
@@ -8736,14 +8972,14 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud KMS keys not publicly accessible"
      },
      {
       "attack_techniques": [],
       "check_id": "1.10",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All KMS encryption keys have rotation periods within 90 days.",
+      "evidence": "No KMS key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set a rotation period of 90 days or less on all Cloud KMS encryption keys.",
       "remediation": {
@@ -8763,14 +8999,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "KMS keys rotated within 90 days"
      },
      {
       "attack_techniques": [],
       "check_id": "1.11",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "No members have both KMS admin and crypto encrypter/decrypter roles.",
+      "evidence": "No IAM binding(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Ensure no user has both cloudkms.admin and any of cloudkms.cryptoKeyEncrypterDecrypter, cloudkms.cryptoKeyEncrypter, or cloudkms.cryptoKeyDecrypter roles.",
       "remediation": {
@@ -8790,14 +9026,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Separation of duties for KMS role assignment"
      },
      {
       "attack_techniques": [],
       "check_id": "1.12",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All 0 API key(s) are restricted to specific APIs.",
+      "evidence": "No API key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Restrict each API key to only the specific APIs required by the application.",
       "remediation": {
@@ -8817,14 +9053,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "API keys restricted to needed APIs"
      },
      {
       "attack_techniques": [],
       "check_id": "1.13",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All 0 API key(s) are restricted to specific hosts or apps.",
+      "evidence": "No API key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Add application restrictions (HTTP referrers, IP addresses, Android/iOS apps) to each API key.",
       "remediation": {
@@ -8844,14 +9080,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "API keys restricted to specific hosts and apps"
      },
      {
       "attack_techniques": [],
       "check_id": "1.14",
       "cis_section": "1 - Identity and Access Management",
-      "evidence": "All 0 API key(s) are within 90-day rotation.",
+      "evidence": "No API key(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Rotate API keys every 90 days or less to reduce the impact of compromised keys.",
       "remediation": {
@@ -8871,7 +9107,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "API keys rotated within 90 days"
      },
      {
@@ -9231,7 +9467,7 @@
       "attack_techniques": [],
       "check_id": "2.12",
       "cis_section": "2 - Logging",
-      "evidence": "Cloud DNS logging is enabled for all 0 managed zone(s).",
+      "evidence": "No private DNS zone(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable DNS logging on all Cloud DNS managed zones by setting the logging configuration.",
       "remediation": {
@@ -9249,14 +9485,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud DNS logging enabled for all VPC networks"
      },
      {
       "attack_techniques": [],
       "check_id": "3.1",
       "cis_section": "3 - Networking",
-      "evidence": "The 'default' VPC network has been deleted. Custom networks in use.",
+      "evidence": "No 'default' VPC network exists in this project.",
       "project_id": "",
       "recommendation": "Delete the 'default' VPC network and create custom VPC networks with explicit firewall rules.",
       "remediation": {
@@ -9308,7 +9544,7 @@
       "attack_techniques": [],
       "check_id": "3.3",
       "cis_section": "3 - Networking",
-      "evidence": "DNSSEC is enabled on all 0 public DNS zone(s).",
+      "evidence": "No public DNS zone(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable DNSSEC on all public Cloud DNS managed zones.",
       "remediation": {
@@ -9327,14 +9563,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "DNSSEC enabled for Cloud DNS"
      },
      {
       "attack_techniques": [],
       "check_id": "3.4",
       "cis_section": "3 - Networking",
-      "evidence": "No DNS zones use RSASHA1 for key-signing.",
+      "evidence": "No DNSSEC-enabled zone(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Use RSASHA256, RSASHA512, or ECDSAP256SHA256 for DNSSEC key-signing keys instead of RSASHA1.",
       "remediation": {
@@ -9353,14 +9589,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "RSASHA1 not used for DNSSEC key-signing key"
      },
      {
       "attack_techniques": [],
       "check_id": "3.5",
       "cis_section": "3 - Networking",
-      "evidence": "No DNS zones use RSASHA1 for zone-signing.",
+      "evidence": "No DNSSEC-enabled zone(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Use RSASHA256, RSASHA512, or ECDSAP256SHA256 for DNSSEC zone-signing keys instead of RSASHA1.",
       "remediation": {
@@ -9379,14 +9615,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "RSASHA1 not used for DNSSEC zone-signing key"
      },
      {
       "attack_techniques": [],
       "check_id": "3.6",
       "cis_section": "3 - Networking",
-      "evidence": "No firewall rules allow SSH (22) from 0.0.0.0/0 or ::/0.",
+      "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove or restrict firewall rules that allow TCP port 22 from 0.0.0.0/0 or ::/0.",
       "remediation": {
@@ -9405,14 +9641,14 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "SSH (port 22) restricted from the internet"
      },
      {
       "attack_techniques": [],
       "check_id": "3.7",
       "cis_section": "3 - Networking",
-      "evidence": "No firewall rules allow RDP (3389) from 0.0.0.0/0 or ::/0.",
+      "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove or restrict firewall rules that allow TCP port 3389 from 0.0.0.0/0 or ::/0.",
       "remediation": {
@@ -9431,14 +9667,14 @@
       },
       "resource_ids": [],
       "severity": "critical",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "RDP (port 3389) restricted from the internet"
      },
      {
       "attack_techniques": [],
       "check_id": "3.8",
       "cis_section": "3 - Networking",
-      "evidence": "No firewall rules allow ICMP from 0.0.0.0/0 or ::/0.",
+      "evidence": "No firewall rule(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove or restrict firewall rules that allow ICMP from 0.0.0.0/0 or ::/0.",
       "remediation": {
@@ -9457,14 +9693,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "ICMP firewall rules not open to the world"
      },
      {
       "attack_techniques": [],
       "check_id": "3.9",
       "cis_section": "3 - Networking",
-      "evidence": "VPC Flow Logs enabled on all 0 subnet(s).",
+      "evidence": "No subnet(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable VPC Flow Logs on all subnets for network monitoring and forensics.",
       "remediation": {
@@ -9483,14 +9719,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "VPC Flow Logs enabled on every subnet"
      },
      {
       "attack_techniques": [],
       "check_id": "3.10",
       "cis_section": "3 - Networking",
-      "evidence": "Private Google Access enabled on all 0 subnet(s).",
+      "evidence": "No subnet(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable Private Google Access on all subnets to allow VMs without external IPs to reach Google APIs.",
       "remediation": {
@@ -9509,14 +9745,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Private Google Access enabled on all subnets"
      },
      {
       "attack_techniques": [],
       "check_id": "4.1",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances using default service account across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Create and assign a custom service account to each VM instance instead of using the default Compute Engine service account.",
       "remediation": {
@@ -9533,14 +9769,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Instances not using default service account"
      },
      {
       "attack_techniques": [],
       "check_id": "4.2",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances use the default service account with full API access across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove the default service account or restrict its scopes. Do not use https://www.googleapis.com/auth/cloud-platform scope with the default SA.",
       "remediation": {
@@ -9557,14 +9793,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Instances not using default service account with full API access"
      },
      {
       "attack_techniques": [],
       "check_id": "4.3",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "All 0 instance(s) have 'block-project-ssh-keys' enabled.",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the 'block-project-ssh-keys' metadata key to 'true' on each VM instance to prevent project-wide SSH key access.",
       "remediation": {
@@ -9581,7 +9817,7 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Block Project-wide SSH Keys enabled on VMs"
      },
      {
@@ -9616,7 +9852,7 @@
       "attack_techniques": [],
       "check_id": "4.5",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances have serial port access enabled across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set 'serial-port-enable' metadata to 'false' or remove it from all VM instances.",
       "remediation": {
@@ -9633,14 +9869,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Serial-port connection disabled on VMs"
      },
      {
       "attack_techniques": [],
       "check_id": "4.6",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances have IP forwarding enabled across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Disable IP forwarding on instances unless explicitly required for NAT or routing functions.",
       "remediation": {
@@ -9657,14 +9893,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "IP forwarding disabled on instances"
      },
      {
       "attack_techniques": [],
       "check_id": "4.7",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "All 0 disk(s) are encrypted with CSEK.",
+      "evidence": "No disk(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Encrypt VM disks with Customer-Supplied Encryption Keys (CSEK) for critical workloads.",
       "remediation": {
@@ -9681,14 +9917,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Critical VM disks encrypted with CSEK"
      },
      {
       "attack_techniques": [],
       "check_id": "4.8",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "All 0 instance(s) have Shielded VM enabled.",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable Shielded VM features (vTPM and Integrity Monitoring) on all Compute instances.",
       "remediation": {
@@ -9705,14 +9941,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Compute instances launched with Shielded VM"
      },
      {
       "attack_techniques": [],
       "check_id": "4.9",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "No instances have public IP addresses across 0 instance(s).",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove external IP addresses from Compute instances. Use Cloud NAT or IAP for outbound/inbound access.",
       "remediation": {
@@ -9729,14 +9965,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Compute instances lack public IP addresses"
      },
      {
       "attack_techniques": [],
       "check_id": "4.11",
       "cis_section": "4 - Virtual Machines",
-      "evidence": "All 0 instance(s) have Confidential Computing enabled.",
+      "evidence": "No VM instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable Confidential Computing on Compute instances for memory encryption.",
       "remediation": {
@@ -9753,14 +9989,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Confidential Computing enabled on instances"
      },
      {
       "attack_techniques": [],
       "check_id": "5.1",
       "cis_section": "5 - Cloud Storage",
-      "evidence": "No bucket(s) were discovered; this check has no data and cannot report PASS.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove allUsers and allAuthenticatedUsers from bucket IAM policies.",
       "remediation": {
@@ -9778,14 +10014,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "no_data",
+      "status": "not_applicable",
       "title": "Cloud Storage buckets not publicly accessible"
      },
      {
       "attack_techniques": [],
       "check_id": "5.2",
       "cis_section": "5 - Cloud Storage",
-      "evidence": "All 0 bucket(s) have uniform bucket-level access enabled.",
+      "evidence": "No bucket(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable uniform bucket-level access on all Cloud Storage buckets to use IAM exclusively for access control.",
       "remediation": {
@@ -9804,14 +10040,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Uniform bucket-level access enabled on buckets"
      },
      {
       "attack_techniques": [],
       "check_id": "6.1",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All 0 Cloud SQL instance(s) require SSL connections.",
+      "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable 'Require SSL' (requireSsl) on all Cloud SQL instances to encrypt connections in transit.",
       "remediation": {
@@ -9826,14 +10062,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL requires SSL for all connections"
      },
      {
       "attack_techniques": [],
       "check_id": "6.2",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "No Cloud SQL instances have public IP addresses across 0 instance(s).",
+      "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove public IP addresses from Cloud SQL instances and use private IP or Cloud SQL Proxy instead.",
       "remediation": {
@@ -9848,14 +10084,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL instances lack public IPs"
      },
      {
       "attack_techniques": [],
       "check_id": "6.3",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All 0 Cloud SQL instance(s) have automated backups enabled.",
+      "evidence": "No Cloud SQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Enable automated backups on all Cloud SQL instances.",
       "remediation": {
@@ -9870,14 +10106,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL automated backups enabled"
      },
      {
       "attack_techniques": [],
       "check_id": "6.4",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All PostgreSQL instances have log_error_verbosity set to DEFAULT or stricter.",
+      "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the log_error_verbosity database flag to DEFAULT or TERSE on PostgreSQL instances.",
       "remediation": {
@@ -9892,14 +10128,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL PostgreSQL log_error_verbosity DEFAULT or stricter"
      },
      {
       "attack_techniques": [],
       "check_id": "6.5",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All PostgreSQL instances have log_connections enabled.",
+      "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the log_connections database flag to 'on' on all PostgreSQL instances.",
       "remediation": {
@@ -9914,14 +10150,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL PostgreSQL log_connections flag on"
      },
      {
       "attack_techniques": [],
       "check_id": "6.6",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All PostgreSQL instances have log_disconnections enabled.",
+      "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the log_disconnections database flag to 'on' on all PostgreSQL instances.",
       "remediation": {
@@ -9936,14 +10172,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL PostgreSQL log_disconnections flag on"
      },
      {
       "attack_techniques": [],
       "check_id": "6.7",
       "cis_section": "6 - Cloud SQL",
-      "evidence": "All PostgreSQL instances have log_min_duration_statement set to -1.",
+      "evidence": "No Cloud SQL PostgreSQL instance(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set the log_min_duration_statement database flag to '-1' to disable logging of statement durations (prevents sensitive data leakage).",
       "remediation": {
@@ -9958,14 +10194,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Cloud SQL PostgreSQL log_min_duration_statement set to -1"
      },
      {
       "attack_techniques": [],
       "check_id": "7.1",
       "cis_section": "7 - BigQuery",
-      "evidence": "No BigQuery datasets are publicly accessible across 0 dataset(s).",
+      "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Remove allUsers and allAuthenticatedUsers from BigQuery dataset IAM policies.",
       "remediation": {
@@ -9980,14 +10216,14 @@
       },
       "resource_ids": [],
       "severity": "high",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "BigQuery datasets not publicly accessible"
      },
      {
       "attack_techniques": [],
       "check_id": "7.2",
       "cis_section": "7 - BigQuery",
-      "evidence": "All 0 BigQuery dataset(s) have default table expiration configured.",
+      "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set a default table expiration on all BigQuery datasets to automatically clean up unused tables.",
       "remediation": {
@@ -10002,14 +10238,14 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "Default CMEK specified for BigQuery datasets"
      },
      {
       "attack_techniques": [],
       "check_id": "7.3",
       "cis_section": "7 - BigQuery",
-      "evidence": "All 0 BigQuery dataset(s) are encrypted with CMEK.",
+      "evidence": "No BigQuery dataset(s) found; this control has nothing to evaluate.",
       "project_id": "",
       "recommendation": "Set a default KMS key on all BigQuery datasets so that new tables are automatically encrypted with CMEK.",
       "remediation": {
@@ -10024,17 +10260,17 @@
       },
       "resource_ids": [],
       "severity": "medium",
-      "status": "pass",
+      "status": "not_applicable",
       "title": "BigQuery tables encrypted with CMEK"
      }
     ],
     "errored": 0,
-    "evaluated": 56,
+    "evaluated": 15,
     "failed": 13,
-    "no_data": 1,
-    "not_applicable": 2,
-    "pass_rate": 76.8,
-    "passed": 43,
+    "no_data": 0,
+    "not_applicable": 44,
+    "pass_rate": 13.3,
+    "passed": 2,
     "project_id": "characterization-project",
     "projects_scanned": [],
     "total": 59,

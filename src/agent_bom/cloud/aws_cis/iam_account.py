@@ -206,6 +206,9 @@ def _check_1_7(iam_client: Any) -> CISCheckResult:
         except (ValueError, TypeError):
             result.evidence = f"Could not parse root last-used date: {last_used}"
         break
+    else:
+        result.status = CheckStatus.NO_DATA
+        result.evidence = "Credential report has no root account row; root usage could not be determined."
     return result
 
 

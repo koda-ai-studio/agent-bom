@@ -6,7 +6,7 @@ from typing import Any
 
 from agent_bom.security import sanitize_text
 
-from ._base import CheckStatus, CISCheckResult, logger
+from ._base import CheckStatus, CISCheckResult, logger, not_applicable_if_empty
 
 # ---------------------------------------------------------------------------
 # Individual checks — CIS 5.x (Networking)
@@ -27,11 +27,13 @@ def _check_5_2(ec2_client: Any) -> CISCheckResult:
     )
     admin_ports = {22, 3389}
     open_sgs = []
+    groups = 0
     exposures: list[dict] = []
 
     paginator = ec2_client.get_paginator("describe_security_groups")
     for page in paginator.paginate():
         for sg in page["SecurityGroups"]:
+            groups += 1
             for perm in sg.get("IpPermissions", []):
                 from_port = perm.get("FromPort", 0)
                 to_port = perm.get("ToPort", 0)
@@ -79,6 +81,7 @@ def _check_5_2(ec2_client: Any) -> CISCheckResult:
         result.network_exposure = exposures[:50]
     else:
         result.evidence = "No security groups allow unrestricted ingress to SSH/RDP."
+        not_applicable_if_empty(result, groups, "security group")
     return result
 
 
@@ -94,9 +97,11 @@ def _check_5_3(ec2_client: Any) -> CISCheckResult:
     )
     paginator = ec2_client.get_paginator("describe_security_groups")
     open_defaults = []
+    groups = 0
 
     for page in paginator.paginate(Filters=[{"Name": "group-name", "Values": ["default"]}]):
         for sg in page["SecurityGroups"]:
+            groups += 1
             if sg.get("IpPermissions") or sg.get("IpPermissionsEgress"):
                 # Check if egress is only the default "allow all" rule
                 egress_only_default = len(sg.get("IpPermissionsEgress", [])) == 1 and sg["IpPermissionsEgress"][0].get("IpProtocol") == "-1"
@@ -111,6 +116,7 @@ def _check_5_3(ec2_client: Any) -> CISCheckResult:
         result.resource_ids = open_defaults[:20]
     else:
         result.evidence = "All default security groups restrict all traffic."
+        not_applicable_if_empty(result, groups, "default security group")
     return result
 
 
@@ -125,10 +131,12 @@ def _check_5_5(ec2_client: Any) -> CISCheckResult:
         recommendation="Remove security group rules that allow unrestricted ingress to all ports.",
     )
     open_sgs: list[str] = []
+    groups = 0
 
     paginator = ec2_client.get_paginator("describe_security_groups")
     for page in paginator.paginate():
         for sg in page["SecurityGroups"]:
+            groups += 1
             for perm in sg.get("IpPermissions", []):
                 # Check for all-ports rules (protocol -1 means all)
                 protocol = perm.get("IpProtocol", "")
@@ -158,6 +166,7 @@ def _check_5_5(ec2_client: Any) -> CISCheckResult:
         result.resource_ids = open_sgs[:20]
     else:
         result.evidence = "No security groups allow unrestricted ingress to all ports."
+        not_applicable_if_empty(result, groups, "security group")
     return result
 
 
@@ -173,11 +182,13 @@ def _check_5_1(ec2_client: Any) -> CISCheckResult:
     )
     admin_ports = {22, 3389}
     open_nacls: list[str] = []
+    nacls = 0
 
     try:
         paginator = ec2_client.get_paginator("describe_network_acls")
         for page in paginator.paginate():
             for nacl in page["NetworkAcls"]:
+                nacls += 1
                 nacl_id = nacl["NetworkAclId"]
                 for entry in nacl.get("Entries", []):
                     # Only check inbound allow rules
@@ -213,6 +224,7 @@ def _check_5_1(ec2_client: Any) -> CISCheckResult:
         result.resource_ids = open_nacls[:20]
     else:
         result.evidence = "No Network ACLs allow unrestricted ingress to admin ports."
+        not_applicable_if_empty(result, nacls, "network ACL")
     return result
 
 
@@ -229,6 +241,7 @@ def _check_5_4(ec2_client: Any) -> CISCheckResult:
     try:
         paginator = ec2_client.get_paginator("describe_route_tables")
         broad_routes: list[str] = []
+        peering_routes = 0
 
         for page in paginator.paginate():
             for rt in page["RouteTables"]:
@@ -237,6 +250,7 @@ def _check_5_4(ec2_client: Any) -> CISCheckResult:
                     # Only check routes targeting a VPC peering connection
                     if not route.get("VpcPeeringConnectionId"):
                         continue
+                    peering_routes += 1
                     cidr = route.get("DestinationCidrBlock", "")
                     ipv6_cidr = route.get("DestinationIpv6CidrBlock", "")
                     if cidr == "0.0.0.0/0" or ipv6_cidr == "::/0":
@@ -250,6 +264,7 @@ def _check_5_4(ec2_client: Any) -> CISCheckResult:
             result.resource_ids = broad_routes[:20]
         else:
             result.evidence = "All VPC peering routes use specific CIDR ranges."
+            not_applicable_if_empty(result, peering_routes, "VPC peering route")
     except Exception as exc:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         logger.debug("Could not check route tables: %s (%s)", sanitize_text(exc), error_code)

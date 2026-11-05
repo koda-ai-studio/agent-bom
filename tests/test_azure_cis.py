@@ -151,11 +151,11 @@ def test_exposed_internet_keyword():
 # ---------------------------------------------------------------------------
 
 
-def test_check_1_1_pass():
+def test_check_1_1_not_applicable():
     auth = MagicMock()
     auth.role_assignments.list_for_scope.return_value = []
     r = _check_1_1(auth, "sub-123")
-    assert r.status == CheckStatus.PASS
+    assert r.status == CheckStatus.NOT_APPLICABLE
 
 
 def test_check_1_1_error():
@@ -177,11 +177,11 @@ def test_check_1_1_with_owners():
     assert "Microsoft Graph" in r.evidence
 
 
-def test_check_1_2_pass():
+def test_check_1_2_not_applicable():
     auth = MagicMock()
     auth.role_assignments.list_for_scope.return_value = []
     r = _check_1_2(auth, "sub-123")
-    assert r.status == CheckStatus.PASS
+    assert r.status == CheckStatus.NOT_APPLICABLE
 
 
 def test_check_1_2_error():
@@ -432,18 +432,18 @@ def test_check_6_1_fail():
     assert r.status == CheckStatus.FAIL
 
 
-def test_check_6_2_pass():
+def test_check_6_2_not_applicable():
     net = MagicMock()
     net.network_security_groups.list_all.return_value = []
     r = _check_6_2(net)
-    assert r.status == CheckStatus.PASS
+    assert r.status == CheckStatus.NOT_APPLICABLE
 
 
-def test_check_6_3_pass():
+def test_check_6_3_not_applicable():
     net = MagicMock()
     net.network_security_groups.list_all.return_value = []
     r = _check_6_3(net)
-    assert r.status == CheckStatus.PASS
+    assert r.status == CheckStatus.NOT_APPLICABLE
 
 
 def test_check_6_5_pass():

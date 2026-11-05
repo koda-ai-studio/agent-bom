@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 
 from ._base import (
     _COMPUTE_SECTION,
@@ -53,6 +53,7 @@ def _check_4_1(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"No instances using default service account across {total} instance(s)."
+            not_applicable_if_empty(result, total, "VM instance")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -100,6 +101,7 @@ def _check_4_2(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"No instances use the default service account with full API access across {total} instance(s)."
+            not_applicable_if_empty(result, total, "VM instance")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -151,6 +153,7 @@ def _check_4_3(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {total} instance(s) have 'block-project-ssh-keys' enabled."
+            not_applicable_if_empty(result, total, "VM instance")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -238,6 +241,7 @@ def _check_4_5(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"No instances have serial port access enabled across {total} instance(s)."
+            not_applicable_if_empty(result, total, "VM instance")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -278,6 +282,7 @@ def _check_4_6(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"No instances have IP forwarding enabled across {total} instance(s)."
+            not_applicable_if_empty(result, total, "VM instance")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -319,6 +324,7 @@ def _check_4_7(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {total} disk(s) are encrypted with CSEK."
+            not_applicable_if_empty(result, total, "disk")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -365,6 +371,7 @@ def _check_4_8(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {total} instance(s) have Shielded VM enabled."
+            not_applicable_if_empty(result, total, "VM instance")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -413,6 +420,7 @@ def _check_4_9(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"No instances have public IP addresses across {total} instance(s)."
+            not_applicable_if_empty(result, total, "VM instance")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -454,6 +462,7 @@ def _check_4_11(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {total} instance(s) have Confidential Computing enabled."
+            not_applicable_if_empty(result, total, "VM instance")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
