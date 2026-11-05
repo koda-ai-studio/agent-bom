@@ -195,6 +195,11 @@
  },
  "known_legitimate": {
   "npm": [
+   "@actions/exec",
+   "@npmcli/query",
+   "@npmcli/redact",
+   "@prettier/sync",
+   "@radix-ui/rect",
    "app",
    "bcryptjs",
    "client",
