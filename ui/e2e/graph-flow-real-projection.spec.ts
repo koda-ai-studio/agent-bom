@@ -25,6 +25,11 @@ async function serve(page: Page, graph: Graph, theme: string) {
 
 async function open(page: Page, query = "") {
   await page.goto(`/security-graph?scan=snapshot&lens=estate&rollup=0${query}`);
+  await showGraph(page);
+}
+
+/** A phone opens on its list; the graph is one tab away. */
+async function showGraph(page: Page) {
   const graphTab = page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true });
   await expect(page.locator(".react-flow__node").or(graphTab).first()).toBeVisible();
   if (await graphTab.isVisible()) await graphTab.click();
@@ -122,8 +127,8 @@ for (const theme of ["light", "dark"]) {
     await page.screenshot({ path: info.outputPath(`k8s20-${theme}-390-next.png`) });
   });
 
-  test(`a cluster above the former limit frames its primary path in ${theme}`, async ({ page }, info) => {
-    await page.setViewportSize(VIEWPORTS[0]!);
+  for (const viewport of VIEWPORTS) test(`a cluster above the former limit frames its primary path in ${theme} at ${viewport.width}`, async ({ page }, info) => {
+    await page.setViewportSize(viewport);
     await serve(page, fixtures.clusterEstate, theme);
     await open(page);
     // The default opens a small preview, and Automatic says so rather than naming a flow.
@@ -135,27 +140,29 @@ for (const theme of ["light", "dark"]) {
     await expect(page).toHaveURL(/flow=exposure/);
     const view = await reading(page);
     const path = ["ingress: prod/app-00", "service: prod/app-00"].map(label => nodeId(fixtures.clusterEstate, label));
-    expect(view.inFrame).toEqual(expect.arrayContaining(path));
-    expect(view.inFrame.length).toBeGreaterThanOrEqual(5);
+    const phone = viewport.width < 640;
+    expect(view.inFrame).toEqual(expect.arrayContaining(phone ? path.slice(0, 1) : path));
+    expect(view.inFrame.length).toBeGreaterThanOrEqual(phone ? 1 : 5);
     expect(view.smallest).toBeGreaterThanOrEqual(11.8);
-    expect(view.detached).toEqual([]);
-    await page.screenshot({ path: info.outputPath(`estate-${theme}-1440-exposure.png`) });
+    if (!phone) expect(view.detached).toEqual([]);
+    expect(await overflow(page)).toBeLessThanOrEqual(0);
+    await page.screenshot({ path: info.outputPath(`estate-${theme}-${viewport.width}-exposure.png`) });
     await page.reload();
-    await settle(page);
+    await showGraph(page);
     await expect(flowSelect(page)).toHaveValue("exposure");
     await page.getByRole("button", { name: "Reset view" }).click();
     await expect(flowSelect(page)).toHaveValue("auto");
   });
 
-  test(`internal Services and a second route read accurately in ${theme}`, async ({ page }, info) => {
-    await page.setViewportSize(VIEWPORTS[0]!);
+  for (const viewport of VIEWPORTS) test(`internal Services and a second route read accurately in ${theme} at ${viewport.width}`, async ({ page }, info) => {
+    await page.setViewportSize(viewport);
     await serve(page, fixtures.internalOnly, theme);
     await open(page);
     await expect(flowSelect(page).locator('option[value="exposure"]')).toHaveJSProperty("disabled", true);
     await expect(flowSelect(page).locator("option:checked")).toHaveText("Automatic · Identity and access");
     const service = page.locator(`.react-flow__node[data-id="${nodeId(fixtures.internalOnly, "service: prod/api")}"]`);
-    await expect(service).toContainText("ClusterIP (internal)");
-    await page.screenshot({ path: info.outputPath(`internal-${theme}-1440.png`) });
+    await expect(service).toContainText("ClusterIP (internal)", { useInnerText: false });
+    await page.screenshot({ path: info.outputPath(`internal-${theme}-${viewport.width}.png`) });
 
     await page.unrouteAll();
     await serve(page, fixtures.twoServices, theme);
@@ -165,7 +172,7 @@ for (const theme of ["light", "dark"]) {
     expect(await x("ingress: prod/web")).toBeLessThan(await x("service: prod/web"));
     expect(await x("service: prod/web")).toBeLessThan(pod);
     expect(await x("service: prod/web-public")).toBeLessThan(pod);
-    await page.screenshot({ path: info.outputPath(`two-services-${theme}-1440.png`) });
+    await page.screenshot({ path: info.outputPath(`two-services-${theme}-${viewport.width}.png`) });
   });
 }
 
