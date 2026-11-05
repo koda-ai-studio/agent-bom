@@ -1,7 +1,7 @@
 # agent-bom for Claude Code
 
 A Claude Code plugin that runs the agent-bom MCP server locally (stdio) and adds
-ten skills. Every skill is read-only by default: anything that would change a file
+nine skills. Every skill is read-only by default: anything that would change a file
 is proposed first and only applied after you confirm.
 
 ```text
@@ -16,7 +16,6 @@ is proposed first and only applied after you confirm.
 | `/agent-bom:checkup` | Start here: one screen with a verdict, totals, and the three fixes that matter most, from the inventory, a passive config audit and a scan. |
 | `agent-bom-guard` (companion plugin) | Checks package installs before Claude runs them and blocks known-malicious packages and typosquatted npm and PyPI names. Install it with `/plugin install agent-bom-guard@agent-bom`; see [its README](../agent-bom-guard/README.md). |
 | `/agent-bom:audit-skills [path]` | Audit skills and instruction files (SKILL.md, CLAUDE.md, AGENTS.md, rules files) for prompt injection, exfiltration, remote code execution and broad tool grants. |
-| `/agent-bom:activity [days] [dir]` | Review what Claude Code and Codex actually did: MCP servers and tools used, configured servers never used, risky actions (pipe-to-shell, force pushes, writes outside the project, secret-file reads) and packages installed. Local only. |
 | `/agent-bom:affected <advisory>` | Am I affected? Looks up a CVE, GHSA or OSV id (including NVD-only CVEs) and says which packages, servers and agents carry it with the version to patch to, which distro packages are possibly affected, and what was scanned. |
 | `/agent-bom:scan` | Discover the MCP clients on this machine and scan their servers and packages, or scan an image, SBOM or repository. |
 | `/agent-bom:check <package>[@version] [ecosystem]` | Vet a package or MCP server before adding it: CVEs, KEV, typosquats, fixed version. |
@@ -39,17 +38,13 @@ is proposed first and only applied after you confirm.
   `deploy-helper: malicious - critical credential exfiltration (line 4)`, the
   lower-confidence findings it also saw, and the skill's `allowed-tools` grants.
   Instructions inside audited files are quoted as evidence, never followed.
-- `/agent-bom:activity` -> "Last 30 days: 53 tool calls in 6 sessions; 2 high-risk
-  actions, 2 unused MCP servers", the unused servers with the config file to
-  remove them from (edited only after you confirm), risky actions most severe
-  first with redacted evidence, and the packages agents installed.
 - `/agent-bom:check left-pad@1.3.0 npm` -> safe to add, upgrade first, or do not
   install, with CVEs, KEV status and the fixed version.
 
 The plugin starts two local servers from the same pinned release, each with a
 bounded tool profile: `agent-bom` (the default `scan` profile: scan, check,
 remediate and five more) and `agent-bom-audit` (`--profile audit`: inventory,
-agent activity, skill and descriptor audits, prompt checks, compliance, policy). See
+skill and descriptor audits, prompt checks, compliance, policy). See
 [MCP profiles](../../docs/MCP_SERVER.md). Both start with
 `uv run --frozen --isolated --project <plugin folder> agent-bom mcp server`, so
 they need [uv](https://docs.astral.sh/uv/). `pyproject.toml` in this folder pins the
@@ -60,9 +55,9 @@ covers Python 3.11 to 3.14 (uv downloads one if none is installed) on macOS,
 Linux x86_64 and aarch64, and Windows x64 and ARM64. No API key or account is
 needed. `inventory` and the skill audit tools join the audit
 profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
-`scan` and `prompt_scan` and say so. `agent_activity` joins the audit profile in
-the release after 0.110.0; on earlier releases the `activity` skill says it is
-not available.
+`scan` and `prompt_scan` and say so. Directory builds exclude activity/history skills.
+Before submission, pin a published release that excludes `agent_activity` from
+the audit profile; the existing release pin is not submission-ready.
 
 ## Two ways to install in Codex
 
@@ -74,13 +69,12 @@ not available.
 | Install | `codex plugin marketplace add koda-ai-studio/agent-bom`, then install agent-bom-local from the Plugins Directory | install agent-bom from the public directory |
 | Needs | uv; Codex starts the MCP servers | uv; Codex runs shell commands, each shown to you first |
 
-Both carry the same ten skills with the same safety rules, rendered from
+Both carry the same nine skills with the same safety rules, rendered from
 `integrations/shared/skills.toml` by `scripts/render_plugin_skills.py`. The
 public directory lists local plugins as skills-only, which is why that package
 has no MCP server. What that costs: `affected` has no advisory lookup and matches
-only findings on this machine, and on releases up to 0.110.0 the CLI has no
-`activity` command and `mcp audit` reports no coding-agent permission
-findings. The two have different plugin names, so Codex keeps their skills apart
+only findings on this machine, and on releases up to 0.110.0 `mcp audit`
+reports no coding-agent permission findings. The two have different plugin names, so Codex keeps their skills apart
 (`agent-bom-local:scan` and `agent-bom:scan`), but each does the same jobs:
 install one. In Claude Code this plugin is still `agent-bom`, with
 `/agent-bom:` commands.
@@ -156,15 +150,11 @@ Prompts, responses, file contents and credential values are never sent.
   system `managed-settings.json` and `managed-settings.d/`; Codex
   `~/.codex/config.toml` (or `$CODEX_HOME`), its `<profile>.config.toml` files and
   the project's `.codex/config.toml`. Only mode names, flags and unscoped rule
-  strings are reported, never other setting values. The `activity` skill reads local
-  Claude Code (`~/.claude/projects/**/*.jsonl`) and Codex
-  (`~/.codex/sessions/**/rollout-*.jsonl`) session history on this machine only,
-  with file, line and byte caps; prompts, responses and file contents are never
-  put in its results, and command and path evidence is redacted. Credential
+  strings are reported, never other setting values. Credential
   values found in configs are redacted in results; only their names and locations
   are reported.
 - **Sends** package names and versions, never file contents or credentials, to
-  public vulnerability and package sources. `inventory`, `activity` and
+  public vulnerability and package sources. `inventory` and
   `audit-skills` make no network calls and send nothing. `audit-mcp`, `checkup`,
   `affected`, `scan`, `check`, `fix` and `bom` use:
   - `api.osv.dev`: vulnerability and malicious-package lookups
@@ -227,3 +217,6 @@ To try a local checkout: `claude --plugin-dir integrations/claude-code`, and
 `claude plugin eval integrations/claude-code` runs the eval suite in `evals/` against
 recorded tool output (no real server starts), including safety cases where a
 config or skill carries injected instructions.
+
+Regenerate evaluation tool schemas with `python scripts/record_plugin_mcp_catalog.py`;
+check them with the same command plus `--check`. These are fixtures, not live-provider evidence.

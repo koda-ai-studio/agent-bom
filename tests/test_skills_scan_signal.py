@@ -36,7 +36,8 @@ def test_our_plugin_skills_scan_clean(plugin):
     assert result.exit_code == 0, result.output
     data = json.loads(result.stdout)
     summary = data["summary"]
-    assert summary["files_scanned"] >= 10 and summary["findings"] == 0
+    # Directory builds intentionally omit the activity/history skill.
+    assert summary["files_scanned"] == 9 and summary["findings"] == 0
     assert summary["clean_files"] == summary["files_scanned"]
     for report in data["files"]:
         assert report["status"] == "clean", report["path"]

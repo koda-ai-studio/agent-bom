@@ -2,7 +2,8 @@
 
 Closes the MCP half of #1964. The MCP server runs as an out-of-process
 host invoked by Claude Desktop / Cursor / Codex / etc. — none of those
-clients pass an authenticated tenant identity. The operator who launches
+stdio clients pass an authenticated tenant identity. OAuth HTTP callers carry
+a verified tenant claim constrained to that same deployment tenant. The operator who launches
 ``agent-bom mcp server`` decides which tenant context the tools execute
 under by setting ``AGENT_BOM_MCP_TENANT_ID`` (preferred) or falling back
 to ``AGENT_BOM_TENANT_ID``.
@@ -27,6 +28,7 @@ from agent_bom.cli._tenant import (
     _multi_tenant_signals_present,
 )
 from agent_bom.core.settings import env_str
+from agent_bom.mcp_tools.request_identity import request_context, verified_access_token
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +38,20 @@ MCP_TENANT_ENV_VAR: Final = "AGENT_BOM_MCP_TENANT_ID"
 def resolve_mcp_tenant_id() -> str:
     """Return the effective tenant id for an MCP tool invocation.
 
-    Resolution order: ``AGENT_BOM_MCP_TENANT_ID`` env (MCP-specific
+    Resolution order: verified OAuth request tenant →
+    ``AGENT_BOM_MCP_TENANT_ID`` env (MCP-specific
     override) → ``AGENT_BOM_TENANT_ID`` env (shared with the CLI) →
     ``"default"``. Logs a warning at the fall-through to ``"default"``
     when multi-tenant signals are present so the operator sees the
     assumption in the MCP server log.
     """
+    context = request_context.get(None)
+    if context is not None:
+        token = verified_access_token(context)
+        if token is not None and token.claims and "tenant_id" in token.claims:
+            # Only the SDK-verified token carries claims here; tool arguments,
+            # headers and metadata cannot supply this binding.
+            return _canonicalize_resolved_tenant_id(token.claims["tenant_id"])
     mcp_specific = (os.environ.get(MCP_TENANT_ENV_VAR) or "").strip()
     if mcp_specific:
         return _canonicalize_resolved_tenant_id(mcp_specific)
@@ -74,6 +84,10 @@ def resolve_mcp_tool_tenant_id(requested_tenant_id: str | None = None) -> str:
     resolved = resolve_mcp_tenant_id()
     requested = (requested_tenant_id or "").strip()
     if requested and requested not in {resolved, DEFAULT_TENANT_ID}:
+        context = request_context.get(None)
+        token = verified_access_token(context) if context is not None else None
+        if token is not None and token.claims and "tenant_id" in token.claims:
+            raise PermissionError("MCP token does not authorize the requested tenant")
         logger.warning(
             "Ignoring MCP tool-supplied tenant_id=%r; using server-bound tenant_id=%r. Set %s on the MCP server process to change scope.",
             requested,

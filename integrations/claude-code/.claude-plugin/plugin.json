@@ -20,6 +20,6 @@
   ],
   "documentationUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md",
   "supportUrl": "https://github.com/koda-ai-studio/agent-bom/issues",
-  "privacyPolicyUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#privacy",
-  "termsOfServiceUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/LICENSE"
+  "privacyPolicyUrl": "https://koda-ai-studio.github.io/agent-bom/privacy/",
+  "termsOfServiceUrl": "https://koda-ai-studio.github.io/agent-bom/terms/"
 }
