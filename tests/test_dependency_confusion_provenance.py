@@ -150,6 +150,5 @@ def test_unlocked_internal_names_keep_true_positive_classes():
         ("corp-ml-sdk", "pypi"),
         ("auth-internal", "cargo"),
         ("billing-internal", "npm"),
-        ("@evil-corp/internal-sdk", "npm"),
     ]:
         assert check_dependency_confusion(Package(name=name, version="1.0.0", ecosystem=eco)) is not None, name

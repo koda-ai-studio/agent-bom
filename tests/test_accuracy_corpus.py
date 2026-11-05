@@ -187,7 +187,8 @@ def test_template_ranges_are_possibly_affected_not_findings(monkeypatch, tmp_pat
     summary = json.loads(json.dumps(to_json(AIBOMReport(agents=[agent], blast_radii=blast_radii)), default=str))["summary"]
     assert summary["total_vulnerabilities"] == 0
     assert not any(summary.get(key) for key in ("critical_findings", "high_findings", "medium_findings", "low_findings"))
-    assert _exit_code(agent, blast_radii) == 0
+    # The severity gate stays clear, but unresolved applicability is partial evidence.
+    assert _exit_code(agent, blast_radii) == 1
 
 
 def test_template_ranges_trip_the_gate_only_when_opted_in(monkeypatch, tmp_path):
