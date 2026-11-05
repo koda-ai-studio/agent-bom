@@ -77,3 +77,11 @@ it("keeps an ingress and its routed Service in sequence before the pod", () => {
   expect(x("endpoint")).toBeLessThan(x("service"));
   expect(x("service")).toBeLessThan(x("pod"));
 });
+it("routes an upward deployment-context edge from the top of the node, clear of the provider mark", () => {
+  const flow = [n("endpoint", "apiGateway", { resource_id: "api-1" }), n("host", "cloudResource"), n("server", "server")];
+  const result = investigationFlow(flow, [e("endpoint", "host", "exposed_to"), e("host", "server", "hosts")], "exposure");
+  const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
+  expect(at("server").y).toBeLessThan(at("host").y);
+  expect(result.edges.find(edge => edge.id === "host-server")).toMatchObject({ sourceHandle: "context-up" });
+  expect(result.edges.find(edge => edge.id === "endpoint-host")?.sourceHandle).toBeUndefined();
+});

@@ -156,7 +156,8 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await fixture(page,nodes,edges);
     await page.goto("/security-graph?lens=estate&scan=snapshot&rollup=0&layers=apiGateway,cloudResource,server,role,dataStore,vulnerability,misconfiguration");
     if (width === 390) await page.getByRole("group", { name:"Investigation view" }).getByRole("button", { name:"Graph", exact:true }).click();
-    await expect(page.locator('.react-flow__node')).toHaveCount(5);
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(5);
+    await expect(page.locator('[data-graph-entity="finding-group"]')).toHaveCount(1);
     await expect(page.locator('[data-evidence-flow]')).toHaveCount(5);
     await expect(page.getByRole("button", { name:"Expand 3 findings for Warehouse MCP" })).toBeVisible();
     await expect(page.locator('[data-graph-adaptive-frame]')).toHaveAttribute("data-graph-camera-settled","true");
@@ -184,7 +185,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     }
     await page.screenshot({ path:info.outputPath(`mixed-expanded-${theme}-${width}.png`),fullPage:true });
     await page.getByRole("button", { name:"Collapse findings",exact:true }).click();
-    await expect(page.locator('.react-flow__node')).toHaveCount(5);
+    await expect(page.locator('.react-flow__node:not([data-id^="display:"])')).toHaveCount(5);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth+1)).toBe(true);
   });
 }
