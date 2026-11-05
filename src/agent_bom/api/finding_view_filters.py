@@ -86,7 +86,8 @@ def _view_filtered_row(
     triage_matches = triage is None or decision == triage or (triage == "untriaged" and decision is None)
     if not (_matches_reachability(row, reachability) and triage_matches):
         return None
-    if suppressed_only and row.get("suppressed") is not True:
+    # A fixed finding is no longer an accepted risk, whatever its last scan recorded.
+    if suppressed_only and (row.get("suppressed") is not True or row.get("status") == "resolved"):
         return None
     return row
 

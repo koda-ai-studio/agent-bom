@@ -9,6 +9,7 @@ from fastapi import HTTPException
 
 from agent_bom.api import finding_cursor
 from agent_bom.api.finding_group_key import _finding_group_identity as _finding_group_identity
+from agent_bom.api.finding_group_lifecycle import group_lifecycle_fields, new_group_lifecycle, record_group_occurrence
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import _FINDING_GROUP_MAX_OCCURRENCES, _FINDING_GROUP_OCCURRENCE_SAMPLE, _normalize_facet_severity
 from agent_bom.api.finding_scope_filters import _finding_identity as _finding_identity
@@ -94,6 +95,7 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
                 finding_group_key=group_key,
                 occurrence_count=0,
                 unreconfirmed_occurrence_count=0,
+                _lifecycle=new_group_lifecycle(),
                 _occurrence_rows=[],
                 occurrences_truncated=False,
                 package_versions=[],
@@ -111,6 +113,7 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
                     "finding_group_key",
                     "occurrence_count",
                     "unreconfirmed_occurrence_count",
+                    "_lifecycle",
                     "_occurrence_rows",
                     "occurrences_truncated",
                     "package_versions",
@@ -123,6 +126,7 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
         if any_kev:
             group["is_kev"] = True
         group["occurrence_count"] = int(group["occurrence_count"]) + 1
+        record_group_occurrence(group["_lifecycle"], row)
         _record_package_version(group, row)
         # The representative may be an image occurrence with no agent; the issue
         # still affects every agent and server its other occurrences name.
@@ -137,6 +141,8 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
             occurrences.append(row)
         else:
             group["occurrences_truncated"] = True
+    for group in grouped.values():
+        group.update(group_lifecycle_fields(group["_lifecycle"]))
     return list(grouped.values())
 
 

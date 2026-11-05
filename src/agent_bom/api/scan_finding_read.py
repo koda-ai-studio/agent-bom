@@ -12,6 +12,7 @@ from agent_bom.api import findings_current, time_window
 from agent_bom.api.finding_history_read import current_findings_with_history
 from agent_bom.api.finding_read_context import read_once
 from agent_bom.api.finding_row_inputs import history_ledger_reads_enabled, scan_row_inputs
+from agent_bom.api.finding_scan_lifecycle import apply_scan_lifecycle
 from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
 from agent_bom.api.finding_walk_cache import reuse_rows
 from agent_bom.api.findings_current import current_scan_jobs
@@ -20,6 +21,7 @@ from agent_bom.api.scan_finding_projection import _iter_scan_findings as _iter_s
 from agent_bom.api.scan_finding_projection import scan_row_sources
 from agent_bom.api.stores import _get_exception_store, _get_store
 from agent_bom.api.suppression_approval import suppression_active
+from agent_bom.core.settings import env_flag
 
 
 def _completed_jobs_for_tenant(tenant_id: str) -> list[ScanJob]:
@@ -49,7 +51,7 @@ def iter_tenant_scan_spine_findings(
     from agent_bom.api.compliance_hub_store import status_matches
     from agent_bom.api.findings_current import scan_only_findings
 
-    rows = _current_scan_rows(tenant_id, since, scan_id)
+    rows = current_scan_rows_with_lifecycle(tenant_id, since, scan_id)
     rows = scan_only_findings(rows, tenant_id, scan_id=scan_id)
     if severity:
         normalized = severity.lower()
@@ -81,7 +83,11 @@ def persisted_finding_evidence(
     if scan_id:
         scan_jobs = [job for job in scan_jobs if str((job.result or {}).get("scan_id") or job.job_id) == scan_id]
     wanted = cve_id.strip().upper()
-    raw_rows = iter_tenant_scan_spine_findings(tenant_id, scan_id=scan_id, status="all", sanitize=False)
+    raw_rows = [
+        row
+        for row in iter_tenant_scan_spine_findings(tenant_id, scan_id=scan_id, status="all", sanitize=False)
+        if row.get("status") != "resolved"
+    ]
     bulk_rows = _bulk_ingested_findings_for_tenant(tenant_id)
     if scan_id:
         bulk_rows = [row for row in bulk_rows if str(row.get("scan_id") or "") == scan_id]
@@ -178,6 +184,34 @@ def _current_scan_rows(tenant_id: str, window_since: str | None, scan_id: str | 
     )
 
 
+def _with_lifecycle(rows: list[dict[str, Any]], jobs: list[Any], since: str | None) -> list[dict[str, Any]]:
+    return apply_scan_lifecycle(
+        rows,
+        jobs,
+        since=since,
+        iter_findings=_cached_scan_findings,
+        in_window=findings_current.job_in_window,
+        retained_history=findings_current._retained_finding_history,
+    )
+
+
+def current_scan_rows_with_lifecycle(tenant_id: str, window_since: str | None, scan_id: str | None) -> list[dict[str, Any]]:
+    """The current rows plus open/resolved state; a pinned scan stays that scan's snapshot.
+
+    The opt-in fast read keeps its selected-reports-only contract, so it serves
+    the snapshot without replaying history. Differential qualification reads
+    retained jobs anyway and must answer exactly as the default read does.
+    """
+    rows = _current_scan_rows(tenant_id, window_since, scan_id)
+    if scan_id or env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS"):
+        return rows
+    jobs = _completed_jobs_for_tenant(tenant_id)
+    return read_once(
+        ("lifecycle_rows", json.dumps([tenant_id, window_since])),
+        lambda: _with_lifecycle(rows, jobs, window_since),
+    )
+
+
 def _cached_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
     key = json.dumps([job.tenant_id, job.job_id, str(job.status), job.completed_at])
     return read_once(("rows", key), lambda: _iter_scan_findings(job))
@@ -195,6 +229,7 @@ def current_open_scan_findings(jobs: list[Any]) -> list[dict[str, Any]]:
         rows = findings_current.current_scan_findings(
             jobs, since=since, scan_id=None, iter_findings=_cached_scan_findings, require_authoritative_evidence=True
         )
+        rows = _with_lifecycle(rows, jobs, since)
         # A suppressed finding (operator VEX, accepted exception) is kept as
         # evidence but is not open; ``finding_summary`` excludes it the same way.
         return [

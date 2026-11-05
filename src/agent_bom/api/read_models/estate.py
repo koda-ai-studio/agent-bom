@@ -57,6 +57,13 @@ class FindingRow(ReadModel):
     last_seen: str | None = None
     status: str | None = None
     lifecycle_status: str | None = None
+    resolved_at: str | None = None
+    last_resolved_at: str | None = None
+    reopened_at: str | None = None
+    status_updated_at: str | None = None
+    scan_count: int | None = None
+    open_occurrence_count: int | None = None
+    resolved_occurrence_count: int | None = None
     owner: str | None = None
     sla_due_at: str | None = None
     sla_due_at_source: str | None = None

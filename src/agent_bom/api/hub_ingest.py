@@ -26,6 +26,7 @@ from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
 from agent_bom.api.compliance_hub_store import get_compliance_hub_store
+from agent_bom.api.finding_lifecycle import validated_observed_at
 from agent_bom.canonical_ids import canonical_id
 
 _T = TypeVar("_T")
@@ -58,6 +59,14 @@ async def read_compliance_ingest_body(request: Request) -> dict[str, Any]:
     return body
 
 
+def observed_at_or_422(value: Any) -> str:
+    """A usable observation time, or the client's own validation error."""
+    try:
+        return validated_observed_at(value)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None  # exc-safe: fixed validation messages
+
+
 async def hub_store_call(fn: Callable[..., _T], /, *args: Any, **kwargs: Any) -> _T:
     """Run blocking Compliance-Hub store writes off the event loop.
 
@@ -80,6 +89,7 @@ def hub_ingest_store_writes(
     batch_id: str,
     source: str,
     reconcile_absent: bool,
+    scope_assets: set[str] | None = None,
 ) -> dict[str, Any]:
     """Synchronous body of the hub ingest store writes (runs in a worker thread).
 
@@ -101,15 +111,12 @@ def hub_ingest_store_writes(
     if needs_hub_prior_snapshots(reconcile_absent=reconcile_absent):
         prior_snapshots = capture_hub_snapshots(hub_store, tenant_id, source=source)
 
-    # Canonical ids are resolved for every batch, not just reconciling ones: the
-    # count of DISTINCT ids is what the store will hold, and a caller told only
-    # how many payloads it sent cannot explain the difference. Pure Python, so
-    # it costs nothing beyond the set the reconcile path already builds.
+    # Resolved for every batch: the DISTINCT count is what the store will hold, which
+    # a caller told only its payload count cannot explain. Pure Python, so it is cheap.
     distinct_ids = collect_present_canonical_ids(payloads, source=source)
 
-    # ``present_canonical_ids`` for absent-reconciliation (and the delta
-    # ``resolved_ids`` derived from it) is computed before the write so the
-    # atomic seam can run the reconcile inside the same transaction.
+    # Computed before the write so the atomic seam can reconcile (and the delta
+    # ``resolved_ids`` can derive) inside the same transaction.
     present: set[str] = distinct_ids if reconcile_absent else set()
 
     atomic = getattr(hub_store, "ingest_batch_atomic", None)
@@ -125,6 +132,7 @@ def hub_ingest_store_writes(
             source=source,
             reconcile_absent=reconcile_absent,
             present_canonical_ids=present,
+            **({} if scope_assets is None else {"scope_assets": scope_assets}),
         )
     else:
         new_total = hub_store.add(tenant_id, payloads)
@@ -142,8 +150,9 @@ def hub_ingest_store_writes(
                 present_canonical_ids=present,
                 observed_at=observed_at,
                 scope_source=source,
+                **({} if scope_assets is None else {"scope_assets": scope_assets}),
             )
-    resolved_ids: set[str] = resolved_canonical_ids(prior_snapshots, present) if reconcile_absent else set()
+    resolved_ids: set[str] = resolved_canonical_ids(prior_snapshots, present, scope_assets) if reconcile_absent else set()
     delta_results = emit_hub_finding_deltas_if_enabled(
         tenant_id=tenant_id,
         hub_store=hub_store,

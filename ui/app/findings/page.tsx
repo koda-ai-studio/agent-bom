@@ -1,4 +1,5 @@
 "use client";
+import { FindingStatusSelect, parseFindingStatus, type FindingStatusFilter } from "@/components/finding-lifecycle";
 import { FindingContextFilter, CONTEXT_LABELS } from "@/components/finding-context-panel";
 import { DOMAIN_FILTERS,FindingsAdvancedFilters,WINDOW_OPTIONS,type ReachabilityFilter,type TriageFilter } from "@/components/findings/advanced-filters";
 
@@ -116,6 +117,9 @@ function FindingsPage() {
   const paramSla = searchParams.get("sla");
   const paramReachability = searchParams.get("reachability");
   const paramTriage = searchParams.get("triage");
+  const paramStatus = parseFindingStatus(searchParams.get("status"));
+  const [statusFilter, setStatusFilter] = useState<FindingStatusFilter>(paramStatus);
+  useEffect(() => { setStatusFilter(paramStatus); }, [paramStatus]);
   const paramContext = searchParams.get("path_context") ?? "";
   const [pathContextFilter, setPathContextFilter] = useState(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : "");
   useEffect(() => { setPathContextFilter(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : ""); }, [paramContext]);
@@ -324,6 +328,7 @@ function FindingsPage() {
     if (reachabilityFilter) params.set("reachability", reachabilityFilter);
     if (triageFilter) params.set("triage", triageFilter);
     if (pathContextFilter) params.set("path_context", pathContextFilter);
+    if (statusFilter !== "open") params.set("status", statusFilter);
     if (frameworkFilter.trim()) params.set("framework", frameworkFilter.trim());
     // A control code without a framework is meaningless — only sync it alongside.
     if (frameworkFilter.trim() && controlFilter.trim()) params.set("control", controlFilter.trim());
@@ -344,7 +349,7 @@ function FindingsPage() {
     ownerFilter,
     slaFilter,
     reachabilityFilter,
-    pathContextFilter, triageFilter,
+    pathContextFilter, triageFilter, statusFilter,
     frameworkFilter,
     controlFilter,
     windowDays,
@@ -500,6 +505,7 @@ function FindingsPage() {
         const findingQuery = search.trim() || deepLinkFinding;
         const response = await api.listFindings({
           ...(pathContextFilter ? { pathContext: pathContextFilter } : {}),
+          ...(statusFilter !== "open" ? { status: statusFilter } : {}),
           ...(paramScan ? { scanId: paramScan } : {}),
           ...(findingQuery ? { query: findingQuery } : {}),
           ...(filter !== "all" ? { severity: filter === "unrated" ? "unknown" : filter } : {}),
@@ -563,7 +569,7 @@ function FindingsPage() {
     ownerFilter,
     slaFilter,
     reachabilityFilter,
-    pathContextFilter, triageFilter,
+    pathContextFilter, triageFilter, statusFilter,
     frameworkFilter,
     controlFilter,
     lane,
@@ -698,11 +704,12 @@ function FindingsPage() {
     setControlFilter("");
   };
 
-  const hasActiveFilters = Boolean(search.trim() || filter !== "all" || issueTypeFilter !== "all" || activeFilterCount || windowDays !== 90);
+  const hasActiveFilters = Boolean(statusFilter !== "open" || search.trim() || filter !== "all" || issueTypeFilter !== "all" || activeFilterCount || windowDays !== 90);
   const clearFilters = () => {
     clearAdvancedFilters();
     setSearch("");
     setFilter("all");
+    setStatusFilter("open");
     setIssueTypeFilter("all");
     setWindowDays(90);
   };
@@ -866,6 +873,7 @@ function FindingsPage() {
                     />
                   )}
                 </div>
+                <FindingStatusSelect value={statusFilter} onChange={setStatusFilter} />
                 <FindingContextFilter value={pathContextFilter} onChange={setPathContextFilter} />
                 <div id="findings-table-controls" />
               </div>

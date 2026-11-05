@@ -3395,7 +3395,6 @@
               "type": "object"
             },
             "maxItems": 1000,
-            "minItems": 1,
             "title": "Findings",
             "type": "array"
           },
@@ -3418,9 +3417,41 @@
           },
           "reconcile_absent": {
             "default": false,
-            "description": "When true, mark open findings in the same source scope that are absent from this batch as resolved at observed_at.",
+            "description": "When true, mark open findings absent from this complete scan as resolved at observed_at. Only findings of the same source on the assets this batch names or lists in scanned_assets are affected.",
             "title": "Reconcile Absent",
             "type": "boolean"
+          },
+          "reconcile_scope": {
+            "default": "assets",
+            "description": "assets (default) limits reconciliation to scanned assets; source asserts the batch covers all of this source.",
+            "enum": [
+              "assets",
+              "source"
+            ],
+            "title": "Reconcile Scope",
+            "type": "string"
+          },
+          "scan_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BulkScanRun"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Scan completeness receipt; a partial, failed or advisory-degraded scan reconciles nothing and says why."
+          },
+          "scanned_assets": {
+            "description": "Asset identifiers (asset.identifier, else asset.name) this scan covered, including assets with no findings.",
+            "items": {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Scanned Assets",
+            "type": "array"
           },
           "schema_version": {
             "default": "v1",
@@ -3453,6 +3484,48 @@
           "findings"
         ],
         "title": "BulkFindingsRequest",
+        "type": "object"
+      },
+      "BulkScanRun": {
+        "description": "The completeness receipt of the scan behind a reconciling batch.",
+        "properties": {
+          "incomplete_scope_count": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Incomplete Scope Count",
+            "type": "integer"
+          },
+          "issues": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 100,
+            "title": "Issues",
+            "type": "array"
+          },
+          "outcome": {
+            "default": "complete",
+            "enum": [
+              "complete",
+              "partial",
+              "failed"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 100,
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "title": "BulkScanRun",
         "type": "object"
       },
       "CampaignExpectedRiskReduction": {
@@ -15672,6 +15745,17 @@
             ],
             "title": "Last Observed"
           },
+          "last_resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Resolved At"
+          },
           "last_seen": {
             "anyOf": [
               {
@@ -15737,6 +15821,17 @@
               }
             ],
             "title": "Occurrence Count"
+          },
+          "open_occurrence_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Occurrence Count"
           },
           "owner": {
             "anyOf": [
@@ -15868,6 +15963,39 @@
             ],
             "title": "Remediation Versions"
           },
+          "reopened_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reopened At"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_occurrence_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Occurrence Count"
+          },
           "risk_score": {
             "anyOf": [
               {
@@ -15881,6 +16009,17 @@
               }
             ],
             "title": "Risk Score"
+          },
+          "scan_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Count"
           },
           "scan_id": {
             "anyOf": [
@@ -15976,6 +16115,17 @@
               }
             ],
             "title": "Status"
+          },
+          "status_updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Updated At"
           },
           "suppressed": {
             "anyOf": [

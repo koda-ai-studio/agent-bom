@@ -3,17 +3,67 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from types import SimpleNamespace
+from typing import Annotated, Any, Literal, NamedTuple
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
+from agent_bom.api.finding_job_metadata import advisory_data_degraded, scan_collection_incomplete_reasons
+from agent_bom.api.finding_lifecycle import ingest_asset_key, ingest_asset_scope
 from agent_bom.canonical_ids import canonical_finding_id
 from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
+from agent_bom.evidence.finding_observation import ReconfirmationReason
 from agent_bom.evidence.finding_reach_sources import CLIENT_REACH_CLAIM_FIELDS, without_fields
 
 _BULK_FINDINGS_MAX_ITEMS = 1000
 _BULK_FINDINGS_SOURCE_MAX_LENGTH = 128
+
+
+class BulkScanRun(BaseModel):
+    """The completeness receipt of the scan behind a reconciling batch."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    outcome: Literal["complete", "partial", "failed"] = "complete"
+    issues: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    scopes: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    incomplete_scope_count: int = Field(default=0, ge=0, le=100)
+
+
+def reconcile_skip_reasons(scan_run: BulkScanRun | None) -> list[str]:
+    """Why a batch's absences prove nothing; empty when none were declared."""
+    if scan_run is None:
+        return []
+    job: Any = SimpleNamespace(result={"scan_run": scan_run.model_dump()})
+    reasons = scan_collection_incomplete_reasons(job)
+    if advisory_data_degraded(job):
+        reasons = sorted({*reasons, ReconfirmationReason.ADVISORY_DATA_DEGRADED.value})
+    return reasons
+
+
+class ReconcilePlan(NamedTuple):
+    """What one batch's absences may resolve, and what the response reports about it."""
+
+    requested: bool
+    skip_reasons: list[str]
+    scope_assets: set[str] | None
+
+    @property
+    def store_kwargs(self) -> dict[str, Any]:
+        return {"reconcile_absent": self.requested and not self.skip_reasons, "scope_assets": self.scope_assets}
+
+    def receipt(self, reconciled: int) -> dict[str, Any]:
+        if not self.requested:
+            return {}
+        return {"reconciled": reconciled, **({"reconcile_skipped": self.skip_reasons} if self.skip_reasons else {})}
+
+
+def reconcile_plan(body: BulkFindingsRequest, payloads: list[dict[str, Any]]) -> ReconcilePlan:
+    assets = None
+    if body.reconcile_scope == "assets":
+        assets = {str(row.get("ingest_asset") or "") for row in payloads} | {ingest_asset_scope(item) for item in body.scanned_assets}
+    return ReconcilePlan(body.reconcile_absent, reconcile_skip_reasons(body.scan_run), assets)
 
 
 class BulkFindingsRequest(BaseModel):
@@ -21,7 +71,7 @@ class BulkFindingsRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    findings: list[dict[str, Any]] = Field(min_length=1, max_length=_BULK_FINDINGS_MAX_ITEMS)
+    findings: list[dict[str, Any]] = Field(max_length=_BULK_FINDINGS_MAX_ITEMS)
     source: str = Field(default="api", min_length=1, max_length=_BULK_FINDINGS_SOURCE_MAX_LENGTH)
     schema_version: str = Field(default="v1", min_length=1, max_length=32)
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -32,8 +82,30 @@ class BulkFindingsRequest(BaseModel):
     )
     reconcile_absent: StrictBool = Field(
         default=False,
-        description=("When true, mark open findings in the same source scope that are absent from this batch as resolved at observed_at."),
+        description=(
+            "When true, mark open findings absent from this complete scan as resolved at observed_at. "
+            "Only findings of the same source on the assets this batch names or lists in scanned_assets are affected."
+        ),
     )
+    reconcile_scope: Literal["assets", "source"] = Field(
+        default="assets",
+        description="assets (default) limits reconciliation to scanned assets; source asserts the batch covers all of this source.",
+    )
+    scanned_assets: list[Annotated[str, Field(min_length=1, max_length=512)]] = Field(
+        default_factory=list,
+        max_length=_BULK_FINDINGS_MAX_ITEMS,
+        description="Asset identifiers (asset.identifier, else asset.name) this scan covered, including assets with no findings.",
+    )
+    scan_run: BulkScanRun | None = Field(
+        default=None,
+        description="Scan completeness receipt; a partial, failed or advisory-degraded scan reconciles nothing and says why.",
+    )
+
+    @model_validator(mode="after")
+    def _empty_batch_needs_a_declared_scan(self) -> BulkFindingsRequest:
+        if not self.findings and not (self.reconcile_absent and (self.scanned_assets or self.reconcile_scope == "source")):
+            raise ValueError("an empty batch must set reconcile_absent and declare scanned_assets or reconcile_scope=source")
+        return self
 
     @field_validator("findings")
     @classmethod
@@ -186,6 +258,9 @@ def _normalized_bulk_finding(row: dict[str, Any], *, source: str, batch_id: str,
     # resends collapse (idempotent) rather than mint a fresh batch_id:ordinal.
     payload["id"] = str(client_id) if client_id else _derive_bulk_finding_id(row, source=source)
     payload.setdefault("source", source)
+    # The batch's source owns reconciliation, even when a row names its own scanner.
+    payload["ingest_source"] = source
+    payload["ingest_asset"] = ingest_asset_key(row)
     # Fail closed on garbage severity/cvss types instead of materialising a row
     # that leaks the value verbatim and never matches the severity/cvss filter.
     payload["severity"] = _coerce_bulk_severity(row.get("severity"), ordinal=ordinal)

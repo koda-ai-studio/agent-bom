@@ -15,6 +15,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `--auto-update-db` prints the time each source took.
 
 ### Fixed
+- Every finding now has a scan-driven lifecycle on both ingest paths: `status`, `first_seen`, `last_seen`, `resolved_at`, `reopened_at`, `last_resolved_at` and `status_updated_at`. A pushed scan that no longer reports a finding resolves it instead of dropping it, `status=resolved` retrieves it, and a returning finding reopens with its original `first_seen`. Partial, failed, inventory-only and differently scoped scans resolve nothing. See `docs/FINDING_LIFECYCLE.md`.
+- `POST /v1/findings/bulk` with `reconcile_absent` no longer resolves other assets of the same source: it covers the assets the batch names or lists in `scanned_assets`, unless `reconcile_scope: "source"` asserts a full snapshot. A complete empty batch can now resolve, a non-complete `scan_run` skips reconciliation, and an unusable `observed_at` is rejected with 422 on bulk and compliance ingest.
+- A reconciling bulk batch that sends its own `canonical_id` no longer resolves its own findings: the batch's present set now identifies rows the same way the store does.
+- The Findings page has a Status filter (Open, Resolved, All), shows resolved and reopened dates, and labels partly fixed issues such as "1 of 2 open".
 - A later finding on the same CVE no longer erases earlier CVE details or its KEV verdict, and every finding that names a CVE follows that CVE's KEV verdict in counts and lists alike.
 - CVE records merge under row locks in a fixed order, so concurrent writers keep every field and batches naming the same CVEs cannot deadlock. KEV can no longer sit in only one of a record's column and payload.
 - Migration `20261105_01` and the control plane's cleanup tick link existing CVE findings to their record and reconcile records that disagree on KEV. Fields a replacing writer already overwrote come back only from a rescan or a catalog sync.

@@ -552,7 +552,9 @@ _FINDING_RESPONSE_TIMESTAMPS = (
     "last_seen",
     "last_observed",
     "resolved_at",
+    "last_resolved_at",
     "reopened_at",
+    "status_updated_at",
     "sla_due_at",
 )
 _FINDING_SEARCH_FIELDS = (
@@ -664,7 +666,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     from agent_bom.security import mask_email
 
     redacted = redact_for_persistence(dict(row), EvidenceTier.SAFE_TO_STORE)
-    payload = dict(redacted) if isinstance(redacted, dict) else {}
+    payload = {key: value for key, value in redacted.items() if key != "ingest_asset"} if isinstance(redacted, dict) else {}
     restore_atlas_receipts(payload, row)
     payload.update(cve_alias_metadata(row.get("aliases")))
     payload.update(safe_upstream_enrichment_metadata(row))
@@ -693,8 +695,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     payload.update(finding_kev_dates(row, _safe_timestamp))
 
     for key in _FINDING_RESPONSE_TIMESTAMPS:
-        safe_value = _safe_timestamp(row.get(key))
-        if safe_value is not None:
+        if (safe_value := _safe_timestamp(row.get(key))) is not None:
             payload[key] = safe_value
 
     occurrence = row.get("occurrence_count", row.get("scan_count"))
@@ -821,7 +822,7 @@ def canonical_finding_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     payload = dict(row)
     payload["lane"] = finding_lane(row)
     payload["finding_class"] = finding_class_for_row(payload)
-    for key in _CANONICAL_NULLABLE_FINDING_FIELDS:
+    for key in (*_CANONICAL_NULLABLE_FINDING_FIELDS, *_FINDING_RESPONSE_TIMESTAMPS):
         payload.setdefault(key, None)
 
     if payload["last_observed"] is None and payload["last_seen"] is not None:

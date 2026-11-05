@@ -146,33 +146,48 @@ def write_current_batch(
     tx.executemany(current_upsert(dialect, has_ledger), rows)
 
 
-def _wrapped_payload_source(raw_payload: Any) -> str | None:
+def _payload_scope(raw_payload: Any) -> tuple[str | None, str]:
     payload = decode_hub_payload(raw_payload)
     source = payload.get("ingest_source")
     source = source if source is not None else payload.get("source")
-    return None if source is None else str(source)
+    return None if source is None else str(source), str(payload.get("ingest_asset") or "")
 
 
-def _open_rows_in_scope(tx: SqlSession, dialect: Dialect, tenant: str, scope_source: str | None) -> list[Any]:
-    """Open rows for one source; SQL filters plain payloads, Python only the compressed few."""
+def _open_rows_in_scope(
+    tx: SqlSession, dialect: Dialect, tenant: str, scope_source: str | None, scope_assets: set[str] | None
+) -> list[Any]:
+    """Open rows for one source; asset scoping decodes in Python, since SQL cannot read a compressed payload."""
     base = "tenant_id = ? AND status IN ('open', 'reopened')"
     if scope_source is None:
         return list(tx.execute(f"SELECT canonical_id, last_seen FROM hub_findings_current WHERE {base}", (tenant,)).fetchall())  # nosec B608
     wrapped = f"{json_text(dialect, 'payload', HUB_PAYLOAD_MARKER)} IS NOT NULL"
     source = f"COALESCE({json_text(dialect, 'payload', 'ingest_source')}, {json_text(dialect, 'payload', 'source')})"
+    decoded = "payload" if scope_assets is not None else f"CASE WHEN {wrapped} THEN payload END"
     rows = tx.execute(
-        f"SELECT canonical_id, last_seen, CASE WHEN {wrapped} THEN payload END FROM hub_findings_current "  # nosec B608
+        f"SELECT canonical_id, last_seen, {decoded} FROM hub_findings_current "  # nosec B608
         f"WHERE {base} AND ({source} = ? OR {wrapped})",
         (tenant, scope_source),
     ).fetchall()
-    return [row for row in rows if row[2] is None or _wrapped_payload_source(row[2]) == scope_source]
+    kept = []
+    for row in rows:
+        row_source, row_asset = _payload_scope(row[2]) if row[2] is not None else (scope_source, "")
+        if row_source == scope_source and (scope_assets is None or row_asset in scope_assets):
+            kept.append(row)
+    return kept
 
 
 def reconcile_current(
-    tx: SqlSession, dialect: Dialect, tenant_id: str, *, present_canonical_ids: set[str], observed_at: str, scope_source: str | None
+    tx: SqlSession,
+    dialect: Dialect,
+    tenant_id: str,
+    *,
+    present_canonical_ids: set[str],
+    observed_at: str,
+    scope_source: str | None,
+    scope_assets: set[str] | None = None,
 ) -> int:
     tenant = require_explicit_tenant_id(tenant_id)
-    rows = _open_rows_in_scope(tx, dialect, tenant, scope_source)
+    rows = _open_rows_in_scope(tx, dialect, tenant, scope_source, scope_assets)
     absent = sorted({str(row[0]) for row in rows if observation_at_least(observed_at, str(row[1]))} - present_canonical_ids)
     total = 0
     now = utc_timestamp()

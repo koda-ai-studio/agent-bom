@@ -8,6 +8,7 @@ from typing import Any
 _OVERLAY_KEYS = (
     "origin",
     "ingest_source",
+    "ingest_asset",
     "batch_id",
     "scan_id",
     "source",

@@ -501,6 +501,12 @@ export interface UnifiedFinding {
   last_seen?: string | null | undefined;
   resolved_at?: string | null | undefined;
   reopened_at?: string | null | undefined;
+  /** The latest resolution, kept when a finding reopens; ``resolved_at`` is only set while resolved. */
+  last_resolved_at?: string | null | undefined;
+  status_updated_at?: string | null | undefined;
+  /** Grouped rows: occurrences by lifecycle state within the requested status view. */
+  open_occurrence_count?: number | undefined;
+  resolved_occurrence_count?: number | undefined;
   scan_count?: number | undefined;
   last_observed?: string | null | undefined;
   occurrence_count?: number | null | undefined;

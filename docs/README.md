@@ -55,6 +55,7 @@ the [documentation site](../site-docs/index.md) owns onboarding walkthroughs.
 - [STORAGE_BACKENDS.md](STORAGE_BACKENDS.md)
 - [DATA_SOURCES.md](DATA_SOURCES.md)
 - [INGEST_PATHS.md](INGEST_PATHS.md)
+- [FINDING_LIFECYCLE.md](FINDING_LIFECYCLE.md)
 - [OKTA_DISCOVERY.md](OKTA_DISCOVERY.md)
 - [SUPABASE_INVENTORY.md](SUPABASE_INVENTORY.md)
 - [VERCEL_INVENTORY.md](VERCEL_INVENTORY.md)

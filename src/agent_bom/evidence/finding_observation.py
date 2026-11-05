@@ -19,3 +19,4 @@ class ReconfirmationReason(str, Enum):
     SCOPE_SKIPPED = "scope_skipped"
     SCOPE_INCOMPLETE = "scope_incomplete"
     COVERAGE_ISSUE = "coverage_issue"
+    ADVISORY_DATA_DEGRADED = "advisory_data_degraded"

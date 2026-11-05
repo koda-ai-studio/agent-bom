@@ -557,6 +557,7 @@ class PostgresComplianceHubStore(CurrentFindingAggregates):
         source: str,
         reconcile_absent: bool,
         present_canonical_ids: set[str],
+        scope_assets: set[str] | None = None,
     ) -> tuple[int, int]:
         """Ledger append + current upsert (+ reconcile) in ONE transaction.
 
@@ -585,6 +586,7 @@ class PostgresComplianceHubStore(CurrentFindingAggregates):
                     present_canonical_ids=present_canonical_ids,
                     observed_at=observed_at,
                     scope_source=source,
+                    scope_assets=scope_assets,
                 )
             _bump_overview_revision_postgres(conn, tenant_id)
             conn.commit()
@@ -871,8 +873,15 @@ class PostgresComplianceHubStore(CurrentFindingAggregates):
         present_canonical_ids: set[str],
         observed_at: str,
         scope_source: str | None = None,
+        scope_assets: set[str] | None = None,
     ) -> int:
         tx = finding_write_session(conn, "postgres", tenant_id)
         return reconcile_current(
-            tx, "postgres", tenant_id, present_canonical_ids=present_canonical_ids, observed_at=observed_at, scope_source=scope_source
+            tx,
+            "postgres",
+            tenant_id,
+            present_canonical_ids=present_canonical_ids,
+            observed_at=observed_at,
+            scope_source=scope_source,
+            scope_assets=scope_assets,
         )

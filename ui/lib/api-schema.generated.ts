@@ -9859,10 +9859,24 @@ export interface components {
             observed_at?: string | null;
             /**
              * Reconcile Absent
-             * @description When true, mark open findings in the same source scope that are absent from this batch as resolved at observed_at.
+             * @description When true, mark open findings absent from this complete scan as resolved at observed_at. Only findings of the same source on the assets this batch names or lists in scanned_assets are affected.
              * @default false
              */
             reconcile_absent: boolean;
+            /**
+             * Reconcile Scope
+             * @description assets (default) limits reconciliation to scanned assets; source asserts the batch covers all of this source.
+             * @default assets
+             * @enum {string}
+             */
+            reconcile_scope: "assets" | "source";
+            /** @description Scan completeness receipt; a partial, failed or advisory-degraded scan reconciles nothing and says why. */
+            scan_run?: components["schemas"]["BulkScanRun"] | null;
+            /**
+             * Scanned Assets
+             * @description Asset identifiers (asset.identifier, else asset.name) this scan covered, including assets with no findings.
+             */
+            scanned_assets?: string[];
             /**
              * Schema Version
              * @default v1
@@ -9878,6 +9892,31 @@ export interface components {
              * @description Deprecated compatibility field; request tenant scope is authoritative.
              */
             tenant_id?: string | null;
+        };
+        /**
+         * BulkScanRun
+         * @description The completeness receipt of the scan behind a reconciling batch.
+         */
+        BulkScanRun: {
+            /**
+             * Incomplete Scope Count
+             * @default 0
+             */
+            incomplete_scope_count: number;
+            /** Issues */
+            issues?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Outcome
+             * @default complete
+             * @enum {string}
+             */
+            outcome: "complete" | "partial" | "failed";
+            /** Scopes */
+            scopes?: {
+                [key: string]: unknown;
+            }[];
         };
         /** CampaignExpectedRiskReduction */
         CampaignExpectedRiskReduction: {
@@ -14465,6 +14504,8 @@ export interface components {
             lane?: string | null;
             /** Last Observed */
             last_observed?: string | null;
+            /** Last Resolved At */
+            last_resolved_at?: string | null;
             /** Last Seen */
             last_seen?: string | null;
             /** Lifecycle Status */
@@ -14477,6 +14518,8 @@ export interface components {
             observation_status?: string | null;
             /** Occurrence Count */
             occurrence_count?: number | null;
+            /** Open Occurrence Count */
+            open_occurrence_count?: number | null;
             /** Owner */
             owner?: string | null;
             /** Package */
@@ -14503,8 +14546,16 @@ export interface components {
             remediation_guidance?: unknown;
             /** Remediation Versions */
             remediation_versions?: string[] | null;
+            /** Reopened At */
+            reopened_at?: string | null;
+            /** Resolved At */
+            resolved_at?: string | null;
+            /** Resolved Occurrence Count */
+            resolved_occurrence_count?: number | null;
             /** Risk Score */
             risk_score?: number | null;
+            /** Scan Count */
+            scan_count?: number | null;
             /** Scan Id */
             scan_id?: string | null;
             /** Scan Sources */
@@ -14523,6 +14574,8 @@ export interface components {
             source?: string | null;
             /** Status */
             status?: string | null;
+            /** Status Updated At */
+            status_updated_at?: string | null;
             /** Suppressed */
             suppressed?: boolean | null;
             /** Suppression Id */

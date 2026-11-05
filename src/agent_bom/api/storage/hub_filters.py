@@ -343,7 +343,7 @@ def _redact_finding(payload: dict[str, Any]) -> dict[str, Any]:
         clean["id"] = str(payload["id"])
     if "source" not in clean and "source" in payload:
         clean["source"] = str(payload["source"])
-    for key in ("origin", "ingest_source", "batch_id", "bulk_ordinal", "intel_ref", "framework_ref"):
+    for key in ("origin", "ingest_source", "ingest_asset", "batch_id", "bulk_ordinal", "intel_ref", "framework_ref"):
         if key not in clean and key in payload:
             clean[key] = payload[key]
     return clean

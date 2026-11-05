@@ -79,7 +79,9 @@ def _print_findings_table(payload: JsonObject) -> None:
     rows = payload.get("findings")
     if not isinstance(rows, list):
         rows = []
-    click.echo("id\tseverity\tstatus\towner\tpackage\tfirst_seen\tlast_seen\tsla_due_at\ttitle\tobservation_status")
+    click.echo(
+        "id\tseverity\tstatus\towner\tpackage\tfirst_seen\tlast_seen\tsla_due_at\ttitle\tresolved_at\treopened_at\tobservation_status"
+    )
     for item in rows:
         if not isinstance(item, dict):
             continue
@@ -95,6 +97,8 @@ def _print_findings_table(payload: JsonObject) -> None:
                     _string(item.get("last_seen")),
                     _string(item.get("sla_due_at")),
                     _string(item.get("title") or item.get("summary") or item.get("message")),
+                    _string(item.get("resolved_at")),
+                    _string(item.get("reopened_at")),
                     _string(item.get("observation_status")) or "unavailable",
                 ]
             )
@@ -152,7 +156,22 @@ def findings_cmd() -> None:
 @findings_cmd.command("push")
 @click.argument("input_path", type=click.Path(exists=True, dir_okay=False, path_type=Path))
 @click.option("--source", default="external_scan", show_default=True, help="Source label stored on ingested findings.")
-@click.option("--reconcile", "reconcile_absent", is_flag=True, help="Mark findings absent from this batch as resolved.")
+@click.option(
+    "--reconcile",
+    "reconcile_absent",
+    is_flag=True,
+    help="This file is a complete scan: resolve this source's open findings absent from it, on the assets it covers.",
+)
+@click.option(
+    "--reconcile-scope",
+    type=click.Choice(["assets", "source"]),
+    default="assets",
+    show_default=True,
+    help="assets limits --reconcile to scanned assets; source asserts the file covers everything from --source.",
+)
+@click.option(
+    "--scanned-asset", "scanned_assets", multiple=True, help="Asset identifier the scan covered, even with no findings. Repeatable."
+)
 @click.option("--observed-at", help="ISO-8601 observation timestamp for the batch.")
 @click.option("--idempotency-key", help="Optional Idempotency-Key header for safe retries.")
 @click.option("--format", "output_format", type=click.Choice(["json"]), default="json", show_default=True)
@@ -165,6 +184,8 @@ def push_findings_cmd(
     input_path: Path,
     source: str,
     reconcile_absent: bool,
+    reconcile_scope: str,
+    scanned_assets: tuple[str, ...],
     observed_at: str | None,
     idempotency_key: str | None,
     output_format: str,
@@ -182,6 +203,7 @@ def push_findings_cmd(
             source=source,
             observed_at=observed_at,
             reconcile_absent=reconcile_absent,
+            reconcile_options={"reconcile_scope": reconcile_scope, "scanned_assets": list(scanned_assets)} if reconcile_absent else None,
             idempotency_key=idempotency_key,
         ),
     )
