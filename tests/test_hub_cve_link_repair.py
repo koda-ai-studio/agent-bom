@@ -137,6 +137,7 @@ def _load_revision() -> Any:
 
 
 def test_repair_revision_is_chained_after_the_materialization_revision() -> None:
+    pytest.importorskip("alembic")
     module = _load_revision()
     assert module.revision == "20261105_01"
     assert module.down_revision == "20261104_01"
