@@ -346,6 +346,10 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
     changed_files += [Path(owner) for path in changed_files if (owner := extracted_owners.get(path.as_posix().removeprefix("./")))]
     for changed in changed_files:
         normalized = Path(changed.as_posix().removeprefix("./"))
+        if normalized.as_posix().startswith("src/agent_bom/parsers/oci_") or normalized.as_posix() == "src/agent_bom/oci_parser.py":
+            selected.update(
+                path for path in available if path.name.startswith("test_oci_") or path.name == "test_additional_container_inventory.py"
+            )
         if normalized.as_posix().startswith("integrations/agent-bom-guard/") or normalized.as_posix() in {
             "scripts/generate_guard_data.py",
             "src/agent_bom/malicious.py",

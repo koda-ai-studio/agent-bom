@@ -11,6 +11,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - File-backed registries, configuration and reports use explicit UTF-8, restoring MCP startup and Unicode evidence on Windows systems with a legacy default encoding.
+- Container binary probes search in small chunks while retaining Go metadata beyond the first window; OCI changes always select the memory-bound regression suite in CI.
 - Mixed Python requirements retain exact pins when resolving ranges; framework discovery no longer treats range bounds as installed versions. Independent requirements pins remain visible alongside Poetry and uv lockfiles.
 - Scoped npm package names are assessed within their namespace, preventing unrelated unscoped names from producing typosquatting or dependency-confusion alerts.
 - Failed Docker MCP image expansion retains the rest of the scan in a partial report. Container inventory includes Go binaries in application directories and distroless dpkg status fragments.

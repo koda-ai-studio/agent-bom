@@ -383,7 +383,7 @@ def _go_buildinfo_window(stream: IO[bytes]) -> bytes:
     overlap so a header spanning two read windows is not lost.
     """
     overlap = b""
-    while chunk := stream.read(_GO_BIN_MAX_READ):
+    while chunk := stream.read(min(_GO_BIN_MAX_READ, 1024 * 1024)):
         chunk = overlap + chunk
         position = chunk.find(_GO_BUILDINFO_MAGIC)
         if position >= 0:
