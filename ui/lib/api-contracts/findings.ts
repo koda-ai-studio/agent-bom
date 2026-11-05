@@ -394,6 +394,8 @@ export interface FindingOccurrenceSummary {
   package_version?: string | null | undefined;
   scan_id?: string | undefined;
   status?: string | undefined;
+  resolution_reason?: string | null | undefined;
+  stale?: boolean | undefined;
   owner?: string | null | undefined;
   sla_due_at?: string | null | undefined;
   sla_due_at_source?: "severity-kev/v1" | "explicit" | "unknown" | "unavailable" | undefined;
@@ -500,6 +502,10 @@ export interface UnifiedFinding {
   first_seen?: string | null | undefined;
   last_seen?: string | null | undefined;
   resolved_at?: string | null | undefined;
+  /** Why the finding is resolved: ``no_longer_detected`` or ``asset_deleted``. Null unless resolved. */
+  resolution_reason?: string | null | undefined;
+  /** Still open, but its asset was not re-checked within the stale period. */
+  stale?: boolean | undefined;
   reopened_at?: string | null | undefined;
   /** The latest resolution, kept when a finding reopens; ``resolved_at`` is only set while resolved. */
   last_resolved_at?: string | null | undefined;

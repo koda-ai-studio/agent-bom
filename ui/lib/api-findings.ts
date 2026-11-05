@@ -51,7 +51,7 @@ export const findingsApi = {
     triage?: "not_affected" | "affected" | "under_investigation" | "untriaged";
     lane?: string;
     findingClass?: "vulnerability" | "misconfiguration" | "secret" | "pii" | "identity" | "unclassified";
-    status?: "open" | "resolved" | "all";
+    status?: "open" | "stale" | "resolved" | "all";
     // Known-exploited only, or explicitly everything else. Omit for no filter —
     // `false` is the inverse, not the default.
     kev?: boolean;
