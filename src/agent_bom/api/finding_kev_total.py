@@ -25,6 +25,9 @@ def exact_kev_total(query: Any, scan_rows: int, bulk_list: Callable[..., Any], s
     counter = getattr(store, "current_kev_count", None)
     if not callable(counter):
         return None
+    pending = getattr(store, "current_materialization_pending", None)
+    if callable(pending) and pending(query.tenant_id):
+        return None
     window = {"since": query.window_since, "status": query.status_key}
     hub_kev = int(counter(query.tenant_id, origin="bulk_ingest", **window))
     if scope["kev"] == "true":

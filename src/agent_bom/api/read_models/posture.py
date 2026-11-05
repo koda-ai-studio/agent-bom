@@ -317,6 +317,8 @@ class OverviewFindingCounts(ReadModel):
     low: int
     unrated: int
     kev: int
+    # True while rows await backfill: ``kev`` is then a lower bound.
+    kev_approximate: bool = False
     total: int
 
 
@@ -379,7 +381,7 @@ class OverviewResponse(ReadResponse):
     domains: dict[str, OverviewDomain]
     finding_counts: OverviewFindingCounts
     headline: OverviewHeadline
-    issue_counts: IssueCounts
+    issue_counts: IssueCounts | None
     posture: OverviewPosture
     top_risks: list[OverviewTopRisk]
 

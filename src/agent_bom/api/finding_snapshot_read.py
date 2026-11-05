@@ -7,8 +7,9 @@ from typing import Any
 
 from fastapi import Request
 
+from agent_bom.api import time_window
 from agent_bom.api.finding_list_helpers import _DEFAULT_FINDING_STATUS, _normalize_finding_sort
-from agent_bom.api.finding_page_read import _list_finding_groups_impl, _list_findings_view_impl
+from agent_bom.api.finding_page_read import _list_finding_groups_impl, _list_findings_view_impl, exact_issue_counts, issue_counts_block
 from agent_bom.api.finding_read_context import finding_read_snapshot
 from agent_bom.api.finding_snapshot_metadata import snapshot_envelope
 from agent_bom.api.findings_current import _finding_snapshot_jobs, current_scan_jobs
@@ -22,7 +23,12 @@ def issue_severity_counts(request: Request) -> dict[str, Any]:
     Nav badges and the overview read this so their numbers equal what the
     grouped ``/v1/findings`` view shows with no filters applied: the same
     tenant, default read window, open status and canonical issue grouping.
+    The store aggregate answers exactly at any size; a store without it, or with
+    rows still pending backfill, walks a bounded window and says it is approximate.
     """
+    exact = exact_issue_counts(request, status=_DEFAULT_FINDING_STATUS, window_days=None)
+    if exact is not None:
+        return issue_counts_block(exact, window=time_window.window_metadata(time_window.normalize_window_days(None)))
     page = _list_finding_groups_impl(
         request,
         None,

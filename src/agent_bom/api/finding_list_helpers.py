@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from agent_bom.api.finding_list_projection import project_list_row
+from agent_bom.core.severity import normalize_severity
 from agent_bom.finding_scope import FINDING_SEVERITY_FILTERS
 
 __all__ = [
@@ -68,7 +69,7 @@ def _freshness_bucket(row: Mapping[str, Any], *, now: datetime | None = None) ->
 
 def _normalize_facet_severity(raw: Any) -> str:
     """Fold a stored severity string into the facet histogram's bands."""
-    value = str(raw or "unknown").strip().lower()
+    value = normalize_severity(str(raw or "unknown"))
     if value == "informational":
         value = "info"
     if value not in ("critical", "high", "medium", "low", "info", "unknown"):

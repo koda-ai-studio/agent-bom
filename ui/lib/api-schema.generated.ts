@@ -20927,6 +20927,11 @@ export interface components {
             high: number;
             /** Kev */
             kev: number;
+            /**
+             * Kev Approximate
+             * @default false
+             */
+            kev_approximate: boolean;
             /** Low */
             low: number;
             /** Medium */
@@ -21016,7 +21021,7 @@ export interface components {
             };
             finding_counts: components["schemas"]["OverviewFindingCounts"];
             headline: components["schemas"]["OverviewHeadline"];
-            issue_counts: components["schemas"]["IssueCounts"];
+            issue_counts: components["schemas"]["IssueCounts"] | null;
             posture: components["schemas"]["OverviewPosture"];
             /** Schema Version */
             schema_version: string;

@@ -51,7 +51,11 @@ def issue_severity_counts(request: Request, jobs: list[Any]) -> dict[str, Any] |
     except Exception:  # noqa: BLE001
         _logger.warning("issue-group counts unavailable; exec posture falls back to occurrence counts")
         return None
-    return counts if isinstance(counts, dict) and counts.get("basis") == "issue_groups" else None
+    if not isinstance(counts, dict) or counts.get("basis") != "issue_groups":
+        return None
+    # A bounded walk stops in severity order, so its bands shrink as data grows.
+    # The headline then reads the exact occurrence histogram and says so.
+    return None if counts.get("approximate") else counts
 
 
 def issue_severity_buckets(issue_counts: dict[str, Any] | None) -> dict[str, int] | None:

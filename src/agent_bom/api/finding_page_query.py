@@ -6,7 +6,7 @@ from typing import Any, NamedTuple
 
 from fastapi import HTTPException, Request
 
-from agent_bom.api import finding_cursor, findings_count_cache, time_window
+from agent_bom.api import compliance_hub_store, finding_cursor, findings_count_cache, time_window
 from agent_bom.api.finding_list_envelope import HUB_LIST_OFFSET_CEILING as _HUB_LIST_OFFSET_CEILING
 from agent_bom.api.finding_list_helpers import (
     _ALLOWED_FINDING_SEVERITIES,
@@ -99,6 +99,14 @@ def _validated_finding_list_params(
     return sort_key, severity, status_key, merged_cursor
 
 
+def _hub_revision(tenant_id: str) -> int | None:
+    reader = getattr(compliance_hub_store.get_compliance_hub_store(), "overview_evidence_revision", None)
+    if not callable(reader):
+        return None
+    revision = reader(tenant_id)
+    return revision if isinstance(revision, int) else None
+
+
 def _finding_list_query(
     request: Request,
     *,
@@ -117,6 +125,7 @@ def _finding_list_query(
     resolved_window = time_window.normalize_window_days(window_days)
     window_since = time_window.window_since_iso(resolved_window)
     sort_key, severity, status_key, merged_cursor = _validated_finding_list_params(sort, severity, status, cursor, offset)
+    findings_count_cache.sync_tenant_revision(tenant_id, _hub_revision(tenant_id))
     effective_approximate_total = findings_count_cache.resolve_effective_approximate_total(
         requested=approximate_total,
         tenant_id=tenant_id,

@@ -10,6 +10,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- KEV counts and the `kev=true` filter no longer miss findings whose stored payload is compressed; existing rows are backfilled by migration `20261104_01`.
+- Overview, posture and grouped findings report exact issue counts from a store aggregate at any size, so totals no longer shrink as data grows and no severity reads 0 because a row budget ran out. Coverage lanes and the Vuln / SCA card are exact on the same basis.
+- First reads of overview, `kev=true` and posture counts no longer join the whole ledger; they read indexed columns.
+- Scoped reconciliation resolves findings whose source sits in a compressed payload, and a cached findings total is dropped once another replica writes.
 - File-backed registries, configuration and reports use explicit UTF-8, restoring MCP startup and Unicode evidence on Windows systems with a legacy default encoding.
 - Container binary probes search in small chunks while retaining Go metadata beyond the first window; OCI changes always select the memory-bound regression suite in CI.
 - Mixed Python requirements retain exact pins when resolving ranges; framework discovery no longer treats range bounds as installed versions. Independent requirements pins remain visible alongside Poetry and uv lockfiles.
