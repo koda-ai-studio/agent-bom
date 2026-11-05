@@ -246,7 +246,14 @@ def test_unknown_workflow_has_no_implicit_release_contract() -> None:
 def _jobs():
     return [
         {"name": name, "status": "completed", "conclusion": "success", "head_sha": SHA}
-        for name in ("UI Validate", "UI export build", "UI E2E and container smoke")
+        for name in (
+            "UI Validate",
+            "UI export build",
+            "UI E2E and container smoke",
+            "Combined Python coverage",
+            "Python correctness aggregation",
+            *_full_correctness_names(),
+        )
     ]
 
 
@@ -283,7 +290,7 @@ def test_release_reads_all_job_pages_from_latest_attempt():
         assert query["filter"] == ["latest"]
         page = int(query["page"][0])
         pages.append(page)
-        return {"jobs": [{"name": "Other"}] * 100 if page == 1 else _jobs(), "total_count": 103}
+        return {"jobs": [{"name": "Other"}] * 100 if page == 1 else _jobs(), "total_count": 100 + len(_jobs())}
 
     assert checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, fetch_json=fetch)["run_id"] == 123
     assert pages == [1, 2]
@@ -295,3 +302,76 @@ def test_release_rejects_job_evidence_for_another_sha():
     jobs[0]["head_sha"] = "e" * 40
     with pytest.raises(checker.ReleaseProofError, match="UI"):
         checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, fetch_json=_fetcher(jobs=jobs))
+
+
+@pytest.mark.parametrize("conclusion", ["failure", "cancelled", None])
+def test_newer_unsuccessful_run_cannot_fall_back_to_older_green(conclusion):
+    checker = _load_script()
+    newer = _run(id=124, status="in_progress" if conclusion is None else "completed", conclusion=conclusion)
+    with pytest.raises(checker.ReleaseProofError, match="completed successful main push"):
+        checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, fetch_json=_fetcher(runs=[newer, _run()]))
+
+
+def _full_correctness_names():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    matrix = workflow["jobs"]["test-main"]["strategy"]["matrix"]
+    return [f"Full correctness (Python {version}, shard {shard})" for version in matrix["python-version"] for shard in matrix["shard"]]
+
+
+@pytest.mark.parametrize("conclusion", ["failure", "skipped", "cancelled", "missing"])
+def test_release_requires_all_full_correctness_shards(conclusion):
+    checker = _load_script()
+    names = _full_correctness_names()
+    for name in names:
+        jobs = [job.copy() for job in _jobs()]
+        if conclusion == "missing":
+            jobs = [job for job in jobs if job["name"] != name]
+        else:
+            next(job for job in jobs if job["name"] == name)["conclusion"] = conclusion
+        with pytest.raises(checker.ReleaseProofError, match="Full correctness"):
+            checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, fetch_json=_fetcher(jobs=jobs))
+
+
+def test_release_required_jobs_track_full_ci_matrix_and_aggregation():
+    checker = _load_script()
+    required = checker.REQUIRED_WORKFLOW_JOBS["ci.yml"]
+    assert set(_full_correctness_names()) <= required
+    assert {"Combined Python coverage", "Python correctness aggregation"} <= required
+
+
+@pytest.mark.parametrize("failed_workflow", ["ci.yml", "runtime-acceptance.yml", ""])
+def test_preflight_requires_remote_proof_before_safe_to_tag(tmp_path, failed_workflow):
+    import os
+    import shutil
+    import subprocess
+
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    shutil.copy(ROOT / "scripts/preflight_release.sh", scripts / "preflight_release.sh")
+    bins = tmp_path / "bin"
+    bins.mkdir()
+    log = tmp_path / "calls"
+    stubs = {
+        "git": f'#!/bin/sh\nprintf "%s\\n" "{SHA}"\n',
+        "gh": '#!/bin/sh\nprintf "%s\\n" "example/repository"\n',
+        "actionlint": "#!/bin/sh\nexit 0\n",
+        "python": """#!/bin/sh
+printf '%s\n' "$*" >> "$PROOF_CALLS"
+case "$*" in
+  *check_release_main_ci.py*--workflow*"$FAILED_WORKFLOW"*)
+    if [ -n "$FAILED_WORKFLOW" ]; then exit 1; fi ;;
+esac
+exit 0
+""",
+    }
+    for name, content in stubs.items():
+        executable = bins / name
+        executable.write_text(content, encoding="utf-8")
+        executable.chmod(0o755)
+    env = {**os.environ, "PATH": f"{bins}:{os.environ['PATH']}", "PROOF_CALLS": str(log), "FAILED_WORKFLOW": failed_workflow}
+    result = subprocess.run(["bash", str(scripts / "preflight_release.sh"), "0.114.0"], env=env, capture_output=True, text=True)
+    calls = log.read_text(encoding="utf-8")
+    for workflow in ("ci.yml", "runtime-acceptance.yml"):
+        assert f"--repo example/repository --sha {SHA} --workflow {workflow}" in calls
+    assert (result.returncode == 0) is (not failed_workflow), result.stdout + result.stderr
+    assert ("safe to tag" in result.stdout) is (not failed_workflow)

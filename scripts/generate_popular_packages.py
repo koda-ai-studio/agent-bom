@@ -13,6 +13,8 @@ ecosystem, taken from public download and dependent rankings:
   ``npm-high-impact`` package at a pinned version. Dependent count ranks the
   names people declare directly (``cross-env``, ``express``), which is what a
   squatter imitates; raw downloads are dominated by transitive helpers.
+  The top ``NPM_SCOPED_TARGETS`` scoped names from each ranking are retained
+  separately so namespace impersonation can be compared to real targets.
 * Plus a short curated list of names that were the target of a documented
   typosquat campaign but sit below the ranking cut (``CAMPAIGN_TARGETS``).
 
@@ -45,6 +47,7 @@ TARGET = ROOT / "src" / "agent_bom" / "data" / "popular_packages.json"
 PYPI_TARGETS = 300
 NPM_DEPENDENT_TARGETS = 250
 NPM_DOWNLOAD_TARGETS = 100
+NPM_SCOPED_TARGETS = 50
 NPM_HIGH_IMPACT_VERSION = "1.13.0"
 PYPI_URL = "https://hugovk.github.io/top-pypi-packages/top-pypi-packages.min.json"
 NPM_URL = "https://cdn.jsdelivr.net/npm/npm-high-impact@{version}/lib/{name}.js"
@@ -88,7 +91,7 @@ def _fetch(url: str) -> bytes:
 
 def _npm_ranking(name: str) -> list[str]:
     text = _fetch(NPM_URL.format(version=NPM_HIGH_IMPACT_VERSION, name=name)).decode("utf-8")
-    return [n for n in re.findall(r"^\s+'([^']+)',?$", text, re.M) if not n.startswith("@")]
+    return re.findall(r"^\s+'([^']+)',?$", text, re.M)
 
 
 def build() -> dict[str, object]:
@@ -99,8 +102,16 @@ def build() -> dict[str, object]:
     npm_dependents = _npm_ranking("top-dependent")
     npm_downloads = _npm_ranking("top-download")
 
+    npm_scoped = {
+        name for ranking in (npm_dependents, npm_downloads) for name in [n for n in ranking if n.startswith("@")][:NPM_SCOPED_TARGETS]
+    }
+    npm_unscoped_dependents = [n for n in npm_dependents if not n.startswith("@")]
+    npm_unscoped_downloads = [n for n in npm_downloads if not n.startswith("@")]
     targets = {
-        "npm": set(npm_dependents[:NPM_DEPENDENT_TARGETS]) | set(npm_downloads[:NPM_DOWNLOAD_TARGETS]) | set(CAMPAIGN_TARGETS["npm"]),
+        "npm": set(npm_unscoped_dependents[:NPM_DEPENDENT_TARGETS])
+        | set(npm_unscoped_downloads[:NPM_DOWNLOAD_TARGETS])
+        | npm_scoped
+        | set(CAMPAIGN_TARGETS["npm"]),
         "pypi": set(pypi_rank[:PYPI_TARGETS]) | set(CAMPAIGN_TARGETS["pypi"]),
     }
     rankings = {"npm": list(dict.fromkeys(npm_dependents + npm_downloads)), "pypi": pypi_rank}
@@ -117,7 +128,7 @@ def build() -> dict[str, object]:
             "pypi": f"{PYPI_URL} (last_update {pypi_doc['last_update']}): top {PYPI_TARGETS} by 30-day downloads",
             "npm": (
                 f"npm-high-impact@{NPM_HIGH_IMPACT_VERSION}: top {NPM_DEPENDENT_TARGETS} unscoped by dependents "
-                f"and top {NPM_DOWNLOAD_TARGETS} by downloads"
+                f"and top {NPM_DOWNLOAD_TARGETS} unscoped by downloads; top {NPM_SCOPED_TARGETS} scoped from each ranking"
             ),
             "curated": "CAMPAIGN_TARGETS in scripts/generate_popular_packages.py",
             "established": "names in the full rankings that sit within typosquat distance of a target",

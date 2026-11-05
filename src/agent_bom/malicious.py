@@ -335,14 +335,19 @@ def _scoped_typosquat_target(
     name: str, scope: str, rest: str, popular: frozenset[str], legitimate: frozenset[str], threshold: float
 ) -> str | None:
     """Compare scoped identities as a whole; a leaf alone cannot impersonate another namespace."""
-    flattened = f"{scope}-{rest}"
-    if flattened in popular or rest in popular:
+    if name in popular or name in legitimate:
         return None
-    for form in (name, flattened):
-        target = typosquat_target(form, "npm", popular, legitimate, threshold)
-        if target:
-            return None if _same_project_family(scope, target) else target
-    return None
+    flattened = f"{scope}-{rest}"
+    unscoped_targets = frozenset(target for target in popular if not target.startswith("@"))
+    if flattened not in popular and rest not in popular:
+        for form in (name, flattened):
+            target = typosquat_target(form, "npm", unscoped_targets, legitimate, threshold)
+            if target:
+                return None if _same_project_family(scope, target) else target
+    # Require an exact leaf of a known scoped target. An unrelated publisher
+    # using a similar leaf is not evidence of namespace impersonation.
+    scoped_targets = frozenset(target for target in popular if target.startswith("@") and target.endswith(f"/{rest}"))
+    return typosquat_target(name, "npm", scoped_targets, legitimate, threshold)
 
 
 # ── Dependency confusion detection ─────────────────────────────────────────
