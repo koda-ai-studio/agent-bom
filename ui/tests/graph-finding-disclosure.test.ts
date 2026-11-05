@@ -48,6 +48,7 @@ it("offers a separate finding group with original findings available on expansio
   const group = collapsed.nodes.find(n => n.type === "findingGroupNode");
   expect(group?.data.label).toBe("Findings");
   expect(group?.data.readingFindings?.count).toBe(1);
+  expect(group?.data.readingFindings?.severity).toBe("high");
   expect(group?.data.displayOnly).toBe(true);
   const expanded = cloudFindingDisclosure(nodes, edges, new Set(["owner"]), () => {});
   expect(expanded.nodes.some(n => n.type === "findingGroupNode")).toBe(false);
