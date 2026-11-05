@@ -31,6 +31,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
+- MCP discovery no longer reports a server as insecure because an argument uses `${CLAUDE_PLUGIN_ROOT}` or `${CLAUDE_PROJECT_DIR}`. Any other `$` expansion or shell metacharacter is still rejected.
 - `docs/PERMISSIONS.md` and the plugin READMEs now list the Alpine, Debian, OSV archive, GitHub advisory, deps.dev, Go and EPSS hosts. The privacy page now covers the guard hook, and states which tokens are sent where.
 - All plugin manifests point at the same privacy and terms pages. Plugin descriptions no longer say credentials are never sent where an ambient token can be, and the guard description lists all of its warnings.
 - The CVE link repair no longer passes over rows. Under some query plans its keyset page moved mid-statement, so it could leave a row unmarked and carry on past it, leaving that row's CVE link unrepaired.

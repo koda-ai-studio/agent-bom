@@ -194,6 +194,10 @@ def require_recognized_launcher(command: str) -> None:
     raise _unrecognized(command)
 
 
+# Expanded by the MCP client when it loads a plugin; no shell ever sees them.
+_PLUGIN_PATH_PLACEHOLDERS = ("${CLAUDE_PLUGIN_ROOT}", "${CLAUDE_PROJECT_DIR}")
+
+
 def validate_arguments(args: list[str]) -> None:
     """
     Reject command arguments containing shell metacharacters.
@@ -211,8 +215,11 @@ def validate_arguments(args: list[str]) -> None:
         SecurityError: If shell metacharacters found
     """
     for arg in args:
+        checked = arg
+        for placeholder in _PLUGIN_PATH_PLACEHOLDERS:
+            checked = checked.replace(placeholder, "")
         for char in SHELL_METACHARACTERS:
-            if char in arg:
+            if char in checked:
                 raise SecurityError(f"Dangerous character '{char}' found in argument: {arg}")
     logger.debug(f"Validated {len(args)} argument(s) successfully")
 
