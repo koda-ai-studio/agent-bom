@@ -174,6 +174,11 @@ def _selected_decorator(original: Any, allowed: frozenset[str], kind: str) -> An
     return filtered
 
 
+# ``agent_activity`` reads chat history. ``scan`` stores its result and can update the
+# advisory database, so it is not read-only, and these catalogs promise read-only tools.
+_OAUTH_EXCLUDED_TOOLS = frozenset({"agent_activity", "scan"})
+
+
 def configure_registration(mcp: Any, name: str, *, read_only: bool = False) -> None:
     """Skip excluded decorators before FastMCP constructs expensive schemas.
 
@@ -186,7 +191,9 @@ def configure_registration(mcp: Any, name: str, *, read_only: bool = False) -> N
             safe = frozenset(
                 tool
                 for tool, capabilities in _TOOL_CAPABILITY_CLASSES.items()
-                if "READ" in capabilities and not {"WRITE", "PROCESS_EXECUTION"}.intersection(capabilities) and tool != "agent_activity"
+                if "READ" in capabilities
+                and not {"WRITE", "PROCESS_EXECUTION"}.intersection(capabilities)
+                and tool not in _OAUTH_EXCLUDED_TOOLS
             )
             allowed = safe if allowed is None else allowed & safe
         if allowed is None:
