@@ -1111,7 +1111,7 @@
      "project:proj"
     ],
     "basis": "discovery",
-    "credential": "***REDACTED***",
+    "credential": "API_TOKEN",
     "max_risk_score": 0.0,
     "reachable_tools": [],
     "risk_tier": "low",

@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any, Iterable
 
+from agent_bom.canonical_ids import agent_graph_id_for
 from agent_bom.graph import builder as _builder
 from agent_bom.graph.builder import _package_node_id_from_parts
 from agent_bom.graph.dependency_reach import compute_dependency_reach
@@ -87,8 +88,14 @@ def apply_dependency_reachability_to_blast_radii(
         _logger.warning("Graph reachability surfacing skipped: %s", exc)
         return 0
 
+    evaluated_agents = frozenset(reach.evaluated_agent_ids)
     stamped = 0
     for br in blast_radii:
+        # Image/SBOM/repository carriers are inventory, not evaluated agent
+        # entrypoints. Absence from an agent-rooted walk is unknown, not proof
+        # that their vulnerable packages cannot be reached.
+        if not any(agent_graph_id_for(agent) in evaluated_agents for agent in br.affected_agents):
+            continue
         # The graph builder mints vulnerability node ids as "vuln:<id>" so
         # the engine's report is keyed by that, not the bare CVE id.
         node_id = f"vuln:{br.vulnerability.id}"

@@ -60,6 +60,7 @@ def path_receipt_label(value: str, *, is_path: Callable[[str], bool], label: Cal
 
 
 _REPORT_AUTH_MODES = {
+    "configured-http-auth",
     "env-credentials",
     "url-embedded-credentials",
     "network-no-auth-observed",

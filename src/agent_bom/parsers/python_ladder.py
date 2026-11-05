@@ -119,6 +119,10 @@ def _from_venv(directory: Path, venv: Path, manifest: Path, declared: list[Packa
 
 
 def _resolved_package(dist: ResolvedDistribution, declared: Package | None) -> Package:
+    # Registry resolution may include exact roots alongside ranged roots. The
+    # lookup does not make an exact declaration floating or less authoritative.
+    if declared is not None and not declared.floating_reference and declared.version == dist.version:
+        return declared
     package = declared or Package(
         name=dist.name,
         version=dist.version,

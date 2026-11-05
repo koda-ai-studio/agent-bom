@@ -7,6 +7,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- Mixed Python requirements retain exact pins when resolving ranges; framework discovery no longer treats range bounds as installed versions. Independent requirements pins remain visible alongside Poetry and uv lockfiles.
+- Scoped npm package names are assessed within their namespace, preventing unrelated unscoped names from producing typosquatting or dependency-confusion alerts.
+- Failed Docker MCP image expansion retains the rest of the scan in a partial report. Container inventory includes Go binaries in application directories and distroless dpkg status fragments.
+- Multi-document pnpm lockfiles retain package inventory and dependency relationships from each document.
+- Reports retain digest-qualified image coordinates and credential variable names while continuing to redact secret values.
+- Unresolved range advisories produce a partial, review-required result without a posture grade; Markdown and CSV include the review candidates.
+- Image inventory without an evaluated agent entrypoint retains unknown dependency reachability, preserving structural CVE paths without claiming execution.
+- Graph path technique enrichment reuses the batch hop index instead of repeatedly reading the same adjacency lists.
+
 ## [0.113.2] - 2026-11-03
 
 ### Fixed

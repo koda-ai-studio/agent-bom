@@ -28,6 +28,7 @@ from agent_bom.output.finding_views import (
     with_output_sanitizer_cache,
     workflow_status,
 )
+from agent_bom.output.possibly_affected import possibly_affected_rows
 from agent_bom.output.technique_evidence import markdown_atlas_sources
 from agent_bom.security import sanitize_sensitive_payload
 
@@ -85,7 +86,7 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
 
     lines.extend(markdown_atlas_sources(cve_rows))
 
-    lines.extend(_trust_assessment_section(report))
+    lines.extend([*_trust_assessment_section(report), *_possibly_affected_section(report)])
 
     if not brs and not policy_findings and scan_run.outcome is ScanOutcome.COMPLETE:
         lines.append("No vulnerabilities found.")
@@ -279,6 +280,24 @@ def _finding_sev_order(sev: str) -> int:
 def _severity_text(sev: str) -> str:
     """Return a text badge for string severities from unified findings."""
     return f"**{sev.upper()}**"
+
+
+def _possibly_affected_section(report: AIBOMReport) -> list[str]:
+    candidates = possibly_affected_rows(report)
+    if not candidates:
+        return []
+    lines = [
+        "## Possibly affected — verification required",
+        "",
+        "These are review candidates, not confirmed vulnerabilities.",
+        "",
+        "| Advisory | Package | Version | Reason |",
+        "|---|---|---|---|",
+    ]
+    for row in candidates:
+        cells = (row["id"], row["package"]["name"], row["package"]["version"], row.get("detail") or row["reason"])
+        lines.append("| " + " | ".join(_md_cell(cell) for cell in cells) + " |")
+    return [*lines, ""]
 
 
 def _md_cell(value: object) -> str:

@@ -12,6 +12,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from packaging.utils import canonicalize_name
+
 from agent_bom.coverage import record_manifest_parse_warning
 from agent_bom.models import Package
 from agent_bom.parsers.file_limits import read_json_limited, read_text_limited
@@ -143,6 +145,34 @@ def parse_conda_environment(directory: Path) -> list[Package]:
     return packages
 
 
+def _with_independent_requirements(directory: Path, locked: list[Package]) -> list[Package]:
+    """Retain independent requirements pins, including conflicting versions.
+
+    Ranges already covered by a lock do not trigger registry guesses. Missing
+    declarations remain unknown and are reported as a coverage gap.
+    """
+    manifest = directory / "requirements.txt"
+    if not manifest.is_file():
+        return locked
+    names = {canonicalize_name(p.name) for p in locked}
+    seen = {(canonicalize_name(p.name), p.version) for p in locked}
+    for package in requirements_file_packages(manifest):
+        name = canonicalize_name(package.name)
+        if _unpinned(package):
+            if name in names:
+                continue
+            record_manifest_parse_warning(
+                ecosystem="pypi",
+                path=str(manifest),
+                detail="requirements.txt declares dependencies absent from the lockfile; installed versions are unknown",
+            )
+        key = (name, package.version)
+        if key not in seen:
+            locked.append(package)
+            seen.add(key)
+    return locked
+
+
 def parse_pip_packages(directory: Path) -> list[Package]:
     """Parse packages from requirements.txt, Pipfile.lock, pyproject.toml,
     poetry.lock, or uv.lock.
@@ -157,12 +187,12 @@ def parse_pip_packages(directory: Path) -> list[Package]:
     # Poetry (most accurate — full resolved lock)
     poetry_pkgs = parse_poetry_lock(directory)
     if poetry_pkgs:
-        return poetry_pkgs
+        return _with_independent_requirements(directory, poetry_pkgs)
 
     if uv_lock_owner(directory) is not None:
         # An existing or required lock is authoritative even when empty or
         # damaged. Declaration fallback would invent versions from the registry.
-        return parse_uv_lock(directory)
+        return _with_independent_requirements(directory, parse_uv_lock(directory))
 
     packages = []
     unlocked_source: Path | None = None

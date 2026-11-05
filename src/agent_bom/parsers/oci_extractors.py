@@ -182,6 +182,12 @@ def _extract_stanza_database(
 
 def _extract_dpkg_status(scan: _LayerScan) -> None:
     _extract_stanza_database(scan, ("var/lib/dpkg/status", "./var/lib/dpkg/status"), _add_dpkg_entries, "Failed to parse dpkg status")
+    # Distroless images retain one dpkg stanza per package instead of a single
+    # database. Read only direct children through the same safe tar boundary.
+    for path in sorted(scan.names):
+        normalized = path.removeprefix("./")
+        if normalized.startswith("var/lib/dpkg/status.d/") and normalized.count("/") == 4:
+            _extract_stanza_database(scan, (path,), _add_dpkg_entries, "Failed to parse dpkg status fragment")
 
 
 def _extract_apk_installed(scan: _LayerScan) -> None:

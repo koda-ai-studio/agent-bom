@@ -100,6 +100,7 @@ class ReachabilityReport:
 
     packages: dict[str, PackageReachability]
     vulnerabilities: dict[str, VulnerabilityReachability]
+    evaluated_agent_ids: tuple[str, ...] = ()
 
     @property
     def reachable_vulnerability_ids(self) -> tuple[str, ...]:
@@ -163,7 +164,7 @@ def compute_dependency_reach(graph: UnifiedGraph) -> ReachabilityReport:
             min_hop_distance=best_hops if best_hops is not None else 0,
         )
 
-    return ReachabilityReport(packages=packages, vulnerabilities=vulnerabilities)
+    return ReachabilityReport(packages=packages, vulnerabilities=vulnerabilities, evaluated_agent_ids=tuple(sorted(agent_ids)))
 
 
 def _bfs_distances_along(

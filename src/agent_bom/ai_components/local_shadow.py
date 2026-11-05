@@ -12,8 +12,22 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from agent_bom.core.packages import normalize_package_name
+from agent_bom.models import Package
 from agent_bom.parsers.declared_requirements import parse_pyproject_dependencies, parse_requirements_txt
 from agent_bom.traversal import iter_discovery_files
+
+
+def declared_framework_package(name: str, version: str) -> Package:
+    """Framework presence is declaration evidence, with a version only for exact pins."""
+    return Package(
+        name=name,
+        version=version,
+        ecosystem="pypi",
+        purl=f"pkg:pypi/{name}@{version}" if version != "unknown" else None,
+        version_source="manifest",
+        floating_reference=version == "unknown",
+        reachability_evidence="declaration_only",
+    )
 
 
 def declared_python_requirements(project: Path) -> dict[str, str]:
