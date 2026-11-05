@@ -31,7 +31,8 @@ GRAPH_PAGE_ENTRY = UI / "app" / "graph" / "page.tsx"
 # Reads in the graph page's modules that are not reads of the canvas payload.
 NOT_CANVAS_READS = {
     # Nested ingress assessment target, not the dropped top-level edge alias.
-    ("target_id", "lib/graph-investigation-flow.ts"),
+    ("target_id", "lib/graph-flow-model.ts"),
+    ("target_id", "components/graph-ingress-receipt.tsx"),
     # Reads the selection refetch (detail.node), not the canvas node.
     ("evidence_provenance", "lib/graph-entity-detail.ts"),
     # Reads /v1/graph/edges/changes rows, a different response.

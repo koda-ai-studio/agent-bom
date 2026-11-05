@@ -25,10 +25,19 @@ it("renders Internet context only for a complete target-bound ingress assessment
     expect(investigationFlow(altered, edges, "exposure").nodes.some(n => n.data.label === "Internet")).toBe(false);
   }
 });
-it("keeps identity, vulnerability and inventory flows distinct", () => {
-  const positions = (["identity", "vulnerability", "inventory"] as InvestigationFlow[]).map(s => investigationFlow(nodes, edges, s).nodes.map(n => n.position));
-  expect(positions[0]).not.toEqual(positions[1]);
-  expect(positions[1]).not.toEqual(positions[2]);
+it("starts identity, vulnerability and inventory flows at their own subject and order their steps", () => {
+  const flow = (scenario: InvestigationFlow) => {
+    const result = investigationFlow(nodes, edges, scenario);
+    return { result, at: (id: string) => result.nodes.find(n => n.id === id)!.position, origin: result.nodes.filter(n => n.position.x === 0 && n.position.y === 0).map(n => n.id) };
+  };
+  const identity = flow("identity"), vulnerability = flow("vulnerability"), inventory = flow("inventory");
+  expect(identity.origin).toEqual(["role"]);
+  expect(identity.at("role").x).toBeLessThan(identity.at("bucket").x);
+  expect(vulnerability.origin).toEqual(["pod"]);
+  expect(vulnerability.at("pod").x).toBeLessThan(vulnerability.at("cve").x);
+  expect(vulnerability.at("cve").y).toBe(vulnerability.at("pod").y);
+  expect(inventory.origin).toEqual(["account"]);
+  expect(inventory.result.primaryPath.slice(0, 3)).toEqual(["account", "cluster", "pod"]);
 });
 
 it("keeps a finding shared with a hidden asset outside a single-owner group", () => {
@@ -48,10 +57,12 @@ it("keeps sibling workloads and their findings on the deployment context branch"
   const result = investigationFlow([...nodes, n("sibling", "container"), n("sibling-cve", "vulnerability")],
     [...edges, e("account", "endpoint", "contains"), e("cluster", "sibling", "hosts"), e("sibling", "sibling-cve", "vulnerable_to")], "exposure");
   const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
-  expect(at("sibling").y).toBeLessThan(at("pod").y);
-  expect(at("sibling-cve").y).toBeLessThan(at("pod").y);
+  const primary = result.primaryPath;
+  expect(primary).not.toContain("sibling");
+  expect(primary).not.toContain("sibling-cve");
+  expect(at("sibling").y).toBeGreaterThan(at("pod").y);
+  expect(at("sibling-cve").y).toBeGreaterThan(at("pod").y);
   expect(at("sibling").x).toBeGreaterThan(at("cluster").x);
-  expect(at("sibling").y).toBe(at("cluster").y);
 });
 
 it("preserves the existing correlation layout when automatic flow has no cloud context", () => {
@@ -77,13 +88,21 @@ it("keeps an ingress and its routed Service in sequence before the pod", () => {
   expect(x("endpoint")).toBeLessThan(x("service"));
   expect(x("service")).toBeLessThan(x("pod"));
 });
-it("routes an upward deployment-context edge from the top of the node, clear of the provider mark", () => {
-  const flow = [n("endpoint", "apiGateway", { resource_id: "api-1" }), n("target", "cloudResource"), n("host", "cloudResource"), n("server", "server")];
-  const result = investigationFlow(flow, [e("endpoint", "target", "exposed_to"), e("target", "host", "part_of"), e("host", "server", "hosts")], "exposure");
+it("routes an upward context edge from the top of the node only when no card sits directly above it", () => {
+  const flow = [n("endpoint", "apiGateway", { resource_id: "api-1" }), n("target", "cloudResource"), n("other", "cloudResource"), n("worker", "container"), n("parent", "cloudResource")];
+  const links = [e("endpoint", "target", "exposed_to"), e("other", "worker", "contains"), e("parent", "other", "contains")];
+  const result = investigationFlow(flow, links, "exposure");
+  const handle = (id: string) => result.edges.find(edge => edge.id === id)?.sourceHandle;
   const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
-  expect(at("server").y).toBeLessThan(at("target").y);
-  expect(result.edges.filter(edge => edge.sourceHandle === "context-up").length).toBeGreaterThan(0);
-  expect(result.edges.find(edge => edge.id === "endpoint-target")?.sourceHandle).toBeUndefined();
+  const clearAbove = (id: string, target: string) => !result.nodes.some(node => node.id !== target && node.position.x === at(id).x && node.position.y < at(id).y && node.position.y >= at(target).y);
+  for (const edge of result.edges.filter(edge => edge.data?.relationship === "contains" && at(edge.target).y < at(edge.source).y && at(edge.source).x <= at(edge.target).x)) {
+    expect(handle(edge.id)).toBe(clearAbove(edge.source, edge.target) ? "context-up" : undefined);
+  }
+  const blocked = investigationFlow(nodes, edges, "exposure");
+  const blockedAt = (id: string) => blocked.nodes.find(node => node.id === id)!.position;
+  expect(blockedAt("cluster").y).toBeGreaterThan(blockedAt("pod").y);
+  expect(blocked.edges.find(edge => edge.id === "cluster-pod")?.sourceHandle).toBeUndefined();
+  expect(blocked.edges.find(edge => edge.id === "endpoint-pod")?.sourceHandle).toBeUndefined();
 });
 it("continues an exposure flow through a workload the exposed host runs", () => {
   const flow = [n("endpoint", "apiGateway", { resource_id: "api-1" }), n("host", "cloudResource"), n("server", "server"), n("role", "role"), n("data", "dataStore")];

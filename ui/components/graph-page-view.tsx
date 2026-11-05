@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { investigationFlow, type InvestigationFlow } from "@/lib/graph-investigation-flow";
-import { useDisplayNodeMeasurements } from "@/hooks/use-display-node-measurements";
-import { useCloudFindingDisclosure } from "@/hooks/use-cloud-finding-disclosure";
+import { useInvestigationFlowView } from "@/hooks/use-investigation-flow-view";
+import { GraphFlowControl } from "@/components/graph-flow-control";
+import { GraphViewportScope } from "@/components/graph-viewport-scope";
+import { GraphIngressReceipt } from "@/components/graph-ingress-receipt";
 import { ASSET_BASE } from "@/lib/asset-base";
 import { useRelationshipLabelControl } from "@/components/relationship-label-control";
 import { AlertTriangle } from "lucide-react";
@@ -109,31 +109,25 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
     findingNodes, inspectRelationship, onNodeClick, onLargeGraphNodeSelect, onNodeMouseEnter, onNodeMouseLeave,
     selectFindingCard, runSearch, loadRootInvestigation, focusSearchResult, clearInvestigationMode, dismissRollup,
     returnToSummary, navigateRollupBreadcrumb, resetRollupToRoot, drillIntoRollup, investigateRollup, loadBlastRadius,
-    retryGraph, graphTruncated, connectionPreview, previewExpanded, setPreviewRoot, setPreviewExpanded,
+    retryGraph, graphTruncated, connectionPreview, previewExpanded, setPreviewRoot, setPreviewExpanded, searchParams,
   } = page;
   const relationshipLabels = useRelationshipLabelControl(displayEdges);
-  const [investigationFlowKind, setInvestigationFlowKind] = useState<InvestigationFlow>("auto");
-  const useCaseEnabled = !selectedAttackPath && !selectedScenarioId && !rollupNavigationActive
-    && !presentation.editing && !presentation.hasPositionOverrides;
-  const scenarioFlow = useMemo(() => useCaseEnabled
-    ? investigationFlow(presentation.nodes, relationshipLabels.edges, investigationFlowKind, narrowViewport)
-    : { nodes: presentation.nodes, edges: relationshipLabels.edges, scenario: "inventory" },
-    [useCaseEnabled, presentation.nodes, relationshipLabels.edges, investigationFlowKind, narrowViewport]);
-  const disclosed = useCloudFindingDisclosure(scenarioFlow.nodes, scenarioFlow.edges, selectedNodeId,
-    `${presentation.storageKey}:${investigationFlowKind}`, useCaseEnabled || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
-  const measuredDisplay = useDisplayNodeMeasurements(disclosed.nodes, presentation.onNodesChange);
-  const toggleFindingGroups = () => {
-    if (!disclosed.collapsed) {
-      if (presentation.nodes.find(node => node.id === selectedNodeId)?.data.readingOwner) {
-        setSelectedNode(null);
-        setSelectedNodeId(null);
-        setPinnedFocusId(null);
-        setHoveredNodeId(null);
-      }
-      setSelectedRelationship(null);
-    }
-    disclosed.toggleAll();
+  const clearSelection = () => {
+    setSelectedNode(null);
+    setSelectedNodeId(null);
+    setSelectedRelationship(null);
+    setPinnedFocusId(null);
+    setHoveredNodeId(null);
+    setReachabilitySummary(null);
+    setBlastRadius(null);
   };
+  const flowView = useInvestigationFlowView({
+    presentation, edges: relationshipLabels.edges, loaded: contextElements, narrowViewport, requestedFlow: searchParams.get("flow"),
+    otherSurface: Boolean(selectedAttackPath || selectedScenarioId || rollupNavigationActive),
+    webglNodeCount: graphRenderer.kind === "webgl" ? displayNodes.length : null,
+    connectionPreview, previewExpanded, setPreviewExpanded, selectedNodeId, clearSelection, resetCamera: () => setManualCameraScope(null),
+  });
+  const { disclosed, measured: measuredDisplay } = flowView;
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
   if (loadingSnapshots) {
     return (
@@ -432,6 +426,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             focusedPath={Boolean(selectedAttackPath)}
             onReset={() => {
               disclosed.reset();
+              if (flowView.kind !== "auto") flowView.selectFlow("auto");
               if (investigationMode) {
                 // Same root, investigation defaults: depth 1, every layer and relationship, a fresh fit.
                 setFilters(current => createInvestigationGraphFilters(current));
@@ -635,27 +630,17 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           {/* One status bar: counts, evidence, context and legend, instead of four stacked bands. */}
           {!firstFramePending && (showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
           {graphHeadline}
-          {useCaseEnabled && <label className="flex items-center gap-2 text-xs text-muted-foreground">Flow
-            <select aria-label="Investigation flow" value={investigationFlowKind} onChange={e => { setInvestigationFlowKind(e.target.value as InvestigationFlow); setManualCameraScope(null); setSelectedNode(null); setSelectedNodeId(null); setSelectedRelationship(null); setPinnedFocusId(null); setHoveredNodeId(null); setReachabilitySummary(null); setBlastRadius(null); }}
-              className="rounded-md border border-outline bg-background px-2 py-1 text-foreground">
-              <option value="auto">Automatic · {scenarioFlow.scenario}</option><option value="exposure">Exposure</option>
-              <option value="identity">Identity and access</option><option value="vulnerability">Vulnerability</option><option value="inventory">Inventory</option>
-            </select>
-          </label>}
-          {showViewportScope && (
-            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
-              {disclosed.collapsed ? <span title={`${displayNodes.length} total nodes and ${displayEdges.length} total relationships loaded`}>
-                Graph · {disclosed.nodes.filter(node => !node.hidden).length} visible items · {disclosed.collapsed} grouped findings
-              </span> : <span>{scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}{scenarioElements.unconnected.length > 0 && ` · ${scenarioElements.unconnected.length} unconnected items`}</span>}
-              {selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode && <button type="button" onClick={() => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId)} className="text-foreground underline underline-offset-4">{scenarioExpanded ? "Focus changes" : "Show full graph"}</button>}
-              {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
-              <button type="button" onClick={fitVisible} className="text-foreground underline underline-offset-4">Fit all</button>
-              {disclosed.available && <button type="button" onClick={toggleFindingGroups} className="text-foreground underline underline-offset-4">{disclosed.collapsed ? `Expand findings (${disclosed.collapsed} grouped)` : "Collapse findings"}</button>}
-
-          {investigationMode?.truncated && rootConnections && <span data-testid="graph-connection-progress">Showing {rootConnections.loaded} of {rootConnections.total} connections</span>}
-          {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
-            </div>
-          )}
+          {flowView.control && <GraphFlowControl {...flowView.control} />}
+          {showViewportScope && <GraphViewportScope
+            collapsedFindings={disclosed.collapsed} canonicalVisibleNodes={flowView.canonicalVisibleNodes} totalNodes={displayNodes.length} totalEdges={displayEdges.length}
+            scopeLabel={scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"}
+            aggregate={rollupNavigationActive} unconnected={scenarioElements.unconnected.length}
+            scenarioToggle={selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode ? { expanded: scenarioExpanded, onToggle: () => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId) } : undefined}
+            minimap={showMiniMap ? { expanded: minimapExpanded, onToggle: () => setMinimapExpanded(value => !value) } : undefined}
+            onFitAll={fitVisible} findingsToggle={disclosed.available ? flowView.toggleFindingGroups : undefined}
+            connections={investigationMode?.truncated && rootConnections ? rootConnections : undefined}
+            onMoreConnections={investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph ? () => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) }) : undefined}
+          />}
           {connectionPreview && <GraphConnectionPreviewControls preview={connectionPreview} expanded={previewExpanded}
             onRoot={setPreviewRoot} onExpanded={setPreviewExpanded}
             onExplore={() => void loadRootInvestigation({ rootId: connectionPreview.root.id, rootLabel: connectionPreview.root.data.label })} />}
@@ -665,7 +650,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}
             onOpen={() => { setChangesOpen(true); if (!viewingCurrentEstate) setComparisonRequested(true); }}
             onClearHighlight={() => { setDriftLensActive(false); setDriftFilter("all"); highlight.clear(); }} />}
-          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline compact />}
+          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : flowView.canonicalEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline compact />}
               {showContextControls && investigationContext && <GraphInvestigationContextControls inline
                 groups={investigationContext.groups} selected={selectedContextGroup}
                 visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
@@ -674,7 +659,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
             <summary className="graph-page-action ml-auto w-fit cursor-pointer">Graph options</summary>
             <div className="mt-2 flex w-full flex-wrap items-start gap-3 rounded-xl border border-outline bg-surface p-3">
               {graphRenderer.kind === "react-flow" && relationshipLabels.control}
-              {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : disclosed.edges.filter(edge => !edge.hidden)} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline label="Relationship evidence breakdown" />}
+              {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : flowView.canonicalEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline label="Relationship evidence breakdown" />}
               {showLegend && <GraphLegendDock items={legendItems} popover />}
             </div>
           </details>
@@ -801,9 +786,10 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           ) : (
             <ReactFlow
               style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport),
+                ...flowView.cardStyle,
                 ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": `${Math.min(156, 64 / Math.max(graphViewport.zoom, 0.1))}px` } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
-              key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${investigationFlowKind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
+              key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${flowView.kind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={measuredDisplay.nodes}
               edges={disclosed.edges}
               nodeTypes={lineageNodeTypesAdaptive}
@@ -834,29 +820,26 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
               })}
               defaultEdgeOptions={{ type: "smoothstep" }}
               proOptions={{ hideAttribution: true }}
-              onEdgeClick={(_event, edge) => inspectRelationship(edge)}
+              onEdgeClick={(_event, edge) => edge.data?.displayOnly ? flowView.inspectDisplayEdge(edge) : inspectRelationship(edge)}
               onKeyDownCapture={event => {
                 if (activateGraphNodeFromKeyboard(event)) return;
                 if (event.key !== "Enter" && event.key !== " ") return;
                 const id = event.target instanceof Element ? event.target.closest(".react-flow__edge")?.getAttribute("data-id") : null;
-                const edge = id ? displayEdges.find(item => item.id === id) : undefined;
-                if (edge) { event.preventDefault(); event.stopPropagation(); inspectRelationship(edge); }
+                const edge = id ? disclosed.edges.find(item => item.id === id) : undefined;
+                if (edge) { event.preventDefault(); event.stopPropagation(); if (edge.data?.displayOnly) flowView.inspectDisplayEdge(edge); else inspectRelationship(edge); }
               }}
               onNodeClick={(event, node) => {
-                if (node.data.displayOnly) {
-                  if (node.data.readingFindings) node.data.readingFindings.toggle();
-                  else { const target = presentation.nodes.find(n => n.id === node.data.displayTargetId); if (target) onNodeClick(event, target); }
-                  return;
-                }
-                onNodeClick(event, node);
+                if (node.data.displayOnly) flowView.inspectDisplayNode(node);
+                else { flowView.closeReceipt(); onNodeClick(event, node); }
               }}
               onNodeMouseEnter={(event, node) => { if (!node.data.readingGroup) onNodeMouseEnter(event, node); }}
               onNodeMouseLeave={onNodeMouseLeave}
               onNodesChange={measuredDisplay.onNodesChange}
               onNodeDragStop={presentation.onNodeDragStop}
               onMoveStart={(event) => { if (event) fitGeneration.current += 1; }}
-              onMoveEnd={presentation.onMoveEnd}
+              onMoveEnd={(event, viewport) => { if (flowView.kind === "auto") presentation.onMoveEnd(event, viewport); }}
               onPaneClick={() => {
+                flowView.closeReceipt();
                 setSelectedRelationship(null);
                 setSelectedNode(null);
                 setSelectedNodeId(null);
@@ -875,12 +858,13 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 boundedPreview={Boolean(connectionPreview) && !previewExpanded}
                 padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
-                navigationIds={selectedAttackPath?.hops ?? (disclosed.available ? disclosed.nodes.filter(node => !node.hidden).sort((a, b) => a.position.x - b.position.x || a.position.y - b.position.y).map(node => node.id) : undefined)}
+                navigationIds={selectedAttackPath?.hops ?? flowView.navigationIds}
+                primaryIds={selectedNodeId ? undefined : flowView.flow.primaryPath}
                 enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
-                layoutKey={`${compactLayoutKey}:${investigationFlowKind}:${disclosed.key}`}
-                anchorId={selectedNodeId ?? investigationMode?.rootId ?? (useCaseEnabled ? scenarioFlow.nodes.find(n => !n.hidden && n.position.x === 0 && n.position.y === 0)?.id : undefined)}
+                layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}`}
+                anchorId={selectedNodeId ?? investigationMode?.rootId ?? flowView.anchorId}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
-                preserveViewport={manualCamera || investigationFlowKind === "auto" && presentation.restoredSavedState}
+                preserveViewport={manualCamera || flowView.kind === "auto" && presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
@@ -931,6 +915,8 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
 
           </div>
           </div>
+          {flowView.receipt && !selectedNode && !selectedRelationship && <GraphIngressReceipt edge={flowView.receipt} mobile={narrowViewport} onClose={flowView.closeReceipt}
+            targetLabel={disclosed.nodes.find(node => node.id === flowView.receipt?.target)?.data.label ?? String(flowView.receipt.target)} />}
           {!selectedNode && selectedRelationship?.scanId === selectedScanId && (() => {
             const aggregate = rollupNavigationActive ? rollupDisplayEdges.find(item => `rollup:${item.source}->${item.target}` === selectedRelationship.id) : undefined;
             if (aggregate && displayEdges.some(item => item.id === selectedRelationship.id)) return <GraphRollupRelationshipDetail

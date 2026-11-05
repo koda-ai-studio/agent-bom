@@ -15,6 +15,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `--auto-update-db` prints the time each source took.
 
 ### Fixed
+- Investigation flows: a flow that cannot apply no longer sits selected with no effect. It is disabled with the reason on screen, Automatic names what is really showing, and flows now work on maps of up to 100 nodes instead of 80, including from the connection preview.
+- Investigation flows: the Kubernetes exposure path now continues from a pod through its ReplicaSet and Deployment to the identity and secrets recorded there, without adding or reversing any edge.
+- Investigation flows: a ClusterIP Service no longer starts an exposure flow or counts as exposure, and appears in context as internal. A service account whose token is not mounted stays in context with a "Token not mounted" caption instead of reading as a step.
+- Investigation flows: a real 20-node Kubernetes graph opens fully framed at a legible size instead of showing 4 of 20 items. Flows always draw full cards, so edges meet their glyphs, and one long label no longer changes the spacing of the map. When a graph cannot fit, the view opens on its primary path.
+- Investigation flows: a second Service on the same pod no longer pulls the pod into an earlier column, Collapse findings now closes a selected finding, and the findings edge no longer runs through its own group.
+- Investigation flows: the Internet boundary is drawn as an unproven dashed link, and clicking it opens the recorded assessment. Display-only objects are left out of evidence totals and item counts, and have accessible names.
+- The flow choice is kept in the URL, Reset view returns it to Automatic, and a flow's camera no longer replaces the saved camera for Automatic.
+- Kubernetes inventory: an EndpointSlice endpoint with no `ready` condition now counts as ready, as `discovery.k8s.io/v1` specifies, so its route is no longer dropped.
+- Kubernetes graph projection: a malformed routing or pod context record in a pushed report is skipped with a warning instead of rejecting the whole report.
 - Typosquat detection now flags an adjacent-letter swap from five letters (`axois` as `axios`); single-letter substitutions keep their six-letter floor.
 - Investigation graph: an exposure flow now continues through the workloads an exposed host runs, so the path to identities and data opens framed on one screen. Edges between adjacent entities no longer arc over nothing.
 - A synchronous push interrupted by a process kill under distributed dispatch no longer stays `running` forever. The request now heartbeats a lease, and once that lease expires any replica marks the job `failed`, so the client can resubmit under the same idempotency key. A long push with a live lease is never failed for its age, and pushes already stranded by earlier releases are failed after the stuck-job timeout.

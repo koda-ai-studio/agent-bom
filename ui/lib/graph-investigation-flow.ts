@@ -1,164 +1,169 @@
-import { MarkerType, type Edge, type Node } from "@xyflow/react";
-import type { LineageNodeData } from "@/components/lineage-nodes";
+import { MarkerType, type Edge } from "@xyflow/react";
+import { INVESTIGATION_NODE_LIMIT } from "@/lib/graph-neighbor-expansion";
+import { collectSteps, longestRanks, placeFlow, primaryPath } from "@/lib/graph-flow-layout";
+import {
+  flowRoots, ingressAssessment, isBlockedIdentityHop, isExposureEntry, isFinding, isInternalService, isPrincipal, ownership, relationshipOf, withFindingOwners,
+  type FlowNode, type InvestigationFlow, type SpecificFlow,
+} from "@/lib/graph-flow-model";
 
-export type InvestigationFlow = "auto" | "exposure" | "identity" | "vulnerability" | "inventory";
-const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
-const IDENTITIES = new Set(["user", "serviceAccount", "servicePrincipal", "federatedIdentity", "role", "managedIdentity"]);
-const CONTEXT = new Set(["contains", "hosts", "hosted_on", "part_of", "belongs_to", "owns"]);
-const FLOW = new Set(["exposed_to", "authenticates_as", "assumes", "inherits", "has_permission", "can_access", "accessed", "depends_on", "uses", "invoked", "calls", "stores"]);
-const endpoint = (n: Node<LineageNodeData>) => n.data.nodeType === "apiGateway" || n.data.attributes?.resource_type === "application_endpoint";
+export { withFindingOwners, type InvestigationFlow, type SpecificFlow } from "@/lib/graph-flow-model";
 
-function ingressAssessment(n: Node<LineageNodeData>): Record<string, unknown> | null {
-  const attrs = n.data.attributes ?? {}, a = attrs.network_reachability_assessment;
-  if (n.hidden || !a || typeof a !== "object" || Array.isArray(a)) return null;
-  const assessment = a as Record<string, unknown>;
-  return assessment.complete === true && assessment.decision === "allow" && assessment.source_scope === "internet"
-    && typeof attrs.resource_id === "string" && Boolean(attrs.resource_id) && assessment.target_id === attrs.resource_id
-    && Array.isArray(assessment.evidence_refs) && assessment.evidence_refs.length > 0
-    && assessment.evidence_refs.every(ref => typeof ref === "string" && ref.trim()) ? assessment : null;
+/**
+ * One canvas page. At this size the primary path still opens framed and legible with the rest
+ * in rows beneath it; larger maps draw as an overview. Readability sets this, not cost:
+ * computing a layout takes under 1ms at this size.
+ */
+export const FLOW_READABLE_NODE_LIMIT = INVESTIGATION_NODE_LIMIT;
+
+export interface FlowResult {
+  nodes: FlowNode[];
+  edges: Edge[];
+  scenario: SpecificFlow;
+  applied: boolean;
+  reason?: string | undefined;
+  primaryPath: string[];
+}
+
+const CONTEXT_EDGE_OPACITY = 0.3;
+
+const NOTHING_TO_SHOW: Record<SpecificFlow, string> = {
+  exposure: "No ingress, LoadBalancer or NodePort Service, or assessed internet ingress in this view.",
+  identity: "No identities or roles in this view.",
+  vulnerability: "No findings in this view.",
+  inventory: "No recorded containment in this view.",
+};
+
+/** Whether each flow has its subject in the supplied nodes. */
+export function flowAvailability(nodes: FlowNode[], edges: Edge[]): Record<SpecificFlow, { available: boolean; reason?: string }> {
+  const visible = nodes.filter(node => !node.hidden);
+  const ids = new Set(visible.map(node => node.id));
+  const present: Record<SpecificFlow, boolean> = {
+    exposure: visible.some(isExposureEntry),
+    identity: visible.some(isPrincipal),
+    vulnerability: visible.some(isFinding),
+    inventory: visible.some(node => node.data.nodeType === "account") || edges.some(edge => {
+      const link = ownership(edge);
+      return link && ids.has(link.parent) && ids.has(link.child);
+    }),
+  };
+  const entry = (flow: SpecificFlow) => present[flow] ? { available: true } : { available: false, reason: NOTHING_TO_SHOW[flow] };
+  return { exposure: entry("exposure"), identity: entry("identity"), vulnerability: entry("vulnerability"), inventory: entry("inventory") };
+}
+
+/** Why no flow can arrange this view at all, whichever one is selected. */
+export function flowUnavailableReason(nodes: FlowNode[]): string | undefined {
+  if (nodes.some(node => node.data.rollup || node.type === "clusterPillNode")) return "Flows need individual nodes. Expand the grouped items on this map to use one.";
+  if (nodes.length > FLOW_READABLE_NODE_LIMIT) return `Flows read up to ${FLOW_READABLE_NODE_LIMIT} nodes so the path stays readable; this view has ${nodes.length}. Narrow it with filters or search.`;
+  return undefined;
+}
+
+const SPECIFIC_FLOWS: readonly string[] = ["exposure", "identity", "vulnerability", "inventory"];
+export function flowFromParam(value: string | null): InvestigationFlow {
+  return value && SPECIFIC_FLOWS.includes(value) ? value as InvestigationFlow : "auto";
+}
+
+/** Everything the flow would read in order, so a bounded canvas page cannot leave out its entry. */
+export function flowPinnedIds(nodes: FlowNode[], edges: Edge[], requested: InvestigationFlow): string[] {
+  const flow = requested === "auto" ? inferredFlow(nodes, edges) : requested;
+  // A view Automatic will not rearrange keeps its existing page contents.
+  if (requested === "auto" && !automaticApplies(nodes, flow)) return [];
+  const visible = nodes.filter(node => !node.hidden), byId = new Map(visible.map(node => [node.id, node]));
+  const roots = flowRoots(flow, visible, edges).map(node => node.id);
+  return [...longestRanks(roots, collectSteps(flow, byId, edges).next).keys()];
+}
+
+/** Above this, Automatic keeps a dense map's existing layout; choosing a flow still applies it up to the limit. */
+const AUTOMATIC_NODE_LIMIT = 80;
+
+function automaticApplies(nodes: FlowNode[], flow: SpecificFlow) {
+  return flow !== "inventory" && nodes.length <= AUTOMATIC_NODE_LIMIT && nodes.some(node => isExposureEntry(node) || ["account", "cluster"].includes(node.data.nodeType));
+}
+
+function inferredFlow(nodes: FlowNode[], edges: Edge[]): SpecificFlow {
+  if (nodes.some(isExposureEntry) && edges.some(edge => relationshipOf(edge) === "exposed_to") || nodes.some(node => ingressAssessment(node))) return "exposure";
+  if (edges.some(edge => ["has_permission", "can_access", "assumes"].includes(relationshipOf(edge)))) return "identity";
+  return nodes.some(isFinding) ? "vulnerability" : "inventory";
 }
 
 /** Display context from a target-bound assessment, never from names, IPs or a public flag.
  * This neither adds a persisted asset nor upgrades an attack-path receipt. */
-function internetContext(nodes: Node<LineageNodeData>[], edges: Edge[]) {
-  const extra: Node<LineageNodeData>[] = [], links: Edge[] = [];
-  for (const n of nodes) {
-    const assessment = ingressAssessment(n);
+function withInternetContext(nodes: FlowNode[], edges: Edge[]) {
+  const extra: FlowNode[] = [], links: Edge[] = [];
+  for (const node of nodes) {
+    const assessment = ingressAssessment(node);
     if (!assessment) continue;
     // One boundary per target: never merge unrelated accounts or snapshots through a global Internet node.
-    const id = `display:internet:${n.id}`;
-    if (nodes.some(n => n.id === id)) continue;
-    extra.push({ id, initialWidth: 240, initialHeight: 300, draggable: false, type: "cloudResourceNode", position: { x: 0, y: 0 }, data: { label: "Internet", nodeType: "cloudResource",
-      displayOnly: true, displayTargetId: n.id, readingLabel: "Assessed ingress · snapshot", attributes: { resource_type: "internet_boundary" } } });
-    links.push({ id: `${id}:ingress`, source: id, target: n.id, type: "smoothstep", markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: "#ea580c", strokeWidth: 1.7 },
-      label: "Assessed ingress", data: { relationship: "exposed_to", displayOnly: true, traversable: false,
-        evidence: assessment, evidenceMode: "inferred", individualLabel: true, quietLabel: true, directionEmphasis: true } });
+    const id = `display:internet:${node.id}`;
+    if (nodes.some(item => item.id === id)) continue;
+    extra.push({
+      id, initialWidth: 240, initialHeight: 300, draggable: false, type: "cloudResourceNode", position: { x: 0, y: 0 }, ariaLabel: `Internet, assessed ingress to ${node.data.label}`,
+      data: { label: "Internet", nodeType: "cloudResource", displayOnly: true, displayTargetId: node.id, readingLabel: "Assessed ingress · snapshot", attributes: { resource_type: "internet_boundary" } },
+    });
+    // A recorded assessment, not a tested route, so it must not outweigh a recorded edge.
+    links.push({
+      id: `${id}:ingress`, source: id, target: node.id, type: "smoothstep", markerEnd: { type: MarkerType.ArrowClosed }, ariaLabel: `Assessed ingress from Internet to ${node.data.label}`,
+      style: { stroke: "var(--text-secondary)", strokeWidth: 1, strokeDasharray: "6 3" }, label: "Assessed ingress",
+      data: { relationship: "exposed_to", displayOnly: true, traversable: false, evidence: assessment, evidenceMode: "inferred", individualLabel: true, quietLabel: true, directionEmphasis: true },
+    });
   }
   return { nodes: [...nodes, ...extra], edges: [...edges, ...links] };
 }
 
-/** A finding belongs to a visual group only when all recorded finding links have one owner. */
-export function withFindingOwners(nodes: Node<LineageNodeData>[], edges: Edge[]) {
-  const ids = new Set(nodes.filter(n => !n.hidden).map(n => n.id));
-  const owners = new Map<string, Set<string>>();
-  for (const e of edges) {
-    const finding = e.data?.relationship === "affects" ? e.source : e.data?.relationship === "vulnerable_to" ? e.target : null;
-    const owner = finding === e.source ? e.target : e.source;
-    if (finding) {
-      if (!owners.has(finding)) owners.set(finding, new Set());
-      owners.get(finding)!.add(owner);
-    }
+function edgeHandles(edge: Edge, positions: Map<string, { x: number; y: number }>) {
+  const source = positions.get(edge.source), target = positions.get(edge.target);
+  if (!source || !target) return {};
+  if (source.x > target.x) return { sourceHandle: "context", targetHandle: "context" };
+  if (!ownership(edge) || target.y >= source.y) return {};
+  // The provider mark sits on the top-right of the glyph, so an upward edge leaves from top centre,
+  // unless another card sits directly above it; the side handles then route around that card.
+  const blocked = [...positions.values()].some(at => at.x === source.x && at.y < source.y && at.y >= target.y && at !== target);
+  return blocked ? {} : { sourceHandle: "context-up" };
+}
+
+function readingCaption(edge: Edge, byId: Map<string, FlowNode>) {
+  if (isBlockedIdentityHop(edge)) {
+    const source = byId.get(edge.source);
+    return { label: source?.data.attributes?.token_mounted === false ? "Token not mounted" : "Not traversable", quietLabel: false };
   }
-  return nodes.map(n => {
-    if (!FINDINGS.has(n.data.nodeType)) return n;
-    const affected = owners.get(n.id);
-    return { ...n, data: { ...n.data, readingFinding: true, readingOwner: affected?.size === 1 && ids.has([...affected][0]!) ? [...affected][0] : undefined } };
-  });
-}
-
-function inferredScenario(nodes: Node<LineageNodeData>[], edges: Edge[]): InvestigationFlow {
-  if (nodes.some(n => ingressAssessment(n)) || nodes.some(endpoint) && edges.some(e => e.data?.relationship === "exposed_to")) return "exposure";
-  if (edges.some(e => ["has_permission", "can_access", "assumes"].includes(String(e.data?.relationship)))) return "identity";
-  if (nodes.some(n => FINDINGS.has(n.data.nodeType))) return "vulnerability";
-  return "inventory";
-}
-
-function contextHandles(e: Edge, positions: Map<string, { x: number; y: number }>) {
-  if (!CONTEXT.has(String(e.data?.relationship))) return {};
-  const source = positions.get(e.source), target = positions.get(e.target);
-  if ((source?.x ?? 0) > (target?.x ?? 0)) return { sourceHandle: "context", targetHandle: "context" };
-  // The provider mark sits on the top-right of the glyph, so an upward edge leaves from top centre.
-  return source && target && target.y < source.y ? { sourceHandle: "context-up" } : {};
+  const source = byId.get(edge.source);
+  return relationshipOf(edge) === "exposed_to" && source && isInternalService(source) ? { label: "Routes in cluster to" } : {};
 }
 
 /** Layout changes reading order, never relationship direction, reachability or finding identity. */
-export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Edge[], requested: InvestigationFlow, narrowViewport = false) {
-  // Captions wrap inside a fixed-width card, so moderate labels do not need a wider column.
-  const shortCaptions = input.every(n => String(n.data.label).length <= 36);
-  const columnGap = shortCaptions ? 420 : 520;
-  const rowGap = narrowViewport ? 440 : shortCaptions ? 300 : 340;
-  const contextGap = narrowViewport ? 880 : shortCaptions ? 480 : 680;
-  const scenario = requested === "auto" ? inferredScenario(input, inputEdges) : requested;
-  if (requested === "auto" && !input.some(n => ingressAssessment(n) || endpoint(n) || ["account", "cluster"].includes(n.data.nodeType))) {
-    return { nodes: input, edges: inputEdges, scenario };
-  }
+export function investigationFlow(input: FlowNode[], inputEdges: Edge[], requested: InvestigationFlow, narrowViewport = false): FlowResult {
+  const scenario = requested === "auto" ? inferredFlow(input, inputEdges) : requested;
+  const untouched = (reason?: string): FlowResult => ({ nodes: input, edges: inputEdges, scenario, applied: false, reason, primaryPath: [] });
+  const declined = flowUnavailableReason(input);
+  if (declined) return untouched(declined);
+  if (requested === "auto" && !automaticApplies(input, scenario)) return untouched();
+  const availability = flowAvailability(input, inputEdges)[scenario];
+  if (!availability.available) return untouched(availability.reason);
+
   const owned = withFindingOwners(input, inputEdges);
-  const { nodes, edges } = scenario === "exposure" ? internetContext(owned, inputEdges) : { nodes: owned, edges: inputEdges };
-  if (scenario === "inventory" && requested === "auto" || nodes.length > 80 || nodes.some(n => n.data.rollup || n.type === "clusterPillNode")
-    || requested === "auto" && !nodes.some(n => n.data.displayOnly || endpoint(n) || ["account", "cluster"].includes(n.data.nodeType))) {
-    return { nodes, edges, scenario };
-  }
-  const visible = nodes.filter(n => !n.hidden), byId = new Map(visible.map(n => [n.id, n]));
-  const principal = (n: Node<LineageNodeData>) => IDENTITIES.has(n.data.nodeType);
-  const incomingEndpoint = (n: Node<LineageNodeData>) => edges.some(e => {
-    const source = byId.get(e.source);
-    return e.target === n.id && e.data?.relationship === "exposed_to" && source && (endpoint(source) || source.data.displayOnly);
-  });
-  const roots = visible.filter(n => scenario === "inventory" ? n.data.nodeType === "account" || edges.some(e => e.source === n.id && CONTEXT.has(String(e.data?.relationship))) && !edges.some(e => CONTEXT.has(String(e.data?.relationship)) && (["hosted_on", "part_of", "belongs_to"].includes(String(e.data?.relationship)) ? e.source : e.target) === n.id) && !FINDINGS.has(n.data.nodeType)
-    : scenario === "exposure" ? n.data.displayOnly || endpoint(n) && !incomingEndpoint(n)
-    : scenario === "identity" ? principal(n) && !edges.some(e => e.target === n.id && principal(byId.get(e.source) ?? n))
-      : n.data.nodeType === "container" && !["image"].includes(String(n.data.attributes?.container_kind))
-        && !edges.some(e => e.source === n.id && CONTEXT.has(String(e.data?.relationship)) && byId.get(e.target)?.data.nodeType === "container"));
-  if (!roots.length) roots.push(...visible.filter(n => scenario === "vulnerability" && n.data.nodeType === "package"));
-  const rank = new Map<string, number>();
-  const queue = roots.sort((a, b) => Number(Boolean(b.data.displayOnly)) - Number(Boolean(a.data.displayOnly)) || a.id.localeCompare(b.id));
-  for (const n of queue) rank.set(n.id, 0);
-  // Bounded BFS follows only recorded flow links. Ownership is attached separately below.
-  for (let index = 0; index < queue.length; index++) {
-    const n = queue[index]!;
-    for (const e of edges) {
-      const relationship = String(e.data?.relationship);
-      const reverse = scenario === "inventory" && ["hosted_on", "part_of", "belongs_to"].includes(relationship);
-      const source = reverse ? e.target : e.source, target = reverse ? e.source : e.target;
-      const followsExposedHost = scenario === "exposure" && relationship === "hosts";
-      if (source !== n.id || !(followsExposedHost || (scenario === "inventory" ? CONTEXT : FLOW).has(relationship)) || !byId.has(target) || rank.has(target)) continue;
-      if (scenario === "vulnerability" && ["assumes", "authenticates_as", "has_permission"].includes(relationship)) continue;
-      rank.set(target, rank.get(n.id)! + 1); queue.push(byId.get(target)!);
-    }
-  }
-  const positions = new Map<string, { x: number; y: number }>(), slots = new Map<number, number>();
-  for (const n of queue) {
-    const column = rank.get(n.id)!;
-    const row = slots.get(column) ?? 0; slots.set(column, row + 1);
-    positions.set(n.id, { x: column * columnGap, y: row * rowGap });
-  }
-  for (let pass = 0; pass < 8; pass++) for (const e of edges) {
-    if (!CONTEXT.has(String(e.data?.relationship)) && !(scenario === "identity" && ["assumes", "authenticates_as", "exposed_to"].includes(String(e.data?.relationship)))) continue;
-    const reverse = ["hosted_on", "part_of", "belongs_to"].includes(String(e.data?.relationship));
-    const parent = reverse ? e.target : e.source, child = reverse ? e.source : e.target;
-    if (byId.has(parent) && positions.has(child) && !positions.has(parent)) {
-      const at = positions.get(child)!;
-      positions.set(parent, { x: at.x + columnGap, y: at.y < 0 ? at.y : -contextGap });
-    }
-  }
-  // Sibling workloads stay with deployment context, outside the selected entry flow.
-  for (let pass = 0; pass < 8; pass++) for (const e of edges) {
-    if (!CONTEXT.has(String(e.data?.relationship))) continue;
-    const reverse = ["hosted_on", "part_of", "belongs_to"].includes(String(e.data?.relationship));
-    const parent = reverse ? e.target : e.source, child = reverse ? e.source : e.target;
-    if (byId.has(child) && positions.has(parent) && !positions.has(child)) {
-      const at = positions.get(parent)!;
-      positions.set(child, { x: at.x + columnGap, y: Math.min(at.y, -contextGap) });
-    }
-  }
-  // Findings are branches from the affected component, not steps through a CVE to data.
-  for (const n of visible) if (n.data.readingOwner && positions.has(n.data.readingOwner)) {
-    const owner = positions.get(n.data.readingOwner)!;
-    positions.set(n.id, { x: owner.x + columnGap, y: scenario === "vulnerability" ? owner.y : owner.y - rowGap });
-  }
-  const extraRow = Math.max(0, ...[...positions.values()].map(p => p.y)) + contextGap;
-  let extra = 0;
-  for (const n of visible) if (!positions.has(n.id)) { positions.set(n.id, { x: (extra % 4) * columnGap, y: extraRow + Math.floor(extra / 4) * rowGap }); extra++; }
-  // Reserve caption space even for multiple findings and converging ownership branches.
-  const occupied: { x: number; y: number }[] = [];
-  for (const n of [...visible].sort((a, b) => a.id.localeCompare(b.id))) {
-    const at = { ...positions.get(n.id)! };
-    while (occupied.some(p => p.x === at.x && Math.abs(p.y - at.y) < rowGap)) at.y -= rowGap;
-    occupied.push(at); positions.set(n.id, at);
-  }
-  return { scenario, nodes: nodes.map(n => ({ ...n, position: positions.get(n.id) ?? n.position,
-    style: { ...n.style, minHeight: 300 }, data: { ...n.data, evidenceFlow: true } })), edges: edges.map(e => ({ ...e,
-    ...contextHandles(e, positions),
-    data: { ...e.data, quietLabel: true, individualLabel: true, directionEmphasis: true } })) };
+  const { nodes, edges } = scenario === "exposure" ? withInternetContext(owned, inputEdges) : { nodes: owned, edges: inputEdges };
+  const visible = nodes.filter(node => !node.hidden), byId = new Map(visible.map(node => [node.id, node]));
+  const displayFirst = (id: string) => Number(!byId.get(id)!.data.displayOnly);
+  const roots = flowRoots(scenario, visible, edges).map(node => node.id).sort((a, b) => displayFirst(a) - displayFirst(b) || a.localeCompare(b));
+  const steps = collectSteps(scenario, byId, edges);
+  const ranks = longestRanks(roots, steps.next);
+  const primary = primaryPath(scenario, ranks, steps, byId);
+  const positions = placeFlow({ visible, ranks, primary, steps, edges, narrow: narrowViewport });
+  const stepped = new Set([...steps.next].flatMap(([from, list]) => list.map(to => `${from}|${to}`)));
+  // Also on the card: an edge caption can be hidden when it would collide with another card.
+  const tokenless = new Set(edges.filter(edge => isBlockedIdentityHop(edge) && byId.get(edge.source)?.data.attributes?.token_mounted === false).map(edge => edge.target));
+  const pathLinks = new Set(primary.slice(1).flatMap((id, index) => [`${primary[index]}|${id}`, `${id}|${primary[index]}`]));
+  return {
+    scenario, applied: true, primaryPath: primary,
+    nodes: nodes.map(node => ({ ...node, position: positions.get(node.id) ?? node.position, style: { ...node.style, minHeight: 320 },
+      data: { ...node.data, evidenceFlow: true, renderBand: "detail" as const, ...(tokenless.has(node.id) ? { flowNote: "token not mounted" } : {}) } })),
+    edges: edges.map(edge => {
+      const { label, ...caption } = readingCaption(edge, byId);
+      const key = `${edge.source}|${edge.target}`, reverse = `${edge.target}|${edge.source}`;
+      const flowStep = stepped.has(key) || stepped.has(reverse);
+      return { ...edge, ...edgeHandles(edge, positions), ...(label ? { label } : {}),
+        // The eye should follow the path first; everything recorded stays drawn and inspectable.
+        style: { ...edge.style, opacity: pathLinks.has(key) ? 1 : flowStep ? 0.55 : CONTEXT_EDGE_OPACITY },
+        data: { ...edge.data, quietLabel: true, individualLabel: true, directionEmphasis: true, flowStep, ...caption } };
+    }),
+  };
 }
