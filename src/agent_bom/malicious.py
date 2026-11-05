@@ -130,6 +130,12 @@ _ESTABLISHED: dict[str, frozenset[str]] = {eco: frozenset(names) for eco, names 
 _KNOWN_LEGITIMATE: dict[str, frozenset[str]] = {
     "npm": frozenset(
         {
+            # Scoped packages whose genuine leaves resemble unscoped projects.
+            "@radix-ui/rect",
+            "@npmcli/redact",
+            "@npmcli/query",
+            "@prettier/sync",
+            "@actions/exec",
             # Independent React-compatible UI framework, published by the
             # Preact project as a first-class public npm package.
             "preact",
@@ -334,7 +340,7 @@ def _same_project_family(scope: str, target: str) -> bool:
 def _scoped_typosquat_target(
     name: str, scope: str, rest: str, popular: frozenset[str], legitimate: frozenset[str], threshold: float
 ) -> str | None:
-    """Compare scoped identities as a whole; a leaf alone cannot impersonate another namespace."""
+    """Prefer scoped identities; unknown namespaces retain possible leaf typo warnings."""
     if name in popular or name in legitimate:
         return None
     flattened = f"{scope}-{rest}"
@@ -346,8 +352,14 @@ def _scoped_typosquat_target(
                 return None if _same_project_family(scope, target) else target
     # Require an exact leaf of a known scoped target. An unrelated publisher
     # using a similar leaf is not evidence of namespace impersonation.
-    scoped_targets = frozenset(target for target in popular if target.startswith("@") and target.endswith(f"/{rest}"))
-    return typosquat_target(name, "npm", scoped_targets, legitimate, threshold)
+    known_scoped = frozenset(target for target in popular | legitimate if target.startswith("@"))
+    scoped_targets = frozenset(target for target in known_scoped if target.endswith(f"/{rest}"))
+    target = typosquat_target(name, "npm", scoped_targets, legitimate, threshold)
+    if target:
+        return target
+    if any(target.startswith(f"@{scope}/") for target in known_scoped):
+        return None
+    return typosquat_target(rest, "npm", unscoped_targets, legitimate, threshold)
 
 
 # ── Dependency confusion detection ─────────────────────────────────────────
