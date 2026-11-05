@@ -28,6 +28,7 @@ from agent_bom.output.html.sections_governance import _trust_assessment_section 
 from agent_bom.output.html.sections_inventory import _ai_inventory_section as _ai_inventory_section
 from agent_bom.output.html.sections_inventory import _inventory_cards as _inventory_cards
 from agent_bom.output.html.sections_inventory import _skill_audit_section as _skill_audit_section
+from agent_bom.output.html.sections_summary import _cloud_grade_line as _cloud_grade_line
 from agent_bom.output.html.sections_summary import _delta_banner as _delta_banner
 from agent_bom.output.html.sections_summary import _executive_headline_section as _executive_headline_section
 from agent_bom.output.html.sections_summary import _headline_row as _headline_row
@@ -43,7 +44,7 @@ __all__ = ["_BADGE_STYLE", "_CIS_CLOUD_LABELS", "_CIS_VERDICT_COLOR", "_REACH_CO
     "_ai_inventory_section", "_blast_table", "_cis_benchmark_section", "_cis_evidence_html", "_compliance_section",
     "_delta_banner", "_enforcement_section", "_executive_headline_section", "_exposure_path_section", "_headline_row",
     "_inventory_cards", "_non_cve_findings", "_pager_controls", "_policy_findings_section", "_remediation_list",
-    "_scan_outcome_banner", "_skill_audit_section", "_summary_cards", "_trust_assessment_section", "_vuln_table",
+    "_cloud_grade_line", "_scan_outcome_banner", "_skill_audit_section", "_summary_cards", "_trust_assessment_section", "_vuln_table",
     "_warn_gate_banner", "_workload_runtime_evidence_hint"]  # fmt: skip
 
 

@@ -207,18 +207,18 @@ class TestCheck21AutoTermination:
         assert result.status == CheckStatus.FAIL
         assert "c1" in result.resource_ids
 
-    def test_no_clusters_passes(self):
+    def test_no_clusters_not_applicable(self):
         ws = _mock_ws()
         ws.clusters.list.return_value = []
         result = _check_2_1(ws)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
     def test_job_clusters_excluded(self):
         ws = _mock_ws()
         # Job cluster with no auto-term should not fail the check
         ws.clusters.list.return_value = [_cluster("job-c1", auto_term=0, source="JOB")]
         result = _check_2_1(ws)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -240,11 +240,11 @@ class TestCheck22NoIsolation:
         assert result.status == CheckStatus.FAIL
         assert "c1" in result.resource_ids
 
-    def test_no_running_clusters_passes(self):
+    def test_no_running_clusters_not_applicable(self):
         ws = _mock_ws()
         ws.clusters.list.return_value = [_cluster("c1", state="TERMINATED", security_mode="NONE")]
         result = _check_2_2(ws)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -367,11 +367,11 @@ class TestCheck52EnvVarCredentials:
         assert result.status == CheckStatus.FAIL
         assert "bad-cluster" in result.resource_ids
 
-    def test_no_clusters_passes(self):
+    def test_no_clusters_not_applicable(self):
         ws = _mock_ws()
         ws.clusters.list.return_value = []
         result = _check_5_2(ws)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------

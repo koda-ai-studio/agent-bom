@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 
 from ._base import (
     _NETWORK_SECTION,
@@ -41,7 +41,7 @@ def _check_3_1(project_id: str) -> CISCheckResult:
             result.resource_ids = ["default"]
         else:
             result.status = CheckStatus.PASS
-            result.evidence = "The 'default' VPC network has been deleted. Custom networks in use."
+            result.evidence = "No 'default' VPC network exists in this project."
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -119,6 +119,7 @@ def _check_3_3(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"DNSSEC is enabled on all {len(public_zones)} public DNS zone(s)."
+            not_applicable_if_empty(result, len(public_zones), "public DNS zone")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
@@ -142,10 +143,12 @@ def _check_3_4(project_id: str) -> CISCheckResult:
         zones = _gcp_managed_zones(project_id)
 
         failing: list[str] = []
+        signed_zones = 0
         for zone in zones:
             dnssec_config = zone.get("dnssecConfig", {})
             if dnssec_config.get("state", "off") != "on":
                 continue
+            signed_zones += 1
             for key_spec in dnssec_config.get("defaultKeySpecs", []):
                 if key_spec.get("keyType") == "keySigning" and key_spec.get("algorithm") == "RSASHA1":
                     failing.append(zone.get("name", "unknown"))
@@ -157,6 +160,7 @@ def _check_3_4(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No DNS zones use RSASHA1 for key-signing."
+            not_applicable_if_empty(result, signed_zones, "DNSSEC-enabled zone")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
@@ -180,10 +184,12 @@ def _check_3_5(project_id: str) -> CISCheckResult:
         zones = _gcp_managed_zones(project_id)
 
         failing: list[str] = []
+        signed_zones = 0
         for zone in zones:
             dnssec_config = zone.get("dnssecConfig", {})
             if dnssec_config.get("state", "off") != "on":
                 continue
+            signed_zones += 1
             for key_spec in dnssec_config.get("defaultKeySpecs", []):
                 if key_spec.get("keyType") == "zoneSigning" and key_spec.get("algorithm") == "RSASHA1":
                     failing.append(zone.get("name", "unknown"))
@@ -195,6 +201,7 @@ def _check_3_5(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No DNS zones use RSASHA1 for zone-signing."
+            not_applicable_if_empty(result, signed_zones, "DNSSEC-enabled zone")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
@@ -241,6 +248,7 @@ def _check_3_8(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No firewall rules allow ICMP from 0.0.0.0/0 or ::/0."
+            not_applicable_if_empty(result, len(rules), "firewall rule")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -281,6 +289,7 @@ def _check_3_10(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"Private Google Access enabled on all {total} subnet(s)."
+            not_applicable_if_empty(result, total, "subnet")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -322,6 +331,7 @@ def _check_3_9(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"VPC Flow Logs enabled on all {total} subnet(s)."
+            not_applicable_if_empty(result, total, "subnet")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -369,6 +379,7 @@ def _check_3_6(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No firewall rules allow SSH (22) from 0.0.0.0/0 or ::/0."
+            not_applicable_if_empty(result, len(rules), "firewall rule")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
@@ -416,6 +427,7 @@ def _check_3_7(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No firewall rules allow RDP (3389) from 0.0.0.0/0 or ::/0."
+            not_applicable_if_empty(result, len(rules), "firewall rule")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"

@@ -71,6 +71,7 @@
       }
      ],
      "posture_grade": "N/A",
+     "posture_grade_label": "N/A",
      "scan_outcome": "partial"
     },
     "results": [],

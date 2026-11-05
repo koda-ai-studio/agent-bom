@@ -166,10 +166,16 @@ export function ScoreFormatToggle({
   );
 }
 
+function partialCoverage(grade: string, gradeLabel: string | null | undefined): string | null {
+  if (!gradeLabel || gradeLabel === grade) return null;
+  return gradeLabel.replace(`${grade} (partial, `, "Partial · ").replace(/\)$/, "");
+}
+
 export function PostureHero({
   localReport = false,
   loading,
   grade,
+  gradeLabel,
   score,
   scoreFormat = "percent",
   onScoreFormatChange,
@@ -182,6 +188,7 @@ export function PostureHero({
   localReport?: boolean | undefined;
   loading: boolean;
   grade: string;
+  gradeLabel?: string | null | undefined;
   score?: number | undefined;
   scoreFormat?: PostureScoreFormat | undefined;
   onScoreFormatChange?: ((format: PostureScoreFormat) => void) | undefined;
@@ -194,6 +201,7 @@ export function PostureHero({
   const ungraded = grade === "N/A" || grade === "—";
   const graded = !loading && typeof score === "number" && !ungraded;
   const scoreDisplay = graded ? formatPostureScore(score, grade, scoreFormat) : null;
+  const coverage = graded ? partialCoverage(grade, gradeLabel) : null;
   const scoreTone = graded && ["D", "F"].includes(grade)
     ? "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300"
     : graded && grade === "C"
@@ -232,6 +240,15 @@ export function PostureHero({
             localReport ? "Posture unavailable" : "Awaiting scan"
           )}
         </p>
+        {coverage ? (
+          <p
+            className="mt-2 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-200"
+            data-testid="overview-posture-coverage"
+            title="Some cloud controls could not be evaluated, so the grade cannot be A. Open the scan for the controls that errored or had no data."
+          >
+            {coverage}
+          </p>
+        ) : null}
         {graded && <p className="mt-2 text-sm font-medium text-foreground">Posture score · 0–100, higher is better</p>}
         {graded ? (
           trend && trend.points >= 2 ? (

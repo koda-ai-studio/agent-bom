@@ -213,10 +213,10 @@ class TestCheck18:
 
 
 class TestCheck110:
-    def test_pass_no_users(self):
+    def test_not_applicable_no_users(self):
         client = _iam_client()
         result = _check_1_10(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
     def test_fail_user_without_mfa(self):
         client = _iam_client()
@@ -229,7 +229,7 @@ class TestCheck110:
         assert result.status == CheckStatus.FAIL
         assert "alice" in result.evidence
 
-    def test_pass_user_no_console(self):
+    def test_not_applicable_user_no_console(self):
         """User without console access should be skipped."""
         client = _iam_client()
         paginator = MagicMock()
@@ -239,7 +239,7 @@ class TestCheck110:
         exc.response = {"Error": {"Code": "NoSuchEntity"}}
         client.get_login_profile.side_effect = exc
         result = _check_1_10(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -701,7 +701,7 @@ class TestCheck114:
         assert result.status == CheckStatus.FAIL
         assert "bob" in result.evidence
 
-    def test_pass_inactive_old_key(self):
+    def test_not_applicable_inactive_old_key(self):
         """Inactive keys should not trigger failure."""
         client = _iam_client()
         paginator = MagicMock()
@@ -714,12 +714,12 @@ class TestCheck114:
             ]
         }
         result = _check_1_14(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
-    def test_pass_no_users(self):
+    def test_not_applicable_no_users(self):
         client = _iam_client()
         result = _check_1_14(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -728,13 +728,13 @@ class TestCheck114:
 
 
 class TestCheck116:
-    def test_no_data_without_admin_policies(self):
+    def test_not_applicable_without_admin_policies(self):
         client = _iam_client()
         paginator = MagicMock()
         paginator.paginate.return_value = [{"Policies": []}]
         client.get_paginator.return_value = paginator
         result = _check_1_16(client)
-        assert result.status == CheckStatus.NO_DATA
+        assert result.status == CheckStatus.NOT_APPLICABLE
         assert result.check_id == "1.16"
 
     def test_fail_admin_policy(self):
@@ -836,13 +836,13 @@ class TestCheck231:
         assert result.status == CheckStatus.FAIL
         assert "db-open" in result.evidence
 
-    def test_pass_no_instances(self):
+    def test_not_applicable_no_instances(self):
         client = MagicMock()
         paginator = MagicMock()
         paginator.paginate.return_value = [{"DBInstances": []}]
         client.get_paginator.return_value = paginator
         result = _check_2_3_1(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -869,13 +869,13 @@ class TestCheck232:
         assert result.status == CheckStatus.FAIL
         assert "db-old" in result.evidence
 
-    def test_pass_no_instances(self):
+    def test_not_applicable_no_instances(self):
         client = MagicMock()
         paginator = MagicMock()
         paginator.paginate.return_value = [{"DBInstances": []}]
         client.get_paginator.return_value = paginator
         result = _check_2_3_2(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -906,7 +906,7 @@ class TestCheck241:
         assert result.status == CheckStatus.FAIL
         assert "key-bad" in result.evidence
 
-    def test_pass_aws_managed_key_skipped(self):
+    def test_not_applicable_aws_managed_key_skipped(self):
         """AWS-managed keys should be skipped (not flagged)."""
         client = MagicMock()
         paginator = MagicMock()
@@ -914,15 +914,15 @@ class TestCheck241:
         client.get_paginator.return_value = paginator
         client.describe_key.return_value = {"KeyMetadata": {"KeyManager": "AWS", "KeyState": "Enabled"}}
         result = _check_2_4_1(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
-    def test_no_data_without_keys(self):
+    def test_not_applicable_without_keys(self):
         client = MagicMock()
         paginator = MagicMock()
         paginator.paginate.return_value = [{"Keys": []}]
         client.get_paginator.return_value = paginator
         result = _check_2_4_1(client)
-        assert result.status == CheckStatus.NO_DATA
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -1081,8 +1081,8 @@ class TestCheck43:
         assert "alarm" in result.evidence.lower()
 
 
-def test_zero_inspected_resources_are_no_data_not_pass() -> None:
-    result = CISCheckResult(check_id="2.1.2", title="S3 public access", status=CheckStatus.PASS, severity="high")
+def test_zero_inspected_resources_are_not_applicable_not_pass() -> None:
+    result = CISCheckResult(check_id="2.1.2", title="S3 public access", status=CheckStatus.NOT_APPLICABLE, severity="high")
 
     finalized = finalize_read_coverage(
         result,
@@ -1093,7 +1093,7 @@ def test_zero_inspected_resources_are_no_data_not_pass() -> None:
         pass_evidence="All 0 bucket(s) comply.",
     )
 
-    assert finalized.status is CheckStatus.NO_DATA
+    assert finalized.status is CheckStatus.NOT_APPLICABLE
     assert "no bucket" in finalized.evidence.lower()
 
 
@@ -1354,7 +1354,7 @@ class TestCheck54:
         assert "rtb-bad" in result.evidence
         assert "pcx-456" in result.evidence
 
-    def test_pass_no_peering_routes(self):
+    def test_not_applicable_no_peering_routes(self):
         """Routes without VpcPeeringConnectionId should be ignored."""
         client = MagicMock()
         paginator = MagicMock()
@@ -1372,15 +1372,15 @@ class TestCheck54:
         ]
         client.get_paginator.return_value = paginator
         result = _check_5_4(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
-    def test_pass_empty_route_tables(self):
+    def test_not_applicable_empty_route_tables(self):
         client = MagicMock()
         paginator = MagicMock()
         paginator.paginate.return_value = [{"RouteTables": []}]
         client.get_paginator.return_value = paginator
         result = _check_5_4(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -1682,7 +1682,7 @@ class TestCheck119:
         assert result.status == CheckStatus.FAIL
         assert "i-bad" in result.evidence
 
-    def test_pass_terminated_instance_skipped(self):
+    def test_not_applicable_terminated_instance_skipped(self):
         client = MagicMock()
         paginator = MagicMock()
         paginator.paginate.return_value = [
@@ -1698,7 +1698,7 @@ class TestCheck119:
         ]
         client.get_paginator.return_value = paginator
         result = _check_1_19(client)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -1789,11 +1789,11 @@ class TestCheck213:
         assert result.status == CheckStatus.FAIL
         assert "no-mfa" in result.evidence
 
-    def test_no_data_without_buckets(self):
+    def test_not_applicable_without_buckets(self):
         client = MagicMock()
         client.list_buckets.return_value = {"Buckets": []}
         result = _check_2_1_3(client)
-        assert result.status == CheckStatus.NO_DATA
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------

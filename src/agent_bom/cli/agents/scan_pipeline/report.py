@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import click
 
 from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
 from agent_bom.cli.agents.scan_pipeline.helpers import (
+    CLOUD_BENCHMARK_REPORTS,
     _benchmark_scan_issues,
     _cloud_scan_scope,
     _compute_scan_id,
@@ -143,6 +145,15 @@ def _seed_findings_and_scan_id(opts: ScanOptions, st: ScanState) -> None:
             _agent.last_seen = _pinned_ts
 
 
+def _provider_evaluated_controls(ctx: Any, provider: str) -> bool:
+    """Whether the provider's benchmark produced at least one pass or fail verdict."""
+    for name, attr in CLOUD_BENCHMARK_REPORTS:
+        report = getattr(ctx, attr, None)
+        if name == provider and report is not None:
+            return any(str(getattr(c.status, "value", c.status)).lower() in {"pass", "fail"} for c in getattr(report, "checks", []) or [])
+    return False
+
+
 def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
 
     st.scan_issues = scanner_warning_issues(list(st.scan_warnings), accepted=accepted_scan_warnings())
@@ -173,7 +184,7 @@ def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
             stage=str(_failure.get("stage") or "discovery"),
             source=str(_failure.get("provider") or "cloud"),
             message=str(_failure.get("error") or "Requested cloud collector failed"),
-            severity="error",
+            severity="warning" if _provider_evaluated_controls(st.ctx, str(_failure.get("provider"))) else "error",
             affects_coverage=True,
         )
         for _failure in st.ctx.cloud_provider_failures
@@ -207,9 +218,11 @@ def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
         )
     if opts.no_scan:
         st.scan_issues.append(vulnerability_scan_skipped_issue())
+    # Controls evaluated for any failed provider are evidence: the run is partial, not failed.
+    _any_evaluated = any(_provider_evaluated_controls(st.ctx, str(_f.get("provider"))) for _f in st.ctx.cloud_provider_failures)
     st.scan_outcome = (
         ScanOutcome.FAILED
-        if st.ctx.cloud_provider_failures and not st.ctx.cloud_provider_successes and not st.agents
+        if st.ctx.cloud_provider_failures and not st.ctx.cloud_provider_successes and not st.agents and not _any_evaluated
         else ScanOutcome.COMPLETE
     )
 
@@ -234,7 +247,7 @@ def _collect_cloud_scopes(opts: ScanOptions, st: ScanState) -> None:
         )
         _has_warning = any(str(record.get("provider") or "cloud") == _provider for record in st.ctx.cloud_provider_warnings)
         _has_failure = any(str(record.get("provider") or "cloud") == _provider for record in st.ctx.cloud_provider_failures)
-        if _has_failure and _success is None:
+        if _has_failure and _success is None and not _provider_evaluated_controls(st.ctx, _provider):
             _scope_status = ScanScopeStatus.UNAVAILABLE
             _scope_count = None
             _scope_message = "Requested cloud collector did not complete."

@@ -2,22 +2,22 @@
  "demo": {
   "html": "bd9fb4420c16274ec84212cce2f7134ce7ed4729a439c025531b34a471f00836",
   "html_offline": "4c58e59e8176dedda4fef0a66b15a58790330a6172e7a583fbacd2dd9793f5bd",
-  "sarif_exclude_unfixable": "091d024058a2edd5a48e3265ceffed9f4e967b5cf3e63fbd0320e2ec4e4ede6e",
-  "sarif_file": "362a3b3e6f22b67956d0990f17a4b4a5381b192030a1d8cb231509923e16135e",
-  "sarif_stdout": "091d024058a2edd5a48e3265ceffed9f4e967b5cf3e63fbd0320e2ec4e4ede6e"
+  "sarif_exclude_unfixable": "d4278a0c4aee9df3a1b3c6ee74bde040cffd67f99efe410c366088689b37d81f",
+  "sarif_file": "0fcb758ce665c2a6eab7c752393a26791a3f6eec1118b5c8a020f2239f169d91",
+  "sarif_stdout": "d4278a0c4aee9df3a1b3c6ee74bde040cffd67f99efe410c366088689b37d81f"
  },
  "empty": {
   "html": "3321190785358c1da3add462aa460a4f8473c103bfd4ada21eaca3163704133b",
   "html_offline": "66a46d2e381ab71c0f375bbe8386e53db8cd5ae42547a4f00090494502567b5b",
-  "sarif_exclude_unfixable": "419fbcb69955c84d32332b7eec7b5dd4c6159c5a80db4af5fcc0b126996de8de",
-  "sarif_file": "dd83ccee5c1f43ee2ced8cbea94a7d21e135a315cb59d8f874e7149666b78f64",
-  "sarif_stdout": "419fbcb69955c84d32332b7eec7b5dd4c6159c5a80db4af5fcc0b126996de8de"
+  "sarif_exclude_unfixable": "443126d556126709d4c80bc44f573c69af3105ddb4a6ee86d4a649a811be9a05",
+  "sarif_file": "dae062ed8d78e3efaef7ae08ec85030cde5514eb35bbbdd30b1e38eb13d6fee2",
+  "sarif_stdout": "443126d556126709d4c80bc44f573c69af3105ddb4a6ee86d4a649a811be9a05"
  },
  "rich": {
-  "html": "681906ee7a76e77c662c3679088d4be5dbf91114bee0db01073bcbe23945afac",
-  "html_offline": "4e3d9d1c26dcdfe2601e8437ef3a3c23d2fc7082cc0642227e90230868739df2",
-  "sarif_exclude_unfixable": "81b05374ef6ac44923058aa738b60181466b5caa60292c98fb4e48f7b119f91f",
-  "sarif_file": "c1c0a43b7dca73360c0671ae37958a004f2862eb6ab7e907ea386ac6d5db8164",
-  "sarif_stdout": "b3b84cd4c9fd571e8dd64ed38c0173137a968cf06b9baf67662928188ffabb68"
+  "html": "05756b5ff2205e3e3d1e422f1a51ed975896152b36f858798f5155c38ffbe243",
+  "html_offline": "685939c2099f33ce5675fb133819e7641ddabf72ee1231631e8687e411a23e99",
+  "sarif_exclude_unfixable": "0eb9a16ea73a02e29c3d838deae030e4e06df9fad0a48f7dea4e192339b742b1",
+  "sarif_file": "314e087249d213a592a2580470e8c106fab1be3b4807f17bdfc046785132afd3",
+  "sarif_stdout": "ff211334576907037a6f1e9dbbd9f00a3a8df28551ffabb2809cd7536cea875d"
  }
 }

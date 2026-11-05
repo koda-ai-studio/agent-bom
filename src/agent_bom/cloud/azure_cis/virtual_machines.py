@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..aws_cis_benchmark import CheckStatus, CISCheckResult
+from ..aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 from ._base import (
     _VM_SECTION,
     _pass_or_no_data,
@@ -142,8 +142,8 @@ def _check_7_4(compute_client: Any) -> CISCheckResult:
             result.status = CheckStatus.PASS
             result.evidence = f"No extensions found on {len(vms)} VM(s)."
         else:
-            result.status = CheckStatus.NO_DATA
-            result.evidence = "No VM(s) were discovered; this check has no data and cannot report PASS."
+            result.status = CheckStatus.PASS
+            not_applicable_if_empty(result, 0, "VM")
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check VM extensions: {exc}"

@@ -425,7 +425,9 @@
    },
    "packages": [],
    "posture_grade": "N/A",
+   "posture_grade_label": "N/A",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": true,
@@ -477,7 +479,10 @@
      }
     },
     "grade": "N/A",
+    "grade_basis": "scan",
+    "grade_label": "N/A",
     "no_data": true,
+    "partial": false,
     "policy_source": "default",
     "score": 0.0,
     "summary": "No artifacts scanned — posture grade unavailable. Connect a surface or run a scan to grade posture."
@@ -2936,7 +2941,9 @@
     }
    ],
    "posture_grade": "D",
+   "posture_grade_label": "D",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": true,
@@ -2988,7 +2995,10 @@
      }
     },
     "grade": "D",
+    "grade_basis": "scan",
+    "grade_label": "D",
     "no_data": false,
+    "partial": false,
     "policy_source": "default",
     "score": 65.1,
     "summary": "Weak best-practice/config posture (D, 65.1%) — this grade is driven by unverified or underspecified MCP configuration on 1/1 server"
@@ -5648,7 +5658,9 @@
     }
    ],
    "posture_grade": "D",
+   "posture_grade_label": "D",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": true,
@@ -5700,7 +5712,10 @@
      }
     },
     "grade": "D",
+    "grade_basis": "scan",
+    "grade_label": "D",
     "no_data": false,
+    "partial": false,
     "policy_source": "default",
     "score": 65.1,
     "summary": "Weak best-practice/config posture (D, 65.1%) — this grade is driven by unverified or underspecified MCP configuration on 1/1 server"
@@ -7749,7 +7764,9 @@
     }
    ],
    "posture_grade": "C",
+   "posture_grade_label": "C",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": false,
@@ -7801,7 +7818,10 @@
      }
     },
     "grade": "C",
+    "grade_basis": "scan",
+    "grade_label": "C",
     "no_data": false,
+    "partial": false,
     "policy_source": "default",
     "score": 70.8,
     "summary": "Vulnerability posture not assessed (scanning skipped); best-practice/config posture C, 70.8%"
@@ -9688,7 +9708,9 @@
     }
    ],
    "posture_grade": "B",
+   "posture_grade_label": "B",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": true,
@@ -9740,7 +9762,10 @@
      }
     },
     "grade": "B",
+    "grade_basis": "scan",
+    "grade_label": "B",
     "no_data": false,
+    "partial": false,
     "policy_source": "default",
     "score": 82.5,
     "summary": "No vulnerabilities found; strong best-practice/config posture (B, 82.5%)"
@@ -12353,7 +12378,9 @@
     }
    ],
    "posture_grade": "D",
+   "posture_grade_label": "D",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": true,
@@ -12405,7 +12432,10 @@
      }
     },
     "grade": "D",
+    "grade_basis": "scan",
+    "grade_label": "D",
     "no_data": false,
+    "partial": false,
     "policy_source": "default",
     "score": 65.1,
     "summary": "Weak best-practice/config posture (D, 65.1%) — this grade is driven by unverified or underspecified MCP configuration on 1/1 server"
@@ -14927,7 +14957,9 @@
     }
    ],
    "posture_grade": "D",
+   "posture_grade_label": "D",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": true,
@@ -14979,7 +15011,10 @@
      }
     },
     "grade": "D",
+    "grade_basis": "scan",
+    "grade_label": "D",
     "no_data": false,
+    "partial": false,
     "policy_source": "default",
     "score": 65.1,
     "summary": "Weak best-practice/config posture (D, 65.1%) — this grade is driven by unverified or underspecified MCP configuration on 1/1 server"
@@ -16949,7 +16984,9 @@
     }
    ],
    "posture_grade": "N/A",
+   "posture_grade_label": "N/A",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": true,
@@ -17001,7 +17038,10 @@
      }
     },
     "grade": "N/A",
+    "grade_basis": "scan",
+    "grade_label": "N/A",
     "no_data": true,
+    "partial": false,
     "policy_source": "default",
     "score": 0.0,
     "summary": "Retained vulnerability evidence requires analysis — posture grade unavailable. Re-run with vulnerability analysis enabled."
@@ -19457,7 +19497,9 @@
     }
    ],
    "posture_grade": "D",
+   "posture_grade_label": "D",
    "posture_scorecard": {
+    "cloud_controls": null,
     "dimensions": {
      "active_exploitation": {
       "assessed": true,
@@ -19509,7 +19551,10 @@
      }
     },
     "grade": "D",
+    "grade_basis": "scan",
+    "grade_label": "D",
     "no_data": false,
+    "partial": false,
     "policy_source": "default",
     "score": 65.1,
     "summary": "Weak best-practice/config posture (D, 65.1%) — this grade is driven by unverified or underspecified MCP configuration on 1/1 server"

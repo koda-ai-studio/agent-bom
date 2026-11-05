@@ -7,7 +7,7 @@ from typing import Any
 from agent_bom.security import sanitize_text
 
 from ..aws_inventory import is_access_denied_error
-from ._base import CheckStatus, CISCheckResult, finalize_read_coverage, logger
+from ._base import CheckStatus, CISCheckResult, finalize_read_coverage, logger, not_applicable_if_empty
 
 # ---------------------------------------------------------------------------
 # Individual checks — CIS 2.x (Storage / S3)
@@ -220,9 +220,11 @@ def _check_2_3_1(rds_client: Any) -> CISCheckResult:
     )
     paginator = rds_client.get_paginator("describe_db_instances")
     unencrypted: list[str] = []
+    inspected = 0
 
     for page in paginator.paginate():
         for db in page["DBInstances"]:
+            inspected += 1
             if not db.get("StorageEncrypted", False):
                 unencrypted.append(db["DBInstanceIdentifier"])
 
@@ -232,8 +234,9 @@ def _check_2_3_1(rds_client: Any) -> CISCheckResult:
         if len(unencrypted) > 5:
             result.evidence += f" (+{len(unencrypted) - 5} more)"
         result.resource_ids = unencrypted[:20]
-    elif not unencrypted:
-        result.evidence = "All RDS instances have encryption at rest enabled (or no instances found)."
+    else:
+        result.evidence = "All RDS instances have encryption at rest enabled."
+        not_applicable_if_empty(result, inspected, "RDS instance")
     return result
 
 
@@ -249,9 +252,11 @@ def _check_2_3_2(rds_client: Any) -> CISCheckResult:
     )
     paginator = rds_client.get_paginator("describe_db_instances")
     no_auto_upgrade: list[str] = []
+    inspected = 0
 
     for page in paginator.paginate():
         for db in page["DBInstances"]:
+            inspected += 1
             if not db.get("AutoMinorVersionUpgrade", False):
                 no_auto_upgrade.append(db["DBInstanceIdentifier"])
 
@@ -262,7 +267,8 @@ def _check_2_3_2(rds_client: Any) -> CISCheckResult:
             result.evidence += f" (+{len(no_auto_upgrade) - 5} more)"
         result.resource_ids = no_auto_upgrade[:20]
     else:
-        result.evidence = "All RDS instances have auto minor version upgrade enabled (or no instances found)."
+        result.evidence = "All RDS instances have auto minor version upgrade enabled."
+        not_applicable_if_empty(result, inspected, "RDS instance")
     return result
 
 
@@ -280,6 +286,7 @@ def _check_2_4_1(kms_client: Any) -> CISCheckResult:
     no_rotation: list[str] = []
     inspected = 0
     denied: list[str] = []
+    unreadable: list[str] = []
 
     for page in paginator.paginate():
         for key in page["Keys"]:
@@ -287,12 +294,12 @@ def _check_2_4_1(kms_client: Any) -> CISCheckResult:
             try:
                 # Only check customer-managed keys (skip AWS-managed and AWS-owned)
                 desc = kms_client.describe_key(KeyId=key_id)["KeyMetadata"]
-                inspected += 1
                 if desc.get("KeyManager") != "CUSTOMER":
                     continue
                 if desc.get("KeyState") != "Enabled":
                     continue
                 rotation = kms_client.get_key_rotation_status(KeyId=key_id)
+                inspected += 1
                 if not rotation.get("KeyRotationEnabled", False):
                     no_rotation.append(key_id)
             except Exception as exc:
@@ -303,6 +310,7 @@ def _check_2_4_1(kms_client: Any) -> CISCheckResult:
                 if is_access_denied_error(exc):
                     denied.append(key_id)
                     continue
+                unreadable.append(key_id)
                 logger.debug("Could not check rotation for key %s: %s", key_id, sanitize_text(exc))
 
     if no_rotation:
@@ -317,7 +325,8 @@ def _check_2_4_1(kms_client: Any) -> CISCheckResult:
             inspected=inspected,
             denied=denied,
             permission="kms:GetKeyRotationStatus",
-            resource_kind="KMS key",
-            pass_evidence="All customer-managed KMS keys have rotation enabled (or no keys found).",
+            resource_kind="customer-managed KMS key",
+            unavailable={"read_failed": unreadable},
+            pass_evidence="All customer-managed KMS keys have rotation enabled.",
         )
     return result

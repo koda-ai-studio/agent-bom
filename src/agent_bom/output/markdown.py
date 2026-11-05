@@ -30,6 +30,7 @@ from agent_bom.output.finding_views import (
 )
 from agent_bom.output.possibly_affected import possibly_affected_rows
 from agent_bom.output.technique_evidence import markdown_atlas_sources
+from agent_bom.posture import compute_posture_scorecard
 from agent_bom.security import sanitize_sensitive_payload
 
 
@@ -52,8 +53,7 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
 
     # Summary
     sev_counts = severity_counts(all_findings)
-    lines.append("## Summary")
-    lines.append("")
+    lines.extend(["## Summary", "", *_cloud_grade_lines(report)])
 
     if scan_run.outcome is not ScanOutcome.COMPLETE:
         label = scan_run.outcome.value.upper()
@@ -88,7 +88,7 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
 
     lines.extend([*_trust_assessment_section(report), *_possibly_affected_section(report)])
 
-    if not brs and not policy_findings and scan_run.outcome is ScanOutcome.COMPLETE:
+    if not brs and not policy_findings and _evidence_complete(report, scan_run.outcome):
         lines.append("No vulnerabilities found.")
         return "\n".join(lines) + "\n"
 
@@ -229,6 +229,17 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
 def export_markdown(report: AIBOMReport, output_path: str, blast_radii: list[BlastRadius] | None = None) -> None:
     """Write Markdown report to file."""
     Path(output_path).write_text(to_markdown(report, blast_radii), encoding="utf-8")
+
+
+def _cloud_grade_lines(report: AIBOMReport) -> list[str]:
+    card = compute_posture_scorecard(report)
+    if card.cloud_controls is None:
+        return []
+    return [f"**Cloud posture grade**: {card.grade_label}" + (f" - {card.summary}" if card.grade == "N/A" else ""), ""]
+
+
+def _evidence_complete(report: AIBOMReport, outcome: ScanOutcome) -> bool:
+    return outcome is ScanOutcome.COMPLETE and not compute_posture_scorecard(report).partial
 
 
 def _non_cve_findings(report: AIBOMReport) -> list[Finding]:

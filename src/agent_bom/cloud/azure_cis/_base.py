@@ -9,7 +9,7 @@ from typing import Any
 from agent_bom.domain.report_payloads import BenchmarkPayload
 from agent_bom.security import sanitize_error
 
-from ..aws_cis_benchmark import CheckStatus, CISCheckResult
+from ..aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 from ..azure_graph import SECURITY_DEFAULTS_PATH, GraphError, GraphPermissionDeniedError
 
 __all__ = [
@@ -127,18 +127,14 @@ _APPSERVICE_SECTION = "9 - App Service"
 
 
 def _pass_or_no_data(result: CISCheckResult, count: int, resource_kind: str, pass_evidence: str) -> CISCheckResult:
-    """PASS only when at least one resource was evaluated; zero resources is NO_DATA.
+    """PASS only when at least one resource was evaluated; zero resources is NOT_APPLICABLE.
 
-    "All 0 servers are compliant" is not evidence of compliance — it is the
-    absence of evidence, reported the same way ``finalize_read_coverage`` does.
+    "All 0 servers are compliant" is not evidence of compliance: the listing
+    succeeded and found nothing, reported the way ``finalize_read_coverage`` does.
     """
-    if count:
-        result.status = CheckStatus.PASS
-        result.evidence = pass_evidence
-    else:
-        result.status = CheckStatus.NO_DATA
-        result.evidence = f"No {resource_kind}(s) were discovered; this check has no data and cannot report PASS."
-    return result
+    result.status = CheckStatus.PASS
+    result.evidence = pass_evidence
+    return not_applicable_if_empty(result, count, resource_kind)
 
 
 def _enum_text(value: Any) -> str:

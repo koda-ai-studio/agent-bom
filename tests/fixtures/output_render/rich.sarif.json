@@ -1808,6 +1808,7 @@
       "properties": {
         "scan_outcome": "partial",
         "posture_grade": "N/A",
+        "posture_grade_label": "N/A",
         "exposure_path_count": 2,
         "trust_assessment": {
           "verdict": "review",

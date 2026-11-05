@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_worst_first_rank
+from agent_bom.evidence.cloud_posture import cloud_posture
 from agent_bom.evidence.scan_run import has_unresolved_advisories
 
 #: A control only counts as evaluated when it produced a real verdict.
@@ -79,6 +80,9 @@ def finding_free_posture(report: Any) -> tuple[str, str]:
     """Zero findings earn no clean verdict without package or evaluated-control evidence."""
     if has_unresolved_advisories(report):
         return "#d97706", "REVIEW REQUIRED"
+    cloud = cloud_posture(report)
+    if cloud.partial and cloud.evaluated:
+        return "#d97706", "PARTIAL COVERAGE"
     bundles = (
         getattr(report, name, None) or {}
         for name in (

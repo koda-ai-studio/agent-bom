@@ -68,6 +68,18 @@ def _mark_report_partial_for_evidence_gaps(report: CISBenchmarkReport) -> None:
         report.warnings.append(warning)
 
 
+def _withhold_unverified_identity(report: CISBenchmarkReport) -> None:
+    """Without a verified account boundary, no affirmative result can stand."""
+    report.warnings.append("AWS account identity could not be verified; affirmative CIS results were withheld.")
+    for check in report.checks:
+        if check.status in {CheckStatus.PASS, CheckStatus.NO_DATA} or (check.status is CheckStatus.NOT_APPLICABLE and check.vacuous):
+            check.status = CheckStatus.ERROR
+            check.evidence = (
+                "AWS account identity could not be verified with STS GetCallerIdentity; "
+                "PASS withheld because the evaluated account boundary is unknown."
+            )
+
+
 def _demote_passes_to_unknown(
     report: CISBenchmarkReport,
     *,
@@ -76,7 +88,7 @@ def _demote_passes_to_unknown(
 ) -> None:
     """Replace only optimistic PASS states when the evidence boundary is incomplete."""
     for check in report.checks:
-        if check.status is not CheckStatus.PASS:
+        if check.status is not CheckStatus.PASS and not (check.status is CheckStatus.NOT_APPLICABLE and check.vacuous):
             continue
         if check_ids is not None and check.check_id not in check_ids:
             continue
@@ -106,6 +118,7 @@ def _merge_regional_cis_check(existing: CISCheckResult, incoming: CISCheckResult
         account_id=winner.account_id or other.account_id,
         network_exposure=winner.network_exposure or other.network_exposure,
         remediation=winner.remediation or other.remediation,
+        vacuous=winner.vacuous,
     )
 
 

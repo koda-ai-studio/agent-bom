@@ -16,6 +16,7 @@ from agent_bom.output.html._common import (
     _esc,
     _sev_badge,
 )
+from agent_bom.posture import compute_posture_scorecard
 
 # ─── HTML sections ────────────────────────────────────────────────────────────
 
@@ -81,6 +82,15 @@ def _warn_gate_banner(report: "AIBOMReport") -> str:
         f"<b>{sev}</b> severity &mdash; exit 0 (warning only, not a hard failure)"
         "</div>"
     )
+
+
+def _cloud_grade_line(report: "AIBOMReport") -> str:
+    """Cloud posture grade with its coverage; empty for a scan without cloud evidence."""
+    card = compute_posture_scorecard(report)
+    if card.cloud_controls is None:
+        return ""
+    detail = _esc(card.summary) if card.grade == "N/A" else f"{card.score:.1f}/100"
+    return f'<div style="margin-bottom:12px;font-size:.85rem"><b>Cloud posture grade:</b> {_esc(card.grade_label)} &middot; {detail}</div>'
 
 
 def _scan_outcome_banner(report: "AIBOMReport") -> str:

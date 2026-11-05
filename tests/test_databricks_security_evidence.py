@@ -33,8 +33,8 @@ def test_other_users_tokens_are_not_attributed_to_service_principals():
         token_management=SimpleNamespace(list=lambda: [SimpleNamespace(owner_id=8, expiry_time=9999999999999)]),
     )
     result = _check_1_4(ws)
-    assert result.status.value == "pass"
-    assert "enumerated" in result.evidence
+    assert result.status.value == "not_applicable"
+    assert "service principal PAT" in result.evidence
 
 
 def test_missing_token_owner_is_an_evidence_gap():
@@ -81,7 +81,7 @@ def test_sdk_job_source_enum_is_excluded_from_interactive_checks():
         JOB = "JOB"
 
     cluster = SimpleNamespace(cluster_id="fixture", cluster_source=Source.JOB, auto_termination_minutes=0)
-    assert _check_2_1(SimpleNamespace(clusters=SimpleNamespace(list=lambda: [cluster]))).status.value == "pass"
+    assert _check_2_1(SimpleNamespace(clusters=SimpleNamespace(list=lambda: [cluster]))).status.value == "not_applicable"
 
 
 def test_unknown_cluster_isolation_is_not_a_clean_verdict():

@@ -92,7 +92,7 @@ def _posture_blocks(report: AIBOMReport, findings: list[Any], policy: list[Any])
     grade = (
         f"Posture grade: not graded - {card.summary or 'not enough evidence to grade'}"
         if card.grade.upper() == "N/A"
-        else f"Posture grade: {card.grade} ({card.score:.0f}/100) - {GRADE_ECHO.sub('', card.summary).strip()}"
+        else f"Posture grade: {card.grade_label} ({card.score:.0f}/100) - {GRADE_ECHO.sub('', card.summary).strip()}"
     )
     counts = {severity: 0 for severity in _SEVERITIES}
     for finding in [*findings, *policy]:

@@ -24,7 +24,7 @@ from .normalization import (
     build_cloud_timestamps,
     build_package_purl,
     parse_container_image_package,
-    sanitize_discovery_warning,
+    service_discovery_gap,
 )
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ def discover(
         agents.extend(vertex_agents)
         warnings.extend(vertex_warns)
     except Exception as exc:
-        warnings.append(sanitize_discovery_warning(f"Vertex AI discovery error: {exc}"))
+        warnings.append(service_discovery_gap("Vertex AI", exc))
 
     # -- Cloud Functions -------------------------------------------------------
     try:
@@ -92,7 +92,7 @@ def discover(
         agents.extend(cf_agents)
         warnings.extend(cf_warns)
     except Exception as exc:
-        warnings.append(sanitize_discovery_warning(f"Cloud Functions discovery error: {exc}"))
+        warnings.append(service_discovery_gap("Cloud Functions", exc))
 
     # -- GKE Clusters ----------------------------------------------------------
     try:
@@ -100,7 +100,7 @@ def discover(
         agents.extend(gke_agents)
         warnings.extend(gke_warns)
     except Exception as exc:
-        warnings.append(sanitize_discovery_warning(f"GKE discovery error: {exc}"))
+        warnings.append(service_discovery_gap("GKE", exc))
 
     # -- Cloud Run services ----------------------------------------------------
     try:
@@ -108,7 +108,7 @@ def discover(
         agents.extend(run_agents)
         warnings.extend(run_warns)
     except Exception as exc:
-        warnings.append(sanitize_discovery_warning(f"Cloud Run discovery error: {exc}"))
+        warnings.append(service_discovery_gap("Cloud Run", exc))
 
     # Per-run discovery envelope (#2083 PR B).
     scope: list[str] = []
@@ -258,7 +258,7 @@ def _discover_vertex_ai(
             agents.append(agent)
 
     except Exception as exc:
-        warnings.append(sanitize_discovery_warning(f"Could not list Vertex AI endpoints: {exc}"))
+        warnings.append(service_discovery_gap("Vertex AI", exc))
 
     return agents, warnings
 
@@ -398,7 +398,7 @@ def _discover_cloud_functions(
             )
 
     except Exception as exc:
-        warnings.append(sanitize_discovery_warning(f"Could not list Cloud Functions: {exc}"))
+        warnings.append(service_discovery_gap("Cloud Functions", exc))
 
     return agents, warnings
 
@@ -504,7 +504,7 @@ def _discover_gke_clusters(
             )
 
     except Exception as exc:
-        warnings.append(sanitize_discovery_warning(f"Could not list GKE clusters: {exc}"))
+        warnings.append(service_discovery_gap("GKE", exc))
 
     return agents, warnings
 
@@ -608,6 +608,6 @@ def _discover_cloud_run(
                     agents.append(agent)
 
     except Exception as exc:
-        warnings.append(sanitize_discovery_warning(f"Could not list Cloud Run services: {exc}"))
+        warnings.append(service_discovery_gap("Cloud Run", exc))
 
     return agents, warnings

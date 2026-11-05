@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..aws_cis_benchmark import CheckStatus, CISCheckResult
+from ..aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 from ._base import (
     _NETWORK_SECTION,
     _pass_or_no_data,
@@ -39,6 +39,7 @@ def _check_6_1(network_client: Any) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No NSG rules found allowing RDP (3389) from 0.0.0.0/0 or ::/0."
+            not_applicable_if_empty(result, len(nsgs), "network security group")
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check NSG rules: {exc}"
@@ -73,6 +74,7 @@ def _check_6_2(network_client: Any) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No NSG rules found allowing SSH (22) from 0.0.0.0/0 or ::/0."
+            not_applicable_if_empty(result, len(nsgs), "network security group")
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check NSG rules: {exc}"
@@ -108,6 +110,7 @@ def _check_6_3(network_client: Any) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No NSG rules found allowing SQL (1433) from 0.0.0.0/0 or ::/0."
+            not_applicable_if_empty(result, len(nsgs), "network security group")
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check NSG rules for SQL access: {exc}"
@@ -167,6 +170,7 @@ def _check_6_4(network_client: Any) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No NSG rules found allowing unrestricted UDP from the internet."
+            not_applicable_if_empty(result, len(nsgs), "network security group")
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check NSG rules for UDP access: {exc}"

@@ -37,6 +37,7 @@ export function BriefSummary({ brief }: { brief: ExecutiveBrief }) {
     <div className="space-y-2 border-t border-outline bg-surface-muted/40 px-5 py-4 text-sm sm:px-6">
       <p className="font-medium">{briefTrend(brief)}</p>
       {brief.posture.no_data ? <p>Posture evidence is incomplete. Returned issue counts do not establish complete coverage.</p> : null}
+      {brief.posture.partial ? <p>Grade {brief.posture.grade_label}. Controls that errored or had no data are not assumed fine.</p> : null}
       <p className="text-xs leading-5 text-ink-secondary">{brief.evidence_boundary}</p>
     </div>
   </section>;

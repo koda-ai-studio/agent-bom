@@ -6,12 +6,22 @@ from typing import Any
 
 from agent_bom.security import sanitize_text
 
-from ..aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage
+from ..aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage, not_applicable_if_empty
 from ..aws_inventory import is_access_denied_error
 from ._base import (
     _KEYVAULT_SECTION,
     logger,
 )
+
+
+def _finish_vault_items(result: CISCheckResult, items: int, item_kind: str, denied: list[str]) -> None:
+    """Zero items is only an empty estate when every vault could be read."""
+    if not items and denied:
+        result.status = CheckStatus.ERROR
+        result.evidence = f"No {item_kind}(s) readable; {len(denied)} vault(s) could not be read (data-plane access denied)."
+        result.resource_ids = list(denied)[:20]
+        return
+    not_applicable_if_empty(result, items, f"Key Vault {item_kind}")
 
 
 def _check_8_1(kv_client: Any, subscription_id: str) -> CISCheckResult:
@@ -28,6 +38,7 @@ def _check_8_1(kv_client: Any, subscription_id: str) -> CISCheckResult:
         vaults = list(kv_client.vaults.list())
         failing_keys: list[str] = []
         readable = 0
+        items = 0
         denied: list[str] = []
 
         for vault in vaults:
@@ -39,6 +50,7 @@ def _check_8_1(kv_client: Any, subscription_id: str) -> CISCheckResult:
 
                 key_client = KeyClient(vault_url=vault_url, credential=DefaultAzureCredential())
                 for key_prop in key_client.list_properties_of_keys():
+                    items += 1
                     exp = getattr(key_prop, "expires_on", None)
                     if exp is None:
                         failing_keys.append(f"{vault_name}/{key_prop.name}")
@@ -65,6 +77,7 @@ def _check_8_1(kv_client: Any, subscription_id: str) -> CISCheckResult:
             note = f" ({len(denied)} vault(s) skipped — data-plane access denied)" if denied else ""
             result.status = CheckStatus.PASS
             result.evidence = f"All keys across {readable} readable vault(s) have expiration dates set.{note}"
+            _finish_vault_items(result, items, "key", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not enumerate Key Vault keys: {exc}"
@@ -85,6 +98,7 @@ def _check_8_2(kv_client: Any, subscription_id: str) -> CISCheckResult:
         vaults = list(kv_client.vaults.list())
         failing_secrets: list[str] = []
         readable = 0
+        items = 0
         denied: list[str] = []
 
         for vault in vaults:
@@ -96,6 +110,7 @@ def _check_8_2(kv_client: Any, subscription_id: str) -> CISCheckResult:
 
                 secret_client = SecretClient(vault_url=vault_url, credential=DefaultAzureCredential())
                 for secret_prop in secret_client.list_properties_of_secrets():
+                    items += 1
                     if getattr(secret_prop, "expires_on", None) is None:
                         failing_secrets.append(f"{vault_name}/{secret_prop.name}")
                 readable += 1
@@ -119,6 +134,7 @@ def _check_8_2(kv_client: Any, subscription_id: str) -> CISCheckResult:
             note = f" ({len(denied)} vault(s) skipped — data-plane access denied)" if denied else ""
             result.status = CheckStatus.PASS
             result.evidence = f"All secrets across {readable} readable vault(s) have expiration dates set.{note}"
+            _finish_vault_items(result, items, "secret", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not enumerate Key Vault secrets: {exc}"
@@ -200,6 +216,7 @@ def _check_8_4(kv_client: Any, subscription_id: str) -> CISCheckResult:
         failing_keys: list[str] = []
         rbac_vault_count = 0
         readable = 0
+        items = 0
         denied: list[str] = []
         for vault in vaults:
             vault_name = vault.name or "unknown"
@@ -226,6 +243,7 @@ def _check_8_4(kv_client: Any, subscription_id: str) -> CISCheckResult:
 
                 key_client = KeyClient(vault_url=vault_url, credential=DefaultAzureCredential())
                 for key_prop in key_client.list_properties_of_keys():
+                    items += 1
                     if getattr(key_prop, "expires_on", None) is None:
                         failing_keys.append(f"{vault_name}/{key_prop.name}")
                 readable += 1
@@ -248,6 +266,7 @@ def _check_8_4(kv_client: Any, subscription_id: str) -> CISCheckResult:
             note = f" ({len(denied)} vault(s) skipped — data-plane access denied)" if denied else ""
             result.status = CheckStatus.PASS
             result.evidence = f"All keys in {readable} readable RBAC vault(s) have expiration dates set.{note}"
+            _finish_vault_items(result, items, "key", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check Key Vault key expiration: {exc}"
@@ -269,6 +288,7 @@ def _check_8_5(kv_client: Any, subscription_id: str) -> CISCheckResult:
         failing_secrets: list[str] = []
         rbac_vault_count = 0
         readable = 0
+        items = 0
         denied: list[str] = []
         for vault in vaults:
             vault_name = vault.name or "unknown"
@@ -295,6 +315,7 @@ def _check_8_5(kv_client: Any, subscription_id: str) -> CISCheckResult:
 
                 secret_client = SecretClient(vault_url=vault_url, credential=DefaultAzureCredential())
                 for secret_prop in secret_client.list_properties_of_secrets():
+                    items += 1
                     if getattr(secret_prop, "expires_on", None) is None:
                         failing_secrets.append(f"{vault_name}/{secret_prop.name}")
                 readable += 1
@@ -317,6 +338,7 @@ def _check_8_5(kv_client: Any, subscription_id: str) -> CISCheckResult:
             note = f" ({len(denied)} vault(s) skipped — data-plane access denied)" if denied else ""
             result.status = CheckStatus.PASS
             result.evidence = f"All secrets in {readable} readable RBAC vault(s) have expiration dates set.{note}"
+            _finish_vault_items(result, items, "secret", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check Key Vault secret expiration: {exc}"
@@ -337,6 +359,7 @@ def _check_8_6(kv_client: Any, subscription_id: str) -> CISCheckResult:
         vaults = list(kv_client.vaults.list())
         failing_secrets: list[str] = []
         readable = 0
+        items = 0
         denied: list[str] = []
         for vault in vaults:
             vault_name = vault.name or "unknown"
@@ -347,6 +370,7 @@ def _check_8_6(kv_client: Any, subscription_id: str) -> CISCheckResult:
 
                 secret_client = SecretClient(vault_url=vault_url, credential=DefaultAzureCredential())
                 for secret_prop in secret_client.list_properties_of_secrets():
+                    items += 1
                     content_type = getattr(secret_prop, "content_type", None)
                     if not content_type:
                         failing_secrets.append(f"{vault_name}/{secret_prop.name}")
@@ -371,6 +395,7 @@ def _check_8_6(kv_client: Any, subscription_id: str) -> CISCheckResult:
             note = f" ({len(denied)} vault(s) skipped — data-plane access denied)" if denied else ""
             result.status = CheckStatus.PASS
             result.evidence = f"All secrets across {readable} readable vault(s) have content type set.{note}"
+            _finish_vault_items(result, items, "secret", denied)
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check Key Vault secret content types: {exc}"

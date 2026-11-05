@@ -276,11 +276,12 @@ def _compute_scan_id(
     return str(_uuid.uuid5(_uuid.UUID(_SCAN_ID_NAMESPACE), "scan:" + "|".join(parts)))
 
 
-_CLOUD_BENCHMARK_REPORTS = (
+CLOUD_BENCHMARK_REPORTS = (
     ("aws", "cis_benchmark_report"),
     ("azure", "azure_cis_benchmark_report"),
     ("gcp", "gcp_cis_benchmark_report"),
     ("snowflake", "sf_cis_benchmark_report"),
+    ("databricks", "databricks_security_report"),
 )
 
 
@@ -294,7 +295,7 @@ def _benchmark_scan_issues(ctx: Any) -> list:
     from agent_bom.evidence.scan_run import ScanIssue
 
     issues: list = []
-    for provider, attr in _CLOUD_BENCHMARK_REPORTS:
+    for provider, attr in CLOUD_BENCHMARK_REPORTS:
         report = getattr(ctx, attr, None)
         if report is None:
             continue

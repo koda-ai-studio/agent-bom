@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 
 from ._base import (
     _IAM_SECTION,
@@ -44,6 +44,7 @@ def _check_1_1(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No gmail.com accounts found in project IAM policy."
+            not_applicable_if_empty(result, len(bindings), "IAM binding")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
@@ -115,6 +116,7 @@ def _check_1_4(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"No user-managed keys found across {len(service_accounts)} service account(s)."
+            not_applicable_if_empty(result, len(service_accounts), "service account")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
@@ -157,6 +159,7 @@ def _check_1_5(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No primitive Owner/Editor roles assigned to user accounts at project level."
+            not_applicable_if_empty(result, len(bindings), "IAM binding")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
@@ -200,6 +203,7 @@ def _check_1_6(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No service accounts have admin privileges (owner/editor/iam.admin)."
+            not_applicable_if_empty(result, len(bindings), "IAM binding")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
@@ -248,6 +252,7 @@ def _check_1_7(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No user-managed service accounts have serviceAccountAdmin, serviceAccountKeyAdmin, or compute.admin roles."
+            not_applicable_if_empty(result, len(bindings), "IAM binding")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
@@ -277,6 +282,7 @@ def _check_1_8(project_id: str) -> CISCheckResult:
         failing: list[str] = []
         now = datetime.datetime.now(datetime.timezone.utc)
         threshold = datetime.timedelta(days=90)
+        user_keys = 0
 
         for sa in service_accounts:
             sa_name = sa.get("name", "")
@@ -284,6 +290,7 @@ def _check_1_8(project_id: str) -> CISCheckResult:
                 continue
             keys_resp = iam_service.projects().serviceAccounts().keys().list(name=sa_name, keyTypes=["USER_MANAGED"]).execute()
             for key in keys_resp.get("keys", []):
+                user_keys += 1
                 created = key.get("validAfterTime", "")
                 if created:
                     created_dt = datetime.datetime.fromisoformat(created.replace("Z", "+00:00"))
@@ -297,6 +304,7 @@ def _check_1_8(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All user-managed service account keys across {len(service_accounts)} account(s) are within 90-day rotation."
+            not_applicable_if_empty(result, user_keys, "user-managed service account key")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."

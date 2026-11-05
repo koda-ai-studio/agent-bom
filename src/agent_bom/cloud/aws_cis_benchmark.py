@@ -65,6 +65,7 @@ from .aws_cis._base import (
     _aws_client_config,
     _safe_error_evidence,
     finalize_read_coverage,
+    not_applicable_if_empty,
 )
 from .aws_cis.iam_access import (
     _check_1_9,
@@ -139,6 +140,7 @@ from .aws_cis.runner import (
     _demote_passes_to_unknown,
     _mark_report_partial_for_evidence_gaps,
     _merge_regional_cis_check,
+    _withhold_unverified_identity,
 )
 from .aws_cis.storage import (
     _STORAGE_SECTION,
@@ -236,6 +238,7 @@ __all__ = [
     "_require_targeting_alarm",
     "_safe_error_evidence",
     "finalize_read_coverage",
+    "not_applicable_if_empty",
     "run_all_account_benchmarks",
     "run_benchmark",
     "run_benchmark_all_regions",
@@ -578,14 +581,7 @@ def run_benchmark(
     _run_check("4.16", _check_4_16, _get_client("securityhub"))
 
     if not account_id:
-        report.warnings.append("AWS account identity could not be verified; affirmative CIS results were withheld.")
-        for check in report.checks:
-            if check.status in {CheckStatus.PASS, CheckStatus.NO_DATA}:
-                check.status = CheckStatus.ERROR
-                check.evidence = (
-                    "AWS account identity could not be verified with STS GetCallerIdentity; "
-                    "PASS withheld because the evaluated account boundary is unknown."
-                )
+        _withhold_unverified_identity(report)
 
     # Sort checks by check_id for consistent output
     report.checks.sort(key=lambda c: [int(x) if x.isdigit() else x for x in c.check_id.replace(".", " ").split()])

@@ -21,7 +21,7 @@ from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
 from agent_bom.output.compact_rows import console_group_key as _console_group_key
 from agent_bom.output.compact_rows import package_display as _package_display
-from agent_bom.output.compact_rows import posture_grade_line as _posture_grade_line
+from agent_bom.output.compact_rows import scorecard_grade_line as _scorecard_grade_line
 from agent_bom.output.compact_text import GRADE_ECHO as _GRADE_ECHO
 from agent_bom.output.compact_text import clip as _clip
 from agent_bom.output.compact_text import compact_detail as _compact_detail
@@ -272,8 +272,8 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
             f"  [bold]Security posture:[/bold]  {posture}{posture_scope}",
             inventory_line,
         ]
-        if scorecard.score < 100 or high_risk_policy_count:
-            lines.append(_posture_grade_line(_posture_grade_badge, _posture_headline, scorecard.grade, scorecard.score, scorecard_summary))
+        if scorecard.score < 100 or high_risk_policy_count or scorecard.partial:
+            lines.append(_scorecard_grade_line(_posture_grade_badge, _posture_headline, scorecard, scorecard_summary))
             if weak_dimensions:
                 lines.append(f"  [dim]Top driver:[/dim] [yellow]{weak_dimensions[0].name}[/yellow]")
         if has_more_context:

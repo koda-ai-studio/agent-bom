@@ -165,6 +165,7 @@ def _check_3_6(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
     trails = cloudtrail_client.describe_trails(includeShadowTrails=False).get("trailList", [])
     if not trails:
         result.status = CheckStatus.NOT_APPLICABLE
+        result.vacuous = True
         result.evidence = "No CloudTrail trails configured."
         return result
 
@@ -215,6 +216,7 @@ def _check_3_3(s3_client: Any, cloudtrail_client: Any) -> CISCheckResult:
     trails = cloudtrail_client.describe_trails(includeShadowTrails=False).get("trailList", [])
     if not trails:
         result.status = CheckStatus.NOT_APPLICABLE
+        result.vacuous = True
         result.evidence = "No CloudTrail trails configured."
         return result
 
@@ -304,6 +306,7 @@ def _check_3_9(ec2_client: Any) -> CISCheckResult:
     vpcs = ec2_client.describe_vpcs().get("Vpcs", [])
     if not vpcs:
         result.status = CheckStatus.NOT_APPLICABLE
+        result.vacuous = True
         result.evidence = "No VPCs found."
         return result
 

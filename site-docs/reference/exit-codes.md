@@ -34,7 +34,7 @@ named on the last line of the output. A scan exits `1` when any of these hold.
 | `--fail-on-kev` / `--fail-if-ai-risk` matched | Yes — you set the flag | A finding met the additional gate you asked to block on. |
 | A policy rule failed | Yes — `--policy`, or `--model-policy-mode enforce` / `--require-model-signatures` / `--block-unsafe-model-formats` (all default off) | Your policy rejected the result. |
 | A known-malicious package was found | **No — fails closed** | A typosquat, dependency-confusion, or known-malicious advisory match. Exiting `0` here would let the package install. |
-| The scan did not complete | **No — fails closed** | A requested collector degraded or failed; `scan_run.issues` in the artifact says which. A partial artifact with zero findings must not read as clean. |
+| The scan did not complete | **No — fails closed** | A requested collector degraded or failed, or a cloud control errored or returned no data; `scan_run.issues` in the artifact says which. A partial artifact with zero findings must not read as clean. An errored control is missing evidence rather than a finding: it exits `1` through this gate, not the severity gate, so real failed controls are named first. A disabled cloud API recorded as not in use does not trip it. |
 | Outdated local vulnerability data that OSV did not back | **No — fails closed** (opt out with `--allow-stale-db` / `AGENT_BOM_ALLOW_STALE_DB`) | The local DB is past the age `agent-bom db freshness` warns about (or its freshness can't be trusted), and the scan was offline or live OSV did not answer. `scan_run.issues` carries a `stale_local_data` coverage issue. |
 
 A missing, empty, or unreadable local advisory database during `scan --offline`

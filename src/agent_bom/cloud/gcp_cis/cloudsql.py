@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 
 from ._base import _SQL_SECTION, _check_failure_evidence, _check_failure_status, _gcp_cloud_sql_instances
 
@@ -19,6 +19,8 @@ def _evaluate_instances(
     failure: Callable[[list[str], int], str],
     error_context: str,
     missing_sdk: str = "google-api-python-client not installed.",
+    applies: Callable[[dict[str, Any]], bool] | None = None,
+    resource_kind: str = "Cloud SQL instance",
 ) -> CISCheckResult:
     """Keep collection errors distinct from failed configuration predicates."""
     try:
@@ -30,6 +32,7 @@ def _evaluate_instances(
             result.resource_ids = failing
         else:
             result.evidence = success(len(instances))
+            not_applicable_if_empty(result, sum(1 for instance in instances if applies is None or applies(instance)), resource_kind)
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = missing_sdk
@@ -37,6 +40,10 @@ def _evaluate_instances(
         result.status = _check_failure_status(exc)
         result.evidence = f"Could not check {error_context}: {_check_failure_evidence(exc)}"
     return result
+
+
+def _is_postgres(instance: dict[str, Any]) -> bool:
+    return str(instance.get("databaseVersion", "")).upper().startswith("POSTGRES")
 
 
 def _postgres_flag_fails(instance: dict[str, Any], name: str, allowed: set[str], *, case_sensitive: bool = False) -> bool:
@@ -129,6 +136,8 @@ def _check_6_4(project_id: str) -> CISCheckResult:
         fails=lambda inst: _postgres_flag_fails(inst, "log_error_verbosity", {"default", "terse"}),
         success=lambda total: "All PostgreSQL instances have log_error_verbosity set to DEFAULT or stricter.",
         failure=lambda failing, total: f"PostgreSQL instances without proper log_error_verbosity: {', '.join(failing[:10])}",
+        applies=_is_postgres,
+        resource_kind="Cloud SQL PostgreSQL instance",
         error_context="PostgreSQL log_error_verbosity",
     )
 
@@ -149,6 +158,8 @@ def _check_6_5(project_id: str) -> CISCheckResult:
         fails=lambda inst: _postgres_flag_fails(inst, "log_connections", {"on"}),
         success=lambda total: "All PostgreSQL instances have log_connections enabled.",
         failure=lambda failing, total: f"PostgreSQL instances without log_connections enabled: {', '.join(failing[:10])}",
+        applies=_is_postgres,
+        resource_kind="Cloud SQL PostgreSQL instance",
         error_context="PostgreSQL log_connections",
     )
 
@@ -169,6 +180,8 @@ def _check_6_6(project_id: str) -> CISCheckResult:
         fails=lambda inst: _postgres_flag_fails(inst, "log_disconnections", {"on"}),
         success=lambda total: "All PostgreSQL instances have log_disconnections enabled.",
         failure=lambda failing, total: f"PostgreSQL instances without log_disconnections enabled: {', '.join(failing[:10])}",
+        applies=_is_postgres,
+        resource_kind="Cloud SQL PostgreSQL instance",
         error_context="PostgreSQL log_disconnections",
     )
 
@@ -189,5 +202,7 @@ def _check_6_7(project_id: str) -> CISCheckResult:
         fails=lambda inst: _postgres_flag_fails(inst, "log_min_duration_statement", {"-1"}, case_sensitive=True),
         success=lambda total: "All PostgreSQL instances have log_min_duration_statement set to -1.",
         failure=lambda failing, total: f"PostgreSQL instances without log_min_duration_statement=-1: {', '.join(failing[:10])}",
+        applies=_is_postgres,
+        resource_kind="Cloud SQL PostgreSQL instance",
         error_context="PostgreSQL log_min_duration_statement",
     )

@@ -10843,6 +10843,30 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * CloudControls
+         * @description Cloud control tally behind a grade; see the cloud posture grading reference.
+         */
+        CloudControls: {
+            /** Applicable */
+            applicable: number;
+            /** Coverage Percent */
+            coverage_percent: number;
+            /** Evaluated */
+            evaluated: number;
+            /** Failed */
+            failed: number;
+            /** No Data */
+            no_data: number;
+            /** Not Applicable */
+            not_applicable: number;
+            /** Passed */
+            passed: number;
+            /** Unknown */
+            unknown: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** CloudInventoryProviderSummary */
         CloudInventoryProviderSummary: {
             /** Account */
@@ -21029,6 +21053,7 @@ export interface components {
         OverviewPosture: {
             /** Breakdown */
             breakdown: components["schemas"]["PostureBreakdownItem"][];
+            cloud_controls?: components["schemas"]["CloudControls"] | null;
             /** Display */
             display: string | null;
             /** Display Format */
@@ -21039,10 +21064,14 @@ export interface components {
             floored: boolean;
             /** Grade */
             grade: string;
+            /** Grade Label */
+            grade_label?: string | null;
             /** Grade Thresholds */
             grade_thresholds: {
                 [key: string]: number;
             };
+            /** Partial */
+            partial?: boolean | null;
             /** Penalty Total */
             penalty_total: number;
             /** Percent */
@@ -21483,6 +21512,7 @@ export interface components {
             basis?: string | null;
             /** Breakdown */
             breakdown?: components["schemas"]["PostureBreakdownItem"][] | null;
+            cloud_controls?: components["schemas"]["CloudControls"] | null;
             /** Demo Estate Seeding */
             demo_estate_seeding?: boolean | null;
             /** Dimensions */
@@ -21500,8 +21530,12 @@ export interface components {
             floored?: boolean | null;
             /** Grade */
             grade: string;
+            /** Grade Label */
+            grade_label?: string | null;
             /** No Data */
             no_data: boolean;
+            /** Partial */
+            partial?: boolean | null;
             /** Percent */
             percent?: number | null;
             /** Policy Source */

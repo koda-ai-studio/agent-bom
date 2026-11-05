@@ -222,6 +222,19 @@ class ScanScorecard(ReadModel):
     summary: str
 
 
+class CloudControls(ReadModel):
+    """Cloud control tally behind a grade; see the cloud posture grading reference."""
+
+    passed: int
+    failed: int
+    unknown: int
+    no_data: int
+    not_applicable: int
+    evaluated: int
+    applicable: int
+    coverage_percent: Num
+
+
 class PostureResponse(ReadResponse):
     """Graded posture; with ``no_data`` true only grade, score and summary are set."""
 
@@ -229,6 +242,9 @@ class PostureResponse(ReadResponse):
     score: Num
     summary: str
     no_data: bool
+    partial: bool | None = None
+    grade_label: str | None = None
+    cloud_controls: CloudControls | None = None
     demo_estate_seeding: bool | None = None
     dimensions: dict[str, PostureDimension] | None = None
     dimensions_basis: PostureDimensionsBasis | None = None
@@ -341,6 +357,9 @@ class OverviewPosture(ReadModel):
     finding_total: int
     floored: bool
     grade: str
+    grade_label: str | None = None
+    partial: bool | None = None
+    cloud_controls: CloudControls | None = None
     grade_thresholds: dict[str, Num]
     penalty_total: Num
     percent: int

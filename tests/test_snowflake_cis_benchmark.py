@@ -118,10 +118,10 @@ class TestCheck11:
         assert result.status == CheckStatus.FAIL
         assert "ADMIN" in result.evidence
 
-    def test_pass_no_password_users(self):
+    def test_not_applicable_no_password_users(self):
         cursor = _empty_cursor()
         result = _check_1_1(cursor)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -334,10 +334,10 @@ class TestCheck31:
 
 
 class TestCheck32:
-    def test_pass_no_shares(self):
+    def test_not_applicable_no_shares(self):
         cursor = _empty_cursor()
         result = _check_3_2(cursor)
-        assert result.status == CheckStatus.PASS
+        assert result.status == CheckStatus.NOT_APPLICABLE
 
     def test_informational_with_shares(self):
         cursor = _mock_cursor([{"name": "SHARE1", "database_name": "DB1", "target_accounts": "ORG.CONSUMER"}])
@@ -580,10 +580,10 @@ def test_denied_account_usage_source_is_error_not_pass():
     assert report.source_health["users"]["query_status"] == "error"
 
 
-def test_clean_filtered_empty_passes_when_source_is_covered_and_fresh():
+def test_clean_filtered_empty_not_applicable_when_source_is_covered_and_fresh():
     report = _run_check_11_with_source(_SourceAwareCursor(source_rows=2, filtered_rows=[]))
-    assert report.checks[0].status == CheckStatus.PASS
-    assert "All 0 password-authenticated users" in report.checks[0].evidence
+    assert report.checks[0].status == CheckStatus.NOT_APPLICABLE
+    assert "No password-authenticated user(s) found" in report.checks[0].evidence
 
 
 def test_same_count_stale_account_usage_values_cannot_produce_false_pass():

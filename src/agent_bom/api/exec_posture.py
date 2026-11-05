@@ -20,7 +20,8 @@ from agent_bom.api.posture_counts_cache import cached_posture_block
 from agent_bom.api.scan_finding_read import current_open_scan_findings
 from agent_bom.api.tenant_posture_dimensions import current_findings_dimensions
 from agent_bom.core.severity import SEVERITY_DISPLAY_BUCKETS
-from agent_bom.exec_score import compute_exec_score
+from agent_bom.evidence.cloud_posture import PARTIAL_GRADE_CAP
+from agent_bom.exec_score import compute_exec_score, format_exec_display
 
 _logger = logging.getLogger(__name__)
 _ISSUE_COUNT_KEYS = ("critical", "high", "medium", "low", "unrated", "total", "kev", "approximate", "basis")
@@ -38,6 +39,9 @@ _EXEC_FIELDS = (
     "floored",
     "finding_total",
     "no_data",
+    "partial",
+    "grade_label",
+    "cloud_controls",
 )
 
 
@@ -120,9 +124,54 @@ def tenant_exec_posture(
         floor_summary=str(scan_posture.get("summary") or "") or None,
     )
     if scan_posture.get("no_data"):
-        score.update(grade="N/A", score=0, percent=0, display="N/A", no_data=True, summary=scan_posture.get("summary", ""))
+        score.update(
+            grade="N/A",
+            score=0,
+            percent=0,
+            display="N/A",
+            no_data=True,
+            summary=scan_posture.get("summary", ""),
+            cloud_controls=scan_posture.get("cloud_controls"),
+        )
+    elif floor is not None:
+        _apply_cloud_control_grade(score, scan_posture, floor, hub_evidence=bool(hub_kev or hub_failing_frameworks))
+    score.setdefault("partial", False)
+    score.setdefault("grade_label", score.get("grade"))
     score["severity_basis"] = "issue_groups" if issue_severity is not None else "finding_occurrences"
     return score
+
+
+def _apply_cloud_control_grade(score: dict[str, Any], scan_posture: dict[str, Any], scan_score: float, *, hub_evidence: bool) -> None:
+    """Keep the headline on the scan's control grade and coverage.
+
+    For a cloud-only estate the control pass rate already counts every failed
+    control, so re-deriving a score from those same findings would disagree with
+    the CLI on the same data. Ingested hub evidence is outside that rate and can
+    still lower the grade.
+    """
+    cloud_only = scan_posture.get("grade_basis") == "cloud_controls"
+    partial = bool(scan_posture.get("partial"))
+    if not cloud_only and not partial:
+        return
+    if cloud_only and not hub_evidence:
+        score.update(
+            grade=str(scan_posture.get("grade")),
+            score=scan_score,
+            points=scan_score,
+            percent=int(round(scan_score)),
+            floored=False,
+            summary=str(scan_posture.get("summary") or score.get("summary") or ""),
+        )
+    elif partial and score.get("grade") == "A":
+        score["grade"] = PARTIAL_GRADE_CAP
+    score["display"] = format_exec_display(float(score["score"]), str(score["grade"]), str(score.get("display_format") or "percent"))
+    if partial:
+        controls = scan_posture.get("cloud_controls") or {}
+        score.update(
+            partial=True,
+            grade_label=f"{score['grade']} (partial, {controls.get('evaluated', 0)} of {controls.get('applicable', 0)} evaluated)",
+            cloud_controls=controls,
+        )
 
 
 def compound_issue_count(tenant_jobs: list[Any]) -> int:
@@ -232,7 +281,7 @@ def canonical_posture_payload(
     from agent_bom.api.routes.overview import _build_overview
 
     exec_posture = _build_overview(request).get("posture") or {}
-    payload: dict[str, Any] = dict(scorecard)
+    payload: dict[str, Any] = {key: value for key, value in scorecard.items() if key != "grade_basis"}
     payload["scan_scorecard"] = {key: scorecard.get(key) for key in ("grade", "score", "summary") if key in scorecard}
     for key in _EXEC_FIELDS:
         if key in exec_posture:

@@ -234,7 +234,12 @@ def sanitize_discovery_warning(value: Any, *, max_len: int = 500) -> str:
 
 def sanitize_discovery_warnings(values: list[Any] | tuple[Any, ...]) -> list[str]:
     """Sanitize a provider/connector warning list."""
-    return [sanitize_discovery_warning(value) for value in values if str(value or "").strip()]
+    sanitized: list[str] = []
+    for value in values:
+        if str(value or "").strip():
+            text = sanitize_discovery_warning(value)
+            sanitized.append(ServiceNotInUse(text) if isinstance(value, ServiceNotInUse) else text)
+    return sanitized
 
 
 def build_cloud_state(
@@ -415,3 +420,16 @@ def build_cloud_scope(
     if source_fields:
         envelope["source_fields"] = [field for field in source_fields if field]
     return envelope
+
+
+class ServiceNotInUse(str):
+    """A discovery gap that means the project does not use this service, not a read failure."""
+
+
+def service_discovery_gap(service: str, exc: Exception) -> str:
+    """A disabled API is recorded as not in use; every other failure stays a coverage warning."""
+    from agent_bom.cloud.aws_inv._base import classify_project_disabled_error
+
+    if classify_project_disabled_error(exc) == "service_disabled":
+        return ServiceNotInUse(f"{service} API is disabled; recorded as not in use.")
+    return sanitize_discovery_warning(f"{service} discovery error: {exc}")

@@ -8,6 +8,8 @@ import click
 
 from agent_bom.cli._common import SEVERITY_ORDER
 from agent_bom.cli.agents._context import ScanContext
+from agent_bom.evidence.cloud_posture import cloud_posture
+from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.output import to_json
 
 
@@ -278,6 +280,24 @@ def _local_db_kev_is_fresh(report: Any) -> bool:
     return "KEV" in {str(source).upper() for source in freshness.get("sources") or []}
 
 
+def _gate_findings(report: Any) -> list:
+    """Non-CVE findings the severity gates read.
+
+    An errored control is missing evidence, not a finding: it reaches the exit
+    code through the incomplete-scan gate, and real failures lead the reason.
+    """
+    from agent_bom.finding import FindingType
+
+    excluded = {FindingType.CVE, FindingType.CIS_ERROR, FindingType.CLOUD_BEST_PRACTICE_ERROR}
+    return [finding for finding in report.to_findings() if finding.finding_type not in excluded]
+
+
+def _execution_outcome(report: Any) -> Any:
+    """Canonical outcome, partial as well when cloud controls went unevaluated."""
+    outcome = effective_scan_run(report).outcome
+    return ScanOutcome.PARTIAL if outcome is ScanOutcome.COMPLETE and cloud_posture(report).partial else outcome
+
+
 def compute_exit_code(
     ctx: ScanContext,
     *,
@@ -339,11 +359,7 @@ def compute_exit_code(
     # Unified non-CVE findings (for example MCP_BLOCKLIST) also respect
     # --fail-on-severity. CVEs are handled above through blast_radii so VEX and
     # delta filtering keep their existing semantics.
-    unified_findings = []
-    if report:
-        from agent_bom.finding import FindingType
-
-        unified_findings = [finding for finding in report.to_findings() if finding.finding_type != FindingType.CVE]
+    unified_findings = _gate_findings(report) if report else []
 
     if fail_on_severity and exit_code == 0 and unified_findings:
         fail_threshold = str(fail_on_severity).lower()
@@ -488,9 +504,7 @@ def compute_exit_code(
     # A requested collector that degraded or failed must never produce a clean
     # process exit even when the partial artifact contains zero findings.
     if report is not None:
-        from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
-
-        scan_outcome = effective_scan_run(report).outcome
+        scan_outcome = _execution_outcome(report)
         if scan_outcome is not ScanOutcome.COMPLETE:
             if not quiet and not ctx.cloud_provider_failures:
                 con.print(
