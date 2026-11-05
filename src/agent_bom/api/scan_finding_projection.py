@@ -15,6 +15,7 @@ from agent_bom.api.scan_graph_view import _effective_reach_lookup as _effective_
 from agent_bom.api.scan_snapshot_read import verified_snapshot_findings
 from agent_bom.api.stores import _get_exception_store
 from agent_bom.core.reachability import review_only_match
+from agent_bom.evidence.finding_project import rows_with_project_identity
 from agent_bom.evidence.finding_reach_sources import SERVER_STAMPED_REACH_FIELDS
 from agent_bom.finding_runtime_evidence import (
     attach_runtime_evidence_to_finding,
@@ -95,7 +96,14 @@ def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
         _score_occurrence_reach(row, occurrence_reach)
         for key in SERVER_STAMPED_REACH_FIELDS:  # an imported result cannot pre-stamp path sources
             row.pop(key, None)
-    return _project_finding_owners_and_suppressions(findings, tenant_id)
+    return rows_with_project_identity(_project_finding_owners_and_suppressions(findings, tenant_id), job)
+
+
+def finish_durable_rows(rows: list[dict[str, Any]], tenant_id: str) -> list[dict[str, Any]]:
+    """Current reach score, owner and suppressions for rows rebuilt from durable history."""
+    for row in rows:
+        _score_occurrence_reach(row, {})
+    return _project_finding_owners_and_suppressions(rows, tenant_id)
 
 
 def _score_occurrence_reach(row: dict[str, Any], reach: dict[str, dict[str, Any]]) -> None:

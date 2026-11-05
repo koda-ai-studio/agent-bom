@@ -1903,6 +1903,7 @@ jobs:
           uv run pytest -q --tb=short \
             tests/test_postgres_integration.py \
             tests/api/test_finding_lifecycle_sequences.py \
+            tests/api/test_finding_durable_lifecycle.py \
             tests/test_job_result_codec.py \
             tests/test_graph_snapshot_ownership.py \
             tests/test_current_graph_assembly_postgres.py \

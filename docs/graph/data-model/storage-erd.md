@@ -7,14 +7,14 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-162 tables in 10 domains. 18 declared foreign keys; 37 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+165 tables in 10 domains. 18 declared foreign keys; 39 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
   tenancy["Tenancy, identity and access<br/>24 tables"]
   scans["Scans, jobs and reports<br/>15 tables"]
   inventory["Inventory and assets<br/>16 tables"]
-  findings["Findings, triage and VEX<br/>25 tables"]
+  findings["Findings, triage and VEX<br/>28 tables"]
   graph["Graph nodes, edges, snapshots and attack paths<br/>21 tables"]
   runtime["Runtime, gateway and traces<br/>18 tables"]
   compliance["Compliance, audit and evidence<br/>10 tables"]
@@ -36,7 +36,7 @@ flowchart LR
 | Tenancy, identity and access | 24 | [storage-erd/tenancy.md](storage-erd/tenancy.md) |
 | Scans, jobs and reports | 15 | [storage-erd/scans.md](storage-erd/scans.md) |
 | Inventory and assets | 16 | [storage-erd/inventory.md](storage-erd/inventory.md) |
-| Findings, triage and VEX | 25 | [storage-erd/findings.md](storage-erd/findings.md) |
+| Findings, triage and VEX | 28 | [storage-erd/findings.md](storage-erd/findings.md) |
 | Graph nodes, edges, snapshots and attack paths | 21 | [storage-erd/graph.md](storage-erd/graph.md) |
 | Runtime, gateway and traces | 18 | [storage-erd/runtime.md](storage-erd/runtime.md) |
 | Compliance, audit and evidence | 10 | [storage-erd/compliance.md](storage-erd/compliance.md) |
@@ -130,6 +130,9 @@ Excluded:
 | `export_schedules` | [Connectors, delivery and schedules](storage-erd/connectors.md) | Postgres, SQLite | `tenant_id`, `schedule_id` | `schedule_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260929_02_export_schedules.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/export_schedule_store.py` (+1) |
 | `finding_history_jobs` | [Findings, triage and VEX](storage-erd/findings.md) | Postgres | `tenant_id`, `job_id` | `tenant_id`, `job_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/storage/finding_history_schema.py` |
 | `finding_history_rows` | [Findings, triage and VEX](storage-erd/findings.md) | Postgres | `tenant_id`, `job_id`, `ordinal` | `tenant_id`, `job_id`, `ordinal` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/storage/finding_history_schema.py` |
+| `finding_lifecycle` | [Findings, triage and VEX](storage-erd/findings.md) | Postgres | `tenant_id`, `scope_hash`, `finding_key` | `tenant_id`, `scope_hash`, `finding_key`, `canonical_id`, `report_canonical_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql` |
+| `finding_lifecycle_backfill` | [Findings, triage and VEX](storage-erd/findings.md) | Postgres | `tenant_id` | `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/storage/finding_lifecycle_schema.py` |
+| `finding_lifecycle_scans` | [Findings, triage and VEX](storage-erd/findings.md) | Postgres | `tenant_id`, `scope_hash`, `job_id` | `tenant_id`, `scope_hash`, `job_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/storage/finding_lifecycle_schema.py` |
 | `findings` | [Findings, triage and VEX](storage-erd/findings.md) | Postgres | `finding_id` | `finding_id`, `scan_run_id`, `team_id`, `cve_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql` |
 | `findings_by_framework` | [Findings, triage and VEX](storage-erd/findings.md) | Snowflake | `finding_id`, `framework_slug` | `finding_id`, `framework_slug`, `tenant_id` | `tenant_id` | persistent | `deploy/snowflake/native-app/dcm/V001__core_schema.sql` |
 | `findings_feed` | [Findings, triage and VEX](storage-erd/findings.md) | ClickHouse | `tenant_id`, `finding_id` | `tenant_id`, `run_id`, `finding_id`, `canonical_id` | `tenant_id` | persistent | `deploy/supabase/clickhouse/init.sql`, `cloud/clickhouse.py` |

@@ -59,7 +59,7 @@ _SCOPE_FILTER_DEADLINE_SECONDS = 1.5
 
 _LIVE_STATUSES = ("open", "reopened")
 
-STATUS_FILTERS = ("open", "resolved", "all")
+STATUS_FILTERS = ("open", "stale", "resolved", "all")
 
 
 class ComplianceHubStore(Protocol):

@@ -6,6 +6,7 @@ from typing import Any
 from agent_bom.api.postgres_common import _tenant_connection
 from agent_bom.api.storage.finding_history import HistoryReader, backfill_history
 from agent_bom.api.storage.sql import connection_session, require_tenant_id
+from agent_bom.api.tenant_worker import tenant_bound_context
 
 
 @contextmanager
@@ -51,3 +52,25 @@ def postgres_history_backfill(store: Any, tenant_id: str, job_ids: list[str]) ->
         count = backfill_history(connection_session(conn, "postgres"), "postgres", tenant_id, job_ids)
         conn.commit()
         return count
+
+
+@contextmanager
+def sqlite_lifecycle_session(store: Any, tenant_id: str, *, write: bool = True):
+    """One committed transaction on the finding lifecycle tables; a read takes no writer lock."""
+    require_tenant_id(tenant_id)
+    conn = store._conn
+    try:
+        with conn:  # commits on success, rolls back on an exception
+            if write:
+                conn.execute("BEGIN IMMEDIATE")
+            yield connection_session(conn, "sqlite")
+    finally:
+        store._close_thread_connection()
+
+
+@contextmanager
+def postgres_lifecycle_session(store: Any, tenant_id: str, *, write: bool = True):
+    require_tenant_id(tenant_id)
+    with tenant_bound_context(tenant_id), _tenant_connection(store._pool) as conn:
+        yield connection_session(conn, "postgres")
+        conn.commit()

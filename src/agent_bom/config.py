@@ -305,6 +305,7 @@ SECRET_LIVE_VALIDATION_ENABLED = _bool("AGENT_BOM_SECRET_LIVE_VALIDATION_ENABLED
 # it never deletes data. Hard deletion is governed by the retention knobs below.
 
 RETENTION_DAYS = _int("AGENT_BOM_RETENTION_DAYS", 90)
+FINDING_STALE_DAYS = _int("AGENT_BOM_FINDING_STALE_DAYS", 30)  # open findings unobserved this long read as stale
 
 # ── Detective-control Evidence Freshness ──────────────────────────────────
 # How old the newest completed scan may be before DETECTIVE compliance controls

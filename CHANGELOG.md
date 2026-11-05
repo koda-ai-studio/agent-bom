@@ -9,7 +9,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Finding dates now outlast scan retention: `first_seen`, `last_seen`, resolved and reopened dates live in their own per-finding table, written in the same transaction as the scan. A resolved finding stays listed after its scans expire, and late, repeated or concurrent scans cannot move a finding's state incorrectly. Existing dates are seeded from retained scans on the first read after upgrade.
+- Every resolved finding states why: `resolution_reason` is `no_longer_detected` or `asset_deleted`. `asset_deleted` needs a complete AWS inventory covering the asset's account, region and service, with no warnings or missing permissions, from the same source and scope. Other sources never produce it; see `docs/FINDING_LIFECYCLE.md`.
+- `stale` marks an open finding not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). It stays open and counted, can be filtered with `status=stale` on the API, `--status stale` on the CLI and the Status filter on the Findings page, and never resolves anything.
+
 ### Changed
+- The same package version in two projects is now two findings with separate dates and resolutions. Finding ids change for scans with a project: a push's `target_scope` or an API scan's target fields. Findings with no project keep their ids. Exceptions and triage assignees still apply by vulnerability and package, and ticket links are copied to each project's finding on first read.
+- An open finding stays in the default findings view after the default read window passes it; an explicit `window_days` still narrows it.
+- A report time more than a day ahead of when it was stored counts as the stored time, so a future-dated push cannot outrank later scans.
 - The GitHub Action reads OSV's application-ecosystem archives by default (`vuln-db-scope: application`, about 0.3 GB instead of 2.9 GB). OS and other packages are answered by live OSV, and the JSON report, SARIF run properties, job summary and pull request comment state the scope. Set `vuln-db-scope: full` for the previous behaviour. The Action's cache key changes, so the first run after upgrading builds a new database.
 - A first `--auto-update-db` refresh caps NVD at 60 seconds, newest CVEs first, and reports it as partial; later refreshes resume it. `AGENT_BOM_NVD_TIME_BUDGET_SECONDS` overrides the cap.
 - `--auto-update-db` prints the time each source took.

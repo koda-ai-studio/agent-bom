@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_bom.api.finding_job_metadata import _normalized_evidence_timestamp
 from agent_bom.api.finding_lifecycle import lifecycle_fields
+from agent_bom.evidence.finding_stale import is_stale
 
 GROUP_LIFECYCLE_KEYS = (
     "status",
@@ -15,13 +16,25 @@ GROUP_LIFECYCLE_KEYS = (
     "last_resolved_at",
     "reopened_at",
     "status_updated_at",
+    "resolution_reason",
+    "stale",
     "open_occurrence_count",
     "resolved_occurrence_count",
 )
 
 
 def new_group_lifecycle() -> dict[str, Any]:
-    return {"open": 0, "resolved": 0, "reopened": 0, "first_seen": "", "last_seen": "", "resolved_at": "", "reopened_at": ""}
+    return {
+        "open": 0,
+        "resolved": 0,
+        "reopened": 0,
+        "stale": 0,
+        "deleted": 0,
+        "first_seen": "",
+        "last_seen": "",
+        "resolved_at": "",
+        "reopened_at": "",
+    }
 
 
 def _pick(current: str, candidate: Any, *, latest: bool) -> str:
@@ -40,9 +53,11 @@ def record_group_occurrence(state: dict[str, Any], row: dict[str, Any]) -> None:
     status = str(row.get("status") or "open")
     if status == "resolved":
         state["resolved"] += 1
+        state["deleted"] += int(row.get("resolution_reason") == "asset_deleted")
     else:
         state["open"] += 1
         state["reopened"] += int(status == "reopened")
+        state["stale"] += int(is_stale(row))
     state["first_seen"] = _pick(state["first_seen"], row.get("first_seen"), latest=False)
     state["last_seen"] = _pick(state["last_seen"], row.get("last_seen"), latest=True)
     state["resolved_at"] = _pick(state["resolved_at"], row.get("resolved_at") or row.get("last_resolved_at"), latest=True)
@@ -56,11 +71,13 @@ def group_lifecycle_fields(state: dict[str, Any]) -> dict[str, Any]:
         first_seen=state["first_seen"],
         resolved_at=state["resolved_at"] or None,
         reopened_at=state["reopened_at"] or None,
+        resolution_reason="asset_deleted" if state["deleted"] and state["deleted"] == state["resolved"] else None,
     )
     return {
         **fields,
         "first_seen": state["first_seen"] or None,
         "last_seen": state["last_seen"] or None,
+        "stale": bool(state["open"]) and state["stale"] == state["open"],
         "open_occurrence_count": state["open"],
         "resolved_occurrence_count": state["resolved"],
     }
