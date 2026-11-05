@@ -10,6 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- A later finding on the same CVE no longer erases earlier CVE details or its KEV verdict, and every finding that names a CVE follows that CVE's KEV verdict in counts and lists alike.
 - KEV counts and the `kev=true` filter no longer miss findings whose stored payload is compressed; existing rows are backfilled by migration `20261104_01`.
 - Overview, posture and grouped findings report exact issue counts from a store aggregate at any size, so totals no longer shrink as data grows and no severity reads 0 because a row budget ran out. Coverage lanes and the Vuln / SCA card are exact on the same basis.
 - First reads of overview, `kev=true` and posture counts no longer join the whole ledger; they read indexed columns.

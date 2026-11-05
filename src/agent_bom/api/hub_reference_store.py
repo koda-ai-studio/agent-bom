@@ -12,6 +12,7 @@ from agent_bom.api.hub_reference_payload import (
     batch_reference_keys,
     extract_reference_blobs,
     hydrate_reference_payload,
+    merge_cve_intel,
     resolve_cve_id,
 )
 from agent_bom.api.storage.finding_payloads import persist_references
@@ -120,7 +121,7 @@ def persist_finding_references_postgres(
 
 def _upsert_cve_intel_memory(tenant_id: str, cve_id: str, blob: dict[str, Any]) -> None:
     with _MEMORY_LOCK:
-        _MEMORY_CVE_INTEL[(tenant_id, cve_id)] = dict(blob)
+        _MEMORY_CVE_INTEL[(tenant_id, cve_id)] = merge_cve_intel(_MEMORY_CVE_INTEL.get((tenant_id, cve_id)), blob)
 
 
 def _upsert_framework_ref_memory(tenant_id: str, framework_ref: str, blob: dict[str, Any]) -> None:

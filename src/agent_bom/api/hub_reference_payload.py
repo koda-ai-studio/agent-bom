@@ -98,14 +98,8 @@ def extract_reference_blobs(payload: Mapping[str, Any]) -> tuple[dict[str, Any],
     cve_id = resolve_cve_id(payload)
     intel_blob: dict[str, Any] | None = None
     if cve_id:
-        intel_blob = {}
-        for key in _CVE_INTEL_KEYS:
-            if key in slim:
-                intel_blob[key] = slim.pop(key)
-        if not intel_blob:
-            intel_blob = None
-        else:
-            slim["intel_ref"] = cve_id
+        slim["intel_ref"] = cve_id
+        intel_blob = {key: slim.pop(key) for key in _CVE_INTEL_KEYS if key in slim} or None
 
     framework_blob: dict[str, Any] | None = None
     fw_ref = framework_ref_key(payload)
@@ -120,6 +114,22 @@ def extract_reference_blobs(payload: Mapping[str, Any]) -> tuple[dict[str, Any],
             framework_blob = None
 
     return slim, intel_blob, framework_blob
+
+
+def merge_cve_intel(existing: Mapping[str, Any] | None, incoming: Mapping[str, Any]) -> dict[str, Any]:
+    """Combine a stored CVE record with a newer, possibly partial, one.
+
+    Findings carry different subsets of the intel fields, so a blank value never
+    erases a known one. A KEV verdict is kept once seen: scans without KEV data
+    report ``false``, and hiding a known-exploited CVE is the unsafe failure.
+    """
+    merged = dict(existing or {})
+    for key, value in incoming.items():
+        if key not in merged or value not in (None, "", [], {}):
+            merged[key] = value
+    if payload_is_kev(existing):
+        merged["is_kev"] = True
+    return merged
 
 
 def is_reference_backed_payload(payload: Mapping[str, Any]) -> bool:

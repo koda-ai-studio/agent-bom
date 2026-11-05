@@ -11,6 +11,7 @@ from agent_bom.api.hub_reference_payload import (
     batch_reference_keys,
     extract_reference_blobs,
     hydrate_reference_payload,
+    merge_cve_intel,
     payload_is_kev,
     resolve_cve_id,
 )
@@ -48,12 +49,16 @@ def persist_references(tx: SqlSession, dialect: Dialect, tenant: str, payload: M
     encoded = (lambda blob: json.dumps(blob, sort_keys=True)) if dialect == "postgres" else encode_hub_payload
     cve_id = resolve_cve_id(payload)
     if intel and cve_id:
-        tx.execute(
-            f"INSERT INTO hub_cve_intel (tenant_id, cve_id, payload, updated_at, is_kev) VALUES (?, ?, {value}, ?, ?) "  # nosec B608
-            "ON CONFLICT (tenant_id, cve_id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at, "
-            "is_kev = excluded.is_kev",
-            (tenant, cve_id, encoded(intel), utc_timestamp(), payload_is_kev(intel)),
-        )  # nosec B608
+        stored = tx.execute("SELECT payload FROM hub_cve_intel WHERE tenant_id = ? AND cve_id = ?", (tenant, cve_id)).fetchone()
+        current = decode_hub_payload(stored[0]) if stored else None
+        merged = merge_cve_intel(current, intel)
+        if merged != current:
+            tx.execute(
+                f"INSERT INTO hub_cve_intel (tenant_id, cve_id, payload, updated_at, is_kev) VALUES (?, ?, {value}, ?, ?) "  # nosec B608
+                "ON CONFLICT (tenant_id, cve_id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at, "
+                "is_kev = hub_cve_intel.is_kev OR excluded.is_kev",
+                (tenant, cve_id, encoded(merged), utc_timestamp(), payload_is_kev(merged)),
+            )  # nosec B608
     framework_ref = str(slim.get("framework_ref") or "")
     if framework and framework_ref:
         tx.execute(
