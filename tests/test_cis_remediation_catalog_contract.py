@@ -32,9 +32,15 @@ def _literal_string(node: ast.expr | None, constants: dict[str, str]) -> str | N
 
 
 def _module_sources(path: Path) -> list[Path]:
-    """The benchmark facade plus its split-out ``<provider>_cis`` check package, when present."""
-    package = path.with_name(path.stem.removesuffix("_benchmark"))
-    return [path, *sorted(package.glob("*.py"))] if package.is_dir() else [path]
+    """The benchmark facade plus its split-out report module and check package, when present."""
+    stem = path.stem.removesuffix("_benchmark")
+    package = path.with_name(stem)
+    report = path.with_name(f"{stem}_report.py")
+    return [
+        path,
+        *([report] if report.is_file() else []),
+        *(sorted(package.glob("*.py")) if package.is_dir() else []),
+    ]
 
 
 def _catalog_identities(cloud: str, path: Path) -> list[CISControlIdentity]:

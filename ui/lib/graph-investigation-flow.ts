@@ -64,6 +64,14 @@ function inferredScenario(nodes: Node<LineageNodeData>[], edges: Edge[]): Invest
   return "inventory";
 }
 
+function contextHandles(e: Edge, positions: Map<string, { x: number; y: number }>) {
+  if (!CONTEXT.has(String(e.data?.relationship))) return {};
+  const source = positions.get(e.source), target = positions.get(e.target);
+  if ((source?.x ?? 0) > (target?.x ?? 0)) return { sourceHandle: "context", targetHandle: "context" };
+  // The provider mark sits on the top-right of the glyph, so an upward edge leaves from top centre.
+  return source && target && target.y < source.y ? { sourceHandle: "context-up" } : {};
+}
+
 /** Layout changes reading order, never relationship direction, reachability or finding identity. */
 export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Edge[], requested: InvestigationFlow, narrowViewport = false) {
   const shortCaptions = input.every(n => String(n.data.label).length <= 28);
@@ -149,7 +157,6 @@ export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Ed
   }
   return { scenario, nodes: nodes.map(n => ({ ...n, position: positions.get(n.id) ?? n.position,
     style: { ...n.style, minHeight: 300 }, data: { ...n.data, evidenceFlow: true } })), edges: edges.map(e => ({ ...e,
-    ...(CONTEXT.has(String(e.data?.relationship)) && (positions.get(e.source)?.x ?? 0) > (positions.get(e.target)?.x ?? 0)
-      ? { sourceHandle: "context", targetHandle: "context" } : {}),
+    ...contextHandles(e, positions),
     data: { ...e.data, quietLabel: true, individualLabel: true, directionEmphasis: true } })) };
 }
