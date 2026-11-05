@@ -10,7 +10,7 @@ import httpx
 import pytest
 from starlette.testclient import TestClient
 
-from agent_bom.api import pipeline, push_ingest_worker, stores
+from agent_bom.api import job_read_retry, pipeline, push_ingest_worker, stores
 from agent_bom.api.fleet_store import InMemoryFleetStore
 from agent_bom.api.idempotency_store import InMemoryIdempotencyStore
 from agent_bom.api.models import JobStatus
@@ -280,3 +280,89 @@ def test_sync_push_stored_receipt_matches_real_sqlite_graph(tmp_path, monkeypatc
     assert projection["nodes"] >= 2 and projection["edges"] >= 1
     assert graph.snapshot_identity(tenant_id="default", scan_id=projection["scan_id"])[1]
     assert client.get(f"/v1/results/push/{receipt['job_id']}").json()["graph_persistence"] == projection
+
+
+def test_transient_store_read_recovers_in_process_without_failing_the_push(monkeypatch: pytest.MonkeyPatch, graph_calls: list[str]) -> None:
+    store = stores._get_store()
+    real_get = store.get
+    reads = {"worker": 0}
+    worker_thread_prefix = "ThreadPoolExecutor"
+
+    def flaky_get(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202
+        if threading.current_thread().name.startswith(worker_thread_prefix) and reads["worker"] == 0:
+            reads["worker"] += 1
+            raise OSError("pool timeout")
+        return real_get(*args, **kwargs)
+
+    monkeypatch.setattr(store, "get", flaky_get)
+    monkeypatch.setattr(job_read_retry, "READ_RETRY_DELAYS", (0.0,))
+    client = TestClient(app)
+    accepted = client.post("/v1/results/push", json=_payload("flaky-read"), headers=ASYNC)
+    job_id = accepted.json()["job_id"]
+    _wait_for(lambda: real_get(job_id, tenant_id="default").status is JobStatus.DONE)
+    assert reads["worker"] == 1
+    assert graph_calls == [job_id]
+
+
+def test_lasting_store_read_failure_leaves_the_push_pending_and_a_retry_completes_it(
+    monkeypatch: pytest.MonkeyPatch, graph_calls: list[str]
+) -> None:
+    store = stores._get_store()
+
+    class _Unavailable:
+        def get(self, *_args, **_kwargs) -> None:  # noqa: ANN002, ANN003
+            raise OSError("pool timeout")
+
+    monkeypatch.setattr(job_read_retry, "READ_RETRY_DELAYS", ())
+    monkeypatch.setattr(push_ingest_worker, "_get_store", lambda: _Unavailable())
+    client = TestClient(app)
+    accepted = client.post("/v1/results/push", json=_payload("down-read"), headers=ASYNC)
+    job_id = accepted.json()["job_id"]
+    _wait_for(lambda: not pipeline_has_local_dispatch(job_id))
+    job = store.get(job_id, tenant_id="default")
+    assert job.status is JobStatus.PENDING and job.error is None
+    assert graph_calls == []
+
+    monkeypatch.setattr(push_ingest_worker, "_get_store", lambda: store)
+    assert client.post("/v1/results/push", json=_payload("down-read"), headers=ASYNC).status_code == 202
+    _wait_for(lambda: store.get(job_id, tenant_id="default").status is JobStatus.DONE)
+    assert graph_calls == [job_id]
+
+
+def pipeline_has_local_dispatch(job_id: str) -> bool:
+    from agent_bom.api import scan_queue
+
+    return job_id in scan_queue._local_dispatches
+
+
+def test_sqlite_sync_push_interrupted_before_restart_fails_and_the_same_key_recovers(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_bom.api.idempotency_store import SQLiteIdempotencyStore
+    from agent_bom.api.scan_job_reconciliation import fail_orphaned_active_scan_jobs
+    from agent_bom.api.store import SQLiteJobStore
+
+    class _Killed(BaseException):
+        pass
+
+    def killed(*_args, **_kwargs) -> None:  # noqa: ANN002, ANN003
+        raise _Killed
+
+    jobs = SQLiteJobStore(str(tmp_path / "jobs.db"))
+    set_job_store(jobs)
+    set_idempotency_store(SQLiteIdempotencyStore(str(tmp_path / "keys.db")))
+    monkeypatch.setenv("AGENT_BOM_IDEMPOTENCY_RESERVATION_LEASE_SECONDS", "1")
+    monkeypatch.setattr("agent_bom.api.routes.observability._persist_graph_snapshot", killed)
+    client = TestClient(app, raise_server_exceptions=False)
+    assert client.post("/v1/results/push", json=_payload("sqlite-kill")).status_code == 500
+    rows = jobs.list_summary(tenant_id="default")
+    assert [row["status"] for row in rows] == ["running"]
+    job_id = rows[0]["job_id"]
+
+    assert fail_orphaned_active_scan_jobs(jobs) == 1  # what the next process start does
+    assert client.get(f"/v1/results/push/{job_id}").json()["status"] == "failed"
+
+    monkeypatch.setattr("agent_bom.api.routes.observability._persist_graph_snapshot", lambda *_a, **_k: None)
+    time.sleep(1.1)
+    retry = client.post("/v1/results/push", json=_payload("sqlite-kill"))
+    assert retry.status_code == 201, retry.text
+    assert retry.json()["job_id"] == job_id
+    assert jobs.get(job_id, tenant_id="default").status is JobStatus.DONE
