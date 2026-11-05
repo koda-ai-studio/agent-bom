@@ -126,7 +126,16 @@ def test_bundled_reference_detects_scoped_target_without_leaf_fallback():
     ],
 )
 def test_scoped_typo_scanner_and_standalone_guard_verdict_parity(name, expected):
-    from tests.test_agent_bom_guard import guard
+    from tests.test_agent_bom_guard import _decide, _decision, _reason, guard
 
     assert check_typosquat(name, "npm") == expected
     assert guard.check_typosquat(name, "npm") == expected
+    package = Package(name=name, version="1.0.0", ecosystem="npm")
+    _flag_suspicious_packages([package])
+    assert package.is_malicious is (expected is not None)
+    verdict = _decide(f"npm install {name}", osv_lookup="false")
+    if expected is None:
+        assert verdict is None
+    else:
+        assert _decision(verdict) == "deny"
+        assert expected in _reason(verdict)

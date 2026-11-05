@@ -23,6 +23,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Unresolved range advisories produce a partial, review-required result without a posture grade; Markdown and CSV include the review candidates.
 - Image inventory without an evaluated agent entrypoint retains unknown dependency reachability, preserving structural CVE paths without claiming execution.
 - Graph path technique enrichment reuses the batch hop index instead of repeatedly reading the same adjacency lists.
+- Scanner and install guard agree on scoped package typo warnings: unknown namespaces retain leaf checks, lookalike scopes target known scoped packages, and legitimate scoped package names remain clean.
 
 ## [0.113.2] - 2026-11-03
 

@@ -113,8 +113,14 @@ def _scoped_target(scope: str, rest: str, normalized: str, popular: list[str], l
             if target:
                 root = target.split("-", 1)[0]
                 return None if scope in (root, f"{root}js", target) else target
-    scoped_targets = [target for target in popular if target.startswith("@") and target.endswith(f"/{rest}")]
-    return _target(normalized, scoped_targets, legitimate)
+    known_scoped = sorted(target for target in set(popular) | legitimate if target.startswith("@"))
+    scoped_targets = [target for target in known_scoped if target.endswith(f"/{rest}")]
+    target = _target(normalized, scoped_targets, legitimate)
+    if target:
+        return target
+    if any(target.startswith(f"@{scope}/") for target in known_scoped):
+        return None
+    return _target(rest, unscoped_targets, legitimate)
 
 
 def check_typosquat(name: str, ecosystem: str) -> str | None:
