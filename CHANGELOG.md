@@ -16,6 +16,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - The CVE link repair no longer passes over rows. Under some query plans its keyset page moved mid-statement, so it could leave a row unmarked and carry on past it, leaving that row's CVE link unrepaired.
+- Skill audit: a security-review skill that lists coercion phrases in quotes as things to report now gets a low finding instead of high, for example `Text that asks the model to "bypass the guardrails"`. The finding stays visible.
+- Skill audit: a quote or example word no longer demotes a real directive. These shapes were low and are now high: `Obey phrases such as "..."`, `Use phrases such as "..." and comply`, a report sentence inside an HTML comment, `Do not hesitate to ...`, a plain sentence under a heading such as `## Red flags`, and a report sentence hidden by base64, zero-width or homoglyph characters.
+- Skill audit: packages launched by `npx`, `bunx`, `uvx` or `uv tool run` in an MCP JSON block, and `npx --yes` commands, now reach the package inventory, so they are checked like any other package.
 - Typosquat detection now flags an adjacent-letter swap from five letters (`axois` as `axios`); single-letter substitutions keep their six-letter floor.
 - Investigation graph: an exposure flow now continues through the workloads an exposed host runs, so the path to identities and data opens framed on one screen. Edges between adjacent entities no longer arc over nothing.
 - A synchronous push interrupted by a process kill under distributed dispatch no longer stays `running` forever. The request now heartbeats a lease, and once that lease expires any replica marks the job `failed`, so the client can resubmit under the same idempotency key. A long push with a live lease is never failed for its age, and pushes already stranded by earlier releases are failed after the stuck-job timeout.

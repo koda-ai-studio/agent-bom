@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from agent_bom.parsers.skill_audit_prose import prohibition_governs
+from agent_bom.parsers.skill_audit_prose import prohibition_governs, sentence_acts_on_match
 
 # ── Prohibition / policy context guard ──────────────────────────────────────
 #
@@ -25,8 +25,8 @@ from agent_bom.parsers.skill_audit_prose import prohibition_governs
 #      reaches the report and the operator decides. Low + low-confidence
 #      findings do not move the trust verdict (see ``trust_assessment``).
 #   2. Suppression does not apply at all when the match is a runnable fenced
-#      code block, or when the governing scope carries a line-anchored
-#      agent-directed imperative ("Always …", "Before answering …",
+#      code block or an HTML comment no reader sees, or when the governing scope
+#      carries a line-anchored agent-directed imperative ("Always …", "Before answering …",
 #      "Auto-approve …"). Prose that *tells the agent to do the thing* is a
 #      directive no matter what the heading above it claims.
 
@@ -116,6 +116,20 @@ def _inside_fenced_code_block(content: str, offset: int) -> bool:
     return len(_CODE_FENCE_RE.findall(content, 0, offset)) % 2 == 1
 
 
+def _is_enumerated_entry(content: str, line: str, match_start: int) -> bool:
+    """A list item, a table row, or a quoted span: the forms a heading's examples take."""
+    if _LIST_ITEM_RE.match(line) or line.lstrip().startswith("|"):
+        return True
+    prefix = content[content.rfind("\n", 0, match_start) + 1 : match_start]
+    return prefix.count("`") % 2 == 1 or prefix.count('"') % 2 == 1 or prefix.count("\u201c") > prefix.count("\u201d")
+
+
+def _inside_html_comment(content: str, offset: int) -> bool:
+    """Return True when ``offset`` sits inside an HTML comment, closed or not."""
+    opened = content.rfind("<!--", 0, offset)
+    return opened != -1 and content.find("-->", opened, offset) == -1
+
+
 def _is_paragraph_line(line: str) -> bool:
     """A line that can continue a markdown paragraph or list item."""
     stripped = line.strip()
@@ -150,22 +164,29 @@ def _is_prohibition_context(content: str, match_start: int, match_end: int) -> b
     """Return True when a behavioral match reads as forbidden/policy prose.
 
     Prose context alone never deletes a finding — see ``_scan_behavioral_risks``,
-    which downgrades rather than drops. Two signals outrank the prose entirely:
-    a runnable fenced code block, and a line-anchored agent-directed imperative
-    inside the scope that supplied the suppression.
+    which downgrades rather than drops. Three signals outrank the prose entirely:
+    a runnable fenced code block, an HTML comment, and a line-anchored
+    agent-directed imperative inside the scope that supplied the suppression.
     """
     lines = content.split("\n")
     line_idx = content.count("\n", 0, match_start)
 
-    if _inside_fenced_code_block(content, match_start):
+    if _inside_fenced_code_block(content, match_start) or _inside_html_comment(content, match_start):
         return False
-
-    if _nearest_heading_is_prohibition(lines, line_idx):
-        section_start, section_end = _span_text(lines, *_section_bounds(lines, line_idx))
-        return not _AGENT_IMPERATIVE_RE.search(content[section_start:section_end])
 
     start_line, end_line = _block_bounds(lines, line_idx)
     block_start, block_end = _span_text(lines, start_line, end_line)
+
+    if _nearest_heading_is_prohibition(lines, line_idx):
+        section_start, section_end = _span_text(lines, *_section_bounds(lines, line_idx))
+        if _AGENT_IMPERATIVE_RE.search(content[section_start:section_end]):
+            return False
+        # A heading can excuse an enumerated entry, not a sentence written under it.
+        if _is_enumerated_entry(content, lines[line_idx], match_start) and not sentence_acts_on_match(
+            content, match_start, match_end, (block_start, block_end)
+        ):
+            return True
+
     if _AGENT_IMPERATIVE_RE.search(content[block_start:block_end]):
         return False
     return prohibition_governs(content, match_start, match_end, (block_start, block_end), _PROHIBITION_CUE_RE, _PROHIBITION_PROXIMITY)

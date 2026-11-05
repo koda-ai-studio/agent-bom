@@ -21,6 +21,7 @@ from pathlib import Path
 
 from agent_bom.models import MCPServer, Package, TransportType
 from agent_bom.parsers.npm_semver import npm_exact_version
+from agent_bom.parsers.skill_launchers import _parse_pkg_spec, collect_launcher_packages, collect_mcp_launcher_packages
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
@@ -44,12 +45,6 @@ SKILL_FILE_NAMES: list[str] = [
 
 # ─── Regex patterns ──────────────────────────────────────────────────────────
 
-_NPX_RE = re.compile(
-    r"(?:npx|bunx)[ \t]+(?:-[yYp][ \t]+)*(?!-)(@?[\w./-]+(?:@[\w.^~<>=+-]+)?)",
-)
-_UVX_RE = re.compile(
-    r"(?:uvx|uv[ \t]+tool[ \t]+run)[ \t]+([\w][\w.-]*(?:(?:==|@)[\w.+-]+)?)",
-)
 _PIP_INSTALL_RE = re.compile(
     r"pip\s+install\s+(?:-[\w-]+\s+)*(.+?)(?:\s*$|\s*&&|\s*\\)",
     re.MULTILINE,
@@ -254,23 +249,7 @@ def parse_skill_file(path: Path) -> SkillScanResult:
     code_blocks = _CODE_BLOCK_RE.findall(content)
     code_text = "\n".join(code_blocks) if code_blocks else content
 
-    # NPX packages
-    for match in _NPX_RE.finditer(code_text):
-        raw = match.group(1)
-        name, version = _parse_pkg_spec(raw, "@")
-        key = (name.lower(), "npm")
-        if key not in seen_packages:
-            seen_packages.add(key)
-            packages.append(Package(name=name, version=version or "latest", ecosystem="npm"))
-
-    # UVX packages
-    for match in _UVX_RE.finditer(code_text):
-        raw = match.group(1)
-        name, version = _parse_pkg_spec(raw, "==" if "==" in raw else "@")
-        key = (name.lower(), "pypi")
-        if key not in seen_packages:
-            seen_packages.add(key)
-            packages.append(Package(name=name, version=version or "latest", ecosystem="pypi"))
+    collect_launcher_packages(code_text, packages, seen_packages)
 
     # pip install packages
     for match in _PIP_INSTALL_RE.finditer(code_text):
@@ -331,6 +310,7 @@ def parse_skill_file(path: Path) -> SkillScanResult:
                 transport = _server_transport(srv_config, url=url)
                 # Redact values — only keep keys for credential detection
                 redacted_env = {k: "***REDACTED***" for k in env}
+                collect_mcp_launcher_packages(command, args, packages, seen_packages)
                 servers.append(
                     MCPServer(
                         name=name,
@@ -457,37 +437,6 @@ def _npm_install_package(name: str, declared: str) -> Package:
     if exact is not None:
         return Package(name=name, version=exact, ecosystem="npm")
     return _unresolved_install_package(name, "npm", declared)
-
-
-def _parse_pkg_spec(spec: str, version_sep: str) -> tuple[str, str]:
-    """Parse a package spec like '@scope/pkg@1.0.0' or 'pkg==1.0.0'.
-
-    Returns (name, version). Version may be empty string.
-    """
-    spec = spec.strip("'\"")
-    if not spec:
-        return ("", "")
-
-    if version_sep == "@":
-        # Handle scoped npm packages: @scope/name@version
-        if spec.startswith("@"):
-            # Find the second @ (version separator)
-            rest = spec[1:]
-            if "@" in rest:
-                idx = rest.index("@")
-                return (spec[: idx + 1], rest[idx + 1 :])
-            return (spec, "")
-        # Non-scoped: name@version
-        if "@" in spec:
-            parts = spec.split("@", 1)
-            return (parts[0], parts[1])
-        return (spec, "")
-    else:
-        # pip-style: name==version or name>=version
-        if version_sep in spec:
-            parts = spec.split(version_sep, 1)
-            return (parts[0], parts[1])
-        return (spec, "")
 
 
 def _is_credential_name(name: str) -> bool:

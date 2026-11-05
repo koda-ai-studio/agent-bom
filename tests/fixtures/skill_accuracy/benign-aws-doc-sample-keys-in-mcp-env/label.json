@@ -10,5 +10,12 @@
     {
       "category": "shell_access"
     }
+  ],
+  "packages": [
+    {
+      "name": "awslabs.s3-tables-mcp-server",
+      "ecosystem": "pypi",
+      "version": "0.0.8"
+    }
   ]
 }
