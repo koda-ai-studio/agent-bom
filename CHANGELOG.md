@@ -36,6 +36,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Graph path technique enrichment reuses the batch hop index instead of repeatedly reading the same adjacency lists.
 - Scanner and install guard agree on scoped package typo warnings: unknown namespaces retain leaf checks, lookalike scopes target known scoped packages, and legitimate scoped package names remain clean.
 
+- Keep distributed scan recovery lease-owned and publish pushed-result completion only after graph persistence.
+
 ## [0.113.2] - 2026-11-03
 
 ### Fixed

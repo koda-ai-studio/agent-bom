@@ -55,6 +55,21 @@ def test_async_push_is_enqueued_with_its_row_and_ingested_once_across_replicas(p
     claimed = pg_store.claim_next("replica-b", 600)
     assert claimed is not None and claimed.job_id == job_id
     assert PostgresJobStore(pg_store._pool).claim_next("replica-c", 600) is None
+    from datetime import datetime, timezone
+
+    from agent_bom.api.scan_job_reconciliation import fail_stale_active_scan_jobs
+
+    monkeypatch.setenv("AGENT_BOM_DISTRIBUTED_SCANS", "1")
+    # The original admission is old, but the live claim must survive the reaper.
+    assert fail_stale_active_scan_jobs(pg_store, timeout_seconds=1, now=datetime(2030, 1, 1, tzinfo=timezone.utc)) == 0
+    old_owner = claimed._dispatch_claim_owner
+    with pg_store._scope_connection(all_tenants=True) as conn:
+        conn.execute("UPDATE scan_dispatch_queue SET lease_expires_at='2000-01-01T00:00:00Z' WHERE job_id=%s", (job_id,))
+        conn.commit()
+    assert pg_store.requeue_expired_leases() == 1
+    claimed = PostgresJobStore(pg_store._pool).claim_next("replica-c", 600)
+    assert claimed is not None and claimed.job_id == job_id
+    assert claimed._dispatch_claim_owner != old_owner
     token = set_current_tenant(tenant)
     try:
         pipeline._run_claimed_scan_sync(claimed)
