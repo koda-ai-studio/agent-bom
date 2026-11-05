@@ -1,4 +1,4 @@
-.PHONY: help install test lint lint-ruff lint-mypy format format-check preflight preflight-fix ci-local ci-smoke docker-build docker-run scan clean build-ui release-build publish-test publish analytics dev check-dupes clean-dupes secrets platform-up fullstack-up
+.PHONY: help plugin-submission-check install test lint lint-ruff lint-mypy format format-check preflight preflight-fix ci-local ci-smoke docker-build docker-run scan clean build-ui release-build publish-test publish analytics dev check-dupes clean-dupes secrets platform-up fullstack-up
 
 help:  ## Show this help message
 	@echo 'Usage: make [target]'
@@ -219,3 +219,6 @@ analytics:  ## Show adoption metrics (PyPI downloads, GitHub traffic, stars)
 	@echo ""
 	@echo "=== GitHub stars & forks ==="
 	@gh api /repos/koda-ai-studio/agent-bom --jq '"  Stars: " + (.stargazers_count|tostring) + "   Forks: " + (.forks_count|tostring)' 2>/dev/null || true
+
+plugin-submission-check:  ## Stop a plugin directory submission that would ship stale pins or draft legal pages
+	python scripts/check_plugin_submission_ready.py

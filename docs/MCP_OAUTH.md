@@ -39,8 +39,9 @@ approved subject, `read` scope, and an `iat`/`exp` interval of at most one hour.
 The signed `tenant_id` must exactly match the explicit deployment tenant.
 Every authenticated request carries that verified binding into tool queries;
 a different tenant argument is refused. Tokens do not grant write privileges
-even if they contain administrative claims. OAuth catalogs exclude mutating,
-process-launching and activity-history tools. Use separate tenant deployments;
+even if they contain administrative claims. OAuth catalogs exclude tools that change
+state, launch processes or read activity history, including `scan`, which stores
+its result and can update the advisory database. Use separate tenant deployments;
 this mode does not dynamically route between tenants.
 
 Next, connect an authorized MCP client and verify `initialize` and `tools/list`

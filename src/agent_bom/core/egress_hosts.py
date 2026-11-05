@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Final
 
-__all__ = ["CONDITIONAL_HOSTS", "DECLARED_HOSTS", "LOOKUP_HOSTS", "USER_NAMED_TARGETS"]
+__all__ = ["CONDITIONAL_HOSTS", "DATABASE_UPDATE_HOSTS", "DECLARED_HOSTS", "LOOKUP_HOSTS", "USER_NAMED_TARGETS"]
 
 # Hosts reached by the lookup skills (checkup, scan, check, fix, affected,
 # audit-mcp, bom) on a normal run.
@@ -34,7 +34,17 @@ CONDITIONAL_HOSTS: Final[dict[str, str]] = {
     "sum.golang.org": "Go module checksums",
 }
 
+# Reached only when the local advisory database is refreshed: `agent-bom db update`,
+# `--auto-update-db`, or the MCP scan tool with auto_update_db=true. No skill does this on its own.
+DATABASE_UPDATE_HOSTS: Final[dict[str, str]] = {
+    "osv-vulnerabilities.storage.googleapis.com": "OSV bulk advisory archives",
+    "secdb.alpinelinux.org": "Alpine security database",
+    "security-tracker.debian.org": "Debian security tracker",
+    "deb.freexian.com": "Debian extended LTS security tracker",
+    "epss.cyentia.com": "the older EPSS address, followed only as a redirect",
+}
+
 # Not a fixed host list: these are reached only when the user names them.
 USER_NAMED_TARGETS: Final[str] = "container registries, git hosts and cloud provider APIs that you name"
 
-DECLARED_HOSTS: Final[frozenset[str]] = frozenset(LOOKUP_HOSTS) | frozenset(CONDITIONAL_HOSTS)
+DECLARED_HOSTS: Final[frozenset[str]] = frozenset(LOOKUP_HOSTS) | frozenset(CONDITIONAL_HOSTS) | frozenset(DATABASE_UPDATE_HOSTS)

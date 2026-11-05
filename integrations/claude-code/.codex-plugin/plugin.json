@@ -24,14 +24,14 @@
       "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server"],
       "cwd": ".",
       "env_vars": ["AGENT_BOM_MCP_WORKSPACE_ROOTS"],
-      "env": { "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0" }
+      "env": { "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0", "GITHUB_TOKEN": "", "GH_TOKEN": "", "NVD_API_KEY": "" }
     },
     "agent-bom-audit": {
       "command": "uv",
       "args": ["run", "--frozen", "--isolated", "--project", ".", "agent-bom", "mcp", "server", "--profile", "audit"],
       "cwd": ".",
       "env_vars": ["AGENT_BOM_MCP_WORKSPACE_ROOTS"],
-      "env": { "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0" }
+      "env": { "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0", "GITHUB_TOKEN": "", "GH_TOKEN": "", "NVD_API_KEY": "" }
     }
   },
   "interface": {
@@ -53,7 +53,7 @@
     "composerIcon": "./assets/icon.png",
     "logo": "./assets/icon.png",
     "screenshots": [],
-    "privacyPolicyURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md#privacy",
-    "termsOfServiceURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/LICENSE"
+    "privacyPolicyURL": "https://koda-ai-studio.github.io/agent-bom/privacy/",
+    "termsOfServiceURL": "https://koda-ai-studio.github.io/agent-bom/terms/"
   }
 }

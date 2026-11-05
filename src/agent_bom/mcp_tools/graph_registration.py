@@ -12,6 +12,7 @@ from agent_bom.mcp_tools.findings import finding_detail_impl, findings_query_imp
 from agent_bom.mcp_tools.graph import deploy_decision_impl, exposure_paths_impl
 from agent_bom.mcp_tools.graph_diff import graph_diff_impl
 from agent_bom.mcp_tools.graph_reach import graph_reach_impl
+from agent_bom.mcp_tools.tool_annotations import LOCAL_READ_ONLY
 
 _TENANT = Field(description="Tenant scope. Defaults to 'default'.")
 _SCAN = Field(description="Optional historical scan ID. Omit for the current tenant estate.")
@@ -36,7 +37,7 @@ def _register_exposure_paths(
     truncate_response: Callable[[str], str],
     result_owner: Callable[[], str] = _local_owner,
 ) -> None:
-    @mcp.tool(annotations=read_only, title="Exposure Paths")
+    @mcp.tool(annotations=LOCAL_READ_ONLY, title="Exposure Paths")
     async def exposure_paths(
         tenant_id: Annotated[str, _TENANT] = "default",
         scan_id: Annotated[str | None, _SCAN] = None,
@@ -359,7 +360,7 @@ def _register_finding_detail(
 def _register_executive_brief(
     mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
 ) -> None:
-    @mcp.tool(annotations=read_only, title="Executive Brief")
+    @mcp.tool(annotations=LOCAL_READ_ONLY, title="Executive Brief")
     async def executive_brief(
         tenant_id: Annotated[str, _TENANT] = "default",
         limit: Annotated[int, Field(ge=1, le=25, description="Ranked exposures to include, in the dashboard queue order.")] = 5,

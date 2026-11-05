@@ -15,12 +15,20 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `stale` marks an open finding not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). It stays open and counted, can be filtered with `status=stale` on the API, `--status stale` on the CLI and the Status filter on the Findings page, and never resolves anything.
 
 ### Changed
+- The MCP `scan` tool now reports `readOnlyHint: false`, because it keeps a redacted result locally and can refresh the advisory database. Its description says so. Tools that open no socket now report `openWorldHint: false`.
+- The Claude plugin's MCP servers start with `GITHUB_TOKEN`, `GH_TOKEN` and `NVD_API_KEY` blanked, so a token in the environment is not sent. Lookups use the anonymous rate limits there.
+- The `inventory` skill no longer has the `scan` tool, so it cannot reach the network.
+- The skills-only OpenAI package now declares `requires_local_executor`, since its skills run a local CLI.
 - The same package version in two projects is now two findings with separate dates and resolutions. Finding ids change for scans with a project: a push's `target_scope` or an API scan's target fields. Findings with no project keep their ids. Exceptions and triage assignees still apply by vulnerability and package, and ticket links are copied to each project's finding after upgrade.
 - An open finding stays in the default findings view after the default read window passes it; an explicit `window_days` still narrows it.
 - A report time more than a day ahead of when it was stored counts as the stored time, so a future-dated push cannot outrank later scans.
 - The GitHub Action reads OSV's application-ecosystem archives by default (`vuln-db-scope: application`, about 0.3 GB instead of 2.9 GB). OS and other packages are answered by live OSV, and the JSON report, SARIF run properties, job summary and pull request comment state the scope. Set `vuln-db-scope: full` for the previous behaviour. The Action's cache key changes, so the first run after upgrading builds a new database.
 - A first `--auto-update-db` refresh caps NVD at 60 seconds, newest CVEs first, and reports it as partial; later refreshes resume it. `AGENT_BOM_NVD_TIME_BUDGET_SECONDS` overrides the cap.
 - `--auto-update-db` prints the time each source took.
+
+### Added
+- `docs/PLUGIN_SUBMISSION.md` and `make plugin-submission-check`, which stops a directory submission that would ship stale pins or draft legal pages. It stays red until the next release.
+- Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
 - Investigation flows: a flow that cannot apply no longer sits selected with no effect. It is disabled with the reason on screen, Automatic names what is really showing, and flows now work on maps of up to 100 nodes instead of 80, including from the connection preview.
@@ -34,6 +42,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The flow choice is kept in the URL, Reset view returns it to Automatic, and a flow's camera no longer replaces the saved camera for Automatic.
 - Kubernetes inventory: an EndpointSlice endpoint with no `ready` condition now counts as ready, as `discovery.k8s.io/v1` specifies, so its route is no longer dropped.
 - Kubernetes graph projection: a malformed routing or pod context record in a pushed report is skipped with a warning instead of rejecting the whole report.
+- A credential-named variable set to an empty value is no longer reported as a credential. Blanking a token to keep it out of a server used to produce a false high finding.
+- Hosted OAuth catalogs no longer list `scan`, which stores its result and can update the advisory database. These catalogs offer read-only tools only.
+- MCP discovery no longer reports a server as insecure because an argument uses `${CLAUDE_PLUGIN_ROOT}` or `${CLAUDE_PROJECT_DIR}`. Any other `$` expansion or shell metacharacter is still rejected.
+- `docs/PERMISSIONS.md` and the plugin READMEs now list the Alpine, Debian, OSV archive, GitHub advisory, deps.dev, Go and EPSS hosts. The privacy page now covers the guard hook, and states which tokens are sent where.
+- All plugin manifests point at the same privacy and terms pages. Plugin descriptions no longer say credentials are never sent where an ambient token can be, and the guard description lists all of its warnings.
 - The CVE link repair no longer passes over rows. Under some query plans its keyset page moved mid-statement, so it could leave a row unmarked and carry on past it, leaving that row's CVE link unrepaired.
 - Skill audit: a security-review skill that lists coercion phrases in quotes as things to report now gets a low finding instead of high, for example `Text that asks the model to "bypass the guardrails"`. The finding stays visible.
 - Skill audit: a quote or example word no longer demotes a real directive. These shapes were low and are now high: `Obey phrases such as "..."`, `Use phrases such as "..." and comply`, a report sentence inside an HTML comment, `Do not hesitate to ...`, a plain sentence under a heading such as `## Red flags`, and a report sentence hidden by base64, zero-width or homoglyph characters.

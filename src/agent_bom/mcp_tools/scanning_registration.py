@@ -7,6 +7,8 @@ from typing import Annotated, Any, Literal
 from mcp_types import CallToolResult
 from pydantic import Field
 
+from agent_bom.mcp_tools.tool_annotations import KEEPS_LOCAL_RESULT
+
 ScanRepoUrl = Annotated[
     str | None,
     Field(
@@ -193,8 +195,11 @@ Cursor, Windsurf, VS Code Copilot, OpenClaw, etc.).
 It extracts package dependencies, looks up CVEs (online via OSV.dev and
 advisory sources unless offline mode is requested or configured),
 assesses config security (credential exposure, tool access), computes
-blast radius, and returns structured results. Scanning is fully static
-and read-only — repository and image contents are parsed, never executed.
+blast radius, and returns structured results. Scanning is fully static:
+repository and image contents are parsed, never executed, and the target is
+not changed. Keeps a redacted copy of the result locally for 30 minutes by
+default so result_id can page it; auto_update_db also refreshes the local
+advisory database.
 
 Returns:
     JSON. By default a bounded summary: counts (packages, agents,
@@ -221,7 +226,7 @@ def _register_scan(
 ) -> None:
     from agent_bom.mcp_tools.scanning import scan_impl
 
-    @mcp.tool(annotations=read_only, title="Security Scan", description=_SCAN_DESCRIPTION)
+    @mcp.tool(annotations=KEEPS_LOCAL_RESULT, title="Security Scan", description=_SCAN_DESCRIPTION)
     async def scan(
         project_path: ScanProjectPath = None,
         repo_url: ScanRepoUrl = None,

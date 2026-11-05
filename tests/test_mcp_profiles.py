@@ -83,7 +83,8 @@ def test_live_card_and_health_match_active_surface(profile, count):
     if profile == "graph":
         assert card["capabilities"]["read_only"] is False
     if profile == "scan":
-        assert card["capabilities"]["read_only"] is True
+        # scan keeps a local result, so the card does not claim a read-only server.
+        assert card["capabilities"]["read_only"] is False
 
 
 def test_schema_construction_skips_excluded_tools(monkeypatch):
@@ -251,7 +252,10 @@ def test_audit_profile_covers_estate_inventory_and_skill_review_read_only():
 
     tools = {t.name: t for t in asyncio.run(create_mcp_server(profile="audit").list_tools())}
     assert plugin_tools <= set(tools)
-    for name in plugin_tools - {"tool_risk_assessment"}:
+    # scan keeps a local result, so it is not read-only; it stays non-destructive.
+    assert tools["scan"].annotations.read_only_hint is False
+    assert tools["scan"].annotations.destructive_hint is False
+    for name in plugin_tools - {"tool_risk_assessment", "scan"}:
         annotations = tools[name].annotations
         assert annotations.read_only_hint is True, name
         assert annotations.destructive_hint is False, name

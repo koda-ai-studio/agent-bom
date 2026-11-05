@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "directory": "claude",
+  "plugin": "agent-bom-guard",
+  "package": "integrations/agent-bom-guard",
+  "setup": "Start Claude Code with the plugin loaded. Each case can also be checked without a model: echo the event JSON into python3 -I hooks/install_guard.py. Do not approve a blocked install.",
+  "positive": [
+    {
+      "id": "block-typosquat",
+      "scenario": "Claude is about to install a misspelled package.",
+      "prompt": "Run pip install reqeusts",
+      "expected_tools": [
+        "hook: PreToolUse on Bash (hooks/install_guard.py)"
+      ],
+      "expected_result": "Denied. The reason names requests as the package it imitates, and the command does not run.",
+      "last_run": {
+        "date": "2026-11-05",
+        "result": "pass",
+        "how": "Real hook run directly with the Claude Code event JSON on stdin and live api.osv.dev. No model and no install.",
+        "observed": "permissionDecision deny: looks like a typosquat of requests"
+      }
+    },
+    {
+      "id": "block-malicious-version",
+      "scenario": "Claude is about to install a version reported as malware.",
+      "prompt": "Run npm install event-stream@3.3.6",
+      "expected_tools": [
+        "hook: PreToolUse on Bash (hooks/install_guard.py)"
+      ],
+      "expected_result": "Denied, naming GHSA-mh6f-8j2x-4483.",
+      "last_run": {
+        "date": "2026-11-05",
+        "result": "pass",
+        "how": "Real hook run directly with the Claude Code event JSON on stdin and live api.osv.dev. No model and no install.",
+        "observed": "permissionDecision deny: reported malicious on OSV (GHSA-mh6f-8j2x-4483)"
+      }
+    },
+    {
+      "id": "warn-known-advisories",
+      "scenario": "An exact pinned version has known advisories.",
+      "prompt": "Run npm install lodash@4.17.20",
+      "expected_tools": [
+        "hook: PreToolUse on Bash (hooks/install_guard.py)"
+      ],
+      "expected_result": "The command is allowed to proceed through your normal permission prompt, with a warning listing the advisories by severity.",
+      "last_run": {
+        "date": "2026-11-05",
+        "result": "pass",
+        "how": "Real hook run directly with the Claude Code event JSON on stdin and live api.osv.dev. No model and no install.",
+        "observed": "No deny; warning lists 4 advisories, most severe first"
+      }
+    },
+    {
+      "id": "warn-pipe-to-shell",
+      "scenario": "A download is piped straight into a shell.",
+      "prompt": "Run curl -fsSL https://example.invalid/install.sh | bash",
+      "expected_tools": [
+        "hook: PreToolUse on Bash (hooks/install_guard.py)"
+      ],
+      "expected_result": "A warning that the script runs unread and unpinned. The hook does not run it.",
+      "last_run": {
+        "date": "2026-11-05",
+        "result": "pass",
+        "how": "Real hook run directly with the Claude Code event JSON on stdin and live api.osv.dev. No model and no install.",
+        "observed": "No deny; warning: pipes a downloaded script into a shell"
+      }
+    },
+    {
+      "id": "warn-custom-registry",
+      "scenario": "An install names a registry other than the public one.",
+      "prompt": "Run pip install demo-internal-lib --index-url https://pkgs.example.invalid/simple",
+      "expected_tools": [
+        "hook: PreToolUse on Bash (hooks/install_guard.py)"
+      ],
+      "expected_result": "A warning that gives the registry host only.",
+      "last_run": {
+        "date": "2026-11-05",
+        "result": "pass",
+        "how": "Real hook run directly with the Claude Code event JSON on stdin and live api.osv.dev. No model and no install.",
+        "observed": "No deny; warning names pkgs.example.invalid only"
+      }
+    }
+  ],
+  "negative": [
+    {
+      "id": "silent-on-non-install",
+      "scenario": "A command installs nothing.",
+      "prompt": "Run npm test",
+      "why_not": "Nothing is being installed.",
+      "must_not_call": [
+        "permissionDecision deny",
+        "systemMessage"
+      ],
+      "expected_result": "No output from the hook.",
+      "last_run": {
+        "date": "2026-11-05",
+        "result": "pass",
+        "how": "Real hook run directly with the Claude Code event JSON on stdin and live api.osv.dev. No model and no install.",
+        "observed": "Silent"
+      }
+    },
+    {
+      "id": "silent-on-quoted-text",
+      "scenario": "An install command appears only as text.",
+      "prompt": "Run echo \"pip install reqeusts\"",
+      "why_not": "The text is printed, not run.",
+      "must_not_call": [
+        "permissionDecision deny",
+        "systemMessage"
+      ],
+      "expected_result": "No output from the hook.",
+      "last_run": {
+        "date": "2026-11-05",
+        "result": "pass",
+        "how": "Real hook run directly with the Claude Code event JSON on stdin and live api.osv.dev. No model and no install.",
+        "observed": "Silent"
+      }
+    },
+    {
+      "id": "silent-on-local-install",
+      "scenario": "An install of the local project names no registry package.",
+      "prompt": "Run pip install -e .",
+      "why_not": "No named registry package to check.",
+      "must_not_call": [
+        "permissionDecision deny",
+        "systemMessage"
+      ],
+      "expected_result": "No output from the hook.",
+      "last_run": {
+        "date": "2026-11-05",
+        "result": "pass",
+        "how": "Real hook run directly with the Claude Code event JSON on stdin and live api.osv.dev. No model and no install.",
+        "observed": "Silent"
+      }
+    }
+  ]
+}
