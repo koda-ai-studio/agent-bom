@@ -296,6 +296,7 @@ def _check_1_14(iam_client: Any) -> CISCheckResult:
     )
     paginator = iam_client.get_paginator("list_users")
     stale_keys: list[str] = []
+    affected_users: list[str] = []
     now = datetime.now(tz=timezone.utc)
 
     for page in paginator.paginate():
@@ -307,14 +308,15 @@ def _check_1_14(iam_client: Any) -> CISCheckResult:
                     continue
                 create_date = key.get("CreateDate")
                 if create_date and (now - create_date).days > 90:
-                    stale_keys.append(f"{username}/{key['AccessKeyId']}")
+                    stale_keys.append(f"{username} ({(now - create_date).days} days)")
+                    affected_users.append(user.get("Arn") or f"iam:user/{username}")
 
     if stale_keys:
         result.status = CheckStatus.FAIL
         result.evidence = f"{len(stale_keys)} access key(s) older than 90 days: {', '.join(stale_keys[:5])}"
         if len(stale_keys) > 5:
             result.evidence += f" (+{len(stale_keys) - 5} more)"
-        result.resource_ids = stale_keys[:20]
+        result.resource_ids = list(dict.fromkeys(affected_users))[:20]
     else:
         result.evidence = "All active access keys are younger than 90 days."
     return result

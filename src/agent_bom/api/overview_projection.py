@@ -8,15 +8,43 @@ from typing import Any, cast
 from fastapi import Request
 
 from agent_bom.api.exec_posture import tenant_exec_posture
+from agent_bom.api.findings_current import current_scan_jobs, job_has_authoritative_scan_evidence
 from agent_bom.api.models import JobStatus
 from agent_bom.api.overview_rollup import _combined_severity, _tenant_id
 from agent_bom.api.stores import _get_fleet_store
+from agent_bom.evidence.cloud_posture import CloudPosture, serialized_cloud_posture
 from agent_bom.fleet.trust_scoring import LOW_TRUST_THRESHOLD
+from agent_bom.posture import _score_to_grade
 
 _logger = logging.getLogger("agent_bom.api.routes.overview")
 
 
 def _posture_snapshot(jobs: list[Any]) -> dict[str, Any]:
+    """Latest scorecard capped by current cloud evidence across all scanned scopes."""
+    snapshot = _latest_posture_snapshot(jobs)
+    cloud = CloudPosture()
+    # A failed collection attempt cannot lend an older healthy snapshot's grade.
+    # Keep the findings lifecycle fold separate; only the grade loses assurance.
+    for job in current_scan_jobs(jobs, since=None, scan_id=None):
+        observed = serialized_cloud_posture(job.result or {})
+        if observed.present and not job_has_authoritative_scan_evidence(job):
+            observed.incomplete = True
+        cloud.merge(observed)
+    if not cloud.present:
+        return snapshot
+    if cloud.incomplete or not cloud.evaluated:
+        return {
+            "grade": "N/A",
+            "score": 0,
+            "no_data": True,
+            "summary": f"Cloud evidence incomplete or unevaluated — posture grade unavailable. {cloud.summary}.",
+        }
+    if snapshot.get("grade") == "N/A" or float(snapshot.get("score") or 0) > cloud.score:
+        snapshot.update(grade=_score_to_grade(cloud.score), score=cloud.score, summary=cloud.summary)
+    return snapshot
+
+
+def _latest_posture_snapshot(jobs: list[Any]) -> dict[str, Any]:
     """Letter grade + score from the latest completed scan (same as /v1/posture)."""
     from agent_bom.api.findings_current import latest_current_scan_job
 

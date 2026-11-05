@@ -317,6 +317,7 @@ def _posture_scorecard_impl(request: Request) -> dict:
         + int(summary.get("total_mcp_servers") or 0)
         + int(summary.get("total_findings") or 0)
         + int(summary.get("total_vulnerabilities") or 0)
+        + int(latest_result.get("cloud_evaluated_controls") or 0)
     )
     if examined_artifacts == 0:
         return {

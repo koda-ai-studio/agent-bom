@@ -12,6 +12,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any, Mapping
 
+from agent_bom.evidence.cloud_posture import serialized_cloud_fields
 from agent_bom.evidence.scan_run import serialized_coverage_view
 from agent_bom.posture import PostureScorecard, compute_posture_scorecard
 
@@ -73,6 +74,8 @@ def serialized_posture_report(result: Mapping[str, Any]) -> SimpleNamespace:
         for agent in _rows(result.get("agents"))
     ]
     servers = [server for agent in agents for server in agent.mcp_servers]
+    for field, value in serialized_cloud_fields(result).items():
+        setattr(view, field, value)
     view.agents = agents
     view.blast_radii = [_blast_radius_view(row) for row in _rows(result.get("blast_radius") or result.get("blast_radii"))]
     view.total_packages = sum(len(server.packages) for server in servers)

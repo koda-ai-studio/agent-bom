@@ -13,6 +13,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from agent_bom.core.tenancy import require_explicit_tenant_id
+from agent_bom.evidence.cloud_posture import serialized_cloud_posture
 
 _CACHE: OrderedDict[tuple[Any, str, str], tuple[float, dict | None]] = OrderedDict()
 _LOCK = threading.Lock()
@@ -32,6 +33,7 @@ def scan_posture_inputs(store: Any, tenant_id: str, load_current: Callable[[], A
         if job is None or job.result is None:
             return None
         inputs = {key: job.result.get(key) for key in ("summary", "posture_scorecard")}
+        inputs["cloud_evaluated_controls"] = serialized_cloud_posture(job.result).evaluated
         inputs["scan_id"] = job.job_id
         inputs["completed_at"] = job.completed_at
         return inputs

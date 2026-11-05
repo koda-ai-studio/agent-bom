@@ -34,8 +34,9 @@ from typing import TYPE_CHECKING, Mapping
 
 from agent_bom.core.risk_display import assessed_risk_score
 from agent_bom.core.severity import severity_policy_rank
+from agent_bom.evidence.cloud_posture import apply_cloud_dimensions, cloud_posture
 from agent_bom.evidence.posture_dimensions import DimensionScore, assessed_weighted_total, lane_summary
-from agent_bom.evidence.posture_inputs import posture_inputs_from_report, score_posture_dimensions
+from agent_bom.evidence.posture_inputs import PostureInputs, posture_inputs_from_report, score_posture_dimensions
 from agent_bom.evidence.scan_run import vulnerability_coverage_caveat, vulnerability_coverage_incomplete
 from agent_bom.vex import active_blast_radii
 
@@ -205,6 +206,41 @@ def _score_to_grade(
     return "F"
 
 
+def _posture_summary(report: "AIBOMReport", inputs: PostureInputs, grade: str, total_score: float) -> str:
+    total_vulns = len(inputs.vulnerabilities)
+    total_cred_servers, total_servers = inputs.credential_servers, inputs.total_servers
+    verified_servers = inputs.verified_servers
+    # Build summary: keep vulnerability cleanliness apart from config quality so
+    # clean scans never read as contradictory when optional metadata is missing.
+    if total_vulns == 0:
+        if grade in ("A", "B"):
+            summary = f"No vulnerabilities found; strong best-practice/config posture ({grade}, {total_score}%)"
+        elif grade == "C":
+            summary = f"No vulnerabilities found; config/best-practice improvements recommended ({grade}, {total_score}%)"
+        else:
+            summary = f"No vulnerabilities found; config/best-practice gaps need attention ({grade}, {total_score}%)"
+    elif grade in ("A", "B"):
+        summary = f"Strong best-practice/config posture ({grade}, {total_score}%)"
+    elif grade == "C":
+        summary = f"Moderate best-practice/config posture ({grade}, {total_score}%) — improvements recommended"
+    else:
+        drivers: list[str] = []
+        if total_cred_servers > 0:
+            drivers.append(f"real credential exposure across {total_cred_servers} server{'s' if total_cred_servers != 1 else ''}")
+        if report.has_mcp_context and total_servers > 0 and verified_servers < total_servers:
+            drivers.append(
+                "unverified or underspecified MCP configuration on "
+                f"{total_servers - verified_servers}/{total_servers} "
+                f"server{'s' if total_servers != 1 else ''}"
+            )
+        if drivers:
+            summary = f"Weak best-practice/config posture ({grade}, {total_score}%) — this grade is driven by " + " and ".join(drivers)
+        else:
+            summary = f"Weak best-practice/config posture ({grade}, {total_score}%) — immediate attention required"
+
+    return summary
+
+
 def compute_posture_scorecard(
     report: "AIBOMReport",
     *,
@@ -229,10 +265,19 @@ def compute_posture_scorecard(
     resolved = policy or load_posture_policy(weights=weights, grade_thresholds=grade_thresholds)
     inputs = posture_inputs_from_report(report)
     dimensions = score_posture_dimensions(inputs, resolved.weights)
+    cloud = cloud_posture(report)
+    apply_cloud_dimensions(cloud, dimensions, has_inventory=bool(inputs.packages or inputs.total_servers or inputs.vulnerabilities))
+    if cloud.present and (cloud.incomplete or not cloud.evaluated):
+        return PostureScorecard(
+            grade="N/A",
+            score=0.0,
+            dimensions=dimensions,
+            no_data=True,
+            policy_source=resolved.source,
+            summary=f"Cloud evidence incomplete or unevaluated — posture grade unavailable. {cloud.summary}.",
+        )
     total_vulns = len(inputs.vulnerabilities)
-    total_cred_servers = inputs.credential_servers
     total_servers = inputs.total_servers
-    verified_servers = inputs.verified_servers
     all_packages = inputs.packages
     retained_vulnerability_occurrences = inputs.retained_vulnerability_occurrences
 
@@ -245,7 +290,7 @@ def compute_posture_scorecard(
     # Return an explicit no-data / N/A posture instead, mirroring the honest N/A
     # treatment used elsewhere (overview tile, exec score). Dimensions and policy
     # source are preserved for downstream plumbing; only the headline is honest.
-    examined_artifacts = total_vulns + total_servers + len(all_packages)
+    examined_artifacts = total_vulns + total_servers + len(all_packages) + cloud.evaluated
     if examined_artifacts == 0:
         return PostureScorecard(
             grade="N/A",
@@ -292,37 +337,15 @@ def compute_posture_scorecard(
 
     # ── Final score ──
     total_score = assessed_weighted_total(dimensions)
+    if cloud.present:
+        total_score = min(total_score, cloud.score)
     grade = _score_to_grade(total_score, resolved.grade_thresholds)
 
-    # Build summary: keep vulnerability cleanliness apart from config quality so
-    # clean scans never read as contradictory when optional metadata is missing.
-    if total_vulns == 0:
-        if grade in ("A", "B"):
-            summary = f"No vulnerabilities found; strong best-practice/config posture ({grade}, {total_score}%)"
-        elif grade == "C":
-            summary = f"No vulnerabilities found; config/best-practice improvements recommended ({grade}, {total_score}%)"
-        else:
-            summary = f"No vulnerabilities found; config/best-practice gaps need attention ({grade}, {total_score}%)"
-    elif grade in ("A", "B"):
-        summary = f"Strong best-practice/config posture ({grade}, {total_score}%)"
-    elif grade == "C":
-        summary = f"Moderate best-practice/config posture ({grade}, {total_score}%) — improvements recommended"
-    else:
-        drivers: list[str] = []
-        if total_cred_servers > 0:
-            drivers.append(f"real credential exposure across {total_cred_servers} server{'s' if total_cred_servers != 1 else ''}")
-        if report.has_mcp_context and total_servers > 0 and verified_servers < total_servers:
-            drivers.append(
-                "unverified or underspecified MCP configuration on "
-                f"{total_servers - verified_servers}/{total_servers} "
-                f"server{'s' if total_servers != 1 else ''}"
-            )
-        if drivers:
-            summary = f"Weak best-practice/config posture ({grade}, {total_score}%) — this grade is driven by " + " and ".join(drivers)
-        else:
-            summary = f"Weak best-practice/config posture ({grade}, {total_score}%) — immediate attention required"
+    summary = _posture_summary(report, inputs, grade, total_score)
 
     summary = lane_summary(summary, skipped=vuln_lane_skipped, grade=grade, score=total_score)
+    if cloud.present:
+        summary = f"{cloud.summary}; assessed snapshot posture {grade}, {total_score}%. Cloud control pass rate: {cloud.score}%."
     coverage_caveat = vulnerability_coverage_caveat(report)
     if coverage_caveat:
         summary = f"{summary}. {coverage_caveat}."

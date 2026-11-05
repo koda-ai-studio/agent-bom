@@ -86,6 +86,20 @@ agent-bom cloud gcp --cis
 agent-bom scan --snowflake --snowflake-cis-benchmark
 ```
 
+Provider commands such as `agent-bom cloud azure` and `agent-bom cloud databricks`
+scan the selected cloud surface without reading workstation MCP configs or
+auto-discovering local skill files. For an intentional combined workstation and
+cloud scan, use `agent-bom scan --azure` or the corresponding provider flag.
+
+To save a provider-scoped artifact, run
+`agent-bom cloud azure --format json --output azure-report.json`, then inspect
+the report's scan outcome, coverage issues and CIS results. Azure selects the
+active `az` subscription when no `--subscription` or `AZURE_SUBSCRIPTION_ID` is
+provided. GCP uses the ADC project, then the active gcloud project, when neither
+`--project` nor `GOOGLE_CLOUD_PROJECT` is provided. Explicit flags take precedence
+over environment settings. Missing scope or permissions remains incomplete
+evidence; selecting an account does not grant access.
+
 These checks are for deployed state, not planned state. They catch drift and
 environment properties that do not appear in a pull request, such as:
 
@@ -110,6 +124,26 @@ If no event queue is configured, the connection falls back to scheduled or
 manual scans.
 
 ## How to read the result
+
+For an explicit `cloud aws`, `cloud azure` or `cloud gcp` command, the JSON report
+includes native inventory for the selected provider and account/project. These
+commands do not discover local workstation MCP configuration or scan local
+skills. Inventory collection remains read-only; missing permissions and collector
+failures stay visible as incomplete coverage.
+
+Cloud posture uses evaluated control rows: PASS / (PASS + FAIL). NOT_APPLICABLE
+rows do not enter that rate. Missing, errored or NO_DATA checks make the overall
+grade N/A; known failed controls remain in the report. Disabled GCP APIs and
+billing are NO_DATA with service-state guidance, while permission and unexpected
+collector errors remain errors. No API is enabled and no permission is changed
+by the scan.
+
+When cloud and package/MCP evidence are combined, the overall score cannot exceed
+the evaluated cloud pass rate. Unassessed package and MCP dimensions do not earn
+100 points in a cloud-only scan. The dashboard uses current cloud scopes as a
+ceiling on its finding-based headline score; incomplete cloud evidence prevents
+a graded headline. This is a posture score for the collected scope, not a
+certification or proof that every cloud resource was inspected.
 
 The useful question is not "IaC or CSPM?" It is:
 

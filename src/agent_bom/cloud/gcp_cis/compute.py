@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
-from agent_bom.cloud.normalization import sanitize_discovery_warning
 
 from ._base import (
     _COMPUTE_SECTION,
+    _check_failure_evidence,
+    _check_failure_status,
     _creds_kwargs,
     _seams,
 )
@@ -56,8 +57,8 @@ def _check_4_1(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check instance service accounts: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check instance service accounts: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -103,8 +104,8 @@ def _check_4_2(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check instance service account scopes: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check instance service account scopes: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -154,8 +155,8 @@ def _check_4_3(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check instance SSH key metadata: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check instance SSH key metadata: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -195,8 +196,8 @@ def _check_4_4(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check OS Login configuration: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check OS Login configuration: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -241,8 +242,8 @@ def _check_4_5(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check serial port configuration: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check serial port configuration: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -281,8 +282,8 @@ def _check_4_6(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check IP forwarding: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check IP forwarding: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -322,8 +323,8 @@ def _check_4_7(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check disk encryption: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check disk encryption: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -368,8 +369,8 @@ def _check_4_8(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Shielded VM configuration: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check Shielded VM configuration: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -416,8 +417,8 @@ def _check_4_9(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check instance public IPs: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check instance public IPs: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -457,6 +458,6 @@ def _check_4_11(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-compute not installed. Install with: pip install google-cloud-compute"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Confidential Computing: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check Confidential Computing: {_check_failure_evidence(exc)}"
     return result

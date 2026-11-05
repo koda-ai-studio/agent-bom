@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
-from agent_bom.cloud.normalization import sanitize_discovery_warning
 
 from ._base import (
     _IAM_SECTION,
+    _check_failure_evidence,
+    _check_failure_status,
     _gcp_kms_crypto_keys,
     _seams,
 )
@@ -51,8 +52,8 @@ def _check_1_9(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check KMS key IAM policies: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check KMS key IAM policies: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -92,8 +93,8 @@ def _check_1_10(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check KMS key rotation: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check KMS key rotation: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -143,8 +144,8 @@ def _check_1_11(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check KMS role separation: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check KMS role separation: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -184,8 +185,8 @@ def _check_1_12(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check API key restrictions: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check API key restrictions: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -227,8 +228,8 @@ def _check_1_13(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check API key host/app restrictions: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check API key host/app restrictions: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -271,8 +272,8 @@ def _check_1_14(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check API key rotation: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check API key rotation: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -313,6 +314,6 @@ def _check_1_15(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check essential contacts: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check essential contacts: {_check_failure_evidence(exc)}"
     return result

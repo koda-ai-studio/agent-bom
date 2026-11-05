@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import logging
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
-from agent_bom.cloud.normalization import sanitize_discovery_warning
+from agent_bom.cloud.aws_cis_benchmark import CISCheckResult
 from agent_bom.security import sanitize_text
 
-from ._base import GCPCISReport, _seams
+from ._base import GCPCISReport, _check_failure_evidence, _check_failure_status, _seams
 
 logger = logging.getLogger("agent_bom.cloud.gcp_cis_benchmark")
 
@@ -91,8 +90,8 @@ def run_registered_checks(report: GCPCISReport, project_id: str, checks: list[st
                 CISCheckResult(
                     check_id=check_id,
                     title=f"Check {check_id}",
-                    status=CheckStatus.ERROR,
+                    status=_check_failure_status(exc),
                     severity="unknown",
-                    evidence=sanitize_discovery_warning(exc),
+                    evidence=_check_failure_evidence(exc),
                 )
             )

@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.cloud.aws_inventory import classify_project_disabled_error
+from agent_bom.cloud.normalization import sanitize_discovery_warning
 from agent_bom.domain.report_payloads import BenchmarkPayload
 
 __all__ = [
@@ -273,3 +275,19 @@ _COMPUTE_SECTION = "4 - Virtual Machines"
 _STORAGE_SECTION = "5 - Cloud Storage"
 _SQL_SECTION = "6 - Cloud SQL"
 _BIGQUERY_SECTION = "7 - BigQuery"
+
+
+def _check_failure_status(exc: Exception) -> CheckStatus:
+    """Disabled project APIs are unavailable evidence, not a failed scanner check."""
+
+    return CheckStatus.NO_DATA if classify_project_disabled_error(exc) else CheckStatus.ERROR
+
+
+def _check_failure_evidence(exc: Exception) -> str:
+
+    cause = classify_project_disabled_error(exc)
+    if cause == "service_disabled":
+        return "Service API disabled; this control is unevaluated. Enable the required API if this service is in scope, then rescan."
+    if cause == "billing_disabled":
+        return "Project billing disabled; this control is unevaluated. Restore billing if this project is in scope, then rescan."
+    return sanitize_discovery_warning(exc)

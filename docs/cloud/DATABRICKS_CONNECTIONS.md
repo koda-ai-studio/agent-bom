@@ -66,6 +66,13 @@ security-report attribution and discovery scope, including profiles that set no
 `scope.project_id`; this is a workspace boundary, not a Databricks account ID.
 Same-named resources in different workspaces retain distinct identities.
 
+If an OAuth login expires, re-authenticate with
+`databricks auth login --host <workspace-url>` and rerun the scan with the same
+profile. For PAT authentication, replace the expired `DATABRICKS_TOKEN` through
+your existing secret-management process. Discovery errors include these recovery
+steps without exposing SDK exception details or token values. See the
+[Databricks profile guide](https://docs.databricks.com/aws/en/dev-tools/auth/config-profiles).
+
 The PAT policy check reads `maxTokenLifetimeDays` from workspace configuration
 and evaluates the 90-day recommendation for **new** tokens. It does not establish
 the lifetime of existing tokens. Service-principal PAT checks match token owner

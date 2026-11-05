@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
-from agent_bom.cloud.normalization import sanitize_discovery_warning
 
 from ._base import (
     _BIGQUERY_SECTION,
+    _check_failure_evidence,
+    _check_failure_status,
     _gcp_bigquery_datasets,
     _seams,
 )
@@ -54,8 +55,8 @@ def _check_7_1(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check BigQuery dataset access: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check BigQuery dataset access: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -95,8 +96,8 @@ def _check_7_2(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check BigQuery dataset expiration: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check BigQuery dataset expiration: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -134,6 +135,6 @@ def _check_7_3(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check BigQuery dataset encryption: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check BigQuery dataset encryption: {_check_failure_evidence(exc)}"
     return result
