@@ -98,7 +98,7 @@ def test_explicit_db_refresh_is_included_in_timing_breakdown(tmp_path):
     """An explicitly requested bulk refresh must be visible in scan profiling."""
     import time
 
-    def _slow_sync(*, sources=None):
+    def _slow_sync(*, sources=None, **_kwargs):
         del sources
         time.sleep(0.11)
 

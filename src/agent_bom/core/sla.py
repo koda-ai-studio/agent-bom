@@ -15,7 +15,7 @@ When neither a policy window nor a KEV deadline can be computed the deadline is 
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from typing import Any
 
@@ -212,3 +212,12 @@ __all__ = [
     "merge_finding_sla",
     "sla_due_at",
 ]
+
+
+def finding_kev_dates(row: Mapping[str, Any], safe: Callable[[Any], str | None]) -> dict[str, str]:
+    """The KEV catalog dates a finding exposes, each passed through ``safe``."""
+    evidence: Mapping[str, Any] = row["evidence"] if isinstance(row.get("evidence"), Mapping) else {}
+    due = row.get("kev_due_date") or evidence.get("kev_due_date")
+    added = row.get("kev_date_added") or row.get("kev_added_date") or evidence.get("kev_date_added")
+    dates = {"kev_due_date": safe(due), "kev_date_added": safe(added)}
+    return {key: value for key, value in dates.items() if value is not None}

@@ -9,9 +9,10 @@ from typing import Any
 
 from agent_bom.api.hub_payload_codec import decode_hub_payload
 from agent_bom.api.hub_reference_payload import (
-    batch_reference_keys,
     extract_reference_blobs,
     hydrate_reference_payload,
+    hydration_reference_keys,
+    merge_cve_intel,
     resolve_cve_id,
 )
 from agent_bom.api.storage.finding_payloads import persist_references
@@ -120,7 +121,7 @@ def persist_finding_references_postgres(
 
 def _upsert_cve_intel_memory(tenant_id: str, cve_id: str, blob: dict[str, Any]) -> None:
     with _MEMORY_LOCK:
-        _MEMORY_CVE_INTEL[(tenant_id, cve_id)] = dict(blob)
+        _MEMORY_CVE_INTEL[(tenant_id, cve_id)] = merge_cve_intel(_MEMORY_CVE_INTEL.get((tenant_id, cve_id)), blob)
 
 
 def _upsert_framework_ref_memory(tenant_id: str, framework_ref: str, blob: dict[str, Any]) -> None:
@@ -197,7 +198,7 @@ def _fetch_framework_refs_postgres(conn: Any, tenant_id: str, refs: Sequence[str
 
 
 def hydrate_finding_payload_memory(tenant_id: str, payload: Mapping[str, Any]) -> dict[str, Any]:
-    cve_ids, framework_refs = batch_reference_keys([payload])
+    cve_ids, framework_refs = hydration_reference_keys([payload])
     return hydrate_reference_payload(
         payload,
         cve_intel=_fetch_cve_intel_memory(tenant_id, sorted(cve_ids)),
@@ -207,7 +208,7 @@ def hydrate_finding_payload_memory(tenant_id: str, payload: Mapping[str, Any]) -
 
 def hydrate_finding_payloads_memory(tenant_id: str, payloads: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
     items = list(payloads)
-    cve_ids, framework_refs = batch_reference_keys(items)
+    cve_ids, framework_refs = hydration_reference_keys(items)
     cve_map = _fetch_cve_intel_memory(tenant_id, sorted(cve_ids))
     fw_map = _fetch_framework_refs_memory(tenant_id, sorted(framework_refs))
     return [hydrate_reference_payload(item, cve_intel=cve_map, framework_refs=fw_map) for item in items]
@@ -219,7 +220,7 @@ def hydrate_finding_payloads_sqlite(
     payloads: Iterable[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
     items = list(payloads)
-    cve_ids, framework_refs = batch_reference_keys(items)
+    cve_ids, framework_refs = hydration_reference_keys(items)
     cve_map = _fetch_cve_intel_sqlite(conn, tenant_id, sorted(cve_ids))
     fw_map = _fetch_framework_refs_sqlite(conn, tenant_id, sorted(framework_refs))
     return [hydrate_reference_payload(item, cve_intel=cve_map, framework_refs=fw_map) for item in items]
@@ -231,7 +232,7 @@ def hydrate_finding_payloads_postgres(
     payloads: Iterable[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
     items = list(payloads)
-    cve_ids, framework_refs = batch_reference_keys(items)
+    cve_ids, framework_refs = hydration_reference_keys(items)
     cve_map = _fetch_cve_intel_postgres(conn, tenant_id, sorted(cve_ids))
     fw_map = _fetch_framework_refs_postgres(conn, tenant_id, sorted(framework_refs))
     return [hydrate_reference_payload(item, cve_intel=cve_map, framework_refs=fw_map) for item in items]

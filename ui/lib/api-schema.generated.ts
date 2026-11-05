@@ -14472,6 +14472,8 @@ export interface components {
             is_kev?: boolean | null;
             /** Kev Cve Id */
             kev_cve_id?: string | null;
+            /** Kev Date Added */
+            kev_date_added?: string | null;
             /** Kev Due Date */
             kev_due_date?: string | null;
             /** Lane */

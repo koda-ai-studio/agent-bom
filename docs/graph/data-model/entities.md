@@ -27,7 +27,7 @@ Emitted by: `api/graph_page_stack.py`, `graph/agent_context.py`, `graph/agent_pr
 
 ## `api_gateway`
 
-Emitted by: `graph/builder_network_inventory.py`
+Emitted by: `graph/builder_network_inventory.py`, `graph/kubernetes_context.py`
 
 ## `application`
 
@@ -43,7 +43,7 @@ Emitted by: `graph/ci_graph_overlay.py`, `graph/pipeline_overlay.py`; demo fixtu
 
 ## `cloud_resource`
 
-Emitted by: `api/cloud_scan_results.py`, `api/graph_page_stack.py`, `graph/benchmark_projection.py`, `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_compute_projection.py`, `graph/cloud_rbac.py`, `graph/cloud_service_projection.py`, `graph/cloud_storage_projection.py`, `graph/finding_projection.py`, `graph/gpu_projection.py`, `graph/hosting_projection.py`, `graph/normalized_resource_projection.py`, `graph/resource_aliases.py`, `graph/side_scan_projection.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_agent_runtime.py`, `demo_estate/showcase_graph.py`
+Emitted by: `api/cloud_scan_results.py`, `api/graph_page_stack.py`, `graph/benchmark_projection.py`, `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_compute_projection.py`, `graph/cloud_rbac.py`, `graph/cloud_service_projection.py`, `graph/cloud_storage_projection.py`, `graph/finding_projection.py`, `graph/gpu_projection.py`, `graph/hosting_projection.py`, `graph/kubernetes_context.py`, `graph/normalized_resource_projection.py`, `graph/resource_aliases.py`, `graph/side_scan_projection.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_agent_runtime.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -79,7 +79,7 @@ Emitted by: `graph/finding_row_projection.py`, `graph/repo_structure_overlay.py`
 
 ## `container`
 
-Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/finding_row_projection.py`, `graph/hosting_projection.py`, `graph/image_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/finding_row_projection.py`, `graph/hosting_projection.py`, `graph/image_projection.py`, `graph/kubernetes_context.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 Id formats:
 

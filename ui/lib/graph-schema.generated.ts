@@ -1060,7 +1060,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "resource",
       "data_store",
       "agent",
-      "account"
+      "account",
+      "container"
     ],
     "traversable": true,
     "traversal_class": "exposure"

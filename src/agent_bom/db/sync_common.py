@@ -66,6 +66,9 @@ OSV_APPLICATION_ECOSYSTEMS = (
     "NuGet",
     "RubyGems",
     "Packagist",
+    "Pub",
+    "Hex",
+    "SwiftURL",
 )
 
 
@@ -217,7 +220,9 @@ def _normalize_ghsa_db_ecosystem(ecosystem: str) -> str:
     return _GHSA_API_TO_DB_ECOSYSTEM.get(eco, eco)
 
 
-_BATCH_SIZE = 500
+# Every commit rewrites the B-tree pages it touched. Measured over 291,000 OSV
+# advisories on a first build: 2.3 GB written at 500 (through WAL), 0.27 GB at 10,000.
+_BATCH_SIZE = 10_000
 
 
 _CVE_ID_RE = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)

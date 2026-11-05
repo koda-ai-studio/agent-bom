@@ -377,6 +377,21 @@ def scan_control_options(fn):
     )(fn)
 
 
+_DB_OSV_SCOPE_OPTION = click.option(
+    "--db-osv-scope",
+    "db_osv_scope",
+    type=click.Choice(["all", "application"]),
+    default="all",
+    show_default=True,
+    envvar="AGENT_BOM_DB_OSV_SCOPE",
+    help=(
+        "OSV archives --auto-update-db reads: every ecosystem (about 2.9 GB), or only application ecosystems (about 0.3 GB), "
+        "with OS and other packages then answered by live OSV. A database that already holds every ecosystem keeps being "
+        "refreshed whole."
+    ),
+)
+
+
 def enrichment_options(fn):
     """NVD, EPSS, KEV, Scorecard, deps.dev, license, Snyk."""
     return _apply(
@@ -427,6 +442,7 @@ def enrichment_options(fn):
                 envvar="AGENT_BOM_DB_SOURCES",
                 help="Comma-separated DB sources to sync before scanning (e.g. nvd,ghsa,osv,epss,kev).",
             ),
+            _DB_OSV_SCOPE_OPTION,
             click.option("--nvd-api-key", envvar="NVD_API_KEY", help="NVD API key for higher rate limits"),
             click.option(
                 "--scorecard",

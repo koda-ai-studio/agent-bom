@@ -23,7 +23,7 @@ _RECORDED: dict[str, list[dict[str, Any]]] = {
                 "name": "web-1-a",
                 "namespace": "shop",
                 "uid": "pod-a",
-                "ownerReferences": [{"kind": "ReplicaSet", "name": "web-1"}],
+                "ownerReferences": [{"kind": "ReplicaSet", "name": "web-1", "uid": "rs-1", "controller": True}],
             },
             "spec": {"serviceAccountName": "web-sa", "containers": [{"name": "app", "image": "registry.example.test/web:2"}]},
             "status": {"containerStatuses": [{"name": "app", "imageID": f"registry.example.test/web@{_DIGEST}"}]},
@@ -31,7 +31,7 @@ _RECORDED: dict[str, list[dict[str, Any]]] = {
     ],
     "deployments": [
         {
-            "metadata": {"name": "web", "namespace": "shop"},
+            "metadata": {"name": "web", "namespace": "shop", "uid": "dep-1"},
             "spec": {
                 "template": {
                     "spec": {"serviceAccountName": "web-sa", "containers": [{"name": "app", "image": "registry.example.test/web:2"}]}
@@ -41,7 +41,12 @@ _RECORDED: dict[str, list[dict[str, Any]]] = {
     ],
     "replicasets": [
         {
-            "metadata": {"name": "web-1", "namespace": "shop", "ownerReferences": [{"kind": "Deployment", "name": "web"}]},
+            "metadata": {
+                "name": "web-1",
+                "namespace": "shop",
+                "uid": "rs-1",
+                "ownerReferences": [{"kind": "Deployment", "name": "web", "uid": "dep-1", "controller": True}],
+            },
             "spec": {"template": {"spec": {"containers": [{"name": "app", "image": "registry.example.test/web:2"}]}}},
         }
     ],
@@ -112,3 +117,11 @@ def test_scan_targets_pin_the_running_digest() -> None:
     assert scan_targets(inventory) == [
         {"ref": f"registry.example.test/web@{_DIGEST}", "image": "registry.example.test/web:2", "image_digest": _DIGEST}
     ]
+
+
+def test_missing_endpoint_permissions_are_partial_evidence_not_clean_routing() -> None:
+    inventory = collect_live_k8s_inventory(_Transport(denied=frozenset({"services", "endpointslices"})), namespace="shop")
+    assert inventory["collection"]["status"] == "partial"
+    states = {c["collector_id"]: c["state"] for c in inventory["collection"]["collectors"]}
+    assert states["services"] == states["endpointslices"] == "unevaluable"
+    assert inventory["endpoint_routes"] == []

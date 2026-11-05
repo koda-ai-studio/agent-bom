@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 import { McpGlyph } from "@/components/graph-mcp-glyph";
-import { BucketGlyph, VirtualMachineGlyph } from "@/components/graph-resource-glyphs";
+import { BucketGlyph, InternetBoundaryGlyph, VirtualMachineGlyph } from "@/components/graph-resource-glyphs";
 import { recordedServiceLabel } from "@/lib/graph-service-identity";
 import {
   Activity, AppWindow, BadgeCheck, Blocks, Bot, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
@@ -52,6 +52,7 @@ export const ASSET_KINDS = {
   integration: { label: "Integration", icon: Cable },
   data_connection: { label: "Data connection", icon: Unplug },
   model: { label: "Model", icon: BrainCircuit },
+  internet_boundary: { label: "Internet", icon: InternetBoundaryGlyph },
   endpoint: { label: "Endpoint", icon: Globe },
   ai_service: { label: "AI service", icon: Sparkles },
   ml_workspace: { label: "ML workspace", icon: FlaskConical },
@@ -278,6 +279,7 @@ export function resolveAssetKind({ entityType, nodeType, attributes, provider }:
 }
 
 export function assetKind(input: AssetKindInput): AssetKind {
+  if (input.attributes?.resource_type === "internet_boundary") return "internet_boundary";
   return resolveAssetKind(input).kind;
 }
 
@@ -290,6 +292,10 @@ export function assetServiceLabel(input: AssetKindInput): string | undefined {
 }
 
 export function assetKindLabel(input: AssetKindInput): string {
+  const kubeKind = input.attributes?.kubernetes_kind;
+  if (typeof kubeKind === "string" && ["Pod", "Deployment", "ReplicaSet", "StatefulSet", "DaemonSet", "Namespace", "Service"].includes(kubeKind)) return `Kubernetes ${kubeKind.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()}`;
+  if (input.attributes?.container_kind === "runtime") return "Kubernetes container";
+  if (input.attributes?.resource_type === "internet_boundary") return "Internet boundary";
   const subtype = input.attributes?.subtype;
   if (input.entityType === "ci_job" || input.nodeType === "ciJob") {
     if (subtype === "gitlab_job") return "GitLab job";

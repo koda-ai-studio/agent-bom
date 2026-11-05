@@ -10693,6 +10693,11 @@ components:
           - type: string
           - type: 'null'
           title: Kev Cve Id
+        kev_date_added:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Kev Date Added
         kev_due_date:
           anyOf:
           - type: string

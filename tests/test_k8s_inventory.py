@@ -35,7 +35,12 @@ def _replicaset(name: str, owner: str, ns: str = "shop") -> dict:
     return {
         "apiVersion": "apps/v1",
         "kind": "ReplicaSet",
-        "metadata": {"name": name, "namespace": ns, "uid": f"rs-{name}", "ownerReferences": [{"kind": "Deployment", "name": owner}]},
+        "metadata": {
+            "name": name,
+            "namespace": ns,
+            "uid": f"rs-{name}",
+            "ownerReferences": [{"kind": "Deployment", "name": owner, "uid": "dep-uid-1", "controller": True}],
+        },
         "spec": {"template": {"spec": {"containers": [{"name": "app", "image": "registry.example.test/shop/web:1.4"}]}}},
     }
 
@@ -43,7 +48,9 @@ def _replicaset(name: str, owner: str, ns: str = "shop") -> dict:
 def _pod(name: str, owner_kind: str | None, owner: str | None, ns: str = "shop", image_id: str = "") -> dict:
     meta: dict = {"name": name, "namespace": ns, "uid": f"pod-{name}"}
     if owner_kind:
-        meta["ownerReferences"] = [{"kind": owner_kind, "name": owner}]
+        meta["ownerReferences"] = [
+            {"kind": owner_kind, "name": owner, "uid": f"rs-{owner}" if owner_kind == "ReplicaSet" else "dep-uid-1", "controller": True}
+        ]
     return {
         "apiVersion": "v1",
         "kind": "Pod",

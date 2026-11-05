@@ -14,7 +14,8 @@ it("keeps the mixed endpoint-to-data chain level and groups only singly owned fi
   expect(new Set(result.nodes.slice(0, 4).map(n => n.position.y)).size).toBe(1);
   expect(result.nodes.slice(4).map(n => n.data.readingOwner)).toEqual(["mcp", "mcp"]);
   const collapsed = cloudFindingDisclosure(result.nodes, result.edges, new Set(), () => {});
-  expect(collapsed.nodes.filter(n => !n.hidden).map(n => n.id)).toEqual(nodes.slice(0,4).map(n => n.id));
+  expect(collapsed.nodes.filter(n => !n.hidden && !n.data.displayOnly).map(n => n.id)).toEqual(nodes.slice(0,4).map(n => n.id));
+  expect(collapsed.nodes.filter(n => n.type === "findingGroupNode")).toHaveLength(1);
   expect(collapsed.nodes[1]!.data.readingFindings).toMatchObject({ count: 2, expanded: false });
   const expanded = cloudFindingDisclosure(result.nodes, result.edges, new Set(["mcp"]), () => {});
   expect(expanded.nodes.filter(n => !n.hidden)).toHaveLength(6);

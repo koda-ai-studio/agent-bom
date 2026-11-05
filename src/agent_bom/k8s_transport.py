@@ -154,6 +154,9 @@ def _parse_json_object(body: str | bytes | bytearray, *, source: str) -> dict[st
 # carries secret values, so no collector may ever request one.
 NAMESPACED_RESOURCES: dict[str, tuple[str, str]] = {
     "pods": ("/api/v1", "pods"),
+    "services": ("/api/v1", "services"),
+    "ingresses": ("/apis/networking.k8s.io/v1", "ingresses"),
+    "endpointslices": ("/apis/discovery.k8s.io/v1", "endpointslices"),
     "serviceaccounts": ("/api/v1", "serviceaccounts"),
     "networkpolicies": ("/apis/networking.k8s.io/v1", "networkpolicies"),
     "roles": ("/apis/rbac.authorization.k8s.io/v1", "roles"),

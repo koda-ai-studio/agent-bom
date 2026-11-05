@@ -92,20 +92,21 @@ def framework_ref_key(payload: Mapping[str, Any]) -> str:
     return canonical_id("hub_framework_ref", fingerprint)
 
 
+def cve_intel_blob(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """The CVE-level fields one finding carries."""
+    return {key: payload[key] for key in _CVE_INTEL_KEYS if key in payload}
+
+
 def extract_reference_blobs(payload: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any] | None, dict[str, Any] | None]:
     """Split a finding payload into a slim row plus optional reference blobs."""
     slim = dict(payload)
     cve_id = resolve_cve_id(payload)
     intel_blob: dict[str, Any] | None = None
     if cve_id:
-        intel_blob = {}
-        for key in _CVE_INTEL_KEYS:
-            if key in slim:
-                intel_blob[key] = slim.pop(key)
-        if not intel_blob:
-            intel_blob = None
-        else:
-            slim["intel_ref"] = cve_id
+        slim["intel_ref"] = cve_id
+        intel_blob = cve_intel_blob(slim) or None
+        for key in intel_blob or ():
+            del slim[key]
 
     framework_blob: dict[str, Any] | None = None
     fw_ref = framework_ref_key(payload)
@@ -122,8 +123,37 @@ def extract_reference_blobs(payload: Mapping[str, Any]) -> tuple[dict[str, Any],
     return slim, intel_blob, framework_blob
 
 
+def merge_cve_intel(existing: Mapping[str, Any] | None, incoming: Mapping[str, Any]) -> dict[str, Any]:
+    """Combine a stored CVE record with a newer, possibly partial, one.
+
+    Findings carry different subsets of the intel fields, so a blank value never
+    erases a known one. A KEV verdict is kept once seen: scans without KEV data
+    report ``false``, and hiding a known-exploited CVE is the unsafe failure.
+    """
+    merged = dict(existing or {})
+    for key, value in incoming.items():
+        if key not in merged or value not in (None, "", [], {}):
+            merged[key] = value
+    if payload_is_kev(existing):
+        merged["is_kev"] = True
+    return merged
+
+
 def is_reference_backed_payload(payload: Mapping[str, Any]) -> bool:
-    return any(payload.get(key) for key in _REF_MARKER_KEYS)
+    return any(payload.get(key) for key in _REF_MARKER_KEYS) or bool(resolve_cve_id(payload))
+
+
+def _apply_cve_intel(merged: dict[str, Any], blob: Mapping[str, Any]) -> None:
+    """Fill a finding from its CVE record, which decides KEV whenever it states a verdict."""
+    for key, value in blob.items():
+        merged.setdefault(key, value)
+    if "is_kev" in blob or "cisa_kev" in blob:
+        verdict = payload_is_kev(blob)
+        merged["is_kev"] = verdict
+        if "cisa_kev" in merged:
+            merged["cisa_kev"] = verdict
+        if not verdict:
+            merged.pop("kev_due_date", None)
 
 
 def hydrate_reference_payload(
@@ -137,12 +167,12 @@ def hydrate_reference_payload(
         return dict(payload)
 
     merged = dict(payload)
-    intel_ref = str(merged.pop("intel_ref", "") or "")
+    # Rows written before every CVE finding carried ``intel_ref`` still name their CVE.
+    intel_ref = str(merged.pop("intel_ref", "") or "") or resolve_cve_id(merged)
     if intel_ref:
         blob = cve_intel.get(intel_ref)
         if blob:
-            for key, value in blob.items():
-                merged.setdefault(key, value)
+            _apply_cve_intel(merged, blob)
         if payload_is_kev(merged):
             merged["is_kev"] = True
 
@@ -166,4 +196,12 @@ def batch_reference_keys(payloads: Iterable[Mapping[str, Any]]) -> tuple[set[str
         framework_ref = str(payload.get("framework_ref") or "")
         if framework_ref:
             framework_refs.add(framework_ref)
+    return cve_ids, framework_refs
+
+
+def hydration_reference_keys(payloads: Iterable[Mapping[str, Any]]) -> tuple[set[str], set[str]]:
+    """Reference rows a read needs, including CVE records for rows with no ``intel_ref``."""
+    items = list(payloads)
+    cve_ids, framework_refs = batch_reference_keys(items)
+    cve_ids.update(cve_id for cve_id in map(resolve_cve_id, items) if cve_id)
     return cve_ids, framework_refs

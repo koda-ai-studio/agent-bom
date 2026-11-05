@@ -549,3 +549,20 @@ until the request's read scope ends. Responses using retained evidence declare
 A cold request with no complete generation still returns a bounded, retryable
 503 while building. Explicit stale generation continuations still fail with 409,
 and generation retention does not cross tenant boundaries.
+
+## Push completion and scan recovery
+
+A synchronous push remains `running` until graph persistence succeeds and the
+completed job receipt is durable. Poll `GET /v1/results/push/{job_id}` for the
+receipt; `stored` requires a recorded persisted graph. A legacy `done` row with
+no graph receipt reports `failed` and can be retried with its original
+idempotency key. A process exit between writes cannot certify completion.
+
+Distributed scan and push jobs use dispatch leases for recovery. The periodic
+creation-age reaper leaves these jobs to the queue, including old admissions
+reclaimed by another worker. Live owners renew their leases; expired leases
+can be reclaimed, and stale tokens cannot acknowledge successor claims. Local
+in-process jobs retain the age timeout and restart cleanup. Lease renewal is
+worker liveness evidence, not proof of forward progress; a live but stalled
+worker still requires operational diagnosis. These rules preserve tenant
+scoping and fail closed on completion claims without persistence evidence.

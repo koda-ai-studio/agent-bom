@@ -29,15 +29,15 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `access_policy` | Access Policy | Identity and access | `identity` | 3 / 3001 |  | 1 (+1 demo) |
 | `account` | Account | Identity and access | `identity` | 3 / 3001 |  | 18 (+2 demo) |
 | `agent` | AI Agent | AI and agents | `orchestration` | 5 / 4001 |  | 15 (+2 demo) |
-| `api_gateway` | API Gateway | Cloud, infrastructure and data | `api_gateway` | 5 / 4001 |  | 1 |
+| `api_gateway` | API Gateway | Cloud, infrastructure and data | `api_gateway` | 5 / 4001 |  | 2 |
 | `application` | Application | AI and agents | `app` | 5 / 4001 |  | 2 (+1 demo) |
 | `blueprint` | Blueprint | AI and agents | `orchestration` | 5 / 4001 |  | 1 |
 | `ci_job` | CI/CD Job | Code and supply chain | `ci` | 5 / 4001 |  | 2 (+1 demo) |
-| `cloud_resource` | Cloud Resource | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 20 (+3 demo) |
+| `cloud_resource` | Cloud Resource | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 21 (+3 demo) |
 | `cluster` | Cluster | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 0 (+1 demo) |
 | `code_module` | Code Module | Code and supply chain | `code` | 5 / 4001 |  | 5 |
 | `config_file` | Config File | Code and supply chain | `code` | 5 / 4001 |  | 3 (+1 demo) |
-| `container` | Container | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 6 (+1 demo) |
+| `container` | Container | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 7 (+1 demo) |
 | `credential` | Credential | Identity and access | `identity` | 5 / 4001 |  | 1 (+1 demo) |
 | `credential_ref` | Credential Reference | Identity and access | `identity` | 5 / 4001 |  | 0 |
 | `data_store` | Data Store | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 8 (+1 demo) |
@@ -86,7 +86,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `called` | `runtime` | runtime | directed | yes | `agent`, `tool_call` | `server`, `tool` | 4 | CR, RT | 2 (+1 demo) |
 | `can_access` | `authority` | identity | directed | yes | `account`, `agent`, `application`, `cloud_resource`, `cluster`, `container` (+10 more) | `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container` (+10 more) | 184 | FU, LT, MT | 5 (+2 demo) |
 | `configures` | `structural` | code_topology | directed | yes | `config_file` | `agent`, `ci_job`, `server`, `tool` | 4 | — | 2 |
-| `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+20 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+22 more) | 99 | FU, BR | 17 (+4 demo) |
+| `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+20 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+22 more) | 99 | FU, BR | 18 (+4 demo) |
 | `correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `code_module`, `server` | `agent`, `data_store`, `server` | 5 | — | 2 |
 | `cross_account_trust` | `authority` | identity | directed | yes | `account`, `federated_identity`, `role`, `service_principal` | `account`, `federated_identity`, `role`, `service_principal` | 16 | — | 2 |
 | `defines` | `structural` | code_topology | directed | yes | `source_file` | `ci_job`, `code_module`, `tool` | 3 | — | 4 |
@@ -94,7 +94,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `depends_on` | `dependency` | inventory | directed | yes | `ci_job`, `cloud_resource`, `code_module`, `config_file`, `container`, `data_store` (+6 more) | `ci_job`, `cloud_resource`, `code_module`, `container`, `data_store`, `package` | 15 | FU, BR | 14 (+2 demo) |
 | `exhibits_drift` | `governance` | governance | bidirectional | yes | `agent` | `drift_incident` | 1 | — | 1 |
 | `exploitable_via` | `finding` | vulnerability | directed | yes | `misconfiguration`, `vulnerability` | `credential`, `tool` | 4 | FU | 1 (+1 demo) |
-| `exposed_to` | `exposure` | exposure | directed | yes | `agent`, `api_gateway`, `cloud_resource`, `container`, `data_store`, `server` | `account`, `agent`, `cloud_resource`, `data_store`, `resource` | 20 | FU | 3 (+2 demo) |
+| `exposed_to` | `exposure` | exposure | directed | yes | `agent`, `api_gateway`, `cloud_resource`, `container`, `data_store`, `server` | `account`, `agent`, `cloud_resource`, `container`, `data_store`, `resource` | 21 | FU | 4 (+2 demo) |
 | `exposes_cred` | `authority` | inventory | directed | yes | `agent`, `resource`, `server` | `credential` | 3 | FU, CR | 2 (+1 demo) |
 | `governs` | `governance` | governance | directed | no | `access_policy`, `blueprint`, `policy` | `account`, `agent`, `drift_incident`, `managed_identity`, `org`, `tool` | 10 | — | 3 |
 | `has_permission` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `account`, `cloud_resource`, `cluster`, `data_store`, `org`, `resource` (+1 more) | 42 | FU, LT | 5 |

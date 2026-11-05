@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from agent_bom.api.finding_rank import compute_effective_reach_score as compute_effective_reach_score
+from agent_bom.api.storage.cve_intel_reconcile import START, Cursor, IntelPage, link_cve_rows_batch, reconcile_intel_batch
 from agent_bom.api.storage.finding_current_reads import CurrentFindingAggregates, SqlCurrentFindingReads
 from agent_bom.api.storage.finding_current_writes import current_ledger_candidates, reconcile_current, write_current_batch
 from agent_bom.api.storage.finding_ingest_state import LedgerIngestState, read_ingest_state, write_ingest_state
@@ -16,12 +17,14 @@ from agent_bom.api.storage.finding_write_session import finding_write_session
 from agent_bom.api.storage.hub_contract import FindingCursorPage, FindingPage
 from agent_bom.api.storage.hub_filters import _redact_findings, status_sql_predicate
 from agent_bom.api.storage.hub_schema import SQLiteHubSchema, _bump_overview_revision_sqlite
-from agent_bom.api.storage.sql import SQLiteBackend, connection_session
+from agent_bom.api.storage.sql import SQLiteBackend, connection_session, utc_timestamp
 from agent_bom.core.tenancy import require_explicit_tenant_id
+from agent_bom.db.kev_catalog import KevCatalog
 
 __all__ = ["SQLiteComplianceHubStore", "compute_effective_reach_score"]
 
 _UPGRADE_BACKFILL_BATCH = 2000
+_CVE_LINK_REPAIR = "cve_intel_links_20261105"
 
 
 class SQLiteComplianceHubStore(CurrentFindingAggregates, SQLiteHubSchema):
@@ -51,8 +54,48 @@ class SQLiteComplianceHubStore(CurrentFindingAggregates, SQLiteHubSchema):
         super()._init_db()
         # Single-process store: finish now so counts are exact from the first read.
         # Each batch commits, so an interrupted upgrade resumes where it stopped.
+        self._repair_cve_links_once()
         while self.backfill_materialized_batch(_UPGRADE_BACKFILL_BATCH):
             pass
+        self._walk_cve_intel_once()
+
+    def _repair_cve_links_once(self) -> None:
+        """Send rows an earlier writer left unlinked back through the backfill, once per database."""
+        with self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            self._conn.execute("CREATE TABLE IF NOT EXISTS agent_bom_hub_backfills (name TEXT PRIMARY KEY, completed_at TEXT NOT NULL)")
+            done = self._conn.execute("SELECT 1 FROM agent_bom_hub_backfills WHERE name = ?", (_CVE_LINK_REPAIR,)).fetchone()
+            if not done:
+                self._conn.execute("UPDATE hub_findings_current SET issue_group_id = NULL WHERE intel_ref = ''")
+                self._conn.execute(
+                    "INSERT INTO agent_bom_hub_backfills (name, completed_at) VALUES (?, ?)", (_CVE_LINK_REPAIR, utc_timestamp())
+                )
+
+    def _walk_cve_intel_once(self) -> None:
+        """Commit each page; rerunning at the next start is harmless."""
+        link_after: Cursor | None = START
+        while link_after is not None:
+            link_after, _ = self.link_cve_rows_batch(link_after, _UPGRADE_BACKFILL_BATCH)
+        walk_after: Cursor | None = START
+        while walk_after is not None:
+            walk_after = self.reconcile_cve_intel_batch(walk_after, _UPGRADE_BACKFILL_BATCH, None).next_after
+
+    def link_cve_rows_batch(self, after: Cursor, limit: int) -> tuple[Cursor | None, int]:
+        with self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            return link_cve_rows_batch(connection_session(self._conn, "sqlite"), "sqlite", after=after, limit=limit)
+
+    def reconcile_cve_intel_batch(self, after: Cursor, limit: int, catalog: KevCatalog | None) -> IntelPage:
+        with self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            return reconcile_intel_batch(
+                connection_session(self._conn, "sqlite"),
+                "sqlite",
+                after=after,
+                limit=limit,
+                catalog=catalog,
+                bump_revision=lambda _tx, tenant: _bump_overview_revision_sqlite(self._conn, tenant),
+            )
 
     def backfill_materialized_batch(self, limit: int) -> int:
         """Materialize up to ``limit`` rows written before these columns existed."""

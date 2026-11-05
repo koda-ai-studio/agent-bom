@@ -52,7 +52,7 @@ erDiagram
 | Table | Backends | Columns | Partitioned | Lifetime |
 |---|---|---|---|---|
 | `adoption_events` | SQLite | 7 |  | persistent |
-| `agent_bom_hub_backfills` | Postgres | 2 |  | persistent |
+| `agent_bom_hub_backfills` | Postgres, SQLite | 2 |  | persistent |
 | `compliance_hub_findings_v2` | SQLite | 13 |  | persistent |
 | `control_plane_schema_versions` | Postgres, SQLite, ClickHouse | 3 |  | persistent |
 | `fleet_agents_tenant_key_migration` | SQLite | 9 |  | persistent |

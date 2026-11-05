@@ -29,6 +29,7 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from agent_bom.db.sync_build import open_sync_session
 from agent_bom.db.sync_common import (
     _BATCH_SIZE,
     _GHSA_REST_URL,
@@ -679,11 +680,10 @@ def sync_db(
     """
     import os
 
-    from agent_bom.db.schema import DB_PATH, init_db
+    from agent_bom.db.schema import DB_PATH
 
-    db_path = path or DB_PATH
-    # The update rewrites the database, so it is the right place to pay for a full integrity check — and the only place that still does.
-    conn = init_db(db_path, verify_integrity=True)
+    session = open_sync_session(path or DB_PATH)
+    conn = session.conn
     enabled = set(sources or DEFAULT_SYNC_SOURCES)
     results: dict[str, int] = {}
 
@@ -698,7 +698,7 @@ def sync_db(
         partial = _read_sync_metadata(conn, source).get("status") == "partial"
         notify(source, "partial" if partial else "complete", count)
 
-    try:
+    with session:
         if "osv" in enabled:
             if osv_ecosystems:
                 canonical_scopes = list(dict.fromkeys(_canonical_osv_ecosystem(item) for item in osv_ecosystems))
@@ -758,14 +758,6 @@ def sync_db(
         if "nvd" in enabled:
             key = nvd_api_key or os.environ.get("NVD_API_KEY")
             run_source("nvd", lambda: _sync_nvd_source(conn, key, nvd_url, max_nvd_entries, notify, nvd_time_budget))
-    finally:
-        # Fold the (potentially large) -wal back into the main DB so concurrent readers don't race a big write-ahead log right after a sync.
-        try:
-            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        except sqlite3.Error as exc:
-            _logger.debug("WAL checkpoint after sync_db skipped: %s", exc)
-        conn.close()
-
     return results
 
 

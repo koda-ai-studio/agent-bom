@@ -197,6 +197,20 @@ scan target that a command cannot honour (for example `fail-on-kev` or
 `baseline` with `scan-type: iac`) fails the step with an error; other
 unsupported inputs are dropped with a warning.
 
+## Vulnerability database scope
+
+`vuln-db-scope: application` (the default) keeps the application-ecosystem OSV
+archives locally. Packages in any other ecosystem, such as OS packages from an
+image, are answered by live OSV (`api.osv.dev`), and a scan where neither could
+answer stays incomplete rather than clean. The first refresh also caps NVD at 60
+seconds, newest CVEs first: the report and the log say `NVD sync partial
+(time_budget)`, and the next refresh resumes it. Set
+`AGENT_BOM_NVD_TIME_BUDGET_SECONDS` to choose another budget.
+
+`vuln-db-scope: full` reads the all-ecosystems archive (about 2.9 GB). Use it when
+OS packages must be answered from local data, including in the offline
+`sbom-artifact` step. The two scopes cache separately.
+
 ## Vulnerability database cache
 
 With `auto-update-db: 'true'` (the default) the scan refreshes the local
@@ -206,7 +220,7 @@ UTC day and restores the newest earlier copy through `restore-keys`:
 
 | Run | What happens | Cost |
 |---|---|---|
-| Cold (no cache entry yet) | Full database sync, then the cache is saved | Minutes: a full sync of every source measured about 22 minutes and a 2.2 GB database on a developer laptop; runner time varies with network and sources |
+| Cold (no cache entry yet) | The scoped database is built, then the cache is saved | Minutes: about 5 minutes and a 270 MB database on a developer laptop; runner time varies with network and sources. `vuln-db-scope: full` measured 21 to 23 minutes on Linux and macOS runners and 72 minutes on Windows before the first-build write path was reduced |
 | Warm, same day | The day's cache entry is restored; no sync | Cache restore only (proportional to database size) |
 | Warm, first run of a new day | Yesterday's copy is restored, refreshed, and saved under the new day's key | Restore plus an incremental refresh |
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Panel, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions } from "@xyflow/react";
+import { Panel, getViewportForBounds, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions } from "@xyflow/react";
 import { GRAPH_FIT_MAX_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 
@@ -62,6 +62,9 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     if (!enabled || !initialized || !width || !height || !windowHeight) return;
     const frameElement = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");
     if (!frameElement) return;
+    // React Flow briefly restores its default store width during a remount.
+    // Never choose a phone camera for a desktop-sized mounted canvas.
+    if (canvas && canvas.clientWidth > 0 && Math.abs(width - canvas.clientWidth) > 2) return;
     const nodes = getNodes().filter(node => !node.hidden);
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
     const frameSize = graphAdaptiveFrame({
@@ -82,6 +85,9 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
       frameElement.dataset.graphCameraSettled = "true";
       return;
     }
+    // An interrupted resize may return to the last settled width after its
+    // intermediate fit already moved the camera. That old receipt is stale.
+    lastAutoFitKey.current = null;
     frameElement.dataset.graphCameraSettled = "false";
     // Frame every loaded node whenever captions stay legible at that fit; a
     // capped zoom keeps small graphs from opening as two giant cards. A graph
@@ -91,14 +97,22 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // anchor at full-card zoom, since summary pills below zoom 1 are unreadable there.
     const phone = width < 640;
     const focus = !frameSize.fitAll && anchor ? (phone ? [{ id: anchor.id }] : neighbourhood(anchor.id, nodes.map(node => node.id), getEdges())) : null;
-    const options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: phone ? padding : "72px" }, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM,
+    let options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: phone ? padding : "72px" }, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM,
       ...(focus ? phone ? { nodes: focus, minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width) } : {}) };
-    const fitIds = focus ? new Set(focus.map(node => node.id)) : null;
+    let fitIds = focus ? new Set(focus.map(node => node.id)) : null;
     // Convergence must measure exactly the nodes passed to fitView.
-    const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => !node.hidden && fitIds.has(node.id)) : getNodes().filter(node => !node.hidden));
+    const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => !node.hidden && fitIds?.has(node.id)) : getNodes().filter(node => !node.hidden));
     let cancelled = false;
     const frames: number[] = [];
     const settle = (pass: number) => {
+      if (canvas && canvas.clientWidth > 0 && Math.abs(width - canvas.clientWidth) > 2) return;
+      // A new reading order can inherit dimensions measured at the previous
+      // zoom. Reconsider the complete graph after those captions settle; a
+      // stale first measurement must not pin a small graph to one neighbour.
+      if (pass > 0 && fitIds && getViewportForBounds(getNodesBounds(getNodes().filter(n => !n.hidden)), width, height, 0.05, 2, padding).zoom >= legibleFitZoom(width)) {
+        fitIds = null;
+        options = { padding: options.padding ?? padding, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM };
+      }
       const before = fittedBounds();
       void fitView(options).then(fitted => {
         // Zoom changes readable glyph/caption dimensions. Their observer and

@@ -3,6 +3,7 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 
 /** Presentation only: full canonical labels remain in the tooltip and inspector. */
 export function mcpNodeCaption(data: LineageNodeData, title: string) {
+  if (data.displayOnly && data.readingLabel) return { title, meta: data.readingLabel };
   if (data.nodeType === "package") {
     const name = title.replace(/^@[^/]+\//, "").replace(/@[^@]+$/, "");
     const version = data.version ?? title.match(/@([^@/]+)$/)?.[1];

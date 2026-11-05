@@ -17,3 +17,11 @@ export function VirtualMachineGlyph(props: GlyphProps) {
     <path d="M5 16H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v1M12 17h5" />
   </svg>;
 }
+
+/** External network boundary; the outer ring distinguishes it from an endpoint. */
+export function InternetBoundaryGlyph(props: GlyphProps) {
+  return <svg {...props} data-asset-glyph="internet-boundary" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+    <circle cx="12" cy="12" r="11" strokeDasharray="2 2" /><circle cx="12" cy="12" r="8" />
+    <ellipse cx="12" cy="12" rx="3.5" ry="8" /><path d="M4 12h16M6 7.5c4 2 8 2 12 0M6 16.5c4-2 8-2 12 0" />
+  </svg>;
+}

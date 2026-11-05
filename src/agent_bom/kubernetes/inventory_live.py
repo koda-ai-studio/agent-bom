@@ -19,6 +19,9 @@ from agent_bom.kubernetes.posture_models import CollectorState, K8sCollectorEvid
 INVENTORY_RESOURCES: dict[str, str] = {
     "namespaces": "Namespace",
     "pods": "Pod",
+    "services": "Service",
+    "ingresses": "Ingress",
+    "endpointslices": "EndpointSlice",
     "deployments": "Deployment",
     "statefulsets": "StatefulSet",
     "daemonsets": "DaemonSet",
