@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent_bom.mcp_server_metadata import _DEFAULT_PROFILE_TOOL_NAMES
+from agent_bom.mcp_tools.tool_capabilities import _TOOL_CAPABILITY_CLASSES
 
 DEFAULT_PROFILE = "scan"
 PROFILE_VERSION = 1
@@ -104,7 +105,7 @@ PROFILES = {
         _COMMON_RESOURCES | {"schema://inventory-v1", "bestpractices://mcp-hardening"},
     ),
     "audit": ToolProfile(
-        "Audit MCP descriptors, permission scope, agent inventory, local agent activity and skill or instruction files; "
+        "Audit MCP descriptors, permission scope, agent inventory and skill or instruction files; "
         "review compliance, policy and audit integrity.",
         frozenset(
             {
@@ -118,7 +119,6 @@ PROFILES = {
                 "inventory",
                 "skill_scan",
                 "skill_trust",
-                "agent_activity",
             }
         ),
         frozenset({"compliance-report"}),
@@ -174,7 +174,7 @@ def _selected_decorator(original: Any, allowed: frozenset[str], kind: str) -> An
     return filtered
 
 
-def configure_registration(mcp: Any, name: str) -> None:
+def configure_registration(mcp: Any, name: str, *, read_only: bool = False) -> None:
     """Skip excluded decorators before FastMCP constructs expensive schemas.
 
     Registration is scoped to this server instance, never a global manager.
@@ -182,6 +182,13 @@ def configure_registration(mcp: Any, name: str) -> None:
     """
     spec = get_profile(name)
     for kind, allowed in (("tool", spec.tools), ("prompt", spec.prompts), ("resource", spec.resources)):
+        if kind == "tool" and read_only:
+            safe = frozenset(
+                tool
+                for tool, capabilities in _TOOL_CAPABILITY_CLASSES.items()
+                if "READ" in capabilities and not {"WRITE", "PROCESS_EXECUTION"}.intersection(capabilities) and tool != "agent_activity"
+            )
+            allowed = safe if allowed is None else allowed & safe
         if allowed is None:
             continue
         setattr(mcp, kind, _selected_decorator(getattr(mcp, kind), allowed, kind))
