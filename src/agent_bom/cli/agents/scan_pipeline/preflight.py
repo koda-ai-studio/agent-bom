@@ -18,7 +18,7 @@ from agent_bom.core.settings import env_opt
 from agent_bom.db import schema as _db_schema
 from agent_bom.db.sync_common import OSV_APPLICATION_ECOSYSTEMS
 from agent_bom.db.sync_nvd_window import TIME_BUDGET_ENV
-from agent_bom.vuln_freshness import bundled_demo_freshness, compute_freshness, osv_archive_is_full, should_refresh
+from agent_bom.vuln_freshness import osv_archive_is_full
 
 # The window is walked newest first and a partial run resumes at the next refresh,
 # so a short first pass keeps the most recent CVEs and is reported as partial.
@@ -112,6 +112,8 @@ def _refresh_vuln_data(opts: ScanOptions, st: ScanState) -> None:
     # attached to the report so the API/MCP can return it. Offline/airgapped
     # callers (``--offline`` or AGENT_BOM_VULN_DB_OFFLINE) never trigger a
     # network refresh — they use whatever cache exists.
+    from agent_bom.vuln_freshness import bundled_demo_freshness, compute_freshness, should_refresh
+
     st.vuln_freshness = None
     st.pre_scan_step_timings = {}
     if opts.demo:
