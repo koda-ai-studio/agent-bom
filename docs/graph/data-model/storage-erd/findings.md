@@ -193,8 +193,8 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `findings_feed_runs` | ClickHouse | 6 |  | persistent |
 | `findings_feed_staged` | ClickHouse | 18 | yes | persistent |
 | `hitl_approvals` | SQLite | 14 |  | persistent |
-| `hub_cve_intel` | Postgres, SQLite | 4 |  | persistent |
-| `hub_findings_current` | Postgres | 18 |  | persistent |
+| `hub_cve_intel` | Postgres, SQLite | 5 |  | persistent |
+| `hub_findings_current` | Postgres | 23 |  | persistent |
 | `hub_findings_current_observations` | Postgres, SQLite | 4 | yes | persistent |
 | `hub_ledger_ingest_state` | SQLite | 3 |  | persistent |
 | `hub_overview_revisions` | Postgres, SQLite | 2 |  | persistent |

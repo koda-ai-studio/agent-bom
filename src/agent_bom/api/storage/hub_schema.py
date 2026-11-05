@@ -13,12 +13,14 @@ from agent_bom.api.hub_current_payload import (
     hydrate_current_payload,
 )
 from agent_bom.api.hub_payload_codec import decode_hub_payload
+from agent_bom.api.hub_reference_payload import payload_is_kev
 from agent_bom.api.hub_reference_store import (
     ensure_sqlite_reference_tables,
     hydrate_finding_payloads_sqlite,
 )
 from agent_bom.api.storage.campaign_revisions import initialize_sqlite_campaign_evidence
 from agent_bom.api.storage.finding_ingest_state import ensure_sqlite_ingest_state
+from agent_bom.api.storage.finding_materialized import PENDING_INDEX, READ_INDEXES
 from agent_bom.api.storage.hub_contract import _LEDGER_ORDINAL_SENTINEL, _SCHEMA_KEY, _SCHEMA_VERSION
 from agent_bom.api.storage.sqlite_connection import open_wal_connection
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
@@ -270,6 +272,27 @@ def _now_utc_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _migrate_materialized_sqlite(conn: sqlite3.Connection) -> None:
+    """Add the columns KEV and issue counts read; rows stay pending until backfilled."""
+    current = {row[1] for row in conn.execute("PRAGMA table_info(hub_findings_current)").fetchall()}
+    for column, ddl in (
+        ("issue_group_id", "TEXT"),
+        ("kev_direct", "INTEGER NOT NULL DEFAULT 0"),
+        ("intel_ref", "TEXT NOT NULL DEFAULT ''"),
+        ("lens_mask", "INTEGER NOT NULL DEFAULT 0"),
+        ("frameworks_csv", "TEXT NOT NULL DEFAULT ''"),
+    ):
+        if column not in current:
+            conn.execute(f"ALTER TABLE hub_findings_current ADD COLUMN {column} {ddl}")  # nosec B608
+    if "is_kev" not in {row[1] for row in conn.execute("PRAGMA table_info(hub_cve_intel)").fetchall()}:
+        conn.execute("ALTER TABLE hub_cve_intel ADD COLUMN is_kev INTEGER NOT NULL DEFAULT 0")
+        rows = conn.execute("SELECT tenant_id, cve_id, payload FROM hub_cve_intel").fetchall()
+        kev = [(row[0], row[1]) for row in rows if payload_is_kev(decode_hub_payload(row[2]))]
+        conn.executemany("UPDATE hub_cve_intel SET is_kev = 1 WHERE tenant_id = ? AND cve_id = ?", kev)
+    for statement in (PENDING_INDEX, *READ_INDEXES):
+        conn.execute(statement)
+
+
 def _ensure_overview_revision_sqlite(conn: sqlite3.Connection) -> None:
     conn.execute(
         """CREATE TABLE IF NOT EXISTS hub_overview_revisions (
@@ -357,6 +380,8 @@ class SQLiteHubSchema:
             self._ensure_scale_indexes()
             _ensure_current_lifecycle_sqlite(self._conn)
             _ensure_overview_revision_sqlite(self._conn)
+            ensure_sqlite_reference_tables(self._conn)
+            _migrate_materialized_sqlite(self._conn)
             ensure_sqlite_reference_tables(self._conn)
             ensure_sqlite_ingest_state(self._conn)
 

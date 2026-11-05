@@ -21,10 +21,12 @@ from agent_bom.api.hub_reference_store import (
     hydrate_finding_payloads_postgres,
 )
 from agent_bom.api.postgres_common import ConnectionPool, _ensure_tenant_rls, _get_pool, _tenant_connection
-from agent_bom.api.storage.finding_current_reads import SqlCurrentFindingReads
+from agent_bom.api.storage.finding_current_reads import CurrentFindingAggregates, SqlCurrentFindingReads
 from agent_bom.api.storage.finding_current_writes import current_ledger_candidates, reconcile_current, write_current_batch
 from agent_bom.api.storage.finding_ingest_state import INGEST_STATE_DDL, LedgerIngestState, read_ingest_state, write_ingest_state
 from agent_bom.api.storage.finding_ledger_writes import write_ledger_batch
+from agent_bom.api.storage.finding_materialized import MATERIALIZED_POSTGRES_DDL
+from agent_bom.api.storage.finding_materialized import backfill_batch as materialized_backfill_batch
 from agent_bom.api.storage.finding_reads import SqlFindingReads
 from agent_bom.api.storage.finding_write_session import finding_write_session
 from agent_bom.api.storage.hub_contract import _LEDGER_ORDINAL_SENTINEL, _SCHEMA_VERSION, FindingCursorPage, FindingPage
@@ -40,11 +42,6 @@ from agent_bom.api.storage.hub_schema import _now_utc_iso
 from agent_bom.api.storage.sql import PostgresBackend
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id
-
-
-def _kev_json_cond_postgres(col: str) -> str:
-    """Postgres predicate: the CISA-KEV flag on a JSONB payload column."""
-    return f"({col}->>'is_kev') IN ('true', 't', '1') OR ({col}->>'cisa_kev') IN ('true', 't', '1')"
 
 
 def _invalidate_overview_severity(tenant_id: str) -> None:
@@ -214,6 +211,12 @@ def _postgres_current_has_ledger_col(conn: Any) -> bool:
     return row is not None
 
 
+def _ensure_materialized_schema(conn: Any) -> None:
+    ensure_postgres_reference_tables(conn)
+    for statement in MATERIALIZED_POSTGRES_DDL:
+        conn.execute(statement)
+
+
 def _ensure_ingest_support_tables(conn: Any) -> None:
     ensure_postgres_reference_tables(conn)
     conn.execute(INGEST_STATE_DDL)
@@ -221,7 +224,7 @@ def _ensure_ingest_support_tables(conn: Any) -> None:
         _ensure_tenant_rls(conn, table, "tenant_id")
 
 
-class PostgresComplianceHubStore:
+class PostgresComplianceHubStore(CurrentFindingAggregates):
     """Shared hub store backing multi-replica self-hosted deployments."""
 
     @property
@@ -448,11 +451,10 @@ class PostgresComplianceHubStore:
                 "CREATE INDEX IF NOT EXISTS idx_hub_findings_current_tenant_severity_ci "
                 "ON hub_findings_current(tenant_id, LOWER(severity)) WHERE severity <> ''"
             )
-            # Ordinal range-scan index + severity-composite sort indexes. Built
-            # after the ledger_ordinal migration so pre-existing tables carry the
-            # column first (#3984).
+            # Sort indexes follow the ledger_ordinal migration so older tables carry the column (#3984).
             for sort_index_sql in _CURRENT_LIFECYCLE_SORT_INDEXES_POSTGRES:
                 conn.execute(sort_index_sql)
+            _ensure_materialized_schema(conn)
             _ensure_tenant_rls(conn, "hub_findings_current", "tenant_id")
             _ensure_tenant_rls(conn, "hub_findings_current_observations", "tenant_id")
             _ensure_ingest_support_tables(conn)
@@ -654,47 +656,19 @@ class PostgresComplianceHubStore:
             counts[key] = counts.get(key, 0) + int(count)
         return counts
 
-    def current_kev_count(
-        self,
-        tenant_id: str,
-        *,
-        origin: str | None = None,
-        since: str | None = None,
-        status: str | None = None,
-    ) -> int:
-        # Same tenant/since/origin/status predicates as ``current_severity_breakdown``.
-        # The KEV flag is not a current-state column, so resolve it from the
-        # current payload, the joined ledger payload, and the CVE-intel reference
-        # — the same places the drill hydrates it — so the exec KEV count
-        # reconciles with the /v1/findings KEV rows (#3961).
-        where = ["c.tenant_id = %s"]
-        params: list[Any] = [tenant_id]
-        if since:
-            where.append("c.last_seen >= %s")
-            params.append(since)
-        if origin is not None:
-            where.append("c.origin = %s")
-            params.append(origin)
-        status_sql, status_params = status_sql_predicate(status, placeholder="%s")
-        if status_sql:
-            where.append(status_sql.replace("status", "c.status", 1))
-            params.extend(status_params)
-        where_sql = " AND ".join(where)
-        kev_cond = " OR ".join(_kev_json_cond_postgres(col) for col in ("c.payload", "l.payload", "i.payload"))
-        with _tenant_connection(self._pool) as conn:
-            row = conn.execute(
-                f"""
-                SELECT COUNT(*)
-                FROM hub_findings_current c
-                LEFT JOIN compliance_hub_findings l
-                    ON l.tenant_id = c.tenant_id AND l.finding_id = c.ledger_finding_id
-                LEFT JOIN hub_cve_intel i
-                    ON i.tenant_id = c.tenant_id AND i.cve_id = (l.payload->>'intel_ref')
-                WHERE {where_sql} AND ({kev_cond})
-                """,  # nosec B608
-                tuple(params),
-            ).fetchone()
-        return int(row[0]) if row else 0
+    def backfill_materialized_batch(self, limit: int) -> int:
+        """Materialize rows old writers left pending, across tenants, on the maintenance role."""
+        with PostgresBackend(self._pool).transaction(all_tenants=True) as tx:
+            return materialized_backfill_batch(
+                tx,
+                "postgres",
+                limit=limit,
+                bump_revision=lambda session, tenant: session.execute(
+                    "INSERT INTO hub_overview_revisions (tenant_id, revision) VALUES (?, 1) "
+                    "ON CONFLICT (tenant_id) DO UPDATE SET revision = hub_overview_revisions.revision + 1",
+                    (tenant,),
+                ),
+            )
 
     def framework_slug_counts(self, tenant_id: str) -> dict[str, int]:
         from agent_bom.compliance_coverage import normalize_framework_slug
@@ -719,48 +693,6 @@ class PostgresComplianceHubStore:
         for slug, n in rows:
             canonical = normalize_framework_slug(str(slug))
             counts[canonical] = counts.get(canonical, 0) + int(n)
-        return counts
-
-    def current_failing_framework_slug_counts(
-        self,
-        tenant_id: str,
-        *,
-        origin: str | None = None,
-        since: str | None = None,
-        status: str | None = None,
-    ) -> dict[str, int]:
-        from agent_bom.compliance_coverage import normalize_framework_slug
-
-        where = ["c.tenant_id = %s", "LOWER(c.severity) IN ('critical', 'high')"]
-        params: list[Any] = [tenant_id]
-        if since:
-            where.append("c.last_seen >= %s")
-            params.append(since)
-        if origin is not None:
-            where.append("c.origin = %s")
-            params.append(origin)
-        status_sql, status_params = status_sql_predicate(status, placeholder="%s")
-        if status_sql:
-            where.append(status_sql.replace("status", "c.status", 1))
-            params.extend(status_params)
-        with _tenant_connection(self._pool) as conn:
-            rows = conn.execute(
-                f"""
-                SELECT TRIM(token), COUNT(*)
-                FROM hub_findings_current c
-                JOIN compliance_hub_findings l
-                  ON l.tenant_id = c.tenant_id AND l.finding_id = c.ledger_finding_id
-                CROSS JOIN LATERAL unnest(string_to_array(l.applicable_frameworks_csv, ',')) AS token
-                WHERE {" AND ".join(where)} AND l.applicable_frameworks_csv <> ''
-                GROUP BY TRIM(token)
-                HAVING TRIM(token) <> ''
-                """,  # nosec B608
-                tuple(params),
-            ).fetchall()
-        counts: dict[str, int] = {}
-        for slug, count in rows:
-            canonical = normalize_framework_slug(str(slug))
-            counts[canonical] = counts.get(canonical, 0) + int(count)
         return counts
 
     def overview_evidence_revision(self, tenant_id: str) -> int:

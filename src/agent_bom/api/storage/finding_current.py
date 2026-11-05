@@ -45,7 +45,7 @@ def parse_row(row: Sequence[Any], *, has_ledger_col: bool) -> dict[str, Any]:
 
 def keyed_rows(tx: SqlSession, tenant: str, ids: Sequence[str], *, ledger: bool, has_ledger: bool = True) -> list[Any]:
     table, key, selected = (
-        ("compliance_hub_findings", "finding_id", "finding_id, payload, ordinal")
+        ("compliance_hub_findings", "finding_id", "finding_id, payload, ordinal, applicable_frameworks_csv")
         if ledger
         else ("hub_findings_current", "canonical_id", columns(has_ledger))
     )

@@ -255,6 +255,6 @@ class ComplianceHubStore(Protocol):
 
 _SCHEMA_KEY = "compliance_hub"
 
-_SCHEMA_VERSION = 3
+_SCHEMA_VERSION = 4
 
 _LEDGER_ORDINAL_SENTINEL = 9223372036854775807

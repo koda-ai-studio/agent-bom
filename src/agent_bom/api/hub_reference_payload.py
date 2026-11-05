@@ -55,6 +55,23 @@ _FRAMEWORK_TAG_KEYS: tuple[str, ...] = (
 _REF_MARKER_KEYS = ("intel_ref", "framework_ref")
 
 
+_KEV_TRUE_TEXT = frozenset({"true", "t", "1"})
+
+
+def is_kev_value(value: Any) -> bool:
+    """Whether one stored KEV flag means known-exploited."""
+    if isinstance(value, str):
+        return value.strip().lower() in _KEV_TRUE_TEXT
+    return value is True or value == 1
+
+
+def payload_is_kev(payload: Mapping[str, Any] | None) -> bool:
+    """The one KEV verdict shared by SQL columns, in-memory stores and the drill."""
+    if not payload:
+        return False
+    return is_kev_value(payload.get("is_kev")) or is_kev_value(payload.get("cisa_kev"))
+
+
 def resolve_cve_id(payload: Mapping[str, Any]) -> str:
     for key in ("cve_id", "vulnerability_id", "id"):
         raw = payload.get(key)
@@ -126,6 +143,8 @@ def hydrate_reference_payload(
         if blob:
             for key, value in blob.items():
                 merged.setdefault(key, value)
+        if payload_is_kev(merged):
+            merged["is_kev"] = True
 
     framework_ref = str(merged.pop("framework_ref", "") or "")
     if framework_ref:

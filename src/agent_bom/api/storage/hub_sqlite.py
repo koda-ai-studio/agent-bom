@@ -6,22 +6,25 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from agent_bom.api.finding_rank import compute_effective_reach_score as compute_effective_reach_score
-from agent_bom.api.storage.finding_current_reads import SqlCurrentFindingReads
+from agent_bom.api.storage.finding_current_reads import CurrentFindingAggregates, SqlCurrentFindingReads
 from agent_bom.api.storage.finding_current_writes import current_ledger_candidates, reconcile_current, write_current_batch
 from agent_bom.api.storage.finding_ingest_state import LedgerIngestState, read_ingest_state, write_ingest_state
 from agent_bom.api.storage.finding_ledger_writes import write_ledger_batch
+from agent_bom.api.storage.finding_materialized import backfill_batch as materialized_backfill_batch
 from agent_bom.api.storage.finding_reads import SqlFindingReads
 from agent_bom.api.storage.finding_write_session import finding_write_session
 from agent_bom.api.storage.hub_contract import FindingCursorPage, FindingPage
-from agent_bom.api.storage.hub_filters import _kev_json_cond_sqlite, _redact_findings, status_sql_predicate
+from agent_bom.api.storage.hub_filters import _redact_findings, status_sql_predicate
 from agent_bom.api.storage.hub_schema import SQLiteHubSchema, _bump_overview_revision_sqlite
-from agent_bom.api.storage.sql import SQLiteBackend
+from agent_bom.api.storage.sql import SQLiteBackend, connection_session
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
 __all__ = ["SQLiteComplianceHubStore", "compute_effective_reach_score"]
 
+_UPGRADE_BACKFILL_BATCH = 2000
 
-class SQLiteComplianceHubStore(SQLiteHubSchema):
+
+class SQLiteComplianceHubStore(CurrentFindingAggregates, SQLiteHubSchema):
     """SQLite-backed hub store for single-node persistence.
 
     NOT safe for multi-replica API deployments: SQLite's WAL is local to
@@ -43,6 +46,24 @@ class SQLiteComplianceHubStore(SQLiteHubSchema):
 
         invalidate_tenant(tenant_id)
         hub_overview_cache.invalidate_tenant(tenant_id)
+
+    def _init_db(self) -> None:
+        super()._init_db()
+        # Single-process store: finish now so counts are exact from the first read.
+        # Each batch commits, so an interrupted upgrade resumes where it stopped.
+        while self.backfill_materialized_batch(_UPGRADE_BACKFILL_BATCH):
+            pass
+
+    def backfill_materialized_batch(self, limit: int) -> int:
+        """Materialize up to ``limit`` rows written before these columns existed."""
+        with self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            return materialized_backfill_batch(
+                connection_session(self._conn, "sqlite"),
+                "sqlite",
+                limit=limit,
+                bump_revision=lambda _tx, tenant: _bump_overview_revision_sqlite(self._conn, tenant),
+            )
 
     def overview_evidence_revision(self, tenant_id: str) -> int:
         return self._ledger_reads.overview_evidence_revision(tenant_id)
@@ -180,47 +201,6 @@ class SQLiteComplianceHubStore(SQLiteHubSchema):
             counts[key] = counts.get(key, 0) + int(count)
         return counts
 
-    def current_kev_count(
-        self,
-        tenant_id: str,
-        *,
-        origin: str | None = None,
-        since: str | None = None,
-        status: str | None = None,
-    ) -> int:
-        # Same tenant/since/origin/status predicates as ``current_severity_breakdown``.
-        # The KEV flag is not a current-state column (the overlay keeps only
-        # sort/filter scalars), so resolve it from the current payload, the joined
-        # ledger payload, and the CVE-intel reference — the exact places the drill
-        # hydrates it from — so the exec KEV count reconciles with the drill.
-        where = ["c.tenant_id = ?"]
-        params: list[Any] = [tenant_id]
-        if since:
-            where.append("c.last_seen >= ?")
-            params.append(since)
-        if origin is not None:
-            where.append("c.origin = ?")
-            params.append(origin)
-        status_sql, status_params = status_sql_predicate(status)
-        if status_sql:
-            where.append(status_sql.replace("status", "c.status", 1))
-            params.extend(status_params)
-        where_sql = " AND ".join(where)
-        kev_cond = " OR ".join(_kev_json_cond_sqlite(col) for col in ("c.payload", "l.payload", "i.payload"))
-        row = self._conn.execute(
-            f"""
-            SELECT COUNT(*)
-            FROM hub_findings_current c
-            LEFT JOIN compliance_hub_findings l
-                ON l.tenant_id = c.tenant_id AND l.finding_id = c.ledger_finding_id
-            LEFT JOIN hub_cve_intel i
-                ON i.tenant_id = c.tenant_id AND i.cve_id = json_extract(l.payload, '$.intel_ref')
-            WHERE {where_sql} AND ({kev_cond})
-            """,  # nosec B608
-            params,
-        ).fetchone()
-        return int((row[0] if row else 0) or 0)
-
     def framework_slug_counts(self, tenant_id: str) -> dict[str, int]:
         from agent_bom.compliance_coverage import normalize_framework_slug
 
@@ -251,54 +231,6 @@ class SQLiteComplianceHubStore(SQLiteHubSchema):
         for slug, n in rows:
             canonical = normalize_framework_slug(str(slug))
             counts[canonical] = counts.get(canonical, 0) + int(n)
-        return counts
-
-    def current_failing_framework_slug_counts(
-        self,
-        tenant_id: str,
-        *,
-        origin: str | None = None,
-        since: str | None = None,
-        status: str | None = None,
-    ) -> dict[str, int]:
-        from agent_bom.compliance_coverage import normalize_framework_slug
-
-        where = ["c.tenant_id = ?", "LOWER(c.severity) IN ('critical', 'high')"]
-        params: list[Any] = [tenant_id]
-        if since:
-            where.append("c.last_seen >= ?")
-            params.append(since)
-        if origin is not None:
-            where.append("c.origin = ?")
-            params.append(origin)
-        status_sql, status_params = status_sql_predicate(status)
-        if status_sql:
-            where.append(status_sql.replace("status", "c.status", 1))
-            params.extend(status_params)
-        rows = self._conn.execute(
-            f"""
-            WITH RECURSIVE selected(csv) AS (
-                SELECT l.applicable_frameworks_csv
-                FROM hub_findings_current c
-                JOIN compliance_hub_findings l
-                  ON l.tenant_id = c.tenant_id AND l.finding_id = c.ledger_finding_id
-                WHERE {" AND ".join(where)} AND l.applicable_frameworks_csv <> ''
-            ), split(rest, token) AS (
-                SELECT csv || ',', '' FROM selected
-                UNION ALL
-                SELECT substr(rest, instr(rest, ',') + 1),
-                       substr(rest, 1, instr(rest, ',') - 1)
-                FROM split WHERE rest <> ''
-            )
-            SELECT TRIM(token), COUNT(*) FROM split
-            WHERE TRIM(token) <> '' GROUP BY TRIM(token)
-            """,  # nosec B608
-            params,
-        ).fetchall()
-        counts: dict[str, int] = {}
-        for slug, count in rows:
-            canonical = normalize_framework_slug(str(slug))
-            counts[canonical] = counts.get(canonical, 0) + int(count)
         return counts
 
     def count(self, tenant_id: str) -> int:

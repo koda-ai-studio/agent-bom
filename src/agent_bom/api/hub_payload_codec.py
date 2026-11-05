@@ -8,7 +8,7 @@ from typing import Any
 
 from agent_bom.api.payload_compression import decode_zstd_json
 
-_MARKER = "__abom_zstd"
+HUB_PAYLOAD_MARKER = "__abom_zstd"
 _MIN_COMPRESS_BYTES = 512
 _ZSTD_LEVEL = 3
 MAX_HUB_PAYLOAD_BYTES = 16 * 1024 * 1024
@@ -25,7 +25,7 @@ def encode_hub_payload(payload: dict[str, Any]) -> str:
 
     compressed = zstd.ZstdCompressor(level=_ZSTD_LEVEL).compress(raw)
     wrapper = {
-        _MARKER: True,
+        HUB_PAYLOAD_MARKER: True,
         "v": 1,
         "data": base64.b64encode(compressed).decode("ascii"),
     }
@@ -35,14 +35,14 @@ def encode_hub_payload(payload: dict[str, Any]) -> str:
 def decode_hub_payload(stored: Any) -> dict[str, Any]:
     """Deserialize a hub payload from plain JSON or a zstd wrapper."""
     if isinstance(stored, dict):
-        if stored.get(_MARKER):
+        if stored.get(HUB_PAYLOAD_MARKER):
             return _decode_wrapper(stored)
         return dict(stored)
     if stored is None:
         return {}
     text = stored if isinstance(stored, str) else str(stored)
     parsed = json.loads(text)
-    if isinstance(parsed, dict) and parsed.get(_MARKER):
+    if isinstance(parsed, dict) and parsed.get(HUB_PAYLOAD_MARKER):
         return _decode_wrapper(parsed)
     return dict(parsed) if isinstance(parsed, dict) else {}
 

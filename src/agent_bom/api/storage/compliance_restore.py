@@ -11,6 +11,7 @@ from typing import Any, cast
 
 from agent_bom.api.finding_lifecycle import normalize_observed_at
 from agent_bom.api.hub_payload_codec import decode_hub_payload, encode_hub_payload
+from agent_bom.api.hub_reference_payload import payload_is_kev
 from agent_bom.api.postgres_compliance_hub import PostgresComplianceHubStore
 from agent_bom.api.storage.canonical_import import PinnedImportPool
 from agent_bom.api.storage.compliance_snapshot import (
@@ -27,6 +28,7 @@ from agent_bom.api.storage.compliance_snapshot import (
 from agent_bom.api.storage.finding_current import CURRENT_COLUMNS, LEDGER_ORDINAL_SENTINEL
 from agent_bom.api.storage.finding_current_writes import current_upsert
 from agent_bom.api.storage.finding_ledger_writes import FIELDS, ledger_upsert
+from agent_bom.api.storage.finding_materialized import MATERIALIZED_COLUMNS
 from agent_bom.api.storage.finding_write_session import finding_write_session
 from agent_bom.api.storage_schema import postgres_deployment_configured
 from agent_bom.api.tenant_worker import tenant_bound_context
@@ -77,6 +79,9 @@ def _restore_rows(tx: Any, snapshot: ComplianceSnapshot) -> None:
     tables = snapshot.tables
     for table in REFERENCE_KEYS:
         _insert_rows(tx, table, tables[table])
+    for intel in tables["hub_cve_intel"]:
+        if payload_is_kev(intel["payload"]):
+            tx.execute("UPDATE hub_cve_intel SET is_kev = TRUE WHERE tenant_id = ? AND cve_id = ?", (intel["tenant_id"], intel["cve_id"]))
     ordinals = {}
     upsert = ledger_upsert("postgres") + " RETURNING ordinal"  # nosec B608 - ledger_upsert: fixed columns and ? placeholders
     for row in sorted(tables[LEDGER], key=lambda row: row["ordinal"]):
@@ -85,9 +90,12 @@ def _restore_rows(tx: Any, snapshot: ComplianceSnapshot) -> None:
         ordinals[row["finding_id"]] = saved[0]
     # Lifecycle fields and historical observation timestamps are preserved.
     # Internal ledger sequence values are mapped to the new Postgres rows.
-    fields = ("tenant_id", *CURRENT_COLUMNS, "origin", "scan_id", "ledger_finding_id", "ledger_ordinal")
+    # A NULL group id leaves the row pending, so the cleanup tick materializes it
+    # from the restored payload and counts stay labelled approximate until then.
+    fields = ("tenant_id", *CURRENT_COLUMNS, "origin", "scan_id", *MATERIALIZED_COLUMNS, "ledger_finding_id", "ledger_ordinal")
     for original in tables[CURRENT]:
         row = dict(original)
+        row.update(issue_group_id=None, kev_direct=False, intel_ref="", lens_mask=0, frameworks_csv="")
         row["ledger_ordinal"] = ordinals.get(row["ledger_finding_id"], LEDGER_ORDINAL_SENTINEL)
         values = tuple(encode_hub_payload(row[key]) if key == "payload" else row[key] for key in fields)
         tx.execute(current_upsert("postgres", True), values)

@@ -1947,6 +1947,7 @@ jobs:
             tests/test_finding_model_integrity.py \
             tests/test_hub_ingest_replica_postgres.py \
             tests/test_hub_overview_cache.py \
+            tests/test_hub_truthful_counts.py \
             tests/test_partition_maintenance.py \
             tests/test_graph_traversal_budget_honesty.py \
             tests/test_graph_traverse_subgraph_completeness.py \

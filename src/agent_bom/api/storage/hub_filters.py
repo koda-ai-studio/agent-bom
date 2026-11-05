@@ -12,6 +12,7 @@ from agent_bom.api.finding_cursor import (
     finding_order_clause,
 )
 from agent_bom.api.finding_rank import compute_effective_reach_score as compute_effective_reach_score
+from agent_bom.api.hub_reference_payload import payload_is_kev
 from agent_bom.api.storage.hub_contract import (
     _LEDGER_ORDINAL_SENTINEL,
     _LIST_PAGE_SORTS,
@@ -290,14 +291,7 @@ def _payload_is_kev(payload: Mapping[str, Any] | None) -> bool:
     The hub normalises ``cisa_kev`` to ``is_kev`` on store, but accept either so
     a freshly-ingested or hydrated payload both resolve — matching what the
     /v1/findings drill shows per row."""
-    if not payload:
-        return False
-    return bool(payload.get("is_kev") or payload.get("cisa_kev"))
-
-
-def _kev_json_cond_sqlite(col: str) -> str:
-    """SQLite predicate: the KEV flag on a JSON column (bool ``true`` or string)."""
-    return f"json_extract({col}, '$.is_kev') IN (1, 'true', 'True', '1') OR json_extract({col}, '$.cisa_kev') IN (1, 'true', 'True', '1')"
+    return payload_is_kev(payload)
 
 
 def _current_kev_count_from_rows(rows: Iterable[dict[str, Any]]) -> int:
@@ -323,6 +317,9 @@ def _redact_finding(payload: dict[str, Any]) -> dict[str, Any]:
     # Path sources are stamped at read time only; a stored copy could forge corroboration.
     safe = safe_finding_response_payload(without_fields(payload, SERVER_STAMPED_REACH_FIELDS))
     clean = {key: value for key, value in without_fields(safe, SERVER_STAMPED_REACH_FIELDS).items() if value is not None}
+    # The response projection keeps only the canonical boolean, which every reader counts on.
+    if payload_is_kev(payload):
+        clean["is_kev"] = True
     # Persisting the empty agent-list default adds no evidence and defeats compaction.
     if not clean.get("graph_reachable_from_agents"):
         clean.pop("graph_reachable_from_agents", None)

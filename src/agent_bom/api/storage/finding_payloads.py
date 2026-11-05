@@ -7,7 +7,13 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from agent_bom.api.hub_payload_codec import decode_hub_payload, encode_hub_payload
-from agent_bom.api.hub_reference_payload import batch_reference_keys, extract_reference_blobs, hydrate_reference_payload, resolve_cve_id
+from agent_bom.api.hub_reference_payload import (
+    batch_reference_keys,
+    extract_reference_blobs,
+    hydrate_reference_payload,
+    payload_is_kev,
+    resolve_cve_id,
+)
 from agent_bom.api.storage.sql import Dialect, SqlSession, utc_timestamp
 
 
@@ -39,19 +45,20 @@ def persist_references(tx: SqlSession, dialect: Dialect, tenant: str, payload: M
         return dict(payload)
     slim, intel, framework = extract_reference_blobs(payload)
     value = "CAST(? AS JSONB)" if dialect == "postgres" else "?"
-    for table, key, identity, blob in [
-        ("hub_cve_intel", "cve_id", resolve_cve_id(payload), intel),
-        ("hub_framework_refs", "framework_ref", str(slim.get("framework_ref") or ""), framework),
-    ]:
-        if blob and identity:
-            tx.execute(
-                f"INSERT INTO {table} (tenant_id, {key}, payload, updated_at) VALUES (?, ?, {value}, ?) "  # nosec B608
-                f"ON CONFLICT (tenant_id, {key}) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at",
-                (
-                    tenant,
-                    identity,
-                    json.dumps(blob, sort_keys=True) if dialect == "postgres" else encode_hub_payload(blob),
-                    utc_timestamp(),
-                ),
-            )  # nosec B608
+    encoded = (lambda blob: json.dumps(blob, sort_keys=True)) if dialect == "postgres" else encode_hub_payload
+    cve_id = resolve_cve_id(payload)
+    if intel and cve_id:
+        tx.execute(
+            f"INSERT INTO hub_cve_intel (tenant_id, cve_id, payload, updated_at, is_kev) VALUES (?, ?, {value}, ?, ?) "  # nosec B608
+            "ON CONFLICT (tenant_id, cve_id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at, "
+            "is_kev = excluded.is_kev",
+            (tenant, cve_id, encoded(intel), utc_timestamp(), payload_is_kev(intel)),
+        )  # nosec B608
+    framework_ref = str(slim.get("framework_ref") or "")
+    if framework and framework_ref:
+        tx.execute(
+            f"INSERT INTO hub_framework_refs (tenant_id, framework_ref, payload, updated_at) VALUES (?, ?, {value}, ?) "  # nosec B608
+            "ON CONFLICT (tenant_id, framework_ref) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at",
+            (tenant, framework_ref, encoded(framework), utc_timestamp()),
+        )  # nosec B608
     return slim

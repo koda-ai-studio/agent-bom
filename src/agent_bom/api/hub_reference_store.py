@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS hub_cve_intel (
     cve_id TEXT NOT NULL,
     payload TEXT NOT NULL,
     updated_at TEXT NOT NULL,
+    is_kev INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (tenant_id, cve_id)
 )
 """
@@ -62,6 +63,7 @@ def ensure_postgres_reference_tables(conn: Any) -> None:
             cve_id TEXT NOT NULL,
             payload JSONB NOT NULL,
             updated_at TEXT NOT NULL,
+            is_kev BOOLEAN NOT NULL DEFAULT FALSE,
             PRIMARY KEY (tenant_id, cve_id)
         )
         """
