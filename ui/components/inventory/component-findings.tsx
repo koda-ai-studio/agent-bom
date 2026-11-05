@@ -40,7 +40,7 @@ function FindingCard({ finding, component, edges, scanId }: { finding: UnifiedNo
     {summary && <p className="text-sm leading-relaxed text-ink-secondary">{summary}</p>}
     <div className="space-y-2 border-l-2 border-[color:var(--accent)] pl-3">
       <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-secondary">Why this is linked</h3>
-      {edges.map(edge => <p key={JSON.stringify([edge.source, edge.target, edge.relationship])} className="text-sm">
+      {edges.map(edge => <p key={JSON.stringify([edge.source, edge.target, edge.relationship])} className="break-words text-sm">
         {plainRelationshipSummary(edge, nodeLabel(edge.source), nodeLabel(edge.target)).why}
       </p>)}
     </div>
@@ -69,18 +69,18 @@ function ComponentFindingEvidence({ assetId, scanId, owner }: { assetId: string;
   const context = neighbors.filter(node => !isFinding(node));
   const last = graph.pages.at(-1);
   const hasGaps = graph.pages.some(page => (page.completeness?.missing_endpoint_count ?? 0) > 0);
-  return <div className="mx-auto max-w-6xl space-y-5 px-4 py-5 sm:p-6">
-    <header className="space-y-3 border-b border-outline pb-5">
-      <Link href="/findings" className="text-xs text-ink-secondary underline underline-offset-4">All findings</Link>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+  return <div className="mx-auto max-w-6xl space-y-6">
+    <header className="flex flex-col gap-5 border-b border-outline pb-6">
+      <Link href="/findings" className="inline-flex w-fit text-sm text-ink-secondary underline underline-offset-4">All findings</Link>
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="rounded-xl border border-outline bg-surface p-3"><ComponentIcon className="h-6 w-6 text-[color:var(--accent)]" aria-hidden="true" /></span>
+          <span className="shrink-0 rounded-xl border border-outline bg-surface p-3"><ComponentIcon className="h-6 w-6 text-[color:var(--accent)]" aria-hidden="true" /></span>
           <div className="min-w-0"><p className="text-xs uppercase tracking-wide text-ink-secondary">Component finding evidence</p>
             <h1 className="mt-1 break-words text-2xl font-semibold">{component?.label || readId}</h1>
-            <p className="mt-1 text-sm text-ink-secondary">What is linked to this component, why it matters, and where to investigate next.</p>
+            <p className="mt-2 text-sm leading-relaxed text-ink-secondary">What is linked to this component, why it matters, and where to investigate next.</p>
           </div>
         </div>
-        <Link className={`${actionClass} bg-[color:var(--accent)]/10`} href={graphHref(readId, readScanId)}><Network className="h-4 w-4" aria-hidden="true" />Investigate the component chain<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
+        <Link className={`${actionClass} w-full bg-[color:var(--accent)]/10 lg:w-auto`} href={graphHref(readId, readScanId)}><Network className="h-4 w-4" aria-hidden="true" />Investigate the component chain<ArrowRight className="h-4 w-4" aria-hidden="true" /></Link>
       </div>
     </header>
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
