@@ -192,9 +192,14 @@ def _ensure_current_scale_indexes_sqlite(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_hub_findings_current_tenant_scan ON hub_findings_current(tenant_id, scan_id) WHERE scan_id != ''"
     )
+    # The raw severity column makes this index covering for severity counts, so the planner
+    # seeks on severity here instead of walking the tenant through the aggregate index.
+    existing = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'idx_hub_findings_current_tenant_severity_ci'").fetchone()
+    if existing and "LOWER(severity), severity" not in existing[0]:
+        conn.execute("DROP INDEX idx_hub_findings_current_tenant_severity_ci")
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_hub_findings_current_tenant_severity_ci "
-        "ON hub_findings_current(tenant_id, LOWER(severity)) WHERE severity != ''"
+        "ON hub_findings_current(tenant_id, LOWER(severity), severity) WHERE severity != ''"
     )
 
 
