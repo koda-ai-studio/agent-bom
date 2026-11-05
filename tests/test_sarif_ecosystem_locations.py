@@ -1,6 +1,6 @@
 """SARIF dependency findings point at the manifest of their own ecosystem (P1 audit fix)."""
 
-from agent_bom.output.sarif import _ecosystem_from_purl, _to_relative_path
+from agent_bom.output.sarif_common import _ecosystem_from_purl, _to_relative_path
 
 
 def test_ecosystem_from_purl():

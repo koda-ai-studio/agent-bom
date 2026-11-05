@@ -220,7 +220,8 @@ def test_sarif_has_note_level_possibly_affected_results(nvd_db, monkeypatch) -> 
     assert _DETAIL in result["message"]["text"] and "distro_backport_unverified" in result["message"]["text"]
     assert result["properties"]["verdict"] == "possibly_affected"
     assert result["properties"]["reason"] == "distro_backport_unverified"
-    assert result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "docker://abtest/php-debian:a"
+    assert result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "agent-bom-findings/image/docker/abtest/php-debian%3Aa"
+    assert result["properties"]["scanned_artifact"] == "docker://abtest/php-debian:a"
     assert len({r["fingerprints"]["agent-bom/v1"] for r in results}) == len(results)
 
 

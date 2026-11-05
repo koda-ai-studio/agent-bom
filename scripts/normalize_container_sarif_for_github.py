@@ -14,9 +14,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-
-def _github_artifact_path(uri: str) -> str:
-    return "Dockerfile" if uri.startswith("docker://") else uri
+# Findings with no repository file; agent_bom.output.sarif_common.VIRTUAL_ARTIFACT_PREFIX.
+_VIRTUAL_PREFIX = "agent-bom-findings/"
 
 
 def _normalize_artifact_location(physical: dict[str, Any], result: dict[str, Any]) -> None:
@@ -24,12 +23,14 @@ def _normalize_artifact_location(physical: dict[str, Any], result: dict[str, Any
     if not isinstance(artifact, dict):
         return
     uri = artifact.get("uri")
-    if not isinstance(uri, str) or not uri.startswith("docker://"):
+    if not isinstance(uri, str) or not uri.startswith(("docker://", _VIRTUAL_PREFIX)):
         return
     properties = result.setdefault("properties", {})
     if isinstance(properties, dict):
-        properties.setdefault("agent-bom:container_uri", uri)
-    artifact["uri"] = _github_artifact_path(uri)
+        image = uri if uri.startswith("docker://") else properties.get("scanned_artifact")
+        if image:
+            properties.setdefault("agent-bom:container_uri", image)
+    artifact["uri"] = "Dockerfile"
     artifact["uriBaseId"] = "%SRCROOT%"
 
 

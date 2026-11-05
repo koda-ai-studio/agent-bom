@@ -166,6 +166,9 @@ def emit_annotations(path: Path, *, max_annotations: int) -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # GitHub reads workflow commands and summaries as UTF-8; a Windows console defaults to cp1252.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("result_file", type=Path)
     parser.add_argument("--max", type=int, default=50, help="Maximum annotations to emit; -1 emits all.")

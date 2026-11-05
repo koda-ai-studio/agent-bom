@@ -76,7 +76,7 @@ def evaluate(report: dict[str, Any], names: list[str], *, threshold: str) -> dic
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
+    return subprocess.run(["git", *args], check=True, capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
 
 
 def _load_at(commit: str, path: str) -> Any:
@@ -94,6 +94,9 @@ def _load_file(path: str) -> Any:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # GitHub reads workflow commands and summaries as UTF-8; a Windows console defaults to cp1252.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base", required=True)
     parser.add_argument("--head", required=True)
@@ -121,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         command = [sys.executable, "-m", "agent_bom", "scan", ".", "-f", "json", "-o", str(out), "-q"]
         if args.offline:
             command.append("--offline")
-        subprocess.run(command, capture_output=True, text=True)
+        subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if not out.is_file():
             print("::error::MCP gate scan produced no report")
             return 1

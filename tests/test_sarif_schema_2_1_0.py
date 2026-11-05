@@ -204,11 +204,7 @@ def test_sarif_results_carry_required_fields(sarif_doc: dict) -> None:
         assert result.get("ruleId"), f"result missing ruleId: {result}"
         assert result.get("level") in {"none", "note", "warning", "error"}, result
         assert result["message"].get("text"), f"result missing message.text: {result}"
-        loc = result["locations"][0]
-        if "physicalLocation" in loc:
-            assert loc["physicalLocation"]["artifactLocation"].get("uri"), result
-        else:
-            assert loc["logicalLocations"][0].get("fullyQualifiedName"), result
+        assert result["locations"][0]["physicalLocation"]["artifactLocation"].get("uri"), result
     # Every advertised result.ruleId must resolve to a rule in the driver catalog.
     catalog = {rule["id"] for rule in sarif_doc["runs"][0]["tool"]["driver"]["rules"]}
     dangling = rule_ids - catalog
@@ -275,7 +271,8 @@ def test_unified_sarif_findings_keep_rule_identity_and_real_locations() -> None:
     assert by_rule["finding/SAST/AB-SAST-002"]["locations"][0]["physicalLocation"]["region"]["startLine"] == 41
 
     logical = by_rule["finding/CREDENTIAL_EXPOSURE/agent_credential_exposure"]
-    assert "physicalLocation" not in logical["locations"][0]
+    assert logical["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "agent-bom-findings/agent/payments-agent"
+    assert logical["properties"]["no_source_file"] is True
     assert logical["locations"][0]["logicalLocations"] == [{"name": "payments-agent", "kind": "agent"}]
     assert "agent-bom-report.json" not in json.dumps(logical)
 

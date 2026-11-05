@@ -28,7 +28,11 @@ def test_self_scan_advisory_has_logical_identity_and_stable_fingerprint(tmp_path
     result = doc["runs"][0]["results"][0]
     assert result["ruleId"] == "CVE-2026-97687"
     assert result["level"] == "error"
-    assert "physicalLocation" not in result["locations"][0]
+    # No repository file exists: GitHub still needs a physical location, so it is a marked virtual path.
+    physical = result["locations"][0]["physicalLocation"]
+    assert physical["artifactLocation"]["uri"] == "agent-bom-findings/package/self-scan/agent-bom"
+    assert "region" not in physical
+    assert result["properties"]["no_source_file"] is True
     assert result["locations"][0]["logicalLocations"][0]["fullyQualifiedName"] == "self-scan://agent-bom"
     assert "partialFingerprints" not in result  # No invented source line hash.
     assert result["fingerprints"]["agent-bom/v1"]
@@ -49,4 +53,6 @@ def test_real_package_manifest_retains_physical_location(config_path, tmp_path, 
     physical = result["locations"][0]["physicalLocation"]
     assert physical["artifactLocation"] == {"uri": "requirements.txt", "uriBaseId": "%SRCROOT%"}
     assert physical["region"]["startLine"] == 3
-    assert result["partialFingerprints"]["primaryLocationLineHash"]
+    # github/codeql-action computes this from the file; supplying another value only warns.
+    assert "partialFingerprints" not in result
+    assert result["fingerprints"]["agent-bom/v1"]

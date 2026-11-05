@@ -16,7 +16,7 @@ inputs:
     required: false
     default: ''
   severity-threshold:
-    description: 'Fail if vulnerabilities at or above this severity (critical, high, medium, low). Default high; set to empty to disable the gate.'
+    description: 'Fail if vulnerabilities at or above this severity (critical, high, medium, low). Default high. Empty means report-only: severity findings and a partial scan do not fail the step (a partial scan warns); a known-malicious package, a failed scan, and an explicit policy or fail-on-kev gate still do. The mcp-gate falls back to high.'
     required: false
     default: 'high'
   warn-on-severity:
@@ -179,7 +179,7 @@ outputs:
     description: 'Scan process exit code.'
     value: ${{ steps.scan.outputs.exit_code }}
   scan-status:
-    description: 'High-level scan status: clean, violations, usage_error, stale_data, or error.'
+    description: 'High-level scan status: clean, violations, partial (report-only step with incomplete coverage), usage_error, stale_data, or error.'
     value: ${{ steps.scan.outputs.scan_status }}
   vulnerability-count:
     description: 'Number of vulnerabilities found, or skill findings when scan-type=skills. Possibly-affected distro results (SARIF verdict possibly_affected) are not counted.'
@@ -286,6 +286,7 @@ runs:
         CURL_CA_BUNDLE: ${{ env.CURL_CA_BUNDLE }}
         PIP_CERT: ${{ env.PIP_CERT }}
         NVD_API_KEY: ${{ inputs.nvd-api-key || env.NVD_API_KEY }}
+        PYTHONUTF8: '1'
         INPUT_SCAN_TYPE: ${{ inputs.scan-type }}
         INPUT_SCAN_REF: ${{ inputs.scan-ref }}
         INPUT_FORMAT: ${{ inputs.format }}
@@ -432,7 +433,7 @@ runs:
         # An input the selected subcommand cannot honour is never forwarded:
         # a blocking gate or scan target fails closed, anything else warns.
         case "${INPUT_SCAN_TYPE:-scan}" in
-          scan|agents|"") CAPS="severity warn-on policy enrich auto-update-db kev image config-dir sbom remediate ai-enrich ignore-file iac ai-inventory os-packages baseline skill-only gpu-scan exclude-unfixable" ;;
+          scan|agents|"") CAPS="severity exit-zero warn-on policy enrich auto-update-db kev image config-dir sbom remediate ai-enrich ignore-file iac ai-inventory os-packages baseline skill-only gpu-scan exclude-unfixable" ;;
           image|fs) CAPS="severity enrich exclude-unfixable" ;;
           sbom) CAPS="severity enrich" ;;
           iac) CAPS="severity" ;;
@@ -491,6 +492,8 @@ runs:
           else
             echo "::notice::severity-threshold does not apply to scan-type=${INPUT_SCAN_TYPE}; it gates with its own verdict and exit code"
           fi
+        elif supports exit-zero; then
+          ARGS+=(--exit-zero)
         fi
         if [ -n "$INPUT_WARN_ON" ]; then
           validate_severity_choice "$INPUT_WARN_ON" "warn-on-severity"
@@ -721,10 +724,10 @@ runs:
         POSTURE_GRADE="unknown"
         if [ "$INPUT_FORMAT" = "sarif" ] && [ -f "$RESULT_FILE" ]; then
           SARIF_FILE="$RESULT_FILE"
-          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); print(sum(1 for r in d.get('runs',[{}])[0].get('results',[]) if (r.get('properties') or {}).get('verdict') != 'possibly_affected'))" 2>/dev/null || echo 0)
+          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'], encoding='utf-8')); print(sum(1 for r in d.get('runs',[{}])[0].get('results',[]) if (r.get('properties') or {}).get('verdict') != 'possibly_affected'))" 2>/dev/null || echo 0)
         elif [ "$INPUT_FORMAT" = "json" ] && [ -f "$RESULT_FILE" ]; then
           # skills: summary.findings; secrets: findings list; scan: unified findings list
-          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'])); s=d.get('summary'); f=d.get('findings'); print(s['findings'] if isinstance(s, dict) and isinstance(s.get('findings'), int) else len(f) if isinstance(f, list) else int(d.get('total') or 0))" 2>/dev/null || echo 0)
+          VULN_COUNT=$(RESULT_FILE="$RESULT_FILE" python3 -c "import json, os; d=json.load(open(os.environ['RESULT_FILE'], encoding='utf-8')); s=d.get('summary'); f=d.get('findings'); print(s['findings'] if isinstance(s, dict) and isinstance(s.get('findings'), int) else len(f) if isinstance(f, list) else int(d.get('total') or 0))" 2>/dev/null || echo 0)
         fi
 
         case "$INPUT_FORMAT" in
@@ -759,13 +762,37 @@ runs:
           *) SCAN_STATUS="error" ;;
         esac
 
+        # Empty severity-threshold is report-only. The CLI still exits 1 on a partial
+        # scan (and focused commands have no --exit-zero), so the step reads the report:
+        # a documented baseline step must leave its report for the gate step, which
+        # keeps failing closed. Malicious packages and unexplained exits stay blocking.
+        GATE_EXIT="$EXIT_CODE"
+        if [ -z "$INPUT_SEVERITY" ] && supports severity; then
+          if [ "$EXIT_CODE" = "0" ] && [ "$VULN_COUNT" -gt 0 ]; then
+            SCAN_STATUS="violations"
+          elif [ "$EXIT_CODE" = "1" ] && [ -z "$INPUT_POLICY" ] && [ "$INPUT_FAIL_ON_KEV" != "true" ]; then
+            case "$(python3 "$GITHUB_ACTION_PATH/scripts/action_report.py" report-only-verdict "$RESULT_FILE")" in
+              complete)
+                GATE_EXIT=0
+                SCAN_STATUS="violations"
+                echo "::notice::severity-threshold is empty: findings are reported and do not fail this step"
+                ;;
+              partial)
+                GATE_EXIT=0
+                SCAN_STATUS="partial"
+                echo "::warning::agent-bom scan was partial, so this report is incomplete; severity-threshold is empty, so the step continues. See scan_run.issues."
+                ;;
+            esac
+          fi
+        fi
+
         # Generate badge from SARIF results (no second scan)
         BADGE_FILE=""
         if [ -n "$INPUT_BADGE" ] && [ -f "$SARIF_FILE" ]; then
           SARIF_FILE="$SARIF_FILE" INPUT_BADGE="$INPUT_BADGE" python3 -c "
         import json, os, sys
         try:
-            sarif = json.load(open(os.environ['SARIF_FILE']))
+            sarif = json.load(open(os.environ['SARIF_FILE'], encoding='utf-8'))
             run = sarif.get('runs', [{}])[0]
             # Possibly-affected distro results stay in the SARIF but are not confirmed findings.
             results = [r for r in run.get('results', []) if (r.get('properties') or {}).get('verdict') != 'possibly_affected']
@@ -801,6 +828,7 @@ runs:
         echo "result_file=$RESULT_FILE" >> "$GITHUB_OUTPUT"
         echo "sbom_file=$SBOM_FILE" >> "$GITHUB_OUTPUT"
         echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+        echo "gate_exit_code=$GATE_EXIT" >> "$GITHUB_OUTPUT"
         echo "scan_status=$SCAN_STATUS" >> "$GITHUB_OUTPUT"
         echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
         echo "badge_file=$BADGE_FILE" >> "$GITHUB_OUTPUT"
@@ -814,7 +842,7 @@ runs:
           if [ -n "$SARIF_FILE" ]; then
             SUMMARY_SOURCE="$SARIF_FILE"
           fi
-          python3 "$GITHUB_ACTION_PATH/scripts/action_report.py" summary "$SUMMARY_SOURCE" --exit-code "$EXIT_CODE" --scan-type "${INPUT_SCAN_TYPE:-scan}" >> "$GITHUB_STEP_SUMMARY" || echo "::warning::agent-bom job summary rendering failed"
+          python3 "$GITHUB_ACTION_PATH/scripts/action_report.py" summary "$SUMMARY_SOURCE" --exit-code "$GATE_EXIT" --scan-type "${INPUT_SCAN_TYPE:-scan}" >> "$GITHUB_STEP_SUMMARY" || echo "::warning::agent-bom job summary rendering failed"
           {
             echo ""
             echo "<details><summary>Scan details</summary>"
@@ -846,7 +874,7 @@ runs:
           } >> "$GITHUB_STEP_SUMMARY"
         fi
 
-        exit $EXIT_CODE
+        exit "$GATE_EXIT"
 
     - name: Emit finding annotations
       if: inputs.annotations == 'true' && always()
@@ -854,6 +882,7 @@ runs:
       env:
         RESULT_FILE: ${{ steps.scan.outputs.result_file }}
         INPUT_MAX_ANNOTATIONS: ${{ inputs.max-annotations }}
+        PYTHONUTF8: '1'
       run: |
         if [ -n "$RESULT_FILE" ] && [ -f "$RESULT_FILE" ]; then
           python3 "$GITHUB_ACTION_PATH/scripts/emit_github_annotations.py" "$RESULT_FILE" --max "$INPUT_MAX_ANNOTATIONS"
@@ -866,6 +895,7 @@ runs:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
         INPUT_SEVERITY: ${{ inputs.severity-threshold }}
         INPUT_AUTO_UPDATE_DB: ${{ inputs.auto-update-db }}
+        PYTHONUTF8: '1'
       run: |
         # pull_request checkouts are the merge commit: its first parent is the
         # base the PR merges into. Fetch it when the clone is shallow.
@@ -890,7 +920,8 @@ runs:
         INPUT_PR_COMMENT: ${{ inputs.pr-comment }}
         SARIF_FILE: ${{ steps.scan.outputs.sarif_file }}
         RESULT_FILE: ${{ steps.scan.outputs.result_file }}
-        EXIT_CODE: ${{ steps.scan.outputs.exit_code }}
+        EXIT_CODE: ${{ steps.scan.outputs.gate_exit_code }}
+        PYTHONUTF8: '1'
         PR_NUMBER: ${{ github.event.pull_request.number }}
         REPO: ${{ github.repository }}
       run: |

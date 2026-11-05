@@ -13,6 +13,7 @@ from agent_bom.output.sarif_common import (
     _sarif_severity,
     _SarifCatalog,
     _to_relative_path,
+    identity_uri,
 )
 from agent_bom.output.sarif_iac import iac_rule, iac_rule_id, iac_shared_compliance, iac_suppressions
 from agent_bom.security import sanitize_url
@@ -72,7 +73,7 @@ def _add_iac_results(catalog: _SarifCatalog, report: AIBOMReport) -> None:
                     fallback=sanitize_advisory_text("title", iac_finding.get("title", "IaC misconfiguration")),
                 )
             },
-            **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
+            **_sarif_fingerprint_fields(stable_input=fp_input),
             "locations": [_sarif_location(file_path, line_num)],
             "properties": {"compliance": list(iac_finding.get("compliance") or [])},
         }
@@ -125,7 +126,7 @@ def _add_ai_inventory_results(catalog: _SarifCatalog, report: AIBOMReport) -> No
 
         file_path = _to_relative_path(comp.get("file", "unknown") or "unknown")
         line_num = int(comp.get("line", 1) or 1)
-        fp_input = f"{rule_id}:{file_path}:{line_num}"
+        fp_input = f"{rule_id}:{identity_uri(file_path, report)}:{line_num}"
         desc = sanitize_advisory_text("description", comp.get("description", ""), fallback=f"{comp_type.replace('_', ' ')}: {name}")
         catalog.results.append(
             {
@@ -133,7 +134,7 @@ def _add_ai_inventory_results(catalog: _SarifCatalog, report: AIBOMReport) -> No
                 "level": level,
                 "kind": "fail",
                 "message": {"text": desc},
-                **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=file_path, start_line=line_num),
+                **_sarif_fingerprint_fields(stable_input=fp_input),
                 "locations": [_sarif_location(file_path, comp.get("line", 1))],
             }
         )
@@ -219,7 +220,7 @@ def _cis_result(check: dict[str, Any], cloud_key: str, rule_id: str, level: str)
                 fallback=rule_id,
             )
         },
-        **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=artifact_uri, start_line=1),
+        **_sarif_fingerprint_fields(stable_input=fp_input),
         "locations": [_sarif_location(artifact_uri, 1)],
         "properties": _cis_result_properties(check),
     }

@@ -928,7 +928,7 @@ def test_action_yml_sanitizes_pr_comment_body_and_single_loads_sarif():
     action_text = (Path(__file__).parent.parent / "action.yml").read_text()
     # Comment cells are escaped in scripts/action_report.py (tests/test_action_report.py).
     assert 'scripts/action_report.py" comment' in action_text
-    assert "sarif = json.load(open(os.environ['SARIF_FILE']))" in action_text
+    assert "sarif = json.load(open(os.environ['SARIF_FILE'], encoding='utf-8'))" in action_text
     assert "run = sarif.get('runs', [{}])[0]" in action_text
     assert "::warning::Badge generation failed" in action_text
 

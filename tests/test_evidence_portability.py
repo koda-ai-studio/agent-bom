@@ -46,7 +46,10 @@ def test_sarif_unknown_source_does_not_invent_a_manifest(tmp_path, monkeypatch):
     )
     monkeypatch.chdir(tmp_path)
     result = to_sarif(_report([package], tmp_path))["runs"][0]["results"][0]
-    assert "physicalLocation" not in result["locations"][0]
+    uri = result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+    assert uri.startswith("agent-bom-findings/package/")
+    assert "region" not in result["locations"][0]["physicalLocation"]
+    assert result["properties"]["no_source_file"] is True
     assert result["locations"][0]["logicalLocations"]
 
 
