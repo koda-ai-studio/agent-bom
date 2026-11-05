@@ -53,9 +53,7 @@ and sha256 hash; uv installs exactly that, never resolves at launch, and writes
 nothing into the plugin folder (the environment lives in uv's cache). The lock
 covers Python 3.11 to 3.14 (uv downloads one if none is installed) on macOS,
 Linux x86_64 and aarch64, and Windows x64 and ARM64. No API key or account is
-needed. `inventory` and the skill audit tools join the audit
-profile in the release after 0.109.0; on 0.109.0 those two skills fall back to
-`scan` and `prompt_scan` and say so. Directory builds exclude activity/history skills.
+needed. Directory builds exclude activity/history skills.
 Before submission, pin a published release that excludes `agent_activity` from
 the audit profile; the existing release pin is not submission-ready.
 
@@ -142,7 +140,10 @@ Prompts, responses, file contents and credential values are never sent.
   setting, as shown in [Projects outside your home directory](#projects-outside-your-home-directory).
 - **Reads** MCP client configuration files on this machine (Claude Code, Claude
   Desktop, Cursor and other supported clients) to find agents, servers and the
-  packages they launch, skill and instruction files under a path you name, plus
+  packages they launch. `~/.claude.json` also holds Claude Code's prompt history;
+  only its MCP server entries are used, and no tool opens chat history or session
+  files (`~/.claude/projects`, `~/.claude/history.jsonl`, `~/.codex/sessions`).
+  It also reads skill and instruction files under a path you name, plus
   any image, SBOM or repository you name. To flag agents that can act with no
   prompts or no sandbox, it also reads coding-agent permission settings: Claude
   Code `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`), the
@@ -177,19 +178,31 @@ Prompts, responses, file contents and credential values are never sent.
   - `api.deps.dev`: license and project metadata a package registry does not
     provide
   - `proxy.golang.org` and `sum.golang.org`: Go module versions and checksums
+  - `osv-vulnerabilities.storage.googleapis.com`, `secdb.alpinelinux.org`,
+    `security-tracker.debian.org`, `deb.freexian.com` and `epss.cyentia.com`
+    (a redirect): only when the local advisory database is refreshed, which no
+    skill does on its own (the `scan` tool's `auto_update_db`, or `agent-bom db update`)
   - container registries, git hosts and cloud provider APIs that you name, such
     as an image to scan or an account for a cloud AI-BOM
 
+  Both servers start with `GITHUB_TOKEN`, `GH_TOKEN` and `NVD_API_KEY` blanked, so
+  a token in your environment is not sent. The pinned CLI that `bom` runs does not
+  blank them: there a `GITHUB_TOKEN` or `GH_TOKEN` goes only to `api.github.com` and
+  `NVD_API_KEY` only to `services.nvd.nist.gov`, to raise rate limits.
+
   The MCP servers make no update check; the CLI checks `pypi.org` for a newer
   release at most once a day, and never in quiet or JSON runs.
-- **Writes** only when you ask for an AI-BOM: `bom` runs the same pinned release
+- **Writes** outside its own cache only when you ask for an AI-BOM: `bom` runs the same pinned release
   from your shell to write the file you name. For a cloud BOM it uses the
   credentials already configured for that provider's CLI, makes read-only API
   calls to that provider, and never asks you to paste keys.
 - **Never** writes to agent configs, installs packages, or sends telemetry. Live
   credential validation and cloud connectors are off unless you enable them
   through the CLI.
-- **Stores** a local cache under `~/.agent-bom`.
+- **Stores** a local cache under `~/.agent-bom`: the advisory database, lookup
+  caches, and each `scan` result with credential values redacted, readable for 30
+  minutes by default and at most four at a time. That retained result is why the
+  `scan` tool reports `readOnlyHint: false`; it changes only agent-bom's own state.
 
 ### Which paths the tools accept
 

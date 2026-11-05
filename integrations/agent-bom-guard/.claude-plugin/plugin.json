@@ -2,7 +2,7 @@
   "name": "agent-bom-guard",
   "version": "0.113.2",
   "displayName": "agent-bom guard",
-  "description": "Checks package installs before Claude runs them: blocks known-malicious npm, PyPI, crates.io and Go packages and typosquatted npm and PyPI names, and warns on known advisories for an exact pinned version and on installs from a custom registry. Silent otherwise; never runs the command it inspects.",
+  "description": "Checks package installs before Claude runs them: blocks known-malicious npm, PyPI, crates.io and Go packages and typosquatted npm and PyPI names, and warns on known advisories for an exact pinned version, downloads piped into a shell, requirement files it cannot read and installs from a custom registry. Silent otherwise; never runs the command it inspects.",
   "author": {
     "name": "koda-ai-studio",
     "url": "https://github.com/koda-ai-studio"
@@ -37,6 +37,6 @@
   },
   "documentationUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/agent-bom-guard/README.md",
   "supportUrl": "https://github.com/koda-ai-studio/agent-bom/issues",
-  "privacyPolicyUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/agent-bom-guard/README.md#privacy",
-  "termsOfServiceUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/LICENSE"
+  "privacyPolicyUrl": "https://koda-ai-studio.github.io/agent-bom/privacy/",
+  "termsOfServiceUrl": "https://koda-ai-studio.github.io/agent-bom/terms/"
 }

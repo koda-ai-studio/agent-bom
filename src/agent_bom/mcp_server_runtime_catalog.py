@@ -7,6 +7,7 @@ from typing import Annotated, Awaitable, Callable
 from pydantic import Field
 
 from agent_bom.mcp_tools.audit_registration import register_audit_tool
+from agent_bom.mcp_tools.tool_annotations import LOCAL_READ_ONLY
 
 
 def register_runtime_catalog_tools(
@@ -27,7 +28,7 @@ def register_runtime_catalog_tools(
         where_impl,
     )
 
-    @mcp.tool(annotations=read_only, title="Skill Scan")
+    @mcp.tool(annotations=LOCAL_READ_ONLY, title="Skill Scan")
     async def skill_scan(
         path: Annotated[str, Field(description="Path to a skill/instruction file or directory to scan.")] = ".",
     ) -> str:
@@ -53,7 +54,7 @@ def register_runtime_catalog_tools(
             _truncate_response=truncate_response,
         )
 
-    @mcp.tool(annotations=read_only, title="Skill Trust Assessment")
+    @mcp.tool(annotations=LOCAL_READ_ONLY, title="Skill Trust Assessment")
     async def skill_trust(
         skill_path: Annotated[str, Field(description="Path to a SKILL.md file (or any skill/instruction file) to assess.")],
     ) -> str:
@@ -71,7 +72,7 @@ def register_runtime_catalog_tools(
         """Show all MCP discovery paths and which config files exist."""
         return await execute_tool_sync_async("where", where_impl, _truncate_response=truncate_response)
 
-    @mcp.tool(annotations=read_only, title="Agent Inventory")
+    @mcp.tool(annotations=LOCAL_READ_ONLY, title="Agent Inventory")
     async def inventory(
         config_path: Annotated[str | None, Field(description="Path to MCP client config directory. Auto-discovers all if omitted.")] = None,
     ) -> str:

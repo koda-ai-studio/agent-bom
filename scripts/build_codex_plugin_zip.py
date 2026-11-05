@@ -66,6 +66,8 @@ def _interface(manifest: dict[str, Any]) -> dict[str, Any]:
 
 def validate_manifest(manifest: dict[str, Any]) -> None:
     openai = manifest.get("extensions", {}).get("com.openai", {})
+    if not (openai.get("requires_local_executor") or manifest.get("requires_local_executor")):
+        raise PackageError("these skills run a local CLI, so the manifest must set requires_local_executor")
     for key in ("apps", "hooks", "mcpServers"):
         if key in manifest or key in openai:
             raise PackageError(f"manifest declares `{key}`, which a skills-only listing cannot carry")

@@ -131,17 +131,9 @@ def _repo_target(url: str) -> Path:
 def test_claude_manifests_fill_every_directory_listing_link(plugin):
     manifest = json.loads((PLUGIN.parent / plugin / ".claude-plugin" / "plugin.json").read_text())
     for key in LISTING_LINKS:
-        expected = (
-            "https://koda-ai-studio.github.io/agent-bom/"
-            if plugin == "claude-code" and key in ("privacyPolicyUrl", "termsOfServiceUrl")
-            else REPO
-        )
+        expected = "https://koda-ai-studio.github.io/agent-bom/" if key in ("privacyPolicyUrl", "termsOfServiceUrl") else REPO
         assert manifest.get(key, "").startswith(expected), (plugin, key)
     assert manifest["supportUrl"] == f"{REPO}/issues"
-    if plugin == "agent-bom-guard":
-        assert manifest["termsOfServiceUrl"] == f"{REPO}/blob/main/LICENSE"
-        for key in ("privacyPolicyUrl", "termsOfServiceUrl"):
-            _repo_target(manifest[key])
     assert _repo_target(manifest["documentationUrl"]).parent.name == plugin
 
 
@@ -151,8 +143,8 @@ def test_codex_manifests_set_the_links_the_codex_schema_reads():
     for manifest_path in (PLUGIN / ".codex-plugin" / "plugin.json", PLUGIN.parent / "codex" / ".codex-plugin" / "plugin.json"):
         interface = json.loads(manifest_path.read_text())["interface"]
         assert interface["websiteURL"] == REPO, manifest_path
-        assert interface["termsOfServiceURL"] == f"{REPO}/blob/main/LICENSE", manifest_path
-        _repo_target(interface["privacyPolicyURL"])
+        assert interface["termsOfServiceURL"] == "https://koda-ai-studio.github.io/agent-bom/terms/", manifest_path
+        assert interface["privacyPolicyURL"] == "https://koda-ai-studio.github.io/agent-bom/privacy/", manifest_path
 
 
 def test_listing_questions_route_to_inventory_not_checkup():
@@ -174,7 +166,7 @@ SKILL_TOOLS = {
     "check": {"agent-bom": {"check"}},
     "checkup": {"agent-bom-audit": {"inventory", "tool_risk_assessment"}, "agent-bom": {"scan"}},
     "fix": {"agent-bom": {"remediate", "scan", "exposure_paths"}},
-    "inventory": {"agent-bom-audit": {"inventory"}, "agent-bom": {"scan"}},
+    "inventory": {"agent-bom-audit": {"inventory"}},
     "scan": {"agent-bom": {"scan"}},
 }
 

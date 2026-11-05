@@ -10,11 +10,21 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Changed
+- The MCP `scan` tool now reports `readOnlyHint: false`, because it keeps a redacted result locally and can refresh the advisory database. Its description says so. Tools that open no socket now report `openWorldHint: false`.
+- The Claude plugin's MCP servers start with `GITHUB_TOKEN`, `GH_TOKEN` and `NVD_API_KEY` blanked, so a token in the environment is not sent. Lookups use the anonymous rate limits there.
+- The `inventory` skill no longer has the `scan` tool, so it cannot reach the network.
+- The skills-only OpenAI package now declares `requires_local_executor`, since its skills run a local CLI.
 - The GitHub Action reads OSV's application-ecosystem archives by default (`vuln-db-scope: application`, about 0.3 GB instead of 2.9 GB). OS and other packages are answered by live OSV, and the JSON report, SARIF run properties, job summary and pull request comment state the scope. Set `vuln-db-scope: full` for the previous behaviour. The Action's cache key changes, so the first run after upgrading builds a new database.
 - A first `--auto-update-db` refresh caps NVD at 60 seconds, newest CVEs first, and reports it as partial; later refreshes resume it. `AGENT_BOM_NVD_TIME_BUDGET_SECONDS` overrides the cap.
 - `--auto-update-db` prints the time each source took.
 
+### Added
+- `docs/PLUGIN_SUBMISSION.md` and `make plugin-submission-check`, which stops a directory submission that would ship stale pins or draft legal pages. It stays red until the next release.
+- Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
+
 ### Fixed
+- `docs/PERMISSIONS.md` and the plugin READMEs now list the Alpine, Debian, OSV archive, GitHub advisory, deps.dev, Go and EPSS hosts. The privacy page now covers the guard hook, and states which tokens are sent where.
+- All plugin manifests point at the same privacy and terms pages. Plugin descriptions no longer say credentials are never sent where an ambient token can be, and the guard description lists all of its warnings.
 - Typosquat detection now flags an adjacent-letter swap from five letters (`axois` as `axios`); single-letter substitutions keep their six-letter floor.
 - Investigation graph: an exposure flow now continues through the workloads an exposed host runs, so the path to identities and data opens framed on one screen. Edges between adjacent entities no longer arc over nothing.
 - A synchronous push interrupted by a process kill under distributed dispatch no longer stays `running` forever. The request now heartbeats a lease, and once that lease expires any replica marks the job `failed`, so the client can resubmit under the same idempotency key. A long push with a live lease is never failed for its age, and pushes already stranded by earlier releases are failed after the stuck-job timeout.

@@ -20,6 +20,18 @@ or a skill for reading chat history. Other explicitly selected standalone
 features have their own permissions; installing a directory plugin does not
 authorize them.
 
+The agent-bom-guard plugin adds one hook. Claude Code passes it the text of
+every Bash command before it runs, and it parses that text on your machine to
+find package installs. It stores nothing and writes no files. With its `osv_lookup`
+option on, which is the default, it sends the name, ecosystem and pinned version of
+each package an install names to `api.osv.dev`, even when the install uses a custom
+registry, so a private package name reaches that service unless the option is off.
+It sends no command text, paths, file contents, environment variables or credentials.
+
+No directory plugin reads Claude or Codex chat history, session files or memory.
+`~/.claude.json` is read for its MCP server entries; the prompt history it also holds
+is not used or returned.
+
 A remote MCP service receives the tool name and arguments sent by the client,
 including any supplied paths, package names or evidence, and returns tool
 results to that client. Remote paths refer to the server's filesystem, not the
@@ -36,6 +48,16 @@ OpenSSF Scorecard. Installation through `uvx` downloads software from the
 configured package index. These providers also receive ordinary network
 request metadata. The scanner's lookup requests do not upload entire project
 files. Offline scanning uses available local evidence and can have coverage gaps.
+
+Refreshing the local advisory database, which no directory skill does on its own,
+downloads public feeds from `osv-vulnerabilities.storage.googleapis.com`,
+`secdb.alpinelinux.org`, `security-tracker.debian.org`, `deb.freexian.com`,
+`epss.empiricalsecurity.com`, CISA and NVD, and sends no package or project data.
+
+The agent-bom Claude plugin starts its servers with `GITHUB_TOKEN`, `GH_TOKEN` and
+`NVD_API_KEY` blanked. When agent-bom runs from a shell, as the Codex skills do, a
+`GITHUB_TOKEN` or `GH_TOKEN` already in that environment is sent only to
+`api.github.com`, and `NVD_API_KEY` only to `services.nvd.nist.gov`, to raise rate limits.
 
 Hosted OAuth sends users to the configured authorization server for login and
 consent. The MCP service validates the access token's issuer, subject, tenant,
@@ -75,6 +97,14 @@ lists the supported destinations and opt-in behavior.
 The hosted service's actual log, backup and identity-account retention periods
 must be supplied by its owner before this draft becomes an effective notice.
 Self-hosted operators must document their own settings and deletion process.
+
+## Purposes and your controls
+
+The information above is processed only to produce the security result you asked for.
+There is no telemetry, advertising or profiling in the plugins. You can preview what
+is read with `agent-bom where --dry-run`, turn off network lookups with offline mode or
+the guard's `osv_lookup` option, turn off rescan summaries with
+`AGENT_BOM_NO_SCAN_MEMORY=1`, and delete local data by removing `~/.agent-bom`.
 
 ## Access and questions
 

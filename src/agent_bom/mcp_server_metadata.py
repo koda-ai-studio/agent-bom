@@ -30,7 +30,7 @@ _SERVER_CARD_TOOLS = [
         "description": "Collect read-only endpoint inventory into durable evidence",
         "annotations": {"readOnlyHint": False, "destructiveHint": True},
     },
-    {"name": "scan", "description": "Full discovery → scan → output pipeline", "annotations": {"readOnlyHint": True}},
+    {"name": "scan", "description": "Full scan pipeline", "annotations": {"readOnlyHint": False, "destructiveHint": False}},
     {"name": "check", "description": "Check a specific package for CVEs before installing", "annotations": {"readOnlyHint": True}},
     {
         "name": "intel_lookup",

@@ -357,6 +357,11 @@ def test_server_card_tools_expose_capability_classes():
             assert "PROCESS_EXECUTION" in classes, tool["name"]
             assert tool["annotations"]["readOnlyHint"] is False
             assert tool["annotations"]["destructiveHint"] is True
+        elif tool["name"] == "scan":
+            # Reads its target but keeps a local result; agent-bom's own state only.
+            assert "WRITE" not in classes
+            assert tool["annotations"]["readOnlyHint"] is False
+            assert tool["annotations"]["destructiveHint"] is False
         else:
             assert "READ" in classes, tool["name"]
             assert tool["annotations"]["readOnlyHint"] is True
@@ -421,6 +426,7 @@ def test_mcp_docs_match_resource_and_prompt_catalog():
         "request_exception",
         "risk_campaign_workflow",
         "runtime_evidence_ingest",
+        "scan",
         "shield_break_glass",
         "shield_start",
         "shield_unblock",
