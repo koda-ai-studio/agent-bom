@@ -23,6 +23,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `--auto-update-db` prints the time each source took.
 
 ### Fixed
+- Security: `oauthlib` moves to 4.0.1 (GHSA-3jp2-3mrg-2vxc), which arrives through the Azure extra. Versions 3.3.0 up to 4.0.1 could issue a bearer token for a bogus device code.
 - Typosquat detection now flags an adjacent-letter swap from five letters (`axois` as `axios`); single-letter substitutions keep their six-letter floor.
 - Investigation graph: an exposure flow now continues through the workloads an exposed host runs, so the path to identities and data opens framed on one screen. Edges between adjacent entities no longer arc over nothing.
 - A synchronous push interrupted by a process kill under distributed dispatch no longer stays `running` forever. The request now heartbeats a lease, and once that lease expires any replica marks the job `failed`, so the client can resubmit under the same idempotency key. A long push with a live lease is never failed for its age, and pushes already stranded by earlier releases are failed after the stuck-job timeout.
