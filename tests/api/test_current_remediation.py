@@ -251,12 +251,13 @@ def test_current_remediation_api_carries_held_on_server_credential_names(scan_st
     assert _plan("another-tenant")["remediation_plan"] == []
 
 
-def test_remediation_default_window_keeps_recent_and_excludes_old_scans(scan_store):  # noqa: F811
+def test_remediation_keeps_an_open_finding_past_the_default_window(scan_store):  # noqa: F811
     old, recent = pushed(6, scope="v1:" + "a" * 64), pushed(8, scope="v1:" + "b" * 64)
     for row, name in ((old, "old-lib"), (recent, "recent-lib")):
         row.result["findings"][0].update(package=name, package_version="1.0.0", fixed_version="2.0.0")
         scan_store.put(row)
     body = _plan()
-    assert [row["package"] for row in body["remediation_plan"]] == ["recent-lib"]
+    # A scan older than the window proves nothing was fixed: its finding stays open, and stale.
+    assert sorted(row["package"] for row in body["remediation_plan"]) == ["old-lib", "recent-lib"]
     assert body["window"]["days"] == 90
     assert body["window"]["since"] == "2026-07-03T00:00:00+00:00"

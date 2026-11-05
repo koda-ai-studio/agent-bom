@@ -9,6 +9,7 @@ from agent_bom.api import stores
 from agent_bom.api.compliance_hub_store import InMemoryComplianceHubStore, set_compliance_hub_store
 from agent_bom.api.server import app
 from agent_bom.api.store import InMemoryJobStore, SQLiteJobStore
+from agent_bom.evidence.finding_project import project_finding_id
 from tests.api.test_findings_owner_sla import _completed_job, _critical_finding
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
@@ -94,9 +95,11 @@ def test_history_never_joins_distinct_occurrences(scan_store, boundary):
     scan_store.put(old)
     scan_store.put(new)
     result = get_rows()
-    assert len(result) == 1
-    assert result[0]["first_seen"] == "2026-09-01T00:00:00+00:00"
-    assert result[0]["sla_due_at"] == "2026-09-08T00:00:00+00:00"
+    # Another target is another project, so it is another finding beside this one.
+    assert len(result) == (2 if boundary == "target" else 1)
+    current = next(row for row in result if row["canonical_id"] == project_finding_id(new, new.result["findings"][0]["canonical_id"]))
+    assert current["first_seen"] == "2026-09-01T00:00:00+00:00"
+    assert current["sla_due_at"] == "2026-09-08T00:00:00+00:00"
 
 
 def test_query_window_does_not_restart_retained_history(scan_store, monkeypatch):
@@ -112,20 +115,14 @@ def test_query_window_does_not_restart_retained_history(scan_store, monkeypatch)
 
 @pytest.mark.parametrize("first_seen", [None, "invalid timestamp"])
 def test_missing_producer_date_uses_first_scan_for_date_and_policy_deadline(scan_store, first_seen):
-    from agent_bom.api.finding_row_inputs import history_ledger_reads_enabled
-
     for month in (8, 9):
         row = job(month)
         row.result["findings"][0].update(first_seen=first_seen, sla_due_at=None, sla_due_at_source="unavailable")
         scan_store.put(row)
     result = get_rows()
-    # The first scan that reported it is the observation; the opt-in projected read serves the snapshot unchanged.
-    if history_ledger_reads_enabled():
-        assert result[0]["first_seen"] in (None, "invalid timestamp")
-        assert result[0]["sla_due_at"] is None
-    else:
-        assert result[0]["first_seen"] == "2026-08-01T00:00:00+00:00"
-        assert result[0]["sla_due_at"] == "2026-08-08T00:00:00+00:00"
+    # The first scan that reported it is the observation, on every read path.
+    assert result[0]["first_seen"] == "2026-08-01T00:00:00+00:00"
+    assert result[0]["sla_due_at"] == "2026-08-08T00:00:00+00:00"
 
 
 def test_explicit_latest_deadline_is_not_replaced_by_history(scan_store):
@@ -168,11 +165,15 @@ def test_history_uses_existing_tenant_read_and_does_not_mutate_snapshots(scan_st
         calls.clear()  # Application startup restores jobs independently of this read route.
         response = client.get("/v1/findings", params={"window_days": 0})
         assert response.status_code == 200 and len(response.json()["findings"]) == 1
+        # The first read seeds durable lifecycle from retained scans, once, through the tenant's own read.
+        assert set(calls) == {"history-tenant"}
+        calls.clear()
+        assert client.get("/v1/findings", params={"window_days": 0}).status_code == 200
     from agent_bom.core.settings import env_flag
 
-    assert calls == (
-        [] if isinstance(scan_store, SQLiteJobStore) and env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS") else ["history-tenant"]
-    )
+    assert set(calls) <= {"history-tenant"}
+    if isinstance(scan_store, SQLiteJobStore) and env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS"):
+        assert calls == []
     assert [row.model_dump(mode="json") for row in original(tenant_id="history-tenant")] == before
 
 
