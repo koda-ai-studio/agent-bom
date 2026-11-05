@@ -190,10 +190,13 @@ def _sarif_run_properties(report: Any, scan_run: ScanRun) -> dict[str, Any]:
     """
     from agent_bom.posture import compute_posture_scorecard
 
+    freshness = getattr(report, "vuln_data_freshness", None) or {}
+    notes = {f"vuln_data_{key}": freshness[key] for key in ("partial_sources", "osv_scope") if freshness.get(key)}
     return {
         "scan_outcome": scan_run.outcome.value,
         "posture_grade": compute_posture_scorecard(report).grade,
         "exposure_path_count": sum(1 for br in report.blast_radii if not getattr(br, "suppressed", False)),
+        **notes,
     }
 
 

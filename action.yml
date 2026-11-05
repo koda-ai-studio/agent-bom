@@ -44,9 +44,13 @@ inputs:
     required: false
     default: 'false'
   auto-update-db:
-    description: 'Auto-update vulnerability database if stale (>7 days). Disable for air-gapped or fully cached runs.'
+    description: 'Refresh the local vulnerability database when it misses the daily freshness target. Disable for air-gapped or fully cached runs.'
     required: false
     default: 'true'
+  vuln-db-scope:
+    description: 'OSV data the refresh keeps locally. application (default) reads the application-ecosystem archives (about 0.3 GB, minutes on a first run); OS and other packages are answered by live OSV, and a scan where neither could answer stays incomplete rather than clean. full reads the all-ecosystems archive (about 2.9 GB, 15 to 70 minutes on a first run); use it when OS packages must be answered from local data, including in the offline sbom-artifact step.'
+    required: false
+    default: 'application'
   nvd-api-key:
     description: 'Optional NVD API key for the vulnerability database refresh (wider NVD window, higher rate limit). Pass it from a repository secret (secrets.NVD_API_KEY in the calling workflow); it reaches the scan only as the NVD_API_KEY environment variable and is never printed. Without it the refresh still reads NVD, keyless.'
     required: false
@@ -68,11 +72,11 @@ inputs:
     required: false
     default: '3.11'
   agent-bom-version:
-    description: 'agent-bom package version to install (for example 0.106.1). Empty = the release this action ref ships; installation fails if that version cannot be installed. Use latest to explicitly install the newest PyPI release, or install-from-source for an unpublished ref.'
+    description: 'agent-bom package version to install (for example 0.106.1). Empty = the release this action ref ships; installation fails if that version cannot be installed. Use latest to explicitly install the newest PyPI release.'
     required: false
     default: ''
   install-from-source:
-    description: 'Install agent-bom from local source (pyproject.toml) instead of PyPI. Use in CI dogfood to test unreleased code.'
+    description: 'Install agent-bom from the workspace (pip install .) instead of PyPI. Works only when the workspace is a checkout of this repository, so it is for testing unreleased agent-bom code in this repository''s own CI. In any other repository it installs the wrong project or fails.'
     required: false
     default: 'false'
   image:
@@ -222,9 +226,9 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.agent-bom/db/vulns.db
-        key: agent-bom-vulndb-${{ runner.os }}-${{ steps.vulndb-cache-key.outputs.day }}
+        key: agent-bom-vulndb-v2-${{ inputs.vuln-db-scope }}-${{ runner.os }}-${{ steps.vulndb-cache-key.outputs.day }}
         restore-keys: |
-          agent-bom-vulndb-${{ runner.os }}-
+          agent-bom-vulndb-v2-${{ inputs.vuln-db-scope }}-${{ runner.os }}-
 
     - name: Install agent-bom
       shell: bash
@@ -297,6 +301,7 @@ runs:
         INPUT_POLICY: ${{ inputs.policy }}
         INPUT_ENRICH: ${{ inputs.enrich }}
         INPUT_AUTO_UPDATE_DB: ${{ inputs.auto-update-db }}
+        INPUT_VULN_DB_SCOPE: ${{ inputs.vuln-db-scope }}
         INPUT_FAIL_ON_KEV: ${{ inputs.fail-on-kev }}
         INPUT_AI_ENRICH: ${{ inputs.ai-enrich }}
         INPUT_AI_MODEL: ${{ inputs.ai-model }}
@@ -551,8 +556,16 @@ runs:
 
         # Auto-update is a scan-only flag; focused commands manage their own
         # advisory lookups, so the default is dropped silently for them.
+        case "$INPUT_VULN_DB_SCOPE" in
+          application|"") DB_OSV_SCOPE="application" ;;
+          full) DB_OSV_SCOPE="all" ;;
+          *)
+            echo "::error::vuln-db-scope must be one of: application, full"
+            exit 1
+            ;;
+        esac
         if [ "$INPUT_AUTO_UPDATE_DB" = "true" ] && supports auto-update-db; then
-          ARGS+=(--auto-update-db)
+          ARGS+=(--auto-update-db --db-osv-scope "$DB_OSV_SCOPE")
         fi
 
         if [ -n "$INPUT_REMEDIATE" ]; then
@@ -895,6 +908,7 @@ runs:
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
         INPUT_SEVERITY: ${{ inputs.severity-threshold }}
         INPUT_AUTO_UPDATE_DB: ${{ inputs.auto-update-db }}
+        INPUT_VULN_DB_SCOPE: ${{ inputs.vuln-db-scope }}
         PYTHONUTF8: '1'
       run: |
         # pull_request checkouts are the merge commit: its first parent is the
@@ -907,7 +921,9 @@ runs:
           GATE_BASE="$BASE_SHA"
         fi
         GATE_ARGS=(--base "$GATE_BASE" --head "$(git rev-parse HEAD)" --severity "${INPUT_SEVERITY:-high}")
-        if [ "$INPUT_AUTO_UPDATE_DB" = "true" ]; then
+        # A scoped database cannot answer every ecosystem a server may pull in, so
+        # the gate stays online for those; its fresh local data still answers the rest.
+        if [ "$INPUT_AUTO_UPDATE_DB" = "true" ] && [ "$INPUT_VULN_DB_SCOPE" = "full" ]; then
           GATE_ARGS+=(--offline)
         fi
         python3 "$GITHUB_ACTION_PATH/scripts/action_mcp_gate.py" "${GATE_ARGS[@]}"

@@ -168,7 +168,7 @@ agent-bom db advisory affected CVE-2026-109618 --report <scan-report.json> --for
 From an MCP client, the read-only `affected_assets` tool (`graph` and `full`
 profiles) takes the same `advisory_id`. In CI, run `uvx agent-bom db update`
 before the GitHub Action step (its `auto-update-db` default only refreshes
-feeds older than seven days). To explain a finding to your team,
+feeds that missed the daily freshness target). To explain a finding to your team,
 [create an impact brief](docs/operations/IMPACT_BRIEF.md) with affected assets,
 source receipts, evidence gaps and the next action.
 

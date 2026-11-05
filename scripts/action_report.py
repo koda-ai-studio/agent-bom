@@ -242,8 +242,35 @@ def coverage_lines(outcome: str) -> list[str]:
     return ["**Partial scan:** a collector did not finish, so these results are incomplete. See `scan_run.issues` in the report.  "]
 
 
+def data_coverage_lines(data: dict[str, Any]) -> list[str]:
+    """What the local vulnerability data did not hold, as the report states it."""
+    if "runs" in data:
+        props = ((data.get("runs") or [{}])[0] or {}).get("properties") or {}
+        partial, scope = props.get("vuln_data_partial_sources"), props.get("vuln_data_osv_scope")
+    else:
+        freshness = data.get("vuln_data_freshness") or {}
+        partial, scope = freshness.get("partial_sources"), freshness.get("osv_scope")
+    lines = []
+    for item in partial or []:
+        if isinstance(item, dict):
+            source, reason = _cell(str(item.get("source"))), _cell(str(item.get("reason")))
+            lines.append(f"**Vulnerability data:** {source} sync is partial ({reason}); it resumes at the next refresh.  ")
+    if scope:
+        lines.append(
+            f"**Vulnerability data:** Local OSV data covers {_cell(', '.join(map(str, scope)), 300)}; other ecosystems were checked live.  "
+        )
+    return lines
+
+
 def render_summary(
-    rows: list[dict[str, Any]], *, exit_code: str, scan_type: str, result_file: str, limit: int = 10, outcome: str = ""
+    rows: list[dict[str, Any]],
+    *,
+    exit_code: str,
+    scan_type: str,
+    result_file: str,
+    limit: int = 10,
+    outcome: str = "",
+    data_notes: list[str] | None = None,
 ) -> str:
     rows, possibly = _split(rows)
     return "\n".join(
@@ -252,6 +279,7 @@ def render_summary(
             "",
             f"**Status:** {status_line(exit_code, len(rows))}  ",
             *coverage_lines(outcome),
+            *(data_notes or []),
             f"**Scan type:** `{_cell(scan_type)}` · **Findings:** {len(rows)} ({severity_counts(rows)})  ",
             f"**Result file:** `{_cell(result_file)}`" if result_file else "",
             "",
@@ -264,7 +292,9 @@ def render_summary(
     )
 
 
-def render_comment(rows: list[dict[str, Any]], *, exit_code: str, limit: int = 10, outcome: str = "") -> str:
+def render_comment(
+    rows: list[dict[str, Any]], *, exit_code: str, limit: int = 10, outcome: str = "", data_notes: list[str] | None = None
+) -> str:
     rows, possibly = _split(rows)
     return "\n".join(
         [
@@ -273,6 +303,7 @@ def render_comment(rows: list[dict[str, Any]], *, exit_code: str, limit: int = 1
             "",
             f"**Status:** {status_line(exit_code, len(rows))}  ",
             *coverage_lines(outcome),
+            *(data_notes or []),
             f"**Findings:** {len(rows)} ({severity_counts(rows)})",
             "",
             findings_table(rows, limit),
@@ -298,14 +329,22 @@ def main(argv: list[str] | None = None) -> int:
         print(report_only_verdict(args.result_file))
         return 0
     rows = load_rows(args.result_file) if args.result_file.is_file() else []
-    outcome = scan_outcome(_load(args.result_file))
+    data = _load(args.result_file)
+    outcome = scan_outcome(data)
+    notes = data_coverage_lines(data)
     if args.mode == "summary":
         result = str(args.result_file) if args.result_file.is_file() else ""
         rendered = render_summary(
-            rows, exit_code=args.exit_code, scan_type=args.scan_type, result_file=result, limit=args.limit, outcome=outcome
+            rows,
+            exit_code=args.exit_code,
+            scan_type=args.scan_type,
+            result_file=result,
+            limit=args.limit,
+            outcome=outcome,
+            data_notes=notes,
         )
     else:
-        rendered = render_comment(rows, exit_code=args.exit_code, limit=args.limit, outcome=outcome)
+        rendered = render_comment(rows, exit_code=args.exit_code, limit=args.limit, outcome=outcome, data_notes=notes)
     sys.stdout.write(rendered)
     return 0
 

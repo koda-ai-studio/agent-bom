@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import time as _time
+from collections.abc import Callable
 from pathlib import Path
 
 import click
@@ -13,6 +14,15 @@ from agent_bom.cli.agents._preflight import run_iac_only_scan
 from agent_bom.cli.agents.scan_pipeline.helpers import _agents_patchable, _reset_offline_mode
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
+from agent_bom.core.settings import env_opt
+from agent_bom.db import schema as _db_schema
+from agent_bom.db.sync_common import OSV_APPLICATION_ECOSYSTEMS
+from agent_bom.db.sync_nvd_window import TIME_BUDGET_ENV
+from agent_bom.vuln_freshness import osv_archive_is_full
+
+# The window is walked newest first and a partial run resumes at the next refresh,
+# so a short first pass keeps the most recent CVEs and is reported as partial.
+COLD_START_NVD_BUDGET_SECONDS = 60.0
 
 
 def _apply_offline_mode(opts: ScanOptions, st: ScanState) -> None:
@@ -40,15 +50,47 @@ def _apply_offline_mode(opts: ScanOptions, st: ScanState) -> None:
             import os
             import time
 
-            from agent_bom.db.schema import DB_PATH
-
-            if DB_PATH.exists():
-                _age_days = (time.time() - os.path.getmtime(DB_PATH)) / 86400
+            db_path = _db_schema.DB_PATH
+            if db_path.exists():
+                _age_days = (time.time() - os.path.getmtime(db_path)) / 86400
                 if _age_days <= 1:
                     st.prefer_local_db = True
                     logger.debug("Local DB is %.1f day(s) old — preferring local DB over network", _age_days)
         except Exception:
             pass  # DB not available, will use network
+
+
+def _osv_ecosystems_for_refresh(opts: ScanOptions, db_path: Path) -> list[str] | None:
+    """The OSV archives this refresh reads; ``None`` is the all-ecosystems archive.
+
+    A database already holding every ecosystem stays whole: refreshing part of it
+    would leave the rest aging behind coverage metadata that still claims it all.
+    """
+    if opts.db_osv_scope != "application" or osv_archive_is_full(db_path):
+        return None
+    return list(OSV_APPLICATION_ECOSYSTEMS)
+
+
+def _cold_start_nvd_budget(db_path: Path) -> float | None:
+    """NVD seconds for a first refresh, which must not hold up the first scan; ``None`` keeps the configured budget."""
+    return None if db_path.exists() or env_opt(TIME_BUDGET_ENV) else COLD_START_NVD_BUDGET_SECONDS
+
+
+def _source_timing_reporter(opts: ScanOptions, st: ScanState) -> Callable[..., None]:
+    """Record each source's refresh time, and print it: a slow runner's log should say where the time went."""
+    started: dict[str, float] = {}
+
+    def report(source: str, phase: str, current: int = 0, _total: int | None = None, **_detail: object) -> None:
+        if phase == "start":
+            started[source] = _time.monotonic()
+        elif phase in {"complete", "partial"} and source in started:
+            seconds = _time.monotonic() - started[source]
+            st.pre_scan_step_timings[f"db refresh {source}"] = seconds
+            if not opts.quiet:
+                note = ", partial" if phase == "partial" else ""
+                st.con.print(f"[dim]  {source}: {seconds:.1f}s ({current:,} records{note})[/dim]", highlight=False)
+
+    return report
 
 
 def _refresh_vuln_data(opts: ScanOptions, st: ScanState) -> None:
@@ -98,12 +140,20 @@ def _refresh_vuln_data(opts: ScanOptions, st: ScanState) -> None:
         if source_list or should_refresh(st.vuln_freshness, offline=opts.offline):
             from agent_bom.db.sync import sync_db
 
+            db_path = _db_schema.DB_PATH
+            osv_ecosystems = _osv_ecosystems_for_refresh(opts, db_path)
             if not opts.quiet and not opts.no_scan:
                 src_msg = f" (sources: {', '.join(source_list)})" if source_list else ""
-                st.con.print(f"[dim]Refreshing local vuln DB{src_msg} …[/dim]")
+                scope_msg = " (application ecosystems of OSV)" if osv_ecosystems else ""
+                st.con.print(f"[dim]Refreshing local vuln DB{src_msg}{scope_msg} …[/dim]")
             _refresh_t0 = _time.monotonic()
             try:
-                sync_db(sources=source_list)
+                sync_db(
+                    sources=source_list,
+                    osv_ecosystems=osv_ecosystems,
+                    nvd_time_budget=_cold_start_nvd_budget(db_path),
+                    progress=_source_timing_reporter(opts, st),
+                )
                 # Recompute so the surfaced freshness reflects the fresh cache.
                 st.vuln_freshness = compute_freshness(offline=opts.offline)
             except Exception as _db_exc:
