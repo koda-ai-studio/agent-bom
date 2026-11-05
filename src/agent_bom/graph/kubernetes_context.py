@@ -16,6 +16,13 @@ if TYPE_CHECKING:
 
 def _object_id(scope: _Scope, ref: Mapping[str, Any], graph: UnifiedGraph) -> str:
     if ref["kind"] == "Pod":
+        workload_id = scope.ids()["workload"](ref)
+        workload = graph.nodes.get(workload_id)
+        if workload and all(
+            workload.attributes.get(key) == value
+            for key, value in (("kubernetes_uid", ref["uid"]), ("cluster", scope.cluster), ("namespace", ref["namespace"]))
+        ):
+            return workload_id
         legacy_id = f"container:k8s:pod:{ref['uid']}"
         legacy = graph.nodes.get(legacy_id)
         if legacy and legacy.attributes.get("cluster") == scope.cluster and legacy.attributes.get("namespace") == ref["namespace"]:

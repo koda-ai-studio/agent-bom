@@ -122,3 +122,14 @@ def test_runtime_context_is_cluster_scoped_and_excludes_environment_values():
         assert graph.nodes[route.source].attributes["cluster"] == graph.nodes[route.target].attributes["cluster"]
     assert "private-fixture-value" not in str(inventories)
     assert "PRIVATE_VALUE" not in str(inventories)
+
+
+def test_standalone_pod_context_reuses_the_existing_workload_asset():
+    items = objects()
+    items[1]["metadata"].pop("ownerReferences")
+    _, graph = project(items)
+    pods = [n for n in graph.nodes.values() if n.attributes.get("kubernetes_uid") == "pod-1"]
+    assert len(pods) == 1
+    route = next(e for e in graph.edges if e.evidence.get("basis") == "kubernetes_endpoint_slice")
+    assert route.target == pods[0].id
+    assert any(e.source == pods[0].id and graph.nodes[e.target].attributes.get("container_kind") == "runtime" for e in graph.edges)
