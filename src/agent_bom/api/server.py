@@ -642,11 +642,6 @@ _shutting_down: bool = False
 _STUCK_JOB_TIMEOUT = 1800  # 30 minutes — mark RUNNING jobs as FAILED
 
 
-def _run_finding_backfills() -> None:
-    run_materialization_tick()
-    run_finding_lifecycle_tick()
-
-
 async def _cleanup_loop() -> None:
     """Background task that removes expired jobs and unsticks RUNNING jobs.
 
@@ -660,6 +655,10 @@ async def _cleanup_loop() -> None:
         await asyncio.to_thread(poll_campaign_reconciliation)
         await asyncio.sleep(60)
         await _cleanup_tick()
+        # Fail-open like the rest of the loop; the next tick resumes where this one stopped.
+        outcome = (await asyncio.gather(asyncio.to_thread(run_finding_lifecycle_tick), return_exceptions=True))[0]
+        if isinstance(outcome, BaseException):
+            _logger.warning("finding lifecycle backfill tick failed: %s", type(outcome).__name__)
 
 
 async def _cleanup_tick() -> None:
@@ -724,7 +723,7 @@ async def _cleanup_tick() -> None:
                 partitions_created,
                 partitions_dropped,
             )
-        await asyncio.to_thread(_run_finding_backfills)
+        await asyncio.to_thread(run_materialization_tick)
     except Exception:  # noqa: BLE001
         _logger.debug("partition maintenance skipped", exc_info=False)
     # NHI lifecycle enforcement (#nhi): expire lingering JIT grants, opt-in

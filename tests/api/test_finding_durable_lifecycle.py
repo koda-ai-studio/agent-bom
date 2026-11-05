@@ -185,6 +185,36 @@ def test_a_read_does_not_project_every_retained_scan(store_kind, client, monkeyp
     assert calls_with(2) == calls_with(40)
 
 
+@pytest.mark.parametrize("failure", [None, RuntimeError("store down")])
+def test_cleanup_loop_runs_the_backfill_tick_and_survives_its_failure(monkeypatch, failure):
+    import asyncio
+
+    from agent_bom.api import server
+
+    ran: list[int] = []
+
+    def tick() -> int:
+        ran.append(1)
+        if failure:
+            raise failure
+        return 0
+
+    async def stop_after_second_pause(_seconds: float) -> None:
+        if ran:
+            raise asyncio.CancelledError
+
+    async def no_cleanup() -> None:
+        return None
+
+    monkeypatch.setattr(server, "run_finding_lifecycle_tick", tick)
+    monkeypatch.setattr(server, "_cleanup_tick", no_cleanup)
+    monkeypatch.setattr(server.asyncio, "sleep", stop_after_second_pause)
+    monkeypatch.setattr("agent_bom.api.campaign_reconciliation.poll_campaign_reconciliation", lambda: None)
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(server._cleanup_loop())
+    assert ran == [1]
+
+
 def test_a_read_writes_no_backfill(push_estate, monkeypatch):
     from agent_bom.api.storage import finding_lifecycle as durable
 
