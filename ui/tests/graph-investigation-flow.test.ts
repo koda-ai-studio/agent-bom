@@ -68,3 +68,12 @@ it("reserves additional caption clearance on narrow screens", () => {
   const gap = (result: typeof desktop) => Math.abs(result.nodes.find(n => n.id === "cve")!.position.y - result.nodes.find(n => n.id === "pod")!.position.y);
   expect(gap(mobile)).toBeGreaterThan(gap(desktop));
 });
+
+it("keeps an ingress and its routed Service in sequence before the pod", () => {
+  const service = n("service", "cloudResource", { resource_type: "application_endpoint" });
+  const links = edges.filter(e => e.id !== "endpoint-pod").concat(e("endpoint", "service", "exposed_to"), e("service", "pod", "exposed_to"));
+  const result = investigationFlow([...nodes, service], links, "exposure");
+  const x = (id: string) => result.nodes.find(n => n.id === id)!.position.x;
+  expect(x("endpoint")).toBeLessThan(x("service"));
+  expect(x("service")).toBeLessThan(x("pod"));
+});

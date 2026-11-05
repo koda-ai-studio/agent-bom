@@ -82,15 +82,19 @@ export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Ed
   }
   const visible = nodes.filter(n => !n.hidden), byId = new Map(visible.map(n => [n.id, n]));
   const principal = (n: Node<LineageNodeData>) => IDENTITIES.has(n.data.nodeType);
+  const incomingEndpoint = (n: Node<LineageNodeData>) => edges.some(e => {
+    const source = byId.get(e.source);
+    return e.target === n.id && e.data?.relationship === "exposed_to" && source && (endpoint(source) || source.data.displayOnly);
+  });
   const roots = visible.filter(n => scenario === "inventory" ? n.data.nodeType === "account" || edges.some(e => e.source === n.id && CONTEXT.has(String(e.data?.relationship))) && !edges.some(e => CONTEXT.has(String(e.data?.relationship)) && (["hosted_on", "part_of", "belongs_to"].includes(String(e.data?.relationship)) ? e.source : e.target) === n.id) && !FINDINGS.has(n.data.nodeType)
-    : scenario === "exposure" ? n.data.displayOnly || endpoint(n)
+    : scenario === "exposure" ? n.data.displayOnly || endpoint(n) && !incomingEndpoint(n)
     : scenario === "identity" ? principal(n) && !edges.some(e => e.target === n.id && principal(byId.get(e.source) ?? n))
       : n.data.nodeType === "container" && !["image"].includes(String(n.data.attributes?.container_kind))
         && !edges.some(e => e.source === n.id && CONTEXT.has(String(e.data?.relationship)) && byId.get(e.target)?.data.nodeType === "container"));
   if (!roots.length) roots.push(...visible.filter(n => scenario === "vulnerability" && n.data.nodeType === "package"));
   const rank = new Map<string, number>();
   const queue = roots.sort((a, b) => Number(Boolean(b.data.displayOnly)) - Number(Boolean(a.data.displayOnly)) || a.id.localeCompare(b.id));
-  for (const n of queue) rank.set(n.id, n.data.displayOnly ? 0 : scenario === "exposure" && nodes.some(n => n.data.displayOnly) ? 1 : 0);
+  for (const n of queue) rank.set(n.id, 0);
   // Bounded BFS follows only recorded flow links. Ownership is attached separately below.
   for (let index = 0; index < queue.length; index++) {
     const n = queue[index]!;
