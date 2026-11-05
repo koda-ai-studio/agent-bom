@@ -1,0 +1,702 @@
+{
+ "agents": [
+  {
+   "agent_type": "custom",
+   "config_path": "<path:ui>",
+   "mcp_servers": [
+    {
+     "command": "project",
+     "name": "ui",
+     "packages": [
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@adobe/css-tools",
+       "parent_package": "@testing-library/jest-dom",
+       "purl": "pkg:npm/%40adobe/css-tools@4.5.0",
+       "version": "4.5.0"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@alloc/quick-lru",
+       "parent_package": "@tailwindcss/postcss",
+       "purl": "pkg:npm/%40alloc/quick-lru@5.2.0",
+       "version": "5.2.0"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@asamuzakjp/css-color",
+       "parent_package": "jsdom",
+       "purl": "pkg:npm/%40asamuzakjp/css-color@7.1.3",
+       "version": "7.1.3"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "lru-cache",
+       "parent_package": "@asamuzakjp/css-color",
+       "purl": "pkg:npm/lru-cache@11.5.3",
+       "version": "11.5.3"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@asamuzakjp/dom-selector",
+       "parent_package": "jsdom",
+       "purl": "pkg:npm/%40asamuzakjp/dom-selector@9.2.4",
+       "version": "9.2.4"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/code-frame",
+       "parent_package": "@testing-library/dom",
+       "purl": "pkg:npm/%40babel/code-frame@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 3,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/compat-data",
+       "parent_package": "@babel/helper-compilation-targets",
+       "purl": "pkg:npm/%40babel/compat-data@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/core",
+       "parent_package": "eslint-plugin-react-hooks",
+       "purl": "pkg:npm/%40babel/core@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "json5",
+       "parent_package": "@babel/core",
+       "purl": "pkg:npm/json5@2.2.3",
+       "version": "2.2.3"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/generator",
+       "parent_package": "@babel/core",
+       "purl": "pkg:npm/%40babel/generator@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/helper-compilation-targets",
+       "parent_package": "@babel/core",
+       "purl": "pkg:npm/%40babel/helper-compilation-targets@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 3,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/helper-globals",
+       "parent_package": "@babel/traverse",
+       "purl": "pkg:npm/%40babel/helper-globals@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 3,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/helper-module-imports",
+       "parent_package": "@babel/helper-module-transforms",
+       "purl": "pkg:npm/%40babel/helper-module-imports@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/helper-module-transforms",
+       "parent_package": "@babel/core",
+       "purl": "pkg:npm/%40babel/helper-module-transforms@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 3,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/helper-string-parser",
+       "parent_package": "@babel/types",
+       "purl": "pkg:npm/%40babel/helper-string-parser@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 3,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/helper-validator-identifier",
+       "parent_package": "@babel/types",
+       "purl": "pkg:npm/%40babel/helper-validator-identifier@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 3,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/helper-validator-option",
+       "parent_package": "@babel/helper-compilation-targets",
+       "purl": "pkg:npm/%40babel/helper-validator-option@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/helpers",
+       "parent_package": "@babel/core",
+       "purl": "pkg:npm/%40babel/helpers@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/parser",
+       "parent_package": "eslint-plugin-react-hooks",
+       "purl": "pkg:npm/%40babel/parser@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/runtime",
+       "parent_package": "@testing-library/react",
+       "purl": "pkg:npm/%40babel/runtime@7.29.2",
+       "version": "7.29.2"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/template",
+       "parent_package": "@babel/core",
+       "purl": "pkg:npm/%40babel/template@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/traverse",
+       "parent_package": "react-docgen",
+       "purl": "pkg:npm/%40babel/traverse@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@babel/types",
+       "parent_package": "react-docgen",
+       "purl": "pkg:npm/%40babel/types@7.29.7",
+       "version": "7.29.7"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@bramus/specificity",
+       "parent_package": "jsdom",
+       "purl": "pkg:npm/%40bramus/specificity@2.4.2",
+       "version": "2.4.2"
+      },
+      {
+       "dependency_depth": 3,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@csstools/color-helpers",
+       "parent_package": "@csstools/css-color-parser",
+       "purl": "pkg:npm/%40csstools/color-helpers@6.1.2",
+       "version": "6.1.2"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@csstools/css-calc",
+       "parent_package": "@asamuzakjp/css-color",
+       "purl": "pkg:npm/%40csstools/css-calc@3.4.3",
+       "version": "3.4.3"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@csstools/css-color-parser",
+       "parent_package": "@asamuzakjp/css-color",
+       "purl": "pkg:npm/%40csstools/css-color-parser@4.2.6",
+       "version": "4.2.6"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@csstools/css-parser-algorithms",
+       "parent_package": "@asamuzakjp/css-color",
+       "purl": "pkg:npm/%40csstools/css-parser-algorithms@4.0.2",
+       "version": "4.0.2"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@csstools/css-syntax-patches-for-csstree",
+       "parent_package": "jsdom",
+       "purl": "pkg:npm/%40csstools/css-syntax-patches-for-csstree@1.1.15",
+       "version": "1.1.15"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@csstools/css-tokenizer",
+       "parent_package": "@asamuzakjp/css-color",
+       "purl": "pkg:npm/%40csstools/css-tokenizer@4.0.2",
+       "version": "4.0.2"
+      },
+      {
+       "dependency_depth": 0,
+       "dependency_scope": "runtime",
+       "ecosystem": "npm",
+       "is_direct": true,
+       "name": "@dagrejs/dagre",
+       "parent_package": null,
+       "purl": "pkg:npm/%40dagrejs/dagre@3.1.1",
+       "version": "3.1.1"
+      },
+      {
+       "dependency_depth": 1,
+       "dependency_scope": "runtime",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@dagrejs/graphlib",
+       "parent_package": "@dagrejs/dagre",
+       "purl": "pkg:npm/%40dagrejs/graphlib@4.0.5",
+       "version": "4.0.5"
+      },
+      {
+       "dependency_depth": 5,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@emnapi/core",
+       "parent_package": "@napi-rs/wasm-runtime",
+       "purl": "pkg:npm/%40emnapi/core@1.11.2",
+       "version": "1.11.2"
+      },
+      {
+       "dependency_depth": 6,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@emnapi/wasi-threads",
+       "parent_package": "@emnapi/core",
+       "purl": "pkg:npm/%40emnapi/wasi-threads@1.2.2",
+       "version": "1.2.2"
+      },
+      {
+       "dependency_depth": 4,
+       "dependency_scope": "runtime",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@emnapi/runtime",
+       "parent_package": "@img/sharp-wasm32",
+       "purl": "pkg:npm/%40emnapi/runtime@1.11.3",
+       "version": "1.11.3"
+      },
+      {
+       "dependency_depth": 4,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@emnapi/wasi-threads",
+       "parent_package": "@emnapi/core",
+       "purl": "pkg:npm/%40emnapi/wasi-threads@1.2.1",
+       "version": "1.2.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/aix-ppc64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/aix-ppc64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/android-arm",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/android-arm@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/android-arm64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/android-arm64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/android-x64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/android-x64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/darwin-arm64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/darwin-arm64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/darwin-x64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/darwin-x64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/freebsd-arm64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/freebsd-arm64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/freebsd-x64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/freebsd-x64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-arm",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-arm@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-arm64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-arm64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-ia32",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-ia32@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-loong64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-loong64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-mips64el",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-mips64el@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-ppc64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-ppc64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-riscv64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-riscv64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-s390x",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-s390x@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/linux-x64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/linux-x64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/netbsd-arm64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/netbsd-arm64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/netbsd-x64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/netbsd-x64@0.28.1",
+       "version": "0.28.1"
+      },
+      {
+       "dependency_depth": 2,
+       "dependency_scope": "dev",
+       "ecosystem": "npm",
+       "is_direct": false,
+       "name": "@esbuild/openbsd-arm64",
+       "parent_package": "esbuild",
+       "purl": "pkg:npm/%40esbuild/openbsd-arm64@0.28.1",
+       "version": "0.28.1"
+      }
+     ],
+     "surface": "other",
+     "transport": "stdio"
+    }
+   ],
+   "name": "project:ui",
+   "source": "project",
+   "status": "configured"
+  }
+ ],
+ "project_inventory": {
+  "direct_packages": 38,
+  "directories": [
+   {
+    "advisory_evidence": "lockfile_backed",
+    "declaration_files": [
+     "package.json"
+    ],
+    "direct_packages": 38,
+    "ecosystems": {
+     "npm": 737
+    },
+    "lockfile_files": [
+     "package-lock.json"
+    ],
+    "manifest_files": [
+     "package-lock.json",
+     "package.json"
+    ],
+    "package_count": 737,
+    "path": ".",
+    "transitive_packages": 699
+   }
+  ],
+  "ecosystems": {
+   "npm": 737
+  },
+  "lockfile_directories": 1,
+  "lockfiles": 1,
+  "manifest_directories": 1,
+  "manifest_files": 2,
+  "package_count": 737,
+  "repository_context": {
+   "code": {
+    "coverage": "python_named_sdk_imports_and_static_calls",
+    "files": [],
+    "status": "complete",
+    "unresolved": []
+   },
+   "coverage": {
+    "cargo": "package_manifests",
+    "go": "module_manifests",
+    "npm_yarn": "package_manifests",
+    "nx": "not_present",
+    "pnpm": "package_manifests",
+    "turbo": "not_present",
+    "uv": "project_manifests"
+   },
+   "identity_basis": "local_root",
+   "pipelines": {
+    "coverage": "literal_gitlab_jobs_and_airflow_dag_operators",
+    "edges": [],
+    "nodes": [],
+    "status": "complete",
+    "unresolved": []
+   },
+   "ref": "unrecorded",
+   "ref_status": "unavailable",
+   "revision": null,
+   "scope_id": "ef2ffad95a66d372d83a59314f5ccd2278ae1bc7bc5b4784417ec5921d5864ea",
+   "status": "complete",
+   "unresolved": [],
+   "version": 1,
+   "workspace_packages": [
+    {
+     "declared_dependencies": [
+      "@dagrejs/dagre",
+      "@next/eslint-plugin-next",
+      "@playwright/test",
+      "@storybook/react-vite",
+      "@tailwindcss/postcss",
+      "@tanstack/react-table",
+      "@tanstack/react-virtual",
+      "@testing-library/jest-dom",
+      "@testing-library/react",
+      "@types/dagre",
+      "@types/node",
+      "@types/react",
+      "@types/react-dom",
+      "@vitejs/plugin-react",
+      "@xyflow/react",
+      "axe-core",
+      "eslint",
+      "eslint-config-next",
+      "eslint-plugin-jsx-a11y",
+      "eslint-plugin-react-hooks",
+      "graphology",
+      "jsdom",
+      "lightningcss",
+      "lucide-react",
+      "next",
+      "openapi-typescript",
+      "react",
+      "react-dom",
+      "recharts",
+      "sigma",
+      "storybook",
+      "tailwindcss",
+      "typescript",
+      "typescript-eslint",
+      "vite",
+      "vitest"
+     ],
+     "ecosystem": "npm",
+     "evidence_tier": "static_scan",
+     "first_party": true,
+     "id": "repo:workspace_package:6dbe5ab8123c8e197061716f49107b2d8b6d7ad023440758500658b427818788",
+     "local_dependency_paths": {},
+     "manifest": "package.json",
+     "manifest_digest": "80abe9a9b9e442467908e7f33b0db65c2cf80784f7bb0765c9c9d364331771da",
+     "name": "ui",
+     "owner_source": "",
+     "owners": [],
+     "path": ".",
+     "workspace_dependencies": []
+    }
+   ]
+  },
+  "root": "<path:ui>",
+  "transitive_packages": 699
+ }
+}

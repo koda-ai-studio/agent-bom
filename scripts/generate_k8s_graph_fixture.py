@@ -22,6 +22,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from agent_bom.demo import demo_inventory_document  # noqa: E402
 from agent_bom.graph.builder import build_unified_graph_from_report  # noqa: E402
 from agent_bom.kubernetes.inventory import build_k8s_inventory  # noqa: E402
 from agent_bom.kubernetes.inventory_report import kubernetes_inventory_section  # noqa: E402
@@ -219,6 +220,22 @@ def image_scan_report() -> Obj:
     }
 
 
+def project_scan_report() -> Obj:
+    """A real repository scan, trimmed to 56 of its packages, as ``agent-bom scan <path>`` reported it."""
+    report: Obj = json.loads((ROOT / "tests" / "fixtures" / "project_scan_report.json").read_text(encoding="utf-8"))
+    return report
+
+
+def demo_inventory_report() -> Obj:
+    """The curated demo inventory, with one finding so the cards show their linked-finding counts."""
+    agents = demo_inventory_document()["agents"]
+    for agent in agents:
+        for server in agent.get("mcp_servers") or []:
+            for package in server.get("packages") or []:
+                package["vulnerabilities"] = [{"id": f"CVE-2099-{sum(map(ord, package['name'])):04d}", "severity": "high"}]
+    return {"agents": agents}
+
+
 SCENARIOS = {
     "snapshot": snapshot_token_unmounted,
     "tokenMounted": snapshot_token_mounted,
@@ -226,8 +243,10 @@ SCENARIOS = {
     "twoServices": two_services,
     "clusterEstate": cluster_estate,
     "withFindings": snapshot_token_mounted,
+    "projectScan": list,
+    "demoInventory": list,
 }
-EXTRA_REPORT = {"withFindings": image_scan_report}
+EXTRA_REPORT = {"withFindings": image_scan_report, "projectScan": project_scan_report, "demoInventory": demo_inventory_report}
 
 
 def _stable(value: Any) -> Any:

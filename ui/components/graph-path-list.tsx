@@ -6,6 +6,7 @@ import { ArrowDown } from "lucide-react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { entityIcon } from "@/lib/entity-icons";
 import { graphChains } from "@/lib/graph-chains";
+import { isBlockedIdentityHop, isInternalService } from "@/lib/graph-flow-model";
 import { LINEAGE_NODE_GRAPH_KIND, relationshipLegendItem } from "@/lib/graph-utils";
 import { GRAPH_NODE_KIND_META } from "@/lib/graph-schema.generated";
 
@@ -16,6 +17,15 @@ function kindLabel(data: LineageNodeData): string {
 
 const ratedSeverity = (severity: string | undefined) =>
   severity && !["none", "unknown", ""].includes(severity.toLowerCase()) ? severity : null;
+
+/** The same plain caveats the canvas gives: a route inside the cluster is not exposure, and an unmounted token is not a step. */
+function hopLabel(relationship: string | undefined, source: Node<LineageNodeData>, targetId: string | undefined, edges: Edge[]): string {
+  if (!relationship) return "linked to";
+  if (relationship === "exposed_to" && isInternalService(source)) return "Routes in cluster to";
+  const edge = edges.find(item => item.source === source.id && item.target === targetId && item.data?.relationship === relationship);
+  const label = relationshipLegendItem(relationship).label;
+  return edge && isBlockedIdentityHop(edge) && source.data.attributes?.token_mounted === false ? `${label} · token not mounted` : label;
+}
 
 /**
  * The phone reading of a loaded graph: each root-to-leaf chain as one readable
@@ -60,7 +70,7 @@ export function GraphPathList({ nodes, edges, onSelect }: {
                     {relationship !== undefined && index < chain.ids.length - 1 && (
                       <p className="flex items-center gap-1.5 py-0.5 pl-3.5 text-xs text-ink-tertiary">
                         <ArrowDown aria-hidden="true" className="h-3.5 w-3.5" />
-                        {relationship ? relationshipLegendItem(relationship).label : "linked to"}
+                        {hopLabel(relationship, node, chain.ids[index + 1], edges)}
                       </p>
                     )}
                   </li>

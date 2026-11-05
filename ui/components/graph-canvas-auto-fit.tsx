@@ -9,10 +9,14 @@ import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 /** A short primary path should open with its surroundings in view, not as two oversized cards. */
 const PRIMARY_PATH_MAX_ZOOM = 0.7;
 const PRIMARY_PATH_TOP_MARGIN = 24;
+const PRIMARY_PATH_LEFT_MARGIN = 24;
+const FIT_WAIT_MS = 600;
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
-export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, navigationIds, navigationMount, padding = 0.08, boundedPreview = false, primaryIds }: {
+export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, navigationIds, navigationMount, padding = 0.08, boundedPreview = false, primaryIds, primaryZoom }: {
+  /** Opens the path at this exact zoom, for maps read by full cards rather than a short path. */
+  primaryZoom?: number | undefined;
   boundedPreview?: boolean;
   /** The reading path to frame when the whole graph cannot be legible, in reading order. */
   primaryIds?: string[] | undefined;
@@ -104,10 +108,10 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // A phone's overview is its Paths list; its Graph view keeps a dense graph's
     // anchor at full-card zoom, since summary pills below zoom 1 are unreadable there.
     const phone = width < 640;
-    const legiblePath = !phone && primaryPathKey ? legiblePrefix(primaryPathKey.split("\n"), nodes, getNodesBounds, width, height) : null;
+    const legiblePath = !phone && primaryPathKey ? legiblePrefix(primaryPathKey.split("\n"), nodes, getNodesBounds, width, height, primaryZoom ?? GRAPH_LEGIBLE_FIT_ZOOM) : null;
     const focus = !frameSize.fitAll && anchor ? (phone ? [{ id: anchor.id }] : legiblePath ?? neighbourhood(anchor.id, nodes.map(node => node.id), getEdges())) : null;
     let options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: phone ? padding : "72px" }, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM,
-      ...(focus ? phone ? { nodes: focus, minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width), ...(legiblePath ? { maxZoom: PRIMARY_PATH_MAX_ZOOM } : {}) } : {}) };
+      ...(focus ? phone ? { nodes: focus, minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width), ...(legiblePath ? { maxZoom: PRIMARY_PATH_MAX_ZOOM } : {}), ...(legiblePath && primaryZoom ? { minZoom: primaryZoom, maxZoom: primaryZoom } : {}) } : {}) };
     let fitIds = focus ? new Set(focus.map(node => node.id)) : null;
     // Convergence must measure exactly the nodes passed to fitView.
     const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => !node.hidden && fitIds?.has(node.id)) : getNodes().filter(node => !node.hidden));
@@ -123,7 +127,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
         options = { padding: options.padding ?? padding, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM };
       }
       const before = fittedBounds();
-      void fitView(options).then(fitted => {
+      void fitWithin(fitView(options)).then(fitted => {
         // Zoom changes readable glyph/caption dimensions. Their observer and
         // React Flow measurements can finish after a second camera fit. Keep
         // fitting until measured bounds settle, with a bounded four-pass budget.
@@ -135,11 +139,13 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
           // Caption dimensions can oscillate around a zoom threshold. Once
           // the bounded budget is spent, keep this camera until geometry or
           // scope changes instead of restarting on virtualization updates.
-          if (fitted && ((pass > 0 && stable) || pass === 3)) {
+          if ((fitted && pass > 0 && stable) || pass === 3) {
             // The rest of the flow lies below its path, so open with the path at the top rather than centred.
             if (legiblePath && fitIds) {
               const viewport = getViewport();
-              void setViewport({ ...viewport, y: PRIMARY_PATH_TOP_MARGIN - after.y * viewport.zoom });
+              // A map read at a fixed zoom also starts at its left edge, so no column space is wasted.
+              const x = primaryZoom ? PRIMARY_PATH_LEFT_MARGIN - after.x * viewport.zoom : viewport.x;
+              void setViewport({ x, zoom: viewport.zoom, y: PRIMARY_PATH_TOP_MARGIN - after.y * viewport.zoom });
             }
             lastAutoFitKey.current = autoFitKey;
             frameElement.dataset.graphCameraSettled = "true";
@@ -150,7 +156,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     };
     frames.push(requestAnimationFrame(() => settle(0)));
     return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
-  }, [boundedPreview, padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, getViewport, setViewport, onLayoutAspect, primaryPathKey]);
+  }, [primaryZoom, boundedPreview, padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, getViewport, setViewport, onLayoutAspect, primaryPathKey]);
   // Small screens focus one readable node. Always provide a way to reach the
   // other loaded nodes, including inventory views without an ordered path.
   if (boundedPreview || !initialized || width >= 640 || width <= 0) return null;
@@ -203,12 +209,20 @@ function focusCardHeight(node: Node | undefined): number {
   return typeof cell === "number" ? cell : node?.measured?.height ?? 0;
 }
 
+/**
+ * React Flow's fit promise resolves on a d3 transition's "end", which never fires when another
+ * camera move interrupts it, so an animated fit can leave this promise pending forever.
+ */
+function fitWithin(fit: Promise<boolean>) {
+  return Promise.race([fit, new Promise<boolean>(resolve => setTimeout(() => resolve(false), FIT_WAIT_MS))]);
+}
+
 /** As much of the path from its start as still fits at a legible zoom; centring a clipped path would cut off where it begins. */
-function legiblePrefix(ids: string[], nodes: Node[], bounds: (nodes: Node[]) => Rect, width: number, height: number) {
+function legiblePrefix(ids: string[], nodes: Node[], bounds: (nodes: Node[]) => Rect, width: number, height: number, minimumZoom: number) {
   const byId = new Map(nodes.map(node => [node.id, node]));
   const path = ids.flatMap(id => byId.has(id) ? [byId.get(id)!] : []);
   let count = path.length;
-  while (count > 1 && getViewportForBounds(bounds(path.slice(0, count)), width - 72, height, 0.05, 2, 0.08).zoom < GRAPH_LEGIBLE_FIT_ZOOM) count--;
+  while (count > 1 && getViewportForBounds(bounds(path.slice(0, count)), width - 72, height, 0.05, 2, 0.08).zoom < minimumZoom) count--;
   return count ? path.slice(0, count).map(node => ({ id: node.id })) : null;
 }
 

@@ -1,13 +1,13 @@
 "use client";
 
-import type { InvestigationFlow, SpecificFlow } from "@/lib/graph-investigation-flow";
+import type { InvestigationFlow, ReadingFlow, SpecificFlow } from "@/lib/graph-investigation-flow";
 
 const FLOW_NAMES: Record<SpecificFlow, string> = { exposure: "Exposure", identity: "Identity and access", vulnerability: "Vulnerability", inventory: "Inventory" };
 const ABSENT: Record<SpecificFlow, string> = { exposure: "no external entry", identity: "no identities", vulnerability: "no findings", inventory: "no containment" };
 const FLOWS = Object.keys(FLOW_NAMES) as SpecificFlow[];
 
-export function automaticFlowLabel({ applied, scenario, preview }: { applied: boolean; scenario: SpecificFlow; preview: boolean }) {
-  return `Automatic · ${preview ? "connection preview" : applied ? FLOW_NAMES[scenario] : "current layout"}`;
+export function automaticFlowLabel({ applied, scenario, preview }: { applied: boolean; scenario: ReadingFlow; preview: boolean }) {
+  return `Automatic · ${preview ? "connection preview" : !applied ? "current layout" : scenario === "connections" ? "Connections" : FLOW_NAMES[scenario]}`;
 }
 
 /** The control never pretends: a flow that cannot apply is disabled, with the reason on screen. */

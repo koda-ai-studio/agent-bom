@@ -39,10 +39,16 @@ The control never shows a flow it did not apply:
 - A flow with nothing to show is disabled and says what is missing, such as
   **Vulnerability (no findings)**.
 - **Automatic** names the flow on screen, or reads **current layout** or
-  **connection preview** when none is applied. It does not rearrange a graph with
-  no endpoint, account or cluster.
-- Maps of more than 24 nodes open as a small connection preview. Choosing a flow
-  opens the full map, and availability is judged on everything loaded.
+  **connection preview** when none is applied. It does not rearrange a graph of 24
+  or fewer nodes with no endpoint, account or cluster.
+- Maps of more than 24 nodes open as a small connection preview, with tall ranks
+  wrapped so no card overlaps another. Choosing a flow opens the full map, and
+  availability is judged on everything loaded.
+- A full map of more than 24 nodes that no flow fits reads as **Automatic ·
+  Connections**. It starts from the root that reaches the most and runs along the
+  top row to the most severe finding it reaches, or to its deepest record. Every
+  loaded record stays drawn, nothing is grouped, and the view claims no reachability.
+  A note on the canvas says how many nodes are in view and how to see the rest.
 - Flows read one canvas page of up to 100 nodes. The nodes a flow reads in order
   are kept on the first page, so paging cannot drop its entry. Above 100 nodes the
   path still opens framed, but the rows beneath it would be too tall to scan. Maps

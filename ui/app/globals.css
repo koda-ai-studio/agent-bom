@@ -350,6 +350,18 @@ body {
 }
 
 /* Keep secondary node metadata available without crowding the default canvas. */
+/* Card text follows the zoom-compensated size, so no chip or count on a card falls below 12px when fitted. */
+[data-graph-entity] .text-xs,
+[data-graph-entity] .text-sm,
+[data-graph-entity] .text-\[11px\] {
+  font-size: var(--graph-node-meta-size, 12px);
+  line-height: 1.3;
+}
+/* An edge passing behind a card must not run through its words. */
+[data-graph-caption] {
+  background: var(--surface);
+  border-radius: 6px;
+}
 .graph-node-context {
   visibility: hidden;
   opacity: 0;

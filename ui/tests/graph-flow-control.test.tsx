@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { automaticFlowLabel, GraphFlowControl } from "@/components/graph-flow-control";
+import { GraphPathList } from "@/components/graph-path-list";
 import { selectionHiddenByCollapse } from "@/hooks/use-investigation-flow-view";
 import { byLabel, k8sFlowGraph } from "./k8s-projection-fixture";
 import { investigationFlow } from "@/lib/graph-investigation-flow";
@@ -39,6 +40,7 @@ describe("GraphFlowControl", () => {
     expect(automaticFlowLabel({ applied: true, scenario: "exposure", preview: false })).toBe("Automatic · Exposure");
     expect(automaticFlowLabel({ applied: false, scenario: "vulnerability", preview: false })).toBe("Automatic · current layout");
     expect(automaticFlowLabel({ applied: false, scenario: "exposure", preview: true })).toBe("Automatic · connection preview");
+    expect(automaticFlowLabel({ applied: true, scenario: "connections", preview: false })).toBe("Automatic · Connections");
   });
 });
 
@@ -49,5 +51,14 @@ describe("collapsing findings while one is selected", () => {
     expect(selectionHiddenByCollapse(nodes, finding)).toBe(false);
     expect(selectionHiddenByCollapse(investigationFlow(nodes, edges, "exposure").nodes, finding)).toBe(true);
     expect(selectionHiddenByCollapse(investigationFlow(nodes, edges, "exposure").nodes, null)).toBe(false);
+  });
+});
+
+describe("the phone's path list", () => {
+  it("does not call a ClusterIP route exposure, and names an unmounted token", () => {
+    const { nodes, edges } = k8sFlowGraph("snapshot");
+    render(<GraphPathList nodes={nodes} edges={edges} onSelect={vi.fn()} />);
+    expect(screen.getAllByText("Routes in cluster to").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Assumes · token not mounted").length).toBeGreaterThan(0);
   });
 });

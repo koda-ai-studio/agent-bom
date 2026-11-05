@@ -3,6 +3,7 @@
 import { useInvestigationFlowView } from "@/hooks/use-investigation-flow-view";
 import { GraphFlowControl } from "@/components/graph-flow-control";
 import { GraphViewportScope } from "@/components/graph-viewport-scope";
+import { GraphInViewHint } from "@/components/graph-in-view-hint";
 import { GraphIngressReceipt } from "@/components/graph-ingress-receipt";
 import { ASSET_BASE } from "@/lib/asset-base";
 import { useRelationshipLabelControl } from "@/components/relationship-label-control";
@@ -326,6 +327,17 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
   );
 
 
+  // A phone's first screen is the graph; the snapshot comparison offer can wait in Graph options, estate changes cannot.
+  const inlineChanges = !narrowViewport || viewingCurrentEstate;
+  const changesEntry = <>
+          {showChangesEntry && viewingCurrentEstate && graphChanges.estateChanges && <GraphScopeChangeStrip changes={graphChanges.estateChanges} onOpen={() => setChangesOpen(true)} />}
+          {showChangesEntry && <GraphChangesEntry loading={graphChanges.loading || loadingDiff} error={graphChanges.error ?? diffError}
+            headline={viewingCurrentEstate ? graphChanges.headline : snapshotChangesHeadline(graphDiff ? diffCounts : null, Boolean(previousSnapshot))}
+            baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}
+            onOpen={() => { setChangesOpen(true); if (!viewingCurrentEstate) setComparisonRequested(true); }}
+            onClearHighlight={() => { setDriftLensActive(false); setDriftFilter("all"); highlight.clear(); }} />}
+  </>;
+
   return (
     // min-h instead of h so the page can grow taller than the viewport
     // when the snapshot diff cards / how-to-read prose / findings
@@ -644,13 +656,9 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           {connectionPreview && <GraphConnectionPreviewControls preview={connectionPreview} expanded={previewExpanded}
             onRoot={setPreviewRoot} onExpanded={setPreviewExpanded}
             onExplore={() => void loadRootInvestigation({ rootId: connectionPreview.root.id, rootLabel: connectionPreview.root.data.label })} />}
-          {showChangesEntry && viewingCurrentEstate && graphChanges.estateChanges && <GraphScopeChangeStrip changes={graphChanges.estateChanges} onOpen={() => setChangesOpen(true)} />}
-          {showChangesEntry && <GraphChangesEntry loading={graphChanges.loading || loadingDiff} error={graphChanges.error ?? diffError}
-            headline={viewingCurrentEstate ? graphChanges.headline : snapshotChangesHeadline(graphDiff ? diffCounts : null, Boolean(previousSnapshot))}
-            baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}
-            onOpen={() => { setChangesOpen(true); if (!viewingCurrentEstate) setComparisonRequested(true); }}
-            onClearHighlight={() => { setDriftLensActive(false); setDriftFilter("all"); highlight.clear(); }} />}
-          {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : flowView.canonicalEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline compact />}
+          {inlineChanges && changesEntry}
+          {/* A phone's first screen is the graph: secondary status moves into Graph options. */}
+          {!narrowViewport && showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : flowView.canonicalEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline compact />}
               {showContextControls && investigationContext && <GraphInvestigationContextControls inline
                 groups={investigationContext.groups} selected={selectedContextGroup}
                 visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
@@ -658,6 +666,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
           <details className="ml-auto text-xs open:w-full">
             <summary className="graph-page-action ml-auto w-fit cursor-pointer">Graph options</summary>
             <div className="mt-2 flex w-full flex-wrap items-start gap-3 rounded-xl border border-outline bg-surface p-3">
+              {!inlineChanges && changesEntry}
               {graphRenderer.kind === "react-flow" && relationshipLabels.control}
               {showScopeEvidence && <GraphScopeEvidence edges={graphRenderer.kind === "webgl" ? relationshipLabels.edges : flowView.canonicalEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline label="Relationship evidence breakdown" />}
               {showLegend && <GraphLegendDock items={legendItems} popover />}
@@ -860,6 +869,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 navigationMount={graphNavigationMount}
                 navigationIds={selectedAttackPath?.hops ?? flowView.navigationIds}
                 primaryIds={selectedNodeId ? undefined : flowView.flow.primaryPath}
+                primaryZoom={flowView.primaryZoom}
                 enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
                 layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}`}
                 anchorId={selectedNodeId ?? investigationMode?.rootId ?? flowView.anchorId}
@@ -867,6 +877,7 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
                 preserveViewport={manualCamera || flowView.kind === "auto" && presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
               />
+              {!captureMode && <GraphInViewHint />}
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
               <Controls {...(investigationContext || selectedScenarioId ? { onFitView: fitVisible, fitViewOptions: selectedScenarioId ? initialViewportOptions : { padding: 0.25, minZoom: 0.05, maxZoom: 1.25 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (

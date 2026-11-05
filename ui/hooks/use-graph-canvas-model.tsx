@@ -17,6 +17,7 @@ import { findingEvidenceContext } from "@/lib/graph-mcp-flow";
 import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
 import { flowFromParam, flowPinnedIds } from "@/lib/graph-investigation-flow";
+import { GRAPH_CARD_ZOOM } from "@/lib/graph-adaptive-frame";
 import { aggregateSiblings, EXPANDED_AGGREGATION_THRESHOLD, FOCUSED_AGGREGATION_THRESHOLD, isClusterPillNode } from "@/lib/sibling-aggregator";
 import { type UnifiedNode } from "@/lib/graph-schema";
 import { resolveSnapshotAttackPathCount } from "@/lib/graph-snapshot-metrics";
@@ -573,7 +574,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
   );
 
   // Levels of detail: the zoom band keeps dense graphs readable without moving nodes.
-  const lodBand = useLodBand();
+  const zoomBand = useLodBand();
+  const lodBand = zoomBand === "summary" && graphViewport.zoom >= GRAPH_CARD_ZOOM ? "detail" : zoomBand;
   const effectiveLodBand = canvasLayoutNodes.some(node => node.data.evidenceFlow) || compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
     sourceNodeCount: flow.nodes.length,
     renderedNodeCount: aggregated.nodes.length,

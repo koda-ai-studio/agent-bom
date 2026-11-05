@@ -254,10 +254,10 @@ function NodeCard({
         {/* A contrasting vendor badge above the caption, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
       </div>
-      <SegmentedLabel text={caption?.title ?? (repository?.slug || displayTitle)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
+      <SegmentedLabel caption text={caption?.title ?? (repository?.slug || displayTitle)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
-        <span data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
+        <span data-graph-caption data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
           {(data.nodeType === "misconfiguration" && data.attributes?.finding_kind === "iac" ? "IaC finding" : caption?.meta) ?? data.readingLabel ?? (repository ? "Repository" : data.nodeType === "agent" ? (data.agentType ? topologyAgentTypeLabel(data.agentType) : "Agent") : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }))}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-xs font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}

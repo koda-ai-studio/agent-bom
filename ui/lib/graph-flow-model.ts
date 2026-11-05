@@ -3,6 +3,8 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 
 export type InvestigationFlow = "auto" | "exposure" | "identity" | "vulnerability" | "inventory";
 export type SpecificFlow = Exclude<InvestigationFlow, "auto">;
+/** What Automatic reads a large map by when no specific flow fits it; not offered as a choice. */
+export type ReadingFlow = SpecificFlow | "connections";
 export type FlowNode = Node<LineageNodeData>;
 
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
@@ -62,9 +64,15 @@ export const isBlockedIdentityHop = (edge: Edge) => edge.data?.traversable === f
  * Walking from a pod up to its controller is the one step read against the edge's direction:
  * identity and secret access are recorded on the controller, and the edge itself is unchanged.
  */
-export function flowStep(flow: SpecificFlow, edge: Edge, source: FlowNode, target: FlowNode): [string, string] | null {
+export function flowStep(flow: ReadingFlow, edge: Edge, source: FlowNode, target: FlowNode): [string, string] | null {
   const forward: [string, string] = [edge.source, edge.target];
   const relationship = relationshipOf(edge);
+  if (flow === "connections") {
+    const link = ownership(edge);
+    if (link) return [link.parent, link.child];
+    if (FINDING_LINKS.has(relationship)) return isFinding(source) ? [edge.target, edge.source] : forward;
+    return edge.data?.traversable === false && relationship !== "exposed_to" ? null : forward;
+  }
   if (flow === "inventory") {
     const link = ownership(edge);
     return link ? [link.parent, link.child] : null;
@@ -81,12 +89,20 @@ export function flowStep(flow: SpecificFlow, edge: Edge, source: FlowNode, targe
   return STEPS.has(relationship) && edge.data?.traversable !== false ? forward : null;
 }
 
-export function flowRoots(flow: SpecificFlow, visible: FlowNode[], edges: Edge[]): FlowNode[] {
+export function flowRoots(flow: ReadingFlow, visible: FlowNode[], edges: Edge[]): FlowNode[] {
   const byId = new Map(visible.map(node => [node.id, node]));
   const incoming = (node: FlowNode, from: (source: FlowNode, edge: Edge) => boolean) => edges.some(edge => {
     const source = byId.get(edge.source);
     return edge.target === node.id && source !== undefined && from(source, edge);
   });
+  if (flow === "connections") {
+    const stepped = new Set(edges.flatMap(edge => {
+      const source = byId.get(edge.source), target = byId.get(edge.target);
+      return source && target && edge.source !== edge.target ? [flowStep(flow, edge, source, target)?.[1] ?? ""] : [];
+    }));
+    const roots = visible.filter(node => !stepped.has(node.id) && !isFinding(node));
+    return roots.length ? roots : visible.slice(0, 1);
+  }
   if (flow === "exposure") return visible.filter(node => node.data.displayOnly
     || isExposureEntry(node) && !incoming(node, (source, edge) => relationshipOf(edge) === "exposed_to" && (isEndpoint(source) || Boolean(source.data.displayOnly))));
   if (flow === "identity") {

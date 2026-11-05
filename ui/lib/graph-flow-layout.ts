@@ -1,5 +1,5 @@
 import type { Edge } from "@xyflow/react";
-import { flowStep, isFinding, isPrincipal, type FlowNode, type SpecificFlow } from "@/lib/graph-flow-model";
+import { flowStep, isFinding, isPrincipal, type FlowNode, type ReadingFlow } from "@/lib/graph-flow-model";
 
 /** Spacing for fixed-width cards whose captions wrap and clamp, so one long label cannot widen a column. */
 export const FLOW_COLUMN_GAP = 370;
@@ -20,7 +20,7 @@ export interface FlowSteps {
   previous: Map<string, string[]>;
 }
 
-export function collectSteps(flow: SpecificFlow, byId: Map<string, FlowNode>, edges: Edge[]): FlowSteps {
+export function collectSteps(flow: ReadingFlow, byId: Map<string, FlowNode>, edges: Edge[]): FlowSteps {
   const next = new Map<string, string[]>(), previous = new Map<string, string[]>();
   const add = (map: Map<string, string[]>, key: string, value: string) => { const list = map.get(key); if (list) list.push(value); else map.set(key, [value]); };
   for (const edge of edges) {
@@ -52,20 +52,43 @@ export function longestRanks(roots: string[], next: Map<string, string[]>): Map<
   return ranks;
 }
 
+const reachableFrom = (start: string, next: Map<string, string[]>) => {
+  const seen = new Set([start]);
+  for (const id of seen) for (const to of next.get(id) ?? []) seen.add(to);
+  return seen;
+};
+
+/** Open on what owns the most, not a package that happens to have the longest dependency chain. */
+export function bestStart(roots: string[], steps: FlowSteps, byId: Map<string, FlowNode>): Set<string> | undefined {
+  const scored = roots.map(id => ({ id, reach: reachableFrom(id, steps.next), isPackage: byId.get(id)?.data.nodeType === "package" }));
+  scored.sort((a, b) => Number(a.isPackage) - Number(b.isPackage) || b.reach.size - a.reach.size || a.id.localeCompare(b.id));
+  return scored[0]?.reach;
+}
+
+/** Nearest distance from a root, for a map where any chain should read contiguously from its start. */
+export function nearestRanks(roots: string[], next: Map<string, string[]>): Map<string, number> {
+  const ranks = new Map(roots.map(root => [root, 0]));
+  for (const [id, rank] of ranks) for (const to of next.get(id) ?? []) if (!ranks.has(to)) ranks.set(to, rank + 1);
+  return ranks;
+}
+
 /** The one path a first frame must show: the deepest chain, ending on what the flow is about. */
-export function primaryPath(flow: SpecificFlow, ranks: Map<string, number>, steps: FlowSteps, byId: Map<string, FlowNode>): string[] {
+export function primaryPath(flow: ReadingFlow, ranks: Map<string, number>, steps: FlowSteps, byId: Map<string, FlowNode>, within?: Set<string>): string[] {
   const score = (id: string) => {
     const node = byId.get(id)!;
-    const subject = flow === "vulnerability" && isFinding(node) ? 1000 * (SEVERITY_WEIGHT[String(node.data.severity).toLowerCase()] ?? 1) : 0;
+    const subject = (flow === "vulnerability" || flow === "connections") && isFinding(node) ? 1000 * (SEVERITY_WEIGHT[String(node.data.severity).toLowerCase()] ?? 1) : 0;
     const access = flow === "exposure" ? TERMINAL_WEIGHT[node.data.nodeType] ?? (isPrincipal(node) ? 1 : 0) : 0;
     return subject + (ranks.get(id) ?? 0) * 10 + access;
   };
-  const terminal = [...ranks.keys()].sort((a, b) => score(b) - score(a) || a.localeCompare(b))[0];
+  const candidates = [...ranks.keys()].filter(id => !within || within.has(id));
+  const terminal = candidates.sort((a, b) => score(b) - score(a) || a.localeCompare(b))[0];
   if (terminal === undefined) return [];
   const path = [terminal];
   for (let current = terminal; (ranks.get(current) ?? 0) > 0;) {
     const rank = ranks.get(current)!;
-    const parent = (steps.previous.get(current) ?? []).filter(id => ranks.get(id) === rank - 1).sort()[0];
+    const earlier = (steps.previous.get(current) ?? []).filter(id => ranks.get(id)! < rank && (!within || within.has(id)));
+    // Prefer the immediately earlier column so the path stays contiguous on its row.
+    const parent = earlier.sort((a, b) => ranks.get(b)! - ranks.get(a)! || a.localeCompare(b))[0];
     if (!parent) break;
     path.unshift(parent);
     current = parent;
@@ -107,7 +130,9 @@ class SlotGrid {
  * slot below, keeping every context edge left-to-right. Compact rows are what let a real
  * cluster map fit at a legible zoom.
  */
-export function placeFlow({ visible, ranks, primary, steps, edges, narrow }: {
+export function placeFlow({ visible, ranks, primary, steps, edges, narrow, strictColumns = true }: {
+  /** A flow's column is its reading order; a plain map can fill free slots to stay compact. */
+  strictColumns?: boolean;
   visible: FlowNode[];
   ranks: Map<string, number>;
   primary: string[];
@@ -128,7 +153,7 @@ export function placeFlow({ visible, ranks, primary, steps, edges, narrow }: {
   // Stack each column by its parents' rows so sibling edges do not cross on the way in.
   for (const rank of new Set(ranked.map(id => ranks.get(id)!))) {
     for (const id of ranked.filter(item => ranks.get(item) === rank).sort((a, b) => meanRow(a) - meanRow(b) || a.localeCompare(b))) {
-      const slot = grid.inColumn(rank);
+      const slot = strictColumns ? grid.inColumn(rank) : grid.nearest(rank);
       grid.place(slot.column, slot.row, cells, id);
     }
   }

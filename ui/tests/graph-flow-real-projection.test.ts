@@ -233,3 +233,32 @@ describe("Internet boundary display context", () => {
     expect(link.ariaLabel).toBe("Assessed ingress from Internet to ingress: prod/web");
   });
 });
+
+describe("a large map with no specific flow", () => {
+  it("is read by its connections, ending the first row on its worst finding", () => {
+    const { nodes, edges } = k8sFlowGraph("demoInventory");
+    const result = investigationFlow(nodes, edges, "auto");
+    expect(nodes.length).toBeGreaterThan(24);
+    expect(result).toMatchObject({ applied: true, scenario: "connections" });
+    const path = result.primaryPath.map(id => result.nodes.find(n => n.id === id)!);
+    expect(path.length).toBeGreaterThan(3);
+    expect(path.at(-1)!.data.nodeType).toBe("vulnerability");
+    expect(path.every(n => n.position.y === 0)).toBe(true);
+    expect(new Set(result.nodes.map(n => `${n.position.x}:${n.position.y}`)).size).toBe(result.nodes.length);
+    expect(result.edges.map(e => [e.source, e.target])).toEqual(edges.map(e => [e.source, e.target]));
+  });
+
+  it("keeps the zoom band so an operator's zoom can still choose the summary renderer", () => {
+    const { nodes, edges } = k8sFlowGraph("projectScan");
+    const banded = nodes.map(n => ({ ...n, data: { ...n.data, renderBand: "summary" as const } }));
+    const result = investigationFlow(banded, edges, "auto");
+    expect(result.applied).toBe(true);
+    expect(result.nodes.every(n => n.data.renderBand === "summary" && n.style?.minHeight === undefined)).toBe(true);
+  });
+
+  it("leaves a small map's layout alone", () => {
+    const { nodes, edges } = k8sFlowGraph("projectScan");
+    const few = nodes.slice(0, 20);
+    expect(investigationFlow(few, edges, "auto")).toMatchObject({ applied: false, nodes: few });
+  });
+});

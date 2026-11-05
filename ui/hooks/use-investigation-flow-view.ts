@@ -8,7 +8,11 @@ import { useCloudFindingDisclosure } from "@/hooks/use-cloud-finding-disclosure"
 import { useDisplayNodeMeasurements } from "@/hooks/use-display-node-measurements";
 import { flowAvailability, flowFromParam, flowUnavailableReason, investigationFlow, type FlowResult, type InvestigationFlow, type SpecificFlow } from "@/lib/graph-investigation-flow";
 import type { graphConnectionPreview } from "@/lib/graph-connection-preview";
+import { GRAPH_CARD_ZOOM } from "@/lib/graph-adaptive-frame";
+import { wrappedRankLayout } from "@/lib/graph-wrapped-ranks";
 
+/** A preview shows few cards, so it can give them room; the same 220px columns wrap to two rows. */
+const PREVIEW_LAYOUT = { maxRows: 2, columnGap: 320, rowGap: 380, respace: true };
 const WIDE_CARD = { "--graph-node-card-width": "300px" } as React.CSSProperties;
 
 /** Finding nodes are hidden when their group collapses, so a selection on one must close first. */
@@ -52,10 +56,11 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   const active = !otherSurface && !pausedReason;
   const [receiptId, setReceiptId] = useState<string | null>(null);
 
-  const flow: FlowResult = useMemo(() => active && !previewActive
-    ? investigationFlow(presentation.nodes, edges, kind, narrowViewport)
-    : { nodes: presentation.nodes, edges, scenario: "inventory", applied: false, primaryPath: [] },
-    [active, previewActive, presentation.nodes, edges, kind, narrowViewport]);
+  const flow: FlowResult = useMemo(() => {
+    if (!active) return { nodes: presentation.nodes, edges, scenario: "inventory", applied: false, primaryPath: [] };
+    if (previewActive) return { nodes: wrappedRankLayout(presentation.nodes, PREVIEW_LAYOUT), edges, scenario: "inventory", applied: false, primaryPath: [] };
+    return investigationFlow(presentation.nodes, edges, kind, narrowViewport);
+  }, [active, previewActive, presentation.nodes, edges, kind, narrowViewport]);
   const disclosed = useCloudFindingDisclosure(flow.nodes, flow.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
     active || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
   const measured = useDisplayNodeMeasurements(disclosed.nodes, presentation.onNodesChange);
@@ -104,6 +109,7 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   return {
     kind, flow, disclosed, measured, active, previewActive, navigationIds, toggleFindingGroups, selectFlow, inspectDisplayEdge, inspectDisplayNode,
     cardStyle: flow.applied && !narrowViewport ? WIDE_CARD : undefined,
+    primaryZoom: flow.scenario === "connections" && flow.applied ? GRAPH_CARD_ZOOM : undefined,
     anchorId: flow.primaryPath[0] ?? (active ? flow.nodes.find(node => !node.hidden && node.position.x === 0 && node.position.y === 0)?.id : undefined),
     receipt: receiptId ? disclosed.edges.find(edge => edge.id === receiptId) ?? null : null,
     closeReceipt: () => setReceiptId(null),

@@ -15,8 +15,10 @@ export function GraphConnectionPreviewControls({ preview, expanded, onRoot, onEx
           {preview.roots.map(node => <option key={node.id} value={node.id}>{node.data.label}</option>)}
         </select>
       </label>
-      <button className="graph-page-action" onClick={onExplore}>Explore these connections</button>
-      <button className="graph-page-action" onClick={() => onExpanded(true)}>Show full map ({preview.totalNodes})</button>
+      <div className="flex min-w-0 gap-2">
+        <button className="graph-page-action whitespace-nowrap" onClick={onExplore}>Explore these</button>
+        <button className="graph-page-action whitespace-nowrap" onClick={() => onExpanded(true)}>Show full map ({preview.totalNodes})</button>
+      </div>
     </>}
   </div>;
 }

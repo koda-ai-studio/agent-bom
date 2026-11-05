@@ -5,6 +5,9 @@ type Endpoints = Pick<EdgeProps, "source" | "target" | "sourceX" | "sourceY" | "
 
 type Point = [number, number];
 
+/** A full canvas page plus the display nodes a flow can add. */
+export const ROUTED_NODE_LIMIT = 130;
+
 function roundedRoute(points: Point[]): string {
   const distinct = points.filter((point, index) => !index || point[0] !== points[index - 1]![0] || point[1] !== points[index - 1]![1]);
   let path = `M${distinct[0]![0]},${distinct[0]![1]}`;
@@ -23,7 +26,7 @@ function roundedRoute(points: Point[]): string {
 /** A vertical rank still uses glyph-side ports. Exit beside the full caption
  * before turning down, and reverse the route for an incoming relationship. */
 function endpointCaptionRoute(edge: Endpoints, obstacles: Obstacle[], path: string): [string, number, number] | null {
-  if (obstacles.length > 80 || Math.abs(edge.targetY - edge.sourceY) < 80) return null;
+  if (obstacles.length > ROUTED_NODE_LIMIT || Math.abs(edge.targetY - edge.sourceY) < 80) return null;
   const forward = edge.sourceY < edge.targetY;
   const upper = { id: forward ? edge.source : edge.target, x: forward ? edge.sourceX : edge.targetX, y: forward ? edge.sourceY : edge.targetY, position: forward ? edge.sourcePosition : edge.targetPosition };
   const lower = { id: forward ? edge.target : edge.source, x: forward ? edge.targetX : edge.sourceX, y: forward ? edge.targetY : edge.sourceY, position: forward ? edge.targetPosition : edge.sourcePosition };
@@ -81,7 +84,7 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   if (captionRoute) return captionRoute;
   // A serpentine path changes rows on the same side of both circular glyphs.
   // Keep its turn and caption outside the wider name/metadata column.
-  if (obstacles.length <= 80 && Math.abs(edge.targetX - edge.sourceX) < 8
+  if (obstacles.length <= ROUTED_NODE_LIMIT && Math.abs(edge.targetX - edge.sourceX) < 8
       && Math.abs(edge.targetY - edge.sourceY) > 80
       && edge.sourcePosition === edge.targetPosition
       && [Position.Left, Position.Right].includes(edge.sourcePosition)) {
@@ -98,7 +101,7 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   }
   // Keep dense/vertical layouts on the standard renderer. This correction is
   // bounded to short investigations and does not change relationship direction.
-  if (obstacles.length > 80 || edge.targetX - edge.sourceX < 240
+  if (obstacles.length > ROUTED_NODE_LIMIT || edge.targetX - edge.sourceX < 240
       || edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left) return [path, labelX, labelY];
   const between = obstacles.filter(node => node.id !== edge.source && node.id !== edge.target
     && node.x > edge.sourceX + 24 && node.x + node.width < edge.targetX - 24);

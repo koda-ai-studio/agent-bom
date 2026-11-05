@@ -29,9 +29,9 @@ export function atomicFontSize(part: string): string {
   return `min(1em, calc(100cqi / ${(part.length * 0.66).toFixed(2)}))`;
 }
 
-export function SegmentedLabel({ text, className = "", style }: { text: string; className?: string; style?: React.CSSProperties }) {
+export function SegmentedLabel({ text, className = "", style, caption = false }: { text: string; className?: string; style?: React.CSSProperties; caption?: boolean }) {
   return (
-    <p className={`break-words [container-type:inline-size] [text-wrap:balance] ${className}`} style={style}>
+    <p data-graph-caption={caption || undefined} className={`break-words [container-type:inline-size] [text-wrap:balance] ${className}`} style={style}>
       {labelSegments(text).map(({ part, atomic }, index) => (
         <Fragment key={index}>
           {index > 0 && <wbr />}
