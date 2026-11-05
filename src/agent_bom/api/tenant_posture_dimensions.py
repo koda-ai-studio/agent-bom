@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+from agent_bom.evidence.cloud_posture import CloudPosture, apply_cloud_dimensions, serialized_cloud_posture
 from agent_bom.evidence.posture_inputs import FRAMEWORK_TAG_FIELDS, PostureInputs, VulnerabilitySignal, score_posture_dimensions
 from agent_bom.evidence.scan_run import VULNERABILITY_SCAN_SKIPPED_CODE, VULNERABILITY_SCAN_SKIPPED_MESSAGE
 from agent_bom.models import Package
@@ -138,6 +139,10 @@ def current_findings_dimensions(evidence_jobs: list[Any], rows: list[dict[str, A
     exposing = _fold_exposed_credentials(inputs, rows, credential_servers)
 
     dimensions = score_posture_dimensions(inputs, load_posture_policy().weights)
+    cloud = CloudPosture()
+    for result in results:
+        cloud.merge(serialized_cloud_posture(result))
+    apply_cloud_dimensions(cloud, dimensions, has_inventory=bool(inputs.packages or inputs.total_servers or inputs.vulnerabilities))
     return {
         "dimensions": {key: value.to_dict() for key, value in dimensions.items()},
         "basis": {

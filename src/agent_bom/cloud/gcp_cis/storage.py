@@ -6,11 +6,12 @@ import logging
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage
 from agent_bom.cloud.aws_inventory import classify_project_disabled_error, is_access_denied_error
-from agent_bom.cloud.normalization import sanitize_discovery_warning
 from agent_bom.security import sanitize_text
 
 from ._base import (
     _STORAGE_SECTION,
+    _check_failure_evidence,
+    _check_failure_status,
     _creds_kwargs,
     _seams,
 )
@@ -69,12 +70,19 @@ def _check_5_1(project_id: str) -> CISCheckResult:
             resource_kind="bucket",
             pass_evidence="No buckets with public (allUsers/allAuthenticatedUsers) IAM bindings found.",
         )
+        if (
+            result.status == CheckStatus.ERROR
+            and not denied
+            and unavailable
+            and set(unavailable) <= {"service_disabled", "billing_disabled"}
+        ):
+            result.status = CheckStatus.NO_DATA
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-storage not installed. Install with: pip install google-cloud-storage"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check Cloud Storage buckets: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check Cloud Storage buckets: {_check_failure_evidence(exc)}"
     return result
 
 
@@ -112,6 +120,6 @@ def _check_5_2(project_id: str) -> CISCheckResult:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-storage not installed. Install with: pip install google-cloud-storage"
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check bucket uniform access: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check bucket uniform access: {_check_failure_evidence(exc)}"
     return result

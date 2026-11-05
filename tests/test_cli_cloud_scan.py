@@ -32,6 +32,7 @@ from agent_bom.cli._cloud_group import (
 def _provider_sdks_installed(monkeypatch):
     """These tests mock discovery, so the provider SDKs themselves need not be installed."""
     monkeypatch.setattr("agent_bom.cli._cloud_sdk.providers_missing_sdk", lambda providers: [])
+    monkeypatch.setattr(cg, "_active_cloud_target", lambda provider: None)
 
 
 def _capture_scan(monkeypatch):

@@ -18,7 +18,7 @@ from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envel
 from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
 from agent_bom.security import sanitize_text
 
-from .base import CloudDiscoveryError
+from .base import CloudDiscoveryError, missing_scope_hint
 from .normalization import build_cloud_origin, build_cloud_principal, build_cloud_scope, build_cloud_timestamps, build_package_purl
 
 logger = logging.getLogger(__name__)
@@ -103,7 +103,7 @@ def discover(
 
     resolved_sub = subscription_id or os.environ.get("AZURE_SUBSCRIPTION_ID", "")
     if not resolved_sub:
-        warnings.append("AZURE_SUBSCRIPTION_ID not set. Provide --azure-subscription or set the AZURE_SUBSCRIPTION_ID env var.")
+        warnings.append(missing_scope_hint("azure"))
         return agents, warnings
 
     try:

@@ -16,7 +16,7 @@ import os
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
 
-from .base import CloudDiscoveryError
+from .base import CloudDiscoveryError, missing_scope_hint
 from .normalization import (
     build_cloud_origin,
     build_cloud_principal,
@@ -75,7 +75,7 @@ def discover(
 
     resolved_project = project_id or os.environ.get("GOOGLE_CLOUD_PROJECT", "")
     if not resolved_project:
-        warnings.append("GOOGLE_CLOUD_PROJECT not set. Provide --gcp-project or set the GOOGLE_CLOUD_PROJECT env var.")
+        warnings.append(missing_scope_hint("gcp"))
         return agents, warnings
 
     # -- Vertex AI Endpoints ---------------------------------------------------

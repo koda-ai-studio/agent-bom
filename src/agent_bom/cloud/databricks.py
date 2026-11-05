@@ -30,7 +30,7 @@ from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface
 from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
-from .databricks_connection import resolved_workspace_host, sdk_value
+from .databricks_connection import discovery_error_hint, resolved_workspace_host, sdk_value
 from .gpu_managed_compute import databricks_gpu_profile, databricks_node_gpu_counts
 from .normalization import build_cloud_origin, build_cloud_state, build_package_purl, normalize_cloud_lifecycle_state
 
@@ -72,7 +72,7 @@ def discover(
     try:
         ws = workspace_client if workspace_client is not None else WorkspaceClient(**ws_kwargs)
     except Exception as exc:
-        warnings.append(f"Could not connect to Databricks: {sanitize_error(exc, generic=True)}")
+        warnings.append(f"Could not connect to Databricks: {discovery_error_hint(exc)}")
         return agents, warnings
 
     resolved_host = resolved_workspace_host(ws, host or os.environ.get("DATABRICKS_HOST", ""))
@@ -116,7 +116,7 @@ def _discover_cluster_agents(
         warnings.append("Access denied for Databricks clusters API. Check workspace permissions.")
         clusters = []
     except Exception as exc:
-        warnings.append(f"Could not list Databricks clusters: {sanitize_error(exc, generic=True)}")
+        warnings.append(f"Could not list Databricks clusters: {discovery_error_hint(exc)}")
         clusters = []
 
     node_gpus = databricks_node_gpu_counts(ws) if clusters else {}
@@ -213,7 +213,7 @@ def _discover_serving_agents(
     except permission_denied:
         warnings.append("Access denied for Databricks model serving API.")
     except Exception as exc:
-        warnings.append(f"Could not list Databricks serving endpoints: {sanitize_error(exc, generic=True)}")
+        warnings.append(f"Could not list Databricks serving endpoints: {discovery_error_hint(exc)}")
     return agents
 
 

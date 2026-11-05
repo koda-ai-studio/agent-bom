@@ -778,20 +778,24 @@ def test_check_1_2_returns_not_applicable():
 
 
 def _install_mock_gcp_logging(metrics=None):
-    """Install a fake google.cloud.logging_v2 with MetricsServiceV2Client."""
+    """Install Logging 3.x service modules; generated clients are not root exports."""
     google_mod, google_cloud = _ensure_google_namespace()
     logging_mod = types.ModuleType("google.cloud.logging_v2")
+    metrics_mod = types.ModuleType("google.cloud.logging_v2.services.metrics_service_v2")
+    config_mod = types.ModuleType("google.cloud.logging_v2.services.config_service_v2")
 
     mock_client = MagicMock()
     mock_client.return_value.list_log_metrics.return_value = metrics or []
-    logging_mod.MetricsServiceV2Client = mock_client
+    metrics_mod.MetricsServiceV2Client = mock_client
 
     # Also add ConfigServiceV2Client for other 2.x checks
     mock_config_client = MagicMock()
-    logging_mod.ConfigServiceV2Client = mock_config_client
+    config_mod.ConfigServiceV2Client = mock_config_client
 
     google_cloud.logging_v2 = logging_mod
     sys.modules["google.cloud.logging_v2"] = logging_mod
+    sys.modules[metrics_mod.__name__] = metrics_mod
+    sys.modules[config_mod.__name__] = config_mod
     return logging_mod
 
 
@@ -1188,7 +1192,8 @@ def test_bucket_partial_collection_never_reports_clean_or_wrong_remediation(monk
     client.list_buckets.return_value = [known, missing]
     monkeypatch.setattr(module, "_import_google_cloud_module", lambda _: SimpleNamespace(Client=lambda **kw: client))
     result = module._check_5_1("project")
-    assert result.status == (CheckStatus.FAIL if public else CheckStatus.ERROR)
+    unevaluated = CheckStatus.NO_DATA if reason in {"SERVICE_DISABLED", "BILLING_DISABLED"} else CheckStatus.ERROR
+    assert result.status == (CheckStatus.FAIL if public else unevaluated)
     assert "1/2" in result.evidence
     expected = {
         "SERVICE_DISABLED": "service_disabled",

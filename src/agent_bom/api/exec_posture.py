@@ -37,6 +37,7 @@ _EXEC_FIELDS = (
     "breakdown",
     "floored",
     "finding_total",
+    "no_data",
 )
 
 
@@ -114,6 +115,8 @@ def tenant_exec_posture(
         floor_score=floor,
         floor_summary=str(scan_posture.get("summary") or "") or None,
     )
+    if scan_posture.get("no_data"):
+        score.update(grade="N/A", score=0, percent=0, display="N/A", no_data=True, summary=scan_posture.get("summary", ""))
     score["severity_basis"] = "issue_groups" if issue_severity is not None else "finding_occurrences"
     return score
 
