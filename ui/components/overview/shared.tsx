@@ -65,6 +65,8 @@ export interface OverviewCockpitProps {
   complianceLoading?: boolean | undefined;
   scanScopeLoading?: boolean | undefined;
   grade: string;
+  /** Grade with its coverage when cloud controls were only partly evaluated. */
+  gradeLabel?: string | null | undefined;
   score?: number | undefined;
   /** Display-only score presentation. Defaults to a percentage. */
   scoreFormat?: PostureScoreFormat | undefined;

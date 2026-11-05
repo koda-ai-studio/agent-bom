@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 
 from ._base import (
     _LOGGING_SECTION,
@@ -427,11 +427,13 @@ def _check_2_12(project_id: str) -> CISCheckResult:
         zones = _gcp_managed_zones(project_id)
 
         failing: list[str] = []
+        private_zones = 0
         for zone in zones:
             zone_name = zone.get("name", "unknown")
             # Check if DNS logging is enabled via the zone's cloud logging config
             visibility = zone.get("visibility", "")
             if visibility == "private":
+                private_zones += 1
                 logging_config = zone.get("cloudLoggingConfig", {})
                 if not logging_config.get("enableLogging", False):
                     failing.append(zone_name)
@@ -442,7 +444,8 @@ def _check_2_12(project_id: str) -> CISCheckResult:
             result.resource_ids = failing
         else:
             result.status = CheckStatus.PASS
-            result.evidence = f"Cloud DNS logging is enabled for all {len(zones)} managed zone(s)."
+            result.evidence = f"Cloud DNS logging is enabled for all {private_zones} private zone(s)."
+            not_applicable_if_empty(result, private_zones, "private DNS zone")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."

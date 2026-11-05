@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage
+from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, finalize_read_coverage, not_applicable_if_empty
 from agent_bom.cloud.aws_inventory import classify_project_disabled_error, is_access_denied_error
 from agent_bom.security import sanitize_text
 
@@ -116,6 +116,7 @@ def _check_5_2(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {total} bucket(s) have uniform bucket-level access enabled."
+            not_applicable_if_empty(result, total, "bucket")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-cloud-storage not installed. Install with: pip install google-cloud-storage"

@@ -6,7 +6,7 @@ from typing import Any
 
 from agent_bom.security import sanitize_error
 
-from .aws_cis_benchmark import CheckStatus, CISCheckResult
+from .aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 
 _IAM_SECTION = "1 - Identity and Access Management"
 
@@ -61,7 +61,7 @@ def _check_1_4(ws: Any) -> CISCheckResult:
         sps = list(ws.service_principals.list() or [])
         if not sps:
             result.status = CheckStatus.PASS
-            result.evidence = "No service principals found."
+            not_applicable_if_empty(result, 0, "service principal")
             return result
         import time
 
@@ -98,6 +98,7 @@ def _check_1_4(ws: Any) -> CISCheckResult:
                 f"{matched} enumerated service principal PAT(s): none expire more than 90 days from this scan. "
                 "This does not establish OAuth use or the original token lifetime."
             )
+            not_applicable_if_empty(result, matched, "service principal PAT")
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check service principal tokens: {sanitize_error(exc, generic=True)}"

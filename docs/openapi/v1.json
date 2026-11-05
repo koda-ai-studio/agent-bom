@@ -5867,6 +5867,63 @@
         "title": "CloudConnectionsResponse",
         "type": "object"
       },
+      "CloudControls": {
+        "additionalProperties": true,
+        "description": "Cloud control tally behind a grade; see the cloud posture grading reference.",
+        "properties": {
+          "applicable": {
+            "title": "Applicable",
+            "type": "integer"
+          },
+          "coverage_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Coverage Percent"
+          },
+          "evaluated": {
+            "title": "Evaluated",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "no_data": {
+            "title": "No Data",
+            "type": "integer"
+          },
+          "not_applicable": {
+            "title": "Not Applicable",
+            "type": "integer"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "integer"
+          },
+          "unknown": {
+            "title": "Unknown",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "passed",
+          "failed",
+          "unknown",
+          "no_data",
+          "not_applicable",
+          "evaluated",
+          "applicable",
+          "coverage_percent"
+        ],
+        "title": "CloudControls",
+        "type": "object"
+      },
       "CloudInventoryProviderSummary": {
         "additionalProperties": true,
         "properties": {
@@ -33531,6 +33588,16 @@
             "title": "Breakdown",
             "type": "array"
           },
+          "cloud_controls": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CloudControls"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "display": {
             "anyOf": [
               {
@@ -33558,6 +33625,17 @@
             "title": "Grade",
             "type": "string"
           },
+          "grade_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Label"
+          },
           "grade_thresholds": {
             "additionalProperties": {
               "anyOf": [
@@ -33571,6 +33649,17 @@
             },
             "title": "Grade Thresholds",
             "type": "object"
+          },
+          "partial": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial"
           },
           "penalty_total": {
             "anyOf": [
@@ -34925,6 +35014,16 @@
             ],
             "title": "Breakdown"
           },
+          "cloud_controls": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CloudControls"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "demo_estate_seeding": {
             "anyOf": [
               {
@@ -35008,9 +35107,31 @@
             "title": "Grade",
             "type": "string"
           },
+          "grade_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Label"
+          },
           "no_data": {
             "title": "No Data",
             "type": "boolean"
+          },
+          "partial": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial"
           },
           "percent": {
             "anyOf": [

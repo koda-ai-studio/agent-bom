@@ -78,6 +78,7 @@ def normalize_pushed_report(body: PushPayload, *, fallback_scan_id: str) -> dict
     scorecard = compute_posture_scorecard_from_result(report).to_dict()
     report["posture_scorecard"] = scorecard
     report["posture_grade"] = scorecard["grade"]
+    report["posture_grade_label"] = scorecard["grade_label"]
     return report
 
 

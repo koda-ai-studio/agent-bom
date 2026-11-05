@@ -72,6 +72,10 @@ class CISCheckResult:
     # ``agent_bom.cloud.cis_remediation.attach_remediation(result, cloud=...)``
     # so per-check functions stay thin. Schema defined in that module.
     remediation: dict = field(default_factory=dict)
+    # True when NOT_APPLICABLE means "enumerated and found nothing", as opposed to a
+    # control that never applies. Such a result depends on the evaluated boundary, so
+    # the guards that withhold PASS on an unverified or incomplete scope withhold it too.
+    vacuous: bool = field(default=False, repr=False, compare=False)
 
 
 @dataclass
@@ -168,6 +172,21 @@ class CISBenchmarkReport:
         }
 
 
+def not_applicable_if_empty(result: CISCheckResult, count: int, resource_kind: str) -> CISCheckResult:
+    """Turn a PASS over zero in-scope resources into NOT_APPLICABLE.
+
+    Enumeration succeeded and found nothing, so the control has nothing to
+    evaluate (XCCDF ``notapplicable``). NO_DATA is reserved for a read that could
+    not determine the answer, such as a disabled API. FAIL and ERROR are kept.
+    """
+    if count or result.status is not CheckStatus.PASS:
+        return result
+    result.status = CheckStatus.NOT_APPLICABLE
+    result.evidence = f"No {resource_kind}(s) found; this control has nothing to evaluate."
+    result.vacuous = True
+    return result
+
+
 def finalize_read_coverage(
     result: CISCheckResult,
     *,
@@ -188,7 +207,7 @@ def finalize_read_coverage(
 
     Decision table (``denied`` is the list of resources whose read was denied):
       * ``denied`` non-empty  -> ERROR (names missing permission + coverage);
-      * ``denied`` empty and ``inspected`` zero -> NO_DATA (never PASS);
+      * ``denied`` empty and ``inspected`` zero -> NOT_APPLICABLE (never PASS);
       * ``denied`` empty and resources inspected -> PASS with ``pass_evidence``.
     """
     prior_failure = result.status == CheckStatus.FAIL
@@ -231,8 +250,8 @@ def finalize_read_coverage(
             )
         result.resource_ids = list(denied)[:20]
     elif inspected == 0:
-        result.status = CheckStatus.NO_DATA
-        result.evidence = f"No {resource_kind}(s) were discovered; this check has no data and cannot report PASS."
+        result.status = CheckStatus.PASS
+        not_applicable_if_empty(result, 0, resource_kind)
     else:
         result.status = CheckStatus.PASS
         result.evidence = pass_evidence

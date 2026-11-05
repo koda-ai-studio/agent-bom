@@ -30,7 +30,7 @@ from typing import Any
 
 from agent_bom.security import sanitize_error
 
-from .aws_cis_benchmark import CheckStatus, CISCheckResult
+from .aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 from .base import CloudDiscoveryError
 from .databricks_connection import resolved_workspace_host, sdk_value
 from .databricks_iam import _check_1_3, _check_1_4
@@ -53,6 +53,18 @@ class DatabricksSecurityReport:
         return sum(1 for c in self.checks if c.status == CheckStatus.FAIL)
 
     @property
+    def errored(self) -> int:
+        return sum(1 for c in self.checks if c.status == CheckStatus.ERROR)
+
+    @property
+    def no_data(self) -> int:
+        return sum(1 for c in self.checks if c.status == CheckStatus.NO_DATA)
+
+    @property
+    def not_applicable(self) -> int:
+        return sum(1 for c in self.checks if c.status == CheckStatus.NOT_APPLICABLE)
+
+    @property
     def total(self) -> int:
         return len(self.checks)
 
@@ -73,6 +85,9 @@ class DatabricksSecurityReport:
             "pass_rate": round(self.pass_rate, 1),
             "passed": self.passed,
             "failed": self.failed,
+            "errored": self.errored,
+            "no_data": self.no_data,
+            "not_applicable": self.not_applicable,
             "total": self.total,
             "checks": [
                 {
@@ -110,7 +125,9 @@ def _check_1_1(ws: Any) -> CISCheckResult:
     )
     try:
         admin_users = []
+        users = 0
         for user in ws.users.list(attributes="id,userName,roles,groups"):
+            users += 1
             roles = getattr(user, "roles", None) or []
             role_values = [getattr(r, "value", str(r)) for r in roles]
             groups = getattr(user, "groups", None) or []
@@ -121,6 +138,7 @@ def _check_1_1(ws: Any) -> CISCheckResult:
         if count <= 3:
             result.status = CheckStatus.PASS
             result.evidence = f"{count} admin user(s) — within recommended limit."
+            not_applicable_if_empty(result, users, "workspace user")
         else:
             result.status = CheckStatus.FAIL
             result.evidence = f"{count} admin users exceed recommended limit of 3."
@@ -186,7 +204,7 @@ def _check_2_1(ws: Any) -> CISCheckResult:
         no_term = [c for c in interactive if not getattr(c, "auto_termination_minutes", 0)]
         if not interactive:
             result.status = CheckStatus.PASS
-            result.evidence = "No interactive clusters found."
+            not_applicable_if_empty(result, 0, "interactive cluster")
         elif no_term:
             result.status = CheckStatus.FAIL
             result.evidence = f"{len(no_term)}/{len(interactive)} interactive cluster(s) lack auto-termination."
@@ -220,7 +238,7 @@ def _check_2_2(ws: Any) -> CISCheckResult:
         unknown = [c for c in running if sdk_value(getattr(c, "data_security_mode", None)) not in unsafe | safe]
         if not running:
             result.status = CheckStatus.PASS
-            result.evidence = "No running clusters found."
+            not_applicable_if_empty(result, 0, "running cluster")
         elif no_isolation:
             result.status = CheckStatus.FAIL
             result.evidence = f"{len(no_isolation)} running cluster(s) use no-isolation or legacy passthrough mode."
@@ -289,7 +307,7 @@ def _check_2_4(ws: Any) -> CISCheckResult:
                 unknown_ids.append(cluster_id)
         if not running:
             result.status = CheckStatus.PASS
-            result.evidence = "No running clusters found."
+            not_applicable_if_empty(result, 0, "running cluster")
         elif public_ids:
             result.status = CheckStatus.FAIL
             result.evidence = f"{len(public_ids)} running cluster(s) expose public DNS or explicitly permit public IPs."
@@ -452,6 +470,7 @@ def _check_5_2(ws: Any) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"Checked {len(clusters)} cluster(s) — no plaintext credentials detected in environment variables."
+            not_applicable_if_empty(result, len(clusters), "cluster")
     except Exception as exc:
         result.status = CheckStatus.ERROR
         result.evidence = f"Could not check cluster environment variables: {sanitize_error(exc, generic=True)}"

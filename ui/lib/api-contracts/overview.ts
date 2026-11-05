@@ -274,6 +274,9 @@ export type ExecScoreDisplayFormat = "grade" | "percent" | "points";
 /** The configurable exec risk-score posture block on the overview payload. */
 export interface OverviewPosture {
   grade: string;
+  /** Grade with its coverage, e.g. "F (partial, 54 of 56 evaluated)". */
+  grade_label?: string | null;
+  partial?: boolean | null;
   score: number | null;
   summary: string;
   points?: number;

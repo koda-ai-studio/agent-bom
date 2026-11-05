@@ -177,14 +177,25 @@ class PostureScorecard:
     summary: str = ""
     policy_source: str = "default"
     no_data: bool = False  # True when the scan examined no gradable artifacts
+    partial: bool = False  # True when cloud controls were graded on incomplete evidence
+    grade_label: str = ""  # Grade plus its coverage, e.g. "F (partial, 54 of 56 evaluated)"
+    grade_basis: str = "scan"  # "cloud_controls" when the snapshot holds only cloud control evidence
+    cloud_controls: dict | None = None
+
+    def __post_init__(self) -> None:
+        self.grade_label = self.grade_label or self.grade
 
     def to_dict(self) -> dict:
         return {
             "grade": self.grade,
+            "grade_label": self.grade_label,
+            "partial": self.partial,
+            "grade_basis": self.grade_basis,
             "score": self.score,
             "summary": self.summary,
             "policy_source": self.policy_source,
             "no_data": self.no_data,
+            "cloud_controls": self.cloud_controls,
             "dimensions": {k: v.to_dict() for k, v in self.dimensions.items()},
         }
 
@@ -266,15 +277,18 @@ def compute_posture_scorecard(
     inputs = posture_inputs_from_report(report)
     dimensions = score_posture_dimensions(inputs, resolved.weights)
     cloud = cloud_posture(report)
-    apply_cloud_dimensions(cloud, dimensions, has_inventory=bool(inputs.packages or inputs.total_servers or inputs.vulnerabilities))
-    if cloud.present and (cloud.incomplete or not cloud.evaluated):
+    has_inventory = bool(inputs.packages or inputs.total_servers or inputs.vulnerabilities)
+    apply_cloud_dimensions(cloud, dimensions, has_inventory=has_inventory)
+    cloud_controls = cloud.controls() if cloud.present else None
+    if cloud.present and not cloud.gradeable:
         return PostureScorecard(
             grade="N/A",
             score=0.0,
             dimensions=dimensions,
             no_data=True,
             policy_source=resolved.source,
-            summary=f"Cloud evidence incomplete or unevaluated — posture grade unavailable. {cloud.summary}.",
+            summary=f"{cloud.ungraded_reason} {cloud.summary}.",
+            cloud_controls=cloud_controls,
         )
     total_vulns = len(inputs.vulnerabilities)
     total_servers = inputs.total_servers
@@ -324,8 +338,9 @@ def compute_posture_scorecard(
     # unavailable, a required scanner failed. Every dimension then falls back to
     # its empty default and the headline reads "No vulnerabilities found …(A)",
     # which is a false all-clear, not a missing one. Grade only what we could
-    # actually evaluate.
-    if vulnerability_coverage_incomplete(report):
+    # actually evaluate. A cloud-only snapshot has no package lane to invalidate:
+    # its grade rests on the control rows checked above.
+    if (has_inventory or not cloud.present) and vulnerability_coverage_incomplete(report):
         return PostureScorecard(
             grade="N/A",
             score=0.0,
@@ -333,19 +348,21 @@ def compute_posture_scorecard(
             summary="Vulnerability coverage incomplete — posture grade unavailable. Re-run once vulnerability data is available.",
             policy_source=resolved.source,
             no_data=True,
+            cloud_controls=cloud_controls,
         )
 
     # ── Final score ──
     total_score = assessed_weighted_total(dimensions)
     if cloud.present:
         total_score = min(total_score, cloud.score)
-    grade = _score_to_grade(total_score, resolved.grade_thresholds)
+    grade = cloud.cap_grade(_score_to_grade(total_score, resolved.grade_thresholds))
+    grade_label = cloud.grade_label(grade)
 
     summary = _posture_summary(report, inputs, grade, total_score)
 
     summary = lane_summary(summary, skipped=vuln_lane_skipped, grade=grade, score=total_score)
     if cloud.present:
-        summary = f"{cloud.summary}; assessed snapshot posture {grade}, {total_score}%. Cloud control pass rate: {cloud.score}%."
+        summary = f"{cloud.summary}; assessed snapshot posture {grade_label}, {total_score}%. Cloud control pass rate: {cloud.score}%."
     coverage_caveat = vulnerability_coverage_caveat(report)
     if coverage_caveat:
         summary = f"{summary}. {coverage_caveat}."
@@ -356,6 +373,10 @@ def compute_posture_scorecard(
         dimensions=dimensions,
         summary=summary,
         policy_source=resolved.source,
+        partial=cloud.present and cloud.partial,
+        grade_label=grade_label,
+        grade_basis="cloud_controls" if cloud.present and not has_inventory else "scan",
+        cloud_controls=cloud_controls,
     )
 
 

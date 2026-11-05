@@ -39,6 +39,7 @@ _PASSTHROUGH_KEYS = (
     "generated_at",
     "scan_sources",
     "posture_grade",
+    "posture_grade_label",
     "gate_status",
     "gate_severity",
     "warn_gate_status",
@@ -250,7 +251,7 @@ def build_scan_summary(
     out["counts"] = _counts(result, findings, paths)
     posture = result.get("posture_scorecard")
     if isinstance(posture, dict):
-        out["posture"] = {key: posture.get(key) for key in ("grade", "score", "summary") if key in posture}
+        out["posture"] = {key: posture.get(key) for key in ("grade", "grade_label", "partial", "score", "summary") if key in posture}
     out["top_findings"] = _top_findings(findings, top_n)
     out["affected_paths"] = _top_paths(paths, top_n)
     out["agents"] = _compact_agents(result, top_n)

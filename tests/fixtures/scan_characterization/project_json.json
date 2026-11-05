@@ -1911,7 +1911,9 @@
    }
   ],
   "posture_grade": "N/A",
+  "posture_grade_label": "N/A",
   "posture_scorecard": {
+   "cloud_controls": null,
    "dimensions": {
     "active_exploitation": {
      "assessed": true,
@@ -1963,7 +1965,10 @@
     }
    },
    "grade": "N/A",
+   "grade_basis": "scan",
+   "grade_label": "N/A",
    "no_data": true,
+   "partial": false,
    "policy_source": "default",
    "score": 0.0,
    "summary": "Vulnerability coverage incomplete \u2014 posture grade unavailable. Re-run once vulnerability data is available."

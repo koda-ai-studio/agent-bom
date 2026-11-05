@@ -15,6 +15,7 @@
       "properties": {
         "scan_outcome": "complete",
         "posture_grade": "N/A",
+        "posture_grade_label": "N/A",
         "exposure_path_count": 0
       },
       "invocations": [

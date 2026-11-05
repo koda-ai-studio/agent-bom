@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from ..aws_inventory import is_access_denied_error
-from ._base import CheckStatus, CISCheckResult, _safe_error_evidence, finalize_read_coverage, logger
+from ._base import CheckStatus, CISCheckResult, _safe_error_evidence, finalize_read_coverage, logger, not_applicable_if_empty
 from .iam_account import _IAM_SECTION
 
 
@@ -25,6 +25,7 @@ def _check_1_10(iam_client: Any) -> CISCheckResult:
     )
     paginator = iam_client.get_paginator("list_users")
     users_without_mfa = []
+    console_users = 0
     for page in paginator.paginate():
         for user in page["Users"]:
             username = user["UserName"]
@@ -35,6 +36,7 @@ def _check_1_10(iam_client: Any) -> CISCheckResult:
                 if error_code == "NoSuchEntity":
                     continue  # no console access
                 raise
+            console_users += 1
             mfa_devices = iam_client.list_mfa_devices(UserName=username)["MFADevices"]
             if not mfa_devices:
                 users_without_mfa.append(username)
@@ -47,6 +49,7 @@ def _check_1_10(iam_client: Any) -> CISCheckResult:
         result.resource_ids = [f"arn:aws:iam::user/{u}" for u in users_without_mfa]
     else:
         result.evidence = "All console users have MFA enabled."
+        not_applicable_if_empty(result, console_users, "console-access IAM user")
     return result
 
 
@@ -84,10 +87,12 @@ def _check_1_11(iam_client: Any) -> CISCheckResult:
     reader = csv.DictReader(io.StringIO(content))
     users_with_initial_keys: list[str] = []
 
+    users = 0
     for row in reader:
         username = row.get("user", "<root_account>")
         if username == "<root_account>":
             continue
+        users += 1
         user_creation = row.get("user_creation_time", "")
         for key_idx in ("1", "2"):
             key_active = row.get(f"access_key_{key_idx}_active", "false")
@@ -117,6 +122,7 @@ def _check_1_11(iam_client: Any) -> CISCheckResult:
         result.resource_ids = [f"arn:aws:iam::user/{u}" for u in users_with_initial_keys]
     else:
         result.evidence = "No users have access keys created during initial setup."
+        not_applicable_if_empty(result, users, "IAM user")
     return result
 
 
@@ -156,10 +162,12 @@ def _check_1_12(iam_client: Any) -> CISCheckResult:
     stale_users = []
     threshold_days = 45
 
+    users = 0
     for row in reader:
         username = row.get("user", "<root_account>")
         if username == "<root_account>":
             continue
+        users += 1
 
         last_used = row.get("password_last_used", "N/A")
         key1_used = row.get("access_key_1_last_used_date", "N/A")
@@ -189,6 +197,7 @@ def _check_1_12(iam_client: Any) -> CISCheckResult:
         result.resource_ids = [f"arn:aws:iam::user/{u}" for u in stale_users]
     else:
         result.evidence = "No credentials unused for 45+ days."
+        not_applicable_if_empty(result, users, "IAM user")
     return result
 
 
@@ -202,11 +211,13 @@ def _check_1_13(iam_client: Any) -> CISCheckResult:
         cis_section=_IAM_SECTION,
         recommendation="Remove extra active access keys so each user has at most one.",
     )
+    users = 0
     paginator = iam_client.get_paginator("list_users")
     multi_key_users: list[str] = []
 
     for page in paginator.paginate():
         for user in page["Users"]:
+            users += 1
             username = user["UserName"]
             keys = iam_client.list_access_keys(UserName=username).get("AccessKeyMetadata", [])
             active_keys = [k for k in keys if k.get("Status") == "Active"]
@@ -221,6 +232,7 @@ def _check_1_13(iam_client: Any) -> CISCheckResult:
         result.resource_ids = [f"arn:aws:iam::user/{u}" for u in multi_key_users]
     else:
         result.evidence = "All IAM users have at most one active access key."
+        not_applicable_if_empty(result, users, "IAM user")
     return result
 
 
@@ -234,11 +246,13 @@ def _check_1_15(iam_client: Any) -> CISCheckResult:
         cis_section=_IAM_SECTION,
         recommendation="Remove inline and directly attached policies from IAM users; use groups instead.",
     )
+    users = 0
     paginator = iam_client.get_paginator("list_users")
     users_with_direct = []
 
     for page in paginator.paginate():
         for user in page["Users"]:
+            users += 1
             username = user["UserName"]
             inline = iam_client.list_user_policies(UserName=username)["PolicyNames"]
             attached = iam_client.list_attached_user_policies(UserName=username)["AttachedPolicies"]
@@ -253,6 +267,7 @@ def _check_1_15(iam_client: Any) -> CISCheckResult:
         result.resource_ids = [f"arn:aws:iam::user/{u}" for u in users_with_direct]
     else:
         result.evidence = "All users receive permissions via groups/roles only."
+        not_applicable_if_empty(result, users, "IAM user")
     return result
 
 
@@ -297,6 +312,7 @@ def _check_1_14(iam_client: Any) -> CISCheckResult:
     paginator = iam_client.get_paginator("list_users")
     stale_keys: list[str] = []
     affected_users: list[str] = []
+    active_keys = 0
     now = datetime.now(tz=timezone.utc)
 
     for page in paginator.paginate():
@@ -306,6 +322,7 @@ def _check_1_14(iam_client: Any) -> CISCheckResult:
             for key in keys:
                 if key.get("Status") != "Active":
                     continue
+                active_keys += 1
                 create_date = key.get("CreateDate")
                 if create_date and (now - create_date).days > 90:
                     stale_keys.append(f"{username} ({(now - create_date).days} days)")
@@ -319,6 +336,7 @@ def _check_1_14(iam_client: Any) -> CISCheckResult:
         result.resource_ids = list(dict.fromkeys(affected_users))[:20]
     else:
         result.evidence = "All active access keys are younger than 90 days."
+        not_applicable_if_empty(result, active_keys, "active access key")
     return result
 
 
@@ -435,12 +453,14 @@ def _check_1_19(ec2_client: Any) -> CISCheckResult:
     try:
         paginator = ec2_client.get_paginator("describe_instances")
         no_role: list[str] = []
+        instances = 0
         for page in paginator.paginate():
             for reservation in page["Reservations"]:
                 for instance in reservation["Instances"]:
                     state = instance.get("State", {}).get("Name", "")
                     if state == "terminated":
                         continue
+                    instances += 1
                     if not instance.get("IamInstanceProfile"):
                         no_role.append(instance["InstanceId"])
 
@@ -452,6 +472,7 @@ def _check_1_19(ec2_client: Any) -> CISCheckResult:
             result.resource_ids = no_role[:20]
         else:
             result.evidence = "All running EC2 instances have IAM instance profiles."
+            not_applicable_if_empty(result, instances, "EC2 instance")
     except Exception as exc:
         error_code = getattr(exc, "response", {}).get("Error", {}).get("Code", "")
         result.status = CheckStatus.ERROR

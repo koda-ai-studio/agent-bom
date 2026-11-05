@@ -66,11 +66,11 @@ class TestAwsCheck212DeniedReads:
         assert result.status == CheckStatus.FAIL, result.evidence
         assert "open-bucket" in result.evidence
 
-    def test_zero_buckets_is_no_data_not_pass(self):
+    def test_zero_buckets_is_not_applicable_not_pass(self):
         client = MagicMock()
         client.list_buckets.return_value = {"Buckets": []}
         result = _check_2_1_2(client)
-        assert result.status == CheckStatus.NO_DATA, result.evidence
+        assert result.status == CheckStatus.NOT_APPLICABLE, result.evidence
 
     def test_mixed_some_denied_some_clean_is_error_not_pass(self):
         client = MagicMock()

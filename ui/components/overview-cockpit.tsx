@@ -23,6 +23,7 @@ export function OverviewCockpit({
   complianceLoading = false,
   scanScopeLoading = false,
   grade,
+  gradeLabel,
   score,
   scoreFormat = "percent",
   scoreBreakdown = null,
@@ -88,6 +89,7 @@ export function OverviewCockpit({
                 localReport={localReport}
                 loading={loading}
                 grade={grade}
+                gradeLabel={gradeLabel}
                 score={score}
                 scoreFormat={scoreFormat}
                 onScoreFormatChange={onScoreFormatChange}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 
 from ._base import (
     _BIGQUERY_SECTION,
@@ -51,6 +51,7 @@ def _check_7_1(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"No BigQuery datasets are publicly accessible across {len(datasets)} dataset(s)."
+            not_applicable_if_empty(result, len(datasets), "BigQuery dataset")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
@@ -92,6 +93,7 @@ def _check_7_2(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {len(datasets)} BigQuery dataset(s) have default table expiration configured."
+            not_applicable_if_empty(result, len(datasets), "BigQuery dataset")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"
@@ -131,6 +133,7 @@ def _check_7_3(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {len(datasets)} BigQuery dataset(s) are encrypted with CMEK."
+            not_applicable_if_empty(result, len(datasets), "BigQuery dataset")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed. Install with: pip install google-api-python-client"

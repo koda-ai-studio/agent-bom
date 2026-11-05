@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult, not_applicable_if_empty
 
 from ._base import (
     _IAM_SECTION,
@@ -30,8 +30,10 @@ def _check_1_9(project_id: str) -> CISCheckResult:
     try:
         kms = _seams()._discovery_client("cloudkms", "v1")
         public_keys: list[str] = []
+        crypto_keys = 0
 
         for key in _gcp_kms_crypto_keys(project_id):
+            crypto_keys += 1
             key_name = key.get("name", "")
             if not key_name:
                 continue
@@ -48,6 +50,7 @@ def _check_1_9(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No KMS encryption keys are anonymously or publicly accessible."
+            not_applicable_if_empty(result, crypto_keys, "KMS key")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
@@ -69,9 +72,11 @@ def _check_1_10(project_id: str) -> CISCheckResult:
     )
     try:
         failing: list[str] = []
+        crypto_keys = 0
         max_rotation_seconds = 90 * 24 * 60 * 60  # 90 days in seconds
 
         for key in _gcp_kms_crypto_keys(project_id):
+            crypto_keys += 1
             key_name = key.get("name", "")
             rotation_period = key.get("rotationPeriod", "")
             if not rotation_period:
@@ -89,6 +94,7 @@ def _check_1_10(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "All KMS encryption keys have rotation periods within 90 days."
+            not_applicable_if_empty(result, crypto_keys, "KMS key")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
@@ -140,6 +146,7 @@ def _check_1_11(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = "No members have both KMS admin and crypto encrypter/decrypter roles."
+            not_applicable_if_empty(result, len(bindings), "IAM binding")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
@@ -181,6 +188,7 @@ def _check_1_12(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {len(keys)} API key(s) are restricted to specific APIs."
+            not_applicable_if_empty(result, len(keys), "API key")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
@@ -224,6 +232,7 @@ def _check_1_13(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {len(keys)} API key(s) are restricted to specific hosts or apps."
+            not_applicable_if_empty(result, len(keys), "API key")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."
@@ -268,6 +277,7 @@ def _check_1_14(project_id: str) -> CISCheckResult:
         else:
             result.status = CheckStatus.PASS
             result.evidence = f"All {len(keys)} API key(s) are within 90-day rotation."
+            not_applicable_if_empty(result, len(keys), "API key")
     except ImportError:
         result.status = CheckStatus.ERROR
         result.evidence = "google-api-python-client not installed."

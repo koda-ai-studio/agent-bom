@@ -20,6 +20,7 @@ from agent_bom.output.html.sections import (
     _blast_table,
     _chart_data,
     _cis_benchmark_section,
+    _cloud_grade_line,
     _compliance_section,
     _cytoscape_elements,
     _delta_banner,
@@ -245,7 +246,7 @@ def to_html(
   <!-- Delta / warn-gate banners (only rendered when applicable) -->
   {_delta_banner(report)}
   {_warn_gate_banner(report)}
-  {_scan_outcome_banner(report)}{iac_exceptions_banner(report)}
+  {_scan_outcome_banner(report)}{_cloud_grade_line(report)}{iac_exceptions_banner(report)}
 
   {_executive_headline_section(findings, policy_findings, observed_at=report.generated_at)}
 
