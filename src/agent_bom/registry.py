@@ -95,7 +95,7 @@ class RegistryFreshnessStatus:
 def _load_registry() -> dict:
     """Load the bundled MCP registry JSON."""
     try:
-        return json.loads(_REGISTRY_PATH.read_text()).get("servers", {})
+        return json.loads(_REGISTRY_PATH.read_text(encoding="utf-8")).get("servers", {})
     except (json.JSONDecodeError, OSError) as exc:
         logger.warning("Failed to load MCP registry from %s: %s", _REGISTRY_PATH, exc)
         return {}
@@ -104,7 +104,7 @@ def _load_registry() -> dict:
 def _load_registry_full() -> dict:
     """Load the full registry JSON (including metadata keys)."""
     try:
-        return json.loads(_REGISTRY_PATH.read_text())
+        return json.loads(_REGISTRY_PATH.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         logger.warning("Failed to load full MCP registry from %s: %s", _REGISTRY_PATH, exc)
         return {"servers": {}}

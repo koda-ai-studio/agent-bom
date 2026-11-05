@@ -199,7 +199,7 @@ def apply_proxy_configs(
             continue
 
         try:
-            data = json.loads(path.read_text())
+            data = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
             logger.warning("Cannot read %s: %s", config_path, exc)
             continue

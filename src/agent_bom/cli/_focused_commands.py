@@ -466,7 +466,7 @@ def secrets_cmd(
         if output_path:
             from pathlib import Path as _Path
 
-            _Path(output_path).write_text(output)
+            _Path(output_path).write_text(output, encoding="utf-8")
             diagnostic_con.print(f"[green]Secrets report written[/green] → {output_path}", soft_wrap=True)
         else:
             click.echo(output)
@@ -545,7 +545,7 @@ def code_cmd(path: str, output_format: str, output_path: Optional[str], quiet: b
         if output_path:
             from pathlib import Path as _Path
 
-            _Path(output_path).write_text(output)
+            _Path(output_path).write_text(output, encoding="utf-8")
             con.print(f"[green]Analysis written[/green] → {output_path}", soft_wrap=True)
         else:
             click.echo(output)

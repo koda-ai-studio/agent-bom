@@ -131,7 +131,7 @@ def manifest_cmd(
             raise click.ClickException("Per-agent BOM exceeds 8 MiB. Narrow the inventory before exporting.")
 
     if output:
-        Path(output).write_text(rendered + "\n")
+        Path(output).write_text(rendered + "\n", encoding="utf-8")
         click.echo(f"Wrote Agent BOM manifest to {output}")
         return
     with nullcontext():

@@ -218,7 +218,7 @@ def _load_registry() -> dict:
     global _registry_cache
     if _registry_cache is None:
         try:
-            _registry_cache = json.loads(_REGISTRY_PATH.read_text()).get("servers", {})
+            _registry_cache = json.loads(_REGISTRY_PATH.read_text(encoding="utf-8")).get("servers", {})
         except Exception as exc:  # noqa: BLE001
             logger.warning("Could not load MCP registry from %s: %s — server recognition disabled", _REGISTRY_PATH, exc)
             _registry_cache = {}

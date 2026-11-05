@@ -35,12 +35,12 @@ _REQUIRED_PROVENANCE = ("schema_version", "license", "source", "normalized_sha25
 
 @lru_cache(maxsize=1)
 def _nist_catalog() -> dict:
-    return json.loads(NIST_CATALOG_PATH.read_text())
+    return json.loads(NIST_CATALOG_PATH.read_text(encoding="utf-8"))
 
 
 @lru_cache(maxsize=1)
 def _crosswalk() -> dict:
-    return json.loads(CROSSWALK_PATH.read_text())
+    return json.loads(CROSSWALK_PATH.read_text(encoding="utf-8"))
 
 
 # ── NIST 800-53 catalog ───────────────────────────────────────────────────────

@@ -83,7 +83,7 @@ class FleetScanResult:
 def _load_registry() -> dict:
     """Load bundled MCP registry JSON."""
     try:
-        return json.loads(_REGISTRY_PATH.read_text()).get("servers", {})
+        return json.loads(_REGISTRY_PATH.read_text(encoding="utf-8")).get("servers", {})
     except (json.JSONDecodeError, OSError):
         return {}
 

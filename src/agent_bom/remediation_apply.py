@@ -239,7 +239,7 @@ def _validate_dependency_files(project: Path, repo_root: Path, changed_files: li
     for rel_path in changed_files:
         path = repo_root / rel_path
         if path.name == "package.json":
-            json.loads(path.read_text())
+            json.loads(path.read_text(encoding="utf-8"))
             package_lock = path.parent / "package-lock.json"
             package_lock_rel = _rel(package_lock, repo_root)
             if package_lock.exists() or package_lock_rel in changed:
@@ -250,7 +250,7 @@ def _validate_dependency_files(project: Path, repo_root: Path, changed_files: li
             _validate_requirements(path)
         elif path.name == "pyproject.toml":
             try:
-                tomllib.loads(path.read_text())
+                tomllib.loads(path.read_text(encoding="utf-8"))
             except tomllib.TOMLDecodeError as exc:
                 raise RemediationApplyError(f"{rel_path} is not valid TOML after remediation") from exc
 
@@ -258,7 +258,7 @@ def _validate_dependency_files(project: Path, repo_root: Path, changed_files: li
 
 
 def _validate_requirements(path: Path) -> None:
-    for lineno, line in enumerate(path.read_text().splitlines(), 1):
+    for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or stripped.startswith("-"):
             continue
@@ -361,8 +361,8 @@ def _write_audit_event(path: Path, event: dict) -> None:
         "actor": os.environ.get("USER") or os.environ.get("USERNAME") or "unknown",
         **event,
     }
-    previous = path.read_text() if path.exists() else ""
-    path.write_text(previous + json.dumps(event, sort_keys=True) + "\n")
+    previous = path.read_text(encoding="utf-8") if path.exists() else ""
+    path.write_text(previous + json.dumps(event, sort_keys=True) + "\n", encoding="utf-8")
 
 
 def _fix_to_json(fix) -> dict:

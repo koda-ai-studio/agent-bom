@@ -510,7 +510,7 @@ def _check_ai_7_2() -> CISCheckResult:
             try:
                 import json
 
-                manifest = json.loads(tag_path.read_text())
+                manifest = json.loads(tag_path.read_text(encoding="utf-8"))
                 digest = manifest.get("config", {}).get("digest", "")
                 if not digest:
                     unverifiable.append(f"{tag_path.parent.name}:{tag_path.name}")

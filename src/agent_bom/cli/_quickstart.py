@@ -321,7 +321,7 @@ def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, sta
     from agent_bom.api.store import SQLiteJobStore
 
     try:
-        payload = json.loads(report_path.read_text())
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
         allowed = {"complete", "partial"} if allow_partial else {"complete"}
         if payload.get("scan_id") != scan_id or payload.get("scan_run", {}).get("outcome") not in allowed:
             raise ValueError("Completed report identity does not match graph")
@@ -370,7 +370,7 @@ def _verify_persisted_graph(
     """Read back the exact scan snapshot before claiming onboarding success."""
 
     try:
-        payload = json.loads(report_path.read_text())
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise click.ClickException("Persisted graph could not be verified because the scan report is unavailable.") from exc
 
@@ -430,7 +430,7 @@ def _write_gateway_baseline(output_path: Path, *, mode: str) -> None:
         output_format="proxy",
         tenant_id="default",
     )
-    output_path.write_text(json.dumps(rendered, indent=2) + "\n")
+    output_path.write_text(json.dumps(rendered, indent=2) + "\n", encoding="utf-8")
 
 
 def _resolve_agent_bom() -> str | None:

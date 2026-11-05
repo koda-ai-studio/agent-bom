@@ -579,7 +579,7 @@ async def runtime_correlate_impl(
                         f"OTel trace file too large ({file_size / 1024 / 1024:.1f} MB, max {_MAX_TRACE_FILE_BYTES // 1024 // 1024} MB)"
                     )
                     return _truncate_response(json.dumps(result, indent=2, default=str))
-                trace_data = json.loads(safe_trace.read_text())
+                trace_data = json.loads(safe_trace.read_text(encoding="utf-8"))
                 ml_calls = parse_ml_api_spans(trace_data)
                 flagged = flag_deprecated_models(ml_calls)
                 result["ml_api_calls"] = [

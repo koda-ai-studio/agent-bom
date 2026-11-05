@@ -211,7 +211,7 @@ def skills_scan_cmd(
         else:
             rendered = json.dumps(payload, indent=2)
         if output_path:
-            output_path.write_text(rendered)
+            output_path.write_text(rendered, encoding="utf-8")
         else:
             click.echo(rendered)
     else:
@@ -223,7 +223,7 @@ def skills_scan_cmd(
                 console.print("\n[bold]agent-bom skills scan[/bold]\n")
             console.print("  [yellow]⚠ No supported skill or instruction files found.[/yellow]\n")
             if output_path:
-                output_path.write_text("")
+                output_path.write_text("", encoding="utf-8")
             sys.exit(2)
 
         if not quiet:
@@ -320,7 +320,7 @@ def skills_scan_cmd(
             console.print()
 
         if output_path:
-            output_path.write_text(json.dumps(payload, indent=2))
+            output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     if policy_result.failed:
         sys.exit(1)
@@ -344,7 +344,7 @@ def skills_rescan_cmd(output_format: str, output_path: Path | None, intel_source
     if output_format == "json":
         rendered = json.dumps(payload, indent=2)
         if output_path:
-            output_path.write_text(rendered)
+            output_path.write_text(rendered, encoding="utf-8")
         else:
             click.echo(rendered)
         return
@@ -388,7 +388,7 @@ def skills_rescan_cmd(output_format: str, output_path: Path | None, intel_source
     console.print()
 
     if output_path:
-        output_path.write_text(json.dumps(payload, indent=2))
+        output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 @skills_group.command("verify")
@@ -409,7 +409,7 @@ def skills_verify_cmd(paths: tuple[Path, ...], output_format: str, output_path: 
     if output_format == "json":
         rendered = json.dumps({"files": results}, indent=2)
         if output_path:
-            output_path.write_text(rendered)
+            output_path.write_text(rendered, encoding="utf-8")
         else:
             click.echo(rendered)
     else:
@@ -418,7 +418,7 @@ def skills_verify_cmd(paths: tuple[Path, ...], output_format: str, output_path: 
         if not results:
             console.print("  [yellow]⚠ No supported skill or instruction files found.[/yellow]\n")
             if output_path:
-                output_path.write_text("")
+                output_path.write_text("", encoding="utf-8")
             sys.exit(2)
 
         table = Table(title="Instruction Provenance", expand=True)
@@ -444,7 +444,7 @@ def skills_verify_cmd(paths: tuple[Path, ...], output_format: str, output_path: 
         console.print()
 
         if output_path:
-            output_path.write_text(json.dumps({"files": results}, indent=2))
+            output_path.write_text(json.dumps({"files": results}, indent=2), encoding="utf-8")
 
     if any(result["status"] != "verified" for result in results):
         sys.exit(1)

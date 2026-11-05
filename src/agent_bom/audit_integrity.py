@@ -182,7 +182,7 @@ def verify_audit_jsonl_chain(log_path: Path, *, max_lines: int = 50_000) -> dict
     algorithms_seen: set[str] = set()
 
     try:
-        lines = log_path.read_text().splitlines()
+        lines = log_path.read_text(encoding="utf-8").splitlines()
     except OSError:
         _logger.warning("Failed to read runtime audit log: %s", log_path, exc_info=True)
         return {

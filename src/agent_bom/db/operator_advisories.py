@@ -34,7 +34,7 @@ def load_local_advisories() -> list[OperatorAdvisory]:
     path = store_path()
     if not path.exists():
         return []
-    rows = json.loads(path.read_text())
+    rows = json.loads(path.read_text(encoding="utf-8"))
     return [OperatorAdvisory.model_validate(row) for row in rows if isinstance(row, dict)]
 
 

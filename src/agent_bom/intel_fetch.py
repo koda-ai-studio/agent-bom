@@ -143,5 +143,5 @@ def store_raw_artifact(artifact: GovernedRawArtifact, root: Path) -> dict[str, A
     metadata_path = source_dir / f"{digest}.metadata.json"
     body_path.write_bytes(artifact.body)
     metadata = artifact.metadata() | {"body_path": str(body_path)}
-    metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
+    metadata_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return metadata | {"metadata_path": str(metadata_path)}

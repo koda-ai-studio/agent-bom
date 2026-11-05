@@ -399,7 +399,7 @@ def export_remediation_md(plan: RemediationPlan, path: str) -> None:
                 lines.append(f"  - Agents: {', '.join(item['agents'][:3])}")
         lines.append("")
 
-    Path(path).write_text("\n".join(lines))
+    Path(path).write_text("\n".join(lines), encoding="utf-8")
 
 
 def export_remediation_sh(plan: RemediationPlan, path: str) -> None:
@@ -431,7 +431,7 @@ def export_remediation_sh(plan: RemediationPlan, path: str) -> None:
                 lines.append("# See remediation.md for manual steps")
             lines.append("")
 
-    Path(path).write_text("\n".join(lines))
+    Path(path).write_text("\n".join(lines), encoding="utf-8")
     # Generated commands require explicit review before invocation.  Keep the
     # artifact private and non-executable; operators can run it with ``bash``
     # after review or deliberately change its mode.
@@ -478,7 +478,7 @@ def _apply_npm_fixes(
     backed_up: list[str] = []
 
     try:
-        content = pkg_json_path.read_text()
+        content = pkg_json_path.read_text(encoding="utf-8")
         # Detect indentation
         indent = 2
         for line in content.splitlines():
@@ -515,7 +515,7 @@ def _apply_npm_fixes(
     if modified and not dry_run:
         if backup:
             backed_up.append(_backup_file(pkg_json_path))
-        pkg_json_path.write_text(json.dumps(data, indent=indent) + "\n")
+        pkg_json_path.write_text(json.dumps(data, indent=indent) + "\n", encoding="utf-8")
 
     return applied, skipped, backed_up
 
@@ -539,7 +539,7 @@ def _apply_pip_fixes(
     backed_up: list[str] = []
 
     try:
-        lines = req_path.read_text().splitlines()
+        lines = req_path.read_text(encoding="utf-8").splitlines()
     except OSError:
         return [], fixes, []
 
@@ -587,7 +587,7 @@ def _apply_pip_fixes(
     if modified and not dry_run:
         if backup:
             backed_up.append(_backup_file(req_path))
-        req_path.write_text("\n".join(new_lines) + "\n")
+        req_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
     return applied, skipped, backed_up
 
@@ -642,7 +642,7 @@ def _apply_pyproject_fixes(
         return [], fixes, []
 
     try:
-        content = pyproject_path.read_text()
+        content = pyproject_path.read_text(encoding="utf-8")
         data = tomllib.loads(content)
     except (OSError, tomllib.TOMLDecodeError):
         return [], fixes, []
@@ -676,7 +676,7 @@ def _apply_pyproject_fixes(
 
     if modified and not dry_run:
         backed_up = [_backup_file(pyproject_path)] if backup else []
-        pyproject_path.write_text(content)
+        pyproject_path.write_text(content, encoding="utf-8")
     else:
         backed_up = []
 
@@ -764,7 +764,7 @@ def apply_fixes_from_json(
     Parses the remediation_plan from the JSON output and applies fixes
     to dependency files in the given project directory.
     """
-    data = json.loads(Path(scan_json_path).read_text())
+    data = json.loads(Path(scan_json_path).read_text(encoding="utf-8"))
     remediation_items = data.get("remediation_plan", [])
 
     if not remediation_items:

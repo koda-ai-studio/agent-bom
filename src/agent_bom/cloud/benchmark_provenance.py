@@ -246,7 +246,7 @@ _ID_KEYED_REGISTRIES: Final = frozenset({"all_checks", "CHECK_REGISTRY"})
 
 def _registry_ids(filename: str, *variables: str) -> tuple[str, ...]:
     """Read the explicit check-function registries into stable control IDs."""
-    tree = ast.parse((Path(__file__).parent / filename).read_text())
+    tree = ast.parse((Path(__file__).parent / filename).read_text(encoding="utf-8"))
     ids: list[str] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
@@ -358,7 +358,7 @@ def render_committed_inventory() -> str:
 
 def load_committed_inventory() -> dict[str, dict[str, Any]]:
     """Return the committed per-provider inventory records."""
-    document = json.loads(INVENTORY_PATH.read_text())
+    document = json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
     providers: dict[str, dict[str, Any]] = document["providers"]
     return providers
 

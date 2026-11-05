@@ -227,7 +227,7 @@ def load_firewall_policy_file(path: Path) -> AgentFirewallPolicy:
     """Load a firewall policy from a JSON file."""
 
     try:
-        payload = json.loads(path.read_text())
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise FirewallPolicyError(f"firewall policy {path} is not valid JSON: {exc.msg}") from exc
     return parse_firewall_policy(payload)

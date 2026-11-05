@@ -72,7 +72,7 @@ def mcp_audit_cmd(
         else:
             text = json.dumps(runtime.to_json(report) if output_format == "json" else runtime.to_sarif(report), indent=2) + "\n"
         if output_path:
-            Path(output_path).write_text(text)
+            Path(output_path).write_text(text, encoding="utf-8")
         else:
             click.echo(text, nl=False)
     except (OSError, ValueError, RuntimeError, runtime.IntrospectionError) as exc:

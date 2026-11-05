@@ -184,7 +184,7 @@ async def sync_from_glama(
     """
     # Load local registry
     try:
-        local_data = json.loads(_REGISTRY_PATH.read_text())
+        local_data = json.loads(_REGISTRY_PATH.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         local_data = {"servers": {}}
 

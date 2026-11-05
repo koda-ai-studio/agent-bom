@@ -47,7 +47,7 @@ def read_token(token_file: Path, output: Path, graph_db: Path | None) -> str:
         paths.append(graph_db.resolve())
     if len(set(paths)) != len(paths):
         raise ValueError("Credential, output and graph files must differ")
-    credential = json.loads(token_file.read_text())
+    credential = json.loads(token_file.read_text(encoding="utf-8"))
     if not isinstance(credential, dict) or not isinstance(credential.get("token"), str):
         raise ValueError("Token file must contain a token string")
     return credential["token"]

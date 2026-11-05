@@ -177,7 +177,7 @@ def _infer_repo_id(model_dir: Path) -> str | None:
             try:
                 import json
 
-                data = json.loads(cfg.read_text())
+                data = json.loads(cfg.read_text(encoding="utf-8"))
                 for key in ("_name_or_path", "name_or_path"):
                     val = data.get(key, "")
                     if val and "/" in val and not val.startswith("/"):
@@ -189,7 +189,7 @@ def _infer_repo_id(model_dir: Path) -> str | None:
     git_cfg = model_dir / ".git" / "config"
     if git_cfg.exists():
         try:
-            text = git_cfg.read_text()
+            text = git_cfg.read_text(encoding="utf-8")
             for line in text.splitlines():
                 line = line.strip()
                 if line.startswith("url = ") and "huggingface.co" in line:

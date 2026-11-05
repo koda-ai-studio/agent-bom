@@ -621,7 +621,7 @@ def _parse_docker_mcp_catalog(
     from agent_bom.models import MCPTool, Package
 
     try:
-        catalog_data = yaml.safe_load(catalog_path.read_text())
+        catalog_data = yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
 

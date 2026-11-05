@@ -111,7 +111,7 @@ def _load_cached_gateway_policies(
     from agent_bom.api.policy_store import GatewayPolicy
 
     try:
-        payload = json.loads(cache_path.read_text())
+        payload = json.loads(cache_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return None, None
     except (json.JSONDecodeError, OSError) as exc:
@@ -139,7 +139,7 @@ def _load_cached_gateway_policies(
             return None, None
         signature_path = _gateway_policy_cache_signature_path(cache_path)
         try:
-            signature_payload = json.loads(signature_path.read_text())
+            signature_payload = json.loads(signature_path.read_text(encoding="utf-8"))
             signature_hex = str(signature_payload["signature_hex"])
             key_id = str(signature_payload["key_id"])
         except FileNotFoundError:

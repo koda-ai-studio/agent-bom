@@ -453,7 +453,7 @@ def _emit_visual_report(
 
         out_path = _resolve_output_path(output, output_format)
         elements = build_graph_elements(report, blast_radii)
-        Path(out_path).write_text(json.dumps({"elements": elements, "format": "cytoscape"}, indent=2))
+        Path(out_path).write_text(json.dumps({"elements": elements, "format": "cytoscape"}, indent=2), encoding="utf-8")
         announce_report_written(con, "Graph JSON", out_path, quiet=quiet)
         con.print("  [dim]Cytoscape.js-compatible element list — open with Cytoscape desktop or any JS graph library[/dim]")
         return True
@@ -462,15 +462,15 @@ def _emit_visual_report(
         if mermaid_mode == "attack-flow":
             from agent_bom.output.mermaid import to_mermaid
 
-            Path(out_path).write_text(to_mermaid(report, blast_radii))
+            Path(out_path).write_text(to_mermaid(report, blast_radii), encoding="utf-8")
         elif mermaid_mode == "lifecycle":
             from agent_bom.output.mermaid import to_mermaid_lifecycle
 
-            Path(out_path).write_text(to_mermaid_lifecycle(report, blast_radii))
+            Path(out_path).write_text(to_mermaid_lifecycle(report, blast_radii), encoding="utf-8")
         else:
             from agent_bom.output.mermaid import to_mermaid_supply_chain
 
-            Path(out_path).write_text(to_mermaid_supply_chain(report))
+            Path(out_path).write_text(to_mermaid_supply_chain(report), encoding="utf-8")
         announce_report_written(con, f"Mermaid diagram ({mermaid_mode})", out_path, quiet=quiet)
         con.print("  [dim]Render with: mermaid-cli, GitHub markdown, or mermaid.live[/dim]")
         return True
@@ -518,7 +518,7 @@ def _emit_inferred_report(
 ) -> bool:
     if output_format in ("text", "plain") and output:
         out_path = _resolve_output_path(output, output_format)
-        Path(out_path).write_text(_format_text(report, blast_radii))
+        Path(out_path).write_text(_format_text(report, blast_radii), encoding="utf-8")
         announce_report_written(con, "Plain text report", out_path, quiet=quiet)
         return True
     elif output:

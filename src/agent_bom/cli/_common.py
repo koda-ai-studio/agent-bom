@@ -256,7 +256,7 @@ def _check_for_update_bg() -> None:
         # Only hit PyPI once per 24 hours
 
         if cache_file.exists() and (time.time() - cache_file.stat().st_mtime) < 86400:
-            _update_check_result = cache_file.read_text().strip() or None
+            _update_check_result = cache_file.read_text(encoding="utf-8").strip() or None
             _update_check_done.set()
             return
 
@@ -276,7 +276,7 @@ def _check_for_update_bg() -> None:
         else:
             msg = ""
         try:
-            cache_file.write_text(msg)
+            cache_file.write_text(msg, encoding="utf-8")
         except OSError as exc:
             # A full disk must not lose the update notice or crash the scan —
             # degrade to no-cache (the result is still served this run).

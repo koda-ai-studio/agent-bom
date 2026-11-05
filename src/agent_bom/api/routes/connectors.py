@@ -61,7 +61,7 @@ def _load_registry() -> list[dict]:
     if not registry_path.exists():
         return []
     try:
-        raw = _json.loads(registry_path.read_text())
+        raw = _json.loads(registry_path.read_text(encoding="utf-8"))
     except (_json.JSONDecodeError, OSError):
         return []
     servers_dict = raw.get("servers", {})
@@ -126,7 +126,7 @@ def _load_registry_meta() -> dict:
     if not registry_path.exists():
         return {}
     try:
-        raw = _json.loads(registry_path.read_text())
+        raw = _json.loads(registry_path.read_text(encoding="utf-8"))
     except (_json.JSONDecodeError, OSError):
         return {}
     return {

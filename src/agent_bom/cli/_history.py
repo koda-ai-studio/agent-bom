@@ -418,7 +418,7 @@ def rescan_command(baseline: str, output: Optional[str], md: Optional[str], enri
 
     # ── Load baseline ─────────────────────────────────────────────────────────
     try:
-        baseline_data = _json.loads(Path(baseline).read_text())
+        baseline_data = _json.loads(Path(baseline).read_text(encoding="utf-8"))
     except Exception as exc:
         con.print(f"  [red]Error loading baseline: {exc}[/red]")
         sys.exit(2)
@@ -593,7 +593,7 @@ def rescan_command(baseline: str, output: Optional[str], md: Optional[str], enri
     }
 
     if output:
-        Path(output).write_text(_json.dumps(verification, indent=2))
+        Path(output).write_text(_json.dumps(verification, indent=2), encoding="utf-8")
         con.print(f"\n  [green]✓[/green] Verification report: {output}", soft_wrap=True)
 
     if md:
@@ -625,7 +625,7 @@ def rescan_command(baseline: str, output: Optional[str], md: Optional[str], enri
             for r in newly_found:
                 lines.append(f"- ⚠️ `{r['id']}` — {r['package']} [{r['severity']}]\n")
             lines.append("\n")
-        Path(md).write_text("".join(lines))
+        Path(md).write_text("".join(lines), encoding="utf-8")
         con.print(f"  [green]✓[/green] Verification report (Markdown): {md}")
 
     con.print()
@@ -745,7 +745,7 @@ def compliance_narrative_cmd(scan_file: str, framework: Optional[str], output_fo
     from agent_bom.output.compliance_narrative import generate_compliance_narrative
 
     console = Console()
-    saved = _report_from_json(_json.loads(Path(scan_file).read_text()))
+    saved = _report_from_json(_json.loads(Path(scan_file).read_text(encoding="utf-8")))
     report: AIBOMReport = cast("AIBOMReport", saved)
     narrative = generate_compliance_narrative(
         report,
@@ -787,7 +787,7 @@ def compliance_narrative_cmd(scan_file: str, framework: Optional[str], output_fo
         rendered = "\n".join(lines).rstrip() + "\n"
 
     if output:
-        Path(output).write_text(rendered)
+        Path(output).write_text(rendered, encoding="utf-8")
         console.print(f"[green]✓[/green] Compliance narrative: {output}", soft_wrap=True)
     else:
         click.echo(rendered)

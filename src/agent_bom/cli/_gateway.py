@@ -118,7 +118,7 @@ def init_policy_cmd(template_name: str, output_path: Path, mode: str, output_for
         output_format=format_value,
         tenant_id=tenant_id,
     )
-    output_path.write_text(json.dumps(rendered, indent=2) + "\n")
+    output_path.write_text(json.dumps(rendered, indent=2) + "\n", encoding="utf-8")
 
     if output_format.lower() == "proxy":
         summary = summarize_policy_bundle(rendered)
@@ -625,7 +625,7 @@ def serve_cmd(
     if policy_bundle_path is not None:
         import json as _json
 
-        raw_bundle = _json.loads(policy_bundle_path.read_text())
+        raw_bundle = _json.loads(policy_bundle_path.read_text(encoding="utf-8"))
         bundle_list = raw_bundle.get("policies", []) if isinstance(raw_bundle, dict) else raw_bundle
         if not isinstance(bundle_list, list):
             raise click.ClickException("--policy-bundle must be a JSON list of policies or {'policies': [...]}")

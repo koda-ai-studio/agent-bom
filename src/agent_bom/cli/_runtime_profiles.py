@@ -41,7 +41,7 @@ def _profile_request(operation: str, api: dict[str, Any], *args: Any, **kwargs: 
 def create(profile_file: Path, **api: Any) -> None:
     """Create a managed assignment from JSON with identity_id and environment."""
     try:
-        profile = json.loads(profile_file.read_text())
+        profile = json.loads(profile_file.read_text(encoding="utf-8"))
         if not isinstance(profile, dict):
             raise ValueError
     except (ValueError, OSError):
@@ -125,7 +125,7 @@ def runtime_feed(cursor_file: Path, follow: bool, limit: int, **api: Any) -> Non
             binding = {"api_url": client.base_url, "tenant_id": client.tenant_id or ""}
             cursor = None
             if cursor_file.exists():
-                saved = json.loads(cursor_file.read_text())
+                saved = json.loads(cursor_file.read_text(encoding="utf-8"))
                 if (
                     not isinstance(saved, dict)
                     or any(saved.get(k) != v for k, v in binding.items())

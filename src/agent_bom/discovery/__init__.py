@@ -234,7 +234,7 @@ def discover_compose_mcp_servers(project_dir: Optional[str] = None) -> Optional[
         return None
 
     try:
-        compose_data = yaml.safe_load(compose_path.read_text())
+        compose_data = yaml.safe_load(compose_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
 

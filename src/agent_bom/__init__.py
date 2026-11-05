@@ -15,7 +15,7 @@ except PackageNotFoundError:
 _pyproject = Path(__file__).parent.parent.parent / "pyproject.toml"
 if _pyproject.exists():
     try:
-        _m = re.search(r'version\s*=\s*"([^"]+)"', _pyproject.read_text())
+        _m = re.search(r'version\s*=\s*"([^"]+)"', _pyproject.read_text(encoding="utf-8"))
         if _m and _m.group(1) != __version__:
             __version__ = _m.group(1)
     except Exception:

@@ -166,7 +166,7 @@ def _load_bundled_kev_catalog() -> dict:
     if not path.exists():
         return {}
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             return {}
         kev_dict = _parse_kev_feed(data)
@@ -265,7 +265,7 @@ def _load_enrichment_cache() -> None:
         if not path.exists():
             continue
         try:
-            raw = json.loads(path.read_text())
+            raw = json.loads(path.read_text(encoding="utf-8"))
             # Expire entries older than TTL
             fresh = {k: v for k, v in raw.items() if isinstance(v, dict) and (now - v.get("_cached_at", 0)) < _ENRICHMENT_TTL}
             if target == "_nvd":
@@ -334,7 +334,7 @@ def _cached_epss_scores(cve_ids: list[str], *, allow_stale: bool = False, offlin
         cache_file = _ENRICHMENT_CACHE_DIR / "epss_cache.json"
         if cache_file.exists():
             try:
-                raw = json.loads(cache_file.read_text())
+                raw = json.loads(cache_file.read_text(encoding="utf-8"))
                 if isinstance(raw, dict):
                     raw_cache.update({k: v for k, v in raw.items() if isinstance(v, dict)})
             except (OSError, json.JSONDecodeError, ValueError) as exc:
@@ -388,7 +388,7 @@ def _cached_kev_catalog(*, allow_stale: bool = False, offline: bool = False) -> 
 
     if _KEV_CACHE_FILE.exists():
         try:
-            disk_data = json.loads(_KEV_CACHE_FILE.read_text())
+            disk_data = json.loads(_KEV_CACHE_FILE.read_text(encoding="utf-8"))
             cached_at = disk_data.get("_cached_at", 0)
             data = disk_data.get("data") or {}
             if data and (allow_stale or (time.time() - cached_at) < _KEV_CACHE_TTL_SECONDS):
@@ -564,7 +564,7 @@ def _stale_kev_catalog() -> dict:
     if not _KEV_CACHE_FILE.exists():
         return {}
     try:
-        disk_data = json.loads(_KEV_CACHE_FILE.read_text())
+        disk_data = json.loads(_KEV_CACHE_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         _logger.warning("Failed to read stale KEV cache: %s", exc)
         return {}

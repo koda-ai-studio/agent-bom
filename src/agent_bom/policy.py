@@ -386,7 +386,7 @@ def load_policy(path: str) -> dict:
     if not p.exists():
         raise FileNotFoundError(f"Policy file not found: {path}")
 
-    text = p.read_text()
+    text = p.read_text(encoding="utf-8")
 
     if p.suffix in (".yaml", ".yml"):
         try:

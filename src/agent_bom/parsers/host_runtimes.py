@@ -197,7 +197,7 @@ def global_node_packages(root: Path) -> list[Package]:
     for node_pattern in ("usr/lib/node_modules/*/package.json", "usr/local/lib/node_modules/*/package.json"):
         for pkg_json_path in root.glob(node_pattern):
             try:
-                pkg_data = json.loads(pkg_json_path.read_text(errors="replace"))
+                pkg_data = json.loads(pkg_json_path.read_text(errors="replace", encoding="utf-8"))
             except (json.JSONDecodeError, OSError):
                 continue
             name = pkg_data.get("name", "")

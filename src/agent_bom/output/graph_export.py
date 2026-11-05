@@ -342,7 +342,7 @@ def load_graph_from_scan(scan_path: Union[str, Path]) -> DepGraph:
         FileNotFoundError: If the path does not exist.
     """
     path = Path(scan_path)
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
 
     if data.get("document_type") != "AI-BOM":
         raise ValueError(f"{scan_path} does not appear to be an agent-bom JSON report (missing 'document_type: AI-BOM')")
