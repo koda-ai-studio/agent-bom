@@ -349,3 +349,21 @@ def test_overview_and_posture_api_serve_the_cli_grade_and_label(counts, grade, l
     finally:
         disable_trusted_proxy_env()
         set_job_store(InMemoryJobStore())
+
+
+def test_disabled_api_stays_not_in_use_through_provider_discovery(monkeypatch) -> None:
+    """The real discovery path sanitizes warnings, and must keep the not-in-use marker."""
+    import types
+
+    from agent_bom import cloud
+    from agent_bom.cli.agents._cloud import _split_not_in_use
+    from agent_bom.cloud.normalization import ServiceNotInUse
+
+    module = types.SimpleNamespace(discover=lambda **_kwargs: ([], [ServiceNotInUse("GKE API is disabled; recorded as not in use.")]))
+    monkeypatch.setattr(cloud.importlib, "import_module", lambda _name: module)
+
+    _agents, warnings = cloud.discover_from_provider("gcp")
+
+    remaining, notices = _split_not_in_use("gcp", warnings)
+    assert remaining == []
+    assert [notice["code"] for notice in notices] == ["cloud_service_not_in_use"]

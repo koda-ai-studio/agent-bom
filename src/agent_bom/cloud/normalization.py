@@ -234,7 +234,12 @@ def sanitize_discovery_warning(value: Any, *, max_len: int = 500) -> str:
 
 def sanitize_discovery_warnings(values: list[Any] | tuple[Any, ...]) -> list[str]:
     """Sanitize a provider/connector warning list."""
-    return [sanitize_discovery_warning(value) for value in values if str(value or "").strip()]
+    sanitized: list[str] = []
+    for value in values:
+        if str(value or "").strip():
+            text = sanitize_discovery_warning(value)
+            sanitized.append(ServiceNotInUse(text) if isinstance(value, ServiceNotInUse) else text)
+    return sanitized
 
 
 def build_cloud_state(
