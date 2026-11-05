@@ -43,3 +43,26 @@ it("uses recorded ownership depth in the explicit inventory flow", () => {
   expect(at("account").x).toBeLessThan(at("cluster").x);
   expect(at("cluster").x).toBeLessThan(at("pod").x);
 });
+
+it("keeps sibling workloads and their findings on the deployment context branch", () => {
+  const result = investigationFlow([...nodes, n("sibling", "container"), n("sibling-cve", "vulnerability")],
+    [...edges, e("cluster", "sibling", "hosts"), e("sibling", "sibling-cve", "vulnerable_to")], "exposure");
+  const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
+  expect(at("sibling").y).toBeLessThan(at("pod").y);
+  expect(at("sibling-cve").y).toBeLessThan(at("pod").y);
+});
+
+it("preserves the existing correlation layout when automatic flow has no cloud context", () => {
+  const original = [n("image", "container"), n("package", "package"), n("finding", "vulnerability")];
+  const links = [e("image", "package", "contains"), e("package", "finding", "vulnerable_to")];
+  expect(investigationFlow(original, links, "auto").nodes).toBe(original);
+});
+
+it("reserves additional caption clearance on narrow screens", () => {
+  const isolated = nodes.filter(n => ["endpoint", "pod", "cve"].includes(n.id));
+  const links = edges.filter(e => isolated.some(n => n.id === e.source) && isolated.some(n => n.id === e.target));
+  const desktop = investigationFlow(isolated, links, "exposure");
+  const mobile = investigationFlow(isolated, links, "exposure", true);
+  const gap = (result: typeof desktop) => Math.abs(result.nodes.find(n => n.id === "cve")!.position.y - result.nodes.find(n => n.id === "pod")!.position.y);
+  expect(gap(mobile)).toBeGreaterThan(gap(desktop));
+});

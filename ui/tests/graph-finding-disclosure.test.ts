@@ -50,6 +50,7 @@ it("offers a separate finding group with original findings available on expansio
   expect(group?.data.readingFindings?.count).toBe(1);
   expect(group?.data.readingFindings?.severity).toBe("high");
   expect(group?.data.displayOnly).toBe(true);
+  expect(group?.draggable).toBe(false);
   const expanded = cloudFindingDisclosure(nodes, edges, new Set(["owner"]), () => {});
   expect(expanded.nodes.some(n => n.type === "findingGroupNode")).toBe(false);
   expect(expanded.nodes.find(n => n.id === "finding")?.hidden).toBe(false);

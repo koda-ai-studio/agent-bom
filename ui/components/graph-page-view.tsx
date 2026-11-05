@@ -116,9 +116,9 @@ export function GraphPageView({ page }: { page: GraphPageData & GraphCanvasModel
   const useCaseEnabled = !selectedAttackPath && !selectedScenarioId && !rollupNavigationActive
     && !presentation.editing && !presentation.hasPositionOverrides;
   const scenarioFlow = useMemo(() => useCaseEnabled
-    ? investigationFlow(presentation.nodes, relationshipLabels.edges, investigationFlowKind)
+    ? investigationFlow(presentation.nodes, relationshipLabels.edges, investigationFlowKind, narrowViewport)
     : { nodes: presentation.nodes, edges: relationshipLabels.edges, scenario: "inventory" },
-    [useCaseEnabled, presentation.nodes, relationshipLabels.edges, investigationFlowKind]);
+    [useCaseEnabled, presentation.nodes, relationshipLabels.edges, investigationFlowKind, narrowViewport]);
   const disclosed = useCloudFindingDisclosure(scenarioFlow.nodes, scenarioFlow.edges, selectedNodeId,
     `${presentation.storageKey}:${investigationFlowKind}`, useCaseEnabled || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
   const measuredDisplay = useDisplayNodeMeasurements(disclosed.nodes, presentation.onNodesChange);

@@ -28,9 +28,10 @@ function internetContext(nodes: Node<LineageNodeData>[], edges: Edge[]) {
     // One boundary per target: never merge unrelated accounts or snapshots through a global Internet node.
     const id = `display:internet:${n.id}`;
     if (nodes.some(n => n.id === id)) continue;
-    extra.push({ id, initialWidth: 240, initialHeight: 300, type: "cloudResourceNode", position: { x: 0, y: 0 }, data: { label: "Internet", nodeType: "cloudResource",
+    extra.push({ id, initialWidth: 240, initialHeight: 300, draggable: false, type: "cloudResourceNode", position: { x: 0, y: 0 }, data: { label: "Internet", nodeType: "cloudResource",
       displayOnly: true, displayTargetId: n.id, readingLabel: "Assessed ingress · snapshot", attributes: { resource_type: "internet_boundary" } } });
     links.push({ id: `${id}:ingress`, source: id, target: n.id, type: "smoothstep", markerEnd: { type: MarkerType.ArrowClosed },
+      style: { stroke: "#ea580c", strokeWidth: 1.7 },
       label: "Assessed ingress", data: { relationship: "exposed_to", displayOnly: true, traversable: false,
         evidence: assessment, evidenceMode: "inferred", individualLabel: true, quietLabel: true, directionEmphasis: true } });
   }
@@ -64,8 +65,15 @@ function inferredScenario(nodes: Node<LineageNodeData>[], edges: Edge[]): Invest
 }
 
 /** Layout changes reading order, never relationship direction, reachability or finding identity. */
-export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Edge[], requested: InvestigationFlow) {
+export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Edge[], requested: InvestigationFlow, narrowViewport = false) {
+  const shortCaptions = input.every(n => String(n.data.label).length <= 28);
+  const columnGap = shortCaptions ? 420 : 520;
+  const rowGap = narrowViewport ? 440 : shortCaptions ? 300 : 340;
+  const contextGap = narrowViewport ? 880 : shortCaptions ? 480 : 680;
   const scenario = requested === "auto" ? inferredScenario(input, inputEdges) : requested;
+  if (requested === "auto" && !input.some(n => ingressAssessment(n) || endpoint(n) || ["account", "cluster"].includes(n.data.nodeType))) {
+    return { nodes: input, edges: inputEdges, scenario };
+  }
   const owned = withFindingOwners(input, inputEdges);
   const { nodes, edges } = scenario === "exposure" ? internetContext(owned, inputEdges) : { nodes: owned, edges: inputEdges };
   if (scenario === "inventory" && requested === "auto" || nodes.length > 80 || nodes.some(n => n.data.rollup || n.type === "clusterPillNode")
@@ -99,7 +107,7 @@ export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Ed
   for (const n of queue) {
     const column = rank.get(n.id)!;
     const row = slots.get(column) ?? 0; slots.set(column, row + 1);
-    positions.set(n.id, { x: column * 420, y: row * 300 });
+    positions.set(n.id, { x: column * columnGap, y: row * rowGap });
   }
   for (let pass = 0; pass < 8; pass++) for (const e of edges) {
     if (!CONTEXT.has(String(e.data?.relationship)) && !(scenario === "identity" && ["assumes", "authenticates_as", "exposed_to"].includes(String(e.data?.relationship)))) continue;
@@ -107,22 +115,32 @@ export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Ed
     const parent = reverse ? e.target : e.source, child = reverse ? e.source : e.target;
     if (byId.has(parent) && positions.has(child) && !positions.has(parent)) {
       const at = positions.get(child)!;
-      positions.set(parent, { x: at.x + 420, y: at.y < 0 ? at.y : -480 });
+      positions.set(parent, { x: at.x + columnGap, y: at.y < 0 ? at.y : -contextGap });
+    }
+  }
+  // Sibling workloads stay with deployment context, outside the selected entry flow.
+  for (let pass = 0; pass < 8; pass++) for (const e of edges) {
+    if (!CONTEXT.has(String(e.data?.relationship))) continue;
+    const reverse = ["hosted_on", "part_of", "belongs_to"].includes(String(e.data?.relationship));
+    const parent = reverse ? e.target : e.source, child = reverse ? e.source : e.target;
+    if (byId.has(child) && positions.has(parent) && !positions.has(child)) {
+      const at = positions.get(parent)!;
+      positions.set(child, { x: at.x - columnGap, y: Math.min(at.y, 0) - rowGap });
     }
   }
   // Findings are branches from the affected component, not steps through a CVE to data.
   for (const n of visible) if (n.data.readingOwner && positions.has(n.data.readingOwner)) {
     const owner = positions.get(n.data.readingOwner)!;
-    positions.set(n.id, { x: owner.x + 420, y: scenario === "vulnerability" ? owner.y : owner.y < 0 ? 340 : -300 });
+    positions.set(n.id, { x: owner.x + columnGap, y: scenario === "vulnerability" ? owner.y : owner.y - rowGap });
   }
-  const extraRow = Math.max(0, ...[...positions.values()].map(p => p.y)) + 480;
+  const extraRow = Math.max(0, ...[...positions.values()].map(p => p.y)) + contextGap;
   let extra = 0;
-  for (const n of visible) if (!positions.has(n.id)) { positions.set(n.id, { x: (extra % 4) * 420, y: extraRow + Math.floor(extra / 4) * 300 }); extra++; }
+  for (const n of visible) if (!positions.has(n.id)) { positions.set(n.id, { x: (extra % 4) * columnGap, y: extraRow + Math.floor(extra / 4) * rowGap }); extra++; }
   // Reserve caption space even for multiple findings and converging ownership branches.
   const occupied: { x: number; y: number }[] = [];
   for (const n of [...visible].sort((a, b) => a.id.localeCompare(b.id))) {
     const at = { ...positions.get(n.id)! };
-    while (occupied.some(p => p.x === at.x && Math.abs(p.y - at.y) < 300)) at.y -= 300;
+    while (occupied.some(p => p.x === at.x && Math.abs(p.y - at.y) < rowGap)) at.y -= rowGap;
     occupied.push(at); positions.set(n.id, at);
   }
   return { scenario, nodes: nodes.map(n => ({ ...n, position: positions.get(n.id) ?? n.position,

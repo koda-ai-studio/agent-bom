@@ -31,7 +31,7 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
     const first = nodes.find(n => n.id === findings[0]!.id)!;
     let id = `display:findings:${owner}`;
     while (nodes.some(n => n.id === id) || groupNodes.some(n => n.id === id)) id += ":group";
-    groupNodes.push({ id, initialWidth: 240, initialHeight: 180, type: "findingGroupNode", position: preservePositions ? first.position : { x: asset.position.x + 520, y: asset.position.y - 340 },
+    groupNodes.push({ id, initialWidth: 240, initialHeight: 180, draggable: false, type: "findingGroupNode", position: preservePositions ? first.position : { x: asset.position.x + 520, y: asset.position.y - 340 },
       data: { label: "Findings", nodeType: "misconfiguration", displayOnly: true, displayTargetId: owner,
         description: asset.data.label, readingFindings: { ...asset.data.readingFindings, count: findings.length, expanded: false, toggle: () => toggle(owner) } } });
     groupEdges.push({ id: `${id}:summary`, source: owner, target: id, type: "smoothstep", label: "Has findings",
