@@ -7,7 +7,7 @@ from typing import Any
 
 from agent_bom.api.finding_rank import compute_effective_reach_score
 from agent_bom.api.hub_payload_codec import decode_hub_payload, encode_hub_payload
-from agent_bom.api.storage.finding_payloads import hydrate_ledger_rows, persist_references
+from agent_bom.api.storage.finding_payloads import hydrate_ledger_rows, persist_batch_cve_intel, persist_references
 from agent_bom.api.storage.hub_filters import _cvss_value, _redact_finding, _severity_rank
 from agent_bom.api.storage.hub_schema import _frameworks_csv
 from agent_bom.api.storage.sql import Dialect, SqlSession, utc_timestamp
@@ -77,10 +77,11 @@ def write_ledger_batch(
     now = utc_timestamp()
     previous = prior_payloads(tx, dialect, tenant, [str(row["id"]) for row in findings if isinstance(row, dict) and row.get("id")])
     prepared: list[tuple[str, tuple[Any, ...]]] = []
+    persist_batch_cve_intel(tx, dialect, tenant, findings)
     for offset, original in enumerate(findings):
         if not isinstance(original, dict):
             continue
-        payload = _redact_finding(persist_references(tx, dialect, tenant, original))
+        payload = _redact_finding(persist_references(tx, dialect, tenant, original, intel_persisted=True))
         fallback = f"hub-{next_ordinal + offset}" if dialect == "sqlite" else f"hub-{now}-{id(original)}"
         finding_id = str(payload.get("id") or fallback)
         payload = carry_finding_sla(payload, previous.get(finding_id, {}))

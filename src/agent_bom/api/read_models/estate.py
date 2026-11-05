@@ -65,6 +65,7 @@ class FindingRow(ReadModel):
     cvss_version: str | None = None
     epss_score: Num | None = None
     is_kev: bool | None = None
+    kev_date_added: str | None = None
     kev_due_date: str | None = None
     fixed_version: str | None = None
     remediation_versions: list[str] | None = None

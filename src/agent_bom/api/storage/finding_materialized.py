@@ -18,7 +18,7 @@ from typing import Any, NamedTuple
 
 from agent_bom.api.finding_group_key import _finding_group_identity
 from agent_bom.api.hub_payload_codec import decode_hub_payload
-from agent_bom.api.hub_reference_payload import extract_reference_blobs, payload_is_kev
+from agent_bom.api.hub_reference_payload import extract_reference_blobs, payload_is_kev, resolve_cve_id
 from agent_bom.api.overview_cve_counts import VULN_CARD_FILTERS
 from agent_bom.api.storage.finding_current import columns, hydrate_rows, parse_row
 from agent_bom.api.storage.sql import Dialect, SqlSession
@@ -116,7 +116,11 @@ def _pending_tuples(tx: SqlSession, tenant: str, rows: Sequence[Any], *, has_led
             f"WHERE tenant_id = ? AND finding_id IN ({markers})",  # nosec B608
             (tenant, *batch),
         ).fetchall()
-        stored.update((str(item[0]), (str(decode_hub_payload(item[1]).get("intel_ref") or ""), str(item[2] or ""))) for item in found)
+        for item in found:
+            ledger = decode_hub_payload(item[1])
+            # Rows written before every CVE finding carried a link still name their CVE.
+            ref = str(ledger.get("intel_ref") or "") or (resolve_cve_id(ledger) if HUB_REFERENCE_NORMALIZE else "")
+            stored[str(item[0])] = (ref, str(item[2] or ""))
     tuples: list[tuple[Any, ...]] = []
     for row in hydrate_rows(tx, tenant, parsed):
         intel_ref, frameworks = stored.get(str(row.get("ledger_finding_id") or ""), (None, ""))

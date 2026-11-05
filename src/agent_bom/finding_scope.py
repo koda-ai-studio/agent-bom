@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from agent_bom.advisory_ids import derive_cve_from_advisory_id
 from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, normalize_framework_slug
+from agent_bom.core.sla import finding_kev_dates
 from agent_bom.domain.framework_evidence import _framework_control_codes as _framework_control_codes
 from agent_bom.domain.framework_evidence import framework_evidence_slugs as framework_evidence_slugs
 from agent_bom.evidence.asset_display import iac_source_label
@@ -689,12 +690,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     source = row.get("sla_due_at_source")
     if isinstance(source, str) and source in SLA_DUE_SOURCES:
         payload["sla_due_at_source"] = source
-    kev = row.get("kev_due_date")
-    if kev is None and isinstance(row.get("evidence"), Mapping):
-        kev = row["evidence"].get("kev_due_date")
-    safe_kev = _safe_timestamp(kev)
-    if safe_kev is not None:
-        payload["kev_due_date"] = safe_kev
+    payload.update(finding_kev_dates(row, _safe_timestamp))
 
     for key in _FINDING_RESPONSE_TIMESTAMPS:
         safe_value = _safe_timestamp(row.get(key))

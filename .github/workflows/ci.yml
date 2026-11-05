@@ -1948,6 +1948,9 @@ jobs:
             tests/test_hub_ingest_replica_postgres.py \
             tests/test_hub_overview_cache.py \
             tests/test_hub_truthful_counts.py \
+            tests/test_hub_cve_intel_concurrency.py \
+            tests/test_hub_cve_link_repair.py \
+            tests/test_kev_catalog.py \
             tests/test_partition_maintenance.py \
             tests/test_graph_traversal_budget_honesty.py \
             tests/test_graph_traverse_subgraph_completeness.py \

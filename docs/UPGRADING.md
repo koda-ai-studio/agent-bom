@@ -61,6 +61,20 @@ profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
   continues, and until a tenant has no pending rows `finding_counts.kev_approximate`
   is true and the headline uses the exact occurrence counts. Rollback: the Alembic
   downgrade drops the columns, and a later upgrade recomputes them.
+- **CVE records.** `20261105_01` links existing CVE findings to their CVE record
+  and reconciles records whose column and payload disagree on KEV; KEV wins. It
+  recomputes every current finding with no CVE link, including non-CVE findings,
+  so plan for up to one extra copy of those rows and their indexes, and the same
+  approximate KEV label until they finish. It stops after 30 minutes; a rerun or
+  the cleanup tick continues. It changes no schema, so its downgrade does nothing
+  and the values stay valid for earlier revisions. CVE fields a replacing writer
+  already overwrote are not recoverable from the database: rescan to restore them
+  (KEV flags and dates also return from a catalog sync).
+- **KEV catalog.** The cleanup tick applies the newest fresh, complete CISA catalog
+  it finds on that replica. See
+  [STORAGE_BACKENDS.md](STORAGE_BACKENDS.md#kev-follows-the-cisa-catalog) for when
+  one is available, and rerun `agent-bom db update` once to record completeness on
+  an existing vulnerability database.
 - **Scheduled scans.** Dispatch rechecks leadership and the current tenant-owned
   schedule. This fails closed for stale due-list records, but does not guarantee
   exactly-once execution after a crash or leadership loss after the final check.

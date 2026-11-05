@@ -10,6 +10,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- A later finding on the same CVE no longer erases earlier CVE details or its KEV verdict, and every finding that names a CVE follows that CVE's KEV verdict in counts and lists alike.
+- CVE records merge under row locks in a fixed order, so concurrent writers keep every field and batches naming the same CVEs cannot deadlock. KEV can no longer sit in only one of a record's column and payload.
+- Migration `20261105_01` and the control plane's cleanup tick link existing CVE findings to their record and reconcile records that disagree on KEV. Fields a replacing writer already overwrote come back only from a rescan or a catalog sync.
+- KEV follows the CISA catalog on the control plane. A fresh, complete catalog already on the replica sets KEV with its added and due dates and clears entries the catalog no longer lists; a missing, stale, empty or truncated catalog changes nothing. `agent-bom db update` now removes delisted entries, and only a complete feed can remove one.
 - KEV counts and the `kev=true` filter no longer miss findings whose stored payload is compressed; existing rows are backfilled by migration `20261104_01`.
 - Overview, posture and grouped findings report exact issue counts from a store aggregate at any size, so totals no longer shrink as data grows and no severity reads 0 because a row budget ran out. Coverage lanes and the Vuln / SCA card are exact on the same basis.
 - First reads of overview, `kev=true` and posture counts no longer join the whole ledger; they read indexed columns.

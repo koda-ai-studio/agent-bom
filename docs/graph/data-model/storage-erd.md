@@ -77,7 +77,7 @@ Excluded:
 | `access_review_items` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `tenant_id`, `item_id` | `item_id`, `campaign_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/access_review.py`, `api/postgres_access_review.py` |
 | `adoption_events` | [Schema metadata and maintenance](storage-erd/other.md) | SQLite | `id` | `id` | **none** | persistent | `db/adoption_events.py` |
 | `affected` | [Vulnerability intelligence (local database)](storage-erd/vulndb.md) | SQLite | `vuln_id`, `ecosystem`, `package_name`, `introduced`, `fixed`, `last_affected`, `limit_version` | `vuln_id`, `ecosystem`, `package_name`, `introduced`, `fixed`, `last_affected`, `limit_version` | **none** | persistent | `db/schema.py` |
-| `agent_bom_hub_backfills` | [Schema metadata and maintenance](storage-erd/other.md) | Postgres | `name` | `name` | **none** | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/postgres_compliance_hub.py` |
+| `agent_bom_hub_backfills` | [Schema metadata and maintenance](storage-erd/other.md) | Postgres, SQLite | `name` | `name` | **none** | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/postgres_compliance_hub.py`, `api/storage/hub_sqlite.py` |
 | `agent_bom_snapshots` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `snapshot_id` | `tenant_id`, `snapshot_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_01_agent_lifecycle.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/lifecycle_store.py` |
 | `agent_bom_tenant_access` | [Tenancy, identity and access](storage-erd/tenancy.md) | Snowflake | `tenant_id`, `snowflake_role` | `tenant_id`, `snowflake_role` | `tenant_id` | persistent | `api/snowflake_store.py` |
 | `agent_bom_tenant_binding_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `key_id` | `key_id` | **none** | persistent | `deploy/supabase/postgres/alembic/versions/20260819_01_tenant_binding_authority.py`, `deploy/supabase/postgres/init.sql`, `deploy/supabase/postgres/runtime-schema.sql` |
@@ -246,7 +246,7 @@ Rows in these tables are not scoped by `tenant_id` / `team_id`. Many are global 
 |---|---|---|
 | `adoption_events` | Schema metadata and maintenance | SQLite |
 | `affected` | Vulnerability intelligence (local database) | SQLite |
-| `agent_bom_hub_backfills` | Schema metadata and maintenance | Postgres |
+| `agent_bom_hub_backfills` | Schema metadata and maintenance | Postgres, SQLite |
 | `agent_bom_tenant_binding_keys` | Tenancy, identity and access | Postgres |
 | `api_rate_limit_hits` | Tenancy, identity and access | Postgres |
 | `api_rate_limits` | Tenancy, identity and access | Postgres |

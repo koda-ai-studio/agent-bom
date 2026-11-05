@@ -278,6 +278,38 @@ keys inside them. Filters, counts and sorts over current findings read columns
 hub payload. `issue_group_id IS NULL` marks a row a pre-`20261104_01` writer left
 pending; such tenants report KEV as approximate until the backfill reaches them.
 
+#### KEV follows the CISA catalog
+
+KEV is a CVE-level verdict held in each tenant's `hub_cve_intel` row, in both
+`is_kev` and the payload. Writers merge that row under `SELECT ... FOR UPDATE`, in
+CVE order and within the session's `lock_timeout`; a lock timeout rolls the batch
+back. SQLite's `BEGIN IMMEDIATE` write transaction already serializes the merge. A
+scan's missing or `false` flag never clears KEV.
+
+Each process's cleanup tick starts one bounded pass per hour. It reads a local
+catalog and makes no network request. Sources, newest wins: the vulnerability
+database from `agent-bom db update` (`AGENT_BOM_DB_PATH`) and the
+`kev_cache.json` a scan's KEV join writes to the state directory, refreshed at
+most daily. A catalog is used only if it was synced within 7 days, delivered every
+entry its `count` declares, and holds at least 1,000 entries. Otherwise the pass
+logs that it skipped the sync, keeps every flag and still reconciles column with
+payload.
+
+A trusted catalog sets KEV on listed CVEs a tenant already has, with
+`kev_added_date` and `kev_due_date` (`kev_date_added` and `kev_due_date` in API
+responses). It clears a flag only when the catalog does not list the CVE and the
+row last changed before the catalog was synced, so a scan with a newer copy of the
+catalog is not overruled. It creates no CVE rows for a tenant and copies nothing
+between tenants.
+
+Limits: a replica with neither source applies no catalog, which includes a control
+plane that only receives pushed results and never runs a scan itself. Replicas can
+hold different copies for up to a day, so a delisted CVE can return until the
+older replica refreshes. A clear leaves a `kev_due_date` the finding itself carried,
+and any SLA derived from it, until that finding's next write. With
+`AGENT_BOM_HUB_REFERENCE_NORMALIZE=0` findings keep their own flag and the catalog does not
+reach them.
+
 Alembic refuses to run as a runtime role. `ALEMBIC_DATABASE_URL` must connect
 as the Postgres bootstrap/admin (migration owner) identity; a connection whose
 `current_user` is `agent_bom_app` or `agent_bom_rls_maintenance` fails before

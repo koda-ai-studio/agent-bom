@@ -23,6 +23,7 @@ from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpress
 from agent_bom.config import ENRICHMENT_MAX_CACHE_ENTRIES as _MAX_ENRICHMENT_CACHE_ENTRIES
 from agent_bom.config import ENRICHMENT_TTL_SECONDS as _ENRICHMENT_TTL
 from agent_bom.core.errors import DegradedCoverage, UpstreamError, UpstreamInvalidResponseError, UpstreamRateLimitedError
+from agent_bom.db.kev_catalog import feed_metadata
 from agent_bom.enrichment_posture import record_enrichment_source
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.models import Vulnerability, compute_confidence
@@ -544,9 +545,9 @@ def _report_epss(vulnerabilities: list[Vulnerability], scored_before: set[int], 
     console.print(f"  [dim]{summary.label()}[/dim]")
 
 
-def _persist_kev_cache(kev_dict: dict) -> None:
+def _persist_kev_cache(kev_dict: dict, catalog: Optional[dict] = None) -> None:
     """Atomically persist the KEV catalog; degrade to no-cache on a full disk."""
-    payload = json.dumps({"_cached_at": time.time(), "data": kev_dict}).encode("utf-8")
+    payload = json.dumps({"_cached_at": time.time(), "data": kev_dict, "catalog": catalog or {}}).encode("utf-8")
     try:
         _KEV_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
         _atomic_write_bytes(_KEV_CACHE_FILE, payload)
@@ -619,8 +620,7 @@ async def fetch_cisa_kev_catalog(client: httpx.AsyncClient, *, errors: list[Upst
         _kev_cache = kev_dict
         _kev_cache_time = datetime.now(timezone.utc)
         record_enrichment_source("cisa_kev", "success")
-        # Persist to disk for cross-session resilience (atomic temp+rename).
-        _persist_kev_cache(kev_dict)
+        _persist_kev_cache(kev_dict, feed_metadata(data, len(kev_dict)))
         return kev_dict
 
     stale = _stale_kev_catalog()

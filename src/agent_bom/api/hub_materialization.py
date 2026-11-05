@@ -11,6 +11,7 @@ from __future__ import annotations
 import time
 
 from agent_bom.api import compliance_hub_store
+from agent_bom.api.hub_cve_intel_tick import run_cve_intel_tick
 
 _BATCH_ROWS = 500
 _TICK_BUDGET_SECONDS = 5.0
@@ -28,4 +29,6 @@ def run_materialization_tick(*, budget_seconds: float = _TICK_BUDGET_SECONDS, ba
         total += done
         if not done:
             break
+    # Last, so a failure here costs no backfill; the pass keeps its place for the next tick.
+    run_cve_intel_tick(budget_seconds=budget_seconds, batch_rows=batch_rows)
     return total

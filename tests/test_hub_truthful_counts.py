@@ -120,14 +120,41 @@ def test_large_cve_intel_blob_keeps_kev(store, tenant) -> None:
     assert _kev(store, tenant) == 1
 
 
-def test_count_follows_the_intel_the_drill_shows(store, tenant) -> None:
+def test_kev_survives_a_later_finding_without_a_kev_flag(store, tenant) -> None:
     _ingest(store, tenant, [_finding("first", cve="CVE-2095-7", is_kev=True, long=True)], batch="b1")
-    assert _kev(store, tenant) == 1
-    # A newer intel blob replaces the reference for every row naming that CVE.
     _ingest(store, tenant, [_finding("second", cve="CVE-2095-7", summary="no verdict")], batch="b2")
 
     drill = [row for row in _rows(store, tenant) if row.get("is_kev") is True]
-    assert _kev(store, tenant) == len(drill) == 0
+    assert _kev(store, tenant) == len(drill) == 2
+
+
+def test_kev_survives_a_later_explicit_false(store, tenant) -> None:
+    _ingest(store, tenant, [_finding("first", cve="CVE-2095-8", is_kev=True)], batch="b1")
+    _ingest(store, tenant, [_finding("second", cve="CVE-2095-8", is_kev=False, cisa_kev=False)], batch="b2")
+
+    drill = [row for row in _rows(store, tenant) if row.get("is_kev") is True]
+    assert _kev(store, tenant) == len(drill) == 2
+
+
+def test_finding_with_no_intel_fields_follows_its_cves_kev_verdict(store, tenant) -> None:
+    _ingest(store, tenant, [_finding("bare-first", cve="CVE-2095-6")], batch="b0")
+    _ingest(store, tenant, [_finding("flagged", cve="CVE-2095-6", is_kev=True)], batch="b1")
+    _ingest(store, tenant, [_finding("bare-later", cve="CVE-2095-6")], batch="b2")
+
+    drill = {row["id"] for row in _rows(store, tenant) if row.get("is_kev") is True}
+    assert drill == {"bare-first", "flagged", "bare-later"}
+    assert _kev(store, tenant) == 3
+
+
+def test_later_partial_intel_keeps_earlier_cve_fields(store, tenant) -> None:
+    first = _finding("first", cve="CVE-2095-9", summary="old", epss_percentile=0.91, nvd_url="https://nvd.example/1", long=True)
+    _ingest(store, tenant, [first], batch="b1")
+    _ingest(store, tenant, [_finding("second", cve="CVE-2095-9", summary="new", nvd_url="", references=[])], batch="b2")
+
+    rows = {row["id"]: row for row in _rows(store, tenant)}
+    assert rows["first"]["summary"] == rows["second"]["summary"] == "new"
+    assert rows["second"]["epss_percentile"] == 0.91
+    assert rows["second"]["nvd_url"] == "https://nvd.example/1"
 
 
 def test_kev_is_scoped_by_tenant_on_a_shared_cve(store, tenant) -> None:
@@ -193,7 +220,7 @@ def test_issue_group_aggregate_equals_the_walk(store, tenant) -> None:
     assert {band: counts[band] for band in walked} == walked
     assert (counts["critical"], counts["high"], counts["medium"], counts["low"], counts["unrated"]) == (1, 1, 2, 0, 2)
     assert (counts["info"], counts["unknown"]) == (1, 1)
-    assert counts["kev"] == sum(1 for group in groups if group.get("is_kev")) == 1
+    assert counts["kev"] == sum(1 for group in groups if group.get("is_kev")) == 2
 
 
 def test_group_lookup_merges_named_groups_only(store, tenant) -> None:
@@ -219,7 +246,7 @@ def test_coverage_aggregate_equals_the_row_fold(store, tenant) -> None:
         _fold_current_coverage(lanes, row)
 
     assert store.current_coverage_counts(tenant, origin="bulk_ingest", since=SINCE, status="open") == lanes
-    assert lanes["_cves"]["kev"] == 1
+    assert lanes["_cves"]["kev"] == 3
 
 
 def _make_legacy(store: Any, tenant: str) -> None:
