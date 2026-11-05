@@ -22808,6 +22808,10 @@ components:
         kev:
           title: Kev
           type: integer
+        kev_approximate:
+          default: false
+          title: Kev Approximate
+          type: boolean
         low:
           title: Low
           type: integer
@@ -22982,7 +22986,9 @@ components:
         headline:
           $ref: '#/components/schemas/OverviewHeadline'
         issue_counts:
-          $ref: '#/components/schemas/IssueCounts'
+          anyOf:
+          - $ref: '#/components/schemas/IssueCounts'
+          - type: 'null'
         posture:
           $ref: '#/components/schemas/OverviewPosture'
         schema_version:

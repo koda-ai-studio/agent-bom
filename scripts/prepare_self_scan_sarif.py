@@ -16,6 +16,11 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 
+def _has_no_source_file(location: dict) -> bool:
+    uri = location.get("physicalLocation", {}).get("artifactLocation", {}).get("uri", "")
+    return "physicalLocation" not in location or str(uri).startswith("agent-bom-findings/")
+
+
 def prepare(document: dict, evidence_uri: str) -> tuple[dict, str]:
     path = PurePosixPath(evidence_uri)
     if not evidence_uri or path.is_absolute() or ".." in path.parts or ":" in evidence_uri or "\\" in evidence_uri:
@@ -25,7 +30,7 @@ def prepare(document: dict, evidence_uri: str) -> tuple[dict, str]:
     for run in output.get("runs", []):
         for result in run.get("results", []):
             locations = result.get("locations", [])
-            if len(locations) != 1 or "physicalLocation" in locations[0]:
+            if len(locations) != 1 or not _has_no_source_file(locations[0]):
                 continue
             logical = locations[0].get("logicalLocations", [])
             if not any(str(item.get("fullyQualifiedName", "")).startswith("self-scan://") for item in logical):
@@ -40,9 +45,9 @@ def prepare(document: dict, evidence_uri: str) -> tuple[dict, str]:
             }
             locations[0]["message"] = {"text": "Generated installed-package scan evidence; not a source manifest."}
             for related in result.get("relatedLocations", []):
-                if "physicalLocation" not in related and related.get("logicalLocations"):
+                if related.get("logicalLocations") and ("physicalLocation" not in related or _has_no_source_file(related)):
                     related["physicalLocation"] = copy.deepcopy(locations[0]["physicalLocation"])
-            result.setdefault("partialFingerprints", {})["primaryLocationLineHash"] = fingerprint
+            result.get("properties", {}).pop("no_source_file", None)
     return output, "".join(record + "\n" for record in records)
 
 

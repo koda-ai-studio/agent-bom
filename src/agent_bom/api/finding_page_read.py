@@ -10,6 +10,7 @@ from fastapi import Request
 from agent_bom.api import compliance_hub_store, finding_cursor, time_window
 from agent_bom.api import finding_reachability_prewarm as _finding_reachability_prewarm
 from agent_bom.api.finding_facets import _finding_facets_bounded as _finding_facets_bounded
+from agent_bom.api.finding_group_key import _finding_group_identity
 from agent_bom.api.finding_grouping import _attach_grouping_metadata as _attach_grouping_metadata
 from agent_bom.api.finding_grouping import _collect_group_occurrences as _collect_group_occurrences
 from agent_bom.api.finding_grouping import _finding_group_offset as _finding_group_offset
@@ -31,9 +32,13 @@ from agent_bom.api.finding_view_filters import _view_filtered_row as _view_filte
 from agent_bom.api.finding_view_filters import _view_filters as _view_filters
 from agent_bom.api.finding_view_filters import _walk_view_filtered_findings as _walk_view_filtered_findings
 from agent_bom.api.finding_view_filters import redact_emitted_rows, redacts_after_filter
+from agent_bom.api.hub_reference_payload import payload_is_kev
 from agent_bom.api.scan_request_context import _logger, _tenant_id
+from agent_bom.api.storage.finding_current_reads import issue_rank_band
+from agent_bom.api.storage.finding_materialized import group_id_for_key
 from agent_bom.api.stores import _get_graph_store
 from agent_bom.core.estate_read_boundary import estate_read_boundary
+from agent_bom.core.severity import severity_rank
 from agent_bom.security import sanitize_error, sanitize_text
 
 # Importing the reader surface registers its bounded graph-commit warm-up.
@@ -370,7 +375,6 @@ def _list_finding_groups_impl(
 
     Group canonical occurrences by issue identity. ``summary_only`` omits
     facets and graph details without changing grouping or bounds.
-    A row-budget hit is explicit partial evidence, never a complete group count.
     """
     sort_key = _normalize_finding_sort(sort)
     group_offset = _finding_group_offset(cursor, offset, sort_key)
@@ -415,6 +419,7 @@ def _list_finding_groups_impl(
         envelope, first_page=first_page, groups=groups, scanned=len(rows), truncated=truncated, severity_counts=severity_counts
     )
     attach_lane_counts(envelope, lane, counts_by_lane, truncated, include_facets)
+    _apply_exact_issue_counts(request, envelope, truncated, status=status, window_days=window_days, include_facets=include_facets)
     return envelope
 
 
@@ -423,3 +428,94 @@ def _finding_group_page(groups: list[dict[str, Any]], *, tenant_id: str, scan_id
         return [], []
     projected, warnings = _project_findings_reachability(groups, tenant_id=tenant_id, scan_id=scan_id)
     return [_serialize_finding_group(group) for group in projected], warnings
+
+
+def _move(counts: dict[str, int], rank: int, delta: int) -> None:
+    """Adjust one group's display band and, for unrated groups, its facet band."""
+    counts[issue_rank_band(rank)] += delta
+    if rank <= 1:
+        counts["info" if rank == 1 else "unknown"] += delta
+
+
+def _merge_scan_groups(counts: dict[str, int], scan_rows: list[dict[str, Any]], lookup: Any) -> dict[str, int]:
+    """Fold scan occurrences in: a group already in the hub only moves to a worse band."""
+    by_id = {group_id_for_key(_finding_group_identity(group)[1]): group for group in _group_occurrence_rows(scan_rows)}
+    known = lookup(list(by_id)) if by_id else {}
+    merged = dict(counts)
+    for group_id, group in by_id.items():
+        rank = severity_rank(str(group.get("severity") or "unknown"))
+        kev = payload_is_kev(group)
+        if group_id in known:
+            hub_rank, hub_kev = known[group_id]
+            if rank > hub_rank:
+                _move(merged, hub_rank, -1)
+                _move(merged, rank, 1)
+            merged["kev"] += int(kev and not hub_kev)
+            continue
+        _move(merged, rank, 1)
+        merged["total"] += 1
+        merged["kev"] += int(kev)
+    return merged
+
+
+def exact_issue_counts(request: Request, *, status: str, window_days: int | None) -> dict[str, int] | None:
+    """The default issue view's exact counts, or ``None`` when the store cannot answer them."""
+    store = compliance_hub_store.get_compliance_hub_store()
+    counter = getattr(store, "current_issue_group_counts", None)
+    lookup = getattr(store, "current_issue_group_lookup", None)
+    if not callable(counter) or not callable(lookup):
+        return None
+    query = _finding_list_query(
+        request,
+        sort="severity",
+        severity=None,
+        status=status,
+        scan_id=None,
+        limit=1,
+        offset=0,
+        cursor=None,
+        approximate_total=True,
+        window_days=window_days,
+    )
+    scope = {"origin": "bulk_ingest", "since": query.window_since, "status": query.status_key}
+    hub = counter(query.tenant_id, **scope)
+    if hub is None:
+        return None
+    return _merge_scan_groups(hub, _scan_half_rows(query, store, []), lambda ids: lookup(query.tenant_id, ids, **scope))
+
+
+def issue_counts_block(counts: dict[str, int], *, window: dict[str, Any] | None) -> dict[str, Any]:
+    block: dict[str, Any] = {key: int(counts.get(key) or 0) for key in ("critical", "high", "medium", "low", "unrated", "total", "kev")}
+    block.update(approximate=False, window=window, basis="issue_groups")
+    return block
+
+
+def _apply_exact_issue_counts(
+    request: Request, envelope: dict[str, Any], truncated: bool, *, status: str, window_days: int | None, include_facets: bool
+) -> None:
+    """Replace a bounded walk's lower bounds with exact totals; rows stay the paged window."""
+    filters = {key: value for key, value in envelope["filters"].items() if value and key not in {"group_occurrences", "severity"}}
+    if not truncated or filters or envelope.get("scan_id"):
+        return
+    counts = exact_issue_counts(request, status=status, window_days=window_days)
+    severity = envelope["filters"].get("severity")
+    total = None if counts is None else (counts["total"] if severity is None else counts.get(severity))
+    if counts is None or total is None:
+        return
+    envelope["total"] = int(total)
+    envelope.pop("total_approximate", None)
+    envelope["count_metadata"].update(
+        total=int(total), total_kind="exact", completeness={"status": "partial", "reason": "paginated_result"}
+    )
+    envelope["grouping"].update(kev_issue_total=int(counts["kev"]), total_basis="store_aggregate")
+    envelope["warnings"] = [
+        "Issue rows are paged from the first 50,000 occurrences; totals and severity counts are exact."
+        if "Issue grouping stopped" in item
+        else item
+        for item in envelope["warnings"]
+    ]
+    if include_facets:
+        envelope.setdefault("facets", {})["severity"] = {
+            key: int(counts.get(key) or 0) for key in ("critical", "high", "medium", "low", "info", "unknown")
+        }
+        envelope.setdefault("facet_metadata", {})["severity_basis"] = "canonical issue groups"

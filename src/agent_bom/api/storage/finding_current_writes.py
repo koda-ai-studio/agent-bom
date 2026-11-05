@@ -7,15 +7,16 @@ from typing import Any
 
 from agent_bom.api.finding_lifecycle import observation_at_least, resolve_canonical_id
 from agent_bom.api.hub_current_payload import current_state_overlay, resolve_ledger_finding_id
-from agent_bom.api.hub_payload_codec import encode_hub_payload
+from agent_bom.api.hub_payload_codec import HUB_PAYLOAD_MARKER, decode_hub_payload, encode_hub_payload
 from agent_bom.api.storage.finding_current import CURRENT_COLUMNS, LEDGER_ORDINAL_SENTINEL, hydrate_rows, keyed_rows, parse_row
+from agent_bom.api.storage.finding_materialized import MATERIALIZED_COLUMNS, materialized_fields
 from agent_bom.api.storage.hub_filters import _redact_finding
 from agent_bom.api.storage.sql import Dialect, SqlSession, json_text, utc_timestamp
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
 
 def current_upsert(dialect: Dialect, has_ledger: bool) -> str:
-    fields = ["tenant_id", *CURRENT_COLUMNS, "origin", "scan_id"]
+    fields = ["tenant_id", *CURRENT_COLUMNS, "origin", "scan_id", *MATERIALIZED_COLUMNS]
     if has_ledger:
         fields.extend(["ledger_finding_id", "ledger_ordinal"])
     values = ["CAST(? AS JSONB)" if field == "payload" and dialect == "postgres" else "?" for field in fields]
@@ -115,6 +116,7 @@ def write_current_batch(
     ledger_ids = {key: resolve_ledger_finding_id(payload, canonical_id=key) or "" for key, payload in by_id.items() if key in inserted}
     ledger = keyed_rows(tx, tenant, list(ledger_ids.values()), ledger=True) if has_ledger else []
     ordinals = {str(row[0]): int(row[2]) for row in ledger}
+    frameworks = {str(row[0]): str(row[3] or "") for row in ledger}
     now = utc_timestamp()
     rows = []
     for canonical, payload in by_id.items():
@@ -136,6 +138,7 @@ def write_current_batch(
             *(merged[column] for column in CURRENT_COLUMNS),
             str(effective_payload.get("origin") or ""),
             str(effective_payload.get("batch_id") or effective_payload.get("scan_id") or ""),
+            *materialized_fields(effective_payload, canonical=canonical, frameworks_csv=frameworks.get(pointer, "")),
         )
         if has_ledger:
             row += (pointer or None, ordinals.get(pointer, LEDGER_ORDINAL_SENTINEL))
@@ -143,17 +146,33 @@ def write_current_batch(
     tx.executemany(current_upsert(dialect, has_ledger), rows)
 
 
+def _wrapped_payload_source(raw_payload: Any) -> str | None:
+    payload = decode_hub_payload(raw_payload)
+    source = payload.get("ingest_source")
+    source = source if source is not None else payload.get("source")
+    return None if source is None else str(source)
+
+
+def _open_rows_in_scope(tx: SqlSession, dialect: Dialect, tenant: str, scope_source: str | None) -> list[Any]:
+    """Open rows for one source; SQL filters plain payloads, Python only the compressed few."""
+    base = "tenant_id = ? AND status IN ('open', 'reopened')"
+    if scope_source is None:
+        return list(tx.execute(f"SELECT canonical_id, last_seen FROM hub_findings_current WHERE {base}", (tenant,)).fetchall())  # nosec B608
+    wrapped = f"{json_text(dialect, 'payload', HUB_PAYLOAD_MARKER)} IS NOT NULL"
+    source = f"COALESCE({json_text(dialect, 'payload', 'ingest_source')}, {json_text(dialect, 'payload', 'source')})"
+    rows = tx.execute(
+        f"SELECT canonical_id, last_seen, CASE WHEN {wrapped} THEN payload END FROM hub_findings_current "  # nosec B608
+        f"WHERE {base} AND ({source} = ? OR {wrapped})",
+        (tenant, scope_source),
+    ).fetchall()
+    return [row for row in rows if row[2] is None or _wrapped_payload_source(row[2]) == scope_source]
+
+
 def reconcile_current(
     tx: SqlSession, dialect: Dialect, tenant_id: str, *, present_canonical_ids: set[str], observed_at: str, scope_source: str | None
 ) -> int:
     tenant = require_explicit_tenant_id(tenant_id)
-    where = ["tenant_id = ?", "status IN ('open', 'reopened')"]
-    params: list[Any] = [tenant]
-    if scope_source is not None:
-        where.append(f"COALESCE({json_text(dialect, 'payload', 'ingest_source')}, {json_text(dialect, 'payload', 'source')}) = ?")
-        params.append(scope_source)
-    predicate = " AND ".join(where)
-    rows = tx.execute(f"SELECT canonical_id, last_seen FROM hub_findings_current WHERE {predicate}", params).fetchall()  # nosec B608
+    rows = _open_rows_in_scope(tx, dialect, tenant, scope_source)
     absent = sorted({str(row[0]) for row in rows if observation_at_least(observed_at, str(row[1]))} - present_canonical_ids)
     total = 0
     now = utc_timestamp()
@@ -161,9 +180,9 @@ def reconcile_current(
         batch = absent[start : start + 500]
         placeholders = ",".join("?" for _ in batch)
         result = tx.execute(
-            f"UPDATE hub_findings_current SET status = 'resolved', resolved_at = ?, updated_at = ? "  # nosec B608
-            f"WHERE {predicate} AND canonical_id IN ({placeholders})",
-            (observed_at, now, *params, *batch),
+            "UPDATE hub_findings_current SET status = 'resolved', resolved_at = ?, updated_at = ? "  # nosec B608
+            f"WHERE tenant_id = ? AND status IN ('open', 'reopened') AND canonical_id IN ({placeholders})",
+            (observed_at, now, tenant, *batch),
         )  # nosec B608
         total += int(result.rowcount or 0)
     return total

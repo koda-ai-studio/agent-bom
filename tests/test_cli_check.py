@@ -491,7 +491,7 @@ def test_check_sarif_output_is_machine_readable(monkeypatch):
     assert rule["properties"]["is_kev"] is True
     assert rule["properties"]["cwe_ids"] == ["CWE-200"]
     assert finding["ruleId"] == "CVE-2023-30861"
-    assert finding["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "pkg:pypi/flask@2.2.0"
+    assert finding["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "agent-bom-findings/package/pypi/flask@2.2.0"
 
 
 def test_check_agent_mode_rejects_sarif_format(monkeypatch):

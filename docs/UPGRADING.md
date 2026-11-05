@@ -54,6 +54,13 @@ profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
   columns; `20261102_10` brings existing databases up to the fleet endpoint and
   retry-safe trend scan schema. Both are additive and idempotent. Preserve the
   same database, identity settings, signing keys and retained reports.
+- **Finding counts.** `20261104_01` adds KEV, issue-group and coverage columns to
+  current findings and backfills them in committed batches. Plan for up to one
+  extra copy of `hub_findings_current` and its indexes on disk during the
+  backfill. It stops after 30 minutes; a rerun or the control plane's cleanup tick
+  continues, and until a tenant has no pending rows `finding_counts.kev_approximate`
+  is true and the headline uses the exact occurrence counts. Rollback: the Alembic
+  downgrade drops the columns, and a later upgrade recomputes them.
 - **Scheduled scans.** Dispatch rechecks leadership and the current tenant-owned
   schedule. This fails closed for stale due-list records, but does not guarantee
   exactly-once execution after a crash or leadership loss after the final check.

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import copy
 import dataclasses
 import hashlib
+import re
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import quote, unquote
 
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.evidence.scan_run import ScanOutcome, ScanRun
@@ -22,24 +25,14 @@ _SARIF_SEVERITY_MAP = {
 }
 
 
-def _sarif_fingerprint_fields(
-    *,
-    stable_input: str,
-    artifact_uri: str,
-    start_line: int | None = 1,
-) -> dict[str, dict[str, str]]:
-    """Return SARIF fingerprints and GitHub partialFingerprints for dedup."""
-    fields = {
-        "fingerprints": {
-            "agent-bom/v1": hashlib.sha256(stable_input.encode()).hexdigest(),
-        },
-        "partialFingerprints": {
-            "primaryLocationLineHash": hashlib.sha256(f"{artifact_uri}:{start_line}".encode()).hexdigest(),
-        },
-    }
-    if start_line is None or artifact_uri.startswith(("self-scan://", "pkg:", "package:")):
-        fields.pop("partialFingerprints")
-    return fields
+def _sarif_fingerprint_fields(*, stable_input: str) -> dict[str, dict[str, str]]:
+    """Return the tool's stable result identity.
+
+    ``partialFingerprints.primaryLocationLineHash`` is left out on purpose:
+    github/codeql-action computes it from the file's content for every result
+    with a line, and warns on each result that supplies a different value.
+    """
+    return {"fingerprints": {"agent-bom/v1": hashlib.sha256(stable_input.encode()).hexdigest()}}
 
 
 # GitHub Security tab uses security-severity (0.0–10.0) for granular sorting.
@@ -204,12 +197,80 @@ def _sarif_run_properties(report: Any, scan_run: ScanRun) -> dict[str, Any]:
     }
 
 
+def scan_root_path(report: Any) -> str:
+    inventory = getattr(report, "project_inventory_data", None)
+    return str(inventory.get("root") or "") if isinstance(inventory, dict) else ""
+
+
+def identity_uri(uri: str, report: Any) -> str:
+    """A file URI relative to the scan root, so the checkout folder is not part of identity.
+
+    The emitted URI stays relative to the working directory, which is what GitHub resolves.
+    """
+    root = scan_root_path(report)
+    if not root:
+        return uri
+    try:
+        prefix = Path(root).resolve().relative_to(Path.cwd().resolve()).as_posix()
+    except (ValueError, OSError):
+        return uri
+    return uri.removeprefix(f"{prefix}/") if prefix != "." else uri
+
+
+# Findings with no repository file (a package identity, a scanned image, an agent)
+# sit under this prefix. It is never a real file: GitHub requires a repository-relative
+# physical location on every result, and these paths let it render the alert without
+# inventing a manifest or a line. ``properties.no_source_file`` marks them.
+VIRTUAL_ARTIFACT_PREFIX = "agent-bom-findings/"
+_LOGICAL_URI_PREFIXES = ("self-scan://", "pkg:", "package:")
+
+
+def virtual_artifact_uri(kind: str, name: str) -> str:
+    """Relative URI for a finding that has no file; stable for one kind and name."""
+    token = re.sub(r"^(?:pkg:|package:)", "", str(name)).replace("://", "/")
+    parts = [quote(unquote(part), safe="@") for part in token.split("/") if part and part != ".."]
+    return VIRTUAL_ARTIFACT_PREFIX + "/".join([quote(str(kind) or "finding", safe=""), *(parts or ["unnamed"])])
+
+
 def _sarif_location(uri: str, start_line: Any, *, scanned_artifact: str | None = None) -> dict[str, Any]:
-    # Package identities are logical; code scanning needs the scanned image as a physical artifact.
-    if uri.startswith(("self-scan://", "pkg:", "package:")):
-        logical = {"logicalLocations": [{"fullyQualifiedName": uri}]}
-        return {"physicalLocation": {"artifactLocation": {"uri": scanned_artifact}}, **logical} if scanned_artifact else logical
+    if uri.startswith(_LOGICAL_URI_PREFIXES):
+        # Package identities are logical. A scanned image is what the package was read from.
+        anchor = virtual_artifact_uri("image", scanned_artifact) if scanned_artifact else virtual_artifact_uri("package", uri)
+        return {
+            "physicalLocation": {"artifactLocation": {"uri": anchor, "uriBaseId": "%SRCROOT%"}},
+            "logicalLocations": [{"fullyQualifiedName": uri}],
+        }
+    uri = uri.replace("\\", "/")
+    if ".." in uri.split("/"):  # a scan root above the working directory: GitHub cannot resolve it
+        uri = uri.rsplit("/", 1)[-1]
     location: dict[str, Any] = {"artifactLocation": {"uri": uri, "uriBaseId": "%SRCROOT%"}}
     if type(start_line) is int and start_line > 0:
         location["region"] = {"startLine": start_line, "startColumn": 1}
     return {"physicalLocation": location}
+
+
+def _logical_anchor(result: dict[str, Any], location: dict[str, Any]) -> str:
+    logical = (location.get("logicalLocations") or [{}])[0]
+    name = logical.get("fullyQualifiedName") or logical.get("name") or result.get("ruleId") or "unnamed"
+    return virtual_artifact_uri(str(logical.get("kind") or "finding"), str(name))
+
+
+def enforce_physical_locations(results: list[dict[str, Any]]) -> None:
+    """Give every result and related location the physical location GitHub requires.
+
+    GitHub rejects the whole upload over one result without it. This is the last
+    step for every result stream, so a new producer cannot break the upload. Graph
+    hops keep their logical location and take the primary location's file, the
+    config or manifest they were read from. ``logicalLocations`` stay alongside.
+    """
+    for result in results:
+        locations = result.get("locations") or [{}]
+        result["locations"] = locations
+        primary = locations[0]
+        if "physicalLocation" not in primary:
+            primary["physicalLocation"] = {"artifactLocation": {"uri": _logical_anchor(result, primary), "uriBaseId": "%SRCROOT%"}}
+        physical = primary["physicalLocation"]
+        for other in [*locations[1:], *(result.get("relatedLocations") or [])]:
+            other.setdefault("physicalLocation", copy.deepcopy(physical))
+        if str(physical["artifactLocation"].get("uri", "")).startswith(VIRTUAL_ARTIFACT_PREFIX):
+            result.setdefault("properties", {})["no_source_file"] = True

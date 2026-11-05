@@ -59,6 +59,7 @@ from agent_bom.api.overview_hub import (
     _hub_severity_snapshot,
     _hub_top_risks,
     _raise_hub_overview_unavailable,
+    overview_finding_counts,
 )
 from agent_bom.api.overview_projection import (
     _cloud_account_count,
@@ -641,9 +642,8 @@ def _compose_overview(
         graph_href=_cloud_graph_href,
     )
 
-    # Fold hub-ingested findings into the exec top-risk strip so a
-    # connector/bulk-ingested estate (scan jobs alone) no longer renders an empty
-    # strip while a million open findings drive the grade (P0 #1).
+    # Fold hub-ingested findings into the exec top-risk strip so a bulk-ingested
+    # estate never renders an empty strip while its findings drive the grade.
     if hub_top_risks is None:
         hub_top_risks = _hub_top_risks(request)
     top_risks = _merge_top_risks(estate["top_risks"], hub_top_risks)
@@ -716,7 +716,7 @@ def _compose_overview(
         "schema_version": "overview.v1",
         "tenant_id": tenant_id,
         "posture": posture,
-        "finding_counts": {key: exec_counts[key] for key in ("critical", "high", "medium", "low", "unrated", "total", "kev")},
+        "finding_counts": overview_finding_counts(exec_counts, request),
         "issue_counts": issue_counts_payload(issue_counts),
         "headline": {
             "critical": headline_critical,

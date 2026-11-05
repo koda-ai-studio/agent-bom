@@ -49,6 +49,26 @@ def test_generated_evidence_is_the_location_without_losing_the_finding():
     Draft7Validator(schema).validate(doc)
 
 
+def test_the_cli_virtual_location_is_replaced_by_the_evidence_artifact():
+    from agent_bom.models import Agent, AIBOMReport, BlastRadius, Package, Severity, Vulnerability
+    from agent_bom.output.sarif import to_sarif
+
+    vuln = Vulnerability(id="CVE-2026-1", summary="s", severity=Severity.HIGH)
+    pkg = Package(name="tornado", version="6.5.8", ecosystem="pypi", vulnerabilities=[vuln])
+    agent = Agent(name="agent-bom", agent_type="cli", config_path="self-scan://agent-bom", mcp_servers=[])
+    blast = BlastRadius(
+        vulnerability=vuln, package=pkg, affected_agents=[agent], affected_servers=[], exposed_credentials=[], exposed_tools=[]
+    )
+
+    output, records = prepare(to_sarif(AIBOMReport(agents=[agent], blast_radii=[blast])), "evidence/self-scan.jsonl")
+
+    result = output["runs"][0]["results"][0]
+    assert result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"] == "evidence/self-scan.jsonl"
+    assert "no_source_file" not in result["properties"]
+    assert "partialFingerprints" not in result
+    assert records.count("\n") == 1
+
+
 def test_real_source_locations_are_unchanged_and_do_not_create_evidence():
     result = finding()
     result["locations"] = [{"physicalLocation": {"artifactLocation": {"uri": "uv.lock"}, "region": {"startLine": 12}}}]

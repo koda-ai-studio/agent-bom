@@ -10,6 +10,7 @@ from agent_bom.api.hub_payload_codec import decode_hub_payload
 from agent_bom.api.hub_reference_payload import batch_reference_keys
 from agent_bom.api.storage.finding_current import CURRENT_COLUMNS
 from agent_bom.api.storage.finding_ledger_writes import FIELDS
+from agent_bom.api.storage.finding_materialized import MATERIALIZED_COLUMNS
 from agent_bom.api.storage.finding_payloads import hydrate_ledger_rows
 from agent_bom.api.storage.sql import connection_session
 from agent_bom.core.tenancy import require_explicit_tenant_id
@@ -29,6 +30,8 @@ COLUMNS = {
     STATE: ("tenant_id", "finding_count", "next_ordinal"),
     REVISION: ("tenant_id", "revision"),
 }
+# Derived from the payloads and recomputed on the target, so a snapshot neither needs nor carries them.
+DERIVED_COLUMNS = {CURRENT: MATERIALIZED_COLUMNS, "hub_cve_intel": ("is_kev",)}
 
 
 @dataclass(frozen=True)
@@ -46,9 +49,11 @@ def read_compliance_snapshots(conn: Any, tenant_map: dict[str, str]) -> list[tup
     tables: dict[str, list[dict[str, Any]]] = {}
     for table, columns in COLUMNS.items():
         actual = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
-        if actual != set(columns):
+        derived = set(DERIVED_COLUMNS.get(table, ()))
+        if actual - derived != set(columns):
             raise ValueError("Compliance source schema is unsupported; preserve it for explicit compatibility recovery")
-        tables[table] = [dict(row) for row in conn.execute(f"SELECT * FROM {table}")]  # nosec B608 - table is a fixed COLUMNS schema key
+        rows = conn.execute(f"SELECT * FROM {table}")  # nosec B608 - table is a fixed COLUMNS schema key
+        tables[table] = [{key: value for key, value in dict(row).items() if key not in derived} for row in rows]
         for row in tables[table]:
             if "payload" in row:
                 row["payload"] = decode_hub_payload(row["payload"])

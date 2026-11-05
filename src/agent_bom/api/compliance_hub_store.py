@@ -53,7 +53,6 @@ if TYPE_CHECKING:
     from agent_bom.api.storage.hub_filters import _filter_current_rows as _filter_current_rows
     from agent_bom.api.storage.hub_filters import _filter_hub_rows as _filter_hub_rows
     from agent_bom.api.storage.hub_filters import _framework_slug_counts_from_rows as _framework_slug_counts_from_rows
-    from agent_bom.api.storage.hub_filters import _kev_json_cond_sqlite as _kev_json_cond_sqlite
     from agent_bom.api.storage.hub_filters import _page_signal as _page_signal
     from agent_bom.api.storage.hub_filters import _page_sort_key as _page_sort_key
     from agent_bom.api.storage.hub_filters import _payload_is_kev as _payload_is_kev
@@ -124,7 +123,6 @@ __all__ = [
     "_frameworks_csv",
     "_hub_findings_current_has_ledger_col",
     "_hydrate_sqlite_current_rows",
-    "_kev_json_cond_sqlite",
     "_migrate_current_ledger_ordinal_sqlite",
     "_migrate_current_ledger_ref_sqlite",
     "_migrate_current_origin_col_sqlite",
@@ -232,7 +230,6 @@ _EXPORTS = {
     "_severity_breakdown_from_rows": "agent_bom.api.storage.hub_filters",
     "_severity_breakdown_from_current_rows": "agent_bom.api.storage.hub_filters",
     "_payload_is_kev": "agent_bom.api.storage.hub_filters",
-    "_kev_json_cond_sqlite": "agent_bom.api.storage.hub_filters",
     "_current_kev_count_from_rows": "agent_bom.api.storage.hub_filters",
     "_framework_slug_counts_from_rows": "agent_bom.api.storage.hub_filters",
     "_redact_finding": "agent_bom.api.storage.hub_filters",

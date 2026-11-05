@@ -32,6 +32,7 @@ from agent_bom.api.docs_ui import configure_docs
 from agent_bom.api.error_envelope import ERROR_RESPONSES, install_error_envelope
 from agent_bom.api.experimental_gate import ExperimentalFeatureHealth, SystemHealthResponse
 from agent_bom.api.foreground_activity import ForegroundActivityMiddleware
+from agent_bom.api.hub_materialization import run_materialization_tick
 from agent_bom.api.middleware import (
     DEFAULT_SCAN_RATE_LIMIT_RPM,
     MAX_RATE_LIMIT_RPM,
@@ -704,9 +705,8 @@ async def _cleanup_tick() -> None:
     except Exception:  # noqa: BLE001
         _logger.debug("hub observations retention skipped", exc_info=False)
     # Generic partition maintenance for the other append-only tables (#3463):
-    # ensure next partitions exist and roll over expired ones. Postgres-only;
-    # a strict no-op on SQLite and on any table an operator has not converted
-    # to declarative partitioning. Fail-open like the hooks above.
+    # ensure next partitions exist and roll over expired ones (Postgres-only;
+    # a no-op on any table not converted to partitioning). Fail-open.
     try:
         from agent_bom.api.partition_maintenance import run_partition_retention
 
@@ -718,6 +718,7 @@ async def _cleanup_tick() -> None:
                 partitions_created,
                 partitions_dropped,
             )
+        await asyncio.to_thread(run_materialization_tick)
     except Exception:  # noqa: BLE001
         _logger.debug("partition maintenance skipped", exc_info=False)
     # NHI lifecycle enforcement (#nhi): expire lingering JIT grants, opt-in

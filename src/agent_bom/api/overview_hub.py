@@ -8,6 +8,7 @@ from typing import Any, NoReturn
 
 from fastapi import HTTPException, Request
 
+from agent_bom.api import compliance_hub_store
 from agent_bom.api.overview_rollup import (
     _COVERAGE_DOMAINS,
     _COVERAGE_LABELS,
@@ -249,15 +250,22 @@ def _hub_top_risks(
     return [_finding_top_risk(row) for row in rows or [] if isinstance(row, dict)]
 
 
+def overview_finding_counts(exec_counts: dict[str, Any], request: Request) -> dict[str, Any]:
+    """Occurrence counts; KEV is a lower bound while rows await backfill."""
+    pending = getattr(compliance_hub_store.get_compliance_hub_store(), "current_materialization_pending", None)
+    counts = {key: exec_counts[key] for key in ("critical", "high", "medium", "low", "unrated", "total", "kev")}
+    return {**counts, "kev_approximate": bool(pending(_tenant_id(request))) if callable(pending) else False}
+
+
 def _hub_coverage_snapshot(
     request: Request,
     hub_store: Any,
     revision: int | None,
 ) -> tuple[dict[str, dict[str, int]], str]:
-    """One bounded keyset pass for all lanes, cached at the durable revision.
+    """All lane counts for one revision: the store aggregate when it can answer.
 
-    Exact persisted domain aggregates are not available. Row/deadline exhaustion
-    retains known counts and marks every lane partial, including zero-count lanes.
+    Otherwise one bounded keyset pass. Row/deadline exhaustion retains known
+    counts and marks every lane partial, including zero-count lanes.
     """
     from agent_bom.api import hub_overview_cache, time_window
     from agent_bom.api.compliance_hub_store import scope_filter_deadline_seconds, scope_filter_scan_budget
@@ -274,12 +282,18 @@ def _hub_coverage_snapshot(
     pager = getattr(hub_store, "list_current_page", None)
     if not callable(pager):
         return lanes, "unavailable"
+    since = time_window.window_since_iso(time_window.normalize_window_days(None))
     remaining = scope_filter_scan_budget()
     deadline = time.monotonic() + scope_filter_deadline_seconds()
     cursor: str | None = None
     status = "partial"
-    since = time_window.window_since_iso(time_window.normalize_window_days(None))
+    aggregate = getattr(hub_store, "current_coverage_counts", None)
     try:
+        exact = aggregate(tenant_id, origin="bulk_ingest", status="open", since=since) if callable(aggregate) else None
+        if isinstance(exact, dict):
+            if revision is not None:
+                hub_overview_cache.set_cached_coverage(tenant_id, revision, exact, "complete")
+            return exact, "complete"
         while remaining > 0 and time.monotonic() < deadline:
             page, _total, next_cursor = pager(
                 tenant_id,

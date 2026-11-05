@@ -317,7 +317,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
         total: summary.total,
       } : importedSeverity;
     }
-    if (counts?.issues) return openIssueSeverity(counts) ?? counts.issues;
+    if (counts?.issues && !counts.issues.approximate) return openIssueSeverity(counts) ?? counts.issues;
     // Same issue-group unit as /v1/posture/counts, so the first frame never
     // shows occurrence totals that later change into issue totals.
     if (overview?.issue_counts) return overview.issue_counts;
@@ -387,7 +387,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
   const highCount = canonicalSeverity.high;
   const displayedKevCount = importedReport
     ? kevCount
-    : (counts?.issues?.kev ?? (overview?.issue_counts ? (overview.issue_counts.kev ?? overview.headline.kev) : undefined) ?? overview?.finding_counts?.kev ?? counts?.kev ?? overview?.headline.kev ?? 0);
+    : ((counts?.issues?.approximate ? undefined : counts?.issues?.kev) ?? (overview?.issue_counts ? (overview.issue_counts.kev ?? overview.headline.kev) : undefined) ?? overview?.finding_counts?.kev ?? counts?.kev ?? overview?.headline.kev ?? 0);
   const displayedKevOccurrences = importedReport ? null : (overview?.finding_counts?.kev ?? counts?.kev ?? null);
   const displayedCredentialExposure = importedReport
     ? credentialExposureCount
@@ -495,6 +495,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
         high={highCount}
         kev={summaryReady ? displayedKevCount : null}
         kevOccurrences={summaryReady ? displayedKevOccurrences : null}
+        kevApproximate={!importedReport && overview?.finding_counts?.kev_approximate === true}
         credentials={summaryReady ? displayedCredentialExposure : null}
         agents={displayedAgentCount}
         scans={importedReport ? 1 : overviewSnapshot ? overviewSnapshot.headline.scans : summaryReady ? (counts?.scan_count ?? effectiveRecentJobs.length) : null}

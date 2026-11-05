@@ -34,6 +34,7 @@ export function OverviewCockpit({
   high,
   kev,
   kevOccurrences = null,
+  kevApproximate = false,
   credentials,
   agents,
   scans,
@@ -103,6 +104,7 @@ export function OverviewCockpit({
                 high={high}
                 kev={kev}
                 kevOccurrences={kevOccurrences}
+                kevApproximate={kevApproximate}
                 credentials={credentials}
                 complianceScore={complianceScore}
                 severity={severity}

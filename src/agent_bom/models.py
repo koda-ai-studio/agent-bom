@@ -303,6 +303,7 @@ class AIBOMReport:
     skill_audit_data: Optional[dict[str, Any]] = None  # Serialized SkillAuditResult (set by CLI)
     trust_assessment_data: Optional[dict[str, Any]] = None  # Serialized TrustAssessmentResult (set by CLI)
     prompt_scan_data: Optional[dict[str, Any]] = None  # Serialized PromptScanResult (set by CLI)
+    delta_pruned_finding_ids: set[str] = field(default_factory=set)  # Pre-existing findings --delta removed from every projection
     model_files: list[dict[str, Any]] = field(default_factory=list)
     model_manifests: list[dict[str, Any]] = field(default_factory=list)
     model_provenance: list[dict[str, Any]] = field(default_factory=list)  # HuggingFace provenance results
@@ -680,6 +681,7 @@ class AIBOMReport:
         from agent_bom.domain.finding_merge import merge_external_code_findings
 
         base = merge_external_code_findings(base)
+        base = [finding for finding in base if str(finding.id) not in self.delta_pruned_finding_ids]
         if self.codeowners:
             apply_codeowners(base, self.codeowners)
         return base

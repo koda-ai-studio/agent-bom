@@ -201,13 +201,57 @@ def possibly_affected_section(rows: list[dict[str, Any]], limit: int) -> list[st
     return [*lines, ""]
 
 
-def render_summary(rows: list[dict[str, Any]], *, exit_code: str, scan_type: str, result_file: str, limit: int = 10) -> str:
+def _load(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def scan_outcome(data: dict[str, Any]) -> str:
+    """The scanner's own outcome (complete, partial or failed), or empty when it wrote none."""
+    if "runs" in data:
+        run = (data.get("runs") or [{}])[0] or {}
+        return str((run.get("properties") or {}).get("scan_outcome") or "")
+    scan_run = data.get("scan_run")
+    return str(scan_run.get("outcome") or "") if isinstance(scan_run, dict) else ""
+
+
+def _has_malicious(data: dict[str, Any]) -> bool:
+    if "runs" in data:
+        results = ((data.get("runs") or [{}])[0] or {}).get("results") or []
+        return any(isinstance(item, dict) and (item.get("properties") or {}).get("is_malicious") for item in results)
+    return any(isinstance(item, dict) and item.get("is_malicious") for item in data.get("findings") or [])
+
+
+def report_only_verdict(path: Path) -> str:
+    """How a report-only step reads a scan that exited 1: complete, partial or blocked.
+
+    A known-malicious package and anything the report cannot explain stay blocked,
+    because exit 1 then is not a severity verdict the operator chose to ignore.
+    """
+    data = _load(path)
+    outcome = scan_outcome(data)
+    return outcome if outcome in {"complete", "partial"} and not _has_malicious(data) else "blocked"
+
+
+def coverage_lines(outcome: str) -> list[str]:
+    if outcome != "partial":
+        return []
+    return ["**Partial scan:** a collector did not finish, so these results are incomplete. See `scan_run.issues` in the report.  "]
+
+
+def render_summary(
+    rows: list[dict[str, Any]], *, exit_code: str, scan_type: str, result_file: str, limit: int = 10, outcome: str = ""
+) -> str:
     rows, possibly = _split(rows)
     return "\n".join(
         [
             "## agent-bom scan summary",
             "",
             f"**Status:** {status_line(exit_code, len(rows))}  ",
+            *coverage_lines(outcome),
             f"**Scan type:** `{_cell(scan_type)}` · **Findings:** {len(rows)} ({severity_counts(rows)})  ",
             f"**Result file:** `{_cell(result_file)}`" if result_file else "",
             "",
@@ -220,7 +264,7 @@ def render_summary(rows: list[dict[str, Any]], *, exit_code: str, scan_type: str
     )
 
 
-def render_comment(rows: list[dict[str, Any]], *, exit_code: str, limit: int = 10) -> str:
+def render_comment(rows: list[dict[str, Any]], *, exit_code: str, limit: int = 10, outcome: str = "") -> str:
     rows, possibly = _split(rows)
     return "\n".join(
         [
@@ -228,6 +272,7 @@ def render_comment(rows: list[dict[str, Any]], *, exit_code: str, limit: int = 1
             "## agent-bom security scan",
             "",
             f"**Status:** {status_line(exit_code, len(rows))}  ",
+            *coverage_lines(outcome),
             f"**Findings:** {len(rows)} ({severity_counts(rows)})",
             "",
             findings_table(rows, limit),
@@ -239,19 +284,29 @@ def render_comment(rows: list[dict[str, Any]], *, exit_code: str, limit: int = 1
 
 
 def main(argv: list[str] | None = None) -> int:
+    # GitHub reads workflow commands and summaries as UTF-8; a Windows console defaults to cp1252.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=["summary", "comment"])
+    parser.add_argument("mode", choices=["summary", "comment", "report-only-verdict"])
     parser.add_argument("result_file", type=Path)
     parser.add_argument("--exit-code", default=os.environ.get("EXIT_CODE", ""))
     parser.add_argument("--scan-type", default=os.environ.get("INPUT_SCAN_TYPE", "scan"))
     parser.add_argument("--limit", type=int, default=10)
     args = parser.parse_args(argv)
+    if args.mode == "report-only-verdict":
+        print(report_only_verdict(args.result_file))
+        return 0
     rows = load_rows(args.result_file) if args.result_file.is_file() else []
+    outcome = scan_outcome(_load(args.result_file))
     if args.mode == "summary":
         result = str(args.result_file) if args.result_file.is_file() else ""
-        sys.stdout.write(render_summary(rows, exit_code=args.exit_code, scan_type=args.scan_type, result_file=result, limit=args.limit))
+        rendered = render_summary(
+            rows, exit_code=args.exit_code, scan_type=args.scan_type, result_file=result, limit=args.limit, outcome=outcome
+        )
     else:
-        sys.stdout.write(render_comment(rows, exit_code=args.exit_code, limit=args.limit))
+        rendered = render_comment(rows, exit_code=args.exit_code, limit=args.limit, outcome=outcome)
+    sys.stdout.write(rendered)
     return 0
 
 

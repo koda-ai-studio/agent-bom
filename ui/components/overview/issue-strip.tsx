@@ -62,8 +62,9 @@ export function CategoryChip({
 }
 
 /** KEV is counted in issues, like the tiles; occurrences are named, never a bare second total. */
-export function kevChipTitle(issues: number, occurrences: number | null | undefined): string {
-  const issueText = `${issues.toLocaleString()} known-exploited issue${issues === 1 ? "" : "s"} (CISA KEV)`;
+export function kevChipTitle(issues: number, occurrences: number | null | undefined, approximate = false): string {
+  const issueText = `${approximate ? "At least " : ""}${issues.toLocaleString()} known-exploited issue${issues === 1 ? "" : "s"} (CISA KEV)`;
+  if (approximate) return `${issueText}; older findings are still being indexed`;
   return occurrences != null && occurrences !== issues ? `${issueText} · ${occurrences.toLocaleString()} findings` : issueText;
 }
 
@@ -74,6 +75,7 @@ export function SeverityIssueStrip({
   high,
   kev,
   kevOccurrences = null,
+  kevApproximate = false,
   credentials,
   complianceScore,
   severity,
@@ -86,6 +88,7 @@ export function SeverityIssueStrip({
   high: number;
   kev: number | null;
   kevOccurrences?: number | null | undefined;
+  kevApproximate?: boolean | undefined;
   credentials: number | null;
   complianceScore?: string | undefined;
   severity: SeverityCounts;
@@ -151,7 +154,7 @@ export function SeverityIssueStrip({
                 icon={Flame}
                 label="KEV"
                 value={kev}
-                title={kevChipTitle(kev, kevOccurrences)}
+                title={kevChipTitle(kev, kevOccurrences, kevApproximate)}
               />
             ) : null}
             {summaryReady && credentials != null ? (

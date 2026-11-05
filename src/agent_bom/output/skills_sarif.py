@@ -149,10 +149,10 @@ def _relative_path(path: str) -> str:
     p = Path(path)
     if p.is_absolute():
         try:
-            return str(p.relative_to(Path.cwd()))
+            return p.relative_to(Path.cwd()).as_posix()
         except ValueError:
             return p.name
-    return path
+    return path.replace("\\", "/")
 
 
 def _text(field_name: str, value: Any, *, fallback: str = "") -> str:

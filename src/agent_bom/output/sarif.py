@@ -34,7 +34,6 @@ from agent_bom.output.possibly_affected import add_sarif_results as add_possibly
 from agent_bom.output.sarif_common import (
     _SARIF_SEVERITY_MAP,
     _SECURITY_SEVERITY_SCORE,
-    _ecosystem_from_purl,
     _sanitize_sarif_property,
     _sarif_fingerprint_fields,
     _sarif_invocation,
@@ -42,8 +41,10 @@ from agent_bom.output.sarif_common import (
     _sarif_run_properties,
     _sarif_severity,
     _SarifCatalog,
-    _to_relative_path,
+    enforce_physical_locations,
+    identity_uri,
 )
+from agent_bom.output.sarif_finding_identity import finding_file_uri, number_repeated_identities, unified_identity
 from agent_bom.output.sarif_scanners import (
     _DEDICATED_CIS_PROVIDERS,
     _add_ai_inventory_results,
@@ -62,7 +63,6 @@ from agent_bom.output.sarif_taxonomy import (
 )
 from agent_bom.output.source_locations import (
     SourceIndex,
-    evidence_relative_path,
     finding_image_reference,
     finding_package_location,
     package_source_index,
@@ -370,6 +370,28 @@ def _ai_assessment_result_properties(assessment: Any) -> dict[str, Any]:
     return props
 
 
+def _package_provenance_properties(finding: Finding) -> dict[str, Any]:
+    props: dict[str, Any] = {}
+    package_provenance = evidence(finding, "package_discovery_provenance")
+    if package_provenance:
+        props["package_discovery_provenance"] = _sanitize_sarif_property(package_provenance)
+    version_provenance = evidence(finding, "package_version_provenance")
+    if version_provenance is not None:
+        props["package_version_provenance"] = _sanitize_sarif_property(version_provenance)
+    for verdict_key in (
+        "package_integrity_verified",
+        "package_provenance_attested",
+        "package_provenance_source",
+        "package_provenance_status",
+    ):
+        # --verify-integrity verdict. Omitted when the check never ran, so a
+        # missing key never reads as "verification failed".
+        verdict_value = evidence(finding, verdict_key, None)
+        if verdict_value is not None:
+            props[verdict_key] = verdict_value
+    return props
+
+
 def _cve_sarif_result(
     report: AIBOMReport,
     finding: Finding,
@@ -393,15 +415,16 @@ def _cve_sarif_result(
         message_text += f" Exposure path: {exposure_chain}. Blast radius: {exposure_path_blast_summary(exposure_path)}."
 
     config_path, start_line = finding_package_location(finding, source_index or {})
-    fp_input = f"{rule_id}:{pkg_name}:{pkg_version}:{config_path}"
+    scanned_artifact = finding_image_reference(finding, report)
+    fp_input = f"{rule_id}:{pkg_name}:{pkg_version}:{identity_uri(config_path, report)}"
     kind = "informational" if sev == Severity.NONE else "fail"
     result: dict = {
         "ruleId": rule_id,
         "level": level,
         "kind": kind,
         "message": {"text": sanitize_advisory_text("title", message_text, fallback=f"{rule_id} package vulnerability")},
-        **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=config_path, start_line=start_line),
-        "locations": [_sarif_location(config_path, start_line, scanned_artifact=finding_image_reference(finding, report))],
+        **_sarif_fingerprint_fields(stable_input=fp_input),
+        "locations": [_sarif_location(config_path, start_line, scanned_artifact=scanned_artifact)],
     }
     related_locations = _exposure_related_locations(exposure_path)
     if related_locations:
@@ -461,24 +484,10 @@ def _cve_sarif_result(
     }
     if finding.fixed_version:
         result_properties["fixed_version"] = finding.fixed_version
+    if scanned_artifact:
+        result_properties["scanned_artifact"] = scanned_artifact
     result_properties.update({key: value for key in ("vex_status", "vex_justification", "vex_source") if (value := evidence(finding, key))})
-    package_provenance = evidence(finding, "package_discovery_provenance")
-    if package_provenance:
-        result_properties["package_discovery_provenance"] = _sanitize_sarif_property(package_provenance)
-    version_provenance = evidence(finding, "package_version_provenance")
-    if version_provenance is not None:
-        result_properties["package_version_provenance"] = _sanitize_sarif_property(version_provenance)
-    for verdict_key in (
-        "package_integrity_verified",
-        "package_provenance_attested",
-        "package_provenance_source",
-        "package_provenance_status",
-    ):
-        # --verify-integrity verdict. Omitted when the check never ran, so a
-        # missing key never reads as "verification failed".
-        verdict_value = evidence(finding, verdict_key, None)
-        if verdict_value is not None:
-            result_properties[verdict_key] = verdict_value
+    result_properties.update(_package_provenance_properties(finding))
     agent_provenance = _agent_discovery_provenance_from_report(report, list(finding.affected_agents))
     if agent_provenance:
         result_properties["agent_discovery_provenance"] = _sanitize_sarif_property(agent_provenance)
@@ -660,22 +669,11 @@ def _unified_finding_properties(finding: Finding, rule_id: str, evidence: dict[s
     }
 
 
-def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence: dict[str, Any]) -> dict[str, Any]:
-    location = finding.asset.location
-    file_path = _to_relative_path(location, _ecosystem_from_purl(finding.asset.identifier)) if location else None
-    if file_path is None or file_path.startswith("<"):  # a redacted <path:...> label is not a URI
-        file_path = evidence_relative_path(finding.evidence)
+def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence: dict[str, Any], report: AIBOMReport) -> dict[str, Any]:
+    file_path = finding_file_uri(finding, report)
     raw_start_line = finding.evidence.get("line_number") or finding.evidence.get("line") or finding.evidence.get("source_line")
     start_line = raw_start_line if isinstance(raw_start_line, int) and raw_start_line > 0 else 1
-    fingerprint_uri = file_path or f"{finding.asset.asset_type}:{finding.asset.stable_id}"
-    fp_input = f"{finding.id}:{fingerprint_uri}:{finding.asset.stable_id}"
-    fingerprint_fields = _sarif_fingerprint_fields(
-        stable_input=fp_input,
-        artifact_uri=fingerprint_uri,
-        start_line=start_line,
-    )
-    if file_path is None:
-        fingerprint_fields.pop("partialFingerprints", None)
+    fp_input = unified_identity(finding, rule_id, file_path, report)
     finding_result: dict = {
         "ruleId": rule_id,
         "level": level,
@@ -687,7 +685,7 @@ def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence
                 fallback=_sanitize_scanner_text("description", finding.description, fallback=finding.finding_type.value),
             )
         },
-        **fingerprint_fields,
+        **_sarif_fingerprint_fields(stable_input=fp_input),
         "properties": _unified_finding_properties(finding, rule_id, evidence),
     }
     if file_path is not None:
@@ -713,7 +711,8 @@ def _add_unified_finding_results(catalog: _SarifCatalog, report: AIBOMReport) ->
             catalog.rules.append(_unified_finding_rule(finding, rule_id, level, security_severity))
         elif finding.cwe_ids:
             _merge_rule_cwe_tags(catalog.rules, rule_id, finding.cwe_ids)
-        catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence))
+        catalog.results.append(_unified_finding_result(finding, rule_id, level, evidence, report))
+    number_repeated_identities(catalog.results)
 
 
 def _build_sarif_run(report: AIBOMReport, catalog: _SarifCatalog, scan_run: ScanRun) -> dict[str, Any]:
@@ -765,6 +764,7 @@ def to_sarif(
     _add_ai_inventory_results(catalog, report)
     _add_cis_benchmark_results(catalog, report)
     add_possibly_affected_sarif(catalog.rules, catalog.results, report)
+    enforce_physical_locations(catalog.results)
     document: dict[str, Any] = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
         "version": "2.1.0",

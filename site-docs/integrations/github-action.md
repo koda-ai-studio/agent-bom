@@ -99,8 +99,9 @@ critical finding now exists on the default branch.
 `scan --baseline <file> --delta`: the report, SARIF, summary and every gate
 cover only findings that are new. This works for every finding type (CVEs,
 IaC, workflow, skill, secret and posture findings). Non-CVE findings are
-matched by type, file, rule and message with line numbers ignored, so moving
-code does not reopen them.
+matched by type, file, rule and message with line numbers and the checkout
+folder name ignored, so moving code or scanning from a differently named folder
+does not reopen them.
 
 ```yaml
 name: agent-bom new findings
@@ -137,6 +138,26 @@ jobs:
 Both checkouts sit in their own directory so neither scan includes the other.
 `baseline` applies to `scan-type: scan`; other scan types fail with an error
 rather than gate on every finding.
+
+`severity-threshold: ''` makes the baseline step report-only:
+
+- Severity findings do not fail the step; `exit-code` still reports what the
+  scanner returned, and `scan-status` is `violations`.
+- A partial scan does not fail it either, because the gate step still needs its
+  report. It emits a warning, `scan-status` is `partial`, and the summary says the
+  results are incomplete. Findings a partial baseline missed read as new, so the
+  gate errs towards failing.
+- A known-malicious package, a failed or unreadable scan, and an explicit `policy`
+  or `fail-on-kev` gate still fail the step.
+
+The gate step keeps the default threshold and fails closed, including on a partial
+scan of the head checkout. A report from before the folder-independent matching
+still matches. A report with no `findings` list suppresses nothing, so every
+non-CVE finding reads as new rather than clean.
+
+Uploading the gate's SARIF from this layout would show `head/...` paths, because
+GitHub resolves them from the repository root. Keep `upload-sarif` on a separate
+scan of a normal checkout, as in the full pull request gate above.
 
 ## MCP gate
 
@@ -240,6 +261,11 @@ walks through the whole flow.
 - [GitLab CI](https://github.com/koda-ai-studio/agent-bom/blob/main/examples/ci/gitlab-ci.yml)
 - [Azure Pipelines](https://github.com/koda-ai-studio/agent-bom/blob/main/examples/ci/azure-pipelines.yml)
 - [Bitbucket Pipelines](https://github.com/koda-ai-studio/agent-bom/blob/main/examples/ci/bitbucket-pipelines.yml)
+
+Every SARIF result carries the physical location GitHub requires. A finding
+with no repository file (a package from an image or a self-scan, for example) uses
+a marked `agent-bom-findings/...` path that is not a real file, with
+`properties.no_source_file: true` and its identity in `logicalLocations`.
 
 For SARIF upload problems see
 [GitHub Action SARIF troubleshooting](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/GITHUB_ACTION_SARIF_TROUBLESHOOTING.md),

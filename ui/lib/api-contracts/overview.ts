@@ -325,7 +325,10 @@ export interface OverviewResponse {
   /** True while a demo-estate server is still seeding its first evidence. */
   demo_estate_seeding?: boolean;
   /** Counts from the same evidence snapshot as posture and top_risks. */
-  finding_counts?: Pick<PostureCountsResponse, "critical" | "high" | "medium" | "low" | "unrated" | "total" | "kev">;
+  finding_counts?: Pick<PostureCountsResponse, "critical" | "high" | "medium" | "low" | "unrated" | "total" | "kev"> & {
+    /** True while rows await backfill: `kev` is then a lower bound. */
+    kev_approximate?: boolean | undefined;
+  };
   /** Open issue-group counts shared with /v1/posture/counts; null when unavailable. */
   issue_counts?: (Omit<IssueSeverityCounts, "kev"> & { kev?: number | null | undefined }) | null;
   schema_version: string;

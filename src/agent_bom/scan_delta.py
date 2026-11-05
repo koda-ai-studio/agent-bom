@@ -8,8 +8,9 @@ The delta key for CVEs is (vulnerability_id, ecosystem, package_name).
 Package versions stay in inventory diffs, but do not reclassify an existing CVE
 as new during remediation. Every other finding type (IaC, secrets, skills,
 posture) is keyed by type, asset location, title and description with line
-references removed. Exit code is based on *new* findings only; pre-existing
-findings are suppressed.
+references and the checkout folder name removed, so scanning a baseline and a
+head from differently named folders compares like with like. Exit code is based
+on *new* findings only; pre-existing findings are suppressed.
 """
 
 from __future__ import annotations
@@ -18,11 +19,12 @@ import json
 import logging
 import re
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from pathlib import Path
 from typing import Any, Optional
 
 from agent_bom.package_utils import vulnerability_occurrence_key
+from agent_bom.parsers.prompt_scanner import prompt_scan_data_to_findings
 from agent_bom.storage import state_home
 
 _logger = logging.getLogger(__name__)
@@ -78,6 +80,15 @@ def load_baseline(path: str | Path) -> dict:
     if "blast_radius" not in data:
         raise ValueError(f"Baseline file does not look like an agent-bom scan output (missing 'blast_radius' key): {p}")
     return data
+
+
+def baseline_scan_outcome(baseline: Mapping[str, Any]) -> str:
+    """The baseline scan's own outcome, ``unknown`` when the report predates it."""
+    scan_run = baseline.get("scan_run")
+    outcome = str((scan_run.get("outcome") if isinstance(scan_run, Mapping) else None) or "unknown")
+    if outcome != "complete":
+        _logger.warning("Delta baseline scan was %s: findings it missed are reported as new.", outcome)
+    return outcome
 
 
 def save_baseline(scan_json: dict, path: str | Path | None = None) -> Path:
@@ -223,29 +234,83 @@ def apply_delta_to_scan(
 FindingDeltaKey = tuple[str, str, str, str]
 
 _LINE_REFERENCE = re.compile(r":\d+(?::\d+)?\b|\blines?\s+\d+(?:\s*[-–]\s*\d+)?", re.IGNORECASE)
+_PROJECT_NAME = re.compile(r"(?<![\w.-])project:(?!<scan-root>)[^\s→,;:]+")
+_CONFIG_PATH_HASH = re.compile(r"\bcfg-[0-9a-f]{12}\b")
+# These producers report paths from the working directory, so the scan root is part of
+# them. IaC and other producers report from the scan root: a leading folder there is
+# a real repository directory and must stay.
+_WORKDIR_RELATIVE_ASSET_TYPES = frozenset({"skill_file"})
+_DERIVED_UUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 
 
 def _without_line_refs(text: str) -> str:
     return " ".join(_LINE_REFERENCE.sub("", text).split())
 
 
-def finding_delta_key(finding: Mapping[str, Any]) -> FindingDeltaKey | None:
-    """Return the line-independent delta key of a serialized unified finding.
+def scan_root_labels(report: Mapping[str, Any]) -> set[str]:
+    """Folder names the report knows its scan root by.
 
-    CVE findings return ``None``: they are matched by the package-occurrence
-    key above, which survives package upgrades.
+    Each report names its own root, in the project agent and the project
+    inventory, so a baseline from an older release is normalized the same way.
+    """
+    labels: set[str] = set()
+    inventory = report.get("project_inventory")
+    root = inventory.get("root") if isinstance(inventory, Mapping) else None
+    if isinstance(root, str) and root:
+        labels.add(root.removeprefix("<path:").removesuffix(">").replace("\\", "/").rstrip("/").rsplit("/", 1)[-1])
+    for agent in report.get("agents") or []:
+        name = agent.get("name") if isinstance(agent, Mapping) else None
+        if isinstance(name, str) and name.startswith("project:"):
+            labels.add(name.removeprefix("project:"))
+    return {label for label in labels if label and label != "."}
+
+
+def canonical_identity_text(text: str, roots: Collection[str] = ()) -> str:
+    """Remove the checkout folder and line references from text used as identity.
+
+    Only the ``project:<root>`` agent name, its ``<path:<root>>`` label and the
+    config-path hash in graph ids carry the folder. Repository paths are left
+    alone: ``base/pod.yaml`` is a real file in many repositories, and rewriting
+    it would turn a folder named like a checkout into a false new finding.
+    """
+    for root in sorted(roots, key=len, reverse=True):
+        text = re.sub(rf"(?<![\w.-])project:{re.escape(root)}(?![\w.-])", "project:<scan-root>", text)
+        text = text.replace(f"<path:{root}>", "<path:scan-root>")
+    if not roots:  # a report that names no root: a cloud "project:prod" is only rewritten then
+        text = _PROJECT_NAME.sub("project:<scan-root>", text)
+    return _without_line_refs(_CONFIG_PATH_HASH.sub("cfg", text))
+
+
+def _asset_identity(asset: Mapping[str, Any], roots: Collection[str]) -> str:
+    identifier = str(asset.get("identifier") or "")
+    # A UUID identifier is derived from the asset's name and path, so it carries the folder.
+    usable_identifier = "" if _DERIVED_UUID.fullmatch(identifier) else identifier
+    location = str(asset.get("location") or usable_identifier or asset.get("name") or "")
+    if asset.get("asset_type") in _WORKDIR_RELATIVE_ASSET_TYPES:
+        for root in sorted(roots, key=len, reverse=True):
+            location, count = re.subn(rf"^(?:.*?/)?{re.escape(root)}/", "", location, count=1)
+            if count:
+                break
+    return canonical_identity_text(location, roots)
+
+
+def finding_delta_key(finding: Mapping[str, Any], roots: Collection[str] = ()) -> FindingDeltaKey | None:
+    """Return the line- and checkout-independent delta key of a serialized unified finding.
+
+    ``roots`` are the folder names of the scan the finding came from. CVE
+    findings return ``None``: they are matched by the package-occurrence key
+    above, which survives package upgrades.
     """
     finding_type = str(finding.get("finding_type") or "")
     if not finding_type or finding_type == "CVE":
         return None
     raw_asset = finding.get("asset")
     asset: Mapping[str, Any] = raw_asset if isinstance(raw_asset, Mapping) else {}
-    location = str(asset.get("location") or asset.get("identifier") or asset.get("name") or "")
     return (
         finding_type,
-        location,
-        _without_line_refs(str(finding.get("title") or "")),
-        _without_line_refs(str(finding.get("description") or "")),
+        _asset_identity(asset, roots),
+        canonical_identity_text(str(finding.get("title") or ""), roots),
+        canonical_identity_text(str(finding.get("description") or ""), roots),
     )
 
 
@@ -257,7 +322,7 @@ class FindingDelta:
         self.pre_existing_ids = pre_existing_ids
 
 
-def compute_finding_delta(current_findings: list[dict], baseline: dict) -> FindingDelta:
+def compute_finding_delta(current_findings: list[dict], baseline: dict, *, current_roots: Collection[str] = ()) -> FindingDelta:
     """Split current non-CVE findings into new and pre-existing by delta key.
 
     Matching is a multiset: two identical occurrences against one baseline
@@ -265,17 +330,18 @@ def compute_finding_delta(current_findings: list[dict], baseline: dict) -> Findi
     ``findings`` list (older reports) suppresses nothing, so the gate fails
     closed rather than hiding findings it cannot prove were already present.
     """
+    baseline_roots = scan_root_labels(baseline)
     baseline_counts: Counter[FindingDeltaKey] = Counter()
     for item in baseline.get("findings") or []:
         if isinstance(item, Mapping):
-            key = finding_delta_key(item)
+            key = finding_delta_key(item, baseline_roots)
             if key is not None:
                 baseline_counts[key] += 1
 
     new_ids: set[str] = set()
     pre_existing_ids: set[str] = set()
     for item in current_findings:
-        key = finding_delta_key(item)
+        key = finding_delta_key(item, current_roots)
         finding_id = str(item.get("id") or "")
         if key is None or not finding_id:
             continue
@@ -306,15 +372,27 @@ def prune_pre_existing_findings(report: Any, pre_existing_ids: set[str]) -> int:
     """Drop pre-existing non-CVE findings from every report block that emits them.
 
     Unified findings are projected from several side blocks, so each source is
-    pruned in place; every renderer and exit gate then reads the same
-    new-only set. Returns how many pre-existing ids are still emitted by a
-    block that cannot be pruned here (logged, never hidden).
+    pruned in place and the rest are excluded by id wherever they are
+    re-projected; every renderer and exit gate then reads the same new-only
+    set. Returns how many pre-existing ids are still emitted (logged, never hidden).
     """
     if not pre_existing_ids:
         return 0
     from agent_bom.finding import iac_finding_to_finding, secret_dict_to_finding
 
+    report.delta_pruned_finding_ids = set(pre_existing_ids)
     report.findings = [finding for finding in report.findings if str(finding.id) not in pre_existing_ids]
+
+    prompt_scan = report.prompt_scan_data
+    if isinstance(prompt_scan, dict) and isinstance(prompt_scan.get("findings"), list):
+        report.prompt_scan_data = {
+            **prompt_scan,
+            "findings": [
+                item
+                for item in prompt_scan["findings"]
+                if not any(str(found.id) in pre_existing_ids for found in prompt_scan_data_to_findings({"findings": [item]}))
+            ],
+        }
 
     iac_data = report.iac_findings_data
     if isinstance(iac_data, dict) and isinstance(iac_data.get("findings"), list):

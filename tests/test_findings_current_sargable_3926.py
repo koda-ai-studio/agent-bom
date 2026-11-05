@@ -103,6 +103,23 @@ def test_severity_count_uses_expression_index(tmp_path) -> None:
     assert "SCAN hub_findings_current" not in detail, detail
 
 
+def test_severity_index_is_upgraded_on_existing_databases(tmp_path) -> None:
+    store = _seed(tmp_path)
+    conn = store._conn
+    conn.execute("DROP INDEX idx_hub_findings_current_tenant_severity_ci")
+    conn.execute(
+        "CREATE INDEX idx_hub_findings_current_tenant_severity_ci ON hub_findings_current(tenant_id, LOWER(severity)) WHERE severity != ''"
+    )
+    conn.commit()
+
+    upgraded = SQLiteComplianceHubStore(str(tmp_path / "hub.db"))
+
+    row = upgraded._conn.execute(
+        "SELECT sql FROM sqlite_master WHERE name = 'idx_hub_findings_current_tenant_severity_ci'",
+    ).fetchone()
+    assert "LOWER(severity), severity" in row[0]
+
+
 def test_severity_filter_is_case_insensitive(tmp_path) -> None:
     store = _seed(tmp_path)
     # Seed stored "Medium" (mixed case) — a lowercase filter must still match.

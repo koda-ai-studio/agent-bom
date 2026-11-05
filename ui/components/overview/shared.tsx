@@ -85,6 +85,8 @@ export interface OverviewCockpitProps {
   kev: number | null;
   /** KEV finding occurrences; `kev` is on the issue unit of the tiles. */
   kevOccurrences?: number | null | undefined;
+  /** True while `kev` is a lower bound because rows await backfill. */
+  kevApproximate?: boolean | undefined;
   credentials: number | null;
   agents: number | null;
   scans: number | null;

@@ -32,6 +32,7 @@ class _CacheEntry:
 
 _lock = threading.Lock()
 _entries: dict[tuple[Any, ...], _CacheEntry] = {}
+_revisions: dict[str, int] = {}
 
 
 def _purge_expired(now: float) -> None:
@@ -89,10 +90,23 @@ def invalidate_tenant(tenant_id: str) -> None:
             _entries.pop(key, None)
 
 
+def sync_tenant_revision(tenant_id: str, revision: int | None) -> None:
+    """Forget totals counted before ``revision``, whichever replica wrote it."""
+    if revision is None:
+        return
+    with _lock:
+        if _revisions.get(tenant_id) == revision:
+            return
+        _revisions[tenant_id] = revision
+        for key in [key for key in _entries if key and key[0] == tenant_id]:
+            _entries.pop(key, None)
+
+
 def reset_findings_count_cache() -> None:
     """Test helper — never call from production code."""
     with _lock:
         _entries.clear()
+        _revisions.clear()
 
 
 def approximate_total_threshold() -> int | None:

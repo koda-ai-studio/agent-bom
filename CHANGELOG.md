@@ -10,6 +10,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- KEV counts and the `kev=true` filter no longer miss findings whose stored payload is compressed; existing rows are backfilled by migration `20261104_01`.
+- Overview, posture and grouped findings report exact issue counts from a store aggregate at any size, so totals no longer shrink as data grows and no severity reads 0 because a row budget ran out. Coverage lanes and the Vuln / SCA card are exact on the same basis.
+- First reads of overview, `kev=true` and posture counts no longer join the whole ledger; they read indexed columns.
+- Scoped reconciliation resolves findings whose source sits in a compressed payload, and a cached findings total is dropped once another replica writes.
+- SARIF uploads are accepted by GitHub code scanning: every result and related location has a physical location, and findings with no repository file use a marked `agent-bom-findings/` path with `properties.no_source_file` instead of a logical-only or `docker://` location. The upload action computes the line hash, so its per-result fingerprint warnings stop. Combination and prompt findings point at the MCP config and instruction file.
+- The GitHub Action treats an empty `severity-threshold` as report-only, as documented. A partial scan warns and reports `scan-status: partial` rather than stopping the baseline step; malicious packages, failed scans and explicit policy or KEV gates still fail it.
+- `--baseline --delta` and `agent-bom/v1` fingerprints no longer depend on the checkout folder name, so a docs-only pull request passes the documented gate. Older baselines still match.
+- The Action's job summary, annotations, pull request comment and MCP gate write UTF-8 on Windows runners instead of failing on `→`.
 - Container inventory probes executable headers before searching for Go build metadata, avoiding false coverage gaps for oversized data files.
 - Scoped npm namespace lookalikes are checked against ranked scoped targets while preserving unrelated namespaces and official package families.
 - Release preflight requires the exact main commit to pass every full Python correctness shard, combined coverage, UI lanes and runtime acceptance; an older green run cannot override a newer unsuccessful run.

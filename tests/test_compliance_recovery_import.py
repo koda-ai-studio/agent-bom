@@ -106,6 +106,40 @@ def test_compliance_recovery_rejects_secret_payloads(tmp_path, table):
         read_source(path, {"source": "target"}, ["compliance_hub"])
 
 
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_MAINTENANCE_URL"), reason="requires restricted-role Postgres")
+def test_recovered_rows_are_pending_until_materialized_with_their_kev_flag(tmp_path):
+    from agent_bom.api.postgres_common import _new_application_pool
+    from agent_bom.api.postgres_compliance_hub import PostgresComplianceHubStore
+    from tests.test_postgres_job_evidence_revision import tenant_scope
+
+    path = tmp_path / "kev.db"
+    source = SQLiteComplianceHubStore(str(path))
+    row = {"id": "kev", "vulnerability_id": "CVE-2091-1", "severity": "high", "source": "scan", "is_kev": True, "location": "d/" * 400}
+    source.ingest_batch_atomic(
+        "source",
+        [row],
+        observed_at="2026-01-01T00:00:00Z",
+        batch_id="b",
+        source="scan",
+        reconcile_absent=False,
+        present_canonical_ids={"kev"},
+    )
+    target = "recovery-" + uuid4().hex
+    pool = _new_application_pool(min_size=1, max_size=2)
+    try:
+        assert import_registries(path, {"source": target}, ["compliance_hub"], apply=True, pool=pool)["committed"]
+        with tenant_scope(target):
+            owner = PostgresComplianceHubStore(pool=pool)
+            assert owner.current_materialization_pending(target) is True
+        while owner.backfill_materialized_batch(100):
+            pass
+        with tenant_scope(target):
+            assert owner.current_materialization_pending(target) is False
+            assert owner.current_kev_count(target) == 1
+    finally:
+        pool.close()
+
+
 @pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires restricted-role Postgres")
 def test_compliance_recovery_preserves_resolved_lifecycle_and_is_repeatable(tmp_path):
     from agent_bom.api.postgres_common import _new_application_pool

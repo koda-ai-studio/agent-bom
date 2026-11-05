@@ -13,6 +13,7 @@ from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import _FINDING_GROUP_MAX_OCCURRENCES, _FINDING_GROUP_OCCURRENCE_SAMPLE, _normalize_facet_severity
 from agent_bom.api.finding_scope_filters import _finding_identity as _finding_identity
 from agent_bom.api.finding_view_filters import _copy_first_page_metadata as _copy_first_page_metadata
+from agent_bom.api.hub_reference_payload import payload_is_kev
 from agent_bom.core.severity import severity_rank
 from agent_bom.evidence.finding_lanes import finding_lane, lane_counts
 
@@ -99,6 +100,7 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
                 _package_version_set=set(),
             )
             grouped[group_id] = group
+        any_kev = payload_is_kev(row) or payload_is_kev(group)
         if severity_rank(str(row.get("severity") or "unknown")) > severity_rank(str(group.get("severity") or "unknown")):
             # An issue is as severe as its worst open occurrence. Taking the
             # first row instead made the issue histogram depend on list sort.
@@ -118,6 +120,8 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
             group.clear()
             group.update(row)
             group.update(aggregate)
+        if any_kev:
+            group["is_kev"] = True
         group["occurrence_count"] = int(group["occurrence_count"]) + 1
         _record_package_version(group, row)
         # The representative may be an image occurrence with no agent; the issue
@@ -157,7 +161,7 @@ def _attach_grouping_metadata(
         "scanned_occurrences": scanned,
         "scan_budget": _FINDING_GROUP_MAX_OCCURRENCES,
         "occurrence_total": sum(int(group.get("occurrence_count") or 0) for group in groups),
-        "kev_issue_total": sum(1 for group in groups if group.get("is_kev") or group.get("cisa_kev")),
+        "kev_issue_total": sum(1 for group in groups if payload_is_kev(group)),
         "occurrence_sample_limit": _FINDING_GROUP_OCCURRENCE_SAMPLE,
     }
     _copy_first_page_metadata(envelope, first_page, ("facets", "facets_approximate", "facet_metadata", "scope_completeness"))

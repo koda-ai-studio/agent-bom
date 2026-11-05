@@ -271,6 +271,13 @@ for the two that slipped through: it creates `fleet_endpoints` and adds
 `trend_history.scan_id` with its unique index on databases migrated before
 those shipped, and is a no-op on newer ones.
 
+Hub payloads of 512 bytes or more are zstd-wrapped at rest, so SQL must not read
+keys inside them. Filters, counts and sorts over current findings read columns
+(`severity`, `origin`, `scan_id`, `kev_direct`, `intel_ref`, `issue_group_id`,
+`lens_mask`), and `tests/test_hub_truthful_counts.py` fails on a new JSON read of a
+hub payload. `issue_group_id IS NULL` marks a row a pre-`20261104_01` writer left
+pending; such tenants report KEV as approximate until the backfill reaches them.
+
 Alembic refuses to run as a runtime role. `ALEMBIC_DATABASE_URL` must connect
 as the Postgres bootstrap/admin (migration owner) identity; a connection whose
 `current_user` is `agent_bom_app` or `agent_bom_rls_maintenance` fails before

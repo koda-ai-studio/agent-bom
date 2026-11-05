@@ -32,7 +32,14 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
     # Step 4h: Delta mode must run before rendering so JSON/SARIF artifacts
     # and CI exit gates both reflect the same new-only finding set.
     if opts.delta_mode:
-        from agent_bom.scan_delta import compute_delta, compute_finding_delta, load_baseline, prune_pre_existing_findings
+        from agent_bom.scan_delta import (
+            baseline_scan_outcome,
+            compute_delta,
+            compute_finding_delta,
+            load_baseline,
+            prune_pre_existing_findings,
+            scan_root_labels,
+        )
 
         _baseline_path = opts.baseline
         if not _baseline_path:
@@ -53,7 +60,11 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
                 _delta_result = compute_delta(st.current_report_json, _baseline_data)
                 _delta_result.baseline_path = _baseline_path
                 st.ctx.delta_result = _delta_result
-                _finding_delta = compute_finding_delta(list(st.current_report_json.get("findings") or []), _baseline_data)
+                _finding_delta = compute_finding_delta(
+                    list(st.current_report_json.get("findings") or []),
+                    _baseline_data,
+                    current_roots=scan_root_labels(st.current_report_json),
+                )
                 _unpruned = prune_pre_existing_findings(st.report, _finding_delta.pre_existing_ids)
                 st.report.delta_data = {
                     "enabled": True,
@@ -62,6 +73,7 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
                     "new_finding_count": len(_finding_delta.new_ids),
                     "pre_existing_finding_count": len(_finding_delta.pre_existing_ids) - _unpruned,
                     "baseline_path": _baseline_path,
+                    "baseline_scan_outcome": baseline_scan_outcome(_baseline_data),
                 }
 
                 _new_keys = {(d.get("vulnerability_id", "").upper(), d.get("package", "")) for d in _delta_result.new_items}
