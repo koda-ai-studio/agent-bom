@@ -248,7 +248,9 @@ def submit_claimed_scan_job(job: ScanJob, on_complete: Any) -> None:
 
     Mirrors :func:`submit_scan_job` but runs the tenant-bound runner and invokes
     ``on_complete(job_id)`` after the scan finishes so the dispatcher can free
-    local capacity and clear the job's dispatch-queue row.
+    local capacity and clear the job's dispatch-queue row. A run that raised or
+    was cancelled reports ``abandoned=True`` instead: its queue row is the only
+    thing that can still recover the job, so it must stay.
     """
     global _executor_active_jobs  # noqa: PLW0603
 
@@ -268,7 +270,10 @@ def submit_claimed_scan_job(job: ScanJob, on_complete: Any) -> None:
             _observe_scan_future(done_future)
         finally:
             try:
-                on_complete(job.job_id)
+                if done_future.cancelled() or done_future.exception() is not None:
+                    on_complete(job.job_id, abandoned=True)
+                else:
+                    on_complete(job.job_id)
             except Exception:  # noqa: BLE001
                 _logger.error("claimed scan on_complete callback failed job=%s", job.job_id)
 

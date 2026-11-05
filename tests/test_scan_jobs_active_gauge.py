@@ -256,6 +256,8 @@ def test_periodic_reaper_leaves_distributed_jobs_to_lease_recovery(monkeypatch, 
     )
     monkeypatch.setattr(store, "get", lambda *a, **kw: job)
     monkeypatch.setattr(store, "put", lambda job: writes.append(job.status))
+    monkeypatch.setattr(store, "unrecoverable_dispatch_rows", lambda *a: [])
+    monkeypatch.setattr(store, "stranded_pushed_jobs", lambda *a: [])
     monkeypatch.setattr(server, "_jobs", {job.job_id: job})
     now = datetime(2026, 4, 29, tzinfo=timezone.utc)
     assert fail_stale_active_scan_jobs(store, timeout_seconds=1800, now=now) == 0

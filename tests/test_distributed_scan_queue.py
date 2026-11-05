@@ -382,3 +382,78 @@ def test_worker_tracks_same_job_id_for_two_tenants(monkeypatch):
     assert set(worker._inflight) == {("b", "same")}
     completions[1]()
     assert not worker._inflight
+
+
+def _submit_and_wait(job, on_complete, submit=None):
+    import threading
+
+    import agent_bom.api.pipeline as pipeline_mod
+
+    done = threading.Event()
+
+    def _finish(job_id, **kwargs):
+        on_complete(job_id, **kwargs)
+        done.set()
+
+    (submit or pipeline_mod.submit_claimed_scan_job)(job, _finish)
+    assert done.wait(10)
+
+
+def test_crashed_claimed_run_keeps_the_dispatch_row_for_redelivery(monkeypatch):
+    import agent_bom.api.pipeline as pipeline_mod
+
+    def explode(_job):
+        raise OSError("transient store failure")
+
+    monkeypatch.setattr(pipeline_mod, "_run_scan_sync", explode)
+    store = _FakeDispatchStore([_job("j1")])
+    worker = DistributedScanWorker(store, worker_id="w", max_concurrent=1)
+    real_submit = pipeline_mod.submit_claimed_scan_job
+    monkeypatch.setattr(pipeline_mod, "submit_claimed_scan_job", lambda job, done: _submit_and_wait(job, done, real_submit))
+    worker._tick()
+    assert store.completed == []
+    assert not worker._inflight  # no more heartbeats, so the lease can expire
+
+
+def test_finished_claimed_run_still_clears_the_dispatch_row(monkeypatch):
+    import agent_bom.api.pipeline as pipeline_mod
+
+    monkeypatch.setattr(pipeline_mod, "_run_scan_sync", lambda _job: None)
+    outcomes = []
+    _submit_and_wait(_job("j1"), lambda job_id, **kwargs: outcomes.append((job_id, kwargs.get("abandoned", False))))
+    assert outcomes == [("j1", False)]
+
+
+def test_cancelled_claimed_run_is_abandoned_not_completed(monkeypatch):
+    from concurrent.futures import Future
+
+    import agent_bom.api.pipeline as pipeline_mod
+
+    pending = Future()
+
+    class _Executor:
+        def submit(self, *_args, **_kwargs):
+            return pending
+
+    monkeypatch.setattr(pipeline_mod, "_executor_for_submission_locked", lambda: _Executor())
+    outcomes = []
+    pipeline_mod.submit_claimed_scan_job(_job("j1"), lambda job_id, **kwargs: outcomes.append(kwargs.get("abandoned", False)))
+    pending.cancel()
+    assert outcomes == [True]
+
+
+def test_worker_tick_sweeps_unrecoverable_rows_before_requeueing(monkeypatch):
+    import agent_bom.api.scan_job_reconciliation as reconciliation
+
+    calls = []
+    monkeypatch.setattr(reconciliation, "fail_unrecoverable_dispatch_jobs", lambda store: calls.append("sweep") or 0)
+    store = _FakeDispatchStore([])
+    real_requeue = store.requeue_expired_leases
+
+    def requeue(**_kwargs):
+        calls.append("requeue")
+        return real_requeue()
+
+    monkeypatch.setattr(store, "requeue_expired_leases", requeue)
+    DistributedScanWorker(store, worker_id="w", max_concurrent=1)._tick()
+    assert calls == ["sweep", "requeue"]

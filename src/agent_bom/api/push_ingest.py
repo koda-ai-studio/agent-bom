@@ -12,7 +12,12 @@ is derived from it, so a retry addresses the same job instead of a duplicate.
 
 from __future__ import annotations
 
+import logging
+import os
+import threading
+from types import TracebackType
 from typing import Any
+from uuid import uuid4
 
 from agent_bom.api.models import JobStatus, ScanJob
 from agent_bom.api.push_evidence import audit_push_admission
@@ -21,8 +26,14 @@ from agent_bom.api.scan_job_dispatch import dispatch_scan_job
 from agent_bom.api.scan_queue import distributed_scans_enabled, store_supports_dispatch
 from agent_bom.api.stores import _get_store
 from agent_bom.api.tenant_quota import enforce_retained_jobs_quota, tenant_quota_guard
+from agent_bom.config import API_SCAN_LEASE_SECONDS
 from agent_bom.core.settings import env_str
+from agent_bom.security import sanitize_error, sanitize_text
 
+_logger = logging.getLogger(__name__)
+# The owner is one request heartbeating for itself, so a dead replica can be
+# noticed sooner than a queue claim whose lease is sized for slow workers.
+_REQUEST_LEASE_SECONDS = max(30, min(API_SCAN_LEASE_SECONDS, 120))
 PUSH_ENDPOINT = "/v1/results/push"
 PUSH_INGEST_MODE_ENV = "AGENT_BOM_PUSH_INGEST_MODE"
 #: Seconds a client should wait before polling an accepted push again.
@@ -100,6 +111,69 @@ def admit_pushed_job(job: ScanJob, job_result: dict, *, actor: str, request_hash
             return
         _store_pushed_job(store, job)
     dispatch_scan_job(job)
+
+
+class RequestPushLease:
+    """Lets a synchronous push be told apart from a dead one under distributed dispatch.
+
+    The request thread owns the job and never enters the queue's claim loop. Its
+    heartbeat is the liveness signal that lets a peer fail the job once the replica
+    dies, and leaves a slow live push alone however old it is. The job stays failed
+    rather than being replayed: an endpoint inventory is held only by the request.
+    """
+
+    def __init__(
+        self, store: Any, job: ScanJob, *, lease_seconds: int = _REQUEST_LEASE_SECONDS, interval_seconds: float | None = None
+    ) -> None:
+        self._store = store
+        self._job = job
+        self._lease_seconds = lease_seconds
+        self._interval = interval_seconds if interval_seconds is not None else lease_seconds / 3
+        self._owner = f"push:{os.getpid()}:{uuid4().hex}"
+        self._leased = (
+            distributed_scans_enabled() and store_supports_dispatch(store) and callable(getattr(store, "put_with_request_lease", None))
+        )
+        self._stored = False
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def __enter__(self) -> RequestPushLease:
+        if self._leased:
+            self._thread = threading.Thread(target=self._beat, name="push-request-lease", daemon=True)
+            self._thread.start()
+        return self
+
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: TracebackType | None) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=1)
+
+    def _beat(self) -> None:
+        key = (self._job.tenant_id, self._job.job_id)
+        while not self._stop.wait(self._interval):
+            if not self._stored:
+                continue
+            try:
+                self._store.renew_leases({key: self._owner}, self._lease_seconds)
+            except Exception as exc:  # broad-except: a missed beat is retried; only a long outage lets the lease lapse
+                _logger.warning("Push lease renewal failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+
+    def store_job(self) -> None:
+        """Publish the job; the first write carries the lease so a crash cannot leave one without the other."""
+        if self._leased and not self._stored:
+            self._store.put_with_request_lease(self._job, self._owner, self._lease_seconds)
+            self._stored = True
+            return
+        _store_pushed_job(self._store, self._job)
+
+    def release(self) -> None:
+        """The outcome is durable. A failed delete is harmless: the sweep clears the row of a finished job."""
+        if not self._stored:
+            return
+        try:
+            self._store.complete_dispatch(self._job.job_id, tenant_id=self._job.tenant_id, claim_owner=self._owner)
+        except Exception as exc:  # broad-except: the outcome is already durable and must not be rolled back
+            _logger.warning("Push lease release failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
 
 
 def redispatch_pending_push(job: ScanJob) -> None:

@@ -298,6 +298,33 @@ def _execution_outcome(report: Any) -> Any:
     return ScanOutcome.PARTIAL if outcome is ScanOutcome.COMPLETE and cloud_posture(report).partial else outcome
 
 
+def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str | None, *, quiet: bool) -> bool:
+    """Send the report to the control plane; automation must see an undelivered push."""
+    from agent_bom.push import normalize_scan_push_url, push_results
+    from agent_bom.security import sanitize_error, sanitize_url
+
+    con = ctx.con
+    endpoint = sanitize_url(push_url)
+    reason = ""
+    try:
+        resolved_push_url = normalize_scan_push_url(push_url)
+        endpoint = sanitize_url(resolved_push_url)
+        report_data = {**to_json(report), **({"target_scope": ctx.target_scope} if ctx.target_scope else {})}
+        if push_results(resolved_push_url, report_data, api_key=push_api_key):
+            if not quiet:
+                con.print(f"\n  [green]Results pushed to {endpoint}[/green]")
+            return True
+    except Exception as exc:  # noqa: BLE001
+        reason = f": {sanitize_error(exc)}"
+    message = f"results were not delivered to {endpoint}{reason}; the local report is unaffected"
+    if quiet:
+        click.echo(f"agent-bom: {message}", err=True)
+    else:
+        con.print("\n  [red bold]Exiting with code 1: [/red bold]", end="")
+        con.print(message, markup=False, highlight=False)
+    return False
+
+
 def compute_exit_code(
     ctx: ScanContext,
     *,
@@ -523,24 +550,8 @@ def compute_exit_code(
             f"report records findings and coverage limits.\n  Exit-code contract: {EXIT_CODE_CONTRACT_URL}[/dim]"
         )
 
-    # Push results to central dashboard
-    if push_url and report:
-        try:
-            from agent_bom.push import normalize_scan_push_url
-            from agent_bom.push import push_results as _push
-            from agent_bom.security import sanitize_url
-
-            resolved_push_url = normalize_scan_push_url(push_url)
-            report_data = {**to_json(report), **({"target_scope": ctx.target_scope} if ctx.target_scope else {})}
-            ok = _push(resolved_push_url, report_data, api_key=push_api_key)
-            endpoint = sanitize_url(resolved_push_url)
-            if ok and not quiet:
-                con.print(f"\n  [green]Results pushed to {endpoint}[/green]")
-            elif not ok and not quiet:
-                con.print(f"\n  [yellow]Push to {endpoint} failed[/yellow]")
-        except Exception as push_err:
-            if not quiet:
-                con.print(f"\n  [yellow]Push failed: {push_err}[/yellow]")
+    if push_url and report and not _push_report(ctx, report, push_url, push_api_key, quiet=quiet):
+        exit_code = exit_code or 1
 
     ctx.exit_code = exit_code
     return exit_code

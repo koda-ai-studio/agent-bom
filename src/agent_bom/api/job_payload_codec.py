@@ -39,9 +39,19 @@ MAX_RESULT_BYTES = 256 * 1024 * 1024
 _ZSTD_LEVEL = 3
 # Keys SQL may read inside a stored result. ``findings``/``vulnerabilities``
 # exist only on plain rows; compressed rows answer through the ``*_count`` keys.
+# ``pushed`` also exists only on plain rows; compressed rows carry it in the projection.
 RESULT_PROJECTION_KEY = "summary_projection"
 SQL_PROJECTED_RESULT_KEYS = frozenset(
-    {"scan_sources", "findings", "vulnerabilities", "findings_count", "vulnerabilities_count", RESULT_CODEC_KEY, RESULT_PROJECTION_KEY}
+    {
+        "scan_sources",
+        "findings",
+        "vulnerabilities",
+        "findings_count",
+        "vulnerabilities_count",
+        "pushed",
+        RESULT_CODEC_KEY,
+        RESULT_PROJECTION_KEY,
+    }
 )
 # Small result members the summary read returns inline; everything else is a section.
 PROJECTED_RESULT_FIELDS = (

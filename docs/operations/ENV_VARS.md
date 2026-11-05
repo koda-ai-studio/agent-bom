@@ -41,6 +41,7 @@ so they cannot regress silently, but they are not part of this reference.
 | `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` | `int` | `192 * 1024 * 1024` | Decoded POST /v1/results/push budget (10k-package estate: 154 MB raw, 8.7 MB gzip); the API clamps it to 240 MiB (jsonb limit). |
 | `AGENT_BOM_API_SCAN_CLAIM_POLL_SECONDS` | `int` | `3` | — |
 | `AGENT_BOM_API_SCAN_LEASE_SECONDS` | `int` | `600` | Distributed scan dispatch (multi-replica work-stealing). When enabled, scan jobs are enqueued to a shared Postgres dispatch queue and any control-plane replica claims them via FOR UPDATE SKIP LOCKED, so scan throughput scales with replicas  |
+| `AGENT_BOM_API_SCAN_MAX_ATTEMPTS` | `int` | `5` | Claims before a job that keeps losing workers fails; below 1 means 1 |
 | `AGENT_BOM_API_SCAN_WORKERS` | `int` | `min(4, os.cpu_count() or 2)` | — |
 | `AGENT_BOM_API_SCAN_WORKER_RECYCLE_JOBS` | `int` | `10` | — |
 | `AGENT_BOM_AWS_EVENT_MAX_BATCHES` | `int` | `10` | — |

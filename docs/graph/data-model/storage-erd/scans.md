@@ -175,7 +175,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `jobs` | SQLite | 14 |  | persistent |
 | `mcp_scan_results` | Postgres | 6 |  | persistent |
 | `report_jobs` | Postgres | 11 |  | persistent |
-| `scan_dispatch_queue` | Postgres | 6 |  | persistent |
+| `scan_dispatch_queue` | Postgres | 7 |  | persistent |
 | `scan_jobs` | Postgres, Snowflake | 15 |  | persistent |
 | `scan_metadata` | ClickHouse | 14 | yes | persistent |
 | `scan_runs` | SQLite | 14 |  | persistent |
