@@ -24,7 +24,7 @@ def test_distroless_dpkg_status_fragment(tmp_path):
 def test_go_buildinfo_beyond_first_read_window(tmp_path, offset):
     from agent_bom.parsers.oci_types import _GO_BIN_MAX_READ
 
-    blob = b"\x00" * (_GO_BIN_MAX_READ + offset)
+    blob = b"\x7fELF" + b"\x00" * (_GO_BIN_MAX_READ + offset - 4)
     blob += b"\xff Go buildinf:\x00\x00\x00\x00\ndep\tgithub.com/spf13/cobra\tv1.8.0\th1:abc=\n"
     result = parse_oci_tarball(_docker_save_tar(tmp_path, "server/github-mcp-server", blob))
     assert [(p.name, p.version) for p in result.packages] == [("github.com/spf13/cobra", "v1.8.0")]
