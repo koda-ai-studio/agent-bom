@@ -279,7 +279,7 @@ def score_to_grade(score: float, thresholds: Mapping[str, float] | None = None) 
     return "F"
 
 
-def _format_display(score: float, grade: str, display_format: str) -> str:
+def format_exec_display(score: float, grade: str, display_format: str) -> str:
     rounded = int(round(score))
     if display_format == "grade":
         return f"Grade {grade}"
@@ -420,7 +420,7 @@ def compute_exec_score(
         "points": final_score,
         "percent": int(round(final_score)),
         "display_format": cfg.display_format,
-        "display": _format_display(final_score, grade, cfg.display_format),
+        "display": format_exec_display(final_score, grade, cfg.display_format),
         "summary": summary,
         "policy_source": cfg.source,
         "weights": dict(weights),

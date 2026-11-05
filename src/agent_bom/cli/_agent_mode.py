@@ -286,6 +286,8 @@ def summarize_scan_data(
         "agents": [_compact_agent(a) for a in agents],
         "posture_scorecard": {
             "grade": scorecard.get("grade"),
+            "grade_label": scorecard.get("grade_label"),
+            "partial": scorecard.get("partial"),
             "score": scorecard.get("score"),
             "summary": scorecard.get("summary"),
         },

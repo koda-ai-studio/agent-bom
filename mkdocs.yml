@@ -167,6 +167,7 @@ nav:
       - CLI Commands: reference/cli.md
       - CLI Debug Guide: reference/cli-debug.md
       - CLI Exit Codes and HTTP Status Mapping: reference/exit-codes.md
+      - Cloud Posture Grading: reference/cloud-posture-grading.md
       - Remediate Output Contract: reference/remediate-output.md
       - Configuration: reference/configuration.md
   - Integrations:

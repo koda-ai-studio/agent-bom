@@ -192,9 +192,11 @@ def _sarif_run_properties(report: Any, scan_run: ScanRun) -> dict[str, Any]:
 
     freshness = getattr(report, "vuln_data_freshness", None) or {}
     notes = {f"vuln_data_{key}": freshness[key] for key in ("partial_sources", "osv_scope") if freshness.get(key)}
+    scorecard = compute_posture_scorecard(report)
     return {
         "scan_outcome": scan_run.outcome.value,
-        "posture_grade": compute_posture_scorecard(report).grade,
+        "posture_grade": scorecard.grade,
+        "posture_grade_label": scorecard.grade_label,
         "exposure_path_count": sum(1 for br in report.blast_radii if not getattr(br, "suppressed", False)),
         **notes,
     }

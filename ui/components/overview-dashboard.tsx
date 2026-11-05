@@ -485,6 +485,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
         complianceLoading={!importedReport && complianceLoading}
         scanScopeLoading={!importedReport && jobsLoading && !overviewSnapshot}
         grade={postureGrade}
+        gradeLabel={importedReport ? null : (overview?.posture.grade_label ?? posture?.grade_label ?? null)}
         score={postureScore}
         scoreFormat={scoreFormat}
         scoreBreakdown={scoreBreakdown}

@@ -22,6 +22,7 @@ from agent_bom.cli.agents._benchmark_phases import _run_vector_db_scan_phase as 
 from agent_bom.cli.agents._benchmark_phases import _run_verify_model_hashes_phase as _run_verify_model_hashes_phase
 from agent_bom.cli.agents._benchmark_phases import _safe_error as _safe_error
 from agent_bom.cli.agents._context import ScanContext
+from agent_bom.cloud.normalization import ServiceNotInUse
 
 __all__ = ["CIS_SHOW_PASSED_META", "_CIS_STATUS_WIDTH", "render_cis_findings_from_context", "run_benchmarks", "run_cloud_discovery"]
 
@@ -40,6 +41,25 @@ _CIS_STATUS_STYLE = {
 # Width that fits the longest rendered status label (``NO DATA``) without
 # clipping.
 _CIS_STATUS_WIDTH = 7
+
+
+def _discover_provider(ctx: ScanContext, provider: str, kwargs: dict) -> tuple[list, list[str]]:
+    from agent_bom.cloud import discover_from_provider
+
+    agents, warnings = discover_from_provider(provider, **kwargs)
+    warnings, notices = _split_not_in_use(provider, warnings)
+    ctx.scan_notices.extend(notices)
+    return agents, warnings
+
+
+def _split_not_in_use(provider: str, warnings: list[str]) -> tuple[list[str], list[dict[str, str]]]:
+    """Separate real collector warnings from services the provider says are not in use."""
+    notices = [
+        {"code": "cloud_service_not_in_use", "source": provider, "message": str(warning)}
+        for warning in warnings
+        if isinstance(warning, ServiceNotInUse)
+    ]
+    return [warning for warning in warnings if not isinstance(warning, ServiceNotInUse)], notices
 
 
 def _cis_status_badge(status_value: str) -> str:
@@ -148,13 +168,11 @@ def run_cloud_discovery(
     quiet = ctx_quiet(ctx)
     verbose = ctx_verbose(ctx)
     for provider_name, provider_kwargs in cloud_providers:
-        from agent_bom.cloud import discover_from_provider
-
         if verbose and not quiet:
             print_lane_header(con, "discover", f"{provider_name.upper()} agents")
         try:
             with stage_status(con, f"[bold]Discovering {provider_name.upper()}…[/bold]", enabled=not quiet and not verbose):
-                cloud_agents, cloud_warnings = discover_from_provider(provider_name, **provider_kwargs)
+                cloud_agents, cloud_warnings = _discover_provider(ctx, provider_name, provider_kwargs)
             if not quiet:
                 pkg_count = sum(a.total_packages for a in cloud_agents) if cloud_agents else 0
                 print_provider_discovery_result(

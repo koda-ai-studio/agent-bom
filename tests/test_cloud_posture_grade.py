@@ -53,9 +53,10 @@ def test_cloud_only_grade_uses_evaluated_controls_and_preserves_push_parity(fiel
 def test_missing_cloud_evidence_never_inherits_local_passing_grade(field, key, missing):
     report = report_with(field, ["PASS", missing], local=True)
     score = compute_posture_scorecard(report)
-    assert score.grade == "N/A"
-    assert "Cloud" in score.summary and "incomplete" in score.summary
-    assert not score.dimensions["compliance_coverage"].assessed
+    assert score.grade != "A"
+    assert score.partial is True
+    assert "partial" in score.grade_label
+    assert score.score <= (100 if missing == "NO_DATA" else 50)
 
 
 @pytest.mark.parametrize("statuses", [[], ["NOT_APPLICABLE"]])
@@ -88,7 +89,7 @@ def test_tenant_dimensions_include_all_current_cloud_controls():
     assert not dimensions["active_exploitation"]["assessed"]
 
 
-@pytest.mark.parametrize("statuses,expected", [(["PASS"], "A"), (["FAIL"], "F"), (["PASS", "ERROR"], "N/A")])
+@pytest.mark.parametrize("statuses,expected", [(["PASS"], "A"), (["FAIL"], "F"), (["PASS", "ERROR"], "F"), (["ERROR"], "N/A")])
 def test_cloud_scorecard_reaches_overview_and_posture_without_local_artifacts(statuses, expected):
     from datetime import datetime, timezone
 
@@ -127,10 +128,11 @@ def test_cloud_scorecard_reaches_overview_and_posture_without_local_artifacts(st
 
 
 @pytest.mark.parametrize("field,key", FIELDS)
-def test_partial_benchmark_metadata_prevents_grade_even_when_rows_pass(field, key):
+def test_partial_benchmark_metadata_caps_grade_even_when_rows_pass(field, key):
     report = report_with(field, ["PASS"])
     getattr(report, field)["completeness"] = "partial"
-    assert compute_posture_scorecard(report).grade == "N/A"
+    card = compute_posture_scorecard(report)
+    assert card.grade == "B" and card.partial is True
 
 
 def test_latest_local_scan_cannot_hide_another_current_cloud_scope():
@@ -156,8 +158,9 @@ def test_latest_local_scan_cannot_hide_another_current_cloud_scope():
             )
         )
     snapshot = _posture_snapshot(jobs)
-    assert snapshot["grade"] == "N/A"
-    assert snapshot["no_data"] is True
+    assert snapshot["grade"] == "B"
+    assert snapshot["partial"] is True
+    assert snapshot["grade_label"] == "B (partial, 1 of 2 evaluated)"
 
 
 def test_partial_cloud_evidence_cannot_regain_grade_from_finding_counts():

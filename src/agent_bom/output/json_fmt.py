@@ -880,6 +880,7 @@ def to_json(report: AIBOMReport) -> dict:
     scorecard = compute_posture_scorecard(report)
     result["posture_scorecard"] = scorecard.to_dict()
     result["posture_grade"] = scorecard.grade
+    result["posture_grade_label"] = scorecard.grade_label
     result["credential_risk_ranking"] = compute_credential_risk_ranking(report)
     result["incident_correlation"] = compute_incident_correlation(report)
 

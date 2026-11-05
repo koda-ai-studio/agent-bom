@@ -64,6 +64,24 @@ describe("OverviewCockpit", () => {
     signals: { tools: 23, packages: 17, activeServices: 7, connected: true },
   };
 
+  it("labels a partial cloud grade with its coverage and keeps failing and clean accounts apart", () => {
+    const { unmount } = render(<OverviewCockpit {...baseProps} grade="F" gradeLabel="F (partial, 54 of 56 evaluated)" score={27.3} />);
+    expect(screen.getByTestId("overview-posture-coverage")).toHaveTextContent("Partial · 54 of 56 evaluated");
+    expect(screen.getByTestId("overview-posture-score")).toHaveTextContent("27%");
+    unmount();
+    render(<OverviewCockpit {...baseProps} grade="B" gradeLabel="B (partial, 50 of 52 evaluated)" score={100} />);
+    expect(screen.getByTestId("overview-posture-coverage")).toHaveTextContent("Partial · 50 of 52 evaluated");
+    expect(screen.getByTestId("overview-posture-score")).toHaveTextContent("Grade B");
+  });
+
+  it("shows no coverage chip on a complete grade or an ungraded scan", () => {
+    const { unmount } = render(<OverviewCockpit {...baseProps} grade="A" gradeLabel="A" score={100} />);
+    expect(screen.queryByTestId("overview-posture-coverage")).toBeNull();
+    unmount();
+    render(<OverviewCockpit {...baseProps} grade="N/A" gradeLabel="N/A" score={0} />);
+    expect(screen.queryByTestId("overview-posture-coverage")).toBeNull();
+  });
+
   it("does not present tenant compliance as a requirement for a local report", () => {
     render(<OverviewCockpit {...baseProps} localReport />);
     expect(screen.queryByRole("region", { name: "Compliance & frameworks" })).not.toBeInTheDocument();

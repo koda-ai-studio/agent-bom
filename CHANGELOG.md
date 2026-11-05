@@ -22,6 +22,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - A first vulnerability database build writes about a ninth of the data it did: it builds beside the target with no write-ahead log or flushes, and only a finished file is renamed into place. A refresh of an existing database keeps its crash-safe settings and checkpoints less often, so it flushes about 20 times less.
 - With a scoped OSV archive, a local hit in an ecosystem outside the scope no longer stops the live OSV lookup for that package.
 - The `install-from-source` input now says that it only works when the workspace is a checkout of this repository.
+- Cloud scans show a grade with partial evidence, such as `F (partial, 54 of 56 evaluated)`, scored as pass / (pass + fail + unknown). Partial grades cap at B and under 50% coverage shows N/A with the reason, so failing and clean accounts no longer both read N/A.
+- Cloud checks with nothing to inspect report `not_applicable` instead of `pass` across AWS, Azure, GCP, Snowflake and Databricks.
+- A disabled GCP API is recorded as not in use, and a provider with evaluated controls is `partial`, not `failed`. An errored check no longer reads as a finding in the exit reason.
 - KEV counts and the `kev=true` filter no longer miss findings whose stored payload is compressed; existing rows are backfilled by migration `20261104_01`.
 - Overview, posture and grouped findings report exact issue counts from a store aggregate at any size, so totals no longer shrink as data grows and no severity reads 0 because a row budget ran out. Coverage lanes and the Vuln / SCA card are exact on the same basis.
 - First reads of overview, `kev=true` and posture counts no longer join the whole ledger; they read indexed columns.

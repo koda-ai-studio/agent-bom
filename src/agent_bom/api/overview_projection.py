@@ -14,7 +14,7 @@ from agent_bom.api.overview_rollup import _combined_severity, _tenant_id
 from agent_bom.api.stores import _get_fleet_store
 from agent_bom.evidence.cloud_posture import CloudPosture, serialized_cloud_posture
 from agent_bom.fleet.trust_scoring import LOW_TRUST_THRESHOLD
-from agent_bom.posture import _score_to_grade
+from agent_bom.posture import _score_to_grade, load_posture_policy
 
 _logger = logging.getLogger("agent_bom.api.routes.overview")
 
@@ -23,25 +23,47 @@ def _posture_snapshot(jobs: list[Any]) -> dict[str, Any]:
     """Latest scorecard capped by current cloud evidence across all scanned scopes."""
     snapshot = _latest_posture_snapshot(jobs)
     cloud = CloudPosture()
+    cloud_only = True
     # A failed collection attempt cannot lend an older healthy snapshot's grade.
     # Keep the findings lifecycle fold separate; only the grade loses assurance.
     for job in current_scan_jobs(jobs, since=None, scan_id=None):
-        observed = serialized_cloud_posture(job.result or {})
+        result = job.result or {}
+        observed = serialized_cloud_posture(result)
         if observed.present and not job_has_authoritative_scan_evidence(job):
             observed.incomplete = True
+        cloud_only &= observed.present and not _has_non_cloud_evidence(result)
         cloud.merge(observed)
     if not cloud.present:
         return snapshot
-    if cloud.incomplete or not cloud.evaluated:
+    if not cloud.gradeable:
         return {
             "grade": "N/A",
             "score": 0,
             "no_data": True,
-            "summary": f"Cloud evidence incomplete or unevaluated — posture grade unavailable. {cloud.summary}.",
+            "summary": f"{cloud.ungraded_reason} {cloud.summary}.",
+            "cloud_controls": cloud.controls(),
         }
+    if snapshot.get("no_data"):
+        return snapshot
     if snapshot.get("grade") == "N/A" or float(snapshot.get("score") or 0) > cloud.score:
-        snapshot.update(grade=_score_to_grade(cloud.score), score=cloud.score, summary=cloud.summary)
+        thresholds = load_posture_policy().grade_thresholds
+        snapshot.update(grade=_score_to_grade(cloud.score, thresholds), score=cloud.score, summary=cloud.summary)
+    grade = cloud.cap_grade(str(snapshot.get("grade")))
+    snapshot.update(
+        grade=grade,
+        grade_label=cloud.grade_label(grade),
+        partial=cloud.partial,
+        grade_basis="cloud_controls" if cloud_only else "scan",
+        cloud_controls=cloud.controls(),
+    )
     return snapshot
+
+
+def _has_non_cloud_evidence(result: dict[str, Any]) -> bool:
+    """Same inventory test the scan scorecard applies: any MCP server or analyzed vulnerability."""
+    if result.get("blast_radius"):
+        return True
+    return any(isinstance(agent, dict) and agent.get("mcp_servers") for agent in result.get("agents") or [])
 
 
 def _latest_posture_snapshot(jobs: list[Any]) -> dict[str, Any]:
@@ -53,11 +75,16 @@ def _latest_posture_snapshot(jobs: list[Any]) -> dict[str, Any]:
         result = cast(dict[str, Any], job.result)
         scorecard = result.get("posture_scorecard")
         if isinstance(scorecard, dict) and scorecard:
-            return {
+            snapshot = {
                 "grade": scorecard.get("grade", "N/A"),
                 "score": scorecard.get("score", 0),
                 "summary": scorecard.get("summary", ""),
             }
+            # Scorecards that carry ``partial`` applied the current rules, so their N/A
+            # stands; older ones may hold rows these rules can now grade.
+            if "partial" in scorecard and scorecard.get("no_data"):
+                snapshot["no_data"] = True
+            return snapshot
         summary = result.get("summary")
         if isinstance(summary, dict) and (summary.get("total_vulnerabilities") or summary.get("total_findings")):
             from agent_bom.posture import _score_to_grade
