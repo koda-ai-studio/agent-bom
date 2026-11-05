@@ -222,6 +222,16 @@ class ScanRun:
         return EvidenceCompletenessLedger(entries=tuple(entries))
 
 
+def has_unresolved_advisories(report: Any) -> bool:
+    """An advisory on a registry-selected range still lacks an installed version."""
+    entries = list(getattr(report, "possibly_affected", None) or [])
+    for agent in getattr(report, "agents", []) or []:
+        for server in getattr(agent, "mcp_servers", []) or []:
+            for package in getattr(server, "packages", []) or []:
+                entries.extend(getattr(package, "possibly_affected", None) or [])
+    return any(isinstance(entry, dict) and entry.get("reason") == "registry_selected_version" for entry in entries)
+
+
 def effective_scan_run(report: Any) -> ScanRun:
     """Return the report's canonical run with legacy coverage gaps folded in."""
     from agent_bom.evidence.cloud_scan import cloud_scan_scopes
@@ -232,6 +242,16 @@ def effective_scan_run(report: Any) -> ScanRun:
         issues=list(getattr(raw, "issues", []) or []),
         scopes=list(getattr(raw, "scopes", []) or []),
     )
+    if has_unresolved_advisories(report):
+        run.add_issue(
+            ScanIssue(
+                code="vulnerability_coverage_gap",
+                stage="scanning",
+                source="vulnerability-data",
+                message="Advisories matched an unlocked version range; pin or lock dependencies to confirm applicability.",
+                affects_coverage=True,
+            )
+        )
     cloud_scopes = cloud_scan_scopes(report)
     run.set_scopes([*run.scopes, *cloud_scopes])
     for scope in cloud_scopes:
@@ -356,7 +376,9 @@ def vulnerability_scan_skipped(run: ScanRun) -> bool:
     return any(issue.code == VULNERABILITY_SCAN_SKIPPED_CODE or issue.message == VULNERABILITY_SCAN_SKIPPED_MESSAGE for issue in run.issues)
 
 
-_VULN_COVERAGE_CODES = frozenset({"required_scanner_unavailable", "scanner_warning", "vulnerability_coverage_gap"})
+_VULN_COVERAGE_CODES = frozenset(
+    {"required_scanner_unavailable", "scanner_warning", "vulnerability_coverage_gap", "image_expansion_failed"}
+)
 _UNRESOLVED_PACKAGE_WARNING = re.compile(r"^(?P<count>\d+) package\(s\) skipped due to unresolved versions$")
 _MAX_GRADEABLE_UNRESOLVED_RATIO = 0.05
 
@@ -467,6 +489,7 @@ def serialized_coverage_view(result: dict[str, Any]) -> SimpleNamespace:
         scan_performance_data=result.get("scan_performance") or result.get("scan_performance_data"),
         scan_run=SimpleNamespace(outcome=outcome, issues=issues, scopes=[]),
         coverage_warnings=result.get("coverage_warnings") or [],
+        possibly_affected=result.get("possibly_affected") or [],
         agents=[],
         total_packages=summary.get("total_packages", 0),
     )

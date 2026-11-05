@@ -89,7 +89,11 @@ than `AGENT_BOM_DB_STALE_DAYS` (default 14) before any lookup, for `check` and
 
 `scan` defaults to a `high` vulnerability gate, the same default as the GitHub
 Action, so a report containing high or critical findings exits non-zero even when no threshold flag was passed. The
-malicious-package and incomplete-evidence gates also fail closed. Use
+malicious-package and incomplete-evidence gates also fail closed. An advisory
+matched only to a registry-selected range leaves applicability unresolved and
+makes the scan partial (exit `1`); it does not increase confirmed vulnerability
+counts. A failed Docker MCP image expansion also produces a partial report,
+retaining results from the other servers. Use
 `--fail-on-severity` to choose a stricter threshold, or `--exit-zero` for an
 explicitly reporting-only vulnerability scan. `--exit-zero` never suppresses a
 malicious-package, policy, or incomplete-evidence failure. Add `--warn-on` when

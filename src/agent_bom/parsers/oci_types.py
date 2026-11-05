@@ -50,7 +50,7 @@ _JAR_MAX_BYTES = 150 * 1024 * 1024
 _GO_BUILDINFO_MAGIC = b"\xff Go buildinf:"
 
 
-_GO_BIN_DIR_RE = re.compile(r"^\.?/?(usr/(local/)?s?bin|go/bin|usr/local/go/bin|opt/go/bin)/")
+_GO_BIN_DIR_RE = re.compile(r"^\.?/?(usr/(local/)?s?bin|s?bin|go/bin|usr/local/go/bin|opt|app|server|ko-app|srv)/")
 
 
 _GO_BIN_MAX_READ = 8 * 1024 * 1024

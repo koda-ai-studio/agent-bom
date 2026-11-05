@@ -64,12 +64,14 @@ def test_official_scoped_npm_packages_are_not_typosquats(name):
         # A lookalike scope is not the project's own namespace.
         ("@rolup/plugin-babel", "npm", "rollup-plugin-babel"),
         ("@rollupp/plugin-commonjs", "npm", "rollup-plugin-commonjs"),
-        # A squat of a popular name published under an unrelated scope.
-        ("@evil/expresss", "npm", "express"),
     ],
 )
 def test_real_squats_still_flagged(name, ecosystem, target):
     assert check_typosquat(name, ecosystem) == target
+
+
+def test_unrelated_namespace_leaf_does_not_establish_impersonation():
+    assert check_typosquat("@evil/expresss", "npm") is None
 
 
 def test_package_coverage_does_not_flag_official_scoped_package_as_malicious():

@@ -23,6 +23,7 @@ from agent_bom.output.finding_views import (
     with_output_sanitizer_cache,
     workflow_status,
 )
+from agent_bom.output.possibly_affected import possibly_affected_rows
 
 _COLUMNS = [
     "cve_id",
@@ -142,6 +143,17 @@ def to_csv(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) ->
         }
         writer.writerow({key: _excel_safe_cell(value) for key, value in row.items()})
 
+    for candidate in possibly_affected_rows(report):
+        row = {
+            "cve_id": candidate["id"],
+            "package": candidate["package"]["name"],
+            "version": candidate["package"]["version"],
+            "ecosystem": candidate["package"]["ecosystem"],
+            "finding_type": "possibly_affected",
+            "title": "Possibly affected — verification required",
+            "summary": candidate.get("detail") or candidate["reason"],
+        }
+        writer.writerow({key: _excel_safe_cell(value) for key, value in row.items()})
     return buf.getvalue()
 
 

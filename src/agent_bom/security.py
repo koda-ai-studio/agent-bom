@@ -43,6 +43,7 @@ from agent_bom.redaction.emails import _contains_email, mask_email
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.redaction.env_values import container_has_secret
 from agent_bom.redaction.field_policy import _REPORT_AUTH_MODES, _REPORT_COORDINATE_KEYS, path_receipt_label
+from agent_bom.redaction.image_coordinates import is_digest_image_coordinate
 from agent_bom.redaction.text_memo import memoized_text, sanitize_text_memo
 
 logger = logging.getLogger(__name__)
@@ -542,7 +543,14 @@ def _looks_sensitive_value(value: str) -> bool:
     checks apply; calling them directly skips re-classifying a constant name.
     """
     text = str(value)
-    return _contains_value_credential(text) or _is_obfuscated_credential(text)
+    if _contains_value_credential(text):
+        return True
+    # A valid content digest adds entropy to an ordinary image coordinate.
+    # Still inspect its repository/tag for encoded secrets; credential-named
+    # fields are independently redacted by the caller.
+    if is_digest_image_coordinate(text):
+        return _is_obfuscated_credential(text.partition("@sha256:")[0])
+    return _is_obfuscated_credential(text)
 
 
 def sanitize_command_args(args: list[Any] | tuple[Any, ...]) -> list[str]:
@@ -627,6 +635,12 @@ _CREDENTIAL_IDENTIFIER_KEYS = frozenset(
 
 def _key_is_credential_identifier(key: object) -> bool:
     return str(key or "").strip().lower().replace("-", "_") in _CREDENTIAL_IDENTIFIER_KEYS
+
+
+def _credential_label_allowed(key: object, value: str) -> bool:
+    return _key_is_credential_identifier(key) or bool(
+        str(key or "").strip().lower() == "credential" and _CREDENTIAL_IDENTIFIER_VALUE_RE.fullmatch(value) and env_key_is_credential(value)
+    )
 
 
 def _key_looks_like_url(key: object) -> bool:
@@ -714,7 +728,7 @@ def _sanitize_sensitive_string(value: str, *, key: object | None, max_str_len: i
     # A credential env-var NAME is an identifier, not a secret value.  Keep
     # it intact so distinct credentials stay distinct graph nodes; still
     # redact defensively if the string itself looks like a leaked secret.
-    if _key_is_credential_identifier(key) and not _looks_sensitive_value(value):
+    if _credential_label_allowed(key, value) and not _looks_sensitive_value(value):
         return sanitize_text(value, max_len=max_str_len)
     if key is not None and _key_looks_sensitive(key):
         return "***REDACTED***"

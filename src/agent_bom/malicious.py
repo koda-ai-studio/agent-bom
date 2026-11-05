@@ -334,11 +334,11 @@ def _same_project_family(scope: str, target: str) -> bool:
 def _scoped_typosquat_target(
     name: str, scope: str, rest: str, popular: frozenset[str], legitimate: frozenset[str], threshold: float
 ) -> str | None:
-    """Scoped npm squats imitate either the unscoped project (``@rolup/plugin-babel``) or a popular name (``@x/expresss``)."""
+    """Compare scoped identities as a whole; a leaf alone cannot impersonate another namespace."""
     flattened = f"{scope}-{rest}"
     if flattened in popular or rest in popular:
         return None
-    for form in (name, flattened, rest):
+    for form in (name, flattened):
         target = typosquat_target(form, "npm", popular, legitimate, threshold)
         if target:
             return None if _same_project_family(scope, target) else target
@@ -420,8 +420,10 @@ def check_dependency_confusion(package: "Package") -> str | None:
     if eco in {"go", "golang"}:
         return None
 
-    # Scoped npm packages from known orgs are safe
-    if eco == "npm" and any(name.startswith(scope) for scope in _SAFE_NPM_SCOPES):
+    # A private-looking leaf within an owned namespace does not establish a
+    # registry collision. Detecting scoped confusion needs registry evidence,
+    # which this name-only heuristic does not have.
+    if eco == "npm" and _split_npm_scope(name) is not None:
         return None
 
     if any(name.startswith(prefix) for prefix in _SAFE_PUBLIC_NAME_PREFIXES_BY_ECOSYSTEM.get(eco, frozenset())):

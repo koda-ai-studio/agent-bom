@@ -23,7 +23,7 @@ from agent_bom.graph.consequence.eligibility import _receipt_scope
 from agent_bom.graph.container import AttackPath, TechniqueMapping, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.hop_evidence import HopAuthorityEvidence, authority_evidence, runtime_evidence_references
-from agent_bom.graph.path_evidence import _runtime_outcome, _runtime_state, resolve_typed_hop
+from agent_bom.graph.path_evidence import HopEdges, _runtime_outcome, _runtime_state, resolve_typed_hop
 from agent_bom.graph.types import EntityType, RelationshipType
 
 # A catalog identifier is not evidence of its prerequisites. These narrow rules
@@ -160,7 +160,7 @@ def _atlas_meta(technique_id: str, catalogs: TechniqueCatalogs) -> tuple[str, li
 
 
 def derive_attack_path_techniques(
-    path: AttackPath, graph: UnifiedGraph, catalogs: TechniqueCatalogs | None = None
+    path: AttackPath, graph: UnifiedGraph, catalogs: TechniqueCatalogs | None = None, *, hop_edges: HopEdges | None = None
 ) -> list[TechniqueMapping]:
     """Derive ordered, catalog-resolved technique mappings for ``path``.
 
@@ -184,7 +184,7 @@ def derive_attack_path_techniques(
             # manufacture exploitability from structural topology.
             continue
 
-        edge, _ = resolve_typed_hop(graph, hops[i], hops[i + 1], rel.value)
+        edge, _ = resolve_typed_hop(graph, hops[i], hops[i + 1], rel.value, hop_edges=hop_edges)
         if edge is None or not edge.traversable or edge.direction != "directed":
             continue
         candidate = _candidate(graph, edge)

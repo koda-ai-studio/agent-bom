@@ -146,6 +146,17 @@ def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
     st.scan_issues = scanner_warning_issues(list(st.scan_warnings), accepted=accepted_scan_warnings())
     st.scan_issues.extend(
         ScanIssue(
+            code="image_expansion_failed",
+            stage="inventory",
+            source="docker-mcp",
+            message=failure,
+            severity="error",
+            affects_coverage=True,
+        )
+        for failure in st.docker_image_failures
+    )
+    st.scan_issues.extend(
+        ScanIssue(
             code="collector_warning",
             stage=str(_warning.get("stage") or "discovery"),
             source=str(_warning.get("provider") or "cloud"),

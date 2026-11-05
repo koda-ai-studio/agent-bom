@@ -539,7 +539,7 @@ def with_technique_mappings(paths: list[AttackPath], graph: UnifiedGraph) -> lis
 
         catalogs = TechniqueCatalogs()
         for path in paths:
-            path.technique_mappings = derive_attack_path_techniques(path, graph, catalogs)
+            path.technique_mappings = derive_attack_path_techniques(path, graph, catalogs, hop_edges=hop_edges)
     except Exception:  # noqa: BLE001
         pass
     return paths

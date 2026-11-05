@@ -3,8 +3,8 @@
 Reads PEP 621 ``[project] dependencies`` and ``optional-dependencies``, PEP 735
 ``[dependency-groups]``, and Poetry ``dependencies`` / ``dev-dependencies`` /
 ``group.<name>.dependencies``. Requirement strings may carry extras
-(``crewai[tools]>=0.80``) and markers. The version is the first concrete
-version in the specifier, or ``"unknown"`` when none is declared.
+(``crewai[tools]>=0.80``) and markers. Only exact pins establish a version;
+ranges, exclusions and wildcard pins return ``"unknown"``.
 """
 
 from __future__ import annotations
@@ -18,16 +18,19 @@ from typing import Any
 from agent_bom.parsers.file_limits import read_text_limited
 
 _REQUIREMENT_RE = re.compile(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:\[[^\]]*\])?\s*(.*)$")
-_VERSION_RE = re.compile(r"[=~!<>^]*\s*v?([0-9][^\s,;'\"]*)")
+_VERSION_RE = re.compile(r"(?:===|==)\s*(v?[0-9][A-Za-z0-9.+_-]*)")
+_POETRY_VERSION_RE = re.compile(r"v?[0-9][A-Za-z0-9.+_-]*")
 
 
 def normalize_name(name: str) -> str:
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
-def _version_from_spec(spec: str) -> str:
+def _version_from_spec(spec: str, *, poetry: bool = False) -> str:
     spec = spec.split(";", 1)[0].strip()
-    match = _VERSION_RE.search(spec)
+    if poetry and _POETRY_VERSION_RE.fullmatch(spec):
+        return spec
+    match = _VERSION_RE.fullmatch(spec)
     return match.group(1) if match else "unknown"
 
 
@@ -51,7 +54,7 @@ def _from_poetry_table(table: Any) -> dict[str, str]:
             continue
         if isinstance(spec, dict):
             spec = spec.get("version", "")
-        out[normalize_name(name)] = _version_from_spec(spec) if isinstance(spec, str) else "unknown"
+        out[normalize_name(name)] = _version_from_spec(spec, poetry=True) if isinstance(spec, str) else "unknown"
     return out
 
 
@@ -89,14 +92,7 @@ def parse_requirements_txt(path: Path) -> dict[str, str]:
         line = line.strip()
         if not line or line.startswith(("#", "-")):
             continue
-        # name==1.2.3, name>=1.2, name~=1.2, name[extra]==1.2
-        m = re.match(r"^([A-Za-z0-9_\-]+)(?:\[[^\]]*\])?\s*[=~!<>]+\s*([^\s;#,]+)", line)
-        if m:
-            pkgs[m.group(1).lower().replace("_", "-")] = m.group(2)
-        else:
-            bare = re.match(r"^([A-Za-z0-9_\-]+)", line)
-            if bare:
-                pkgs[bare.group(1).lower().replace("_", "-")] = "unknown"
+        pkgs.update(_from_requirement_strings([line.split(" #", 1)[0]]))
     return pkgs
 
 

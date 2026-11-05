@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 import time as _time
 from contextlib import nullcontext as _nullcontext
 from typing import Any
@@ -114,8 +113,7 @@ def _summarize_packages(opts: ScanOptions, st: ScanState) -> None:
     if st.docker_image_failures:
         for failure in st.docker_image_failures:
             st.con.print(f"  [yellow]⚠[/yellow] {failure}")
-        st.con.print("  [red]Docker MCP image expansion failed; refusing to report a clean result from image stubs only.[/red]")
-        sys.exit(2)
+        st.con.print("  [yellow]Docker MCP image expansion incomplete; retaining available inventory in a partial report.[/yellow]")
 
 
 def _resolve_deps_dev(opts: ScanOptions, st: ScanState) -> None:

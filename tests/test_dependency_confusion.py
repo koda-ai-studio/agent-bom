@@ -62,10 +62,9 @@ def test_safe_scoped_npm_not_flagged_as_typosquat():
     assert check_typosquat("@babel/core", "npm") is None
 
 
-def test_unknown_npm_scope_with_internal_name():
+def test_unknown_npm_scope_name_alone_does_not_prove_registry_confusion():
     pkg = _pkg("@evil-corp/internal-sdk", "npm")
-    result = check_dependency_confusion(pkg)
-    assert result is not None
+    assert check_dependency_confusion(pkg) is None
 
 
 def test_package_with_scorecard_not_flagged():

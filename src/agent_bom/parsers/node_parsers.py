@@ -521,28 +521,25 @@ def parse_pnpm_lock(directory: Path) -> list[Package]:
             logger.debug("PyYAML not installed; skipping pnpm-lock.yaml parsing")
             return []
 
-        data = yaml.safe_load(read_text_limited(lock_file)) or {}
-        lockfile_version = lockfile_major(data)
-        seen: set[tuple[str, str]] = set()
-        for key in data.get("packages", {}) or {}:
-            parsed = parse_pnpm_key(key, lockfile_version)
-            if parsed is None or parsed in seen:
+        by_key: dict[tuple[str, str], Package] = {}
+        for data in yaml.safe_load_all(read_text_limited(lock_file)):
+            if data is None:
                 continue
-            seen.add(parsed)
-            name, version = parsed
-            if name and version:
-                packages.append(
-                    Package(
-                        name=name,
-                        version=version,
-                        ecosystem="npm",
-                        purl=_npm_purl(name, version),
-                        version_evidence=[{"type": "lockfile", "source_file": str(lock_file)}],
-                        is_direct=None,  # Rooted relationships are established by the topology pass.
-                        version_source="lockfile",
-                    )
-                )
-        pnpm_topology(directory, packages, data)
+            document_packages = _pnpm_document_packages(directory, lock_file, data)
+            for package in document_packages:
+                key = (package.name, package.version)
+                if key not in by_key:
+                    packages.append(package)
+                    by_key[key] = package
+                else:
+                    existing = by_key[key]
+                    existing.version_evidence.extend(e for e in package.version_evidence if e not in existing.version_evidence)
+                    if existing.parent_package != package.parent_package:
+                        existing.parent_package = None
+                    if package.is_direct is True:
+                        existing.is_direct = True
+                        existing.dependency_depth = 0
+                        existing.dependency_scope = package.dependency_scope
     except Exception as exc:
         logger.debug("Failed to parse pnpm-lock.yaml at %s: %s", lock_file, exc)
         record_manifest_parse_warning(
@@ -551,6 +548,32 @@ def parse_pnpm_lock(directory: Path) -> list[Package]:
             detail="pnpm-lock.yaml could not be read or parsed; pnpm dependencies were not scanned",
         )
 
+    return packages
+
+
+def _pnpm_document_packages(directory: Path, lock_file: Path, data: dict) -> list[Package]:
+    """Resolve topology within its own YAML document before joining inventory."""
+    lockfile_version = lockfile_major(data)
+    packages: list[Package] = []
+    seen: set[tuple[str, str]] = set()
+    for key in data.get("packages", {}) or {}:
+        parsed = parse_pnpm_key(key, lockfile_version)
+        if parsed is None or parsed in seen:
+            continue
+        seen.add(parsed)
+        name, version = parsed
+        packages.append(
+            Package(
+                name=name,
+                version=version,
+                ecosystem="npm",
+                purl=_npm_purl(name, version),
+                version_evidence=[{"type": "lockfile", "source_file": str(lock_file)}],
+                is_direct=None,
+                version_source="lockfile",
+            )
+        )
+    pnpm_topology(directory, packages, data)
     return packages
 
 

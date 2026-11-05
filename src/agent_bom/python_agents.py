@@ -36,7 +36,7 @@ import re
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from agent_bom.ai_components.local_shadow import declared_python_requirements, is_sdk_import
+from agent_bom.ai_components.local_shadow import declared_framework_package, declared_python_requirements, is_sdk_import
 from agent_bom.ast.call_scopes import call_scopes
 from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.ast_signal_utils import is_agent_tool_decorator
@@ -640,12 +640,7 @@ def scan_python_agents(project_path: str) -> tuple[list[Agent], list[str]]:
         version = req_pkgs.get(pkg_name, req_pkgs.get(pkg_name.replace("-", "_")))
         if version:
             active_frameworks[fkey] = display
-            pkg = Package(
-                name=pkg_name,
-                version=version,
-                ecosystem="pypi",
-                purl=f"pkg:pypi/{pkg_name}@{version}",
-            )
+            pkg = declared_framework_package(pkg_name, version)
             framework_packages.setdefault(fkey, []).append(pkg)
 
     # 3. Scan Python files for agent definitions

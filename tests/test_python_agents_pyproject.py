@@ -61,9 +61,9 @@ def _crew_project(tmp_path: Path, pyproject: str) -> Path:
 @pytest.mark.parametrize(
     ("pyproject", "version"),
     [
-        (_PEP621, "0.80.0"),
+        (_PEP621, "unknown"),
         (_PEP621_OPTIONAL, "0.86.0"),
-        (_POETRY, "0.80.0"),
+        (_POETRY, "unknown"),
         (_POETRY_GROUP, "0.80.0"),
     ],
     ids=["pep621", "pep621-optional", "poetry", "poetry-group"],

@@ -106,7 +106,7 @@ def _scoped_target(scope: str, rest: str, normalized: str, popular: list[str], l
     flattened = f"{scope}-{rest}"
     if flattened in popular or rest in popular:
         return None
-    for form in (normalized, flattened, rest):
+    for form in (normalized, flattened):
         target = _target(form, popular, legitimate)
         if target:
             root = target.split("-", 1)[0]
