@@ -707,3 +707,12 @@ def test_guard_description_claims_typosquat_checks_only_where_lists_exist():
     description = json.loads((GUARD / ".claude-plugin" / "plugin.json").read_text())["description"]
     assert "typosquatted npm and PyPI" in description
     assert "typosquatted npm, PyPI, crates.io and Go" not in description
+
+
+@pytest.mark.parametrize("name", ["@typse/node", "@typpes/node", "@types/node", "@independent/node", "@typse/unrelated"])
+def test_scoped_namespace_targets_match_scanner(monkeypatch, name):
+    data = {**guard._data(), "popular": {"npm": ["@types/node", "node"]}}
+    monkeypatch.setattr(guard, "_DATA", data)
+    monkeypatch.setitem(malicious._POPULAR_PACKAGES, "npm", frozenset(data["popular"]["npm"]))
+    expected = "@types/node" if name in {"@typse/node", "@typpes/node"} else None
+    assert guard.check_typosquat(name, "npm") == malicious.check_typosquat(name, "npm") == expected

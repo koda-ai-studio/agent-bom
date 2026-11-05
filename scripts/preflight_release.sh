@@ -37,6 +37,13 @@ if [ -z "$VERSION" ]; then
 fi
 python scripts/bump-version.py "$VERSION" --check || fail=1
 
+step "exact main SHA has completed full CI and runtime acceptance"
+CANDIDATE_SHA="$(git rev-parse HEAD)"
+RELEASE_REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
+for workflow in ci.yml runtime-acceptance.yml; do
+  python scripts/check_release_main_ci.py --repo "$RELEASE_REPO" --sha "$CANDIDATE_SHA" --workflow "$workflow" || fail=1
+done
+
 step "tag is new + changelog documents it"
 # Every check above answers "are the managed files consistent with the version
 # string I was handed?" — none of them asks whether that version already

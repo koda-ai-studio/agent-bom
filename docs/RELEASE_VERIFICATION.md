@@ -12,6 +12,14 @@ For each tagged GitHub Release, expect:
 
 ## Release matrix
 
+Before creating a tag, run `scripts/preflight_release.sh <version>` from the
+candidate commit with an authenticated GitHub CLI. It checks the current main
+SHA against completed push CI, including all Python correctness shards and
+combined coverage, and runtime acceptance. Missing, skipped, pending or failed
+proof exits nonzero; inspect the referenced CI run, fix or rerun it, and retry
+the preflight. The release workflow repeats these checks after tag creation.
+This local check does not prevent an operator from creating a tag manually.
+
 Run this matrix before tagging a release that will back a hosted POC or a
 customer self-hosted deployment. The goal is to prove the exact artifact shape
 that users will touch: package install, CLI, API, UI, hosted preflight, and
