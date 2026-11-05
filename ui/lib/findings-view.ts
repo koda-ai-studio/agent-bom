@@ -65,6 +65,8 @@ export interface EnrichedVuln extends Vulnerability {
   first_seen?: string | undefined;
   last_seen?: string | undefined;
   resolved_at?: string | undefined;
+  resolution_reason?: string | null | undefined;
+  stale?: boolean | undefined;
   reopened_at?: string | undefined;
   last_resolved_at?: string | undefined;
   status_updated_at?: string | undefined;

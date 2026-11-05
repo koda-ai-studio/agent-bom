@@ -9,6 +9,7 @@ from typing import Any
 
 from agent_bom.api import compliance_hub_store, finding_cursor, findings_current
 from agent_bom.api.finding_kev_total import exact_kev_total, exact_scoped_total
+from agent_bom.api.finding_lifecycle_read import RESOLVED_READ_LIMIT, resolved_history_truncated
 from agent_bom.api.finding_list_totals import fill_resume_total, resume_page_total
 from agent_bom.api.finding_merge import MergedScanBulkPage as MergedScanBulkPage
 from agent_bom.api.finding_merge import _merged_scan_bulk_page as _merged_scan_bulk_page
@@ -56,7 +57,13 @@ def _scan_half_rows(query: _FindingListQuery, store: Any, warnings: list[str]) -
         return []
 
     def load() -> list[dict[str, Any]]:
-        rows = current_scan_rows_with_lifecycle(query.tenant_id, query.window_since, query.scan_id)
+        rows = current_scan_rows_with_lifecycle(
+            query.tenant_id,
+            query.window_since,
+            query.scan_id,
+            live_since=query.explicit_window_since,
+            include_resolved=query.status_key in {"resolved", "all"},
+        )
         rows = findings_current.scan_only_findings(rows, query.tenant_id, hub=store, scan_id=query.scan_id)
         rows = _filter_finding_rows(rows, query)
         rows.sort(key=lambda row: _finding_sort_key(row, query.sort_key))
@@ -65,6 +72,12 @@ def _scan_half_rows(query: _FindingListQuery, store: Any, warnings: list[str]) -
     # View filters and issue grouping page through up to 50k rows in one read;
     # fold, filter and sort the scan half once per read instead of once per page.
     # Callers only index into or copy the returned list.
+    if (
+        query.status_key in {"resolved", "all"}
+        and not query.scan_id
+        and resolved_history_truncated(_get_store(), query.tenant_id, query.window_since)
+    ):
+        warnings.append(f"showing the newest {RESOLVED_READ_LIMIT} resolved findings; narrow window_days to see older ones")
     key = [query.tenant_id, query.window_since, query.scan_id, query.severity, query.status_key, query.sort_key]
     walk_key = (query.window_days, *key[2:], json.dumps(sorted(query.scope_filters.items())))
     continuation = query.merged_cursor is not None

@@ -19,8 +19,9 @@ from agent_bom.api.postgres_common import (
     set_current_tenant,
 )
 from agent_bom.api.scan_snapshot_store import discard_job_snapshot
-from agent_bom.api.storage.finding_history_adapters import postgres_history_backfill, postgres_history_read
+from agent_bom.api.storage.finding_history_adapters import PostgresFindingLifecycle, postgres_history_backfill, postgres_history_read
 from agent_bom.api.storage.finding_history_schema import POSTGRES_FINDING_HISTORY_V1
+from agent_bom.api.storage.finding_lifecycle_schema import POSTGRES_FINDING_LIFECYCLE_V1, forget_job_evidence
 from agent_bom.api.storage.job_detail_reads import json_column, postgres_detail_projection, postgres_status_view
 from agent_bom.api.storage.job_payload_cache import JobPayloadCache, read_versioned_jobs
 from agent_bom.api.storage.job_read_projections import postgres_demo_exists, postgres_pending_dispatch_count
@@ -50,7 +51,7 @@ if TYPE_CHECKING:
     from .server import ScanJob
 
 
-class PostgresJobStore:
+class PostgresJobStore(PostgresFindingLifecycle):
     finding_history_read = postgres_history_read
     backfill_finding_history = postgres_history_backfill
     has_usable_demo_job = postgres_demo_exists
@@ -202,7 +203,7 @@ class PostgresJobStore:
             _ensure_tenant_rls(conn, "scan_jobs", "team_id")
             _ensure_tenant_rls(conn, "cis_benchmark_checks", "team_id")
             _ensure_tenant_rls(conn, "scan_dispatch_queue", "tenant_id")
-            conn.execute(POSTGRES_JOB_REVISIONS_V1 + POSTGRES_FINDING_HISTORY_V1)
+            conn.execute(POSTGRES_JOB_REVISIONS_V1 + POSTGRES_FINDING_HISTORY_V1 + POSTGRES_FINDING_LIFECYCLE_V1)
             conn.commit()
 
     def overview_evidence_revision(self, tenant_id: str) -> str:
@@ -320,6 +321,7 @@ class PostgresJobStore:
                     "DELETE FROM scan_jobs WHERE job_id = %s AND team_id = %s",
                     (job_id, tenant_id),
                 )
+            forget_job_evidence(connection_session(conn, "postgres"), deleted_tenants if tenant_id is None else [tenant_id], job_id)
             conn.commit()
             if tenant_id is not None:
                 job_status_count_cache.invalidate_tenant(tenant_id)

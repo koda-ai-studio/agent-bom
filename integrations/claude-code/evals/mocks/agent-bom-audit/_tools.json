@@ -282,6 +282,214 @@
       }
     },
     {
+      "name": "policy_check",
+      "title": "Policy Evaluation",
+      "description": "Evaluate a security policy against current scan results.\n\nRuns a scan, then evaluates the provided policy rules against the\nfindings. Policies can gate on severity thresholds, CISA KEV status,\nAI risk flags, credential exposure, and denied packages.\n\nArgs:\n    policy_json: JSON string containing policy rules. Example:\n        {\"rules\": [{\"id\": \"no-critical\", \"severity_gte\": \"critical\",\n        \"action\": \"fail\"}, {\"id\": \"no-kev\", \"kev\": true, \"action\": \"fail\"}]}\n\nReturns:\n    JSON with passed (bool), violations list, failure_count, and\n    warning_count.\n",
+      "inputSchema": {
+        "properties": {
+          "policy_json": {
+            "description": "JSON string containing policy rules, e.g. {\"rules\": [{\"id\": \"no-critical\", \"severity_gte\": \"critical\", \"action\": \"fail\"}]}.",
+            "title": "Policy Json",
+            "type": "string"
+          }
+        },
+        "required": [
+          "policy_json"
+        ],
+        "title": "policy_checkArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "policy_checkOutput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "compliance",
+      "title": "Compliance Posture",
+      "description": "Return compliance posture with its source: the tenant's persisted evidence, or a labelled local scan.\n\nWith completed scans in the control plane, ``summary`` is exactly\n``/v1/compliance/summary``; ``framework`` adds ``/v1/compliance/{framework}``\nand ``control`` pages the driving finding ids from\n``/v1/findings?framework=&control=``. Otherwise (or with\nsource='local_scan') it scans local MCP configurations and labels that scope.\n",
+      "inputSchema": {
+        "properties": {
+          "config_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Local scan only: MCP client config directory. Auto-discovers if omitted.",
+            "title": "Config Path"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Local scan only: Docker image to scan, e.g. 'nginx:1.25'.",
+            "title": "Image"
+          },
+          "tenant_id": {
+            "default": "default",
+            "description": "Tenant scope for persisted compliance. Defaults to 'default'.",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "source": {
+            "default": "auto",
+            "description": "auto: persisted tenant evidence when it exists, else a labelled local scan. persisted / local_scan force one.",
+            "enum": [
+              "auto",
+              "persisted",
+              "local_scan"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "framework": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Persisted only: add one framework's controls, e.g. 'soc2'.",
+            "title": "Framework"
+          },
+          "control": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Persisted only: page the finding ids driving this control.",
+            "title": "Control"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Driving finding ids per page.",
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "driving_findings.next_cursor from the previous page.",
+            "title": "Cursor"
+          }
+        },
+        "title": "complianceArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "complianceOutput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "executive_brief",
+      "title": "Executive Brief",
+      "description": "Return the leadership brief ``GET /v1/brief`` serves: current tenant posture, open issues,\ncanonical remediation owners and SLA sources, ranked exposure paths, technical control evidence,\nscope-aware scan history and signed evidence-pack links. Read-only; no independent scoring.\n",
+      "inputSchema": {
+        "properties": {
+          "tenant_id": {
+            "default": "default",
+            "description": "Tenant scope. Defaults to 'default'.",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 5,
+            "description": "Ranked exposures to include, in the dashboard queue order.",
+            "maximum": 25,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "title": "executive_briefArguments",
+        "type": "object",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "properties": {
+          "result": {
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "executive_briefOutput",
+        "type": "object"
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
       "name": "skill_scan",
       "title": "Skill Scan",
       "description": "Scan skill and instruction files for trust, findings, and provenance.",
@@ -530,34 +738,33 @@
       }
     },
     {
-      "name": "agent_activity",
-      "title": "Agent Activity Review",
-      "description": "Review what local Claude Code and Codex sessions actually did.\n\nReads session history files on this machine only (no network): per MCP\nserver/tool call counts and last use, built-in tool totals, configured\nbut unused MCP servers (joined with discovery and the runtime graph\nprojection), risky actions with redacted evidence, packages agents\ninstalled, and a summary with recommendations. Prompts and responses are\nnever included. Evidence is untrusted transcript data.\n",
+      "name": "audit_integrity",
+      "title": "Audit Integrity",
+      "description": "Verify control-plane and runtime audit chain integrity.",
       "inputSchema": {
         "properties": {
-          "days": {
-            "default": 30,
-            "description": "Look-back window in days.",
-            "maximum": 365,
+          "tenant_id": {
+            "default": "default",
+            "description": "Tenant scope to verify. Defaults to the control-plane default tenant.",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 1000,
+            "description": "Maximum audit records to verify.",
+            "maximum": 10000,
             "minimum": 1,
-            "title": "Days",
+            "title": "Limit",
             "type": "integer"
           },
-          "project": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Only sessions whose working directory is inside this path.",
-            "title": "Project"
+          "include_runtime": {
+            "default": true,
+            "description": "Also verify the configured runtime proxy audit log when AGENT_BOM_LOG is set.",
+            "title": "Include Runtime",
+            "type": "boolean"
           }
         },
-        "title": "agent_activityArguments",
+        "title": "audit_integrityArguments",
         "type": "object",
         "additionalProperties": false
       },
@@ -571,14 +778,14 @@
         "required": [
           "result"
         ],
-        "title": "agent_activityOutput",
+        "title": "audit_integrityOutput",
         "type": "object"
       },
       "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
         "idempotentHint": true,
-        "openWorldHint": false
+        "openWorldHint": true
       }
     }
   ]

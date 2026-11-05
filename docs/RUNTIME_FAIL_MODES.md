@@ -588,3 +588,48 @@ outage during ingest, keeps its queue row so the lease can expire and the job ca
 be redelivered. Worker reads retry briefly first, and a store error never marks
 the report failed. Without distributed dispatch the job stays `pending`: a resubmit
 re-offers it, and the age timeout or next restart fails it otherwise.
+
+## Hosted MCP OAuth
+
+OAuth authentication is fail-closed and independent of gateway fail-mode flags.
+Missing tenant or introspection configuration refuses startup. Invalid signature,
+issuer, audience, subject, scope, tenant or token lifetime denies access. An
+expired/revoked token, missing introspection claims, inconsistent signed and
+introspected identity, timeout, redirect, oversized response or issuer failure
+cannot fall back to signature-only validation or anonymous access.
+
+Every HTTP request is authenticated before MCP dispatch, including requests in
+an existing session. The signed tenant must equal the deployment's configured
+tenant; conflicting tool arguments return an error without executing the tool.
+Read-only registration also excludes unknown plugin tools, writes, process
+execution and activity-history collection. Public OAuth discovery is available
+without credentials and contains no tenant inventory or secrets.
+
+Revocation takes effect on the next HTTP request once the authorization server
+reports the token inactive. It does not cancel an operation already admitted or
+erase results already returned. There is no positive introspection cache.
+Public keys are cached for five minutes with refresh rate limiting. Subject
+allowlist changes require restart. Issuer administrators and a compromised
+resource-server process remain trusted boundaries; token checks do not prove
+protection against either administrator rewriting policy or stored evidence.
+
+### STRIDE assessment
+
+| Threat | Boundary and mitigation | Remaining constraint |
+|---|---|---|
+| Spoofing | Verified issuer/signature, exact audience, approved subject and signed tenant; client uses authorization code with S256 PKCE | Issuer must protect tenant attributes and client registration |
+| Tampering | Introspection identity must match signed claims; tool arguments and headers cannot override tenant | Issuer and server administrators remain trusted |
+| Repudiation | Existing request identifiers and bounded tool telemetry remain available; no tokens or issuer errors are logged by the verifier | Process-local telemetry is not an independent audit record or durable login ledger |
+| Information disclosure | Exact deployment tenant, scoped stores and explicit tool allowlist; introspection only to issuer HTTPS origin | Tool results are visible to the authorized client; hosting logs/backups require operator policy |
+| Denial of service | Token size, response size and request timeout bounds; unknown-key refresh throttled | Introspection adds issuer availability/latency dependency; edge rate limits and capacity testing remain operator responsibilities |
+| Elevation of privilege | Read scope only, read-only catalog, no history or process execution; revocation checked per HTTP request | New tools need capability classification and annotation review before exposure |
+
+Regression evidence: `tests/test_mcp_oauth_tenant_revocation.py` exercises two
+seeded tenants, wrong-tenant arguments/tokens, revoked sessions, contradictory
+introspection and issuer failures. `tests/test_mcp_external_oauth.py` covers
+signature, time, discovery and key rotation. Run an approved real MCP client
+against the configured issuer as described in [MCP_OAUTH.md](MCP_OAUTH.md);
+unit tests do not establish production login or directory acceptance.
+
+Rollback restores a compatible application and issuer configuration together.
+Never disable authentication or enable the public tier as a recovery shortcut.

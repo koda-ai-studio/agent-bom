@@ -9,7 +9,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Finding dates now outlast scan retention: `first_seen`, `last_seen`, resolved and reopened dates live in their own per-finding table, written in the same transaction as the scan. A resolved finding stays listed after its scans expire, and late, repeated or concurrent scans cannot move a finding's state incorrectly. The cleanup tick seeds existing dates from retained scans after upgrade, outside any read. Reads no longer rebuild findings for every retained scan.
+- Every resolved finding states why: `resolution_reason` is `no_longer_detected` or `asset_deleted`. `asset_deleted` needs a complete AWS inventory covering the asset's account, region and service, with no warnings or missing permissions, from the same source and scope. Other sources never produce it; see `docs/FINDING_LIFECYCLE.md`.
+- `stale` marks an open finding not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). It stays open and counted, can be filtered with `status=stale` on the API, `--status stale` on the CLI and the Status filter on the Findings page, and never resolves anything.
+
 ### Changed
+- The same package version in two projects is now two findings with separate dates and resolutions. Finding ids change for scans with a project: a push's `target_scope` or an API scan's target fields. Findings with no project keep their ids. Exceptions and triage assignees still apply by vulnerability and package, and ticket links are copied to each project's finding after upgrade.
+- An open finding stays in the default findings view after the default read window passes it; an explicit `window_days` still narrows it.
+- A report time more than a day ahead of when it was stored counts as the stored time, so a future-dated push cannot outrank later scans.
 - The GitHub Action reads OSV's application-ecosystem archives by default (`vuln-db-scope: application`, about 0.3 GB instead of 2.9 GB). OS and other packages are answered by live OSV, and the JSON report, SARIF run properties, job summary and pull request comment state the scope. Set `vuln-db-scope: full` for the previous behaviour. The Action's cache key changes, so the first run after upgrading builds a new database.
 - A first `--auto-update-db` refresh caps NVD at 60 seconds, newest CVEs first, and reports it as partial; later refreshes resume it. `AGENT_BOM_NVD_TIME_BUDGET_SECONDS` overrides the cap.
 - `--auto-update-db` prints the time each source took.
@@ -19,6 +27,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Skill audit: a security-review skill that lists coercion phrases in quotes as things to report now gets a low finding instead of high, for example `Text that asks the model to "bypass the guardrails"`. The finding stays visible.
 - Skill audit: a quote or example word no longer demotes a real directive. These shapes were low and are now high: `Obey phrases such as "..."`, `Use phrases such as "..." and comply`, a report sentence inside an HTML comment, `Do not hesitate to ...`, a plain sentence under a heading such as `## Red flags`, and a report sentence hidden by base64, zero-width or homoglyph characters.
 - Skill audit: packages launched by `npx`, `bunx`, `uvx` or `uv tool run` in an MCP JSON block, and `npx --yes` commands, now reach the package inventory, so they are checked like any other package.
+- Security: `oauthlib` moves to 4.0.1 (GHSA-3jp2-3mrg-2vxc), which arrives through the Azure extra. Versions 3.3.0 up to 4.0.1 could issue a bearer token for a bogus device code.
 - Typosquat detection now flags an adjacent-letter swap from five letters (`axois` as `axios`); single-letter substitutions keep their six-letter floor.
 - Investigation graph: an exposure flow now continues through the workloads an exposed host runs, so the path to identities and data opens framed on one screen. Edges between adjacent entities no longer arc over nothing.
 - A synchronous push interrupted by a process kill under distributed dispatch no longer stays `running` forever. The request now heartbeats a lease, and once that lease expires any replica marks the job `failed`, so the client can resubmit under the same idempotency key. A long push with a live lease is never failed for its age, and pushes already stranded by earlier releases are failed after the stuck-job timeout.

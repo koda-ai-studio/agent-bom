@@ -14,7 +14,14 @@ from agent_bom.finding_scope import safe_finding_response_payload
 
 def test_resolved_at_only_describes_a_resolution_in_force() -> None:
     fields = lifecycle_fields("reopened", first_seen="T1", resolved_at="T2", reopened_at="T3")
-    assert fields == {"status": "reopened", "resolved_at": None, "last_resolved_at": "T2", "reopened_at": "T3", "status_updated_at": "T3"}
+    assert fields == {
+        "status": "reopened",
+        "resolved_at": None,
+        "resolution_reason": None,
+        "last_resolved_at": "T2",
+        "reopened_at": "T3",
+        "status_updated_at": "T3",
+    }
     assert lifecycle_fields("resolved", first_seen="T1", resolved_at="T2", reopened_at=None)["status_updated_at"] == "T2"
     assert lifecycle_fields("open", first_seen="T1", resolved_at=None, reopened_at=None)["status_updated_at"] == "T1"
 

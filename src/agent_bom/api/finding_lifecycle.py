@@ -129,12 +129,15 @@ def resolve_canonical_id(payload: dict[str, Any], *, source: str = "") -> str:
     return canonical_finding_id(str(asset_stable), str(rule), str(package), pkg_version, str(location))
 
 
-def lifecycle_fields(status: str, *, first_seen: str, resolved_at: str | None, reopened_at: str | None) -> dict[str, Any]:
-    """Public lifecycle fields; ``resolved_at`` names a resolution still in force."""
+def lifecycle_fields(
+    status: str, *, first_seen: str, resolved_at: str | None, reopened_at: str | None, resolution_reason: str | None = None
+) -> dict[str, Any]:
+    """Public lifecycle fields; ``resolved_at`` and the reason describe a resolution still in force."""
     resolved = status == "resolved"
     return {
         "status": status,
         "resolved_at": resolved_at if resolved else None,
+        "resolution_reason": (resolution_reason or "no_longer_detected") if resolved else None,
         "last_resolved_at": resolved_at,
         "reopened_at": reopened_at,
         "status_updated_at": resolved_at if resolved else (reopened_at if status == "reopened" else first_seen),

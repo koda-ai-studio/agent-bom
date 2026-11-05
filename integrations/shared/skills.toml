@@ -197,23 +197,3 @@ Write an AI-BOM file and summarize it. This skill is read-only toward everything
 3. Summarize from the file, not from memory: the format and spec version, component counts by type (agents, MCP servers, models, packages), how many components carry vulnerabilities and the worst severity, and where the file was written. Mention that relationships are recorded (agent -> MCP server -> package) so the BOM shows how parts connect, not only what is installed.
 4. Offer next steps by name: the `checkup` skill for what to fix first, and the `fix` skill for an upgrade plan.
 """
-
-[skills.activity]
-description = "Review what the user's coding agents actually did with agent-bom - which MCP servers and tools Claude Code and Codex called, configured MCP servers that were never used, risky actions such as pipe-to-shell installs, force pushes, writes outside the project or reads of secret files, and packages the agents installed. Use when the user asks what their agents have been doing, which MCP servers are unused, or what risky commands their agents ran."
-capabilities = { read_inventory = true, read_findings = true, read_audit_log = true, write_findings = false, outbound_http = false }
-codex_body = """
-Review local coding-agent activity with agent-bom. This skill is read-only: the command reads Claude Code and Codex session history files on this machine, sends nothing over the network, and changes nothing.
-
-1. Run `{ab} activity --format json > "$OUT/activity.json"`. Add `--since '<N>d'` if the user named a window (default 30 days) and `--project '<dir>'` only if they named a project directory. Never add `--check-packages`; offer the `check` skill instead.
-2. Report, in this order:
-   - the `summary.headline` exactly as returned, including the window label, and say if `truncated` is true (read limits were reached, so counts are partial)
-   - **Unused MCP servers** from `unused_servers`: agent, server and `config_path`. These are configured attack surface with no use in the window; they are candidates to remove. A client whose history was not found is never listed, so do not call its servers unused.
-   - **Risky actions** from `risky_actions`, most severe first (high, medium, low): category, `count`, `last_seen`, agent, project and the redacted `evidence`; each row already groups repeats. Use `risky_action_totals` for totals, and say so when `risky_actions_truncated` is true. For `secret_file_read` give the path only. Mention the `low_signal_writes` totals in one line, not as risks.
-   - **MCP usage** from `mcp_servers`: calls and `last_used` per server with the top tools, and the `builtin_tools` totals in one line. `usage_basis: "name_only"` means the call named a server that could not be matched to exactly one configured server; say so rather than treating it as confirmed.
-   - **Installed packages** from `installed_packages`: ecosystem, name, version (or "unpinned") and count. Offer the `check` skill to look them up; this command did not check them.
-   - the `summary.recommendations`, as written
-3. If `summary.headline` says no session history was found, say which history this covers (Claude Code `~/.claude/projects`, Codex `~/.codex/sessions`) and stop.
-4. If the shell reports `No such command 'activity'`, this release cannot review agent activity yet; say so and stop.
-
-To remove an unused server, read the named config file and show the exact entry you would delete. Edit only that entry, one server at a time.
-"""

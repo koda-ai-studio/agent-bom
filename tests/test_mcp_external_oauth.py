@@ -21,8 +21,20 @@ def signing_key():
 
 
 @pytest.fixture
-def verifier(signing_key):
-    verifier = OAuthTokenVerifier(OAuthConfig(ISSUER, AUDIENCE, ISSUER + "/certs", frozenset({"approved-user"})))
+def verifier(signing_key, monkeypatch):
+    verifier = OAuthTokenVerifier(
+        OAuthConfig(
+            ISSUER,
+            AUDIENCE,
+            ISSUER + "/certs",
+            frozenset({"approved-user"}),
+            "tenant-a",
+            ISSUER + "/introspect",
+            "resource",
+            "test-only-secret",
+        )
+    )
+    monkeypatch.setattr(verifier, "_active", lambda token, claims: True)
     verifier.keys = Mock()
     verifier.keys.get_signing_key_from_jwt.return_value.key = signing_key.public_key()
     return verifier
@@ -30,7 +42,7 @@ def verifier(signing_key):
 
 def token(key, **changes):
     now = int(time.time())
-    claims = dict(iss=ISSUER, aud=AUDIENCE, sub="approved-user", iat=now, exp=now + 600, scope="read")
+    claims = dict(iss=ISSUER, aud=AUDIENCE, sub="approved-user", iat=now, exp=now + 600, scope="read", tenant_id="tenant-a")
     claims.update(changes)
     return jwt.encode(claims, key, algorithm="RS256", headers={"kid": "first"})
 
@@ -40,7 +52,7 @@ async def test_approved_token_is_read_only(verifier, signing_key):
     result = await verifier.verify_token(token(signing_key, scope="read admin scan:write", roles=["admin"]))
     assert result is not None
     assert result.scopes == ["read"]
-    assert result.client_id == "oauth:approved-user"
+    assert result.client_id == "oauth:tenant-a:approved-user"
     assert result.resource == AUDIENCE
 
 
@@ -50,7 +62,6 @@ async def test_approved_token_is_read_only(verifier, signing_key):
         {"iss": "https://other.example"},
         {"aud": "other-api"},
         {"sub": "unapproved"},
-        {"scope": "admin"},
         {"scope": ["read"]},
         {"exp": 1},
         lambda: {"exp": int(time.time()) + 7200},
@@ -79,6 +90,10 @@ def oauth_env(monkeypatch):
     for key, value in {"ISSUER": ISSUER, "AUDIENCE": AUDIENCE, "JWKS_URI": ISSUER + "/certs", "SUBJECTS": "approved-user"}.items():
         monkeypatch.setenv("AGENT_BOM_MCP_OAUTH_" + key, value)
     monkeypatch.setenv("AGENT_BOM_MCP_PUBLIC_URL", "https://mcp.example")
+    monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", "tenant-a")
+    monkeypatch.setenv("AGENT_BOM_MCP_OAUTH_INTROSPECTION_URL", ISSUER + "/introspect")
+    monkeypatch.setenv("AGENT_BOM_MCP_OAUTH_INTROSPECTION_CLIENT_ID", "resource")
+    monkeypatch.setenv("AGENT_BOM_MCP_OAUTH_INTROSPECTION_CLIENT_SECRET", "test-only-secret")
     monkeypatch.delenv("AGENT_BOM_MCP_OPERATOR_TOKEN", raising=False)
 
 
@@ -139,7 +154,19 @@ async def test_jwks_rotates_and_new_access_token_works(monkeypatch, signing_key)
         {**json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(k.public_key())), "kid": kid}
         for k, kid in [(signing_key, "first"), (other, "second")]
     ]
-    verifier = OAuthTokenVerifier(OAuthConfig(ISSUER, AUDIENCE, ISSUER + "/certs", frozenset({"approved-user"})))
+    verifier = OAuthTokenVerifier(
+        OAuthConfig(
+            ISSUER,
+            AUDIENCE,
+            ISSUER + "/certs",
+            frozenset({"approved-user"}),
+            "tenant-a",
+            ISSUER + "/introspect",
+            "resource",
+            "test-only-secret",
+        )
+    )
+    monkeypatch.setattr(verifier, "_active", lambda token, claims: True)
     responses = iter([{"keys": [keys[0]]}, {"keys": keys}])
 
     def fetch():
@@ -152,7 +179,7 @@ async def test_jwks_rotates_and_new_access_token_works(monkeypatch, signing_key)
     assert await verifier.verify_token(token(signing_key)) is not None
     now = int(time.time())
     renewed = jwt.encode(
-        dict(iss=ISSUER, aud=AUDIENCE, sub="approved-user", iat=now, exp=now + 600, scope="read"),
+        dict(iss=ISSUER, aud=AUDIENCE, sub="approved-user", iat=now, exp=now + 600, scope="read", tenant_id="tenant-a"),
         other,
         algorithm="RS256",
         headers={"kid": "second"},
@@ -227,3 +254,10 @@ def test_hosted_startup_preserves_configured_oauth(deployment, oauth_env, monkey
         assert client.post("/mcp", json=message, headers=headers).status_code == 401
         headers["Authorization"] = "Bearer " + token(signing_key)
         assert client.post("/mcp", json=message, headers=headers).status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_valid_token_without_read_scope_grants_no_authority(verifier, signing_key):
+    result = await verifier.verify_token(token(signing_key, scope="admin"))
+    assert result is not None
+    assert result.scopes == []  # SDK required_scopes rejects this token with 403.

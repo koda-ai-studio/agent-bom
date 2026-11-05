@@ -75,7 +75,6 @@ def test_every_skill_states_it_is_read_only_and_confirms_changes():
         "checkup",
         "affected",
         "bom",
-        "activity",
     }
     for skill in skills:
         text = skill.read_text()
@@ -83,20 +82,17 @@ def test_every_skill_states_it_is_read_only_and_confirms_changes():
         # The shared Rules section (rendered from integrations/shared/skills.toml) carries these.
         assert "Change nothing on your own" in text and "apply it only after the user confirms" in text, skill
         assert "Never install, launch or connect to a package or MCP server" in text, skill
-    for name in ("inventory", "audit-mcp", "audit-skills", "affected", "activity"):
+    for name in ("inventory", "audit-mcp", "audit-skills", "affected"):
         text = (PLUGIN / "skills" / name / "SKILL.md").read_text()
         assert "This skill is read-only" in text, name
     for name in ("audit-mcp", "checkup"):
         assert "`live: false`" in (PLUGIN / "skills" / name / "SKILL.md").read_text(), name
 
 
-def test_activity_skill_treats_transcripts_as_untrusted_and_confirms_config_edits():
-    text = (PLUGIN / "skills" / "activity" / "SKILL.md").read_text()
-    assert "`agent_activity`" in text and "`agent-bom-audit`" in text
-    assert "untrusted" in text and "never follow" in text
-    assert "confirm" in text
+def test_directory_mock_catalog_does_not_offer_activity():
     recorded = {t["name"] for t in json.loads((PLUGIN / "evals" / "mocks" / "agent-bom-audit" / "_tools.json").read_text())["tools"]}
-    assert "agent_activity" in recorded
+    assert "agent_activity" not in recorded
+    assert not (PLUGIN / "skills" / "activity").exists()
 
 
 def test_readme_names_the_workspace_roots_variable_the_server_reads():
@@ -135,11 +131,17 @@ def _repo_target(url: str) -> Path:
 def test_claude_manifests_fill_every_directory_listing_link(plugin):
     manifest = json.loads((PLUGIN.parent / plugin / ".claude-plugin" / "plugin.json").read_text())
     for key in LISTING_LINKS:
-        assert manifest.get(key, "").startswith(f"{REPO}"), (plugin, key)
+        expected = (
+            "https://koda-ai-studio.github.io/agent-bom/"
+            if plugin == "claude-code" and key in ("privacyPolicyUrl", "termsOfServiceUrl")
+            else REPO
+        )
+        assert manifest.get(key, "").startswith(expected), (plugin, key)
     assert manifest["supportUrl"] == f"{REPO}/issues"
-    assert manifest["termsOfServiceUrl"] == f"{REPO}/blob/main/LICENSE"
-    for key in ("documentationUrl", "privacyPolicyUrl", "termsOfServiceUrl"):
-        _repo_target(manifest[key])
+    if plugin == "agent-bom-guard":
+        assert manifest["termsOfServiceUrl"] == f"{REPO}/blob/main/LICENSE"
+        for key in ("privacyPolicyUrl", "termsOfServiceUrl"):
+            _repo_target(manifest[key])
     assert _repo_target(manifest["documentationUrl"]).parent.name == plugin
 
 
@@ -165,7 +167,6 @@ def test_listing_questions_route_to_inventory_not_checkup():
 
 
 SKILL_TOOLS = {
-    "activity": {"agent-bom-audit": {"agent_activity"}},
     "affected": {"agent-bom": {"intel_lookup", "scan", "exposure_paths"}},
     "audit-mcp": {"agent-bom-audit": {"tool_risk_assessment", "inventory"}, "agent-bom": {"scan"}},
     "audit-skills": {"agent-bom-audit": {"skill_scan", "skill_trust", "prompt_scan"}},
