@@ -111,14 +111,21 @@ def test_query_window_does_not_restart_retained_history(scan_store, monkeypatch)
 
 
 @pytest.mark.parametrize("first_seen", [None, "invalid timestamp"])
-def test_missing_history_does_not_use_job_completion_as_first_seen(scan_store, first_seen):
+def test_missing_producer_date_uses_first_scan_for_date_and_policy_deadline(scan_store, first_seen):
+    from agent_bom.api.finding_row_inputs import history_ledger_reads_enabled
+
     for month in (8, 9):
         row = job(month)
         row.result["findings"][0].update(first_seen=first_seen, sla_due_at=None, sla_due_at_source="unavailable")
         scan_store.put(row)
     result = get_rows()
-    assert result[0]["first_seen"] in (None, "invalid timestamp")
-    assert result[0]["sla_due_at"] is None
+    # The first scan that reported it is the observation; the opt-in projected read serves the snapshot unchanged.
+    if history_ledger_reads_enabled():
+        assert result[0]["first_seen"] in (None, "invalid timestamp")
+        assert result[0]["sla_due_at"] is None
+    else:
+        assert result[0]["first_seen"] == "2026-08-01T00:00:00+00:00"
+        assert result[0]["sla_due_at"] == "2026-08-08T00:00:00+00:00"
 
 
 def test_explicit_latest_deadline_is_not_replaced_by_history(scan_store):
