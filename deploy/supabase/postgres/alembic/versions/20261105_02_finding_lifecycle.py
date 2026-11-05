@@ -1,7 +1,8 @@
 """Durable per-finding lifecycle, kept past scan retention.
 
-Empty tables only, so the upgrade is brief. Existing dates come from retained
-scans the first time a tenant's findings are read after this revision.
+Empty tables only, so the upgrade is brief. The control plane's cleanup tick seeds
+existing dates from retained scans in bounded batches; reads answer from the
+retained reports until it finishes.
 
 Revision ID: 20261105_02
 Revises: 20261105_01

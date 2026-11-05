@@ -15,6 +15,7 @@ from agent_bom.graph.sla import merge_finding_sla
 _KEY_BATCH = 400
 _LIVE = ("open", "reopened")
 BACKFILL_VERSION = 1
+_NEVER_EXECUTED_SCOPE = ""
 _STATE_COLUMNS = (
     "scope_hash,finding_key,canonical_id,environment,report_canonical_id,first_seen,last_seen,status,resolved_at,"
     "resolution_reason,reopened_at,scan_count,last_job_id,unconfirmed_job_id,unconfirmed_at,asset_key,coverage_key,payload_hash"
@@ -163,6 +164,12 @@ def apply_job_lifecycle(session: SqlSession, dialect: Dialect, job: Any) -> bool
     """
     evidence = scan_evidence(job, collect_scan_findings)
     if evidence is None:
+        # Recorded too, so "every finished job is folded" can be answered from SQL.
+        session.execute(
+            "INSERT INTO finding_lifecycle_scans (tenant_id,scope_hash,job_id,evidence_at,complete) VALUES (?,?,?,?,0) "
+            "ON CONFLICT (tenant_id,scope_hash,job_id) DO NOTHING",
+            (job.tenant_id, _NEVER_EXECUTED_SCOPE, job.job_id, ""),
+        )
         return False
     tenant_id = evidence.tenant_id
     _lock_scope(session, dialect, evidence)
@@ -198,6 +205,32 @@ def purge_tenant(session: SqlSession, tenant_id: str) -> int:
     for table in ("finding_lifecycle_scans", "finding_lifecycle_backfill"):
         session.execute(f"DELETE FROM {table} WHERE tenant_id=?", (tenant_id,))  # nosec B608 - fixed tables
     return deleted
+
+
+def _job_table(dialect: Dialect) -> tuple[str, str]:
+    return ("scan_jobs", "team_id") if dialect == "postgres" else ("jobs", "tenant_id")
+
+
+def pending_job_ids(session: SqlSession, dialect: Dialect, tenant_id: str, limit: int) -> list[str]:
+    """Finished jobs not yet folded, which only exist for scans from before this table."""
+    table, tenant = _job_table(dialect)
+    rows = session.execute(
+        f"SELECT j.job_id FROM {table} j WHERE j.{tenant}=? AND j.status='done' AND NOT EXISTS ("  # nosec B608 - fixed identifiers
+        f"SELECT 1 FROM finding_lifecycle_scans s WHERE s.tenant_id=j.{tenant} AND s.job_id=j.job_id) "
+        "ORDER BY j.completed_at LIMIT ?",
+        (tenant_id, limit),
+    ).fetchall()
+    return [row[0] for row in rows]
+
+
+def unbackfilled_tenants(session: SqlSession, dialect: Dialect, limit: int) -> list[str]:
+    table, tenant = _job_table(dialect)
+    rows = session.execute(
+        f"SELECT DISTINCT {tenant} FROM {table} WHERE status='done' AND {tenant} NOT IN "  # nosec B608 - fixed identifiers
+        "(SELECT tenant_id FROM finding_lifecycle_backfill) LIMIT ?",
+        (limit,),
+    ).fetchall()
+    return [row[0] for row in rows]
 
 
 def backfilled(session: SqlSession, tenant_id: str) -> bool:

@@ -159,6 +159,7 @@ CURRENT_EVIDENCE_SOURCES = frozenset(
         "src/agent_bom/api/storage/finding_history_schema.py",
         "src/agent_bom/api/finding_lifecycle_fold.py",
         "src/agent_bom/api/finding_lifecycle_read.py",
+        "src/agent_bom/api/finding_lifecycle_tick.py",
         "src/agent_bom/api/finding_scan_lifecycle.py",
         "src/agent_bom/api/storage/finding_lifecycle.py",
         "src/agent_bom/api/storage/finding_lifecycle_schema.py",

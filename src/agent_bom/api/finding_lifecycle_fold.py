@@ -331,17 +331,35 @@ def apply_evidence(
     return [state for state in states.values() if state.changed]
 
 
-def replay_lifecycle(jobs: Iterable[Any], rows_for_job: RowsForJob) -> list[FindingState]:
-    """Fold retained scans in evidence order, for job stores with no durable table."""
+def _cached_evidence(job: Any, rows_for_job: RowsForJob, cache: dict[Any, ScanEvidence | None]) -> ScanEvidence | None:
+    result = job.result if isinstance(job.result, dict) else {}
+    key = (getattr(job, "tenant_id", ""), job.job_id, job.completed_at, str(job.status), len(result.get("findings") or ()))
+    if key not in cache:
+        cache[key] = scan_evidence(job, rows_for_job)
+    return cache[key]
+
+
+def replay_lifecycle(
+    jobs: Iterable[Any], rows_for_job: RowsForJob, *, cache: dict[Any, ScanEvidence | None] | None = None
+) -> list[FindingState]:
+    """Fold retained scans in evidence order, for a read with no durable state to use.
+
+    ``cache`` lets a store that keeps its jobs in memory reuse each job's evidence.
+    """
     by_scope: dict[str, dict[str, FindingState]] = {}
 
     def own_payload(state: FindingState) -> dict[str, Any]:
         return state.new_row or {}
 
-    built = (
-        evidence for job in sorted(jobs, key=scan_evidence_authority_key) if (evidence := scan_evidence(job, rows_for_job)) is not None
-    )
+    seen = {} if cache is None else cache
+    built = [
+        evidence
+        for job in sorted(jobs, key=scan_evidence_authority_key)
+        if (evidence := _cached_evidence(job, rows_for_job, seen)) is not None
+    ]
     for evidence in sorted(built, key=lambda item: item.at):
         states = by_scope.setdefault(evidence.scope_hash, {})
         apply_evidence(states, evidence, (), own_payload)
+        for state in states.values():
+            state.changed = False
     return [state for states in by_scope.values() for state in states.values()]

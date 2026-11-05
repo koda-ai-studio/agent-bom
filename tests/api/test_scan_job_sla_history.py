@@ -165,15 +165,11 @@ def test_history_uses_existing_tenant_read_and_does_not_mutate_snapshots(scan_st
         calls.clear()  # Application startup restores jobs independently of this read route.
         response = client.get("/v1/findings", params={"window_days": 0})
         assert response.status_code == 200 and len(response.json()["findings"]) == 1
-        # The first read seeds durable lifecycle from retained scans, once, through the tenant's own read.
-        assert set(calls) == {"history-tenant"}
-        calls.clear()
-        assert client.get("/v1/findings", params={"window_days": 0}).status_code == 200
     from agent_bom.core.settings import env_flag
 
-    assert set(calls) <= {"history-tenant"}
-    if isinstance(scan_store, SQLiteJobStore) and env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS"):
-        assert calls == []
+    assert calls == (
+        [] if isinstance(scan_store, SQLiteJobStore) and env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS") else ["history-tenant"]
+    )
     assert [row.model_dump(mode="json") for row in original(tenant_id="history-tenant")] == before
 
 

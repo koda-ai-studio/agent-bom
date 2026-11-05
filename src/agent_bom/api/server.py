@@ -31,6 +31,7 @@ from agent_bom.api.dev_auth_state import set_dev_api_key
 from agent_bom.api.docs_ui import configure_docs
 from agent_bom.api.error_envelope import ERROR_RESPONSES, install_error_envelope
 from agent_bom.api.experimental_gate import ExperimentalFeatureHealth, SystemHealthResponse
+from agent_bom.api.finding_lifecycle_tick import run_finding_lifecycle_tick
 from agent_bom.api.foreground_activity import ForegroundActivityMiddleware
 from agent_bom.api.hub_materialization import run_materialization_tick
 from agent_bom.api.middleware import (
@@ -641,6 +642,11 @@ _shutting_down: bool = False
 _STUCK_JOB_TIMEOUT = 1800  # 30 minutes — mark RUNNING jobs as FAILED
 
 
+def _run_finding_backfills() -> None:
+    run_materialization_tick()
+    run_finding_lifecycle_tick()
+
+
 async def _cleanup_loop() -> None:
     """Background task that removes expired jobs and unsticks RUNNING jobs.
 
@@ -718,7 +724,7 @@ async def _cleanup_tick() -> None:
                 partitions_created,
                 partitions_dropped,
             )
-        await asyncio.to_thread(run_materialization_tick)
+        await asyncio.to_thread(_run_finding_backfills)
     except Exception:  # noqa: BLE001
         _logger.debug("partition maintenance skipped", exc_info=False)
     # NHI lifecycle enforcement (#nhi): expire lingering JIT grants, opt-in

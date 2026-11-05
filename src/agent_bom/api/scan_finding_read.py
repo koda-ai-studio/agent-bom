@@ -192,7 +192,7 @@ def _with_lifecycle(
     live_since: str | None,
     include_resolved: bool,
 ) -> list[dict[str, Any]]:
-    read = lifecycle_read(_get_store(), tenant_id, jobs, _cached_scan_findings, since=since, include_resolved=include_resolved)
+    read = lifecycle_read(_get_store(), tenant_id, jobs, since=since, include_resolved=include_resolved)
     return apply_scan_lifecycle(
         rows,
         read.states,

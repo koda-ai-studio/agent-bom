@@ -40,6 +40,13 @@ def _tenant_jobs(tenant: str) -> list[dict[str, Any]]:
         return stores._get_store().list_summary(tenant_id=tenant)
 
 
+def _run_backfill() -> None:
+    from agent_bom.api.finding_lifecycle_tick import run_finding_lifecycle_tick
+
+    while run_finding_lifecycle_tick(budget_seconds=30):
+        pass
+
+
 def _days_ago(days: int) -> str:
     return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
@@ -121,14 +128,74 @@ def test_backfill_recovers_dates_from_retained_scans(push_estate):
     with store.finding_lifecycle_session(push_estate.tenant) as session:
         for table in ("finding_lifecycle", "finding_lifecycle_scans", "finding_lifecycle_backfill"):
             session.execute(f"DELETE FROM {table} WHERE tenant_id=?", (push_estate.tenant,))  # nosec B608
+    # Until the maintenance tick runs, a read answers from the retained reports and writes nothing.
+    assert_at(push_estate.one(VULN[0], "open")["first_seen"], T[1])
+    assert_at(push_estate.one(FIXED_VULN[0], "resolved")["resolved_at"], T[3])
+    with store.finding_lifecycle_session(push_estate.tenant, write=False) as session:
+        assert session.execute("SELECT count(*) FROM finding_lifecycle WHERE tenant_id=?", (push_estate.tenant,)).fetchone()[0] == 0
+    _run_backfill()
     kept = push_estate.one(VULN[0], "open")
     assert_at(kept["first_seen"], T[1])
     assert_at(kept["last_seen"], T[2])
     assert_at(push_estate.one(FIXED_VULN[0], "resolved")["resolved_at"], T[3])
-    # A second read must not count the same scans twice.
+    # Another tick must not count the same scans twice.
+    _run_backfill()
     assert push_estate.one(VULN[0], "open")["scan_count"] == 2
     _expire_all_jobs()
     assert_at(push_estate.one(VULN[0], "open")["first_seen"], T[1])
+
+
+def _count_scan_projection(monkeypatch, read) -> int:
+    from agent_bom.api import scan_finding_projection, scan_finding_read
+
+    calls = []
+    original = scan_finding_projection._iter_scan_findings
+
+    def counted(job):
+        calls.append(job.job_id)
+        return original(job)
+
+    monkeypatch.setattr(scan_finding_read, "_iter_scan_findings", counted)
+    read()
+    return len(calls)
+
+
+def _rescans(estate_: Estate, count: int) -> None:
+    for day in range(count):
+        at = (datetime(2026, 9, 1, tzinfo=timezone.utc) + timedelta(hours=day)).isoformat()
+        estate_.scan("asset-a", [VULN], at)
+
+
+def test_a_read_does_not_project_every_retained_scan(store_kind, client, monkeypatch):
+    """A read's projection work follows the current scans, never how many are retained."""
+
+    def calls_with(retained: int) -> int:
+        estate_ = Estate(client, "push", f"lifecycle-{uuid4().hex[:10]}")
+        _rescans(estate_, retained)
+
+        def read() -> None:
+            assert len(estate_.rows("all")) == 1
+            with tenant_bound_context(estate_.tenant):
+                from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant, current_open_scan_findings
+
+                assert len(current_open_scan_findings(_completed_jobs_for_tenant(estate_.tenant))) == 1
+
+        return _count_scan_projection(monkeypatch, read)
+
+    assert calls_with(2) == calls_with(40)
+
+
+def test_a_read_writes_no_backfill(push_estate, monkeypatch):
+    from agent_bom.api.storage import finding_lifecycle as durable
+
+    push_estate.scan("asset-a", [VULN], T[1])
+    folded: list[Any] = []
+    monkeypatch.setattr(durable, "apply_job_lifecycle", lambda *args: folded.append(args))
+    with stores._get_store().finding_lifecycle_session(push_estate.tenant) as session:
+        for table in ("finding_lifecycle", "finding_lifecycle_scans", "finding_lifecycle_backfill"):
+            session.execute(f"DELETE FROM {table} WHERE tenant_id=?", (push_estate.tenant,))  # nosec B608
+    assert push_estate.one(VULN[0], "open")["status"] == "open"
+    assert folded == []
 
 
 # ── Order, replay and concurrency against durable state ─────────────────────
@@ -377,6 +444,7 @@ def test_ticket_link_filed_on_the_old_id_follows_each_project(push_estate):
                 updated_at=T[1],
             )
         )
+        _run_backfill()
         ids = {item["id"] for item in push_estate.rows("all")}
         assert len(ids) == 2
         links = tickets.list_ticket_links_for_findings(push_estate.tenant, ids, limit=10)

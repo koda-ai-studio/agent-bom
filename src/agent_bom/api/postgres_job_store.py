@@ -19,7 +19,7 @@ from agent_bom.api.postgres_common import (
     set_current_tenant,
 )
 from agent_bom.api.scan_snapshot_store import discard_job_snapshot
-from agent_bom.api.storage.finding_history_adapters import postgres_history_backfill, postgres_history_read, postgres_lifecycle_session
+from agent_bom.api.storage.finding_history_adapters import PostgresFindingLifecycle, postgres_history_backfill, postgres_history_read
 from agent_bom.api.storage.finding_history_schema import POSTGRES_FINDING_HISTORY_V1
 from agent_bom.api.storage.finding_lifecycle_schema import POSTGRES_FINDING_LIFECYCLE_V1, forget_job_evidence
 from agent_bom.api.storage.job_detail_reads import json_column, postgres_detail_projection, postgres_status_view
@@ -42,11 +42,9 @@ if TYPE_CHECKING:
     from .server import ScanJob
 
 
-class PostgresJobStore:
+class PostgresJobStore(PostgresFindingLifecycle):
     finding_history_read = postgres_history_read
     backfill_finding_history = postgres_history_backfill
-    finding_lifecycle_dialect = "postgres"
-    finding_lifecycle_session = postgres_lifecycle_session
     has_usable_demo_job = postgres_demo_exists
     pending_dispatch_count = postgres_pending_dispatch_count
     get_status_view = postgres_status_view

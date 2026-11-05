@@ -129,8 +129,11 @@ resolutions merge by evidence time rather than arrival:
   follows the same rules, so it can only widen dates.
 - A report time more than a day ahead of when it was stored counts as the stored time.
 
-Existing dates are seeded from retained scans the first time a tenant's findings
-are read. Deleting a scan explicitly removes findings only it reported; expiry
+After an upgrade the control plane's cleanup tick seeds existing dates from retained
+scans in small commits, about 20 seconds a minute, and replicas can share the work.
+Until a tenant finishes, reads answer from the finding streams of its retained reports
+and write nothing; a report with no stream, from an old producer, shows as open with
+its reported dates until then. Deleting a scan explicitly removes findings only it reported; expiry
 removes nothing.
 
 **Bulk** (`POST /v1/findings/bulk`, `agent-bom findings push`). A batch resolves
@@ -146,8 +149,8 @@ and the response lists why in `reconcile_skipped`. State is stored per tenant in
 Manual exceptions apply at read time and manual SLA assignments carry through
 history, so both survive a resolve and reopen. Exceptions and triage assignees
 match on vulnerability, package and server, so one applies to that package in every
-project. A ticket filed before project identity stays linked: the first read after
-upgrade copies its link to each project's finding.
+project. A ticket filed before project identity stays linked: the tick copies its
+link to each project's finding when it finishes the tenant.
 
 ## Limits
 
