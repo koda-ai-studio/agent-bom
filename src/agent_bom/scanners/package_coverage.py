@@ -13,6 +13,7 @@ from agent_bom.scanners.package_matching import _emit_scan_warning as _emit_scan
 from agent_bom.scanners.package_matching import _scanners_patchable as _scanners_patchable
 from agent_bom.scanners.scan_options import IncompleteScanError, ScanOptions, _logger, _package_db_key
 from agent_bom.scanners.state import record_coverage_warning
+from agent_bom.vuln_freshness import local_osv_is_scoped
 
 
 def _flag_remote_lookup_gap(osv_targets: list[Package]) -> None:
@@ -105,11 +106,14 @@ def _select_osv_targets(
     inventory_ecosystems = {eco for package in scannable for eco in _db_ecosystems_for_package(package)}
     covered_ecos = _scanners_patchable("_db_covered_ecosystems")(inventory_ecosystems)
     # An exact package hit or a complete ecosystem archive is sufficient local evidence; sparse-release
-    # fallbacks override both so EOL coverage cannot be mistaken for a clean result.
+    # fallbacks override both so EOL coverage cannot be mistaken for a clean result. A scoped archive
+    # also holds rows for other ecosystems (cross-ecosystem advisories, distro feeds), so there a hit
+    # outside the scope proves nothing about that package's remaining advisories.
+    held = set() if not offline and local_osv_is_scoped() else db_covered
     osv_targets = [
         p
         for p in scannable
-        if (_package_db_key(p) not in db_covered and not any(eco in covered_ecos for eco in _db_ecosystems_for_package(p)))
+        if (_package_db_key(p) not in held and not any(eco in covered_ecos for eco in _db_ecosystems_for_package(p)))
         or _package_db_key(p) in force_osv_keys
     ]
     if force_osv_keys:

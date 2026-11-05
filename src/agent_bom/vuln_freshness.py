@@ -123,6 +123,9 @@ class VulnDataFreshness:
     # Feeds whose last sync was partial (rate-limited, timed out or capped):
     # ``[{"source": "NVD", "reason": "truncated"}]``.
     partial_sources: list[dict[str, str]] = field(default_factory=list)
+    # OSV ecosystems the local archive holds when it is not the full archive.
+    # Packages in any other ecosystem are answered by live OSV, not by this cache.
+    osv_scope: list[str] = field(default_factory=list)
 
     @property
     def age_days(self) -> int | None:
@@ -156,6 +159,8 @@ class VulnDataFreshness:
             payload["integrity_issue"] = self.integrity_issue
         if self.partial_sources:
             payload["partial_sources"] = [dict(item) for item in self.partial_sources]
+        if self.osv_scope:
+            payload["osv_scope"] = list(self.osv_scope)
         if cache_hits:
             payload["osv_response_cache"] = cache
         if epss_source:
@@ -172,6 +177,8 @@ class VulnDataFreshness:
         line = self._base_summary()
         for item in self.partial_sources:
             line += f"; {item['source']} sync partial ({item['reason']}) — rerun `agent-bom db update`"
+        if self.osv_scope:
+            line += f"; OSV archive scoped to {', '.join(self.osv_scope)}; other ecosystems are checked live"
         return line
 
     def _base_summary(self) -> str:
@@ -281,6 +288,43 @@ def _read_partial_sources(db_path: Path, label: Callable[[str], str]) -> list[di
     return partial
 
 
+def _read_osv_coverage(db_path: Path) -> dict[str, object]:
+    """The OSV source's sync metadata; empty when absent or unreadable. Never raises."""
+    try:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return {}
+    try:
+        row = conn.execute("SELECT metadata_json FROM sync_meta WHERE source = 'osv'").fetchone()
+        meta = json.loads(row[0]) if row and row[0] else {}
+    except (sqlite3.Error, json.JSONDecodeError, TypeError):
+        return {}
+    finally:
+        conn.close()
+    return meta if isinstance(meta, dict) else {}
+
+
+def osv_archive_scope(db_path: Path) -> list[str]:
+    """Ecosystems a scoped OSV archive holds; empty for a full, legacy or absent one."""
+    meta = _read_osv_coverage(db_path)
+    if meta.get("coverage") != "selected_ecosystems":
+        return []
+    ecosystems = meta.get("ecosystems")
+    return [str(item) for item in ecosystems if isinstance(item, str)] if isinstance(ecosystems, list) else []
+
+
+def local_osv_is_scoped() -> bool:
+    """Whether the configured local OSV archive holds only selected ecosystems."""
+    from agent_bom.db.schema import DB_PATH
+
+    return bool(osv_archive_scope(DB_PATH))
+
+
+def osv_archive_is_full(db_path: Path) -> bool:
+    """True when the last sync recorded the all-ecosystems archive."""
+    return _read_osv_coverage(db_path).get("coverage") == "all_ecosystems"
+
+
 def _schema_issue(schema_version: int | None) -> str | None:
     from agent_bom.db.schema import CODE_SCHEMA_VERSION
 
@@ -357,7 +401,6 @@ def compute_freshness(
             sources.append(_label(src))
 
     record_count = sum(count for _src, _ts, count in rows)
-    partial_sources = _read_partial_sources(resolved_path, _label)
 
     oldest: datetime | None = None
     for _src, ts, _count in rows:
@@ -396,7 +439,8 @@ def compute_freshness(
         danger=danger,
         max_age_hours=threshold,
         integrity_issue=integrity_issue,
-        partial_sources=partial_sources,
+        partial_sources=_read_partial_sources(resolved_path, _label),
+        osv_scope=osv_archive_scope(resolved_path),
     )
 
 

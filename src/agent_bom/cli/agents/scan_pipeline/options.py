@@ -181,6 +181,7 @@ class ScanOptions:
     auto_update_db: bool
     require_fresh_db: bool
     db_sources: Optional[str]
+    db_osv_scope: str
     snyk_flag: bool
     snyk_token: Optional[str]
     snyk_org: Optional[str]

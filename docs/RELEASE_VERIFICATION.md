@@ -622,8 +622,9 @@ The GitHub Action follows the same rule without an override: with
 `agent-bom-version` empty, `koda-ai-studio/agent-bom@vX` installs `agent-bom==X` (the
 version in the action ref's `pyproject.toml`). Installation fails if that version
 cannot be installed; network, index or dependency-resolution errors never select
-a different release. For an unpublished ref, use `install-from-source: 'true'` or
-select a published `agent-bom-version` explicitly.
+a different release. For an unpublished ref, select a published
+`agent-bom-version` explicitly; `install-from-source: 'true'` installs the
+workspace, so it only works when the workspace is a checkout of this repository.
 
 #### Pre-tag release smoke
 

@@ -9,11 +9,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- The GitHub Action reads OSV's application-ecosystem archives by default (`vuln-db-scope: application`, about 0.3 GB instead of 2.9 GB). OS and other packages are answered by live OSV, and the report states the scope in `vuln_data_freshness.osv_scope`. Set `vuln-db-scope: full` for the previous behaviour. The Action's cache key changes, so the first run after upgrading builds a new database.
+- A first `--auto-update-db` refresh caps NVD at 60 seconds, newest CVEs first, and reports it as partial; later refreshes resume it. `AGENT_BOM_NVD_TIME_BUDGET_SECONDS` overrides the cap.
+- `--auto-update-db` prints the time each source took.
+
 ### Fixed
 - A later finding on the same CVE no longer erases earlier CVE details or its KEV verdict, and every finding that names a CVE follows that CVE's KEV verdict in counts and lists alike.
 - CVE records merge under row locks in a fixed order, so concurrent writers keep every field and batches naming the same CVEs cannot deadlock. KEV can no longer sit in only one of a record's column and payload.
 - Migration `20261105_01` and the control plane's cleanup tick link existing CVE findings to their record and reconcile records that disagree on KEV. Fields a replacing writer already overwrote come back only from a rescan or a catalog sync.
 - KEV follows the CISA catalog on the control plane. A fresh, complete catalog already on the replica sets KEV with its added and due dates and clears entries the catalog no longer lists; a missing, stale, empty or truncated catalog changes nothing. `agent-bom db update` now removes delisted entries, and only a complete feed can remove one.
+- A first vulnerability database build writes about a ninth of the data it did: it builds beside the target with no write-ahead log or flushes, and only a finished file is renamed into place. A refresh of an existing database keeps its crash-safe settings with a larger page cache and fewer checkpoints.
+- With a scoped OSV archive, a local hit in an ecosystem outside the scope no longer stops the live OSV lookup for that package.
+- The `install-from-source` input now says that it only works when the workspace is a checkout of this repository.
 - KEV counts and the `kev=true` filter no longer miss findings whose stored payload is compressed; existing rows are backfilled by migration `20261104_01`.
 - Overview, posture and grouped findings report exact issue counts from a store aggregate at any size, so totals no longer shrink as data grows and no severity reads 0 because a row budget ran out. Coverage lanes and the Vuln / SCA card are exact on the same basis.
 - First reads of overview, `kev=true` and posture counts no longer join the whole ledger; they read indexed columns.
