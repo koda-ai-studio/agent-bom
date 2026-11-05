@@ -1192,7 +1192,8 @@ def test_bucket_partial_collection_never_reports_clean_or_wrong_remediation(monk
     client.list_buckets.return_value = [known, missing]
     monkeypatch.setattr(module, "_import_google_cloud_module", lambda _: SimpleNamespace(Client=lambda **kw: client))
     result = module._check_5_1("project")
-    assert result.status == (CheckStatus.FAIL if public else CheckStatus.ERROR)
+    unevaluated = CheckStatus.NO_DATA if reason in {"SERVICE_DISABLED", "BILLING_DISABLED"} else CheckStatus.ERROR
+    assert result.status == (CheckStatus.FAIL if public else unevaluated)
     assert "1/2" in result.evidence
     expected = {
         "SERVICE_DISABLED": "service_disabled",
