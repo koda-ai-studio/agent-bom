@@ -44,3 +44,29 @@ def test_distroless_checksums_are_not_status_records(tmp_path, filename, expecte
     result = parse_oci_tarball(_docker_save_tar(tmp_path, f"var/lib/dpkg/status.d/{filename}", blob))
     assert result.packages == []
     assert bool(result.coverage_warnings) is expected_gap
+
+
+@pytest.mark.parametrize("path", ["opt/model/weights.bin", "app/README.md", "srv/static/data.json"])
+def test_oversized_non_binary_is_not_a_go_coverage_gap(tmp_path, monkeypatch, path):
+    monkeypatch.setenv("AGENT_BOM_OCI_MAX_METADATA_MEMBER_BYTES", "128")
+    result = parse_oci_tarball(_docker_save_tar(tmp_path, path, b"documentation and data\n" * 20))
+    assert result.packages == []
+    assert not result.coverage_warnings
+
+
+def test_non_binary_probe_stops_before_searching_body(tmp_path, monkeypatch):
+    from agent_bom.parsers import oci_extractors
+
+    def unexpected_search(stream):
+        pytest.fail("Non-executable content must not enter the Go marker search")
+
+    monkeypatch.setattr(oci_extractors, "_go_buildinfo_window", unexpected_search)
+    result = parse_oci_tarball(_docker_save_tar(tmp_path, "app/data.bin", b"data" * 1024))
+    assert not result.coverage_warnings
+
+
+@pytest.mark.parametrize("header", [b"\x7fELF", b"MZ", b"\xcf\xfa\xed\xfe"])
+def test_oversized_executable_still_records_unknown_inventory(tmp_path, monkeypatch, header):
+    monkeypatch.setenv("AGENT_BOM_OCI_MAX_METADATA_MEMBER_BYTES", "128")
+    result = parse_oci_tarball(_docker_save_tar(tmp_path, "app/server", header + bytes(512)))
+    assert any(w.path == "app/server" for w in result.coverage_warnings)

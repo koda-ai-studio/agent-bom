@@ -40,8 +40,11 @@ def _fetch_safely(fetch_json: FetchJSON, endpoint: str) -> Mapping[str, Any]:
 
 
 REQUIRED_UI_JOBS = frozenset({"UI Validate", "UI export build", "UI E2E and container smoke"})
+REQUIRED_FULL_CORRECTNESS_JOBS = frozenset(
+    f"Full correctness (Python {version}, shard {shard})" for version in ("3.11", "3.12", "3.13", "3.14") for shard in range(4)
+)
 REQUIRED_WORKFLOW_JOBS = {
-    "ci.yml": REQUIRED_UI_JOBS,
+    "ci.yml": REQUIRED_UI_JOBS | REQUIRED_FULL_CORRECTNESS_JOBS | {"Combined Python coverage", "Python correctness aggregation"},
     "runtime-acceptance.yml": frozenset({"Gateway ingest and replica reconnect"}),
 }
 
@@ -111,9 +114,11 @@ def verify_release_candidate(
             and run.get("head_branch") == branch
             and run.get("event") == "push"
             and run.get("path") == expected_path
-            and run.get("status") == "completed"
-            and run.get("conclusion") == "success"
         ):
+            # GitHub returns newest first. A newer incomplete or red run must
+            # not borrow proof from an older green execution of the same SHA.
+            if run.get("status") != "completed" or run.get("conclusion") != "success":
+                break
             run_id = run.get("id")
             run_url = run.get("html_url")
             if isinstance(run_id, int) and isinstance(run_url, str) and run_url.startswith("https://"):

@@ -103,15 +103,18 @@ def _target(name: str, popular: list[str], legitimate: set[str]) -> str | None:
 
 def _scoped_target(scope: str, rest: str, normalized: str, popular: list[str], legitimate: set[str]) -> str | None:
     """An owned npm scope is not a squat of its own project family (``@rollup/x`` vs ``rollup-x``)."""
-    flattened = f"{scope}-{rest}"
-    if flattened in popular or rest in popular:
+    if normalized in popular or normalized in legitimate:
         return None
-    for form in (normalized, flattened):
-        target = _target(form, popular, legitimate)
-        if target:
-            root = target.split("-", 1)[0]
-            return None if scope in (root, f"{root}js", target) else target
-    return None
+    flattened = f"{scope}-{rest}"
+    unscoped_targets = [target for target in popular if not target.startswith("@")]
+    if flattened not in popular and rest not in popular:
+        for form in (normalized, flattened):
+            target = _target(form, unscoped_targets, legitimate)
+            if target:
+                root = target.split("-", 1)[0]
+                return None if scope in (root, f"{root}js", target) else target
+    scoped_targets = [target for target in popular if target.startswith("@") and target.endswith(f"/{rest}")]
+    return _target(normalized, scoped_targets, legitimate)
 
 
 def check_typosquat(name: str, ecosystem: str) -> str | None:

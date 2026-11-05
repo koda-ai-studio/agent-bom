@@ -10,6 +10,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Fixed
+- Container inventory probes executable headers before searching for Go build metadata, avoiding false coverage gaps for oversized data files.
+- Scoped npm namespace lookalikes are checked against ranked scoped targets while preserving unrelated namespaces and official package families.
+- Release preflight requires the exact main commit to pass every full Python correctness shard, combined coverage, UI lanes and runtime acceptance; an older green run cannot override a newer unsuccessful run.
 - File-backed registries, configuration and reports use explicit UTF-8, restoring MCP startup and Unicode evidence on Windows systems with a legacy default encoding.
 - Container binary probes search in small chunks while retaining Go metadata beyond the first window; OCI changes always select the memory-bound regression suite in CI.
 - Mixed Python requirements retain exact pins when resolving ranges; framework discovery no longer treats range bounds as installed versions. Independent requirements pins remain visible alongside Poetry and uv lockfiles.

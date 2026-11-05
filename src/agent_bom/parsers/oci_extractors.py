@@ -21,6 +21,7 @@ from agent_bom.parsers.oci_io import (
     _decompression_ratio_exceeded,
     _logger,
     _max_jar_uncompressed_bytes,
+    _max_metadata_member_bytes,
     _query_legacy_rpmdb,
     _safe_extractfile,
     _safe_getmember,
@@ -394,11 +395,23 @@ def _go_buildinfo_window(stream: IO[bytes]) -> bytes:
 
 
 def _add_go_buildinfo(scan: _LayerScan, member_name: str, member: tarfile.TarInfo) -> None:
-    f = _safe_extractfile(scan.layer_tf, member_name)
+    # A path under /app or /opt is not evidence of an executable. Probe only
+    # the header before applying the metadata limit or searching the body.
+    # _extract_go_binaries has already rejected links and unsafe tar names.
+    f = scan.layer_tf.extractfile(member)
     if f is None:
         scan.gap(member_name)
         return
     with f:
+        header = f.read(16)
+        if not header.startswith(
+            (b"\x7fELF", b"MZ", b"\xfe\xed\xfa\xce", b"\xce\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xcf\xfa\xed\xfe", _GO_BUILDINFO_MAGIC)
+        ):
+            return
+        if member.size > _max_metadata_member_bytes():
+            scan.gap(member_name)
+            return
+        f.seek(0)
         chunk = _go_buildinfo_window(f)
     for m in _GO_DEP_LINE_RE.finditer(chunk):
         mod_path = m.group(1).decode("utf-8", errors="ignore").strip()
@@ -418,6 +431,7 @@ def _extract_go_binaries(scan: _LayerScan) -> None:
             _add_go_buildinfo(scan, member_name, member)
         except Exception:
             _logger.debug("Skipped Go binary: %s", member_name)
+            scan.gap(member_name)
 
 
 def _add_gemspec(scan: _LayerScan, path: str) -> None:
