@@ -557,7 +557,7 @@ runs:
         # Auto-update is a scan-only flag; focused commands manage their own
         # advisory lookups, so the default is dropped silently for them.
         case "$INPUT_VULN_DB_SCOPE" in
-          application) DB_OSV_SCOPE="application" ;;
+          application|"") DB_OSV_SCOPE="application" ;;
           full) DB_OSV_SCOPE="all" ;;
           *)
             echo "::error::vuln-db-scope must be one of: application, full"

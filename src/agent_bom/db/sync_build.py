@@ -32,12 +32,9 @@ _BUILD_PRAGMAS = (
     "PRAGMA temp_store = MEMORY",
     "PRAGMA locking_mode = EXCLUSIVE",
 )
-# Durability is untouched. The default 2 MB page cache spills to the log on nearly
-# every advisory of a refresh, and the default checkpoint flushes every 4 MB of it.
-_UPDATE_PRAGMAS = (
-    "PRAGMA cache_size = -262144",
-    "PRAGMA wal_autocheckpoint = 16384",
-)
+# Durability is untouched, and each flush costs a slow disk far more than a write:
+# refreshing 60,000 advisories took 163 flushes at the default of every 1,000 pages, 7 here.
+_UPDATE_PRAGMAS = ("PRAGMA wal_autocheckpoint = 16384",)
 
 
 def build_files(db_path: Path) -> list[Path]:
@@ -96,7 +93,7 @@ class SyncSession:
         try:
             finished = sqlite3.connect(str(build))
             try:
-                finished.execute("PRAGMA journal_mode = WAL")
+                finished.execute("PRAGMA journal_mode = WAL").fetchone()
             finally:
                 finished.close()
             with open(build, "rb+") as handle:

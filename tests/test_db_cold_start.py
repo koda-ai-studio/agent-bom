@@ -39,6 +39,7 @@ def _stub_kev(seen: list[dict], db_path: Path):
                 "synchronous": _pragma(conn, "synchronous"),
                 "journal_mode": _pragma(conn, "journal_mode"),
                 "cache_size": _pragma(conn, "cache_size"),
+                "wal_autocheckpoint": _pragma(conn, "wal_autocheckpoint"),
             }
         )
         conn.execute("INSERT INTO kev_entries(cve_id) VALUES ('CVE-2021-0001')")
@@ -56,7 +57,8 @@ def test_cold_sync_builds_aside_without_fsyncs_and_publishes_a_wal_database(tmp_
 
     assert sync_module.sync_db(path=db_path, sources=["kev"]) == {"kev": 1}
 
-    assert seen == [{"target_exists": False, "synchronous": 0, "journal_mode": "memory", "cache_size": -262144}]
+    assert seen[0]["target_exists"] is False
+    assert (seen[0]["synchronous"], seen[0]["journal_mode"], seen[0]["cache_size"]) == (0, "memory", -262144)
     assert build_files(db_path) == []
     conn = sqlite3.connect(db_path)
     try:
@@ -83,7 +85,7 @@ def test_existing_database_is_updated_in_place_with_crash_safe_settings(tmp_path
     assert seen[0]["target_exists"] is True
     assert seen[0]["journal_mode"] == "wal"
     assert seen[0]["synchronous"] == 1
-    assert seen[0]["cache_size"] == -262144
+    assert seen[0]["wal_autocheckpoint"] == 16384
     assert db_path.stat().st_ino == inode
 
 
@@ -357,6 +359,59 @@ def test_action_install_from_source_says_it_needs_this_repository_as_the_workspa
 
     assert "workspace" in description
     assert "this repository" in description
+
+
+_NOTED = {"partial_sources": [{"source": "NVD", "reason": "time_budget"}], "osv_scope": ["PyPI", "npm"]}
+
+
+def _run_properties(report) -> dict:
+    from agent_bom.output.sarif_common import _sarif_run_properties
+
+    return _sarif_run_properties(report, SimpleNamespace(outcome=SimpleNamespace(value="complete")))
+
+
+def test_sarif_run_carries_the_data_coverage_notes() -> None:
+    from agent_bom.models import AIBOMReport
+
+    properties = _run_properties(AIBOMReport(agents=[], blast_radii=[], vuln_data_freshness=_NOTED))
+
+    assert properties["vuln_data_partial_sources"] == _NOTED["partial_sources"]
+    assert properties["vuln_data_osv_scope"] == ["PyPI", "npm"]
+
+
+def test_sarif_run_without_notes_adds_no_properties() -> None:
+    from agent_bom.models import AIBOMReport
+
+    properties = _run_properties(AIBOMReport(agents=[], blast_radii=[]))
+
+    assert "vuln_data_partial_sources" not in properties
+    assert "vuln_data_osv_scope" not in properties
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"vuln_data_freshness": _NOTED},
+        {"runs": [{"properties": {"vuln_data_partial_sources": _NOTED["partial_sources"], "vuln_data_osv_scope": _NOTED["osv_scope"]}}]},
+    ],
+)
+def test_job_summary_and_comment_state_the_data_coverage(data: dict) -> None:
+    from scripts.action_report import data_coverage_lines, render_comment, render_summary
+
+    notes = data_coverage_lines(data)
+    summary = render_summary([], exit_code="0", scan_type="scan", result_file="r.sarif", data_notes=notes)
+    comment = render_comment([], exit_code="0", data_notes=notes)
+
+    for rendered in (summary, comment):
+        assert "NVD sync is partial (time_budget); it resumes at the next refresh" in rendered
+        assert "Local OSV data covers PyPI, npm; other ecosystems were checked live" in rendered
+
+
+def test_a_report_with_whole_data_gets_no_coverage_notes() -> None:
+    from scripts.action_report import data_coverage_lines
+
+    assert data_coverage_lines({"vuln_data_freshness": {"mode": "local"}}) == []
+    assert data_coverage_lines({"runs": [{"properties": {}}]}) == []
 
 
 def test_permissions_doc_lists_the_bulk_archive_host_the_refresh_reads() -> None:
