@@ -46,10 +46,12 @@ it("uses recorded ownership depth in the explicit inventory flow", () => {
 
 it("keeps sibling workloads and their findings on the deployment context branch", () => {
   const result = investigationFlow([...nodes, n("sibling", "container"), n("sibling-cve", "vulnerability")],
-    [...edges, e("cluster", "sibling", "hosts"), e("sibling", "sibling-cve", "vulnerable_to")], "exposure");
+    [...edges, e("account", "endpoint", "contains"), e("cluster", "sibling", "hosts"), e("sibling", "sibling-cve", "vulnerable_to")], "exposure");
   const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
   expect(at("sibling").y).toBeLessThan(at("pod").y);
   expect(at("sibling-cve").y).toBeLessThan(at("pod").y);
+  expect(at("sibling").x).toBeGreaterThan(at("cluster").x);
+  expect(at("sibling").y).toBe(at("cluster").y);
 });
 
 it("preserves the existing correlation layout when automatic flow has no cloud context", () => {

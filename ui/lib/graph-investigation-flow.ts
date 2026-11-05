@@ -125,7 +125,7 @@ export function investigationFlow(input: Node<LineageNodeData>[], inputEdges: Ed
     const parent = reverse ? e.target : e.source, child = reverse ? e.source : e.target;
     if (byId.has(child) && positions.has(parent) && !positions.has(child)) {
       const at = positions.get(parent)!;
-      positions.set(child, { x: at.x - columnGap, y: Math.min(at.y, 0) - rowGap });
+      positions.set(child, { x: at.x + columnGap, y: Math.min(at.y, -contextGap) });
     }
   }
   // Findings are branches from the affected component, not steps through a CVE to data.
