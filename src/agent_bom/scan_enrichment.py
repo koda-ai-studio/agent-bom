@@ -6,17 +6,20 @@ graph builder, which already consumes ``report["cloud_inventory"]`` and
 ``report["identity_discovery"]``, sees real data on an ordinary scan instead of
 the always-empty default.
 
+Explicit cloud commands pass their selected providers to collect native inventory
+within the chosen account/project. Other scan entry points remain opt-in.
+
 Every enrichment here is:
 
 - **Default OFF** — guarded by the same per-provider env flags the discovery
   modules already own (``AGENT_BOM_AWS_INVENTORY`` / ``AGENT_BOM_AZURE_INVENTORY``
   / ``AGENT_BOM_GCP_INVENTORY`` for inventory; ``AGENT_BOM_OKTA_DISCOVERY`` /
-  ``AGENT_BOM_ENTRA_DISCOVERY`` for NHIs). With all flags off these functions do
+  ``AGENT_BOM_ENTRA_DISCOVERY`` for NHIs). Without an explicit provider selection, all flags off means
   no network I/O and leave the report untouched.
 - **Read-only / reference-only** — the underlying connectors never read secret
   material and never call a write API.
 - **Crash-safe** — each provider is wrapped so a connector raising never breaks
-  a scan; the failure is logged and that provider is skipped.
+  a scan; explicit selections retain a partial receipt on collection failure.
 
 Both the API scan pipeline and the CLI scan path call these so the two surfaces
 stay identical.
@@ -34,12 +37,26 @@ from agent_bom.parsers.sbom_context import combine_cloud_inventories
 _logger = logging.getLogger(__name__)
 
 
+def _record_inventory_failure(payloads: list[dict[str, Any]], providers: tuple[str, ...] | None, provider: str) -> None:
+    if providers is not None and provider in providers:
+        payloads.append(
+            {
+                "provider": provider,
+                "status": "error",
+                "completeness": "partial",
+                "resources": [],
+                "warnings": ["Requested inventory collection failed; coverage is incomplete."],
+            }
+        )
+
+
 def collect_cloud_inventory(
     *,
     aws_region: str | None = None,
     aws_profile: str | None = None,
     azure_subscription: str | None = None,
     gcp_project: str | None = None,
+    providers: tuple[str, ...] | None = None,
 ) -> list[dict[str, Any]]:
     """Run opt-in estate-wide cloud inventory for every enabled provider.
 
@@ -57,6 +74,7 @@ def collect_cloud_inventory(
     unset so default behaviour is unchanged.
     """
     payloads: list[dict[str, Any]] = []
+    force: dict[str, Any] = {"force": True} if providers is not None else {}
 
     # AWS — AGENT_BOM_AWS_INVENTORY (+ AGENT_BOM_AWS_ORG_INVENTORY to fan across
     # every member account of the organization, like Azure does for subscriptions
@@ -64,13 +82,14 @@ def collect_cloud_inventory(
     try:
         from agent_bom.cloud import aws_inventory, aws_organizations
 
-        if aws_inventory.inventory_enabled():
-            if aws_organizations.org_fanout_enabled():
+        if ("aws" in providers) if providers is not None else aws_inventory.inventory_enabled():
+            if providers is None and aws_organizations.org_fanout_enabled():
                 payloads.extend(aws_inventory.discover_all_account_inventories(region=aws_region, profile=aws_profile))
             else:
-                payloads.append(aws_inventory.discover_inventory(region=aws_region, profile=aws_profile))
+                payloads.append(aws_inventory.discover_inventory(region=aws_region, profile=aws_profile, **force))
     except Exception:  # noqa: BLE001 — a connector failure must never break a scan
-        _logger.warning("AWS estate inventory enrichment failed", exc_info=True)
+        _logger.warning("AWS estate inventory enrichment failed")
+        _record_inventory_failure(payloads, providers, "aws")
 
     # Azure — AGENT_BOM_AZURE_INVENTORY (+ AGENT_BOM_AZURE_ALL_SUBSCRIPTIONS to
     # fan across every subscription in the tenant, like AWS Organizations does
@@ -78,13 +97,14 @@ def collect_cloud_inventory(
     try:
         from agent_bom.cloud import azure_inventory
 
-        if azure_inventory.inventory_enabled():
-            if azure_inventory.all_subscriptions_enabled():
+        if ("azure" in providers) if providers is not None else azure_inventory.inventory_enabled():
+            if providers is None and azure_inventory.all_subscriptions_enabled():
                 payloads.extend(azure_inventory.discover_all_subscription_inventories())
             else:
-                payloads.append(azure_inventory.discover_inventory(subscription_id=azure_subscription))
+                payloads.append(azure_inventory.discover_inventory(subscription_id=azure_subscription, **force))
     except Exception:  # noqa: BLE001
-        _logger.warning("Azure estate inventory enrichment failed", exc_info=True)
+        _logger.warning("Azure estate inventory enrichment failed")
+        _record_inventory_failure(payloads, providers, "azure")
 
     # GCP — AGENT_BOM_GCP_INVENTORY (+ AGENT_BOM_GCP_ALL_PROJECTS to fan across
     # every project in the org/folder tree, like AWS Organizations does for member
@@ -92,20 +112,21 @@ def collect_cloud_inventory(
     try:
         from agent_bom.cloud import gcp_inventory, gcp_organizations
 
-        if gcp_inventory.inventory_enabled():
-            if gcp_inventory.all_projects_enabled():
+        if ("gcp" in providers) if providers is not None else gcp_inventory.inventory_enabled():
+            if providers is None and gcp_inventory.all_projects_enabled():
                 gcp_payloads = gcp_inventory.discover_all_project_inventories()
             else:
-                gcp_payloads = [gcp_inventory.discover_inventory(project_id=gcp_project)]
+                gcp_payloads = [gcp_inventory.discover_inventory(project_id=gcp_project, **force)]
             # Attach the org → folder → project hierarchy to the first GCP payload
             # so the graph builder can promote the CONTAINS roll-up backbone. Only
             # attached when the project is actually in an organization.
-            org = gcp_organizations.discover_organization()
+            org = gcp_organizations.discover_organization() if providers is None else {}
             if isinstance(org, dict) and org.get("status") == "ok" and gcp_payloads:
                 gcp_payloads[0]["gcp_organization"] = org
             payloads.extend(gcp_payloads)
     except Exception:  # noqa: BLE001
-        _logger.warning("GCP estate inventory enrichment failed", exc_info=True)
+        _logger.warning("GCP estate inventory enrichment failed")
+        _record_inventory_failure(payloads, providers, "gcp")
 
     return payloads
 
@@ -195,6 +216,7 @@ def enrich_report_with_estate_discovery(
     aws_profile: str | None = None,
     azure_subscription: str | None = None,
     gcp_project: str | None = None,
+    providers: tuple[str, ...] | None = None,
 ) -> None:
     """Attach gated cloud-inventory + NHI-discovery blocks to a scan report.
 
@@ -209,12 +231,20 @@ def enrich_report_with_estate_discovery(
             aws_profile=aws_profile,
             azure_subscription=azure_subscription,
             gcp_project=gcp_project,
+            providers=providers,
         )
         if inventories:
             report.cloud_inventory_data = combine_cloud_inventories(report.cloud_inventory_data, inventories)
     except Exception:  # noqa: BLE001
         _logger.warning("Cloud inventory enrichment skipped", exc_info=True)
 
+    # Explicit cloud commands stay within their selected account/project scopes.
+    if providers is None:
+        _enrich_opt_in_estate(report, aws_profile)
+
+
+def _enrich_opt_in_estate(report: AIBOMReport, aws_profile: str | None) -> None:
+    """Attach explicitly opted-in identity, audit and organization context."""
     try:
         discovery = collect_identity_discovery()
         if discovery is not None:

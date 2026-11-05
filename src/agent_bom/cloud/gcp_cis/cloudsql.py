@@ -6,9 +6,8 @@ from collections.abc import Callable
 from typing import Any
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
-from agent_bom.cloud.normalization import sanitize_discovery_warning
 
-from ._base import _SQL_SECTION, _gcp_cloud_sql_instances
+from ._base import _SQL_SECTION, _check_failure_evidence, _check_failure_status, _gcp_cloud_sql_instances
 
 
 def _evaluate_instances(
@@ -35,8 +34,8 @@ def _evaluate_instances(
         result.status = CheckStatus.ERROR
         result.evidence = missing_sdk
     except Exception as exc:
-        result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check {error_context}: {sanitize_discovery_warning(exc)}"
+        result.status = _check_failure_status(exc)
+        result.evidence = f"Could not check {error_context}: {_check_failure_evidence(exc)}"
     return result
 
 

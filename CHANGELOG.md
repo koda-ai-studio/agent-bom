@@ -13,8 +13,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Container inventory probes executable headers before searching for Go build metadata, avoiding false coverage gaps for oversized data files.
 - Scoped npm namespace lookalikes are checked against ranked scoped targets while preserving unrelated namespaces and official package families.
 - Release preflight requires the exact main commit to pass every full Python correctness shard, combined coverage, UI lanes and runtime acceptance; an older green run cannot override a newer unsuccessful run.
+- Cloud posture grades use evaluated controls and remain unavailable when collection is incomplete. Explicit cloud scans collect selected-provider native inventory without local workstation discovery; failed inventory retains a partial receipt.
+- Disabled GCP APIs and billing are reported as unevaluated controls with service-state guidance, while permission and unexpected collector failures remain errors.
 - File-backed registries, configuration and reports use explicit UTF-8, restoring MCP startup and Unicode evidence on Windows systems with a legacy default encoding.
 - Container binary probes search in small chunks while retaining Go metadata beyond the first window; OCI changes always select the memory-bound regression suite in CI.
+- Cloud provider commands isolate collection from workstation discovery, resolve active Azure/GCP targets when explicit scope is absent, and give safe Databricks re-authentication guidance. GCP logging checks use the Logging SDK's service client modules.
 - Mixed Python requirements retain exact pins when resolving ranges; framework discovery no longer treats range bounds as installed versions. Independent requirements pins remain visible alongside Poetry and uv lockfiles.
 - Scoped npm package names are assessed within their namespace, preventing unrelated unscoped names from producing typosquatting or dependency-confusion alerts.
 - Failed Docker MCP image expansion retains the rest of the scan in a partial report. Container inventory includes Go binaries in application directories and distroless dpkg status fragments.

@@ -57,6 +57,32 @@ def test_discover_connection_failure():
         assert any("Could not connect" in w for w in warnings)
 
 
+@pytest.mark.parametrize("stage", ["connect", "clusters", "serving"])
+def test_expired_login_has_safe_reauthentication_guidance(stage):
+    mods = _mock_databricks_modules()
+    sdk = mods["databricks.sdk"]
+    client = sdk.WorkspaceClient.return_value
+    client.clusters.list.return_value = []
+    client.serving_endpoints.list.return_value = []
+    private_detail = "private-" + "credential-value"
+    failure = ValueError("OAuth refresh expired: " + private_detail)
+    if stage == "connect":
+        sdk.WorkspaceClient.side_effect = failure
+    elif stage == "clusters":
+        client.clusters.list.side_effect = failure
+    else:
+        client.serving_endpoints.list.side_effect = failure
+    with patch.dict(sys.modules, mods):
+        from agent_bom.cloud.databricks import discover
+
+        agents, warnings = discover()
+    assert not agents
+    text = " ".join(warnings)
+    assert "databricks auth login --host <workspace-url>" in text
+    assert "DATABRICKS_TOKEN" in text
+    assert private_detail not in text
+
+
 def test_discover_empty_clusters():
     mods = _mock_databricks_modules()
     mock_sdk = mods["databricks.sdk"]

@@ -1,7 +1,7 @@
 """Cloud inventory, scan and runtime-evidence commands.
 
 ``cloud scan`` discovers configured AWS/Azure/GCP credentials and runs shared
-inventory/CIS paths; per-provider aliases retain their existing behavior.
+inventory/CIS paths without ambient workstation discovery.
 ``cloud supabase`` requires explicit projects and a private management token.
 """
 
@@ -13,9 +13,12 @@ from typing import Optional
 
 import click
 
+from agent_bom.cli._cloud_context import active_cloud_target as _active_cloud_target
+from agent_bom.cli._cloud_context import print_provider_status
 from agent_bom.cli._cloud_sdk import exit_if_sdk_missing
 from agent_bom.cli._grouped_help import SuggestingGroup
 from agent_bom.cli._param_source import invoke_forwarding
+from agent_bom.core.settings import env_opt
 from agent_bom.evidence.cloud_scan import inventory_artifact
 
 
@@ -131,22 +134,8 @@ def _run_cloud_scan(
 
     providers = exit_if_sdk_missing([p for p in _PROVIDER_ORDER if p in providers])
 
-    # Per-provider status: say exactly what was detected and why, so the operator
-    # (or a collector) knows which clouds are scanning and how their credentials
-    # were resolved. Only surfaced on console output and when not quiet.
-    show_status = not quiet and output_format == "console"
-    if show_status and (providers or skipped):
-        con = Console(stderr=True)
-        for prov in providers:
-            _has, source = _provider_status(prov)
-            line = f"  [green]{prov}[/green]: scanning [dim](creds via {source})[/dim]"
-            if verify:
-                ok, detail = _verify_provider(prov)
-                mark = "[green]verified[/green]" if ok else "[yellow]unverified[/yellow]"
-                line += f" · {mark} [dim]({detail})[/dim]"
-            con.print(line)
-        for prov in skipped or []:
-            con.print(f"  [yellow]{prov}[/yellow]: skipped — no credentials [dim](set up: {_PROVIDER_HINT[prov]})[/dim]")
+    if not quiet and output_format == "console":
+        print_provider_status(providers, skipped or [], _PROVIDER_HINT, _provider_status, _verify_provider, verify=verify)
 
     if not providers:
         con = Console(stderr=True)
@@ -159,6 +148,10 @@ def _run_cloud_scan(
     aws_on = "aws" in providers
     azure_on = "azure" in providers
     gcp_on = "gcp" in providers
+    if azure_on:
+        azure_subscription = azure_subscription or env_opt("AZURE_SUBSCRIPTION_ID") or _active_cloud_target("azure")
+    if gcp_on:
+        gcp_project = gcp_project or env_opt("GOOGLE_CLOUD_PROJECT") or _active_cloud_target("gcp")
 
     if not quiet and output_format == "console" and len(providers) > 1:
         Console(stderr=True).print(
@@ -172,9 +165,12 @@ def _run_cloud_scan(
 
     ctx = click.get_current_context()
     ctx.meta[CIS_SHOW_PASSED_META] = show_passed
+    ctx.meta["cloud_inventory_providers"] = tuple(providers)
     invoke_forwarding(
         ctx,
         scan,
+        no_discover=True,
+        no_skill=True,
         aws=aws_on,
         aws_region=aws_region,
         aws_profile=aws_profile,
@@ -221,6 +217,7 @@ def cloud_group(ctx: click.Context) -> None:
       gcp          Alias — scan --provider gcp (Vertex AI, Cloud Run + CIS)
       resilience   Provider pagination/retry/partial-failure evidence
     """
+    ctx.meta["cloud_inventory_providers"] = ()
     if ctx.invoked_subcommand is None:
         providers = _detect_configured_providers()
 

@@ -6,6 +6,8 @@ import json
 import logging
 from pathlib import Path
 
+import click
+
 from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
 from agent_bom.cli.agents.scan_pipeline.helpers import (
     _benchmark_scan_issues,
@@ -384,12 +386,15 @@ def _attach_estate_and_runtime(opts: ScanOptions, st: ScanState) -> None:
     # *_DISCOVERY flags are set. The graph builder consumes the attached blocks.
     from agent_bom.scan_enrichment import enrich_report_with_estate_discovery
 
+    context = click.get_current_context(silent=True)
+    providers = context.meta.get("cloud_inventory_providers") if context else None
     enrich_report_with_estate_discovery(
         st.report,
         aws_region=opts.aws_region,
         aws_profile=opts.aws_profile,
         azure_subscription=opts.azure_subscription,
         gcp_project=opts.gcp_project,
+        providers=providers,
     )
 
     # Attach introspection / health check results so they're in JSON/BOM exports
