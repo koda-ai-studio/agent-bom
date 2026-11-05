@@ -201,10 +201,10 @@ def _refresh(tmp_path, monkeypatch, *, db_path: Path, scope: str = "application"
         db_sources=sources,
         db_osv_scope=scope,
     )
-    console = Console(file=open(tmp_path / "console.txt", "w", encoding="utf-8"), width=200, force_terminal=False)
-    st = SimpleNamespace(con=console, vuln_freshness=None, pre_scan_step_timings={})
-    preflight._refresh_vuln_data(opts, st)
-    console.file.close()
+    with open(tmp_path / "console.txt", "w", encoding="utf-8") as console_file:
+        console = Console(file=console_file, width=200, force_terminal=False)
+        st = SimpleNamespace(con=console, vuln_freshness=None, pre_scan_step_timings={})
+        preflight._refresh_vuln_data(opts, st)
     captured["console"] = (tmp_path / "console.txt").read_text(encoding="utf-8")
     captured["timings"] = st.pre_scan_step_timings
     return captured
