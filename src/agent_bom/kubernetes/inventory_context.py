@@ -4,8 +4,16 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _records(value: Any) -> list[Mapping[str, Any]]:
+    return [item for item in value if isinstance(item, Mapping)] if isinstance(value, list) else []
+
+
 def object_ref(obj: Mapping[str, Any]) -> dict[str, str]:
-    meta = obj.get("metadata") or {}
+    meta = _mapping(obj.get("metadata"))
     return {
         "kind": str(obj.get("kind") or ""),
         "namespace": str(meta.get("namespace") or "default"),
@@ -16,7 +24,7 @@ def object_ref(obj: Mapping[str, Any]) -> dict[str, str]:
 
 def recorded_owner(obj: Mapping[str, Any], by_ref: dict[tuple[str, str, str], Mapping[str, Any]]) -> dict[str, str] | None:
     ref = object_ref(obj)
-    for owner in (obj.get("metadata") or {}).get("ownerReferences") or []:
+    for owner in _records(_mapping(obj.get("metadata")).get("ownerReferences")):
         if not isinstance(owner, Mapping) or owner.get("controller") is not True or not owner.get("uid"):
             continue
         parent = by_ref.get((str(owner.get("kind")), ref["namespace"], str(owner.get("name"))))
@@ -34,29 +42,29 @@ def investigation_context(items: list[Mapping[str, Any]], containers: Callable[.
         if kind in {"Pod", "Deployment", "StatefulSet", "DaemonSet", "ReplicaSet", "Job", "CronJob"}:
             record: dict[str, Any] = {**ref, "owner": recorded_owner(obj, by_ref)}
             if kind == "Pod":
-                record["containers"] = containers(obj.get("spec") or {}, [obj])
+                record["containers"] = containers(_mapping(obj.get("spec")), [obj])
                 pods.append(record)
             else:
                 controllers.append(record)
         elif kind == "Service":
-            spec = obj.get("spec") or {}
+            spec = _mapping(obj.get("spec"))
             services.append(
                 {
                     **ref,
                     "type": str(spec.get("type") or "ClusterIP"),
                     "ports": [
                         {k: p[k] for k in ("name", "port", "targetPort", "protocol") if k in p}
-                        for p in spec.get("ports") or []
+                        for p in _records(spec.get("ports"))
                         if isinstance(p, Mapping)
                     ],
                 }
             )
         elif kind == "EndpointSlice":
-            service_name = ((obj.get("metadata") or {}).get("labels") or {}).get("kubernetes.io/service-name")
+            service_name = _mapping(_mapping(obj.get("metadata")).get("labels")).get("kubernetes.io/service-name")
             service = by_ref.get(("Service", ref["namespace"], str(service_name)))
             if not service or not object_ref(service)["uid"]:
                 continue
-            owners = (obj.get("metadata") or {}).get("ownerReferences") or []
+            owners = _records(_mapping(obj.get("metadata")).get("ownerReferences"))
             if not any(
                 isinstance(o, Mapping)
                 and o.get("kind") == "Service"
@@ -65,8 +73,8 @@ def investigation_context(items: list[Mapping[str, Any]], containers: Callable[.
                 for o in owners
             ):
                 continue
-            for endpoint in obj.get("endpoints") or []:
-                target = endpoint.get("targetRef") or {}
+            for endpoint in _records(obj.get("endpoints")):
+                target = _mapping(endpoint.get("targetRef"))
                 pod = by_ref.get(("Pod", str(target.get("namespace") or ""), str(target.get("name") or "")))
                 if (
                     target.get("kind") != "Pod"
@@ -74,7 +82,7 @@ def investigation_context(items: list[Mapping[str, Any]], containers: Callable[.
                     or not target.get("uid")
                     or target.get("uid") != object_ref(pod)["uid"]
                     or target.get("namespace") != ref["namespace"]
-                    or (endpoint.get("conditions") or {}).get("ready") is not True
+                    or _mapping(endpoint.get("conditions")).get("ready") is not True
                 ):
                     continue
                 routes.append(
@@ -84,7 +92,7 @@ def investigation_context(items: list[Mapping[str, Any]], containers: Callable[.
                         "slice": ref,
                         "ports": [
                             {k: p[k] for k in ("name", "port", "protocol") if k in p}
-                            for p in obj.get("ports") or []
+                            for p in _records(obj.get("ports"))
                             if isinstance(p, Mapping)
                         ],
                     }
@@ -104,20 +112,22 @@ def _ingresses(items: list[Mapping[str, Any]], by_ref: dict[tuple[str, str, str]
         ref = object_ref(obj)
         if ref["kind"] != "Ingress":
             continue
-        spec = obj.get("spec") or {}
-        candidates = [spec.get("defaultBackend") or {}]
+        spec = _mapping(obj.get("spec"))
+        candidates = [_mapping(spec.get("defaultBackend"))]
         candidates.extend(
-            path.get("backend") or {} for rule in spec.get("rules") or [] for path in (rule.get("http") or {}).get("paths") or []
+            _mapping(path.get("backend"))
+            for rule in _records(spec.get("rules"))
+            for path in _records(_mapping(rule.get("http")).get("paths"))
         )
         backends = []
         for backend in candidates:
-            service = backend.get("service") or {}
+            service = _mapping(backend.get("service"))
             target = by_ref.get(("Service", ref["namespace"], str(service.get("name") or "")))
             if target:
                 backends.append(
                     {
                         "service": object_ref(target),
-                        "port": {k: service["port"][k] for k in ("name", "number") if k in (service.get("port") or {})},
+                        "port": {k: service["port"][k] for k in ("name", "number") if k in _mapping(service.get("port"))},
                     }
                 )
         result.append({**ref, "backends": backends})

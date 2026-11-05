@@ -133,3 +133,19 @@ def test_standalone_pod_context_reuses_the_existing_workload_asset():
     route = next(e for e in graph.edges if e.evidence.get("basis") == "kubernetes_endpoint_slice")
     assert route.target == pods[0].id
     assert any(e.source == pods[0].id and graph.nodes[e.target].attributes.get("container_kind") == "runtime" for e in graph.edges)
+
+
+def test_malformed_optional_routing_records_do_not_create_links_or_abort_inventory():
+    items = objects()
+    items[3]["endpoints"] = [None, "invalid", {"targetRef": "invalid", "conditions": "invalid"}]
+    items.append(
+        {
+            "kind": "Ingress",
+            "metadata": {"name": "bad", "namespace": "shop", "uid": "bad-1"},
+            "spec": {"rules": [None, {"http": {"paths": [None, {"backend": "invalid"}]}}]},
+        }
+    )
+    items.append({"kind": "Service", "metadata": "invalid", "spec": "invalid"})
+    inv, graph = project(items)
+    assert inv["pod_context"][0]["uid"] == "pod-1"
+    assert not any(e.evidence.get("basis") in {"kubernetes_endpoint_slice", "kubernetes_ingress_backend"} for e in graph.edges)
