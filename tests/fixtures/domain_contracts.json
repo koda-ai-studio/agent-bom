@@ -998,6 +998,7 @@
         "skill_audit_data",
         "trust_assessment_data",
         "prompt_scan_data",
+        "delta_pruned_finding_ids",
         "model_files",
         "model_manifests",
         "model_provenance",
