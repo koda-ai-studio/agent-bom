@@ -55,7 +55,7 @@ _FORK_GUARD_INDEX_CANON = "createuniqueindexifnotexistsaudit_log_team_prevsig_un
 
 # The newest migration. One place to update when a revision lands, so the
 # single-head property and the head's identity do not drift apart.
-ALEMBIC_HEAD = "20261105_02"
+ALEMBIC_HEAD = "20261105_03"
 
 
 def _canonical_sql(text: str) -> str:
@@ -1045,6 +1045,27 @@ def test_finding_history_migration_matches_bootstrap_and_invalidates_every_job_m
         assert f"CREATE POLICY {table}_tenant_isolation ON {table}" in POSTGRES_FINDING_HISTORY_V1
     assert "VALUES ('scan_jobs',4,now())" in POSTGRES_FINDING_HISTORY_V1
     assert ":" not in POSTGRES_FINDING_HISTORY_V1
+
+
+def test_finding_lifecycle_migration_matches_bootstrap_with_rls_and_a_tenant_key(monkeypatch) -> None:
+    from agent_bom.api.storage.finding_lifecycle_schema import POSTGRES_FINDING_LIFECYCLE_V1
+
+    statements = []
+    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(op=SimpleNamespace(execute=statements.append)))
+    migration = _load_module(VERSIONS_DIR / "20261105_03_finding_lifecycle.py", "finding_lifecycle_upgrade")
+    assert (migration.revision, migration.down_revision) == ("20261105_03", "20261105_02")
+    migration.upgrade()
+    assert statements == [POSTGRES_FINDING_LIFECYCLE_V1]
+    assert POSTGRES_FINDING_LIFECYCLE_V1 in RUNTIME_SCHEMA_SQL.read_text()
+    assert "PRIMARY KEY (tenant_id, scope_hash, finding_key)" in POSTGRES_FINDING_LIFECYCLE_V1
+    for table in ("finding_lifecycle", "finding_lifecycle_scans", "finding_lifecycle_backfill"):
+        assert f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY" in POSTGRES_FINDING_LIFECYCLE_V1
+        assert f"CREATE POLICY {table}_tenant_isolation ON {table}" in POSTGRES_FINDING_LIFECYCLE_V1
+    assert "VALUES ('scan_jobs',5,now())" in POSTGRES_FINDING_LIFECYCLE_V1
+    # Every index leads with the tenant, so RLS and reads stay sargable.
+    for line in POSTGRES_FINDING_LIFECYCLE_V1.splitlines():
+        if line.strip().startswith("ON finding_lifecycle"):
+            assert "(tenant_id," in line, line
 
 
 def test_runtime_trace_import_policy_guard_finds_policy_on_resolved_table() -> None:

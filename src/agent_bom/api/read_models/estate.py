@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import ConfigDict, Field
 
@@ -58,6 +58,8 @@ class FindingRow(ReadModel):
     status: str | None = None
     lifecycle_status: str | None = None
     resolved_at: str | None = None
+    resolution_reason: Literal["no_longer_detected", "asset_deleted"] | None = None
+    stale: bool | None = None
     last_resolved_at: str | None = None
     reopened_at: str | None = None
     status_updated_at: str | None = None

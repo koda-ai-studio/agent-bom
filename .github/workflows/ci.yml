@@ -1655,7 +1655,7 @@ jobs:
   postgres-integration:
     name: Postgres Integration Contract
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     needs: changes
     # Relevant PRs and every main/nightly/manual run prove live Postgres/RLS.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false') }}
@@ -1900,9 +1900,10 @@ jobs:
         # this job nor its EXCLUDED map, which records why each exclusion
         # (currently only a wall-clock throughput benchmark) stays out.
         run: |
-          uv run pytest -q --tb=short \
+          uv run pytest -q --tb=short --durations=15 \
             tests/test_postgres_integration.py \
             tests/api/test_finding_lifecycle_sequences.py \
+            tests/api/test_finding_durable_lifecycle.py \
             tests/test_job_result_codec.py \
             tests/test_graph_snapshot_ownership.py \
             tests/test_current_graph_assembly_postgres.py \

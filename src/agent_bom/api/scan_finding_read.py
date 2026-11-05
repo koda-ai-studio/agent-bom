@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from functools import partial
 from types import SimpleNamespace
 from typing import Any
 
 from agent_bom.api import findings_current, time_window
 from agent_bom.api.finding_history_read import current_findings_with_history
+from agent_bom.api.finding_lifecycle_read import lifecycle_read
 from agent_bom.api.finding_read_context import read_once
 from agent_bom.api.finding_row_inputs import history_ledger_reads_enabled, scan_row_inputs
 from agent_bom.api.finding_scan_lifecycle import apply_scan_lifecycle
@@ -18,10 +19,9 @@ from agent_bom.api.finding_walk_cache import reuse_rows
 from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.models import JobStatus, ScanJob
 from agent_bom.api.scan_finding_projection import _iter_scan_findings as _iter_scan_findings
-from agent_bom.api.scan_finding_projection import scan_row_sources
+from agent_bom.api.scan_finding_projection import finish_durable_rows, scan_row_sources
 from agent_bom.api.stores import _get_exception_store, _get_store
 from agent_bom.api.suppression_approval import suppression_active
-from agent_bom.core.settings import env_flag
 
 
 def _completed_jobs_for_tenant(tenant_id: str) -> list[ScanJob]:
@@ -184,31 +184,41 @@ def _current_scan_rows(tenant_id: str, window_since: str | None, scan_id: str | 
     )
 
 
-def _with_lifecycle(rows: list[dict[str, Any]], jobs: list[Any], since: str | None) -> list[dict[str, Any]]:
+def _with_lifecycle(
+    rows: list[dict[str, Any]],
+    jobs: Callable[[], list[Any]],
+    tenant_id: str,
+    since: str | None,
+    live_since: str | None,
+    include_resolved: bool,
+) -> list[dict[str, Any]]:
+    read = lifecycle_read(_get_store(), tenant_id, jobs, since=since, include_resolved=include_resolved)
     return apply_scan_lifecycle(
         rows,
-        jobs,
+        read.states,
         since=since,
-        iter_findings=_cached_scan_findings,
-        in_window=findings_current.job_in_window,
-        retained_history=findings_current._retained_finding_history,
+        live_since=live_since,
+        load_payloads=read.load_payloads,
+        finish_rows=lambda restored: finish_durable_rows(restored, tenant_id),
     )
 
 
-def current_scan_rows_with_lifecycle(tenant_id: str, window_since: str | None, scan_id: str | None) -> list[dict[str, Any]]:
+def current_scan_rows_with_lifecycle(
+    tenant_id: str, window_since: str | None, scan_id: str | None, *, live_since: str | None = None, include_resolved: bool = True
+) -> list[dict[str, Any]]:
     """The current rows plus open/resolved state; a pinned scan stays that scan's snapshot.
 
-    The opt-in fast read keeps its selected-reports-only contract, so it serves
-    the snapshot without replaying history. Differential qualification reads
-    retained jobs anyway and must answer exactly as the default read does.
+    ``window_since`` bounds resolved findings. Open ones stay in view past it, since
+    a stale finding still counts, unless a caller's explicit ``live_since`` narrows them.
     """
     rows = _current_scan_rows(tenant_id, window_since, scan_id)
-    if scan_id or env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS"):
+    if scan_id:
         return rows
-    jobs = _completed_jobs_for_tenant(tenant_id)
     return read_once(
-        ("lifecycle_rows", json.dumps([tenant_id, window_since])),
-        lambda: _with_lifecycle(rows, jobs, window_since),
+        ("lifecycle_rows", json.dumps([tenant_id, window_since, live_since, include_resolved])),
+        lambda: _with_lifecycle(
+            rows, partial(_completed_jobs_for_tenant, tenant_id), tenant_id, window_since, live_since, include_resolved
+        ),
     )
 
 
@@ -229,7 +239,7 @@ def current_open_scan_findings(jobs: list[Any]) -> list[dict[str, Any]]:
         rows = findings_current.current_scan_findings(
             jobs, since=since, scan_id=None, iter_findings=_cached_scan_findings, require_authoritative_evidence=True
         )
-        rows = _with_lifecycle(rows, jobs, since)
+        rows = _with_lifecycle(rows, lambda: jobs, tenant_id, since, None, False)
         # A suppressed finding (operator VEX, accepted exception) is kept as
         # evidence but is not open; ``finding_summary`` excludes it the same way.
         return [
@@ -250,6 +260,11 @@ def suppressed_finding_ids(tenant_id: str) -> frozenset[str]:
     if not any(suppression_active(exc) for exc in _get_exception_store().list_all(tenant_id=tenant_id)):
         return frozenset()
     rows = iter_tenant_scan_spine_findings(tenant_id, status="all", sanitize=False)
+    # Graph nodes keep the reported id; a row's own id also carries its project.
     return frozenset(
-        str(value) for row in rows if row.get("suppressed") is True for value in (row.get("id"), row.get("finding_id")) if value
+        str(value)
+        for row in rows
+        if row.get("suppressed") is True
+        for value in (row.get("id"), row.get("finding_id"), row.get("report_canonical_id"))
+        if value
     )

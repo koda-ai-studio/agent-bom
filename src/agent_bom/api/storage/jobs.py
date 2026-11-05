@@ -81,6 +81,11 @@ def put_job(session: SqlSession, dialect: Dialect, job: ScanJob, *, if_absent: b
         from agent_bom.api.storage.finding_history import record_history_write
 
         record_history_write(session, job)
+    if changed and job.status.value == "done":
+        from agent_bom.api.storage.finding_lifecycle import apply_job_lifecycle
+
+        # Atomic with the job row: a failure here fails the ingest, which the producer retries.
+        apply_job_lifecycle(session, dialect, job)
     return changed
 
 

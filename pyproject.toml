@@ -128,7 +128,7 @@ azure = [
     # Scheduled findings export to an Azure Blob sink (#4040).
     "azure-storage-blob>=12.19",
     # msrest -> requests-oauthlib; exclude the vulnerable OAuthlib 3.x line.
-    "oauthlib>=4.0.0",
+    "oauthlib>=4.0.1",
     "six>=1.17.0",
 ]
 gcp = [

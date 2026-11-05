@@ -125,11 +125,15 @@ def mark_unlinked_rows_pending(tx: SqlSession, *, after: Cursor, limit: int) -> 
     SQL cannot tell a CVE row from a policy row while payloads are compressed, so
     every blank row is recomputed. Postgres only; SQLite does this in one upgrade step.
     """
+    # The page must be a CTE: under IN, a plan may rescan the LIMIT per outer row, so the
+    # page moves mid-statement and the cursor passes a row it locked but never updated.
     rows = tx.execute(
-        "UPDATE hub_findings_current SET issue_group_id = NULL WHERE (tenant_id, canonical_id) IN ("
-        "SELECT tenant_id, canonical_id FROM hub_findings_current "
+        "WITH page AS MATERIALIZED (SELECT tenant_id, canonical_id FROM hub_findings_current "
         "WHERE (tenant_id, canonical_id) > (?, ?) AND intel_ref = '' AND issue_group_id IS NOT NULL "
-        "ORDER BY tenant_id, canonical_id LIMIT ? FOR UPDATE SKIP LOCKED) RETURNING tenant_id, canonical_id",
+        "ORDER BY tenant_id, canonical_id LIMIT ? FOR UPDATE SKIP LOCKED) "
+        "UPDATE hub_findings_current AS current_row SET issue_group_id = NULL FROM page "
+        "WHERE current_row.tenant_id = page.tenant_id AND current_row.canonical_id = page.canonical_id "
+        "RETURNING current_row.tenant_id, current_row.canonical_id",
         (*after, int(limit)),
     ).fetchall()
     if not rows:

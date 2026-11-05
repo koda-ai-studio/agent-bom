@@ -1,6 +1,7 @@
 """Pushed evidence replaces only the same explicitly identified target."""
 
 import os
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -8,6 +9,7 @@ import pytest
 from agent_bom.api.findings_current import current_scan_findings, scan_scope_key
 from agent_bom.api.models import PushPayload, ScanRequest
 from agent_bom.api.routes.observability import _normalize_pushed_report
+from agent_bom.evidence.finding_project import project_finding_id
 from tests.api.test_scan_job_sla_history import (
     get_rows,
     job,
@@ -26,6 +28,11 @@ def pushed(month, *, scope=None, empty=False, partial=False):
     return row
 
 
+def _ids(*reports):
+    """The finding ids reports hold once each report's project is part of the identity."""
+    return {project_finding_id(row, row.result["findings"][0]["id"]) for row in reports}
+
+
 @pytest.mark.parametrize("legacy", [False, True])
 def test_tiny_push_cannot_remove_other_repositories(scan_store, legacy):  # noqa: F811
     first = pushed(6, scope=None if legacy else "v1:" + "a" * 64)
@@ -33,13 +40,14 @@ def test_tiny_push_cannot_remove_other_repositories(scan_store, legacy):  # noqa
     tiny = pushed(8, scope=None if legacy else "v1:" + "c" * 64, empty=True)
     for row in (first, second, tiny):
         scan_store.put(row)
-    assert {f["canonical_id"] for f in get_rows()} == {"finding-6", "finding-7"}
+    assert {f["canonical_id"] for f in get_rows()} == _ids(first, second)
 
 
 def test_complete_rescan_replaces_only_its_target(scan_store):  # noqa: F811
-    for row in (pushed(6, scope="v1:" + "a" * 64), pushed(7, scope="v1:" + "b" * 64), pushed(8, scope="v1:" + "a" * 64, empty=True)):
+    kept = pushed(7, scope="v1:" + "b" * 64)
+    for row in (pushed(6, scope="v1:" + "a" * 64), kept, pushed(8, scope="v1:" + "a" * 64, empty=True)):
         scan_store.put(row)
-    assert {f["canonical_id"] for f in get_rows()} == {"finding-7"}
+    assert {f["canonical_id"] for f in get_rows()} == _ids(kept)
 
 
 def test_partial_push_marks_only_its_own_prior_findings_unreconfirmed():
@@ -99,7 +107,10 @@ def test_push_http_route_preserves_targets_after_readback(scan_store, tmp_path, 
         # shared Postgres pool that process-wide stores already hold.
         response = client.get("/v1/findings", params={"window_days": 0})
         assert response.status_code == 200, response.text
-    assert {f["canonical_id"] for f in response.json()["findings"]} == {"finding-6", "finding-7"}
+    assert {f["canonical_id"] for f in response.json()["findings"]} == {
+        project_finding_id(SimpleNamespace(result={"pushed": True, "target_scope": scope}), identity)
+        for scope, identity in (("v1:" + "a" * 64, "finding-6"), ("v1:" + "b" * 64, "finding-7"))
+    }
 
 
 def test_push_graph_enrichment_does_not_mutate_published_job(scan_store, tmp_path, monkeypatch):  # noqa: F811
