@@ -43,6 +43,7 @@ from agent_bom.redaction.emails import _contains_email, mask_email
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.redaction.env_values import container_has_secret
 from agent_bom.redaction.field_policy import _REPORT_AUTH_MODES, _REPORT_COORDINATE_KEYS, path_receipt_label
+from agent_bom.redaction.image_coordinates import is_digest_image_coordinate
 from agent_bom.redaction.text_memo import memoized_text, sanitize_text_memo
 
 logger = logging.getLogger(__name__)
@@ -199,10 +200,6 @@ _HIGH_ENTROPY_SHORT_THRESHOLD = 5.0  # stricter for shorter strings (24-39 chars
 _STRUCTURED_EDGE_ID_RE = re.compile(r"^[^\s>]+->[A-Za-z][A-Za-z0-9_.:-]*->[^\s>]+$")
 # Directory-traversal coverage receipt (``traversal.py``): a root digest and a reason code.
 _COVERAGE_RECEIPT_RE = re.compile(r"^filesystem-discovery:[0-9a-f]{16}:[a-z_]{1,64}$")
-_DIGEST_IMAGE_RE = re.compile(
-    r"(?:[a-z0-9]+(?:[._-][a-z0-9]+)*(?::[0-9]{1,5})?/)*"
-    r"[a-z0-9]+(?:[._-][a-z0-9]+)*(?::[A-Za-z0-9_][A-Za-z0-9_.-]{0,127})?@sha256:[0-9a-f]{64}"
-)
 
 
 def _coordinate_label(key_text: str, value: str, max_str_len: int) -> str | None:
@@ -551,7 +548,7 @@ def _looks_sensitive_value(value: str) -> bool:
     # A valid content digest adds entropy to an ordinary image coordinate.
     # Still inspect its repository/tag for encoded secrets; credential-named
     # fields are independently redacted by the caller.
-    if _DIGEST_IMAGE_RE.fullmatch(text):
+    if is_digest_image_coordinate(text):
         return _is_obfuscated_credential(text.partition("@sha256:")[0])
     return _is_obfuscated_credential(text)
 
