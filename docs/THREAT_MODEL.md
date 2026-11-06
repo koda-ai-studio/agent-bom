@@ -150,6 +150,36 @@ Prompt injection: advisory summaries returned anonymously are third-party text
 and carry the server's untrusted-data instructions, the same as authenticated
 results; the tier adds no agent instruction surface.
 
+## Remote MCP with an external OAuth issuer
+
+Off unless issuer, audience, JWKS, subjects and introspection settings are all set,
+with an explicit deployment tenant. The issuer owns login, consent and renewal; the
+server only verifies tokens. Design and tests: [MCP OAuth](MCP_OAUTH.md),
+`src/agent_bom/mcp_tools/oauth.py`, `tests/test_mcp_external_oauth.py`.
+
+| STRIDE | Attack scenario | Mitigation | Residual risk |
+|---|---|---|---|
+| Spoofing | A forged or foreign token, or `alg` downgrade | RS256 or ES256 only; `iss`, `aud`, `sub`, `iat`, `exp` and `tenant_id` required; subjects are an explicit allowlist with no wildcard; JWKS and introspection must share the issuer's origin | A compromised issuer can mint accepted tokens |
+| Tampering | A client changes tenant or tool arguments | A signed tenant claim must equal the deployment tenant, and that tenant is used for reads | Tool arguments remain untrusted input |
+| Repudiation | Actions cannot be tied to a person | Client identity is derived from tenant and subject | Issuer logs are outside this project's control |
+| Information disclosure | A token reaches another tenant's data, or leaks into logs | One deployment tenant; auth failures log no token or remote error | A subject allowlisted in error sees that tenant |
+| Denial of service | Bad tokens force key fetches | JWKS refresh is rate limited | Introspection on each request depends on the issuer |
+| Elevation of privilege | A read-only token reaches scans or session history | `scan` and `agent_activity` are excluded from the OAuth catalog | Revocation depends on live introspection |
+
+Any verification or introspection failure rejects the request.
+
+## Install guard plugin hook
+
+`agent-bom-guard` adds one `PreToolUse` hook on Bash. The command text is untrusted
+and is parsed, never executed. With `osv_lookup` on, the default, the name, ecosystem
+and pinned version of each named package go to `api.osv.dev`; it sends no command text,
+paths or credentials and stores nothing. Tests: `tests/test_agent_bom_guard.py`.
+
+**The hook fails open.** An internal failure or unreachable lookup exits 0 and the
+command runs, so it never blocks work on its own defect. It is a safety net against known
+malicious and look-alike packages, not an enforcement boundary. A shell construct the
+parser cannot read, or a package not yet reported, passes.
+
 ## API and browser exposure
 
 Non-loopback API binds require configured authentication unless an operator
@@ -256,6 +286,11 @@ separate claims. Verify remediation with a new scan of the same scope; a pin
 change alone does not prove a running deployment was updated.
 
 Review this model after security-boundary changes and before release.
+Trust boundaries reviewed November 6, 2026, for the 0.114.0 release: AI advice and
+graph explanation, durable finding history, remote MCP OAuth tenant binding, the install
+guard hook, and leased push jobs (a request heartbeat lets a peer fail a job whose
+replica died; `AGENT_BOM_API_SCAN_MAX_ATTEMPTS` ends a job that keeps losing workers).
+
 Trust boundaries reviewed November 1, 2026, for the 0.113.0 release: MCP
 descriptor poisoning detection, absolute-path launcher acceptance,
 identifier-safe redaction, MCP session result scoping, gzip push budgets, exec
