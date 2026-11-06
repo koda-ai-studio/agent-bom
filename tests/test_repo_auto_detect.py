@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
+from agent_bom import repo_auto_detect
 from agent_bom.repo_auto_detect import expand_project_scan_targets, project_has_notebooks
 
 
@@ -212,3 +214,14 @@ def test_expand_project_scan_targets_walks_the_tree_once(tmp_path: Path, monkeyp
 
     assert {"sast", "terraform", "iac", "python_agents", "ai_inventory"} <= set(targets.auto_enabled)
     assert len(calls) == 1
+
+
+def test_project_has_predicates_document_what_they_detect() -> None:
+    predicates = {
+        name: fn
+        for name, fn in inspect.getmembers(repo_auto_detect, inspect.isfunction)
+        if name.startswith("project_has_") and fn.__module__ == repo_auto_detect.__name__
+    }
+    assert predicates
+    undocumented = [name for name, fn in predicates.items() if not inspect.getdoc(fn)]
+    assert undocumented == []
