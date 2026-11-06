@@ -208,6 +208,7 @@ export function buildSigmaGraphOverviewModel(
     type: "directed",
   });
 
+  const topRiskIds = new Set(overview.topRisks.map(risk => risk.id));
   for (const node of overview.nodes) {
     graph.addNode(node.id, {
       label: node.label,
@@ -229,7 +230,8 @@ export function buildSigmaGraphOverviewModel(
       // high-signal nodes keep drawing on top.
       forceLabel: node.highlighted,
       dimmed: node.hidden,
-      zIndex: node.highlighted || node.forceLabel ? 2 : 1,
+      topRisk: topRiskIds.has(node.id),
+      zIndex: topRiskIds.has(node.id) ? 3 : node.highlighted || node.forceLabel ? 2 : 1,
     });
   }
 

@@ -39,15 +39,15 @@ export function GraphViewControls({ filters, onChange, agentNames, validValues, 
 
   return (
     <section aria-label="Graph view and layers" className="border-b border-outline" data-testid="graph-view-controls">
-      <div className="flex flex-wrap items-start gap-2 py-1">
+      <div className="flex flex-wrap items-start gap-2 py-1 max-sm:gap-1 max-sm:py-0.5">
         <button
           type="button"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen(!open)}
-          className="flex min-h-[38px] items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
+          className="flex min-h-[38px] items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium max-sm:px-1.5 text-foreground hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
         >
-          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+          <SlidersHorizontal className="h-3.5 w-3.5 max-sm:hidden" aria-hidden="true" />
           View &amp; layers
         </button>
         <div className={`${open ? "order-last flex w-full" : "sr-only"} min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-ink-secondary `} aria-label="Active graph filters">

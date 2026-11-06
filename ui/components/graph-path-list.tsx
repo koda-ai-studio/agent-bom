@@ -15,6 +15,14 @@ function kindLabel(data: LineageNodeData): string {
   return (kind && GRAPH_NODE_KIND_META[kind]?.label) || data.entityType || data.nodeType;
 }
 
+const SEVERITY_ORDER = ["critical", "high", "medium", "low"];
+
+/** Worst rating anywhere on the chain, so the screen opens on what matters; unrated chains keep their reading order. */
+function chainRank(ids: string[], byId: Map<string, Node<LineageNodeData>>) {
+  const ranks = ids.map(id => SEVERITY_ORDER.indexOf(byId.get(id)?.data.severity?.toLowerCase() ?? "")).filter(rank => rank >= 0);
+  return ranks.length ? Math.min(...ranks) : SEVERITY_ORDER.length;
+}
+
 const ratedSeverity = (severity: string | undefined) =>
   severity && !["none", "unknown", ""].includes(severity.toLowerCase()) ? severity : null;
 
@@ -37,7 +45,8 @@ export function GraphPathList({ nodes, edges, onSelect }: {
   onSelect: (nodeId: string) => void;
 }) {
   const byId = new Map(nodes.map(node => [node.id, node]));
-  const { chains, truncated } = graphChains(nodes, edges);
+  const { chains: inOrder, truncated } = graphChains(nodes, edges);
+  const chains = inOrder.map(chain => ({ chain, rank: chainRank(chain.ids, byId) })).sort((a, b) => a.rank - b.rank).map(item => item.chain);
   return (
     <section aria-label="Graph paths" data-testid="graph-path-list" className="mt-2 space-y-3">
       <p className="text-xs text-ink-secondary">

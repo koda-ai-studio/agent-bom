@@ -47,6 +47,8 @@ export type LineageNodeData = {
   evidenceFlow?: boolean;
   /** A reading caveat a flow adds to the card's caption, such as an unmounted token. */
   flowNote?: string | undefined;
+  /** Connections of this node not drawn right now, so a quiet card never reads as unconnected. */
+  heldConnections?: number | undefined;
   displayOnly?: boolean;
   displayTargetId?: string;
   evidenceFlowContext?: string | undefined;
@@ -253,6 +255,8 @@ function NodeCard({
         <GraphPackageGlyph ecosystem={data.nodeType === "package" ? allBadges.find(badge => badge.kind === "ecosystem")?.value : undefined} fallback={<Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />} />
         {/* A contrasting vendor badge above the caption, shown once per scope. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
+        {data.heldConnections ? <span data-testid="graph-held-connections" title={`${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn`} style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}
+          className="absolute -bottom-1 -right-2 rounded-full border border-outline bg-surface px-1.5 font-medium leading-snug text-ink-secondary">+{data.heldConnections}<span className="sr-only"> more connections not drawn</span></span> : null}
       </div>
       <SegmentedLabel caption text={caption?.title ?? (repository?.slug || displayTitle)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
