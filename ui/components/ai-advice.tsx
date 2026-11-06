@@ -96,7 +96,7 @@ export function AIAdviceSection({ assessment }: { assessment: AIAssessment | nul
 
 function statusSentence(status: AIStatus): string {
   const run = status.last_run;
-  if (status.state === "off") return `AI advice is off. ${status.reason}`.trim();
+  if (status.state === "off") return status.reason || "AI advice is off.";
   if (run && ["failed", "unavailable", "blocked"].includes(run.status)) {
     return `The last AI run failed${run.reason ? `: ${run.reason}` : ""}. Scanner findings are unaffected.`;
   }

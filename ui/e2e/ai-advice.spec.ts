@@ -51,7 +51,7 @@ async function findingsFixture(page: Page, status: object) {
 }
 
 const statusOn = { schema_version: "ai.status.v1", state: "on", reason: "", advisory_only: true, model: "ollama/llama3.2", last_run: { scan_id: "s", created_at: stamp, status: "partial", model: "ollama/llama3.2", triage_scope: { findings_total: 300, findings_offered: 100, skipped: { below_risk_cutoff: 200 } } } };
-const statusOff = { schema_version: "ai.status.v1", state: "off", reason: "AI is off: the operator has not set AGENT_BOM_AI_CONTROL_PLANE_ENABLED.", advisory_only: true, model: null, last_run: null };
+const statusOff = { schema_version: "ai.status.v1", state: "off", reason: "AI advice is off: the operator has not set AGENT_BOM_AI_CONTROL_PLANE_ENABLED.", advisory_only: true, model: null, last_run: null };
 const statusFailed = { ...statusOn, state: "degraded", last_run: { scan_id: "s", created_at: stamp, status: "failed", reason: "the 900s run deadline was reached" } };
 
 for (const theme of ["light", "dark"] as const) {

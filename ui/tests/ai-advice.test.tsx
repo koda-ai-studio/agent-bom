@@ -71,7 +71,7 @@ describe("AI advice", () => {
   });
 
   it("states clearly when AI is off, failed, or on", () => {
-    const { rerender } = render(<AIStatusNotice status={{ state: "off", reason: "AI is off: the operator has not set AGENT_BOM_AI_CONTROL_PLANE_ENABLED.", last_run: null, advisory_only: true, schema_version: "v1" }} />);
+    const { rerender } = render(<AIStatusNotice status={{ state: "off", reason: "AI advice is off: the operator has not set AGENT_BOM_AI_CONTROL_PLANE_ENABLED.", last_run: null, advisory_only: true, schema_version: "v1" }} />);
     expect(screen.getByRole("status").textContent).toContain("AI advice is off");
     rerender(<AIStatusNotice status={{ state: "degraded", reason: "", advisory_only: true, schema_version: "v1", last_run: { scan_id: "s", created_at: "2026-11-05T00:00:00+00:00", status: "failed", reason: "deadline" } }} />);
     expect(screen.getByRole("status").textContent).toContain("last AI run failed");
@@ -133,10 +133,10 @@ describe("Explain this path", () => {
   });
 
   it("says why it cannot explain when AI is off", async () => {
-    explainGraph.mockRejectedValue({ status: 409, message: "AI is off: the operator has not set AGENT_BOM_AI_CONTROL_PLANE_ENABLED." });
+    explainGraph.mockRejectedValue({ status: 409, message: "AI advice is off: the operator has not set AGENT_BOM_AI_CONTROL_PLANE_ENABLED." });
     render(<AIPathExplainPanel nodeIds={["a"]} />);
     fireEvent.click(screen.getByRole("button", { name: "Explain this path" }));
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("AI is off"));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("AI advice is off"));
   });
 
   it("reports when every claim was removed rather than showing an empty success", async () => {

@@ -225,7 +225,9 @@ def test_explain_is_refused_while_ai_is_off(store, monkeypatch: pytest.MonkeyPat
     with patch.object(ai_routes, "_call_explain", side_effect=AssertionError("must not run")):
         response = _explain(_client())
     assert response.status_code == 409
-    assert response.json()["detail"]["state"] == "off"
+    detail = response.json()["detail"]
+    assert detail["state"] == "off"
+    assert "AGENT_BOM_AI_CONTROL_PLANE_ENABLED" in detail["message"], "the UI's error path reads detail.message"
 
 
 def test_viewers_cannot_spend_model_budget(store, ai_on) -> None:

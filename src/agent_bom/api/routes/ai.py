@@ -93,12 +93,12 @@ async def post_graph_explain(request: Request, body: GraphExplainRequest) -> dic
     tenant_id = require_request_tenant_id(request)
     decision = control_plane_decision(tenant_id)
     if not decision.enabled:
-        raise HTTPException(status_code=409, detail={"state": "off", "reason": decision.reason})
+        raise HTTPException(status_code=409, detail={"state": "off", "reason": decision.reason, "message": decision.reason})
     model = control_plane_model("")
     resolution = _resolve_ai_provider(model) if model else None
     if resolution is None or not resolution.available:
         reason = resolution.reason if resolution else "The operator has not set AGENT_BOM_AI_CONTROL_PLANE_MODEL."
-        raise HTTPException(status_code=409, detail={"state": "unavailable", "reason": reason})
+        raise HTTPException(status_code=409, detail={"state": "unavailable", "reason": reason, "message": reason})
     actor = _actor(request)
     ensure_ai_call_sink()
     try:

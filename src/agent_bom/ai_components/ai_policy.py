@@ -23,10 +23,10 @@ class PolicyDecision:
 def control_plane_decision(tenant_id: str) -> PolicyDecision:
     """Whether hosted use is on for this tenant. A request can never turn it on."""
     if not env_bool(CONTROL_PLANE_ENV, False, on_invalid="default"):
-        return PolicyDecision(False, f"AI is off: the operator has not set {CONTROL_PLANE_ENV}.")
+        return PolicyDecision(False, f"AI advice is off: the operator has not set {CONTROL_PLANE_ENV}.")
     allowed = {item.strip() for item in env_str(CONTROL_PLANE_TENANTS_ENV).split(",") if item.strip()}
     if allowed and tenant_id not in allowed:
-        return PolicyDecision(False, f"AI is off for this tenant: it is not listed in {CONTROL_PLANE_TENANTS_ENV}.")
+        return PolicyDecision(False, f"AI advice is off for this tenant: it is not listed in {CONTROL_PLANE_TENANTS_ENV}.")
     return PolicyDecision(True)
 
 
