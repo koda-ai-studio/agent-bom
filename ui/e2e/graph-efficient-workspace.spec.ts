@@ -34,14 +34,18 @@ for (const theme of ["light", "dark"]) test(`small graph uses its canvas and def
   await expect(findingEdge).toHaveCount(1);
   await expect(findingLabel).toHaveCount(0);
   await expect(findingEdge.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
-  const point = await findingEdge.locator(".react-flow__edge-path").evaluate((element) => {
-    const path = element as SVGPathElement;
-    const at = path.getPointAtLength(path.getTotalLength() / 2);
-    const screen = new DOMPoint(at.x, at.y).matrixTransform(path.getScreenCTM()!);
-    return { x: screen.x, y: screen.y };
-  });
-  await page.mouse.move(point.x, point.y);
-  await expect(findingLabel.locator(".relationship-badge svg")).toBeVisible();
+  // The canvas can still be fitting the graph, so each attempt finds the edge where it is now.
+  await expect(async () => {
+    const point = await findingEdge.locator(".react-flow__edge-path").evaluate((element) => {
+      const path = element as SVGPathElement;
+      const at = path.getPointAtLength(path.getTotalLength() / 2);
+      const screen = new DOMPoint(at.x, at.y).matrixTransform(path.getScreenCTM()!);
+      return { x: screen.x, y: screen.y };
+    });
+    await page.mouse.move(0, 0);
+    await page.mouse.move(point.x, point.y);
+    await expect(findingLabel.locator(".relationship-badge svg")).toBeVisible({ timeout: 1000 });
+  }).toPass({ timeout: 10000 });
   await page.mouse.move(0, 0);
   await expect(findingLabel).toHaveCount(0);
   await findingEdge.focus();
