@@ -297,18 +297,22 @@ so they cannot regress silently, but they are not part of this reference.
 ## Multi-provider LLM harness (issue #3206)
 | Env var | Type | Default | Description |
 |---|---|---|---|
+| `AGENT_BOM_AI_CAPACITY_WAIT_SECONDS` | `float` | `30.0` | — |
 | `AGENT_BOM_AI_DETERMINISTIC` | `bool` | `False` | Temperature-zero mode inherited by CLI/API requests without an override. It improves stability but is not byte-reproducible across provider revisions. |
-| `AGENT_BOM_AI_FINDING_BATCH_SIZE` | `int` | `20` | findings per triage request; runtime cap 50 |
+| `AGENT_BOM_AI_FINDING_BATCH_SIZE` | `int` | `8` | findings per triage request; runtime cap 50 |
 | `AGENT_BOM_AI_MAX_CALLS` | `int` | `50` | Cap actual provider requests, including retries. 0 is unlimited; negative is invalid. |
+| `AGENT_BOM_AI_MAX_CONCURRENT_CALLS` | `int` | `2` | process-wide provider concurrency |
 | `AGENT_BOM_AI_MAX_FINDINGS` | `int` | `100` | Bound the amount of finding material sent for advisory triage in one run. |
 | `AGENT_BOM_AI_MAX_RETRIES` | `int` | `2` | Reliability: bounded retries with exponential backoff around remote provider calls, and a per-call timeout. Graceful degradation is preserved — exhausted retries return None (no model) rather than raising. |
 | `AGENT_BOM_AI_MODEL_CHEAP` | `str` | `''` | tagging, summaries |
 | `AGENT_BOM_AI_MODEL_REVISION` | `str` | `''` | cache/provenance model revision, when provider exposes one |
 | `AGENT_BOM_AI_MODEL_STRONG` | `str` | `''` | detection, remediation |
+| `AGENT_BOM_AI_NUM_CTX` | `int` | `8192` | Ollama context window; the default silently truncates batches |
 | `AGENT_BOM_AI_REDACT_PROMPTS` | `bool` | `True` | Redact recognizable secret values at every provider boundary. This is not a general source-code anonymizer; raw skill content is restricted to a loopback-configured Ollama endpoint. |
 | `AGENT_BOM_AI_REQUEST_TIMEOUT` | `float` | `120.0` | — |
 | `AGENT_BOM_AI_RETRY_BASE_DELAY` | `float` | `0.5` | — |
 | `AGENT_BOM_AI_RETRY_MAX_DELAY` | `float` | `8.0` | — |
+| `AGENT_BOM_AI_RUN_DEADLINE_SECONDS` | `float` | `900.0` | whole enrichment run; the scan continues past it |
 | `AGENT_BOM_AI_TEMPERATURE` | `float` | `0.3` | — |
 
 ## OIDC discovery shim

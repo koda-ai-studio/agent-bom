@@ -633,6 +633,10 @@ ignore = []
 ".clusterfuzzlite/fuzz/*.py" = ["N802", "T201"]  # TestOneInput is required atheris entry; harnesses print repro output
 "src/agent_bom/output/html/*.py" = ["E501", "F541"]  # Inline HTML/CSS/JS template strings cannot be wrapped; f-prefix is load-bearing (unescapes `{{`)
 "scripts/generate_doc_architecture_svgs.py" = ["E501"]  # SVG coordinate strings are intentionally single-line
+"scripts/ai_triage_dataset_cases.py" = ["E501"]  # One public fact per line keeps the label basis reviewable
+"src/agent_bom/ai_components/triage.py" = ["E501"]  # Prompt paragraphs are hashed and recorded; wrapping would change them
+"src/agent_bom/ai_components/graph_explain.py" = ["E501"]  # Prompt paragraphs are hashed; wrapping would change them
+"deploy/supabase/postgres/alembic/versions/20261105_04_ai_assessments.py" = ["E501"]  # Literal DDL matches runtime-schema.sql line for line
 "tests/fixtures/analysis_characterization/**" = ["I001"]  # Golden analyzer inputs: reordering imports shifts the recorded line numbers
 "tests/fixtures/taint_characterization/**" = ["I001"]  # Golden taint inputs: reordering imports shifts the recorded line numbers
 # T201 allowlist — places where bare `print()` is legitimately the contract:

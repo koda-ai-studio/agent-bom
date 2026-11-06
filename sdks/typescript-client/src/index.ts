@@ -149,6 +149,12 @@ export interface DeployDecision {
   [key: string]: JsonValue | undefined;
 }
 
+export interface GraphExplainRequest {
+  nodeIds: string[];
+  ordered?: boolean;
+  scanId?: string;
+}
+
 export interface BulkFindingIngestRequest {
   findings: Record<string, JsonValue>[];
   source?: string;
@@ -377,6 +383,20 @@ export class AgentBomClient {
   /** Assess recorded consequences at one snapshot revision; never executes containment. */
   consequenceAssessment(request: GraphConsequenceRequest): Promise<GraphConsequenceResponse> {
     return this.request<GraphConsequenceResponse>("POST", "/v1/graph/consequences", request);
+  }
+
+  /** AI advice on recorded graph evidence: on demand, cited, and never written to the graph. */
+  explainGraphSelection(request: GraphExplainRequest): Promise<Record<string, JsonValue>> {
+    return this.request<Record<string, JsonValue>>("POST", "/v1/graph/explain", {
+      node_ids: request.nodeIds,
+      ordered: request.ordered ?? false,
+      ...(request.scanId ? { scan_id: request.scanId } : {}),
+    });
+  }
+
+  /** Whether AI advice is on for this tenant and how its last scan run went. Calls no model. */
+  aiStatus(): Promise<Record<string, JsonValue>> {
+    return this.request<Record<string, JsonValue>>("GET", "/v1/ai/status");
   }
 
   listFindings(query: FindingsQuery = {}): Promise<Record<string, JsonValue>> {

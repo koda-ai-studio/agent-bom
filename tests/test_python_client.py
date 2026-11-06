@@ -125,6 +125,8 @@ def test_client_exposes_findings_and_dataset_loop() -> None:
     client.register_evaluation_run(evaluation_id="eval-a", dataset_id="dataset-a", dataset_version_id="v1")
     client.evaluation_runs(dataset_id="dataset-a", limit=10)
     client.evaluation_run("eval-a")
+    client.ai_status()
+    client.explain_graph_selection(node_ids=["agent:a", "server:s"], ordered=True, scan_id="scan-1")
 
     assert seen == [
         ("GET", "/v1/findings"),
@@ -140,6 +142,8 @@ def test_client_exposes_findings_and_dataset_loop() -> None:
         ("POST", "/v1/evaluations"),
         ("GET", "/v1/evaluations"),
         ("GET", "/v1/evaluations/eval-a"),
+        ("GET", "/v1/ai/status"),
+        ("POST", "/v1/graph/explain"),
     ]
 
 

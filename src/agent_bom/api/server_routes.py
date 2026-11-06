@@ -8,6 +8,7 @@ from agent_bom.api.routes.adoption import router as _adoption_router
 from agent_bom.api.routes.advisory_affected import router as _advisory_affected_router
 from agent_bom.api.routes.agent_lifecycle import router as _agent_lifecycle_router
 from agent_bom.api.routes.agent_manifest import router as _agent_manifest_router
+from agent_bom.api.routes.ai import router as _ai_router
 from agent_bom.api.routes.ai_scans import router as _ai_scans_router
 from agent_bom.api.routes.assets import router as _assets_router
 from agent_bom.api.routes.blueprints import router as _blueprints_router
@@ -87,6 +88,7 @@ def register_domain_routes(application: FastAPI) -> None:
         _exports_router,
         _fleet_router,
         _evaluations_router,
+        _ai_router,
         _frameworks_router,
         _gateway_router,
         _gateway_feed_router,

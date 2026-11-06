@@ -25,6 +25,7 @@ import { investigationPathRows } from "@/lib/investigation-path-rows";
 import { PathPreviewControl } from "@/components/path-preview-control";
 import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
 import { AttackPathCorrelationProof } from "@/components/attack-path-correlation-proof";
+import { AIPathExplainPanel } from "@/components/ai-path-explain-panel";
 import { ExposurePathCommandCenter, type ExposurePathView } from "@/components/exposure-path-command-center";
 import { InvestigationPathWorkspace, InvestigationTools } from "@/components/investigation-path-workspace";
 import { GraphRemediationPriorities } from "@/components/graph-remediation-priorities";
@@ -872,7 +873,12 @@ export default function AttackPathInvestigationContent() {
                     />
                   ) : null
                 }
-                detailsSlot={selectedAttackPath ? <AttackPathTechniqueChain path={selectedAttackPath} /> : null}
+                detailsSlot={selectedAttackPath ? (
+                  <div className="space-y-3">
+                    <AttackPathTechniqueChain path={selectedAttackPath} />
+                    <AIPathExplainPanel key={selectedAttackPath.hops.join("|")} nodeIds={selectedAttackPath.hops.slice(0, 25)} scanId={graphData?.scan_id ?? selectedScanId} />
+                  </div>
+                ) : null}
                 graphSlot={
                   selectedAttackPath ? (
                     <div className="space-y-2">

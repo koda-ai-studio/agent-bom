@@ -470,9 +470,11 @@ def _vuln_summary(finding: Finding, ai_assessments: dict[str, Any]) -> str:
     if assessment is not None:
         summary += (
             f'<div class="ai-triage" style="margin-top:4px;font-size:.66rem;color:#a5b4fc">'
-            f'<span class="badge-ai" title="AI triage (advisory)">AI</span> '
-            f"{_esc(assessment.classification)} "
-            f'<span style="color:#94a3b8">&middot; FP&nbsp;likelihood: {_esc(assessment.false_positive_likelihood)}</span>'
+            f'<span class="badge-ai" title="AI advice; scanner severity is unchanged">AI advice</span> '
+            f"{_esc(assessment.verdict.replace('_', ' '))} "
+            f'<span style="color:#94a3b8">&middot; confidence: {_esc(assessment.confidence)} &middot; FP&nbsp;likelihood: {_esc(assessment.false_positive_likelihood)}</span>'
+            f'<span style="color:#94a3b8"> &middot; {_esc(assessment.provenance.model)}, {_esc(assessment.provenance.generated_at.date().isoformat())}</span>'
+            f'<div style="color:#cbd5e1">{_esc(assessment.rationale)}</div>'
             f"</div>"
         )
     return summary

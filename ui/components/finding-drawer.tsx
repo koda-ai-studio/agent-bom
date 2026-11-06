@@ -24,6 +24,7 @@ import { buildWhyItMatters } from "@/lib/finding-why-matters";
 import { Drawer } from "@/components/drawer";
 import { DetailTabs } from "@/components/detail-tabs";
 import { FindingReconfirmation } from "@/components/finding-reconfirmation";
+import { AIAdviceSection } from "@/components/ai-advice";
 import {
   findingsDrawerEyebrow,
   findingsDrawerSubtitle,
@@ -157,6 +158,7 @@ function OverviewTab({ vuln, graphScanId, story }: { vuln: EnrichedVuln; graphSc
         <p className="flex flex-wrap items-baseline gap-2"><span className="break-words text-base font-semibold text-foreground">{packageLabel}</span><span className="text-xs text-ink-tertiary">{findingAssetKind(vuln)}</span></p>
         <p className="mt-1 max-w-prose text-sm leading-6 text-ink-secondary">{summary}</p>
       </div>
+      <AIAdviceSection assessment={vuln.ai_assessment} />
 
       <Section title="Next action" accent>
         <p className="text-sm font-medium text-foreground">

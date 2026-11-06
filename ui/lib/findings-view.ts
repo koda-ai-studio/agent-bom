@@ -1,8 +1,11 @@
+import type { AIAssessment } from "@/components/ai-advice";
 import type { Vulnerability } from "@/lib/api";
 import type { FindingFacets, FindingOccurrenceSummary, FindingReconfirmation, WorkloadRuntimeEvidence } from "@/lib/api-types";
 import { nowForRelativeTime } from "@/lib/relative-clock";
 
 export interface EnrichedVuln extends Vulnerability {
+  /** Stored model advice; absent when none exists. Never feeds severity, counts or gates. */
+  ai_assessment?: AIAssessment | null | undefined;
   /** Verified against the repository scan root by the scanner; absent is unknown. */
   repository_relative_path?: string | undefined;
   observation_status?: "observed" | "unreconfirmed" | undefined;

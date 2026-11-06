@@ -18,10 +18,10 @@ All LLM calls are optional and gracefully fall back when no provider is availabl
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import uuid
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
+
+from rich.text import Text
 
 from agent_bom import config
 from agent_bom.ai_components.ai_prompts import _ASSIGNMENT_PATTERN as _ASSIGNMENT_PATTERN
@@ -53,9 +53,11 @@ if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport, BlastRadius
     from agent_bom.parsers.skill_audit import SkillAuditResult
     from agent_bom.parsers.skills import SkillScanResult
+from collections.abc import Callable
 from importlib import import_module
 from typing import Any
 
+from agent_bom.ai_components.call_audit import defer_ai_call_records, mark_guard_rejected
 from agent_bom.ai_components.call_state import (
     _AI_DETERMINISTIC_OVERRIDE,
     _AI_RUN_ID,
@@ -64,13 +66,23 @@ from agent_bom.ai_components.call_state import (
     AICallBudget,
     EnrichmentTask,
     _effective_temperature,
-    _prepare_prompt,
     console,
     logger,
     resolve_task_model,
 )
 from agent_bom.ai_components.provider_discovery import _has_any_provider, _resolve_ai_provider
 from agent_bom.ai_components.providers import _call_llm, _call_llm_structured, _parse_json_response
+from agent_bom.ai_components.triage import (
+    AI_TRIAGE_DATASET_VERSION,
+    AI_TRIAGE_PROMPT_VERSION,
+    TRIAGE_RESPONSE_SCHEMA,
+    TRIAGE_SYSTEM_PROMPT,
+    TriageParseOutcome,
+    build_triage_prompt,
+    select_findings_for_triage,
+)
+from agent_bom.ai_components.triage import parse_finding_assessments as _parse_finding_assessments
+from agent_bom.ai_components.triage_console import render_ai_triage_summary
 
 _DEFAULT_AI_MAX_CALLS = 50  # Hard cap: prevent runaway spend on large monorepos
 __all__ = ["_ASSIGNMENT_PATTERN", "_IDENTIFIER_RE", "_MAX_AI_PROMPT_CHARS", "_MAX_AI_SKILL_FILES",
@@ -164,68 +176,6 @@ async def generate_threat_chains(
     return [result] if result else []
 
 
-def _parse_finding_assessments(
-    response: str,
-    *,
-    known_ids: set[str],
-    provider: str,
-    model: str,
-    run_id: str,
-    prompt: str,
-) -> list["AIFindingAssessment"]:
-    from pydantic import ValidationError
-
-    from agent_bom.ai_schemas import (
-        AIFindingAssessment,
-        AIFindingAssessmentResponse,
-        AIProvenance,
-    )
-
-    data = _parse_json_response(response)
-    if not isinstance(data, dict):
-        return []
-    try:
-        parsed = AIFindingAssessmentResponse.model_validate(data)
-    except ValidationError as exc:
-        logger.warning("AI finding assessment response rejected: %s", sanitize_error(exc, generic=True))
-        return []
-
-    accepted: list[AIFindingAssessment] = []
-    seen_ids: set[str] = set()
-    prompt_sha256 = hashlib.sha256(_prepare_prompt(prompt).encode()).hexdigest()
-    response_sha256 = hashlib.sha256(response.encode()).hexdigest()
-    generated_at = datetime.now(timezone.utc)
-    for candidate in parsed.assessments:
-        finding_id = candidate.finding_id
-        if finding_id not in known_ids or finding_id in seen_ids:
-            continue
-        seen_ids.add(finding_id)
-        controls = list(dict.fromkeys(candidate.suggested_controls))[:10]
-        accepted.append(
-            AIFindingAssessment(
-                finding_id=finding_id,
-                classification=candidate.classification,
-                confidence=candidate.confidence,
-                false_positive_likelihood=candidate.false_positive_likelihood,
-                rationale=candidate.rationale,
-                suggested_controls=controls,
-                provenance=AIProvenance(
-                    run_id=run_id,
-                    provider=provider,
-                    model=model,
-                    model_revision=str(getattr(config, "AI_MODEL_REVISION", "") or ""),
-                    prompt_version=AI_PROMPT_VERSION,
-                    prompt_sha256=prompt_sha256,
-                    response_sha256=response_sha256,
-                    generated_at=generated_at,
-                    deterministic=_effective_temperature() == 0.0,
-                    redaction_applied=bool(getattr(config, "AI_REDACT_PROMPTS", True)),
-                ),
-            )
-        )
-    return accepted
-
-
 async def assess_report_findings(
     report: "AIBOMReport",
     model: str = DEFAULT_MODEL,
@@ -233,6 +183,7 @@ async def assess_report_findings(
     provider: str = "unknown",
     budget: AICallBudget | None = None,
     run_id: str | None = None,
+    on_batch: Callable[[list["AIFindingAssessment"]], None] | None = None,
 ) -> list["AIFindingAssessment"]:
     """Return immutable, provenance-scored AI triage for deterministic findings."""
     if not _has_any_provider(model):
@@ -242,37 +193,48 @@ async def assess_report_findings(
         raise ValueError("AGENT_BOM_AI_MAX_FINDINGS must be non-negative")
     if max_findings == 0:
         return []
-    findings = report.to_findings()[:max_findings]
-    if not findings:
+    selection = select_findings_for_triage(report.to_findings(), max_findings)
+    if not selection.selected:
         return []
-    batch_size = max(1, min(int(getattr(config, "AI_FINDING_BATCH_SIZE", 20)), 50))
+    batch_size = max(1, min(int(getattr(config, "AI_FINDING_BATCH_SIZE", 8)), 50))
     assessments: list[AIFindingAssessment] = []
     active_run_id = run_id or str(uuid.uuid4())
-    for offset in range(0, len(findings), batch_size):
-        batch = findings[offset : offset + batch_size]
-        prompt = _build_finding_assessment_prompt(batch)
-        response = await _call_llm(
-            prompt,
-            model,
-            max_tokens=1800,
-            task=EnrichmentTask.TRIAGE,
-            budget=budget,
-        )
-        if not response:
-            if budget is not None and budget.to_dict()["exhausted"]:
-                logger.warning("AI provider-attempt budget exhausted before finding triage completed")
-                break
-            continue
-        assessments.extend(
-            _parse_finding_assessments(
+    for offset in range(0, len(selection.selected), batch_size):
+        batch = selection.selected[offset : offset + batch_size]
+        prompt, refs = build_triage_prompt(batch)
+        outcome = TriageParseOutcome()
+        with defer_ai_call_records() as records:
+            response = await _call_llm(
+                prompt,
+                model,
+                max_tokens=200 * len(batch) + 100,
+                task=EnrichmentTask.TRIAGE,
+                budget=budget,
+                system=TRIAGE_SYSTEM_PROMPT,
+                response_schema=TRIAGE_RESPONSE_SCHEMA,
+                num_ctx=int(getattr(config, "AI_NUM_CTX", 8192)),
+            )
+            if not response:
+                if budget is not None and budget.to_dict()["exhausted"]:
+                    logger.warning("AI provider-attempt budget exhausted before finding triage completed")
+                    break
+                continue
+            accepted = _parse_finding_assessments(
                 response,
-                known_ids={finding.id for finding in batch},
+                findings={str(finding.id): finding for finding in batch},
                 provider=provider,
                 model=model,
                 run_id=active_run_id,
-                prompt=prompt,
+                prompt=f"{TRIAGE_SYSTEM_PROMPT}\n{prompt}",
+                refs=refs,
+                model_digest=next((record.model_digest for record in records if record.model_digest), ""),
+                outcome=outcome,
             )
-        )
+            assessments.extend(accepted)
+            if on_batch is not None:
+                on_batch(accepted)
+            if outcome.rejected_output:
+                mark_guard_rejected(records, outcome.rejection_reason)
     return assessments
 
 
@@ -293,6 +255,9 @@ async def _run_ai_enrichment_impl(
         "run_id": run_id,
         "call_budget": budget.to_dict(),
     }
+    if resolution.status == "blocked":
+        console.print(Text(f"  AI enrichment skipped: {resolution.reason}", style="yellow"))
+        return
     if not resolution.available:
         console.print("  [yellow]No LLM provider available. Skipping AI enrichment.[/yellow]")
         console.print("  [dim]Option 1: Install Ollama (free, local) — ollama.com[/dim]")
@@ -317,6 +282,8 @@ async def _run_ai_enrichment_impl(
         "run_id": run_id,
         "model_revision": str(getattr(config, "AI_MODEL_REVISION", "") or ""),
         "prompt_version": AI_PROMPT_VERSION,
+        "triage_prompt_version": AI_TRIAGE_PROMPT_VERSION,
+        "triage_dataset_version": AI_TRIAGE_DATASET_VERSION,
         "task_models": {
             "narrative": narrative_model,
             "summary": summary_model,
@@ -335,23 +302,20 @@ async def _run_ai_enrichment_impl(
 
     # Advisory triage is the primary structured surface, so it receives budget before optional narrative generation on large estates.
     triage_resolution = _resolve_ai_provider(triage_model)
+    report.ai_finding_assessments = []
     assessments = await assess_report_findings(
         report,
         triage_resolution.model if triage_resolution.available else triage_model,
         provider=triage_resolution.provider.name if triage_resolution.provider else "unknown",
         budget=budget,
         run_id=run_id,
+        on_batch=report.ai_finding_assessments.extend,
     )
-    total_findings = len(report.to_findings())
-    max_findings = int(getattr(config, "AI_MAX_FINDINGS_PER_RUN", 100))
-    report.ai_enrichment_metadata["triage_scope"] = {
-        "findings_total": total_findings,
-        "findings_offered": min(total_findings, max_findings),
-        "findings_truncated": max(total_findings - max_findings, 0),
-        "assessments_generated": len(assessments),
-    }
+    max_findings = max(int(getattr(config, "AI_MAX_FINDINGS_PER_RUN", 100)), 0)
+    report.ai_enrichment_metadata["triage_scope"] = select_findings_for_triage(report.to_findings(), max_findings).to_metadata(
+        assessed=len(assessments)
+    )
     if assessments:
-        report.ai_finding_assessments = assessments
         console.print(f"  [green]{len(assessments)} advisory finding assessment(s) generated[/green]")
 
     # Step 1: Enrich blast radii with contextual narratives
@@ -401,6 +365,10 @@ async def _run_ai_enrichment_impl(
     report.ai_enrichment_metadata["call_budget"] = budget.to_dict()
 
 
+def _record_ai_failure(report: AIBOMReport, reason: str) -> None:
+    report.ai_enrichment_metadata = {**(report.ai_enrichment_metadata or {}), "status": "failed", "reason": reason}
+
+
 async def run_ai_enrichment(
     report: AIBOMReport,
     model: str = DEFAULT_MODEL,
@@ -416,13 +384,18 @@ async def run_ai_enrichment(
     try:
         if gate_ai_findings and _effective_temperature() != 0.0:
             raise ValueError("AI finding gating requires deterministic mode")
-        await _run_ai_enrichment_impl(
-            report,
-            model,
-            skill_result,
-            skill_audit,
-            gate_ai_findings=gate_ai_findings,
-        )
+        deadline = float(getattr(config, "AI_RUN_DEADLINE_SECONDS", 900.0))
+        try:
+            await asyncio.wait_for(
+                _run_ai_enrichment_impl(report, model, skill_result, skill_audit, gate_ai_findings=gate_ai_findings),
+                timeout=deadline if deadline > 0 else None,
+            )
+        except asyncio.TimeoutError:
+            _record_ai_failure(report, f"the {deadline:g}s run deadline was reached")
+        except Exception as exc:  # noqa: BLE001 - advice is optional; the scan's results stand
+            logger.warning("AI enrichment failed: %s", sanitize_error(exc, generic=True))
+            _record_ai_failure(report, "the AI step stopped on an unexpected error")
+        render_ai_triage_summary(report, console)
     finally:
         _AI_RUN_ID.reset(run_token)
         _AI_DETERMINISTIC_OVERRIDE.reset(deterministic_token)

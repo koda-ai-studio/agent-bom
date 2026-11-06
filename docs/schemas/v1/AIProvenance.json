@@ -2,6 +2,12 @@
   "additionalProperties": false,
   "description": "Public schema contract for model-derived scan evidence.",
   "properties": {
+    "dataset_version": {
+      "default": "",
+      "maxLength": 64,
+      "title": "Dataset Version",
+      "type": "string"
+    },
     "deterministic": {
       "title": "Deterministic",
       "type": "boolean"
@@ -15,6 +21,12 @@
       "maxLength": 256,
       "minLength": 1,
       "title": "Model",
+      "type": "string"
+    },
+    "model_digest": {
+      "default": "",
+      "maxLength": 128,
+      "title": "Model Digest",
       "type": "string"
     },
     "model_revision": {

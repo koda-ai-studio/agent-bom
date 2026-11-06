@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import Response
 
 from agent_bom.api import job_status_count_cache
+from agent_bom.api.ai_assessment_read import attach_ai_assessments
 from agent_bom.api.bulk_findings_ingest import BulkFindingsRequest, PackageCheckRequest, _normalized_bulk_finding, reconcile_plan
 from agent_bom.api.current_graph import refuse_unpinned_read_while_seeding
 from agent_bom.api.finding_blast_row import _finding_from_blast_radius as _finding_from_blast_radius
@@ -590,6 +591,11 @@ def _list_jobs_impl(
     }
 
 
+def _with_ai_advice(implementation: Any, request: Request, *args: Any, **kwargs: Any) -> dict:
+    """Stored advice joins the page after every filter and projection; reads never call a model."""
+    return attach_ai_assessments(implementation(request, *args, **kwargs), require_request_tenant_id(request))
+
+
 @router.get("/findings", **documented(FindingsResponse), tags=["scan"], dependencies=[Depends(reject_unknown_query_params)])
 async def list_findings(
     request: Request,
@@ -649,7 +655,7 @@ async def list_findings(
             implementation = _list_finding_groups_impl if group_occurrences else _list_findings_view_impl
             with finding_list_projection(include_controls="controls" in includes):
                 body = await anyio.to_thread.run_sync(
-                    partial(implementation, lane=lane, path_context=path_context),
+                    partial(_with_ai_advice, implementation, lane=lane, path_context=path_context),
                     request,
                     q,
                     severity,

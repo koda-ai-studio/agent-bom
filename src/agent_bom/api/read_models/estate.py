@@ -13,6 +13,7 @@ from agent_bom.api.read_models._base import (
     ReadModel,
     ReadResponse,
 )
+from agent_bom.api.read_models.ai_advice import AIAssessmentRow
 
 # ── findings ─────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ class FindingAsset(ReadModel):
 
 
 class FindingRow(ReadModel):
+    ai_assessment: AIAssessmentRow | None = None
     path_context: str | None = None
     lane: str | None = None
     severity_source: str | None = None

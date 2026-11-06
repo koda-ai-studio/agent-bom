@@ -1,6 +1,379 @@
 {
   "components": {
     "schemas": {
+      "AIAssessmentProvenance": {
+        "additionalProperties": true,
+        "properties": {
+          "dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "model_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Digest"
+          },
+          "model_revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Revision"
+          },
+          "prompt_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Sha256"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "response_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Sha256"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "AIAssessmentProvenance",
+        "type": "object"
+      },
+      "AIAssessmentRow": {
+        "additionalProperties": true,
+        "properties": {
+          "advisory": {
+            "title": "Advisory",
+            "type": "boolean"
+          },
+          "classification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "false_positive_likelihood": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "False Positive Likelihood"
+          },
+          "finding_id": {
+            "title": "Finding Id",
+            "type": "string"
+          },
+          "guard_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guard Applied"
+          },
+          "protected_reasons": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Reasons"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/AIAssessmentProvenance"
+          },
+          "rationale": {
+            "title": "Rationale",
+            "type": "string"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "verdict": {
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "finding_id",
+          "verdict",
+          "confidence",
+          "rationale",
+          "advisory",
+          "provenance"
+        ],
+        "title": "AIAssessmentRow",
+        "type": "object"
+      },
+      "AIStatusResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "advisory_only": {
+            "title": "Advisory Only",
+            "type": "boolean"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AITriageRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "state",
+          "reason",
+          "advisory_only"
+        ],
+        "title": "AIStatusResponse",
+        "type": "object"
+      },
+      "AITriageRun": {
+        "additionalProperties": true,
+        "properties": {
+          "call_budget": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Budget"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Version"
+          },
+          "local": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "triage_scope": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triage Scope"
+          }
+        },
+        "required": [
+          "scan_id",
+          "created_at",
+          "status"
+        ],
+        "title": "AITriageRun",
+        "type": "object"
+      },
       "AccessReviewCampaignRow": {
         "additionalProperties": true,
         "properties": {
@@ -15314,6 +15687,16 @@
             ],
             "title": "Affected Servers"
           },
+          "ai_assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AIAssessmentRow"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "applicable_frameworks": {
             "anyOf": [
               {
@@ -21481,6 +21864,68 @@
         "title": "GraphCanvasNodeRecord",
         "type": "object"
       },
+      "GraphCitation": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "traversable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traversable"
+          }
+        },
+        "required": [
+          "ref",
+          "kind",
+          "id",
+          "label"
+        ],
+        "title": "GraphCitation",
+        "type": "object"
+      },
+      "GraphClaim": {
+        "additionalProperties": true,
+        "properties": {
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/GraphCitation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "citations"
+        ],
+        "title": "GraphClaim",
+        "type": "object"
+      },
       "GraphClustersResponse": {
         "additionalProperties": true,
         "properties": {
@@ -23436,6 +23881,143 @@
           "scan_id"
         ],
         "title": "GraphEvidenceManifestResponse",
+        "type": "object"
+      },
+      "GraphExplainRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "node_ids": {
+            "items": {
+              "maxLength": 512,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 25,
+            "minItems": 1,
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "ordered": {
+            "default": false,
+            "description": "Treat node_ids as an ordered path, so missing or non-traversable hops are reported",
+            "title": "Ordered",
+            "type": "boolean"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Graph scan id; defaults to the latest snapshot",
+            "title": "Scan Id"
+          }
+        },
+        "required": [
+          "node_ids"
+        ],
+        "title": "GraphExplainRequest",
+        "type": "object"
+      },
+      "GraphExplanationProvenance": {
+        "additionalProperties": true,
+        "properties": {
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "model_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Digest"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "provider",
+          "prompt_version",
+          "generated_at"
+        ],
+        "title": "GraphExplanationProvenance",
+        "type": "object"
+      },
+      "GraphExplanationResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "advisory": {
+            "title": "Advisory",
+            "type": "boolean"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/GraphClaim"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "evidence_limits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Limits",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/GraphExplanationProvenance"
+          },
+          "rejected_claims": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Rejected Claims",
+            "type": "object"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "advisory",
+          "label",
+          "status",
+          "claims",
+          "rejected_claims",
+          "evidence_limits",
+          "provenance"
+        ],
+        "title": "GraphExplanationResponse",
         "type": "object"
       },
       "GraphExploitStoryResponse": {
@@ -49521,6 +50103,48 @@
         ]
       }
     },
+    "/v1/ai/status": {
+      "get": {
+        "description": "Whether AI advice is on for this tenant, why, and how its last scan run went. Never calls a model.",
+        "operationId": "get_ai_status_v1_ai_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Get Ai Status",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/v1/assets": {
       "get": {
         "description": "List tracked vulnerability assets with first_seen / last_seen / status.\n\nThe asset tracker persists across scans so you can see when a vulnerability\nwas first discovered, when it was last seen, and when it was resolved.\n\nUse ``--save`` on CLI scans or the API to populate the tracker.",
@@ -68648,6 +69272,58 @@
           }
         },
         "summary": "Get Graph Evidence Manifest",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/explain": {
+      "post": {
+        "description": "Explain a recorded path or selection as AI advice, citing real node and edge ids. Writes nothing.",
+        "operationId": "post_graph_explain_v1_graph_explain_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphExplainRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphExplanationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Post Graph Explain",
         "tags": [
           "graph"
         ]
