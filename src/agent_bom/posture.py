@@ -277,7 +277,7 @@ def compute_posture_scorecard(
     inputs = posture_inputs_from_report(report)
     dimensions = score_posture_dimensions(inputs, resolved.weights)
     cloud = cloud_posture(report)
-    has_inventory = bool(inputs.packages or inputs.total_servers or inputs.vulnerabilities)
+    has_inventory = bool(inputs.packages or inputs.evaluated_servers or inputs.vulnerabilities)
     apply_cloud_dimensions(cloud, dimensions, has_inventory=has_inventory)
     cloud_controls = cloud.controls() if cloud.present else None
     if cloud.present and not cloud.gradeable:
@@ -291,7 +291,6 @@ def compute_posture_scorecard(
             cloud_controls=cloud_controls,
         )
     total_vulns = len(inputs.vulnerabilities)
-    total_servers = inputs.total_servers
     all_packages = inputs.packages
     retained_vulnerability_occurrences = inputs.retained_vulnerability_occurrences
 
@@ -304,13 +303,26 @@ def compute_posture_scorecard(
     # Return an explicit no-data / N/A posture instead, mirroring the honest N/A
     # treatment used elsewhere (overview tile, exec score). Dimensions and policy
     # source are preserved for downstream plumbing; only the headline is honest.
-    examined_artifacts = total_vulns + total_servers + len(all_packages) + cloud.evaluated
+    examined_artifacts = total_vulns + inputs.evaluated_servers + len(all_packages) + cloud.evaluated
     if examined_artifacts == 0:
         return PostureScorecard(
             grade="N/A",
             score=0.0,
             dimensions=dimensions,
             summary="No artifacts scanned — posture grade unavailable. Connect a surface or run a scan to grade posture.",
+            policy_source=resolved.source,
+            no_data=True,
+        )
+
+    # A package the public registry has never heard of has no advisory history to
+    # grade. When that is everything scanned, "no vulnerabilities" is not a result.
+    all_unknown = all(getattr(package, "registry_not_found", False) for package in all_packages)
+    if all_packages and all_unknown and not total_vulns and not report.has_mcp_context:
+        return PostureScorecard(
+            grade="N/A",
+            score=0.0,
+            dimensions=dimensions,
+            summary="No scanned package exists on its public registry — posture grade unavailable. Confirm the package names.",
             policy_source=resolved.source,
             no_data=True,
         )

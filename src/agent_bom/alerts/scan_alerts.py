@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from agent_bom.malicious_basis import malicious_basis, malicious_label
+
 
 def alerts_from_scan_result(report_dict: dict) -> list[dict]:
     """Generate alert dicts from a completed scan report.
@@ -87,11 +89,15 @@ def alerts_from_scan_result(report_dict: dict) -> list[dict]:
                             "type": "scan_alert",
                             "detector": "scan_malicious",
                             "severity": "critical",
-                            "message": f"Malicious package detected: {pkg.get('name', '')}@{pkg.get('version', '')}",
+                            "message": (
+                                f"{malicious_label(pkg.get('malicious_reason')).capitalize()} package detected: "
+                                f"{pkg.get('name', '')}@{pkg.get('version', '')}"
+                            ),
                             "details": {
                                 "package": pkg.get("name", ""),
                                 "version": pkg.get("version", ""),
                                 "reason": pkg.get("malicious_reason", ""),
+                                "basis": malicious_basis(pkg.get("malicious_reason")),
                             },
                             "ts": ts,
                         }

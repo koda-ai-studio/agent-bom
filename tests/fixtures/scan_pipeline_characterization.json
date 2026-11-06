@@ -4179,12 +4179,12 @@
  },
  "image_error_and_graph_failure": {
   "calls": [
-   "store.put:done",
+   "store.put:failed",
    "reconcile",
-   "adoption:complete"
+   "adoption:failed"
   ],
   "completed": true,
-  "error": null,
+  "error": "Image scan error for registry.example/app:1: registry token=<redacted>",
   "progress": [
    {
     "completed_at": null,
@@ -4299,7 +4299,7 @@
     "scopes": [],
     "warning_count": 1
    },
-   "status": "no_agents_found",
+   "status": "failed",
    "vulnerabilities": [],
    "warnings": [
     "Image scan error for registry.example/app:1: registry token=<redacted>"
@@ -4307,7 +4307,7 @@
   },
   "result_document": null,
   "started": true,
-  "status": "done"
+  "status": "failed"
  },
  "image_error_with_agent_and_graph_failure": {
   "calls": [

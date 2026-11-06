@@ -179,7 +179,10 @@ def to_spdx2(report: AIBOMReport, version: str = "2.3") -> dict:
                                 "annotationType": "OTHER",
                                 "annotator": "Tool: agent-bom",
                                 "annotationDate": created,
-                                "comment": f"agent-bom:malicious=true reason={pkg.malicious_reason or 'flagged malicious'}",
+                                "comment": (
+                                    f"agent-bom:malicious=true basis={pkg.malicious_basis} "
+                                    f"reason={pkg.malicious_reason or 'flagged malicious'}"
+                                ),
                             }
                         )
                     # SPDX 2.x has no field for a verification verdict either;

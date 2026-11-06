@@ -232,6 +232,27 @@ def has_unresolved_advisories(report: Any) -> bool:
     return any(isinstance(entry, dict) and entry.get("reason") == "registry_selected_version" for entry in entries)
 
 
+NOTHING_TO_SCAN = "nothing_to_scan"
+PACKAGE_NOT_ON_REGISTRY = "package_not_on_registry"
+
+
+def nothing_to_scan_message(names: list[str]) -> str:
+    return (
+        f"Nothing to scan in {', '.join(names)}: no packages, lockfiles or manifests were found, so no posture grade was given. "
+        "Check the path; a directory with no dependencies has nothing for this scan to gate on."
+    )
+
+
+def nothing_to_scan_issue(names: list[str]) -> ScanIssue:
+    return ScanIssue(
+        code=NOTHING_TO_SCAN,
+        stage="discovery",
+        source="filesystem",
+        message=nothing_to_scan_message(names),
+        affects_coverage=True,
+    )
+
+
 def effective_scan_run(report: Any) -> ScanRun:
     """Return the report's canonical run with legacy coverage gaps folded in."""
     from agent_bom.evidence.cloud_scan import cloud_scan_scopes

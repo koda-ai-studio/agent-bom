@@ -382,8 +382,10 @@ def _check_result_payload(
     possibly_affected: list[dict] | None = None,
 ) -> dict:
     """Build machine-readable check output."""
+    from agent_bom.malicious_basis import BLOCKING_VERDICTS, malicious_basis
     from agent_bom.scanners.package_check_result import PackageCheckResult, serialize_vulnerability
 
+    flagged = verdict in BLOCKING_VERDICTS
     result = PackageCheckResult(
         package=name,
         version=version,
@@ -393,8 +395,9 @@ def _check_result_payload(
         lookup_mode=lookup_mode,
         vulnerabilities=tuple(serialize_vulnerability(vuln) for vuln in vulnerabilities or []),
         warnings=tuple(warnings or []),
-        is_malicious=verdict == "malicious",
+        is_malicious=flagged,
         malicious_reason=malicious_reason,
+        malicious_basis=malicious_basis(malicious_reason) if flagged else None,
         exit_code=exit_code,
         vuln_data_freshness=vuln_data_freshness,
         completeness=completeness,

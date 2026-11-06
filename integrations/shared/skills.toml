@@ -87,10 +87,10 @@ Vet one package before it is installed.
 
 1. Parse the request into a package, an ecosystem (npm, pypi, go, cargo, maven, nuget, …) and a version. An MCP server launched with `npx` is npm; one launched with `uvx` or `pip` is pypi.
 2. Run `{ab} check '<package>@<version>' --ecosystem '<ecosystem>' -q -f json -o "$OUT/check.json"`. If the user named no version, run it as `'<package>'` without `@<version>`: the CLI checks the latest published version and reports `version_source: "registry_latest"` with that `version`; say that the latest published version, by number, is the one checked. If the result is `canonical_verdict: "incomplete"` instead (the latest version could not be resolved, or the pinned release predates this), ask the user which version they plan to install.
-3. Read `canonical_verdict`, `message`, `is_malicious`, `malicious_reason`, `vulnerability_count`, `completeness`, `vuln_data_freshness.stale` and, per entry in `vulnerabilities[]`, `id`, `severity`, `is_kev` and `fixed_version`.
+3. Read `canonical_verdict`, `message`, `is_malicious`, `malicious_reason`, `malicious_basis`, `vulnerability_count`, `completeness`, `vuln_data_freshness.stale` and, per entry in `vulnerabilities[]`, `id`, `severity`, `is_kev` and `fixed_version`.
 4. Answer in this order:
    - a verdict in one line: safe to add, upgrade first, or do not install; base it on `canonical_verdict` and quote `message`
-   - malicious or typosquat signals, if any, and the legitimate name it imitates (`malicious_reason`)
+   - malicious or typosquat signals, if any, and the legitimate name it imitates (`malicious_reason`). `suspected_malicious` is a name match, not a report of malware: say so, and say not to install it until its name and publisher are confirmed on the registry
    - CVEs with severity, KEV status and the first fixed version, most severe first, at most ten with the total count
    - when `completeness.status` is not `complete` or `vuln_data_freshness.stale` is true, the reason, as written
 5. If the package is fine but the user is adding an MCP server, suggest running the `scan` skill afterwards to see what credentials and tools the new server can reach.

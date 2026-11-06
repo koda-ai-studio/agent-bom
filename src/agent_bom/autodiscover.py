@@ -24,6 +24,8 @@ _DEFAULT_MAX_CANDIDATES = 200
 
 # ─── npm / PyPI metadata fetchers ────────────────────────────────────────────
 
+_NOT_FOUND: dict = {"registry_not_found": True}
+
 _NPM_URL = "https://registry.npmjs.org/{}/latest"
 _PYPI_URL = "https://pypi.org/pypi/{}/json"
 _REQUEST_TIMEOUT = 5.0
@@ -72,6 +74,8 @@ async def fetch_npm_metadata(name: str, client: object) -> Optional[dict]:  # no
     """Fetch package metadata from the npm registry."""
     try:
         resp = await client.get(_NPM_URL.format(name), timeout=_REQUEST_TIMEOUT)  # type: ignore[attr-defined]
+        if resp.status_code == 404:
+            return dict(_NOT_FOUND)
         if resp.status_code != 200:
             return None
         data = resp.json()
@@ -94,6 +98,8 @@ async def fetch_pypi_metadata(name: str, client: object) -> Optional[dict]:  # n
     """Fetch package metadata from PyPI."""
     try:
         resp = await client.get(_PYPI_URL.format(name), timeout=_REQUEST_TIMEOUT)  # type: ignore[attr-defined]
+        if resp.status_code == 404:
+            return dict(_NOT_FOUND)
         if resp.status_code != 200:
             return None
         data = resp.json()
@@ -214,6 +220,8 @@ async def autodiscover_package(
 
     if not metadata:
         return None
+    if metadata.get("registry_not_found"):
+        return metadata
 
     risk_level = infer_risk_level(metadata)
     justification = generate_risk_justification(metadata, risk_level)
@@ -223,6 +231,20 @@ async def autodiscover_package(
         "auto_risk_level": risk_level,
         "auto_risk_justification": justification,
     }
+
+
+def packages_not_on_registry(packages: list[Package]) -> list[Package]:
+    return [pkg for pkg in packages if getattr(pkg, "registry_not_found", False)]
+
+
+def package_not_on_registry_message(packages: list[Package]) -> str:
+    """Why these packages cannot be called clean; a private package is the usual innocent cause."""
+    shown = ", ".join(f"{pkg.name}@{pkg.version}" for pkg in packages[:5])
+    more = f" and {len(packages) - 5} more" if len(packages) > 5 else ""
+    return (
+        f"{shown}{more} not found on its public registry, so no advisory can clear it. "
+        "Check for a typo; if it is private, confirm it installs from your own registry, because anyone can claim an unused public name."
+    )
 
 
 @dataclass
@@ -292,6 +314,9 @@ async def enrich_unknown_packages(packages: list[Package], *, global_timeout: fl
         async def _enrich_one(pkg: Package) -> bool:
             async with sem:
                 result = await autodiscover_package(pkg.name, pkg.ecosystem, client)
+                if result and result.get("registry_not_found"):
+                    pkg.registry_not_found = True
+                    return False
                 if result:
                     pkg.auto_risk_level = result.get("auto_risk_level")
                     pkg.auto_risk_justification = result.get("auto_risk_justification")

@@ -19,6 +19,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `stale` marks an open finding not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). It stays open and counted, can be filtered with `status=stale` on the API, `--status stale` on the CLI and the Status filter on the Findings page, and never resolves anything.
 
 ### Changed
+- **Behaviour change:** a typosquat or dependency-confusion match now reads as suspected, not as malware. `check` and MCP report `suspected_malicious` in `verdict`, `canonical_verdict` and `status`, and say what the flag rests on and how to confirm it. It still exits `1` and `is_malicious` stays `true`. A new `malicious_basis` field (`known_malicious`, `name_similarity`, `dependency_confusion`, `unspecified`) appears in check results, reports, SARIF, CycloneDX, SPDX, CSV and Parquet. Findings, remediation text, alerts and the console use the same wording. A script that matches only `verdict == "malicious"` should also match `suspected_malicious`.
+- **Behaviour change:** `agent-bom fs` on a directory with no packages exits `2` instead of `0`. The grade is `N/A` rather than `A`, `scan_run.outcome` is `partial`, and a `nothing_to_scan` issue names the directory. Any scan carrier with no packages, such as an image or SBOM, also grades `N/A`.
+- **Behaviour change:** an API scan whose every requested target failed, such as an unreachable image, now ends as job `status: failed` with `error` set and `result.status: failed`, instead of `done` and `no_agents_found`.
+- **Behaviour change:** NVIDIA CSAF bulletins apply to a PyPI package only when a CVE's own product identifies that package, and the fix comes from that product's entry. `torch`, `torchvision`, `jax`, `tritonclient`, `openai` and other packages that bundle or call a product no longer receive these findings, and `Upgrade torch to 26.07` no longer appears.
 - **Behaviour change:** an AI dismissal is held as `needs_review` when the recorded fix is on a different release line from the installed version. On the recorded held-out set, `qwen2.5:3b` goes from 8 wrong dismissals to 3 and from 79% to 64% recall.
 - AI triage warns when a model missed the published quality bar or was never measured: in the CLI summary, the JSON report, `GET /v1/ai/status` and the AI status line.
 - The Go SDK and example now declare `go 1.26.10`; 1.22 no longer receives security fixes.
@@ -46,6 +50,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
+- `ctransformers` and `parsing` are no longer flagged as typosquats. Both are established PyPI projects.
+- A scan no longer says `supply chain looks clean` when the public registry has never heard of a package. It names the package, records a `package_not_on_registry` issue, and grades `N/A` if no scanned package exists. The exit code does not change, because private packages are normal.
 - The `scan` skill's frontmatter is valid YAML again; an unquoted colon in its description broke parsing in the Claude and Codex plugins.
 - Investigation flows: a flow that cannot apply no longer sits selected with no effect. It is disabled with the reason on screen, Automatic names what is really showing, and flows now work on maps of up to 100 nodes instead of 80, including from the connection preview.
 - Investigation flows: the Kubernetes exposure path now continues from a pod through its ReplicaSet and Deployment to the identity and secrets recorded there, without adding or reversing any edge.

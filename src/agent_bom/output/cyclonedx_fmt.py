@@ -749,6 +749,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                     pkg_properties.append({"name": "agent-bom:is-malicious", "value": "true"})
                     if pkg.malicious_reason:
                         pkg_properties.append({"name": "agent-bom:malicious-reason", "value": pkg.malicious_reason})
+                    pkg_properties.append({"name": "agent-bom:malicious-basis", "value": str(pkg.malicious_basis)})
                 # --verify-integrity verdict. The namespaced properties give a
                 # consumer an unambiguous boolean; the identity evidence below
                 # says the same thing in the spec's own vocabulary.

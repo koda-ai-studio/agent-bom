@@ -33,6 +33,7 @@ from agent_bom.domain.finding_types import _occurrence_evidence_qualifier as _oc
 from agent_bom.domain.finding_types import _stable_id as _stable_id
 from agent_bom.domain.finding_types import cites_cis_control
 from agent_bom.domain.finding_types import stable_id as stable_id
+from agent_bom.malicious_basis import is_suspected, malicious_basis, malicious_label
 from agent_bom.security import sanitize_text
 
 if TYPE_CHECKING:
@@ -109,6 +110,8 @@ def _remediation_guidance_for_vulnerability(vuln: object, pkg: object) -> str:
     if getattr(pkg, "is_malicious", False):
         reason = getattr(pkg, "malicious_reason", None)
         detail = f" ({reason})" if isinstance(reason, str) and reason.strip() else ""
+        if is_suspected(reason):
+            return f"Confirm {package_name} is the package you intended before installing it; remove it if not{detail}."
         return f"Remove {package_name} from all environments immediately{detail}."
 
     ecosystem = getattr(pkg, "ecosystem", None)
@@ -764,6 +767,7 @@ def blast_radius_to_finding(br: object) -> "Finding":
         reason = getattr(pkg, "malicious_reason", None)
         if isinstance(reason, str) and reason.strip():
             evidence["malicious_reason"] = reason.strip()
+        evidence["malicious_basis"] = malicious_basis(reason)
     if vuln.references:
         evidence["references"] = _sanitized_evidence_field(vuln.references[:5])
 
@@ -934,6 +938,7 @@ def malicious_package_to_finding(
         "ecosystem": ecosystem,
         "package_is_malicious": True,
         "malicious_reason": reason,
+        "malicious_basis": malicious_basis(reason),
         "finding_kind": "malicious-package",
     }
     finding = Finding(
@@ -941,7 +946,7 @@ def malicious_package_to_finding(
         source=FindingSource.MCP_SCAN,
         asset=Asset(name=name, asset_type="package", identifier=identifier),
         severity="critical",
-        title=f"Malicious package: {name}@{version}",
+        title=f"{malicious_label(reason).capitalize()} package: {name}@{version}",
         description=reason,
         is_malicious=True,
         malicious_reason=reason,

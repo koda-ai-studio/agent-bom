@@ -18,6 +18,7 @@ from agent_bom.asset_provenance import (
 from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import severity_basis
 from agent_bom.core.vex_policy import is_vex_suppressed
+from agent_bom.malicious_basis import package_basis_fields
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, Severity
 from agent_bom.output.vulnerability_counts import SuppressionStates, suppression_states
@@ -140,6 +141,8 @@ def _package_json(pkg: Any, agent: Any, states: SuppressionStates | None = None)
         "floating_reference_reason": pkg.floating_reference_reason,
         "is_malicious": pkg.is_malicious,
         "malicious_reason": pkg.malicious_reason,
+        **package_basis_fields(pkg.malicious_reason, pkg.is_malicious),
+        **({"registry_not_found": True} if pkg.registry_not_found else {}),
         "registry_version": pkg.registry_version,
         "license": pkg.license,
         "license_expression": pkg.license_expression,

@@ -13,6 +13,7 @@ from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.evidence.scan_run import ScanRun, effective_scan_run
 from agent_bom.exploitability import exploitability_tags, parse_cvss_vector_signals
 from agent_bom.finding import Finding, FindingType
+from agent_bom.malicious_basis import package_basis_fields
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
 from agent_bom.output.advisory_text import advisory_help, sanitize_advisory_text
 from agent_bom.output.exposure_path import (
@@ -487,6 +488,7 @@ def _cve_sarif_result(
         "suppressed": bool(finding.suppressed),
         "is_malicious": finding.is_malicious,
         "malicious_reason": (sanitize_advisory_text("title", finding.malicious_reason) or None) if finding.malicious_reason else None,
+        **package_basis_fields(finding.malicious_reason, finding.is_malicious),
     }
     if finding.fixed_version:
         result_properties["fixed_version"] = finding.fixed_version
@@ -655,6 +657,7 @@ def _unified_finding_properties(finding: Finding, rule_id: str, evidence: dict[s
         "remediation_guidance": _sanitize_sarif_property(finding.remediation_guidance),
         "is_malicious": finding.is_malicious,
         "malicious_reason": (sanitize_advisory_text("title", finding.malicious_reason) or None) if finding.malicious_reason else None,
+        **package_basis_fields(finding.malicious_reason, finding.is_malicious),
         # Structured reach lists + AI-native context (unified Finding parity).
         "affected_servers": list(finding.affected_servers),
         "affected_agents": list(finding.affected_agents),

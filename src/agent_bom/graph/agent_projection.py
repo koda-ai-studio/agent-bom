@@ -422,6 +422,7 @@ def _project_package_nodes(graph: UnifiedGraph, agent: AgentScope, srv_dict: Map
                     "license": pkg_dict.get("license", ""),
                     "scorecard_score": pkg_dict.get("scorecard_score"),
                     "is_malicious": pkg_dict.get("is_malicious", False),
+                    **({"malicious_basis": pkg_dict["malicious_basis"]} if pkg_dict.get("malicious_basis") else {}),
                     "stable_id": pkg_dict.get("stable_id", ""),
                     "environment": agent.agent_env,
                     "discovery_provenance": package_discovery_provenance,

@@ -15,7 +15,7 @@ automation can distinguish caller mistakes from control-plane outages.
 | ----- | ------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `0`   | success             | Command completed; no findings or all findings under the default or configured severity threshold.             | Any subcommand that finished cleanly; `scan --exit-zero` with vulnerability findings only. |
 | `1`   | scan verdict or operational failure | Either (a) a scan gate matched — see "Why `scan` exits 1" below — or (b) a precondition failed: missing config, unreachable backend, missing required env var, dependency not present. | Default high threshold or `--fail-on-severity` matched, an incomplete scan such as a missing or unreadable offline vulnerability database, `agent-bom scan --demo` (malicious package fails closed), `--clickhouse-url` missing, NVD unreachable, optional dependency not installed, `agent-bom connect <provider>` failing to verify or register. |
-| `2`   | usage, empty or incomplete check | Invalid arguments, no input to act on, a report that contained no rows after filtering, or an `agent-bom check` that could not complete (stale local DB, or no version given and the registry's latest version could not be resolved: `version_source` is absent and `verdict: "incomplete"`). | Click `UsageError` (auto), `agent-bom skills scan` with no skill files, empty result rendering, `agent-bom connect` when the control plane rejects the payload (`400`/`422`), `agent-bom check <package>` without a version when the registry is unreachable. |
+| `2`   | usage, empty or incomplete check | Invalid arguments, no input to act on, a report that contained no rows after filtering, or an `agent-bom check` that could not complete (stale local DB, or no version given and the registry's latest version could not be resolved: `version_source` is absent and `verdict: "incomplete"`). | Click `UsageError` (auto), `agent-bom skills scan` with no skill files, `agent-bom fs` on a directory with no packages, empty result rendering, `agent-bom connect` when the control plane rejects the payload (`400`/`422`), `agent-bom check <package>` without a version when the registry is unreachable. |
 | `3`   | policy gate failed  | An opt-in policy gate failed. Currently emitted by `--require-fresh-db` / `AGENT_BOM_REQUIRE_FRESH_DB` when the local vuln DB is stale. Otherwise reserved for future policy gates. | `agent-bom scan --require-fresh-db` or `agent-bom check --require-fresh-db` against a stale local vuln DB. |
 | `4`   | (reserved)          | Reserved for "auth required" / "auth invalid" on commands that talk to an authenticated control plane.        | Not yet emitted.                                                           |
 | `5`   | (reserved)          | Reserved for "remote control-plane error" (5xx response from the API).                                         | Not yet emitted.                                                           |
@@ -33,7 +33,7 @@ named on the last line of the output. A scan exits `1` when any of these hold.
 | Default high severity gate / `--fail-on-severity` | High is the default (the same as the GitHub Action); the flag selects another threshold | A vulnerability met or exceeded the active threshold. Use `--exit-zero` only for an explicitly reporting-only vulnerability scan. |
 | `--fail-on-kev` / `--fail-if-ai-risk` matched | Yes — you set the flag | A finding met the additional gate you asked to block on. |
 | A policy rule failed | Yes — `--policy`, or `--model-policy-mode enforce` / `--require-model-signatures` / `--block-unsafe-model-formats` (all default off) | Your policy rejected the result. |
-| A known-malicious package was found | **No — fails closed** | A typosquat, dependency-confusion, or known-malicious advisory match. Exiting `0` here would let the package install. |
+| A malicious or suspected malicious package was found | **No — fails closed** | A known-malicious advisory, or a typosquat or dependency-confusion match, which reads as suspected. Exiting `0` here would let the package install. |
 | The scan did not complete | **No — fails closed** | A requested collector degraded or failed, or a cloud control errored or returned no data; `scan_run.issues` in the artifact says which. A partial artifact with zero findings must not read as clean. An errored control is missing evidence rather than a finding: it exits `1` through this gate, not the severity gate, so real failed controls are named first. A disabled cloud API recorded as not in use does not trip it. |
 | `--push-url` results were not delivered | **No — fails closed** | The control plane could not be reached or rejected the report after retries, so it does not hold this scan. The local report is unaffected. A report the server accepted and is still ingesting counts as delivered. |
 | Outdated local vulnerability data that OSV did not back | **No — fails closed** (opt out with `--allow-stale-db` / `AGENT_BOM_ALLOW_STALE_DB`) | The local DB is past the age `agent-bom db freshness` warns about (or its freshness can't be trusted), and the scan was offline or live OSV did not answer. `scan_run.issues` carries a `stale_local_data` coverage issue. |
@@ -44,6 +44,43 @@ requested and exits `1`. It is not a usage error (`2`) because the command and
 input were valid. The narrower `check` command retains its established
 precondition contract and exits `2` when its requested offline advisory lookup
 cannot start.
+
+### Malicious and suspected malicious packages
+
+A flagged package always exits `1`, and `--exit-zero` does not clear it. The
+wording follows the evidence:
+
+| `malicious_basis` | Evidence | `check` `verdict` and `canonical_verdict`, MCP and API `status` |
+| --- | --- | --- |
+| `known_malicious` | A malware advisory (`MAL-`, CWE-506 family), a tampered go.sum hash, or a confirmed pickle payload | `malicious` |
+| `unspecified` | Flagged with no recorded reason | `malicious` |
+| `name_similarity` | The name is close to a popular package; nothing reports it as malware | `suspected_malicious` |
+| `dependency_confusion` | The name looks internal and has no public data; nothing reports it as malware | `suspected_malicious` |
+
+`is_malicious` stays `true` for all four because every gate reads it, so read
+`malicious_basis` before calling a package malware. For a suspected package,
+confirm its name and publisher on the registry; the exit stays `1` for that name, as there is no allowlist. Reports, SARIF properties,
+CycloneDX (`agent-bom:malicious-basis`) and SPDX annotations carry the same basis,
+and CSV and Parquet add a `malicious_basis` column.
+
+### Nothing to scan
+
+`agent-bom fs <dir>` on a directory with no packages, lockfiles or manifests
+writes its report and exits `2`: `posture_grade` is `N/A`, `scan_run.outcome` is
+`partial`, and a `nothing_to_scan` issue names the directory. A wrong path must
+not pass a CI gate. The GitHub Action reports this as `scan-status: usage_error`;
+if a directory is meant to hold no dependencies, do not run an `fs` gate on it.
+On the API, the same request keeps `status: done` and adds the message to
+`warnings`, with no grade.
+
+An API scan whose every requested target failed, such as an unreachable image,
+ends with job `status: failed`, `error` set and `scan_run.outcome: failed`. If at
+least one target succeeded, the job is `done` and `scan_run.outcome` is `partial`.
+
+A package the public registry answers `404` for is named in the scan summary
+and in a `package_not_on_registry` issue, and its row carries
+`registry_not_found: true`. If no scanned package exists, `posture_grade` is
+`N/A`. This does not change the exit code, because private packages are normal.
 
 ### Skill and instruction scans
 

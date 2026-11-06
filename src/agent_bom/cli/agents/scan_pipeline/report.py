@@ -9,6 +9,7 @@ from typing import Any
 
 import click
 
+from agent_bom.autodiscover import package_not_on_registry_message, packages_not_on_registry
 from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
 from agent_bom.cli.agents.scan_pipeline.helpers import (
     CLOUD_BENCHMARK_REPORTS,
@@ -20,11 +21,13 @@ from agent_bom.cli.agents.scan_pipeline.helpers import (
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.evidence.scan_run import (
+    PACKAGE_NOT_ON_REGISTRY,
     ScanIssue,
     ScanOutcome,
     ScanRun,
     ScanScope,
     ScanScopeStatus,
+    nothing_to_scan_issue,
     scanner_warning_issues,
     vulnerability_scan_skipped_issue,
 )
@@ -218,6 +221,17 @@ def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
         )
     if opts.no_scan:
         st.scan_issues.append(vulnerability_scan_skipped_issue())
+    _missing = packages_not_on_registry(st.all_packages)
+    if _missing:
+        st.scan_issues.append(
+            ScanIssue(
+                code=PACKAGE_NOT_ON_REGISTRY,
+                stage="inventory",
+                source="autodiscover",
+                message=package_not_on_registry_message(_missing),
+                affects_coverage=False,
+            )
+        )
     # Controls evaluated for any failed provider are evidence: the run is partial, not failed.
     _any_evaluated = any(_provider_evaluated_controls(st.ctx, str(_f.get("provider"))) for _f in st.ctx.cloud_provider_failures)
     st.scan_outcome = (
@@ -269,6 +283,15 @@ def _collect_cloud_scopes(opts: ScanOptions, st: ScanState) -> None:
         )
 
 
+def _flag_nothing_scanned(st: ScanState) -> None:
+    """Filesystem targets that held nothing, and no other evidence: the run has no result to report."""
+    carriers = [agent for agent in st.agents if agent.source == "filesystem"]
+    if not carriers or len(carriers) != len(st.agents) or any(server.packages for agent in carriers for server in agent.mcp_servers):
+        return
+    if not st.report.to_findings():
+        st.report.scan_run.add_issue(nothing_to_scan_issue([Path(agent.config_path or agent.name).name for agent in carriers]))
+
+
 def _build_report(opts: ScanOptions, st: ScanState) -> None:
 
     _codeowners: list[dict[str, object]] = []
@@ -292,6 +315,7 @@ def _build_report(opts: ScanOptions, st: ScanState) -> None:
         codeowners=_codeowners,
         **st.report_kwargs,
     )
+    _flag_nothing_scanned(st)
     from agent_bom.advisory_sources import summarize_advisory_coverage
 
     # Drain here, at the single point every branch reaches. A manifest that

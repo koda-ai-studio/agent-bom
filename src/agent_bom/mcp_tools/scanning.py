@@ -12,6 +12,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
 from agent_bom.evidence.scan_run import scanner_warning_issues
+from agent_bom.malicious_basis import BLOCKING_VERDICTS, malicious_message, malicious_verdict_value
 from agent_bom.mcp_server_scan import consume_repo_tree_iac, consume_repo_tree_inventory
 from agent_bom.mcp_tools.check_lookup import (
     incomplete_lookup_reason,
@@ -608,7 +609,8 @@ async def check_impl(
                 purl=pkg.purl,
                 is_malicious=bool(pkg.is_malicious),
                 malicious_reason=pkg.malicious_reason,
-                exit_code=0 if verdict == "clean" else 1 if verdict in {"vulnerable", "malicious"} else 2,
+                malicious_basis=pkg.malicious_basis,
+                exit_code=0 if verdict == "clean" else 1 if verdict == "vulnerable" or verdict in BLOCKING_VERDICTS else 2,
                 source_context=source_context or {},
                 vuln_data_freshness=evidence[0].freshness if evidence else None,
                 completeness=evidence[0].completeness() if evidence else None,
@@ -654,10 +656,9 @@ async def check_impl(
         evidence.append(data_evidence)
 
         if pkg.is_malicious:
-            reason = pkg.malicious_reason or "flagged as malicious by package intelligence"
             return service_result(
-                "malicious",
-                f"MALICIOUS package {name}@{version} — {reason}. Do not install.",
+                malicious_verdict_value(pkg.malicious_reason),
+                malicious_message(f"{name}@{version}", pkg.malicious_reason),
             )
 
         incomplete = None if pkg.vulnerabilities else incomplete_lookup_reason(f"{name}@{version}", coverage_warnings, data_evidence)
