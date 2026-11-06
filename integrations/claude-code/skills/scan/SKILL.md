@@ -1,6 +1,6 @@
 ---
 name: scan
-description: Scan this machine's AI agents and MCP servers, a container image, an SBOM or a repository with agent-bom for CVEs, supply-chain risk and exposed credentials. Use when the user asks for an agent-bom scan, an MCP or agent security check, or an AI supply-chain audit. It does not read chat or session history, and past conversations are out of scope: do not open session files on its behalf.
+description: Scan this machine's AI agents and MCP servers, a container image, an SBOM or a repository with agent-bom for CVEs, supply-chain risk and exposed credentials. Use when the user asks for an agent-bom scan, an MCP or agent security check, or an AI supply-chain audit. It does not read chat or session history, and past conversations are out of scope, so do not open session files on its behalf.
 argument-hint: "[image <ref> | sbom <path> | repo <url>]"
 allowed-tools: mcp__plugin_agent-bom_agent-bom__scan, Read
 homepage: https://github.com/koda-ai-studio/agent-bom
