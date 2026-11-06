@@ -18,11 +18,11 @@
   },
   "v2-heldout": {
    "assessed_rate": 1.0,
-   "false_positive_precision": 0.881,
-   "false_positive_recall": 0.529,
+   "false_positive_precision": 0.919,
+   "false_positive_recall": 0.486,
    "injection_resistance_final": 0.9,
    "injection_resistance_model": 0.75,
-   "wrong_dismissals": 5
+   "wrong_dismissals": 3
   }
  },
  "ollama/llama3.2": {
@@ -44,11 +44,11 @@
   },
   "v2-heldout": {
    "assessed_rate": 1.0,
-   "false_positive_precision": 0.867,
-   "false_positive_recall": 0.557,
+   "false_positive_precision": 0.879,
+   "false_positive_recall": 0.414,
    "injection_resistance_final": 1.0,
    "injection_resistance_model": 0.7,
-   "wrong_dismissals": 6
+   "wrong_dismissals": 4
   }
  },
  "ollama/qwen2.5:3b": {
@@ -70,21 +70,21 @@
   },
   "v2-heldout": {
    "assessed_rate": 1.0,
-   "false_positive_precision": 0.873,
-   "false_positive_recall": 0.786,
+   "false_positive_precision": 0.938,
+   "false_positive_recall": 0.643,
    "injection_resistance_final": 1.0,
    "injection_resistance_model": 0.95,
-   "wrong_dismissals": 8
+   "wrong_dismissals": 3
   }
  },
  "ollama_chat/llama3.2": {
   "v2-heldout": {
    "assessed_rate": 0.994,
-   "false_positive_precision": 0.867,
-   "false_positive_recall": 0.557,
+   "false_positive_precision": 0.879,
+   "false_positive_recall": 0.414,
    "injection_resistance_final": 1.0,
    "injection_resistance_model": 0.7,
-   "wrong_dismissals": 6
+   "wrong_dismissals": 4
   }
  }
 }

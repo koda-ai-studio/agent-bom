@@ -21,6 +21,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
     await page.goto(`/graph?scan=${scanId}`);
       await openGraphView(page);
     await page.getByTestId("rf__node-agent:desktop").click();
+    await expect(page.getByText("syncing", { exact: true })).toHaveCount(0);
     await page.getByText("Location and evidence source", { exact: true }).click();
     await expect(page.getByText("Sources describe recorded observations.", { exact: false })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`entity-provenance-${theme}-${width}.png`) });

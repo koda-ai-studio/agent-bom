@@ -1,3 +1,3 @@
 module github.com/msaad00/agent-bom/sdks/go
 
-go 1.22
+go 1.26.10

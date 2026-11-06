@@ -161,6 +161,9 @@ def tampering_signal(finding: "Finding") -> bool:
     return any(isinstance(value, str) and looks_like_instruction(value) for value in fields)
 
 
+_RELEASE_LINE = re.compile(r"v?(\d+)\.(\d+)")
+
+
 def fix_status(finding: "Finding") -> str:
     """Compare versions in code; small models get version arithmetic wrong."""
     evidence = finding.evidence if isinstance(finding.evidence, dict) else {}
@@ -174,6 +177,20 @@ def fix_status(finding: "Finding") -> str:
     if order is None:
         return "unknown"
     return "fix_not_installed" if order < 0 else "fix_already_installed"
+
+
+def fix_on_other_release_line(finding: "Finding") -> bool:
+    """The recorded fix sits below the installed version but on another line, so it may not cover that line.
+
+    An advisory with fixes on several release lines can leave ``fixed_version`` on an older
+    one: 6.1.4 is at or above 5.3.33 and can still be vulnerable until 6.1.5.
+    """
+    if fix_status(finding) != "fix_already_installed":
+        return False
+    evidence = finding.evidence if isinstance(finding.evidence, dict) else {}
+    installed = _RELEASE_LINE.match(str(evidence.get("package_version")))
+    fixed = _RELEASE_LINE.match(str(finding.fixed_version))
+    return bool(installed and fixed and installed.groups() != fixed.groups())
 
 
 def risk_rank(finding: "Finding") -> tuple[float, ...]:
@@ -283,7 +300,7 @@ def _hold_weak_dismissal(fields: dict[str, Any], finding: "Finding") -> dict[str
     """A wrong dismissal costs more than a missed one: it takes high confidence and no conflict with the version check."""
     if fields["verdict"] != "likely_false_positive":
         return fields
-    if fields["confidence"] == "high" and fix_status(finding) != "fix_not_installed":
+    if fields["confidence"] == "high" and fix_status(finding) != "fix_not_installed" and not fix_on_other_release_line(finding):
         return fields
     return {**fields, "verdict": "needs_review", "classification": "unconfirmed_dismissal", "false_positive_likelihood": "medium"}
 

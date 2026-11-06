@@ -8696,6 +8696,8 @@ export interface components {
             local?: boolean | null;
             /** Model */
             model?: string | null;
+            /** Model Standing */
+            model_standing?: string | null;
             /** Prompt Version */
             prompt_version?: string | null;
             /** Provider */

@@ -24,7 +24,7 @@ export type AIAssessment = Pick<Schemas["AIAssessmentRow"], "finding_id" | "verd
 
 export type AIStatus = Pick<Schemas["AIStatusResponse"], "state" | "reason" | "advisory_only"> & {
   schema_version?: string;
-  last_run?: (Pick<Schemas["AITriageRun"], "scan_id" | "created_at" | "status"> & Partial<Pick<Schemas["AITriageRun"], "reason" | "model" | "triage_scope">>) | null | undefined;
+  last_run?: (Pick<Schemas["AITriageRun"], "scan_id" | "created_at" | "status"> & Partial<Pick<Schemas["AITriageRun"], "reason" | "model" | "model_standing" | "triage_scope">>) | null | undefined;
 };
 
 const VERDICTS: Record<string, string> = {
@@ -97,6 +97,11 @@ export function AIAdviceSection({ assessment }: { assessment: AIAssessment | nul
   );
 }
 
+const MODEL_STANDING_NOTES: Record<string, string> = {
+  missed_bar: " This model missed the published triage quality bar, so expect more wrong advice.",
+  not_measured: " This model has not been measured against the published triage quality bar.",
+};
+
 function statusSentence(status: AIStatus): string {
   const run = status.last_run;
   if (status.state === "off") return status.reason || "AI advice is off.";
@@ -107,7 +112,8 @@ function statusSentence(status: AIStatus): string {
   const scope = (run.triage_scope ?? {}) as { findings_total?: number; findings_offered?: number };
   const coverage = scope.findings_offered !== undefined && scope.findings_total !== undefined ? ` It assessed the riskiest ${scope.findings_offered} of ${scope.findings_total} findings.` : "";
   const partial = run.status === "partial" ? ` Some assessments are missing${run.reason ? `: ${run.reason}` : ""}.` : "";
-  return `AI advice is on${run.model ? ` (${run.model})` : ""}.${coverage}${partial} Advice never changes scanner severity.`;
+  const standing = run.model_standing ? (MODEL_STANDING_NOTES[run.model_standing] ?? "") : "";
+  return `AI advice is on${run.model ? ` (${run.model})` : ""}.${coverage}${partial}${standing} Advice never changes scanner severity.`;
 }
 
 export function AIStatusNotice({ status }: { status: AIStatus | null | undefined }) {

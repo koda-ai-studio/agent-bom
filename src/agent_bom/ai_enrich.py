@@ -89,6 +89,7 @@ from agent_bom.ai_components.triage import (
 )
 from agent_bom.ai_components.triage import parse_finding_assessments as _parse_finding_assessments
 from agent_bom.ai_components.triage_console import render_ai_triage_summary
+from agent_bom.ai_components.triage_model_standing import triage_model_standing
 
 _DEFAULT_AI_MAX_CALLS = 50  # Hard cap: prevent runaway spend on large monorepos
 __all__ = ["_ASSIGNMENT_PATTERN", "_IDENTIFIER_RE", "_MAX_AI_PROMPT_CHARS", "_MAX_AI_SKILL_FILES",
@@ -315,6 +316,9 @@ async def _run_ai_enrichment_impl(
         budget=budget,
         run_id=run_id,
         on_batch=report.ai_finding_assessments.extend,
+    )
+    report.ai_enrichment_metadata["triage_model_standing"] = triage_model_standing(
+        triage_resolution.model if triage_resolution.available else triage_model
     )
     max_findings = max(int(getattr(config, "AI_MAX_FINDINGS_PER_RUN", 100)), 0)
     report.ai_enrichment_metadata["triage_scope"] = select_findings_for_triage(report.to_findings(), max_findings).to_metadata(

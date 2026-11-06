@@ -25,9 +25,9 @@ export function GraphFlowControl({ value, automaticLabel, available, disabledRea
   const message = compact ? note : disabledReason ?? note;
   return <div data-testid="graph-flow-control" title={disabledReason} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
     <label className="flex items-center gap-2"><span className={compact ? "sr-only" : undefined}>Flow</span>
-      <select aria-label="Investigation flow" value={value} disabled={Boolean(disabledReason)} onChange={event => onChange(event.target.value as InvestigationFlow)}
+      <select aria-label="Investigation flow" title={compact && value === "auto" ? automaticLabel : undefined} value={value} disabled={Boolean(disabledReason)} onChange={event => onChange(event.target.value as InvestigationFlow)}
         className={`rounded-md border border-outline bg-background px-2 py-1 text-foreground disabled:opacity-60 ${compact ? "min-h-11 w-[8.5rem]" : ""}`}>
-        <option value="auto">{automaticLabel}</option>
+        <option value="auto">{compact ? "Automatic" : automaticLabel}</option>
         {FLOWS.map(flow => <option key={flow} value={flow} disabled={!available[flow]}>{FLOW_NAMES[flow]}{available[flow] ? "" : ` (${ABSENT[flow]})`}</option>)}
       </select>
     </label>

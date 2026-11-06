@@ -29,6 +29,12 @@ describe("GraphFlowControl", () => {
     expect(select().disabled).toBe(false);
   });
 
+  it("fits Automatic on a phone's narrow row and keeps the full label as the tooltip", () => {
+    render(<GraphFlowControl value="auto" automaticLabel="Automatic · connection preview" available={allAvailable} compact onChange={() => {}} />);
+    expect(screen.getByRole<HTMLOptionElement>("option", { name: "Automatic" }).selected).toBe(true);
+    expect(select().title).toBe("Automatic · connection preview");
+  });
+
   it("reports the selection", () => {
     const onChange = vi.fn();
     render(<GraphFlowControl value="auto" automaticLabel="Automatic · Exposure" available={allAvailable} onChange={onChange} />);

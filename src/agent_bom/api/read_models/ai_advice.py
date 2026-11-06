@@ -43,6 +43,7 @@ class AITriageRun(ReadModel):
     reason: str | None = None
     provider: str | None = None
     model: str | None = None
+    model_standing: str | None = None
     local: bool | None = None
     prompt_version: str | None = None
     dataset_version: str | None = None

@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 from rich.console import Console
 from rich.text import Text
 
+from agent_bom.ai_components.triage_model_standing import STANDING_NOTES, triage_model_standing
+
 if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport
 
@@ -38,6 +40,9 @@ def render_ai_triage_summary(report: "AIBOMReport", console: Console) -> None:
         first = assessments[0].provenance
         digest = f" {first.model_digest[:19]}" if first.model_digest else ""
         console.print(Text(f"  model: {first.model}{digest}, {first.generated_at.date().isoformat()}"))
+        note = STANDING_NOTES.get(triage_model_standing(first.model))
+        if note:
+            console.print(Text(f"  {note}", style="yellow"))
     flagged = [item for item in assessments if item.verdict == "likely_false_positive"]
     for item in flagged[:_MAX_SHOWN]:
         console.print(Text(f"  - {item.finding_id[:24]} ({item.confidence}): {item.rationale}"))
