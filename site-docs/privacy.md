@@ -1,9 +1,11 @@
 # Privacy notice
 
-> **DRAFT — Owner review required before publication.** This is a technical
-> description for review, not an effective legal notice. The service owner must
-> confirm its identity, contact process, hosting and identity-provider retention,
-> and applicable legal requirements before publishing or submitting a directory listing.
+Last updated: 2026-11-06.
+
+This notice covers the agent-bom software and its directory plugins, which run on
+your machine. The agent-bom project offers no public hosted service, and these tools
+send the project no data. Anyone who runs agent-bom as a service for others is its
+operator, and that operator's own notice applies to what they store.
 
 ## Scope and information processed
 
@@ -94,9 +96,8 @@ lists the supported destinations and opt-in behavior.
   successful introspection decision. Client-side refresh-token storage belongs
   to the MCP client and authorization server.
 
-The hosted service's actual log, backup and identity-account retention periods
-must be supplied by its owner before this draft becomes an effective notice.
-Self-hosted operators must document their own settings and deletion process.
+The operator of a hosted or self-hosted deployment sets its log, backup and
+identity-account retention, and must document those settings and its deletion process.
 
 ## Purposes and your controls
 
@@ -108,8 +109,8 @@ the guard's `osv_lookup` option, turn off rescan summaries with
 
 ## Access and questions
 
-Contact the service operator for access, correction or deletion requests about
-its stored data. Use the project's
+The project holds no records about you from these tools. For data stored by a hosted
+or self-hosted deployment, contact its operator. Use the project's
 [support channel](https://github.com/koda-ai-studio/agent-bom/issues) for general
 questions without including private records. Report security concerns through
 [the private reporting instructions](https://github.com/koda-ai-studio/agent-bom/security/policy).
