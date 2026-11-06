@@ -290,7 +290,7 @@ def _collect_cloud_scopes(opts: ScanOptions, st: ScanState) -> None:
 
 def _flag_nothing_scanned(st: ScanState) -> None:
     """Filesystem targets that held nothing, and no other evidence: the run has no result to report."""
-    if st.ctx.iac_findings_data is not None:
+    if st.ctx is not None and st.ctx.iac_findings_data is not None:
         return
     carriers = [agent for agent in st.agents if agent.source == "filesystem"]
     if not carriers or len(carriers) != len(st.agents) or any(server.packages for agent in carriers for server in agent.mcp_servers):
