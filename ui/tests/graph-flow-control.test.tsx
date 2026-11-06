@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { automaticFlowLabel, GraphFlowControl } from "@/components/graph-flow-control";
+import { automaticFlowLabel, compactAutomaticLabel, GraphFlowControl } from "@/components/graph-flow-control";
 import { GraphPathList } from "@/components/graph-path-list";
 import { selectionHiddenByCollapse } from "@/hooks/use-investigation-flow-view";
 import { byLabel, k8sFlowGraph } from "./k8s-projection-fixture";
@@ -29,10 +29,21 @@ describe("GraphFlowControl", () => {
     expect(select().disabled).toBe(false);
   });
 
-  it("fits Automatic on a phone's narrow row and keeps the full label as the tooltip", () => {
+  it("says what Automatic chose on a phone's narrow row and keeps the full label as the tooltip", () => {
     render(<GraphFlowControl value="auto" automaticLabel="Automatic · connection preview" available={allAvailable} compact onChange={() => {}} />);
-    expect(screen.getByRole<HTMLOptionElement>("option", { name: "Automatic" }).selected).toBe(true);
+    expect(screen.getByRole<HTMLOptionElement>("option", { name: "Auto · preview" }).selected).toBe(true);
     expect(select().title).toBe("Automatic · connection preview");
+  });
+
+  it("keeps every phone label within the selector's fifteen characters", () => {
+    const scenarios = ["connections", "exposure", "identity", "vulnerability"] as const;
+    const labels = [
+      automaticFlowLabel({ applied: true, scenario: "exposure", preview: true }),
+      automaticFlowLabel({ applied: false, scenario: "exposure", preview: false }),
+      ...scenarios.map(scenario => automaticFlowLabel({ applied: true, scenario, preview: false })),
+    ].map(compactAutomaticLabel);
+    expect(labels).toEqual(["Auto · preview", "Auto · layout", "Auto · Links", "Auto · Exposure", "Auto · Identity", "Auto · Vulns"]);
+    expect(Math.max(...labels.map(label => label.length))).toBeLessThanOrEqual(15);
   });
 
   it("reports the selection", () => {

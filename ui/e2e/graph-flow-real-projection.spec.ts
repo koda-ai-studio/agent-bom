@@ -132,7 +132,7 @@ for (const theme of ["light", "dark"]) {
     await serve(page, fixtures.clusterEstate, theme);
     await open(page);
     // The default opens a small preview, and Automatic says so rather than naming a flow.
-    await expect(flowSelect(page).locator("option:checked")).toHaveText("Automatic · connection preview");
+    await expect(flowSelect(page).locator("option:checked")).toHaveText(viewport.width === 390 ? "Auto · preview" : "Automatic · connection preview");
     await flowSelect(page).selectOption("exposure");
     await settle(page);
     await expect(page.getByText("Return to connection preview")).toBeVisible();
@@ -159,7 +159,7 @@ for (const theme of ["light", "dark"]) {
     await serve(page, fixtures.internalOnly, theme);
     await open(page);
     await expect(flowSelect(page).locator('option[value="exposure"]')).toHaveJSProperty("disabled", true);
-    await expect(flowSelect(page).locator("option:checked")).toHaveText("Automatic · Identity and access");
+    await expect(flowSelect(page).locator("option:checked")).toHaveText(viewport.width === 390 ? "Auto · Identity" : "Automatic · Identity and access");
     const service = page.locator(`.react-flow__node[data-id="${nodeId(fixtures.internalOnly, "service: prod/api")}"]`);
     await expect(service).toContainText("ClusterIP (internal)", { useInnerText: false });
     await page.screenshot({ path: info.outputPath(`internal-${theme}-${viewport.width}.png`) });
