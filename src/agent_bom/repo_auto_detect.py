@@ -209,20 +209,44 @@ def project_has_model_files(root: Path) -> bool:
 
 
 def project_has_notebooks(root: Path) -> bool:
+    """True when the pruned tree holds a Jupyter notebook.
+
+    Marker: ``.ipynb``.
+    """
     return "jupyter" in detect_tree_surfaces(root, frozenset({"jupyter"}))
 
 
 def project_has_sast_targets(root: Path) -> bool:
+    """True when the pruned tree holds a source file the SAST surface accepts.
+
+    Suffixes: ``.py``, ``.js``, ``.ts``, ``.jsx``, ``.tsx``, ``.go``, ``.rs``, ``.java``, ``.rb``, ``.php``, ``.cs``.
+    """
     return "sast" in detect_tree_surfaces(root, frozenset({"sast"}))
 
 
 def project_has_prompt_templates(root: Path) -> bool:
+    """True when prompt-template discovery finds at least one file under *root*.
+
+    Delegates to :func:`agent_bom.parsers.prompt_scanner.discover_prompt_files` (depth ≤ 4):
+    extensions ``.prompt``, ``.promptfile``, ``.system-prompt``, ``.jinja2``, ``.j2``, ``.hbs``,
+    ``.mustache``; names ``system_prompt.txt``, ``system_prompt.md``, ``system_prompt.yaml``,
+    ``system_prompt.yml``, ``system_prompt.json``, ``prompt.yaml``, ``prompt.yml``, ``prompt.json``,
+    ``user_prompt.txt``, ``user_prompt.md``, ``agent_prompt.txt``, ``agent_prompt.md``,
+    ``instructions.txt``, ``instructions.md``; and, inside ``prompts``, ``prompt_templates``,
+    ``prompt-templates``, ``system_prompts``, or ``system-prompts``, files ending in ``.txt``,
+    ``.md``, ``.yaml``, ``.yml``, ``.json``, ``.j2``, ``.jinja2``, ``.hbs``, ``.mustache``,
+    ``.prompt``, or ``.promptfile``.
+    """
     from agent_bom.parsers.prompt_scanner import discover_prompt_files
 
     return bool(discover_prompt_files(root))
 
 
 def project_has_terraform(root: Path) -> bool:
+    """True when the pruned tree holds Terraform configuration.
+
+    Markers: ``.tf`` and ``.tfvars``.
+    """
     return "terraform" in detect_tree_surfaces(root, frozenset({"terraform"}))
 
 
@@ -238,6 +262,10 @@ def project_has_iac(root: Path) -> bool:
 
 
 def project_has_github_actions(root: Path) -> bool:
+    """True when the repository root has a GitHub Actions workflow.
+
+    Requires a ``.github/workflows`` directory containing ``*.yml`` or ``*.yaml``.
+    """
     workflows = root / ".github" / "workflows"
     if not workflows.is_dir():
         return False
@@ -249,10 +277,22 @@ def _has_python_manifest(root: Path) -> bool:
 
 
 def project_has_python_agent_surface(root: Path) -> bool:
+    """True when the project exposes a Python agent scan surface.
+
+    A root manifest — ``requirements.txt``, ``pyproject.toml``, ``poetry.lock``, ``uv.lock``,
+    ``Pipfile``, ``Pipfile.lock``, ``setup.py``, or ``setup.cfg`` — or any ``.py`` file other
+    than ``__init__.py`` in the pruned tree.
+    """
     return _has_python_manifest(root) or "python_source" in detect_tree_surfaces(root, frozenset({"python_source"}))
 
 
 def project_has_ai_inventory_surface(root: Path) -> bool:
+    """True when the project exposes an AI SDK or observability inventory surface.
+
+    The same root manifests as :func:`project_has_python_agent_surface`, or a pruned-tree
+    source file whose suffix is in ``EXTENSION_TO_LANGUAGE``: ``.py``, ``.pyx``, ``.js``,
+    ``.jsx``, ``.mjs``, ``.cjs``, ``.ts``, ``.tsx``, ``.mts``, ``.java``, ``.go``, ``.rs``, ``.rb``.
+    """
     return _has_python_manifest(root) or "ai_source" in detect_tree_surfaces(root, frozenset({"ai_source"}))
 
 
