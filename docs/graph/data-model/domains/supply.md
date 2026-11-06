@@ -44,7 +44,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `re
 | `belongs_to` | `structural` | yes | `package`<br/>Findings: `misconfiguration`, `vulnerability` | `code_module`<br/>AI and agents: `application` |
 | `can_access` | `authority` | yes | AI and agents: `agent`, `application`, `server`, `tool`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `model`<br/>Identity and access: `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `config_file` |
 | `configures` | `structural` | yes | `config_file` | AI and agents: `agent`, `server`, `tool` |
-| `contains` | `structural` | yes | `ci_job`, `config_file`, `directory`, `package`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `environment`, `fleet` | `ci_job`, `config_file`, `directory`, `package`, `source_file`<br/>Cloud, infrastructure and data: `container`<br/>Findings: `misconfiguration`, `vulnerability`<br/>AI and agents: `server` |
+| `contains` | `structural` | yes | `ci_job`, `config_file`, `directory`, `package`<br/>AI and agents: `agent`<br/>Cloud, infrastructure and data: `cloud_resource`, `cluster`, `container`, `environment`, `fleet` | `ci_job`, `config_file`, `directory`, `package`, `source_file`<br/>Cloud, infrastructure and data: `container`<br/>Findings: `misconfiguration`, `vulnerability`<br/>AI and agents: `server` |
 | `correlates_with` | `correlation` | no | `code_module` | Cloud, infrastructure and data: `data_store` |
 | `defines` | `structural` | yes | `source_file` | AI and agents: `tool` |
 | `depends_on` | `dependency` | yes | Cloud, infrastructure and data: `container`, `resource`<br/>AI and agents: `framework`, `server` | `package` |

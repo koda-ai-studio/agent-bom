@@ -138,11 +138,11 @@ Emitted by: `graph/ci_graph_overlay.py`, `graph/pipeline_overlay.py`
 
 ## `contains`
 
-Class `structural` · directed · traversable · required evidence `source`, `tier` · 99 pairs
+Class `structural` · directed · traversable · required evidence `source`, `tier` · 100 pairs
 
 - `access_policy` → `misconfiguration`, `vulnerability`
 - `account` → `api_gateway`, `application`, `cloud_resource`, `data_store`, `environment`
-- `agent` → `agent`, `misconfiguration`, `vulnerability`
+- `agent` → `agent`, `directory`, `misconfiguration`, `vulnerability`
 - `api_gateway` → `misconfiguration`, `vulnerability`
 - `application` → `misconfiguration`, `vulnerability`
 - `ci_job` → `ci_job`, `misconfiguration`, `vulnerability`
@@ -196,7 +196,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 
 - `source_file` → `ci_job`, `code_module`, `tool`
 
-Emitted by: `graph/ast_tool_projection.py`, `graph/code_graph_overlay.py`, `graph/pipeline_overlay.py`, `graph/sdk_overlay.py`
+Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/ci_graph_overlay.py`, `graph/code_graph_overlay.py`, `graph/pipeline_overlay.py`, `graph/sdk_overlay.py`
 
 ## `delegated_to`
 

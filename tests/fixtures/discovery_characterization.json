@@ -1550,7 +1550,7 @@
       ],
       "name": "gha:ci",
       "packages": [],
-      "surface": "mcp-server",
+      "surface": "ci-workflow",
       "tools": []
      }
     ],
@@ -1608,7 +1608,7 @@
         "pypi"
        ]
       ],
-      "surface": "mcp-server",
+      "surface": "notebook",
       "tools": []
      }
     ],

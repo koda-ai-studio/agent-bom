@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -13,13 +14,14 @@ from agent_bom.canonical_ids import (
 from agent_bom.core.packages import normalize_package_name as normalize_package_name
 from agent_bom.core.severity import Severity as Severity
 from agent_bom.domain.inventory_types import AgentStatus, AgentType, _utc_now_iso
-from agent_bom.domain.mcp_model import MCPServer
+from agent_bom.domain.mcp_model import MCPServer, agent_is_repository_inventory
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
 __all__ = [
     "Agent",
     "Severity",
     "agent_is_installed_unconfigured",
+    "agent_record_counts_as_agent",
     "classify_agent_kind",
     "normalize_package_name",
     "parse_debian_source_name",
@@ -33,6 +35,16 @@ def agent_is_installed_unconfigured(status: object, has_servers: bool) -> bool:
     discovery and saved reports count agents identically.
     """
     return str(getattr(status, "value", status)) == AgentStatus.INSTALLED_NOT_CONFIGURED.value and not has_servers
+
+
+def agent_record_counts_as_agent(record: Mapping[str, Any]) -> bool:
+    """The public agent-count judgement for a serialized agent, as ``Agent.counts_as_agent``."""
+    servers = [server for server in record.get("mcp_servers") or [] if isinstance(server, Mapping)]
+    if agent_is_installed_unconfigured(record.get("status"), bool(servers)):
+        return False
+    return not agent_is_repository_inventory(
+        record.get("source"), [(server.get("surface"), server.get("command")) for server in servers], record.get("metadata")
+    )
 
 
 @dataclass
@@ -110,6 +122,13 @@ class Agent:
     @property
     def total_packages(self) -> int:
         return sum(len(s.packages) for s in self.mcp_servers)
+
+    @property
+    def counts_as_agent(self) -> bool:
+        """An agent in the public count: not an idle client, and not a repository's scan inventory."""
+        if self.is_installed_unconfigured:
+            return False
+        return not agent_is_repository_inventory(self.source, [(s.surface, s.command) for s in self.mcp_servers], self.metadata)
 
     @property
     def total_mcp_servers(self) -> int:

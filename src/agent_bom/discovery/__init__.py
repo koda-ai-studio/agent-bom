@@ -45,6 +45,7 @@ from agent_bom.discovery.platform_config import detect_installed_agents as detec
 from agent_bom.discovery.platform_config import expand_path as expand_path
 from agent_bom.discovery.platform_config import get_platform as get_platform
 from agent_bom.floating_refs import classify_image_reference
+from agent_bom.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.models import Agent, AgentStatus, AgentType, MCPServer, TransportType
 from agent_bom.security import sanitize_env_vars, sanitize_log_label
 
@@ -274,6 +275,7 @@ def discover_compose_mcp_servers(project_dir: Optional[str] = None) -> Optional[
         elif isinstance(raw_env, dict):
             env = {k: str(v) for k, v in raw_env.items()}
 
+        plaintext_secrets = plaintext_env_secrets(env)
         # Redact sensitive values
         env = sanitize_env_vars(env)
 
@@ -297,6 +299,7 @@ def discover_compose_mcp_servers(project_dir: Optional[str] = None) -> Optional[
             packages=packages,
             config_path=str(compose_path),
             security_warnings=[floating.to_security_warning()] if floating else [],
+            plaintext_env_secrets=plaintext_secrets,
         )
         mcp_servers.append(server)
 
@@ -652,6 +655,7 @@ def discover_k8s_mcp_servers(
                 url = f"http://{svc_name}.{pod_ns}.svc.cluster.local:{port_num}"
 
             raw_env = {e.get("name", ""): e.get("value", "") for e in env_vars if e.get("name")}
+            plaintext_secrets = plaintext_env_secrets(raw_env)
             env = sanitize_env_vars(raw_env)
 
             container_name = container.get("name", "mcp")
@@ -668,6 +672,7 @@ def discover_k8s_mcp_servers(
                 url=url,
                 config_path=f"k8s://{pod_ns}/{pod_name}",
                 connection_metadata=pod_hosting_metadata(pod, cluster=context or "", provider_ids=provider_ids),
+                plaintext_env_secrets=plaintext_secrets,
             )
             mcp_servers.append(server)
 

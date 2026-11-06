@@ -98,7 +98,10 @@ def apply_ci_graph_overlay(
                 UnifiedEdge(
                     source=config_by_path[config_path],
                     target=job_id,
-                    relationship=RelationshipType.CONFIGURES,
+                    # A workflow held as a source file defines its job; a config file configures one.
+                    relationship=RelationshipType.DEFINES
+                    if graph.nodes[config_by_path[config_path]].entity_type == EntityType.SOURCE_FILE
+                    else RelationshipType.CONFIGURES,
                     evidence={"source": _OVERLAY_SOURCE, "config_path": config_path},
                 )
             )

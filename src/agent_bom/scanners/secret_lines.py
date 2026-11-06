@@ -13,7 +13,8 @@ import re
 from collections.abc import Iterator
 from typing import NamedTuple
 
-from agent_bom.runtime.patterns import CODE_CALL_ASSIGNMENT, CREDENTIAL_PATTERNS
+from agent_bom.runtime.patterns import CREDENTIAL_PATTERNS
+from agent_bom.scanners.secret_value_shape import assigned_from_code, is_label_assignment
 
 # Additional patterns specific to file scanning (not in runtime patterns)
 FILE_SECRET_PATTERNS: list[tuple[str, re.Pattern]] = [
@@ -144,14 +145,15 @@ def is_comment_line(line: str) -> bool:
     return line.strip().startswith(("#", "//", "/*", "*"))
 
 
-def match_credential(line: str) -> tuple[str, re.Match] | None:
+def match_credential(line: str, *, code_file: bool = False) -> tuple[str, re.Match] | None:
     """Return the first credential pattern a line holds as a literal.
 
-    A secret-named variable assigned to a function/method call (e.g. OAuth
-    token minting: ``access_token = self.signing_key.sign(claims)``) is derived
-    code, not a hardcoded literal. A real literal passed as a call argument
-    (``k = load("AKIA...")``) still matches on the literal itself, whose match
-    is not call-shaped, so it is preserved.
+    A secret-named variable assigned from a call, attribute or environment
+    lookup (``access_token = self.signing_key.sign(claims)``) is code, not a
+    hardcoded literal. A real literal passed as a call argument
+    (``k = load("AKIA...")``) still matches on its own format further down the
+    pattern list. ``code_file`` says a bare word on this line is an identifier;
+    in a config file it is the value itself.
     """
     for name, pattern in CREDENTIAL_PATTERNS:
         match = pattern.search(line)
@@ -159,18 +161,21 @@ def match_credential(line: str) -> tuple[str, re.Match] | None:
             continue
         if matched_assignment_is_placeholder(match, line):
             return None
-        if line[match.end() :].lstrip().startswith("(") and CODE_CALL_ASSIGNMENT.search(line):
-            return None
+        if assigned_from_code(line, match, code_file=code_file):
+            continue
         return name, match
     return None
 
 
-def match_file_secret(line: str) -> tuple[str, re.Match] | None:
-    """Return the first file-specific secret pattern that is not a placeholder."""
+def match_file_secret(line: str, *, code_file: bool = False, translation_file: bool = False) -> tuple[str, re.Match] | None:
+    """Return the first file-specific secret pattern that holds a literal secret."""
     for name, pattern in FILE_SECRET_PATTERNS:
         for match in pattern.finditer(line):
-            if not matched_assignment_is_placeholder(match, line) and not _issue_style_map(match, line):
-                return name, match
+            if matched_assignment_is_placeholder(match, line) or _issue_style_map(match, line):
+                continue
+            if assigned_from_code(line, match, code_file=code_file) or is_label_assignment(line, match, translation_file=translation_file):
+                continue
+            return name, match
     return None
 
 

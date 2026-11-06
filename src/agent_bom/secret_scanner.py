@@ -42,6 +42,7 @@ from agent_bom.scanners.secret_lines import is_comment_line, match_credential, m
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
 from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
+from agent_bom.scanners.secret_value_shape import LineLocators, is_translation_file
 from agent_bom.scanners.source_pii import machine_identity_match, source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
@@ -171,6 +172,10 @@ _PII_CODE_EXTENSIONS = frozenset(
         ".ps1",
     }
 )
+# Languages whose string values must be quoted, so a bare word assigned to a
+# secret-named key is an identifier. Shell, env, YAML, TOML and INI are not here:
+# a bare word there is the value itself.
+_QUOTED_STRING_EXTENSIONS = frozenset({".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".java", ".rb", ".php", ".tf", ".hcl"})
 _URL_USERINFO_PREFIX_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s/@'\"]*$")
 _PII_CONTEXT_RE = re.compile(
     r"(?:=|:|\b(?:addr|address|allowlist|bind|database|endpoint|host|ip|listen|proxy|redis|server|url|uri)\b)",
@@ -357,9 +362,13 @@ def _pii_type(file_path: Path, line: str) -> str | None:
     """Return the first personal value, continuing past non-personal matches."""
     if not _should_scan_pii_line(file_path, line):
         return None
+    locators: LineLocators | None = None
     for name, pattern in PII_PATTERNS:
         for match in pattern.finditer(line):
             if machine_identity_match(name, match):
+                continue
+            locators = locators or LineLocators(line)
+            if locators.contains(match.start(), match.end()):
                 continue
             if file_path.suffix.lower() in _PII_CODE_EXTENSIONS and not source_pii_match(line, name, match):
                 break
@@ -396,13 +405,15 @@ def _scan_file(
     lines = mask_public_module_links(mask_public_docstrings(content, file_path), file_path).split("\n")
     pii_lines = mask_build_config_quantities("\n".join(lines), file_path).split("\n")
     aws_secrets = _aws_secret_candidates(lines) if aws_validator is not None else []
+    code_file = file_path.suffix.lower() in _QUOTED_STRING_EXTENSIONS
+    translation_file = is_translation_file(rel_path)
 
     # Check each line against all patterns
     for line_num, line in enumerate(lines, 1):
         if is_comment_line(line):
             continue
 
-        credential = match_credential(line)
+        credential = match_credential(line, code_file=code_file)
         if credential is not None:
             secret_type, secret_match = credential
             validation_status: ValidationStatus | None = (
@@ -432,7 +443,7 @@ def _scan_file(
                 )
             )
 
-        file_secret = match_file_secret(line)
+        file_secret = match_file_secret(line, code_file=code_file, translation_file=translation_file)
         if file_secret is not None:
             findings.append(
                 SecretFinding(
