@@ -170,3 +170,30 @@ async def test_structured_calls_are_gated_and_audited_like_every_other_call(reco
         assert await providers._call_llm_structured("other prompt", "ollama/m:latest", Answer) is None
     remote.post.assert_not_called()
     assert records[-1].outcome == "blocked"
+
+
+@pytest.mark.asyncio
+async def test_a_required_audit_failure_stops_the_output_at_the_boundary() -> None:
+    def down(_record) -> None:
+        raise RuntimeError("audit store down")
+
+    remove = call_audit.register_ai_call_sink(down, required=True)
+    try:
+        with patch("httpx.AsyncClient", return_value=_client(OK)), call_audit.ai_call_scope(tenant_id="t", actor="a", audit_required=True):
+            with pytest.raises(call_audit.AICallAuditError):
+                await providers._call_llm("audit required prompt", "ollama/m:latest")
+    finally:
+        remove()
+
+
+@pytest.mark.asyncio
+async def test_a_required_sink_failure_does_not_stop_a_caller_that_did_not_require_it() -> None:
+    def down(_record) -> None:
+        raise RuntimeError("audit store down")
+
+    remove = call_audit.register_ai_call_sink(down, required=True)
+    try:
+        with patch("httpx.AsyncClient", return_value=_client(OK)):
+            assert await providers._call_llm("audit optional prompt", "ollama/m:latest") == '{"ok":true}'
+    finally:
+        remove()

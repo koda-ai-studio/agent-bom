@@ -59,7 +59,7 @@ from importlib import import_module
 from typing import Any
 
 from agent_bom.ai_components import call_state
-from agent_bom.ai_components.call_audit import defer_ai_call_records, mark_guard_rejected
+from agent_bom.ai_components.call_audit import AICallAuditError, defer_ai_call_records, mark_guard_rejected
 from agent_bom.ai_components.call_state import (
     _AI_DETERMINISTIC_OVERRIDE,
     _AI_RUN_ID,
@@ -236,11 +236,12 @@ async def assess_report_findings(
                 model_digest=next((record.model_digest for record in records if record.model_digest), ""),
                 outcome=outcome,
             )
-            assessments.extend(accepted)
-            if on_batch is not None:
-                on_batch(accepted)
             if outcome.rejected_output:
                 mark_guard_rejected(records, outcome.rejection_reason)
+        # Only now has this call's audit record been written; a required failure raised on leaving the block.
+        assessments.extend(accepted)
+        if on_batch is not None:
+            on_batch(accepted)
     return assessments
 
 
@@ -251,9 +252,10 @@ async def _run_ai_enrichment_impl(
     skill_audit: "SkillAuditResult | None" = None,
     *,
     gate_ai_findings: bool = False,
+    budget: AICallBudget | None = None,
 ) -> None:
     """Run all AI enrichment steps on a report. Modifies report in-place."""
-    budget = AICallBudget(max_calls=int(getattr(config, "AI_MAX_CALLS_PER_RUN", 150)))
+    budget = budget or AICallBudget(max_calls=int(getattr(config, "AI_MAX_CALLS_PER_RUN", 150)))
     run_id = _AI_RUN_ID.get() or str(uuid.uuid4())
     resolution = _resolve_ai_provider(model)
     report.ai_enrichment_metadata = {
@@ -365,8 +367,6 @@ async def _run_ai_enrichment_impl(
         else:
             console.print("  [dim]  Skill analysis could not be completed[/dim]")
 
-    report.ai_enrichment_metadata["call_budget"] = budget.to_dict()
-
 
 def _record_ai_failure(report: AIBOMReport, reason: str) -> None:
     report.ai_enrichment_metadata = {**(report.ai_enrichment_metadata or {}), "status": "failed", "reason": reason}
@@ -388,16 +388,23 @@ async def run_ai_enrichment(
         if gate_ai_findings and _effective_temperature() != 0.0:
             raise ValueError("AI finding gating requires deterministic mode")
         deadline = call_state.AI_RUN_DEADLINE_SECONDS
+        budget = AICallBudget(max_calls=int(getattr(config, "AI_MAX_CALLS_PER_RUN", 150)))
         try:
             await asyncio.wait_for(
-                _run_ai_enrichment_impl(report, model, skill_result, skill_audit, gate_ai_findings=gate_ai_findings),
+                _run_ai_enrichment_impl(report, model, skill_result, skill_audit, gate_ai_findings=gate_ai_findings, budget=budget),
                 timeout=deadline if deadline > 0 else None,
             )
+        except AICallAuditError:
+            logger.error("AI enrichment stopped: an audit record could not be written")
+            _record_ai_failure(report, "an AI call's audit record could not be written, so its output was discarded")
         except asyncio.TimeoutError:
             _record_ai_failure(report, f"the {deadline:g}s run deadline was reached")
         except (RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError, httpx.HTTPError) as exc:
             logger.warning("AI enrichment failed: %s", sanitize_error(exc, generic=True))
             _record_ai_failure(report, "the AI step stopped on an unexpected error")
+        metadata = getattr(report, "ai_enrichment_metadata", None)
+        if isinstance(metadata, dict):
+            metadata["call_budget"] = budget.to_dict()
         render_ai_triage_summary(report, console)
     finally:
         _AI_RUN_ID.reset(run_token)

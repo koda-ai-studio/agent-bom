@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_bom.ai_components.ai_policy import control_plane_decision, control_plane_model
-from agent_bom.ai_components.call_audit import ai_call_scope
+from agent_bom.ai_components.call_audit import AICallAuditError, ai_call_scope
 from agent_bom.ai_components.call_state import _AI_DETERMINISTIC_OVERRIDE, _AI_RUN_ID
 from agent_bom.ai_components.graph_explain import MAX_CONTEXT_NODES, build_explain_context, explain_graph_selection
 from agent_bom.ai_components.provider_discovery import _resolve_ai_provider
@@ -80,7 +80,7 @@ def _call_explain(tenant_id: str, actor: str, context: Any, model: str, provider
     run_token = _AI_RUN_ID.set(f"explain:{tenant_id}:{scan_id}")
     deterministic = _AI_DETERMINISTIC_OVERRIDE.set(True)
     try:
-        with ai_call_scope(tenant_id=tenant_id, actor=actor):
+        with ai_call_scope(tenant_id=tenant_id, actor=actor, audit_required=True):
             return asyncio.run(run())
     finally:
         _AI_DETERMINISTIC_OVERRIDE.reset(deterministic)
@@ -113,5 +113,8 @@ async def post_graph_explain(request: Request, body: GraphExplainRequest) -> dic
             return await anyio.to_thread.run_sync(
                 _call_explain, tenant_id, actor, context, resolution.model, provider, body.scan_id or "latest"
             )
+    except AICallAuditError as exc:
+        message = "The explanation was withheld because its audit record could not be written."
+        raise HTTPException(status_code=503, detail={"state": "audit_unavailable", "reason": message, "message": message}) from exc
     except BackpressureRejectedError as exc:
         raise HTTPException(status_code=429, detail=exc.to_dict(), headers={"Retry-After": str(exc.retry_after_seconds)}) from exc

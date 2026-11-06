@@ -117,6 +117,17 @@
       "AIAssessmentRow": {
         "additionalProperties": true,
         "properties": {
+          "advice_covers_occurrences": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Covers Occurrences"
+          },
           "advisory": {
             "title": "Advisory",
             "type": "boolean"
@@ -150,6 +161,17 @@
           "finding_id": {
             "title": "Finding Id",
             "type": "string"
+          },
+          "group_occurrences": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Occurrences"
           },
           "guard_applied": {
             "anyOf": [
@@ -21867,6 +21889,31 @@
       "GraphCitation": {
         "additionalProperties": true,
         "properties": {
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "evidence_keys": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Keys"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -21882,6 +21929,39 @@
           "ref": {
             "title": "Ref",
             "type": "string"
+          },
+          "relationship": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
           },
           "traversable": {
             "anyOf": [
@@ -21914,6 +21994,21 @@
             "title": "Citations",
             "type": "array"
           },
+          "claim_type": {
+            "title": "Claim Type",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -21921,6 +22016,7 @@
         },
         "required": [
           "text",
+          "claim_type",
           "citations"
         ],
         "title": "GraphClaim",

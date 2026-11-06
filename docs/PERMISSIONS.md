@@ -414,6 +414,16 @@ Every query names the tenant, and both advice tables enforce row-level security.
 `AGENT_BOM_AI_CONTROL_PLANE_TENANTS` narrows it to listed tenants, and
 `AGENT_BOM_AI_CONTROL_PLANE_MODEL` fixes the model so a request cannot choose one.
 
+### Local AI call log
+
+`agent-bom scan --ai-enrich` appends one record per model call to
+`<state dir>/ai-audit/ai-calls.jsonl` (mode 0600), with a `.chain-key` file beside it.
+The state directory is `AGENT_BOM_STATE_DIR` or the product default. Records hold the
+same fields as the control plane's `ai.call` audit entries: identity, hashes, counts
+and outcome, never prompt or response text. Check it with
+`agent-bom runtime audit <path> --verify-chain`. Set `AGENT_BOM_AI_LOCAL_AUDIT=0` to
+opt out. Set `AGENT_BOM_AUDIT_HMAC_KEY` to keep the signing key away from the log.
+
 ## Event consumer acknowledgement permissions
 
 Configured AWS and Azure event consumers are queue workers, not ordinary

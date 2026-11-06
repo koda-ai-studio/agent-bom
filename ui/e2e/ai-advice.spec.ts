@@ -104,7 +104,7 @@ const explanation = {
   advisory: true,
   label: "AI advice",
   status: "ok",
-  claims: [{ text: `The agent depends on this package. ${hostile}`, citations: [{ ref: "E1", kind: "edge", id: "edge:copilot-langchain", label: "Member copilot depends_on langchain@0.0.150", traversable: true }, { ref: "N1", kind: "node", id: "agent:copilot", label: "Member copilot", traversable: null }] }],
+  claims: [{ text: `"Member copilot" depends on "langchain@0.0.150". This hop is recorded as traversable.`, claim_type: "route_step", note: "Review this first.", citations: [{ ref: "E1", kind: "edge", id: "edge:copilot-langchain", label: "Member copilot depends_on langchain@0.0.150", traversable: true }, { ref: "N1", kind: "node", id: "agent:copilot", label: "Member copilot", traversable: null }] }],
   rejected_claims: { uncited: 1, invented_id: 1 },
   evidence_limits: [`The edge from ${packageId} to vuln:${findingId} is not traversable: it records a relationship, not a route.`, "Graph reachability is recorded topology and static evidence. It is not proof that this path was exploited."],
   provenance: { model: "ollama/llama3.2", provider: "ollama", model_digest: "sha256:a80c4f17acd5", prompt_version: "ai-graph-explain.v1", generated_at: "2026-11-05T12:00:00+00:00" },

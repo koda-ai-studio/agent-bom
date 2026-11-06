@@ -31,6 +31,8 @@ class AIAssessmentRow(ReadModel):
     guard_applied: bool | None = None
     protected_reasons: list[str] | None = None
     scan_id: str | None = None
+    advice_covers_occurrences: int | None = None
+    group_occurrences: int | None = None
     provenance: AIAssessmentProvenance
 
 
@@ -63,10 +65,17 @@ class GraphCitation(ReadModel):
     id: str
     label: str
     traversable: bool | None = None
+    source: str | None = None
+    target: str | None = None
+    relationship: str | None = None
+    direction: str | None = None
+    evidence_keys: list[str] | None = None
 
 
 class GraphClaim(ReadModel):
     text: str
+    claim_type: str
+    note: str | None = None
     citations: list[GraphCitation]
 
 

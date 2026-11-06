@@ -23,6 +23,14 @@ def _row_ids(row: dict[str, Any]) -> list[str]:
     return [str(row[key]) for key in _ROW_ID_KEYS if row.get(key)]
 
 
+def _mark_group_scope(advice: dict[str, Any], row: dict[str, Any]) -> dict[str, Any]:
+    """A grouped row shows one occurrence's advice, and has to say so."""
+    count = row.get("occurrence_count")
+    if isinstance(count, int) and count > 1:
+        return {**advice, "advice_covers_occurrences": 1, "group_occurrences": count}
+    return advice
+
+
 def attach_ai_assessments(body: dict[str, Any], tenant_id: str) -> dict[str, Any]:
     """Add ``ai_assessment`` to the rows of a findings page; a store failure costs only the advice."""
     rows = body.get("findings")
@@ -42,7 +50,7 @@ def attach_ai_assessments(body: dict[str, Any], tenant_id: str) -> dict[str, Any
             continue
         match = next((stored[identifier] for identifier in _row_ids(row) if identifier in stored), None)
         if match is not None:
-            row["ai_assessment"] = guard_verdict(match, row)
+            row["ai_assessment"] = _mark_group_scope(guard_verdict(match, row), row)
     return body
 
 
@@ -50,7 +58,9 @@ def run_status(metadata: dict[str, Any], assessed: int, *, failed: bool = False)
     """One word for how a scan's AI step went."""
     if failed:
         return "failed"
-    if metadata.get("status") in {"disabled", "blocked", "unavailable"}:
+    if metadata.get("status") == "failed" and assessed:
+        return "partial"
+    if metadata.get("status") in {"disabled", "blocked", "unavailable", "failed"}:
         return str(metadata["status"])
     scope = metadata.get("triage_scope")
     offered = int(scope.get("findings_offered") or 0) if isinstance(scope, dict) else 0

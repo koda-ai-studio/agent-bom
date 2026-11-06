@@ -28,7 +28,7 @@ def run_advisory_ai(ctx: Any, report: Any) -> None:
     failed = False
     try:
         ensure_ai_call_sink()
-        with ai_call_scope(tenant_id=tenant_id, actor=str(ctx.job.triggered_by or "scan")):
+        with ai_call_scope(tenant_id=tenant_id, actor=str(ctx.job.triggered_by or "scan"), audit_required=True):
             run_ai_enrichment_sync(report, model=control_plane_model(req.ai_model), deterministic=req.ai_deterministic)
     except Exception as ai_exc:  # noqa: BLE001
         failed = True

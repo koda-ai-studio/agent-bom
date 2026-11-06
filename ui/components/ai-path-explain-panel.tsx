@@ -49,6 +49,7 @@ export function AIPathExplainPanel({ nodeIds, scanId }: { nodeIds: string[]; sca
             {state.result.claims.map((claim, index) => (
               <li key={`${index}-${claim.text}`} className="text-sm text-foreground">
                 <p className="max-w-prose break-words leading-6">{claim.text}</p>
+                {claim.note ? <p className="mt-0.5 text-xs italic text-ink-tertiary">Model note, not evidence: {claim.note}</p> : null}
                 <ul aria-label="Citations" className="mt-1 flex flex-wrap gap-1">
                   {claim.citations.map((citation) => (
                     <li key={citation.ref} title={citation.id} className="max-w-full break-all rounded border border-outline px-1.5 py-0.5 font-mono text-[11px] text-ink-secondary">
@@ -65,8 +66,8 @@ export function AIPathExplainPanel({ nodeIds, scanId }: { nodeIds: string[]; sca
               {state.result.evidence_limits.map((limit) => <li key={limit} className="break-words">{limit}</li>)}
             </ul>
           </div>
-          {removed > 0 ? <p className="text-xs text-ink-tertiary">{removed === 1 ? "1 claim was" : `${removed} claims were`} removed because they cited nothing real or asserted reach the graph does not record.</p> : null}
-          <p className="break-words text-xs text-ink-tertiary">{[state.result.provenance.model, state.result.provenance.generated_at.slice(0, 10), state.result.provenance.prompt_version].join(" · ")}. A model's reading of recorded evidence. It adds nothing to the graph.</p>
+          {removed > 0 ? <p className="text-xs text-ink-tertiary">{removed === 1 ? "1 claim was" : `${removed} claims were`} removed or corrected because they cited nothing real or disagreed with the recorded edge.</p> : null}
+          <p className="break-words text-xs text-ink-tertiary">{[state.result.provenance.model, state.result.provenance.generated_at.slice(0, 10), state.result.provenance.prompt_version].join(" · ")}. The server wrote each sentence from the recorded edge; the model only chose what to show. It adds nothing to the graph.</p>
         </section>
       ) : null}
     </div>

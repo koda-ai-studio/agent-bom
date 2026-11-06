@@ -19,7 +19,7 @@ from agent_bom.ai_components.triage_guard import protected_reasons  # noqa: E402
 
 
 def _raw() -> dict:
-    return json.loads(harness.DATASET.read_text())
+    return json.loads(harness.DATASETS["v1"].read_text())
 
 
 def test_dataset_is_versioned_and_large_enough_with_every_required_class() -> None:
@@ -61,7 +61,7 @@ def test_split_is_a_function_of_the_id_and_held_out_covers_each_class() -> None:
 
 
 def test_dataset_is_public_or_synthetic_only() -> None:
-    text = harness.DATASET.read_text()
+    text = harness.DATASETS["v1"].read_text()
     assert not re.search(r"(?<![0-9])(?!111122223333|123456789012)\d{12}(?![0-9])", text), "looks like a real AWS account id"
     assert not re.search(r"\b(?:ghp_[A-Za-z0-9]{36}|xoxb-|sk-ant-|-----BEGIN [A-Z ]*PRIVATE KEY)", text), (
         "credential-shaped value in dataset"
@@ -188,11 +188,53 @@ def test_recordings_hold_only_hashes_and_model_output_about_the_public_dataset()
     for path in harness.RECORDINGS.glob("*.json"):
         body = json.loads(path.read_text())
         assert set(body["calls"][0]) <= {"prompt_sha256", "response", "latency_ms", "prompt_tokens", "completion_tokens", "outcome"}
-        assert body["dataset_sha256"] == harness.dataset_sha256()
+        assert body["dataset_sha256"] == harness.dataset_sha256(body.get("dataset", "v1"))
         assert body["model_digest"], "a recording without a digest cannot say what it measured"
 
 
 def test_published_results_match_the_replayed_recordings() -> None:
     doc = (harness.ROOT / "docs" / "AI_ENRICHMENT.md").read_text()
-    assert harness.results_table("heldout") in doc, "regenerate the table with scripts/ai_triage_eval.py --table"
-    assert "ai-triage-dataset.v1" in doc
+    assert harness.results_table("heldout", "v2") in doc, (
+        "regenerate the table with scripts/ai_triage_eval.py --table --dataset v2 --split heldout"
+    )
+    assert harness.results_table("heldout", "v1") in doc, (
+        "regenerate the table with scripts/ai_triage_eval.py --table --dataset v1 --split heldout"
+    )
+    assert "ai-triage-dataset.v2" in doc
+
+
+def test_held_out_v2_is_new_and_has_enough_eligible_false_positives() -> None:
+    bar = json.loads((harness.EVAL_DIR / "bar.json").read_text())
+    v1 = {case["finding"]["id"] for case in _raw()["cases"]}
+    v2 = json.loads(harness.DATASETS["v2"].read_text())
+    assert v2["version"] == "ai-triage-dataset.v2"
+    assert all(case["split"] == "heldout" for case in v2["cases"])
+    assert not (v1 & {case["finding"]["id"] for case in v2["cases"] if not case.get("adversarial")})
+    cases = harness.load_cases("heldout", "v2")
+    eligible = [case for case in cases if case.label == "false_positive" and not protected_reasons(case.finding)]
+    assert len(eligible) >= bar["held_out_v2_eligible_false_positives_min"]
+    for case in v2["cases"]:
+        assert len(case["label_basis"]) > 20 and case["source"]
+
+
+def test_the_wilson_interval_is_honest_at_the_edges() -> None:
+    assert harness.wilson_interval(0, 0) is None
+    low, high = harness.wilson_interval(10, 10)
+    assert low < 0.75 and high == 1.0
+    low, high = harness.wilson_interval(10, 20)
+    assert 0.27 < low < 0.31 and 0.69 < high < 0.73
+
+
+def test_the_bar_flags_each_miss() -> None:
+    passing = {
+        "false_positive_precision": 0.9,
+        "false_positive_recall": 0.6,
+        "severe_dismissals_after_guard": 0,
+        "invalid_response_rate": 0.0,
+        "expected_calibration_error": 0.1,
+        "injection_resistance_model": 0.9,
+        "injection_resistance_final": 1.0,
+    }
+    assert harness.bar_problems(passing) == []
+    assert any("recall" in item for item in harness.bar_problems({**passing, "false_positive_recall": 0.2}))
+    assert any("severe" in item for item in harness.bar_problems({**passing, "severe_dismissals_after_guard": 1}))

@@ -58,6 +58,12 @@ describe("AI advice", () => {
     expect(container.textContent).toContain(hostile);
   });
 
+  it("says when a grouped row's advice covers one occurrence", () => {
+    render(<><AIAdviceSection assessment={{ ...assessment, group_occurrences: 4, advice_covers_occurrences: 1 }} /><AIAdviceBadge assessment={{ ...assessment, group_occurrences: 4 }} /></>);
+    expect(screen.getByRole("region", { name: "AI advice" }).textContent).toContain("covers one of 4 occurrences");
+    expect(screen.getByLabelText(/AI advice: Likely false positive/).textContent).toContain("1 of 4");
+  });
+
   it("shows nothing in the drawer when a finding has no assessment", () => {
     const { container } = render(<AIAdviceSection assessment={null} />);
     expect(container.textContent).toBe("");
@@ -88,7 +94,9 @@ const explanation = {
   status: "ok",
   claims: [
     {
-      text: "The agent uses this server. <script>alert(1)</script>",
+      text: '"agent a" uses "server <script>alert(1)</script>". This hop is recorded as traversable.',
+      claim_type: "route_step",
+      note: "Review this first.",
       citations: [
         { ref: "E1", kind: "edge", id: "edge:abc", label: "agent uses server", traversable: true },
         { ref: "N1", kind: "node", id: "agent:a", label: "agent a", traversable: null },
@@ -119,11 +127,12 @@ describe("Explain this path", () => {
     const { container } = render(<AIPathExplainPanel nodeIds={["agent:a", "server:s"]} scanId="scan-1" />);
     expect(explainGraph).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Explain this path" }));
-    await waitFor(() => expect(screen.getByText(/The agent uses this server/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/This hop is recorded as traversable/)).toBeTruthy());
     expect(explainGraph).toHaveBeenCalledTimes(1);
     expect(explainGraph).toHaveBeenCalledWith({ nodeIds: ["agent:a", "server:s"], ordered: true, scanId: "scan-1" });
     const panel = screen.getByRole("region", { name: "Path explanation, AI advice" });
     expect(panel.textContent).toContain("agent uses server");
+    expect(panel.textContent).toContain("Model note, not evidence: Review this first.");
     expect(panel.textContent).toContain("agent:a");
     expect(panel.textContent).toContain("not traversable");
     expect(panel.textContent).toContain("2 claims were removed");

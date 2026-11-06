@@ -72,3 +72,46 @@ def test_ttl_sweep_spans_tenants_under_the_maintenance_role(store) -> None:
     with _scope(second):
         assert store.latest_for_findings(second, ["b"]) != {}
         store.purge_tenant(second)
+
+
+def test_explain_rate_and_budget_are_shared_across_workers(monkeypatch) -> None:
+    """A real shared store: separate limiter instances, as separate workers hold, draw on one allowance."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from agent_bom.api import ai_explain_limits
+
+    monkeypatch.setenv("AGENT_BOM_AI_EXPLAIN_PER_MINUTE", "3")
+    monkeypatch.setenv("AGENT_BOM_AI_EXPLAIN_PER_DAY", "1000")
+    tenant, other = "ai-" + uuid4().hex, "ai-" + uuid4().hex
+    ai_explain_limits.reset_explain_limits()
+    minute, _day = ai_explain_limits._stores()
+    assert type(minute).__name__ == "PostgresRateLimitStore", "the shared store, not the process-local one"
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        outcomes = list(pool.map(lambda _i: ai_explain_limits.consume_explain_allowance(tenant), range(10)))
+    assert sum(item is None for item in outcomes) == 3, "exactly the allowance passes under concurrency"
+    ai_explain_limits.reset_explain_limits()  # a new worker sees the same count
+    denied = ai_explain_limits.consume_explain_allowance(tenant)
+    assert denied is not None and denied.retry_after_seconds == 60
+    assert ai_explain_limits.consume_explain_allowance(other) is None, "another tenant has its own allowance"
+
+    monkeypatch.setenv("AGENT_BOM_AI_EXPLAIN_PER_MINUTE", "1000")
+    monkeypatch.setenv("AGENT_BOM_AI_EXPLAIN_PER_DAY", "2")
+    budget_tenant = "ai-" + uuid4().hex
+    ai_explain_limits.reset_explain_limits()
+    assert ai_explain_limits.consume_explain_allowance(budget_tenant) is None
+    assert ai_explain_limits.consume_explain_allowance(budget_tenant) is None
+    over = ai_explain_limits.consume_explain_allowance(budget_tenant)
+    assert over is not None and "budget" in over.message
+    ai_explain_limits.reset_explain_limits()
+
+
+def test_a_limiter_outage_denies_the_model_call(monkeypatch) -> None:
+    from agent_bom.api import ai_explain_limits
+
+    class Down:
+        def consume_if_below(self, *_args):
+            raise RuntimeError("shared limiter down")
+
+    monkeypatch.setattr(ai_explain_limits, "_stores", lambda: (Down(), Down()))
+    denied = ai_explain_limits.consume_explain_allowance("ai-" + uuid4().hex)
+    assert denied is not None and "could not be checked" in denied.message

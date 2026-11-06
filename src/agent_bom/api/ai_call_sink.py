@@ -28,5 +28,5 @@ def ensure_ai_call_sink() -> None:
     global _registered
     with _lock:
         if not _registered:
-            register_ai_call_sink(_sink)
+            register_ai_call_sink(_sink, required=True)
             _registered = True

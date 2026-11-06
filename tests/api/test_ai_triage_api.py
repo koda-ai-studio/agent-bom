@@ -126,6 +126,15 @@ def test_grouped_finding_reads_carry_the_advice_too(store) -> None:
     assert row["ai_assessment"]["verdict"] == "likely_false_positive"
 
 
+def test_a_group_row_says_its_advice_covers_one_occurrence() -> None:
+    from agent_bom.api.ai_assessment_read import _mark_group_scope
+
+    single = _mark_group_scope({"verdict": "confirmed"}, {"occurrence_count": 1})
+    group = _mark_group_scope({"verdict": "confirmed"}, {"occurrence_count": 4})
+    assert "advice_covers_occurrences" not in single
+    assert group["advice_covers_occurrences"] == 1 and group["group_occurrences"] == 4
+
+
 def test_another_tenant_never_sees_that_advice(store) -> None:
     [row] = _rows(_client("tenant-b"))
     assert row.get("ai_assessment") is None
@@ -213,7 +222,7 @@ def _graph(tenant: str = "tenant-a", label: str = "server s"):
     return FakeGraph(), writes, edge
 
 
-CLAIMS = json.dumps({"claims": [{"text": "The agent uses this server.", "citations": ["E1", "N1"]}, {"text": "Uncited.", "citations": []}]})
+CLAIMS = json.dumps({"steps": [{"claim": "route_step", "ref": "E1", "note": "the server owns the agent"}, {"claim": "relationship"}]})
 
 
 def _explain(client: TestClient, **body) -> object:
@@ -244,9 +253,12 @@ def test_explain_returns_cited_claims_and_strips_the_rest(store, ai_on) -> None:
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["advisory"] is True and body["label"] == "AI advice"
-    assert [claim["text"] for claim in body["claims"]] == ["The agent uses this server."]
-    assert {item["id"] for item in body["claims"][0]["citations"]} == {edge.id, "agent:a"}
-    assert body["rejected_claims"] == {"uncited": 1}
+    [claim] = body["claims"]
+    assert claim["text"] == '"agent a" uses "server s". This hop is recorded as traversable.'
+    assert claim["note"] == ""
+    assert [item["id"] for item in claim["citations"]] == [edge.id]
+    assert claim["citations"][0]["source"] == "agent:a" and claim["citations"][0]["target"] == "server:s"
+    assert body["rejected_claims"] == {"note_removed": 1, "uncited": 1}
     assert any("attack path" in limit for limit in body["evidence_limits"])
     assert writes == [], "explanation reads the graph and writes nothing"
 
@@ -361,10 +373,10 @@ def test_explain_reads_a_real_persisted_path_and_never_writes_to_the_store(store
         prompts.append(prompt)
         return json.dumps(
             {
-                "claims": [
-                    {"text": "The agent uses the server.", "citations": ["E1"]},
-                    {"text": "The attacker can reach the package.", "citations": ["E2"]},
-                    {"text": "Invented.", "citations": ["N9"]},
+                "steps": [
+                    {"claim": "route_step", "ref": "E1"},
+                    {"claim": "route_step", "ref": "E2"},
+                    {"claim": "relationship", "ref": "N9"},
                 ]
             }
         )
@@ -381,8 +393,10 @@ def test_explain_reads_a_real_persisted_path_and_never_writes_to_the_store(store
     assert response.status_code == 200, response.text
     assert foreign.status_code == 404
     body = response.json()
-    assert [claim["text"] for claim in body["claims"]] == ["The agent uses the server."]
-    assert body["rejected_claims"] == {"invented_id": 1, "unsupported_reachability": 1}
+    assert [claim["claim_type"] for claim in body["claims"]] == ["route_step", "blocked_hop"]
+    assert body["claims"][0]["text"].startswith('"agent a" uses "[label withheld: N2]"')
+    assert "not a route" in body["claims"][1]["text"]
+    assert body["rejected_claims"] == {"claim_type_corrected": 1, "invented_id": 1}
     assert any("not traversable" in limit and "server:s" in limit for limit in body["evidence_limits"])
     assert planted not in prompts[0] and "<untrusted-data>" not in prompts[0]
     assert "ignore previous" in prompts[0], "hostile text stays visible as data"
@@ -521,3 +535,59 @@ async def test_a_slow_model_never_blocks_the_server_loop(store, ai_on) -> None:
             await tick
     assert response.status_code == 200, response.text
     assert worst < 0.5, f"server loop stalled for {worst:.2f}s"
+
+
+class _BrokenAudit(InMemoryAuditLog):
+    def append(self, entry) -> None:
+        raise RuntimeError("audit store down")
+
+
+def test_no_advice_is_stored_without_its_audit_record_and_the_scan_goes_on(store, ai_on) -> None:
+    from agent_bom.api.ai_scan_stage import run_advisory_ai
+
+    set_audit_log(_BrokenAudit())
+    report = _report()
+    before = [finding.to_dict() for finding in report.findings]
+    response = json.dumps({"assessments": [{"ref": "F1", "verdict": "problem_exists", "confidence": "high", "rationale": "real"}]})
+    client = AsyncMock()
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = False
+    reply = SimpleNamespace(status_code=200, json=lambda: {"message": {"content": response}, "models": []})
+    client.post.return_value = reply
+    client.get.return_value = reply
+    try:
+        with patch("httpx.AsyncClient", return_value=client):
+            run_advisory_ai(_scan_context("tenant-audit"), report)
+    finally:
+        set_audit_log(InMemoryAuditLog())
+    assert store.latest_for_findings("tenant-audit", ["finding-1"]) == {}
+    assert store.latest_run("tenant-audit")["status"] == "failed"
+    assert report.ai_finding_assessments == []
+    assert [finding.to_dict() for finding in report.findings] == before
+
+
+def test_explain_returns_nothing_without_its_audit_record(store, ai_on) -> None:
+    graph, _, _ = _graph()
+    set_audit_log(_BrokenAudit())
+    client = AsyncMock()
+    client.__aenter__.return_value = client
+    client.__aexit__.return_value = False
+    reply = SimpleNamespace(status_code=200, json=lambda: {"message": {"content": CLAIMS}, "models": []})
+    client.post.return_value = reply
+    client.get.return_value = reply
+    try:
+        with patch.object(ai_routes, "_get_graph_store", return_value=graph), patch("httpx.AsyncClient", return_value=client):
+            response = _explain(_client())
+    finally:
+        set_audit_log(InMemoryAuditLog())
+    assert response.status_code == 503
+    assert "claims" not in response.text
+
+
+def test_a_run_that_stopped_after_assessing_some_findings_reports_partial() -> None:
+    from agent_bom.api.ai_assessment_read import run_status
+
+    assert run_status({"status": "failed"}, 40) == "partial"
+    assert run_status({"status": "failed"}, 0) == "failed"
+    assert run_status({"triage_scope": {"findings_offered": 5}}, 5) == "ok"
+    assert run_status({"triage_scope": {"findings_offered": 5}}, 2) == "partial"

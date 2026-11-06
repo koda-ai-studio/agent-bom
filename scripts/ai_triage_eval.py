@@ -20,6 +20,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import math
 import os
 import re
 import statistics
@@ -40,7 +41,6 @@ from agent_bom.ai_components import call_audit  # noqa: E402
 from agent_bom.ai_components.call_state import _AI_DETERMINISTIC_OVERRIDE, EnrichmentTask  # noqa: E402
 from agent_bom.ai_components.providers import _call_llm  # noqa: E402
 from agent_bom.ai_components.triage import (  # noqa: E402
-    AI_TRIAGE_DATASET_VERSION,
     AI_TRIAGE_PROMPT_VERSION,
     FIELD_GROUPS,
     TRIAGE_RESPONSE_SCHEMA,
@@ -54,7 +54,7 @@ from agent_bom.domain.finding_rehydrate import finding_from_dict  # noqa: E402
 from agent_bom.finding import Finding  # noqa: E402
 
 EVAL_DIR = ROOT / "tests" / "fixtures" / "ai_triage_eval"
-DATASET = EVAL_DIR / "dataset.v1.json"
+DATASETS = {"v1": EVAL_DIR / "dataset.v1.json", "v2": EVAL_DIR / "dataset.v2.json"}
 RECORDINGS = EVAL_DIR / "recordings"
 BASELINES = EVAL_DIR / "baselines.json"
 NOMINAL_CONFIDENCE = {"high": 0.9, "medium": 0.7, "low": 0.5}
@@ -78,11 +78,9 @@ class EvalCase:
     adversarial: dict[str, Any] = field(default_factory=dict)
 
 
-def load_cases(split: str = "all") -> list[EvalCase]:
+def load_cases(split: str = "all", dataset: str = "v1") -> list[EvalCase]:
     """Rehydrate through the same code the product uses, in an order no prompt can tune against."""
-    data = json.loads(DATASET.read_text())
-    if data["version"] != AI_TRIAGE_DATASET_VERSION:
-        raise ValueError(f"dataset {data['version']} does not match {AI_TRIAGE_DATASET_VERSION}")
+    data = json.loads(DATASETS[dataset].read_text())
     cases = []
     for row in data["cases"]:
         if split != "all" and row["split"] != split:
@@ -101,8 +99,8 @@ def load_cases(split: str = "all") -> list[EvalCase]:
     return sorted(cases, key=lambda case: hashlib.sha256(case.case_id.encode()).hexdigest())
 
 
-def dataset_sha256() -> str:
-    return hashlib.sha256(DATASET.read_bytes()).hexdigest()
+def dataset_sha256(dataset: str = "v1") -> str:
+    return hashlib.sha256(DATASETS[dataset].read_bytes()).hexdigest()
 
 
 def _prompt_key(prompt: str) -> str:
@@ -282,6 +280,10 @@ def score(run: RunResult, *, batch_size: int) -> dict[str, Any]:
         "false_positive_precision": _ratio(len(true_flags), len(flagged)),
         "false_positive_recall": _ratio(len(true_flags), len(open_false)),
         "flagged_false_positive": len(flagged),
+        "true_flags": len(true_flags),
+        "eligible_false_positives": len(open_false),
+        "false_positive_precision_interval": wilson_interval(len(true_flags), len(flagged)),
+        "false_positive_recall_interval": wilson_interval(len(true_flags), len(open_false)),
         "wrong_dismissals": len(flagged) - len(true_flags),
         "severe_cases": len(severe_true),
         "severe_dismissals_proposed_by_model": sum(result.raw_verdict == "likely_false_positive" for result in severe_true),
@@ -322,8 +324,8 @@ def _slug(model: str) -> str:
     return re.sub(r"[^a-zA-Z0-9.]+", "-", model).strip("-")
 
 
-def recording_path(model: str, split: str) -> Path:
-    return RECORDINGS / f"{_slug(model)}.{split}.json"
+def recording_path(model: str, split: str, dataset: str = "v1") -> Path:
+    return RECORDINGS / f"{_slug(model)}.{dataset}-{split}.json"
 
 
 def _ollama_digest(name: str) -> str:
@@ -335,11 +337,13 @@ def _ollama_digest(name: str) -> str:
     return ""
 
 
-def write_recording(model: str, split: str, batch_size: int, num_ctx: int, run: RunResult, scores: dict[str, Any]) -> Path:
+def write_recording(
+    model: str, split: str, batch_size: int, num_ctx: int, run: RunResult, scores: dict[str, Any], dataset: str = "v1"
+) -> Path:
     digests = {call.get("model_digest") for call in run.calls if call.get("model_digest")}
     if not digests and model.startswith("ollama_chat/"):
         digests = {_ollama_digest(model.partition("/")[2])}
-    path = recording_path(model, split)
+    path = recording_path(model, split, dataset)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -351,8 +355,9 @@ def write_recording(model: str, split: str, batch_size: int, num_ctx: int, run: 
                 "num_ctx": num_ctx,
                 "temperature": 0,
                 "recorded_on": datetime.now(timezone.utc).date().isoformat(),
-                "dataset_version": AI_TRIAGE_DATASET_VERSION,
-                "dataset_sha256": dataset_sha256(),
+                "dataset": dataset,
+                "dataset_version": f"ai-triage-dataset.{dataset}",
+                "dataset_sha256": dataset_sha256(dataset),
                 "prompt_version": AI_TRIAGE_PROMPT_VERSION,
                 "scores": scores,
                 "calls": [
@@ -377,7 +382,7 @@ def recordings() -> list[dict[str, Any]]:
 
 
 def replay(recording: dict[str, Any]) -> dict[str, Any]:
-    cases = load_cases(recording["split"])
+    cases = load_cases(recording["split"], recording.get("dataset", "v1"))
     run = asyncio.run(run_eval(cases, replay_caller(recording), model=recording["model"], batch_size=recording["batch_size"]))
     return score(run, batch_size=recording["batch_size"])
 
@@ -390,8 +395,8 @@ def check() -> list[str]:
     if not stored:
         return ["no recorded responses to replay"]
     for recording in stored:
-        name = f"{recording['model']}/{recording['split']}"
-        if recording["dataset_sha256"] != dataset_sha256():
+        name = f"{recording['model']}/{recording.get('dataset', 'v1')}-{recording['split']}"
+        if recording["dataset_sha256"] != dataset_sha256(recording.get("dataset", "v1")):
             problems.append(f"{name}: recorded against a different dataset; re-record it")
             continue
         try:
@@ -401,7 +406,7 @@ def check() -> list[str]:
             continue
         if scores["severe_dismissals_after_guard"] != 0:
             problems.append(f"{name}: {scores['severe_dismissals_after_guard']} protected finding(s) dismissed")
-        floor = baselines.get(recording["model"], {}).get(recording["split"], {})
+        floor = baselines.get(recording["model"], {}).get(f"{recording.get('dataset', 'v1')}-{recording['split']}", {})
         if not floor:
             problems.append(f"{name}: no baseline")
         for metric in LOWER_IS_WORSE:
@@ -417,18 +422,49 @@ def write_baselines() -> None:
     payload: dict[str, Any] = {}
     for recording in recordings():
         scores = replay(recording)
-        payload.setdefault(recording["model"], {})[recording["split"]] = {
+        payload.setdefault(recording["model"], {})[f"{recording.get('dataset', 'v1')}-{recording['split']}"] = {
             **{metric: scores[metric] for metric in LOWER_IS_WORSE if scores[metric] is not None},
             "wrong_dismissals": scores["wrong_dismissals"],
         }
     BASELINES.write_text(json.dumps(payload, indent=1, sort_keys=True) + "\n")
 
 
+def wilson_interval(hits: int, total: int, z: float = 1.96) -> tuple[float, float] | None:
+    """95% interval that behaves at 0 and at 100%, where these small samples often land."""
+    if not total:
+        return None
+    rate = hits / total
+    denominator = 1 + z * z / total
+    centre = (rate + z * z / (2 * total)) / denominator
+    margin = z * math.sqrt(rate * (1 - rate) / total + z * z / (4 * total * total)) / denominator
+    return round(max(0.0, centre - margin), 3), round(min(1.0, centre + margin), 3)
+
+
+def bar_problems(scores: dict[str, Any]) -> list[str]:
+    """Which parts of the committed bar a result misses."""
+    bar = json.loads((EVAL_DIR / "bar.json").read_text())
+    checks = (
+        ("false_positive_precision", bar["false_positive_precision_min"], ">="),
+        ("false_positive_recall", bar["false_positive_recall_min"], ">="),
+        ("severe_dismissals_after_guard", bar["severe_dismissals_after_guard_max"], "<="),
+        ("invalid_response_rate", bar["invalid_response_rate_max"], "<="),
+        ("expected_calibration_error", bar["expected_calibration_error_max"], "<="),
+        ("injection_resistance_model", bar["injection_resistance_model_min"], ">="),
+        ("injection_resistance_final", bar["injection_resistance_final_min"], ">="),
+    )
+    problems = []
+    for metric, limit, direction in checks:
+        value = scores[metric]
+        if value is None or (direction == ">=" and value < limit) or (direction == "<=" and value > limit):
+            problems.append(f"{metric} {value} (bar {direction} {limit})")
+    return problems
+
+
 def _pct(value: float | None) -> str:
     return "n/a" if value is None else f"{value * 100:.0f}%"
 
 
-def results_table(split: str = "heldout") -> str:
+def results_table(split: str = "heldout", dataset: str = "v2") -> str:
     head = (
         "| Model | Digest | Cases | FP precision | FP recall | Wrong dismissals | Severe proposed / after guard | ECE | "
         "Invalid | Injection: model / final | s per finding | Tokens per finding |\n"
@@ -436,7 +472,7 @@ def results_table(split: str = "heldout") -> str:
     )
     rows = []
     for recording in recordings():
-        if recording["split"] != split:
+        if recording["split"] != split or recording.get("dataset", "v1") != dataset:
             continue
         s = replay(recording)
         injection = f"{_pct(s['injection_resistance_model'])} / {_pct(s['injection_resistance_final'])}"
@@ -468,6 +504,7 @@ def main() -> int:
     parser.add_argument("--record", action="store_true")
     parser.add_argument("--model", default="ollama/llama3.2")
     parser.add_argument("--split", default="dev", choices=["dev", "heldout", "all"])
+    parser.add_argument("--dataset", default="v1", choices=sorted(DATASETS))
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--num-ctx", type=int, default=8192)
     parser.add_argument("--fields", default=",".join(FIELD_GROUPS), help="comma-separated field groups; empty for the bare prompt")
@@ -479,7 +516,7 @@ def main() -> int:
         write_baselines()
         return 0
     if args.table:
-        print(results_table(args.split))
+        print(results_table(args.split, args.dataset))
         return 0
     if args.check:
         problems = check()
@@ -492,7 +529,9 @@ def main() -> int:
 
     if args.split == "heldout" and args.fields != ",".join(FIELD_GROUPS):
         parser.error("field experiments belong on the dev split")
-    cases = load_cases(args.split)
+    if args.dataset == "v2" and args.split != "heldout":
+        parser.error("dataset v2 is all held out")
+    cases = load_cases(args.split, args.dataset)
     if args.limit:
         cases = cases[: args.limit]
     fields = [item for item in args.fields.split(",") if item]
@@ -520,7 +559,7 @@ def main() -> int:
             json.dumps({"model": args.model, "split": args.split, "fields": fields, "scores": scores, "cases": per_case(run)}, indent=1)
         )
     if args.record:
-        print(write_recording(args.model, args.split, args.batch_size, args.num_ctx, run, scores))
+        print(write_recording(args.model, args.split, args.batch_size, args.num_ctx, run, scores, args.dataset))
     return 0
 
 

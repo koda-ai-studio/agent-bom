@@ -16,8 +16,10 @@ def _run_ai_enrichment(opts: ScanOptions, st: ScanState) -> None:
     _skill_result_obj = st.ctx._skill_result_obj
     _skill_audit_obj = st.ctx._skill_audit_obj
     if opts.ai_enrich:
+        from agent_bom.ai_components.local_audit import ensure_local_ai_audit
         from agent_bom.ai_enrich import run_ai_enrichment_sync
 
+        ensure_local_ai_audit()
         run_ai_enrichment_sync(
             st.report,
             model=opts.ai_model,

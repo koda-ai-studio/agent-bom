@@ -8638,6 +8638,8 @@ export interface components {
         };
         /** AIAssessmentRow */
         AIAssessmentRow: {
+            /** Advice Covers Occurrences */
+            advice_covers_occurrences?: number | null;
             /** Advisory */
             advisory: boolean;
             /** Classification */
@@ -8648,6 +8650,8 @@ export interface components {
             false_positive_likelihood?: string | null;
             /** Finding Id */
             finding_id: string;
+            /** Group Occurrences */
+            group_occurrences?: number | null;
             /** Guard Applied */
             guard_applied?: boolean | null;
             /** Protected Reasons */
@@ -16790,6 +16794,10 @@ export interface components {
         };
         /** GraphCitation */
         GraphCitation: {
+            /** Direction */
+            direction?: string | null;
+            /** Evidence Keys */
+            evidence_keys?: string[] | null;
             /** Id */
             id: string;
             /** Kind */
@@ -16798,6 +16806,12 @@ export interface components {
             label: string;
             /** Ref */
             ref: string;
+            /** Relationship */
+            relationship?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Target */
+            target?: string | null;
             /** Traversable */
             traversable?: boolean | null;
         } & {
@@ -16807,6 +16821,10 @@ export interface components {
         GraphClaim: {
             /** Citations */
             citations: components["schemas"]["GraphCitation"][];
+            /** Claim Type */
+            claim_type: string;
+            /** Note */
+            note?: string | null;
             /** Text */
             text: string;
         } & {

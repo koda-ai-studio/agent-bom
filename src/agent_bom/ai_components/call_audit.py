@@ -49,32 +49,41 @@ class AICallRecord:
         return details
 
 
+class AICallAuditError(RuntimeError):
+    """A required audit write failed, so this call's output must not be used."""
+
+
 _scope: ContextVar[tuple[str, str]] = ContextVar("ai_call_scope", default=("", ""))
+_audit_required: ContextVar[bool] = ContextVar("ai_call_audit_required", default=False)
 _deferred: ContextVar[list[AICallRecord] | None] = ContextVar("ai_call_deferred", default=None)
 _active: ContextVar[AICallRecord | None] = ContextVar("ai_call_active", default=None)
-_sinks: list[Callable[[AICallRecord], None]] = []
+_sinks: list[tuple[Callable[[AICallRecord], None], bool]] = []
 _sinks_lock = threading.Lock()
 _digests: dict[tuple[str, str], tuple[float, str]] = {}
 
 
-def register_ai_call_sink(sink: Callable[[AICallRecord], None]) -> Callable[[], None]:
+def register_ai_call_sink(sink: Callable[[AICallRecord], None], *, required: bool = False) -> Callable[[], None]:
+    """A required sink is the record of the call: a scope that demands it loses the output if the sink fails."""
+    entry = (sink, required)
     with _sinks_lock:
-        _sinks.append(sink)
+        _sinks.append(entry)
 
     def remove() -> None:
         with _sinks_lock:
-            if sink in _sinks:
-                _sinks.remove(sink)
+            if entry in _sinks:
+                _sinks.remove(entry)
 
     return remove
 
 
 @contextmanager
-def ai_call_scope(*, tenant_id: str, actor: str) -> Iterator[None]:
+def ai_call_scope(*, tenant_id: str, actor: str, audit_required: bool = False) -> Iterator[None]:
     token = _scope.set((tenant_id, actor))
+    required = _audit_required.set(audit_required)
     try:
         yield
     finally:
+        _audit_required.reset(required)
         _scope.reset(token)
 
 
@@ -89,6 +98,11 @@ def best_effort(operation: Callable[[], _T], label: str) -> _T | None:
     except Exception as exc:  # noqa: BLE001
         logger.warning("%s skipped: %s", label, type(exc).__name__)
         return None
+
+
+def _deliver(sink: Callable[[AICallRecord], None], record: AICallRecord) -> bool:
+    sink(record)
+    return True
 
 
 def emit_ai_call(record: AICallRecord) -> None:
@@ -106,8 +120,12 @@ def emit_ai_call(record: AICallRecord) -> None:
     )
     with _sinks_lock:
         sinks = list(_sinks)
-    for sink in sinks:
-        best_effort(partial(sink, record), "AI call audit sink")
+    delivered = True
+    for sink, required in sinks:
+        ok = best_effort(partial(_deliver, sink, record), "AI call audit sink")
+        delivered = delivered and (bool(ok) or not required)
+    if not delivered and _audit_required.get():
+        raise AICallAuditError("the audit record for this AI call could not be written")
 
 
 @contextmanager

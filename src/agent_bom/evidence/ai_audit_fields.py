@@ -2,6 +2,10 @@
 
 AI_CALL_AUDIT_FIELDS: frozenset[str] = frozenset(
     {
+        "ai_tenant_id",
+        "ai_actor",
+        "ai_recorded_at",
+        "type",
         "ai_task",
         "ai_provider",
         "ai_model",

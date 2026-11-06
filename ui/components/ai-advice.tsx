@@ -12,6 +12,8 @@ export type AIAssessment = Pick<Schemas["AIAssessmentRow"], "finding_id" | "verd
   guard_applied?: boolean | null | undefined;
   protected_reasons?: string[] | null | undefined;
   scan_id?: string | null | undefined;
+  advice_covers_occurrences?: number | null | undefined;
+  group_occurrences?: number | null | undefined;
   provenance: Pick<Schemas["AIAssessmentProvenance"], "model"> & {
     model_digest?: string | null | undefined;
     prompt_version?: string | null | undefined;
@@ -54,11 +56,11 @@ export function AIAdviceBadge({ assessment }: { assessment: AIAssessment | null 
   return (
     <span
       aria-label={`AI advice: ${label}, ${assessment.confidence} confidence`}
-      title={`AI advice: ${label}. Scanner severity is unchanged.`}
+      title={`AI advice: ${label}.${assessment.group_occurrences ? ` Covers one of ${assessment.group_occurrences} occurrences.` : ""} Scanner severity is unchanged.`}
       className="inline-flex shrink-0 items-center gap-1 rounded border border-dashed border-outline px-1.5 py-0.5 text-[11px] leading-4 text-ink-secondary"
     >
       <Sparkles aria-hidden="true" className="h-3 w-3" />
-      AI: {label}
+      AI: {label}{assessment.group_occurrences ? ` (1 of ${assessment.group_occurrences})` : ""}
     </span>
   );
 }
@@ -88,6 +90,7 @@ export function AIAdviceSection({ assessment }: { assessment: AIAssessment | nul
         <span className="ml-2 font-normal text-ink-secondary">{titleCase(assessment.confidence)} confidence</span>
       </p>
       <p className="max-w-prose whitespace-pre-wrap break-words leading-6 text-ink-secondary">{assessment.rationale}</p>
+      {assessment.group_occurrences ? <p className="text-xs text-ink-secondary">This advice covers one of {assessment.group_occurrences} occurrences. Open an occurrence to check the others.</p> : null}
       {assessment.guard_applied && reasons ? <p className="text-xs text-ink-secondary">This finding is {reasons}, so a model cannot dismiss it.</p> : null}
       <p className="break-words text-xs text-ink-tertiary" title={provenance.model_digest ?? undefined}>{facts}</p>
     </SectionShell>
@@ -103,7 +106,7 @@ function statusSentence(status: AIStatus): string {
   if (!run) return "AI advice is on. No scan has requested it yet.";
   const scope = (run.triage_scope ?? {}) as { findings_total?: number; findings_offered?: number };
   const coverage = scope.findings_offered !== undefined && scope.findings_total !== undefined ? ` It assessed the riskiest ${scope.findings_offered} of ${scope.findings_total} findings.` : "";
-  const partial = run.status === "partial" ? " Some assessments are missing." : "";
+  const partial = run.status === "partial" ? ` Some assessments are missing${run.reason ? `: ${run.reason}` : ""}.` : "";
   return `AI advice is on${run.model ? ` (${run.model})` : ""}.${coverage}${partial} Advice never changes scanner severity.`;
 }
 
