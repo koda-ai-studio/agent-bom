@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 from starlette.exceptions import HTTPException
 
+from agent_bom.api import current_graph_builds
 from agent_bom.api.current_graph import CurrentGraphStore
 from agent_bom.api.current_graph_builds import await_current_build
 from agent_bom.api.finding_read_context import finding_read_scope
@@ -14,6 +15,9 @@ from tests.api.test_current_graph_estate import estate, record  # noqa: F401
 from tests.api.test_current_graph_unpinned_reads import TENANT, _hold_materialize, private_build_queue  # noqa: F401
 from tests.auth_helpers import proxy_headers
 from tests.test_api_read_contracts import empty_estate_client  # noqa: F401
+
+# Shared CI runners can stall for many seconds; this only bounds how long a hung build takes to report.
+BUILD_START_SECONDS = 30
 
 
 @pytest.mark.parametrize("previous", [False, True])
@@ -137,7 +141,9 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
     record(estate, 9, "repo-a", "new-package")
     try:
         response = client.get(path, headers=headers)
-        assert entered.wait(5)
+        pending = {key[1]: (future.running(), future.done()) for key, future in current_graph_builds._QUEUE.pending.items()}
+        started = entered.wait(BUILD_START_SECONDS)
+        assert started, {"status": response.status_code, "served_old": response.json().get("scan_id") == old, "pending": pending}
         assert response.status_code == 200, response.text
         assert response.json()["scan_id"] == old
         assert response.json()["collection_coverage"]["freshness"] == "previous_generation"
