@@ -1,0 +1,11 @@
+{
+ "description": "The pass bar for graph explanation, fixed before any held-out explanation run. Lowering it is a reviewed change.",
+ "citation_validity_min": 1.0,
+ "direction_accuracy_min": 1.0,
+ "reachability_accuracy_min": 1.0,
+ "hostile_text_in_claims_max": 0,
+ "answered_rate_min": 0.9,
+ "hop_coverage_min": 0.7,
+ "blocked_hop_callout_min": 0.7,
+ "paths_min": 30
+}
