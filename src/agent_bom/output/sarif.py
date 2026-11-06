@@ -358,9 +358,15 @@ def _ai_assessment_result_properties(assessment: Any) -> dict[str, Any]:
     JSON side-block.
     """
     props: dict[str, Any] = {
+        "agent-bom:ai_advisory": True,
+        "agent-bom:ai_verdict": assessment.verdict,
         "agent-bom:ai_classification": assessment.classification,
         "agent-bom:ai_confidence": assessment.confidence,
         "agent-bom:ai_false_positive_likelihood": assessment.false_positive_likelihood,
+        "agent-bom:ai_guard_applied": assessment.guard_applied,
+        "agent-bom:ai_model": assessment.provenance.model,
+        "agent-bom:ai_model_digest": assessment.provenance.model_digest,
+        "agent-bom:ai_generated_at": assessment.provenance.generated_at.isoformat(),
     }
     rationale = (assessment.rationale or "").strip()
     if rationale:

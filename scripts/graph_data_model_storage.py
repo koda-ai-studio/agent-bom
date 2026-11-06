@@ -94,7 +94,7 @@ _DOMAIN_SPECS: tuple[tuple[str, str, str, str], ...] = (
         "Compliance, audit and evidence",
         (
             "compliance_controls cis_benchmark_checks hub_framework_refs governance_audit_log policy_results "
-            "evaluation_runs attestation_replay"
+            "evaluation_runs attestation_replay ai_finding_assessments ai_triage_runs"
         ),
         "audit_",
     ),

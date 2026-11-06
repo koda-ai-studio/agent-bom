@@ -9,11 +9,12 @@ Used to:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 AIConfidence = Literal["high", "medium", "low"]
+AIVerdict = Literal["confirmed", "likely_false_positive", "needs_review"]
 
 
 class AIProvenance(BaseModel):
@@ -26,6 +27,8 @@ class AIProvenance(BaseModel):
     provider: str = Field(min_length=1, max_length=64)
     model: str = Field(min_length=1, max_length=256)
     model_revision: str = Field(default="", max_length=256)
+    model_digest: str = Field(default="", max_length=128)
+    dataset_version: str = Field(default="", max_length=64)
     prompt_version: str = Field(default="ai-enrichment.v2", min_length=1, max_length=64)
     prompt_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     response_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -42,14 +45,31 @@ class AIFindingAssessment(BaseModel):
     schema_version: Literal["ai.finding-assessment.v1"] = "ai.finding-assessment.v1"
     finding_id: str = Field(min_length=1, max_length=128)
     task: Literal["triage"] = "triage"
+    verdict: AIVerdict = "needs_review"
     classification: str = Field(default="needs_review", min_length=1, max_length=64)
     confidence: AIConfidence = "low"
     false_positive_likelihood: AIConfidence = "low"
     rationale: str = Field(default="", max_length=1000)
     suggested_controls: list[str] = Field(default_factory=list, max_length=10)
+    protected_reasons: list[str] = Field(default_factory=list, max_length=3)
+    guard_applied: bool = False
     advisory: Literal[True] = True
     ai_detected: Literal[False] = False
     provenance: AIProvenance
+
+    @model_validator(mode="after")
+    def _protected_findings_stay_confirmed(self) -> "AIFindingAssessment":
+        if self.protected_reasons and (self.verdict == "likely_false_positive" or self.false_positive_likelihood != "low"):
+            raise ValueError("AI advice cannot dismiss a protected finding")
+        return self
+
+
+_MODEL_VERDICTS = {"problem_exists": "confirmed", "problem_absent": "likely_false_positive", "unclear": "needs_review"}
+
+
+def _model_verdict(value: object) -> object:
+    """Prompts use words small models keep straight; "confirmed" read to them as confirming their own reasoning."""
+    return _MODEL_VERDICTS.get(value, value) if isinstance(value, str) else value
 
 
 class AIFindingAssessmentCandidate(BaseModel):
@@ -57,12 +77,28 @@ class AIFindingAssessmentCandidate(BaseModel):
 
     model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
 
-    finding_id: str = Field(min_length=1, max_length=128)
-    classification: str = Field(default="needs_review", min_length=1, max_length=64)
+    finding_id: str = Field(min_length=1, max_length=128, validation_alias=AliasChoices("finding_id", "ref", "id"))
+    verdict: Annotated[AIVerdict | None, BeforeValidator(_model_verdict)] = None
+    classification: str = Field(default="", max_length=64)
     confidence: AIConfidence = "low"
-    false_positive_likelihood: AIConfidence = "low"
-    rationale: str = Field(default="", max_length=1000)
+    false_positive_likelihood: AIConfidence | None = None
+    rationale: str = Field(default="", max_length=1000, validation_alias=AliasChoices("rationale", "reason"))
     suggested_controls: list[str] = Field(default_factory=list, max_length=10)
+
+    @model_validator(mode="after")
+    def _derive_verdict(self) -> "AIFindingAssessmentCandidate":
+        if self.verdict is None:
+            label = self.classification.lower().replace("-", "_").replace(" ", "_")
+            if "false_positive" in label or self.false_positive_likelihood == "high":
+                self.verdict = "likely_false_positive"
+            elif label in {"true_positive", "confirmed", "likely_exploitable", "exploitable"}:
+                self.verdict = "confirmed"
+            else:
+                self.verdict = "needs_review"
+        if self.false_positive_likelihood is None:
+            self.false_positive_likelihood = "high" if self.verdict == "likely_false_positive" else "low"
+        self.classification = self.classification or self.verdict
+        return self
 
 
 class AIFindingAssessmentResponse(BaseModel):
@@ -70,7 +106,7 @@ class AIFindingAssessmentResponse(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    assessments: list[AIFindingAssessmentCandidate] = Field(default_factory=list, max_length=50)
+    assessments: list[dict] = Field(default_factory=list, max_length=50)
 
 
 class BlastRadiusAnalysis(BaseModel):

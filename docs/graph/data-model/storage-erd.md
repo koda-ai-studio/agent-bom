@@ -7,7 +7,7 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-165 tables in 10 domains. 18 declared foreign keys; 39 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+167 tables in 10 domains. 18 declared foreign keys; 40 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
@@ -17,7 +17,7 @@ flowchart LR
   findings["Findings, triage and VEX<br/>28 tables"]
   graph["Graph nodes, edges, snapshots and attack paths<br/>21 tables"]
   runtime["Runtime, gateway and traces<br/>18 tables"]
-  compliance["Compliance, audit and evidence<br/>10 tables"]
+  compliance["Compliance, audit and evidence<br/>12 tables"]
   connectors["Connectors, delivery and schedules<br/>16 tables"]
   vulndb["Vulnerability intelligence (local database)<br/>8 tables"]
   other["Schema metadata and maintenance<br/>9 tables"]
@@ -39,7 +39,7 @@ flowchart LR
 | Findings, triage and VEX | 28 | [storage-erd/findings.md](storage-erd/findings.md) |
 | Graph nodes, edges, snapshots and attack paths | 21 | [storage-erd/graph.md](storage-erd/graph.md) |
 | Runtime, gateway and traces | 18 | [storage-erd/runtime.md](storage-erd/runtime.md) |
-| Compliance, audit and evidence | 10 | [storage-erd/compliance.md](storage-erd/compliance.md) |
+| Compliance, audit and evidence | 12 | [storage-erd/compliance.md](storage-erd/compliance.md) |
 | Connectors, delivery and schedules | 16 | [storage-erd/connectors.md](storage-erd/connectors.md) |
 | Vulnerability intelligence (local database) | 8 | [storage-erd/vulndb.md](storage-erd/vulndb.md) |
 | Schema metadata and maintenance | 9 | [storage-erd/other.md](storage-erd/other.md) |
@@ -86,8 +86,10 @@ Excluded:
 | `agent_identity_jit_grants` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `grant_id` | `grant_id`, `tenant_id`, `identity_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/identity_local_store.py`, `api/postgres_agent_identity.py` |
 | `agent_lifecycle_records` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `kind`, `record_id` | `tenant_id`, `kind`, `record_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_01_agent_lifecycle.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/lifecycle_store.py` |
 | `agents` | [Inventory and assets](storage-erd/inventory.md) | Postgres | `agent_id` | `agent_id`, `scan_run_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql` |
+| `ai_finding_assessments` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres | `tenant_id`, `scan_id`, `finding_id` | `tenant_id`, `scan_id`, `finding_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20261105_04_ai_assessments.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/ai_assessment_store.py` |
 | `ai_system_blueprint_versions` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `blueprint_id`, `version` | `tenant_id`, `blueprint_id`, `version` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/blueprint_store.py`, `api/postgres_blueprint.py` |
 | `ai_system_blueprints` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `blueprint_id` | `tenant_id`, `blueprint_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/blueprint_store.py`, `api/postgres_blueprint.py` |
+| `ai_triage_runs` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres | `tenant_id`, `scan_id` | `tenant_id`, `scan_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20261105_04_ai_assessments.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/ai_assessment_store.py` |
 | `api_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `key_id` | `key_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql`, `api/postgres_access.py`, `api/sqlite_key_store.py` |
 | `api_rate_limit_hits` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | — | `bucket_key` | **none** | persistent | `deploy/supabase/postgres/init.sql`, `api/rate_limit_store.py` |
 | `api_rate_limits` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `bucket_key`, `window_started` | `bucket_key`, `window_started` | **none** | persistent | `deploy/supabase/postgres/init.sql` |

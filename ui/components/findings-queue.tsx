@@ -15,6 +15,7 @@ import { useAuthState } from "@/components/auth-provider";
 import { Drawer } from "@/components/drawer";
 import { ReconfirmationBadge } from "@/components/finding-reconfirmation";
 import { severityColor, severityText, severityDot, type FindingTriageItem } from "@/lib/api";
+import { AIAdviceBadge } from "@/components/ai-advice";
 import type { FindingsLens } from "@/lib/findings-lens";
 import type { EnrichedVuln, SortKey } from "@/lib/findings-view";
 import {
@@ -352,6 +353,7 @@ function MobileFindingCard({
           <span className="flex min-w-0 items-center gap-2">
             <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${severityDot(vuln.severity)}`} />
             <span className="truncate font-mono text-xs text-foreground">{vuln.id}</span>
+            <AIAdviceBadge assessment={vuln.ai_assessment} />
           </span>
           {findingSecondaryText(vuln) ? (
             <span className="mt-1 block line-clamp-2 text-xs text-ink-tertiary">
@@ -461,6 +463,7 @@ function FindingIdentity({
             >
               {vuln.id}
             </button>
+            <AIAdviceBadge assessment={vuln.ai_assessment} />
             {getOsvVulnerabilityUrl(vuln.id) ? (
               <a
                 href={getOsvVulnerabilityUrl(vuln.id) ?? undefined}

@@ -15,3 +15,17 @@ test("consequences reuse authenticated transport and preserve the server revisio
   }});
   assert.deepEqual(await client.consequenceAssessment(request), receipt);
 });
+
+test("AI advice reads and on-demand explanation use the documented routes", async () => {
+  const calls = [];
+  const client = new AgentBomClient({baseUrl: "https://example.test", apiKey: "fixture", tenantId: "tenant-a", fetch: async (url, init) => {
+    calls.push([init.method, url, init.body ? JSON.parse(init.body) : null]);
+    return new Response(JSON.stringify({state: "off"}), {status: 200, headers: {"content-type": "application/json"}});
+  }});
+  await client.aiStatus();
+  await client.explainGraphSelection({nodeIds: ["agent:a", "server:s"], ordered: true, scanId: "scan-1"});
+  assert.deepEqual(calls, [
+    ["GET", "https://example.test/v1/ai/status", null],
+    ["POST", "https://example.test/v1/graph/explain", {node_ids: ["agent:a", "server:s"], ordered: true, scan_id: "scan-1"}],
+  ]);
+});

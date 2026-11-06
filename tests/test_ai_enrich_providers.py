@@ -34,6 +34,12 @@ from agent_bom.ai_enrich import (
 # ─── Redaction ───────────────────────────────────────────────────────────────
 
 
+@pytest.fixture(autouse=True)
+def _permit_remote_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These suites cover provider routing; the egress gate has its own in test_ai_policy.py."""
+    monkeypatch.setenv("AGENT_BOM_AI_ALLOW_REMOTE", "1")
+
+
 @pytest.mark.parametrize(
     "raw, needle",
     [
@@ -169,7 +175,7 @@ def test_litellm_capability_is_independent_from_selected_model_readiness():
     """An Anthropic-only install is capable, while OpenAI resolution stays strict."""
     with (
         patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
-        patch.dict("os.environ", {"ANTHROPIC_API_KEY": "configured"}, clear=True),
+        patch.dict("os.environ", {"ANTHROPIC_API_KEY": "configured", "AGENT_BOM_AI_ALLOW_REMOTE": "1"}, clear=True),
     ):
         capability = next(item for item in ai_enrich.describe_ai_providers() if item["name"] == "litellm")
         anthropic = ai_enrich._resolve_ai_provider("anthropic/claude-sonnet-5")
@@ -187,7 +193,7 @@ def test_litellm_resolution_allows_ambient_workload_identity(model):
     """Bedrock and Vertex SDK ambient identity chains are not env-key gated."""
     with (
         patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
-        patch.dict("os.environ", {}, clear=True),
+        patch.dict("os.environ", {"AGENT_BOM_AI_ALLOW_REMOTE": "1"}, clear=True),
     ):
         resolution = ai_enrich._resolve_ai_provider(model)
 

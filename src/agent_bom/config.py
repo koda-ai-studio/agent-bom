@@ -449,10 +449,10 @@ AI_RETRY_MAX_DELAY = _float("AGENT_BOM_AI_RETRY_MAX_DELAY", 8.0)
 AI_REQUEST_TIMEOUT = _float("AGENT_BOM_AI_REQUEST_TIMEOUT", 120.0)
 
 # Cap actual provider requests, including retries. 0 is unlimited; negative is invalid.
-AI_MAX_CALLS_PER_RUN = _int("AGENT_BOM_AI_MAX_CALLS", 50)
+AI_MAX_CALLS_PER_RUN = _int("AGENT_BOM_AI_MAX_CALLS", 150)
 # Bound the amount of finding material sent for advisory triage in one run.
 AI_MAX_FINDINGS_PER_RUN = _int("AGENT_BOM_AI_MAX_FINDINGS", 100)
-AI_FINDING_BATCH_SIZE = _int("AGENT_BOM_AI_FINDING_BATCH_SIZE", 20)  # findings per triage request; runtime cap 50
+AI_FINDING_BATCH_SIZE = _int("AGENT_BOM_AI_FINDING_BATCH_SIZE", 1)  # findings per request; small models skip entries in larger batches
 
 # ── OIDC discovery shim ──────────────────────────────────────────────────
 # Optional static OIDC discovery metadata JSON served by the gateway for

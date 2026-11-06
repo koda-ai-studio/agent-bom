@@ -298,8 +298,8 @@ so they cannot regress silently, but they are not part of this reference.
 | Env var | Type | Default | Description |
 |---|---|---|---|
 | `AGENT_BOM_AI_DETERMINISTIC` | `bool` | `False` | Temperature-zero mode inherited by CLI/API requests without an override. It improves stability but is not byte-reproducible across provider revisions. |
-| `AGENT_BOM_AI_FINDING_BATCH_SIZE` | `int` | `20` | findings per triage request; runtime cap 50 |
-| `AGENT_BOM_AI_MAX_CALLS` | `int` | `50` | Cap actual provider requests, including retries. 0 is unlimited; negative is invalid. |
+| `AGENT_BOM_AI_FINDING_BATCH_SIZE` | `int` | `1` | findings per request; small models skip entries in larger batches |
+| `AGENT_BOM_AI_MAX_CALLS` | `int` | `150` | Cap actual provider requests, including retries. 0 is unlimited; negative is invalid. |
 | `AGENT_BOM_AI_MAX_FINDINGS` | `int` | `100` | Bound the amount of finding material sent for advisory triage in one run. |
 | `AGENT_BOM_AI_MAX_RETRIES` | `int` | `2` | Reliability: bounded retries with exponential backoff around remote provider calls, and a per-call timeout. Graceful degradation is preserved — exhausted retries return None (no model) rather than raising. |
 | `AGENT_BOM_AI_MODEL_CHEAP` | `str` | `''` | tagging, summaries |

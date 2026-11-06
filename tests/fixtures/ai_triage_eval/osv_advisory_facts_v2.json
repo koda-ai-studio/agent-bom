@@ -1,0 +1,370 @@
+{
+ "advisories": {
+  "GHSA-223j-4rm8-mrmf": {
+   "modified": "2025-10-13T15:35:50Z",
+   "severity": "LOW",
+   "summary": "Next.js may leak x-middleware-subrequest-id to external hosts"
+  },
+  "GHSA-2444-8gj8-6fmx": {
+   "modified": "2025-03-04T16:42:03.781779Z",
+   "severity": "HIGH",
+   "summary": "Magento Open Source allows XML Injection"
+  },
+  "GHSA-24fg-p96v-hxh8": {
+   "modified": "2024-12-07T05:38:37.003705Z",
+   "severity": "MODERATE",
+   "summary": "actionpack Cross-Site Request Forgery vulnerability"
+  },
+  "GHSA-264g-f7v8-q5qq": {
+   "modified": "2025-03-04T19:27:06.177355Z",
+   "severity": "HIGH",
+   "summary": "Magento Open Source allows Cross-Site Scripting (XSS)"
+  },
+  "GHSA-269w-pqc7-68q9": {
+   "modified": "2025-02-10T21:18:59.329620Z",
+   "severity": "CRITICAL",
+   "summary": "Magento vulnerable to a file upload restriction bypass"
+  },
+  "GHSA-273r-v888-vgc6": {
+   "modified": "2024-02-16T08:11:47.454005Z",
+   "severity": "MODERATE",
+   "summary": "Magento Cross-site Scripting (XSS)"
+  },
+  "GHSA-274w-2j5w-m2xj": {
+   "modified": "2024-02-16T08:17:28.488537Z",
+   "severity": "MODERATE",
+   "summary": "Magento 2 Community Edition Information Disclosure"
+  },
+  "GHSA-2768-5wmv-cfff": {
+   "modified": "2025-10-22T19:12:54.707836Z",
+   "severity": "HIGH",
+   "summary": "Magento vulnerable to stored Cross-Site Scripting (XSS)"
+  },
+  "GHSA-28vp-39rf-3q2j": {
+   "modified": "2025-03-04T18:42:06.035864Z",
+   "severity": "LOW",
+   "summary": "Magento Open Source has Business Logic Errors Vulnerability"
+  },
+  "GHSA-297f-r9w7-w492": {
+   "modified": "2026-09-10T03:49:46.041504790Z",
+   "severity": "HIGH",
+   "summary": "Magento Improper input validation vulnerability"
+  },
+  "GHSA-298q-wv2h-v5vw": {
+   "modified": "2024-02-16T08:11:27.050195Z",
+   "severity": "MODERATE",
+   "summary": "Magento 2 Community Edition XSS Vulnerability"
+  },
+  "GHSA-29gr-w57f-rpfw": {
+   "modified": "2024-11-29T05:41:26.253561Z",
+   "severity": "MODERATE",
+   "summary": "actionpack vulnerable to Path Traversal"
+  },
+  "GHSA-29m4-mx89-3mjg": {
+   "modified": "2024-12-05T05:43:20.650593Z",
+   "severity": "MODERATE",
+   "summary": "TYPO3 Denial of Service in Online Media Asset Handling"
+  },
+  "GHSA-29mr-gr4c-vf9c": {
+   "modified": "2024-02-16T08:24:15.972263Z",
+   "severity": "MODERATE",
+   "summary": "Magento 2 Community Edition XSS Vulnerability"
+  },
+  "GHSA-2cg3-w597-rjfv": {
+   "modified": "2024-12-08T05:32:04.362297Z",
+   "severity": "MODERATE",
+   "summary": "Magento 2 Community Edition Arbitrary File Deletion"
+  },
+  "GHSA-2crc-5vq6-386r": {
+   "modified": "2024-12-08T05:25:22.283238Z",
+   "severity": "HIGH",
+   "summary": "Magento 2 Community Edition RCE Vulnerability"
+  },
+  "GHSA-2fx5-pggv-6jjr": {
+   "modified": "2025-01-15T15:46:12.385402Z",
+   "severity": "MODERATE",
+   "summary": "TYPO3 Potential Open Redirect via Parsing Differences"
+  },
+  "GHSA-2j54-93q2-3hjq": {
+   "modified": "2026-09-10T03:51:07.731717328Z",
+   "severity": "MODERATE",
+   "summary": "TYPO3 CMS has Broken Access Control in Backend API"
+  },
+  "GHSA-2r6j-862c-m2v2": {
+   "modified": "2026-07-08T06:29:29.299723425Z",
+   "severity": "HIGH",
+   "summary": "Unrestricted File Upload in Form Framework"
+  },
+  "GHSA-2rmj-mq67-h97g": {
+   "modified": "2026-09-10T03:50:55.885781916Z",
+   "severity": "MODERATE",
+   "summary": "Spring Framework DoS via conditional HTTP request"
+  },
+  "GHSA-2rqw-v265-jf8c": {
+   "modified": "2024-02-21T05:31:33.873268Z",
+   "severity": "MODERATE",
+   "summary": "Open Redirect in ActionPack"
+  },
+  "GHSA-2rxh-h6h9-qrqc": {
+   "modified": "2026-09-10T03:48:30.099290014Z",
+   "severity": "HIGH",
+   "summary": "Class destructors causing side-effects when being unserialized in TYPO3 CMS"
+  },
+  "GHSA-2wj9-434x-9hvp": {
+   "modified": "2026-09-10T03:48:30.137957665Z",
+   "severity": "HIGH",
+   "summary": "Insecure Deserialization in Backend User Settings in TYPO3 CMS"
+  },
+  "GHSA-2wrp-6fg6-hmc5": {
+   "modified": "2026-09-10T03:50:11.076262382Z",
+   "severity": "HIGH",
+   "summary": "Spring Framework URL Parsing with Host Validation"
+  },
+  "GHSA-2xjj-5x6h-8vmf": {
+   "modified": "2024-11-29T05:40:31.205427Z",
+   "severity": "MODERATE",
+   "summary": "Cross-site Scripting in actionpack"
+  },
+  "GHSA-347x-877p-hcwx": {
+   "modified": "2026-09-10T03:48:29.882187135Z",
+   "severity": "LOW",
+   "summary": "Information Disclosure in Password Reset"
+  },
+  "GHSA-34fr-fhqr-7235": {
+   "modified": "2026-07-08T06:27:26.446733090Z",
+   "severity": "MODERATE",
+   "summary": "Information Disclosure in User Authentication"
+  },
+  "GHSA-35jh-r3h4-6jhm": {
+   "modified": "2026-10-17T02:55:38.085813876Z",
+   "severity": "HIGH",
+   "summary": "Command Injection in lodash"
+  },
+  "GHSA-36g8-62qv-5957": {
+   "modified": "2026-09-10T03:50:12.924741922Z",
+   "severity": "MODERATE",
+   "summary": "TYPO3 vulnerable to an Uncontrolled Resource Consumption in the ShowImageController"
+  },
+  "GHSA-38r2-5695-334w": {
+   "modified": "2026-09-10T03:50:05.300800282Z",
+   "severity": "MODERATE",
+   "summary": "TYPO3 Backend Forms vulnerable to Information Disclosure of Hashed Passwords"
+  },
+  "GHSA-3crr-9vmg-864v": {
+   "modified": "2024-11-29T05:41:10.183721Z",
+   "severity": "MODERATE",
+   "summary": "Active Record Improper Input Validation"
+  },
+  "GHSA-3hhc-qp5v-9p2j": {
+   "modified": "2026-07-08T06:29:07.745701671Z",
+   "severity": "CRITICAL",
+   "summary": "Active Record RCE bug with Serialized Columns"
+  },
+  "GHSA-3jrg-97f3-rqh9": {
+   "modified": "2025-05-20T20:13:27.658652Z",
+   "severity": "LOW",
+   "summary": "TYPO3 Unverified Password Change for Backend Users"
+  },
+  "GHSA-3p42-w5ch-gg42": {
+   "modified": "2026-09-10T03:50:55.381407550Z",
+   "severity": "MODERATE",
+   "summary": "TYPO3 CMS has an Open Redirect Vulnerability via Core Utilities"
+  },
+  "GHSA-3rp6-rjw4-cq39": {
+   "modified": "2024-12-05T05:43:55.435973Z",
+   "severity": "HIGH",
+   "summary": "Cross-origin Resource Sharing bypass in ASP.NET Core"
+  },
+  "GHSA-3wcj-rg8q-9cqv": {
+   "modified": "2023-11-08T03:58:50.693495Z",
+   "severity": "HIGH",
+   "summary": "Open redirect in ASP.NET Core"
+  },
+  "GHSA-4g8v-vg43-wpgf": {
+   "modified": "2025-05-05T17:49:20.823550Z",
+   "severity": "MODERATE",
+   "summary": "Actionpack has possible cross-site scripting vulnerability via User Supplied Values to redirect_to"
+  },
+  "GHSA-4gc7-5j7h-4qph": {
+   "modified": "2026-09-10T03:50:19.586027622Z",
+   "severity": "MODERATE",
+   "summary": "Spring Framework DataBinder Case Sensitive Match Exception"
+  },
+  "GHSA-579w-22j4-4749": {
+   "modified": "2026-02-03T03:17:25.303496Z",
+   "severity": "HIGH",
+   "summary": "Denial of Service Vulnerability in ActiveRecord's PostgreSQL adapter"
+  },
+  "GHSA-5c58-w9xc-qcj9": {
+   "modified": "2024-12-08T05:24:29.967821Z",
+   "severity": "MODERATE",
+   "summary": "Symfony Vulnerable to PHP Eval Injection"
+  },
+  "GHSA-6439-2f28-8p8q": {
+   "modified": "2026-09-10T03:51:04.868176127Z",
+   "severity": "HIGH",
+   "summary": "Symfony's HEAD Request Bypasses methods: ['GET'] Filter in #[IsGranted] / #[IsSignatureValid] / #[IsCsrfTokenValid]"
+  },
+  "GHSA-699m-mcjm-9cw8": {
+   "modified": "2024-11-29T05:42:51.010893Z",
+   "severity": "MODERATE",
+   "summary": "actionpack vulnerable to Cross-site Scripting"
+  },
+  "GHSA-6h5q-96hp-9jgm": {
+   "modified": "2024-11-29T05:42:36.454703Z",
+   "severity": "MODERATE",
+   "summary": "actionpack vulnerable to Cross-site Scripting"
+  },
+  "GHSA-6r3c-xf4w-jxjm": {
+   "modified": "2026-09-10T03:50:25.010163414Z",
+   "severity": "MODERATE",
+   "summary": "Spring Framework vulnerable to a reflected file download (RFD)"
+  },
+  "GHSA-6v7w-535j-rq5m": {
+   "modified": "2024-03-15T05:46:26.165089Z",
+   "severity": "MODERATE",
+   "summary": "Pivotal Spring Framework DoS Attack with XML Input"
+  },
+  "GHSA-6x85-j5j2-27jx": {
+   "modified": "2025-10-24T19:34:06.974370Z",
+   "severity": "HIGH",
+   "summary": "actionpack Path Traversal vulnerability"
+  },
+  "GHSA-6xh7-4v2w-36q6": {
+   "modified": "2023-11-08T03:58:40.064574Z",
+   "severity": "HIGH",
+   "summary": "ASP.NET Core fails to properly validate web requests"
+  },
+  "GHSA-754h-5r27-7x3r": {
+   "modified": "2026-07-08T06:29:30.177347473Z",
+   "severity": "HIGH",
+   "summary": "RCE in Symfony"
+  },
+  "GHSA-76r7-hhxj-r776": {
+   "modified": "2026-09-10T03:50:26.794588754Z",
+   "severity": "MODERATE",
+   "summary": "Active Record logging vulnerable to ANSI escape injection"
+  },
+  "GHSA-76wq-xw4h-f8wj": {
+   "modified": "2025-01-21T15:34:40.818782Z",
+   "severity": "HIGH",
+   "summary": "activerecord vulnerable to SQL Injection"
+  },
+  "GHSA-8hc4-xxm3-5ppp": {
+   "modified": "2024-02-20T05:21:22.451179Z",
+   "severity": "HIGH",
+   "summary": "Active Record subject to Regular Expression Denial-of-Service (ReDoS)"
+  },
+  "GHSA-9822-6m93-xqf4": {
+   "modified": "2026-06-08T23:45:17.847969876Z",
+   "severity": "MODERATE",
+   "summary": "Rails has possible XSS Vulnerability in Action Controller"
+  },
+  "GHSA-9gcm-f4x3-8jpw": {
+   "modified": "2024-12-02T05:43:15.118408Z",
+   "severity": "MODERATE",
+   "summary": "Spring Framework Cross Site Tracing (XST)"
+  },
+  "GHSA-9p3v-wf2w-v29c": {
+   "modified": "2025-04-09T20:05:53.148849Z",
+   "severity": "MODERATE",
+   "summary": "Moderate severity vulnerability that affects rails"
+  },
+  "GHSA-9rf5-jm6f-2fmm": {
+   "modified": "2024-11-29T05:41:44.037978Z",
+   "severity": "HIGH",
+   "summary": "Active Record subject to strong parameters protection bypass"
+  },
+  "GHSA-ccgv-vj62-xf9h": {
+   "modified": "2026-09-10T03:50:06.331831380Z",
+   "severity": "HIGH",
+   "summary": "Spring Web vulnerable to Open Redirect or Server Side Request Forgery"
+  },
+  "GHSA-ch6p-4jcm-h8vh": {
+   "modified": "2024-12-05T05:37:59.757189Z",
+   "severity": "MODERATE",
+   "summary": "Moderate severity vulnerability that affects Microsoft.AspNetCore.Mvc and Microsoft.AspNetCore.Mvc.Core"
+  },
+  "GHSA-fh39-v733-mxfr": {
+   "modified": "2024-12-05T05:29:06.170986Z",
+   "severity": "MODERATE",
+   "summary": "Active Record vulnerable to SQL Injection via nested query parameters"
+  },
+  "GHSA-fhj9-cjjh-27vm": {
+   "modified": "2024-12-03T06:08:45.528569Z",
+   "severity": "CRITICAL",
+   "summary": "Active Record contains deserialization of arbitrary YAML"
+  },
+  "GHSA-gfwj-fwqj-fp3v": {
+   "modified": "2024-02-20T05:32:02.209050Z",
+   "severity": "HIGH",
+   "summary": "Improper Privilege Management in Spring Framework"
+  },
+  "GHSA-gh2w-j7cx-2664": {
+   "modified": "2025-01-21T17:08:19.377001Z",
+   "severity": "HIGH",
+   "summary": "Active Record contains SQL Injection"
+  },
+  "GHSA-ghhp-997w-qr28": {
+   "modified": "2024-12-07T05:45:57.337833Z",
+   "severity": "CRITICAL",
+   "summary": ".NET Core Remote Code Execution Vulnerability"
+  },
+  "GHSA-gjxw-5w2q-7grf": {
+   "modified": "2024-12-07T05:40:02.753205Z",
+   "severity": "MODERATE",
+   "summary": "Rails activerecord gem has Improper Input Validation vulnerability"
+  },
+  "GHSA-h7vf-5wrv-9fhv": {
+   "modified": "2025-02-13T19:02:16.092641Z",
+   "severity": "MODERATE",
+   "summary": "Symfony storing cookie headers in HttpCache"
+  },
+  "GHSA-hgjh-9rj2-g67j": {
+   "modified": "2026-09-10T03:50:10.753799391Z",
+   "severity": "HIGH",
+   "summary": "Spring Framework URL Parsing with Host Validation Vulnerability"
+  },
+  "GHSA-j8f4-2w4p-mhjc": {
+   "modified": "2023-11-08T03:58:40.306690Z",
+   "severity": "MODERATE",
+   "summary": "Moderate severity vulnerability that affects Microsoft.AspNetCore.Mvc"
+  },
+  "GHSA-m2qf-hxjv-5gpq": {
+   "modified": "2026-09-10T03:50:01.763387498Z",
+   "severity": "HIGH",
+   "summary": "Flask vulnerable to possible disclosure of permanent session cookie due to missing Vary: Cookie header"
+  },
+  "GHSA-m46p-ggm5-5j83": {
+   "modified": "2024-12-08T05:43:59.579843Z",
+   "severity": "MODERATE",
+   "summary": "Rails vulnerable to Cross-site Scripting"
+  },
+  "GHSA-q3j3-w37x-hq2q": {
+   "modified": "2026-07-08T06:28:30.044634543Z",
+   "severity": "MODERATE",
+   "summary": "Webcache Poisoning in symfony/http-kernel"
+  },
+  "GHSA-q8hg-pf8v-cxrv": {
+   "modified": "2024-02-20T05:19:46.052258Z",
+   "severity": "HIGH",
+   "summary": "Symfony Http-Kernel has non-constant time comparison in UriSigner"
+  },
+  "GHSA-qhqf-ghgh-x2m4": {
+   "modified": "2023-11-08T03:58:40.185760Z",
+   "severity": "HIGH",
+   "summary": "High severity vulnerability that affects Microsoft.AspNetCore.Mvc"
+  },
+  "GHSA-qmqw-mpqp-mr54": {
+   "modified": "2024-12-05T05:42:42.499490Z",
+   "severity": "MODERATE",
+   "summary": "Symfony Incorrect Access Control"
+  },
+  "GHSA-wvjv-p5rr-mmqm": {
+   "modified": "2024-05-30T04:26:51.101526Z",
+   "severity": "HIGH",
+   "summary": "Symfony allows direct access of ESI URLs behind a trusted proxy"
+  }
+ },
+ "source": "https://api.osv.dev/v1/vulns (fetched 2026-11-06)"
+}

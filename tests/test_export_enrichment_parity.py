@@ -221,6 +221,7 @@ def _report_with_assessment() -> tuple[AIBOMReport, str]:
         AIFindingAssessment(
             finding_id=finding.id,
             classification="true_positive",
+            verdict="confirmed",
             confidence="high",
             false_positive_likelihood="low",
             rationale="Reachable RCE in a running server.",
@@ -252,7 +253,7 @@ def test_sarif_result_without_assessment_has_no_ai_props() -> None:
 def test_html_vuln_table_shows_ai_assessment() -> None:
     report, _ = _report_with_assessment()
     html = _vuln_table(report, report.blast_radii)
-    assert "true_positive" in html
+    assert "confirmed" in html
     # false-positive likelihood must be surfaced on the annotated row.
     assert "FP" in html or "false" in html.lower()
 

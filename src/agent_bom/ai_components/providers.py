@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING, Optional
 import httpx
 
 from agent_bom import config
-from agent_bom.ai_components import provider_discovery
+from agent_bom.ai_components import call_audit, provider_discovery
+from agent_bom.ai_components.ai_policy import egress_refusal
 from agent_bom.config import OLLAMA_BASE_URL
 from agent_bom.core.settings import env_is_set, env_opt
 from agent_bom.security import sanitize_error
@@ -31,6 +32,7 @@ from agent_bom.ai_components.call_state import (
     _prepare_prompt,
     _request_timeout,
     _response_text,
+    ai_capacity_slot,
     logger,
     retry_async,
 )
@@ -117,6 +119,8 @@ def _cache_key(
     *,
     task: EnrichmentTask | None = None,
     provider: str | None = None,
+    system: str | None = None,
+    response_schema: dict | None = None,
 ) -> str:
     """Hash every execution posture field that can change model output."""
     prepared_prompt = _prepare_prompt(prompt)
@@ -134,9 +138,18 @@ def _cache_key(
         "redaction": bool(getattr(config, "AI_REDACT_PROMPTS", True)),
         "prompt_version": AI_PROMPT_VERSION,
         "prompt": prepared_prompt,
+        "system": system or "",
+        "response_schema": response_schema or {},
     }
     encoded = json.dumps(posture, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _chat_messages(outbound: str, system: str | None) -> list[dict[str, str]]:
+    messages = [{"role": "user", "content": outbound}]
+    if system:
+        messages.insert(0, {"role": "system", "content": system})
+    return messages
 
 
 async def _call_ollama_direct(
@@ -146,51 +159,63 @@ async def _call_ollama_direct(
     *,
     task: EnrichmentTask | None = None,
     budget: AICallBudget | None = None,
+    system: str | None = None,
+    response_schema: dict | None = None,
+    num_ctx: int | None = None,
 ) -> Optional[str]:
     """Call Ollama directly via HTTP API (no litellm dependency needed).
 
     The *model* parameter is the bare model name (e.g. ``llama3.2``).
     """
     full_model = f"ollama/{model}"
-    key = _cache_key(prompt, full_model, task=task, provider="ollama")
+    key = _cache_key(prompt, full_model, task=task, provider="ollama", system=system, response_schema=response_schema)
     cached = _ai_cache_get(key)
     if cached is not None:
         if budget is not None:
             budget.record_cache_hit()
+        call_audit.note_outcome("cache_hit")
         return cached
 
     outbound = _prepare_prompt(prompt)
     if budget is not None and not budget.try_provider_attempt(task):
+        call_audit.note_outcome("over_budget")
         return None
+    options: dict[str, object] = {"num_predict": max_tokens, "temperature": _effective_temperature()}
+    if num_ctx:
+        # Ollama silently drops the head of a prompt that overruns the context window.
+        options["num_ctx"] = num_ctx
+    body: dict[str, object] = {"model": model, "messages": _chat_messages(outbound, system), "stream": False, "options": options}
+    if response_schema:
+        body["format"] = response_schema
     try:
         async with httpx.AsyncClient(timeout=_request_timeout()) as client:
-            resp = await client.post(
-                f"{OLLAMA_BASE_URL}/api/chat",
-                json={
-                    "model": model,
-                    "messages": [{"role": "user", "content": outbound}],
-                    "stream": False,
-                    "options": {
-                        "num_predict": max_tokens,
-                        "temperature": _effective_temperature(),
-                    },
-                },
-            )
+            resp = await client.post(f"{OLLAMA_BASE_URL}/api/chat", json=body)
             if resp.status_code == 200:
                 data = resp.json()
                 message = data.get("message", {})
                 content = message.get("content") if isinstance(message, dict) else None
                 text = _response_text(content)
+                call_audit.note_usage(
+                    prompt_tokens=data.get("prompt_eval_count", 0),
+                    completion_tokens=data.get("eval_count", 0),
+                    digest=await call_audit.ollama_model_digest(client, OLLAMA_BASE_URL, model),
+                )
                 if text:
                     _ai_cache_put(key, text)
+                    call_audit.note_outcome("ok")
                     return text
+                call_audit.note_outcome("empty")
+                return None
             logger.warning("Ollama returned status %d", resp.status_code)
+            call_audit.note_outcome("failed")
             return None
     except (httpx.ConnectError, httpx.TimeoutException) as exc:
         logger.warning("Ollama connection failed: %s", sanitize_error(exc, generic=True))
+        call_audit.note_outcome("failed")
         return None
-    except Exception as exc:
+    except (httpx.HTTPError, ValueError, TypeError, KeyError, AttributeError) as exc:
         logger.warning("Ollama call failed: %s", sanitize_error(exc, generic=True))
+        call_audit.note_outcome("failed")
         return None
 
 
@@ -201,13 +226,16 @@ async def _call_llm_via_litellm(
     *,
     task: EnrichmentTask | None = None,
     budget: AICallBudget | None = None,
+    system: str | None = None,
+    response_schema: dict | None = None,
 ) -> Optional[str]:
     """Call LLM via litellm with caching and error handling."""
-    key = _cache_key(prompt, model, task=task, provider="litellm")
+    key = _cache_key(prompt, model, task=task, provider="litellm", system=system, response_schema=response_schema)
     cached = _ai_cache_get(key)
     if cached is not None:
         if budget is not None:
             budget.record_cache_hit()
+        call_audit.note_outcome("cache_hit")
         return cached
 
     outbound = _prepare_prompt(prompt)
@@ -217,6 +245,7 @@ async def _call_llm_via_litellm(
         nonlocal attempt_index
         is_retry = attempt_index > 0
         if budget is not None and not budget.try_provider_attempt(task, retry=is_retry):
+            call_audit.note_outcome("over_budget")
             return None
         attempt_index += 1
         try:
@@ -224,12 +253,19 @@ async def _call_llm_via_litellm(
         except ImportError:
             logger.warning("litellm not installed. Install with: pip install 'agent-bom[ai-enrich]'")
             return None
+        extra: dict[str, object] = {"response_format": {"type": "json_object"}} if response_schema else {}
         response = await acompletion(
             model=model,
-            messages=[{"role": "user", "content": outbound}],
+            messages=_chat_messages(outbound, system),
             max_tokens=max_tokens,
             temperature=_effective_temperature(),
             timeout=_request_timeout(),
+            **extra,
+        )
+        usage = getattr(response, "usage", None)
+        call_audit.note_usage(
+            prompt_tokens=getattr(usage, "prompt_tokens", 0),
+            completion_tokens=getattr(usage, "completion_tokens", 0),
         )
         text = _response_text(response.choices[0].message.content)
         return text or None
@@ -237,6 +273,7 @@ async def _call_llm_via_litellm(
     text = await retry_async(_once, retry_on=(Exception,), label=f"litellm:{model}")
     if text:
         _ai_cache_put(key, text)
+        call_audit.note_outcome("ok")
     return text
 
 
@@ -247,6 +284,7 @@ async def _call_huggingface(
     *,
     task: EnrichmentTask | None = None,
     budget: AICallBudget | None = None,
+    system: str | None = None,
 ) -> Optional[str]:
     """Call HuggingFace Inference API (free tier available).
 
@@ -254,11 +292,12 @@ async def _call_huggingface(
     Requires ``HF_TOKEN`` env var for gated models.
     """
     full_model = f"huggingface/{model}"
-    key = _cache_key(prompt, full_model, task=task, provider="huggingface")
+    key = _cache_key(prompt, full_model, task=task, provider="huggingface", system=system)
     cached = _ai_cache_get(key)
     if cached is not None:
         if budget is not None:
             budget.record_cache_hit()
+        call_audit.note_outcome("cache_hit")
         return cached
 
     outbound = _prepare_prompt(prompt)
@@ -268,6 +307,7 @@ async def _call_huggingface(
         nonlocal attempt_index
         is_retry = attempt_index > 0
         if budget is not None and not budget.try_provider_attempt(task, retry=is_retry):
+            call_audit.note_outcome("over_budget")
             return None
         attempt_index += 1
         try:
@@ -279,7 +319,7 @@ async def _call_huggingface(
         # Run sync client in executor to avoid blocking event loop
         response = await asyncio.to_thread(
             client.chat_completion,
-            messages=[{"role": "user", "content": outbound}],
+            messages=_chat_messages(outbound, system),
             max_tokens=max_tokens,
             temperature=_effective_temperature(),
         )
@@ -288,6 +328,7 @@ async def _call_huggingface(
     text = await retry_async(_once, retry_on=(Exception,), label=f"huggingface:{model}")
     if text:
         _ai_cache_put(key, text)
+        call_audit.note_outcome("ok")
     return text
 
 
@@ -298,21 +339,53 @@ async def _call_llm(
     *,
     task: EnrichmentTask | None = None,
     budget: AICallBudget | None = None,
+    system: str | None = None,
+    response_schema: dict | None = None,
+    num_ctx: int | None = None,
 ) -> Optional[str]:
     """Call LLM via the best available provider.
 
     Provider prefixes are strict data-boundary decisions. In particular, an
     explicit ``ollama/*`` model never falls back to a remote provider.
     """
-    if model.startswith("ollama/"):
-        bare_model = model[len("ollama/") :]
-        return await _call_ollama_direct(prompt, bare_model, max_tokens, task=task, budget=budget)
-
-    if model.startswith("huggingface/"):
-        hf_model = model[len("huggingface/") :]
-        return await _call_huggingface(prompt, model=hf_model, max_tokens=max_tokens, task=task, budget=budget)
-
-    return await _call_llm_via_litellm(prompt, model, max_tokens, task=task, budget=budget)
+    outbound_sha256 = call_audit.sha256_text(f"{system or ''}\n{_prepare_prompt(prompt)}")
+    provider = _provider_name_for_model(model)
+    with call_audit.observe_ai_call(
+        task=task.value if task is not None else "unspecified", provider=provider, model=model, prompt_sha256=outbound_sha256
+    ) as record:
+        if refusal := egress_refusal(model):
+            logger.warning("AI call refused: %s", refusal)
+            call_audit.note_outcome("blocked")
+            return None
+        slot = ai_capacity_slot()
+        if not await asyncio.to_thread(slot.acquire):
+            call_audit.note_outcome("over_capacity")
+            return None
+        try:
+            if provider == "ollama":
+                text = await _call_ollama_direct(
+                    prompt,
+                    model[len("ollama/") :],
+                    max_tokens,
+                    task=task,
+                    budget=budget,
+                    system=system,
+                    response_schema=response_schema,
+                    num_ctx=num_ctx,
+                )
+            elif provider == "huggingface":
+                text = await _call_huggingface(
+                    prompt, model=model[len("huggingface/") :], max_tokens=max_tokens, task=task, budget=budget, system=system
+                )
+            else:
+                text = await _call_llm_via_litellm(
+                    prompt, model, max_tokens, task=task, budget=budget, system=system, response_schema=response_schema
+                )
+        finally:
+            slot.release()
+        if text:
+            record.response_sha256 = call_audit.sha256_text(text)
+        return text
 
 
 def _parse_json_response(response: str) -> dict | None:
@@ -424,10 +497,20 @@ async def _call_llm_structured(
     2. Fallback: unstructured call + ``schema.model_validate_json()``
     """
     if model.startswith("ollama/"):
-        bare_model = model[len("ollama/") :]
-        result = await _call_ollama_structured(prompt, bare_model, schema_cls, max_tokens)
-        if result is not None:
-            return result
+        with call_audit.observe_ai_call(
+            task="unspecified",
+            provider="ollama",
+            model=model,
+            prompt_sha256=call_audit.sha256_text(f"\n{_prepare_prompt(prompt)}"),
+        ):
+            if refusal := egress_refusal(model):
+                logger.warning("AI call refused: %s", refusal)
+                call_audit.note_outcome("blocked")
+                return None
+            result = await _call_ollama_structured(prompt, model[len("ollama/") :], schema_cls, max_tokens)
+            if result is not None:
+                call_audit.note_outcome("ok")
+                return result
 
     # Fallback: unstructured call + parse
     raw = await _call_llm(prompt, model, max_tokens)

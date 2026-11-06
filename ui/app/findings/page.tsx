@@ -6,6 +6,7 @@ import { DOMAIN_FILTERS,FindingsAdvancedFilters,WINDOW_OPTIONS,type Reachability
 import { ApiOfflineState } from "@/components/api-offline-state";
 import { FindingDrawer } from "@/components/finding-drawer";
 import { FindingLaneTable,type LaneFinding } from "@/components/finding-lane-table";
+import { AIAdviceStatusLine } from "@/components/ai-advice-status";
 import { FindingLaneTabs } from "@/components/finding-lane-tabs";
 import { FindingsQueueTable } from "@/components/findings-queue";
 import { ComponentFindings } from "@/components/inventory/component-findings";
@@ -747,6 +748,7 @@ function FindingsPage() {
         }
       />
 
+      <AIAdviceStatusLine />
       <FindingLaneTabs lane={lane} counts={detailLoading ? undefined : findingFacets?.lane} approximate={laneCountsApproximate} onChange={(next) => { setSelectedId(null); setLane(next); setIssueTypeFilter("all"); setPage(1); setPageCursors([""]); setSortKey(next === "all" ? "effective_reach" : "severity"); }} />
 
       {triageError && (

@@ -142,6 +142,7 @@ export function collectUnifiedFindings(findings: UnifiedFinding[]): LaneFinding[
       lifecycle_status: finding.status ?? undefined,
       observation_status: finding.observation_status,
       reconfirmation: finding.reconfirmation,
+      ai_assessment: (finding as { ai_assessment?: EnrichedVuln["ai_assessment"] }).ai_assessment ?? null,
       unreconfirmed_occurrence_count: finding.unreconfirmed_occurrence_count,
       first_seen: finding.first_seen ?? undefined,
       last_seen: finding.last_seen ?? undefined,

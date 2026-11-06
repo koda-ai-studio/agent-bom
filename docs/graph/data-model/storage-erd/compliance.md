@@ -5,12 +5,21 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-10 tables.
+12 tables.
 
 Tables from other domains drawn for their relations: `gateway_policies`, `scan_jobs`, `teams`.
 
 ```mermaid
 erDiagram
+  ai_finding_assessments {
+    text tenant_id PK
+    text scan_id PK
+    text finding_id PK
+  }
+  ai_triage_runs {
+    text tenant_id PK
+    text scan_id PK
+  }
   attestation_replay {
     text tenant_id PK
     text evidence_id PK
@@ -67,6 +76,7 @@ erDiagram
   teams {
     text team_id PK
   }
+  ai_triage_runs ||..o{ ai_finding_assessments : "logical scan_id"
   gateway_policies ||--o{ policy_results : "policy_id"
   scan_jobs ||--o{ cis_benchmark_checks : "scan_id"
   scan_jobs ||--o{ policy_results : "scan_run_id"
@@ -78,6 +88,7 @@ erDiagram
 
 | Parent | Child | Column | Kind |
 |---|---|---|---|
+| `ai_triage_runs` | `ai_finding_assessments` | `scan_id` | logical |
 | `gateway_policies` | `policy_results` | `policy_id` | declared FK |
 | `scan_jobs` | `cis_benchmark_checks` | `scan_id → scan_jobs.job_id` | declared FK |
 | `scan_jobs` | `policy_results` | `scan_run_id → scan_jobs.job_id` | declared FK |
@@ -96,6 +107,8 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 | Table | Backends | Columns | Partitioned | Lifetime |
 |---|---|---|---|---|
+| `ai_finding_assessments` | Postgres | 5 |  | persistent |
+| `ai_triage_runs` | Postgres | 4 |  | persistent |
 | `attestation_replay` | SQLite | 4 |  | persistent |
 | `audit_chain_checkpoint` | Postgres, SQLite | 4 |  | persistent |
 | `audit_events` | ClickHouse | 10 | yes | persistent |

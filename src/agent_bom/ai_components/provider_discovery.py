@@ -228,6 +228,13 @@ def _litellm_readiness(model: str) -> tuple[bool, str]:
         return False, "LITELLM_API_KEY is required for the configured remote LiteLLM proxy"
 
     prefix = model.partition("/")[0].lower()
+    if prefix == "ollama_chat":
+        base = env_str("OLLAMA_API_BASE") or "http://localhost:11434"
+        if _url_is_loopback(base):
+            return True, "keyless loopback Ollama endpoint configured"
+        if env_is_set("LITELLM_API_KEY") or env_is_set("OLLAMA_API_KEY"):
+            return True, "authenticated remote Ollama endpoint configured"
+        return False, "selected ollama_chat model requires a loopback OLLAMA_API_BASE or an API key"
     if prefix in {"bedrock", "vertex_ai"}:
         return True, f"{prefix} ambient workload identity chain supported"
     if prefix == "openai":
@@ -301,6 +308,18 @@ def _resolve_ai_provider(model: str = DEFAULT_MODEL) -> AIProviderResolution:
     resolved_model = _resolve_model(model) if model == DEFAULT_MODEL else model
     preferred_name = _provider_name_for_model(resolved_model)
     preferred_status = _provider_status(preferred_name, resolved_model)
+    from agent_bom.ai_components.ai_policy import egress_refusal
+
+    refusal = egress_refusal(resolved_model)
+    if preferred_status.available and refusal:
+        return AIProviderResolution(
+            requested_model=requested_model,
+            model=resolved_model,
+            provider=preferred_status.descriptor,
+            available=False,
+            status="blocked",
+            reason=refusal,
+        )
     if preferred_status.available:
         return AIProviderResolution(
             requested_model=requested_model,

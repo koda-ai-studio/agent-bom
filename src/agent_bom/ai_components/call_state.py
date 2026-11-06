@@ -17,6 +17,7 @@ from rich.console import Console
 from agent_bom import config
 from agent_bom.ai_components.ai_prompts import redact_secrets as redact_secrets
 from agent_bom.config import AI_CACHE_MAX_ENTRIES as _MAX_AI_CACHE
+from agent_bom.core.settings import env_int
 from agent_bom.security import sanitize_error
 
 __all__ = [
@@ -79,6 +80,7 @@ AI_PROMPT_VERSION = "ai-enrichment.v2"
 
 
 OLLAMA_MODEL_PREFERENCE = [
+    "qwen2.5:3b",  # best held-out triage result; see docs/AI_ENRICHMENT.md
     "llama3.1:8b",
     "llama3.2",
     "llama3.2:3b",
@@ -171,6 +173,38 @@ async def retry_async(
     return None
 
 
+AI_MAX_CONCURRENT_CALLS = env_int("AGENT_BOM_AI_MAX_CONCURRENT_CALLS", 2, minimum=1, on_invalid="default") or 2
+AI_CAPACITY_WAIT_SECONDS = float(env_int("AGENT_BOM_AI_CAPACITY_WAIT_SECONDS", 30, minimum=0, on_invalid="default") or 30)
+AI_RUN_DEADLINE_SECONDS = float(env_int("AGENT_BOM_AI_RUN_DEADLINE_SECONDS", 900, minimum=0, on_invalid="default") or 900)
+AI_NUM_CTX = env_int("AGENT_BOM_AI_NUM_CTX", 8192, minimum=512, on_invalid="default") or 8192
+
+
+class _CapacitySlot:
+    """Bounded provider concurrency across scan workers and explain routes in this process."""
+
+    def __init__(self, semaphore: threading.BoundedSemaphore) -> None:
+        self._semaphore = semaphore
+
+    def acquire(self) -> bool:
+        return self._semaphore.acquire(timeout=AI_CAPACITY_WAIT_SECONDS)
+
+    def release(self) -> None:
+        self._semaphore.release()
+
+
+_capacity_lock = threading.Lock()
+_capacity: tuple[int, threading.BoundedSemaphore] | None = None
+
+
+def ai_capacity_slot() -> _CapacitySlot:
+    global _capacity
+    limit = max(1, AI_MAX_CONCURRENT_CALLS)
+    with _capacity_lock:
+        if _capacity is None or _capacity[0] != limit:
+            _capacity = (limit, threading.BoundedSemaphore(limit))
+        return _CapacitySlot(_capacity[1])
+
+
 class EnrichmentTask(str, Enum):
     """Kinds of enrichment work, used to pick a per-task model + provenance."""
 
@@ -180,6 +214,7 @@ class EnrichmentTask(str, Enum):
     DETECTION = "detection"  # LLM-assisted novel-issue detection (strong)
     TRIAGE = "triage"  # FP reduction / dedup (strong)
     CONFIG_ANALYSIS = "config_analysis"  # MCP config security review
+    GRAPH_EXPLAIN = "graph_explain"  # on-demand explanation of a recorded attack path
 
 
 @dataclass
@@ -234,6 +269,7 @@ _TASK_TIER: dict[EnrichmentTask, str] = {
     EnrichmentTask.DETECTION: "strong",
     EnrichmentTask.TRIAGE: "strong",
     EnrichmentTask.CONFIG_ANALYSIS: "strong",
+    EnrichmentTask.GRAPH_EXPLAIN: "strong",
 }
 
 
