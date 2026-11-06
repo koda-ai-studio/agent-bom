@@ -157,6 +157,21 @@ def _provider_evaluated_controls(ctx: Any, provider: str) -> bool:
     return False
 
 
+def _package_not_on_registry_issues(packages: list[Any]) -> list[ScanIssue]:
+    missing = packages_not_on_registry(packages)
+    if not missing:
+        return []
+    return [
+        ScanIssue(
+            code=PACKAGE_NOT_ON_REGISTRY,
+            stage="inventory",
+            source="autodiscover",
+            message=package_not_on_registry_message(missing),
+            affects_coverage=False,
+        )
+    ]
+
+
 def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
 
     st.scan_issues = scanner_warning_issues(list(st.scan_warnings), accepted=accepted_scan_warnings())
@@ -221,17 +236,7 @@ def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
         )
     if opts.no_scan:
         st.scan_issues.append(vulnerability_scan_skipped_issue())
-    _missing = packages_not_on_registry(st.all_packages)
-    if _missing:
-        st.scan_issues.append(
-            ScanIssue(
-                code=PACKAGE_NOT_ON_REGISTRY,
-                stage="inventory",
-                source="autodiscover",
-                message=package_not_on_registry_message(_missing),
-                affects_coverage=False,
-            )
-        )
+    st.scan_issues.extend(_package_not_on_registry_issues(st.all_packages))
     # Controls evaluated for any failed provider are evidence: the run is partial, not failed.
     _any_evaluated = any(_provider_evaluated_controls(st.ctx, str(_f.get("provider"))) for _f in st.ctx.cloud_provider_failures)
     st.scan_outcome = (

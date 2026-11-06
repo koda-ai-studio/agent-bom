@@ -5,6 +5,17 @@ from typing import Any
 from agent_bom.package_utils import canonical_package_key, synthesize_purl
 
 
+def cyclonedx_malicious_properties(pkg: Any) -> list[dict[str, str]]:
+    """The malicious flag, so a MAL- package is distinguishable from an ordinary library component."""
+    if not pkg.is_malicious:
+        return []
+    properties = [{"name": "agent-bom:is-malicious", "value": "true"}]
+    if pkg.malicious_reason:
+        properties.append({"name": "agent-bom:malicious-reason", "value": pkg.malicious_reason})
+    properties.append({"name": "agent-bom:malicious-basis", "value": str(pkg.malicious_basis)})
+    return properties
+
+
 def _package_node_attributes(pkg: dict[str, Any]) -> dict[str, Any]:
     raw_version_provenance = pkg.get("version_provenance")
     version_provenance: dict[str, Any]

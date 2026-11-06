@@ -23,6 +23,18 @@ def _reported_agent_count(agents_data: list[dict]) -> int:
     return sum(1 for agent in agents_data if agent_record_counts_as_agent(agent))
 
 
+def _is_repository_inventory(agent: dict) -> bool:
+    """A repository's scan inventory is not an agent, so the topology does not draw one."""
+    servers = agent.get("mcp_servers", [])
+    return agent_is_repository_inventory(
+        agent.get("source"), [(srv.get("surface"), srv.get("command")) for srv in servers], agent.get("metadata")
+    )
+
+
+def _agent_vulnerability_count(servers: list[dict]) -> int:
+    return sum(len(pkg.get("vulnerabilities", [])) for srv in servers for pkg in srv.get("packages", []))
+
+
 def build_agent_mesh(agents_data: list[dict], blast_radius: list[dict] | None = None) -> dict:
     """Build ReactFlow nodes/edges for a multi-agent mesh topology.
 
@@ -55,17 +67,10 @@ def build_agent_mesh(agents_data: list[dict], blast_radius: list[dict] | None = 
     for agent in agents_data:
         agent_name = agent.get("name", "unknown")
         servers = agent.get("mcp_servers", [])
-        # A repository's scan inventory is not an agent, so the topology does not draw one.
-        if agent_is_repository_inventory(
-            agent.get("source"), [(srv.get("surface"), srv.get("command")) for srv in servers], agent.get("metadata")
-        ):
+        if _is_repository_inventory(agent):
             continue
 
-        # Count agent-level vulns
-        agent_vuln_count = 0
-        for srv in servers:
-            for pkg in srv.get("packages", []):
-                agent_vuln_count += len(pkg.get("vulnerabilities", []))
+        agent_vuln_count = _agent_vulnerability_count(servers)
 
         # Agent node
         agent_id = f"agent:{agent_name}"

@@ -14,6 +14,10 @@ from bisect import bisect_right
 from collections.abc import Callable
 from pathlib import PurePath
 
+# Languages whose string values must be quoted, so a bare word assigned to a
+# secret-named key is an identifier. Shell, env, YAML, TOML and INI are not here:
+# a bare word there is the value itself.
+QUOTED_STRING_EXTENSIONS = frozenset({".py", ".js", ".ts", ".jsx", ".tsx", ".go", ".rs", ".java", ".rb", ".php", ".tf", ".hcl"})
 _ASSIGNED_NAME_RE = re.compile(r"[^=:\n]{0,64}[=:]\s*(?:await\s+|new\s+)?([A-Za-z_$][\w$.]{0,200})")
 # Letters with at most a short version suffix, per segment. A random token carries
 # digits inside its segments, which is what keeps it out of this shape.

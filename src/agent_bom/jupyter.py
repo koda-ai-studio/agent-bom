@@ -121,6 +121,16 @@ def _parse_pip_packages(line: str) -> list[tuple[str, str]]:
     return results
 
 
+def _credential_env_vars(source: str) -> list[str]:
+    """Credential environment variables a notebook reads, once each in order of first use."""
+    names: list[str] = []
+    for match in _CRED_ENV_RE.finditer(source):
+        env_name = next((group for group in match.groups() if group), "")
+        if env_name not in names:
+            names.append(env_name)
+    return names
+
+
 def scan_jupyter_notebooks(
     directory: str | Path,
 ) -> tuple[list[Agent], list[str]]:
@@ -155,7 +165,6 @@ def scan_jupyter_notebooks(
 
         full_source = "\n".join(code_cells)
         seen_packages: dict[str, str] = {}  # name -> version
-        credential_env_vars: list[str] = []
 
         # 1. Detect AI library imports
         for match in _AI_IMPORT_RE.finditer(full_source):
@@ -174,10 +183,7 @@ def scan_jupyter_notebooks(
                     seen_packages[base_name] = version
 
         # 3. Detect credential env vars
-        for match in _CRED_ENV_RE.finditer(full_source):
-            env_name = next((group for group in match.groups() if group), "")
-            if env_name not in credential_env_vars:
-                credential_env_vars.append(env_name)
+        credential_env_vars = _credential_env_vars(full_source)
 
         # 4. Detect hardcoded API keys (warning only)
         for match in _HARDCODED_KEY_RE.finditer(full_source):

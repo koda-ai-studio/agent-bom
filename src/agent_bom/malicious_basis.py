@@ -69,3 +69,22 @@ def malicious_message(subject: str, reason: str | None) -> str:
 def package_basis_fields(row_reason: str | None, flagged: bool) -> dict[str, str]:
     """The optional ``malicious_basis`` key for a serialized row; absent on an unflagged package."""
     return {"malicious_basis": malicious_basis(row_reason)} if flagged else {}
+
+
+def malicious_row_fields(reason: str | None, flagged: bool) -> dict[str, object]:
+    """The flag, reason and basis keys of a serialized finding row."""
+    return {"is_malicious": flagged, "malicious_reason": reason, **package_basis_fields(reason, flagged)}
+
+
+def malicious_evidence_fields(reason: str | None) -> dict[str, str]:
+    """Reason and basis for a finding's evidence; a blank reason is left out but still has a basis."""
+    reason_fields = {"malicious_reason": reason.strip()} if isinstance(reason, str) and reason.strip() else {}
+    return {**reason_fields, "malicious_basis": malicious_basis(reason)}
+
+
+def malicious_remediation(package_name: str, reason: str | None) -> str:
+    """Known malware is removed outright; a suspected match is confirmed first."""
+    detail = f" ({reason})" if isinstance(reason, str) and reason.strip() else ""
+    if is_suspected(reason):
+        return f"Confirm {package_name} is the package you intended before installing it; remove it if not{detail}."
+    return f"Remove {package_name} from all environments immediately{detail}."

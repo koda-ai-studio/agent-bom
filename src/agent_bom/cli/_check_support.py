@@ -12,6 +12,7 @@ import click
 
 from agent_bom import __version__
 from agent_bom.core.severity import severity_at_or_above
+from agent_bom.malicious_basis import BLOCKING_VERDICTS, malicious_basis
 from agent_bom.output.sarif_common import virtual_artifact_uri
 
 
@@ -382,7 +383,6 @@ def _check_result_payload(
     possibly_affected: list[dict] | None = None,
 ) -> dict:
     """Build machine-readable check output."""
-    from agent_bom.malicious_basis import BLOCKING_VERDICTS, malicious_basis
     from agent_bom.scanners.package_check_result import PackageCheckResult, serialize_vulnerability
 
     flagged = verdict in BLOCKING_VERDICTS

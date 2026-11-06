@@ -470,6 +470,15 @@ def attach_github_action_packages(agents: list[Agent], repo_path: str | Path, pa
         known_package_ids.add(package.stable_id)
 
 
+def _ai_packages_from_installs(pip_packages: list[str], npm_packages: list[str]) -> list[Package]:
+    """AI packages among the workflow's pip and npm installs."""
+    packages = [Package(name=name, version="unknown", ecosystem="pypi") for name in pip_packages if name.lower() in _AI_PACKAGES_PIP]
+    for name in npm_packages:
+        if name.lower() in _AI_PACKAGES_NPM or name.startswith("@anthropic") or name.startswith("@langchain"):
+            packages.append(Package(name=name, version="unknown", ecosystem="npm"))
+    return packages
+
+
 def scan_github_actions(repo_path: str) -> tuple[list[Agent], list[str]]:
     """Scan GitHub Actions workflows in a repository for AI usage and credential exposure.
 
@@ -527,26 +536,7 @@ def scan_github_actions(repo_path: str) -> tuple[list[Agent], list[str]]:
                 if pattern.search(run_text) and name not in ai_sdk_uses:
                     ai_sdk_uses.append(name)
 
-        # ── Build AI packages from pip/npm installs ───────────────────────────
-        ai_packages: list[Package] = []
-        for pkg_name in info["pip_packages"]:
-            if pkg_name.lower() in _AI_PACKAGES_PIP:
-                ai_packages.append(
-                    Package(
-                        name=pkg_name,
-                        version="unknown",
-                        ecosystem="pypi",
-                    )
-                )
-        for pkg_name in info["npm_packages"]:
-            if pkg_name.lower() in _AI_PACKAGES_NPM or pkg_name.startswith("@anthropic") or pkg_name.startswith("@langchain"):
-                ai_packages.append(
-                    Package(
-                        name=pkg_name,
-                        version="unknown",
-                        ecosystem="npm",
-                    )
-                )
+        ai_packages = _ai_packages_from_installs(info["pip_packages"], info["npm_packages"])
 
         # ── Only create an agent if something AI-related was found ─────────────
         if not (ai_env_keys or ai_action_refs or ai_sdk_uses or ai_packages):

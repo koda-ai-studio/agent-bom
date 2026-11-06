@@ -39,6 +39,11 @@ def _ci_job_id(workflow_stem: str) -> str:
     return f"ci_job:{workflow_stem}"
 
 
+def _workflow_file_relationship(entity_type: EntityType) -> RelationshipType:
+    """A workflow held as a source file defines its job; a config file configures one."""
+    return RelationshipType.DEFINES if entity_type == EntityType.SOURCE_FILE else RelationshipType.CONFIGURES
+
+
 def apply_ci_graph_overlay(
     graph: UnifiedGraph,
     report_json: dict[str, Any],
@@ -98,10 +103,7 @@ def apply_ci_graph_overlay(
                 UnifiedEdge(
                     source=config_by_path[config_path],
                     target=job_id,
-                    # A workflow held as a source file defines its job; a config file configures one.
-                    relationship=RelationshipType.DEFINES
-                    if graph.nodes[config_by_path[config_path]].entity_type == EntityType.SOURCE_FILE
-                    else RelationshipType.CONFIGURES,
+                    relationship=_workflow_file_relationship(graph.nodes[config_by_path[config_path]].entity_type),
                     evidence={"source": _OVERLAY_SOURCE, "config_path": config_path},
                 )
             )

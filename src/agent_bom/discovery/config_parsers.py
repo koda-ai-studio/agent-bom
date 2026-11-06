@@ -22,6 +22,7 @@ from rich.markup import escape
 from agent_bom.discovery.continue_config import continue_legacy_servers
 from agent_bom.discovery.coverage import report_blocked_server
 from agent_bom.discovery.mcp_metadata import connection_metadata
+from agent_bom.discovery.server_definition import args_field, blocked_mcp_server, string_field
 from agent_bom.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, ServerSurface, TransportType
 from agent_bom.security import (
@@ -37,18 +38,6 @@ logger = logging.getLogger(__name__)
 
 def _display_label(value: object, max_len: int = 500) -> str:
     return escape(sanitize_log_label(value, max_len=max_len))
-
-
-def _string_field(value: object) -> str:
-    return value if isinstance(value, str) else ""
-
-
-def _args_field(value: object) -> list[str]:
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, list):
-        return [item for item in value if isinstance(item, str)]
-    return []
 
 
 def _auto_approved_tool_names(value: object) -> list[str]:
@@ -146,19 +135,7 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
         except SecurityError as e:
             report_blocked_server(name, e)
             # Include blocked server in report for visibility — no silent skips.
-            # The recipe stays readable: a blocked launcher is what the audit most needs to judge.
-            blocked_env = server_def.get("env", {})
-            blocked_server = MCPServer(
-                name=name,
-                command=_string_field(server_def.get("command", "")),
-                args=_args_field(server_def.get("args", [])),
-                env=sanitize_env_vars(blocked_env) if isinstance(blocked_env, dict) else {},
-                config_path=config_path,
-                security_blocked=True,
-                security_warnings=[str(e)],
-                plaintext_env_secrets=plaintext_env_secrets(blocked_env),
-            )
-            servers.append(blocked_server)
+            servers.append(blocked_mcp_server(name, server_def, config_path, e))
             continue
 
         # Determine transport type
@@ -168,19 +145,19 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
         vscode_type = server_def.get("type", "")
         if vscode_type == "sse":
             transport = TransportType.SSE
-            url = _string_field(server_def.get("uri") or server_def.get("url"))
+            url = string_field(server_def.get("uri") or server_def.get("url"))
         elif vscode_type == "http":
             transport = TransportType.STREAMABLE_HTTP
-            url = _string_field(server_def.get("uri") or server_def.get("url"))
+            url = string_field(server_def.get("uri") or server_def.get("url"))
         elif "url" in server_def or "uri" in server_def:
-            url = _string_field(server_def.get("url") or server_def.get("uri"))
+            url = string_field(server_def.get("url") or server_def.get("uri"))
             if url and "sse" in url.lower():
                 transport = TransportType.SSE
             else:
                 transport = TransportType.STREAMABLE_HTTP
 
-        command = _string_field(server_def.get("command", ""))
-        args = _args_field(server_def.get("args", []))
+        command = string_field(server_def.get("command", ""))
+        args = args_field(server_def.get("args", []))
         raw_env = server_def.get("env", {})
 
         # Retain environment names while redacting credential values.
@@ -296,9 +273,9 @@ def parse_codex_config(config_path: str) -> list[MCPServer]:
 
         # Determine transport
         transport = TransportType.STDIO
-        url = _string_field(server_def.get("url"))
-        command = _string_field(server_def.get("command", ""))
-        args = _args_field(server_def.get("args", []))
+        url = string_field(server_def.get("url"))
+        command = string_field(server_def.get("command", ""))
+        args = args_field(server_def.get("args", []))
 
         if url:
             transport = TransportType.SSE if "sse" in url.lower() else TransportType.STREAMABLE_HTTP
@@ -307,7 +284,7 @@ def parse_codex_config(config_path: str) -> list[MCPServer]:
         env = sanitize_env_vars(raw_env) if isinstance(raw_env, dict) else {}
 
         # Bearer token env var → track as credential
-        bearer_var = _string_field(server_def.get("bearer_token_env_var"))
+        bearer_var = string_field(server_def.get("bearer_token_env_var"))
         if bearer_var:
             env[bearer_var] = "***REDACTED***"
 
