@@ -64,6 +64,7 @@ def test_protection_reads_a_persisted_finding_row() -> None:
     "dismissal",
     [
         {"verdict": "likely_false_positive", "confidence": "high"},
+        {"verdict": "problem_absent", "confidence": "high"},
         {"verdict": "confirmed", "false_positive_likelihood": "high"},
         {"classification": "false_positive"},
         {"classification": "benign", "false_positive_likelihood": "medium"},

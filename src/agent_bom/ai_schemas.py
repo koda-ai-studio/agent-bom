@@ -9,9 +9,9 @@ Used to:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 AIConfidence = Literal["high", "medium", "low"]
 AIVerdict = Literal["confirmed", "likely_false_positive", "needs_review"]
@@ -64,13 +64,21 @@ class AIFindingAssessment(BaseModel):
         return self
 
 
+_MODEL_VERDICTS = {"problem_exists": "confirmed", "problem_absent": "likely_false_positive", "unclear": "needs_review"}
+
+
+def _model_verdict(value: object) -> object:
+    """Prompts use words small models keep straight; "confirmed" read to them as confirming their own reasoning."""
+    return _MODEL_VERDICTS.get(value, value) if isinstance(value, str) else value
+
+
 class AIFindingAssessmentCandidate(BaseModel):
     """Bounded untrusted model output before known-ID filtering."""
 
     model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
 
     finding_id: str = Field(min_length=1, max_length=128, validation_alias=AliasChoices("finding_id", "ref", "id"))
-    verdict: AIVerdict | None = None
+    verdict: Annotated[AIVerdict | None, BeforeValidator(_model_verdict)] = None
     classification: str = Field(default="", max_length=64)
     confidence: AIConfidence = "low"
     false_positive_likelihood: AIConfidence | None = None

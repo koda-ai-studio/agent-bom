@@ -134,14 +134,12 @@ def test_api_pipeline_ai_enrichment_inherits_env_and_serializes_typed_provenance
 
     async def fake_provider(prompt, model, max_tokens=500, **kwargs):
         provider_prompts.append(prompt)
-        if "Classify and triage" in prompt:
-            findings = json.loads(prompt.split("\nFindings:\n", maxsplit=1)[1])
-            finding_id = findings[0]["finding_id"]
+        if prompt.startswith("Triage these"):
             return json.dumps(
                 {
                     "assessments": [
                         {
-                            "finding_id": finding_id,
+                            "ref": "F1",
                             "classification": "needs_review",
                             "confidence": "high",
                             "false_positive_likelihood": "low",
@@ -156,6 +154,7 @@ def test_api_pipeline_ai_enrichment_inherits_env_and_serializes_typed_provenance
         return "Fake provider narrative."
 
     monkeypatch.setattr(config, "AI_DETERMINISTIC", True)
+    monkeypatch.setenv("AGENT_BOM_AI_CONTROL_PLANE_ENABLED", "1")
     monkeypatch.setattr("agent_bom.api.pipeline._get_store", lambda: store)
     monkeypatch.setattr("agent_bom.api.pipeline._sync_scan_agents_to_fleet", lambda _agents, tenant_id="default": None)
     monkeypatch.setattr("agent_bom.discovery.discover_all", lambda *args, **kwargs: [agent])
@@ -169,7 +168,7 @@ def test_api_pipeline_ai_enrichment_inherits_env_and_serializes_typed_provenance
     assert job.status == JobStatus.DONE
     assert job.result is not None
     assert job.result["ai_enrichment_metadata"]["deterministic"] is True
-    assert any("Classify and triage" in prompt for prompt in provider_prompts), job.result
+    assert any(prompt.startswith("Triage these") for prompt in provider_prompts), job.result
     assessment = job.result["ai_finding_assessments"][0]
     assert assessment["schema_version"] == "ai.finding-assessment.v1"
     assert assessment["provenance"]["provider"] == "ollama"

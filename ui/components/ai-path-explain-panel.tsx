@@ -65,7 +65,7 @@ export function AIPathExplainPanel({ nodeIds, scanId }: { nodeIds: string[]; sca
               {state.result.evidence_limits.map((limit) => <li key={limit} className="break-words">{limit}</li>)}
             </ul>
           </div>
-          {removed > 0 ? <p className="text-xs text-ink-tertiary">{removed} claims were removed because they cited nothing real or asserted reach the graph does not record.</p> : null}
+          {removed > 0 ? <p className="text-xs text-ink-tertiary">{removed === 1 ? "1 claim was" : `${removed} claims were`} removed because they cited nothing real or asserted reach the graph does not record.</p> : null}
           <p className="break-words text-xs text-ink-tertiary">{[state.result.provenance.model, state.result.provenance.generated_at.slice(0, 10), state.result.provenance.prompt_version].join(" · ")}. A model's reading of recorded evidence. It adds nothing to the graph.</p>
         </section>
       ) : null}

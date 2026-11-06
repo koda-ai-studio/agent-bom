@@ -18,7 +18,7 @@ from agent_bom.core.tenancy import require_explicit_tenant_id
 from agent_bom.storage.base import BackendKind
 from agent_bom.storage.factory import resolve_backend
 
-MAX_FINDING_LOOKUP = 1_000
+MAX_FINDING_LOOKUP = 3_000  # a 1,000-row page carries up to three identifiers per row
 
 
 class AIAssessmentStore(Protocol):

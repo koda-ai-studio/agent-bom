@@ -79,6 +79,7 @@ AI_PROMPT_VERSION = "ai-enrichment.v2"
 
 
 OLLAMA_MODEL_PREFERENCE = [
+    "qwen2.5:3b",  # best held-out triage result; see docs/AI_ENRICHMENT.md
     "llama3.1:8b",
     "llama3.2",
     "llama3.2:3b",

@@ -10,11 +10,18 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- AI triage is measured: a labelled dataset and `scripts/ai_triage_eval.py` score false-positive precision and recall, severe dismissals, calibration, invalid responses, injection resistance, latency and tokens per model, and CI replays recorded responses so a regression fails. Results are in `docs/AI_ENRICHMENT.md`.
+- AI advice now appears with its finding: `ai_assessment` on `GET /v1/findings`, the findings page and drawer, CLI output, CSV, SARIF and HTML, stored per scan and tenant on every store. It is labelled as advice and never changes scanner severity. `GET /v1/ai/status` says when it is off or failed.
+- "Explain this path" (`POST /v1/graph/explain`): on demand, each claim cites real node or edge IDs, uncited or unrecorded claims are removed, and evidence limits such as non-traversable hops are stated.
+- Each AI call is recorded in the audit chain with hashes rather than prompt text, plus `agent_bom_ai_calls_total` and latency metrics.
 - Finding dates now outlast scan retention: `first_seen`, `last_seen`, resolved and reopened dates live in their own per-finding table, written in the same transaction as the scan. A resolved finding stays listed after its scans expire, and late, repeated or concurrent scans cannot move a finding's state incorrectly. The cleanup tick seeds existing dates from retained scans after upgrade, outside any read. Reads no longer rebuild findings for every retained scan.
 - Every resolved finding states why: `resolution_reason` is `no_longer_detected` or `asset_deleted`. `asset_deleted` needs a complete AWS inventory covering the asset's account, region and service, with no warnings or missing permissions, from the same source and scope. Other sources never produce it; see `docs/FINDING_LIFECYCLE.md`.
 - `stale` marks an open finding not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). It stays open and counted, can be filtered with `status=stale` on the API, `--status stale` on the CLI and the Status filter on the Findings page, and never resolves anything.
 
 ### Changed
+- **Behaviour change:** AI never dismisses or downgrades a KEV, malicious-package or reachable-critical finding, and a finding whose text addresses the reader goes to a person.
+- **Behaviour change:** providers off the loopback interface need `AGENT_BOM_AI_ALLOW_REMOTE=1`, and control-plane AI needs `AGENT_BOM_AI_CONTROL_PLANE_ENABLED=1`. A scan request's `ai_enrich` no longer turns it on by itself.
+- AI triage picks the riskiest findings rather than the first ones, sends the fields that decide a false positive, and reports what it skipped and why.
 - The MCP `scan` tool now reports `readOnlyHint: false`, because it keeps a redacted result locally and can refresh the advisory database. Its description says so. Tools that open no socket now report `openWorldHint: false`.
 - The Claude plugin's MCP servers start with `GITHUB_TOKEN`, `GH_TOKEN` and `NVD_API_KEY` blanked, so a token in the environment is not sent. Lookups use the anonymous rate limits there.
 - The `inventory` skill no longer has the `scan` tool, so it cannot reach the network.

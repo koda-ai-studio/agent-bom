@@ -88,6 +88,22 @@ def test_reachability_claim_over_a_non_traversable_edge_is_rejected(context) -> 
     assert rejected == {"unsupported_reachability": 2}
 
 
+def test_a_claim_about_a_node_cannot_borrow_an_edge_from_elsewhere(context) -> None:
+    far_edge = context.ref_for_edge("pkg:p", "vuln:v")
+    near_edge = context.ref_for_edge("agent:a", "server:s")
+    response = json.dumps(
+        {
+            "claims": [
+                {"text": "The agent is vulnerable to CVE-1.", "citations": [context.ref_for("agent:a"), far_edge]},
+                {"text": "The agent uses the server.", "citations": [context.ref_for("agent:a"), near_edge]},
+            ]
+        }
+    )
+    claims, rejected = validate_claims(response, context)
+    assert [claim.text for claim in claims] == ["The agent uses the server."]
+    assert rejected == {"mismatched_citation": 1}
+
+
 def test_garbage_response_yields_no_claims(context) -> None:
     assert validate_claims("not json at all", context) == ([], {"unparseable": 1})
 

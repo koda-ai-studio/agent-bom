@@ -136,3 +136,37 @@ def test_scope_is_isolated_between_contexts() -> None:
     with call_audit.ai_call_scope(tenant_id="a", actor="x"):
         assert call_audit.current_scope() == ("a", "x")
     assert call_audit.current_scope() == ("", "")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("task", list(EnrichmentTask))
+async def test_planted_secrets_stop_at_the_provider_boundary_on_every_task(records, task, caplog) -> None:
+    planted = ["ghp_" + "A" * 36, "AKIA" + "B" * 16, "postgres://u:p4ssw0rdvalue@db.internal/x", "api_key=" + "Zx9" * 8]
+    client = _client(OK)
+    with patch("httpx.AsyncClient", return_value=client):
+        await providers._call_llm(f"{task.value} {' '.join(planted)}", "ollama/m:latest", task=task, system="rules")
+    sent = json.dumps(client.post.call_args.kwargs["json"])
+    audit_text = json.dumps(records[-1].to_details())
+    for secret in planted:
+        assert secret not in sent
+        assert secret not in audit_text
+        assert secret not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_structured_calls_are_gated_and_audited_like_every_other_call(records, monkeypatch) -> None:
+    from pydantic import BaseModel
+
+    class Answer(BaseModel):
+        ok: bool
+
+    client = _client(OK)
+    with patch("httpx.AsyncClient", return_value=client):
+        assert (await providers._call_llm_structured("structured prompt", "ollama/m:latest", Answer)) == Answer(ok=True)
+    assert records[-1].outcome == "ok" and records[-1].provider == "ollama"
+    monkeypatch.setattr(providers.provider_discovery, "OLLAMA_BASE_URL", "http://ollama.internal:11434")
+    remote = _client(OK)
+    with patch("httpx.AsyncClient", return_value=remote):
+        assert await providers._call_llm_structured("other prompt", "ollama/m:latest", Answer) is None
+    remote.post.assert_not_called()
+    assert records[-1].outcome == "blocked"

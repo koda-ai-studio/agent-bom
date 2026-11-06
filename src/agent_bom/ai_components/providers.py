@@ -497,10 +497,20 @@ async def _call_llm_structured(
     2. Fallback: unstructured call + ``schema.model_validate_json()``
     """
     if model.startswith("ollama/"):
-        bare_model = model[len("ollama/") :]
-        result = await _call_ollama_structured(prompt, bare_model, schema_cls, max_tokens)
-        if result is not None:
-            return result
+        with call_audit.observe_ai_call(
+            task="unspecified",
+            provider="ollama",
+            model=model,
+            prompt_sha256=call_audit.sha256_text(f"\n{_prepare_prompt(prompt)}"),
+        ):
+            if refusal := egress_refusal(model):
+                logger.warning("AI call refused: %s", refusal)
+                call_audit.note_outcome("blocked")
+                return None
+            result = await _call_ollama_structured(prompt, model[len("ollama/") :], schema_cls, max_tokens)
+            if result is not None:
+                call_audit.note_outcome("ok")
+                return result
 
     # Fallback: unstructured call + parse
     raw = await _call_llm(prompt, model, max_tokens)

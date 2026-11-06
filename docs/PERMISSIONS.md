@@ -206,7 +206,7 @@ plane setting.
 | Vanta (optional) | `https://api.vanta.com/v1/` | Compliance evidence | API token (`--vanta-token`) |
 | Drata (optional) | `https://public-api.drata.com/` | Compliance evidence | API token (`--drata-token`) |
 | SaaS connectors | Connector-specific API URL | Connector evidence requested by the operator | Connector-specific token |
-| AI enrichment | Operator-provided LLM endpoint | Redacted finding context for enrichment | Operator-provided key |
+| AI enrichment | Operator-provided LLM endpoint. Off by default; anything off the loopback interface also needs `AGENT_BOM_AI_ALLOW_REMOTE=1` | Redacted, bounded finding fields listed in `docs/AI_ENRICHMENT.md` | Operator-provided key |
 
 ### Data flow
 
@@ -400,6 +400,19 @@ agent-bom agents --snowflake --snowflake-authenticator oauth
   Local UI-to-API traffic is expected when using the dashboard or browser client.
 
 ---
+
+## AI advice routes
+
+| Route | Minimum role | Scope | Calls a model |
+|---|---|---|---|
+| `GET /v1/findings` (`ai_assessment` on each row) | viewer | existing finding scope | No |
+| `GET /v1/ai/status` | viewer | `ai:read` | No |
+| `POST /v1/graph/explain` | analyst | `ai:invoke` | Yes, once per request, within the tenant's rate and daily budget |
+
+Every query names the tenant, and both advice tables enforce row-level security.
+`AGENT_BOM_AI_CONTROL_PLANE_ENABLED` turns hosted use on,
+`AGENT_BOM_AI_CONTROL_PLANE_TENANTS` narrows it to listed tenants, and
+`AGENT_BOM_AI_CONTROL_PLANE_MODEL` fixes the model so a request cannot choose one.
 
 ## Event consumer acknowledgement permissions
 

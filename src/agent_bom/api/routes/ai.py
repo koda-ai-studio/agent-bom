@@ -17,6 +17,8 @@ from agent_bom.ai_components.provider_discovery import _resolve_ai_provider
 from agent_bom.api.ai_assessment_read import ai_status
 from agent_bom.api.ai_call_sink import ensure_ai_call_sink
 from agent_bom.api.ai_explain_limits import consume_explain_allowance
+from agent_bom.api.graph_node_alias import resolve_snapshot_node_ids
+from agent_bom.api.graph_scan_ids import resolve_graph_scan_id
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.ai_advice import AIStatusResponse, GraphExplanationResponse
 from agent_bom.api.stores import _get_graph_store
@@ -53,8 +55,9 @@ async def get_ai_status(request: Request) -> dict[str, Any]:
 
 def _read_selection(tenant_id: str, body: GraphExplainRequest) -> tuple[list[Any], list[Any], list[Any]]:
     store = _get_graph_store()
-    scan_id = body.scan_id or ""
-    wanted = set(body.node_ids)
+    scan_id = resolve_graph_scan_id(tenant_id, body.scan_id or "")
+    requested, _aliases = resolve_snapshot_node_ids(store, tenant_id=tenant_id, scan_id=scan_id, node_ids=list(body.node_ids))
+    wanted = set(requested)
     nodes = store.nodes_by_ids(scan_id=scan_id, tenant_id=tenant_id, node_ids=wanted)
     found = {node.id for node in nodes}
     if not nodes or found != wanted:
@@ -62,7 +65,7 @@ def _read_selection(tenant_id: str, body: GraphExplainRequest) -> tuple[list[Any
     edges = store.edges_for_node_ids(scan_id=scan_id, tenant_id=tenant_id, node_ids=wanted)
     paths = store.attack_paths_for_sources(scan_id=scan_id, tenant_id=tenant_id, source_ids=wanted)
     covered = [path for path in paths if wanted <= {path.source, path.target, *path.hops}]
-    ordered = {node_id: index for index, node_id in enumerate(body.node_ids)}
+    ordered = {node_id: index for index, node_id in enumerate(requested)}
     return sorted(nodes, key=lambda node: ordered[node.id]), edges, covered
 
 
@@ -104,7 +107,8 @@ async def post_graph_explain(request: Request, body: GraphExplainRequest) -> dic
             denied = await anyio.to_thread.run_sync(consume_explain_allowance, tenant_id)
             if denied is not None:
                 raise HTTPException(status_code=429, detail=denied.message, headers={"Retry-After": str(denied.retry_after_seconds)})
-            context = build_explain_context(nodes, edges, hops=body.node_ids if body.ordered else None, attack_paths=paths)
+            hops = [node.id for node in nodes] if body.ordered else None
+            context = build_explain_context(nodes, edges, hops=hops, attack_paths=paths)
             provider = resolution.provider.name if resolution.provider else "unknown"
             return await anyio.to_thread.run_sync(
                 _call_explain, tenant_id, actor, context, resolution.model, provider, body.scan_id or "latest"

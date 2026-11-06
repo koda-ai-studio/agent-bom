@@ -20,6 +20,7 @@ import argparse
 import asyncio
 import hashlib
 import json
+import os
 import re
 import statistics
 import sys
@@ -29,6 +30,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+import httpx
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
@@ -323,8 +326,19 @@ def recording_path(model: str, split: str) -> Path:
     return RECORDINGS / f"{_slug(model)}.{split}.json"
 
 
+def _ollama_digest(name: str) -> str:
+    """LiteLLM does not report what a tag resolved to, so ask the same local server."""
+    base = os.environ.get("OLLAMA_API_BASE", "http://localhost:11434")
+    for entry in httpx.get(f"{base}/api/tags", timeout=10).json().get("models", []):
+        if entry.get("name") in {name, f"{name}:latest"}:
+            return str(entry.get("digest") or "")
+    return ""
+
+
 def write_recording(model: str, split: str, batch_size: int, num_ctx: int, run: RunResult, scores: dict[str, Any]) -> Path:
     digests = {call.get("model_digest") for call in run.calls if call.get("model_digest")}
+    if not digests and model.startswith("ollama_chat/"):
+        digests = {_ollama_digest(model.partition("/")[2])}
     path = recording_path(model, split)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -454,7 +468,7 @@ def main() -> int:
     parser.add_argument("--record", action="store_true")
     parser.add_argument("--model", default="ollama/llama3.2")
     parser.add_argument("--split", default="dev", choices=["dev", "heldout", "all"])
-    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--num-ctx", type=int, default=8192)
     parser.add_argument("--fields", default=",".join(FIELD_GROUPS), help="comma-separated field groups; empty for the bare prompt")
     parser.add_argument("--limit", type=int, default=0)
@@ -482,6 +496,9 @@ def main() -> int:
     if args.limit:
         cases = cases[: args.limit]
     fields = [item for item in args.fields.split(",") if item]
+    unknown = set(fields) - set(FIELD_GROUPS)
+    if unknown:
+        parser.error(f"unknown field groups: {sorted(unknown)}")
     token = _AI_DETERMINISTIC_OVERRIDE.set(True)
     try:
         run = asyncio.run(

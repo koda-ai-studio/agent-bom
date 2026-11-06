@@ -866,19 +866,17 @@ export default function AttackPathInvestigationContent() {
                 onViewChange={sharePathView}
                 techniquesSlot={
                   selectedAttackPath ? (
-                    <AttackPathCorrelationProof
-                      path={selectedAttackPath}
-                      riskReasons={selectedFixFirstCard?.risk_reasons}
-                      nodes={selectedAttackPath.hops.map((id) => graphNodeById.get(id)).filter((node): node is UnifiedNode => Boolean(node))}
-                    />
+                    <div className="space-y-3">
+                      <AttackPathCorrelationProof
+                        path={selectedAttackPath}
+                        riskReasons={selectedFixFirstCard?.risk_reasons}
+                        nodes={selectedAttackPath.hops.map((id) => graphNodeById.get(id)).filter((node): node is UnifiedNode => Boolean(node))}
+                      />
+                      <AIPathExplainPanel key={selectedAttackPath.hops.join("|")} nodeIds={selectedAttackPath.hops.slice(0, 25)} scanId={graphData?.scan_id ?? selectedScanId} />
+                    </div>
                   ) : null
                 }
-                detailsSlot={selectedAttackPath ? (
-                  <div className="space-y-3">
-                    <AttackPathTechniqueChain path={selectedAttackPath} />
-                    <AIPathExplainPanel key={selectedAttackPath.hops.join("|")} nodeIds={selectedAttackPath.hops.slice(0, 25)} scanId={graphData?.scan_id ?? selectedScanId} />
-                  </div>
-                ) : null}
+                detailsSlot={selectedAttackPath ? <AttackPathTechniqueChain path={selectedAttackPath} /> : null}
                 graphSlot={
                   selectedAttackPath ? (
                     <div className="space-y-2">

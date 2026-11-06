@@ -208,6 +208,29 @@ Design and tests: [Finding lifecycle](FINDING_LIFECYCLE.md),
 | Denial of service | Flood unique findings or unscoped pushes to grow the table; hold a scope lock. | Pushes are authenticated and quota-bound; unscoped pushes share one track per source; the lock covers one scope for one transaction. | `test_concurrent_scans_of_one_scope_converge` | Distinct finding ids still add rows, with no per-tenant cap on this table. |
 | Elevation of privilege | Use a backfill or purge to reach another tenant. | Sessions bind the named tenant before any statement; the backfill replays only that tenant's jobs. | `test_tenant_data_deletion_removes_durable_history`, `test_backfill_recovers_dates_from_retained_scans` | None known. |
 
+## AI advice and model-derived text
+
+AI triage and graph explanation are off until an operator turns them on. Their
+output is advice stored beside scanner evidence; no gate, severity, status, count
+or graph edge reads it. The controls below are tested in
+`tests/test_ai_triage_flow.py`, `tests/test_ai_triage_guard.py`,
+`tests/test_ai_graph_explain.py`, `tests/test_ai_policy.py`,
+`tests/api/test_ai_triage_api.py` and `tests/test_postgres_ai_assessments.py`.
+
+| STRIDE | Threat | Control | Residual risk |
+|---|---|---|---|
+| Spoofing | A caller invokes a model under another identity, or picks a provider | `POST /v1/graph/explain` needs an authenticated analyst. The request body has no model field; the operator sets `AGENT_BOM_AI_CONTROL_PLANE_MODEL`. Non-loopback endpoints need `AGENT_BOM_AI_ALLOW_REMOTE=1`. | An operator's own endpoint choice is trusted. |
+| Tampering, prompt injection | Hostile titles, descriptions, package names, asset names or node labels steer a verdict | Every field is bounded, stripped of format characters, and JSON inside delimiters it cannot close. Refs replace real IDs. A finding with instruction-like text gets `needs_review` whatever the model says, and its rationale is replaced. | Detection is a pattern match. Paraphrased attacks can pass it, and small models obey some of them. See the published injection results in `AI_ENRICHMENT.md`. An attack can still lower a non-protected finding's priority in a reader's mind; it cannot change the finding. |
+| Tampering, evidence poisoning | A model invents graph facts, or dismisses a finding that matters | Graph claims must cite refs in the bounded context; uncited claims, unknown IDs and reachability claims without cited traversable edges are removed. KEV, malicious-package and reachable-critical findings cannot be dismissed, at parse time, in the schema, and again on every read. | A claim can cite real nodes and still describe them poorly. It is labelled AI advice with its citations shown. |
+| Tampering, tool misuse | Model output triggers an action | The model has no tools. Output is validated data rendered as text, never as HTML or a link target. The CLI prints it with markup off; CSV cells are formula-escaped. | None known on these paths. |
+| Repudiation | Nobody can tell which model said what | Each call writes `ai.call` to the tamper-evident audit chain from the API: tenant, actor, task, provider, model, digest, prompt and response hashes, tokens, latency, outcome, and guard decision. Assessments carry prompt version, dataset version and model digest. | The CLI has no audit chain: it logs the same fields and records provenance in the report. A non-Ollama provider reports no digest unless `AGENT_BOM_AI_MODEL_REVISION` is set. |
+| Information disclosure | Secrets or another tenant's data reach a prompt, log, cache or reader | Allowlisted fields only, with redaction at the field and at the provider boundary. Raw evidence and node attributes are never sent. Prompt text is never logged. Tables enforce row-level security; cache keys carry the run, or tenant and snapshot for explanation. `ollama/*` never falls back to a remote provider. | Redaction covers recognizable secret shapes, not every sensitive string. Hosted providers receive the allowlisted text once opted in. |
+| Denial of service | Model calls exhaust the host or stall a scan | Calls are bounded by count, per-call timeout, process concurrency and a whole-run deadline. Explain has a per-tenant rate and daily budget plus backpressure, and runs off the server loop. A scan continues past any AI failure. | A slow local model can use the whole run deadline. |
+| Elevation of privilege | Advice is treated as a decision | Only the separate deterministic skill gate can act on AI output, and only with both explicit flags. `ai_assessment` feeds nothing else. | A person may over-trust a label; the UI states it is advice. |
+
+LiteLLM has a security history, so it stays an optional extra with the floor and
+exclusions in `pyproject.toml`, and the core install never imports it.
+
 ## Resource exhaustion and fail modes
 
 Input limits cover compressed stored job/hub payloads, image blobs/layers,

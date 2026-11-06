@@ -158,6 +158,28 @@ def test_planted_secrets_in_model_output_never_persist_or_log(plant: str, caplog
     assert plant not in caplog.text
 
 
+@pytest.mark.parametrize(
+    ("confidence", "installed", "fixed", "verdict"),
+    [
+        ("high", "2.0.0", "2.0.0", "likely_false_positive"),
+        ("medium", "2.0.0", "2.0.0", "needs_review"),
+        ("low", "2.0.0", "2.0.0", "needs_review"),
+        ("high", "1.0.0", "2.0.0", "needs_review"),
+    ],
+)
+def test_a_dismissal_needs_high_confidence_and_cannot_contradict_the_version_comparison(
+    confidence: str, installed: str, fixed: str, verdict: str
+) -> None:
+    finding = _finding("x", fixed_version=fixed, evidence={"package_version": installed, "ecosystem": "npm"})
+    response = json.dumps({"assessments": [{"ref": "F1", "verdict": "problem_absent", "confidence": confidence, "rationale": "fine"}]})
+    outcome = triage.TriageParseOutcome()
+    [assessment] = triage.parse_finding_assessments(
+        response, findings={"x": finding}, provider="p", model="m", run_id="r", prompt="q", refs={"F1": "x"}, outcome=outcome
+    )
+    assert assessment.verdict == verdict
+    assert outcome.raw_verdicts["x"] == "likely_false_positive"
+
+
 def _report(*findings: Finding) -> AIBOMReport:
     report = AIBOMReport()
     report.findings = list(findings)
@@ -279,7 +301,7 @@ def test_cli_summary_says_when_ai_produced_nothing() -> None:
     report.ai_enrichment_metadata = {"status": "failed", "reason": "run deadline reached"}
     buffer = io.StringIO()
     render_ai_triage_summary(report, Console(file=buffer, force_terminal=False, width=200))
-    assert "failed" in buffer.getvalue() and "scanner results are unaffected" in buffer.getvalue()
+    assert "failed" in buffer.getvalue() and "Scanner results are unaffected" in buffer.getvalue()
 
 
 def test_csv_export_keeps_ai_advice_in_its_own_columns() -> None:

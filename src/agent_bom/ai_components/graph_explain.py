@@ -69,6 +69,7 @@ class Citation:
     id: str
     label: str
     traversable: bool | None = None
+    endpoints: tuple[str, str] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,6 +201,7 @@ def build_explain_context(
             id=str(edge.id),
             label=f"{citations[refs_by_node[edge.source]].label} {relationship} {citations[refs_by_node[edge.target]].label}",
             traversable=bool(edge.traversable),
+            endpoints=(refs_by_node[edge.source], refs_by_node[edge.target]),
         )
         edge_rows.append(
             {
@@ -261,6 +263,10 @@ def validate_claims(response: str, context: ExplainContext) -> tuple[list[Claim]
             continue
         cited = tuple(context.citations[ref] for ref in dict.fromkeys(refs))
         cited_edges = [item for item in cited if item.kind == "edge"]
+        touched = {ref for item in cited_edges for ref in item.endpoints or ()}
+        if cited_edges and any(item.kind == "node" and item.ref not in touched for item in cited):
+            reject("mismatched_citation")
+            continue
         if _REACHABILITY_CLAIM.search(text) and (not cited_edges or not all(item.traversable for item in cited_edges)):
             reject("unsupported_reachability")
             continue

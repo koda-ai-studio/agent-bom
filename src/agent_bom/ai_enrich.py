@@ -70,6 +70,9 @@ from agent_bom.ai_components.call_state import (
     logger,
     resolve_task_model,
 )
+from agent_bom.ai_components.call_state import (
+    _prepare_prompt as _prepare_prompt,
+)
 from agent_bom.ai_components.provider_discovery import _has_any_provider, _resolve_ai_provider
 from agent_bom.ai_components.providers import _call_llm, _call_llm_structured, _parse_json_response
 from agent_bom.ai_components.triage import (
@@ -196,7 +199,7 @@ async def assess_report_findings(
     selection = select_findings_for_triage(report.to_findings(), max_findings)
     if not selection.selected:
         return []
-    batch_size = max(1, min(int(getattr(config, "AI_FINDING_BATCH_SIZE", 8)), 50))
+    batch_size = max(1, min(int(getattr(config, "AI_FINDING_BATCH_SIZE", 1)), 50))
     assessments: list[AIFindingAssessment] = []
     active_run_id = run_id or str(uuid.uuid4())
     for offset in range(0, len(selection.selected), batch_size):
@@ -247,7 +250,7 @@ async def _run_ai_enrichment_impl(
     gate_ai_findings: bool = False,
 ) -> None:
     """Run all AI enrichment steps on a report. Modifies report in-place."""
-    budget = AICallBudget(max_calls=int(getattr(config, "AI_MAX_CALLS_PER_RUN", 50)))
+    budget = AICallBudget(max_calls=int(getattr(config, "AI_MAX_CALLS_PER_RUN", 150)))
     run_id = _AI_RUN_ID.get() or str(uuid.uuid4())
     resolution = _resolve_ai_provider(model)
     report.ai_enrichment_metadata = {
