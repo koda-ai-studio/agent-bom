@@ -22,6 +22,7 @@ from rich.markup import escape
 from agent_bom.discovery.continue_config import continue_legacy_servers
 from agent_bom.discovery.coverage import report_blocked_server
 from agent_bom.discovery.mcp_metadata import connection_metadata
+from agent_bom.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, ServerSurface, TransportType
 from agent_bom.security import (
     SecurityError,
@@ -144,13 +145,18 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
             validate_mcp_server_config(server_def)
         except SecurityError as e:
             report_blocked_server(name, e)
-            # Include blocked server in report for visibility — no silent skips
+            # Include blocked server in report for visibility — no silent skips.
+            # The recipe stays readable: a blocked launcher is what the audit most needs to judge.
+            blocked_env = server_def.get("env", {})
             blocked_server = MCPServer(
                 name=name,
                 command=_string_field(server_def.get("command", "")),
+                args=_args_field(server_def.get("args", [])),
+                env=sanitize_env_vars(blocked_env) if isinstance(blocked_env, dict) else {},
                 config_path=config_path,
                 security_blocked=True,
                 security_warnings=[str(e)],
+                plaintext_env_secrets=plaintext_env_secrets(blocked_env),
             )
             servers.append(blocked_server)
             continue
@@ -215,6 +221,7 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
             security_warnings=security_warnings,
             identity_bindings=identity_bindings,
             connection_metadata=connection_metadata(server_def, config_data),
+            plaintext_env_secrets=plaintext_env_secrets(raw_env),
         )
 
         # Detect privilege indicators from command/args
@@ -312,6 +319,7 @@ def parse_codex_config(config_path: str) -> list[MCPServer]:
             transport=transport,
             url=url,
             config_path=config_path,
+            plaintext_env_secrets=plaintext_env_secrets(raw_env),
             connection_metadata=connection_metadata(server_def, data),
         )
         servers.append(server)
@@ -366,6 +374,7 @@ def parse_goose_config(config_path: str) -> list[MCPServer]:
             transport=transport,
             url=url,
             config_path=config_path,
+            plaintext_env_secrets=plaintext_env_secrets(raw_env),
         )
         servers.append(server)
 

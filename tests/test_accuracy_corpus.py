@@ -26,6 +26,7 @@ import pytest
 
 from agent_bom.parsers import scan_project_directory
 from agent_bom.scanners.state import peek_coverage_warnings, reset_scan_warnings
+from agent_bom.secret_scanner import scan_secrets
 
 CORPUS = Path(__file__).parent / "fixtures" / "accuracy_corpus"
 FIXTURE_SUFFIX = ".fixture"
@@ -255,3 +256,10 @@ def test_go_reference_count_has_a_different_evidence_scope(tmp_path):
     assert len(reference) == 120
     assert len(inventory) == 57
     assert len(reference - inventory) == 63
+
+
+def test_secret_rules_report_literals_and_not_references_labels_or_locators(tmp_path):
+    root = _materialize("secret_assignments", tmp_path)
+    found = sorted((finding.file_path, finding.line_number, finding.secret_type) for finding in scan_secrets(root).findings)
+    expected = sorted((row["file"], row["line"], row["type"]) for row in _expected("secret_assignments")["findings"])
+    assert found == expected

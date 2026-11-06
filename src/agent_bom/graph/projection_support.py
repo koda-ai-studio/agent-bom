@@ -7,6 +7,7 @@ from pathlib import PurePath
 from typing import Any
 
 from agent_bom.canonical_ids import agent_graph_id, agent_identity_scope
+from agent_bom.domain.mcp_model import FILE_INVENTORY_SOURCES, agent_is_repository_inventory
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.types import RelationshipType
@@ -66,15 +67,18 @@ def _is_sbom_import(agent: Mapping[str, Any]) -> bool:
 
 
 def _is_repository_inventory(agent: Mapping[str, Any]) -> bool:
-    """Recognize the explicit manifest-collector wrappers, not arbitrary agents."""
+    """Recognize the repository scan wrappers, not arbitrary agents."""
     servers = agent.get("mcp_servers", [])
     if not servers:
         return False
-    if agent.get("source") == "repo-lockfiles":
-        return all(srv.get("surface") == "filesystem" and not srv.get("command") for srv in servers)
-    if agent.get("source") == "project":
-        return all(srv.get("surface") == "other" and srv.get("command") in {"project", "github-actions"} for srv in servers)
-    return False
+    return agent_is_repository_inventory(
+        agent.get("source"), [(srv.get("surface"), srv.get("command")) for srv in servers], agent.get("metadata")
+    )
+
+
+def _file_inventory_surface(agent: Mapping[str, Any]) -> str:
+    """The surface of a wrapper that stands for one file (a notebook or a workflow)."""
+    return FILE_INVENTORY_SOURCES.get(str(agent.get("source") or ""), "") if agent.get("mcp_servers") else ""
 
 
 def _repository_manifest_directory(agent: Mapping[str, Any], server: Mapping[str, Any]) -> str:

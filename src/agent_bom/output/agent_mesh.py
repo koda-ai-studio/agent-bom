@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from agent_bom.constants import is_credential_key
-from agent_bom.domain.agent_model import agent_is_installed_unconfigured
-from agent_bom.domain.mcp_model import surface_counts_as_mcp_server
+from agent_bom.domain.agent_model import agent_record_counts_as_agent
+from agent_bom.domain.mcp_model import agent_is_repository_inventory, surface_counts_as_mcp_server
 
 
 def _vuln_color(count: int) -> str:
@@ -20,7 +20,7 @@ def _vuln_color(count: int) -> str:
 
 def _reported_agent_count(agents_data: list[dict]) -> int:
     """Count agents with the same judgement ``scan`` uses (``AIBOMReport.total_agents``)."""
-    return sum(1 for agent in agents_data if not agent_is_installed_unconfigured(agent.get("status"), bool(agent.get("mcp_servers"))))
+    return sum(1 for agent in agents_data if agent_record_counts_as_agent(agent))
 
 
 def build_agent_mesh(agents_data: list[dict], blast_radius: list[dict] | None = None) -> dict:
@@ -55,6 +55,11 @@ def build_agent_mesh(agents_data: list[dict], blast_radius: list[dict] | None = 
     for agent in agents_data:
         agent_name = agent.get("name", "unknown")
         servers = agent.get("mcp_servers", [])
+        # A repository's scan inventory is not an agent, so the topology does not draw one.
+        if agent_is_repository_inventory(
+            agent.get("source"), [(srv.get("surface"), srv.get("command")) for srv in servers], agent.get("metadata")
+        ):
+            continue
 
         # Count agent-level vulns
         agent_vuln_count = 0

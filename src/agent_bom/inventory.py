@@ -42,6 +42,7 @@ from typing import Any
 
 from agent_bom.asset_provenance import sanitize_discovery_provenance
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
+from agent_bom.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 from agent_bom.security import sanitize_env_vars, sanitize_sensitive_payload
 
@@ -485,6 +486,7 @@ def _inventory_server(server_data: dict, agent_data: dict, agent_provenance: dic
         command=server_data.get("command", ""),
         args=server_data.get("args", []),
         env=sanitize_env_vars(server_data.get("env", {})),
+        plaintext_env_secrets=plaintext_env_secrets(server_data.get("env", {})),
         transport=TransportType(server_data.get("transport", "stdio")),
         url=server_data.get("url"),
         config_path=agent_data.get("config_path"),

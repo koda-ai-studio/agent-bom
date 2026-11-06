@@ -63,8 +63,8 @@ def apply_code_graph_overlay(
 
     files_by_dir: dict[tuple[str, str], list[str]] = defaultdict(list)
     for node in graph.nodes.values():
-        if node.entity_type != EntityType.SOURCE_FILE or node.dimensions.surface == "sbom":
-            # Imported inventory is a source artifact, not observed source code.
+        if node.entity_type != EntityType.SOURCE_FILE or node.dimensions.surface in {"sbom", "notebook", "ci-workflow"}:
+            # Inventory wrappers name a whole artifact, not an observed source module.
             continue
         path = _norm_path((node.attributes or {}).get("path") or node.label)
         if not path:

@@ -572,6 +572,7 @@ def scan_github_actions(repo_path: str) -> tuple[list[Agent], list[str]]:
             packages=ai_packages,
             config_path=str(wf_path),
             tools=tools,
+            surface=ServerSurface.CI_WORKFLOW,
         )
         agent = Agent(
             name=f"gha:{wf_path.stem}",

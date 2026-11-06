@@ -11,7 +11,7 @@ import logging
 import re
 from pathlib import Path
 
-from agent_bom.models import Agent, AgentType, MCPServer, Package
+from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +209,7 @@ def scan_jupyter_notebooks(
             args=[str(nb_path.name)],
             env=env_dict,
             packages=packages,
+            surface=ServerSurface.NOTEBOOK,
         )
 
         # Build Agent

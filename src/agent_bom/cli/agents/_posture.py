@@ -16,10 +16,10 @@ def render_posture_summary(agents: list[Any], blast_radii: list[Any]) -> None:
     total_vulns = len(blast_radii)
     crit = sum(1 for br in blast_radii if br.vulnerability.severity.value == "critical")
     high = sum(1 for br in blast_radii if br.vulnerability.severity.value == "high")
-    agent_names = [a.name for a in agents]
+    agent_names = [a.name for a in agents if a.counts_as_agent]
     agent_list_str = ", ".join(agent_names[:3]) + (f" +{len(agent_names) - 3}" if len(agent_names) > 3 else "")
-    agent_count = len(agents)
-    server_count = sum(len(a.mcp_servers) for a in agents)
+    agent_count = len(agent_names)
+    server_count = sum(a.total_mcp_servers for a in agents)
     credential_server_count = sum(
         1
         for agent in agents
