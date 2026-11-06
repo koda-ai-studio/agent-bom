@@ -637,6 +637,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ai Status
+         * @description Whether AI advice is on for this tenant, why, and how its last scan run went. Never calls a model.
+         */
+        get: operations["get_ai_status_v1_ai_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/assets": {
         parameters: {
             query?: never;
@@ -4552,6 +4572,26 @@ export interface paths {
         get: operations["get_graph_evidence_manifest_v1_graph_evidence_manifest_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/graph/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Graph Explain
+         * @description Explain a recorded path or selection as AI advice, citing real node and edge ids. Writes nothing.
+         */
+        post: operations["post_graph_explain_v1_graph_explain_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8571,6 +8611,108 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AIAssessmentProvenance */
+        AIAssessmentProvenance: {
+            /** Dataset Version */
+            dataset_version?: string | null;
+            /** Generated At */
+            generated_at?: string | null;
+            /** Model */
+            model: string;
+            /** Model Digest */
+            model_digest?: string | null;
+            /** Model Revision */
+            model_revision?: string | null;
+            /** Prompt Sha256 */
+            prompt_sha256?: string | null;
+            /** Prompt Version */
+            prompt_version?: string | null;
+            /** Provider */
+            provider?: string | null;
+            /** Response Sha256 */
+            response_sha256?: string | null;
+            /** Run Id */
+            run_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AIAssessmentRow */
+        AIAssessmentRow: {
+            /** Advice Covers Occurrences */
+            advice_covers_occurrences?: number | null;
+            /** Advisory */
+            advisory: boolean;
+            /** Classification */
+            classification?: string | null;
+            /** Confidence */
+            confidence: string;
+            /** False Positive Likelihood */
+            false_positive_likelihood?: string | null;
+            /** Finding Id */
+            finding_id: string;
+            /** Group Occurrences */
+            group_occurrences?: number | null;
+            /** Guard Applied */
+            guard_applied?: boolean | null;
+            /** Protected Reasons */
+            protected_reasons?: string[] | null;
+            provenance: components["schemas"]["AIAssessmentProvenance"];
+            /** Rationale */
+            rationale: string;
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Verdict */
+            verdict: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AIStatusResponse */
+        AIStatusResponse: {
+            /** Advisory Only */
+            advisory_only: boolean;
+            last_run?: components["schemas"]["AITriageRun"] | null;
+            /** Model */
+            model?: string | null;
+            /** Reason */
+            reason: string;
+            /** Schema Version */
+            schema_version: string;
+            /** State */
+            state: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AITriageRun */
+        AITriageRun: {
+            /** Call Budget */
+            call_budget?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at: string;
+            /** Dataset Version */
+            dataset_version?: string | null;
+            /** Local */
+            local?: boolean | null;
+            /** Model */
+            model?: string | null;
+            /** Prompt Version */
+            prompt_version?: string | null;
+            /** Provider */
+            provider?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Scan Id */
+            scan_id: string;
+            /** Status */
+            status: string;
+            /** Triage Scope */
+            triage_scope?: {
+                [key: string]: unknown;
+            } | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** AccessReviewCampaignRow */
         AccessReviewCampaignRow: {
             /** Campaign Id */
@@ -14428,6 +14570,7 @@ export interface components {
             affected_agents?: string[] | null;
             /** Affected Servers */
             affected_servers?: string[] | null;
+            ai_assessment?: components["schemas"]["AIAssessmentRow"] | null;
             /** Applicable Frameworks */
             applicable_frameworks?: string[] | null;
             asset?: components["schemas"]["FindingAsset"] | null;
@@ -16649,6 +16792,44 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** GraphCitation */
+        GraphCitation: {
+            /** Direction */
+            direction?: string | null;
+            /** Evidence Keys */
+            evidence_keys?: string[] | null;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Ref */
+            ref: string;
+            /** Relationship */
+            relationship?: string | null;
+            /** Source */
+            source?: string | null;
+            /** Target */
+            target?: string | null;
+            /** Traversable */
+            traversable?: boolean | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphClaim */
+        GraphClaim: {
+            /** Citations */
+            citations: components["schemas"]["GraphCitation"][];
+            /** Claim Type */
+            claim_type: string;
+            /** Note */
+            note?: string | null;
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphClustersResponse */
         GraphClustersResponse: {
             /** Available Kinds */
@@ -17426,6 +17607,59 @@ export interface components {
             snapshot_generation?: string | null;
             /** Tenant Id */
             tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphExplainRequest */
+        GraphExplainRequest: {
+            /** Node Ids */
+            node_ids: string[];
+            /**
+             * Ordered
+             * @description Treat node_ids as an ordered path, so missing or non-traversable hops are reported
+             * @default false
+             */
+            ordered: boolean;
+            /**
+             * Scan Id
+             * @description Graph scan id; defaults to the latest snapshot
+             */
+            scan_id?: string | null;
+        };
+        /** GraphExplanationProvenance */
+        GraphExplanationProvenance: {
+            /** Generated At */
+            generated_at: string;
+            /** Model */
+            model: string;
+            /** Model Digest */
+            model_digest?: string | null;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Provider */
+            provider: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphExplanationResponse */
+        GraphExplanationResponse: {
+            /** Advisory */
+            advisory: boolean;
+            /** Claims */
+            claims: components["schemas"]["GraphClaim"][];
+            /** Evidence Limits */
+            evidence_limits: string[];
+            /** Label */
+            label: string;
+            provenance: components["schemas"]["GraphExplanationProvenance"];
+            /** Rejected Claims */
+            rejected_claims: {
+                [key: string]: number;
+            };
+            /** Schema Version */
+            schema_version: string;
+            /** Status */
+            status: string;
         } & {
             [key: string]: unknown;
         };
@@ -27176,6 +27410,44 @@ export interface operations {
             };
         };
     };
+    get_ai_status_v1_ai_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIStatusResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     list_assets_v1_assets_get: {
         parameters: {
             query?: {
@@ -36418,6 +36690,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphEvidenceManifestResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    post_graph_explain_v1_graph_explain_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GraphExplainRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphExplanationResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

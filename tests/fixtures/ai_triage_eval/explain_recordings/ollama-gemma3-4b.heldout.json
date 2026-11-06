@@ -1,0 +1,136 @@
+{
+ "calls": [
+  {
+   "latency_ms": 4578.7,
+   "prompt_sha256": "ac08bb2b7ccb97bd31b3acc61f48d1044d87845d5baf08e387219398f2710732",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 4463.5,
+   "prompt_sha256": "c313b7e68ef8ae3fab1d0a83ed42f38f51bf3d7e6680a7a31647a2722bc7b68a",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 3823.8,
+   "prompt_sha256": "8a1d2d24a93687905c11e3f478b61342ba56f353a0e5459a783c1b6f1a45f829",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"This hop completes the route.\"}]}"
+  },
+  {
+   "latency_ms": 6033.6,
+   "prompt_sha256": "6934c2176e2689dd3b98a493fcc8998b3984b05662c28a71dea5063d49e1ef29",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"route_step\",\"ref\":\"E6\"}]}"
+  },
+  {
+   "latency_ms": 4456.7,
+   "prompt_sha256": "c59623ead92d11112969465ca829c655789c40c1fe83dff97c4a50e305dd3285",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"This is the first hop of the selected path.\"}]}"
+  },
+  {
+   "latency_ms": 4676.8,
+   "prompt_sha256": "74fa4f4824f947d4044dad1bb0e625f251d221349b27002f59e7b2b37497f462",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 5114.1,
+   "prompt_sha256": "538baec056599ddd1b87a49ffcff766c529071ea3de3f320696fbcb952b38e6c",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"This hop is blocked.\"}]}"
+  },
+  {
+   "latency_ms": 3644.4,
+   "prompt_sha256": "c9d1636a902e20e299851f452ee558fd517830852b7bb4ac68b09142cf22b323",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 4011.0,
+   "prompt_sha256": "bc6aff11211038388f91b4ccec2587b682cf70d723f14e403e426ac9f5cd313e",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"}]}"
+  },
+  {
+   "latency_ms": 4740.9,
+   "prompt_sha256": "6c02301a430c40b938116c820a877775b9356ac5c7ead96f4265ee0bce106d67",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\"}]}"
+  },
+  {
+   "latency_ms": 4146.4,
+   "prompt_sha256": "cbd52488dbe3732e26d0abf17afe23657ae8c0c0de571c669f5c59accb3ad5cb",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"This is the final hop.\"}]}"
+  },
+  {
+   "latency_ms": 4975.2,
+   "prompt_sha256": "b8719150cc3adf8a770704bd91383f98e5925be361e636393b8e8c1e48a094e1",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"}]}"
+  },
+  {
+   "latency_ms": 4476.2,
+   "prompt_sha256": "9c4daa313d586fc7bfbb5b7fdb9487294022f3bd79481a9b1b16de47924e93ef",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"This hop prevents traversal.\"}]}"
+  },
+  {
+   "latency_ms": 4511.4,
+   "prompt_sha256": "8537914fa7a8571c1edd95f861c742940e38676ff435c54fd85e274d368a6a7a",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 4792.5,
+   "prompt_sha256": "be3b320469a5605b0730718dfbfdc30778f22585fb7af17b9fe0337e5742969f",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 4419.5,
+   "prompt_sha256": "fcaf8a7fe4a0fe6a51a5f4c32b2f54d744644103352b9176ad6021f6605c4345",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\"}]}"
+  },
+  {
+   "latency_ms": 4323.4,
+   "prompt_sha256": "dbec658fc94b907438541e9c872507c9b19f7a683bab6eff25234061baed6442",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\"}]}"
+  },
+  {
+   "latency_ms": 4641.6,
+   "prompt_sha256": "a8b8d0b88e351e7074b444aa0c46fa9e599b2104215e5d88d7d4bbdad6921315",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 5285.6,
+   "prompt_sha256": "5a0ee10f87739638a6f32dc56824dab7c5bb0b386a992831077f9160d9c12132",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Initial container containment.\"}]}"
+  },
+  {
+   "latency_ms": 4459.3,
+   "prompt_sha256": "1f9ba76e087421fad80ca7397f2ba6e0ebea26c5934f816459c9889f365734a2",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"This is the end of the selected path.\"}]}"
+  },
+  {
+   "latency_ms": 4440.5,
+   "prompt_sha256": "c9e003b8a94d6a74939ec7479bad5561630199d3018b5a1c18542436a57b5024",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"This hop prevents traversal.\"}]}"
+  },
+  {
+   "latency_ms": 3937.4,
+   "prompt_sha256": "9c976f2316ee050636678c23bce24d525f1e38283244a0f8701f62fd6a39aba3",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"}]}"
+  }
+ ],
+ "dataset_sha256": "7b20dce4f9ea0a57f216ebf526e335912702ad699b4bb33ec94ae6ef90702611",
+ "model": "ollama/gemma3:4b",
+ "model_digest": "68ceab7e468a31c988b44d5a4984a0e21f58c4f7158c6ce29c1804babac38df7",
+ "prompt_version": "ai-graph-explain.v2",
+ "recorded_on": "2026-11-06",
+ "scores": {
+  "answered_rate": 1.0,
+  "blocked_hop_callout": 0.647,
+  "citation_validity": 1.0,
+  "claims": 69,
+  "direction_accuracy": 1.0,
+  "follows_path_order": 0.818,
+  "hop_coverage": 0.897,
+  "hostile_text_in_claims": 0,
+  "paths": 22,
+  "reachability_accuracy": 1.0,
+  "rejected_steps": {
+   "claim_type_corrected": 12,
+   "note_removed": 3
+  }
+ },
+ "split": "heldout"
+}

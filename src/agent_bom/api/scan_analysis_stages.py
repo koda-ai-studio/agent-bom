@@ -297,15 +297,10 @@ def _enrich_report(ctx: ScanContext, report: Any) -> None:
     except Exception as enrich_exc:  # noqa: BLE001
         _logger.warning("Estate enrichment skipped: %s", sanitize_text(sanitize_error(enrich_exc)))
 
-    req = ctx.req
-    if req.ai_enrich:
-        try:
-            from agent_bom.ai_enrich import run_ai_enrichment_sync
+    if ctx.req.ai_enrich:
+        from agent_bom.api.ai_scan_stage import run_advisory_ai
 
-            run_ai_enrichment_sync(report, model=req.ai_model, deterministic=req.ai_deterministic)
-        except Exception as ai_exc:  # noqa: BLE001
-            _logger.warning("Advisory AI enrichment skipped: %s", sanitize_text(sanitize_error(ai_exc, generic=True)))
-            ctx.progress("Advisory AI enrichment skipped")
+        run_advisory_ai(ctx, report)
 
     # Graph-derived findings: build the unified graph once (after every report
     # side block is set) and surface NHI-governance + toxic-combination findings

@@ -70,7 +70,7 @@ export function GraphLensSwitcher({ scanId, variant = "inline" }: GraphLensSwitc
   ];
   return <nav aria-label="Investigation workspace" className={variant === "floating" ? "absolute left-3 top-3 z-30 flex gap-4 bg-surface px-3 py-2" : "flex flex-wrap gap-5 border-b border-outline"}>
     {options.map(option => <button key={option.label} type="button" aria-current={option.active ? "page" : undefined}
-      className={`min-h-11 border-b-2 px-1 text-sm font-medium ${option.active ? "border-[var(--accent)] text-foreground" : "border-transparent text-ink-secondary hover:text-foreground"}`}
+      className={`min-h-11 border-b-2 px-1 text-sm font-medium max-sm:min-h-10 ${option.active ? "border-[var(--accent)] text-foreground" : "border-transparent text-ink-secondary hover:text-foreground"}`}
       onClick={() => { if (!option.active) router.push(buildInvestigationLensHref(option.href, {
         get: key => key === "scan" && scanId ? scanId : params.get(key),
       })); }}>

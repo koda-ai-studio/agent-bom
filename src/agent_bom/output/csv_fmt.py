@@ -73,6 +73,10 @@ _COLUMNS = [
     "symbol_reachability_reason",
     "runtime_dependency_chain",
     "sla_due_at_source",
+    "ai_advice_verdict",
+    "ai_advice_confidence",
+    "ai_advice_rationale",
+    "ai_advice_model",
 ]
 
 
@@ -96,9 +100,15 @@ def to_csv(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) ->
 
     writer = csv.DictWriter(buf, fieldnames=_COLUMNS, quoting=csv.QUOTE_MINIMAL)
     writer.writeheader()
+    advice = {item.finding_id: item for item in getattr(report, "ai_finding_assessments", []) or []}
 
     for finding in findings:
+        assessment = advice.get(finding.id)
         row = {
+            "ai_advice_verdict": assessment.verdict if assessment else "",
+            "ai_advice_confidence": assessment.confidence if assessment else "",
+            "ai_advice_rationale": assessment.rationale if assessment else "",
+            "ai_advice_model": assessment.provenance.model if assessment else "",
             "cve_id": finding.cve_id or "",
             "package": package_name(finding),
             "version": package_version(finding),

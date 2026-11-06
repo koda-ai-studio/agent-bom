@@ -4,6 +4,7 @@ import type { LineageNodeData, LineageNodeType } from "@/components/lineage-node
 import { agentSource } from "@/lib/agent-source";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import { RELATIONSHIP_COLOR_MAP } from "@/lib/graph-schema";
+import { rankTopRisks, type TopRisk } from "@/lib/graph-top-risk";
 
 export const LARGE_GRAPH_OVERVIEW_NODE_THRESHOLD = 200;
 export const LARGE_GRAPH_OVERVIEW_EDGE_THRESHOLD = 500;
@@ -51,6 +52,8 @@ export interface LargeGraphOverviewModel {
   sourceEdgeCount: number;
   omittedNodeCount: number;
   omittedEdgeCount: number;
+  /** Always within `nodes`: the draw budget cannot leave out what the first frame names. */
+  topRisks: TopRisk[];
 }
 
 export interface LargeGraphOverviewSummary {
@@ -349,8 +352,10 @@ export function buildLargeGraphOverviewModel(
   edges: Edge[],
 ): LargeGraphOverviewModel {
   const total = Math.max(nodes.length, 1);
+  const topRisks = rankTopRisks(nodes);
+  const pinned = new Set(topRisks.map(risk => risk.id));
   const rankedNodes = nodes
-    .map((node, index) => ({ node, index, score: nodeSignalScore(node, index) }))
+    .map((node, index) => ({ node, index, score: nodeSignalScore(node, index) + (pinned.has(node.id) ? 2_000_000 : 0) }))
     .sort((left, right) => right.score - left.score)
     .slice(0, LARGE_GRAPH_OVERVIEW_MAX_RENDERED_NODES)
     .sort((left, right) => left.index - right.index);
@@ -407,5 +412,6 @@ export function buildLargeGraphOverviewModel(
     sourceEdgeCount: edges.length,
     omittedNodeCount: Math.max(0, nodes.length - overviewNodes.length),
     omittedEdgeCount: Math.max(0, edges.length - overviewEdges.length),
+    topRisks,
   };
 }

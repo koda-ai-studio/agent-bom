@@ -1,0 +1,217 @@
+{
+ "calls": [
+  {
+   "latency_ms": 4414.6,
+   "prompt_sha256": "283d97f2e544af6ccae59c237234914f4622467531b17e456c1c78ac97c497d0",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"route_step\",\"ref\":\"E6\"}]}"
+  },
+  {
+   "latency_ms": 2256.0,
+   "prompt_sha256": "d20fb0e740db154fab4592e6348bfe933e93021e2cc08500042d3e3454a26e17",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"Review this last.\"}]}"
+  },
+  {
+   "latency_ms": 3377.8,
+   "prompt_sha256": "081f37f2a1ef2d9f2af6ca1525e38f7a614cba57a3f5ee61dcce42c5f5686680",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"route_step\",\"ref\":\"E6\"}]}"
+  },
+  {
+   "latency_ms": 2093.1,
+   "prompt_sha256": "bcf129de7a4d7ad315f567539a787766a27c0dc99f4a5e7a7cccc19aa2c82319",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E4\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 1595.5,
+   "prompt_sha256": "44cc366b40027a8b735fb50ccfa3001292c768699896687cac75cba7da4f795a",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\",\"note\":\"Follow the path to the final resource.\"}]}"
+  },
+  {
+   "latency_ms": 3306.5,
+   "prompt_sha256": "ef5a0a5db396431665c98b56046b34e97bd08a68c0530245e560cc07ee27a97f",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"route_step\",\"ref\":\"E6\"}]}"
+  },
+  {
+   "latency_ms": 1958.6,
+   "prompt_sha256": "b2d5e50d4699d96d149bc1c7e560246c093e1e6dfcb6021dcc8bc640fb339a2c",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 1654.0,
+   "prompt_sha256": "e7cb79153b26645c011ae7a51a5a712d0c0985eb5f3a3401d7a8e82d51297729",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\",\"note\":\"Follow the dependency chain to ensure all components are secure.\"}]}"
+  },
+  {
+   "latency_ms": 3424.9,
+   "prompt_sha256": "44fe1b47527d575074894276621c9b9fa068d47237e7ffe63c3570843653f4d7",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"Review this first.\"},{\"claim\":\"blocked_hop\",\"ref\":\"E4\",\"note\":\"Review this first.\"},{\"claim\":\"blocked_hop\",\"ref\":\"E5\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 1867.1,
+   "prompt_sha256": "4380bb44dc981a6493c773050632a604d62d757c26f2d353d3a6876f95711d0d",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 3358.0,
+   "prompt_sha256": "9f667ba58a4c29db6364ae4e3a2e39fe32e694a3cc2e6867d97db4b30fd682de",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"route_step\",\"ref\":\"E6\"},{\"claim\":\"blocked_hop\",\"ref\":\"E4\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 2454.0,
+   "prompt_sha256": "532f73c677882d407a2e5416c84c47bcc1f7b393bd4424e6c550c99f9ca1089b",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 2029.1,
+   "prompt_sha256": "34df73d187a28b4c6ac16ef577cd757968e9c37542ec2ca3dfc80cd5fb651666",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E4\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 1969.5,
+   "prompt_sha256": "1b6c08482f42014b2fdab68ce3b012835d686341fa10b09b8320b2d13ab690ac",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"route_step\",\"ref\":\"E3\"}]}"
+  },
+  {
+   "latency_ms": 2441.2,
+   "prompt_sha256": "a75e04b62cb2921f810a9533c328fb6bd19d14ac815997834c74fa91ac245f33",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"Review this first.\"},{\"claim\":\"blocked_hop\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 2634.2,
+   "prompt_sha256": "e0faeb2cbce4de16ef48c0933e304f75c7c736ca6941bb6cbd43488d2a6a3678",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"path_complete\",\"ref\":\"N5\"}]}"
+  },
+  {
+   "latency_ms": 1743.3,
+   "prompt_sha256": "5f861ea67b2828638ba694c7d42d950500c1ad36ec4e001881236b93a5e6c9a3",
+   "response": "{\"steps\":[{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Review this first.\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 1946.7,
+   "prompt_sha256": "911b00490b7930f50d1a3b12c4b63a3aa2888afc3056d438f2f0fe715d0636c2",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"}]}"
+  },
+  {
+   "latency_ms": 1855.1,
+   "prompt_sha256": "4380bb44dc981a6493c773050632a604d62d757c26f2d353d3a6876f95711d0d",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 3218.5,
+   "prompt_sha256": "a52f56a65084422af213913bfcbb5cb086103140cd5d9c11b26cb12c36c6cb7e",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"route_step\",\"ref\":\"E6\"},{\"claim\":\"path_complete\",\"ref\":\"\"}]}"
+  },
+  {
+   "latency_ms": 1453.4,
+   "prompt_sha256": "602ea2a33c120d73b9f5c2407b8fb481cf88d39b08ef537b221c5eb5e48e1bee",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 2837.9,
+   "prompt_sha256": "9b53858f6b82e8482f6f8ba0823dc7da40ed34233aa8d56c94a7ef723d5e08e3",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"path_complete\",\"ref\":\"\"}]}"
+  },
+  {
+   "latency_ms": 3313.1,
+   "prompt_sha256": "8686ae78fb111d1d5fad74beda4bf16111bcbd04290216efa3b5b907b71bf0dc",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"route_step\",\"ref\":\"E6\"}]}"
+  },
+  {
+   "latency_ms": 2384.4,
+   "prompt_sha256": "cf6a8a69370a0c86420c51ad99e9b53d507de6e43ba78a6f3312c9da9d8b48b7",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"relationship\",\"ref\":\"E3\"},{\"claim\":\"relationship\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 2867.6,
+   "prompt_sha256": "691b7525d99748e338ee549fd026456c020999ad776846106544229a631ab9e8",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Review this first.\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 1886.2,
+   "prompt_sha256": "1012b9982d6b06420eb134596d4e9bc1f90b02dd9fcabb8bc1d9848213093d61",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 2270.4,
+   "prompt_sha256": "68b7a66e524cfb1ab61d89393a5ef028bd5f90cd3b2e3525757bb43397a039a5",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"relationship\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 1480.3,
+   "prompt_sha256": "7de737576ff6a0b8a89e821f1f1550b01ba8840b4cf1bb5a43f0efacae266cb6",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 1486.4,
+   "prompt_sha256": "10ffa3c9523d7c8a049a0a951485ffe0becd880bd2c9329fc5d39f78185eba46",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 2459.2,
+   "prompt_sha256": "42ae4c1253ed670088279fe4623a72fe7f767d04e6effc5154360059d654ca8d",
+   "response": "{\"steps\":[{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Review this first.\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"blocked_hop\",\"ref\":\"E3\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 3398.7,
+   "prompt_sha256": "48851e1a3407b26c47f91bca71a9a212642906a934c3d0b280110c22b213f44a",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"},{\"claim\":\"route_step\",\"ref\":\"E5\"},{\"claim\":\"route_step\",\"ref\":\"E6\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"}]}"
+  },
+  {
+   "latency_ms": 1707.6,
+   "prompt_sha256": "9de5db7033891ebea355121ec919fc7494ba927b945e7f1605b123e1eb515a12",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\",\"note\":\"Follow the path to understand the exploitability.\"}]}"
+  },
+  {
+   "latency_ms": 2401.0,
+   "prompt_sha256": "b2ff6cedcd360f544e6250f67c1cc00fb3ea310b460eb74d0ff789811c862ee7",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"blocked_hop\",\"ref\":\"E1\",\"note\":\"Review this first.\"},{\"claim\":\"relationship\",\"ref\":\"E3\"},{\"claim\":\"route_step\",\"ref\":\"E4\"}]}"
+  },
+  {
+   "latency_ms": 1377.6,
+   "prompt_sha256": "8c6ca9a3977773222a976ad8fe4b43f68c3f1b9145f4851544fb5c128f06c636",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"}]}"
+  },
+  {
+   "latency_ms": 2394.0,
+   "prompt_sha256": "3de0ff07e1d6c863afa81dbb752a40cb28187bc4106dc64b11217c0e2cfac3ea",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"},{\"claim\":\"blocked_hop\",\"ref\":\"N4\",\"note\":\"This node indicates a critical vulnerability.\"}]}"
+  },
+  {
+   "latency_ms": 2764.7,
+   "prompt_sha256": "30369d479195f5beaf6c9cf16fd49235b934e92fb5e0f2fb751cc93f44c10af6",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"blocked_hop\",\"ref\":\"E2\",\"note\":\"Review this first.\"},{\"claim\":\"relationship\",\"ref\":\"E3\"},{\"claim\":\"node_fact\",\"ref\":\"N5\",\"note\":\"This node highlights a critical vulnerability.\"}]}"
+  },
+  {
+   "latency_ms": 1709.7,
+   "prompt_sha256": "812f533002efa29dc36614951fc7027ef3a68fa7fca0d80e63db3dce6bef54a3",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\",\"note\":\"Follow the dependency chain to the final node.\"}]}"
+  },
+  {
+   "latency_ms": 1761.3,
+   "prompt_sha256": "67b3cba3d97726df7ca5f7c05543ca38474f652a0f51be0259e2e06855e0e7fc",
+   "response": "{\"steps\":[{\"claim\":\"route_step\",\"ref\":\"E1\"},{\"claim\":\"route_step\",\"ref\":\"E2\"},{\"claim\":\"route_step\",\"ref\":\"E3\"}]}"
+  }
+ ],
+ "dataset_sha256": "7b20dce4f9ea0a57f216ebf526e335912702ad699b4bb33ec94ae6ef90702611",
+ "model": "ollama/qwen2.5:3b",
+ "model_digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+ "prompt_version": "ai-graph-explain.v2",
+ "recorded_on": "2026-11-06",
+ "scores": {
+  "answered_rate": 1.0,
+  "blocked_hop_callout": 0.952,
+  "citation_validity": 1.0,
+  "claims": 139,
+  "direction_accuracy": 1.0,
+  "follows_path_order": 0.763,
+  "hop_coverage": 0.959,
+  "hostile_text_in_claims": 0,
+  "paths": 38,
+  "reachability_accuracy": 1.0,
+  "rejected_steps": {
+   "claim_type_corrected": 21,
+   "note_removed": 5,
+   "wrong_claim_type": 1
+  }
+ },
+ "split": "dev"
+}

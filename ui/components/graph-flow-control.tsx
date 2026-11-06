@@ -11,19 +11,22 @@ export function automaticFlowLabel({ applied, scenario, preview }: { applied: bo
 }
 
 /** The control never pretends: a flow that cannot apply is disabled, with the reason on screen. */
-export function GraphFlowControl({ value, automaticLabel, available, disabledReason, note, onChange }: {
+export function GraphFlowControl({ value, automaticLabel, available, disabledReason, note, compact = false, onChange }: {
   value: InvestigationFlow;
   automaticLabel: string;
   available: Record<SpecificFlow, boolean>;
   disabledReason?: string | undefined;
   note?: string | undefined;
+  /** A phone's narrow row: the combobox's own name and options say what it is. */
+  compact?: boolean;
   onChange: (flow: InvestigationFlow) => void;
 }) {
-  const message = disabledReason ?? note;
-  return <div data-testid="graph-flow-control" className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-    <label className="flex items-center gap-2">Flow
+  // On a phone's narrow row a standing reason moves to Graph options; a just-chosen flow's note stays with it.
+  const message = compact ? note : disabledReason ?? note;
+  return <div data-testid="graph-flow-control" title={disabledReason} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+    <label className="flex items-center gap-2"><span className={compact ? "sr-only" : undefined}>Flow</span>
       <select aria-label="Investigation flow" value={value} disabled={Boolean(disabledReason)} onChange={event => onChange(event.target.value as InvestigationFlow)}
-        className="rounded-md border border-outline bg-background px-2 py-1 text-foreground disabled:opacity-60">
+        className={`rounded-md border border-outline bg-background px-2 py-1 text-foreground disabled:opacity-60 ${compact ? "min-h-11 w-[8.5rem]" : ""}`}>
         <option value="auto">{automaticLabel}</option>
         {FLOWS.map(flow => <option key={flow} value={flow} disabled={!available[flow]}>{FLOW_NAMES[flow]}{available[flow] ? "" : ` (${ABSENT[flow]})`}</option>)}
       </select>

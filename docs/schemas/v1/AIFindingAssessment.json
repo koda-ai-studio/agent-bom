@@ -4,6 +4,12 @@
       "additionalProperties": false,
       "description": "Public schema contract for model-derived scan evidence.",
       "properties": {
+        "dataset_version": {
+          "default": "",
+          "maxLength": 64,
+          "title": "Dataset Version",
+          "type": "string"
+        },
         "deterministic": {
           "title": "Deterministic",
           "type": "boolean"
@@ -17,6 +23,12 @@
           "maxLength": 256,
           "minLength": 1,
           "title": "Model",
+          "type": "string"
+        },
+        "model_digest": {
+          "default": "",
+          "maxLength": 128,
+          "title": "Model Digest",
           "type": "string"
         },
         "model_revision": {
@@ -127,6 +139,19 @@
       "title": "Finding Id",
       "type": "string"
     },
+    "guard_applied": {
+      "default": false,
+      "title": "Guard Applied",
+      "type": "boolean"
+    },
+    "protected_reasons": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 3,
+      "title": "Protected Reasons",
+      "type": "array"
+    },
     "provenance": {
       "$ref": "#/$defs/AIProvenance"
     },
@@ -154,6 +179,16 @@
       "const": "triage",
       "default": "triage",
       "title": "Task",
+      "type": "string"
+    },
+    "verdict": {
+      "default": "needs_review",
+      "enum": [
+        "confirmed",
+        "likely_false_positive",
+        "needs_review"
+      ],
+      "title": "Verdict",
       "type": "string"
     }
   },

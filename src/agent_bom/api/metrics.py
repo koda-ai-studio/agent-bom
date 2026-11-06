@@ -76,6 +76,8 @@ _gateway_relays = _LabelledCounter()  # labelled by "<upstream>|<outcome>"
 _authorization_evidence = _LabelledCounter()  # labelled by "<provider>|<status>"
 _authorization_evidence_gaps = _LabelledCounter()  # labelled by "<provider>|<reason>"
 _auto_correlations = _LabelledCounter()  # labelled by "<outcome>|<bounded-reason>"
+_ai_calls = _LabelledCounter()  # labelled by "<task>|<provider>|<outcome>"
+_ai_call_latency_ms = _LabelledCounter()  # summed whole milliseconds, labelled by "<task>|<provider>"
 _scan_jobs_active = _Gauge()  # in-flight scans (queued + running)
 
 _AUTHORIZATION_PROVIDERS = frozenset({"azure", "gcp"})
@@ -207,9 +209,44 @@ def record_auto_correlation(*, outcome: str, reason: str) -> None:
     _auto_correlations.inc(f"{safe_outcome}|{safe_reason}")
 
 
+_AI_TASKS = frozenset({"triage", "narrative", "summary", "tagging", "detection", "config_analysis", "graph_explain", "unspecified"})
+_AI_PROVIDERS = frozenset({"ollama", "huggingface", "litellm"})
+_AI_OUTCOMES = frozenset({"ok", "empty", "failed", "blocked", "over_budget", "over_capacity", "cache_hit"})
+
+
+def record_ai_call(*, task: str, provider: str, outcome: str, latency_ms: float) -> None:
+    safe_task = task if task in _AI_TASKS else "unspecified"
+    safe_provider = provider if provider in _AI_PROVIDERS else "other"
+    safe_outcome = outcome if outcome in _AI_OUTCOMES else "failed"
+    _ai_calls.inc(f"{safe_task}|{safe_provider}|{safe_outcome}")
+    _ai_call_latency_ms.inc(f"{safe_task}|{safe_provider}", amount=max(int(latency_ms), 0))
+
+
 def record_report_export(outcome: str) -> None:
     if outcome in {"claimed", "lease_lost", "completed", "failed"}:
         _report_exports.inc(outcome)
+
+
+def _ai_metric_lines() -> list[str]:
+    lines: list[str] = []
+    ai_calls = _ai_calls.snapshot()
+    lines.append("# HELP agent_bom_ai_calls_total AI provider calls by task, provider and outcome")
+    lines.append("# TYPE agent_bom_ai_calls_total counter")
+    if not ai_calls:
+        lines.append('agent_bom_ai_calls_total{task="none",provider="none",outcome="none"} 0')
+    for label, count in sorted(ai_calls.items()):
+        task, provider, outcome = label.split("|", 2)
+        lines.append(f'agent_bom_ai_calls_total{{task="{task}",provider="{provider}",outcome="{outcome}"}} {count}')
+
+    ai_latency = _ai_call_latency_ms.snapshot()
+    lines.append("# HELP agent_bom_ai_call_latency_milliseconds_total Total time spent in AI provider calls")
+    lines.append("# TYPE agent_bom_ai_call_latency_milliseconds_total counter")
+    if not ai_latency:
+        lines.append('agent_bom_ai_call_latency_milliseconds_total{task="none",provider="none"} 0')
+    for label, count in sorted(ai_latency.items()):
+        task, _, provider = label.partition("|")
+        lines.append(f'agent_bom_ai_call_latency_milliseconds_total{{task="{task}",provider="{provider}"}} {count}')
+    return lines
 
 
 def render_prometheus_lines() -> list[str]:
@@ -302,7 +339,7 @@ def render_prometheus_lines() -> list[str]:
         outcome, _, reason = label.partition("|")
         lines.append(f'agent_bom_auto_correlations_total{{outcome="{outcome}",reason="{reason}"}} {count}')
 
-    return lines
+    return [*lines, *_ai_metric_lines()]
 
 
 def reset_for_tests() -> None:
@@ -318,6 +355,8 @@ def reset_for_tests() -> None:
         _authorization_evidence,
         _authorization_evidence_gaps,
         _auto_correlations,
+        _ai_calls,
+        _ai_call_latency_ms,
     ):
         with counter._lock:  # noqa: SLF001
             counter._values.clear()  # noqa: SLF001

@@ -1,0 +1,445 @@
+{
+ "advisories": {
+  "GHSA-29mw-wpgm-hmr9": {
+   "modified": "2025-09-29T21:12:31.102523Z",
+   "severity": "MODERATE",
+   "summary": "Regular Expression Denial of Service (ReDoS) in lodash"
+  },
+  "GHSA-35mm-cc6r-8fjp": {
+   "modified": "2024-02-16T07:59:11.354962Z",
+   "severity": "MODERATE",
+   "summary": "Cross-site scripting in actionpack"
+  },
+  "GHSA-39hc-v87j-747x": {
+   "modified": "2024-12-03T06:08:44.549863Z",
+   "severity": "MODERATE",
+   "summary": "Vulnerable OpenSSL included in cryptography wheels"
+  },
+  "GHSA-3c5c-7235-994j": {
+   "modified": "2026-04-09T18:26:05.864111202Z",
+   "severity": "HIGH",
+   "summary": "Pillow buffer overflow in ImagingPcdDecode"
+  },
+  "GHSA-3f63-hfp8-52jq": {
+   "modified": "2026-09-10T03:50:04.766695102Z",
+   "severity": "CRITICAL",
+   "summary": "Arbitrary Code Execution in Pillow"
+  },
+  "GHSA-3vfw-7rcp-3xgm": {
+   "modified": "2024-11-29T05:35:28.609253Z",
+   "severity": "MODERATE",
+   "summary": "actionpack Improper Input Validation vulnerability"
+  },
+  "GHSA-3wvg-mj6g-m9cv": {
+   "modified": "2025-08-15T14:25:07.863555Z",
+   "severity": "HIGH",
+   "summary": "Pillow Uncontrolled Resource Consumption"
+  },
+  "GHSA-3ww4-gg4f-jr7f": {
+   "modified": "2026-09-10T03:50:05.279171645Z",
+   "severity": "HIGH",
+   "summary": "Python Cryptography package vulnerable to Bleichenbacher timing oracle attack"
+  },
+  "GHSA-3xv8-3j54-hgrp": {
+   "modified": "2025-06-06T15:13:14.202950Z",
+   "severity": "HIGH",
+   "summary": "Out-of-bounds read in Pillow"
+  },
+  "GHSA-43fq-w8qq-v88h": {
+   "modified": "2024-10-09T20:02:20.538595Z",
+   "severity": "CRITICAL",
+   "summary": "Out-of-bounds read in Pillow"
+  },
+  "GHSA-44wm-f244-xhp3": {
+   "modified": "2026-09-10T03:50:11.139712157Z",
+   "severity": "HIGH",
+   "summary": "Pillow buffer overflow vulnerability"
+  },
+  "GHSA-45hq-cxwh-f6vc": {
+   "modified": "2026-09-10T03:50:51.372929814Z",
+   "severity": "HIGH",
+   "summary": "Pillow `BdfFontFile`: `Image.new()` called without `_decompression_bomb_check()` — bomb protection bypass via font loading"
+  },
+  "GHSA-4fx9-vc88-q2xc": {
+   "modified": "2024-12-05T05:35:12.297192Z",
+   "severity": "LOW",
+   "summary": "Infinite loop in Pillow"
+  },
+  "GHSA-4grg-w6v8-c28g": {
+   "modified": "2026-09-10T03:50:24.238504042Z",
+   "severity": "LOW",
+   "summary": "Flask uses fallback key instead of current signing key"
+  },
+  "GHSA-4wrc-f8pq-fpqp": {
+   "modified": "2026-09-10T03:49:19.715346399Z",
+   "severity": "CRITICAL",
+   "summary": "Pivotal Spring Framework contains unsafe Java deserialization methods"
+  },
+  "GHSA-4ww3-3rxj-8v6q": {
+   "modified": "2024-11-29T05:42:21.419833Z",
+   "severity": "HIGH",
+   "summary": "actionpack allows remote attackers to bypass intended access restrictions"
+  },
+  "GHSA-4x4j-2g7c-83w6": {
+   "modified": "2026-09-10T03:51:10.324377232Z",
+   "severity": "MODERATE",
+   "summary": "Pillow: WindowsViewer.get_command() OS command injection via unescaped shell path"
+  },
+  "GHSA-4xc9-xhrj-v574": {
+   "modified": "2025-08-12T21:55:35.778975Z",
+   "severity": "HIGH",
+   "summary": "Prototype Pollution in lodash"
+  },
+  "GHSA-537c-gmf6-5ccf": {
+   "modified": "2026-09-10T03:50:48.298936410Z",
+   "severity": "HIGH",
+   "summary": "Vulnerable OpenSSL included in cryptography wheels"
+  },
+  "GHSA-562c-5r94-xh97": {
+   "modified": "2025-02-21T05:29:40.872529Z",
+   "severity": "HIGH",
+   "summary": "Flask is vulnerable to Denial of Service via incorrect encoding of JSON data"
+  },
+  "GHSA-57h3-9rgr-c24m": {
+   "modified": "2024-10-08T13:22:45.198644Z",
+   "severity": "CRITICAL",
+   "summary": "Out of bounds write in Pillow"
+  },
+  "GHSA-5cpq-8wj7-hf2v": {
+   "modified": "2026-09-10T03:50:02.133725445Z",
+   "severity": "LOW",
+   "summary": "Vulnerable OpenSSL included in cryptography wheels"
+  },
+  "GHSA-5gm3-px64-rw72": {
+   "modified": "2024-10-08T13:22:59.440420Z",
+   "severity": "HIGH",
+   "summary": "Uncontrolled Resource Consumption in Pillow"
+  },
+  "GHSA-5hq2-xf89-9jxq": {
+   "modified": "2024-02-16T08:18:07.647142Z",
+   "severity": "MODERATE",
+   "summary": "Possible Open Redirect Vulnerability in Action Pack"
+  },
+  "GHSA-5wv5-4vpf-pj6m": {
+   "modified": "2024-09-20T21:24:25.140560Z",
+   "severity": "HIGH",
+   "summary": "Pallets Project Flask is vulnerable to Denial of Service via Unexpected memory usage"
+  },
+  "GHSA-5x94-69rx-g8h2": {
+   "modified": "2026-09-10T03:51:10.514604451Z",
+   "severity": "HIGH",
+   "summary": "Pillow: `FontFile.compile()`: `Image.new()` called without `_decompression_bomb_check()`"
+  },
+  "GHSA-5xmw-vc9v-4wf2": {
+   "modified": "2026-10-19T20:00:04.709097863Z",
+   "severity": "MODERATE",
+   "summary": "Pillow has a heap buffer overflow with nested list coordinates"
+  },
+  "GHSA-62p4-gmf7-7g93": {
+   "modified": "2026-09-10T03:51:10.632149522Z",
+   "severity": "HIGH",
+   "summary": "Pillow: Out-of-bounds read via attacker-controlled row stride on Pillow's mmap path (McIdas AREA files)"
+  },
+  "GHSA-652x-xj99-gmcc": {
+   "modified": "2024-10-21T22:22:54.104555Z",
+   "severity": "MODERATE",
+   "summary": "Exposure of Sensitive Information to an Unauthorized Actor in Requests"
+  },
+  "GHSA-654m-c8p4-x5fp": {
+   "modified": "2026-09-10T03:50:45.767891933Z",
+   "severity": "LOW",
+   "summary": "Axios has a Patch Bypass: Proxy-Authorization Header Injection via Prototype Pollution — Incomplete Null-Prototype Fix"
+  },
+  "GHSA-68rp-wp8r-4726": {
+   "modified": "2026-09-10T03:49:54.354981590Z",
+   "severity": "LOW",
+   "summary": "Flask session does not add `Vary: Cookie` header when accessed in some ways"
+  },
+  "GHSA-6r8x-57c9-28j4": {
+   "modified": "2026-09-10T03:51:10.822199342Z",
+   "severity": "HIGH",
+   "summary": "Pillow: Heap out-of-bounds write `Image.paste()` / `Image.crop()` via signed coordinate overflow"
+  },
+  "GHSA-6vqw-3v5j-54x4": {
+   "modified": "2026-09-10T03:50:09.815640629Z",
+   "severity": "HIGH",
+   "summary": "cryptography NULL pointer dereference with pkcs12.serialize_key_and_certificates when called with a non-matching certificate and private key and an hmac_hash override"
+  },
+  "GHSA-7534-mm45-c74v": {
+   "modified": "2024-10-09T21:10:34.327533Z",
+   "severity": "CRITICAL",
+   "summary": "Buffer Overflow in Pillow"
+  },
+  "GHSA-77gc-v2xv-rvvh": {
+   "modified": "2024-10-09T21:25:17.588681Z",
+   "severity": "HIGH",
+   "summary": "Out-of-bounds Read in Pillow"
+  },
+  "GHSA-79v4-65xg-pq4g": {
+   "modified": "2026-09-10T03:50:22.501671988Z",
+   "severity": "LOW",
+   "summary": "Vulnerable OpenSSL included in cryptography wheels"
+  },
+  "GHSA-7r7m-5h27-29hp": {
+   "modified": "2024-10-14T18:25:51.489802Z",
+   "severity": "HIGH",
+   "summary": "Potential infinite loop in Pillow"
+  },
+  "GHSA-8843-m7mw-mxqm": {
+   "modified": "2025-06-06T15:13:20.298139Z",
+   "severity": "HIGH",
+   "summary": "Buffer overflow in Pillow"
+  },
+  "GHSA-8ghj-p4vj-mr35": {
+   "modified": "2024-10-14T21:23:45.339098Z",
+   "severity": "HIGH",
+   "summary": "Pillow Denial of Service vulnerability"
+  },
+  "GHSA-8m9x-pxwq-j236": {
+   "modified": "2024-10-09T21:11:12.984800Z",
+   "severity": "CRITICAL",
+   "summary": "Pillow command injection"
+  },
+  "GHSA-8v84-f9pq-wr9x": {
+   "modified": "2026-09-10T03:51:11.229114807Z",
+   "severity": "HIGH",
+   "summary": "Pillow `PcfFontFile._load_bitmaps()`: `Image.frombytes()` called without `_decompression_bomb_check()` — bomb protection bypass via PCF font loading"
+  },
+  "GHSA-8vj2-vxx3-667w": {
+   "modified": "2024-10-14T18:26:08.636369Z",
+   "severity": "CRITICAL",
+   "summary": "Arbitrary expression injection in Pillow"
+  },
+  "GHSA-8xjq-8fcg-g5hw": {
+   "modified": "2024-10-08T13:23:21.252680Z",
+   "severity": "HIGH",
+   "summary": "Out-of-bounds Write in Pillow"
+  },
+  "GHSA-8xjv-v9xq-m5h9": {
+   "modified": "2024-10-09T20:25:16.253664Z",
+   "severity": "HIGH",
+   "summary": "Pillow Buffer overflow in ImagingFliDecode"
+  },
+  "GHSA-95q3-8gr9-gm8w": {
+   "modified": "2025-08-15T14:25:58.420732Z",
+   "severity": "HIGH",
+   "summary": "Pillow Denial of Service by Uncontrolled Resource Consumption"
+  },
+  "GHSA-98vv-pw6r-q6q4": {
+   "modified": "2024-10-09T21:08:55.452380Z",
+   "severity": "HIGH",
+   "summary": "Uncontrolled Resource Consumption in pillow"
+  },
+  "GHSA-9hjg-9r4m-mvj7": {
+   "modified": "2026-10-19T20:00:04.716114530Z",
+   "severity": "MODERATE",
+   "summary": "Requests vulnerable to .netrc credentials leak via malicious URLs"
+  },
+  "GHSA-9hw9-ch79-4vh6": {
+   "modified": "2026-09-10T03:51:11.334365483Z",
+   "severity": "HIGH",
+   "summary": "Pillow: Controlled heap out-of-bounds write in Pillow `ImageCmsTransform.apply()` via output mode mismatch"
+  },
+  "GHSA-9hx2-hgq2-2g4f": {
+   "modified": "2024-10-09T21:24:57.273766Z",
+   "severity": "MODERATE",
+   "summary": "Regular Expression Denial of Service (ReDoS) in Pillow"
+  },
+  "GHSA-9j59-75qj-795w": {
+   "modified": "2024-10-14T18:43:28.549080Z",
+   "severity": "HIGH",
+   "summary": "Path traversal in Pillow"
+  },
+  "GHSA-9v9h-cgj8-h64p": {
+   "modified": "2026-09-10T03:50:09.410128409Z",
+   "severity": "MODERATE",
+   "summary": "Null pointer dereference in PKCS12 parsing"
+  },
+  "GHSA-9wrq-xvmp-xjc8": {
+   "modified": "2025-04-03T15:46:47.783301Z",
+   "severity": "HIGH",
+   "summary": "Rails Denial of Service vulnerability"
+  },
+  "GHSA-9wx4-h78v-vm56": {
+   "modified": "2026-09-10T03:50:13.740879755Z",
+   "severity": "MODERATE",
+   "summary": "Requests `Session` object does not verify requests after making first request with verify=False"
+  },
+  "GHSA-cf7p-gm2m-833m": {
+   "modified": "2026-09-10T03:49:57.356196452Z",
+   "severity": "HIGH",
+   "summary": "cryptography mishandles SSH certificates"
+  },
+  "GHSA-cfh3-3jmp-rvhc": {
+   "modified": "2026-09-10T03:50:59.393816085Z",
+   "severity": "HIGH",
+   "summary": "Pillow affected by out-of-bounds write when loading PSD images"
+  },
+  "GHSA-cfj3-7x9c-4p3h": {
+   "modified": "2024-10-26T22:51:23.384075Z",
+   "severity": "MODERATE",
+   "summary": "Exposure of Sensitive Information to an Unauthorized Actor in Requests"
+  },
+  "GHSA-f57c-hx33-hvh8": {
+   "modified": "2026-02-03T17:50:09.070094Z",
+   "severity": "CRITICAL",
+   "summary": "Active Record component in Ruby on Rails has a data-type injection vulnerability"
+  },
+  "GHSA-fcf9-3qw3-gxmj": {
+   "modified": "2024-09-13T18:23:23.420507Z",
+   "severity": "HIGH",
+   "summary": "PyCA Cryptography vulnerable to GCM tag forgery"
+  },
+  "GHSA-fjfg-q662-gm6j": {
+   "modified": "2025-05-01T18:49:06.777708Z",
+   "severity": "MODERATE",
+   "summary": "Moderate severity vulnerability that affects rails"
+  },
+  "GHSA-fvqr-27wr-82fm": {
+   "modified": "2025-08-12T21:55:16.003066Z",
+   "severity": "MODERATE",
+   "summary": "Prototype Pollution in lodash"
+  },
+  "GHSA-g6hf-f9cq-q7w7": {
+   "modified": "2024-12-04T05:41:42.939748Z",
+   "severity": "MODERATE",
+   "summary": "Cross-Site Request Forgery in Spring Framework"
+  },
+  "GHSA-gc5v-m9x4-r6x2": {
+   "modified": "2026-09-10T03:50:39.207922076Z",
+   "severity": "MODERATE",
+   "summary": "Requests has Insecure Temp File Reuse in its extract_zipped_paths() utility function"
+  },
+  "GHSA-gm25-fpmr-43fj": {
+   "modified": "2025-04-09T15:30:21.670801Z",
+   "severity": "MODERATE",
+   "summary": "Moderate severity vulnerability that affects rails"
+  },
+  "GHSA-h4gh-qq45-vh27": {
+   "modified": "2026-09-10T03:50:18.241644273Z",
+   "severity": "MODERATE",
+   "summary": "pyca/cryptography has a vulnerable OpenSSL included in cryptography wheels"
+  },
+  "GHSA-hggm-jpg3-v476": {
+   "modified": "2024-11-24T05:24:23.229640Z",
+   "severity": "HIGH",
+   "summary": "RSA decryption vulnerable to Bleichenbacher timing vulnerability"
+  },
+  "GHSA-j8r2-6x86-q33q": {
+   "modified": "2026-09-10T03:50:01.756149727Z",
+   "severity": "MODERATE",
+   "summary": "Unintended leak of Proxy-Authorization header in requests"
+  },
+  "GHSA-jf85-cpcp-j695": {
+   "modified": "2026-09-10T03:47:55.238868631Z",
+   "severity": "CRITICAL",
+   "summary": "Prototype Pollution in lodash"
+  },
+  "GHSA-jfhm-5ghh-2f97": {
+   "modified": "2026-09-10T03:49:59.095260608Z",
+   "severity": "MODERATE",
+   "summary": "cryptography vulnerable to NULL-dereference when loading PKCS7 certificates"
+  },
+  "GHSA-jm77-qphf-c4w8": {
+   "modified": "2026-09-10T03:50:02.832467975Z",
+   "severity": "LOW",
+   "summary": "pyca/cryptography's wheels include vulnerable OpenSSL"
+  },
+  "GHSA-jmgf-p46x-982h": {
+   "modified": "2025-04-09T17:02:22.936736Z",
+   "severity": "MODERATE",
+   "summary": "rails is vulnerable to CRLF injection"
+  },
+  "GHSA-jwhv-rgqc-fqj5": {
+   "modified": "2025-04-09T15:30:02.622007Z",
+   "severity": "MODERATE",
+   "summary": "Session fixation vulnerability in Rails "
+  },
+  "GHSA-m959-cc7f-wv43": {
+   "modified": "2026-09-10T03:51:00.592317622Z",
+   "severity": "LOW",
+   "summary": "cryptography has incomplete DNS name constraint enforcement on peer names"
+  },
+  "GHSA-p423-j2cm-9vmq": {
+   "modified": "2026-11-04T03:30:50.401534783Z",
+   "severity": "MODERATE",
+   "summary": "Cryptography vulnerable to buffer overflow if non-contiguous buffers were passed to APIs"
+  },
+  "GHSA-p4c6-77gc-694x": {
+   "modified": "2025-04-09T15:55:51.425352Z",
+   "severity": "MODERATE",
+   "summary": "session fixation protection mechanism in cgi_process.rb in Rails"
+  },
+  "GHSA-p6mc-m468-83gw": {
+   "modified": "2025-08-12T21:56:17.174859Z",
+   "severity": "HIGH",
+   "summary": "Prototype Pollution in lodash"
+  },
+  "GHSA-pg2w-x9wp-vw92": {
+   "modified": "2024-12-01T05:57:02.796059Z",
+   "severity": "MODERATE",
+   "summary": "Python Requests Session Fixation"
+  },
+  "GHSA-q3cj-2r34-2cwc": {
+   "modified": "2024-09-13T20:24:39.475398Z",
+   "severity": "HIGH",
+   "summary": "Improper input validation in cryptography"
+  },
+  "GHSA-r6ph-v2qm-q3c2": {
+   "modified": "2026-09-10T03:50:59.750965345Z",
+   "severity": "HIGH",
+   "summary": "cryptography Vulnerable to a Subgroup Attack Due to Missing Subgroup Validation for SECT Curves"
+  },
+  "GHSA-rhm9-p9w5-fwm7": {
+   "modified": "2025-02-15T05:29:30.639484Z",
+   "severity": "HIGH",
+   "summary": "PyCA Cryptography symmetrically encrypting large values can lead to integer overflow"
+  },
+  "GHSA-rvpq-5xqx-pfpp": {
+   "modified": "2025-04-03T14:58:34.698394Z",
+   "severity": "HIGH",
+   "summary": "Ruby on Rails vulnerable to code injection"
+  },
+  "GHSA-rxq3-gm4p-5fj4": {
+   "modified": "2024-02-16T08:14:01.612807Z",
+   "severity": "CRITICAL",
+   "summary": "rails vulnerable to improper authentication"
+  },
+  "GHSA-v8gr-m533-ghj9": {
+   "modified": "2026-09-10T03:50:03.291941916Z",
+   "severity": "LOW",
+   "summary": "Vulnerable OpenSSL included in cryptography wheels"
+  },
+  "GHSA-w7pp-m8wf-vj6r": {
+   "modified": "2026-09-10T03:49:52.124485319Z",
+   "severity": "MODERATE",
+   "summary": "Cipher.update_into can corrupt memory if passed an immutable python object as the outbuf"
+  },
+  "GHSA-wff4-fpwg-qqv3": {
+   "modified": "2026-07-13T07:26:53.150769655Z",
+   "severity": "MODERATE",
+   "summary": "Unexpected server crash in Next.js"
+  },
+  "GHSA-x4qr-2fvf-3mr5": {
+   "modified": "2026-09-10T03:49:52.275131140Z",
+   "severity": "HIGH",
+   "summary": "Vulnerable OpenSSL included in cryptography wheels"
+  },
+  "GHSA-x5rq-j2xg-h7qm": {
+   "modified": "2026-09-10T03:48:25.206281974Z",
+   "severity": "MODERATE",
+   "summary": "Regular Expression Denial of Service (ReDoS) in lodash"
+  },
+  "GHSA-x84v-xcm2-53pg": {
+   "modified": "2024-10-21T21:42:55.896669Z",
+   "severity": "HIGH",
+   "summary": "Insufficiently Protected Credentials in Requests"
+  },
+  "GHSA-xjrf-8x4f-43h4": {
+   "modified": "2025-07-03T20:36:14.698961Z",
+   "severity": "MODERATE",
+   "summary": "Improper Neutralization of Input During Web Page Generation in Spring Framework"
+  }
+ },
+ "source": "https://api.osv.dev/v1/vulns (fetched 2026-11-05)"
+}

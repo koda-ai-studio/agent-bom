@@ -1,0 +1,38 @@
+{
+ "ollama/gemma3:4b": {
+  "dev": {
+   "answered_rate": 1.0,
+   "blocked_hop_callout": 0.738,
+   "hop_coverage": 0.876
+  },
+  "heldout": {
+   "answered_rate": 1.0,
+   "blocked_hop_callout": 0.647,
+   "hop_coverage": 0.897
+  }
+ },
+ "ollama/llama3.2": {
+  "dev": {
+   "answered_rate": 0.974,
+   "blocked_hop_callout": 0.976,
+   "hop_coverage": 0.967
+  },
+  "heldout": {
+   "answered_rate": 1.0,
+   "blocked_hop_callout": 1.0,
+   "hop_coverage": 1.0
+  }
+ },
+ "ollama/qwen2.5:3b": {
+  "dev": {
+   "answered_rate": 1.0,
+   "blocked_hop_callout": 0.952,
+   "hop_coverage": 0.959
+  },
+  "heldout": {
+   "answered_rate": 1.0,
+   "blocked_hop_callout": 0.941,
+   "hop_coverage": 0.985
+  }
+ }
+}

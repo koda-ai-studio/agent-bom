@@ -421,6 +421,24 @@ are disabled because legacy runs lack durable ownership records. Reconcile
 those resources manually using saved IDs and provider events; no clean-state
 claim follows from an empty sweep result.
 
+## AI advice
+
+AI advice fails closed: a failure removes advice and never changes scanner results.
+
+| Failure | Behaviour | Where it shows |
+|---|---|---|
+| AI not enabled for the deployment or tenant | No provider call. `POST /v1/graph/explain` returns 409. | `GET /v1/ai/status` state `off`, with the reason; findings page; CLI |
+| Non-loopback provider without `AGENT_BOM_AI_ALLOW_REMOTE=1` | Refused at resolution and again at the provider boundary, before any request | Run status `blocked`; audit outcome `blocked` |
+| Provider down, timeout, or empty response | That batch produces no advice; the scan continues | Run status `partial` or `failed`; audit outcome `failed` or `empty` |
+| Invalid or unparseable response | The bad entry or response is dropped; valid neighbours stand | Audit `guard_rejected` with the reason |
+| Model tries to dismiss a protected finding | Dismissal discarded and the finding stays confirmed | `guard_applied` on the assessment; audit `guard_rejected` |
+| Budget, capacity wait or run deadline reached | No further calls; advice so far is kept | Run status `partial` or `failed`; audit `over_budget` or `over_capacity` |
+| Advice store unavailable | Findings list still answers, with a warning | `warnings` on `GET /v1/findings` |
+| Control-plane audit write fails | Fails closed for the AI call: its output is discarded, so no advice is stored and no explanation returned without its record. The scan itself continues, since it does not depend on advice | Run status `failed`; explain returns 503 `audit_unavailable`; error log |
+| CLI local audit write fails | The scan and its advice stand, with a warning. The local log records one user's own calls and can be opted out of, so an unwritable state directory should not take their results away | Log warning |
+| Explain rate or budget store unavailable | Fails closed: no model call | 429 with `Retry-After` |
+| Explain rate or daily budget exceeded | 429 with `Retry-After`, no model call | `agent_bom_rate_limit_hits_total{bucket="ai_explain"}` or `ai_explain_budget` |
+
 ## Scheduled scan dispatch
 
 The scan scheduler rechecks its leadership lock after reading due schedules

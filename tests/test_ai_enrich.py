@@ -22,6 +22,12 @@ from agent_bom.models import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _permit_remote_providers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """These suites cover provider routing; the egress gate has its own in test_ai_policy.py."""
+    monkeypatch.setenv("AGENT_BOM_AI_ALLOW_REMOTE", "1")
+
+
 def _make_blast_radius() -> BlastRadius:
     """Create a test BlastRadius with realistic data based on real OpenClaw CVEs."""
     vuln = Vulnerability(

@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Iterable
 
+from agent_bom.evidence.ai_audit_fields import AI_CALL_AUDIT_FIELDS
 from agent_bom.security import mask_email, sanitize_text
 
 # ─── Tier definition ─────────────────────────────────────────────────────────
@@ -411,7 +412,7 @@ def classify_field(field_name: str) -> EvidenceTier:
     if not isinstance(field_name, str):
         return EvidenceTier.REPLAY_ONLY
     canonical = field_name.strip().lower()
-    if canonical in TIER_A_FIELDS:
+    if canonical in TIER_A_FIELDS or canonical in AI_CALL_AUDIT_FIELDS:
         return EvidenceTier.SAFE_TO_STORE
     return EvidenceTier.REPLAY_ONLY
 

@@ -10,6 +10,7 @@ import { flowAvailability, flowFromParam, flowUnavailableReason, investigationFl
 import type { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { GRAPH_CARD_ZOOM } from "@/lib/graph-adaptive-frame";
 import { wrappedRankLayout } from "@/lib/graph-wrapped-ranks";
+import { quietContextEdges, withHeldConnections } from "@/lib/graph-edge-quieting";
 
 /** A preview shows few cards, so it can give them room; the same 220px columns wrap to two rows. */
 const PREVIEW_LAYOUT = { maxRows: 2, columnGap: 320, rowGap: 380, respace: true };
@@ -42,12 +43,15 @@ export interface FlowViewInput {
   previewExpanded: boolean;
   setPreviewExpanded: (expanded: boolean) => void;
   selectedNodeId: string | null;
+  /** Beyond the selection: nodes whose connections the operator is looking at right now. */
+  focusNodeIds: (string | null)[];
+  selectedRelationshipId: string | null;
   clearSelection: () => void;
   resetCamera: () => void;
 }
 
 /** Which flow is on screen, whether it could apply, and the disclosure layered over it. */
-export function useInvestigationFlowView({ presentation, edges, loaded, narrowViewport, requestedFlow, otherSurface, webglNodeCount, connectionPreview, previewExpanded, setPreviewExpanded, selectedNodeId, clearSelection, resetCamera }: FlowViewInput) {
+export function useInvestigationFlowView({ presentation, edges, loaded, narrowViewport, requestedFlow, otherSurface, webglNodeCount, connectionPreview, previewExpanded, setPreviewExpanded, selectedNodeId, focusNodeIds, selectedRelationshipId, clearSelection, resetCamera }: FlowViewInput) {
   const previewActive = Boolean(connectionPreview) && !previewExpanded;
   const kind = previewActive ? "auto" : flowFromParam(requestedFlow);
   const pausedReason = webglNodeCount !== null ? `Flows need a smaller view than this ${webglNodeCount.toLocaleString()}-node overview. Narrow it with filters or search.`
@@ -63,7 +67,14 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   }, [active, previewActive, presentation.nodes, edges, kind, narrowViewport]);
   const disclosed = useCloudFindingDisclosure(flow.nodes, flow.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
     active || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
-  const measured = useDisplayNodeMeasurements(disclosed.nodes, presentation.onNodesChange);
+  const [allEdgesShown, setAllEdgesShown] = useState(false);
+  const annotated = useMemo(() => withHeldConnections(disclosed.nodes, disclosed.edges, allEdgesShown || presentation.editing), [disclosed.nodes, disclosed.edges, allEdgesShown, presentation.editing]);
+  const measured = useDisplayNodeMeasurements(annotated, presentation.onNodesChange);
+  const focusKey = JSON.stringify([selectedNodeId, ...focusNodeIds]);
+  const quieted = useMemo(
+    () => quietContextEdges(disclosed.edges, { showAll: allEdgesShown || presentation.editing, focusNodes: JSON.parse(focusKey) as (string | null)[], focusEdge: selectedRelationshipId }),
+    [disclosed.edges, allEdgesShown, presentation.editing, focusKey, selectedRelationshipId],
+  );
 
   // A preview or canvas page is a window, so what a flow could show is judged on the whole loaded map.
   const scope = previewActive && connectionPreview ? { nodes: connectionPreview.allNodes, edges: connectionPreview.allEdges } : loaded;
@@ -107,7 +118,7 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   }, [disclosed.available, disclosed.nodes, flow.applied, flow.primaryPath]);
 
   return {
-    kind, flow, disclosed, measured, active, previewActive, navigationIds, toggleFindingGroups, selectFlow, inspectDisplayEdge, inspectDisplayNode,
+    kind, flow, disclosed, measured, active, previewActive, navigationIds, quieted, allEdgesShown, setAllEdgesShown, toggleFindingGroups, selectFlow, inspectDisplayEdge, inspectDisplayNode,
     cardStyle: flow.applied && !narrowViewport ? WIDE_CARD : undefined,
     primaryZoom: flow.scenario === "connections" && flow.applied ? GRAPH_CARD_ZOOM : undefined,
     anchorId: flow.primaryPath[0] ?? (active ? flow.nodes.find(node => !node.hidden && node.position.x === 0 && node.position.y === 0)?.id : undefined),

@@ -10,11 +10,23 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- AI triage is measured: a labelled dataset and `scripts/ai_triage_eval.py` score false-positive precision and recall, severe dismissals, calibration, invalid responses, injection resistance, latency and tokens per model, and CI replays recorded responses so a regression fails. Results are in `docs/AI_ENRICHMENT.md`.
+- AI advice now appears with its finding: `ai_assessment` on `GET /v1/findings`, the findings page and drawer, CLI output, CSV, SARIF and HTML, stored per scan and tenant on every store. It is labelled as advice and never changes scanner severity. `GET /v1/ai/status` says when it is off or failed.
+- "Explain this path" (`POST /v1/graph/explain`): on demand. The model selects recorded edges and nodes and the server writes each sentence from the record, so direction and reachability come from the graph. Evidence limits such as non-traversable hops are stated.
+- Each AI call is recorded with hashes rather than prompt text: in the audit chain on the control plane, with `agent_bom_ai_calls_total` and latency metrics, and in a local chained log on the CLI (`AGENT_BOM_AI_LOCAL_AUDIT=0` opts out). On the control plane, output whose audit record cannot be written is discarded.
 - Finding dates now outlast scan retention: `first_seen`, `last_seen`, resolved and reopened dates live in their own per-finding table, written in the same transaction as the scan. A resolved finding stays listed after its scans expire, and late, repeated or concurrent scans cannot move a finding's state incorrectly. The cleanup tick seeds existing dates from retained scans after upgrade, outside any read. Reads no longer rebuild findings for every retained scan.
 - Every resolved finding states why: `resolution_reason` is `no_longer_detected` or `asset_deleted`. `asset_deleted` needs a complete AWS inventory covering the asset's account, region and service, with no warnings or missing permissions, from the same source and scope. Other sources never produce it; see `docs/FINDING_LIFECYCLE.md`.
 - `stale` marks an open finding not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). It stays open and counted, can be filtered with `status=stale` on the API, `--status stale` on the CLI and the Status filter on the Findings page, and never resolves anything.
 
 ### Changed
+- **Behaviour change:** AI never dismisses or downgrades a KEV, malicious-package or reachable-critical finding, and a finding whose text addresses the reader goes to a person.
+- **Behaviour change:** providers off the loopback interface need `AGENT_BOM_AI_ALLOW_REMOTE=1`, and control-plane AI needs `AGENT_BOM_AI_CONTROL_PLANE_ENABLED=1`. A scan request's `ai_enrich` no longer turns it on by itself.
+- AI triage picks the riskiest findings rather than the first ones, sends the fields that decide a false positive, and reports what it skipped and why.
+- The investigation graph opens on what explains the first frame. A full map reads as rows of chains, draws the connections between neighbours, and holds back long ones until a node is hovered or selected. A strip above the canvas states how many connections are drawn, each card shows how many of its own are not, and Show all or Fit all draws the rest.
+- A connection no longer leaves the map to go around it. An exterior route more than twice the direct distance now takes the direct line, which removes the stray lines that crossed the whole frame.
+- On a phone, graph and paths content starts in the first third of the screen. The newer-snapshot notice fits one line, Paths, Graph, Flow and Graph options share one row, and counts and preview actions sit under the content. Paths open on the worst-rated chain.
+- The estate map opens on the highest recorded risks, named in a list and on the canvas, with one Investigate action. The overview's draw budget always includes them, its controls fit one toolbar, and its partial-view count now matches the map's.
+- The WebGL map follows its own container's size, so opening the inspector no longer leaves the canvas misaligned.
 - The MCP `scan` tool now reports `readOnlyHint: false`, because it keeps a redacted result locally and can refresh the advisory database. Its description says so. Tools that open no socket now report `openWorldHint: false`.
 - The Claude plugin's MCP servers start with `GITHUB_TOKEN`, `GH_TOKEN` and `NVD_API_KEY` blanked, so a token in the environment is not sent. Lookups use the anonymous rate limits there.
 - The `inventory` skill no longer has the `scan` tool, so it cannot reach the network.

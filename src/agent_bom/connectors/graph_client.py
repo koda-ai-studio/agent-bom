@@ -36,6 +36,17 @@ class GraphClientMixin:
             "POST", "/v1/graph/consequences", json={**request, "scan_id": scan_id, "snapshot_generation": snapshot_generation}
         )
 
+    def explain_graph_selection(self, *, node_ids: list[str], ordered: bool = False, scan_id: str | None = None) -> JsonObject:
+        """Ask for AI advice on recorded graph evidence: on demand, cited, and never written to the graph."""
+        body: dict[str, JsonValue] = {"node_ids": list(node_ids), "ordered": ordered}
+        if scan_id:
+            body["scan_id"] = scan_id
+        return self._request("POST", "/v1/graph/explain", json=body)
+
+    def ai_status(self) -> JsonObject:
+        """Whether AI advice is on for this tenant and how its last scan run went. Calls no model."""
+        return self._request("GET", "/v1/ai/status")
+
     def compromise_assessment(
         self,
         *,
