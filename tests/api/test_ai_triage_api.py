@@ -414,12 +414,12 @@ def _report():
 
 
 def test_a_scan_request_cannot_turn_ai_on(store, monkeypatch: pytest.MonkeyPatch) -> None:
-    from agent_bom.api.scan_analysis_stages import _run_advisory_ai
+    from agent_bom.api.ai_scan_stage import run_advisory_ai as _run_advisory_ai
 
     monkeypatch.delenv("AGENT_BOM_AI_CONTROL_PLANE_ENABLED", raising=False)
     report = _report()
     before = [finding.to_dict() for finding in report.findings]
-    with patch("agent_bom.ai_enrich.run_ai_enrichment_sync", side_effect=AssertionError("AI is off")):
+    with patch("agent_bom.api.ai_scan_stage.run_ai_enrichment_sync", side_effect=AssertionError("AI is off")):
         _run_advisory_ai(_scan_context(), report)
     assert report.ai_enrichment_metadata["status"] == "disabled"
     assert store.latest_run("tenant-a")["status"] == "disabled"
@@ -428,7 +428,7 @@ def test_a_scan_request_cannot_turn_ai_on(store, monkeypatch: pytest.MonkeyPatch
 
 def test_scan_persists_advice_for_its_tenant_and_uses_the_operator_model(store, ai_on) -> None:
     from agent_bom.ai_components.providers import _call_llm  # noqa: F401
-    from agent_bom.api.scan_analysis_stages import _run_advisory_ai
+    from agent_bom.api.ai_scan_stage import run_advisory_ai as _run_advisory_ai
 
     response = json.dumps({"assessments": [{"ref": "F1", "verdict": "problem_absent", "confidence": "high", "rationale": "safe"}]})
     report = _report()
@@ -449,10 +449,10 @@ def test_scan_persists_advice_for_its_tenant_and_uses_the_operator_model(store, 
 
 
 def test_a_failing_ai_step_is_stored_as_failed_and_the_scan_goes_on(store, ai_on) -> None:
-    from agent_bom.api.scan_analysis_stages import _run_advisory_ai
+    from agent_bom.api.ai_scan_stage import run_advisory_ai as _run_advisory_ai
 
     report = _report()
-    with patch("agent_bom.ai_enrich.run_ai_enrichment_sync", side_effect=RuntimeError("boom")):
+    with patch("agent_bom.api.ai_scan_stage.run_ai_enrichment_sync", side_effect=RuntimeError("boom")):
         _run_advisory_ai(_scan_context("tenant-d"), report)
     assert store.latest_run("tenant-d")["status"] == "failed"
 

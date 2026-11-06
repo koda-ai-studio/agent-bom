@@ -7,6 +7,8 @@ assessment for one page of findings without loading a single report.
 from __future__ import annotations
 
 import json
+import logging
+import sqlite3
 import threading
 from collections.abc import Sequence
 from typing import Any, Protocol
@@ -18,6 +20,7 @@ from agent_bom.core.tenancy import require_explicit_tenant_id
 from agent_bom.storage.base import BackendKind
 from agent_bom.storage.factory import resolve_backend
 
+_logger = logging.getLogger(__name__)
 MAX_FINDING_LOOKUP = 3_000  # a 1,000-row page carries up to three identifiers per row
 
 
@@ -315,3 +318,18 @@ def get_ai_assessment_store() -> AIAssessmentStore:
 def set_ai_assessment_store(store: AIAssessmentStore | None) -> None:
     global _STORE
     _STORE = store
+
+
+def discard_scan_advice(tenant_id: str, scan_id: str) -> None:
+    """Derived-data cleanup: a failure here never fails the job delete or the maintenance loop, and the TTL sweep retries."""
+    try:
+        get_ai_assessment_store().delete_scan(tenant_id, scan_id)
+    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
+        _logger.warning("AI advice delete skipped: %s", type(exc).__name__)
+
+
+def expire_advice(cutoff_iso: str) -> None:
+    try:
+        get_ai_assessment_store().delete_older_than(cutoff_iso)
+    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
+        _logger.warning("AI advice expiry skipped: %s", type(exc).__name__)

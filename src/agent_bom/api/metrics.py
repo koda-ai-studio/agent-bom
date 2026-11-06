@@ -227,6 +227,28 @@ def record_report_export(outcome: str) -> None:
         _report_exports.inc(outcome)
 
 
+def _ai_metric_lines() -> list[str]:
+    lines: list[str] = []
+    ai_calls = _ai_calls.snapshot()
+    lines.append("# HELP agent_bom_ai_calls_total AI provider calls by task, provider and outcome")
+    lines.append("# TYPE agent_bom_ai_calls_total counter")
+    if not ai_calls:
+        lines.append('agent_bom_ai_calls_total{task="none",provider="none",outcome="none"} 0')
+    for label, count in sorted(ai_calls.items()):
+        task, provider, outcome = label.split("|", 2)
+        lines.append(f'agent_bom_ai_calls_total{{task="{task}",provider="{provider}",outcome="{outcome}"}} {count}')
+
+    ai_latency = _ai_call_latency_ms.snapshot()
+    lines.append("# HELP agent_bom_ai_call_latency_milliseconds_total Total time spent in AI provider calls")
+    lines.append("# TYPE agent_bom_ai_call_latency_milliseconds_total counter")
+    if not ai_latency:
+        lines.append('agent_bom_ai_call_latency_milliseconds_total{task="none",provider="none"} 0')
+    for label, count in sorted(ai_latency.items()):
+        task, _, provider = label.partition("|")
+        lines.append(f'agent_bom_ai_call_latency_milliseconds_total{{task="{task}",provider="{provider}"}} {count}')
+    return lines
+
+
 def render_prometheus_lines() -> list[str]:
     """Return Prometheus text-format lines for all in-process counters."""
     lines: list[str] = []
@@ -308,24 +330,6 @@ def render_prometheus_lines() -> list[str]:
         provider, _, reason = label.partition("|")
         lines.append(f'agent_bom_authorization_evidence_gaps_total{{provider="{provider}",reason="{reason}"}} {count}')
 
-    ai_calls = _ai_calls.snapshot()
-    lines.append("# HELP agent_bom_ai_calls_total AI provider calls by task, provider and outcome")
-    lines.append("# TYPE agent_bom_ai_calls_total counter")
-    if not ai_calls:
-        lines.append('agent_bom_ai_calls_total{task="none",provider="none",outcome="none"} 0')
-    for label, count in sorted(ai_calls.items()):
-        task, provider, outcome = label.split("|", 2)
-        lines.append(f'agent_bom_ai_calls_total{{task="{task}",provider="{provider}",outcome="{outcome}"}} {count}')
-
-    ai_latency = _ai_call_latency_ms.snapshot()
-    lines.append("# HELP agent_bom_ai_call_latency_milliseconds_total Total time spent in AI provider calls")
-    lines.append("# TYPE agent_bom_ai_call_latency_milliseconds_total counter")
-    if not ai_latency:
-        lines.append('agent_bom_ai_call_latency_milliseconds_total{task="none",provider="none"} 0')
-    for label, count in sorted(ai_latency.items()):
-        task, _, provider = label.partition("|")
-        lines.append(f'agent_bom_ai_call_latency_milliseconds_total{{task="{task}",provider="{provider}"}} {count}')
-
     correlations = _auto_correlations.snapshot()
     lines.append("# HELP agent_bom_auto_correlations_total Automatic exact-batch graph correlation decisions")
     lines.append("# TYPE agent_bom_auto_correlations_total counter")
@@ -335,7 +339,7 @@ def render_prometheus_lines() -> list[str]:
         outcome, _, reason = label.partition("|")
         lines.append(f'agent_bom_auto_correlations_total{{outcome="{outcome}",reason="{reason}"}} {count}')
 
-    return lines
+    return [*lines, *_ai_metric_lines()]
 
 
 def reset_for_tests() -> None:

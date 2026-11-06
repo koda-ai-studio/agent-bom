@@ -20,13 +20,7 @@ def render_ai_triage_summary(report: "AIBOMReport", console: Console) -> None:
     assessments = list(getattr(report, "ai_finding_assessments", None) or [])
     console.print(Text("AI advice (does not change scanner severity or results)", style="bold"))
     if status in {"failed", "blocked", "unavailable", "disabled"} and not assessments:
-        console.print(
-            Text(
-                f"  {status}: {metadata.get('reason') or 'no assessments'}. Scanner results are unaffected.".replace(
-                    "Scanner", "scanner", 1
-                )
-            )
-        )
+        console.print(Text(f"  {status}: {metadata.get('reason') or 'no assessments'}. Scanner results are unaffected."))
         return
     counts = {word: sum(item.verdict == verdict for item in assessments) for verdict, word in _VERDICT_WORDS}
     console.print(Text("  " + ", ".join(f"{count} {word}" for word, count in counts.items())))

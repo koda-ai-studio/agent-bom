@@ -15,9 +15,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-from agent_bom import config
 from agent_bom.ai_components import call_audit
-from agent_bom.ai_components.call_state import EnrichmentTask
+from agent_bom.ai_components.call_state import AI_NUM_CTX, EnrichmentTask
 from agent_bom.ai_components.providers import _call_llm, _parse_json_response
 from agent_bom.ai_components.triage import _delimited, _untrusted
 
@@ -286,7 +285,7 @@ async def explain_graph_selection(context: ExplainContext, *, model: str, provid
             task=EnrichmentTask.GRAPH_EXPLAIN,
             system=EXPLAIN_SYSTEM_PROMPT,
             response_schema=EXPLAIN_RESPONSE_SCHEMA,
-            num_ctx=int(getattr(config, "AI_NUM_CTX", 8192)),
+            num_ctx=AI_NUM_CTX,
         )
         digest = next((record.model_digest for record in records if record.model_digest), "")
 

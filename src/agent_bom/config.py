@@ -453,10 +453,6 @@ AI_MAX_CALLS_PER_RUN = _int("AGENT_BOM_AI_MAX_CALLS", 150)
 # Bound the amount of finding material sent for advisory triage in one run.
 AI_MAX_FINDINGS_PER_RUN = _int("AGENT_BOM_AI_MAX_FINDINGS", 100)
 AI_FINDING_BATCH_SIZE = _int("AGENT_BOM_AI_FINDING_BATCH_SIZE", 1)  # findings per request; small models skip entries in larger batches
-AI_MAX_CONCURRENT_CALLS = _int("AGENT_BOM_AI_MAX_CONCURRENT_CALLS", 2)  # process-wide provider concurrency
-AI_CAPACITY_WAIT_SECONDS = _float("AGENT_BOM_AI_CAPACITY_WAIT_SECONDS", 30.0)
-AI_RUN_DEADLINE_SECONDS = _float("AGENT_BOM_AI_RUN_DEADLINE_SECONDS", 900.0)  # whole enrichment run; the scan continues past it
-AI_NUM_CTX = _int("AGENT_BOM_AI_NUM_CTX", 8192)  # Ollama context window; the default silently truncates batches
 
 # ── OIDC discovery shim ──────────────────────────────────────────────────
 # Optional static OIDC discovery metadata JSON served by the gateway for

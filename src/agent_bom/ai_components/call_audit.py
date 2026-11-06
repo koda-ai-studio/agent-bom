@@ -14,10 +14,13 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass
+from functools import partial
+from typing import TypeVar
 
 import httpx
 
 logger = logging.getLogger("agent_bom.ai_enrich")
+_T = TypeVar("_T")
 
 OUTCOMES = frozenset({"ok", "empty", "failed", "blocked", "over_budget", "over_capacity", "cache_hit"})
 _DIGEST_TTL_SECONDS = 300.0
@@ -79,6 +82,15 @@ def current_scope() -> tuple[str, str]:
     return _scope.get()
 
 
+def best_effort(operation: Callable[[], _T], label: str) -> _T | None:
+    """Optional AI bookkeeping: pluggable stores raise driver errors, and none may reach a scan or a read."""
+    try:
+        return operation()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("%s skipped: %s", label, type(exc).__name__)
+        return None
+
+
 def emit_ai_call(record: AICallRecord) -> None:
     """A broken sink must not change the outcome of a scan or a read."""
     logger.info(
@@ -95,10 +107,7 @@ def emit_ai_call(record: AICallRecord) -> None:
     with _sinks_lock:
         sinks = list(_sinks)
     for sink in sinks:
-        try:
-            sink(record)
-        except Exception:
-            logger.warning("AI call audit sink failed", exc_info=False)
+        best_effort(partial(sink, record), "AI call audit sink")
 
 
 @contextmanager

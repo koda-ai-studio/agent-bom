@@ -21,6 +21,7 @@ import asyncio
 import uuid
 from typing import TYPE_CHECKING, Optional
 
+import httpx
 from rich.text import Text
 
 from agent_bom import config
@@ -57,10 +58,12 @@ from collections.abc import Callable
 from importlib import import_module
 from typing import Any
 
+from agent_bom.ai_components import call_state
 from agent_bom.ai_components.call_audit import defer_ai_call_records, mark_guard_rejected
 from agent_bom.ai_components.call_state import (
     _AI_DETERMINISTIC_OVERRIDE,
     _AI_RUN_ID,
+    AI_NUM_CTX,
     AI_PROMPT_VERSION,
     DEFAULT_MODEL,
     AICallBudget,
@@ -215,7 +218,7 @@ async def assess_report_findings(
                 budget=budget,
                 system=TRIAGE_SYSTEM_PROMPT,
                 response_schema=TRIAGE_RESPONSE_SCHEMA,
-                num_ctx=int(getattr(config, "AI_NUM_CTX", 8192)),
+                num_ctx=AI_NUM_CTX,
             )
             if not response:
                 if budget is not None and budget.to_dict()["exhausted"]:
@@ -258,11 +261,8 @@ async def _run_ai_enrichment_impl(
         "run_id": run_id,
         "call_budget": budget.to_dict(),
     }
-    if resolution.status == "blocked":
-        console.print(Text(f"  AI enrichment skipped: {resolution.reason}", style="yellow"))
-        return
     if not resolution.available:
-        console.print("  [yellow]No LLM provider available. Skipping AI enrichment.[/yellow]")
+        console.print(Text(f"  AI enrichment skipped: {resolution.reason}", style="yellow"))
         console.print("  [dim]Option 1: Install Ollama (free, local) — ollama.com[/dim]")
         console.print("  [dim]Option 2: pip install 'agent-bom[huggingface]' + set HF_TOKEN[/dim]")
         console.print("  [dim]Option 3: pip install 'agent-bom[ai-enrich]' + set API key[/dim]")
@@ -387,7 +387,7 @@ async def run_ai_enrichment(
     try:
         if gate_ai_findings and _effective_temperature() != 0.0:
             raise ValueError("AI finding gating requires deterministic mode")
-        deadline = float(getattr(config, "AI_RUN_DEADLINE_SECONDS", 900.0))
+        deadline = call_state.AI_RUN_DEADLINE_SECONDS
         try:
             await asyncio.wait_for(
                 _run_ai_enrichment_impl(report, model, skill_result, skill_audit, gate_ai_findings=gate_ai_findings),
@@ -395,7 +395,7 @@ async def run_ai_enrichment(
             )
         except asyncio.TimeoutError:
             _record_ai_failure(report, f"the {deadline:g}s run deadline was reached")
-        except Exception as exc:  # noqa: BLE001 - advice is optional; the scan's results stand
+        except (RuntimeError, ValueError, TypeError, KeyError, AttributeError, OSError, httpx.HTTPError) as exc:
             logger.warning("AI enrichment failed: %s", sanitize_error(exc, generic=True))
             _record_ai_failure(report, "the AI step stopped on an unexpected error")
         render_ai_triage_summary(report, console)

@@ -22,6 +22,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
+from agent_bom.api.ai_assessment_store import discard_scan_advice, expire_advice
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.settings import env_raw
 from agent_bom.security import sanitize_text
@@ -339,12 +340,7 @@ def discard_job_snapshot(tenant_id: str | None, job_id: str, *, deleted: bool) -
         get_scan_snapshot_store().delete_job(tenant_id, job_id)
     except Exception as exc:  # broad-except: derived-data cleanup must never fail the authoritative job delete
         _logger.warning("scan snapshot delete skipped job=%s: %s", sanitize_text(job_id), sanitize_text(exc))
-    try:
-        from agent_bom.api.ai_assessment_store import get_ai_assessment_store
-
-        get_ai_assessment_store().delete_scan(tenant_id, job_id)
-    except Exception as exc:  # broad-except: derived-data cleanup must never fail the authoritative job delete
-        _logger.warning("AI advice delete skipped job=%s: %s", sanitize_text(job_id), sanitize_text(exc))
+    discard_scan_advice(tenant_id, job_id)
     return deleted
 
 
@@ -356,12 +352,7 @@ def expire_jobs_and_snapshots(job_store: Any, ttl_seconds: int) -> int:
         get_scan_snapshot_store().delete_older_than(None, cutoff)
     except Exception as exc:  # broad-except: one failed sweep must not stop the maintenance loop; the next tick retries
         _logger.warning("scan snapshot expiry skipped: %s", sanitize_text(exc))
-    try:
-        from agent_bom.api.ai_assessment_store import get_ai_assessment_store
-
-        get_ai_assessment_store().delete_older_than(cutoff)
-    except Exception as exc:  # broad-except: one failed sweep must not stop the maintenance loop; the next tick retries
-        _logger.warning("AI advice expiry skipped: %s", sanitize_text(exc))
+    expire_advice(cutoff)
     return removed
 
 

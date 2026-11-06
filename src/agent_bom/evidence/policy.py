@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Iterable
 
+from agent_bom.evidence.ai_audit_fields import AI_CALL_AUDIT_FIELDS
 from agent_bom.security import mask_email, sanitize_text
 
 # ─── Tier definition ─────────────────────────────────────────────────────────
@@ -49,19 +50,6 @@ _TIER_RANK: dict[EvidenceTier, int] = {
 # All names are lowercase; classification is case-insensitive at lookup time.
 TIER_A_FIELDS: frozenset[str] = frozenset(
     {
-        # AI call audit: identity, hashes and counts, never prompt or response text
-        "ai_task",
-        "ai_provider",
-        "ai_model",
-        "ai_model_digest",
-        "ai_prompt_sha256",
-        "ai_response_sha256",
-        "ai_prompt_tokens",
-        "ai_completion_tokens",
-        "ai_latency_ms",
-        "ai_outcome",
-        "ai_guard_rejected",
-        "ai_guard_reason",
         # Package / lockfile metadata
         "package_version",
         "package_name",
@@ -424,7 +412,7 @@ def classify_field(field_name: str) -> EvidenceTier:
     if not isinstance(field_name, str):
         return EvidenceTier.REPLAY_ONLY
     canonical = field_name.strip().lower()
-    if canonical in TIER_A_FIELDS:
+    if canonical in TIER_A_FIELDS or canonical in AI_CALL_AUDIT_FIELDS:
         return EvidenceTier.SAFE_TO_STORE
     return EvidenceTier.REPLAY_ONLY
 

@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from rich.console import Console
 
-from agent_bom import ai_enrich, config
-from agent_bom.ai_components import triage
+from agent_bom import ai_enrich
+from agent_bom.ai_components import call_state, triage
 from agent_bom.ai_components.triage import build_triage_prompt, select_findings_for_triage
 from agent_bom.ai_components.triage_console import render_ai_triage_summary
 from agent_bom.ai_schemas import AIFindingAssessment, AIProvenance
@@ -225,7 +225,7 @@ def test_an_unexpected_enrichment_error_is_recorded_and_never_raised() -> None:
 
 
 def test_the_run_deadline_stops_the_ai_step_and_keeps_what_it_has(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(config, "AI_RUN_DEADLINE_SECONDS", 0.05)
+    monkeypatch.setattr(call_state, "AI_RUN_DEADLINE_SECONDS", 0.05)
     report = _report(_finding("a"))
 
     async def forever(*_args: object, **_kwargs: object) -> None:

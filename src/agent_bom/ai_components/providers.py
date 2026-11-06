@@ -213,7 +213,7 @@ async def _call_ollama_direct(
         logger.warning("Ollama connection failed: %s", sanitize_error(exc, generic=True))
         call_audit.note_outcome("failed")
         return None
-    except Exception as exc:
+    except (httpx.HTTPError, ValueError, TypeError, KeyError, AttributeError) as exc:
         logger.warning("Ollama call failed: %s", sanitize_error(exc, generic=True))
         call_audit.note_outcome("failed")
         return None

@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
-import logging
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, TypeVar
 
+from agent_bom.ai_components.call_audit import best_effort
 from agent_bom.ai_components.triage_guard import guard_verdict
 from agent_bom.api.ai_assessment_store import get_ai_assessment_store
-from agent_bom.security import sanitize_error, sanitize_text
 
-_logger = logging.getLogger(__name__)
+_T = TypeVar("_T")
 _UNAVAILABLE_WARNING = "AI advice is unavailable for this page; scanner findings are unaffected."
 _ROW_ID_KEYS = ("id", "finding_id", "canonical_id")
+
+
+def _optional_advice(operation: Callable[[], _T]) -> _T | None:
+    return best_effort(operation, "AI advice store call")
 
 
 def _row_ids(row: dict[str, Any]) -> list[str]:
@@ -25,10 +29,8 @@ def attach_ai_assessments(body: dict[str, Any], tenant_id: str) -> dict[str, Any
     if not isinstance(rows, list) or not rows:
         return body
     wanted = [identifier for row in rows if isinstance(row, dict) for identifier in _row_ids(row)]
-    try:
-        stored = get_ai_assessment_store().latest_for_findings(tenant_id, wanted)
-    except Exception as exc:  # noqa: BLE001 - optional advice must not fail the findings list
-        _logger.warning("AI advice read skipped: %s", sanitize_text(sanitize_error(exc)))
+    stored = _optional_advice(lambda: get_ai_assessment_store().latest_for_findings(tenant_id, wanted))
+    if stored is None:
         warnings = body.get("warnings")
         if isinstance(warnings, list):
             warnings.append(_UNAVAILABLE_WARNING)
@@ -76,18 +78,11 @@ def persist_scan_assessments(tenant_id: str, scan_id: str, report: Any, *, faile
         "triage_scope": scope if isinstance(scope, dict) else {},
         "call_budget": metadata.get("call_budget"),
     }
-    try:
-        get_ai_assessment_store().put_scan(tenant_id, scan_id, run, assessments)
-    except Exception as exc:  # noqa: BLE001 - a failed advice write must not fail the scan
-        _logger.warning("AI advice not persisted: %s", sanitize_text(sanitize_error(exc)))
+    _optional_advice(lambda: get_ai_assessment_store().put_scan(tenant_id, scan_id, run, assessments))
 
 
 def ai_status(tenant_id: str, *, enabled: bool, reason: str, model: str) -> dict[str, Any]:
-    try:
-        last_run = get_ai_assessment_store().latest_run(tenant_id)
-    except Exception as exc:  # noqa: BLE001 - status stays useful when history cannot load
-        _logger.warning("AI run status read skipped: %s", sanitize_text(sanitize_error(exc)))
-        last_run = None
+    last_run = _optional_advice(lambda: get_ai_assessment_store().latest_run(tenant_id))
     state = "on" if enabled else "off"
     if enabled and last_run and last_run.get("status") in {"failed", "unavailable", "blocked"}:
         state = "degraded"
