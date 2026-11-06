@@ -36,7 +36,7 @@ def _clock(value: str) -> Iterator[None]:
     original = graph_util._now_iso
     patched = [
         mod
-        for name, mod in list(sys.modules.items())
+        for name, mod in sys.modules.copy().items()
         if name.startswith("agent_bom") and getattr(mod, "__dict__", {}).get("_now_iso") is original
     ]
     assert len(patched) >= 4

@@ -11,7 +11,7 @@ from agent_bom.api.current_graph_builds import await_current_build
 from agent_bom.api.finding_read_context import finding_read_scope
 from agent_bom.core.estate_read_boundary import estate_read_boundary
 from tests.api.test_current_graph_estate import estate, record  # noqa: F401
-from tests.api.test_current_graph_unpinned_reads import TENANT, _hold_materialize
+from tests.api.test_current_graph_unpinned_reads import TENANT, _hold_materialize, private_build_queue  # noqa: F401
 from tests.auth_helpers import proxy_headers
 from tests.test_api_read_contracts import empty_estate_client  # noqa: F401
 
@@ -130,6 +130,8 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
     headers = proxy_headers(role="analyst", tenant=TENANT)
     warm = client.get(path, headers=headers)
     assert warm.status_code == 200, warm.text
+    # A build still running from the warm read would absorb the next read and never reach the hold.
+    assert await_current_build(store, TENANT, seconds=10) is not None
     # Hold before recording: the new scan can start a rebuild that would finish first.
     entered, release = _hold_materialize(store)
     record(estate, 9, "repo-a", "new-package")

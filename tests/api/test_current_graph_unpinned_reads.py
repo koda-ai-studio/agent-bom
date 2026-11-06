@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 from starlette.exceptions import HTTPException
 
+from agent_bom.api import current_graph_builds
 from agent_bom.api.current_graph import CurrentGraphStore
 from agent_bom.api.finding_read_context import finding_read_scope
 from tests.api import test_current_graph_estate as estate_helpers
@@ -31,6 +32,15 @@ def revisioned_estate(request, estate, tmp_path):
     from agent_bom.api.store import SQLiteJobStore
 
     return SQLiteJobStore(str(tmp_path / "jobs.db")), estate[1]
+
+
+@pytest.fixture(autouse=True)
+def private_build_queue(monkeypatch):
+    """A held build needs a free worker, so it must not share the process-wide pool."""
+    queue = current_graph_builds.CurrentBuildQueue()
+    monkeypatch.setattr(current_graph_builds, "_QUEUE", queue)
+    yield queue
+    queue.executor.shutdown(wait=True)
 
 
 def _hold_materialize(store: CurrentGraphStore) -> tuple[threading.Event, threading.Event]:

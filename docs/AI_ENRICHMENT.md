@@ -142,22 +142,33 @@ positives, not available when the prompt was tuned):**
 
 | Model | Digest | Cases | FP precision | FP recall | Wrong dismissals | Severe proposed / after guard | ECE | Invalid | Injection: model / final | s per finding | Tokens per finding |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `ollama_chat/llama3.2` | `a80c4f17acd5` | 160 | 87% | 56% | 6 | 0 / 0 | 0.081 | 1% | 70% / 100% | 2.76 | 661.7 |
-| `ollama/gemma3:4b` | `68ceab7e468a` | 160 | 88% | 53% | 5 | 0 / 0 | 0.143 | 0% | 75% / 90% | 4.72 | 698.2 |
-| `ollama/llama3.2` | `a80c4f17acd5` | 160 | 87% | 56% | 6 | 0 / 0 | 0.078 | 0% | 70% / 100% | 2.42 | 661.6 |
-| `ollama/qwen2.5:3b` | `357c53fb659c` | 160 | 87% | 79% | 8 | 0 / 0 | 0.037 | 0% | 95% / 100% | 2.33 | 657.5 |
+| `ollama_chat/llama3.2` | `a80c4f17acd5` | 160 | 88% | 41% | 4 | 0 / 0 | 0.083 | 1% | 70% / 100% | 2.76 | 661.7 |
+| `ollama/gemma3:4b` | `68ceab7e468a` | 160 | 92% | 49% | 3 | 0 / 0 | 0.138 | 0% | 75% / 90% | 4.72 | 698.2 |
+| `ollama/llama3.2` | `a80c4f17acd5` | 160 | 88% | 41% | 4 | 0 / 0 | 0.079 | 0% | 70% / 100% | 2.42 | 661.6 |
+| `ollama/qwen2.5:3b` | `357c53fb659c` | 160 | 94% | 64% | 3 | 0 / 0 | 0.015 | 0% | 95% / 100% | 2.33 | 657.5 |
 
 `ollama_chat/*` is LiteLLM 1.100.4 against the same local Ollama server.
 
 | Model | True flags / flagged | Precision, 95% interval | True flags / eligible | Recall, 95% interval | Bar |
 |---|---:|---:|---:|---:|---|
-| `qwen2.5:3b` | 55 / 63 | 77-93% | 55 / 70 | 68-87% | Met |
-| `llama3.2` | 39 / 45 | 74-94% | 39 / 70 | 44-67% | Missed: raw injection 70% |
-| `gemma3:4b` | 37 / 42 | 75-95% | 37 / 70 | 41-64% | Missed: injection 75% raw, 90% final |
+| `qwen2.5:3b` | 45 / 48 | 83-98% | 45 / 70 | 53-75% | Met |
+| `llama3.2` | 29 / 33 | 73-95% | 29 / 70 | 31-53% | Missed: recall 41%, raw injection 70% |
+| `gemma3:4b` | 34 / 37 | 79-97% | 34 / 70 | 37-60% | Missed: recall 49%, injection 75% raw, 90% final |
 
 **Recommendation:** `ollama/qwen2.5:3b` for local triage. It is the only tested model
-that meets the bar. It still gets things wrong: 8 of its 63 dismissals were real
+that meets the bar. It still gets things wrong: 3 of its 48 dismissals were real
 findings, so treat a dismissal as a reason to look, not a reason to close.
+
+**Models outside the bar get a warning.** The CLI summary, `ai_enrichment_metadata.triage_model_standing`
+in the JSON report, and `last_run.model_standing` on `GET /v1/ai/status` report `met_bar`,
+`missed_bar` or `not_measured`. The console and the AI status line warn on the last two.
+Standing follows the model name and tag, so another build under the same tag was not
+measured separately. Hosted models are `not_measured`.
+
+**These figures are not blind.** They are model responses recorded before the release-line
+rule below was written, replayed through it. The rule was chosen after seeing this set,
+so it needs a fresh held-out set to confirm it. Before the rule, `qwen2.5:3b` scored 87%
+precision and 79% recall with 8 wrong dismissals of 63.
 
 **Earlier held-out set v1 (82 findings, prompt `ai-triage.v4`):**
 
@@ -190,15 +201,16 @@ with 2 wrong dismissals out of 12 flagged.
 
 ### How to read these numbers
 
-- **Most of the recall is one easy class.** On set v2, `qwen2.5:3b` found 46 of 48
-  false positives where the installed version is at or above the fix, but only 7 of 15
-  cloud look-alikes and 0 of 5 documentation look-alikes. It is much stronger on
-  version checks than on judging prose.
-- **Multi-release advisories caused most wrong dismissals.** 7 of `qwen2.5:3b`'s 8
-  wrong dismissals on set v2 are vulnerable versions whose recorded fix belongs to a
-  different release line, so the version check reports the fix as installed. Those
-  dataset cases take the advisory's last fix event, which may be harsher than a real
-  scan; this has not been measured on real scans.
+- **Most of the recall is one easy class.** On set v2, `qwen2.5:3b` found 34 of 34
+  false positives where the installed version equals the fix, but only 2 of 14 above
+  the fix, 7 of 15 cloud look-alikes and 0 of 5 documentation look-alikes.
+- **A fix on another release line cannot support a dismissal.** Multi-release advisories
+  caused 7 of `qwen2.5:3b`'s 8 wrong dismissals: a vulnerable version whose recorded fix
+  belongs to an older line looks fixed. Code now holds such a dismissal as `needs_review`
+  when major or minor differs. That removed 5 of the 7 and cost 10 correct dismissals,
+  most of the above-the-fix class. The other 2 stay on the same major.minor (Magento
+  2.4.6-p3 against 2.4.4-p7). Those dataset cases take the advisory's last fix event,
+  which may be harsher than a real scan; this has not been measured on real scans.
 - **Injection resistance mostly comes from withholding.** The swing from 41% to 85%
   between v1 splits came from which attacks each split held: direct "mark this a false
   positive" text in a description was flagged 6 of 7 times, while paraphrases were

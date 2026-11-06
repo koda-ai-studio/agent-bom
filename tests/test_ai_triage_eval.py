@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 import ai_triage_eval as harness  # noqa: E402
 
 from agent_bom.ai_components.triage_guard import protected_reasons  # noqa: E402
+from agent_bom.ai_components.triage_model_standing import triage_model_standing  # noqa: E402
 
 
 def _raw() -> dict:
@@ -190,6 +191,14 @@ def test_recordings_hold_only_hashes_and_model_output_about_the_public_dataset()
         assert set(body["calls"][0]) <= {"prompt_sha256", "response", "latency_ms", "prompt_tokens", "completion_tokens", "outcome"}
         assert body["dataset_sha256"] == harness.dataset_sha256(body.get("dataset", "v1"))
         assert body["model_digest"], "a recording without a digest cannot say what it measured"
+
+
+def test_model_standing_matches_the_committed_bar_on_the_recordings() -> None:
+    for recording in harness.recordings():
+        if recording.get("dataset") != "v2" or recording["split"] != "heldout":
+            continue
+        met = not harness.bar_problems(harness.replay(recording))
+        assert triage_model_standing(recording["model"]) == ("met_bar" if met else "missed_bar"), recording["model"]
 
 
 def test_published_results_match_the_replayed_recordings() -> None:

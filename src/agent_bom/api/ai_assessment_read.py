@@ -8,6 +8,7 @@ from typing import Any, TypeVar
 
 from agent_bom.ai_components.call_audit import best_effort
 from agent_bom.ai_components.triage_guard import guard_verdict
+from agent_bom.ai_components.triage_model_standing import triage_model_standing
 from agent_bom.api.ai_assessment_store import get_ai_assessment_store
 
 _T = TypeVar("_T")
@@ -93,6 +94,8 @@ def persist_scan_assessments(tenant_id: str, scan_id: str, report: Any, *, faile
 
 def ai_status(tenant_id: str, *, enabled: bool, reason: str, model: str) -> dict[str, Any]:
     last_run = _optional_advice(lambda: get_ai_assessment_store().latest_run(tenant_id))
+    if last_run:
+        last_run = {**last_run, "model_standing": triage_model_standing(str(last_run.get("model") or ""))}
     state = "on" if enabled else "off"
     if enabled and last_run and last_run.get("status") in {"failed", "unavailable", "blocked"}:
         state = "degraded"

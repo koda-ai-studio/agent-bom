@@ -74,7 +74,7 @@ for (const theme of ["light", "dark"]) for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport);
       await serve(page, fixtures[scenario], theme);
       await open(page);
-      await expect(page.getByRole("combobox", { name: "Investigation flow" }).locator("option:checked")).toHaveText("Automatic · connection preview");
+      await expect(page.getByRole("combobox", { name: "Investigation flow" }).locator("option:checked")).toHaveText(viewport.width === 390 ? "Auto · preview" : "Automatic · connection preview");
       const view = await firstFrame(page);
       expect(view.overlaps).toEqual([]);
       expect(view.undersized).toEqual([]);

@@ -334,6 +334,17 @@
             ],
             "title": "Model"
           },
+          "model_standing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Standing"
+          },
           "prompt_version": {
             "anyOf": [
               {

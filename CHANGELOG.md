@@ -19,6 +19,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `stale` marks an open finding not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). It stays open and counted, can be filtered with `status=stale` on the API, `--status stale` on the CLI and the Status filter on the Findings page, and never resolves anything.
 
 ### Changed
+- **Behaviour change:** an AI dismissal is held as `needs_review` when the recorded fix is on a different release line from the installed version. On the recorded held-out set, `qwen2.5:3b` goes from 8 wrong dismissals to 3 and from 79% to 64% recall.
+- AI triage warns when a model missed the published quality bar or was never measured: in the CLI summary, the JSON report, `GET /v1/ai/status` and the AI status line.
+- The Go SDK and example now declare `go 1.26.10`; 1.22 no longer receives security fixes.
 - **Behaviour change:** AI never dismisses or downgrades a KEV, malicious-package or reachable-critical finding, and a finding whose text addresses the reader goes to a person.
 - **Behaviour change:** providers off the loopback interface need `AGENT_BOM_AI_ALLOW_REMOTE=1`, and control-plane AI needs `AGENT_BOM_AI_CONTROL_PLANE_ENABLED=1`. A scan request's `ai_enrich` no longer turns it on by itself.
 - AI triage picks the riskiest findings rather than the first ones, sends the fields that decide a false positive, and reports what it skipped and why.

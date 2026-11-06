@@ -10,6 +10,12 @@ export function automaticFlowLabel({ applied, scenario, preview }: { applied: bo
   return `Automatic · ${preview ? "connection preview" : !applied ? "current layout" : scenario === "connections" ? "Connections" : FLOW_NAMES[scenario]}`;
 }
 
+/** Fits a phone's narrow selector and still says what Automatic chose. */
+export function compactAutomaticLabel(label: string): string {
+  return label.replace("Automatic", "Auto").replace("connection preview", "preview").replace("current layout", "layout")
+    .replace("Connections", "Links").replace("Identity and access", "Identity").replace("Vulnerability", "Vulns");
+}
+
 /** The control never pretends: a flow that cannot apply is disabled, with the reason on screen. */
 export function GraphFlowControl({ value, automaticLabel, available, disabledReason, note, compact = false, onChange }: {
   value: InvestigationFlow;
@@ -25,9 +31,9 @@ export function GraphFlowControl({ value, automaticLabel, available, disabledRea
   const message = compact ? note : disabledReason ?? note;
   return <div data-testid="graph-flow-control" title={disabledReason} className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
     <label className="flex items-center gap-2"><span className={compact ? "sr-only" : undefined}>Flow</span>
-      <select aria-label="Investigation flow" value={value} disabled={Boolean(disabledReason)} onChange={event => onChange(event.target.value as InvestigationFlow)}
+      <select aria-label="Investigation flow" title={compact && value === "auto" ? automaticLabel : undefined} value={value} disabled={Boolean(disabledReason)} onChange={event => onChange(event.target.value as InvestigationFlow)}
         className={`rounded-md border border-outline bg-background px-2 py-1 text-foreground disabled:opacity-60 ${compact ? "min-h-11 w-[8.5rem]" : ""}`}>
-        <option value="auto">{automaticLabel}</option>
+        <option value="auto">{compact ? compactAutomaticLabel(automaticLabel) : automaticLabel}</option>
         {FLOWS.map(flow => <option key={flow} value={flow} disabled={!available[flow]}>{FLOW_NAMES[flow]}{available[flow] ? "" : ` (${ABSENT[flow]})`}</option>)}
       </select>
     </label>

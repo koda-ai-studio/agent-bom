@@ -1,6 +1,8 @@
 """Recovery preserves disabled policies, quarantine, and historical waiver decisions."""
 
 import os
+import sqlite3
+from contextlib import closing
 from uuid import uuid4
 
 import pytest
@@ -26,6 +28,9 @@ def test_recovery_decodes_iac_scope_without_changing_the_decision(tmp_path, reso
         revoked_at="2026-10-02T00:00:00Z",
     )
     SQLiteExceptionStore(str(path)).put(waiver, tenant_id="source")
+    # The store's connection can close at any point and checkpoint its WAL into the file.
+    with closing(sqlite3.connect(path)) as conn:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     before = path.read_bytes()
     [(table, record, payload)] = read_source(path, {"source": "target"}, ["exceptions"])
     assert table == "exceptions"
