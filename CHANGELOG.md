@@ -36,6 +36,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
+- The `scan` skill's frontmatter is valid YAML again; an unquoted colon in its description broke parsing in the Claude and Codex plugins.
 - Investigation flows: a flow that cannot apply no longer sits selected with no effect. It is disabled with the reason on screen, Automatic names what is really showing, and flows now work on maps of up to 100 nodes instead of 80, including from the connection preview.
 - Investigation flows: the Kubernetes exposure path now continues from a pod through its ReplicaSet and Deployment to the identity and secrets recorded there, without adding or reversing any edge.
 - Investigation flows: a ClusterIP Service no longer starts an exposure flow or counts as exposure, and appears in context as internal. A service account whose token is not mounted stays in context with a "Token not mounted" caption instead of reading as a step.

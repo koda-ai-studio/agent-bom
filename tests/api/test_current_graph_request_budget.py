@@ -130,8 +130,9 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
     headers = proxy_headers(role="analyst", tenant=TENANT)
     warm = client.get(path, headers=headers)
     assert warm.status_code == 200, warm.text
-    record(estate, 9, "repo-a", "new-package")
+    # Hold before recording: the new scan can start a rebuild that would finish first.
     entered, release = _hold_materialize(store)
+    record(estate, 9, "repo-a", "new-package")
     try:
         response = client.get(path, headers=headers)
         assert entered.wait(5)
