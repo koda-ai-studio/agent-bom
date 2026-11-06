@@ -50,10 +50,9 @@ def _publish_pages(root: Path) -> None:
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def test_current_tree_is_blocked_on_the_stale_release_and_draft_pages() -> None:
+def test_current_tree_is_blocked_on_the_stale_release() -> None:
     problems = gate.problems(ROOT)
     assert any(gate.MINIMUM_RELEASE in problem for problem in problems)
-    assert any("privacy.md" in problem and "draft" in problem.lower() for problem in problems)
     assert gate.main(["--root", str(ROOT)]) == 1
 
 
@@ -77,6 +76,8 @@ def test_a_single_stale_pin_is_named(tmp_path: Path) -> None:
 def test_draft_marker_is_found_even_after_release(tmp_path: Path) -> None:
     root = _copy_tree(tmp_path)
     _set_release(root, gate.MINIMUM_RELEASE)
+    page = root / "site-docs/privacy.md"
+    page.write_text("DRAFT\n" + page.read_text(encoding="utf-8"), encoding="utf-8")
     assert any("draft" in problem.lower() for problem in gate.problems(root))
 
 
