@@ -27,17 +27,22 @@ function SnapshotUpdates({ scanId, owner }: { scanId: string; owner: string }) {
   if (!available && !error && !dismissed && baselineKnown !== false) return <p role="status" className="sr-only">
     {checked ? "Viewing a pinned snapshot. Updates never switch this investigation automatically." : "Checking saved snapshots…"}
   </p>;
-  return <aside aria-label="Saved snapshot updates" className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-outline bg-surface px-3 py-2 text-xs text-ink-secondary">
-    <p role="status" className="min-w-0 basis-full sm:basis-auto sm:flex-1">
-      {available ? <>Newer saved snapshot available: <span className="break-all font-mono">{newer.scan_id}</span> · {new Date(newer.created_at).toLocaleString()}. Your current investigation stays pinned.</>
+  return <aside aria-label="Saved snapshot updates" className="mb-3 rounded-xl border border-outline bg-surface px-3 py-2 text-xs text-ink-secondary max-sm:mb-1 max-sm:rounded-lg max-sm:px-2 max-sm:py-1">
+    <div role="status" className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${available ? "max-sm:flex-nowrap max-sm:gap-x-1.5" : ""}`}>
+    <p className="min-w-0 flex-1 basis-40">
+      {available ? <>
+        <span className="sm:hidden" aria-hidden="true">Newer snapshot · {new Date(newer.created_at).toLocaleDateString()}</span>
+        <span className="max-sm:sr-only">Newer saved snapshot available: <span className="break-all font-mono">{newer.scan_id}</span> · {new Date(newer.created_at).toLocaleString()}. Your current investigation stays pinned.</span>
+      </>
         : error ? "Snapshot update check unavailable. Your current investigation stays pinned."
         : baselineKnown === false ? "Selected snapshot metadata is outside this bounded response. Its update status is unknown; the retained investigation stays selected."
         : checked ? "Viewing a pinned snapshot. Updates never switch this investigation automatically."
         : "Checking saved snapshots…"}
     </p>
     {available ? <>
-      <a className="graph-page-action" href={`${ASSET_BASE}/security-graph?${next.toString()}`}>Open newer snapshot</a>
-      <button type="button" className="graph-page-action" onClick={() => setDismissed(newer.scan_id)}>Keep current</button>
+      <a className="graph-page-action graph-action-compact-phone shrink-0" href={`${ASSET_BASE}/security-graph?${next.toString()}`}>Open <span className="max-sm:sr-only">newer snapshot</span></a>
+      <button type="button" className="graph-page-action graph-action-compact-phone shrink-0" onClick={() => setDismissed(newer.scan_id)}>Keep <span className="max-sm:sr-only">current</span></button>
     </> : <button type="button" className="graph-page-action" disabled={checking} onClick={() => void refresh(true)}>Check for updates</button>}
+    </div>
   </aside>;
 }

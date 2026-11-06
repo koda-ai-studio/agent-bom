@@ -11,6 +11,8 @@ const PRIMARY_PATH_MAX_ZOOM = 0.7;
 const PRIMARY_PATH_TOP_MARGIN = 24;
 const PRIMARY_PATH_LEFT_MARGIN = 24;
 const FIT_WAIT_MS = 600;
+/** The node navigator under a phone's canvas stays on the same screen as it. */
+const PHONE_NAVIGATOR_HEIGHT = 60;
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
@@ -81,7 +83,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
     const frameSize = graphAdaptiveFrame({
       bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length, boundedPreview,
-      availableHeight: windowHeight - spaceAbove - 24,
+      availableHeight: windowHeight - spaceAbove - 24 - (width < 640 ? PHONE_NAVIGATOR_HEIGHT : 0),
       focusHeight: focusCardHeight(anchor), focusPadding: padding,
     });
     onLayoutAspect(frameSize.layoutAspect);
@@ -182,7 +184,7 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
     const fitted = await fitView({ nodes: [{ id: node.id }], minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1, padding: 0.15, duration: 200 });
     if (fitted) setTargetId(node.id);
   };
-  return <div className="mb-2 rounded-lg border border-outline bg-surface p-2">
+  return <div className="rounded-lg border border-outline bg-surface p-1 shadow-sm">
     <div role="group" aria-label="Navigate loaded graph nodes" className="flex items-center gap-2">
       <button type="button" aria-label="Previous graph node" disabled={index === 0}
         className="graph-page-action min-h-11 px-3 disabled:opacity-40"

@@ -7,6 +7,8 @@ type Point = [number, number];
 
 /** A full canvas page plus the display nodes a flow can add. */
 export const ROUTED_NODE_LIMIT = 130;
+/** A corridor beyond this multiple of the direct distance reads as a stray line across the map, not a route. */
+const MAX_DETOUR = 2;
 
 function roundedRoute(points: Point[]): string {
   const distinct = points.filter((point, index) => !index || point[0] !== points[index - 1]![0] || point[1] !== points[index - 1]![1]);
@@ -71,8 +73,8 @@ function endpointCaptionRoute(edge: Endpoints, obstacles: Obstacle[], path: stri
     [x, lastLane], [lowerX, lastLane], [lowerX, lower.y], [lower.x, lower.y],
   ] as Point[] })).filter(candidate => clear(candidate.route));
   const length = (route: Point[]) => route.slice(1).reduce((total, point, index) => total + Math.abs(point[0] - route[index]![0]) + Math.abs(point[1] - route[index]![1]), 0);
-  candidates.sort((a, b) => length(a.route) - length(b.route));
-  const candidate = candidates[0];
+  const direct = Math.abs(edge.targetX - edge.sourceX) + Math.abs(edge.targetY - edge.sourceY);
+  const candidate = candidates.filter(item => length(item.route) <= direct * MAX_DETOUR).sort((a, b) => length(a.route) - length(b.route))[0];
   if (!candidate) return null;
   return [roundedRoute(forward ? candidate.route : candidate.route.reverse()), candidate.x, (firstLane + lastLane) / 2];
 }

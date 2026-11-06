@@ -95,7 +95,7 @@ for(const agents of [12,120]) test(`first useful graph paint below two seconds a
 // Verify actual chunk requests as well as timing: inspectors must remain usable.
 test("loads node evidence code only when the inspector is opened", async ({ page }) => {
   const manifest = JSON.parse(readFileSync(".next/react-loadable-manifest.json", "utf8"));
-  const entry = manifest["components/graph-page-view.tsx -> @/components/graph-entity-drawer"];
+  const entry = manifest["components/graph-selection-panels.tsx -> @/components/graph-entity-drawer"];
   expect(entry, "Node evidence must have an on-demand production chunk").toBeDefined();
   // A loadable manifest also lists shared/transitive chunks; their order does
   // not identify the inspector module. Observe the chunk exporting the drawer.
@@ -118,7 +118,7 @@ test("loads node evidence code only when the inspector is opened", async ({ page
 test("loads scenario and operator code only after view controls open", async ({ page }) => {
   const manifest = JSON.parse(readFileSync(".next/react-loadable-manifest.json", "utf8"));
   const chunks = ["graph-scenario-comparison", "graph-operator-tools"].map(module => {
-    const entry = manifest[`components/graph-page-view.tsx -> @/components/${module}`];
+    const entry = manifest[`components/graph-advanced-controls.tsx -> @/components/${module}`];
     expect(entry, `${module} must have an on-demand production chunk`).toBeDefined();
     return entry.files.at(-1) as string;
   });

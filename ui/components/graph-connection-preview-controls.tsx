@@ -7,17 +7,17 @@ export function GraphConnectionPreviewControls({ preview, expanded, onRoot, onEx
   onExpanded: (expanded: boolean) => void;
   onExplore: () => void;
 }) {
-  return <div role="group" aria-label="Connection preview" className="flex w-full min-w-0 flex-wrap items-center gap-2 text-xs text-ink-secondary">
-    {expanded ? <button className="graph-page-action" onClick={() => onExpanded(false)}>Return to connection preview</button> : <>
+  return <div role="group" aria-label="Connection preview" className={`flex min-w-0 flex-wrap items-center gap-2 text-xs text-ink-secondary ${expanded ? "" : "w-full"}`}>
+    {expanded ? <button className="graph-page-action graph-action-compact" onClick={() => onExpanded(false)}>Return to connection preview</button> : <>
       <span>Connection preview · {preview.nodes.length} of {preview.totalNodes} nodes in this map · {preview.edges.length} of {preview.totalEdges} relationships</span>
       <label className="flex min-w-0 items-center gap-2">Start at
-        <select aria-label="Preview starting point" className="graph-page-action max-w-64 min-w-0" value={preview.root.id} onChange={event => onRoot(event.target.value)}>
+        <select aria-label="Preview starting point" className="graph-page-action graph-action-compact max-w-64 min-w-0" value={preview.root.id} onChange={event => onRoot(event.target.value)}>
           {preview.roots.map(node => <option key={node.id} value={node.id}>{node.data.label}</option>)}
         </select>
       </label>
       <div className="flex min-w-0 gap-2">
-        <button className="graph-page-action whitespace-nowrap" onClick={onExplore}>Explore these</button>
-        <button className="graph-page-action whitespace-nowrap" onClick={() => onExpanded(true)}>Show full map ({preview.totalNodes})</button>
+        <button className="graph-page-action graph-action-compact whitespace-nowrap" onClick={onExplore}>Explore these</button>
+        <button className="graph-page-action graph-action-compact whitespace-nowrap" onClick={() => onExpanded(true)}>Show full map ({preview.totalNodes})</button>
       </div>
     </>}
   </div>;

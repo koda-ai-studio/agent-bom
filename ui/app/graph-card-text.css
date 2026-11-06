@@ -10,3 +10,10 @@
   background: var(--surface);
   border-radius: 6px;
 }
+
+/* Secondary graph actions, compact enough to share a phone's row. */
+.graph-page-action.graph-action-compact { display: inline-flex; align-items: center; padding: 0.25rem 0.5rem; font-size: 0.75rem; line-height: 1.1rem; }
+@media (max-width: 639px) {
+  main .graph-page-header { padding: 0; }
+  .graph-page-action.graph-action-compact-phone { padding: 0.25rem 0.5rem; font-size: 0.75rem; line-height: 1.1rem; }
+}

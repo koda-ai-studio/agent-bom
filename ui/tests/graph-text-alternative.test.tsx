@@ -81,6 +81,7 @@ function model(
     sourceEdgeCount: EDGES.length,
     omittedNodeCount: 0,
     omittedEdgeCount: 0,
+    topRisks: [],
     ...overrides,
   };
 }

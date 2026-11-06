@@ -6,6 +6,7 @@ export const FLOW_COLUMN_GAP = 370;
 /** Holds a glyph plus a three-line clamped name and two lines of metadata at the legibility floor. */
 const ROW_GAP = 340;
 const NARROW_ROW_GAP = 380;
+export const flowRowGap = (narrow: boolean) => narrow ? NARROW_ROW_GAP : ROW_GAP;
 /** A column is 370 wide and a row 340 on a canvas about twice as wide as tall, so wide grids frame best. */
 const COLUMNS_PER_ROW = 2.4;
 /** One row down costs as much as this many columns across. */
@@ -100,7 +101,7 @@ class SlotGrid {
   private taken = new Set<string>();
   bottom = 0;
   constructor(readonly columns: number, private readonly rowLimit: number) {}
-  private free(column: number, row: number) { return !this.taken.has(`${column}:${row}`); }
+  free(column: number, row: number) { return !this.taken.has(`${column}:${row}`); }
   place(column: number, row: number, cells: Map<string, Cell>, id: string) {
     this.taken.add(`${column}:${row}`);
     this.bottom = Math.max(this.bottom, row);
@@ -146,6 +147,11 @@ export function placeFlow({ visible, ranks, primary, steps, edges, narrow, stric
   const onPath = new Set(primary);
   for (const id of primary) grid.place(ranks.get(id)!, 0, cells, id);
   const ranked = [...ranks.keys()].filter(id => !onPath.has(id)).sort((a, b) => ranks.get(a)! - ranks.get(b)! || a.localeCompare(b));
+  if (!strictColumns) {
+    placeChains(ranked, steps, grid, cells, primary.length);
+    placeContext(visible, edges, grid, cells);
+    return new Map([...cells].map(([id, cell]) => [id, { x: cell.column * FLOW_COLUMN_GAP, y: cell.row * flowRowGap(narrow) }]));
+  }
   const meanRow = (id: string) => {
     const rows = (steps.previous.get(id) ?? []).flatMap(from => cells.has(from) ? [cells.get(from)!.row] : []);
     return rows.length ? rows.reduce((total, row) => total + row, 0) / rows.length : Number.MAX_SAFE_INTEGER;
@@ -153,13 +159,37 @@ export function placeFlow({ visible, ranks, primary, steps, edges, narrow, stric
   // Stack each column by its parents' rows so sibling edges do not cross on the way in.
   for (const rank of new Set(ranked.map(id => ranks.get(id)!))) {
     for (const id of ranked.filter(item => ranks.get(item) === rank).sort((a, b) => meanRow(a) - meanRow(b) || a.localeCompare(b))) {
-      const slot = strictColumns ? grid.inColumn(rank) : grid.nearest(rank);
+      const slot = grid.inColumn(rank);
       grid.place(slot.column, slot.row, cells, id);
     }
   }
   placeContext(visible, edges, grid, cells);
-  const rowGap = narrow ? NARROW_ROW_GAP : ROW_GAP;
+  const rowGap = flowRowGap(narrow);
   return new Map([...cells].map(([id, cell]) => [id, { x: cell.column * FLOW_COLUMN_GAP, y: cell.row * rowGap }]));
+}
+
+/**
+ * A plain map has no column order to keep, so it reads as rows of chains: each node followed by the
+ * child that leads furthest. A first frame then opens on whole chains whose edges are short and drawn.
+ */
+function placeChains(ranked: string[], steps: FlowSteps, grid: SlotGrid, cells: Map<string, Cell>, firstRowStart: number) {
+  const waiting = new Set(ranked);
+  const onward = (id: string) => (steps.next.get(id) ?? []).filter(to => waiting.has(to));
+  const reach = (id: string) => reachableFrom(id, steps.next).size;
+  const reachOf = new Map(ranked.map(id => [id, reach(id)]));
+  let column = firstRowStart, row = 0;
+  for (const start of ranked) {
+    if (!waiting.has(start)) continue;
+    const chain: string[] = [];
+    for (let id: string | undefined = start; id !== undefined && chain.length < grid.columns; id = onward(id).sort((a, b) => reachOf.get(b)! - reachOf.get(a)! || a.localeCompare(b))[0]) {
+      chain.push(id);
+      waiting.delete(id);
+    }
+    if (column + chain.length > grid.columns) { column = 0; row++; }
+    // A row with a card in the way carries on below it, rather than overlapping.
+    while (chain.some((_, offset) => !grid.free(column + offset, row))) { column = 0; row++; }
+    for (const id of chain) grid.place(column++, row, cells, id);
+  }
 }
 
 function placeContext(visible: FlowNode[], edges: Edge[], grid: SlotGrid, cells: Map<string, Cell>) {

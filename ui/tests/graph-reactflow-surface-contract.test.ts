@@ -6,7 +6,7 @@ const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8")
 
 describe("interactive React Flow surface contract", () => {
   it.each([
-    "components/graph-page-view.tsx",
+    "components/graph-flow-canvas.tsx",
     "components/security-graph-investigation.tsx",
   ])("keeps evidence topology immutable in %s", (path) => {
     expect(source(path)).toContain("deleteKeyCode={null}");
