@@ -1214,6 +1214,7 @@
         "license",
         "license_expression",
         "deps_dev_resolved",
+        "registry_not_found",
         "supplier",
         "author",
         "description",
