@@ -44,7 +44,8 @@ export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, 
   // whole graph opens framed. Denser graphs start at a neighbourhood; Fit all
   // still makes the complete returned topology available.
   const fitAll = viewport.zoom >= legibleFitZoom(width);
-  const window = !fitAll && tallest.zoom < legibleFitZoom(width) && !boundedPreview && width >= 640 ? ceiling : height;
+  // A phone always reads a map too wide to fit through its window, one card at a time.
+  const window = !fitAll && !boundedPreview && (width < 640 || tallest.zoom < legibleFitZoom(width)) ? ceiling : height;
   // Chrome above a phone canvas can leave less room than one focused card at
   // its minimum zoom; the page scrolls, so grow the frame rather than clip it.
   const focusFloor = width < 640 && !fitAll && focusHeight > 0

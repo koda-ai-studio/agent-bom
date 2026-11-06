@@ -1,6 +1,6 @@
 import { MarkerType, type Edge } from "@xyflow/react";
 import { INVESTIGATION_NODE_LIMIT } from "@/lib/graph-neighbor-expansion";
-import { bestStart, collectSteps, longestRanks, nearestRanks, placeFlow, primaryPath } from "@/lib/graph-flow-layout";
+import { bestStart, collectSteps, flowRowGap, FLOW_COLUMN_GAP, longestRanks, nearestRanks, placeFlow, primaryPath } from "@/lib/graph-flow-layout";
 import {
   flowRoots, ingressAssessment, isBlockedIdentityHop, isExposureEntry, isFinding, isInternalService, isPrincipal, ownership, relationshipOf, withFindingOwners,
   type FlowNode, type InvestigationFlow, type ReadingFlow, type SpecificFlow,
@@ -26,6 +26,8 @@ export interface FlowResult {
 
 const CONTEXT_EDGE_OPACITY = 0.3;
 const DENSE_MAP_NODES = 24;
+/** A map this small has no tangle to quiet: every connection it draws stays legible. */
+const QUIET_MIN_NODES = 16;
 
 const NOTHING_TO_SHOW: Record<SpecificFlow, string> = {
   exposure: "No ingress, LoadBalancer or NodePort Service, or assessed internet ingress in this view.",
@@ -166,6 +168,12 @@ export function investigationFlow(input: FlowNode[], inputEdges: Edge[], request
   // Also on the card: an edge caption can be hidden when it would collide with another card.
   const tokenless = new Set(edges.filter(edge => isBlockedIdentityHop(edge) && byId.get(edge.source)?.data.attributes?.token_mounted === false).map(edge => edge.target));
   const pathLinks = new Set(primary.slice(1).flatMap((id, index) => [`${primary[index]}|${id}`, `${id}|${primary[index]}`]));
+  const rowGap = flowRowGap(narrowViewport);
+  /** More than one grid cell away or running against the reading order, so the line has to go around other cards. */
+  const roundabout = (edge: Edge) => {
+    const from = positions.get(edge.source), to = positions.get(edge.target);
+    return Boolean(from && to) && (from!.x > to!.x || Math.abs(from!.x - to!.x) > FLOW_COLUMN_GAP || Math.abs(from!.y - to!.y) > rowGap);
+  };
   return {
     scenario, applied: true, primaryPath: primary,
     // Connections keeps the zoom band, so an operator zooming out still gets the summary renderer.
@@ -178,7 +186,9 @@ export function investigationFlow(input: FlowNode[], inputEdges: Edge[], request
       return { ...edge, ...edgeHandles(edge, positions), ...(label ? { label } : {}),
         // The eye should follow the path first; everything recorded stays drawn and inspectable.
         style: { ...edge.style, opacity: pathLinks.has(key) ? 1 : flowStep ? 0.55 : CONTEXT_EDGE_OPACITY },
-        data: { ...edge.data, quietLabel: true, individualLabel: true, directionEmphasis: true, flowStep, ...caption } };
+        data: { ...edge.data, quietLabel: true, individualLabel: true, directionEmphasis: true, flowStep, ...caption,
+          // A chosen flow's steps are its subject, and what surrounds them waits; on a plain map only the roundabout lines do.
+          quietUntilFocus: visible.length >= QUIET_MIN_NODES && !pathLinks.has(key) && (connections ? roundabout(edge) : !flowStep) } };
     }),
   };
 }

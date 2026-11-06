@@ -22,6 +22,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - **Behaviour change:** AI never dismisses or downgrades a KEV, malicious-package or reachable-critical finding, and a finding whose text addresses the reader goes to a person.
 - **Behaviour change:** providers off the loopback interface need `AGENT_BOM_AI_ALLOW_REMOTE=1`, and control-plane AI needs `AGENT_BOM_AI_CONTROL_PLANE_ENABLED=1`. A scan request's `ai_enrich` no longer turns it on by itself.
 - AI triage picks the riskiest findings rather than the first ones, sends the fields that decide a false positive, and reports what it skipped and why.
+- The investigation graph opens on what explains the first frame. A full map reads as rows of chains, draws the connections between neighbours, and holds back long ones until a node is hovered or selected. A strip above the canvas states how many connections are drawn, each card shows how many of its own are not, and Show all or Fit all draws the rest.
+- A connection no longer leaves the map to go around it. An exterior route more than twice the direct distance now takes the direct line, which removes the stray lines that crossed the whole frame.
+- On a phone, graph and paths content starts in the first third of the screen. The newer-snapshot notice fits one line, Paths, Graph, Flow and Graph options share one row, and counts and preview actions sit under the content. Paths open on the worst-rated chain.
+- The estate map opens on the highest recorded risks, named in a list and on the canvas, with one Investigate action. The overview's draw budget always includes them, its controls fit one toolbar, and its partial-view count now matches the map's.
+- The WebGL map follows its own container's size, so opening the inspector no longer leaves the canvas misaligned.
 - The MCP `scan` tool now reports `readOnlyHint: false`, because it keeps a redacted result locally and can refresh the advisory database. Its description says so. Tools that open no socket now report `openWorldHint: false`.
 - The Claude plugin's MCP servers start with `GITHUB_TOKEN`, `GH_TOKEN` and `NVD_API_KEY` blanked, so a token in the environment is not sent. Lookups use the anonymous rate limits there.
 - The `inventory` skill no longer has the `scan` tool, so it cannot reach the network.
