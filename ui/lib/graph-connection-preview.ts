@@ -34,5 +34,5 @@ export function graphConnectionPreview<N extends Node<LineageNodeData>, E extend
   }
   return { root, roots, nodes: nodes.filter(node => selected.has(node.id)),
     edges: edges.filter(edge => selected.has(edge.source) && selected.has(edge.target)),
-    totalNodes: nodes.length, totalEdges: edges.length };
+    totalNodes: nodes.length, totalEdges: edges.length, allNodes: nodes, allEdges: edges };
 }

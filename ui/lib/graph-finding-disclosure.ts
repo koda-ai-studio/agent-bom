@@ -3,6 +3,8 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import { mixedEvidenceFlow } from "@/lib/graph-mixed-flow";
 import { cloudHierarchyLayout } from "@/lib/graph-cloud-hierarchy";
 
+const GROUP_OFFSET = { x: 520, y: -340 };
+
 /** Display-only disclosure: canonical IDs, direction and evidence stay intact. */
 export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Edge[], expanded: ReadonlySet<string>, toggle: (id: string) => void, preservePositions = false) {
   const groups = new Map<string, Node<LineageNodeData>[]>();
@@ -31,10 +33,14 @@ export function cloudFindingDisclosure(nodes: Node<LineageNodeData>[], edges: Ed
     const first = nodes.find(n => n.id === findings[0]!.id)!;
     let id = `display:findings:${owner}`;
     while (nodes.some(n => n.id === id) || groupNodes.some(n => n.id === id)) id += ":group";
-    groupNodes.push({ id, initialWidth: 240, initialHeight: 180, draggable: false, type: "findingGroupNode", position: preservePositions ? first.position : { x: asset.position.x + 520, y: asset.position.y - 340 },
+    const position = preservePositions ? first.position : { x: asset.position.x + GROUP_OFFSET.x, y: asset.position.y + GROUP_OFFSET.y };
+    const grouped = `${findings.length} grouped finding${findings.length === 1 ? "" : "s"}`;
+    groupNodes.push({ id, initialWidth: 240, initialHeight: 180, draggable: false, type: "findingGroupNode", position, ariaLabel: `Findings for ${asset.data.label}: ${findings.length} grouped`,
       data: { label: "Findings", nodeType: "misconfiguration", displayOnly: true, displayTargetId: owner,
         description: asset.data.label, readingFindings: { ...asset.data.readingFindings, count: findings.length, expanded: false, toggle: () => toggle(owner) } } });
-    groupEdges.push({ id: `${id}:summary`, source: owner, target: id, type: "smoothstep", label: "Has findings",
+    // A group left of its owner is entered from its far side; otherwise the edge crosses its own glyph.
+    groupEdges.push({ id: `${id}:summary`, source: owner, target: id, type: "smoothstep", label: "Has findings", ariaLabel: `${asset.data.label} has ${grouped}`,
+      ...(position.x < asset.position.x ? { sourceHandle: "context", targetHandle: "context" } : {}),
       data: { displayOnly: true, relationship: "finding_group", traversable: false, quietLabel: true } });
   }
   return { nodes: [...positioned, ...groupNodes], edges: [...mappedEdges, ...groupEdges] };

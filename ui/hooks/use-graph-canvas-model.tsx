@@ -16,6 +16,8 @@ import { useGraphLayout } from "@/lib/use-graph-layout";
 import { findingEvidenceContext } from "@/lib/graph-mcp-flow";
 import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
+import { flowFromParam, flowPinnedIds } from "@/lib/graph-investigation-flow";
+import { GRAPH_CARD_ZOOM } from "@/lib/graph-adaptive-frame";
 import { aggregateSiblings, EXPANDED_AGGREGATION_THRESHOLD, FOCUSED_AGGREGATION_THRESHOLD, isClusterPillNode } from "@/lib/sibling-aggregator";
 import { type UnifiedNode } from "@/lib/graph-schema";
 import { resolveSnapshotAttackPathCount } from "@/lib/graph-snapshot-metrics";
@@ -209,6 +211,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
     if (currentSearch.get("map_view") === "full") nextParams.set("map_view", "full");
     const previewRoot = currentSearch.get("preview_root");
     if (previewRoot) nextParams.set("preview_root", previewRoot);
+    const requestedFlow = currentSearch.get("flow");
+    if (requestedFlow) nextParams.set("flow", requestedFlow);
     if (selectedScenarioId) {
       nextParams.set("scenario", selectedScenarioId);
       nextParams.set("state", attackPathLens ? "current" : scenarioState);
@@ -456,6 +460,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     url.searchParams.set("context_view", id);
     history.replaceState(null, "", url);
   }, [investigationContext, selectedNodeId, setCanvasPage, setHoveredNodeId, setPinnedFocusId, setSelectedNode, setSelectedNodeId, setSelectedRelationship]);
+  const requestedFlow = flowFromParam(searchParams.get("flow"));
   const layoutInput = useMemo(() => {
     const selected = contextElements;
     if (previewActive && connectionPreview) return { nodes: connectionPreview.nodes, edges: connectionPreview.edges, omittedNodes: 0, pageCount: 1, page: 0, layoutRequired: true };
@@ -467,8 +472,9 @@ export function useGraphCanvasModel(page: GraphPageData) {
       graphOnlyFindings: selected.nodes.every(node => ["vulnerability", "misconfiguration"].includes(node.data.nodeType)),
     }).kind === "webgl";
     if (broadMap) return { ...selected, omittedNodes: 0, pageCount: 1, page: 0, layoutRequired: false };
-    return { ...boundedGraphElements(selected.nodes, selected.edges, [...(attackPathNodeIds ?? scenarioContextIds ?? [])], canvasPage), layoutRequired: true };
-  }, [previewActive, connectionPreview, contextElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
+    const pinned = attackPathNodeIds ?? scenarioContextIds ?? (investigationMode ? [] : flowPinnedIds(selected.nodes, selected.edges, requestedFlow));
+    return { ...boundedGraphElements(selected.nodes, selected.edges, [...pinned], canvasPage), layoutRequired: true };
+  }, [requestedFlow, previewActive, connectionPreview, contextElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
   const rankedInvestigationEdges = useMemo(() => investigationContext ? investigationRankEdges(investigationContext, layoutInput.edges) : layoutInput.edges,
     [investigationContext, layoutInput.edges]);
   const { nodes: layoutNodes, edges: rankedLayoutEdges, pending: layoutPending } = useGraphLayout(
@@ -568,7 +574,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
   );
 
   // Levels of detail: the zoom band keeps dense graphs readable without moving nodes.
-  const lodBand = useLodBand();
+  const zoomBand = useLodBand();
+  const lodBand = zoomBand === "summary" && graphViewport.zoom >= GRAPH_CARD_ZOOM ? "detail" : zoomBand;
   const effectiveLodBand = canvasLayoutNodes.some(node => node.data.evidenceFlow) || compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
     sourceNodeCount: flow.nodes.length,
     renderedNodeCount: aggregated.nodes.length,

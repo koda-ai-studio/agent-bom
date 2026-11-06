@@ -149,3 +149,28 @@ def test_malformed_optional_routing_records_do_not_create_links_or_abort_invento
     inv, graph = project(items)
     assert inv["pod_context"][0]["uid"] == "pod-1"
     assert not any(e.evidence.get("basis") in {"kubernetes_endpoint_slice", "kubernetes_ingress_backend"} for e in graph.edges)
+
+
+def test_endpoint_slice_treats_an_unset_ready_condition_as_ready():
+    items = objects()
+    del items[3]["endpoints"][0]["conditions"]["ready"]
+    inv, _ = project(items)
+    assert [route["pod"]["uid"] for route in inv["endpoint_routes"]] == ["pod-1"]
+    del items[3]["endpoints"][0]["conditions"]
+    inv, _ = project(items)
+    assert [route["pod"]["uid"] for route in inv["endpoint_routes"]] == ["pod-1"]
+
+
+def test_malformed_routing_records_do_not_reject_the_rest_of_the_report():
+    good = build_k8s_inventory(objects(), source="live", cluster="cluster-a")
+    bad = deepcopy(good)
+    bad["pod_context"] = [*bad["pod_context"], {"uid": "u", "name": "p", "namespace": "n"}, "not-a-record", {"kind": "Pod", "uid": "x"}]
+    bad["controller_context"] = None
+    bad["services"] = [*bad["services"], {"uid": "s", "namespace": "n"}, 7]
+    bad["endpoint_routes"] = [*bad["endpoint_routes"], {"pod": {}}, {"service": {"uid": "svc-1"}}]
+    bad["ingresses"] = [{"uid": "i", "namespace": "n", "name": "i"}, {"uid": "j"}]
+    graph = UnifiedGraph(scan_id="scan", tenant_id="tenant")
+    project_kubernetes_inventory(graph, {"inventories": [bad]})
+    assert any(n.attributes.get("kubernetes_uid") == "pod-1" for n in graph.nodes.values())
+    assert any(n.attributes.get("kubernetes_uid") == "svc-1" for n in graph.nodes.values())
+    assert not any(n.attributes.get("kubernetes_uid") == "s" for n in graph.nodes.values())

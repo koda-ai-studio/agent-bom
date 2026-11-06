@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeGuard
 
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -12,6 +13,25 @@ from agent_bom.graph.types import RelationshipType as R
 
 if TYPE_CHECKING:
     from agent_bom.graph.kubernetes_scope import KubernetesScope as _Scope
+
+
+logger = logging.getLogger(__name__)
+_REF_KEYS = ("kind", "namespace", "name", "uid")
+_NAMED_KEYS = ("namespace", "name", "uid")
+
+
+def _is_ref(value: Any, keys: tuple[str, ...]) -> TypeGuard[Mapping[str, Any]]:
+    return isinstance(value, Mapping) and all(isinstance(value.get(key), str) and value[key] for key in keys)
+
+
+def _records(inventory: Mapping[str, Any], section: str, keys: tuple[str, ...]) -> list[Mapping[str, Any]]:
+    """Well-formed records only: a pushed report's one bad record must not reject everything else in it."""
+    value = inventory.get(section)
+    raw = value if isinstance(value, list) else []
+    valid = [record for record in raw if _is_ref(record, keys)]
+    if len(valid) != len(raw):
+        logger.warning("Skipped %d malformed Kubernetes %s record(s)", len(raw) - len(valid), section)
+    return valid
 
 
 def _object_id(scope: _Scope, ref: Mapping[str, Any], graph: UnifiedGraph) -> str:
@@ -33,8 +53,8 @@ def _object_id(scope: _Scope, ref: Mapping[str, Any], graph: UnifiedGraph) -> st
 
 
 def project_context(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, Any], project_image: Callable[..., None]) -> None:
-    records = [*inventory.get("controller_context", []), *inventory.get("pod_context", [])]
-    by_ref = {(r["kind"], r["namespace"], r["name"], r["uid"]): r for r in records if r.get("uid")}
+    records = [*_records(inventory, "controller_context", _REF_KEYS), *_records(inventory, "pod_context", _REF_KEYS)]
+    by_ref = {(r["kind"], r["namespace"], r["name"], r["uid"]): r for r in records}
     for ref in by_ref.values():
         node_id = _object_id(scope, ref, graph)
         if node_id not in graph.nodes:
@@ -54,7 +74,7 @@ def project_context(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, 
     for ref in by_ref.values():
         node_id = _object_id(scope, ref, graph)
         owner = ref.get("owner")
-        if owner and tuple(owner[k] for k in ("kind", "namespace", "name", "uid")) in by_ref:
+        if _is_ref(owner, _REF_KEYS) and tuple(owner[k] for k in _REF_KEYS) in by_ref:
             parent = _object_id(scope, owner, graph)
             graph.add_edge(
                 UnifiedEdge(
@@ -65,7 +85,9 @@ def project_context(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, 
                     evidence=scope.evidence("kubernetes_owner_reference", owner_uid=owner["uid"], child_uid=ref["uid"]),
                 )
             )
-        for container in ref.get("containers", []):
+        for container in ref.get("containers") or []:
+            if not _is_ref(container, ("name",)):
+                continue
             runtime_id = f"{node_id}/container/{container['name']}"
             graph.add_node(
                 scope.node(
@@ -77,7 +99,7 @@ def project_context(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, 
                     container_name=container["name"],
                     pod_uid=ref["uid"],
                     namespace=ref["namespace"],
-                    image_ref=container["image"],
+                    image_ref=container.get("image") or "",
                 )
             )
             if container.get("image"):
@@ -96,9 +118,7 @@ def project_context(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, 
 
 def _project_routes(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, Any]) -> None:
     services = {}
-    for service in inventory.get("services", []):
-        if not service.get("uid"):
-            continue
+    for service in _records(inventory, "services", _NAMED_KEYS):
         node_id = f"cloud_resource:k8s:service:{scope.key(service['namespace'], service['uid'])}"
         services[service["uid"]] = node_id
         graph.add_node(
@@ -110,13 +130,17 @@ def _project_routes(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, 
                 kubernetes_kind="Service",
                 kubernetes_uid=service["uid"],
                 namespace=service["namespace"],
-                service_type=service["type"],
-                ports=service["ports"],
+                service_type=service.get("type"),
+                ports=service.get("ports") or [],
                 network_reachability="unknown",
             )
         )
     _project_ingresses(graph, scope, inventory, services)
-    for route in inventory.get("endpoint_routes", []):
+    routes = inventory.get("endpoint_routes")
+    for route in routes if isinstance(routes, list) else []:
+        if not (isinstance(route, Mapping) and _is_ref(route.get("service"), ("uid",)) and _is_ref(route.get("pod"), _REF_KEYS)):
+            logger.warning("Skipped a malformed Kubernetes endpoint route record")
+            continue
         source, target = services.get(route["service"]["uid"]), _object_id(scope, route["pod"], graph)
         if source and target in graph.nodes:
             graph.add_edge(
@@ -127,10 +151,10 @@ def _project_routes(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, 
                     traversable=False,
                     evidence=scope.evidence(
                         "kubernetes_endpoint_slice",
-                        endpoint_slice_uid=route["slice"]["uid"],
+                        endpoint_slice_uid=str((route.get("slice") or {}).get("uid") or ""),
                         service_uid=route["service"]["uid"],
                         pod_uid=route["pod"]["uid"],
-                        ports=route["ports"],
+                        ports=route.get("ports") or [],
                         network_reachability="unknown",
                         missing_evidence=["effective_route_and_rule_evaluation", "observed_traffic"],
                     ),
@@ -139,9 +163,7 @@ def _project_routes(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, 
 
 
 def _project_ingresses(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[str, Any], services: dict[str, str]) -> None:
-    for ingress in inventory.get("ingresses", []):
-        if not ingress.get("uid"):
-            continue
+    for ingress in _records(inventory, "ingresses", _NAMED_KEYS):
         node_id = f"api_gateway:k8s:ingress:{scope.key(ingress['namespace'], ingress['uid'])}"
         graph.add_node(
             scope.node(
@@ -155,7 +177,9 @@ def _project_ingresses(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[st
                 network_reachability="unknown",
             )
         )
-        for backend in ingress["backends"]:
+        for backend in ingress.get("backends") or []:
+            if not (isinstance(backend, Mapping) and _is_ref(backend.get("service"), ("uid",))):
+                continue
             target = services.get(backend["service"]["uid"])
             if target:
                 graph.add_edge(
@@ -168,7 +192,7 @@ def _project_ingresses(graph: UnifiedGraph, scope: _Scope, inventory: Mapping[st
                             "kubernetes_ingress_backend",
                             ingress_uid=ingress["uid"],
                             service_uid=backend["service"]["uid"],
-                            service_port=backend["port"],
+                            service_port=backend.get("port"),
                             network_reachability="unknown",
                         ),
                     )
