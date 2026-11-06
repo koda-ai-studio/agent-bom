@@ -681,23 +681,6 @@ DROP POLICY IF EXISTS evaluation_runs_tenant_isolation ON public.evaluation_runs
 CREATE POLICY evaluation_runs_tenant_isolation ON public.evaluation_runs USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant()) WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.evaluation_runs TO agent_bom_app, agent_bom_rls_maintenance;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('evaluation_runs',1,now()) ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,1);
-CREATE TABLE IF NOT EXISTS ai_finding_assessments (tenant_id TEXT NOT NULL CHECK (length(btrim(tenant_id)) > 0), scan_id TEXT NOT NULL, finding_id TEXT NOT NULL, created_at TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (tenant_id, scan_id, finding_id));
-CREATE INDEX IF NOT EXISTS idx_ai_finding_assessments_latest ON public.ai_finding_assessments (tenant_id, finding_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ai_finding_assessments_created ON public.ai_finding_assessments (created_at);
-ALTER TABLE public.ai_finding_assessments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ai_finding_assessments FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS ai_finding_assessments_tenant_isolation ON public.ai_finding_assessments;
-CREATE POLICY ai_finding_assessments_tenant_isolation ON public.ai_finding_assessments USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant()) WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.ai_finding_assessments TO agent_bom_app, agent_bom_rls_maintenance;
-CREATE TABLE IF NOT EXISTS ai_triage_runs (tenant_id TEXT NOT NULL CHECK (length(btrim(tenant_id)) > 0), scan_id TEXT NOT NULL, created_at TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (tenant_id, scan_id));
-CREATE INDEX IF NOT EXISTS idx_ai_triage_runs_latest ON public.ai_triage_runs (tenant_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ai_triage_runs_created ON public.ai_triage_runs (created_at);
-ALTER TABLE public.ai_triage_runs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.ai_triage_runs FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS ai_triage_runs_tenant_isolation ON public.ai_triage_runs;
-CREATE POLICY ai_triage_runs_tenant_isolation ON public.ai_triage_runs USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant()) WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.ai_triage_runs TO agent_bom_app, agent_bom_rls_maintenance;
-INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('ai_triage',1,now()) ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,1);
 CREATE TABLE IF NOT EXISTS public.webhook_subscriptions (tenant_id TEXT NOT NULL CHECK (length(btrim(tenant_id)) > 0), data JSONB NOT NULL, subscription_id TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL, PRIMARY KEY (tenant_id, subscription_id));
 CREATE INDEX IF NOT EXISTS idx_webhook_subscriptions_tenant ON public.webhook_subscriptions (tenant_id);
 ALTER TABLE public.webhook_subscriptions ENABLE ROW LEVEL SECURITY;
@@ -1014,3 +997,21 @@ DO $$ BEGIN
 END $$;
 INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('scan_jobs',5,now())
 ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,5);
+
+CREATE TABLE IF NOT EXISTS ai_finding_assessments (tenant_id TEXT NOT NULL CHECK (length(btrim(tenant_id)) > 0), scan_id TEXT NOT NULL, finding_id TEXT NOT NULL, created_at TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (tenant_id, scan_id, finding_id));
+CREATE INDEX IF NOT EXISTS idx_ai_finding_assessments_latest ON public.ai_finding_assessments (tenant_id, finding_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_finding_assessments_created ON public.ai_finding_assessments (created_at);
+ALTER TABLE public.ai_finding_assessments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_finding_assessments FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ai_finding_assessments_tenant_isolation ON public.ai_finding_assessments;
+CREATE POLICY ai_finding_assessments_tenant_isolation ON public.ai_finding_assessments USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant()) WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.ai_finding_assessments TO agent_bom_app, agent_bom_rls_maintenance;
+CREATE TABLE IF NOT EXISTS ai_triage_runs (tenant_id TEXT NOT NULL CHECK (length(btrim(tenant_id)) > 0), scan_id TEXT NOT NULL, created_at TEXT NOT NULL, data JSONB NOT NULL, PRIMARY KEY (tenant_id, scan_id));
+CREATE INDEX IF NOT EXISTS idx_ai_triage_runs_latest ON public.ai_triage_runs (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_triage_runs_created ON public.ai_triage_runs (created_at);
+ALTER TABLE public.ai_triage_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_triage_runs FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ai_triage_runs_tenant_isolation ON public.ai_triage_runs;
+CREATE POLICY ai_triage_runs_tenant_isolation ON public.ai_triage_runs USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant()) WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.ai_triage_runs TO agent_bom_app, agent_bom_rls_maintenance;
+INSERT INTO control_plane_schema_versions(component,version,updated_at) VALUES ('ai_triage',1,now()) ON CONFLICT(component) DO UPDATE SET version=GREATEST(control_plane_schema_versions.version,1);

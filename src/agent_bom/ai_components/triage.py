@@ -20,6 +20,7 @@ from agent_bom.ai_components.ai_prompts import _bounded_prompt_text, redact_secr
 from agent_bom.ai_components.call_state import _effective_temperature, _prepare_prompt, logger
 from agent_bom.ai_components.providers import _parse_json_response
 from agent_bom.ai_components.triage_guard import enforce_protection, enforce_tampering, protected_reasons
+from agent_bom.core.severity import severity_rank
 from agent_bom.core.versions.ordering import compare_version_order
 from agent_bom.security import sanitize_error
 
@@ -33,7 +34,6 @@ AI_TRIAGE_DATASET_VERSION = "ai-triage-dataset.v2"
 # Field groups the evaluation can switch off one at a time, so each has to earn its place.
 FIELD_GROUPS: tuple[str, ...] = ("versions", "exploit_signals", "reachability", "path_summary")
 
-_SEVERITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 _MAX_TRIAGE_DESCRIPTION = 500
 _WITHHELD = "[withheld: instruction-like text]"
 
@@ -180,7 +180,7 @@ def risk_rank(finding: "Finding") -> tuple[float, ...]:
     """Highest risk first; the stable identifier keeps a re-run's selection identical."""
     return (
         0.0 if protected_reasons(finding) else 1.0,
-        -float(_SEVERITY_ORDER.get(str(finding.effective_severity()).lower(), 0)),
+        -float(severity_rank(str(finding.effective_severity()))),
         -float(finding.risk_score or 0.0),
         -float(finding.epss_score or 0.0),
     )

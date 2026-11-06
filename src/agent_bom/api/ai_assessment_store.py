@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import sqlite3
 import threading
 from collections.abc import Sequence
 from typing import Any, Protocol
@@ -220,7 +219,7 @@ _POSTGRES_DDL = (
 
 class PostgresAIAssessmentStore:
     def __init__(self, pool: Any = None) -> None:
-        self._pool = pool or _get_pool()
+        self._injected_pool = pool
         with self._pool.connection() as conn:
             if ensure_postgres_schema_version(conn, "ai_triage", version=1):
                 for statement in _POSTGRES_DDL:
@@ -228,6 +227,11 @@ class PostgresAIAssessmentStore:
                 _ensure_tenant_rls(conn, "ai_finding_assessments", "tenant_id")
                 _ensure_tenant_rls(conn, "ai_triage_runs", "tenant_id")
                 conn.commit()
+
+    @property
+    def _pool(self) -> Any:
+        # The shared pool can be replaced after a reset, so this long-lived store never keeps it.
+        return self._injected_pool or _get_pool()
 
     def put_scan(self, tenant_id: str, scan_id: str, run: dict[str, Any], assessments: Sequence[dict[str, Any]]) -> None:
         from psycopg.types.json import Jsonb
@@ -325,12 +329,12 @@ def discard_scan_advice(tenant_id: str, scan_id: str) -> None:
     """Derived-data cleanup: a failure here never fails the job delete or the maintenance loop, and the TTL sweep retries."""
     try:
         get_ai_assessment_store().delete_scan(tenant_id, scan_id)
-    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
+    except Exception as exc:  # broad-except: driver errors have no common base, and this is derived data
         _logger.warning("AI advice delete skipped: %s", type(exc).__name__)
 
 
 def expire_advice(cutoff_iso: str) -> None:
     try:
         get_ai_assessment_store().delete_older_than(cutoff_iso)
-    except (OSError, RuntimeError, ValueError, sqlite3.Error) as exc:
+    except Exception as exc:  # broad-except: driver errors have no common base, and this is derived data
         _logger.warning("AI advice expiry skipped: %s", type(exc).__name__)

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 import threading
 
 from agent_bom.ai_components.call_audit import AICallRecord, register_ai_call_sink
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.metrics import record_ai_call
 
-_logger = logging.getLogger(__name__)
 _registered = False
 _lock = threading.Lock()
 
