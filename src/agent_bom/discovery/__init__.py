@@ -46,8 +46,8 @@ from agent_bom.discovery.platform_config import expand_path as expand_path
 from agent_bom.discovery.platform_config import get_platform as get_platform
 from agent_bom.discovery.workload_servers import compose_service_env, k8s_container_endpoint
 from agent_bom.floating_refs import classify_image_reference
-from agent_bom.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.models import Agent, AgentStatus, AgentType, MCPServer, TransportType
+from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.security import sanitize_env_vars, sanitize_log_label
 
 console = Console(stderr=True)

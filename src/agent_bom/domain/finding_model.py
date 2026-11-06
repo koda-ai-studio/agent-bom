@@ -12,7 +12,7 @@ from agent_bom.core.sla import finding_owner, finding_sla_fields
 from agent_bom.core.vex_policy import vex_row_fields
 from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 from agent_bom.evidence.finding_lanes import model_lane_fields
-from agent_bom.malicious_basis import malicious_row_fields
+from agent_bom.evidence.malicious_basis import malicious_row_fields
 
 if TYPE_CHECKING:
     from agent_bom.domain.remediation_model import Remediation

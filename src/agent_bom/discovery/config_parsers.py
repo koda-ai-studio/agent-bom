@@ -23,8 +23,8 @@ from agent_bom.discovery.continue_config import continue_legacy_servers
 from agent_bom.discovery.coverage import report_blocked_server
 from agent_bom.discovery.mcp_metadata import connection_metadata
 from agent_bom.discovery.server_definition import args_field, blocked_mcp_server, string_field
-from agent_bom.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, ServerSurface, TransportType
+from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.security import (
     SecurityError,
     sanitize_env_vars,

@@ -10,10 +10,10 @@ from agent_bom.asset_provenance import agent_discovery_provenance, sanitize_disc
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
+from agent_bom.evidence.malicious_basis import package_basis_fields
 from agent_bom.evidence.scan_run import ScanRun, effective_scan_run
 from agent_bom.exploitability import exploitability_tags, parse_cvss_vector_signals
 from agent_bom.finding import Finding, FindingType
-from agent_bom.malicious_basis import package_basis_fields
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
 from agent_bom.output.advisory_text import advisory_help, sanitize_advisory_text
 from agent_bom.output.exposure_path import (

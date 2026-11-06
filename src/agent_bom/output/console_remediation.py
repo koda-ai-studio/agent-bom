@@ -7,8 +7,8 @@ from collections.abc import Sequence
 from rich.rule import Rule
 
 from agent_bom.core.severity import severity_rank
+from agent_bom.evidence.malicious_basis import is_suspected
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType, blast_radius_to_finding
-from agent_bom.malicious_basis import is_suspected
 from agent_bom.models import AIBOMReport, Severity
 from agent_bom.output.compact import _pct
 from agent_bom.output.console_style import _console

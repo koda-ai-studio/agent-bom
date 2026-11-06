@@ -33,7 +33,7 @@ from agent_bom.cli._check_support import (
     _vulns_at_or_above,
 )
 from agent_bom.cli._common import _sync_runtime_consoles
-from agent_bom.malicious_basis import is_suspected, malicious_headline, malicious_message, malicious_verdict_value
+from agent_bom.evidence.malicious_basis import is_suspected, malicious_headline, malicious_message, malicious_verdict_value
 from agent_bom.resolvers.latest_stable import PRERELEASE_NOTE, PRERELEASE_VERSION_SOURCE, resolved_version_source
 from agent_bom.vuln_freshness import db_stale_days_threshold, db_staleness, set_allow_stale_db
 

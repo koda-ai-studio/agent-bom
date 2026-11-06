@@ -12,8 +12,8 @@ from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import normalize_severity
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.domain.inventory_types import DEV_DEPENDENCY_SCOPES
+from agent_bom.evidence.malicious_basis import malicious_basis
 from agent_bom.finding import Finding, FindingType, blast_radius_to_finding
-from agent_bom.malicious_basis import malicious_basis
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
 from agent_bom.security import sanitize_log_label, sanitize_text, text_requires_redaction
 

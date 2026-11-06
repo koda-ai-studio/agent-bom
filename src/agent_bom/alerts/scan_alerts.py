@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from agent_bom.malicious_basis import malicious_basis, malicious_label
+from agent_bom.evidence.malicious_basis import malicious_basis, malicious_label
 
 
 def _malicious_package_alert(pkg: dict, ts: str) -> dict:

@@ -12,7 +12,7 @@ from rich.tree import Tree
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_worst_first_rank
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.core.terminal import safe_emoji as safe_emoji
-from agent_bom.malicious_basis import is_suspected
+from agent_bom.evidence.malicious_basis import is_suspected
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.cis_posture import ERROR, INCOMPLETE, NOT_EVALUATED, PASS, cis_pass_rate, cis_verdict
 from agent_bom.output.compact import _compact_detail, _coverage_bar

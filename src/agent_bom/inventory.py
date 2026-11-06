@@ -42,8 +42,8 @@ from typing import Any
 
 from agent_bom.asset_provenance import sanitize_discovery_provenance
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
-from agent_bom.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
+from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.security import sanitize_env_vars, sanitize_sensitive_payload
 
 logger = logging.getLogger(__name__)

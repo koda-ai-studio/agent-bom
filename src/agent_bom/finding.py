@@ -33,7 +33,7 @@ from agent_bom.domain.finding_types import _occurrence_evidence_qualifier as _oc
 from agent_bom.domain.finding_types import _stable_id as _stable_id
 from agent_bom.domain.finding_types import cites_cis_control
 from agent_bom.domain.finding_types import stable_id as stable_id
-from agent_bom.malicious_basis import malicious_basis, malicious_evidence_fields, malicious_label, malicious_remediation
+from agent_bom.evidence.malicious_basis import malicious_basis, malicious_evidence_fields, malicious_label, malicious_remediation
 from agent_bom.security import sanitize_text
 
 if TYPE_CHECKING:

@@ -12,9 +12,9 @@ from agent_bom.asset_provenance import (
 )
 from agent_bom.canonical_ids import agent_identity_export, canonical_id
 from agent_bom.coverage import package_vulnerability_unassessed
+from agent_bom.evidence.malicious_basis import package_basis_fields
 from agent_bom.evidence.occurrence_ids import server_occurrence_id
 from agent_bom.evidence.scan_run import effective_scan_run, vulnerability_scan_skipped
-from agent_bom.malicious_basis import package_basis_fields
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, MCPServer
 from agent_bom.output.json_sections import _package_occurrence_to_dict

@@ -18,7 +18,7 @@ from agent_bom.asset_provenance import (
 from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import severity_basis
 from agent_bom.core.vex_policy import is_vex_suppressed
-from agent_bom.malicious_basis import package_basis_fields
+from agent_bom.evidence.malicious_basis import package_basis_fields
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, Severity
 from agent_bom.output.vulnerability_counts import SuppressionStates, suppression_states

@@ -66,10 +66,11 @@ and CSV and Parquet add a `malicious_basis` column.
 ### Nothing to scan
 
 `agent-bom fs <dir>` on a directory with no packages, lockfiles or manifests
-writes its report and exits `2`: `posture_grade` is `N/A`, `scan_run.outcome` is
-`partial`, and a `nothing_to_scan` issue names the directory. A wrong path must
-not pass a CI gate. The GitHub Action reports this as `scan-status: usage_error`;
-if a directory is meant to hold no dependencies, do not run an `fs` gate on it.
+exits `0` because a repository with no dependencies is normal in CI, but gets no
+grade: `posture_grade` is `N/A`, `scan_run.outcome` is `partial`, and a
+`nothing_to_scan` issue names the directory. To require packages in a gate, check
+that `posture_grade` is not `N/A`. A directory with IaC files that were evaluated
+is a complete scan, not this case.
 On the API, the same request keeps `status: done` and adds the message to
 `warnings`, with no grade.
 

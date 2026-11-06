@@ -11,8 +11,8 @@ import re
 from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
+from agent_bom.evidence.malicious_basis import BLOCKING_VERDICTS, malicious_message, malicious_verdict_value
 from agent_bom.evidence.scan_run import scanner_warning_issues
-from agent_bom.malicious_basis import BLOCKING_VERDICTS, malicious_message, malicious_verdict_value
 from agent_bom.mcp_server_scan import consume_repo_tree_iac, consume_repo_tree_inventory
 from agent_bom.mcp_tools.check_lookup import (
     incomplete_lookup_reason,

@@ -12,12 +12,12 @@ from click.testing import CliRunner
 from agent_bom.cli import main
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.scan_findings import attach_graph_derived_findings
-from agent_bom.mcp_launch_risk import filesystem_root_argument, plaintext_env_secrets, remote_code_launch
 from agent_bom.models import Agent, AgentType, AIBOMReport, MCPServer, ServerSurface
 from agent_bom.output.graph_evidence import graph_evidence_sections
 from agent_bom.output.json_fmt import to_json
 from agent_bom.output.sarif import to_sarif
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit, audit_mcp_agents
+from agent_bom.scanners.mcp_launch_risk import filesystem_root_argument, plaintext_env_secrets, remote_code_launch
 
 GITHUB_SHAPED = "gh" + "p_" + "a1B2c3D4" * 5
 AWS_SHAPED = "AK" + "IA" + "QWERTYUIOP234567"

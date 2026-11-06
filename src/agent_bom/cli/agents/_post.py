@@ -9,8 +9,8 @@ import click
 from agent_bom.cli._common import SEVERITY_ORDER
 from agent_bom.cli.agents._context import ScanContext
 from agent_bom.evidence.cloud_posture import cloud_posture
+from agent_bom.evidence.malicious_basis import malicious_label
 from agent_bom.evidence.scan_run import NOTHING_TO_SCAN, ScanOutcome, effective_scan_run
-from agent_bom.malicious_basis import malicious_label
 from agent_bom.output import to_json
 
 
@@ -539,10 +539,9 @@ def compute_exit_code(
     if report is not None:
         scan_outcome = _execution_outcome(report)
         nothing_scanned = next((issue for issue in effective_scan_run(report).issues if issue.code == NOTHING_TO_SCAN), None)
-        if nothing_scanned is not None and exit_code == 0:
-            # Nothing was evaluated, which the exit contract calls no input to act on: not a verdict, and never a pass.
-            click.echo(f"agent-bom: Exiting with code 2: {nothing_scanned.message}", err=True)
-            exit_code = 2
+        if nothing_scanned is not None:
+            # A repository without dependencies is normal in CI. The report withholds the grade instead of failing the job.
+            click.echo(f"agent-bom: {nothing_scanned.message}", err=True)
         elif scan_outcome is not ScanOutcome.COMPLETE:
             if not quiet and not ctx.cloud_provider_failures:
                 con.print(

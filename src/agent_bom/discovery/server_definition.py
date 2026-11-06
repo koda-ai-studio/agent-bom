@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from agent_bom.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.models import MCPServer
+from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.security import SecurityError, sanitize_env_vars
 
 

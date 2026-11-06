@@ -16,9 +16,9 @@ from click.testing import CliRunner
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.pipeline import _run_scan_sync
 from agent_bom.cli import main
+from agent_bom.evidence.malicious_basis import DEPENDENCY_CONFUSION, KNOWN_MALICIOUS, NAME_SIMILARITY, UNSPECIFIED, malicious_basis
 from agent_bom.finding import malicious_package_to_finding
 from agent_bom.malicious import check_dependency_confusion, check_typosquat
-from agent_bom.malicious_basis import DEPENDENCY_CONFUSION, KNOWN_MALICIOUS, NAME_SIMILARITY, UNSPECIFIED, malicious_basis
 from agent_bom.models import Agent, AgentType, AIBOMReport, MCPServer, Package
 from agent_bom.posture import compute_posture_scorecard
 from agent_bom.scanners.package_coverage import _flag_suspicious_packages
@@ -357,7 +357,7 @@ def _empty_fs_report(tmp_path: Path, *args: str) -> tuple[int, str, str]:
 def test_empty_directory_has_no_grade_and_says_nothing_was_found(tmp_path):
     exit_code, output, raw = _empty_fs_report(tmp_path, "-f", "json")
     report = json.loads(raw)
-    assert exit_code == 2, output
+    assert exit_code == 0, output
     assert report["posture_grade"] == "N/A"
     assert report["posture_scorecard"]["no_data"] is True
     assert report["scan_run"]["outcome"] == "partial"
@@ -365,14 +365,43 @@ def test_empty_directory_has_no_grade_and_says_nothing_was_found(tmp_path):
     assert "Nothing to scan" in issue["message"]
     assert "empty" in issue["message"]
     assert issue["affects_coverage"] is True
-    assert "Exiting with code 2" in _flat(output)
     assert "Nothing to scan" in _flat(output)
+
+
+def test_directory_with_clean_iac_is_a_complete_scan_with_a_passing_exit(tmp_path):
+    target = tmp_path / "infra"
+    target.mkdir()
+    (target / "ok.tf").write_text('resource "null_resource" "ok" {}\n')
+    artifact = tmp_path / "r.json"
+    result = CliRunner().invoke(main, ["fs", str(target), "-f", "json", "-o", str(artifact)])
+    report = json.loads(artifact.read_text())
+    assert result.exit_code == 0, result.output
+    assert not [i for i in report["scan_run"]["issues"] if i["code"] == "nothing_to_scan"]
+
+
+def test_a_missing_path_still_fails(tmp_path):
+    result = CliRunner().invoke(main, ["fs", str(tmp_path / "missing")])
+    assert result.exit_code != 0, result.output
+
+
+def test_fs_detects_iac_in_its_target_rather_than_the_working_directory(tmp_path, monkeypatch):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / "Dockerfile").write_text("FROM scratch\n")
+    target = tmp_path / "target"
+    target.mkdir()
+    monkeypatch.chdir(elsewhere)
+    artifact = tmp_path / "r.json"
+    result = CliRunner().invoke(main, ["fs", str(target), "-f", "json", "-o", str(artifact)])
+    assert result.exit_code == 0, result.output
+    assert "Auto-detected" not in result.output
+    assert any(i["code"] == "nothing_to_scan" for i in json.loads(artifact.read_text())["scan_run"]["issues"])
 
 
 def test_empty_directory_sarif_reports_na(tmp_path):
     exit_code, _output, raw = _empty_fs_report(tmp_path, "-f", "sarif")
     properties = json.loads(raw)["runs"][0]["properties"]
-    assert exit_code == 2
+    assert exit_code == 0
     assert properties["posture_grade"] == "N/A"
     assert properties["scan_outcome"] == "partial"
 
@@ -380,7 +409,7 @@ def test_empty_directory_sarif_reports_na(tmp_path):
 @pytest.mark.parametrize("fmt", ["markdown", "html"])
 def test_empty_directory_rendered_reports_do_not_grade(tmp_path, fmt):
     exit_code, _output, raw = _empty_fs_report(tmp_path, "-f", fmt)
-    assert exit_code == 2
+    assert exit_code == 0
     assert "Nothing to scan" in raw
     assert ">A<" not in raw
     assert "grade: A" not in raw.lower()

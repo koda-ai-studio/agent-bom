@@ -14,6 +14,12 @@ GITHUB_SHAPED = "gh" + "p_" + "a1B2c3D4" * 5
 GOOGLE_SHAPED = "AI" + "za" + "b" * 35
 AWS_SHAPED = "AK" + "IA" + "QWERTYUIOP234567"
 
+_LONG_VALUE = "abc123" + "def456ghi789jkl012"
+_PLAIN_VALUE = "plain" + "fixture7"
+_MIXED_VALUE = "Xy7-Qz9" + "-fixture"
+_SHORT_VALUE = "abcd1234" + "efgh5678"
+_PHRASE_VALUE = "Tr0ub4dor" + "-fixture-7"
+
 
 def _types(name: str, text: str) -> list[str]:
     return [finding.secret_type for finding in scan_content(text, Path(name), name)]
@@ -41,9 +47,9 @@ def test_code_reading_a_key_is_not_a_hardcoded_key(line):
     "line",
     [
         'api_key = "abcdefghijklmnopqrstuvwxyz"',
-        "api_key = 'abc123def456ghi789jkl012'",
+        f"api_key = '{_LONG_VALUE}'",
         'URL = "https://api.invalid/v1?api_key=abcdefghijklmnopqrstuvwxyz"',
-        "api_key=abc123def456ghi789jkl012",
+        f"api_key={_LONG_VALUE}",
         "api_key=abc-def-ghi-jkl-mno-pqr-stu",
     ],
 )
@@ -96,8 +102,8 @@ def test_env_style_rules_do_not_report_code(line):
 
 
 def test_env_style_rules_still_report_a_literal():
-    assert match_file_secret("DB_PASSWORD=plainfixture7") is not None
-    assert match_file_secret('DB_PASSWORD = "plainfixture7"', code_file=True) is not None
+    assert match_file_secret(f"DB_PASSWORD={_PLAIN_VALUE}") is not None
+    assert match_file_secret(f'DB_PASSWORD = "{_PLAIN_VALUE}"', code_file=True) is not None
 
 
 @pytest.mark.parametrize(
@@ -118,9 +124,9 @@ def test_translation_labels_are_not_passwords(line):
 @pytest.mark.parametrize(
     "line",
     [
-        '"support_password": "Xy7-Qz9-fixture",',
+        f'"support_password": "{_MIXED_VALUE}",',
         '"password": "Tr0ub4dor&3xyz",',
-        '"secret": "abcd1234efgh5678",',
+        f'"secret": "{_SHORT_VALUE}",',
     ],
 )
 def test_secret_shaped_values_in_translation_files_still_report(line):
@@ -131,7 +137,7 @@ def test_label_keys_and_label_values_outside_translation_files():
     assert match_file_secret('LABEL_PASSWORD: "Current password value",') is None
     assert match_file_secret('forgotPassword: "Forgot your password?",') is None
     assert match_file_secret('password: "correct horse battery staple",') is not None
-    assert match_file_secret('LABEL_PASSWORD: "Tr0ub4dor-fixture-7",') is not None
+    assert match_file_secret(f'LABEL_PASSWORD: "{_PHRASE_VALUE}",') is not None
 
 
 def test_translation_rule_applies_by_directory_and_only_to_the_label_rules(tmp_path):

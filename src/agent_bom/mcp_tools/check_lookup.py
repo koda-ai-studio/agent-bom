@@ -7,8 +7,8 @@ from typing import Any
 from urllib.parse import quote
 
 from agent_bom import http_client
+from agent_bom.evidence.malicious_basis import malicious_message, malicious_verdict_value
 from agent_bom.malicious import check_typosquat, is_malicious_osv_record
-from agent_bom.malicious_basis import malicious_message, malicious_verdict_value
 from agent_bom.scanners.local_data_freshness import CheckDataEvidence, check_data_evidence
 from agent_bom.scanners.osv_details import OSV_API_URL
 from agent_bom.scanners.package_check_result import has_lookup_coverage_gap

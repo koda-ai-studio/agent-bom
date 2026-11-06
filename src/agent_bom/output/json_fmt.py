@@ -10,9 +10,9 @@ from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.core.severity import severity_basis
 from agent_bom.evidence.iac_identity import prepare_iac_occurrences
+from agent_bom.evidence.malicious_basis import package_basis_fields
 from agent_bom.exploitability import fused_triage_priority
 from agent_bom.finding import Finding, _forward_fixed_version
-from agent_bom.malicious_basis import package_basis_fields
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.exposure_path import exposure_path_for_report_finding
 from agent_bom.output.finding_views import blast_radius_output_tags, cve_findings
