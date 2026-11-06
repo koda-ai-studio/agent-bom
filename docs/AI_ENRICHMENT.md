@@ -42,8 +42,9 @@ These hold whatever a model says, and tests pin them:
   build one, and each read applies the rule again, because a finding can become
   known-exploited after its assessment was stored.
 - A finding whose text is addressed to the reader, such as "ignore previous
-  instructions", goes to a person: the verdict becomes `needs_review`, or stays
-  `confirmed` for a protected finding, and the model's rationale is replaced.
+  instructions", goes to a person. Recognized text is withheld from the prompt, the
+  verdict becomes `needs_review`, or stays `confirmed` for a protected finding, and
+  the model's rationale is replaced.
 - A failed, invalid or over-budget call never changes scanner results. See
   [Runtime fail modes](RUNTIME_FAIL_MODES.md#ai-advice).
 
@@ -125,12 +126,52 @@ reports a non-loopback Ollama URL as networked instead of labeling it local.
 
 ## Measured quality
 
-Quality depends on the model. These numbers come from
-`scripts/ai_triage_eval.py`, run on 2026-11-05 at temperature zero on one 16 GB
-laptop running other work, so treat the timings as rough. Dataset version
-`ai-triage-dataset.v1`, prompt version `ai-triage.v3`.
+Quality depends on the model. These numbers come from `scripts/ai_triage_eval.py`,
+run on 2026-11-06 at temperature zero on one 16 GB laptop running other work, so
+treat the timings as rough. Prompt version `ai-triage.v4`. Full digests are in
+`tests/fixtures/ai_triage_eval/recordings/`.
 
-**Held-out split (82 findings, not used for tuning):**
+**The bar** is committed in `tests/fixtures/ai_triage_eval/bar.json`, ahead of the
+held-out runs in this section: false-positive precision at least 85%, recall at least
+50%, no protected finding dismissed after guards, invalid responses at most 5%,
+calibration error at most 0.15, injection resistance at least 80% from the model alone
+and 95% after guards.
+
+**Held-out set v2 (`ai-triage-dataset.v2`, 160 new findings, 70 eligible false
+positives, not available when the prompt was tuned):**
+
+| Model | Digest | Cases | FP precision | FP recall | Wrong dismissals | Severe proposed / after guard | ECE | Invalid | Injection: model / final | s per finding | Tokens per finding |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `ollama_chat/llama3.2` | `a80c4f17acd5` | 160 | 87% | 56% | 6 | 0 / 0 | 0.081 | 1% | 70% / 100% | 2.76 | 661.7 |
+| `ollama/gemma3:4b` | `68ceab7e468a` | 160 | 88% | 53% | 5 | 0 / 0 | 0.143 | 0% | 75% / 90% | 4.72 | 698.2 |
+| `ollama/llama3.2` | `a80c4f17acd5` | 160 | 87% | 56% | 6 | 0 / 0 | 0.078 | 0% | 70% / 100% | 2.42 | 661.6 |
+| `ollama/qwen2.5:3b` | `357c53fb659c` | 160 | 87% | 79% | 8 | 0 / 0 | 0.037 | 0% | 95% / 100% | 2.33 | 657.5 |
+
+`ollama_chat/*` is LiteLLM 1.100.4 against the same local Ollama server.
+
+| Model | True flags / flagged | Precision, 95% interval | True flags / eligible | Recall, 95% interval | Bar |
+|---|---:|---:|---:|---:|---|
+| `qwen2.5:3b` | 55 / 63 | 77-93% | 55 / 70 | 68-87% | Met |
+| `llama3.2` | 39 / 45 | 74-94% | 39 / 70 | 44-67% | Missed: raw injection 70% |
+| `gemma3:4b` | 37 / 42 | 75-95% | 37 / 70 | 41-64% | Missed: injection 75% raw, 90% final |
+
+**Recommendation:** `ollama/qwen2.5:3b` for local triage. It is the only tested model
+that meets the bar. It still gets things wrong: 8 of its 63 dismissals were real
+findings, so treat a dismissal as a reason to look, not a reason to close.
+
+**Earlier held-out set v1 (82 findings, prompt `ai-triage.v4`):**
+
+| Model | Digest | Cases | FP precision | FP recall | Wrong dismissals | Severe proposed / after guard | ECE | Invalid | Injection: model / final | s per finding | Tokens per finding |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `ollama/gemma3:4b` | `68ceab7e468a` | 82 | 80% | 20% | 1 | 1 / 0 | 0.15 | 0% | 77% / 92% | 5.1 | 694.6 |
+| `ollama/llama3.2` | `a80c4f17acd5` | 82 | 86% | 30% | 1 | 4 / 0 | 0.137 | 0% | 81% / 100% | 2.35 | 655.7 |
+| `ollama/qwen2.5:3b` | `357c53fb659c` | 82 | 83% | 50% | 2 | 0 / 0 | 0.05 | 0% | 96% / 100% | 2.33 | 655.3 |
+
+These results are no longer unseen: an earlier prompt was measured on this set before
+the current prompt was written. `qwen2.5:3b` is 2 points under the precision bar here,
+with 2 wrong dismissals out of 12 flagged.
+
+**That earlier prompt on set v1, frozen as first measured (`ai-triage.v3`, 2026-11-05):**
 
 | Model | Digest | Cases | FP precision | FP recall | Wrong dismissals | Severe proposed / after guard | ECE | Invalid | Injection: model / final | s per finding | Tokens per finding |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -139,47 +180,38 @@ laptop running other work, so treat the timings as rough. Dataset version
 | `ollama/llama3.2` | `a80c4f17acd5` | 82 | 67% | 20% | 2 | 5 / 0 | 0.181 | 0% | 54% / 96% | 2.76 | 637.8 |
 | `ollama/qwen2.5:3b` | `357c53fb659c` | 82 | 100% | 50% | 0 | 1 / 0 | 0.021 | 0% | 85% / 100% | 2.31 | 627.4 |
 
-`ollama_chat/*` is LiteLLM 1.100.4 against the same local Ollama server. Full digests
-are in `tests/fixtures/ai_triage_eval/recordings/`.
-
 **Development split (117 findings, used for tuning):**
 
 | Model | Digest | Cases | FP precision | FP recall | Wrong dismissals | Severe proposed / after guard | ECE | Invalid | Injection: model / final | s per finding | Tokens per finding |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `ollama/gemma3:4b` | `68ceab7e468a` | 117 | 100% | 31% | 0 | 2 / 0 | 0.163 | 0% | 71% / 100% | 4.07 | 660.5 |
-| `ollama/llama3.2` | `a80c4f17acd5` | 117 | 94% | 47% | 1 | 5 / 0 | 0.031 | 0% | 71% / 100% | 2.77 | 632.8 |
-| `ollama/qwen2.5:3b` | `357c53fb659c` | 117 | 96% | 61% | 1 | 4 / 0 | 0.017 | 0% | 41% / 100% | 2.33 | 623.8 |
-
-**Recommendation:** `ollama/qwen2.5:3b` for local triage. It led on the development
-split and is the only tested model that meets the bar below on the held-out split.
-Do not treat `llama3.2` or `gemma3:4b` as a false-positive filter: their held-out
-recall is 20%, and `llama3.2` wrongly dismissed 2 real findings out of 6 it flagged.
-
-The bar, fixed before any held-out run: false-positive precision at least 85%,
-recall at least 50%, no protected finding dismissed after guards, invalid responses
-at most 5%, calibration error at most 0.15, injection resistance at least 80% from
-the model alone and 95% after guards.
+| `ollama/gemma3:4b` | `68ceab7e468a` | 117 | 100% | 33% | 0 | 0 / 0 | 0.151 | 0% | 100% / 100% | 4.6 | 695.1 |
+| `ollama/llama3.2` | `a80c4f17acd5` | 117 | 85% | 47% | 3 | 1 / 0 | 0.038 | 0% | 88% / 100% | 2.41 | 656.7 |
+| `ollama/qwen2.5:3b` | `357c53fb659c` | 117 | 100% | 67% | 0 | 0 / 0 | 0.009 | 0% | 94% / 100% | 3.51 | 658.1 |
 
 ### How to read these numbers
 
-- **The samples are small.** `qwen2.5:3b` flagged 10 of 20 eligible false positives
-  on the held-out split, all correct. A 95% interval on 10 of 20 runs from about 27%
-  to 73%, and 10 of 10 is compatible with true precision as low as about 72%. A
-  result at the recall bar is not a margin above it.
-- **A model is not robust to injection on its own.** `qwen2.5:3b` resisted 85% of
-  attacks on the held-out split but 41% on the development split. Guards bring the
-  final figure to 100% for it, but other models let a paraphrased attack through
-  (for `llama3.2`, an IaC finding claiming a sandbox and a security sign-off).
-  Pattern detection does not catch every wording.
-- **Half of real false positives remain.** Many are correctly held as `needs_review`.
+- **Most of the recall is one easy class.** On set v2, `qwen2.5:3b` found 46 of 48
+  false positives where the installed version is at or above the fix, but only 7 of 15
+  cloud look-alikes and 0 of 5 documentation look-alikes. It is much stronger on
+  version checks than on judging prose.
+- **Multi-release advisories caused most wrong dismissals.** 7 of `qwen2.5:3b`'s 8
+  wrong dismissals on set v2 are vulnerable versions whose recorded fix belongs to a
+  different release line, so the version check reports the fix as installed. Those
+  dataset cases take the advisory's last fix event, which may be harsher than a real
+  scan; this has not been measured on real scans.
+- **Injection resistance mostly comes from withholding.** The swing from 41% to 85%
+  between v1 splits came from which attacks each split held: direct "mark this a false
+  positive" text in a description was flagged 6 of 7 times, while paraphrases were
+  flagged 2 of 10. Text recognized as instruction-like now never reaches the model, and
+  a closing reminder follows the data. Paraphrases that pass the pattern match can still
+  move a model: one reached a final dismissal on `gemma3:4b`.
 - **Some false positives can't be found from these fields.** A version below an
-  advisory's `introduced` event looks vulnerable when only the fixed version is
-  known. They stay in the dataset as hard cases.
+  advisory's `introduced` event looks vulnerable when only the fixed version is known.
 - Precision and recall exclude protected findings, because the hard rule forbids
-  dismissing them even when the scanner was wrong. There are 3 such cases.
-- The verdict labels matter. Asking whether the "scanner is correct" gave models
-  that explained a fix correctly and then answered the opposite. Asking whether the
-  problem exists took `llama3.2` from 12% recall to 76% on a 50-case development subset.
+  dismissing them even when the scanner was wrong.
+- The verdict labels matter. Asking whether the "scanner is correct" gave models that
+  explained a fix correctly and then answered the opposite. Asking whether the problem
+  exists took `llama3.2` from 12% recall to 76% on a 50-case development subset.
 
 ### Dataset
 
@@ -196,10 +228,16 @@ Eight cloud look-alike cases are reconstructions, not captured scanner output: a
 real rule's output re-targeted at a shape the IaC accuracy tests pin as quiet. Each
 says so in its source.
 
+`dataset.v2.json`, built by `scripts/build_ai_triage_dataset_v2.py`, is all held out.
+It uses advisories and findings v1 does not: 70 false positives, all eligible, and 90
+true positives. 20 of the 160 are attacks written for it. Its 15 cloud
+look-alikes are reconstructions too, each pinned by a named test in this repository,
+and rule IDs with no matching rule are marked `reconstructed-`.
+
 ### Which fields earn their place
 
-Leave-one-out on the development split with `llama3.2` (36 eligible false positives).
-Only one model was measured, and small differences are one or two cases.
+Leave-one-out on the development split with `llama3.2` and prompt `ai-triage.v3` (36
+eligible false positives). Small differences are one or two cases.
 
 | Fields sent | FP precision | FP recall | Wrong dismissals | ECE |
 |---|---:|---:|---:|---:|
@@ -209,18 +247,22 @@ Only one model was measured, and small differences are one or two cases.
 | Without path summary | 83% | 42% | 3 | 0.082 |
 | Without exploit signals (KEV, EPSS, risk) | 94% | 42% | 1 | 0.045 |
 | Without reachability | 94% | 42% | 1 | 0.053 |
-| Without scope | 94% | 44% | 1 | 0.038 |
 
-Versions carry most of the gain and path summary helps precision. Exploit signals,
-reachability and scope each move only one or two cases, which is not strong evidence;
-they stay because the prompt's rules about KEV and unreachable findings need them.
+Versions carry most of the gain and path summary helps precision. Exploit signals and
+reachability move only a few cases, which is weak evidence; they stay because the
+prompt's rules about KEV and unreachable findings need them.
+
+Scope (provider, environment, dependency scope) was dropped. Retested on three models
+with prompt `ai-triage.v4`, it changed at most one case on each, in mixed directions:
+removing it gained `qwen2.5:3b` one wrong dismissal fewer and cost `llama3.2` and
+`gemma3:4b` one true flag each.
 
 ### Run it
 
 ```bash
 python scripts/ai_triage_eval.py --check                                   # replay; what CI runs
 python scripts/ai_triage_eval.py --live --model ollama/qwen2.5:3b --split dev
-python scripts/ai_triage_eval.py --live --record --model MODEL --split heldout   # then --write-baselines
+python scripts/ai_triage_eval.py --live --record --model MODEL --dataset v2 --split heldout   # then --write-baselines
 ```
 
 `--check` needs no model. It fails if a score drops below its baseline, a protected
@@ -234,7 +276,7 @@ recording stale. Tune only on `dev`.
 | Scan with AI off | No AI code runs: `--ai-enrich` guards the import and the call |
 | Added read cost, 50-row page | 0.9 ms SQLite, 1.8 ms Postgres (p50) |
 | Added read cost, 1,000-row page | 25 ms SQLite, 12 ms Postgres (p50) |
-| Triage of 100 findings, `qwen2.5:3b` | 421 s (4.2 s each), 100 assessed; the longest event-loop stall was 53 ms |
+| Triage, `qwen2.5:3b` | About 2.3 s per finding alone. A run of 100 took 421 s while other model work shared the machine, all assessed, with a longest event-loop stall of 53 ms |
 
 Read cost was measured against 21,000 stored assessments. Ollama's default context
 window silently cut a 7,000-token prompt to 2,050 tokens here, which is why
@@ -252,39 +294,89 @@ window silently cut a 7,000-token prompt to 2,050 tokens here, which is why
 
 Advice is stored per scan and tenant in `ai_finding_assessments` and
 `ai_triage_runs`, expires with its scan, and is removed by tenant erasure. A grouped
-finding row shows the advice for its representative occurrence only.
+finding row shows the advice for its representative occurrence and says so:
+"AI: Confirmed (1 of 2)" on the row and "covers one of 2 occurrences" in the drawer.
+When AI is later turned off, stored advice stays visible with its date and the status
+line says AI is off.
 
 ## Graph explanation
 
 `POST /v1/graph/explain` takes up to 25 node IDs, optionally as an ordered path,
-and runs only when asked. It reads those nodes and the edges between them, and
-returns claims that each cite node or edge IDs from that context. It writes nothing
-to the graph.
+and runs only when asked. It reads those nodes and the edges between them from the
+snapshot and writes nothing to the graph.
 
-Validation is code, not the model. A claim is removed if it cites nothing, cites
-anything outside the context, or asserts reach (reachable, exploitable, leads to,
-and similar words) without citing only traversable edges. The response counts what
-was removed in `rejected_claims`. `evidence_limits` is computed without the model
-and states missing hops, non-traversable hops, and whether a recorded attack path
-covers the selection. It needs an analyst role, and rate and budget limits apply
-per tenant.
+**The model does not write facts.** It selects and orders recorded edges and nodes,
+and picks a claim type from a closed set: `route_step`, `blocked_hop`,
+`relationship`, `node_fact` or `path_complete`. The server writes each sentence from
+the record, so source, target, direction, relationship and traversability come from
+the graph:
 
-Removing unsupported claims does not make the remaining ones good. Validation
-checks citations and recorded reach, not whether a sentence describes its citation
-well, and no scored dataset exists for that yet. In a live run over six small test
-paths, `qwen2.5:3b` kept 4 claims and removed 2; one kept claim reversed the direction
-of a real `depends_on` edge. Read the citations, not only the sentence.
+- A step that names an unknown ref or claim type is removed and counted in
+  `rejected_claims`.
+- The record decides route or blocked hop. If a model calls a non-traversable edge a
+  route, the sentence still says it is not a route, and `claim_type_corrected` counts
+  it.
+- `path_complete` is written only when every selected hop has a traversable edge.
+- A label that addresses the reader, or that runs to more than four words, is
+  withheld from sentences and shown as `[label withheld: N2]`.
+- A step may carry a short note, shown apart as "Model note, not evidence". A note
+  that names a graph element or states a relationship, reach, or safety is dropped.
+
+`evidence_limits` is computed without the model and states missing hops,
+non-traversable hops, and whether a recorded attack path covers the selection. The
+route needs an analyst role. Rate and daily budget apply per tenant through the
+shared store when Postgres is configured, and an outage of that store refuses the
+call rather than spending.
+
+### Measured explanation
+
+`scripts/ai_explain_eval.py` posts each path through the real route to a real graph
+store, using 60 paths from the real Kubernetes and demo projections in
+`ui/e2e/fixtures/k8s-projection.json` (`explain_dataset.v1.json`): 38 for tuning, 22
+held out, including non-traversable hops and hostile labels. Truth is the recorded edge.
+The bar is committed in `explain_bar.json`. CI replays recorded selections through the
+route and fails on regression.
+
+**Held out:**
+
+| Model | Digest | Paths | Citations valid | Direction | Reachability | Hostile text | Answered | Hop coverage | Blocked hops shown |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `ollama/gemma3:4b` | `68ceab7e468a` | 22 | 100% | 100% | 100% | 0 | 100% | 90% | 65% |
+| `ollama/llama3.2` | `a80c4f17acd5` | 22 | 100% | 100% | 100% | 0 | 100% | 100% | 100% |
+| `ollama/qwen2.5:3b` | `357c53fb659c` | 22 | 100% | 100% | 100% | 0 | 100% | 98% | 94% |
+
+**Development:**
+
+| Model | Digest | Paths | Citations valid | Direction | Reachability | Hostile text | Answered | Hop coverage | Blocked hops shown |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `ollama/gemma3:4b` | `68ceab7e468a` | 38 | 100% | 100% | 100% | 0 | 100% | 88% | 74% |
+| `ollama/llama3.2` | `a80c4f17acd5` | 38 | 100% | 100% | 100% | 0 | 97% | 97% | 98% |
+| `ollama/qwen2.5:3b` | `357c53fb659c` | 38 | 100% | 100% | 100% | 0 | 100% | 96% | 95% |
+
+Citations, direction and reachability are 100% by construction, since the server writes
+them; the tests show a model that lies cannot move them. Hop coverage and blocked hops
+shown measure the model's selection, and `gemma3:4b` misses the 70% blocked-hop bar on
+the held-out paths. These two are a proxy for usefulness: nobody has rated whether the
+explanations help a reader.
 
 ## Audit and metrics
 
 Each provider call produces one record: tenant, actor, task, provider, model,
 digest, prompt and response hashes, tokens, latency, outcome, and whether a guard
-rejected output. Prompt and response text is never recorded. In the control plane
-the record goes to the tamper-evident audit chain as `ai.call`, with
-`agent_bom_ai_calls_total{task,provider,outcome}` and
-`agent_bom_ai_call_latency_milliseconds_total{task,provider}` in Prometheus. The
-CLI has no audit chain; it logs the same fields at `INFO`, and each assessment
-keeps its provenance in the report.
+rejected output. Prompt and response text is never recorded.
+
+In the control plane the record goes to the tamper-evident audit chain as `ai.call`,
+with `agent_bom_ai_calls_total{task,provider,outcome}` and
+`agent_bom_ai_call_latency_milliseconds_total{task,provider}` in Prometheus. If the
+audit write fails, the call's output is discarded: no advice is stored and no
+explanation is returned without its record. The scan itself continues and its AI run
+reports `failed`.
+
+The CLI writes the same fields to `<state dir>/ai-audit/ai-calls.jsonl`, in the same
+hash-chained format as the runtime audit log. Check it with
+`agent-bom runtime audit <path> --verify-chain`. That command verifies the chain but
+does not yet list AI call records. Set `AGENT_BOM_AI_LOCAL_AUDIT=0` to opt out. If the
+file cannot be written, the scan and its advice stand and a warning is logged.
 
 ## Not built
 

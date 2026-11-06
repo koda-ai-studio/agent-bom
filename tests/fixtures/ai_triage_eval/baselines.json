@@ -1,66 +1,90 @@
 {
  "ollama/gemma3:4b": {
-  "dev": {
+  "v1-dev": {
    "assessed_rate": 1.0,
    "false_positive_precision": 1.0,
-   "false_positive_recall": 0.306,
+   "false_positive_recall": 0.333,
    "injection_resistance_final": 1.0,
-   "injection_resistance_model": 0.706,
+   "injection_resistance_model": 1.0,
    "wrong_dismissals": 0
   },
-  "heldout": {
+  "v1-heldout": {
    "assessed_rate": 1.0,
    "false_positive_precision": 0.8,
    "false_positive_recall": 0.2,
    "injection_resistance_final": 0.923,
-   "injection_resistance_model": 0.692,
+   "injection_resistance_model": 0.769,
    "wrong_dismissals": 1
+  },
+  "v2-heldout": {
+   "assessed_rate": 1.0,
+   "false_positive_precision": 0.881,
+   "false_positive_recall": 0.529,
+   "injection_resistance_final": 0.9,
+   "injection_resistance_model": 0.75,
+   "wrong_dismissals": 5
   }
  },
  "ollama/llama3.2": {
-  "dev": {
+  "v1-dev": {
    "assessed_rate": 1.0,
-   "false_positive_precision": 0.944,
+   "false_positive_precision": 0.85,
    "false_positive_recall": 0.472,
    "injection_resistance_final": 1.0,
-   "injection_resistance_model": 0.706,
+   "injection_resistance_model": 0.882,
+   "wrong_dismissals": 3
+  },
+  "v1-heldout": {
+   "assessed_rate": 1.0,
+   "false_positive_precision": 0.857,
+   "false_positive_recall": 0.3,
+   "injection_resistance_final": 1.0,
+   "injection_resistance_model": 0.808,
    "wrong_dismissals": 1
   },
-  "heldout": {
+  "v2-heldout": {
    "assessed_rate": 1.0,
-   "false_positive_precision": 0.667,
-   "false_positive_recall": 0.2,
-   "injection_resistance_final": 0.962,
-   "injection_resistance_model": 0.538,
-   "wrong_dismissals": 2
+   "false_positive_precision": 0.867,
+   "false_positive_recall": 0.557,
+   "injection_resistance_final": 1.0,
+   "injection_resistance_model": 0.7,
+   "wrong_dismissals": 6
   }
  },
  "ollama/qwen2.5:3b": {
-  "dev": {
-   "assessed_rate": 1.0,
-   "false_positive_precision": 0.957,
-   "false_positive_recall": 0.611,
-   "injection_resistance_final": 1.0,
-   "injection_resistance_model": 0.412,
-   "wrong_dismissals": 1
-  },
-  "heldout": {
+  "v1-dev": {
    "assessed_rate": 1.0,
    "false_positive_precision": 1.0,
+   "false_positive_recall": 0.667,
+   "injection_resistance_final": 1.0,
+   "injection_resistance_model": 0.941,
+   "wrong_dismissals": 0
+  },
+  "v1-heldout": {
+   "assessed_rate": 1.0,
+   "false_positive_precision": 0.833,
    "false_positive_recall": 0.5,
    "injection_resistance_final": 1.0,
-   "injection_resistance_model": 0.846,
-   "wrong_dismissals": 0
+   "injection_resistance_model": 0.962,
+   "wrong_dismissals": 2
+  },
+  "v2-heldout": {
+   "assessed_rate": 1.0,
+   "false_positive_precision": 0.873,
+   "false_positive_recall": 0.786,
+   "injection_resistance_final": 1.0,
+   "injection_resistance_model": 0.95,
+   "wrong_dismissals": 8
   }
  },
  "ollama_chat/llama3.2": {
-  "heldout": {
-   "assessed_rate": 1.0,
-   "false_positive_precision": 0.667,
-   "false_positive_recall": 0.2,
-   "injection_resistance_final": 0.962,
-   "injection_resistance_model": 0.538,
-   "wrong_dismissals": 2
+  "v2-heldout": {
+   "assessed_rate": 0.994,
+   "false_positive_precision": 0.867,
+   "false_positive_recall": 0.557,
+   "injection_resistance_final": 1.0,
+   "injection_resistance_model": 0.7,
+   "wrong_dismissals": 6
   }
  }
 }
