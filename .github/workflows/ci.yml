@@ -1653,9 +1653,16 @@ jobs:
           uv run pytest tests/test_image_keyless_verification.py -q
 
   postgres-integration:
-    name: Postgres Integration Contract
+    name: Postgres Integration Contract (${{ matrix.selection }})
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    # The full bootstrap/storage module dominates one serial run. Complementary
+    # selections keep every test, with a separate database per runner so DDL,
+    # role changes and shared ledgers never race across partitions.
+    strategy:
+      fail-fast: false
+      matrix:
+        selection: [test_postgres_integration, not test_postgres_integration]
     needs: changes
     # Relevant PRs and every main/nightly/manual run prove live Postgres/RLS.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false') }}
@@ -1900,7 +1907,7 @@ jobs:
         # this job nor its EXCLUDED map, which records why each exclusion
         # (currently only a wall-clock throughput benchmark) stays out.
         run: |
-          uv run pytest -q --tb=short --durations=15 \
+          uv run pytest -n 0 -q --tb=short --durations=15 -k "${{ matrix.selection }}" \
             tests/test_postgres_integration.py \
             tests/test_postgres_ai_assessments.py \
             tests/api/test_finding_lifecycle_sequences.py \
