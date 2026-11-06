@@ -11,7 +11,7 @@ import {
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
 import { minimapNodeColor, relationshipEdgeLabelText } from "@/lib/graph-utils";
-import { relationshipPath } from "@/lib/relationship-routing";
+import { relationshipPath, ROUTED_NODE_LIMIT } from "@/lib/relationship-routing";
 import { mcpBranchPath } from "@/lib/graph-mcp-routing";
 import { columnEdgePath } from "@/lib/path-card-column";
 
@@ -129,7 +129,7 @@ export function RelationshipEdge(props: EdgeProps) {
     }))) : null;
   const [path, x, y] = mcpPath ?? (columnSource
     ? columnEdgePath(props, columnSource.position.y + (columnSource.measured?.height ?? 0) + 6)
-    : relationshipPath(props, nodes.length <= 80 ? nodes.filter(node => !node.hidden).map(node => ({
+    : relationshipPath(props, nodes.length <= ROUTED_NODE_LIMIT ? nodes.filter(node => !node.hidden).map(node => ({
       id: node.id, x: node.position.x, y: node.position.y,
       width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
     })) : []));

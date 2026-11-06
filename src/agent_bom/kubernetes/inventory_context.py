@@ -82,7 +82,8 @@ def investigation_context(items: list[Mapping[str, Any]], containers: Callable[.
                     or not target.get("uid")
                     or target.get("uid") != object_ref(pod)["uid"]
                     or target.get("namespace") != ref["namespace"]
-                    or _mapping(endpoint.get("conditions")).get("ready") is not True
+                    # discovery.k8s.io/v1: a nil ready condition is to be interpreted as true.
+                    or _mapping(endpoint.get("conditions")).get("ready") is False
                 ):
                     continue
                 routes.append(

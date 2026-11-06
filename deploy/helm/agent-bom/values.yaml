@@ -124,8 +124,9 @@ scanner:
   # collectors (workloads, NetworkPolicy, RBAC, optional node config) over the
   # native service-account transport — no kubectl, no image discovery. It is
   # bound to the scanner service account, which carries the least-privilege
-  # read-only ClusterRole (get/list on pods/namespaces/nodes/networkpolicies/
-  # RBAC; no secrets, no mutation, no nodes/proxy).
+  # read-only ClusterRole (get/list on pods/namespaces/nodes/services/
+  # endpointslices/ingresses/networkpolicies/RBAC; no secrets, no mutation,
+  # no nodes/proxy).
   kspm:
     enabled: false
     schedule: "0 */6 * * *"

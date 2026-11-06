@@ -62,3 +62,16 @@ it("keeps finding disclosure available when an asset uses the display ID prefix"
   expect(result.nodes.filter(n => n.type === "findingGroupNode")).toHaveLength(1);
   expect(new Set(result.nodes.map(n => n.id)).size).toBe(result.nodes.length);
 });
+
+it("gives a finding group an accessible name and a connector that faces it", () => {
+  const left = nodes.map(n => n.id === "finding" ? { ...n, position: { x: -600, y: 0 } } : n);
+  const result = cloudFindingDisclosure(left, edges, new Set(), () => {}, true);
+  const group = result.nodes.find(n => n.type === "findingGroupNode")!;
+  const link = result.edges.find(e => e.data?.relationship === "finding_group")!;
+  expect(group.position.x).toBeLessThan(0);
+  expect(link).toMatchObject({ sourceHandle: "context", targetHandle: "context" });
+  expect(group.ariaLabel).toBe("Findings for app: 1 grouped");
+  expect(link.ariaLabel).toBe("app has 1 grouped finding");
+  const right = cloudFindingDisclosure(nodes, edges, new Set(), () => {}, true).edges.find(e => e.data?.relationship === "finding_group")!;
+  expect(right.sourceHandle).toBeUndefined();
+});
