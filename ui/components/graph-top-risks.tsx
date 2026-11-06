@@ -43,7 +43,7 @@ export function GraphTopRisks({ risks, loaded, onSelect }: {
     </ol>
     <div className="px-3 pb-3 pt-1.5">
       <button type="button" onClick={() => onSelect(lead.id)} aria-label={`Investigate top risk: ${lead.label}`}
-        className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-medium text-white hover:bg-emerald-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500">
+        className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-700 px-3 text-sm font-medium text-white hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500">
         Investigate top risk <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
