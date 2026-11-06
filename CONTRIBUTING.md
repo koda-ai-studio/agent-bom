@@ -80,9 +80,11 @@ make preflight                           # only if you touched api/ routes or mo
 ```
 
 **5. Open the PR (about 10 minutes).** Use a conventional title
-(`fix(parsers): ...`), fill in the template, list the commands you ran, and sign
-off your commit (`git commit -s`). Draft PRs are welcome if you want early
-feedback on direction.
+(`fix(parsers): ...`), fill in the template, list the commands you ran, and both
+sign off and cryptographically sign your commit (`git commit -s -S`). They are
+different things, and `main` requires both; see
+[Signing your commits](#signing-your-commits). Draft PRs are welcome if you want
+early feedback on direction.
 
 **How CI gates work.** A change classifier runs first. Docs-only PRs skip the
 Python test shards, while code PRs run lint, mypy, the architecture and
@@ -378,6 +380,22 @@ Use `scripts/bump-version.py`. It updates the release-managed version surfaces i
 ## Developer Certificate of Origin
 
 All contributions must include a `Signed-off-by` line (`git commit -s`). By signing, you certify you have the right to submit the work under the Apache 2.0 license per [DCO v1.1](https://developercertificate.org/).
+
+### Signing your commits
+
+`git commit -s` adds the `Signed-off-by` line above. It is a statement, not a signature. Separately, `main` only accepts commits GitHub shows as **Verified**, and a squash merge cannot get around that, because GitHub checks the commits in the pull request.
+
+Sign with the SSH key you already use for GitHub:
+
+```bash
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+git config --global commit.gpgsign true
+```
+
+Then add that key on [GitHub](https://github.com/settings/keys) as a **Signing Key**. GPG and S/MIME also work; see [GitHub's guide](https://docs.github.com/en/authentication/managing-commit-signature-verification).
+
+Already pushed unsigned commits? Run `git rebase --exec 'git commit --amend --no-edit -S -s' origin/main`, then `git push --force-with-lease`. If this gets in your way, say so on your pull request and a maintainer will help.
 
 ---
 
