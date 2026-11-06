@@ -95,7 +95,9 @@ def test_prompt_carries_the_fields_that_decide_a_false_positive() -> None:
     assert row["ref"] == "F1" and "finding_id" not in row
     assert row["installed_version"] == "1.0.0" and row["fixed_version"] == "2.0.0" and row["ecosystem"] == "npm"
     assert row["epss"] == 0.42 and row["reachability"] == "unlikely" and row["graph_reachable"] is False
-    assert row["environment"] == "prod" and row["provider"] == "aws" and row["dependency_scope"] == "dev"
+    assert not {"environment", "provider", "dependency_scope"} & set(row), (
+        "scope moved no more than one case on any model, so it was dropped"
+    )
     assert row["path"]["introduced_via"] == "parent-lib" and row["path"]["dependency_depth"] == 2
     assert row["match_tier"] == "unverified_range"
     assert "must-not-appear" not in prompt
@@ -104,7 +106,7 @@ def test_prompt_carries_the_fields_that_decide_a_false_positive() -> None:
 def test_field_groups_switch_off_for_the_evaluation() -> None:
     prompt, _ = build_triage_prompt([_vuln_finding()], fields=set())
     [row] = _rows(prompt)
-    assert not {"installed_version", "epss", "reachability", "environment", "path"} & set(row)
+    assert not {"installed_version", "epss", "reachability", "path"} & set(row)
     assert row["title"] == "title vuln"
 
 

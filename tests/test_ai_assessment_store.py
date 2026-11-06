@@ -82,3 +82,14 @@ def test_ttl_sweep_expires_rows_with_their_scans(store) -> None:
 
 def test_empty_lookup_touches_nothing(store) -> None:
     assert store.latest_for_findings("t1", []) == {}
+
+
+def test_a_sqlite_reader_sees_runs_written_after_its_last_read(tmp_path: Path) -> None:
+    """A half-read statement pins a WAL snapshot; the status line stayed on an old run in a real browser run."""
+    path = str(tmp_path / "shared.db")
+    reader, writer = SQLiteAIAssessmentStore(path), SQLiteAIAssessmentStore(path)
+    writer.put_scan("t1", "first", {"status": "failed", "created_at": "2026-11-01T00:00:00+00:00"}, [])
+    writer.put_scan("t1", "second", {"status": "ok", "created_at": "2026-11-01T00:00:00+00:00"}, [])
+    assert reader.latest_run("t1") is not None
+    writer.put_scan("t1", "third", {"status": "partial", "created_at": "2026-11-03T00:00:00+00:00"}, [])
+    assert reader.latest_run("t1")["status"] == "partial"

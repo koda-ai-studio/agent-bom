@@ -165,12 +165,13 @@ class SQLiteAIAssessmentStore:
         return {str(row[0]): json.loads(row[1]) for row in rows.fetchall()}
 
     def latest_run(self, tenant_id: str) -> dict[str, Any] | None:
-        row = (
+        # fetchall finishes the statement; a half-read one would pin this connection to an old WAL snapshot.
+        rows = (
             self._backend._conn()
             .execute("SELECT data FROM ai_triage_runs WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1", (tenant_id,))
-            .fetchone()
+            .fetchall()
         )
-        return json.loads(row[0]) if row else None
+        return json.loads(rows[0][0]) if rows else None
 
     def _delete(self, predicate: str, values: tuple[str, ...]) -> int:
         removed = 0

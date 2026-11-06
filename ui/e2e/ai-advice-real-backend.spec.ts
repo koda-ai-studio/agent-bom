@@ -23,6 +23,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.addInitScript((mode) => localStorage.setItem("agent-bom-theme", mode), theme);
       await page.goto("/findings");
       await expect(page.getByRole("status").filter({ hasText: /AI advice|AI run/ })).toHaveText(STATUS[expected]!, { timeout: 30_000 });
+      await expect(page.getByRole("button", { name: "Investigate" }).first()).toBeVisible({ timeout: 60_000 });
       await page.screenshot({ path: testInfo.outputPath(`${label}-findings-${theme}-${width}.png`), fullPage: width > 500 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       const badges = page.getByLabel(/^AI advice: /);
@@ -35,7 +36,8 @@ for (const theme of ["light", "dark"] as const) {
       await expect(section).toContainText("confidence");
       await expect(section).toContainText("ollama/qwen2.5:3b");
       await expect(section).toContainText("does not change scanner severity");
-      await page.screenshot({ path: testInfo.outputPath(`${label}-drawer-${theme}-${width}.png`) });
+      await page.waitForTimeout(800);
+      await page.screenshot({ path: testInfo.outputPath(`${label}-drawer-${theme}-${width}.png`), animations: "disabled" });
     });
   }
 

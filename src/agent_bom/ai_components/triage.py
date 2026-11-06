@@ -31,7 +31,7 @@ AI_TRIAGE_PROMPT_VERSION = "ai-triage.v4"
 AI_TRIAGE_DATASET_VERSION = "ai-triage-dataset.v2"
 
 # Field groups the evaluation can switch off one at a time, so each has to earn its place.
-FIELD_GROUPS: tuple[str, ...] = ("versions", "exploit_signals", "reachability", "scope", "path_summary")
+FIELD_GROUPS: tuple[str, ...] = ("versions", "exploit_signals", "reachability", "path_summary")
 
 _SEVERITY_ORDER = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 _MAX_TRIAGE_DESCRIPTION = 500
@@ -246,12 +246,6 @@ def triage_row(finding: "Finding", ref: str, *, fields: frozenset[str] | set[str
         row.update(is_kev=finding.is_kev, is_malicious=finding.is_malicious, epss=finding.epss_score, risk_score=finding.risk_score)
     if "reachability" in fields:
         row.update(reachability=_untrusted(finding.reachability, 32), graph_reachable=finding.graph_reachable)
-    if "scope" in fields:
-        row.update(
-            provider=_untrusted(finding.provider or finding.asset.provider, 32),
-            environment=_untrusted(finding.environment or finding.asset.environment, 32),
-            dependency_scope=_untrusted(evidence.get("package_dependency_scope"), 32),
-        )
     if "path_summary" in fields:
         row["path"] = _path_summary(finding)
     return {key: value for key, value in row.items() if value not in (None, "", {})}
