@@ -107,8 +107,8 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 | Table | Backends | Columns | Partitioned | Lifetime |
 |---|---|---|---|---|
-| `ai_finding_assessments` | Postgres, SQLite | 5 |  | persistent |
-| `ai_triage_runs` | Postgres, SQLite | 4 |  | persistent |
+| `ai_finding_assessments` | Postgres | 5 |  | persistent |
+| `ai_triage_runs` | Postgres | 4 |  | persistent |
 | `attestation_replay` | SQLite | 4 |  | persistent |
 | `audit_chain_checkpoint` | Postgres, SQLite | 4 |  | persistent |
 | `audit_events` | ClickHouse | 10 | yes | persistent |
