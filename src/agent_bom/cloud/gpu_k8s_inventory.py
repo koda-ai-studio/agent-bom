@@ -87,7 +87,7 @@ def workload_agent(workload: GpuWorkload, stack: GpuStack) -> Agent:
         transport=TransportType.UNKNOWN,
         surface=ServerSurface.AI_INVENTORY,
         packages=_workload_packages(workload, stack),
-        env={name: "" for name in workload.credential_env},
+        env={name: "***REDACTED***" for name in workload.credential_env},  # a Secret reference; its value is never read
     )
     return Agent(
         name=f"gpu-workload:{ident}",

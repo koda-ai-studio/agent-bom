@@ -31,6 +31,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
+- The `scan` skill's frontmatter is valid YAML again; an unquoted colon in its description broke parsing in the Claude and Codex plugins.
 - A credential-named variable set to an empty value is no longer reported as a credential. Blanking a token to keep it out of a server used to produce a false high finding.
 - Hosted OAuth catalogs no longer list `scan`, which stores its result and can update the advisory database. These catalogs offer read-only tools only.
 - MCP discovery no longer reports a server as insecure because an argument uses `${CLAUDE_PLUGIN_ROOT}` or `${CLAUDE_PROJECT_DIR}`. Any other `$` expansion or shell metacharacter is still rejected.

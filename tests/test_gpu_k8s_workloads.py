@@ -80,7 +80,7 @@ def test_workload_agent_carries_image_and_gpu_stack_packages_with_cpes() -> None
     assert by_name["nvidia-gpu-display-driver"].discovery_provenance["source"] == "gpu-feature-discovery-label"
     assert by_name["nvidia-container-toolkit"].discovery_provenance["source"] == "gpu-operator-clusterpolicy"
     assert any(p.ecosystem == "container-image" for p in server.packages)
-    assert server.env == {"HF_TOKEN": ""} and server.credential_names == ["HF_TOKEN"]
+    assert server.env == {"HF_TOKEN": "***REDACTED***"} and server.credential_names == ["HF_TOKEN"]
     origin = agent.metadata["cloud_origin"]
     assert (origin["provider"], origin["service"], origin["resource_type"]) == ("aws", "kubernetes", "gpu-workload")
     assert agent.metadata["gpu_workload"]["pool_name"] == "gpu-a10g"
