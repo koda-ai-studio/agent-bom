@@ -54,6 +54,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
+- The current-estate cache sweep no longer deletes a file a running store is using. Previously, starting another agent-bom process on the same state directory, or building more than 8 stores in one, could remove a live projection and cause `no such table` or `disk I/O error`. Each store now holds a lock on `<file>.lease` that clears when it exits, and the sweep and `agent-bom db prune` skip locked files. Where locks are unavailable nothing is swept.
+- Two callers reaching a new current-estate store at the same moment now share one instance. Before, a scan's warm-up racing a reader could build a second one with separate build tracking.
 - `ctransformers` and `parsing` are no longer flagged as typosquats. Both are established PyPI projects.
 - A scan no longer says `supply chain looks clean` when the public registry has never heard of a package. It names the package, records a `package_not_on_registry` issue, and grades `N/A` if no scanned package exists. The exit code does not change, because private packages are normal.
 - The `scan` skill's frontmatter is valid YAML again; an unquoted colon in its description broke parsing in the Claude and Codex plugins.
