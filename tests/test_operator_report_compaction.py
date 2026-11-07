@@ -29,3 +29,17 @@ def test_ingest_normalizes_legacy_alias_once_and_preserves_distinct_sections():
     assert result["ai_bom_entities"]["packages"] == [package]
     body = PushPayload.model_validate({"packages": [package], "ai_bom_entities": {"packages": [{"name": "different"}]}})
     assert normalize_pushed_report(body, fallback_scan_id="test")["packages"] == [package]
+
+
+def test_compaction_preserves_the_bounded_graph_workspace_threshold(monkeypatch):
+    from agent_bom.api.graph_persistence import _graph_store_backed_build_enabled
+    from agent_bom.output.report_compaction import compact_report_sections
+
+    monkeypatch.delenv("AGENT_BOM_GRAPH_STORE_BACKED_BUILD", raising=False)
+    monkeypatch.setenv("AGENT_BOM_GRAPH_STORE_BACKED_MIN_ENTITIES", "5000")
+    packages = [{"name": f"package-{n}", "version": "1"} for n in range(5000)]
+    report = {"packages": packages, "ai_bom_entities": {"packages": packages}}
+    assert _graph_store_backed_build_enabled(report)
+    compact = compact_report_sections(report)
+    assert "packages" not in compact
+    assert _graph_store_backed_build_enabled(compact)
