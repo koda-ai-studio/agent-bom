@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
@@ -13,8 +15,14 @@ from agent_bom.core.errors import UpstreamError, UpstreamInvalidResponseError
 from agent_bom.enrichment_posture import record_enrichment_source
 from agent_bom.models import Package
 from agent_bom.package_utils import normalize_package_name
+from agent_bom.scanners.state import record_coverage_warning
 
 _logger = logging.getLogger("agent_bom.scanners.osv")
+
+# Firm bounds on one batch's page follow-ups: about 10,000 advisories per
+# query and one minute of wall time. A query cut off by either is reported.
+MAX_PAGE_FOLLOWUPS = 10
+PAGE_DEADLINE_SECONDS = 60.0
 
 PageFetch = Callable[[list[int], list[dict]], Awaitable["dict[int, str] | None"]]
 
@@ -32,21 +40,29 @@ async def follow_result_pages(
     queries: list[dict],
     fetch: PageFetch,
     bump_scan_perf: Callable[[str, int], None],
-    max_pages: int,
 ) -> UnfinishedQueries:
-    """Ask for the next page of every paginated query until none is left.
+    """Ask for the next page of every paginated query until none is left or a bound is hit.
 
     OSV paginates a query past about 1,000 advisories (or a batch past about
     3,000); each further page is requested with that query's ``page_token``.
     ``fetch`` merges a page and returns its tokens, or None after recording a
-    failure for the queries it was asked about.
+    failure for the queries it was asked about. ``MAX_PAGE_FOLLOWUPS`` and
+    ``PAGE_DEADLINE_SECONDS`` bound the pages, time and memory spent.
     """
+    deadline = time.monotonic() + PAGE_DEADLINE_SECONDS
     pages = 0
-    while tokens and pages < max_pages:
+    while tokens and pages < MAX_PAGE_FOLLOWUPS:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
         pages += 1
         bump_scan_perf("osv_page_followups", 1)
         indexes = sorted(tokens)
-        next_tokens = await fetch(indexes, [dict(queries[idx], page_token=tokens[idx]) for idx in indexes])
+        page_queries = [dict(queries[idx], page_token=tokens[idx]) for idx in indexes]
+        try:
+            next_tokens = await asyncio.wait_for(fetch(indexes, page_queries), remaining)
+        except asyncio.TimeoutError:
+            break
         if next_tokens is None:
             return UnfinishedQueries(frozenset(indexes), limit_reached=False)
         tokens = next_tokens
@@ -132,10 +148,25 @@ def merge_batch_response(
         return None, UpstreamInvalidResponseError("osv", f"parse error: {type(exc).__name__}")
 
 
-def pagination_limit_failure(console: Console) -> UpstreamError:
+def page_limit_failures(
+    console: Console, indexes: frozenset[int], pkg_index: dict[int, tuple[Package, str]]
+) -> list[tuple[str, str, UpstreamError]]:
+    """Report each query the page bound cut off, by package, and return its lookup errors."""
     console.print("  [red]✗[/red] OSV returned more result pages than the scan follows")
     record_enrichment_source("osv", "failure", error="pagination limit reached")
-    return UpstreamInvalidResponseError("osv", "pagination limit reached")
+    for package in sorted({f"{pkg_index[idx][0].name}@{pkg_index[idx][0].version}" for idx in indexes if idx in pkg_index}):
+        record_coverage_warning(
+            {
+                "ecosystem": "vulnerability-data",
+                "release": f"osv-page-limit:{package}",
+                "reason": "osv_result_page_limit",
+                "detail": (
+                    f"OSV results for {package} exceeded the scan's bound of {MAX_PAGE_FOLLOWUPS} extra pages or "
+                    f"{PAGE_DEADLINE_SECONDS:.0f} s; the advisories read so far are reported and the rest are missing."
+                ),
+            }
+        )
+    return query_failures(sorted(indexes), pkg_index, UpstreamInvalidResponseError("osv", "pagination limit reached"))
 
 
 def query_failures(
