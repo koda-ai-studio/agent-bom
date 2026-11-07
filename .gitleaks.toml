@@ -22,6 +22,11 @@ regexes = [
   # Synthetic AKS hostname in characterization history; survives rebased commits.
   '''^\s*"api_server_fqdn":\s*"private\.azmk8s\.io",?\s*$''',
   '''["']?framework_key["']?\s*[:=]''',
+  # Synthetic values in tests/fixtures/accuracy_corpus/secret_assignments, which measure the scanner.
+  '''DB_PASSWORD=plainfixture7''',
+  '''Set `api_key=abc123def456ghi789jkl012` to use the shared account''',
+  '''"support_password": "Xy7-Qz9-fixture"''',
+  '''admin_password = "Tr0ub4dor-fixture-7"''',
   '''AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq''',
 ]
 paths = [

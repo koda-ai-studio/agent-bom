@@ -43,6 +43,9 @@ class PostureInputs:
     credentials: set[str] = field(default_factory=set)
     packages: list[Any] = field(default_factory=list)
     total_servers: int = 0
+    # An MCP server's configuration is evidence on its own. A scan carrier (filesystem, image, SBOM) only holds packages,
+    # so one with none evaluated nothing.
+    evaluated_servers: int = 0
     verified_servers: int = 0
     servers_with_tools: int = 0
     has_mcp_context: bool = False
@@ -76,6 +79,7 @@ def posture_inputs_from_report(report: "AIBOMReport") -> PostureInputs:
     for agent in report.agents:
         for server in agent.mcp_servers:
             inputs.total_servers += 1
+            inputs.evaluated_servers += int(bool(getattr(server, "is_mcp_surface", True) or server.packages))
             inputs.verified_servers += int(bool(server.registry_verified))
             inputs.servers_with_tools += int(bool(server.tools))
             if server.has_credentials:

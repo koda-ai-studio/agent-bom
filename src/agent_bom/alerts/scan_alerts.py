@@ -8,6 +8,26 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from agent_bom.evidence.malicious_basis import malicious_basis, malicious_label
+
+
+def _malicious_package_alert(pkg: dict, ts: str) -> dict:
+    return {
+        "type": "scan_alert",
+        "detector": "scan_malicious",
+        "severity": "critical",
+        "message": (
+            f"{malicious_label(pkg.get('malicious_reason')).capitalize()} package detected: {pkg.get('name', '')}@{pkg.get('version', '')}"
+        ),
+        "details": {
+            "package": pkg.get("name", ""),
+            "version": pkg.get("version", ""),
+            "reason": pkg.get("malicious_reason", ""),
+            "basis": malicious_basis(pkg.get("malicious_reason")),
+        },
+        "ts": ts,
+    }
+
 
 def alerts_from_scan_result(report_dict: dict) -> list[dict]:
     """Generate alert dicts from a completed scan report.
@@ -82,20 +102,7 @@ def alerts_from_scan_result(report_dict: dict) -> list[dict]:
         for server in agent.get("mcp_servers", []):
             for pkg in server.get("packages", []):
                 if pkg.get("is_malicious"):
-                    alerts.append(
-                        {
-                            "type": "scan_alert",
-                            "detector": "scan_malicious",
-                            "severity": "critical",
-                            "message": f"Malicious package detected: {pkg.get('name', '')}@{pkg.get('version', '')}",
-                            "details": {
-                                "package": pkg.get("name", ""),
-                                "version": pkg.get("version", ""),
-                                "reason": pkg.get("malicious_reason", ""),
-                            },
-                            "ts": ts,
-                        }
-                    )
+                    alerts.append(_malicious_package_alert(pkg, ts))
 
     # Policy violations
     policy = report_dict.get("policy_results") or {}

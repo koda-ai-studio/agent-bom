@@ -51,7 +51,11 @@ def _host(report: dict) -> tuple[set[str], list[str], set[str]]:
     hosts = [n for n in graph.nodes_by_type(EntityType.AGENT) if n.label in owners]
     assert len(hosts) == 1, [n.label for n in graph.nodes_by_type(EntityType.AGENT)]
     host = hosts[0]
-    contained = {graph.nodes[e.target].label for e in graph.adjacency.get(host.id, []) if e.relationship == RelationshipType.CONTAINS}
+    contained = {
+        graph.nodes[e.target].label
+        for e in graph.adjacency.get(host.id, [])
+        if e.relationship == RelationshipType.CONTAINS and graph.nodes[e.target].entity_type == EntityType.AGENT
+    }
     agents = {n.label for n in graph.nodes_by_type(EntityType.AGENT)} - {host.label}
     return contained, [a["name"] for a in host.attributes.get("code_agents") or []], agents
 

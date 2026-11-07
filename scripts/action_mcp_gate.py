@@ -20,6 +20,7 @@ from typing import Any
 
 MCP_CONFIG_NAMES = {".mcp.json", "mcp.json"}
 SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+SUSPECTED_BASES = {"name_similarity", "dependency_confusion"}
 
 
 def is_mcp_config(path: str) -> bool:
@@ -61,7 +62,8 @@ def evaluate(report: dict[str, Any], names: list[str], *, threshold: str) -> dic
             for package in server.get("packages") or []:
                 if package.get("is_malicious"):
                     why = package.get("malicious_reason") or "known malicious package"
-                    reasons.setdefault(name, []).append(f"malicious package {package.get('name')}: {why}")
+                    label = "suspected malicious" if package.get("malicious_basis") in SUSPECTED_BASES else "malicious"
+                    reasons.setdefault(name, []).append(f"{label} package {package.get('name')}: {why}")
     for row in report.get("blast_radius") or []:
         if not _meets(row.get("severity"), threshold):
             continue

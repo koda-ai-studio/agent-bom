@@ -91,9 +91,10 @@ async def test_check_impl_blocks_malicious_package_without_cve_rows():
         )
 
     payload = json.loads(result)
-    assert payload["canonical_verdict"] == "malicious"
-    assert payload["status"] == "malicious"
+    assert payload["canonical_verdict"] == "suspected_malicious"
+    assert payload["status"] == "suspected_malicious"
     assert payload["is_malicious"] is True
+    assert payload["malicious_basis"] == "name_similarity"
     assert payload["malicious_reason"] == "Possible typosquat of requests"
     assert payload["vulnerability_count"] == 0
     assert payload["lookup_mode"] == "offline"

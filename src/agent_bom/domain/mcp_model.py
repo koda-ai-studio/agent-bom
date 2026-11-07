@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable, Mapping, Optional, Sequence
 from uuid import UUID
 
 from agent_bom.canonical_ids import (
@@ -243,6 +243,44 @@ def server_dict_counts_as_mcp_server(server: dict) -> bool:
     return surface_counts_as_mcp_server(server.get("surface"), server.get("discovery_sources") or ())
 
 
+# Collectors that describe one file. They never read MCP configuration, so a
+# record from one is inventory whatever surface an older report stamped on it.
+FILE_INVENTORY_SOURCES = {"jupyter": ServerSurface.NOTEBOOK.value, "github-actions": ServerSurface.CI_WORKFLOW.value}
+_REPOSITORY_SOURCES = frozenset({"project", "ai-inventory", "sast", "repo-lockfiles"})
+_REPOSITORY_ONLY_SURFACES = frozenset(
+    {ServerSurface.AI_INVENTORY.value, ServerSurface.SAST.value, ServerSurface.NOTEBOOK.value, ServerSurface.CI_WORKFLOW.value}
+)
+_MANIFEST_COMMANDS = frozenset({"project", "github-actions"})
+# Set on an AI inventory record when source analysis found framework agent definitions.
+FRAMEWORK_AGENTS_METADATA_KEY = "framework_agents_declared"
+
+
+def _surface_is_repository_inventory(surface: object, command: object) -> bool:
+    value = str(getattr(surface, "value", surface) or "")
+    if value in _REPOSITORY_ONLY_SURFACES:
+        return True
+    if value == ServerSurface.FILESYSTEM.value:
+        return not command
+    return value == ServerSurface.OTHER.value and command in _MANIFEST_COMMANDS
+
+
+def agent_is_repository_inventory(source: object, servers: Sequence[tuple[object, object]], metadata: object = None) -> bool:
+    """Whether an agent record only wraps a repository's scan surfaces.
+
+    ``servers`` holds each server's ``(surface, command)``. Real MCP configuration
+    and code-defined agents (surface ``other`` launched by ``python``, or framework
+    agents recorded in ``metadata``) keep the record an agent; manifests, notebooks,
+    workflows, SAST and AI SDK inventory do not make one.
+    """
+    if source in FILE_INVENTORY_SOURCES:
+        return True
+    if source not in _REPOSITORY_SOURCES or not servers:
+        return False
+    if isinstance(metadata, Mapping) and metadata.get(FRAMEWORK_AGENTS_METADATA_KEY):
+        return False
+    return all(_surface_is_repository_inventory(surface, command) for surface, command in servers)
+
+
 @dataclass
 class MCPServer:
     """An MCP server with its tools, resources, and dependencies."""
@@ -272,6 +310,7 @@ class MCPServer:
     discovery_provenance: Optional[dict[str, Any]] = None  # Sanitized discovery provenance contract for this server asset
     identity_bindings: list[CredentialIdentityBinding] = field(default_factory=list)
     imported_canonical_id: Optional[str] = None  # Declared SBOM identity; never authorizes execution or trust.
+    plaintext_env_secrets: dict[str, str] = field(default_factory=dict)  # Env name to detected format; never the value.
 
     def __post_init__(self) -> None:
         """Scope child tool/resource/prompt identities to this server."""

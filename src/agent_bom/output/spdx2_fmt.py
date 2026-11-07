@@ -45,6 +45,10 @@ def _created_timestamp(report: AIBOMReport) -> str:
     return generated.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _tool_annotation(created: str, comment: str) -> dict[str, str]:
+    return {"annotationType": "OTHER", "annotator": "Tool: agent-bom", "annotationDate": created, "comment": comment}
+
+
 def _license_field(value: str | None) -> str:
     value = (value or "").strip()
     return value or _NOASSERTION
@@ -175,25 +179,17 @@ def to_spdx2(report: AIBOMReport, version: str = "2.3") -> dict:
                         # flag as an annotation so a MAL- package is not emitted
                         # as an indistinguishable ordinary library.
                         annotations.append(
-                            {
-                                "annotationType": "OTHER",
-                                "annotator": "Tool: agent-bom",
-                                "annotationDate": created,
-                                "comment": f"agent-bom:malicious=true reason={pkg.malicious_reason or 'flagged malicious'}",
-                            }
+                            _tool_annotation(
+                                created,
+                                f"agent-bom:malicious=true basis={pkg.malicious_basis} "
+                                f"reason={pkg.malicious_reason or 'flagged malicious'}",
+                            )
                         )
                     # SPDX 2.x has no field for a verification verdict either;
                     # the annotation mechanism (annotationType OTHER) is the
                     # spec's slot for a tool-asserted statement about a package.
                     for statement in integrity_verdict_statements(integrity_verdict(pkg)):
-                        annotations.append(
-                            {
-                                "annotationType": "OTHER",
-                                "annotator": "Tool: agent-bom",
-                                "annotationDate": created,
-                                "comment": statement,
-                            }
-                        )
+                        annotations.append(_tool_annotation(created, statement))
                     if annotations:
                         pkg_entry["annotations"] = annotations
                     spdx_packages.append(pkg_entry)

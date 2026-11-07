@@ -120,7 +120,7 @@ def test_colourama_is_a_typosquat_of_colorama() -> None:
 
 
 @pytest.mark.asyncio
-async def test_check_unresolvable_typosquat_name_is_malicious_not_error() -> None:
+async def test_check_unresolvable_typosquat_name_is_suspected_not_error() -> None:
     """colourama has no registry entry; its name alone is the verdict."""
     from agent_bom.mcp_tools import scanning
 
@@ -129,7 +129,9 @@ async def test_check_unresolvable_typosquat_name_is_malicious_not_error() -> Non
         patch("agent_bom.mcp_tools.check_lookup._query_osv_by_name", new=AsyncMock(return_value=[])),
     ):
         data = json.loads(await scanning.check_impl(package="colourama", ecosystem="pypi", **_CHECK_KW))
-    assert data["status"] == "malicious"
+    assert data["status"] == "suspected_malicious"
+    assert data["is_malicious"] is True
+    assert data["malicious_basis"] == "name_similarity"
     assert "colorama" in data["malicious_reason"]
 
 

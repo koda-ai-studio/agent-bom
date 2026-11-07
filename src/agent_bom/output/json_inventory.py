@@ -12,6 +12,7 @@ from agent_bom.asset_provenance import (
 )
 from agent_bom.canonical_ids import agent_identity_export, canonical_id
 from agent_bom.coverage import package_vulnerability_unassessed
+from agent_bom.evidence.malicious_basis import package_basis_fields
 from agent_bom.evidence.occurrence_ids import server_occurrence_id
 from agent_bom.evidence.scan_run import effective_scan_run, vulnerability_scan_skipped
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
@@ -134,6 +135,8 @@ def _append_package_entities(
                 "floating_reference_reason": pkg.floating_reference_reason,
                 "is_malicious": pkg.is_malicious,
                 "malicious_reason": pkg.malicious_reason,
+                **package_basis_fields(pkg.malicious_reason, pkg.is_malicious),
+                **({"registry_not_found": True} if pkg.registry_not_found else {}),
                 "version_provenance": package_version_provenance(pkg, inherited=agent_provenance),
                 "discovery_provenance": package_discovery_provenance(pkg, inherited=agent_provenance),
                 "occurrence_count": len(pkg.occurrences),

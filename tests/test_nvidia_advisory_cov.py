@@ -202,18 +202,18 @@ class TestCheckNvidiaAdvisories:
 
     @pytest.mark.asyncio
     async def test_nvidia_packages_with_advisory(self):
-        pkgs = [Package(name="torch", version="2.0.0", ecosystem="pypi")]
+        pkgs = [Package(name="nvidia-cublas-cu12", version="12.1.3", ecosystem="pypi")]
         mock_index = [{"id": "CVE-2025-001", "path": "2025/CVE-2025-001", "url": "https://example.com/adv.json"}]
         mock_csaf = {
             "document": {"title": "NVIDIA CUDA Toolkit Security Update"},
-            "product_tree": {"branches": []},
+            "product_tree": {"branches": [{"name": "NVIDIA CUDA Toolkit", "product": {"product_id": "cuda_toolkit_all"}}]},
             "vulnerabilities": [
                 {
                     "cve": "CVE-2025-0001",
                     "scores": [{"cvss_v3": {"baseScore": 9.0}}],
                     "notes": [{"category": "description", "text": "Critical vuln"}],
                     "cwe": {},
-                    "product_status": {},
+                    "product_status": {"known_affected": ["cuda_toolkit_all"]},
                     "references": [],
                 }
             ],

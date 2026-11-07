@@ -41,7 +41,7 @@ from agent_bom.output.finding_views import (
     workflow_status,
 )
 from agent_bom.output.json_writer import write_json_file
-from agent_bom.output.package_attributes import cyclonedx_identifiers
+from agent_bom.output.package_attributes import cyclonedx_identifiers, cyclonedx_malicious_properties
 from agent_bom.output.possibly_affected import cyclonedx_vulnerabilities as undecided_cdx
 from agent_bom.output.technique_evidence import scoped_vulnerability_properties
 from agent_bom.sbom_formats.cyclonedx import merge_properties as _merge_properties
@@ -743,12 +743,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                     pkg_properties.append({"name": "agent-bom:parent-package", "value": pkg.parent_package})
                 if pkg.scorecard_score is not None:
                     pkg_properties.append({"name": "agent-bom:scorecard-score", "value": str(pkg.scorecard_score)})
-                if pkg.is_malicious:
-                    # Surface the malicious flag so a MAL- package is
-                    # distinguishable from an ordinary library component.
-                    pkg_properties.append({"name": "agent-bom:is-malicious", "value": "true"})
-                    if pkg.malicious_reason:
-                        pkg_properties.append({"name": "agent-bom:malicious-reason", "value": pkg.malicious_reason})
+                pkg_properties.extend(cyclonedx_malicious_properties(pkg))
                 # --verify-integrity verdict. The namespaced properties give a
                 # consumer an unambiguous boolean; the identity evidence below
                 # says the same thing in the spec's own vocabulary.

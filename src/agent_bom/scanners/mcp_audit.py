@@ -29,6 +29,7 @@ from agent_bom.mcp_introspect import IntrospectionReport, ServerIntrospection
 from agent_bom.mcp_tool_rules import evaluate_tool
 from agent_bom.models import Agent, AIBOMReport, MCPServer
 from agent_bom.risk_analyzer import ToolCapability
+from agent_bom.scanners.mcp_launch_risk import launch_recipe_findings
 from agent_bom.security import sanitize_sensitive_payload
 
 
@@ -129,6 +130,7 @@ def audit_mcp_agents(
             observed.stamp_child_identities()
             findings = scan_description_surfaces([observed]).findings
             findings.extend(check_over_permission(observed, agent.agent_type.value, expected_capabilities=expected_capabilities))
+            findings.extend(launch_recipe_findings(configured))
             retained_rules = {
                 (t.canonical_id, r.get("rule_id"), r.get("property_name")) for t in configured.tools for r in t.schema_rule_findings
             }
