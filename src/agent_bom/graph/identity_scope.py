@@ -1,6 +1,6 @@
 """Fail closed for traversal through observations with contradictory owner scope."""
 
-from agent_bom.graph.asset_identity import cloud_identity_scope, family_of
+from agent_bom.graph.asset_identity import FAMILY_ENTITY_TYPES, cloud_identity_scope, family_of
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 
@@ -10,12 +10,12 @@ def guard_cloud_identity_scope(graph: UnifiedGraph) -> int:
     from agent_bom.graph.store_backed import StoreBackedUnifiedGraph
 
     conflicted: set[str] = set()
-    for node in graph.nodes.values():
+    for node in graph.iter_nodes_of_types(FAMILY_ENTITY_TYPES):
         if not family_of(node):
             continue
         scope = cloud_identity_scope(node)
         if scope["status"] == "conflict":
-            node.attributes["identity_scope"] = scope
+            (graph.get_node(node.id) or node).attributes["identity_scope"] = scope
             conflicted.add(node.id)
     if not conflicted:
         return 0

@@ -110,7 +110,7 @@ def _add(graph: UnifiedGraph, source: UnifiedNode, target: UnifiedNode, relation
 
 def correlate_storage_integrations(graph: UnifiedGraph) -> int:
     """Draw recorded-identifier joins for every storage integration; returns the edges it holds."""
-    integrations, roles, buckets = _collect(graph.nodes.values())
+    integrations, roles, buckets = _collect(graph.iter_nodes())
     if not integrations:
         return 0
     drawn = 0

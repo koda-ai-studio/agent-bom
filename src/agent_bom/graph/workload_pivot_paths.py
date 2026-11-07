@@ -162,7 +162,8 @@ def _record_status(graph: UnifiedGraph, paths: int, footholds: int, capped: bool
 def workload_pivot_paths(graph: UnifiedGraph, outgoing: Mapping[str, list[UnifiedEdge]]) -> list[AttackPath]:
     paths: list[AttackPath] = []
     footholds = 0
-    for workload in sorted((n for n in graph.nodes.values() if is_workload(n)), key=lambda n: n.id):
+    candidates = graph.iter_nodes_of_types((E.CONTAINER, E.CLOUD_RESOURCE))
+    for workload in sorted((n for n in candidates if is_workload(n)), key=lambda n: n.id):
         identities = _identities(graph, workload, outgoing)
         foothold = _foothold(graph, workload.id, outgoing) if identities else None
         if foothold is None or not foothold.vuln_ids:

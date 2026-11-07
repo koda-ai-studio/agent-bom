@@ -35,7 +35,20 @@ _REGISTRY_MODULES = frozenset(
     }
 )
 _NON_EMITTING_CALLS = frozenset(
-    {"relationship_spec", "frozenset", "set", "tuple", "list", "dict", "isinstance", "RelationshipType", "EntityType", "len"}
+    {
+        "relationship_spec",
+        "frozenset",
+        "set",
+        "tuple",
+        "list",
+        "dict",
+        "isinstance",
+        "RelationshipType",
+        "EntityType",
+        "len",
+        "iter_nodes_by_type",
+        "nodes_by_type",
+    }
 )
 
 

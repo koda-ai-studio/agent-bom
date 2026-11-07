@@ -133,12 +133,23 @@ def _campaign_id(graph: UnifiedGraph, jewel: UnifiedNode | None, jewel_id: str) 
     return "campaign-" + hashlib.sha256(seed).hexdigest()[:16]
 
 
+def _partitions_and_entries(graph: UnifiedGraph) -> tuple[dict[str, str], list[UnifiedNode]]:
+    """One read-only pass: a store-backed scan costs a parse per node."""
+    partition_of: dict[str, str] = {}
+    entries: list[UnifiedNode] = []
+    for node in graph.iter_nodes():
+        partition_of[node.id] = _partition_key(node)
+        if _is_entry(node):
+            entries.append(node)
+    return partition_of, entries
+
+
 def compute_partitioned_campaigns(graph: UnifiedGraph) -> PartitionedCampaignResult:
     """Bounded, partitioned campaign computation. Never raises; never over-claims."""
     node_count = len(graph.nodes)
     reason_codes: set[str] = {"partitioned"}
 
-    partition_of: dict[str, str] = {nid: _partition_key(n) for nid, n in graph.nodes.items()}
+    partition_of, entry_candidates = _partitions_and_entries(graph)
     partitions = sorted(set(partition_of.values()))
     if len(partitions) > _MAX_PARTITIONS:
         reason_codes.add("partition_cap_reached")
@@ -146,7 +157,7 @@ def compute_partitioned_campaigns(graph: UnifiedGraph) -> PartitionedCampaignRes
     else:
         kept = set(partitions)
 
-    entries = [n for n in graph.nodes.values() if _is_entry(n) and partition_of[n.id] in kept]
+    entries = [n for n in entry_candidates if partition_of[n.id] in kept]
     entry_count = len(entries)
     entries.sort(key=lambda n: (-n.risk_score, n.id))
     if entry_count > _MAX_ENTRIES:
