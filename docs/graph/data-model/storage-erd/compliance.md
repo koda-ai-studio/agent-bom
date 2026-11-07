@@ -118,8 +118,8 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `attestation_replay` | SQLite | 4 |  | persistent |
 | `audit_chain_checkpoint` | Postgres, SQLite | 4 |  | persistent |
 | `audit_events` | ClickHouse | 10 | yes | persistent |
-| `audit_key_boundary` | Postgres | 2 |  | persistent |
-| `audit_key_identity` | Postgres | 2 |  | persistent |
+| `audit_key_boundary` | SQLite | 2 |  | persistent |
+| `audit_key_identity` | SQLite | 2 |  | persistent |
 | `audit_log` | Postgres, SQLite | 10 |  | persistent |
 | `cis_benchmark_checks` | Postgres, ClickHouse | 22 | yes | persistent |
 | `compliance_controls` | ClickHouse | 11 | yes | persistent |
