@@ -251,7 +251,7 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
     # store-backed (#4055/#4075). Byte-identical to the prior two comprehensions.
     cloud_resources: list[UnifiedNode] = []
     misconfigs: list[UnifiedNode] = []
-    for n in graph.nodes.values():
+    for n in graph.nodes_of_types((EntityType.CLOUD_RESOURCE, EntityType.RESOURCE, EntityType.SERVER, EntityType.MISCONFIGURATION)):
         et = n.entity_type
         if et in (EntityType.CLOUD_RESOURCE, EntityType.RESOURCE, EntityType.SERVER):
             cloud_resources.append(n)
@@ -425,9 +425,7 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
 
     # ── Data sensitivity (PII/PHI/secrets) on datasets and data stores ──
     sensitive_ids: set[str] = set()
-    for node in graph.nodes.values():
-        if node.entity_type not in (EntityType.DATASET, EntityType.DATA_STORE):
-            continue
+    for node in graph.nodes_of_types((EntityType.DATASET, EntityType.DATA_STORE)):
         backing = graph.nodes.get(node.attributes.get("backed_by", "")) if node.entity_type == EntityType.DATA_STORE else None
         if _is_sensitive(node) or (backing is not None and _is_sensitive(backing)):
             node.attributes["data_sensitivity"] = "sensitive"

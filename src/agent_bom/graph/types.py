@@ -6,7 +6,7 @@ from enum import Enum
 
 from agent_bom.core.entity_types import EntityType as EntityType
 
-__all__ = ["EntityType", "GraphLayout", "GraphSemanticLayer", "NodeStatus", "RelationshipType"]
+__all__ = ["EntityType", "GraphLayout", "GraphSemanticLayer", "NodeStatus", "RelationshipType", "entity_type_value"]
 
 
 class GraphSemanticLayer(str, Enum):
@@ -26,6 +26,11 @@ class GraphSemanticLayer(str, Enum):
     FINDING = "finding"
     CODE = "code"
     CI = "ci"
+
+
+def entity_type_value(entity_type: object) -> str:
+    """The stored string for a node type, whether it is an enum member or already text."""
+    return entity_type.value if isinstance(entity_type, EntityType) else str(entity_type)
 
 
 class RelationshipType(str, Enum):

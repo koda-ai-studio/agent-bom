@@ -54,6 +54,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
+- Pushing a large estate no longer slows faster than it grows: paged graph-build reads use an index instead of sorting the whole table, and read-only passes no longer rewrite every node they read. Stored results are unchanged.
+- On SQLite, a valid API key no longer gets HTTP 500 while a large snapshot commits, and a failed key write can no longer leave that worker's connection failing with `database is locked` until restart.
 - `agent-bom quickstart --run` completes on a plain `pip install agent-bom`. `zstandard` moved from the `api` extra to the base dependencies, because stored finding and job payloads need it on the CLI path too.
 - `agent-bom quickstart --run` finds `agent-bom.exe` beside the interpreter on Windows when the venv is not on `PATH`.
 - `POST /v1/auth/saml/login` accepts the `application/x-www-form-urlencoded` form an IdP's browser posts, as the SAML HTTP-POST binding defines. The form is capped at 1 MiB and shares the browser-session attempt limit. A verified post starts an HttpOnly browser session backed by the short-lived key and redirects to `/`; the key never reaches the page. JSON callers are unchanged. RelayState stays a one-time server nonce and is never a redirect target.

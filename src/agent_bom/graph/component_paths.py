@@ -181,7 +181,7 @@ def derive_component_paths(
     seen: set[tuple[str, ...]] = set()
     nodes = graph.nodes
 
-    for finding in nodes.values():
+    for finding in graph.iter_nodes_of_types((EntityType.VULNERABILITY, EntityType.MISCONFIGURATION)):
         if not is_component_finding(finding):
             continue
         finding_edges = [edge for edge in incoming.get(finding.id, []) if _rel_value(edge) == _VULNERABLE_TO]

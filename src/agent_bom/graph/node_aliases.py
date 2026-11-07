@@ -29,7 +29,7 @@ def drop_live_node_aliases(graph: Any) -> int:
     # Stream once and keep only nodes that carry aliases: a store-backed graph
     # must not hold every node in memory at the same time.
     carriers: list[tuple[str, list[Any]]] = []
-    for node in graph.nodes.values():
+    for node in graph.iter_nodes():
         identity = node.attributes.get("identity")
         aliases = identity.get("aliases") if isinstance(identity, dict) else None
         if isinstance(aliases, list) and aliases:

@@ -141,7 +141,7 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
     paths: list[AttackPath] = []
     findings = [
         node
-        for node in graph.nodes.values()
+        for node in graph.iter_nodes_by_type(EntityType.MISCONFIGURATION)
         if node.attributes.get("finding_source") == "GRAPH_ANALYSIS" and node.attributes.get("rule_id") == _RULE
     ]
     owners = dict.fromkeys(owner for node in findings if isinstance(owner := node.attributes.get("owner_node_id"), str))

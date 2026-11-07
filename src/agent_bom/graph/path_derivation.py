@@ -273,76 +273,72 @@ def _derived_governance_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
             )
 
     # Agent → identity → dangerous tool, and agent → drift incident → tool.
-    for node in graph.nodes.values():
-        ntype = _node_type_value(node)
-        if ntype == EntityType.AGENT.value:
-            for id_edge in graph.adjacency.get(node.id, []):
-                if not id_edge.traversable:
+    for node in graph.iter_nodes_by_type(EntityType.AGENT):
+        for id_edge in graph.adjacency.get(node.id, []):
+            if not id_edge.traversable:
+                continue
+            if _rel_value(id_edge) == RelationshipType.AUTHENTICATES_AS.value:
+                identity = graph.nodes.get(id_edge.target)
+                if identity is None:
                     continue
-                if _rel_value(id_edge) == RelationshipType.AUTHENTICATES_AS.value:
-                    identity = graph.nodes.get(id_edge.target)
-                    if identity is None:
+                for tool_edge in graph.adjacency.get(identity.id, []):
+                    if not tool_edge.traversable:
                         continue
-                    for tool_edge in graph.adjacency.get(identity.id, []):
-                        if not tool_edge.traversable:
-                            continue
-                        tool = graph.nodes.get(tool_edge.target)
-                        if tool is None or _node_type_value(tool) != EntityType.TOOL.value or not _is_dangerous_tool(tool.label):
-                            continue
-                        emit(
-                            "over_scoped_tool",
-                            node.id,
-                            tool.id,
-                            [node.id, identity.id, tool.id],
-                            ["authenticates_as", _rel_value(tool_edge)],
-                            48.0,
-                            f"{node.label} has recorded scope for high-capability tool {tool.label} through identity {identity.label}.",
-                        )
-                    # Broad-scope identity: standing access with no per-tool scope.
-                    # This is a posture risk on its own — no vulnerability or
-                    # dangerous-tool anchor required — so surface it as a path even
-                    # when the identity's reachable tools are benign or not yet wired.
-                    if identity.attributes.get("scope_bound") is False:
-                        emit(
-                            "broad_scope_identity",
-                            node.id,
-                            identity.id,
-                            [node.id, identity.id],
-                            ["authenticates_as"],
-                            40.0,
-                            f"{node.label} is registered to {identity.label}, an identity with no per-tool scope; "
-                            "this binding does not establish request authorization or successful tool execution.",
-                        )
-                elif _rel_value(id_edge) == RelationshipType.EXHIBITS_DRIFT.value:
-                    incident = graph.nodes.get(id_edge.target)
-                    if incident is None:
+                    tool = graph.nodes.get(tool_edge.target)
+                    if tool is None or _node_type_value(tool) != EntityType.TOOL.value or not _is_dangerous_tool(tool.label):
                         continue
-                    for tool_edge in graph.adjacency.get(incident.id, []):
-                        if not tool_edge.traversable:
-                            continue
-                        tool = graph.nodes.get(tool_edge.target)
-                        if tool is None or _node_type_value(tool) != EntityType.TOOL.value:
-                            continue
-                        emit(
-                            "drift_to_tool",
-                            node.id,
-                            tool.id,
-                            [node.id, incident.id, tool.id],
-                            ["exhibits_drift", _rel_value(tool_edge)],
-                            45.0,
-                            f"{node.label} drifted to using tool {tool.label} outside its declared blueprint.",
-                        )
+                    emit(
+                        "over_scoped_tool",
+                        node.id,
+                        tool.id,
+                        [node.id, identity.id, tool.id],
+                        ["authenticates_as", _rel_value(tool_edge)],
+                        48.0,
+                        f"{node.label} has recorded scope for high-capability tool {tool.label} through identity {identity.label}.",
+                    )
+                # Broad-scope identity: standing access with no per-tool scope.
+                # This is a posture risk on its own — no vulnerability or
+                # dangerous-tool anchor required — so surface it as a path even
+                # when the identity's reachable tools are benign or not yet wired.
+                if identity.attributes.get("scope_bound") is False:
+                    emit(
+                        "broad_scope_identity",
+                        node.id,
+                        identity.id,
+                        [node.id, identity.id],
+                        ["authenticates_as"],
+                        40.0,
+                        f"{node.label} is registered to {identity.label}, an identity with no per-tool scope; "
+                        "this binding does not establish request authorization or successful tool execution.",
+                    )
+            elif _rel_value(id_edge) == RelationshipType.EXHIBITS_DRIFT.value:
+                incident = graph.nodes.get(id_edge.target)
+                if incident is None:
+                    continue
+                for tool_edge in graph.adjacency.get(incident.id, []):
+                    if not tool_edge.traversable:
+                        continue
+                    tool = graph.nodes.get(tool_edge.target)
+                    if tool is None or _node_type_value(tool) != EntityType.TOOL.value:
+                        continue
+                    emit(
+                        "drift_to_tool",
+                        node.id,
+                        tool.id,
+                        [node.id, incident.id, tool.id],
+                        ["exhibits_drift", _rel_value(tool_edge)],
+                        45.0,
+                        f"{node.label} drifted to using tool {tool.label} outside its declared blueprint.",
+                    )
 
     return paths
 
 
-_TOXIC_RESOURCE_TYPES = frozenset(
-    {
-        EntityType.CLOUD_RESOURCE.value,
-        EntityType.RESOURCE.value,
-        EntityType.SERVER.value,
-        EntityType.DATA_STORE.value,
-    }
+_TOXIC_RESOURCE_ENTITY_TYPES = (
+    EntityType.CLOUD_RESOURCE,
+    EntityType.RESOURCE,
+    EntityType.SERVER,
+    EntityType.DATA_STORE,
 )
 
 _MAX_TOXIC_PATHS = 100
@@ -392,9 +388,9 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
                 sensitive_neighbors.setdefault(edge.source, []).append((edge.target, rel))
 
     paths: list[AttackPath] = []
-    for node in graph.nodes.values():
-        if _node_type_value(node) not in _TOXIC_RESOURCE_TYPES or len(paths) >= _MAX_TOXIC_PATHS:
-            continue
+    for node in graph.iter_nodes_of_types(_TOXIC_RESOURCE_ENTITY_TYPES):
+        if len(paths) >= _MAX_TOXIC_PATHS:
+            break
         attrs = node.attributes
         factors: list[str] = []
         if coerce_truthy(attrs.get("internet_exposed")):

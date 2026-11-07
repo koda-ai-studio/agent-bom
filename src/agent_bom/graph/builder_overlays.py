@@ -109,7 +109,7 @@ def _apply_repo_structure_overlay(graph: UnifiedGraph, report_json: Mapping[str,
     Reports with neither project inventory nor file findings are a no-op.
     """
     has_inventory = isinstance(report_json.get("project_inventory"), Mapping)
-    if not has_inventory and not any(node.entity_type == EntityType.MISCONFIGURATION for node in graph.nodes.values()):
+    if not has_inventory and next(graph.iter_nodes_by_type(EntityType.MISCONFIGURATION), None) is None:
         return
     from agent_bom.graph.dbt_overlay import apply_dbt_overlay
     from agent_bom.graph.pipeline_overlay import apply_pipeline_overlay
@@ -127,7 +127,7 @@ def _apply_repo_structure_overlay(graph: UnifiedGraph, report_json: Mapping[str,
 
 def _apply_code_graph_overlay(graph: UnifiedGraph, report_json: Mapping[str, Any]) -> None:
     """Emit CODE_MODULE nodes from SOURCE_FILE evidence already on the graph."""
-    if not any(node.entity_type == EntityType.SOURCE_FILE for node in graph.nodes.values()):
+    if next(graph.iter_nodes_by_type(EntityType.SOURCE_FILE), None) is None:
         return
     from agent_bom.graph.code_graph_overlay import apply_code_graph_overlay
 

@@ -256,6 +256,7 @@ def _write_snapshot(
 
     if graph.tenant_id != tenant_id:
         raise ValueError("Graph tenant must match the persistence tenant")
+    graph.finish_writes()
     with tenant_bound_context(tenant_id):
         prior_digest = None
         graph_store = store_factory()

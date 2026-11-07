@@ -39,6 +39,7 @@ _FAMILIES: dict[EntityType, str] = {
     E.SERVICE_PRINCIPAL: "identity",
     E.MANAGED_IDENTITY: "identity",
 }
+FAMILY_ENTITY_TYPES = tuple(_FAMILIES)
 FAMILY_TYPES: dict[str, tuple[EntityType, ...]] = {}
 for _entity, _family in _FAMILIES.items():
     FAMILY_TYPES.setdefault(_family, ())

@@ -406,3 +406,25 @@ def test_open_workspace_defaults_to_sqlite_without_postgres_url(monkeypatch) -> 
         assert isinstance(ws._backend, _SQLiteWorkspaceBackend)
         ws.add_nodes([UnifiedNode(id="x", entity_type=EntityType.AGENT, label="x")])
         assert ws.node_count() == 1
+
+
+@pytest.mark.parametrize(
+    ("sql", "params"),
+    [
+        ("SELECT seq, node_id, payload FROM ws_nodes WHERE tenant_id = ? AND seq > ? ORDER BY seq LIMIT ?", ("t", 0, 10)),
+        ("SELECT seq, payload FROM ws_edges WHERE tenant_id = ? AND seq > ? ORDER BY seq LIMIT ?", ("t", 0, 10)),
+        (
+            "SELECT seq, node_id, payload FROM ws_nodes WHERE tenant_id = ? AND entity_type = ? AND seq > ? ORDER BY seq LIMIT ?",
+            ("t", "x", 0, 10),
+        ),
+        ("SELECT seq, payload FROM ws_edges WHERE tenant_id = ? AND source_id = ? AND seq > ? ORDER BY seq LIMIT ?", ("t", "x", 0, 10)),
+        ("SELECT seq, payload FROM ws_edges WHERE tenant_id = ? AND target_id = ? AND seq > ? ORDER BY seq LIMIT ?", ("t", "x", 0, 10)),
+    ],
+)
+def test_sqlite_keyset_pages_read_in_seq_order_without_sorting_the_tenant(sql: str, params: tuple[object, ...]) -> None:
+    backend = _SQLiteWorkspaceBackend()
+    try:
+        plan = " ".join(str(row[3]) for row in backend._conn.execute(f"EXPLAIN QUERY PLAN {sql}", params))
+    finally:
+        backend.close()
+    assert "TEMP B-TREE" not in plan, plan
