@@ -1,9 +1,10 @@
 # Explicitly synthetic, single-node enterprise story profile.
 #
 # This profile is for demonstrations and evaluation only. It seeds the bundled
-# fictional Northstar Health AI estate and exposes viewer-only anonymous access
-# so the dashboard works on first boot. It must not be used for production or
-# combined with live customer collection.
+# fictional Northstar Health AI estate. Sign in with the AGENT_BOM_API_KEYS key
+# from the agent-bom-control-plane Secret; a `:viewer` key suits a read-only
+# demonstration. It must not be used for production or combined with live
+# customer collection.
 #
 # Install:
 #   python scripts/install_helm_profile.py synthetic-enterprise-story
@@ -23,11 +24,14 @@ controlPlane:
         value: /var/lib/agent-bom/control-plane.sqlite
       - name: AGENT_BOM_DEMO_ESTATE
         value: "1"
-      # DEMO ONLY — viewer role, synthetic data, single-node evaluation.
-      - name: AGENT_BOM_ALLOW_UNAUTHENTICATED_API
-        value: "1"
-      - name: AGENT_BOM_NO_AUTH_ROLE
-        value: viewer
+      # The API refuses a non-loopback bind without authentication, so this
+      # profile takes its sign-in key from the Secret below. A missing key stops
+      # the pod (CreateContainerConfigError); it never starts anonymous.
+      - name: AGENT_BOM_API_KEYS
+        valueFrom:
+          secretKeyRef:
+            name: agent-bom-control-plane
+            key: AGENT_BOM_API_KEYS
     extraVolumes:
       - name: sqlite-data
         persistentVolumeClaim:

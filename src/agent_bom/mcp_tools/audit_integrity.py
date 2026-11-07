@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 # Top-level modules shipped only by the ``agent-bom[api]`` extra.
-_API_EXTRA_MODULES = frozenset({"fastapi", "uvicorn", "sse_starlette", "zstandard"})
+_API_EXTRA_MODULES = frozenset({"fastapi", "uvicorn", "sse_starlette"})
 
 
 async def audit_integrity_impl(

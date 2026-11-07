@@ -1344,11 +1344,11 @@ def test_control_plane_profiles_reference_only_documented_secrets():
 
 
 def test_sqlite_pilot_opens_a_working_first_run_login():
-    """The single-replica demo profile has no auth backend; it must ship the
-    visible demo-only unauthenticated overlay so login is not a dead wall."""
+    """The API refuses a non-loopback bind without auth, so the demo profile seeds a key."""
     values = yaml.safe_load((HELM_DIR / "examples" / "eks-control-plane-sqlite-pilot-values.yaml").read_text())
-    env = {e["name"]: e["value"] for e in values["controlPlane"]["api"]["env"]}
-    assert env.get("AGENT_BOM_ALLOW_UNAUTHENTICATED_API") == "1"
+    env = {e["name"]: e for e in values["controlPlane"]["api"]["env"]}
+    assert "AGENT_BOM_ALLOW_UNAUTHENTICATED_API" not in env
+    assert env["AGENT_BOM_API_KEYS"]["valueFrom"]["secretKeyRef"]["key"] == "AGENT_BOM_API_KEYS"
 
 
 def test_snowflake_key_secret_mount_is_group_readable_under_fsgroup():

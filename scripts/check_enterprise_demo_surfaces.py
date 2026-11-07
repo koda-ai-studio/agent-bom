@@ -211,11 +211,12 @@ def main_check() -> None:
     helm_profile = _read("deploy/helm/agent-bom/examples/synthetic-enterprise-story-values.yaml")
     for marker in (
         "AGENT_BOM_DEMO_ESTATE",
-        "AGENT_BOM_ALLOW_UNAUTHENTICATED_API",
-        "AGENT_BOM_NO_AUTH_ROLE",
-        "viewer",
+        "AGENT_BOM_API_KEYS",
+        "secretKeyRef",
     ):
         _require(marker in helm_profile, f"Helm demo profile lost {marker}")
+    # The API refuses this anonymous posture on the profile's non-loopback bind.
+    _require("AGENT_BOM_ALLOW_UNAUTHENTICATED_API" not in helm_profile, "Helm demo profile asks for anonymous access")
 
     runbook = _read("docs/ENTERPRISE_DEMO.md")
     for marker in (

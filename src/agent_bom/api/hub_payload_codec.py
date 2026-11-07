@@ -6,6 +6,8 @@ import base64
 import json
 from typing import Any
 
+import zstandard as zstd
+
 from agent_bom.api.payload_compression import decode_zstd_json
 
 HUB_PAYLOAD_MARKER = "__abom_zstd"
@@ -21,8 +23,6 @@ def encode_hub_payload(payload: dict[str, Any]) -> str:
         raise ValueError("Stored hub payload exceeds the 16 MiB size limit")
     if len(raw) < _MIN_COMPRESS_BYTES:
         return raw.decode("utf-8")
-    import zstandard as zstd
-
     compressed = zstd.ZstdCompressor(level=_ZSTD_LEVEL).compress(raw)
     wrapper = {
         HUB_PAYLOAD_MARKER: True,
