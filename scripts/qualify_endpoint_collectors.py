@@ -18,11 +18,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from agent_bom import __version__
-from agent_bom.endpoint.inventory import _default_runner, collect_endpoint_inventory
+from agent_bom.endpoint.inventory import _DEFAULT_MAX_ITEMS, _default_runner, collect_endpoint_inventory
 
 CORE = {"applications", "processes", "services", "listeners"}
-# The product default. A lower cap can fill on a busy host before the fixture listener is reached.
-MAX_ITEMS = 1000
+# A lower cap than the product's can fill on a busy host before the fixture listener is reached.
+MAX_ITEMS = _DEFAULT_MAX_ITEMS
 ALL = CORE | {"containers", "images"}
 STATUSES = {"complete", "partial", "unsupported", "unavailable", "permission_denied"}
 
