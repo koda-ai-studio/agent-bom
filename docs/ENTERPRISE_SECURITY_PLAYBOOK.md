@@ -435,6 +435,9 @@ helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0
   -n agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml \
   --set gateway.enabled=true \
+  --set gateway.persistence.enabled=true \
+  --set gateway.persistence.existingClaim=agent-bom-gateway-state \
+  --set gateway.replicas=1 \
   --set-file gateway.upstreamsYaml=./my-upstreams.yaml
 
 # ─── 3. Smoke-test the control plane (6 checks; fails fast)

@@ -726,9 +726,9 @@ class SQLiteAuditLog:
                     )
                     self._upsert_checkpoint(tenant_id, entry.hmac_signature)
                     self._conn.commit()
-                except sqlite3.IntegrityError as exc:
+                except sqlite3.Error as exc:  # Any open write transaction would hold the file against other writers.
                     self._conn.rollback()
-                    if "prev_signature" not in str(exc) or attempts > _MAX_APPEND_RETRIES:
+                    if not isinstance(exc, sqlite3.IntegrityError) or "prev_signature" not in str(exc) or attempts > _MAX_APPEND_RETRIES:
                         raise
                     # Another writer linked this head first — drop the stale cache and re-read the advanced head before retrying.
                     self._last_sig_by_tenant[tenant_id] = self._latest_signature_for_tenant(tenant_id)

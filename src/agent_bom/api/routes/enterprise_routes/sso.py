@@ -172,6 +172,7 @@ def snowflake_oauth_callback(
         token_payload = exchange_code_for_tokens(cfg, code=code, code_verifier=code_verifier)
         subject = username_from_token_response(token_payload)
     except OIDCError as exc:
+        request.state.authentication_failed = exc.counts_as_failed_credential
         raise HTTPException(status_code=401, detail=sanitize_error(exc)) from exc
 
     tenant_id = cfg.tenant_id
@@ -237,6 +238,10 @@ def saml_relay_state() -> dict:
     }
 
 
+class _SAMLAssertionRejected(HTTPException):
+    """The presented assertion failed verification, which counts toward the failure limit."""
+
+
 def _verify_saml_login(req: SAMLLoginRequest, *, request_id: str | None = None) -> tuple[Any, Any]:
 
     if not saml_api.saml_runtime_available():
@@ -251,7 +256,7 @@ def _verify_saml_login(req: SAMLLoginRequest, *, request_id: str | None = None) 
         assertion = cfg.verify_response(req.saml_response, relay_state=req.relay_state, **bound)
         _consume_saml_response_once(req.saml_response, ttl_seconds=cfg.session_ttl_seconds)
     except saml_api.SAMLError as exc:
-        raise HTTPException(status_code=401, detail=sanitize_error(exc)) from exc
+        raise _SAMLAssertionRejected(status_code=401, detail=sanitize_error(exc)) from exc
     return cfg, assertion
 
 
@@ -418,6 +423,7 @@ def _saml_browser_login(request: Request, req: SAMLLoginRequest) -> Response:
         )
         _record_saml_login(api_key, assertion)
     except HTTPException as exc:
+        request.state.authentication_failed = isinstance(exc, _SAMLAssertionRejected)
         response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers=_NO_STORE)
     _clear_saml_login_cookie(response, name, samesite)
     return response
@@ -432,7 +438,11 @@ class _SAMLAssertionConsumerRoute(APIRoute):
         async def handler(request: Request) -> Response:
             content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
             if content_type != _SAML_FORM_CONTENT_TYPE:
-                return await json_handler(request)
+                try:
+                    return await json_handler(request)
+                except _SAMLAssertionRejected:
+                    request.state.authentication_failed = True
+                    raise
             login = await _read_saml_form(request)
             return await anyio.to_thread.run_sync(_saml_browser_login, request, login)
 

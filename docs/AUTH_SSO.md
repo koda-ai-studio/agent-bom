@@ -469,7 +469,9 @@ hops and `AGENT_BOM_TRUSTED_PROXY_CIDRS` to the API-facing proxy subnet CIDRs.
 Both are required before auth rate limits use `X-Forwarded-For`; direct peers
 outside those networks and short, malformed, or oversized chains fall back to
 the transport peer. `/v1/auth/policy` reports the effective client-identity
-source and any incomplete or invalid topology warning.
+source and any incomplete or invalid topology warning. In Helm, set
+`controlPlane.api.trustedProxy`; enabling the ingress without it fails rendering.
+See [source identity behind a proxy](RUNTIME_FAIL_MODES.md#source-identity-behind-a-proxy).
 
 `GET /v1/auth/policy` exposes `proxy_control_plane_mtls` with one of three
 honest states:

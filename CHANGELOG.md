@@ -39,6 +39,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - A healthy single-process local start no longer warns about the per-process rate-limit key or audit HMAC key; both are logged at info. They still warn in production or clustered mode, and the audit key still warns when a durable audit store is configured.
 - The compose files no longer pin `container_name`, so a second copy of a stack can run under another project name; services already reach each other by service name. Host ports still need to differ.
 ### Changed
+- **Behaviour change:** only a presented credential that failed verification now counts toward authentication backoff, marked by the handler that verified it. An expired session, a missing credential, a logged-out `/v1/auth/me` and a valid key missing a report token no longer lock out a source.
+- **Behaviour change:** enabling `controlPlane.ingress` in Helm now fails rendering unless `controlPlane.api.trustedProxy` declares the proxy, or `sharedSourceAccepted` records that all clients share one authentication failure budget. The hosted Compose overlay sets the trusted proxy settings, and the API warns once when a peer is outside the configured networks, when only `X-Real-IP` arrives, and on a unix socket.
+- **Behaviour change:** Compose secret files are now mode 0640 with your primary group, read by services through `group_add`, so `make platform-up` works on Linux without world-readable secrets. For a direct `docker compose up`, set `AGENT_BOM_SECRETS_GID`.
+- **Behaviour change:** audit integrity over its entry budget now reports `verified: null`, `status: not_verified_over_budget`, `total_entries` and `verification_limit`, in the API, the export and the dashboard, instead of zero verified.
+- **Behaviour change:** `/`, `/version`, `/docs`, `/redoc` and `/openapi.json` no longer depend on authentication state, so a source's backoff or an auth-store outage does not refuse them. See `docs/RUNTIME_FAIL_MODES.md`.
 - **Behaviour change:** a typosquat or dependency-confusion match now reads as suspected, not as malware. `check` and MCP report `suspected_malicious` in `verdict`, `canonical_verdict` and `status`, and say what the flag rests on and how to confirm it. It still exits `1` and `is_malicious` stays `true`. A new `malicious_basis` field (`known_malicious`, `name_similarity`, `dependency_confusion`, `unspecified`) appears in check results, reports, SARIF, CycloneDX, SPDX, CSV and Parquet. Findings, remediation text, alerts and the console use the same wording. A script that matches only `verdict == "malicious"` should also match `suspected_malicious`.
 - `agent-bom fs` on a directory with no packages or evaluated IaC no longer grades `A`: `posture_grade` is `N/A`, `scan_run.outcome` is `partial` and a `nothing_to_scan` issue names the directory. It still exits `0`. Any scan carrier with no packages, such as an image or SBOM, also grades `N/A`.
 - `agent-bom fs <dir>` auto-detects IaC in that directory rather than in the working directory.
@@ -74,6 +79,19 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
+- A database restart no longer extends an authentication outage: dead pooled connections are retried, the breaker opens only after three consecutive store errors, and one success closes it. In a private Postgres restart test, valid keys went from 25.7 s of 503s to 0.4 s.
+- Failed-authentication receipts have their own workers and bounded queue, so a held audit lock or a failed audit write no longer refuses other callers. Dropped receipts are counted in `agent_bom_auth_receipts_dropped_total` and recorded in the audit chain. The Postgres key-presence check no longer holds the event loop while it waits on the audit table.
+- One stalled SQLite transaction no longer blocks authentication checks for other sources.
+- A burst of distinct sources now waits briefly for authentication state instead of receiving 503. An audit write error no longer leaves the SQLite file write-locked, and an unreachable identity provider no longer counts as a failed credential.
+- Audit integrity is now scored per entry. Entries from a key's first use onward are verified exactly, entries no held key can check are counted as unverifiable, and links and counts are checked either way.
+- Websocket authentication now follows the same source limit and failure counting as HTTP.
+- Dropped failed-authentication receipts are recorded within seconds, with their window and sources.
+- The session attempt limit uses every forwarded header line and the trusted-proxy settings, as the failure limit does, and a blank key no longer spends attempts. Forwarded entries written with a port are read as addresses; unreadable ones are limited apart from the proxy's own address.
+- `controlPlane.api.trustedProxy.fromSecret` now requires `secretName` and reads both settings from that Secret as required keys.
+- All `X-Forwarded-For` lines are combined before trusted hops are counted, so a second line can neither evade the failure limit nor frame another address. IPv6 sources are limited by /64.
+- Attempts refused for capacity still count toward the failure limit.
+- The stored audit signing-key identity is now a salted HMAC. Existing unsalted digests are upgraded in place.
+- `run_runtime_capacity_qualification.py` no longer raises once a tenant's audit chain passes the default budget.
 - Pushing a large estate no longer slows faster than it grows: paged graph-build reads use an index instead of sorting the whole table, and read-only passes no longer rewrite every node they read. Stored results are unchanged.
 - On SQLite, a valid API key no longer gets HTTP 500 while a large snapshot commits, and a failed key write can no longer leave that worker's connection failing with `database is locked` until restart.
 - `agent-bom quickstart --run` completes on a plain `pip install agent-bom`. `zstandard` moved from the `api` extra to the base dependencies, because stored finding and job payloads need it on the CLI path too.

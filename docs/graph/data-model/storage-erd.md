@@ -7,7 +7,7 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-169 tables in 10 domains. 18 declared foreign keys; 40 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+170 tables in 10 domains. 18 declared foreign keys; 40 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
@@ -17,7 +17,7 @@ flowchart LR
   findings["Findings, triage and VEX<br/>28 tables"]
   graph["Graph nodes, edges, snapshots and attack paths<br/>21 tables"]
   runtime["Runtime, gateway and traces<br/>18 tables"]
-  compliance["Compliance, audit and evidence<br/>13 tables"]
+  compliance["Compliance, audit and evidence<br/>14 tables"]
   connectors["Connectors, delivery and schedules<br/>16 tables"]
   vulndb["Vulnerability intelligence (local database)<br/>8 tables"]
   other["Schema metadata and maintenance<br/>9 tables"]
@@ -39,7 +39,7 @@ flowchart LR
 | Findings, triage and VEX | 28 | [storage-erd/findings.md](storage-erd/findings.md) |
 | Graph nodes, edges, snapshots and attack paths | 21 | [storage-erd/graph.md](storage-erd/graph.md) |
 | Runtime, gateway and traces | 18 | [storage-erd/runtime.md](storage-erd/runtime.md) |
-| Compliance, audit and evidence | 13 | [storage-erd/compliance.md](storage-erd/compliance.md) |
+| Compliance, audit and evidence | 14 | [storage-erd/compliance.md](storage-erd/compliance.md) |
 | Connectors, delivery and schedules | 16 | [storage-erd/connectors.md](storage-erd/connectors.md) |
 | Vulnerability intelligence (local database) | 8 | [storage-erd/vulndb.md](storage-erd/vulndb.md) |
 | Schema metadata and maintenance | 9 | [storage-erd/other.md](storage-erd/other.md) |
@@ -99,7 +99,8 @@ Excluded:
 | `attestation_replay` | [Compliance, audit and evidence](storage-erd/compliance.md) | SQLite | `tenant_id`, `evidence_id`, `nonce` | `tenant_id`, `evidence_id`, `nonce` | `tenant_id` | persistent | `sbom_attestation.py` |
 | `audit_chain_checkpoint` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres, SQLite | `tenant_id` | `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/audit_log.py`, `api/postgres_audit.py` |
 | `audit_events` | [Compliance, audit and evidence](storage-erd/compliance.md) | ClickHouse | `tenant_id`, `entry_id` | `entry_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/clickhouse/init.sql`, `cloud/clickhouse.py` |
-| `audit_key_identity` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres | `singleton` | `singleton` | **none** | persistent | `api/audit_key_state.py` |
+| `audit_key_boundary` | [Compliance, audit and evidence](storage-erd/compliance.md) | SQLite | — | `first_rowid` | **none** | persistent | `api/sqlite_audit_key_identity.py` |
+| `audit_key_identity` | [Compliance, audit and evidence](storage-erd/compliance.md) | SQLite | `singleton` | `singleton` | **none** | persistent | `api/sqlite_audit_key_identity.py` |
 | `audit_log` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres, SQLite | `entry_id` | `entry_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql`, `api/audit_log.py`, `api/postgres_audit.py` |
 | `auth_session_attempts` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | — | `key` | **none** | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/shared_auth_state.py` |
 | `bound_references` | [Connectors, delivery and schedules](storage-erd/connectors.md) | Snowflake | `reference_name`, `object_name` | `reference_name`, `object_name` | **none** | persistent | `deploy/snowflake/native-app/dcm/V001__core_schema.sql` |
@@ -258,7 +259,8 @@ Rows in these tables are not scoped by `tenant_id` / `team_id`. Many are global 
 | `api_auth_failure_limits` | Tenancy, identity and access | Postgres, SQLite |
 | `api_rate_limit_hits` | Tenancy, identity and access | Postgres |
 | `api_rate_limits` | Tenancy, identity and access | Postgres |
-| `audit_key_identity` | Compliance, audit and evidence | Postgres |
+| `audit_key_boundary` | Compliance, audit and evidence | SQLite |
+| `audit_key_identity` | Compliance, audit and evidence | SQLite |
 | `auth_session_attempts` | Tenancy, identity and access | Postgres |
 | `bound_references` | Connectors, delivery and schedules | Snowflake |
 | `control_plane_schema_versions` | Schema metadata and maintenance | Postgres, SQLite, ClickHouse |

@@ -217,6 +217,7 @@ async def managed_trial_oidc_start(request: Request, body: ManagedTrialOIDCStart
     _check_auth_session_rate_limit(request)
     raw_token = body.token.get_secret_value()
     if not raw_token.startswith("abti_") or len(raw_token) > 128:
+        request.state.authentication_failed = True
         raise HTTPException(status_code=401, detail="Invalid or expired managed-trial invitation")
     digest = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
 
@@ -228,6 +229,7 @@ async def managed_trial_oidc_start(request: Request, body: ManagedTrialOIDCStart
     except ManagedTrialInvitationConfigurationError as exc:
         raise HTTPException(status_code=503, detail=sanitize_error(exc, generic=True)) from exc
     except ManagedTrialInvitationError as exc:
+        request.state.authentication_failed = True
         raise HTTPException(status_code=401, detail="Invalid or expired managed-trial invitation") from exc
     try:
         cfg = OIDCBrowserConfig.from_env()
@@ -283,11 +285,13 @@ async def managed_trial_oidc_start_form(request: Request) -> RedirectResponse:
         raise HTTPException(status_code=415, detail="Unsupported invitation form content type")
     raw = await request.body()
     if len(raw) > 512:
+        request.state.authentication_failed = True
         raise HTTPException(status_code=401, detail="Invalid or expired managed-trial invitation")
     try:
         token = parse_qs(raw.decode("utf-8"), strict_parsing=True).get("token", [""])[0]
         body = ManagedTrialOIDCStartRequest(token=SecretStr(token))
     except (UnicodeDecodeError, ValueError):
+        request.state.authentication_failed = True
         raise HTTPException(status_code=401, detail="Invalid or expired managed-trial invitation") from None
     return await managed_trial_oidc_start(request, body)
 

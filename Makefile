@@ -124,10 +124,10 @@ secrets:  ## Generate the mounted Docker secret files (idempotent; run before pl
 	python scripts/deploy/hosted_poc_preflight.py --write-secret --skip-compose
 
 platform-up: secrets  ## Bring up the production-shaped platform stack (generates secrets first)
-	docker compose -f deploy/docker-compose.platform.yml up --build -d
+	AGENT_BOM_SECRETS_GID=$$(id -g) docker compose -f deploy/docker-compose.platform.yml up --build -d
 
 fullstack-up: secrets  ## Bring up the dev full-stack (API + UI + Postgres); generates secrets first
-	docker compose -f deploy/docker-compose.fullstack.yml up --build -d
+	AGENT_BOM_SECRETS_GID=$$(id -g) docker compose -f deploy/docker-compose.fullstack.yml up --build -d
 
 build-ui:  ## Build Next.js dashboard and bundle into package
 	bash scripts/build-ui.sh

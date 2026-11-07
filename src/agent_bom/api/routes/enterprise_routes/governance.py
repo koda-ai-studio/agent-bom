@@ -128,16 +128,19 @@ def audit_integrity(
             )
 
     total_unverifiable = sum(int(chain.get("unverifiable", 0)) for chain in chains)
-    total_verified = sum(int(chain["verified"]) for chain in chains)
+    # A chain that was never walked has no verified count, and the rollup must not invent one.
+    verified_counts = [int(chain["verified"]) for chain in chains if chain["verified"] is not None]
+    total_verified = sum(verified_counts) if verified_counts else None
     total_tampered = sum(int(chain["tampered"]) for chain in chains)
     algorithms = sorted({algorithm for chain in chains for algorithm in str(chain["algorithm"]).split(",") if algorithm})
     return {
         "verified": total_verified,
         "tampered": total_tampered,
         "unverifiable": total_unverifiable,
-        "checked": total_verified + total_tampered + total_unverifiable,
+        "checked": sum(int(chain["checked"]) for chain in chains),
         "algorithms": algorithms,
         "chains": chains,
+        **({"status": control_plane["status"], "error": control_plane["error"]} if control_plane.get("status") else {}),
     }
 
 

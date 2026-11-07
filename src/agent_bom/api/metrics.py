@@ -67,6 +67,7 @@ class _Gauge:
 
 
 _auth_failures = _LabelledCounter()  # labelled by reason (missing_key, invalid_key, ...)
+_auth_receipts_dropped = _LabelledCounter()  # labelled by reason (queue_full, source_queue_full, write_failed)
 _rate_limit_hits = _LabelledCounter()  # labelled by bucket name (global, tenant, ...)
 _report_exports = _LabelledCounter()  # bounded labels; no job or tenant identifiers
 _compliance_exports = _LabelledCounter()  # labelled by algorithm (Ed25519, HMAC-SHA256)
@@ -130,6 +131,11 @@ _AUTO_CORRELATION_REASONS = frozenset(
 def record_auth_failure(reason: str) -> None:
     """Record an authentication failure (missing_key, invalid_key, expired_token, ...)."""
     _auth_failures.inc(reason)
+
+
+def record_auth_receipt_dropped(reason: str) -> None:
+    """Record a failed-authentication receipt that could not be written."""
+    _auth_receipts_dropped.inc(reason)
 
 
 def record_rate_limit_hit(bucket: str) -> None:
@@ -249,6 +255,19 @@ def _ai_metric_lines() -> list[str]:
     return lines
 
 
+def _auth_receipt_metric_lines() -> list[str]:
+    dropped = _auth_receipts_dropped.snapshot()
+    lines = [
+        "# HELP agent_bom_auth_receipts_dropped_total Failed-authentication audit receipts not written, by reason",
+        "# TYPE agent_bom_auth_receipts_dropped_total counter",
+    ]
+    if not dropped:
+        lines.append('agent_bom_auth_receipts_dropped_total{reason="none"} 0')
+    for reason, count in sorted(dropped.items()):
+        lines.append(f'agent_bom_auth_receipts_dropped_total{{reason="{reason}"}} {count}')
+    return lines
+
+
 def render_prometheus_lines() -> list[str]:
     """Return Prometheus text-format lines for all in-process counters."""
     lines: list[str] = []
@@ -339,13 +358,14 @@ def render_prometheus_lines() -> list[str]:
         outcome, _, reason = label.partition("|")
         lines.append(f'agent_bom_auto_correlations_total{{outcome="{outcome}",reason="{reason}"}} {count}')
 
-    return [*lines, *_ai_metric_lines()]
+    return [*lines, *_auth_receipt_metric_lines(), *_ai_metric_lines()]
 
 
 def reset_for_tests() -> None:
     """Reset all counters — test-only entry point."""
     for counter in (
         _auth_failures,
+        _auth_receipts_dropped,
         _rate_limit_hits,
         _report_exports,
         _compliance_exports,

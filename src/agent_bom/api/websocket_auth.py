@@ -14,6 +14,8 @@ from typing import Any, Callable
 import anyio.to_thread
 from fastapi import WebSocket
 
+from agent_bom.api import audit_log
+from agent_bom.api.auth_failure_policy import active_policy
 from agent_bom.api.stream_authorization import StreamAuthorization
 
 _logger = logging.getLogger(__name__)
@@ -179,7 +181,7 @@ def _ws_auth_required() -> bool:
         return True
 
 
-def _ws_auth_from_trusted_proxy(websocket: WebSocket) -> _WebSocketAuthContext | None:
+def _ws_auth_from_trusted_proxy(websocket: WebSocket, rejected: list[bool] | None = None) -> _WebSocketAuthContext | None:
     import hmac as _hmac
     import os as _os
 
@@ -194,7 +196,10 @@ def _ws_auth_from_trusted_proxy(websocket: WebSocket) -> _WebSocketAuthContext |
 
     if not _trusted_proxy_secret_is_strong(secret):
         return None
-    if not secret or not presented_secret or not _hmac.compare_digest(presented_secret, secret):
+    if not secret or not presented_secret:
+        return None
+    if not _hmac.compare_digest(presented_secret.encode(), secret.encode()):
+        _note_rejected(rejected)
         return None
     expected_issuer = _os.environ.get("AGENT_BOM_TRUST_PROXY_AUTH_ISSUER", "").strip()
     presented_issuer = websocket.headers.get("x-agent-bom-auth-issuer", "").strip()
@@ -221,7 +226,8 @@ def _ws_auth_from_trusted_proxy(websocket: WebSocket) -> _WebSocketAuthContext |
     return _WebSocketAuthContext(tenant_id=tenant_id, role=effective_role, auth_method="proxy_header")
 
 
-def _ws_auth_from_token(token: str, *, bearer: bool = True) -> _WebSocketAuthContext | None:
+def _ws_auth_from_token(token: str, *, bearer: bool = True, rejected: list[bool] | None = None) -> _WebSocketAuthContext | None:
+    """Resolve a token; ``rejected`` records that it failed verification, not merely lacked a grant."""
     import hmac as _hmac
 
     from agent_bom.api.secret_source import resolve_secret
@@ -231,7 +237,7 @@ def _ws_auth_from_token(token: str, *, bearer: bool = True) -> _WebSocketAuthCon
         return None
 
     static_key = resolve_secret("AGENT_BOM_API_KEY")
-    if static_key and _hmac.compare_digest(token, static_key):
+    if static_key and _hmac.compare_digest(token.encode(), static_key.encode()):
         return _WebSocketAuthContext(tenant_id="default", role="admin", auth_method="static_api_key")
 
     from agent_bom.api.auth import get_key_store
@@ -254,6 +260,7 @@ def _ws_auth_from_token(token: str, *, bearer: bool = True) -> _WebSocketAuthCon
         from agent_bom.api.oidc import oidc_enabled_from_env
 
         if not oidc_enabled_from_env():
+            _note_rejected(rejected)
             return None
         from agent_bom.api.oidc import OIDCConfig, OIDCError
 
@@ -261,7 +268,9 @@ def _ws_auth_from_token(token: str, *, bearer: bool = True) -> _WebSocketAuthCon
         if oidc_cfg is not None and getattr(oidc_cfg, "enabled", False):
             try:
                 claims, oidc_role = oidc_cfg.verify(token)
-            except OIDCError:
+            except OIDCError as exc:
+                if exc.counts_as_failed_credential:
+                    _note_rejected(rejected)
                 return None
             tenant_id = oidc_cfg.resolve_tenant(claims)
             role = _ws_runtime_role(
@@ -274,7 +283,23 @@ def _ws_auth_from_token(token: str, *, bearer: bool = True) -> _WebSocketAuthCon
             )
             if role is not None and _role_allows(role, "viewer"):
                 return _WebSocketAuthContext(tenant_id=tenant_id, role=role, auth_method="oidc")
+        return None
+    _note_rejected(rejected)
     return None
+
+
+def _note_rejected(rejected: list[bool] | None) -> None:
+    if rejected is not None:
+        rejected.append(True)
+
+
+async def _ws_failed_credential_blocks(websocket: WebSocket, credential: str) -> bool:
+    """Count a credential that failed verification; true when its source is now blocked."""
+    return bool(await active_policy().record_failed_credential(websocket, 401, audit_log.fingerprint_auth_credential(credential)))
+
+
+_WS_SOURCE_BLOCKED = 4029
+_WS_TRY_AGAIN_LATER = 1013
 
 
 async def _ws_accept_and_check_auth(websocket: WebSocket) -> _WebSocketAuthContext | None:
@@ -303,23 +328,37 @@ async def _ws_accept_and_check_auth(websocket: WebSocket) -> _WebSocketAuthConte
         context = _WebSocketAuthContext(role=effective_no_auth_role(credentials_configured=credentials_configured).value)
         return _ws_bind_authorization(context, lambda: context if not _ws_auth_required() else None)
 
+    # Before anything is verified, so a blocked source learns nothing from a key.
+    denied = await active_policy().before(websocket)
+    if denied is not None:
+        await websocket.close(code=_WS_SOURCE_BLOCKED if denied.status_code == 429 else _WS_TRY_AGAIN_LATER)
+        return None
+
     if websocket.query_params.get("token"):
         await websocket.close(code=4001)
         return None
 
-    proxy_context = _ws_auth_from_trusted_proxy(websocket)
+    rejected: list[bool] = []
+    proxy_context = _ws_auth_from_trusted_proxy(websocket, rejected)
     if proxy_context is not None:
         await websocket.accept()
         return _ws_bind_authorization(proxy_context, partial(_ws_auth_from_trusted_proxy, websocket))
+    if rejected and await _ws_failed_credential_blocks(websocket, websocket.headers.get("x-agent-bom-proxy-secret", "")):
+        await websocket.close(code=_WS_SOURCE_BLOCKED)
+        return None
 
     token = _ws_header_token(websocket)
     # ``_ws_auth_from_token`` runs a scrypt derivation (or a blocking store
     # read) inside ``store.verify``. This handshake happens before the socket
     # is authenticated, so keep it off the event loop.
-    header_context = await anyio.to_thread.run_sync(partial(_ws_auth_from_token, token, bearer=True))
+    rejected.clear()
+    header_context = await anyio.to_thread.run_sync(partial(_ws_auth_from_token, token, bearer=True, rejected=rejected))
     if header_context is not None:
         await websocket.accept()
         return _ws_bind_authorization(header_context, partial(_ws_auth_from_token, token, bearer=True))
+    if rejected and await _ws_failed_credential_blocks(websocket, token):
+        await websocket.close(code=_WS_SOURCE_BLOCKED)
+        return None
 
     await websocket.accept()
     try:
@@ -330,10 +369,14 @@ async def _ws_accept_and_check_auth(websocket: WebSocket) -> _WebSocketAuthConte
 
     if isinstance(payload, dict) and payload.get("type") == "auth":
         token = str(payload.get("token", ""))
-        message_context = await anyio.to_thread.run_sync(partial(_ws_auth_from_token, token, bearer=False))
+        rejected.clear()
+        message_context = await anyio.to_thread.run_sync(partial(_ws_auth_from_token, token, bearer=False, rejected=rejected))
         if message_context is not None:
             await websocket.send_json({"type": "auth", "status": "ok"})
             return _ws_bind_authorization(message_context, partial(_ws_auth_from_token, token, bearer=False))
+        if rejected and await _ws_failed_credential_blocks(websocket, token):
+            await websocket.close(code=_WS_SOURCE_BLOCKED)
+            return None
 
     await websocket.close(code=4001)
     return None

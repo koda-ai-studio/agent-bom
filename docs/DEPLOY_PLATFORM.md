@@ -226,10 +226,10 @@ make fullstack-up       # == docker compose -f deploy/docker-compose.fullstack.y
 
 Prefer to write the secret files by hand? Generate all seven with `openssl` /
 Fernet as documented in [`deploy/secrets/README.md`](../deploy/secrets/README.md),
-`chmod 0644` them (world-readable — compose bind-mounts preserve host perms and
-the non-root postgres/API container users must read `/run/secrets/*`; the host
-filesystem is the trust boundary on a single-tenant self-host VM), then run the
-compose command above.
+then `chmod 0640` them and set their group to your primary group. Compose
+bind-mounts keep host ownership, and the non-root postgres and API users read
+`/run/secrets/*` through `group_add`. Run compose through `make fullstack-up`, or
+set `AGENT_BOM_SECRETS_GID=$(id -g)` yourself.
 
 > **Re-running a failed first `up`?** The Postgres init scripts (`init.sql`,
 > app-role bootstrap) run **only against an empty data volume**. A stack that

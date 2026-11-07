@@ -79,11 +79,12 @@ async def create_browser_session(request: Request, response: Response, body: Bro
     """
     from agent_bom.api.auth import OPERATOR_KEY_ID_PREFIX, get_key_store
 
-    _check_auth_session_rate_limit(request)
     raw_key = body.api_key.strip()
-    request.state.auth_credential_fingerprint = audit_log.fingerprint_auth_credential(raw_key)
+    # Nothing presented, nothing to check: refused before it can spend anyone's attempts.
     if not raw_key:
         raise HTTPException(status_code=401, detail="Invalid API key")
+    _check_auth_session_rate_limit(request)
+    request.state.auth_credential_fingerprint = audit_log.fingerprint_auth_credential(raw_key)
 
     from agent_bom.api.secret_source import resolve_secret
 
@@ -112,34 +113,34 @@ async def create_browser_session(request: Request, response: Response, body: Bro
         return None
 
     store = get_key_store()
-    if store.has_keys():
-        # ``store.verify`` runs a ~21ms scrypt derivation (in-memory store) or a
-        # blocking DB read (Postgres store). This route is auth-exempt, so an
-        # unauthenticated caller could otherwise stall the event loop on demand.
-        api_key = await anyio.to_thread.run_sync(store.verify, raw_key)
-        if api_key:
-            _set_browser_session_cookie(
-                response,
-                request,
-                subject=api_key.name,
-                role=api_key.role.value,
-                tenant_id=api_key.tenant_id,
-                auth_method="browser_session",
-                key_id=api_key.key_id,
-                scopes=list(api_key.scopes),
-                operator_key_hash=api_key.key_hash if api_key.key_id.startswith(OPERATOR_KEY_ID_PREFIX) else None,
-            )
-            audit_log.log_action(
-                "auth.browser_session_created",
-                actor=api_key.name,
-                resource="auth/session",
-                tenant_id=api_key.tenant_id,
-                method="api_key",
-                key_id=api_key.key_id,
-                role=api_key.role.value,
-            )
-            return None
+    # ``store.verify`` runs a ~21ms scrypt derivation (in-memory store) or a
+    # blocking DB read (Postgres store). This route is auth-exempt, so an
+    # unauthenticated caller could otherwise stall the event loop on demand.
+    api_key = await anyio.to_thread.run_sync(store.verify, raw_key)
+    if api_key:
+        _set_browser_session_cookie(
+            response,
+            request,
+            subject=api_key.name,
+            role=api_key.role.value,
+            tenant_id=api_key.tenant_id,
+            auth_method="browser_session",
+            key_id=api_key.key_id,
+            scopes=list(api_key.scopes),
+            operator_key_hash=api_key.key_hash if api_key.key_id.startswith(OPERATOR_KEY_ID_PREFIX) else None,
+        )
+        audit_log.log_action(
+            "auth.browser_session_created",
+            actor=api_key.name,
+            resource="auth/session",
+            tenant_id=api_key.tenant_id,
+            method="api_key",
+            key_id=api_key.key_id,
+            role=api_key.role.value,
+        )
+        return None
 
+    request.state.authentication_failed = True
     raise HTTPException(status_code=401, detail="Invalid API key")
 
 

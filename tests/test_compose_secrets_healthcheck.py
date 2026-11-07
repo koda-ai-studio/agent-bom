@@ -377,6 +377,8 @@ def test_hosted_poc_overlay_keeps_api_and_ui_loopback_only() -> None:
     # The customer hardening overlay must never enable anonymous sample access.
     assert api_env == [
         "AGENT_BOM_SESSION_COOKIE_SECURE=1",
+        "AGENT_BOM_TRUSTED_PROXY_HOPS=${AGENT_BOM_TRUSTED_PROXY_HOPS:-1}",
+        "AGENT_BOM_TRUSTED_PROXY_CIDRS=${AGENT_BOM_TRUSTED_PROXY_CIDRS:-172.16.0.0/12,192.168.0.0/16}",
     ]
     assert "AGENT_BOM_ALLOW_UNAUTHENTICATED_API" not in "\n".join(api_env)
     assert "AGENT_BOM_DEMO_ESTATE" not in "\n".join(api_env)

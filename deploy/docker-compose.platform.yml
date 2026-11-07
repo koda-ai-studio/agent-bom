@@ -26,6 +26,9 @@
 #         deploy/secrets/browser_session_signing_key
 #         deploy/secrets/connections_key
 #     Placeholders live at deploy/secrets/*.example for documentation only.
+#   - Secret files are mode 0640, owner plus the operator's primary group. Services
+#     join that group through group_add; `make platform-up` sets AGENT_BOM_SECRETS_GID.
+#     Without it, those Linux services cannot read the files and fail to start.
 #
 # Usage:
 #   # 1. Generate the mounted secret files FIRST — `up` hard-fails without them:
@@ -38,6 +41,11 @@
 services:
   postgres:
     image: postgres:16-alpine
+    # Started as the postgres user directly: the image's privilege drop discards
+    # supplementary groups, which its init scripts need to read the secret files.
+    user: postgres
+    group_add:
+      - "${AGENT_BOM_SECRETS_GID:-65534}"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-agent_bom}
       # Bootstrap role for image init only — API never connects as this user.
@@ -83,6 +91,8 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: agent-bom:latest
+    group_add:
+      - "${AGENT_BOM_SECRETS_GID:-65534}"
     working_dir: /opt/agent-bom
     entrypoint: ["python"]
     command: ["deploy/supabase/postgres/compose_migrate.py"]
@@ -112,6 +122,8 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: agent-bom:latest
+    group_add:
+      - "${AGENT_BOM_SECRETS_GID:-65534}"
     command: api --host 0.0.0.0 --port 8422
     ports:
       - "${AGENT_BOM_API_BIND_HOST:-127.0.0.1}:${API_PORT:-8422}:8422"
@@ -129,6 +141,10 @@ services:
       - AGENT_BOM_AUDIT_HMAC_KEY_FILE=/run/secrets/audit_hmac_key
       - AGENT_BOM_REQUIRE_AUDIT_HMAC=${AGENT_BOM_REQUIRE_AUDIT_HMAC:-1}
       - AGENT_BOM_CONNECTIONS_KEY_FILE=/run/secrets/connections_key
+      # Set both when a proxy fronts the API, or every client behind it shares one
+      # authentication failure budget. See docs/RUNTIME_FAIL_MODES.md.
+      - AGENT_BOM_TRUSTED_PROXY_HOPS=${AGENT_BOM_TRUSTED_PROXY_HOPS:-}
+      - AGENT_BOM_TRUSTED_PROXY_CIDRS=${AGENT_BOM_TRUSTED_PROXY_CIDRS:-}
       # Role for any request that reaches the API without an authenticated
       # identity. This stack ships with API-key auth (above), so unauthenticated
       # requests fail closed (401) and this never applies — it only takes effect

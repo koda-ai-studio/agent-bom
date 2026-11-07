@@ -1,7 +1,6 @@
 """Enterprise API routes for authentication, audit, exceptions, baselines and triage.
 
-Route registrations below and the generated OpenAPI catalog define the current
-endpoint inventory. Authentication helpers retain their compatibility exports.
+Route registrations below and the generated OpenAPI catalog define the endpoints; auth helpers keep compatibility exports.
 """
 
 from __future__ import annotations
@@ -60,6 +59,7 @@ from agent_bom.api.routes.enterprise_routes._session_helpers import _saml_respon
 from agent_bom.api.routes.enterprise_routes._session_helpers import _session_cookie_max_age as _session_cookie_max_age
 from agent_bom.api.routes.enterprise_routes._session_helpers import _session_cookie_secure as _session_cookie_secure
 from agent_bom.api.routes.enterprise_routes._session_helpers import _set_browser_session_cookie as _set_browser_session_cookie
+from agent_bom.api.routes.enterprise_routes._session_helpers import failed_credential
 from agent_bom.api.routes.enterprise_routes.findings import build_tenant_triage_owner_index as build_tenant_triage_owner_index
 from agent_bom.api.routes.enterprise_routes.findings import build_tenant_triage_state_index as build_tenant_triage_state_index
 from agent_bom.api.routes.enterprise_routes.findings import create_finding_feedback as create_finding_feedback
@@ -360,9 +360,9 @@ async def oidc_browser_callback(
     except ManagedTrialInvitationConfigurationError as exc:
         raise HTTPException(status_code=503, detail=sanitize_error(exc, generic=True)) from exc
     except ManagedTrialInvitationError as exc:
-        raise HTTPException(status_code=401, detail="Invalid or expired managed-trial invitation") from exc
+        raise failed_credential(request, "Invalid or expired managed-trial invitation") from exc
     except OIDCError as exc:
-        raise HTTPException(status_code=401, detail=sanitize_error(exc)) from exc
+        raise failed_credential(request, sanitize_error(exc), counts=exc.counts_as_failed_credential) from exc
 
     if managed_invitation is not None:
         from agent_bom.api.managed_trial import MANAGED_TRIAL_ANALYST_SCOPES
@@ -403,7 +403,7 @@ async def oidc_browser_callback(
         try:
             await anyio.to_thread.run_sync(_accept_managed_invitation)
         except ManagedTrialInvitationError as exc:
-            raise HTTPException(status_code=401, detail="Invalid or expired managed-trial invitation") from exc
+            raise failed_credential(request, "Invalid or expired managed-trial invitation") from exc
     secure = _session_cookie_secure(request)
     response.delete_cookie(OIDC_PKCE_COOKIE_NAME, httponly=True, secure=secure, samesite="lax", path="/")
     if managed_invitation is not None:

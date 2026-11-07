@@ -2127,22 +2127,28 @@ def test_client_fingerprint_falls_back_when_forwarded_chain_is_too_short(monkeyp
 
 
 @pytest.mark.parametrize(
-    "forwarded",
-    ["not-an-ip", ",".join(f"192.0.2.{index % 255}" for index in range(33))],
+    ("forwarded", "expected"),
+    [
+        # Never the proxy's own address, which every client behind it shares.
+        ("not-an-ip", "unparseable-forwarded-address"),
+        # Only the trusted trailing hop is read, so padding changes nothing.
+        (",".join(f"192.0.2.{index % 255}" for index in range(33)), "192.0.2.32"),
+    ],
 )
-def test_client_fingerprint_rejects_malformed_or_oversized_forwarded_chain(monkeypatch, forwarded):
+def test_client_fingerprint_keeps_malformed_or_padded_chains_off_the_proxys_budget(monkeypatch, forwarded, expected):
     from agent_bom.api.routes import enterprise
 
     monkeypatch.setenv("AGENT_BOM_TRUSTED_PROXY_HOPS", "1")
     monkeypatch.setenv("AGENT_BOM_TRUSTED_PROXY_CIDRS", "10.0.0.0/24")
     request = SimpleNamespace(headers={"x-forwarded-for": forwarded}, client=SimpleNamespace(host="10.0.0.5"))
-    assert enterprise._client_fingerprint(request) == "10.0.0.5"
+    assert enterprise._client_fingerprint(request) == expected
 
 
 @pytest.mark.parametrize(
     ("peer", "cidrs", "forwarded", "expected"),
     [
-        ("2001:db8::10", "2001:db8::/64", "2001:4860:4860::8888", "2001:4860:4860::8888"),
+        # IPv6 is limited by /64, as the failed-authentication limit is.
+        ("2001:db8::10", "2001:db8::/64", "2001:4860:4860::8888", "2001:4860:4860::/64"),
         ("10.0.0.5", "10.0.0.0/24", ",".join(["192.0.2.1"] * 32), "192.0.2.1"),
     ],
 )

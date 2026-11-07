@@ -18,7 +18,7 @@ from typing import Any, cast
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from agent_bom.api.oidc import OIDCConfig, OIDCError, discover_oidc, verify_oidc_token
+from agent_bom.api.oidc import OIDCConfig, OIDCError, classified_oidc_error, discover_oidc, verify_oidc_token
 from agent_bom.security import sanitize_error, validate_url
 
 _OIDC_TIMEOUT = 10
@@ -243,7 +243,7 @@ def exchange_code_for_tokens(
         with urlopen(request, timeout=_OIDC_TIMEOUT) as resp:  # noqa: S310  # nosec B310 — validated above
             payload = json.loads(resp.read())
     except Exception as exc:  # noqa: BLE001
-        raise OIDCError(f"OIDC token exchange failed: {sanitize_error(exc)}") from exc
+        raise classified_oidc_error(exc, f"OIDC token exchange failed: {sanitize_error(exc)}") from exc
     if not isinstance(payload, dict):
         raise OIDCError("OIDC token endpoint returned a non-object payload")
     return payload

@@ -25,3 +25,8 @@ services:
   api:
     environment:
       - AGENT_BOM_SESSION_COOKIE_SECURE=1
+      # One front door adds the client address, and it reaches the API through a
+      # Docker bridge. These ranges are Docker's default address pools; a custom
+      # pool must be set here, and the API warns if a peer falls outside them.
+      - AGENT_BOM_TRUSTED_PROXY_HOPS=${AGENT_BOM_TRUSTED_PROXY_HOPS:-1}
+      - AGENT_BOM_TRUSTED_PROXY_CIDRS=${AGENT_BOM_TRUSTED_PROXY_CIDRS:-172.16.0.0/12,192.168.0.0/16}

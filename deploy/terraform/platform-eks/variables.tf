@@ -234,6 +234,22 @@ variable "image_tag" {
   default     = ""
 }
 
+variable "ingress_trusted_proxy_hops" {
+  description = "Trusted proxies between clients and the API, used to identify clients for authentication failure limits."
+  type        = number
+  default     = 1
+}
+
+variable "ingress_trusted_proxy_cidrs" {
+  description = <<-EOT
+    Networks the ingress connects to the API from. Defaults to the created VPC.
+    Required with a domain when create_cluster = false: the chart refuses to
+    render an ingress without them, as every client would share one budget.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
 variable "domain" {
   description = <<-EOT
     Public hostname for the UI/API ingress (e.g. agent-bom.internal.example.com).

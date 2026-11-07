@@ -45,6 +45,8 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: agentbom/agent-bom:0.113.2
+    group_add:
+      - "${AGENT_BOM_SECRETS_GID:-65534}"
     working_dir: /opt/agent-bom
     entrypoint: ["python"]
     command: ["deploy/supabase/postgres/compose_migrate.py"]
@@ -72,6 +74,8 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: agentbom/agent-bom:0.113.2
+    group_add:
+      - "${AGENT_BOM_SECRETS_GID:-65534}"
     restart: unless-stopped
     command: api --host 0.0.0.0 --port 8422
     env_file:
@@ -103,6 +107,10 @@ services:
       AGENT_BOM_AUDIT_HMAC_KEY_FILE: /run/secrets/audit_hmac_key
       AGENT_BOM_BROWSER_SESSION_SIGNING_KEY_FILE: /run/secrets/browser_session_signing_key
       AGENT_BOM_CONNECTIONS_KEY_FILE: /run/secrets/connections_key
+      # Set both when a proxy fronts the API, or every client behind it shares one
+      # authentication failure budget. See docs/RUNTIME_FAIL_MODES.md.
+      AGENT_BOM_TRUSTED_PROXY_HOPS: ${AGENT_BOM_TRUSTED_PROXY_HOPS:-}
+      AGENT_BOM_TRUSTED_PROXY_CIDRS: ${AGENT_BOM_TRUSTED_PROXY_CIDRS:-}
       # Local dev stack only: filesystem scans should be explicit in shared API setups.
       AGENT_BOM_API_LOCAL_PATH_SCANS: ${AGENT_BOM_API_LOCAL_PATH_SCANS:-disabled}
       # 1 makes every log line one JSON object, including access logs.
@@ -168,6 +176,11 @@ services:
   # Bootstrap password + app-role password are Docker secrets only.
   postgres:
     image: postgres:16-alpine
+    # Started as the postgres user directly: the image's privilege drop discards
+    # supplementary groups, which its init scripts need to read the secret files.
+    user: postgres
+    group_add:
+      - "${AGENT_BOM_SECRETS_GID:-65534}"
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-agent_bom}

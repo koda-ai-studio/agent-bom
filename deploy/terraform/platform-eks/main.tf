@@ -137,9 +137,22 @@ locals {
 
   effective_image_tag = var.image_tag
 
+  # The load balancer connects from inside the VPC this module creates. A referenced
+  # cluster's networks are unknown here, so they must be supplied.
+  ingress_trusted_proxy_cidrs = (
+    length(var.ingress_trusted_proxy_cidrs) > 0 ? var.ingress_trusted_proxy_cidrs :
+    var.create_cluster ? [var.cluster_vpc_cidr] : []
+  )
+
   # Ingress values block, emitted only when a domain is supplied.
   ingress_values = var.domain == "" ? {} : {
     controlPlane = {
+      api = {
+        trustedProxy = {
+          hops  = var.ingress_trusted_proxy_hops
+          cidrs = local.ingress_trusted_proxy_cidrs
+        }
+      }
       ingress = {
         enabled     = true
         className   = var.ingress_class_name

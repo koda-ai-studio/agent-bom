@@ -34,6 +34,16 @@ describe("Audit trail", () => {
     expect(screen.queryByText("No integrity exceptions detected")).not.toBeInTheDocument();
   });
 
+  it("reports a chain over its budget as not verified, never as zero verified", async () => {
+    apiMock.getAuditIntegrity.mockResolvedValue({ verified: null, checked: 0, tampered: 0, unverifiable: 1026,
+      status: "not_verified_over_budget", error: "Not verified: 1026 entries exceed the requested limit of 1000, so no chain was checked." });
+    render(<AuditLogPage />);
+    expect(await screen.findByText(/1026 entries exceed the requested limit of 1000/)).toBeVisible();
+    expect(screen.getByText("Not verified / 1,026 entries not checked")).toBeVisible();
+    expect(screen.queryByText(/0 verified/)).not.toBeInTheDocument();
+    expect(screen.queryByText("No integrity exceptions detected")).not.toBeInTheDocument();
+  });
+
   it("collapses repeated campaign rows without changing event pagination or losing receipts", async () => {
     const campaign = { ...event, action: "risk_campaign.membership_observed", resource: "campaign-1" };
     apiMock.listAuditEntries.mockResolvedValue({ entries: [campaign, { ...campaign, entry_id: "receipt-2" }], total: 100 });

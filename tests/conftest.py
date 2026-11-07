@@ -110,6 +110,15 @@ def _pin_isolated_env() -> None:
 
 
 @pytest.fixture(autouse=True)
+def _drain_auth_failure_receipts():
+    """Receipts are written after the response; none may land in the next test's audit store."""
+    yield
+    receipts = sys.modules.get("agent_bom.api.auth_failure_receipts")
+    if receipts is not None:
+        receipts.RECEIPTS.flush(timeout=5)
+
+
+@pytest.fixture(autouse=True)
 def _isolate_home_and_state_dir():
     """Guarantee HOME and the data dirs are temporary around every test.
 

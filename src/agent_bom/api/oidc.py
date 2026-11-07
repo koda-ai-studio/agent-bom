@@ -117,7 +117,7 @@ def _fetch_json(url: str) -> dict[str, Any]:
             # always return a JSON object, so narrow to the documented shape.
             return cast("dict[str, Any]", json.loads(resp.read()))
     except (URLError, OSError, json.JSONDecodeError) as exc:
-        raise OIDCError(f"Failed to fetch {url}: {exc}") from exc
+        raise OIDCProviderUnavailableError(f"Failed to fetch {url}: {exc}") from exc
 
 
 def discover_oidc(issuer: str) -> dict[str, Any]:
@@ -178,6 +178,32 @@ def _validate_jwks_uri(
 class OIDCError(Exception):
     """Raised when OIDC configuration or JWT verification fails."""
 
+    # Whether this failure is evidence of a guessed credential.
+    counts_as_failed_credential = True
+
+
+class OIDCTokenExpiredError(OIDCError):
+    """A token whose signature verified has passed its expiry: the holder must refresh."""
+
+    counts_as_failed_credential = False
+
+
+class OIDCProviderUnavailableError(OIDCError):
+    """The identity provider could not be reached, so nothing was verified."""
+
+    counts_as_failed_credential = False
+
+
+def classified_oidc_error(exc: Exception, message: str) -> OIDCError:
+    """Only the provider's own refusal, or a token that fails checks, is about the credential."""
+    names = {cls.__name__ for cls in type(exc).__mro__}
+    status = getattr(exc, "code", None)
+    if "ExpiredSignatureError" in names:
+        return OIDCTokenExpiredError(message)
+    if "PyJWKClientConnectionError" in names or (status >= 500 if isinstance(status, int) else isinstance(exc, OSError)):
+        return OIDCProviderUnavailableError(message)
+    return OIDCError(message)
+
 
 def _check_pyjwt() -> None:
     try:
@@ -228,7 +254,7 @@ def verify_oidc_token(
         jwks_client = PyJWKClient(jwks_uri, cache_jwk_set=True, lifespan=_JWKS_CACHE_TTL)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
     except Exception as exc:
-        raise OIDCError(f"Failed to resolve signing key: {exc}") from exc
+        raise classified_oidc_error(exc, f"Failed to resolve signing key: {exc}") from exc
 
     decode_kwargs: dict[str, Any] = {
         "algorithms": list(OIDC_ALLOWED_ALGORITHMS),
@@ -241,7 +267,7 @@ def verify_oidc_token(
     try:
         claims = jwt.decode(token, signing_key.key, **decode_kwargs)
     except PyJWTError as exc:
-        raise OIDCError(f"JWT verification failed: {exc}") from exc
+        raise classified_oidc_error(exc, f"JWT verification failed: {exc}") from exc
 
     if required_nonce is not None:
         token_nonce = claims.get("nonce")
