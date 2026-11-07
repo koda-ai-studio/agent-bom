@@ -15,9 +15,6 @@ on:
     paths:
       - .github/workflows/qualification.yml
       - scripts/qualification/**
-  push:
-    branches:
-      - ci/qualification-workflow
 
 permissions:
   contents: read
@@ -33,7 +30,7 @@ env:
 jobs:
   accuracy:
     name: Accuracy (${{ matrix.target }})
-    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',accuracy,') || (github.event_name == 'push' && (!contains(github.event.head_commit.message, 'lanes=') || contains(github.event.head_commit.message, 'accuracy'))) }}
+    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',accuracy,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -66,7 +63,7 @@ jobs:
 
   performance:
     name: Performance (SQLite)
-    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',performance,') || (github.event_name == 'push' && (!contains(github.event.head_commit.message, 'lanes=') || contains(github.event.head_commit.message, 'performance'))) }}
+    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',performance,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -93,7 +90,7 @@ jobs:
 
   performance-postgres:
     name: Performance (Postgres)
-    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',performance,') || (github.event_name == 'push' && (!contains(github.event.head_commit.message, 'lanes=') || contains(github.event.head_commit.message, 'performance'))) }}
+    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',performance,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     services:
@@ -135,7 +132,7 @@ jobs:
 
   platforms:
     name: Platforms (${{ matrix.os }})
-    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',platforms,') || (github.event_name == 'push' && (!contains(github.event.head_commit.message, 'lanes=') || contains(github.event.head_commit.message, 'platforms'))) }}
+    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',platforms,') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -179,7 +176,7 @@ jobs:
 
   action:
     name: Action (${{ matrix.case }})
-    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',action,') || (github.event_name == 'push' && (!contains(github.event.head_commit.message, 'lanes=') || contains(github.event.head_commit.message, 'action'))) }}
+    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',action,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -237,7 +234,7 @@ jobs:
 
   identity:
     name: Identity (Keycloak)
-    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',identity,') || (github.event_name == 'push' && (!contains(github.event.head_commit.message, 'lanes=') || contains(github.event.head_commit.message, 'identity'))) }}
+    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',identity,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -268,7 +265,7 @@ jobs:
 
   runtime:
     name: Runtime (proxy and gateway)
-    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',runtime,') || (github.event_name == 'push' && (!contains(github.event.head_commit.message, 'lanes=') || contains(github.event.head_commit.message, 'runtime'))) }}
+    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',runtime,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -295,7 +292,7 @@ jobs:
 
   deploy:
     name: Deploy (${{ matrix.variant }})
-    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',deploy,') || (github.event_name == 'push' && (!contains(github.event.head_commit.message, 'lanes=') || contains(github.event.head_commit.message, 'deploy'))) }}
+    if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',deploy,') }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:

@@ -14,7 +14,7 @@ Keep counts out of public positioning copy and update this file from the repo in
 | MCP tools | 99 | `src/agent_bom/mcp_server_metadata.py` | Counted from the advertised server-card tools. |
 | MCP resources | 7 | `src/agent_bom/mcp_server_metadata.py` | Counted from the advertised server-card resources. |
 | MCP prompts | 8 | `src/agent_bom/mcp_server_metadata.py` | Counted from the advertised server-card workflow prompts. |
-| GitHub workflow files | 44 | `.github/workflows` | Counts .yml and .yaml workflow definitions. |
+| GitHub workflow files | 45 | `.github/workflows` | Counts .yml and .yaml workflow definitions. |
 | API route modules | 97 | `src/agent_bom/api/routes` | Counts Python files in the routes package, including __init__.py. |
 | UI app pages | 48 | `ui/app` | Counts page.tsx and page.jsx files recursively. |
 | Python modules | 2230 | `src/agent_bom` | Counts all Python files recursively. |
