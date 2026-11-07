@@ -111,16 +111,18 @@ def _select_osv_targets(
     # also holds rows for other ecosystems (cross-ecosystem advisories, distro feeds), so there a hit
     # outside the scope proves nothing about that package's remaining advisories.
     held = set() if not offline and local_osv_is_scoped() else db_covered
-    osv_targets = [
-        p
-        for p in scannable
-        if (_package_db_key(p) not in held and not any(eco in covered_ecos for eco in _db_ecosystems_for_package(p)))
-        or _package_db_key(p) in force_osv_keys
-    ]
+
+    def _uncovered(package: Package) -> bool:
+        return _package_db_key(package) not in held and not any(eco in covered_ecos for eco in _db_ecosystems_for_package(package))
+
+    osv_targets = [p for p in scannable if _uncovered(p) or _package_db_key(p) in force_osv_keys]
     if force_osv_keys:
         _logger.info("Refreshing OSV coverage for %d package(s) with stale or sparse local evidence", len(force_osv_keys))
-    if sparse_osv_keys:
-        _emit_scan_warning(f"sparse local DB OSV fallback for {len(sparse_osv_keys)} package(s)")
+    # Only a package the local DB would otherwise have answered is a fallback;
+    # with no local data for it, OSV was always going to be asked.
+    sparse_fallbacks = sum(1 for p in scannable if not _uncovered(p) and _package_db_key(p) in sparse_osv_keys)
+    if sparse_fallbacks:
+        _emit_scan_warning(f"sparse local DB OSV fallback for {sparse_fallbacks} package(s)")
     return osv_targets, covered_ecos
 
 

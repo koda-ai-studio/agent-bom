@@ -206,6 +206,36 @@ def _issue_style_map(match: re.Match, line: str) -> bool:
     return len(keys) == len(entries) and {"vulnerability", "secret"} <= keys
 
 
+_DSN_PARTS_RE = re.compile(r"://([^:@\s/]{1,200}):([^@\s/]{1,200})@([^\s/:'\"`]{1,253})")
+# RFC 2606 / RFC 6761 names reserved for documentation and testing.
+_RESERVED_DOC_HOST_RE = re.compile(r"(?i)(?:^|\.)(?:example\.(?:com|net|org)|example|test|invalid|localhost)$")
+# Plain lowercase words (``pass``, ``development key``): documentation prose, not generated secrets.
+_PLAIN_WORDS_RE = re.compile(r"[A-Za-z][a-z]{0,23}(?:[ _-][a-z]{1,24}){0,4}")
+_DOC_QUOTED_RE = re.compile(r"""[=:]\s*(["'])([^"'\n]{1,200})\1""")
+
+
+def _documentation_word(value: str) -> bool:
+    return bool(is_placeholder_value(value) or _SAMPLE_MARKER_RE.search(value) or _PLAIN_WORDS_RE.fullmatch(value))
+
+
+def is_documentation_sample(match: re.Match, line: str) -> bool:
+    """Whether a match inside a docstring shows an illustrative value, not a credential.
+
+    A connection string counts when its password is a plain word or placeholder,
+    or its host is a reserved documentation name. An assignment counts when its
+    value is a plain word or phrase or carries a sample marker. A value with
+    digits, mixed case or symbols on a real host still reports.
+    """
+    dsn = _DSN_PARTS_RE.search(match.group(0))
+    if dsn:
+        return _documentation_word(dsn.group(2)) or bool(_RESERVED_DOC_HOST_RE.search(dsn.group(3)))
+    quoted = _DOC_QUOTED_RE.search(line, match.start())
+    if quoted:
+        return _documentation_word(quoted.group(2))
+    body = _CREDENTIAL_BODY_RE.search(match.group(0))
+    return bool(body and _documentation_word(body.group(1)))
+
+
 def is_sample_value(match: re.Match) -> bool:
     """A credential-shaped match whose value carries a documentation marker."""
     assigned = ASSIGNED_VALUE_RE.search(match.group(0))

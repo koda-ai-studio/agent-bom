@@ -601,7 +601,7 @@
     {
       "distro_name": null,
       "distro_version": null,
-      "ecosystem": "golang",
+      "ecosystem": "go",
       "is_direct": false,
       "name": "github.com/gorilla/mux",
       "occurrences": [
@@ -634,7 +634,7 @@
     {
       "distro_name": null,
       "distro_version": null,
-      "ecosystem": "golang",
+      "ecosystem": "go",
       "is_direct": false,
       "name": "golang.org/x/net",
       "occurrences": [

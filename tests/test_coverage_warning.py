@@ -78,16 +78,18 @@ def test_uncovered_release_emits_warning(tmp_path):
     """A release with packages present but zero advisory rows (while the family
     is broadly covered) is flagged as an incomplete-coverage gap."""
     conn = init_db(tmp_path / "vulns.db")
-    # Family carried at 11/12/13, but buster (10) dropped — zero rows.
-    _seed_db(conn, family_releases=["debian:11", "debian:12", "debian:13"])
+    # Family carried at 10/11/12, but trixie (13) missing — zero rows. End-of-life
+    # Debian releases get the more specific live-feed gap instead
+    # (tests/test_eol_debian_live_feed_gap.py).
+    _seed_db(conn, family_releases=["debian:10", "debian:11", "debian:12"])
 
-    warnings = detect_release_coverage_gaps(_deb_packages("10"), conn=conn)
+    warnings = detect_release_coverage_gaps(_deb_packages("13"), conn=conn)
     conn.close()
 
     assert len(warnings) == 1
     w = warnings[0]
     assert w["ecosystem"] == "debian"
-    assert w["release"] == "debian:10"
+    assert w["release"] == "debian:13"
     assert w["reason"] == "release_advisories_absent"
     assert w["advisory_rows"] == 0
     assert w["package_count"] == 8
@@ -108,10 +110,12 @@ def test_covered_release_no_warning(tmp_path):
 
 def test_empty_db_no_false_positive(tmp_path):
     """When the family is not carried at all (empty/absent DB, e.g. default online
-    scans), no per-release gap is reported — the remote source covers it."""
+    scans), a supported release reports no per-release gap — the remote source
+    covers it. End-of-life Debian is the exception: live OSV no longer carries
+    its per-CVE records (tests/test_eol_debian_live_feed_gap.py)."""
     conn = init_db(tmp_path / "vulns.db")  # no rows
 
-    warnings = detect_release_coverage_gaps(_deb_packages("10"), conn=conn)
+    warnings = detect_release_coverage_gaps(_deb_packages("12"), conn=conn)
     conn.close()
 
     assert warnings == []
