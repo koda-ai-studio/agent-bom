@@ -351,7 +351,7 @@ async def test_shared_admission_bounds_waiters_and_survives_a_cancelled_request(
         assert requests[-1].result().status_code == 503
         requests[0].cancel()
         with pytest.raises(asyncio.CancelledError):
-            await requests[0]
+            assert await requests[0] is None
         release.set()
         assert await asyncio.gather(*requests[1:64]) == [None] * 63
         assert not policy._source_waiters
