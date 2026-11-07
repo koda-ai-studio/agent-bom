@@ -597,3 +597,35 @@ def test_source_admission_supports_concurrent_event_loops(monkeypatch):
             assert policy._unavailable_until == 0
         finally:
             release.set()
+
+
+def test_timed_out_admission_releases_capacity_after_its_loop_closes(monkeypatch):
+    import asyncio
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from types import SimpleNamespace
+
+    from agent_bom.api import auth_failure_policy
+
+    policy = auth_failure_policy.AuthFailurePolicy()
+    release = threading.Event()
+    request = SimpleNamespace(client=SimpleNamespace(host="192.0.2.18"), headers={})
+
+    def remaining(_source, _now):
+        assert release.wait(2)
+        return 0
+
+    monkeypatch.setattr(policy.store, "remaining", remaining)
+    with ThreadPoolExecutor(max_workers=1) as worker:
+        monkeypatch.setattr(auth_failure_policy, "_AUTH_WORKERS", worker)
+        try:
+            response = asyncio.run(policy.before(request))
+            assert response.status_code == 503
+            assert policy._outstanding == 1
+        finally:
+            release.set()
+    # Joining the worker includes its completion callbacks. Its owning request
+    # loop is already closed, so cleanup cannot depend on that loop running.
+    assert policy._outstanding == 0
+    assert policy._source_work == {}
+    assert policy._unavailable_until == 0
