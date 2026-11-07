@@ -558,6 +558,13 @@ cached. Cache entries remain bounded by `AGENT_BOM_API_KEY_VERIFY_CACHE_MAX_ENTR
 setting that limit or `AGENT_BOM_API_KEY_VERIFY_CACHE_TTL_SECONDS` to zero disables
 the optimization.
 
+On SQLite, the `last_used` stamp written after a successful verification is best
+effort: if another writer holds the database for more than 100 ms, such as a large
+graph snapshot commit, the stamp is skipped and the next request records it. The
+decision to accept or refuse a key never depends on that write, and revocation,
+expiry and rotation are still read from the committed key row on every request.
+`last_used` can therefore lag by the length of such a write.
+
 ## Current graph refresh
 
 A current-estate request retains the previous complete generation while waiting

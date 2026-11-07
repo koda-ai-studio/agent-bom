@@ -435,7 +435,8 @@ def _write_gateway_baseline(output_path: Path, *, mode: str) -> None:
 
 def _resolve_agent_bom() -> str | None:
     """Resolve the ``agent-bom`` console script, preferring the active interpreter's bin."""
-    candidate = Path(sys.executable).with_name("agent-bom")
+    script = "agent-bom.exe" if sys.platform == "win32" else "agent-bom"
+    candidate = Path(sys.executable).with_name(script)
     if candidate.exists():
         return str(candidate)
     return shutil.which("agent-bom")

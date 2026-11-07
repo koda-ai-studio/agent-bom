@@ -17,7 +17,8 @@ import os
 import sqlite3
 import threading
 import time
-from collections.abc import Iterator
+import weakref
+from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
 from functools import lru_cache, wraps
 from pathlib import Path
@@ -33,6 +34,7 @@ from agent_bom.api.current_graph_builds import current_view_coverage, resolve_re
 from agent_bom.api.current_graph_builds import generation_rotating as _generation_rotating
 from agent_bom.api.current_graph_counts import count_current_nodes
 from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
+from agent_bom.api.current_graph_reads import GRAPH_READS as _READS
 from agent_bom.api.file_lock import exclusive_file_lock
 from agent_bom.api.finding_read_context import cached_read, forget_read, on_scope_exit, read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key
@@ -45,43 +47,13 @@ from agent_bom.graph import UnifiedGraph
 from agent_bom.graph.adjacency_page import CURRENT_ESTATE_SCAN_PREFIX
 from agent_bom.graph.agent_context import annotate_agent_context
 from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuses
-from agent_bom.storage.projection_cache import cache_path_for, postgres_locator, sqlite_locator, sweep_sibling_projections
+from agent_bom.storage.projection_cache import open_durable_projection, postgres_locator, sqlite_locator, sweep_sibling_projections
 
 CURRENT_PREFIX = CURRENT_ESTATE_SCAN_PREFIX
 _PROJECTION_FORMAT = 6
 # Restarts of an unpinned read whose generation another worker retired between
 # resolve and read. In-process readers are pinned and never need one.
 _UNPINNED_READ_ATTEMPTS = 3
-_READS = frozenset(
-    {
-        "load_graph",
-        "load_rollup_graph",
-        "iter_nodes",
-        "iter_edges",
-        "snapshot_identity",
-        "snapshot_stats",
-        "page_nodes",
-        "edges_for_node_ids",
-        "search_nodes",
-        "query_inventory",
-        "nodes_by_ids",
-        "bfs_paths",
-        "impact_of",
-        "traverse_subgraph",
-        "attack_paths_for_sources",
-        "longest_path_to",
-        "attack_paths",
-        "snapshot_attack_paths",
-        "snapshot_queue_page",
-        "snapshot_path_summary",
-        "snapshot_cross_vendor_page",
-        "incident_edges_page",
-        "node_context",
-        "resolve_node_aliases",
-        "compliance_summary",
-        "evidence_manifest",
-    }
-)
 
 
 def seeding_refusal() -> HTTPException:
@@ -115,20 +87,10 @@ def _durable_locator(graph_store: Any) -> str:
     return postgres_locator() if type(graph_store).__module__ == "agent_bom.api.postgres_graph" else ""
 
 
-def _durable_cache_path(graph_store: Any) -> Path | None:
-    """Return a private per-backing-store cache file, or None when it cannot persist."""
+def _durable_projection(graph_store: Any) -> tuple[Path, Callable[[], None]] | None:
+    """Return a held private per-backing-store cache file, or None when it cannot persist."""
     locator = _durable_locator(graph_store)
-    if not locator:
-        return None
-    path = cache_path_for(locator)
-    try:
-        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        os.chmod(path.parent, 0o700)
-        os.close(os.open(path, os.O_CREAT | os.O_RDWR, 0o600))
-        os.chmod(path, 0o600)
-    except OSError:
-        return None
-    return path
+    return open_durable_projection(locator) if locator else None
 
 
 def graph_scan_id(job: Any) -> str:
@@ -165,14 +127,18 @@ class CurrentGraphStore:
     def __init__(self, graph_store: Any, job_store: Any) -> None:
         self._graph_store = graph_store
         self._job_store = job_store
-        durable = _durable_cache_path(graph_store)
+        durable = _durable_projection(graph_store)
         self._cache_directory: TemporaryDirectory[str] | None = None
+        self._release_projection: Callable[[], Any] = lambda: None
         if durable is None:
             self._cache_directory = TemporaryDirectory(prefix="agent-bom-current-")
-            durable = Path(self._cache_directory.name) / "projection.db"
+            cache_path = Path(self._cache_directory.name) / "projection.db"
         else:
-            sweep_sibling_projections(durable)
-        self._cache_path = str(durable)
+            cache_path, release = durable
+            # An lru_cache eviction drops the last reference, so the lease cannot outlive the store.
+            self._release_projection = weakref.finalize(self, release)
+            sweep_sibling_projections(cache_path)
+        self._cache_path = str(cache_path)
         self._projection_store = SQLiteGraphStore(self._cache_path)
         self._lock = _ProjectionLock()
         self._coverage: dict[str, dict[str, Any]] = {}
@@ -182,6 +148,13 @@ class CurrentGraphStore:
         # Generations a live read scope resolved; retirement skips them.
         self._pins: dict[str, int] = {}
         self._build_gates: dict[str, threading.RLock] = {}
+
+    def close(self) -> None:
+        """Let the sweep reclaim this store's projection, then close the backing store if it can close."""
+        self._release_projection()
+        closer = getattr(self._graph_store, "close", None)
+        if callable(closer):
+            closer()
 
     def __getattr__(self, name: str) -> Any:
         method = getattr(self._graph_store, name)
@@ -586,8 +559,22 @@ class CurrentGraphStore:
                 raise
 
 
+_wrapper_guard = threading.Lock()
+
+
 @lru_cache(maxsize=8)
-def current_graph_store(graph_store: Any, job_store: Any) -> Any:
+def _current_graph_store(graph_store: Any, job_store: Any) -> Any:
     if isinstance(graph_store, NeptuneGraphStore):
         return graph_store  # Keep the experimental backend's explicit capability errors.
     return CurrentGraphStore(graph_store, job_store)
+
+
+def current_graph_store(graph_store: Any, job_store: Any) -> Any:
+    """The one wrapper for this pair of stores.
+
+    ``lru_cache`` runs concurrent misses in parallel and hands each caller its
+    own result, so without the guard a commit warm-up racing a reader gets a
+    second wrapper with separate locks, pins and build gates over the same file.
+    """
+    with _wrapper_guard:
+        return _current_graph_store(graph_store, job_store)

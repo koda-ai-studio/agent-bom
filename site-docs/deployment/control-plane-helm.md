@@ -85,7 +85,7 @@ This page stays focused on the Helm-packaged control-plane shape itself:
 
 | Model | State and configuration | Availability boundary |
 |---|---|---|
-| Single-instance VM or Kubernetes pilot | One API instance; persistent local state; configured authentication. The shipped SQLite pilot is a demo profile with anonymous viewer access. | Restart recovery depends on its volume; this is not an HA configuration. |
+| Single-instance VM or Kubernetes pilot | One API instance; persistent local state; configured authentication. The shipped SQLite pilot is a demo profile that signs in with a seeded API key. | Restart recovery depends on its volume; this is not an HA configuration. |
 | On-premises Kubernetes | Customer PostgreSQL, shared session/audit keys, ingress TLS, identity, and artifact storage. Use the BYO PostgreSQL secret layout and operator-owned values. | API/UI replicas require node placement, database failover, and storage recovery to be exercised together. |
 | Customer-cloud Kubernetes | The same shared-state requirements; managed PostgreSQL, object storage, and cloud identity can supply those services. EKS examples include AWS-specific annotations and secret providers. | A provider-compatible connection string is not evidence of tested provider failover or restoration. |
 | Air-gapped deployment | Apply offline images, packages, and vulnerability-data procedures to the selected single-instance or HA model. | Disconnected operation does not supply database HA or shared storage; maintain an explicit data-refresh and upgrade process. |
@@ -553,7 +553,14 @@ You still own:
   requires a migrated target with private keys already provisioned
 - use [Backup and Restore Runbook](backup-restore.md) for the full operator checklist
 - expose `GET /v1/auth/saml/metadata` to your IdP admins and keep
-  `POST /v1/auth/saml/login` behind the same ingress hostname as the API
+  `POST /v1/auth/saml/login` (the SAML HTTP-POST ACS URL) on the same ingress
+  hostname as the dashboard, which is where it redirects after sign-in
+- start browser sign-in at `GET /v1/auth/saml/start`, and point any IdP app tile
+  or bookmark there. As a deliberate limit, the form-post ACS accepts only a
+  response to a login that started in the same browser, so unsolicited and
+  IdP-initiated posts are refused; the IdP must allow unsigned AuthnRequests and
+  return `InResponseTo`. Serve the ACS over https. Plain http works only for
+  non-production local development, with the IdP on the same site
 - enable PDBs when you are running multi-replica workloads
 
 ## Current boundary

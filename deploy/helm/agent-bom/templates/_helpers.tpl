@@ -207,3 +207,23 @@ is one. This is not the observed pod count or a rolling-update connection budget
 {{- end -}}
 {{- $capacity -}}
 {{- end -}}
+
+{{/*
+Generated Secrets the teardown hook deletes by name, as a JSON array.
+*/}}
+{{- define "agent-bom.teardownTargetSecrets" -}}
+{{- $defaults := .Values.controlPlane.externalSecrets -}}
+{{- $secrets := list -}}
+{{- if $defaults.enabled -}}
+{{- $secrets = $defaults.secrets -}}
+{{- if not $secrets -}}
+{{- $secrets = list (dict "target" $defaults.target) -}}
+{{- end -}}
+{{- end -}}
+{{- $names := list -}}
+{{- range $secret := $secrets -}}
+{{- $target := default (dict) (get $secret "target") -}}
+{{- $names = append $names (default $defaults.target.name (get $target "name")) -}}
+{{- end -}}
+{{- concat $names (.Values.teardownHooks.extraTargetSecrets | default list) | toJson -}}
+{{- end -}}

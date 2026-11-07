@@ -17,12 +17,14 @@ controlPlane:
     env:
       - name: AGENT_BOM_DB
         value: /var/lib/agent-bom/control-plane.sqlite
-      # DEMO ONLY — opens the dashboard anonymously at the viewer role so a fresh
-      # `helm install` has a working first-run without an auth backend. Never use
-      # this posture in production; drop it and seed AGENT_BOM_API_KEYS (see
-      # control-plane-auth-secret.example.yaml) or OIDC for a real login.
-      - name: AGENT_BOM_ALLOW_UNAUTHENTICATED_API
-        value: "1"
+      # The API refuses a non-loopback bind without authentication, so this
+      # profile takes its sign-in key from the Secret below. A missing key stops
+      # the pod (CreateContainerConfigError); it never starts anonymous.
+      - name: AGENT_BOM_API_KEYS
+        valueFrom:
+          secretKeyRef:
+            name: agent-bom-control-plane
+            key: AGENT_BOM_API_KEYS
     extraVolumes:
       - name: sqlite-data
         persistentVolumeClaim:

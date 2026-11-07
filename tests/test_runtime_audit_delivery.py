@@ -11,6 +11,7 @@ import json
 import os
 import stat
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -345,6 +346,63 @@ def test_private_key_rejects_symlink_and_hardlink_aliases(tmp_path: Path) -> Non
 @pytest.mark.skipif(sys.platform != "darwin", reason="macOS fixed /tmp alias only")
 def test_macos_fixed_tmp_alias_is_canonicalized_without_general_symlink_following() -> None:
     assert canonical_runtime_state_path(Path("/tmp/agent-bom/audit")) == Path("/private/tmp/agent-bom/audit")
+
+
+@pytest.mark.parametrize(
+    ("given", "expected"),
+    [
+        ("/var/folders/ab/T/state", "/private/var/folders/ab/T/state"),
+        ("/var", "/private/var"),
+        ("/tmp/state", "/private/tmp/state"),
+        ("/variable/state", "/variable/state"),
+        ("/home/user/var/state", "/home/user/var/state"),
+    ],
+)
+def test_only_macos_fixed_system_aliases_are_canonicalized(monkeypatch: pytest.MonkeyPatch, given: str, expected: str) -> None:
+    monkeypatch.setattr("agent_bom.runtime.audit_delivery.sys.platform", "darwin")
+
+    assert canonical_runtime_state_path(Path(given)) == Path(expected)
+
+
+def test_var_is_left_alone_outside_macos(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("agent_bom.runtime.audit_delivery.sys.platform", "linux")
+
+    assert canonical_runtime_state_path(Path("/var/lib/agent-bom")) == Path("/var/lib/agent-bom")
+
+
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS /var alias only")
+def test_store_under_macos_var_alias_appends_and_still_refuses_inner_symlinks() -> None:
+    uid_temp = os.confstr("CS_DARWIN_USER_TEMP_DIR") if "CS_DARWIN_USER_TEMP_DIR" in os.confstr_names else None
+    base = Path(uid_temp or tempfile.gettempdir())
+    if not str(base).startswith("/var/"):
+        pytest.skip(f"temp dir {base} is not under the /var alias")
+    with tempfile.TemporaryDirectory(dir=base, prefix="abom-var-alias-") as raw:
+        root = Path(raw)
+        assert str(root).startswith("/var/")
+        store = AuditSpilloverStore(spill_path=root / "ok" / "spill.jsonl", dlq_path=root / "ok" / "dlq.jsonl", max_spillover_bytes=4096)
+        store.append_events([{"event_id": "under-var-alias"}])
+        assert store.spillover_size_bytes() > 0
+
+        (root / "real").mkdir()
+        (root / "linked").symlink_to(root / "real", target_is_directory=True)
+        attacked = AuditSpilloverStore(
+            spill_path=root / "linked" / "spill.jsonl", dlq_path=root / "linked" / "dlq.jsonl", max_spillover_bytes=4096
+        )
+        with pytest.raises(ValueError, match="must not contain symlink ancestors"):
+            attacked.append_events([{"event_id": "through-inner-link"}])
+        assert not (root / "real" / "spill.jsonl").exists()
+
+
+def test_macos_alias_cannot_smuggle_parent_traversal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("agent_bom.runtime.audit_delivery.sys.platform", "darwin")
+    store = AuditSpilloverStore(
+        spill_path=Path("/var/../etc/agent-bom/spill.jsonl"),
+        dlq_path=Path("/var/../etc/agent-bom/dlq.jsonl"),
+        max_spillover_bytes=4096,
+    )
+
+    with pytest.raises(ValueError, match="parent traversal"):
+        store.append_events([{"event_id": "traversal"}])
 
 
 def test_state_dir_paths_are_stable_and_do_not_embed_identity(tmp_path: Path) -> None:

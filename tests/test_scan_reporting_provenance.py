@@ -34,6 +34,17 @@ def test_json_reports_warm_osv_response_cache_even_without_local_database(tmp_pa
     assert result["vuln_data_freshness"]["age_hours"] is None  # response-cache age is not feed-sync age
 
 
+def test_linked_cve_request_cost_survives_into_json(tmp_path):
+    reset_scan_performance()
+    _bump_scan_perf("linked_cve_lookups", 195)
+    _bump_scan_perf("linked_cve_cache_hits", 3)
+    st = ScanState(scan_outcome=ScanOutcome.COMPLETE)
+    _build_report(SimpleNamespace(project=str(tmp_path)), st)
+    osv = to_json(st.report)["scan_performance"]["osv"]
+    assert osv["linked_cve_lookups"] == 195
+    assert osv["linked_cve_cache_hits"] == 3
+
+
 def test_suppressed_unfixed_count_survives_into_json(tmp_path, monkeypatch):
     monkeypatch.delenv("AGENT_BOM_INCLUDE_UNFIXED", raising=False)
     reset_scan_performance()

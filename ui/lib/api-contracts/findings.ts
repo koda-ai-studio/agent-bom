@@ -368,6 +368,7 @@ export interface Vulnerability {
   published?: string | undefined;
   /** Phase 2 fields */
   severity_source?: string | undefined;
+  severity_note?: string | undefined;
   confidence?: number | undefined;
   match_confidence_tier?: string | undefined;
 }
@@ -463,6 +464,7 @@ export interface UnifiedFinding {
   published_at?: string | null | undefined;
   modified_at?: string | null | undefined;
   severity_source?: string | null | undefined;
+  severity_note?: string | null | undefined;
   confidence?: number | null | undefined;
   match_confidence_tier?: string | null | undefined;
   package?: string | null | undefined;

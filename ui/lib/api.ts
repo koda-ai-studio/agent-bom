@@ -338,7 +338,7 @@ export {
 } from "./api-errors";
 export { invalidate as invalidateApiCache, clearCache as _clearApiCacheForTests } from "./api-cache";
 export { ATLAS_LABELS as MITRE_ATLAS } from "./atlas-labels.generated";
-export { severityColor, severityText, severityDot, formatDate, isConfigured, agentClass, agentClassCounts } from "./api-format";
+export { severityColor, severityText, severitySourceLabel, severityDot, formatDate, isConfigured, agentClass, agentClassCounts } from "./api-format";
 export * from "./api-contracts";
 export * from "./api-catalogs";
 

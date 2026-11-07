@@ -3,6 +3,8 @@
 from collections.abc import Mapping
 from typing import Any, Literal
 
+from agent_bom.core.severity import severity_linked_cve
+
 FindingLane = Literal["vulnerabilities", "cloud", "iac", "secrets", "identity", "data", "other"]
 FINDING_LANES = ("vulnerabilities", "cloud", "iac", "secrets", "identity", "data", "other")
 
@@ -50,7 +52,16 @@ def lane_response_fields(row: Mapping[str, Any]) -> dict[str, Any]:
     evidence = row.get("evidence")
     evidence = evidence if isinstance(evidence, Mapping) else {}
     source = row.get("severity_source") or evidence.get("severity_source")
-    return {"lane": finding_lane(row), **({"severity_source": sanitize_text(source, max_len=64)} if isinstance(source, str) else {})}
+    fields: dict[str, Any] = {"lane": finding_lane(row)}
+    if isinstance(source, str):
+        fields["severity_source"] = sanitize_text(source, max_len=64)
+        linked_cve = severity_linked_cve(source)
+        if linked_cve:
+            fields["severity_linked_cve"] = sanitize_text(linked_cve, max_len=64)
+    note = row.get("severity_note") or evidence.get("severity_note")
+    if isinstance(note, str) and note:
+        fields["severity_note"] = sanitize_text(note, max_len=400)
+    return fields
 
 
 def model_lane_fields(finding: Any) -> dict[str, Any]:

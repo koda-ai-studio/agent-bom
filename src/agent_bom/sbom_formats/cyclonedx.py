@@ -8,6 +8,7 @@ from copy import deepcopy
 
 from agent_bom.advisory_ids import upstream_advisory_ids
 from agent_bom.checksums import add_checksum
+from agent_bom.core.severity import severity_linked_cve
 from agent_bom.models import Package, Vulnerability
 from agent_bom.scanners.enrichment_apply import apply_epss_entry
 
@@ -147,6 +148,13 @@ def vulnerability_source(vuln: Vulnerability) -> dict[str, str]:
 def vulnerability_enrichment_properties(vuln: Vulnerability, pkg_ref: str = "") -> list[dict[str, str]]:
     """Preserve scalar intelligence with the CVE supplying each value."""
     vuln_properties: list[dict[str, str]] = []
+    if vuln.severity_source:
+        vuln_properties.append({"name": "agent-bom:severity_source", "value": vuln.severity_source})
+    linked_cve = severity_linked_cve(vuln.severity_source)
+    if linked_cve:
+        vuln_properties.append({"name": "agent-bom:severity_linked_cve", "value": linked_cve})
+    if vuln.severity_note:
+        vuln_properties.append({"name": "agent-bom:severity_note", "value": vuln.severity_note})
     if vuln.match_confidence_tier or vuln.fixed_version:
         vuln_properties.append(
             {
@@ -272,3 +280,57 @@ def merge_vulnerability_observation(by_id: dict[str, dict], observation: dict) -
     incoming_properties = observation.get("properties")
     if isinstance(incoming_properties, list):
         existing["properties"] = merge_properties(existing.get("properties", []), incoming_properties)
+
+
+def _cdx_score_method(cvss_vector: str | None) -> str:
+    """Map a CVSS vector string onto the CDX 1.7 ``scoreMethod`` enum.
+
+    The enum separates CVSSv3 (3.0) from CVSSv31 (3.1), so a hardcoded
+    ``CVSSv3`` mislabels every 3.1 and 4.0 score the scanner produces. Falls
+    back to CVSSv3 when no vector is available, matching the prior default.
+    """
+    vector = (cvss_vector or "").strip().upper()
+    if vector.startswith("CVSS:4"):
+        return "CVSSv4"
+    if vector.startswith("CVSS:3.1"):
+        return "CVSSv31"
+    if vector.startswith("CVSS:3"):
+        return "CVSSv3"
+    if vector and not vector.startswith("CVSS:"):
+        # CVSS v2 vectors carry no version prefix (``AV:N/AC:L/Au:N/...``).
+        return "CVSSv2"
+    return "CVSSv3"
+
+
+def vulnerability_ratings(vuln: Vulnerability) -> list[dict[str, object]]:
+    """CVSS or plain severity, attributed to the linked CVE when it supplied them, then EPSS."""
+    ratings: list[dict[str, object]] = []
+    if vuln.cvss_score:
+        cvss_rating: dict[str, object] = {
+            "score": vuln.cvss_score,
+            "severity": vuln.severity.value,
+            "method": _cdx_score_method(vuln.cvss_vector),
+        }
+        if vuln.cvss_vector:
+            # CDX 1.7 `ratings[].vector` is the canonical slot for the metric
+            # string. Emitting a bare score forces every consumer to re-derive
+            # AV/AC/PR/UI — which they cannot, so the detail was simply lost.
+            cvss_rating["vector"] = vuln.cvss_vector
+        ratings.append(cvss_rating)
+    else:
+        ratings.append({"severity": vuln.severity.value})
+    linked_cve = severity_linked_cve(vuln.severity_source)
+    if linked_cve:
+        # The rating belongs to the linked CVE, not to the advisory carrying it.
+        ratings[0]["source"] = {"name": linked_cve, "url": f"https://osv.dev/vulnerability/{linked_cve}"}
+    if vuln.epss_score is not None:
+        # EPSS is a probability (0.0–1.0), not a CVSS-style severity — surface it
+        # as an `other`-method rating attributed to the EPSS source.
+        ratings.append(
+            {
+                "source": {"name": "EPSS", "url": "https://www.first.org/epss/"},
+                "score": vuln.epss_score,
+                "method": "other",
+            }
+        )
+    return ratings

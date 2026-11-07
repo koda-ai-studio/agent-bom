@@ -108,7 +108,7 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
         return {"has_permission_edges": 0, "privilege_escalations": 0}
     limits = {"max_principals": _MAX_PRINCIPALS, "max_depth": _MAX_DEPTH, "max_permission_witnesses": _MAX_PERMISSION_WITNESSES}
     input_limited = graph.completeness.truncated or graph.completeness.depth_limited
-    principals = [n for n in graph.nodes.values() if n.entity_type in _PRINCIPAL_TYPES]
+    principals = graph.nodes_of_types(_PRINCIPAL_TYPES)
     if not principals:
         graph.analysis_status[_ANALYZER] = GraphAnalysisStatus(
             status=GraphAnalysisState.LIMITED if input_limited else GraphAnalysisState.COMPLETE,

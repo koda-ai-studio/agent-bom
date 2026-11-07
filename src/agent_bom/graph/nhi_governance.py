@@ -226,7 +226,7 @@ def evaluate_identity_governance(
         for key, vals in usage.items():
             usage_map[str(key)] = {str(v) for v in vals}
 
-    identities = [n for n in graph.nodes.values() if n.entity_type in _GOVERNED_ENTITY_TYPES]
+    identities = graph.nodes_of_types(_GOVERNED_ENTITY_TYPES)
     results: list[IdentityGovernance] = []
     for node in identities[:_MAX_IDENTITIES]:
         attrs = node.attributes

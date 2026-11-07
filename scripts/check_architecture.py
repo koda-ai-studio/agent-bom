@@ -99,7 +99,6 @@ OPTIONAL_EXTRA_MODULES = frozenset(
         "uvicorn",
         "wandb",
         "watchdog",
-        "zstandard",
     }
 )
 BASELINE = Path("scripts/architecture-baseline.json")

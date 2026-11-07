@@ -157,6 +157,10 @@ class _SQLiteWorkspaceBackend:
             "source_id TEXT NOT NULL DEFAULT '', target_id TEXT NOT NULL DEFAULT '', "
             "UNIQUE(tenant_id, edge_key))"
         )
+        # Without the tenant-and-seq indexes a keyset page reads and sorts the
+        # tenant's whole table, so one full pass costs O(rows * pages).
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_ws_nodes_seq ON ws_nodes (tenant_id, seq)")
+        self._conn.execute("CREATE INDEX IF NOT EXISTS idx_ws_edges_seq ON ws_edges (tenant_id, seq)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_ws_nodes_type ON ws_nodes (tenant_id, entity_type, seq)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_ws_edges_source ON ws_edges (tenant_id, source_id, seq)")
         self._conn.execute("CREATE INDEX IF NOT EXISTS idx_ws_edges_target ON ws_edges (tenant_id, target_id, seq)")
@@ -309,11 +313,7 @@ class _SQLiteWorkspaceBackend:
         finally:
             if self._owns_file:
                 for suffix in ("", "-wal", "-shm"):
-                    p = Path(str(self._path) + suffix)
-                    try:
-                        p.unlink()
-                    except FileNotFoundError:
-                        pass  # best-effort cleanup; failure leaves nothing to undo
+                    Path(str(self._path) + suffix).unlink(missing_ok=True)
 
 
 class _PostgresWorkspaceBackend:

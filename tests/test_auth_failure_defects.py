@@ -764,11 +764,20 @@ def test_failed_usage_timestamp_does_not_fail_a_verified_key(monkeypatch, tmp_pa
     raw, key = create_api_key("person", Role.VIEWER)
     assert isinstance(key, ApiKey)
     store.add(key)
+    real = store._conn
 
-    def locked(*_args):
-        raise sqlite3.OperationalError("database is locked")
+    class DiskFull:
+        def execute(self, sql, *args):
+            if sql.startswith("UPDATE api_keys SET last_used"):
+                error = sqlite3.OperationalError("database or disk is full")
+                error.sqlite_errorcode = sqlite3.SQLITE_FULL
+                raise error
+            return real.execute(sql, *args)
 
-    monkeypatch.setattr(store, "_write", locked)
+        def __getattr__(self, name):
+            return getattr(real, name)
+
+    monkeypatch.setattr(SQLiteKeyStore, "_conn", property(lambda _self: DiskFull()))
     assert store.verify(raw).key_id == key.key_id
 
 

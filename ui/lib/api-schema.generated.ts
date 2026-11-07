@@ -1113,6 +1113,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/saml/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Saml Login Start
+         * @description Start SP-initiated SAML browser login.
+         */
+        get: operations["saml_login_start_v1_auth_saml_start_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/scim/config": {
         parameters: {
             query?: never;
@@ -14744,6 +14764,10 @@ export interface components {
             schema_version?: string | null;
             /** Severity */
             severity: string;
+            /** Severity Linked Cve */
+            severity_linked_cve?: string | null;
+            /** Severity Note */
+            severity_note?: string | null;
             /** Severity Source */
             severity_source?: string | null;
             /** Sla Due At */
@@ -28308,6 +28332,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SAMLLoginRequest"];
+                "application/x-www-form-urlencoded": {
+                    RelayState: string;
+                    SAMLResponse: string;
+                };
             };
         };
         responses: {
@@ -28321,6 +28349,20 @@ export interface operations {
                         [key: string]: unknown;
                     };
                 };
+            };
+            /** @description IdP form post verified: browser session started, redirected to the dashboard. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description SAML form exceeds the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
             "4XX": {
@@ -28399,6 +28441,42 @@ export interface operations {
                         [key: string]: unknown;
                     };
                 };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    saml_login_start_v1_auth_saml_start_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to the IdP with a new AuthnRequest; the browser is bound to this login by a cookie. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
             "4XX": {

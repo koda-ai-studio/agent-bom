@@ -44,6 +44,8 @@ def _now() -> str:
 
 
 _logger = logging.getLogger(__name__)
+_DEFAULT_BUSY_MS = 30000
+_STAMP_BUSY_MS = 100
 
 
 class SQLiteKeyStore:
@@ -143,8 +145,16 @@ class SQLiteKeyStore:
 
     def _write(self, sql: str, params: tuple[object, ...]) -> int:
         with self._write_lock:
-            cursor = self._conn.execute(sql, params)
-            self._conn.commit()
+            conn = self._conn
+            try:
+                cursor = conn.execute(sql, params)
+                conn.commit()
+            except sqlite3.Error:
+                # A failed statement leaves the implicit transaction open. Later reads
+                # would then pin an old snapshot and every later write on this thread's
+                # connection would fail as locked until the process restarts.
+                conn.rollback()
+                raise
             return int(cursor.rowcount)
 
     def add(self, key: ApiKey) -> None:
@@ -168,9 +178,14 @@ class SQLiteKeyStore:
             where += " AND tenant_id = ?"
             params = (principal_id, tenant_id)
         with self._write_lock:
-            rows = self._conn.execute(f"SELECT key_id FROM api_keys WHERE {where}", params).fetchall()  # nosec B608 - fixed column list; values are bound
-            self._conn.execute(f"UPDATE api_keys SET revoked_at = ?, rotation_overlap_until = NULL WHERE {where}", (_now(), *params))  # nosec B608 - fixed column list; values are bound
-            self._conn.commit()
+            conn = self._conn
+            try:
+                rows = conn.execute(f"SELECT key_id FROM api_keys WHERE {where}", params).fetchall()  # nosec B608 - fixed column list; values are bound
+                conn.execute(f"UPDATE api_keys SET revoked_at = ?, rotation_overlap_until = NULL WHERE {where}", (_now(), *params))  # nosec B608 - fixed column list; values are bound
+                conn.commit()
+            except sqlite3.Error:
+                conn.rollback()
+                raise
         return [row[0] for row in rows]
 
     def mark_rotating(self, key_id: str, *, replacement_key_id: str, overlap_until: str) -> bool:
@@ -204,7 +219,28 @@ class SQLiteKeyStore:
             except sqlite3.OperationalError as exc:
                 # A usage timestamp must not turn a verified key into an error while another writer holds the file.
                 _logger.warning("API key last-used time not recorded (%s)", type(exc).__name__)
+            self._stamp_last_used(key.key_id, key.last_used)
         return key
+
+    def _stamp_last_used(self, key_id: str, when: str) -> None:
+        """Record usage unless another writer holds the database.
+
+        The key was already checked against a committed row, so a long write such
+        as a graph snapshot can only delay this stamp, never decide the request.
+        """
+        with self._write_lock:
+            conn = self._conn
+            conn.execute(f"PRAGMA busy_timeout={_STAMP_BUSY_MS}")
+            try:
+                conn.execute("UPDATE api_keys SET last_used = ? WHERE key_id = ?", (when, key_id))
+                conn.commit()
+            except sqlite3.OperationalError as exc:
+                conn.rollback()
+                # A usage timestamp must not turn a verified key into an error, whatever stopped it.
+                if exc.sqlite_errorcode & 0xFF not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
+                    _logger.warning("API key last-used time not recorded (%s)", type(exc).__name__)
+            finally:
+                conn.execute(f"PRAGMA busy_timeout={_DEFAULT_BUSY_MS}")
 
     def has_keys(self) -> bool:
         return self._conn.execute("SELECT 1 FROM api_keys WHERE revoked_at IS NULL LIMIT 1").fetchone() is not None

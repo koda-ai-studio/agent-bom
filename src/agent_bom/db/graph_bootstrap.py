@@ -1,5 +1,6 @@
 """SQLite graph startup repair and read initialization."""
 
+import os
 import sqlite3
 from collections.abc import Callable
 from pathlib import Path
@@ -25,20 +26,24 @@ def invalidate_read_schema(path: Path) -> None:
         _INITIALIZED_FILES.pop(key, None)
 
 
+def _read_schema_is_current(key: str, metadata: os.stat_result) -> bool:
+    # Linux can give a re-created file the deleted file's inode, so an empty file
+    # with a known identity is still a new file and needs its schema.
+    return metadata.st_size > 0 and _INITIALIZED_FILES.get(key) == (metadata.st_dev, metadata.st_ino)
+
+
 def ensure_read_schema(path: Path, initialize: Callable[[], sqlite3.Connection], refresh: Callable[[sqlite3.Connection], None]) -> None:
     """Initialize once per physical file, retaining read concurrency in WAL mode."""
     key = str(path.resolve())
-    metadata = path.stat()
-    identity = (metadata.st_dev, metadata.st_ino)
-    if _INITIALIZED_FILES.get(key) == identity:
+    if _read_schema_is_current(key, path.stat()):
         return
     # Reuse the per-file writer queue: cold reads may migrate schema, but one
     # busy database must not hold up initialization or recovery of another.
     with graph_writer_admission(path):
         metadata = path.stat()
-        identity = (metadata.st_dev, metadata.st_ino)
-        if _INITIALIZED_FILES.get(key) == identity:
+        if _read_schema_is_current(key, metadata):
             return
+        identity = (metadata.st_dev, metadata.st_ino)
         # Retire the old identity before attempting replacement initialization:
         # a failed replacement may otherwise leave a reusable inode cached.
         _INITIALIZED_FILES.pop(key, None)

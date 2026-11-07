@@ -12,6 +12,7 @@ import { ssoLoginPreset } from "@/lib/sso-login-presets";
 const AUTH_FAILURE_MESSAGE =
   "Sign-in failed. Check your API key or contact your administrator.";
 const OIDC_BROWSER_LOGIN_PATH = "/v1/auth/oidc/login";
+const SAML_BROWSER_LOGIN_PATH = "/v1/auth/saml/start";
 const SNOWFLAKE_OAUTH_LOGIN_PATH = "/v1/auth/snowflake/login";
 
 function isAuthFailure(message: string): boolean {
@@ -113,7 +114,8 @@ export function LoginPanel({
     const configuredModes = session?.configured_modes ?? [];
     const browserOidcConfigured = configuredModes.includes("oidc_browser");
     const snowflakeOauthConfigured = configuredModes.includes("snowflake_oauth");
-    const ssoConfigured = browserOidcConfigured || snowflakeOauthConfigured;
+    const samlConfigured = configuredModes.includes("saml_sso");
+    const ssoConfigured = browserOidcConfigured || snowflakeOauthConfigured || samlConfigured;
     const trustedProxyConfigured = configuredModes.includes("trusted_proxy");
     const oidcBearerConfigured = configuredModes.includes("oidc_bearer");
     const proxyOrBearerHint = !ssoConfigured && (trustedProxyConfigured || oidcBearerConfigured);
@@ -141,7 +143,7 @@ export function LoginPanel({
             <h1 className="text-center text-2xl font-semibold tracking-tight text-[var(--foreground)]">{title}</h1>
             <p className="mt-2 text-center text-sm leading-5 text-[var(--text-secondary)]">
               {ssoConfigured
-                ? `${browserOidcConfigured ? ssoPreset.buttonLabel : "Sign in with Snowflake"}, or use an API key as a fallback.`
+                ? `${browserOidcConfigured ? ssoPreset.buttonLabel : snowflakeOauthConfigured ? "Sign in with Snowflake" : "Sign in with SAML"}, or use an API key as a fallback.`
                 : "Enter your API key to access the dashboard."}
             </p>
           </div>
@@ -167,6 +169,18 @@ export function LoginPanel({
                   }
                 >
                   Sign in with Snowflake
+                </a>
+              ) : null}
+              {samlConfigured ? (
+                <a
+                  href={SAML_BROWSER_LOGIN_PATH}
+                  className={
+                    browserOidcConfigured || snowflakeOauthConfigured
+                      ? "login-sso-button login-sso-secondary"
+                      : "login-sso-button login-sso-browser"
+                  }
+                >
+                  Sign in with SAML
                 </a>
               ) : null}
               {showApiKeyDivider ? apiKeyDivider : null}

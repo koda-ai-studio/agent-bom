@@ -341,6 +341,36 @@ def test_saml_rejected_assertion_counts(monkeypatch):
         assert client.post("/v1/auth/saml/login", json=body).status_code == 429
 
 
+def test_saml_form_post_counts_a_rejected_assertion_and_not_a_missing_login(monkeypatch):
+    from agent_bom.api import saml
+    from agent_bom.api.routes.enterprise_routes import sso
+
+    monkeypatch.setenv("AGENT_BOM_AUTH_FAILURE_LIMIT", "2")
+    monkeypatch.setattr(audit_log, "_audit_log", audit_log.InMemoryAuditLog())
+    monkeypatch.setattr(saml, "saml_runtime_available", lambda: True)
+    monkeypatch.setattr(saml, "saml_unavailable_reason", lambda: "")
+    monkeypatch.setattr(sso, "_consume_saml_relay_state", lambda _state: None)
+    monkeypatch.setattr(sso, "_check_auth_session_rate_limit", lambda _request: None)
+    monkeypatch.setattr(sso, "_saml_login_cookie", lambda _url: ("saml-login", "lax"))
+
+    def reject(*_args, **_kwargs):
+        raise saml.SAMLError("signature invalid")
+
+    config = SimpleNamespace(verify_response=reject, session_ttl_seconds=60, sp_acs_url="https://sp.example/acs")
+    monkeypatch.setattr(saml.SAMLConfig, "from_env", classmethod(lambda cls: config))
+    form = {"SAMLResponse": "assertion", "RelayState": "relay"}
+
+    # No browser that started this login: nothing was verified.
+    monkeypatch.setattr(sso, "open_saml_login", lambda *_args: None)
+    with TestClient(_sso_app(), client=("192.0.2.164", 1000)) as client:
+        assert {client.post("/v1/auth/saml/login", data=form).status_code for _ in range(6)} == {401}
+
+    monkeypatch.setattr(sso, "open_saml_login", lambda *_args: "request-id")
+    with TestClient(_sso_app(), client=("192.0.2.165", 1000)) as client:
+        assert client.post("/v1/auth/saml/login", data=form).status_code == 401
+        assert client.post("/v1/auth/saml/login", data=form).status_code == 429
+
+
 @pytest.mark.parametrize("module_name", ["agent_bom.api.oidc_browser", "agent_bom.api.snowflake_oauth"])
 def test_token_endpoint_outage_is_not_a_failed_credential(monkeypatch, module_name):
     import importlib

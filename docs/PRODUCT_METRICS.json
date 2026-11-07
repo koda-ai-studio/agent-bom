@@ -28,13 +28,13 @@
     },
     {
       "name": "GitHub workflow files",
-      "value": 44,
+      "value": 45,
       "source": ".github/workflows",
       "notes": "Counts .yml and .yaml workflow definitions."
     },
     {
       "name": "API route modules",
-      "value": 97,
+      "value": 99,
       "source": "src/agent_bom/api/routes",
       "notes": "Counts Python files in the routes package, including __init__.py."
     },
@@ -46,7 +46,7 @@
     },
     {
       "name": "Python modules",
-      "value": 2242,
+      "value": 2249,
       "source": "src/agent_bom",
       "notes": "Counts all Python files recursively."
     },

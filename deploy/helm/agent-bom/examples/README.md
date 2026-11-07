@@ -115,8 +115,8 @@ Which keys each profile requires, and its first-run login posture:
 |---|---|---|---|
 | `focused-pilot` (`eks-mcp-pilot`) | `agent-bom-control-plane-db` + `agent-bom-control-plane-maintenance` + `agent-bom-control-plane-admin` + `agent-bom-control-plane-auth` | app: `AGENT_BOM_POSTGRES_URL`; maintenance: `AGENT_BOM_POSTGRES_MAINTENANCE_URL`; admin: `ALEMBIC_DATABASE_URL`; auth: browser-session, connections, and API keys | Seeded `AGENT_BOM_API_KEYS` admin key |
 | `eks-vanilla` | same four split Secrets | app: `AGENT_BOM_POSTGRES_URL`; maintenance: `AGENT_BOM_POSTGRES_MAINTENANCE_URL`; admin: `ALEMBIC_DATABASE_URL`; auth: `AGENT_BOM_BROWSER_SESSION_SIGNING_KEY`, `AGENT_BOM_AUDIT_HMAC_KEY`, `AGENT_BOM_CONNECTIONS_KEY`, `AGENT_BOM_API_KEYS` | Seeded `AGENT_BOM_API_KEYS` admin key |
-| `sqlite-pilot` | `agent-bom-control-plane` (demo) | `AGENT_BOM_CONNECTIONS_KEY` only (sqlite, replicas 1) | Anonymous — the profile sets a **visible, demo-only** `AGENT_BOM_ALLOW_UNAUTHENTICATED_API=1` (viewer role). Not for production |
-| `synthetic-enterprise-story` | `agent-bom-control-plane` (demo) | `AGENT_BOM_CONNECTIONS_KEY` only (sqlite, replicas 1) | Anonymous viewer — synthetic fixture only, explicitly labeled, and not for production or live collection |
+| `sqlite-pilot` | `agent-bom-control-plane` (demo) | `AGENT_BOM_CONNECTIONS_KEY`, `AGENT_BOM_API_KEYS` (sqlite, replicas 1) | Seeded `AGENT_BOM_API_KEYS` key. Not for production |
+| `synthetic-enterprise-story` | `agent-bom-control-plane` (demo) | `AGENT_BOM_CONNECTIONS_KEY`, `AGENT_BOM_API_KEYS` (sqlite, replicas 1) | Seeded `AGENT_BOM_API_KEYS` key — synthetic fixture only, explicitly labeled, and not for production or live collection |
 
 Swap `AGENT_BOM_API_KEYS` for the OIDC block
 (`AGENT_BOM_OIDC_ISSUER` / `AGENT_BOM_OIDC_CLIENT_ID` /
