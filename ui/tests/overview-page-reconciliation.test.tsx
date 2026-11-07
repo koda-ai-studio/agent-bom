@@ -194,7 +194,7 @@ describe("Overview canonical finding counts", () => {
     await waitFor(() => expect(screen.getByLabelText("Evidence scopes")).toHaveTextContent("Findings: Imported report"));
     expect(screen.queryByText("Canonical posture")).not.toBeInTheDocument();
     expect(screen.queryByText("49%")).not.toBeInTheDocument();
-    expect(screen.queryByText("Current findings · configured window")).not.toBeInTheDocument();
+    expect(screen.queryByText("Current finding occurrences · configured window")).not.toBeInTheDocument();
     expect(screen.queryByText("12 scans")).not.toBeInTheDocument();
     expect(screen.queryByText("Recent scans & activity")).not.toBeInTheDocument();
     expect(screen.queryByText("Last successful scan")).not.toBeInTheDocument();
@@ -378,7 +378,7 @@ describe("Overview canonical finding counts", () => {
     const count = await screen.findByText("22 vulns");
     const row = count.closest("a");
     expect(row).toHaveAccessibleName(/SBOM scan.*22 vulns/i);
-    expect(row).toHaveTextContent("4 CRIT");
+    expect(row).toHaveTextContent("4 critical scan findings");
     expect(row).not.toHaveTextContent("Metrics unavailable");
     expect(row).not.toHaveTextContent("agents");
     expect(apiMock.getScanDashboard).toHaveBeenCalledTimes(1);
@@ -403,7 +403,7 @@ describe("Overview canonical finding counts", () => {
     const high = screen.getByRole("link", { name: /^High 11/i });
     expect(critical).toHaveTextContent("7");
     expect(high).toHaveTextContent("11");
-    expect(screen.getByText("Current findings · configured window")).toBeInTheDocument();
+    expect(screen.getByText("Current finding occurrences · configured window")).toBeInTheDocument();
     expect(critical).toHaveAttribute("href", "/findings?scope=all&severity=critical");
   });
 
