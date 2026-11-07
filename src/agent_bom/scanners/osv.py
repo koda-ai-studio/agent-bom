@@ -24,7 +24,7 @@ from agent_bom.http_client import OfflineModeError, create_client, request_with_
 from agent_bom.models import Package
 from agent_bom.os_advisory import OS_DISTRO_COMPARATOR_FAMILIES
 from agent_bom.package_utils import normalize_package_name
-from agent_bom.scanners.osv_batch import follow_result_pages, merge_batch_response, pagination_limit_failure, query_failures
+from agent_bom.scanners.osv_batch import follow_result_pages, merge_batch_response, page_limit_failures, query_failures
 from agent_bom.scanners.osv_details import OSV_API_URL as OSV_API_URL
 from agent_bom.scanners.osv_details import enrich_results_if_needed as enrich_results_if_needed
 from agent_bom.scanners.osv_details import enrich_vuln_details as enrich_vuln_details
@@ -52,7 +52,6 @@ OSV_BATCH_URL = f"{OSV_API_URL}/querybatch"
 # Separate from per-request exponential backoff (http_client.py) — this pauses the
 # whole batch queue so subsequent batches don't immediately hammer a throttled API.
 _PIPELINE_429_BACKOFF = 60.0
-_MAX_OSV_PAGE_FOLLOWUPS = 20
 
 
 def candidate_package_names(
@@ -476,9 +475,9 @@ async def query_osv_batch_impl(
                 tokens = await _fetch(batch_indexes, batch)
                 if tokens is None:
                     return partial, batch_errors
-                unfinished = await follow_result_pages(tokens, queries, _fetch, bump_scan_perf, _MAX_OSV_PAGE_FOLLOWUPS)
+                unfinished = await follow_result_pages(tokens, queries, _fetch, bump_scan_perf)
                 if unfinished.limit_reached:
-                    batch_errors.extend(query_failures(sorted(unfinished.indexes), pkg_index, pagination_limit_failure(console)))
+                    batch_errors.extend(page_limit_failures(console, unfinished.indexes, pkg_index))
                 completed_queries.update(idx for idx in batch_indexes if idx not in unfinished.indexes)
                 _record_batch_answered(bump_scan_perf)
             return partial, batch_errors
