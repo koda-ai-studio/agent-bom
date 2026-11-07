@@ -244,7 +244,7 @@ def test_console_remediation_separates_suspected(monkeypatch):
 
 
 def test_remediation_action_for_suspected_group():
-    from agent_bom.output.console_remediation import _remediation_action
+    import agent_bom.output.console_remediation as remediation
 
     group = {
         "is_malicious": True,
@@ -253,7 +253,7 @@ def test_remediation_action_for_suspected_group():
         "ecosystem": "pypi",
         "fix": None,
     }
-    action = _remediation_action(group)
+    action = remediation._remediation_action(group)
     assert action.startswith("Confirm reqeusts is the package you intended")
     assert group["suspected"] is True
     assert group["reason"] == TYPOSQUAT_REASON

@@ -21,13 +21,13 @@ from agent_bom.cli.agents.scan_pipeline.helpers import (
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.evidence.scan_run import (
-    PACKAGE_NOT_ON_REGISTRY,
     ScanIssue,
     ScanOutcome,
     ScanRun,
     ScanScope,
     ScanScopeStatus,
     nothing_to_scan_issue,
+    package_not_on_registry_issue,
     scanner_warning_issues,
     vulnerability_scan_skipped_issue,
 )
@@ -161,15 +161,7 @@ def _package_not_on_registry_issues(packages: list[Any]) -> list[ScanIssue]:
     missing = packages_not_on_registry(packages)
     if not missing:
         return []
-    return [
-        ScanIssue(
-            code=PACKAGE_NOT_ON_REGISTRY,
-            stage="inventory",
-            source="autodiscover",
-            message=package_not_on_registry_message(missing),
-            affects_coverage=False,
-        )
-    ]
+    return [package_not_on_registry_issue(package_not_on_registry_message(missing))]
 
 
 def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:

@@ -70,7 +70,7 @@ def _reach_findings(report: AIBOMReport) -> list:
 
 def test_notebook_keeps_its_own_surface_and_is_not_an_mcp_server(tmp_path):
     _notebook(tmp_path)
-    [agent], _warnings = scan_jupyter_notebooks(tmp_path)
+    [agent], _ = scan_jupyter_notebooks(tmp_path)
     [server] = agent.mcp_servers
     assert server.surface == ServerSurface.NOTEBOOK
     assert not server.is_mcp_surface
@@ -81,7 +81,7 @@ def test_notebook_keeps_its_own_surface_and_is_not_an_mcp_server(tmp_path):
 
 def test_workflow_keeps_its_own_surface_and_is_not_an_mcp_server(tmp_path):
     _workflow(tmp_path)
-    [agent], _warnings = scan_github_actions(str(tmp_path))
+    [agent], _ = scan_github_actions(str(tmp_path))
     [server] = agent.mcp_servers
     assert server.surface == ServerSurface.CI_WORKFLOW
     assert not server.is_mcp_surface

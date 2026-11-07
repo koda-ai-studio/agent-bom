@@ -253,6 +253,10 @@ def nothing_to_scan_issue(names: list[str]) -> ScanIssue:
     )
 
 
+def package_not_on_registry_issue(message: str) -> ScanIssue:
+    return ScanIssue(code=PACKAGE_NOT_ON_REGISTRY, stage="inventory", source="autodiscover", message=message, affects_coverage=False)
+
+
 def effective_scan_run(report: Any) -> ScanRun:
     """Return the report's canonical run with legacy coverage gaps folded in."""
     from agent_bom.evidence.cloud_scan import cloud_scan_scopes
