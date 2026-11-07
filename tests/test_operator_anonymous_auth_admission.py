@@ -1,4 +1,4 @@
-"""Explicit anonymous reads must not depend on authentication failure state."""
+"""Explicit anonymous access must not depend on authentication failure state."""
 
 import pytest
 from starlette.testclient import TestClient
@@ -12,6 +12,7 @@ from agent_bom.api.read_models.posture import PostureResponse
 @pytest.fixture(autouse=True)
 def anonymous_viewer(monkeypatch):
     monkeypatch.setenv("AGENT_BOM_NO_AUTH_ROLE", "viewer")
+    monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "0")
 
 
 @pytest.mark.parametrize("failure", [RuntimeError, TimeoutError])
@@ -60,9 +61,9 @@ def test_anonymous_mode_never_bypasses_auth_state_for_presented_credentials(monk
 
 @pytest.mark.parametrize(
     ("method", "path"),
-    [("GET", "/v1/auth/keys"), ("GET", "/v1/auth/oidc/callback"), ("POST", "/v1/scan"), ("GET", "/v1/unclassified-read")],
+    [("GET", "/v1/auth/keys"), ("GET", "/v1/auth/oidc/callback"), ("GET", "/scim/v2/Users"), ("GET", "/v1/unclassified-read")],
 )
-def test_anonymous_admission_does_not_exempt_auth_mutations_or_unknown_routes(monkeypatch, method, path):
+def test_anonymous_admission_does_not_exempt_auth_or_unknown_routes(monkeypatch, method, path):
     def unavailable(*args):
         raise RuntimeError("synthetic auth state unavailable")
 
@@ -70,6 +71,30 @@ def test_anonymous_admission_does_not_exempt_auth_mutations_or_unknown_routes(mo
     server.configure_api(api_key=None, allow_unauthenticated=True)
     response = TestClient(server.app).request(method, path)
     assert response.status_code == 503, response.text
+
+
+@pytest.mark.parametrize(("role", "api_key", "expected"), [("viewer", None, 403), ("admin", None, 202), ("admin", "synthetic-key", 403)])
+def test_anonymous_mutations_keep_configured_role_and_credential_clamp(monkeypatch, tmp_path, role, api_key, expected):
+    from agent_bom.db import adoption_events
+
+    calls = []
+
+    def unavailable(*args):
+        calls.append(1)
+        raise RuntimeError("synthetic auth state unavailable")
+
+    monkeypatch.setenv("AGENT_BOM_NO_AUTH_ROLE", role)
+    monkeypatch.setattr(SQLiteAuthFailureStore, "remaining", unavailable)
+    store = adoption_events.AdoptionEventStore(tmp_path / "events.db", enabled=True)
+    monkeypatch.setattr(adoption_events, "_store", store)
+    server.configure_api(api_key=api_key, allow_unauthenticated=True)
+    response = TestClient(server.app).post(
+        "/v1/observability/adoption/events",
+        json={"event": "artifact_created", "channel": "control_plane", "artifact_type": "sarif"},
+    )
+    assert response.status_code == expected, response.text
+    assert calls == []
+    assert store.summary()["counts"].get("artifact_created", 0) == (1 if expected == 202 else 0)
 
 
 def test_anonymous_reads_still_require_operator_opt_in(monkeypatch):
@@ -80,6 +105,18 @@ def test_anonymous_reads_still_require_operator_opt_in(monkeypatch):
 
     monkeypatch.setattr(SQLiteAuthFailureStore, "remaining", unavailable)
     server.configure_api(api_key="synthetic-configured-key", allow_unauthenticated=False)
+    response = TestClient(server.app).get("/v1/posture")
+    assert response.status_code == 503, response.text
+
+
+def test_configured_scim_path_never_uses_anonymous_admission(monkeypatch):
+    monkeypatch.setenv("AGENT_BOM_SCIM_BASE_PATH", "/v1/posture")
+
+    def unavailable(*args):
+        raise RuntimeError("synthetic auth state unavailable")
+
+    monkeypatch.setattr(SQLiteAuthFailureStore, "remaining", unavailable)
+    server.configure_api(api_key=None, allow_unauthenticated=True)
     response = TestClient(server.app).get("/v1/posture")
     assert response.status_code == 503, response.text
 

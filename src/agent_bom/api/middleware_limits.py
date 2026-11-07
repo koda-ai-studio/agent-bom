@@ -297,7 +297,7 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         rpm: int = DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM,
-        anonymous_read: Callable[[StarletteRequest], bool] | None = None,
+        anonymous_request: Callable[[StarletteRequest], bool] | None = None,
     ):
         super().__init__(app)
         self._rpm = _validate_rate_limit("global_ip_rpm", rpm, max_rpm=MAX_RATE_LIMIT_RPM * 5)
@@ -306,7 +306,7 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
         from agent_bom.api.auth_failure_policy import AuthFailurePolicy
 
         self._auth_failures = AuthFailurePolicy()
-        self._anonymous_read = anonymous_read
+        self._anonymous_request = anonymous_request
 
     def _bucket_key(self, request: StarletteRequest) -> str:
         client_ip = request.client.host if request.client else "unknown"
@@ -323,7 +323,7 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
 
         if request.method == "OPTIONS":
             return await call_next(request)
-        if self._anonymous_read is None or not self._anonymous_read(request):
+        if self._anonymous_request is None or not self._anonymous_request(request):
             if denied := await self._auth_failures.before(request):
                 return denied
 

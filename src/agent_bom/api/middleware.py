@@ -353,21 +353,20 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         return False
 
     @classmethod
-    def anonymous_viewer_read(cls, request: StarletteRequest) -> bool:
-        """Classify credential-free reads; callers must require anonymous opt-in.
+    def anonymous_request(cls, request: StarletteRequest) -> bool:
+        """Classify credential-free operations; callers must require anonymous opt-in.
 
         This only avoids an authentication-state dependency. The resolver and
         route authorization still run, including the configured anonymous role.
         """
-        if request.method not in {"GET", "HEAD"} or request.url.path.startswith("/v1/auth/"):
-            return False
         auth = request.headers.get("authorization", "")
         if auth or request.headers.get("x-api-key") or request.cookies.get(SESSION_COOKIE_NAME):
             return False
         if cls._credential_presented(request, auth):
             return False
-        policy = route_policy(request.method, request.url.path)
-        return policy is not None and policy.minimum_role == "viewer"
+        if request.url.path.startswith("/v1/auth/") or cls._is_scim_path(request.url.path):
+            return False
+        return route_policy(request.method, request.url.path) is not None
 
     async def _serve_anonymous(self, request: StarletteRequest, call_next: RequestResponseEndpoint) -> Response:
         """Serve a credential-less request as the configured NO_AUTH_ROLE.
@@ -681,7 +680,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             )
         )
 
-    def _is_scim_path(self, path: str) -> bool:
+    @staticmethod
+    def _is_scim_path(path: str) -> bool:
         from agent_bom.api.scim import scim_base_path
 
         base = scim_base_path()
