@@ -151,7 +151,7 @@ def _stdout_serialization(
             return json.dumps(to_badge(report), indent=2)
         return json.dumps(to_redacted_json(report, report_json=report_json), indent=2)
     if output_format == "cyclonedx":
-        return json.dumps(to_cyclonedx(report), indent=2)
+        return json.dumps(to_cyclonedx(report, spec_version="1.6"), indent=2)
     if output_format == "sarif":
         return json.dumps(to_sarif(report, exclude_unfixable=exclude_unfixable), indent=2)
     if output_format == "spdx":
@@ -393,7 +393,7 @@ def _emit_document_report(
         return True
     elif output_format == "cyclonedx":
         out_path = _resolve_output_path(output, output_format)
-        export_cyclonedx(report, out_path)
+        export_cyclonedx(report, out_path, spec_version="1.6")
         announce_report_written(con, "CycloneDX BOM", out_path, quiet=quiet)
         return True
     elif output_format == "sarif":
@@ -523,7 +523,7 @@ def _emit_inferred_report(
         return True
     elif output:
         if output.endswith(".cdx.json"):
-            export_cyclonedx(report, output)
+            export_cyclonedx(report, output, spec_version="1.6")
         elif output.endswith(".json"):
             export_json(report, output, report_json=ctx.report_json)
         elif output.endswith(".sarif"):

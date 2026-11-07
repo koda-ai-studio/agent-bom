@@ -21,7 +21,7 @@ A curated registry of 1295 MCP server security metadata entries.
 ```bash
 # CLI
 agent-bom registry search brave-search
-agent-bom registry list --risk high
+agent-bom registry list --risk-level high
 
 # MCP tool
 registry_lookup(server_name="brave-search")

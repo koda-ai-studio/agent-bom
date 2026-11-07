@@ -27,6 +27,10 @@ def register_operator_key_ids(source: str, key_ids: list[str]) -> None:
     _active_operator_key_ids[source] = frozenset(key_ids)
 
 
+class TenantNotProvisionedError(ValueError):
+    """A tenant must be provisioned before it can own persisted API keys."""
+
+
 @dataclass
 class ApiKey:
     """Stored API key metadata (the raw key is never stored)."""
@@ -53,6 +57,7 @@ class ApiKey:
     # (explicit → scim_subject_id → owner). Deprovisioning a subject revokes
     # every key keyed to its principal_id, independent of the display ``name``.
     principal_id: str | None = None
+    last_used: str | None = None
 
     def __post_init__(self) -> None:
         if not self.created_at:
@@ -129,6 +134,7 @@ class ApiKey:
             "name": self.name,
             "role": self.role.value,
             "created_at": self.created_at,
+            "last_used": self.last_used,
             "expires_at": self.expires_at,
             "scopes": self.scopes,
             "tenant_id": self.tenant_id,

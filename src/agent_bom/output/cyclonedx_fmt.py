@@ -579,13 +579,15 @@ def _build_training_component(run: dict, comp_id: int) -> tuple[dict, str]:
 # ── Main export ──────────────────────────────────────────────────────────────
 
 
-def to_cyclonedx(report: AIBOMReport) -> dict:
+def to_cyclonedx(report: AIBOMReport, *, spec_version: str = "1.7") -> dict:
     """Build CycloneDX 1.7 dict from report with ML BOM extensions.
 
     Emits native CycloneDX 1.7 ``machine-learning-model`` components with
     ``modelCard`` for model provenance, ``data`` components for datasets,
     and training run metadata via ``quantitativeAnalysis``.
     """
+    if spec_version not in {"1.6", "1.7"}:
+        raise ValueError("Supported CycloneDX versions are 1.6 and 1.7")
     components = []
     scan_run = effective_scan_run(report)
     services: list[dict] = []
@@ -849,7 +851,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
 
     cdx = {
         "bomFormat": "CycloneDX",
-        "specVersion": "1.7",
+        "specVersion": spec_version,
         "serialNumber": f"urn:uuid:{report.scan_id}" if report.scan_id else f"urn:uuid:{uuid4()}",
         "version": 1,
         "metadata": {
@@ -910,6 +912,6 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
     return attach_cloud_context(sanitize_linked_document(cdx), report, "cyclonedx")
 
 
-def export_cyclonedx(report: AIBOMReport, output_path: str) -> None:
+def export_cyclonedx(report: AIBOMReport, output_path: str, *, spec_version: str = "1.7") -> None:
     """Export report as CycloneDX 1.7 JSON file."""
-    write_json_file(to_cyclonedx(report), output_path)
+    write_json_file(to_cyclonedx(report, spec_version=spec_version), output_path)

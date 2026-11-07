@@ -529,7 +529,7 @@ async def test_receive_push_normalizes_report_contract_and_persists_graph(tmp_pa
     assert pushed_job is not None
     assert pushed_job.result["scan_id"] == pushed["job_id"]
     assert pushed_job.result["blast_radius"][0]["vulnerability_id"] == "CVE-2026-0001"
-    assert pushed_job.result["blast_radii"][0]["vulnerability_id"] == "CVE-2026-0001"
+    assert "blast_radii" not in pushed_job.result
     assert pushed_job.result["agents"][0]["type"] == "claude-desktop"
     assert pushed_job.result["agents"][0]["agent_type"] == "claude-desktop"
     pushed_server = pushed_job.result["agents"][0]["mcp_servers"][0]

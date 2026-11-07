@@ -88,7 +88,7 @@ _DEFAULT_STORE_BACKED_MIN_ENTITIES = 5_000
 def _estimate_graph_entities(report_json: Mapping[str, Any] | dict[str, Any]) -> int:
     """Cheap O(report) entity estimate for the store-backed auto gate.
 
-    Counts agents, nested MCP servers/packages, top-level packages, findings,
+    Counts agents, nested MCP servers/packages, the flattened package table, findings,
     and blast-radius entries already resident in ``report_json``. Under-approximates
     final graph node count (overlays mint extras) — acceptable for a heuristic.
     """
@@ -110,6 +110,9 @@ def _estimate_graph_entities(report_json: Mapping[str, Any] | dict[str, Any]) ->
                         total += len(packages)
     for key in ("packages", "findings"):
         value = report_json.get(key) or []
+        if key == "packages" and not value:
+            entities = report_json.get("ai_bom_entities")
+            value = entities.get("packages", []) if isinstance(entities, Mapping) else []
         if isinstance(value, list):
             total += len(value)
     blast = report_json.get("blast_radius") or []

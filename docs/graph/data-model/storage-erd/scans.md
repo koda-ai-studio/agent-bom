@@ -173,8 +173,8 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `job_overview_revisions` | Postgres, SQLite | 3 |  | persistent |
 | `job_queue` | Postgres | 13 |  | persistent |
 | `jobs` | SQLite | 14 |  | persistent |
-| `mcp_scan_results` | Postgres | 6 |  | persistent |
-| `report_jobs` | Postgres | 11 |  | persistent |
+| `mcp_scan_results` | Postgres, SQLite | 6 |  | persistent |
+| `report_jobs` | Postgres, SQLite | 11 |  | persistent |
 | `scan_dispatch_queue` | Postgres | 7 |  | persistent |
 | `scan_jobs` | Postgres, Snowflake | 15 |  | persistent |
 | `scan_metadata` | ClickHouse | 14 | yes | persistent |

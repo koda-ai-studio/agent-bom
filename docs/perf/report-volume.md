@@ -123,3 +123,11 @@ contents private; the measurement does not require publishing them.
   use `GET /v1/findings`, which reads the normalized finding tables.
 - No production-size estate was available; the 20x tiled run shows the writer's
   memory shape, not real-world compression ratios.
+
+## Compatibility and duplicate sections
+
+The public root `packages` field remains available alongside
+`ai_bom_entities.packages`. Ingest normalizes legacy `blast_radii` to
+`blast_radius` without storing a second identical section. Different legacy
+content, package occurrences, findings, and the inventory replay projection
+remain intact. No reduction of the saved report's root package table is claimed.

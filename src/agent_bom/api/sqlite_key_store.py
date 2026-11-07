@@ -85,6 +85,8 @@ class SQLiteKeyStore:
             )
             """
         )
+        if "last_used" not in {row[1] for row in conn.execute("PRAGMA table_info(api_keys)")}:
+            conn.execute("ALTER TABLE api_keys ADD COLUMN last_used TEXT")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys (key_prefix)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_principal ON api_keys (tenant_id, principal_id)")
         conn.commit()
@@ -129,6 +131,7 @@ class SQLiteKeyStore:
             scim_subject_id=row[13],
             owner=row[14],
             principal_id=row[15],
+            last_used=row[16] if len(row) > 16 else None,
         )
 
     def _write(self, sql: str, params: tuple[object, ...]) -> int:
@@ -168,15 +171,15 @@ class SQLiteKeyStore:
         return self._write(sql, (replacement_key_id, overlap_until, key_id)) > 0
 
     def get(self, key_id: str) -> ApiKey | None:
-        row = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys WHERE key_id = ?", (key_id,)).fetchone()  # nosec B608 - fixed column list; values are bound
+        row = self._conn.execute(f"SELECT {_COLUMNS}, last_used FROM api_keys WHERE key_id = ?", (key_id,)).fetchone()  # nosec B608 - fixed column list; values are bound
         return self._row_to_key(row) if row else None
 
     def list_keys(self, tenant_id: str | None = None) -> list[ApiKey]:
         if tenant_id is None:
-            rows = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys ORDER BY created_at DESC").fetchall()  # nosec B608 - fixed column list; values are bound
+            rows = self._conn.execute(f"SELECT {_COLUMNS}, last_used FROM api_keys ORDER BY created_at DESC").fetchall()  # nosec B608 - fixed column list; values are bound
         else:
             rows = self._conn.execute(
-                f"SELECT {_COLUMNS} FROM api_keys WHERE tenant_id = ? ORDER BY created_at DESC",  # nosec B608 - fixed column list; values are bound
+                f"SELECT {_COLUMNS}, last_used FROM api_keys WHERE tenant_id = ? ORDER BY created_at DESC",  # nosec B608 - fixed column list; values are bound
                 (tenant_id,),
             ).fetchall()
         return [self._row_to_key(row) for row in rows]
@@ -185,8 +188,12 @@ class SQLiteKeyStore:
         return self._write("DELETE FROM api_keys WHERE tenant_id = ?", (tenant_id,))
 
     def verify(self, raw_key: str) -> ApiKey | None:
-        rows = self._conn.execute(f"SELECT {_COLUMNS} FROM api_keys WHERE key_prefix = ?", (raw_key[:12],)).fetchall()  # nosec B608 - fixed column list; values are bound
-        return verify_api_key(raw_key, [self._row_to_key(row) for row in rows])
+        rows = self._conn.execute(f"SELECT {_COLUMNS}, last_used FROM api_keys WHERE key_prefix = ?", (raw_key[:12],)).fetchall()  # nosec B608 - fixed column list; values are bound
+        key = verify_api_key(raw_key, [self._row_to_key(row) for row in rows])
+        if key is not None:
+            key.last_used = _now()
+            self._write("UPDATE api_keys SET last_used = ? WHERE key_id = ?", (key.last_used, key.key_id))
+        return key
 
     def has_keys(self) -> bool:
         return self._conn.execute("SELECT 1 FROM api_keys WHERE revoked_at IS NULL LIMIT 1").fetchone() is not None

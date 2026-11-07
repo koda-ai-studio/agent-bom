@@ -503,7 +503,11 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
         latestScan={overviewSnapshot || !jobsLoading ? latestScanShort : null}
         mode={importedReport ? "Imported report" : deploymentModeLabel(counts?.deployment_mode)}
         summaryReady={Boolean(importedReport || counts || overview)}
-        findingsScopeLabel={importedReport ? "Imported report" : "Current findings · configured window"}
+        findingsScopeLabel={importedReport ? "Imported report · finding occurrences"
+          : (counts?.issues && !counts.issues.approximate) || overview?.issue_counts
+            ? "Deduplicated open issues · configured window"
+            : overview?.finding_counts || counts ? "Current finding occurrences · configured window"
+                : "Critical/high findings · overview snapshot"}
         severity={canonicalSeverity}
         domains={importedReport ? null : overview?.domains ?? null}
         coverage={importedReport ? null : overview?.coverage ?? null}
@@ -652,11 +656,11 @@ function JobRow({ job }: { job: JobListItem }) {
           <span className="sr-only">· Scan ID {job.job_id}</span>
         </div>
       </div>
-      <div className="flex items-center gap-3 text-xs">
+      <div className="flex w-full flex-wrap items-center gap-3 text-xs sm:w-auto">
         {job.status === "done" && (
           <>
             {critCount != null && critCount > 0 && (
-              <span className="text-red-400 font-mono font-semibold">{critCount} CRIT</span>
+              <span className="text-red-400 font-mono font-semibold">{critCount} critical scan findings</span>
             )}
             {vulnCount != null ? (
               <span className="text-ink-secondary">{vulnCount} vuln{vulnCount !== 1 ? "s" : ""}</span>

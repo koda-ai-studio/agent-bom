@@ -40,6 +40,7 @@ class StorageSchemaComponent:
 
 
 CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
+    StorageSchemaComponent("auth_failure_limits", "sqlite/postgres", ("api_auth_failure_limits",), tenant_scoped=False),
     StorageSchemaComponent("agent_lifecycle", "sqlite/postgres", ("agent_lifecycle_records", "agent_bom_snapshots")),
     StorageSchemaComponent(
         "scan_jobs",

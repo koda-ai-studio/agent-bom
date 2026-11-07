@@ -7,17 +7,17 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-167 tables in 10 domains. 18 declared foreign keys; 40 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+169 tables in 10 domains. 18 declared foreign keys; 40 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
-  tenancy["Tenancy, identity and access<br/>24 tables"]
+  tenancy["Tenancy, identity and access<br/>25 tables"]
   scans["Scans, jobs and reports<br/>15 tables"]
   inventory["Inventory and assets<br/>16 tables"]
   findings["Findings, triage and VEX<br/>28 tables"]
   graph["Graph nodes, edges, snapshots and attack paths<br/>21 tables"]
   runtime["Runtime, gateway and traces<br/>18 tables"]
-  compliance["Compliance, audit and evidence<br/>12 tables"]
+  compliance["Compliance, audit and evidence<br/>13 tables"]
   connectors["Connectors, delivery and schedules<br/>16 tables"]
   vulndb["Vulnerability intelligence (local database)<br/>8 tables"]
   other["Schema metadata and maintenance<br/>9 tables"]
@@ -33,13 +33,13 @@ flowchart LR
 
 | Domain | Tables | Page |
 |---|---|---|
-| Tenancy, identity and access | 24 | [storage-erd/tenancy.md](storage-erd/tenancy.md) |
+| Tenancy, identity and access | 25 | [storage-erd/tenancy.md](storage-erd/tenancy.md) |
 | Scans, jobs and reports | 15 | [storage-erd/scans.md](storage-erd/scans.md) |
 | Inventory and assets | 16 | [storage-erd/inventory.md](storage-erd/inventory.md) |
 | Findings, triage and VEX | 28 | [storage-erd/findings.md](storage-erd/findings.md) |
 | Graph nodes, edges, snapshots and attack paths | 21 | [storage-erd/graph.md](storage-erd/graph.md) |
 | Runtime, gateway and traces | 18 | [storage-erd/runtime.md](storage-erd/runtime.md) |
-| Compliance, audit and evidence | 12 | [storage-erd/compliance.md](storage-erd/compliance.md) |
+| Compliance, audit and evidence | 13 | [storage-erd/compliance.md](storage-erd/compliance.md) |
 | Connectors, delivery and schedules | 16 | [storage-erd/connectors.md](storage-erd/connectors.md) |
 | Vulnerability intelligence (local database) | 8 | [storage-erd/vulndb.md](storage-erd/vulndb.md) |
 | Schema metadata and maintenance | 9 | [storage-erd/other.md](storage-erd/other.md) |
@@ -90,6 +90,7 @@ Excluded:
 | `ai_system_blueprint_versions` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `blueprint_id`, `version` | `tenant_id`, `blueprint_id`, `version` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/blueprint_store.py`, `api/postgres_blueprint.py` |
 | `ai_system_blueprints` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `blueprint_id` | `tenant_id`, `blueprint_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/blueprint_store.py`, `api/postgres_blueprint.py` |
 | `ai_triage_runs` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres | `tenant_id`, `scan_id` | `tenant_id`, `scan_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20261105_04_ai_assessments.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/ai_assessment_store.py` |
+| `api_auth_failure_limits` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `source` | `source` | **none** | persistent | `deploy/supabase/postgres/alembic/versions/20261106_01_auth_failure_limits.py`, `deploy/supabase/postgres/runtime-schema.sql`, `api/auth_failure_store.py` |
 | `api_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `key_id` | `key_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql`, `api/postgres_access.py`, `api/sqlite_key_store.py` |
 | `api_rate_limit_hits` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | — | `bucket_key` | **none** | persistent | `deploy/supabase/postgres/init.sql`, `api/rate_limit_store.py` |
 | `api_rate_limits` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `bucket_key`, `window_started` | `bucket_key`, `window_started` | **none** | persistent | `deploy/supabase/postgres/init.sql` |
@@ -98,6 +99,7 @@ Excluded:
 | `attestation_replay` | [Compliance, audit and evidence](storage-erd/compliance.md) | SQLite | `tenant_id`, `evidence_id`, `nonce` | `tenant_id`, `evidence_id`, `nonce` | `tenant_id` | persistent | `sbom_attestation.py` |
 | `audit_chain_checkpoint` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres, SQLite | `tenant_id` | `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/audit_log.py`, `api/postgres_audit.py` |
 | `audit_events` | [Compliance, audit and evidence](storage-erd/compliance.md) | ClickHouse | `tenant_id`, `entry_id` | `entry_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/clickhouse/init.sql`, `cloud/clickhouse.py` |
+| `audit_key_identity` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres | `singleton` | `singleton` | **none** | persistent | `api/audit_key_state.py` |
 | `audit_log` | [Compliance, audit and evidence](storage-erd/compliance.md) | Postgres, SQLite | `entry_id` | `entry_id`, `team_id` | `team_id` | persistent | `deploy/supabase/postgres/init.sql`, `api/audit_log.py`, `api/postgres_audit.py` |
 | `auth_session_attempts` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | — | `key` | **none** | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/shared_auth_state.py` |
 | `bound_references` | [Connectors, delivery and schedules](storage-erd/connectors.md) | Snowflake | `reference_name`, `object_name` | `reference_name`, `object_name` | **none** | persistent | `deploy/snowflake/native-app/dcm/V001__core_schema.sql` |
@@ -121,7 +123,7 @@ Excluded:
 | `edge_groups` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | SQLite | `source_type`, `source_identity`, `target_type`, `target_identity`, `relationship` | `source_type`, `source_identity`, `target_type`, `target_identity`, `relationship` | **none** | scratch | `graph/correlation_workspace.py` |
 | `edge_observations` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | SQLite | `source_type`, `source_identity`, `target_type`, `target_identity`, `relationship`, `scan_id`, `edge_id` | `source_type`, `source_identity`, `target_type`, `target_identity`, `relationship`, `scan_id`, `edge_id` | **none** | scratch | `graph/correlation_workspace.py` |
 | `endpoint_agent_bindings` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `device_id`, `agent_id` | `tenant_id`, `device_id`, `agent_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_03_endpoint_connectors.py`, `connectors/endpoints/store.py` |
-| `endpoint_connections` | [Connectors, delivery and schedules](storage-erd/connectors.md) | Postgres | `tenant_id`, `id` | `tenant_id`, `id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_03_endpoint_connectors.py`, `connectors/endpoints/store.py` |
+| `endpoint_connections` | [Connectors, delivery and schedules](storage-erd/connectors.md) | Postgres, SQLite | `tenant_id`, `id` | `tenant_id`, `id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_03_endpoint_connectors.py`, `connectors/endpoints/store.py` |
 | `endpoint_devices` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `connection_id`, `run_id`, `device_id` | `tenant_id`, `connection_id`, `run_id`, `device_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_03_endpoint_connectors.py`, `connectors/endpoints/store.py` |
 | `endpoint_sync_events` | [Connectors, delivery and schedules](storage-erd/connectors.md) | Postgres, SQLite | `tenant_id`, `connection_id`, `event_id` | `tenant_id`, `connection_id`, `event_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_03_endpoint_connectors.py`, `connectors/endpoints/store.py` |
 | `endpoint_syncs` | [Connectors, delivery and schedules](storage-erd/connectors.md) | Postgres, SQLite | `tenant_id`, `connection_id`, `run_id` | `tenant_id`, `connection_id`, `run_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_03_endpoint_connectors.py`, `connectors/endpoints/store.py` |
@@ -185,7 +187,7 @@ Excluded:
 | `managed_trial_tenants` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `tenant_id` | `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260724_03_managed_trial_invitations.py`, `deploy/supabase/postgres/runtime-schema.sql` |
 | `mcp_client_configs` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `config_id` | `config_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/mcp_config_store.py`, `api/postgres_mcp_config.py` |
 | `mcp_observations` | [Inventory and assets](storage-erd/inventory.md) | Postgres, SQLite | `tenant_id`, `observation_id` | `tenant_id`, `observation_id`, `server_canonical_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/mcp_observation_store.py`, `api/storage/registry_schema.py` |
-| `mcp_scan_results` | [Scans, jobs and reports](storage-erd/scans.md) | Postgres | `tenant_id`, `result_id` | `tenant_id`, `result_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_02_mcp_scan_results.py`, `deploy/supabase/postgres/runtime-schema.sql`, `mcp_tools/result_store.py` |
+| `mcp_scan_results` | [Scans, jobs and reports](storage-erd/scans.md) | Postgres, SQLite | `tenant_id`, `result_id` | `tenant_id`, `result_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260927_02_mcp_scan_results.py`, `deploy/supabase/postgres/runtime-schema.sql`, `mcp_tools/result_store.py` |
 | `merged_nodes` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | SQLite | `entity_type`, `identity` | `entity_type`, `identity` | **none** | scratch | `graph/correlation_workspace.py` |
 | `model_provider_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `provider_key_id` | `provider_key_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/model_key_broker.py`, `api/postgres_model_key_broker.py` |
 | `model_virtual_keys` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres, SQLite | `virtual_key_id` | `virtual_key_id`, `tenant_id`, `provider_key_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/model_key_broker.py`, `api/postgres_model_key_broker.py` |
@@ -199,7 +201,7 @@ Excluded:
 | `posture_scores` | [Runtime, gateway and traces](storage-erd/runtime.md) | ClickHouse | `measured_at`, `agent_name` | `measured_at`, `tenant_id`, `agent_name` | `tenant_id` | persistent | `deploy/supabase/clickhouse/init.sql`, `cloud/clickhouse.py` |
 | `posture_webhook_outbox` | [Connectors, delivery and schedules](storage-erd/connectors.md) | SQLite | `id` | `id`, `tenant_id` | `tenant_id` | persistent | `posture_streaming.py` |
 | `proxy_replay_log` | [Runtime, gateway and traces](storage-erd/runtime.md) | Postgres, SQLite | `row_id` | `row_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/proxy_replay_store.py` |
-| `report_jobs` | [Scans, jobs and reports](storage-erd/scans.md) | Postgres | `tenant_id`, `job_id` | `job_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260911_01_durable_report_jobs.py`, `api/report_job_store.py` |
+| `report_jobs` | [Scans, jobs and reports](storage-erd/scans.md) | Postgres, SQLite | `tenant_id`, `job_id` | `job_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/postgres/alembic/versions/20260911_01_durable_report_jobs.py`, `api/report_job_store.py` |
 | `revoked_session_nonces` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `nonce` | `nonce` | **none** | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/shared_auth_state.py` |
 | `risk_campaign_workflows` | [Findings, triage and VEX](storage-erd/findings.md) | Postgres, SQLite | `tenant_id`, `campaign_id` | `tenant_id`, `campaign_id` | `tenant_id` | persistent | `deploy/supabase/postgres/runtime-schema.sql`, `api/campaign_store.py`, `api/postgres_campaign.py` |
 | `runtime_events` | [Runtime, gateway and traces](storage-erd/runtime.md) | ClickHouse | `tenant_id`, `event_id` | `event_id`, `tenant_id` | `tenant_id` | persistent | `deploy/supabase/clickhouse/init.sql`, `cloud/clickhouse.py` |
@@ -253,8 +255,10 @@ Rows in these tables are not scoped by `tenant_id` / `team_id`. Many are global 
 | `affected` | Vulnerability intelligence (local database) | SQLite |
 | `agent_bom_hub_backfills` | Schema metadata and maintenance | Postgres, SQLite |
 | `agent_bom_tenant_binding_keys` | Tenancy, identity and access | Postgres |
+| `api_auth_failure_limits` | Tenancy, identity and access | Postgres, SQLite |
 | `api_rate_limit_hits` | Tenancy, identity and access | Postgres |
 | `api_rate_limits` | Tenancy, identity and access | Postgres |
+| `audit_key_identity` | Compliance, audit and evidence | Postgres |
 | `auth_session_attempts` | Tenancy, identity and access | Postgres |
 | `bound_references` | Connectors, delivery and schedules | Snowflake |
 | `control_plane_schema_versions` | Schema metadata and maintenance | Postgres, SQLite, ClickHouse |
@@ -358,7 +362,7 @@ Tables defined for both backends whose column sets differ (columns added by `ALT
 
 | Table | Postgres only | SQLite only |
 |---|---|---|
-| `api_keys` | `created_by`, `last_used`, `revoked`, `team_id` | `tenant_id` |
+| `api_keys` | `created_by`, `revoked`, `team_id` | `tenant_id` |
 | `audit_chain_checkpoint` | `updated_at` | — |
 | `audit_log` | `team_id` | `tenant_id` |
 | `drift_incidents` | `blueprint_key` | — |

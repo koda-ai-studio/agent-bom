@@ -140,7 +140,7 @@ Rescan the patched asset so a new stored scan replaces the old one, then match
 again:
 
 ```bash
-agent-bom image registry.example.com/shop/web:2.4 --save -f json -o web.json
+agent-bom image registry.example.com/shop/web:2.4 -f json -o web.json
 agent-bom db advisory match --id CVE-2026-109618 --report web.json --format json
 ```
 
