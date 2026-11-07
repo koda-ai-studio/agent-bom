@@ -44,6 +44,7 @@ READ_REPEATS = 20
 READ_TIMEOUT_SECONDS = 120
 INGEST_TIMEOUT_SECONDS = 600
 POLL_RETRY_STATUSES = frozenset({429, 502, 503, 504})
+PREPARING_WAIT_SECONDS = 120
 HEALTH_POLL_SECONDS = 1.0
 HEALTH_TIMEOUT_SECONDS = 30
 SCALE_STEPS = (10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000)
@@ -161,20 +162,30 @@ class ApiServer:
 
 
 def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> dict[str, Any]:
+    """Time repeated reads; a read still preparing is retried as its Retry-After asks, within a bound, and counted."""
     latencies: list[float] = []
     statuses: dict[str, int] = {}
     size = 0
     first: Any = None
+    preparing_deadline = time.monotonic() + PREPARING_WAIT_SECONDS
+    preparing = 0
     for _ in range(repeats):
-        began = time.perf_counter()
-        status, body, size = http_json(f"{server.base}{path}", headers=server.headers, timeout=READ_TIMEOUT_SECONDS)
-        elapsed = (time.perf_counter() - began) * 1000
+        while True:
+            began = time.perf_counter()
+            status, body, size = http_json(f"{server.base}{path}", headers=server.headers, timeout=READ_TIMEOUT_SECONDS)
+            elapsed = (time.perf_counter() - began) * 1000
+            if status != 503 or time.monotonic() > preparing_deadline:
+                break
+            preparing += 1
+            time.sleep(1)
         statuses[str(status)] = statuses.get(str(status), 0) + 1
         if status == 200:
             latencies.append(elapsed)
             first = first if first is not None else body
     summary: dict[str, Any] = {**latency_summary(latencies), "statuses": statuses, "response_bytes": size}
     summary["cold_ms"] = round(latencies[0], 3) if latencies else None
+    if preparing:
+        summary["preparing_retries"] = preparing
     return {"timing": summary, "body": first}
 
 

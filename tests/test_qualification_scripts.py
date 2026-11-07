@@ -412,3 +412,21 @@ def test_ingest_poll_refusal_says_why(monkeypatch) -> None:
     outcome = _ingest_outcome(monkeypatch, [(202, {"job_id": "j", "status": "queued"}), (404, {"detail": "no such job"})])
     assert outcome["ingest_status"] == "poll_refused"
     assert "HTTP 404" in outcome["detail"] and "no such job" in outcome["detail"]
+
+
+def test_a_read_still_preparing_is_retried_and_counted(monkeypatch) -> None:
+    replies = iter([(503, {}, 0), (200, {"ok": 1}, 2), (200, {"ok": 1}, 2)])
+    monkeypatch.setattr(performance, "http_json", lambda *_args, **_kwargs: next(replies))
+    monkeypatch.setattr(performance.time, "sleep", lambda _seconds: None)
+    server = type("Server", (), {"base": "http://api", "headers": {}})()
+    timing = performance.timed_reads(server, "/v1/graph", repeats=2)["timing"]
+    assert timing["statuses"] == {"200": 2}
+    assert timing["preparing_retries"] == 1
+
+
+def test_a_read_that_never_becomes_ready_stays_a_failure(monkeypatch) -> None:
+    monkeypatch.setattr(performance, "http_json", lambda *_args, **_kwargs: (503, {}, 0))
+    monkeypatch.setattr(performance.time, "sleep", lambda _seconds: None)
+    monkeypatch.setattr(performance, "PREPARING_WAIT_SECONDS", -1)
+    server = type("Server", (), {"base": "http://api", "headers": {}})()
+    assert performance.timed_reads(server, "/v1/graph", repeats=1)["timing"]["statuses"] == {"503": 1}

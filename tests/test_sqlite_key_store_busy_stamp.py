@@ -41,7 +41,8 @@ def test_valid_key_verifies_quickly_while_another_writer_holds_the_database(tmp_
 
 def test_invalid_and_revoked_keys_stay_refused_while_another_writer_holds_the_database(tmp_path: Path) -> None:
     store, raw, key_id = _store(tmp_path)
-    assert store.remove(key_id) is True
+    removed = store.remove(key_id)
+    assert removed is True
     writer = _writer(tmp_path)
     try:
         assert store.verify(raw) is None
@@ -63,7 +64,8 @@ def test_a_failed_write_does_not_leave_the_connection_unable_to_write(tmp_path: 
     other.commit()
     other.close()
     assert store.get(key_id) is not None
-    assert store.remove(key_id) is True
+    removed = store.remove(key_id)
+    assert removed is True
     writer.close()
 
 
