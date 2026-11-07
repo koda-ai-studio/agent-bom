@@ -213,8 +213,9 @@ def test_form_session_ends_when_its_short_lived_key_is_gone(client: TestClient, 
     assert client.get("/v1/auth/me").status_code == 200
 
     key = store.list_keys("tenant-alpha")[0]
-    assert store.remove(key.key_id)
+    removed = store.remove(key.key_id)
 
+    assert removed
     assert client.get("/v1/auth/me").status_code == 401
 
 

@@ -219,8 +219,8 @@ def test_a_lease_never_outwaits_a_stuck_sweeper(tmp_path):
     path = tmp_path / "busy.db"
     marker = projection_cache.lease_path(path)
     fd = os.open(marker, os.O_CREAT | os.O_RDWR, 0o600)
-    assert file_lock.try_exclusive_lock(fd)
     try:
+        assert file_lock.try_exclusive_lock(fd)
         with pytest.raises(TimeoutError):
             projection_cache.acquire_projection_lease(path, wait_seconds=0.1)
     finally:
@@ -231,14 +231,16 @@ def test_a_lease_never_outwaits_a_stuck_sweeper(tmp_path):
 def test_a_waiter_on_a_marker_the_sweep_unlinked_moves_to_a_new_one(tmp_path):
     path = tmp_path / "raced.db"
     marker = projection_cache.lease_path(path)
-    fd = os.open(marker, os.O_CREAT | os.O_RDWR, 0o600)
-    assert file_lock.try_exclusive_lock(fd)
     acquired: list = []
     waiter = threading.Thread(target=lambda: acquired.append(projection_cache.acquire_projection_lease(path)))
-    waiter.start()
-    time.sleep(0.05)
-    marker.unlink()
-    file_lock.release_lock(fd, exclusive=True)
+    fd = os.open(marker, os.O_CREAT | os.O_RDWR, 0o600)
+    try:
+        assert file_lock.try_exclusive_lock(fd)
+        waiter.start()
+        time.sleep(0.05)
+        marker.unlink()
+    finally:
+        file_lock.release_lock(fd, exclusive=True)
     waiter.join(timeout=10)
     assert acquired, "the waiter never got a lease"
 
@@ -330,29 +332,43 @@ def windows_locks():
 
 @pytest.mark.skipif(os.name == "nt", reason="the real thing runs on Windows")
 def test_windows_shared_holders_coexist_and_exclude_the_sweep(tmp_path, windows_locks):
+    still_open: set[int] = set()
+
     def handle() -> int:
-        return os.open(tmp_path / "marker", os.O_CREAT | os.O_RDWR, 0o600)
+        fd = os.open(tmp_path / "marker", os.O_CREAT | os.O_RDWR, 0o600)
+        still_open.add(fd)
+        return fd
 
-    first, second, sweeper = handle(), handle(), handle()
-    assert windows_locks.try_shared_lock(first)
-    assert windows_locks.try_shared_lock(second)
-    assert not windows_locks.try_exclusive_lock(sweeper)
-    windows_locks.release_lock(first, exclusive=False)
-    assert not windows_locks.try_exclusive_lock(sweeper)
-    windows_locks.release_lock(second, exclusive=False)
-    assert windows_locks.try_exclusive_lock(sweeper)
+    def release(fd: int, *, exclusive: bool) -> None:
+        still_open.discard(fd)
+        windows_locks.release_lock(fd, exclusive=exclusive)
 
-    third = handle()
-    assert not windows_locks.try_shared_lock(third), "a sweeping marker admits no new holder"
-    windows_locks.release_lock(sweeper, exclusive=True)
-    assert windows_locks.try_shared_lock(third)
-    windows_locks.release_lock(third, exclusive=False)
+    try:
+        first, second, sweeper = handle(), handle(), handle()
+        assert windows_locks.try_shared_lock(first)
+        assert windows_locks.try_shared_lock(second)
+        assert not windows_locks.try_exclusive_lock(sweeper)
+        release(first, exclusive=False)
+        assert not windows_locks.try_exclusive_lock(sweeper)
+        release(second, exclusive=False)
+        assert windows_locks.try_exclusive_lock(sweeper)
+
+        third = handle()
+        assert not windows_locks.try_shared_lock(third), "a sweeping marker admits no new holder"
+        release(sweeper, exclusive=True)
+        assert windows_locks.try_shared_lock(third)
+        release(third, exclusive=False)
+    finally:
+        for fd in still_open:
+            os.close(fd)
 
 
 @pytest.mark.skipif(os.name == "nt", reason="the real thing runs on Windows")
 def test_windows_full_slot_table_refuses_instead_of_overrunning_the_sweep_range(tmp_path, windows_locks):
-    handles = [os.open(tmp_path / "marker", os.O_CREAT | os.O_RDWR, 0o600) for _ in range(windows_locks.SHARED_SLOTS + 1)]
+    handles: list[int] = []
     try:
+        for _ in range(windows_locks.SHARED_SLOTS + 1):
+            handles.append(os.open(tmp_path / "marker", os.O_CREAT | os.O_RDWR, 0o600))
         assert all(windows_locks.try_shared_lock(fd) for fd in handles[:-1])
         assert not windows_locks.try_shared_lock(handles[-1])
     finally:

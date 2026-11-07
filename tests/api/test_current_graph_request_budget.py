@@ -182,6 +182,7 @@ def test_racing_first_calls_share_one_wrapper(estate, monkeypatch):  # noqa: F81
             # On an unguarded cache miss both callers get here; the second waits out the first.
             entered.wait(0.5)
         except threading.BrokenBarrierError:
+            # No second caller arrived in time, which is the guarded outcome; only the delay matters.
             pass
 
     monkeypatch.setattr(CurrentGraphStore, "__init__", slow_init)
