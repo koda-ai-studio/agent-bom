@@ -6,6 +6,7 @@ from starlette.testclient import TestClient
 from agent_bom.api import server
 from agent_bom.api.auth_failure_store import SQLiteAuthFailureStore
 from agent_bom.api.browser_session import SESSION_COOKIE_NAME
+from agent_bom.api.read_models.posture import PostureResponse
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +26,9 @@ def test_opted_in_anonymous_viewer_read_does_not_query_auth_state(monkeypatch, f
     server.configure_api(api_key=None, allow_unauthenticated=True)
     response = TestClient(server.app).get("/v1/posture")
     assert response.status_code == 200, response.text
-    assert response.json()["summary"] == "No completed scans available"
+    # Both an empty history and a completed zero-artifact scan are valid
+    # public posture responses; inventory state is not this auth contract.
+    PostureResponse.model_validate(response.json())
     assert calls == []
 
 
