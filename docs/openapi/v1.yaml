@@ -11148,6 +11148,16 @@ components:
         severity:
           title: Severity
           type: string
+        severity_linked_cve:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity Linked Cve
+        severity_note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity Note
         severity_source:
           anyOf:
           - type: string

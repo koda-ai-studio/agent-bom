@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import quote, unquote
 
+from agent_bom.core.severity import severity_basis, severity_linked_cve
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.evidence.scan_run import ScanOutcome, ScanRun
 from agent_bom.models import Severity
@@ -279,3 +280,17 @@ def enforce_physical_locations(results: list[dict[str, Any]]) -> None:
             other.setdefault("physicalLocation", copy.deepcopy(physical))
         if str(physical["artifactLocation"].get("uri", "")).startswith(VIRTUAL_ARTIFACT_PREFIX):
             result.setdefault("properties", {})["no_source_file"] = True
+
+
+def severity_provenance_properties(finding: Any) -> dict[str, Any]:
+    """Where a finding's severity came from; absent when it recorded no source or note."""
+    raw = finding.evidence if isinstance(finding.evidence, dict) else {}
+    source = raw.get("severity_source") or finding.severity_source
+    note = raw.get("severity_note")
+    fields = {
+        "severity_source": source,
+        "severity_basis": severity_basis(source),
+        "severity_linked_cve": severity_linked_cve(source),
+        "severity_note": sanitize_text(note) if isinstance(note, str) else None,
+    }
+    return {key: value for key, value in fields.items() if value}

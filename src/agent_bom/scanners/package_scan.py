@@ -80,7 +80,7 @@ from agent_bom.scanners.unverified_range_policy import (
     supersede_with_live_answer,
     unverified_packages,
 )
-from agent_bom.scanners.upstream_severity import resolve_upstream_advisory_severity
+from agent_bom.scanners.upstream_severity import resolve_distro_advisory_severity
 from agent_bom.soc2 import tag_blast_radius as tag_soc2
 from agent_bom.vuln_compliance import tag_vulnerability as _tag_vuln
 
@@ -549,7 +549,7 @@ async def scan_packages(
     retire_stale_receipt_warnings_if_decided(scannable)
     total_vulns += await _scan_supplemental_advisories(scannable, scan_offline)
     _record_runtime_coverage_gaps(scannable, scan_offline)
-    resolve_upstream_advisory_severity(scannable)
+    await resolve_distro_advisory_severity(scannable, offline=scan_offline)
     _flag_suspicious_packages(scannable)
     total_vulns -= _suppress_unfixed_findings(scannable)
     total_vulns -= demote_ambiguous_distro_matches(scannable)

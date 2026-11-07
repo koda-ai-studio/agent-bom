@@ -92,6 +92,9 @@ def _latest_posture_snapshot(jobs: list[Any]) -> dict[str, Any]:
             critical = int(summary.get("critical_unified_findings") or summary.get("critical_findings") or 0)
             high = int(summary.get("high_unified_findings") or 0)
             total = int(summary.get("total_vulnerabilities") or summary.get("total_findings") or 0)
+            by_severity = (result.get("finding_summary") or {}).get("by_severity") or {}
+            if total and int(by_severity.get("unknown") or 0) >= total:
+                return {"grade": "N/A", "score": 0, "summary": f"None of the {total} findings has a severity", "no_data": True}
             penalty = min(100.0, critical * 12.0 + high * 6.0 + max(0, total - critical - high) * 1.5)
             score = max(0.0, round(100.0 - penalty, 1))
             return {

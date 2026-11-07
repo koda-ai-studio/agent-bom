@@ -8,7 +8,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ExternalLink, FileSearch, Loader2 } from "lucide-react";
 
-import { severityColor, severityText, type FindingTriageDecision, type FindingTriageItem, type FindingTriageJustification } from "@/lib/api";
+import { severityColor, severityText, severitySourceLabel, type FindingTriageDecision, type FindingTriageItem, type FindingTriageJustification } from "@/lib/api";
 import { useAuthState } from "@/components/auth-provider";
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
 import { groupFindingControls } from "@/lib/finding-controls";
@@ -608,7 +608,8 @@ function IntelligencePanel({ vuln }: { vuln: EnrichedVuln }) {
         {typeof vuln.is_kev === "boolean" ? <KeyVal label="CISA KEV" value={vuln.is_kev ? "Known exploited" : "Not listed"} /> : null}
         {vuln.kev_date_added ? <KeyVal label="KEV added" value={formatDateOnly(vuln.kev_date_added)} /> : null}
         {vuln.cvss_vector ? <KeyVal label="CVSS vector" value={vuln.cvss_vector} /> : null}
-        {vuln.severity_source ? <KeyVal label="Severity source" value={vuln.severity_source} /> : null}
+        {vuln.severity_source ? <KeyVal label="Severity source" value={severitySourceLabel(vuln.severity_source) ?? vuln.severity_source} /> : null}
+        {vuln.severity_note ? <p>{vuln.severity_note}</p> : null}
         {published ? <KeyVal label="Published" value={formatDateOnly(published)} /> : null}
         {vuln.modified_at ? <KeyVal label="Modified" value={formatDateOnly(vuln.modified_at)} /> : null}
       </div>

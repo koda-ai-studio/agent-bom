@@ -167,6 +167,7 @@ contents or credential values are included in those requests.
 | Service | URL | What we send | What we receive | Auth |
 |---------|-----|-------------|----------------|------|
 | OSV.dev | `https://api.osv.dev/v1/querybatch` | Package names + versions | CVE IDs, advisories | None |
+| OSV.dev (advisory and CVE records) | `https://api.osv.dev/v1/vulns/{id}` | Advisory or CVE IDs | Advisory details; for a distro advisory with no severity, the CVSS score and Debian tracker state of each CVE it links to, cached for 7 days | None |
 | OSV bulk archives | `https://osv-vulnerabilities.storage.googleapis.com/all.zip`, or `https://osv-vulnerabilities.storage.googleapis.com/<ecosystem>/all.zip` for one ecosystem | _(none — full download during `db update` or `--auto-update-db`; the GitHub Action reads the per-ecosystem archives unless `vuln-db-scope: full`)_ | Advisory archives | None |
 | NVD/NIST | `https://services.nvd.nist.gov/rest/json/cves/2.0` | CVE IDs, or a `lastModStartDate`/`lastModEndDate` time window during `db update --source nvd` | CVE records: CVSS scores, CWE IDs, CPE applicability ranges | Optional (NVD_API_KEY for higher rate limits, sent only as the `apiKey` header) |
 | FIRST EPSS | `https://api.first.org/data/v1/epss` | CVE IDs | Exploit probability scores | None |

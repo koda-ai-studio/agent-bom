@@ -46,7 +46,7 @@ from agent_bom.output.possibly_affected import cyclonedx_vulnerabilities as unde
 from agent_bom.output.technique_evidence import scoped_vulnerability_properties
 from agent_bom.sbom_formats.cyclonedx import merge_properties as _merge_properties
 from agent_bom.sbom_formats.cyclonedx import merge_vulnerability_observation as _merge_vulnerability_observation
-from agent_bom.sbom_formats.cyclonedx import vulnerability_enrichment_properties, vulnerability_source
+from agent_bom.sbom_formats.cyclonedx import vulnerability_enrichment_properties, vulnerability_ratings, vulnerability_source
 from agent_bom.sbom_formats.surface_labels import server_surface_description
 from agent_bom.security import sanitize_launch_command, sanitize_path_label
 from agent_bom.vex import vex_justification_to_cdx
@@ -123,26 +123,6 @@ def _cwe_ids_to_integers(cwe_ids: list[str]) -> list[int]:
     return ints
 
 
-def _cdx_score_method(cvss_vector: str | None) -> str:
-    """Map a CVSS vector string onto the CDX 1.7 ``scoreMethod`` enum.
-
-    The enum separates CVSSv3 (3.0) from CVSSv31 (3.1), so a hardcoded
-    ``CVSSv3`` mislabels every 3.1 and 4.0 score the scanner produces. Falls
-    back to CVSSv3 when no vector is available, matching the prior default.
-    """
-    vector = (cvss_vector or "").strip().upper()
-    if vector.startswith("CVSS:4"):
-        return "CVSSv4"
-    if vector.startswith("CVSS:3.1"):
-        return "CVSSv31"
-    if vector.startswith("CVSS:3"):
-        return "CVSSv3"
-    if vector and not vector.startswith("CVSS:"):
-        # CVSS v2 vectors carry no version prefix (``AV:N/AC:L/Au:N/...``).
-        return "CVSSv2"
-    return "CVSSv3"
-
-
 def _cyclonedx_vulnerability(
     vuln: Vulnerability,
     pkg_ref: str,
@@ -160,36 +140,11 @@ def _cyclonedx_vulnerability(
     severity-derived remediation SLA (``agent-bom:sla_due_at``); omitted when no
     deadline is derivable so a missing property never reads as "no SLA".
     """
-    ratings: list[dict[str, object]] = []
-    if vuln.cvss_score:
-        cvss_rating: dict[str, object] = {
-            "score": vuln.cvss_score,
-            "severity": vuln.severity.value,
-            "method": _cdx_score_method(vuln.cvss_vector),
-        }
-        if vuln.cvss_vector:
-            # CDX 1.7 `ratings[].vector` is the canonical slot for the metric
-            # string. Emitting a bare score forces every consumer to re-derive
-            # AV/AC/PR/UI — which they cannot, so the detail was simply lost.
-            cvss_rating["vector"] = vuln.cvss_vector
-        ratings.append(cvss_rating)
-    else:
-        ratings.append({"severity": vuln.severity.value})
-    if vuln.epss_score is not None:
-        # EPSS is a probability (0.0–1.0), not a CVSS-style severity — surface it
-        # as an `other`-method rating attributed to the EPSS source.
-        ratings.append(
-            {
-                "source": {"name": "EPSS", "url": "https://www.first.org/epss/"},
-                "score": vuln.epss_score,
-                "method": "other",
-            }
-        )
     entry: dict = {
         "id": vuln.id,
         "description": vuln.summary or f"See {vuln.id} for details",
         "source": vulnerability_source(vuln),
-        "ratings": ratings,
+        "ratings": vulnerability_ratings(vuln),
         "affects": [{"ref": pkg_ref}],
     }
     cwes = _cwe_ids_to_integers(vuln.cwe_ids)

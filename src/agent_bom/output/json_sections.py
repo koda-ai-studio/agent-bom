@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_bom.advisory_ids import vulnerability_enrichment_metadata
+from agent_bom.advisory_ids import severity_provenance_fields, vulnerability_enrichment_metadata
 from agent_bom.asset_provenance import (
     agent_discovery_provenance,
     package_discovery_provenance,
@@ -72,8 +72,7 @@ def _vulnerability_json(v: Any, *, suppression_state: str | None = None) -> dict
         "severity": v.severity.value,
         "severity_label": _severity_label(v.severity, v.severity_source),
         "severity_state": _severity_state(v.severity),
-        "severity_source": v.severity_source,
-        "severity_basis": severity_basis(v.severity_source),
+        **severity_provenance_fields(v),
         "advisory_sources": v.all_advisory_sources,
         "primary_advisory_source": v.all_advisory_sources[0] if v.all_advisory_sources else None,
         "advisory_coverage_state": v.advisory_coverage_state,

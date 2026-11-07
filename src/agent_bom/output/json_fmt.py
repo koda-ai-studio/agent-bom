@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from typing import Any, TextIO
 
-from agent_bom.advisory_ids import vulnerability_enrichment_metadata
+from agent_bom.advisory_ids import severity_provenance_fields, vulnerability_enrichment_metadata
 from agent_bom.asset_provenance import package_discovery_provenance, package_version_provenance
 from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
-from agent_bom.core.severity import severity_basis
 from agent_bom.evidence.iac_identity import prepare_iac_occurrences
 from agent_bom.evidence.malicious_basis import package_basis_fields
 from agent_bom.exploitability import fused_triage_priority
@@ -512,7 +511,7 @@ def _blast_radius_json_entry(
         "vulnerability_id": finding.cve_id or br.vulnerability.id,
         "severity": br.vulnerability.severity.value,
         "severity_label": _severity_label(br.vulnerability.severity, br.vulnerability.severity_source),
-        "severity_basis": severity_basis(br.vulnerability.severity_source),
+        **severity_provenance_fields(br.vulnerability),
         "severity_state": _severity_state(br.vulnerability.severity),
         "advisory_sources": br.vulnerability.all_advisory_sources,
         "primary_advisory_source": (br.vulnerability.all_advisory_sources[0] if br.vulnerability.all_advisory_sources else None),

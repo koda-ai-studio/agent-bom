@@ -2,9 +2,9 @@
  "demo": {
   "html": "bd9fb4420c16274ec84212cce2f7134ce7ed4729a439c025531b34a471f00836",
   "html_offline": "4c58e59e8176dedda4fef0a66b15a58790330a6172e7a583fbacd2dd9793f5bd",
-  "sarif_exclude_unfixable": "d4278a0c4aee9df3a1b3c6ee74bde040cffd67f99efe410c366088689b37d81f",
-  "sarif_file": "0fcb758ce665c2a6eab7c752393a26791a3f6eec1118b5c8a020f2239f169d91",
-  "sarif_stdout": "d4278a0c4aee9df3a1b3c6ee74bde040cffd67f99efe410c366088689b37d81f"
+  "sarif_exclude_unfixable": "e079e19b1e717188a9c0a01b442db76e6ae77413610f6540c82bb657b16973a6",
+  "sarif_file": "9da109f44394ced141ce0cd41cf6b3689e6f3dddb9c221fd9b24011fa26688cd",
+  "sarif_stdout": "e079e19b1e717188a9c0a01b442db76e6ae77413610f6540c82bb657b16973a6"
  },
  "empty": {
   "html": "3321190785358c1da3add462aa460a4f8473c103bfd4ada21eaca3163704133b",

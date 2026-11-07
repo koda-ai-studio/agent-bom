@@ -254,3 +254,50 @@ __all__ = [
     "posture_inputs_from_report",
     "score_posture_dimensions",
 ]
+
+
+def unrated_vulnerabilities(inputs: PostureInputs) -> int:
+    """How many active vulnerability occurrences have no severity."""
+    return sum(vuln.severity == "UNKNOWN" for vuln in inputs.vulnerabilities)
+
+
+def all_unrated_summary(total_vulns: int) -> str:
+    return (
+        f"None of the {total_vulns} vulnerability findings has a severity — posture grade unavailable. "
+        "Re-run online or run `agent-bom db update` to rate them."
+    )
+
+
+def posture_summary(report: "AIBOMReport", inputs: PostureInputs, grade: str, total_score: float) -> str:
+    total_vulns = len(inputs.vulnerabilities)
+    total_cred_servers, total_servers = inputs.credential_servers, inputs.total_servers
+    verified_servers = inputs.verified_servers
+    # Build summary: keep vulnerability cleanliness apart from config quality so
+    # clean scans never read as contradictory when optional metadata is missing.
+    if total_vulns == 0:
+        if grade in ("A", "B"):
+            summary = f"No vulnerabilities found; strong best-practice/config posture ({grade}, {total_score}%)"
+        elif grade == "C":
+            summary = f"No vulnerabilities found; config/best-practice improvements recommended ({grade}, {total_score}%)"
+        else:
+            summary = f"No vulnerabilities found; config/best-practice gaps need attention ({grade}, {total_score}%)"
+    elif grade in ("A", "B"):
+        summary = f"Strong best-practice/config posture ({grade}, {total_score}%)"
+    elif grade == "C":
+        summary = f"Moderate best-practice/config posture ({grade}, {total_score}%) — improvements recommended"
+    else:
+        drivers: list[str] = []
+        if total_cred_servers > 0:
+            drivers.append(f"real credential exposure across {total_cred_servers} server{'s' if total_cred_servers != 1 else ''}")
+        if report.has_mcp_context and total_servers > 0 and verified_servers < total_servers:
+            drivers.append(
+                "unverified or underspecified MCP configuration on "
+                f"{total_servers - verified_servers}/{total_servers} "
+                f"server{'s' if total_servers != 1 else ''}"
+            )
+        if drivers:
+            summary = f"Weak best-practice/config posture ({grade}, {total_score}%) — this grade is driven by " + " and ".join(drivers)
+        else:
+            summary = f"Weak best-practice/config posture ({grade}, {total_score}%) — immediate attention required"
+
+    return summary
