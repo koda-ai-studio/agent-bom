@@ -19,6 +19,8 @@ from agent_bom.cli._common import (
     _check_for_update_bg,
     _print_update_notice,
 )
+from agent_bom.core.settings import env_str
+from agent_bom.verbose_hint import DEBUG_ENV_HINT, argv_command, command_accepts_verbose
 
 
 def make_entry_point(
@@ -78,13 +80,17 @@ def make_entry_point(
                     err=False,
                 )
                 sys.exit(1)
-            verbose = "--verbose" in sys.argv or "-v" in sys.argv
+            typed_command = argv_command(_group, sys.argv[1:])
+            has_verbose = command_accepts_verbose(typed_command)
+            verbose = (has_verbose and ("--verbose" in sys.argv or "-v" in sys.argv)) or (env_str("AGENT_BOM_LOG_LEVEL").upper() == "DEBUG")
             err_console = Console(stderr=True)
             err_console.print(f"\n[bold red]{product_name} error:[/bold red] {exc}")
             if verbose:
                 err_console.print_exception(show_locals=False)
+            elif has_verbose:
+                err_console.print("[dim]Run with --verbose for the full traceback.[/dim]")
             else:
-                err_console.print("[dim]Run with --verbose for full traceback.[/dim]")
+                err_console.print(f"[dim]Set {DEBUG_ENV_HINT} for the full traceback.[/dim]")
             sys.exit(1)
 
     entry_main.__doc__ = f"Entry point for {product_name}."

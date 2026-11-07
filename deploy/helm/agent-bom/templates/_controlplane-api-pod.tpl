@@ -166,6 +166,10 @@ spec:
               value: {{ $cp.autoCorrelation.enabled | quote }}
             - name: AGENT_BOM_GRAPH_AUTO_CORRELATE_MAX_AGE_HOURS
               value: {{ $cp.autoCorrelation.maxAgeHours | quote }}
+            {{- if (($cp.logging).json) }}
+            - name: AGENT_BOM_LOG_JSON
+              value: "1"
+            {{- end }}
             {{- include "agent-bom.nvdApiKeyEnv" $root | nindent 12 }}
           {{- with $api.env }}
             {{- toYaml . | nindent 12 }}

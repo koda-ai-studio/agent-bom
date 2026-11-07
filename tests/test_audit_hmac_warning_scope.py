@@ -48,7 +48,9 @@ def test_first_signature_with_an_ephemeral_key_warns_once(fresh_audit_log, caplo
     assert first.verify()
 
 
-def test_api_startup_warns_about_an_ephemeral_key(fresh_audit_log, caplog) -> None:
+def test_api_startup_warns_about_an_ephemeral_key(fresh_audit_log, caplog, monkeypatch, tmp_path) -> None:
+    # Only a durable chain outlives the key; the in-memory case is covered in test_log_json_every_line.
+    monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "cp.db"))
     caplog.set_level(logging.WARNING, logger="agent_bom.api.audit_log")
     fresh_audit_log.warn_if_ephemeral_hmac_key()
     assert WARNING_TEXT in caplog.text

@@ -178,9 +178,19 @@ def test_public_first_run_surfaces_share_one_primary_command() -> None:
 
     site = (ROOT / "site-docs/index.md").read_text(encoding="utf-8")
     for text in (readme, pypi, guide, site):
-        assert (
-            text.split("```bash", 1)[1].split("```", 1)[0].strip() == "uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html"
-        )
+        assert text.split("```bash", 1)[1].split("```", 1)[0].strip() == "uvx agent-bom scan . -f html -o agent-bom-report.html"
+    # --no-discover drops secret, personal-data, skill, dataset and training-pipeline
+    # scanning of the project; the first run must keep them.
+    for path in (
+        "README.md",
+        "docs/registry/PYPI_README.md",
+        "docs/FIRST_RUN.md",
+        "site-docs/index.md",
+        "site-docs/getting-started/quickstart.md",
+        "site-docs/deployment/overview.md",
+    ):
+        assert "scan . --no-discover" not in (ROOT / path).read_text(encoding="utf-8"), path
+        assert "`--no-discover` excludes workstation-wide discovery" not in (ROOT / path).read_text(encoding="utf-8"), path
     assert "Open `agent-bom-report.html`" in readme
     assert "No MCP configuration" in readme
     assert "pip install agent-bom\nagent-bom scan ." in guide  # supported alternative

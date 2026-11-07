@@ -29,12 +29,15 @@ With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), ru
 this from the repository you want to inspect:
 
 ```bash
-uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
+uvx agent-bom scan . -f html -o agent-bom-report.html
 ```
 
 Open `agent-bom-report.html` for inventory, prioritized findings, recorded
-exposure paths, fix guidance and coverage warnings. The command scans the
-selected project; `--no-discover` excludes workstation-wide discovery.
+exposure paths, fix guidance and coverage warnings. The command scans only the
+selected project (packages, MCP configuration, secrets and personal data,
+skills and IaC) and does not read agent configuration elsewhere on the machine.
+Do not add `--no-discover` here: it also turns off the project's secret,
+personal-data, skill, dataset and training-pipeline scanning.
 No MCP configuration in the project means agent/tool relationships may be
 unavailable, while package inventory and advisory findings remain useful.
 Use an explicit inventory or project MCP configuration to add that context.

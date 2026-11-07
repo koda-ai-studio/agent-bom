@@ -14,6 +14,7 @@ from rich.rule import Rule
 
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.compact import _compact_detail
+from agent_bom.verbose_hint import verbose_hint
 
 if TYPE_CHECKING:
     from rich.console import Console
@@ -75,7 +76,7 @@ def print_collapsed_warnings(
         con.print(f"  [yellow]{prefix}[/yellow] {_compact_detail(warning, 100)}")
     remaining = len(clean) - min(len(clean), max_visible)
     if remaining > 0:
-        con.print(f"  [dim]… {remaining} more warning(s) — use --verbose to expand[/dim]")
+        con.print(f"  [dim]… {remaining} more warning(s) — use {verbose_hint()} to expand[/dim]")
 
 
 def print_provider_discovery_result(

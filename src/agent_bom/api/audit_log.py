@@ -40,7 +40,7 @@ from agent_bom.api.audit_details import sanitize_audit_details as sanitize_audit
 from agent_bom.api.audit_key_state import record_key_identity, require_verification_budget
 from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
-from agent_bom.core.settings import env_bool, env_int
+from agent_bom.core.settings import env_bool, env_first, env_int
 
 __all__ = ["AUTH_FAILURE_AUDIT_TENANT", "_AUDIT_DETAIL_KEY_RE", "_MAX_AUDIT_DETAILS_JSON_BYTES", "_MAX_AUDIT_DETAIL_COLLECTION_ITEMS",
     "_MAX_AUDIT_DETAIL_DEPTH", "_MAX_AUDIT_DETAIL_KEYS", "_MAX_AUDIT_DETAIL_KEY_LENGTH", "_MAX_AUDIT_DETAIL_STRING_LENGTH",
@@ -200,20 +200,19 @@ _EPHEMERAL_KEY_WARNED = False
 AUTH_FAILURE_AUDIT_TENANT = "__auth_security__"
 
 
-def warn_if_ephemeral_hmac_key() -> None:
-    """Log once per process when audit signatures use an ephemeral key."""
+def warn_if_ephemeral_hmac_key(*, durable: bool | None = None) -> None:
+    """Warn once when a durable audit chain uses an ephemeral key; an in-memory chain (startup default) loses nothing, so it is info."""
     global _EPHEMERAL_KEY_WARNED
     if _HMAC_ENV_KEY or _EPHEMERAL_KEY_WARNED:
         return
+    if not (durable or postgres_deployment_configured() or env_first("AGENT_BOM_AUDIT_DB", "AGENT_BOM_DB")):
+        return logger.info("AGENT_BOM_AUDIT_HMAC_KEY not set — the in-memory audit log is signed with a per-process key")
     _EPHEMERAL_KEY_WARNED = True
-    logger.warning(
-        "AGENT_BOM_AUDIT_HMAC_KEY not set — audit log HMAC uses ephemeral key "
-        "(signatures will not survive process restart; set env var for production)"
-    )
+    logger.warning("AGENT_BOM_AUDIT_HMAC_KEY not set — durable audit signatures use a per-process key and fail to verify after restart")
 
 
 def _default_signing_key() -> bytes:
-    warn_if_ephemeral_hmac_key()
+    warn_if_ephemeral_hmac_key(durable=True)
     return _HMAC_KEY
 
 

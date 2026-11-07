@@ -43,6 +43,7 @@ from agent_bom.output.finding_views import (
     sanitize_output_text,
 )
 from agent_bom.security import sanitize_launch_command, sanitize_path_label
+from agent_bom.verbose_hint import verbose_hint
 
 
 def _console() -> Console:
@@ -205,13 +206,12 @@ def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
     table.add_column("Fix", ratio=2)
     # Filter to actionable findings only — UNKNOWN severity transitive deps with no creds/tools are noise. Users see all with --verbose.
     actionable = [finding for finding in all_cve if is_actionable_finding(finding)]
-    # --fixable-only: keep only entries that have a fix available
-    if fixable_only:
+    if fixable_only:  # keep only entries that have a fix available
         actionable = [finding for finding in actionable if finding.fixed_version]
     if not actionable:
         _console().print("  [green]✓ No actionable findings (all transitive/low-severity noise).[/green]")
         if len(all_cve) > 0:
-            _console().print(f"  [dim]{len(all_cve)} low-priority findings hidden. Use --verbose to see all.[/dim]")
+            _console().print(f"  [dim]{len(all_cve)} low-priority findings hidden. Use {verbose_hint()} to see all.[/dim]")
         return
 
     for finding in actionable[:25]:  # Top 25 actionable

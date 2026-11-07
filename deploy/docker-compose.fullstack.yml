@@ -45,7 +45,6 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: agentbom/agent-bom:0.113.2
-    container_name: agent-bom-fullstack-migrate
     working_dir: /opt/agent-bom
     entrypoint: ["python"]
     command: ["deploy/supabase/postgres/compose_migrate.py"]
@@ -73,7 +72,6 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: agentbom/agent-bom:0.113.2
-    container_name: agent-bom-api
     restart: unless-stopped
     command: api --host 0.0.0.0 --port 8422
     env_file:
@@ -107,6 +105,8 @@ services:
       AGENT_BOM_CONNECTIONS_KEY_FILE: /run/secrets/connections_key
       # Local dev stack only: filesystem scans should be explicit in shared API setups.
       AGENT_BOM_API_LOCAL_PATH_SCANS: ${AGENT_BOM_API_LOCAL_PATH_SCANS:-disabled}
+      # 1 makes every log line one JSON object, including access logs.
+      AGENT_BOM_LOG_JSON: ${AGENT_BOM_LOG_JSON:-0}
     secrets:
       - postgres_app_password
       - postgres_maintenance_password
@@ -143,7 +143,6 @@ services:
       context: ../ui/
       dockerfile: Dockerfile
     image: agentbom/agent-bom-ui:0.113.2
-    container_name: agent-bom-ui
     restart: unless-stopped
     environment:
       # The browser same-origins to this UI; the UI's Node server proxies
@@ -169,7 +168,6 @@ services:
   # Bootstrap password + app-role password are Docker secrets only.
   postgres:
     image: postgres:16-alpine
-    container_name: agent-bom-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-agent_bom}
