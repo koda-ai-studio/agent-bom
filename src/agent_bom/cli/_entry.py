@@ -20,7 +20,7 @@ from agent_bom.cli._common import (
     _print_update_notice,
 )
 from agent_bom.core.settings import env_str
-from agent_bom.verbose_hint import DEBUG_ENV_HINT, argv_command, command_accepts_verbose
+from agent_bom.core.verbose_hint import DEBUG_ENV_HINT, argv_command, command_accepts_verbose
 
 
 def make_entry_point(

@@ -10,7 +10,7 @@ import pytest
 from click.testing import CliRunner
 
 from agent_bom.cli._entry import make_entry_point
-from agent_bom.verbose_hint import DEBUG_ENV_HINT, verbose_hint
+from agent_bom.core.verbose_hint import DEBUG_ENV_HINT, verbose_hint
 
 SRC = Path(__file__).resolve().parents[1] / "src" / "agent_bom"
 

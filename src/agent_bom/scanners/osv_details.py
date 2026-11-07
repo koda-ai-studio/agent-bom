@@ -10,9 +10,9 @@ import httpx
 from rich.console import Console
 
 from agent_bom.core.errors import DegradedCoverage, UpstreamError, UpstreamInvalidResponseError
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.http_client import OfflineModeError, create_client, request_with_retry
 from agent_bom.scanners.upstream import upstream_request
-from agent_bom.verbose_hint import verbose_hint
 
 _logger = logging.getLogger(__name__)
 

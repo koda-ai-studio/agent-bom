@@ -13,8 +13,8 @@ from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.scan_memory import remember_and_report
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.output import print_diff
-from agent_bom.verbose_hint import verbose_hint
 
 
 def _scan_cmd_to_json(report: Any) -> dict[str, Any]:

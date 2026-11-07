@@ -15,6 +15,7 @@ from agent_bom.core.errors import (
     UpstreamError,
     UpstreamRateLimitedError,
 )
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.core.versions.osv import is_release_range, range_limits, range_match_state, range_windows
 from agent_bom.core.versions.osv import is_valid_fix_version as is_valid_fix_version
 from agent_bom.cpe_match import cpe_identity
@@ -29,7 +30,6 @@ from agent_bom.scanners.osv_details import enrich_results_if_needed as enrich_re
 from agent_bom.scanners.osv_details import enrich_vuln_details as enrich_vuln_details
 from agent_bom.scanners.osv_details import vuln_needs_enrichment as vuln_needs_enrichment
 from agent_bom.scanners.upstream import upstream_request
-from agent_bom.verbose_hint import verbose_hint
 from agent_bom.version_utils import compare_version_order, is_prerelease_version
 
 __all__ = [

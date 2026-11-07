@@ -12,9 +12,9 @@ from typing import TYPE_CHECKING, Iterator
 from rich.panel import Panel
 from rich.rule import Rule
 
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.compact import _compact_detail
-from agent_bom.verbose_hint import verbose_hint
 
 if TYPE_CHECKING:
     from rich.console import Console

@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.rule import Rule
 from rich.table import Table
 
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
@@ -29,7 +30,6 @@ from agent_bom.output.dependency_hierarchy import dependency_count_label
 from agent_bom.output.inventory_label import inventory_counts, inventory_subjects
 from agent_bom.output.kernel_header_console import collapse_kernel_header_findings, print_findings_heading, print_kernel_groups_only
 from agent_bom.output.possibly_affected import print_possibly_affected
-from agent_bom.verbose_hint import verbose_hint
 
 # The cross-cutting helpers (`console`, `_sev_badge`, `build_remediation_plan`)
 # live in the package's __init__. Import lazily inside functions to avoid a
