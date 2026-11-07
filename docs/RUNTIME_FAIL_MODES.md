@@ -713,8 +713,10 @@ or hold an answer. Every failure increments
 receipt. A receipt that is not written increments
 `agent_bom_auth_receipts_dropped_total{reason}` (`over_budget`, `queue_full`,
 `source_queue_full`, `write_failed`) and is reported by an `auth.receipts_dropped`
-audit entry with the count once writes succeed again. All but `over_budget` also log an
-error at most once a minute.
+audit entry within about five seconds, without waiting for another failure, retried until
+it is written. That entry gives `dropped_receipts`, `window_started_at`, `window_ended_at`,
+`dropped_source_count` and up to 20 sources as `dropped_sources`. All reasons but
+`over_budget` also log an error at most once a minute.
 At exit the process waits two seconds for queued receipts and logs an error if any
 remain. Those, and a gap not yet recorded, are then lost, with the log and metric the
 only record.
@@ -740,11 +742,12 @@ revocation still use the current durable credential record on every request.
 | `GET`/`HEAD` of `/`, `/version`, `/docs`, `/redoc`, `/openapi.json`, `/brand/mark.svg` | Served | Served |
 | Anonymous route, when the operator enabled anonymous access | Served | Served, if the route's own data store answers |
 | Anything presenting a credential, or `/v1/auth/*`, SCIM and unclassified routes | 429 | 503 |
+| `/ws/proxy/metrics` and `/ws/proxy/alerts`, when authentication is required | Closed with 4029 | Closed with 1013 |
 
 These exact operations verify nothing, so neither a source's backoff nor the auth
 store has any bearing on them. Any other method on those paths, a plain `OPTIONS`, and
 every other path can reach a key check, so they are limited like everything else; a
-test walks every route and method to hold this. On the API, `/.well-known/*` is one of
+test walks every HTTP, websocket and MCP route to hold this. On the API, `/.well-known/*` is one of
 those other paths. The standalone MCP server serves its OAuth discovery documents there
 without a check. They still pass the coarse per-IP limit, whose
 shared store degrades to local limits in an outage. `AGENT_BOM_DISABLE_DOCS`
@@ -814,6 +817,7 @@ Only the handler that verified a credential marks a failure, by setting
 | Unsupported `Authorization` scheme | Proxy identity headers with no attestation secret |
 | Unreadable browser-session cookie | Expired or revoked session, or one signed before a signing-key change |
 | JWT that fails verification, including a bad signature on an expired token | Expired JWT with a valid signature; identity provider or token endpoint unreachable or returning 5xx |
+| Wrong key or attestation secret on a websocket, by header or first message | Websocket key without the required scope or role; a token in the URL, which is refused unread |
 | Wrong SCIM bearer or wrong proxy attestation secret | Inactive SCIM user or inactive trial, whose identity did verify |
 | Invalid trial invitation, failed OIDC code exchange or SAML assertion | Missing OIDC or SAML state; missing report download token on a valid key |
 | OAuth `invalid_client` and `invalid_grant`; standalone MCP 401 when a token was presented | Generic 400/403 validation or authorization errors; MCP challenge with no token |
@@ -835,27 +839,51 @@ rotation; retained receipts are not rewritten. Preserve prior verification keys
 under the operator's evidence-retention policy.
 
 Receipt admission permits at most three per source per minute, and 100 per deployment
-for repeat receipts. A source's first receipt in the window has a ceiling of 400, so a
-spray from many sources cannot erase the next source's only record. Blocked requests do not append another receipt. These sampled records
+for repeat receipts. A source's first receipt in the window has a ceiling of 400, with
+at most 25 per IPv4 /16 or IPv6 /48, so one network's flood cannot erase other sources'
+only record. A flood across hundreds of networks can still spend it, and the
+`auth.receipts_dropped` entry then records the loss. Blocked requests do not append another receipt. These sampled records
 establish observed failures, not an exhaustive attempt count or independent
 collector evidence.
 
-For persisted SQLite audit logs without a configured HMAC key, a changed or
-unrecorded signing-key identity yields `unverifiable` rows and an explicit
-cannot-verify reason. It never yields a clean/verified result. Local key-identity
-metadata is a diagnostic receipt, not independent tamper evidence. A recorded
-identity that does not match the key in use, configured or not, reports `unverifiable`
-rather than tampered; altered rows under the matching key stay exact. With no recorded
-identity, as on Postgres, every row failing also reports `unverifiable`, since that
-means a different key or a complete rewrite. It is a salted
-HMAC of the key's digest, and a database opened with an older unsalted digest is
-upgraded in place, including when its original key is gone. Testing a candidate key
-against it costs about one HMAC-SHA-256, the same as testing one against any stored
-audit row with known contents, so it adds no offline guessing route; a slow
-derivation here would protect nothing while those rows exist. Use a high-entropy
-signing key. With a configured key, every HMAC and chain checkpoint is still
-verified when the full chain fits the requested limit; changed rows and truncation
-retain their existing tamper results.
+### What integrity checks detect
+
+`verified` rows check out under the held signing key. `tampered` rows are shown to
+have changed. `unverifiable` rows are ones no held key can check, reported with
+`status: partially_unverifiable` and an explanation. It is never a clean result.
+Links between rows and the stored count and head need no key, so reordering, deletion
+and truncation are detected in every state, unless the stored checkpoint was rewritten
+to match and the chain's genesis row survives.
+
+| State | Row contents | Reported |
+|---|---|---|
+| SQLite, row from the key's boundary up to the next key's | Any change is detected | `verified` or `tampered` |
+| SQLite, row before the key's boundary or in another key's range (an earlier key, or an ephemeral key that is gone) | Changes are **not** detected | `unverifiable`, unless it verifies under the held key |
+| Postgres, row at or after the first row the key verifies | Any change is detected | `verified` or `tampered` |
+| Postgres, row before that | Changes are **not** detected: a different earlier key and altered contents cannot be told apart | `unverifiable` |
+| Postgres, every row fails its signature with links and count intact | A different key and every row altered cannot be told apart, including a single-row chain | `unverifiable` |
+
+On SQLite, the first time a key opens the log it signs a boundary: rows from there until
+the next key's boundary must verify under it. Configuring or rotating a key therefore
+needs no other action, and tampering after that point is reported exactly. Opening once
+with the wrong key loses nothing when the right one returns. To check older rows, restart
+with the key that wrote them; other keys' rows then read `unverifiable`.
+
+A boundary can be signed only with its key, so editing that table cannot make a row read
+as verified, and a row it covers cannot be excused by rewriting its boundary. An added
+unsigned boundary can end a key's range early, which turns later failures into
+`unverifiable`: visible and never clean, but not exact. Deleting every boundary
+removes the boundary until the next start, when a new one begins at the end of the log.
+Rows the key still verifies keep later rows exact, but changes before the first such row
+then read `unverifiable`, as on Postgres. Postgres keeps no record of the key.
+This local metadata is a diagnostic receipt, not independent tamper evidence: an actor
+holding both the records and the key can rewrite them undetected.
+
+The key identity row is a salted HMAC of the key's digest, and a database opened with an
+older unsalted digest is upgraded in place. Testing a candidate key against it costs about
+one HMAC-SHA-256, the same as testing one against any stored audit row with known contents,
+so it adds no offline guessing route, and a slow derivation would protect nothing while
+those rows exist. Use a high-entropy signing key.
 
 A larger chain is not walked. The integrity response and export report
 `status: not_verified_over_budget`, `verified: null` (no count exists, which differs
@@ -870,7 +898,7 @@ persistent audit logs as evidence.
 | Threat | Scenario and mitigation | Remaining constraint |
 |---|---|---|
 | Spoofing | A second `X-Forwarded-For` line or IPv6 rotation sought a fresh budget. Lines are combined before hops are counted; IPv6 is limited by /64 | Shipped defaults trust Docker's pools on the hosted overlay; anything else that can reach the API over those networks is trusted |
-| Tampering | Stored key digest upgraded to a salted HMAC; receipts and gap entries stay in the signed chain | An actor controlling both the records and the key can still rewrite them |
+| Tampering | Rows are held to the key from its signed boundary, and links and counts need no key. Key digest stored as a salted HMAC | Rows before a key's boundary are unverifiable. Postgres cannot tell altered rows from a different key before the first row that verifies. An actor controlling both the records and the key can rewrite them |
 | Repudiation | Receipts leave the request path, so a stall can no longer block on them. Drops are counted, logged, and recorded in the chain | Receipts still queued two seconds after process exit starts are lost, with an error logged |
 | Information disclosure | Warnings use fixed text with no header values; receipts hold a keyed fingerprint and validated addresses | Exact addresses in receipts are visible to operators who can read that chain |
 | Denial of service | Expired sessions, missing credentials and missing report tokens no longer lock out a source. Audit stalls, dead connections and one source's failures no longer refuse others | A shared NAT or /64 still shares one budget. Three consecutive real store errors still fail closed for everyone |

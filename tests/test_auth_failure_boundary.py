@@ -385,16 +385,16 @@ def test_many_sources_cannot_spend_the_budget_for_a_targets_first_receipt(tmp_pa
     store = SQLiteAuthFailureStore(str(tmp_path / "limits.db"))
     for number in range(34):
         for _ in range(3):
-            store.audit_allowed(f"198.51.100.{number}", 100)
+            store.audit_allowed(f"{number + 1}.51.100.1", 100)
     assert store.audit_allowed("203.0.113.9", 100) is True
     # Repeat receipts still respect the deployment ceiling.
-    assert store.audit_allowed("198.51.100.200", 100) is True
-    assert store.audit_allowed("198.51.100.200", 100) is False
+    assert store.audit_allowed("198.52.100.200", 100) is True
+    assert store.audit_allowed("198.52.100.200", 100) is False
 
 
 def test_first_receipts_still_have_a_ceiling(tmp_path):
     store = SQLiteAuthFailureStore(str(tmp_path / "limits.db"))
-    allowed = sum(store.audit_allowed(f"198.{n // 65536}.{(n // 256) % 256}.{n % 256}", 100) for n in range(1000))
+    allowed = sum(store.audit_allowed(f"{n % 200 + 1}.{n // 200}.0.1", 100) for n in range(1000))
     assert 100 < allowed <= 400
 
 

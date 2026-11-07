@@ -257,8 +257,6 @@ def test_receipts_that_cannot_be_queued_are_counted_and_recorded_later(monkeypat
     assert dropped >= 1
     assert sum(1 for action, _ in written if action == "auth.failed") == 20 - dropped
 
-    receipts.submit("198.51.100.200", 1.0, allowed, status_code=401)
-    assert receipts.flush()
     gaps = [details for action, details in written if action == "auth.receipts_dropped"]
     assert sum(gap["dropped_receipts"] for gap in gaps) == dropped
     assert all(gap["tenant_id"] == audit_log.AUTH_FAILURE_AUDIT_TENANT for gap in gaps)
@@ -605,8 +603,8 @@ def test_recorded_gap_survives_audit_redaction(monkeypatch):
     store = audit_log.InMemoryAuditLog()
     monkeypatch.setattr(audit_log, "_audit_log", store)
     receipts = AuthFailureReceipts()
-    receipts._unrecorded_drops = 7
-    receipts.submit("198.51.100.1", 1.0, lambda *_args: True, status_code=401)
+    for _ in range(7):
+        receipts._dropped("write_failed", source="198.51.100.1", observed_at=1.0)
     assert receipts.flush()
     gap = store.list_entries(action="auth.receipts_dropped", tenant_id=audit_log.AUTH_FAILURE_AUDIT_TENANT)[0]
     assert gap.details["dropped_receipts"] == 7

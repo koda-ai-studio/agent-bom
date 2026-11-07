@@ -17,6 +17,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import AbstractContextManager, contextmanager
+from ipaddress import ip_network
 from typing import Any, TypeVar
 
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore
@@ -33,6 +34,7 @@ _BUSY_TIMEOUT_SECONDS = 0.4
 _RECEIPTS_PER_SOURCE_PER_MINUTE = 3
 _RECEIPTS_PER_MINUTE = 100
 _FIRST_RECEIPTS_PER_MINUTE = 400
+_FIRST_RECEIPTS_PER_NETWORK_PER_MINUTE = 25
 _T = TypeVar("_T")
 
 
@@ -80,30 +82,48 @@ class AuthFailureStore(ABC):
         return max(0, math.ceil(blocked - now))
 
     def audit_allowed(self, source: str, now: float) -> bool:
-        # Global lock serializes both budgets across replicas. Repeat receipts share
-        # the deployment ceiling. A source's first receipt in the window has a higher
-        # one, so a spray from many sources cannot erase the next source's only record,
-        # and rotating sources still cannot grow the log without bound.
+        # Global lock serializes the budgets across replicas. Repeat receipts share the
+        # deployment ceiling. A source's first receipt in the window has a higher one,
+        # limited per network, so a flood cannot erase other sources' only record, and
+        # rotating sources still cannot grow the log without bound.
         with self.transaction("audit-budget") as execute:
 
             def bucket(name: str) -> tuple[int, float]:
                 row = execute("SELECT failures, window_start FROM api_auth_failure_limits WHERE source = ?", (name,)).fetchone()
                 return (row[0], row[1]) if row and now - row[1] < 60 else (0, now)
 
-            source_bucket = "audit:source:" + source
-            source_count, source_start = bucket(source_bucket)
-            global_count, global_start = bucket("audit:global")
-            ceiling = _RECEIPTS_PER_MINUTE if source_count else _FIRST_RECEIPTS_PER_MINUTE
-            if source_count >= _RECEIPTS_PER_SOURCE_PER_MINUTE or global_count >= ceiling:
+            buckets = {name: bucket(name) for name in ("audit:source:" + source, "audit:global")}
+            source_count = buckets["audit:source:" + source][0]
+            if source_count >= _RECEIPTS_PER_SOURCE_PER_MINUTE:
                 return False
-            for values in ((source_bucket, source_count + 1, source_start, now), ("audit:global", global_count + 1, global_start, now)):
+            if source_count:
+                if buckets["audit:global"][0] >= _RECEIPTS_PER_MINUTE:
+                    return False
+            else:
+                network = "audit:network:" + _receipt_network(source)
+                buckets[network] = bucket(network)
+                if (
+                    buckets["audit:global"][0] >= _FIRST_RECEIPTS_PER_MINUTE
+                    or buckets[network][0] >= _FIRST_RECEIPTS_PER_NETWORK_PER_MINUTE
+                ):
+                    return False
+            for name, (count, start) in buckets.items():
                 execute(
                     """INSERT INTO api_auth_failure_limits VALUES (?, ?, 0, ?, 0, ?)
                     ON CONFLICT (source) DO UPDATE SET failures=excluded.failures,
                     window_start=excluded.window_start, updated_at=excluded.updated_at""",
-                    values,
+                    (name, count + 1, start, now),
                 )
         return True
+
+
+def _receipt_network(source: str) -> str:
+    """Group a source for its share of first receipts: an IPv4 /16 or an IPv6 /48."""
+    try:
+        network = ip_network(source, strict=False)
+    except ValueError:
+        return source
+    return str(network.supernet(new_prefix=16 if network.version == 4 else 48))
 
 
 class SQLiteAuthFailureStore(AuthFailureStore):

@@ -320,9 +320,10 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
         self._rpm = _validate_rate_limit("global_ip_rpm", rpm, max_rpm=MAX_RATE_LIMIT_RPM * 5)
         self._window = 60
         self._store = _build_admission_rate_limit_store(self._window)
-        from agent_bom.api.auth_failure_policy import AuthFailurePolicy
+        from agent_bom.api.auth_failure_policy import AuthFailurePolicy, set_active_policy
 
         self._auth_failures = AuthFailurePolicy()
+        set_active_policy(self._auth_failures)
         self._anonymous_request = anonymous_request
 
     def _bucket_key(self, request: StarletteRequest) -> str:

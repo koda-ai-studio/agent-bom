@@ -63,7 +63,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Failed-authentication receipts have their own workers and bounded queue, so a held audit lock or a failed audit write no longer refuses other callers. Dropped receipts are counted in `agent_bom_auth_receipts_dropped_total` and recorded in the audit chain. The Postgres key-presence check no longer holds the event loop while it waits on the audit table.
 - One stalled SQLite transaction no longer blocks authentication checks for other sources.
 - A burst of distinct sources now waits briefly for authentication state instead of receiving 503. An audit write error no longer leaves the SQLite file write-locked, and an unreachable identity provider no longer counts as a failed credential.
-- A different signing key now reports "cannot verify" rather than tampered entries.
+- Audit integrity is now scored per entry. Entries from a key's first use onward are verified exactly, entries no held key can check are counted as unverifiable, and links and counts are checked either way.
+- Websocket authentication now follows the same source limit and failure counting as HTTP.
+- Dropped failed-authentication receipts are recorded within seconds, with their window and sources.
 - All `X-Forwarded-For` lines are combined before trusted hops are counted, so a second line can neither evade the failure limit nor frame another address. IPv6 sources are limited by /64.
 - Attempts refused for capacity still count toward the failure limit.
 - The stored audit signing-key identity is now a salted HMAC. Existing unsalted digests are upgraded in place.

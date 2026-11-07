@@ -125,7 +125,8 @@ class AuthFailurePolicy:
             )
 
     def _client_address(self, request) -> str:
-        peer = request.client.host if request.client else ""
+        client = getattr(request, "client", None)
+        peer = client.host if client else ""
         forwarded = forwarded_for_header(request.headers)
         self._warn_source_conditions(request, peer, forwarded)
         return resolve_forwarded_client_ip(peer_host=peer or "unknown", forwarded_for=forwarded, bounded=False)
@@ -319,29 +320,22 @@ class AuthFailurePolicy:
         recorded = self._write_pending_failures(source)
         return recorded if recorded is not None else self.store.remaining(source, time.time())
 
-    def _submit_receipt(self, request, response, source: str, now: float, throttled: bool) -> None:
+    def _submit_receipt(self, request, status_code: int, source: str, now: float, throttled: bool, fingerprint: str | None) -> None:
         credential = request.headers.get("x-api-key") or request.headers.get("authorization") or request.headers.get("cookie") or ""
-        fingerprint = getattr(request.state, "auth_credential_fingerprint", None) or (
-            audit_log.fingerprint_auth_credential(credential) if credential else "absent"
-        )
+        fingerprint = fingerprint or (audit_log.fingerprint_auth_credential(credential) if credential else "absent")
         address = self._client_address(request)
         RECEIPTS.submit(
             source,
             now,
             self.store.audit_allowed,
             hmac_sha256=fingerprint,
-            status_code=response.status_code,
+            status_code=status_code,
             reason_code="auth_source_throttled" if throttled else "authentication_failed",
             **({"client_address": address} if address != source else {}),
         )
 
-    async def after(self, request, response):
-        # Only the handler that verified a credential can say it failed. A 401
-        # also means an expired session, nothing presented, or a missing report
-        # token, none of which is a guess at a credential.
-        failed = response.status_code in {400, 401, 403} and getattr(request.state, "authentication_failed", False)
-        if not failed:
-            return response
+    async def record_failed_credential(self, request, status_code: int, fingerprint: str | None = None) -> int:
+        """Count a credential that failed verification; returns the source's backoff, if known."""
         metrics.record_auth_failure("failed_credential")
         source, now = self.source(request), time.time()
         with self._state_lock:
@@ -352,10 +346,39 @@ class AuthFailurePolicy:
         except AuthProtectionUnavailableError:
             # The credential was already refused and its count is held for the
             # next operation. Admission, not this answer, fails closed.
-            self._submit_receipt(request, response, source, now, throttled=False)
+            self._submit_receipt(request, status_code, source, now, False, fingerprint)
+            return 0
+        self._submit_receipt(request, status_code, source, now, bool(remaining), fingerprint)
+        return remaining
+
+    async def after(self, request, response):
+        # Only the handler that verified a credential can say it failed. A 401
+        # also means an expired session, nothing presented, or a missing report
+        # token, none of which is a guess at a credential.
+        if not (response.status_code in {400, 401, 403} and getattr(request.state, "authentication_failed", False)):
             return response
-        self._submit_receipt(request, response, source, now, throttled=bool(remaining))
+        fingerprint = getattr(request.state, "auth_credential_fingerprint", None)
+        remaining = await self.record_failed_credential(request, response.status_code, fingerprint)
         return self.denied(remaining) if remaining else response
+
+
+_active_policy: AuthFailurePolicy | None = None
+_active_policy_lock = threading.Lock()
+
+
+def set_active_policy(policy: AuthFailurePolicy) -> None:
+    """Share the HTTP middleware's policy, so a block applies on every protocol it serves."""
+    global _active_policy
+    with _active_policy_lock:
+        _active_policy = policy
+
+
+def active_policy() -> AuthFailurePolicy:
+    global _active_policy
+    with _active_policy_lock:
+        if _active_policy is None:
+            _active_policy = AuthFailurePolicy()
+        return _active_policy
 
 
 class AuthFailureMiddleware(BaseHTTPMiddleware):

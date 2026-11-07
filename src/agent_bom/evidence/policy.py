@@ -156,6 +156,10 @@ TIER_A_FIELDS: frozenset[str] = frozenset(
         # Failed-authentication receipts: a validated IP literal and a count.
         "client_address",
         "dropped_receipts",
+        "dropped_source_count",
+        "dropped_sources",
+        "window_started_at",
+        "window_ended_at",
         "origin",
         "source_type",
         "observed_via",

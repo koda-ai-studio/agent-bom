@@ -60,8 +60,10 @@ def test_unverifiable_count_respects_limit_and_tenant(monkeypatch, tmp_path):
     reopened = audit_log.SQLiteAuditLog(path)
     monkeypatch.setattr(audit_log, "get_audit_log", lambda: reopened)
     request = SimpleNamespace(state=SimpleNamespace(tenant_id="default"))
+    # Five entries exceed a limit of two, so none are walked and the count stays true.
     result = audit_integrity(request, limit=2, include_runtime=False)
-    assert result["unverifiable"] == result["checked"] == 2
+    assert (result["status"], result["unverifiable"], result["checked"]) == ("not_verified_over_budget", 5, 0)
+    assert audit_integrity(request, limit=5, include_runtime=False)["unverifiable"] == 5
     request.state.tenant_id = "absent"
     assert audit_integrity(request, limit=2, include_runtime=False)["checked"] == 0
 
@@ -203,6 +205,9 @@ def test_legacy_marker_rows_keep_their_meaning(monkeypatch, tmp_path):
     first.append(audit_log.AuditEntry(action="test.first"))
     with sqlite3.connect(path) as connection:
         connection.execute("UPDATE audit_key_identity SET fingerprint = 'legacy-key-unrecorded'")
+        connection.execute("DROP TABLE audit_key_boundary")
+    monkeypatch.setattr(audit_log, "_HMAC_KEY", b"another-ephemeral-key")
     reopened = audit_log.SQLiteAuditLog(path)
     assert _identity_row(reopened) == "legacy-key-unrecorded"
-    assert _integrity(monkeypatch, reopened)["unverifiable"] == 1
+    result = _integrity(monkeypatch, reopened)
+    assert (result["tampered"], result["unverifiable"]) == (0, 1)
