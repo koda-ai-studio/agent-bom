@@ -145,6 +145,12 @@ def _new_saml_relay_state() -> tuple[str, str]:
     raise HTTPException(status_code=503, detail="SAML relay_state issuance unavailable")
 
 
+def failed_credential(request: Request, detail: str, *, counts: bool = True) -> HTTPException:
+    """A 401 for a presented credential, marked for the failed-authentication limit."""
+    request.state.authentication_failed = counts
+    return HTTPException(status_code=401, detail=detail)
+
+
 def _consume_saml_relay_state(relay_state: str | None) -> None:
     if not relay_state:
         if _saml_idp_initiated_allowed():

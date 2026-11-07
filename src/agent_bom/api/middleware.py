@@ -45,6 +45,7 @@ from agent_bom.api.browser_session import (
     CSRF_HEADER_NAME,
     SESSION_COOKIE_NAME,
     BrowserSessionError,
+    MalformedBrowserSessionError,
     verify_browser_session_token,
     verify_csrf,
 )
@@ -379,7 +380,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         from agent_bom.api.auth import Role
         from agent_bom.rbac import effective_no_auth_role
 
-        role = effective_no_auth_role(credentials_configured=bool(self._api_key or get_key_store().has_keys()))
+        credentials_configured = bool(self._api_key) or await anyio.to_thread.run_sync(get_key_store().has_keys)
+        role = effective_no_auth_role(credentials_configured=credentials_configured)
         # Combined mode: when credentials (a static API key or any stored keys) are also configured, the anonymous fallback is strictly
         # read-only — otherwise NO_AUTH_ROLE=admin would hand an unauthenticated caller admin
         # (they could mint admin keys). NO_AUTH_ROLE elevation only applies to a
@@ -583,6 +585,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             # A bearer that is not JWT-shaped is not an OIDC token at all (e.g. a raw opaque API key sent as ``Authorization: Bearer``). It
             # stays ``Absent`` so the API-key resolver can still authenticate it, preserving the legitimate key-as-bearer path.
             if token_is_jwt_shaped(raw_key):
+                if exc.counts_as_failed_credential:
+                    request.state.authentication_failed = True
                 return Invalid(
                     JSONResponse(
                         status_code=401,
@@ -598,7 +602,9 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         from agent_bom.api.auth import Role, get_key_store
 
         store = get_key_store()
-        if not store.has_keys():
+        # On Postgres this reads through the maintenance role and appends an audit receipt, so it can wait on the audit table. It must never
+        # hold the event loop that answers every other caller.
+        if not await anyio.to_thread.run_sync(store.has_keys):
             return Absent()
         # ``store.verify`` runs a ~21ms scrypt derivation (in-memory store) or a blocking DB read (Postgres store); offload it to a worker
         # thread so it never stalls the async event loop while unrelated requests wait.
@@ -667,12 +673,17 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             # and rejected.
             if self._allow_unauthenticated and not self._credential_presented(request, auth):
                 return Resolved(await self._serve_anonymous(request, call_next))
+            # An unusable Authorization scheme was still presented. Nothing at all, or proxy identity headers without an attestation, is
+            # an unauthenticated request, not a failed credential.
+            if auth.strip():
+                request.state.authentication_failed = True
             return Invalid(
                 JSONResponse(
                     status_code=401,
                     content={"detail": "Unauthorized — provide API key via Authorization: Bearer <key> or X-API-Key header"},
                 )
             )
+        request.state.authentication_failed = True
         return Invalid(
             JSONResponse(
                 status_code=401,
@@ -707,6 +718,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 content={"detail": "SCIM bearer token configuration is invalid"},
             )
         if binding is None:
+            if raw_key:
+                request.state.authentication_failed = True
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Unauthorized — SCIM bearer token required"},
@@ -730,7 +743,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             session_role = Role(str(payload.get("role", "")).lower())
         except AuthStateUnavailable:
             return JSONResponse(status_code=503, content={"detail": "Authentication state unavailable"})
-        except (BrowserSessionError, ValueError):
+        except (BrowserSessionError, ValueError) as exc:
+            # An expired or revoked session is a person who must sign in again, never a guess, and must not lock them out.
+            if isinstance(exc, MalformedBrowserSessionError):
+                request.state.authentication_failed = True
             return JSONResponse(status_code=401, content={"detail": "Unauthorized — invalid browser session"})
 
         subject = str(payload.get("sub") or "browser-session")
@@ -818,6 +834,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             )
         presented_secret = request.headers.get("x-agent-bom-proxy-secret", "").strip()
         if not hmac.compare_digest(presented_secret, self._trusted_proxy_secret):
+            request.state.authentication_failed = bool(presented_secret)
             return JSONResponse(status_code=401, content={"detail": "Unauthorized — invalid trusted proxy attestation"})
         presented_issuer = request.headers.get("x-agent-bom-auth-issuer", "").strip()
         if self._trusted_proxy_issuer and not hmac.compare_digest(presented_issuer, self._trusted_proxy_issuer):

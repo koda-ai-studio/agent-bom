@@ -9587,17 +9587,23 @@ export interface components {
             name: string;
             /** Source */
             source?: string | null;
+            /** Status */
+            status?: string | null;
             /** Tampered */
             tampered: number;
             /** Tenant Scoped */
             tenant_scoped: boolean;
+            /** Total Entries */
+            total_entries?: number | null;
             /**
              * Unverifiable
              * @default 0
              */
             unverifiable: number;
+            /** Verification Limit */
+            verification_limit?: number | null;
             /** Verified */
-            verified: number;
+            verified: number | null;
         } & {
             [key: string]: unknown;
         };
@@ -9660,15 +9666,21 @@ export interface components {
             checked: number;
             /** Error */
             error?: string | null;
+            /** Status */
+            status?: string | null;
             /** Tampered */
             tampered: number;
+            /** Total Entries */
+            total_entries?: number | null;
             /**
              * Unverifiable
              * @default 0
              */
             unverifiable: number;
+            /** Verification Limit */
+            verification_limit?: number | null;
             /** Verified */
-            verified: number;
+            verified: number | null;
         } & {
             [key: string]: unknown;
         };
@@ -9709,6 +9721,10 @@ export interface components {
             chains: components["schemas"]["AuditChain"][];
             /** Checked */
             checked: number;
+            /** Error */
+            error?: string | null;
+            /** Status */
+            status?: string | null;
             /** Tampered */
             tampered: number;
             /**
@@ -9717,7 +9733,7 @@ export interface components {
              */
             unverifiable: number;
             /** Verified */
-            verified: number;
+            verified: number | null;
         } & {
             [key: string]: unknown;
         };

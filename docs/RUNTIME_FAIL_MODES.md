@@ -666,18 +666,53 @@ The state uses the existing Postgres rate-limit pool and migration-owned
 same `AGENT_BOM_DB` path: authentication state lives in the owner-only
 `<database>.auth-limits.db` sidecar so a scan-ingest write transaction cannot
 lock its budget. Without a persistent database it is process-local.
-At most eight state operations may be outstanding per application, with at most
-two from one source. Capacity exhaustion returns 503 for that request without
-queuing or tripping a process-wide breaker. Timed-out work keeps its slot until
-it exits. A dedicated eight-thread pool separates auth state from background
-work. Operations completing after 500 ms fail closed for that request; their
-completion time is recorded in the worker, so delayed event-loop delivery of
-an on-time result does not create an outage.
+At most eight state operations may be outstanding per application, at most four
+of them failure writes and at most two from one source. An admission check that
+cannot get a slot returns 503 without queuing or tripping a process-wide breaker.
+Timed-out work keeps its slot until it exits. A dedicated eight-thread pool
+separates auth state from background work. Operations completing after 500 ms
+fail closed for that request; their completion time is recorded in the worker, so
+delayed event-loop delivery of an on-time result does not create an outage.
 Postgres auth transactions bound pool acquisition, statement execution and lock
 waits to 400 ms each. Pool saturation and SQL cancellation/lock timeouts fail
 that request closed without activating the global outage cooldown.
-SQLite busy/locked responses likewise indicate contention, not a global outage;
-they return 503 for that request and allow immediate recovery when the lock clears.
+SQLite uses one connection per worker. Admission reads never wait for a writer,
+so one stalled transaction blocks no other source's check. A second writer waits
+at most 400 ms. The process-local in-memory database has one connection, and a
+bounded lock around it gives the same 400 ms limit to every operation.
+
+A failed attempt that cannot be written is never lost. Its count waits in memory,
+for at most 4,096 sources, and the next operation for that source carries it,
+including the next admission check, which then refuses the source. The caller still
+receives its 401, since the credential was already refused. Only a process exit
+before the next operation loses that count; a wave of concurrent guesses can
+therefore pass the limit by at most the number in flight, not by every attempt.
+
+### Outage breaker
+
+| Condition | Response | Effect on others |
+|---|---|---|
+| Dead pooled connection | Retried on the next connection within 400 ms | None. A database restart leaves several, and each costs one attempt |
+| One store error | 503 for that request | None; a success clears the count |
+| Three consecutive store errors, no success between | Breaker opens for five seconds: 503 with `Retry-After: 5`, including valid keys | Fails closed. One operation goes through every 500 ms to find recovery, and one success closes the breaker |
+| Slot, deadline, pool or lock timeout | 503 for that admission check | None. Contention is not evidence of an outage |
+| Audit write or receipt-budget failure | The caller is unaffected | None. Counted as a dropped receipt |
+
+After a Postgres restart, valid keys recover as soon as the driver's pool has a
+new connection. The pool reconnects in the background with its own backoff, and
+requests until then receive 503.
+
+### Failed-authentication receipts
+
+Receipts are written by two dedicated workers with their own queue of 256, at most
+eight per source, so an audit stall or a flood from one source cannot refuse anyone
+or hold an answer. A receipt that cannot be queued or written increments
+`agent_bom_auth_receipts_dropped_total{reason}` (`queue_full`, `source_queue_full`,
+`write_failed`), logs an error at most once a minute, and is reported by an
+`auth.receipts_dropped` audit entry with the count once writes succeed again.
+At exit the process waits two seconds for queued receipts and logs an error if any
+remain. Those, and a gap not yet recorded, are then lost, with the log and metric the
+only record. Sampling, described below, is not a drop.
 
 Admission reads are cached for at most one second and 4,096 source addresses.
 Concurrent cold requests from the same source share one admission lookup, with
@@ -689,12 +724,28 @@ A failure invalidates that source locally; atomic shared-store updates still
 decide the failure count and backoff. Another replica's block or a new outage
 may take up to one second to become visible through an existing admission
 cache entry. Once a store exception is observed, all local admission cache
-entries are cleared and a five-second outage cooldown fails auth closed with
-503, including valid credentials. A slot/deadline timeout does not trigger
-that global cooldown. Health, static assets and CORS preflight bypass the
-check; ordinary read/write limits retain their existing behavior.
-This cache holds source admission only; key validity and revocation still use
-the current durable credential record on every request.
+entries are cleared. This cache holds source admission only; key validity and
+revocation still use the current durable credential record on every request.
+
+### What needs authentication state
+
+| Request | During a backoff | Auth store down |
+|---|---|---|
+| `/health`, `/healthz`, `/livez`, `/readyz`, `/ping`, static assets, CORS preflight | Served | Served |
+| `GET`/`HEAD` of `/`, `/version`, `/docs`, `/redoc`, `/openapi.json`, `/brand/mark.svg`, `/.well-known/*` | Served | Served |
+| Anonymous route, when the operator enabled anonymous access | Served | Served, if the route's own data store answers |
+| Anything presenting a credential, or `/v1/auth/*`, SCIM and unclassified routes | 429 | 503 |
+
+These public documents verify nothing, so neither a source's backoff nor the auth
+store has any bearing on them. They still pass the coarse per-IP limit, whose
+shared store degrades to local limits in an outage. `AGENT_BOM_DISABLE_DOCS`
+still removes the documentation routes.
+
+Anonymous reads depend on their own data, which is why backends differ when a
+database is down. On Postgres, auth state and data share one database, so an
+anonymous read returns 503 from the route itself. On SQLite, auth state is a
+separate sidecar file: losing it leaves anonymous reads working, and they fail only
+if the data file does. Neither case is a clean result reported from missing data.
 
 When the operator explicitly enables anonymous access, credential-free requests
 to declared non-auth routes do not query failed-authentication state. They still
@@ -711,19 +762,55 @@ an authenticated identity or bypass the role gate.
 Only source addresses incur backoff; a claimed key or tenant cannot consume
 another source's allowance. Backoff rejects requests from the blocked source
 before credential verification, including valid keys and sessions. Users behind
-one NAT or unconfigured load balancer therefore share the block. Configure both
-`AGENT_BOM_TRUSTED_PROXY_CIDRS` and `AGENT_BOM_TRUSTED_PROXY_HOPS` on every
-replica. Proxy-auth configuration without source trust warns at startup; when
-no proxy is declared, the first ignored forwarded header warns once without
-logging its contents. A proxy cannot be detected before it makes a request.
-Owned API/MCP launchers disable server-side proxy-header rewriting. For direct
-ASGI deployment, use `uvicorn --no-proxy-headers` to preserve the transport peer.
+one NAT or unconfigured load balancer therefore share the block.
 
-API-key, browser-session, OIDC and MCP bearer/OAuth authentication rejections
-enter the failure budget. Cookies do not turn generic 400/403 validation or
-authorization responses into login failures. OAuth token handlers explicitly
-mark invalid-client and invalid-grant failures; ordinary protocol validation
-does not consume this budget.
+### Source identity behind a proxy
+
+Configure both `AGENT_BOM_TRUSTED_PROXY_CIDRS` and `AGENT_BOM_TRUSTED_PROXY_HOPS`
+on every replica. Every `X-Forwarded-For` line is combined in received order before
+hops are counted, so a second line cannot select or forge the source. An IPv6 source
+is limited as its /64, since one customer routinely holds at least that much, and an
+IPv4-mapped address counts as its IPv4 address. A receipt for such a source also
+records the exact address as `client_address`.
+
+| Profile | Behaviour |
+|---|---|
+| Helm with `controlPlane.ingress.enabled` | Rendering fails unless `controlPlane.api.trustedProxy.hops` and `.cidrs` are set (or both variables in `controlPlane.api.env`), `.fromSecret=true` records that a Secret in `envFrom` supplies them, or `.sharedSourceAccepted=true` records that one budget is intended |
+| Compose hosted-POC overlay | One hop, trusting Docker's default address pools `172.16.0.0/12` and `192.168.0.0/16`. Override both variables for a custom pool. `hosted_poc_preflight.py` fails if either is empty |
+| Compose platform and fullstack | Both variables pass through and default to empty, for a loopback bind with no proxy |
+
+Each condition below warns once per process, without logging header contents:
+
+| Condition | Meaning |
+|---|---|
+| Forwarded header with no proxy settings, or proxy auth without them | Clients behind that proxy share one budget |
+| Forwarded header from a peer outside the CIDRs | The peer address is used. If it is your proxy, correct the CIDRs |
+| Only `X-Real-IP` arrives | It is not used. Configure the proxy to send `X-Forwarded-For` |
+| No transport peer, as on a unix socket | Forwarded addresses cannot be trusted and all clients share one budget. Listen on TCP behind the proxy |
+
+A proxy cannot be detected before it makes a request. Owned API/MCP launchers
+disable server-side proxy-header rewriting. For direct ASGI deployment, use
+`uvicorn --no-proxy-headers` to preserve the transport peer.
+
+### What counts as a failure
+
+Only the handler that verified a credential marks a failure, by setting
+`request.state.authentication_failed`. A status code alone never counts.
+
+| Counts | Does not count |
+|---|---|
+| Wrong API key, in `Authorization: Bearer`, `X-API-Key` or `POST /v1/auth/session` | Nothing presented, including the logged-out dashboard's `/v1/auth/me` |
+| Unsupported `Authorization` scheme | Proxy identity headers with no attestation secret |
+| Unreadable browser-session cookie | Expired or revoked session, or one signed before a signing-key change |
+| JWT that fails verification, including a bad signature on an expired token | Expired JWT with a valid signature; identity provider unreachable |
+| Wrong SCIM bearer or wrong proxy attestation secret | Inactive SCIM user or inactive trial, whose identity did verify |
+| Invalid trial invitation, failed OIDC code exchange or SAML assertion | Missing OIDC or SAML state; missing report download token on a valid key |
+| OAuth `invalid_client` and `invalid_grant`; standalone MCP 401 when a token was presented | Generic 400/403 validation or authorization errors; MCP challenge with no token |
+
+A session with a well-formed envelope and an unexpected signature is not counted,
+because a key rotation produces exactly that. Forging one needs the signing key, so
+an unlimited count of such attempts gives no guessing advantage; the coarse per-IP
+limit still applies to them.
 
 `auth.failed` receipts use the reserved `__auth_security__` operator chain,
 not the default tenant's audit chain. Tenant audit list, integrity and export
@@ -744,11 +831,38 @@ collector evidence.
 For persisted SQLite audit logs without a configured HMAC key, a changed or
 unrecorded signing-key identity yields `unverifiable` rows and an explicit
 cannot-verify reason. It never yields a clean/verified result. Local key-identity
-metadata is a diagnostic receipt, not independent tamper evidence. With a
-configured key, every HMAC and chain checkpoint is still verified when the full
-chain fits the requested limit; changed rows and truncation retain their existing
-tamper results. A larger chain returns `unverifiable` with its total and requested
-limit in the explanation, rather than walking an unbounded history or claiming
-a partial chain is verified. The HTTP limit is at most 10,000 entries; larger
-histories require offline verification with an explicitly larger budget. Configure
-`AGENT_BOM_AUDIT_HMAC_KEY` before using persistent audit logs as evidence.
+metadata is a diagnostic receipt, not independent tamper evidence. It is a salted
+HMAC of the key's digest, and a database opened with an older unsalted digest is
+upgraded in place, including when its original key is gone. Testing a candidate key
+against it costs about one HMAC-SHA-256, the same as testing one against any stored
+audit row with known contents, so it adds no offline guessing route; a slow
+derivation here would protect nothing while those rows exist. Use a high-entropy
+signing key. With a configured key, every HMAC and chain checkpoint is still
+verified when the full chain fits the requested limit; changed rows and truncation
+retain their existing tamper results.
+
+A larger chain is not walked. The integrity response and export report
+`status: not_verified_over_budget`, `verified: null` (no count exists, which differs
+from zero rows verifying), `checked: 0`, `unverifiable`, `total_entries` and
+`verification_limit`, and the dashboard says "Not verified" with those counts. The
+HTTP limit is at most 10,000 entries; larger histories require offline verification
+with an explicitly larger budget. Configure `AGENT_BOM_AUDIT_HMAC_KEY` before using
+persistent audit logs as evidence.
+
+### STRIDE assessment
+
+| Threat | Scenario and mitigation | Remaining constraint |
+|---|---|---|
+| Spoofing | A second `X-Forwarded-For` line or IPv6 rotation sought a fresh budget. Lines are combined before hops are counted; IPv6 is limited by /64 | Shipped defaults trust Docker's pools on the hosted overlay; anything else that can reach the API over those networks is trusted |
+| Tampering | Stored key digest upgraded to a salted HMAC; receipts and gap entries stay in the signed chain | An actor controlling both the records and the key can still rewrite them |
+| Repudiation | Receipts leave the request path, so a stall can no longer block on them. Drops are counted, logged, and recorded in the chain | Receipts still queued two seconds after process exit starts are lost, with an error logged |
+| Information disclosure | Warnings use fixed text with no header values; receipts hold a keyed fingerprint and validated addresses | Exact addresses in receipts are visible to operators who can read that chain |
+| Denial of service | Expired sessions, missing credentials and missing report tokens no longer lock out a source. Audit stalls, dead connections and one source's failures no longer refuse others | A shared NAT or /64 still shares one budget. Three consecutive real store errors still fail closed for everyone |
+| Elevation of privilege | Exempt routes are an exact list of public documents that verify nothing. Admission still fails closed for anything presenting a credential | Uncounted well-formed session forgeries rely on the signing key staying secret |
+
+Regression evidence: `tests/test_auth_failure_defects.py`,
+`tests/test_auth_failure_deployment.py`, and `tests/test_auth_failure_processes.py`,
+which runs separate server and client processes against SQLite and a private Postgres
+cluster and skips where Postgres server binaries are not on `PATH`. The secret-group
+behaviour was exercised against real Linux permissions with `postgres:16-alpine`, not
+through a complete `docker compose up` on a Linux host.

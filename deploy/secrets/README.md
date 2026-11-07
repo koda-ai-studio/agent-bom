@@ -35,22 +35,30 @@ printf %s "$(python -c 'from cryptography.fernet import Fernet; print(Fernet.gen
 # install -m 0600 /secure/path/to/oidc-client-secret \
 #   deploy/secrets/oidc/client_secret
 
-# Source files are owner-only. For bind mounts, provision a separate
-# per-service mount owned by the container UID; verify read access before
-# starting services. Compose file-secret mode/uid/gid overrides do not change
-# the host file's ownership. Do not make credentials world-readable.
-chmod 0600 deploy/secrets/postgres_password deploy/secrets/postgres_app_password \
+# Owner and your primary group only. Never world-readable.
+chgrp "$(id -g)" deploy/secrets/*
+chmod 0640 deploy/secrets/postgres_password deploy/secrets/postgres_app_password \
   deploy/secrets/postgres_maintenance_password \
   deploy/secrets/api_key deploy/secrets/audit_hmac_key \
   deploy/secrets/browser_session_signing_key deploy/secrets/connections_key
 ```
 
-`make secrets` creates files with mode 0600 from the first write and repairs
-existing file permissions without replacing their contents. It refuses symlink
-destinations. Permission changes alone do not provision container ownership:
-non-root containers need a secret mount they can read. Verify the intended
-container UID and mounted-file access before starting a bind-mounted stack;
-use per-service secret provisioning rather than widening host permissions.
+`make secrets` creates files with mode 0640, owner plus your primary group, and
+repairs existing files without replacing their contents. It refuses symlink
+destinations.
+
+Compose bind-mounts a secret file with its host owner and mode; the long-syntax
+`uid`, `gid` and `mode` fields do not apply. The containers run as other non-root
+users (postgres is UID 70), so on Linux a 0600 file is unreadable inside them. Each
+service that reads secrets joins your group through `group_add`, and Postgres starts
+directly as its own user because the image's privilege drop discards extra groups.
+`make platform-up` and `make fullstack-up` set `AGENT_BOM_SECRETS_GID`; for a direct
+`docker compose up`, run `export AGENT_BOM_SECRETS_GID=$(id -g)` first, or those
+services cannot read the files and fail to start.
+
+Anyone else in your primary group can read these files, so run this under an account
+whose primary group is private to it. Rootless Docker maps group IDs differently and
+has not been verified; provision per-service secret mounts there instead.
 
 `*.example` files are non-secret documentation placeholders only.
 Compose defaults to the real `deploy/secrets/*` paths so a shared stack fails

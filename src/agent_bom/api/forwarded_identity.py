@@ -8,7 +8,8 @@ so authentication throttles and runtime conditional-access policy cannot drift.
 from __future__ import annotations
 
 import os
-from ipaddress import IPv4Network, IPv6Network, ip_address, ip_network
+from collections.abc import Mapping
+from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 
 
 def trusted_proxy_hops() -> int:
@@ -32,6 +33,45 @@ def trusted_proxy_networks() -> tuple[IPv4Network | IPv6Network, ...]:
         return tuple(ip_network(part.strip(), strict=False) for part in raw.split(",") if part.strip())
     except ValueError:
         return ()
+
+
+def forwarded_for_header(headers: Mapping[str, str]) -> str:
+    """Return every X-Forwarded-For line as one list, in received order.
+
+    HTTP treats repeated field lines as one comma-joined value. Reading only
+    the first line would let a caller choose the entry a proxy appended to a
+    later line, and so choose its own source address.
+    """
+    getlist = getattr(headers, "getlist", None)
+    return ",".join(getlist("x-forwarded-for")) if getlist else str(headers.get("x-forwarded-for", ""))
+
+
+def peer_is_trusted_proxy(peer_host: str) -> bool:
+    """Whether this transport peer is inside the configured proxy networks."""
+    try:
+        peer = ip_address(peer_host)
+    except ValueError:
+        return False
+    return any(peer in network for network in trusted_proxy_networks())
+
+
+def failure_limit_source(address: str) -> str:
+    """Group an address for failed-authentication limits.
+
+    One IPv6 customer is routinely delegated at least a /64, so a per-address
+    limit gives one caller billions of fresh budgets. IPv4-mapped addresses
+    count as the IPv4 address they carry.
+    """
+    try:
+        parsed = ip_address(address)
+    except ValueError:
+        return address
+    if isinstance(parsed, IPv6Address):
+        if parsed.ipv4_mapped is not None:
+            return str(parsed.ipv4_mapped)
+        # From the integer, so a zone suffix cannot name a fresh budget.
+        return str(ip_network((int(parsed), 64), strict=False))
+    return str(parsed)
 
 
 def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback: str = "") -> str:

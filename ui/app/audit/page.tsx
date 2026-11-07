@@ -157,7 +157,9 @@ export default function AuditLogPage() {
                 : integrity.checked ? "No integrity exceptions detected" : "No records checked"}
           </strong>
           {integrity && !loading && <span className="text-[var(--text-secondary)]">
-            {integrity.verified.toLocaleString()} verified / {integrity.checked.toLocaleString()} checked
+            {integrity.verified === null
+              ? `Not verified / ${(integrity.unverifiable ?? 0).toLocaleString()} entries not checked`
+              : `${integrity.verified.toLocaleString()} verified / ${integrity.checked.toLocaleString()} checked`}
           </span>}
         </div>
         <p className="mt-1 text-xs text-[var(--text-tertiary)]">Current tenant · Control-plane records across all actions and dates. Independent of the event filters below; runtime logs are excluded.</p>

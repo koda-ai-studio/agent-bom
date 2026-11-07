@@ -14,6 +14,12 @@ controlPlane:
     postgres:
       enabled: false
   api:
+    # Replace with the subnets the ingress connects to the API from. Without
+    # this, every client behind the ingress shares one authentication failure budget.
+    trustedProxy:
+      hops: 1
+      cidrs:
+        - 10.0.0.0/16
     replicas: 1
     envFrom:
       - secretRef:

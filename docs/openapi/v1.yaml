@@ -1825,19 +1825,36 @@ components:
           - type: string
           - type: 'null'
           title: Source
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
         tampered:
           title: Tampered
           type: integer
         tenant_scoped:
           title: Tenant Scoped
           type: boolean
+        total_entries:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Total Entries
         unverifiable:
           default: 0
           title: Unverifiable
           type: integer
+        verification_limit:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Verification Limit
         verified:
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Verified
-          type: integer
       required:
       - name
       - algorithm
@@ -1957,16 +1974,33 @@ components:
           - type: string
           - type: 'null'
           title: Error
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
         tampered:
           title: Tampered
           type: integer
+        total_entries:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Total Entries
         unverifiable:
           default: 0
           title: Unverifiable
           type: integer
+        verification_limit:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Verification Limit
         verified:
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Verified
-          type: integer
       required:
       - verified
       - tampered
@@ -2033,6 +2067,16 @@ components:
         checked:
           title: Checked
           type: integer
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        status:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
         tampered:
           title: Tampered
           type: integer
@@ -2041,8 +2085,10 @@ components:
           title: Unverifiable
           type: integer
         verified:
+          anyOf:
+          - type: integer
+          - type: 'null'
           title: Verified
-          type: integer
       required:
       - verified
       - tampered

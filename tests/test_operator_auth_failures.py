@@ -7,7 +7,16 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from agent_bom.api import audit_log
+from agent_bom.api.auth_failure_receipts import RECEIPTS
 from agent_bom.api.middleware_limits import GlobalRateLimitMiddleware
+
+
+def _verified_or_rejected(request):
+    """A handler that verified the presented key, marking the failure as real handlers do."""
+    valid = request.headers.get("x-api-key") == "valid-test-key"
+    if not valid:
+        request.state.authentication_failed = True
+    return JSONResponse({}, status_code=200 if valid else 401)
 
 
 def test_bad_keys_from_eight_clients_are_limited_and_audited(monkeypatch):
@@ -15,7 +24,7 @@ def test_bad_keys_from_eight_clients_are_limited_and_audited(monkeypatch):
     monkeypatch.setattr(audit_log, "log_action", lambda action, **kw: events.append((action, kw)))
 
     async def authenticate(request):
-        return JSONResponse({}, status_code=200 if request.headers.get("x-api-key") == "valid-test-key" else 401)
+        return _verified_or_rejected(request)
 
     app = Starlette(routes=[Route("/v1/findings", authenticate)])
     app.add_middleware(GlobalRateLimitMiddleware)
@@ -27,6 +36,7 @@ def test_bad_keys_from_eight_clients_are_limited_and_audited(monkeypatch):
             assert any(r.status_code == 429 and int(r.headers["retry-after"]) > 0 for r in responses)
 
     assert statuses.count(429) > 0
+    assert RECEIPTS.flush()
     assert 0 < len(events) <= 24
     assert all(action == "auth.failed" for action, _ in events)
     assert "invalid-test-key" not in repr(events)
@@ -43,6 +53,7 @@ def test_spoofed_forwarding_does_not_evade_source_limit(monkeypatch):
     monkeypatch.setattr(audit_log, "log_action", lambda *a, **kw: None)
 
     async def denied(request):
+        request.state.authentication_failed = True
         return JSONResponse({}, status_code=401)
 
     app = Starlette(routes=[Route("/v1/findings", denied)])
@@ -60,7 +71,7 @@ def test_trusted_proxy_clients_have_separate_budgets(monkeypatch):
     monkeypatch.setattr(audit_log, "log_action", lambda *a, **kw: None)
 
     async def authenticate(request):
-        return JSONResponse({}, status_code=200 if request.headers.get("x-api-key") == "valid-test-key" else 401)
+        return _verified_or_rejected(request)
 
     app = Starlette(routes=[Route("/v1/findings", authenticate)])
     app.add_middleware(GlobalRateLimitMiddleware)
@@ -133,6 +144,7 @@ def test_real_auth_resolvers_share_failure_budget_and_safe_receipts(monkeypatch,
     with TestClient(app, client=("192.0.2.55", 1000)) as client:
         assert client.get("/v1/findings", headers=headers).status_code == 401
         assert client.get("/v1/findings", headers=headers).status_code == 429
+    assert RECEIPTS.flush()
     entries = store.list_entries(action="auth.failed", tenant_id=audit_log.AUTH_FAILURE_AUDIT_TENANT)
     assert len(entries) == 2
     assert entries[0].details["source"] == "192.0.2.55"
@@ -186,6 +198,7 @@ def test_browser_key_exchange_receipt_hashes_body_credential(monkeypatch):
     bad_key = "body-only-invalid-credential"
     with TestClient(app, client=("192.0.2.61", 1000)) as client:
         assert client.post("/v1/auth/session", json={"api_key": bad_key}).status_code == 401
+    assert RECEIPTS.flush()
     entry = store.list_entries(action="auth.failed", tenant_id=audit_log.AUTH_FAILURE_AUDIT_TENANT)[0]
     assert (
         entry.details["hmac_sha256"]
@@ -424,12 +437,14 @@ def test_failed_auth_receipts_are_not_visible_to_default_tenant_readers(monkeypa
     monkeypatch.setattr(audit_log, "_audit_log", store)
 
     async def reject(request):
+        request.state.authentication_failed = True
         return JSONResponse({}, status_code=401)
 
     app = Starlette(routes=[Route("/v1/findings", reject)])
     app.add_middleware(GlobalRateLimitMiddleware)
     with TestClient(app, client=("192.0.2.75", 1000)) as client:
         assert client.get("/v1/findings", headers={"x-api-key": "mistyped-credential"}).status_code == 401
+    assert RECEIPTS.flush()
     assert store.count(action="auth.failed") == 1
     result = list_audit_entries(SimpleNamespace(state=SimpleNamespace(tenant_id="default")))
     assert result["total"] == 0
@@ -531,6 +546,10 @@ async def test_expired_cached_admission_fails_closed_on_real_store_outage(monkey
     await asyncio.sleep(1.05)
     assert (await policy.before(request)).status_code == 503
     assert not policy._source_cache
+    # A single error fails this request closed; repetition is what shows an outage.
+    assert policy._unavailable_until == 0
+    assert (await policy.before(request)).status_code == 503
+    assert (await policy.before(request)).status_code == 503
     assert policy._unavailable_until > 0
 
 
@@ -553,6 +572,7 @@ def test_oauth_token_validation_is_not_auth_failure_but_invalid_grant_is(monkeyp
         bad_grant = {"grant_type": "authorization_code", "client_id": registered["client_id"], "code": "expired-code"}
         assert client.post("/oauth/token", data=bad_grant).status_code == 400
         assert client.post("/oauth/token", data=bad_grant).status_code == 429
+    assert RECEIPTS.flush()
     entries = store.list_entries(action="auth.failed", tenant_id=audit_log.AUTH_FAILURE_AUDIT_TENANT)
     assert len(entries) == 2
     assert entries[0].details["hmac_sha256"] == audit_log.fingerprint_auth_credential("expired-code")

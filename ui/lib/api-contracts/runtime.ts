@@ -374,9 +374,11 @@ export interface AuditLogResponse {
 }
 
 export interface AuditIntegrityResponse {
-  verified: number;
+  /** Null when no chain was walked, which is different from zero rows verifying. */
+  verified: number | null;
   tampered: number;
   checked: number;
   unverifiable?: number;
+  status?: string | null;
   error?: string | null;
 }

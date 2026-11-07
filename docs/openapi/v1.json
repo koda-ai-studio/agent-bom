@@ -2704,6 +2704,17 @@
             ],
             "title": "Source"
           },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
           "tampered": {
             "title": "Tampered",
             "type": "integer"
@@ -2712,14 +2723,43 @@
             "title": "Tenant Scoped",
             "type": "boolean"
           },
+          "total_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Entries"
+          },
           "unverifiable": {
             "default": 0,
             "title": "Unverifiable",
             "type": "integer"
           },
+          "verification_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Limit"
+          },
           "verified": {
-            "title": "Verified",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified"
           }
         },
         "required": [
@@ -2893,18 +2933,58 @@
             ],
             "title": "Error"
           },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
           "tampered": {
             "title": "Tampered",
             "type": "integer"
+          },
+          "total_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Entries"
           },
           "unverifiable": {
             "default": 0,
             "title": "Unverifiable",
             "type": "integer"
           },
+          "verification_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Limit"
+          },
           "verified": {
-            "title": "Verified",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified"
           }
         },
         "required": [
@@ -2994,6 +3074,28 @@
             "title": "Checked",
             "type": "integer"
           },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
           "tampered": {
             "title": "Tampered",
             "type": "integer"
@@ -3004,8 +3106,15 @@
             "type": "integer"
           },
           "verified": {
-            "title": "Verified",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified"
           }
         },
         "required": [

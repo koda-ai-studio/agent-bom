@@ -159,6 +159,7 @@ def snowflake_oauth_callback(
         token_payload = exchange_code_for_tokens(cfg, code=code, code_verifier=code_verifier)
         subject = username_from_token_response(token_payload)
     except OIDCError as exc:
+        request.state.authentication_failed = exc.counts_as_failed_credential
         raise HTTPException(status_code=401, detail=sanitize_error(exc)) from exc
 
     tenant_id = cfg.tenant_id
@@ -226,7 +227,7 @@ def saml_relay_state() -> dict:
 
 
 @router.post("/auth/saml/login", tags=["enterprise"], status_code=201)
-def saml_login(req: SAMLLoginRequest) -> dict:
+def saml_login(request: Request, req: SAMLLoginRequest) -> dict:
     """Verify a SAML assertion and return a short-lived API key."""
     from agent_bom.api.audit_log import log_action
     from agent_bom.api.auth import Role, create_api_key, get_key_store, resolve_scim_user_role
@@ -243,6 +244,7 @@ def saml_login(req: SAMLLoginRequest) -> dict:
         assertion = cfg.verify_response(req.saml_response, relay_state=req.relay_state)
         _consume_saml_response_once(req.saml_response, ttl_seconds=cfg.session_ttl_seconds)
     except SAMLError as exc:
+        request.state.authentication_failed = True
         raise HTTPException(status_code=401, detail=sanitize_error(exc)) from exc
 
     expires_at = (datetime.now(timezone.utc) + timedelta(seconds=cfg.session_ttl_seconds)).isoformat()

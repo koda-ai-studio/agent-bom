@@ -37,6 +37,7 @@ pre-wired to the series below.
 |---|---|---|---|
 | `agent_bom_auth_failures_total` | counter | `reason` ∈ {missing_key, invalid_key, expired_token, forbidden_origin, ...} | Rejected authentication attempts by reason |
 | `agent_bom_oidc_decode_failures_total` | counter | — | OIDC JWT decode or verification failures |
+| `agent_bom_auth_receipts_dropped_total` | counter | `reason` ∈ {queue_full, source_queue_full, write_failed} | Failed-authentication audit receipts that could not be written. Above zero means a gap in that evidence |
 
 **SLO sketch:** `rate(agent_bom_auth_failures_total{reason="invalid_key"}[5m]) > 5`
 is a credential-spray signal. Page on sustained > 10/min.

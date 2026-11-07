@@ -95,6 +95,7 @@ export AGENT_BOM_SESSION_COOKIE_SECURE=1
 
 # All secrets are file mounts only — never .env / compose env.
 python scripts/deploy/hosted_poc_preflight.py --write-secret --skip-compose
+export AGENT_BOM_SECRETS_GID=$(id -g)
 # Or write files manually — see deploy/secrets/README.md
 ```
 

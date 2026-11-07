@@ -24,7 +24,7 @@ fi
 
 if [ ! -f "${APP_PASS_FILE}" ]; then
     echo "ERROR: missing app role secret at ${APP_PASS_FILE}."
-    echo "Create deploy/secrets/postgres_app_password (chmod 0644) before compose up."
+    echo "Create deploy/secrets/postgres_app_password with `make secrets` before compose up."
     echo "Refusing to fall back to the bootstrap/admin role."
     exit 1
 fi
@@ -32,7 +32,7 @@ fi
 
 if [ ! -f "${MAINTENANCE_PASS_FILE}" ]; then
     echo "ERROR: missing maintenance role secret at ${MAINTENANCE_PASS_FILE}."
-    echo "Create deploy/secrets/postgres_maintenance_password (chmod 0644) before compose up."
+    echo "Create deploy/secrets/postgres_maintenance_password with `make secrets` before compose up."
     echo "Refusing to reuse the app or bootstrap/admin role for maintenance."
     exit 1
 fi

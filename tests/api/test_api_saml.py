@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import os
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -20,6 +21,8 @@ from agent_bom.api.saml import (
     saml_enabled_from_env,
 )
 from agent_bom.api.shared_auth_state import reset_auth_state_for_tests
+
+_REQUEST = SimpleNamespace(state=SimpleNamespace())
 
 
 class _FakeAuth:
@@ -261,7 +264,7 @@ async def test_saml_login_mints_short_lived_api_key(isolated_key_store, monkeypa
         )(),
     )
 
-    response = enterprise.saml_login(SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
+    response = enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
 
     assert response["role"] == "admin"
     assert response["tenant_id"] == "tenant-alpha"
@@ -281,7 +284,7 @@ async def test_saml_login_rejects_missing_relay_state_by_default(isolated_key_st
     )
 
     with pytest.raises(HTTPException) as error:
-        enterprise.saml_login(SAMLLoginRequest(saml_response="assertion"))
+        enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="assertion"))
 
     assert error.value.status_code == 401
     assert error.value.detail == "SAML relay_state required"
@@ -295,7 +298,7 @@ async def test_saml_login_rejects_unissued_relay_state(isolated_key_store, monke
     )
 
     with pytest.raises(HTTPException) as error:
-        enterprise.saml_login(SAMLLoginRequest(saml_response="assertion", relay_state="attacker-controlled"))
+        enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="assertion", relay_state="attacker-controlled"))
 
     assert error.value.status_code == 401
     assert error.value.detail == "Invalid or expired SAML relay_state"
@@ -320,11 +323,11 @@ async def test_saml_relay_state_is_one_time(isolated_key_store, monkeypatch, sam
         )(),
     )
 
-    response = enterprise.saml_login(SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
+    response = enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
     assert response["tenant_id"] == "tenant-alpha"
 
     with pytest.raises(HTTPException) as error:
-        enterprise.saml_login(SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
+        enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
     assert error.value.status_code == 401
 
 
@@ -351,7 +354,7 @@ async def test_saml_relay_state_redeems_from_shared_auth_backend(isolated_key_st
         )(),
     )
 
-    response = enterprise.saml_login(SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
+    response = enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
     assert response["tenant_id"] == "tenant-alpha"
 
 
@@ -375,11 +378,11 @@ async def test_saml_login_rejects_replayed_assertion_with_fresh_relay(isolated_k
         )(),
     )
 
-    response = enterprise.saml_login(SAMLLoginRequest(saml_response="same-assertion", relay_state=first_relay["relay_state"]))
+    response = enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="same-assertion", relay_state=first_relay["relay_state"]))
     assert response["tenant_id"] == "tenant-alpha"
 
     with pytest.raises(HTTPException) as error:
-        enterprise.saml_login(SAMLLoginRequest(saml_response="same-assertion", relay_state=second_relay["relay_state"]))
+        enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="same-assertion", relay_state=second_relay["relay_state"]))
     assert error.value.status_code == 401
     assert error.value.detail == "SAML assertion replay detected"
 
@@ -406,10 +409,10 @@ async def test_saml_replay_identity_uses_decoded_response_bytes(isolated_key_sto
         )(),
     )
 
-    enterprise.saml_login(SAMLLoginRequest(saml_response=encoded, relay_state=first_relay["relay_state"]))
+    enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response=encoded, relay_state=first_relay["relay_state"]))
 
     with pytest.raises(HTTPException) as error:
-        enterprise.saml_login(SAMLLoginRequest(saml_response=folded, relay_state=second_relay["relay_state"]))
+        enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response=folded, relay_state=second_relay["relay_state"]))
     assert error.value.status_code == 401
     assert error.value.detail == "SAML assertion replay detected"
 
@@ -424,7 +427,7 @@ async def test_saml_login_rejects_invalid_assertion(isolated_key_store, monkeypa
     monkeypatch.setattr("agent_bom.api.saml.SAMLConfig.verify_response", _raise_bad_saml)
 
     with pytest.raises(HTTPException) as error:
-        enterprise.saml_login(SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
+        enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="assertion", relay_state=relay["relay_state"]))
 
     assert error.value.status_code == 401
     assert error.value.detail == "bad saml"
@@ -457,7 +460,7 @@ async def test_saml_login_returns_install_hint_when_extra_missing(monkeypatch: p
     monkeypatch.setattr("agent_bom.api.saml.saml_runtime_available", lambda: False)
 
     with pytest.raises(HTTPException) as error:
-        enterprise.saml_login(SAMLLoginRequest(saml_response="assertion", relay_state="nonce"))
+        enterprise.saml_login(_REQUEST, SAMLLoginRequest(saml_response="assertion", relay_state="nonce"))
 
     assert error.value.status_code == 503
     assert SAML_INSTALL_HINT in error.value.detail

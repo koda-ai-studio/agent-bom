@@ -53,7 +53,7 @@ _TENANT_SCOPED_AUTH_METHODS = {
 # rate limiter reads the state instead of paying a second scrypt derivation.
 # Deliberately narrow: "static_api_key" is NOT here because the static key never
 # reaches the KeyStore, so its verify returns None and buckets differently.
-_API_KEY_VERIFIED_AUTH_METHODS = {"api_key", "saml"}
+_API_KEY_VERIFIED_AUTH_METHODS = {"api_key", "saml", "static_api_key"}
 
 DEFAULT_SCAN_RATE_LIMIT_RPM = 600
 
@@ -206,6 +206,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         bucket_type = "scan" if is_scan else "read"
         auth = request.headers.get("authorization", "")
         raw_key = auth[7:] if auth.startswith("Bearer ") else request.headers.get("x-api-key", "")
+        if self.needs_no_auth_state(request.url.path, request.method):
+            raw_key = ""  # Never verified for these routes, and verifying needs the key store.
         tenant_scope = await self._resolve_tenant_scope(request, raw_key)
         if tenant_scope:
             scope = f"tenant:{tenant_scope}"
@@ -226,6 +228,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if path in {"/favicon.ico", "/robots.txt", "/manifest.json", "/apple-touch-icon.png"}:
             return True
         return False
+
+    # Constant public documents. They verify nothing, so authentication state
+    # and a source's backoff have no bearing on them, including in an outage.
+    _PUBLIC_DOCUMENT_PATHS = frozenset({"/", "/version", "/docs", "/redoc", "/openapi.json", "/brand/mark.svg"})
+
+    @classmethod
+    def needs_no_auth_state(cls, path: str, method: str) -> bool:
+        if path in cls._HEALTH_EXEMPT_PATHS or cls._is_dashboard_static_asset(path, method):
+            return True
+        return method in {"GET", "HEAD"} and (path in cls._PUBLIC_DOCUMENT_PATHS or path.startswith("/.well-known/"))
 
     @classmethod
     def _is_write_rate_limited(cls, path: str, method: str) -> bool:
@@ -323,7 +335,8 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
 
         if request.method == "OPTIONS":
             return await call_next(request)
-        if self._anonymous_request is None or not self._anonymous_request(request):
+        public_document = RateLimitMiddleware.needs_no_auth_state(request.url.path, request.method)
+        if not public_document and (self._anonymous_request is None or not self._anonymous_request(request)):
             if denied := await self._auth_failures.before(request):
                 return denied
 
@@ -341,7 +354,7 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
                 },
             )
         response = await call_next(request)
-        return await self._auth_failures.after(request, response)
+        return response if public_document else await self._auth_failures.after(request, response)
 
 
 def _shared_rate_limit_required() -> bool:

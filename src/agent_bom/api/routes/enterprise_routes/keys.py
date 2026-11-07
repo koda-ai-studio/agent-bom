@@ -112,7 +112,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
         return None
 
     store = get_key_store()
-    if store.has_keys():
+    if await anyio.to_thread.run_sync(store.has_keys):
         # ``store.verify`` runs a ~21ms scrypt derivation (in-memory store) or a
         # blocking DB read (Postgres store). This route is auth-exempt, so an
         # unauthenticated caller could otherwise stall the event loop on demand.
@@ -140,6 +140,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
             )
             return None
 
+    request.state.authentication_failed = True
     raise HTTPException(status_code=401, detail="Invalid API key")
 
 

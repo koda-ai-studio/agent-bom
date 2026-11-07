@@ -16,6 +16,17 @@ Call with (dict "root" $ "component" "api"|"worker").
 {{- if or (lt $autoCorrelationMaxAge 1) (gt $autoCorrelationMaxAge 8760) -}}
 {{- fail "controlPlane.autoCorrelation.maxAgeHours must be between 1 and 8760" -}}
 {{- end -}}
+{{- $trustedProxy := $cp.api.trustedProxy | default dict -}}
+{{- $proxyEnvSet := dict -}}
+{{- range $entry := $cp.api.env -}}
+{{- if has (get $entry "name") (list "AGENT_BOM_TRUSTED_PROXY_HOPS" "AGENT_BOM_TRUSTED_PROXY_CIDRS") -}}
+{{- $_ := set $proxyEnvSet (get $entry "name") true -}}
+{{- end -}}
+{{- end -}}
+{{- $proxyConfigured := or (and $trustedProxy.hops $trustedProxy.cidrs) (eq (len $proxyEnvSet) 2) $trustedProxy.fromSecret -}}
+{{- if and $cp.ingress.enabled (not $proxyConfigured) (not $trustedProxy.sharedSourceAccepted) -}}
+{{- fail "controlPlane.ingress.enabled requires controlPlane.api.trustedProxy.hops and .cidrs: without them every client behind the ingress shares one authentication failure budget and about ten bad logins refuse everyone. Set them, set controlPlane.api.trustedProxy.fromSecret=true if a Secret in envFrom supplies both variables, or set controlPlane.api.trustedProxy.sharedSourceAccepted=true to accept one shared budget." -}}
+{{- end -}}
 {{- $roleEnv := list "AGENT_BOM_API_ROLE" "AGENT_BOM_DISTRIBUTED_SCANS" -}}
 {{- range $entry := $cp.api.env -}}
 {{- if eq (get $entry "name") "AGENT_BOM_CONTROL_PLANE_REPLICAS" -}}
@@ -167,6 +178,13 @@ spec:
             - name: AGENT_BOM_GRAPH_AUTO_CORRELATE_MAX_AGE_HOURS
               value: {{ $cp.autoCorrelation.maxAgeHours | quote }}
             {{- include "agent-bom.nvdApiKeyEnv" $root | nindent 12 }}
+          {{- $trustedProxy := $api.trustedProxy | default dict }}
+          {{- if and $trustedProxy.hops $trustedProxy.cidrs }}
+            - name: AGENT_BOM_TRUSTED_PROXY_HOPS
+              value: {{ $trustedProxy.hops | quote }}
+            - name: AGENT_BOM_TRUSTED_PROXY_CIDRS
+              value: {{ join "," $trustedProxy.cidrs | quote }}
+          {{- end }}
           {{- with $api.env }}
             {{- toYaml . | nindent 12 }}
           {{- end }}

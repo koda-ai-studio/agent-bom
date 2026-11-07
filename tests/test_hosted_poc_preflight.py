@@ -165,7 +165,7 @@ def test_preflight_can_write_secret_files(tmp_path: Path) -> None:
     ):
         path = secrets_dir / name
         assert len(path.read_text(encoding="utf-8")) >= 32
-        assert oct(path.stat().st_mode & 0o777) == "0o600"
+        assert oct(path.stat().st_mode & 0o777) == "0o640"
 
 
 def test_secret_generation_does_not_require_hosted_url_configuration(
@@ -208,4 +208,4 @@ def test_secret_generation_repairs_permissions_without_rotating(tmp_path):
     path.chmod(0o644)
     _write_secret_files(tmp_path, force=False)
     assert path.read_bytes() == before
-    assert path.stat().st_mode & 0o777 == 0o600
+    assert path.stat().st_mode & 0o777 == 0o640
