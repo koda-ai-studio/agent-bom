@@ -1,5 +1,6 @@
 """A caller-facing cold read cannot own an unbounded projection build."""
 
+import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -7,7 +8,7 @@ import pytest
 from starlette.exceptions import HTTPException
 
 from agent_bom.api import current_graph_builds
-from agent_bom.api.current_graph import CurrentGraphStore, current_graph_store
+from agent_bom.api.current_graph import CurrentGraphStore, _current_graph_store, current_graph_store
 from agent_bom.api.current_graph_builds import await_current_build
 from agent_bom.api.finding_read_context import finding_read_scope
 from agent_bom.core.estate_read_boundary import estate_read_boundary
@@ -149,13 +150,13 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
             "scan_id": response.json().get("scan_id"),
             "coverage": response.json().get("collection_coverage"),
             "same_store": store is stores._get_graph_store(),
-            "store_cache": str(current_graph_store.cache_info()),
+            "store_cache": str(_current_graph_store.cache_info()),
             "summaries": len(estate[0].list_summary(tenant_id=TENANT)),
             "store_job_summaries": len(store._job_store.list_summary(tenant_id=TENANT)),
             "generation": response.json().get("snapshot_generation"),
             "cache_keys": list(store._cache),
         }
-        assert started, diagnostics
+        assert started, json.dumps(diagnostics, default=str)
         assert response.status_code == 200, response.text
         assert response.json()["scan_id"] == old
         assert response.json()["collection_coverage"]["freshness"] == "previous_generation"
@@ -166,6 +167,30 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
     assert fresh.status_code == 200, fresh.text
     assert fresh.json()["scan_id"] != old
     assert "freshness" not in fresh.json()["collection_coverage"]
+
+
+def test_racing_first_calls_share_one_wrapper(estate, monkeypatch):  # noqa: F811
+    """Each wrapper owns its locks, pins and build gates; a commit warm-up racing a reader must not get a second one."""
+    built = []
+    entered = threading.Barrier(2)
+    initialize = CurrentGraphStore.__init__
+
+    def slow_init(self, *args, **kwargs):
+        built.append(self)
+        initialize(self, *args, **kwargs)
+        try:
+            # On an unguarded cache miss both callers get here; the second waits out the first.
+            entered.wait(0.5)
+        except threading.BrokenBarrierError:
+            pass
+
+    monkeypatch.setattr(CurrentGraphStore, "__init__", slow_init)
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        first, second = (workers.submit(current_graph_store, estate[1], estate[0]) for _ in range(2))
+        wrappers = first.result(timeout=10), second.result(timeout=10)
+
+    assert wrappers[0] is wrappers[1]
+    assert len(built) == 1
 
 
 @pytest.mark.parametrize("completed", [False, True])
