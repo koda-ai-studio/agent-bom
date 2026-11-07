@@ -38,8 +38,9 @@ three with a baseline has not been done.
 
 1. Merge the open fix work and cut the release (`scripts/bump-version.py`). This moves
    the versions, skill pins and `uv.lock`.
-2. Review `site-docs/privacy.md` and `site-docs/terms.md`, fill in the operator, contact
-   address, law and retention, and remove the draft notes. Only the owner can do this.
+2. Check that `site-docs/privacy.md` and `site-docs/terms.md` still match what the plugins
+   do. They cover local and self-hosted use. A public hosted service needs a named operator,
+   contact, law and retention added first.
 3. Run `make plugin-submission-check`, and fix what it reports.
 4. Rerun the [review cases](PLUGIN_REVIEW_CASES.md) and the evals against the release:
 

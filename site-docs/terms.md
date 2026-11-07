@@ -1,9 +1,10 @@
 # Terms of service
 
-> **DRAFT — Owner review required before publication.** These proposed terms
-> are not yet effective. The owner must approve the service operator, contact
-> details, applicable law, retention commitments and any commercial terms before
-> publication or directory submission.
+Last updated: 2026-11-06.
+
+The agent-bom project offers no public hosted service. These terms cover use of the
+software and its directory plugins. Anyone who runs agent-bom as a service for others
+is its operator and sets their own terms for that service.
 
 ## Software and service scope
 
@@ -11,9 +12,10 @@ agent-bom provides security inventory, vulnerability analysis and related
 read-only investigation tools. The open-source software is licensed under
 [Apache License 2.0](https://github.com/koda-ai-studio/agent-bom/blob/main/LICENSE).
 That license governs use, modification and distribution of the software;
-this page does not replace it or grant access to a hosted service.
+this page does not replace it, including its warranty and liability terms, or
+grant access to a hosted service.
 
-Hosted access depends on the service operator's approved accounts, tenant
+Access to a deployment run by an operator depends on that operator's approved accounts, tenant
 assignments and supported tool profile. OAuth authorization grants access only
 to the configured tenant and available read-only tools. It does not authorize
 access to another tenant, changes to infrastructure or collection outside the
@@ -47,6 +49,5 @@ be documented by the operator.
 Use [project support](https://github.com/koda-ai-studio/agent-bom/issues) for
 non-sensitive software questions and the
 [security reporting process](https://github.com/koda-ai-studio/agent-bom/security/policy)
-for private security concerns. Hosted account and data requests belong to the
-service operator. Owner-approved contact details and an effective date are
-required before these draft terms are published as operative terms.
+for private security concerns. Account and data requests for a deployment belong
+to its operator.

@@ -275,8 +275,12 @@ def test_postgres_collated_order_is_served_by_a_collated_index(sort: str, status
             assert f"USING btree {expected_columns}" in ddl, ddl
             expected_predicate = "(status = ANY (ARRAY['open'::text, 'reopened'::text]))" if status else None
             assert index_predicate == expected_predicate, index_predicate
-            # Sorting is priced out, so any Sort node means no index can serve the order.
+            # This checks index capability, not the cheapest plan for whichever
+            # rows earlier randomized tests left behind. enable_sort does not
+            # disable Incremental Sort: that can still use a cheaper legacy
+            # index's prefix and sort the collated suffix. Price out both kinds.
             tx.execute("SET LOCAL enable_sort = off")
+            tx.execute("SET LOCAL enable_incremental_sort = off")
             plans = [
                 "\n".join(
                     str(row[0])
