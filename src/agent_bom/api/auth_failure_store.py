@@ -100,11 +100,16 @@ class SQLiteAuthFailureStore(AuthFailureStore):
 
     @contextmanager
     def transaction(self, source: str):
-        with self._lock:
-            conn = self._connection
-            conn.execute("BEGIN IMMEDIATE")
-            with conn:
-                yield conn.execute
+        try:
+            with self._lock:
+                conn = self._connection
+                conn.execute("BEGIN IMMEDIATE")
+                with conn:
+                    yield conn.execute
+        except sqlite3.OperationalError as exc:
+            if getattr(exc, "sqlite_errorcode", 0) & 0xFF in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}:
+                raise TimeoutError("Authentication database capacity exhausted") from exc
+            raise
 
 
 class PostgresAuthFailureStore(AuthFailureStore):

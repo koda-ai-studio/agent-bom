@@ -42,7 +42,7 @@ from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.settings import env_bool, env_int
 
-__all__ = ["_AUDIT_DETAIL_KEY_RE", "_MAX_AUDIT_DETAILS_JSON_BYTES", "_MAX_AUDIT_DETAIL_COLLECTION_ITEMS",
+__all__ = ["AUTH_FAILURE_AUDIT_TENANT", "_AUDIT_DETAIL_KEY_RE", "_MAX_AUDIT_DETAILS_JSON_BYTES", "_MAX_AUDIT_DETAIL_COLLECTION_ITEMS",
     "_MAX_AUDIT_DETAIL_DEPTH", "_MAX_AUDIT_DETAIL_KEYS", "_MAX_AUDIT_DETAIL_KEY_LENGTH", "_MAX_AUDIT_DETAIL_STRING_LENGTH",
     "_safe_audit_label", "_sanitize_detail_key", "_sanitize_detail_value", "sanitize_audit_details"]  # fmt: skip
 

@@ -5,6 +5,20 @@ from contextlib import contextmanager
 import pytest
 
 
+def test_sqlite_writer_contention_is_not_a_store_outage(tmp_path):
+    import sqlite3
+
+    from agent_bom.api.auth_failure_store import SQLiteAuthFailureStore
+
+    path = str(tmp_path / "busy-auth.db")
+    store = SQLiteAuthFailureStore(path)
+    with sqlite3.connect(path) as blocker:
+        blocker.execute("BEGIN IMMEDIATE")
+        with pytest.raises(TimeoutError):
+            store.remaining("192.0.2.1", 100)
+    assert store.remaining("192.0.2.2", 100) == 0
+
+
 def test_postgres_auth_operations_bound_pool_and_sql_waits():
     from agent_bom.api.auth_failure_store import PostgresAuthFailureStore
 

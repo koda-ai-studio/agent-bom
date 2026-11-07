@@ -676,8 +676,13 @@ an on-time result does not create an outage.
 Postgres auth transactions bound pool acquisition, statement execution and lock
 waits to 400 ms each. Pool saturation and SQL cancellation/lock timeouts fail
 that request closed without activating the global outage cooldown.
+SQLite busy/locked responses likewise indicate contention, not a global outage;
+they return 503 for that request and allow immediate recovery when the lock clears.
 
 Admission reads are cached for at most one second and 4,096 source addresses.
+Concurrent cold requests from the same source share one admission lookup, with
+at most eight distinct source lookups and 64 waiting requests per source.
+Excess waiters receive 503; canceling a waiter does not cancel the shared read.
 A failure invalidates that source locally; atomic shared-store updates still
 decide the failure count and backoff. Another replica's block or a new outage
 may take up to one second to become visible through an existing admission

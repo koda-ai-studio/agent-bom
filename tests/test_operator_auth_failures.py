@@ -304,6 +304,64 @@ async def test_completed_auth_check_is_not_an_outage_when_loop_delivery_is_delay
 
 
 @pytest.mark.asyncio
+async def test_concurrent_cold_requests_share_one_source_admission_read(monkeypatch):
+    import asyncio
+    import time
+    from types import SimpleNamespace
+
+    from agent_bom.api.auth_failure_policy import AuthFailurePolicy
+
+    policy = AuthFailurePolicy()
+    calls = []
+
+    def remaining(source, _now):
+        calls.append(source)
+        time.sleep(0.02)
+        return 0
+
+    monkeypatch.setattr(policy.store, "remaining", remaining)
+    request = SimpleNamespace(client=SimpleNamespace(host="192.0.2.15"), headers={})
+    responses = await asyncio.gather(*(policy.before(request) for _ in range(8)))
+    assert responses == [None] * 8
+    assert calls == ["192.0.2.15"]
+
+
+@pytest.mark.asyncio
+async def test_shared_admission_bounds_waiters_and_survives_a_cancelled_request(monkeypatch):
+    import asyncio
+    import threading
+    from types import SimpleNamespace
+
+    from agent_bom.api.auth_failure_policy import AuthFailurePolicy
+
+    policy = AuthFailurePolicy()
+    started, release = asyncio.Event(), threading.Event()
+    loop = asyncio.get_running_loop()
+
+    def remaining(_source, _now):
+        loop.call_soon_threadsafe(started.set)
+        release.wait(1)
+        return 0
+
+    monkeypatch.setattr(policy.store, "remaining", remaining)
+    request = SimpleNamespace(client=SimpleNamespace(host="192.0.2.16"), headers={})
+    requests = [asyncio.create_task(policy.before(request)) for _ in range(65)]
+    try:
+        await started.wait()
+        assert requests[-1].result().status_code == 503
+        requests[0].cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await requests[0]
+        release.set()
+        assert await asyncio.gather(*requests[1:64]) == [None] * 63
+        assert not policy._source_waiters
+        assert policy._unavailable_until == 0
+    finally:
+        release.set()
+        await asyncio.gather(*requests, return_exceptions=True)
+
+
+@pytest.mark.asyncio
 async def test_one_source_cannot_exhaust_auth_workers_or_open_global_breaker(monkeypatch):
     import asyncio
     import time

@@ -39,6 +39,8 @@ class AuthFailurePolicy:
         self._outstanding = 0
         self._source_work: dict[str, int] = {}
         self._source_cache: OrderedDict[str, tuple[float, float]] = OrderedDict()
+        self._source_reads: dict[str, asyncio.Task[int | None]] = {}
+        self._source_waiters: dict[str, int] = {}
         self._proxy_warning_emitted = False
         self._unavailable_until = 0.0
         self.limit = _positive_setting("AGENT_BOM_AUTH_FAILURE_LIMIT", 10, 1000)
@@ -148,15 +150,36 @@ class AuthFailurePolicy:
             self._source_cache.move_to_end(source)
             remaining = max(0, math.ceil(cached[1] - now))
             return self.denied(remaining) if remaining else None
+        task = self._source_reads.get(source)
+        if task is None:
+            if len(self._source_reads) >= 8:
+                return self.unavailable()
+            task = asyncio.create_task(self._read_source(source))
+            self._source_reads[source] = task
+            task.add_done_callback(lambda _finished: self._source_reads.pop(source, None))
+        if self._source_waiters.get(source, 0) >= 64:
+            return self.unavailable()
+        self._source_waiters[source] = self._source_waiters.get(source, 0) + 1
+        try:
+            result = await asyncio.shield(task)
+        finally:
+            self._source_waiters[source] -= 1
+            if not self._source_waiters[source]:
+                del self._source_waiters[source]
+        if result is None:
+            return self.unavailable()
+        return self.denied(result) if result else None
+
+    async def _read_source(self, source: str) -> int | None:
         try:
             remaining = await self._call(self.store.remaining, source, time.time())
         except AuthProtectionUnavailableError:
-            return self.unavailable()
+            return None
         self._source_cache[source] = (time.monotonic() + 1, time.monotonic() + remaining)
         self._source_cache.move_to_end(source)
         while len(self._source_cache) > 4096:
             self._source_cache.popitem(last=False)
-        return self.denied(remaining) if remaining else None
+        return remaining
 
     async def after(self, request, response):
         # Cookies and generic validation/authorization errors are not evidence
