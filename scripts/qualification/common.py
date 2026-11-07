@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import platform
+import re
 import socket
 import statistics
 import subprocess
@@ -30,6 +31,8 @@ SCHEMA_VERSION = 1
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = REPO_ROOT / "qualification-results"
 
+_API_KEY = re.compile(r"abom_[A-Za-z0-9_-]+")
+
 
 class LaneResult:
     """Collects the outcome of one lane variant and writes it as JSON."""
@@ -44,8 +47,9 @@ class LaneResult:
         self.started = time.monotonic()
 
     def check(self, name: str, ok: bool, detail: Any = "") -> bool:
-        self.checks.append({"name": name, "ok": bool(ok), "detail": str(detail)[:2000]})
-        print(f"{'PASS' if ok else 'FAIL'} {name}: {str(detail)[:400]}", flush=True)
+        text = _API_KEY.sub("abom_[redacted]", str(detail))
+        self.checks.append({"name": name, "ok": bool(ok), "detail": text[:2000]})
+        print(f"{'PASS' if ok else 'FAIL'} {name}: {text[:400]}", flush=True)
         return bool(ok)
 
     def defect(self, defect_id: str, summary: str, reproduction: str) -> None:

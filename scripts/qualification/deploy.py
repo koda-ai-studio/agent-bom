@@ -89,7 +89,9 @@ def _fernet_key() -> str:
     return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
 
 
-def prepare_pilot_namespace() -> None:
+def prepare_pilot_namespace() -> str:
+    """Create what the profile documents it needs; returns the sign-in key."""
+    key = secrets.token_urlsafe(24)
     _apply({"apiVersion": "v1", "kind": "Namespace", "metadata": {"name": NAMESPACE}})
     _apply(
         {
@@ -97,7 +99,7 @@ def prepare_pilot_namespace() -> None:
             "kind": "Secret",
             "metadata": {"name": "agent-bom-control-plane", "namespace": NAMESPACE},
             "type": "Opaque",
-            "stringData": {"AGENT_BOM_CONNECTIONS_KEY": _fernet_key()},
+            "stringData": {"AGENT_BOM_CONNECTIONS_KEY": _fernet_key(), "AGENT_BOM_API_KEYS": f"{key}:admin"},
         }
     )
     _apply(
@@ -108,6 +110,7 @@ def prepare_pilot_namespace() -> None:
             "spec": {"accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}},
         }
     )
+    return key
 
 
 def helm_install(release: str, namespace: str, *extra: str, timeout: str = "5m") -> Any:
@@ -152,21 +155,6 @@ def port_forward_api() -> tuple[subprocess.Popen[bytes], str]:
     return process, f"http://127.0.0.1:{port}"
 
 
-def use_api_key_auth() -> str:
-    """Give the pilot the documented AGENT_BOM_API_KEYS login so the rest of the deployment can be measured."""
-    key = secrets.token_urlsafe(24)
-    _apply(
-        {
-            "apiVersion": "v1",
-            "kind": "Secret",
-            "metadata": {"name": "agent-bom-control-plane", "namespace": NAMESPACE},
-            "type": "Opaque",
-            "stringData": {"AGENT_BOM_CONNECTIONS_KEY": _fernet_key(), "AGENT_BOM_API_KEYS": f"{key}:admin"},
-        }
-    )
-    return key
-
-
 def helm_uninstall(result: LaneResult, release: str, namespace: str) -> None:
     """Uninstall as a user would; a failing hook is a defect, then removal continues without hooks."""
     uninstall = run_measured(["helm", "uninstall", release, "--namespace", namespace, "--wait", "--timeout", "3m"], timeout=240)
@@ -205,7 +193,7 @@ def run_helm(result: LaneResult) -> None:
 
     # The default and pilot releases both own the cluster-scoped agent-bom-reader ClusterRole.
     helm_uninstall(result, "scanner", "scanner-only")
-    prepare_pilot_namespace()
+    headers = {"Authorization": f"Bearer {prepare_pilot_namespace()}"}
     stock = helm_install("agent-bom", NAMESPACE, "-f", str(PILOT_VALUES))
     result.measurements["helm_pilot_install_seconds"] = stock.seconds
     stock_error = stock.stdout + stock.stderr
@@ -223,25 +211,6 @@ def run_helm(result: LaneResult) -> None:
             "agent-bom", NAMESPACE, "-f", str(PILOT_VALUES), "--set", "controlPlane.observability.prometheusRule.enabled=false"
         )
         result.measurements["helm_pilot_install_without_rule_seconds"] = stock.seconds
-    headers: dict[str, str] = {}
-    if stock.returncode != 0:
-        crash = kubectl("logs", "-n", NAMESPACE, "deployment/agent-bom-api", "--previous", "--tail", "40")
-        crash_log = tail(crash.stdout + crash.stderr, 40)
-        result.measurements["helm_api_crash_log"] = crash_log
-        if "Refusing to expose" in crash_log:
-            result.defect(
-                "sqlite-pilot-profile-crashloops",
-                "The shipped sqlite-pilot values set AGENT_BOM_ALLOW_UNAUTHENTICATED_API=1 for an anonymous first run, "
-                "but the API refuses a non-loopback bind without auth, so the pod crash-loops",
-                f"kubectl create ns {NAMESPACE}; create the Secret and PVC the profile names; helm install agent-bom deploy/helm/agent-bom "
-                f"-n {NAMESPACE} -f deploy/helm/agent-bom/examples/eks-control-plane-sqlite-pilot-values.yaml "
-                "--set controlPlane.observability.prometheusRule.enabled=false; kubectl logs deployment/agent-bom-api -p",
-            )
-            headers = {"Authorization": f"Bearer {use_api_key_auth()}"}
-            kubectl("rollout", "restart", "deployment/agent-bom-api", "-n", NAMESPACE)
-            stock = helm_install(
-                "agent-bom", NAMESPACE, "-f", str(PILOT_VALUES), "--set", "controlPlane.observability.prometheusRule.enabled=false"
-            )
     state = dump_cluster_state("helm")
     if not result.check(
         "helm_pilot_install", stock.returncode == 0, f"exit {stock.returncode}\n{tail(stock.stdout + stock.stderr)}\n{state}"
@@ -250,7 +219,7 @@ def run_helm(result: LaneResult) -> None:
     forward, base = port_forward_api()
     try:
         time.sleep(3)
-        assert_api(result, "helm_api", base, expect_write=bool(headers), headers=headers)
+        assert_api(result, "helm_api", base, expect_write=True, headers=headers)
     finally:
         forward.terminate()
     helm_uninstall(result, "agent-bom", NAMESPACE)

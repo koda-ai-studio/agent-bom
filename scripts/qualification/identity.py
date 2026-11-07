@@ -382,7 +382,11 @@ def exercise_saml(result: LaneResult, base: str, ca: Path, realm_secrets: realm.
         saml_response = _saml_response(client, realm_secrets, relay_state)
     login = httpx.post(f"{base}/v1/auth/saml/login", json={"saml_response": saml_response, "relay_state": relay_state}, timeout=60)
     body = login.json() if login.status_code == 201 else {}
-    result.check("saml_assertion_is_verified", login.status_code == 201, f"HTTP {login.status_code} {login.text[:400]}")
+    result.check(
+        "saml_assertion_is_verified",
+        login.status_code == 201,
+        f"HTTP {login.status_code} {login.text[:400] if login.status_code != 201 else ''}",
+    )
     result.check(
         "saml_maps_tenant_and_role",
         body.get("tenant_id") == realm.USER_TENANT and body.get("role") == realm.ROLE,

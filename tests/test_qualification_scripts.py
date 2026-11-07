@@ -63,6 +63,15 @@ def test_result_fails_on_failed_check_and_on_defect(tmp_path: Path) -> None:
     assert json.loads((tmp_path / "x-bad.json").read_text())["checks"][0]["detail"] == "why"
 
 
+def test_results_never_publish_an_api_key(tmp_path: Path, capsys) -> None:
+    key = "abom_" + "x1-_" * 8
+    result = common.LaneResult("x", "key")
+    result.check("login", True, f'HTTP 201 {{"raw_key":"{key}"}}')
+    result.write(tmp_path)
+    assert key not in (tmp_path / "x-key.json").read_text()
+    assert key not in capsys.readouterr().out
+
+
 def test_result_with_no_checks_is_not_a_pass() -> None:
     assert not common.LaneResult("x").passed
 
