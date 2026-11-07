@@ -147,7 +147,8 @@ def test_distro_advisory_id_is_not_projected_as_a_cve_id() -> None:
 
     payload = finding.to_dict()
 
-    assert payload["cve_ids"] == []
+    assert payload["cve_ids"] == ["CVE-2024-22365", "CVE-2025-6020"]
+    assert dla.aliases == []  # Upstream relationships are not identity aliases.
     assert "DLA-4306-1" in payload["advisory_ids"]
     assert payload["vulnerability_id"] == "DLA-4306-1"
 
