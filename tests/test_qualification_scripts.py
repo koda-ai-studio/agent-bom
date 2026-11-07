@@ -150,7 +150,7 @@ def test_accuracy_flags_phantom_mcp_and_false_malicious() -> None:
 def test_platform_quickstart_names_persistence_defect() -> None:
     result = common.LaneResult("platforms", "x")
     run = common.RunResult(1, 1.0, None, "", "Error: Completed scan could not be verified in the control-plane database.")
-    platforms.record_quickstart_defect(result, run, sys.executable, missing_module="zstandard")
+    platforms.record_quickstart_defect(result, run, missing_module="zstandard")
     assert result.defects[0]["id"] == "quickstart-run-fails-on-clean-install"
     assert "zstandard" in result.defects[0]["summary"]
 
@@ -158,7 +158,7 @@ def test_platform_quickstart_names_persistence_defect() -> None:
 def test_platform_quickstart_names_windows_lookup_defect() -> None:
     result = common.LaneResult("platforms", "x")
     run = common.RunResult(1, 1.0, None, "", "Error: Could not locate the 'agent-bom' executable to run the scan.")
-    platforms.record_quickstart_defect(result, run, sys.executable, missing_module=None)
+    platforms.record_quickstart_defect(result, run, missing_module=None)
     assert result.defects[0]["id"] == "quickstart-run-cannot-find-itself-on-windows"
 
 

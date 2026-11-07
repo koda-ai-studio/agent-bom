@@ -59,7 +59,7 @@ def _load(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
 
 
-def record_quickstart_defect(result: LaneResult, run: RunResult, python: str, *, missing_module: str | None) -> None:
+def record_quickstart_defect(result: LaneResult, run: RunResult, *, missing_module: str | None) -> None:
     if "Could not locate the 'agent-bom' executable" in run.stdout + run.stderr:
         result.defect(
             "quickstart-run-cannot-find-itself-on-windows",
@@ -86,7 +86,7 @@ def step_quickstart(result: LaneResult, workdir: Path, env: dict[str, str]) -> N
     run = run_measured(agent_bom_command("quickstart", "--run", "--sample-dir", "sample"), env=env, cwd=workdir, timeout=900)
     result.measurements["quickstart_seconds"] = run.seconds
     report = _load(workdir / "sample" / "agent-bom-report.json")
-    record_quickstart_defect(result, run, sys.executable, missing_module=_missing_module("zstandard"))
+    record_quickstart_defect(result, run, missing_module=_missing_module("zstandard"))
     result.check("quickstart_exit_zero", run.returncode == 0, f"exit {run.returncode}\n{tail(run.stdout + run.stderr)}")
     result.check("quickstart_report_has_agents", bool(report and report.get("agents")), f"report present: {report is not None}")
     result.check("quickstart_persisted_graph", "Verified persisted graph" in run.stdout, tail(run.stdout, 12))

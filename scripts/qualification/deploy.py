@@ -16,7 +16,6 @@ import json
 import secrets
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -262,15 +261,14 @@ def main() -> int:
     parser.add_argument("--variant", required=True, choices=("compose", "helm"))
     args = parser.parse_args()
     result = LaneResult("deploy", args.variant)
-    with tempfile.TemporaryDirectory(prefix="qualification-deploy-"):
-        try:
-            (run_compose if args.variant == "compose" else run_helm)(result)
-        except Exception as exc:  # noqa: BLE001 - a lane records its own failure before exiting
-            result.check("lane_completed", False, f"{type(exc).__name__}: {exc}")
-        finally:
-            if args.variant == "helm":
-                dump_cluster_state("helm-final")
-                subprocess.run(["kind", "delete", "cluster", "--name", "qualification"], capture_output=True)  # noqa: S603, S607
+    try:
+        (run_compose if args.variant == "compose" else run_helm)(result)
+    except Exception as exc:  # noqa: BLE001 - a lane records its own failure before exiting
+        result.check("lane_completed", False, f"{type(exc).__name__}: {exc}")
+    finally:
+        if args.variant == "helm":
+            dump_cluster_state("helm-final")
+            subprocess.run(["kind", "delete", "cluster", "--name", "qualification"], capture_output=True)  # noqa: S603, S607
     return result.write()
 
 
