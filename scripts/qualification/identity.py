@@ -313,13 +313,48 @@ def exercise_browser_login(result: LaneResult, base: str, ca: Path, realm_secret
         result.check("oidc_callback_refuses_replay", replay.status_code == 401, f"HTTP {replay.status_code}")
 
 
-def _saml_response(client: httpx.Client, realm_secrets: realm.RealmSecrets, relay_state: str) -> str:
-    action, _page = _login_form(client, f"{realm.ISSUER}/protocol/saml/clients/{realm.SAML_URL_NAME}?RelayState={relay_state}")
+def _saml_form(client: httpx.Client, start_url: str, realm_secrets: realm.RealmSecrets) -> dict[str, str]:
+    action, _page = _login_form(client, start_url)
     posted = client.post(action, data={"username": realm.USER_NAME, "password": realm_secrets.user_password})
-    match = re.search(r'name="SAMLResponse"\s+value="([^"]+)"', posted.text)
-    if not match:
+    fields = {name: re.search(rf'name="{name}"\s+value="([^"]+)"', posted.text) for name in ("SAMLResponse", "RelayState")}
+    if not fields["SAMLResponse"]:
         raise RuntimeError(f"Keycloak returned no SAMLResponse: HTTP {posted.status_code} {posted.text[:300]}")
-    return html.unescape(match.group(1))
+    return {name: html.unescape(match.group(1)) for name, match in fields.items() if match}
+
+
+def _saml_response(client: httpx.Client, realm_secrets: realm.RealmSecrets, relay_state: str) -> str:
+    start_url = f"{realm.ISSUER}/protocol/saml/clients/{realm.SAML_URL_NAME}?RelayState={relay_state}"
+    return _saml_form(client, start_url, realm_secrets)["SAMLResponse"]
+
+
+def exercise_saml_browser_login(result: LaneResult, base: str, ca: Path, realm_secrets: realm.RealmSecrets) -> None:
+    """Run the browser path against the real IdP; httpx sends cookies regardless of SameSite."""
+    acs = f"{base}/v1/auth/saml/login"
+    with httpx.Client(verify=str(ca), follow_redirects=True, timeout=60) as browser:
+        start = browser.get(f"{base}/v1/auth/saml/start", follow_redirects=False)
+        location = start.headers.get("location", "")
+        if not result.check(
+            "saml_start_redirects_to_issuer",
+            start.status_code == 302 and location.startswith(realm.ISSUER) and "SAMLRequest=" in location,
+            f"HTTP {start.status_code} {start.text[:300]}",
+        ):
+            return
+        form = _saml_form(browser, location, realm_secrets)
+        result.check("saml_idp_echoes_relay_state", bool(form.get("RelayState")), sorted(form))
+        other = httpx.post(acs, data=form, timeout=60, follow_redirects=False)
+        result.check("saml_form_refused_from_another_browser", other.status_code == 401, f"HTTP {other.status_code}")
+        posted = browser.post(acs, data=form, follow_redirects=False)
+        result.measurements["saml_form_post_status"] = posted.status_code
+        result.check("saml_form_post_starts_session", posted.status_code == 303, f"HTTP {posted.status_code} {posted.text[:400]}")
+        me = browser.get(f"{base}/v1/auth/me")
+        body = me.json() if me.status_code == 200 else {}
+        result.check(
+            "saml_session_authenticates_api",
+            me.status_code == 200 and body.get("tenant_id") == realm.USER_TENANT and body.get("auth_method") == "saml",
+            f"HTTP {me.status_code} {str(body)[:300]}",
+        )
+        replay = browser.post(acs, data=form, follow_redirects=False)
+        result.check("saml_form_refuses_replay", replay.status_code == 401, f"HTTP {replay.status_code}")
 
 
 def exercise_saml(result: LaneResult, base: str, ca: Path, realm_secrets: realm.RealmSecrets) -> None:
@@ -337,17 +372,10 @@ def exercise_saml(result: LaneResult, base: str, ca: Path, realm_secrets: realm.
     result.check("saml_relay_state_issued", bool(relay_state), f"HTTP {relay.status_code}")
     with httpx.Client(verify=str(ca), follow_redirects=True, timeout=60) as client:
         saml_response = _saml_response(client, realm_secrets, relay_state)
-    # The IdP's browser form posts urlencoded to the ACS URL it was given.
-    form_post = httpx.post(
+    unsolicited = httpx.post(
         f"{base}/v1/auth/saml/login", data={"SAMLResponse": saml_response, "RelayState": relay_state}, timeout=60, follow_redirects=False
     )
-    result.measurements["saml_form_post_status"] = form_post.status_code
-    if form_post.status_code not in (200, 201, 302, 303):
-        result.defect(
-            "saml-acs-rejects-idp-form-post",
-            f"The SP ACS URL answers HTTP {form_post.status_code} to the urlencoded POST an IdP browser form sends; it only accepts JSON",
-            'curl -i -X POST "$API/v1/auth/saml/login" --data-urlencode "SAMLResponse=$RESPONSE" --data-urlencode "RelayState=$RELAY"',
-        )
+    result.check("saml_refuses_unsolicited_form_post", unsolicited.status_code == 401, f"HTTP {unsolicited.status_code}")
     relay = httpx.post(f"{base}/v1/auth/saml/relay-state", timeout=30)
     relay_state = relay.json().get("relay_state", "")
     with httpx.Client(verify=str(ca), follow_redirects=True, timeout=60) as client:
@@ -557,6 +585,7 @@ def run(result: LaneResult, workdir: Path) -> None:
             exercise_api_bearer(result, api_base, issuer, issuer.token("probe-tenant-a"))
             exercise_browser_login(result, api_base, ca, realm_secrets)
             exercise_saml(result, api_base, ca, realm_secrets)
+            exercise_saml_browser_login(result, api_base, ca, realm_secrets)
         if mcp_ready:
             exercise_mcp(result, issuer, mcp_base)
     finally:
