@@ -681,7 +681,9 @@ they return 503 for that request and allow immediate recovery when the lock clea
 
 Admission reads are cached for at most one second and 4,096 source addresses.
 Concurrent cold requests from the same source share one admission lookup, with
-at most eight distinct source lookups and 64 waiting requests per source.
+at most eight outstanding source lookups and 64 waiting requests per source.
+Lookup tasks are shared only within their owning event loop; cache and capacity
+accounting remain synchronized across loops serving the same application.
 Excess waiters receive 503; canceling a waiter does not cancel the shared read.
 A failure invalidates that source locally; atomic shared-store updates still
 decide the failure count and backoff. Another replica's block or a new outage

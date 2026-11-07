@@ -6,6 +6,7 @@ import asyncio
 import contextvars
 import logging
 import math
+import threading
 import time
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
@@ -36,10 +37,11 @@ class AuthProtectionUnavailableError(RuntimeError):
 
 class AuthFailurePolicy:
     def __init__(self) -> None:
+        self._state_lock = threading.RLock()
         self._outstanding = 0
         self._source_work: dict[str, int] = {}
         self._source_cache: OrderedDict[str, tuple[float, float]] = OrderedDict()
-        self._source_reads: dict[str, asyncio.Task[int | None]] = {}
+        self._source_reads: dict[tuple[asyncio.AbstractEventLoop, str], asyncio.Task[int | None]] = {}
         self._source_waiters: dict[str, int] = {}
         self._proxy_warning_emitted = False
         self._unavailable_until = 0.0
@@ -90,16 +92,18 @@ class AuthFailurePolicy:
         if time.monotonic() < self._unavailable_until:
             raise AuthProtectionUnavailableError("Authentication state temporarily unavailable")
         source = admission_source or str(args[0] if args else "unknown")
-        if self._outstanding >= 8 or self._source_work.get(source, 0) >= 2:
-            raise AuthProtectionUnavailableError("Authentication source capacity exhausted")
-        self._outstanding += 1
-        self._source_work[source] = self._source_work.get(source, 0) + 1
+        with self._state_lock:
+            if self._outstanding >= 8 or self._source_work.get(source, 0) >= 2:
+                raise AuthProtectionUnavailableError("Authentication source capacity exhausted")
+            self._outstanding += 1
+            self._source_work[source] = self._source_work.get(source, 0) + 1
 
         def release(completed):
-            self._outstanding -= 1
-            self._source_work[source] -= 1
-            if not self._source_work[source]:
-                del self._source_work[source]
+            with self._state_lock:
+                self._outstanding -= 1
+                self._source_work[source] -= 1
+                if not self._source_work[source]:
+                    del self._source_work[source]
             if completed is not None and not completed.cancelled():
                 completed.exception()  # Consume failures after a response timed out.
 
@@ -134,8 +138,9 @@ class AuthFailurePolicy:
             raise AuthProtectionUnavailableError("Authentication operation deadline exceeded") from exc
         except Exception as exc:  # broad-except: Any backend or audit failure must close the authentication boundary.
             logging.getLogger(__name__).warning("Authentication state unavailable (%s); failing closed", type(exc).__name__)
-            self._source_cache.clear()
-            self._unavailable_until = time.monotonic() + 5
+            with self._state_lock:
+                self._source_cache.clear()
+                self._unavailable_until = time.monotonic() + 5
             raise AuthProtectionUnavailableError("Authentication protection unavailable") from exc
         finally:
             if pending is None:
@@ -145,40 +150,51 @@ class AuthFailurePolicy:
         now, source = time.monotonic(), self.source(request)
         if now < self._unavailable_until:
             return self.unavailable()
-        cached = self._source_cache.get(source)
-        if cached and cached[0] > now:
-            self._source_cache.move_to_end(source)
-            remaining = max(0, math.ceil(cached[1] - now))
-            return self.denied(remaining) if remaining else None
-        task = self._source_reads.get(source)
-        if task is None:
-            if len(self._source_reads) >= 8:
+        # Tasks belong to one event loop. A shared ASGI app may also serve
+        # callers on separate loops; keep task ownership local while enforcing
+        # worker, waiter and cache bounds across the whole policy instance.
+        read_key = (asyncio.get_running_loop(), source)
+        with self._state_lock:
+            cached = self._source_cache.get(source)
+            if cached and cached[0] > now:
+                self._source_cache.move_to_end(source)
+                remaining = max(0, math.ceil(cached[1] - now))
+                return self.denied(remaining) if remaining else None
+            if self._source_waiters.get(source, 0) >= 64:
                 return self.unavailable()
-            task = asyncio.create_task(self._read_source(source))
-            self._source_reads[source] = task
-            task.add_done_callback(lambda _finished: self._source_reads.pop(source, None))
-        if self._source_waiters.get(source, 0) >= 64:
-            return self.unavailable()
-        self._source_waiters[source] = self._source_waiters.get(source, 0) + 1
+            task = self._source_reads.get(read_key)
+            if task is None:
+                if len(self._source_reads) >= 8:
+                    return self.unavailable()
+                task = asyncio.create_task(self._read_source(source))
+                self._source_reads[read_key] = task
+                task.add_done_callback(lambda _finished: self._release_read(read_key))
+            self._source_waiters[source] = self._source_waiters.get(source, 0) + 1
         try:
             result = await asyncio.shield(task)
         finally:
-            self._source_waiters[source] -= 1
-            if not self._source_waiters[source]:
-                del self._source_waiters[source]
+            with self._state_lock:
+                self._source_waiters[source] -= 1
+                if not self._source_waiters[source]:
+                    del self._source_waiters[source]
         if result is None:
             return self.unavailable()
         return self.denied(result) if result else None
+
+    def _release_read(self, read_key: tuple[asyncio.AbstractEventLoop, str]) -> None:
+        with self._state_lock:
+            self._source_reads.pop(read_key, None)
 
     async def _read_source(self, source: str) -> int | None:
         try:
             remaining = await self._call(self.store.remaining, source, time.time())
         except AuthProtectionUnavailableError:
             return None
-        self._source_cache[source] = (time.monotonic() + 1, time.monotonic() + remaining)
-        self._source_cache.move_to_end(source)
-        while len(self._source_cache) > 4096:
-            self._source_cache.popitem(last=False)
+        with self._state_lock:
+            self._source_cache[source] = (time.monotonic() + 1, time.monotonic() + remaining)
+            self._source_cache.move_to_end(source)
+            while len(self._source_cache) > 4096:
+                self._source_cache.popitem(last=False)
         return remaining
 
     async def after(self, request, response):
@@ -190,7 +206,8 @@ class AuthFailurePolicy:
         if not failed:
             return response
         source, now = self.source(request), time.time()
-        self._source_cache.pop(source, None)
+        with self._state_lock:
+            self._source_cache.pop(source, None)
         try:
             remaining = await self._call(self.store.record, source, now, limit=self.limit, base=self.base, maximum=self.maximum)
             if await self._call(self.store.audit_allowed, source, now):

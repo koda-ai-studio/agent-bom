@@ -557,3 +557,43 @@ def test_oauth_token_validation_is_not_auth_failure_but_invalid_grant_is(monkeyp
     assert len(entries) == 2
     assert entries[0].details["hmac_sha256"] == audit_log.fingerprint_auth_credential("expired-code")
     assert "expired-code" not in str([entry.to_dict() for entry in entries])
+
+
+def test_source_admission_supports_concurrent_event_loops(monkeypatch):
+    import asyncio
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from types import SimpleNamespace
+
+    from agent_bom.api.auth_failure_policy import AuthFailurePolicy
+
+    policy = AuthFailurePolicy()
+    started, release = threading.Event(), threading.Event()
+    request = SimpleNamespace(client=SimpleNamespace(host="192.0.2.17"), headers={})
+
+    def remaining(_source, _now):
+        started.set()
+        assert release.wait(2)
+        return 0
+
+    monkeypatch.setattr(policy.store, "remaining", remaining)
+
+    def second_loop():
+        async def check():
+            task = asyncio.create_task(policy.before(request))
+            await asyncio.sleep(0)
+            release.set()
+            return await task
+
+        return asyncio.run(check())
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(lambda: asyncio.run(policy.before(request)))
+        try:
+            assert started.wait(2)
+            second = pool.submit(second_loop)
+            assert second.result(timeout=3) is None
+            assert first.result(timeout=3) is None
+            assert policy._unavailable_until == 0
+        finally:
+            release.set()
