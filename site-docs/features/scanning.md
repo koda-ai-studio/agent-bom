@@ -57,6 +57,42 @@ mode:
 Local databases synced before this precedence keep their stored scores until the
 next `agent-bom db update`.
 
+### Distro advisories and linked CVEs
+
+Debian `DSA-`/`DLA-` and similar distro advisories usually carry no severity,
+only links to the CVEs they fix. An unrated one takes the strongest rating among
+those CVEs (`severity_source: upstream_cve:CVE-…`, `severity_basis: linked_cve`,
+`severity_linked_cve: CVE-…`), read in this order: records already in the scan,
+the local database, a cache, then `api.osv.dev`.
+
+- **Limits.** Each distinct CVE is one `GET /v1/vulns/{id}` for `DEBIAN-CVE-…`,
+  plus one for `CVE-…` when that record has no CVSS score. A scan makes at most
+  1,000 such requests in 90 seconds, 50 per batch and 10 at a time, and reaches
+  each advisory's first CVE before any advisory's second. A rate limit or a batch
+  with no answers stops the lookups.
+- **Cache.** Answers are kept in `linked_cve_severity_cache.json` in the state
+  directory for 7 days (1 day when the CVE has no rating). Failures are not cached.
+- **Debian tracker.** A CVE the tracker lists as fixed at or below the installed
+  version does not count. Neither does a CVE that lists the source package under
+  other releases but not this one, while this release is still tracked. An
+  end-of-life release leaves the feed, and a CVE filed under a different source
+  package says nothing about this one, so in those cases the linked score stands
+  unless a synced local tracker row shows it fixed. If every linked CVE is
+  excluded, the finding stays `unknown`.
+- **Namespace defaults.** A distro record rated only by a namespace default
+  (`*_heuristic`) takes a linked score when one exists, and a default is never
+  passed on to another advisory.
+- **Gaps.** `--offline`, a failed lookup or a spent budget keeps the finding
+  `unknown` and adds a scan warning, which marks the scan partial and withholds
+  the posture grade. A rollup with some CVEs answered keeps the strongest known
+  rating, and `severity_note` says it may be understated. An advisory that links
+  no CVE, such as a `tzdata` update, stays `unknown` with a note and is not a
+  coverage gap.
+
+`severity_note` appears with these fields in JSON, SARIF, CycloneDX, the API and
+the Findings drawer. A posture grade needs at least one rated vulnerability: when
+every finding is `unknown`, the grade is `N/A`.
+
 ### Declared version ranges
 
 A range is never reported as a version. Without a lockfile, a `package.json`

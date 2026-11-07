@@ -1,5 +1,6 @@
 """Cold graph stores and failed probes do not serialize unrelated databases."""
 
+import os
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event
@@ -37,3 +38,19 @@ def test_blocked_initialization_does_not_block_another_database(tmp_path, operat
         finally:
             release.set()
         blocked.result(timeout=5)
+
+
+def test_a_recreated_file_on_a_reused_inode_gets_its_schema_again(tmp_path):
+    from agent_bom.api.graph_store import SQLiteGraphStore
+
+    db = tmp_path / "projection.db"
+    store = SQLiteGraphStore(db)
+    store.check_readiness()
+    assert store.snapshot_identity(tenant_id="t", for_paging=True)[0] == ""
+
+    # Same device and inode with no content is what a sweep and re-create leave when Linux reuses the inode.
+    os.truncate(db, 0)
+    for sidecar in (tmp_path / "projection.db-wal", tmp_path / "projection.db-shm"):
+        sidecar.unlink(missing_ok=True)
+
+    assert store.snapshot_identity(tenant_id="t", for_paging=True)[0] == ""

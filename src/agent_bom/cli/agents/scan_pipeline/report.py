@@ -348,6 +348,8 @@ def _build_report(opts: ScanOptions, st: ScanState) -> None:
             "skipped_unresolvable_versions": _scan_perf.get("skipped_unresolvable_versions", 0),
             "skipped_non_osv_ecosystems": _scan_perf.get("skipped_non_osv_ecosystems", 0),
             "cache_hit_rate_pct": _scan_perf.get("osv_cache_hit_rate_pct", 0),
+            "linked_cve_lookups": _scan_perf.get("linked_cve_lookups", 0),
+            "linked_cve_cache_hits": _scan_perf.get("linked_cve_cache_hits", 0),
         },
         **(
             {"filtering": {"unfixed_os_findings_suppressed": _scan_perf["unfixed_os_findings_suppressed"]}}

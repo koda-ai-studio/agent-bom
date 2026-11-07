@@ -16518,6 +16518,28 @@
             "title": "Severity",
             "type": "string"
           },
+          "severity_linked_cve": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Linked Cve"
+          },
+          "severity_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Note"
+          },
           "severity_source": {
             "anyOf": [
               {
@@ -51496,6 +51518,23 @@
               "schema": {
                 "$ref": "#/components/schemas/SAMLLoginRequest"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "RelayState": {
+                    "type": "string"
+                  },
+                  "SAMLResponse": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "SAMLResponse",
+                  "RelayState"
+                ],
+                "type": "object"
+              }
             }
           },
           "required": true
@@ -51512,6 +51551,12 @@
               }
             },
             "description": "Successful Response"
+          },
+          "303": {
+            "description": "IdP form post verified: browser session started, redirected to the dashboard."
+          },
+          "413": {
+            "description": "SAML form exceeds the size limit."
           },
           "4XX": {
             "content": {
@@ -51619,6 +51664,41 @@
           }
         },
         "summary": "Saml Relay State",
+        "tags": [
+          "enterprise"
+        ]
+      }
+    },
+    "/v1/auth/saml/start": {
+      "get": {
+        "description": "Start SP-initiated SAML browser login.",
+        "operationId": "saml_login_start_v1_auth_saml_start_get",
+        "responses": {
+          "302": {
+            "description": "Redirect to the IdP with a new AuthnRequest; the browser is bound to this login by a cookie."
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Saml Login Start",
         "tags": [
           "enterprise"
         ]

@@ -26,6 +26,7 @@ import base64
 import json
 from typing import Annotated, Any
 
+import zstandard
 from pydantic import BaseModel, BeforeValidator
 from pydantic_core import to_json
 
@@ -68,14 +69,6 @@ PROJECTED_RESULT_FIELDS = (
 _WARNINGS_PREVIEW = 3
 
 
-def _zstd() -> Any:
-    try:
-        import zstandard
-    except ImportError:  # pragma: no cover - zstandard ships with the api extra
-        return None
-    return zstandard
-
-
 def _list_len(value: Any) -> int:
     return len(value) if isinstance(value, list) else 0
 
@@ -115,8 +108,7 @@ def encode_result_field(value: Any, *, project: bool = False) -> Any:
     raw = to_json(value)
     if len(raw) > MAX_RESULT_BYTES:
         raise ValueError("Stored job result exceeds the 256 MiB size limit")
-    zstd = _zstd() if compression_enabled() else None
-    if len(raw) < MIN_COMPRESS_BYTES or zstd is None:
+    if len(raw) < MIN_COMPRESS_BYTES or not compression_enabled():
         return json.loads(raw)
     header = {"codec": "zstd", "encoding": "base64", "v": CODEC_VERSION, "raw_bytes": len(raw)}
     envelope: dict[str, Any] = {RESULT_CODEC_KEY: header}
@@ -127,7 +119,7 @@ def encode_result_field(value: Any, *, project: bool = False) -> Any:
         envelope["vulnerabilities_count"] = _list_len(value.get("vulnerabilities"))
         if project:
             envelope[RESULT_PROJECTION_KEY] = json.loads(to_json(result_summary_projection(value)))
-    envelope["data"] = base64.b64encode(zstd.ZstdCompressor(level=_ZSTD_LEVEL).compress(raw)).decode("ascii")
+    envelope["data"] = base64.b64encode(zstandard.ZstdCompressor(level=_ZSTD_LEVEL).compress(raw)).decode("ascii")
     return envelope
 
 
@@ -145,9 +137,6 @@ def decode_result_field(value: Any) -> Any:
         raise ValueError("Invalid stored job result size")
     if size > MAX_RESULT_BYTES:
         raise ValueError("Stored job result exceeds the 256 MiB size limit")
-    zstd = _zstd()
-    if zstd is None:  # pragma: no cover - zstandard ships with the api extra
-        raise ValueError("Reading a compressed job result requires the zstandard package (agent-bom[api])")
     return decode_zstd_json(value.get("data"), max_bytes=MAX_RESULT_BYTES, expected_size=size)
 
 

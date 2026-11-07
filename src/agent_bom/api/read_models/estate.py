@@ -42,6 +42,8 @@ class FindingRow(ReadModel):
     path_context: str | None = None
     lane: str | None = None
     severity_source: str | None = None
+    severity_linked_cve: str | None = None
+    severity_note: str | None = None
     id: str
     canonical_id: str | None = None
     cve_id: str | None = None

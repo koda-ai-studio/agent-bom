@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict, deque
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -24,7 +24,7 @@ from agent_bom.graph.rekey import rekey_in_memory
 from agent_bom.graph.relationship_contract import ContractRejections, admit_edge, merge_edge_provenance
 from agent_bom.graph.severity_floor import FINDING_ENTITY_TYPES, counts_as_finding
 from agent_bom.graph.technique_mapping import TechniqueMapping, technique_mappings_from_json
-from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType
+from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType, entity_type_value
 from agent_bom.graph.util import _now_iso
 from agent_bom.graph.view_filters import INVENTORY_RELATIONSHIPS
 from agent_bom.graph.view_filters import GraphFilterOptions as GraphFilterOptions
@@ -240,6 +240,20 @@ class UnifiedGraph:
     def iter_nodes_by_type(self, entity_type: EntityType) -> Iterator[UnifiedNode]:
         """Stream nodes of one type for read-only scans (mutations need ``get_node``)."""
         return (n for n in self.nodes.values() if n.entity_type == entity_type)
+
+    def finish_writes(self) -> None:
+        """Declare the build done: later reads through ``nodes`` are not expected to change nodes."""
+
+    def iter_nodes(self) -> Iterator[UnifiedNode]:
+        return iter(self.nodes.values())
+
+    def iter_nodes_of_types(self, entity_types: Iterable[EntityType]) -> Iterator[UnifiedNode]:
+        """Stream nodes of several types in insertion order for read-only scans (mutations need ``get_node``)."""
+        wanted = frozenset(entity_type_value(entity_type) for entity_type in entity_types)
+        return (n for n in self.nodes.values() if entity_type_value(n.entity_type) in wanted)
+
+    def nodes_of_types(self, entity_types: Iterable[EntityType]) -> list[UnifiedNode]:
+        return list(self.iter_nodes_of_types(entity_types))
 
     def edges_from(self, node_id: str) -> list[UnifiedEdge]:
         return self.adjacency.get(node_id, [])

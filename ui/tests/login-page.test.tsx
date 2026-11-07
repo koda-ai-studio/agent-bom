@@ -277,6 +277,35 @@ describe("LoginPage", () => {
     expect(screen.queryByRole("link", { name: /^sign in with sso$/i })).not.toBeInTheDocument();
     expect(screen.getByLabelText("API key")).toBeInTheDocument();
   });
+  it("links SAML sign-in to the route that binds the browser to the login", async () => {
+    apiMock.getAuthMe.mockReset();
+    apiMock.getAuthMe.mockResolvedValue({
+      authenticated: false,
+      auth_required: true,
+      configured_modes: ["api_key", "saml_sso"],
+      recommended_ui_mode: "session_api_key",
+      auth_method: null,
+      subject: null,
+      role: null,
+      tenant_id: "default",
+      role_summary: null,
+      memberships: [],
+      request_id: null,
+      trace_id: null,
+      span_id: null,
+    });
+
+    render(
+      <AuthProvider>
+        <LoginPage />
+      </AuthProvider>,
+    );
+
+    const samlLink = await screen.findByRole("link", { name: /sign in with saml/i });
+    expect(samlLink).toHaveAttribute("href", "/v1/auth/saml/start");
+    expect(screen.getByText("Sign in with SAML, or use an API key as a fallback.")).toBeInTheDocument();
+    expect(screen.getByLabelText("API key")).toBeInTheDocument();
+  });
   it("shows the reverse-proxy SSO hint (no fake button) when trusted_proxy is configured", async () => {
     apiMock.getAuthMe.mockReset();
     apiMock.getAuthMe.mockResolvedValue({

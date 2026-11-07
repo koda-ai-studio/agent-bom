@@ -6,6 +6,8 @@ import re
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agent_bom.core.severity import severity_basis, severity_linked_cve
+
 _ALPINE_CVE_RE = re.compile(r"^ALPINE-CVE-(\d{4}-\d+)$", re.IGNORECASE)
 _DEBIAN_CVE_RE = re.compile(r"^DEBIAN-CVE-(\d{4}-\d+)$", re.IGNORECASE)
 _CVE_RE = re.compile(r"^CVE-\d{4}-\d+$", re.IGNORECASE)
@@ -148,6 +150,17 @@ def upstream_enrichment_metadata(value: Any) -> dict[str, Any]:
         return value.get(key, default) if isinstance(value, Mapping) else getattr(value, key, default)
 
     return {"upstream_ids": read("upstream_ids", []) or [], "epss_cve_id": read("epss_cve_id"), "kev_cve_id": read("kev_cve_id")}
+
+
+def severity_provenance_fields(value: Any) -> dict[str, Any]:
+    """Where a finding's severity came from, which linked CVE if any, and why it is partial or absent."""
+    source = getattr(value, "severity_source", None)
+    return {
+        "severity_source": source,
+        "severity_basis": severity_basis(source),
+        "severity_linked_cve": severity_linked_cve(source),
+        "severity_note": getattr(value, "severity_note", None),
+    }
 
 
 def vulnerability_enrichment_metadata(value: Any) -> dict[str, Any]:

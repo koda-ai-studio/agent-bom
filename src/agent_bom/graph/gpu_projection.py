@@ -128,14 +128,16 @@ def _project_cloud_pools(graph: UnifiedGraph, cloud_inventory: Any, data_source:
 
 
 def _annotate_gpu_instances(graph: UnifiedGraph) -> None:
-    for node in graph.nodes.values():
-        attrs = node.attributes
-        if node.entity_type != EntityType.CLOUD_RESOURCE or not attrs.get("instance_type"):
+    for candidate in graph.iter_nodes_by_type(EntityType.CLOUD_RESOURCE):
+        attrs = candidate.attributes
+        if not attrs.get("instance_type"):
             continue
         classify = _INSTANCE_CLASSIFIERS.get(str(attrs.get("cloud_provider") or ""))
         acc = classify(str(attrs["instance_type"])) if classify else None
         if acc is not None:
-            attrs.update(gpu=True, gpu_vendor=acc.vendor, accelerator_type=acc.model, accelerators_per_node=acc.count)
+            (graph.get_node(candidate.id) or candidate).attributes.update(
+                gpu=True, gpu_vendor=acc.vendor, accelerator_type=acc.model, accelerators_per_node=acc.count
+            )
 
 
 def _ensure_k8s_pool(graph: UnifiedGraph, workload: GpuWorkload, sources: list[str]) -> str:

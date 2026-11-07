@@ -44,6 +44,7 @@ from agent_bom.output.sarif_common import (
     _SarifCatalog,
     enforce_physical_locations,
     identity_uri,
+    severity_provenance_properties,
 )
 from agent_bom.output.sarif_finding_identity import finding_file_uri, number_repeated_identities, unified_identity
 from agent_bom.output.sarif_scanners import (
@@ -457,6 +458,7 @@ def _cve_sarif_result(
         "sla_due_at_source": finding_sla["sla_due_at_source"],
         **({"blast_score": finding.risk_score} if finding.risk_score is not None else {"risk_score_status": "not_assessed"}),
         "match_confidence_tier": evidence(finding, "match_confidence_tier"),
+        **severity_provenance_properties(finding),
         **({"atlas_mapping_evidence": evidence(finding, "atlas_mapping_evidence")} if evidence(finding, "atlas_mapping_evidence") else {}),
         "cve_ids": _cve_ids_for_finding(finding),
         "cwe_ids": list(finding.cwe_ids),
@@ -646,6 +648,7 @@ def _sast_result_properties(finding: Finding, evidence: dict[str, Any]) -> dict[
 def _unified_finding_properties(finding: Finding, rule_id: str, evidence: dict[str, Any]) -> dict[str, Any]:
     return {
         "advisory_id": rule_id,
+        **severity_provenance_properties(finding),
         "cwe_ids": list(finding.cwe_ids),
         "asset_canonical_id": finding.asset.stable_id,
         "occurrence_id": finding.id,

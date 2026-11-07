@@ -338,8 +338,11 @@ store — the directory is swept: the newest `8` files by last use always stay
 (one process holds at most eight live stores), anything beyond them or unused
 for more than `AGENT_BOM_CURRENT_ESTATE_CACHE_MAX_AGE_DAYS` (default `14`,
 `<= 0` disables the age rule) is removed with its `-wal`/`-shm` siblings, and
-the projection the process is about to use is never touched. Preview or apply
-the same sweep by hand:
+the projection the process is about to use is never touched. Each live store
+holds a shared lock on `<file>.lease`, and a file is removed only under an
+exclusive lock on it, so a projection in use by any process stays. A dead
+process's lock clears by itself. Where the filesystem has no advisory locks
+nothing is swept. Preview or apply the same sweep by hand:
 
 ```bash
 agent-bom db prune            # dry run: each candidate with size and age

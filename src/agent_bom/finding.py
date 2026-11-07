@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from agent_bom.advisory_ids import vulnerability_enrichment_metadata
+from agent_bom.advisory_ids import severity_provenance_fields, vulnerability_enrichment_metadata
 from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_owasp_llm_tags, flow_severity, is_security_flow_category
 from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.core.exploitability import fused_triage_priority
 from agent_bom.core.packages import synthesize_purl
-from agent_bom.core.severity import severity_basis
 from agent_bom.core.versions.prerelease_fix import upgrade_remediation
 from agent_bom.domain.finding_evidence import _evidence_key_looks_like_path as _evidence_key_looks_like_path
 from agent_bom.domain.finding_evidence import _evidence_key_looks_like_url as _evidence_key_looks_like_url
@@ -735,8 +734,7 @@ def blast_radius_to_finding(br: object) -> "Finding":
         "layer_attribution": _sanitized_evidence_field([_package_occurrence_evidence(occ) for occ in br.layer_attribution]),
         "published_at": getattr(vuln, "published_at", None),
         "modified_at": getattr(vuln, "modified_at", None),
-        "severity_source": getattr(vuln, "severity_source", None),
-        "severity_basis": severity_basis(getattr(vuln, "severity_source", None)),
+        **severity_provenance_fields(vuln),
         "cvss_vector": getattr(vuln, "cvss_vector", None),
         "attack_vector": getattr(vuln, "attack_vector", None),
         "attack_complexity": getattr(vuln, "attack_complexity", None),

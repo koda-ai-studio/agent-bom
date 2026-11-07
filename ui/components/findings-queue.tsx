@@ -14,7 +14,7 @@ import { FINDING_COLUMN_LABELS, defaultFindingColumns, readFindingColumns, write
 import { useAuthState } from "@/components/auth-provider";
 import { Drawer } from "@/components/drawer";
 import { ReconfirmationBadge } from "@/components/finding-reconfirmation";
-import { severityColor, severityText, severityDot, type FindingTriageItem } from "@/lib/api";
+import { severityColor, severityText, severitySourceLabel, severityDot, type FindingTriageItem } from "@/lib/api";
 import { AIAdviceBadge } from "@/components/ai-advice";
 import type { FindingsLens } from "@/lib/findings-lens";
 import type { EnrichedVuln, SortKey } from "@/lib/findings-view";
@@ -327,7 +327,7 @@ function MobileFindingCard({
   const controls = controlLabels(vuln);
   const due = formatSlaDue(vuln.sla_due_at);
   const fields: Record<FindingColumnKey, ReactNode> = {
-    priority: <span className={`inline-block rounded border px-1.5 py-0.5 text-xs ${severityColor(vuln.severity)}`} title={`Severity source: ${vuln.severity_source || "unreported"}`}>{severityText(vuln.severity, vuln)}</span>,
+    priority: <span className={`inline-block rounded border px-1.5 py-0.5 text-xs ${severityColor(vuln.severity)}`} title={`Severity source: ${severitySourceLabel(vuln.severity_source) || "unreported"}`}>{severityText(vuln.severity, vuln)}</span>,
     asset: [...vuln.packages.map((name, index) => index === 0 ? packageVersionLabel(vuln) : name), ...vuln.agents, ...vuln.affected_servers].slice(0, 2).join(", ") || "Unavailable",
     detection: <DetectionEvidence vuln={vuln} />,
     observed: <ObservedEvidence vuln={vuln} />,
@@ -709,7 +709,7 @@ function EngineeringCells({
           </div>
       </td>),
     detection: (<td className="px-3 py-3 text-xs text-ink-secondary"><DetectionEvidence vuln={vuln} /></td>),
-    priority: (<td className="px-3 py-3"><span className={`text-xs font-medium px-2 py-0.5 rounded border ${severityColor(vuln.severity)}`} title={`Severity source: ${vuln.severity_source || "unreported"}`}>{severityText(vuln.severity, vuln)}</span></td>),
+    priority: (<td className="px-3 py-3"><span className={`text-xs font-medium px-2 py-0.5 rounded border ${severityColor(vuln.severity)}`} title={`Severity source: ${severitySourceLabel(vuln.severity_source) || "unreported"}`}>{severityText(vuln.severity, vuln)}</span></td>),
     controls: (<td className="px-3 py-3">
         {controlTags.length > 0 ? (
           <div className="flex max-w-[16rem] flex-wrap gap-1">

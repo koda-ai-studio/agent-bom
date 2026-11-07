@@ -7,7 +7,7 @@ from copy import deepcopy
 from dataclasses import asdict
 
 from agent_bom.advisory_ids import derive_cve_from_advisory_id
-from agent_bom.core.severity import severity_basis, severity_rank
+from agent_bom.core.severity import severity_basis, severity_linked_cve, severity_rank
 from agent_bom.models import Vulnerability
 from agent_bom.scanners.state import record_scan_warning
 
@@ -159,6 +159,53 @@ def merge_advisory_clusters(records: list[Vulnerability], *, fix_fallback: bool 
     return sorted(_collapse_covered_distro_rollups(merged), key=lambda record: record.id)
 
 
+_SCORE_FIELDS = (
+    "severity",
+    "cvss_score",
+    "cvss_vector",
+    "attack_vector",
+    "attack_complexity",
+    "privileges_required",
+    "user_interaction",
+    "network_exploitable",
+)
+
+
+def _is_rated(record: Vulnerability) -> bool:
+    return severity_rank(record.severity) > 0 and severity_basis(record.severity_source) != "default"
+
+
+def _strength(record: Vulnerability) -> tuple[int, float]:
+    return (severity_rank(record.severity) if _is_rated(record) else 0, record.cvss_score if record.cvss_score is not None else -1.0)
+
+
+def _carry_rollup_evidence(rollup: Vulnerability, targets: list[Vulnerability]) -> None:
+    """Keep a collapsed rollup's severity and KEV on one record, not on all of them.
+
+    The CVE the rollup names as the source gets the value; otherwise the
+    strongest target does (lowest id on a tie), so one rated rollup stays one
+    rated finding rather than rating every CVE it fixes.
+    """
+    strongest = min(targets, key=lambda record: (-_strength(record)[0], -_strength(record)[1], record.id))
+    by_id = {record.id: record for record in targets}
+
+    if _is_rated(rollup):
+        target = by_id.get(severity_linked_cve(rollup.severity_source) or "", strongest)
+        if _strength(rollup) > _strength(target):
+            for field in _SCORE_FIELDS:
+                setattr(target, field, getattr(rollup, field))
+            target.severity_source = rollup.severity_source if severity_linked_cve(rollup.severity_source) else f"advisory:{rollup.id}"
+            target.severity_note = rollup.severity_note
+
+    if rollup.is_kev:
+        target = by_id.get(rollup.kev_cve_id or "", strongest)
+        target.is_kev = True
+        for field in ("kev_date_added", "kev_due_date", "kev_cve_id", "kev_status"):
+            value = getattr(rollup, field)
+            if value:
+                setattr(target, field, value)
+
+
 def _collapse_covered_distro_rollups(records: list[Vulnerability]) -> list[Vulnerability]:
     """Remove a Debian rollup only when its CVEs and fix are already represented.
 
@@ -184,4 +231,5 @@ def _collapse_covered_distro_rollups(records: list[Vulnerability]) -> list[Vulne
             target = by_cve[cve]
             target.references = sorted({*target.references, *record.references, reference})
             target.advisory_sources = sorted({*target.advisory_sources, *record.advisory_sources})
+        _carry_rollup_evidence(record, [by_cve[cve] for cve in sorted(cves)])
     return retained

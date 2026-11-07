@@ -3,10 +3,10 @@
 OSV publishes a distro fix advisory such as ``DLA-4306-1`` with no severity of
 its own, only ``upstream`` links to the CVEs it fixes. Left ``unknown`` it
 trips the fail-closed CI gate even though every upstream CVE is scored. The
-severity is the maximum of the upstream CVEs' scores, taken from data the scan
-already holds (other advisories in the scan, then the local DB) — never a new
-network request. Unresolvable advisories stay ``unknown`` and keep failing
-closed.
+severity is the maximum of the upstream CVEs' scores. This suite covers data the
+machine already holds (other advisories in the scan, then the local DB), which
+needs no network request; ``test_linked_cve_severity`` covers the bounded lookups.
+Unresolvable advisories stay ``unknown`` and keep failing closed.
 """
 
 from __future__ import annotations

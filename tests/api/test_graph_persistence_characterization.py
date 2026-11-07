@@ -26,6 +26,7 @@ def persistence(monkeypatch):
         interaction_risks=[],
         analysis_status={},
         created_at="fixed",
+        finish_writes=lambda: None,
     )
     store = Mock()
 

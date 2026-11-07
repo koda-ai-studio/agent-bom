@@ -80,7 +80,7 @@ def _describe(paths: list[Path], now: float) -> list[dict[str, Any]]:
 def _echo_table(payload: dict[str, Any]) -> None:
     verb = "Removed" if not payload["dry_run"] else "Would remove"
     click.echo(f"Projection cache: {payload['directory']}")
-    click.echo(f"Keeping the newest {payload['keep_latest']} and the active projection {Path(payload['active']).name}")
+    click.echo(f"Keeping the newest {payload['keep_latest']}, the active projection {Path(payload['active']).name} and any file in use")
     if payload["max_age_days"] > 0:
         click.echo(f"Age cap: {payload['max_age_days']} day(s) since last use (AGENT_BOM_CURRENT_ESTATE_CACHE_MAX_AGE_DAYS)")
     for entry in payload["candidates"]:

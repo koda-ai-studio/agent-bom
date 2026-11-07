@@ -44,9 +44,10 @@ only).
 
 from __future__ import annotations
 
+import heapq
 import json
 from collections import OrderedDict
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from typing import TYPE_CHECKING, Any, Optional
 
 from agent_bom.graph.analysis import GraphAnalysisStatus
@@ -67,7 +68,7 @@ from agent_bom.graph.node_merge import merge_node
 from agent_bom.graph.recorded_time import stamp_edge, stamp_node
 from agent_bom.graph.rekey import normalized_rekey_mapping, rekey_path_references
 from agent_bom.graph.relationship_contract import ContractRejections
-from agent_bom.graph.types import EntityType
+from agent_bom.graph.types import EntityType, entity_type_value
 from agent_bom.graph.util import _now_iso
 from agent_bom.graph.workspace_writes import WorkspaceWrites
 
@@ -238,6 +239,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         # (see the interface-identity audit); the default is sized well above that.
         self._cache: OrderedDict[str, UnifiedNode] = OrderedDict()
         self._dirty: set[str] = set()
+        self._writes_finished = False
 
         self._nodes_view = _NodesView(self)
         self._edges_view = _EdgesView(self)
@@ -304,7 +306,18 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         return node
 
     def _mark_dirty(self, node_id: str) -> None:
-        self._dirty.add(node_id)
+        if not self._writes_finished:
+            self._dirty.add(node_id)
+
+    def finish_writes(self) -> None:
+        """Persist pending changes, then stop treating reads through ``nodes`` as changes.
+
+        Path derivation, the snapshot save and delta alerts only read, and each
+        full pass would otherwise rewrite every node it evicts. ``get_node`` and
+        ``add_node`` still record changes.
+        """
+        self.flush()
+        self._writes_finished = True
 
     def _write_back(self, node_id: str, node: UnifiedNode) -> None:
         self._writes.add_node(_node_to_row(node))
@@ -345,7 +358,16 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
                 yield seq, node_id, payload
 
     def _iter_nodes(self, *, mark_dirty: bool, entity_type: str | None = None) -> Iterator[UnifiedNode]:
-        for _seq, node_id, payload in self._iter_node_rows(entity_type=entity_type):
+        return self._nodes_from_rows(self._iter_node_rows(entity_type=entity_type), mark_dirty=mark_dirty)
+
+    def _iter_nodes_of_types(self, entity_types: Iterable[EntityType], *, mark_dirty: bool) -> Iterator[UnifiedNode]:
+        # Each type is an indexed walk in ``seq`` order, so merging keeps insertion order
+        # and a type the graph does not hold costs one empty query, not a full pass.
+        walks = [self._iter_node_rows(entity_type=value) for value in sorted({entity_type_value(et) for et in entity_types})]
+        return self._nodes_from_rows(heapq.merge(*walks), mark_dirty=mark_dirty)
+
+    def _nodes_from_rows(self, rows: Iterable[tuple[int, str, str]], *, mark_dirty: bool) -> Iterator[UnifiedNode]:
+        for _seq, node_id, payload in rows:
             cached = self._cache.get(node_id)
             node = cached if cached is not None else _node_from_payload(json.loads(payload))
             if cached is None:
@@ -398,7 +420,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         existing = self._resolve_node(node.id)
         if existing is not None:
             merge_node(existing, node)
-            self._mark_dirty(node.id)
+            self._dirty.add(node.id)
             return
         # Pending rows preserve first-insert order; cache owns the live identity.
         self._writes.add_node(_node_to_row(node))
@@ -406,7 +428,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         # The caller owns the object it passed and may mutate it immediately
         # after add_node(). Mark the cached identity dirty so an LRU eviction
         # writes those in-place changes back instead of silently losing them.
-        self._mark_dirty(node.id)
+        self._dirty.add(node.id)
 
     def write_edges(self, edges: list[UnifiedEdge]) -> None:
         """Persist edges read from this graph and changed in place, as-is (no evidence merge)."""
@@ -474,7 +496,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     def get_node(self, node_id: str) -> Optional[UnifiedNode]:
         node = self._resolve_node(node_id)
         if node is not None:
-            self._mark_dirty(node_id)
+            self._dirty.add(node_id)
         return node
 
     def has_node(self, node_id: str) -> bool:
@@ -487,6 +509,15 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     def iter_nodes_by_type(self, entity_type: EntityType) -> Iterator[UnifiedNode]:
         et = entity_type.value if isinstance(entity_type, EntityType) else str(entity_type)
         return self._iter_nodes(mark_dirty=False, entity_type=et)
+
+    def iter_nodes(self) -> Iterator[UnifiedNode]:
+        return self._iter_nodes(mark_dirty=False)
+
+    def iter_nodes_of_types(self, entity_types: Iterable[EntityType]) -> Iterator[UnifiedNode]:
+        return self._iter_nodes_of_types(entity_types, mark_dirty=False)
+
+    def nodes_of_types(self, entity_types: Iterable[EntityType]) -> list[UnifiedNode]:
+        return list(self._iter_nodes_of_types(entity_types, mark_dirty=True))
 
     def to_dict(self) -> dict[str, Any]:
         self.flush()

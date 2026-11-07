@@ -64,9 +64,9 @@ def _chains(graph: UnifiedGraph, agent_id: str) -> list[tuple[list[str], list[st
 def gpu_host_escape_paths(graph: UnifiedGraph) -> list[AttackPath]:
     """Bounded, deterministic set of host-GPU-stack CVE paths through GPU workloads."""
     paths: list[AttackPath] = []
-    for package in sorted(graph.nodes.values(), key=lambda n: n.id):
-        if package.entity_type != EntityType.PACKAGE or _package_name(package) not in HOST_STACK_PACKAGES:
-            continue
+    # Filter before sorting: the sort holds what it is given in memory at once.
+    host_stack = (package for package in graph.iter_nodes_by_type(EntityType.PACKAGE) if _package_name(package) in HOST_STACK_PACKAGES)
+    for package in sorted(host_stack, key=lambda n: n.id):
         vulns = _host_stack_vulns(graph, package)
         if not vulns:
             continue

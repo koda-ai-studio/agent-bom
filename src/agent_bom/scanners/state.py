@@ -46,6 +46,8 @@ _SCAN_PERF_TEMPLATE = {
     "offline_skips": 0,
     "skipped_unresolvable_versions": 0,
     "skipped_non_osv_ecosystems": 0,
+    "linked_cve_lookups": 0,
+    "linked_cve_cache_hits": 0,
 }
 _loop_semaphores_lock = threading.Lock()
 _MAX_CACHED_LOOPS = 8

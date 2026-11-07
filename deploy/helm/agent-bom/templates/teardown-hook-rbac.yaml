@@ -25,15 +25,21 @@ metadata:
     helm.sh/hook-weight: "-5"
     helm.sh/hook-delete-policy: {{ .Values.teardownHooks.deletePolicy | quote }}
 rules:
+  {{- with include "agent-bom.teardownTargetSecrets" . | fromJsonArray }}
   - apiGroups: [""]
-    resources: ["secrets", "persistentvolumeclaims"]
-    verbs: ["get", "list", "delete"]
+    resources: ["secrets"]
+    resourceNames: {{ toJson . }}
+    verbs: ["delete"]
+  {{- end }}
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["deletecollection"]
   - apiGroups: ["batch"]
     resources: ["jobs", "cronjobs"]
-    verbs: ["get", "list", "delete"]
+    verbs: ["deletecollection"]
   - apiGroups: ["external-secrets.io"]
     resources: ["externalsecrets"]
-    verbs: ["get", "list", "delete"]
+    verbs: ["deletecollection"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

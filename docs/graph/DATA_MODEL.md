@@ -28,19 +28,19 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `access_grant` | Access Grant | Identity and access | `identity` | 3 / 3001 |  | 1 |
 | `access_policy` | Access Policy | Identity and access | `identity` | 3 / 3001 |  | 1 (+1 demo) |
 | `account` | Account | Identity and access | `identity` | 3 / 3001 |  | 18 (+2 demo) |
-| `agent` | AI Agent | AI and agents | `orchestration` | 5 / 4001 |  | 15 (+2 demo) |
+| `agent` | AI Agent | AI and agents | `orchestration` | 5 / 4001 |  | 9 (+2 demo) |
 | `api_gateway` | API Gateway | Cloud, infrastructure and data | `api_gateway` | 5 / 4001 |  | 2 |
 | `application` | Application | AI and agents | `app` | 5 / 4001 |  | 2 (+1 demo) |
 | `blueprint` | Blueprint | AI and agents | `orchestration` | 5 / 4001 |  | 1 |
 | `ci_job` | CI/CD Job | Code and supply chain | `ci` | 5 / 4001 |  | 2 (+1 demo) |
-| `cloud_resource` | Cloud Resource | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 21 (+3 demo) |
+| `cloud_resource` | Cloud Resource | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 20 (+3 demo) |
 | `cluster` | Cluster | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 0 (+1 demo) |
 | `code_module` | Code Module | Code and supply chain | `code` | 5 / 4001 |  | 5 |
 | `config_file` | Config File | Code and supply chain | `code` | 5 / 4001 |  | 3 (+1 demo) |
 | `container` | Container | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 7 (+1 demo) |
 | `credential` | Credential | Identity and access | `identity` | 5 / 4001 |  | 1 (+1 demo) |
 | `credential_ref` | Credential Reference | Identity and access | `identity` | 5 / 4001 |  | 0 |
-| `data_store` | Data Store | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 8 (+1 demo) |
+| `data_store` | Data Store | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 7 (+1 demo) |
 | `dataset` | Dataset | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 1 (+1 demo) |
 | `directory` | Directory | Code and supply chain | `code` | 5 / 4001 |  | 6 |
 | `drift_incident` | Drift Incident | Findings | `finding` | 2 / 2004 | yes | 1 |
@@ -54,7 +54,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `misconfiguration` | Misconfiguration | Findings | `finding` | 2 / 2003 | yes | 9 (+3 demo) |
 | `model` | Model | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 (+1 demo) |
 | `org` | Organization | Identity and access | `identity` | 3 / 3001 |  | 6 (+2 demo) |
-| `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 7 (+2 demo) |
+| `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 6 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |
 | `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 (+1 demo) |
 | `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 5 |
@@ -66,7 +66,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `tool` | Tool | AI and agents | `tool` | 5 / 4001 |  | 6 (+2 demo) |
 | `tool_call` | Tool Call | AI and agents | `runtime_evidence` | 5 / 4001 |  | 0 (+1 demo) |
 | `user` | User | Identity and access | `user` | 3 / 3001 |  | 8 (+1 demo) |
-| `vulnerability` | Vulnerability | Findings | `finding` | 2 / 2001 | yes | 7 (+2 demo) |
+| `vulnerability` | Vulnerability | Findings | `finding` | 2 / 2001 | yes | 5 (+2 demo) |
 
 ## Relationships
 
