@@ -36,25 +36,26 @@ PUSH_REPORT = {
 }
 
 
-def assert_api(result: LaneResult, prefix: str, base: str, *, expect_write: bool) -> None:
+def assert_api(result: LaneResult, prefix: str, base: str, *, expect_write: bool, headers: dict[str, str] | None = None) -> None:
+    headers = headers or {}
     result.check(f"{prefix}_health", wait_for_http(f"{base}/health", timeout=120), f"{base}/health")
-    status, version, _size = http_json(f"{base}/version")
+    status, version, _size = http_json(f"{base}/version", headers=headers)
     result.check(f"{prefix}_version_read", status == 200 and bool(version), f"HTTP {status} {str(version)[:200]}")
     result.measurements[f"{prefix}_version"] = version.get("version") if isinstance(version, dict) else None
     if expect_write:
         body = json.dumps(PUSH_REPORT).encode()
         status, receipt, _size = http_json(
-            f"{base}/v1/results/push", method="POST", body=body, headers={"Content-Type": "application/json"}
+            f"{base}/v1/results/push", method="POST", body=body, headers={**headers, "Content-Type": "application/json"}
         )
         job_id = receipt.get("job_id") if isinstance(receipt, dict) else None
         result.check(f"{prefix}_push_stored", status in (201, 202) and bool(job_id), f"HTTP {status} {str(receipt)[:300]}")
         time.sleep(3)
-        status, jobs, _size = http_json(f"{base}/v1/jobs")
+        status, jobs, _size = http_json(f"{base}/v1/jobs", headers=headers)
         result.check(f"{prefix}_push_reads_back", status == 200 and str(job_id) in json.dumps(jobs), f"HTTP {status} {str(jobs)[:300]}")
     else:
-        status, jobs, _size = http_json(f"{base}/v1/jobs")
+        status, jobs, _size = http_json(f"{base}/v1/jobs", headers=headers)
         result.check(f"{prefix}_jobs_read", status == 200 and isinstance(jobs, (dict, list)), f"HTTP {status} {str(jobs)[:300]}")
-    status, findings, _size = http_json(f"{base}/v1/findings?limit=1")
+    status, findings, _size = http_json(f"{base}/v1/findings?limit=1", headers=headers)
     result.check(f"{prefix}_findings_read", status == 200 and isinstance(findings, dict), f"HTTP {status} {str(findings)[:300]}")
 
 
@@ -152,6 +153,21 @@ def port_forward_api() -> tuple[subprocess.Popen[bytes], str]:
     return process, f"http://127.0.0.1:{port}"
 
 
+def use_api_key_auth() -> str:
+    """Give the pilot the documented AGENT_BOM_API_KEYS login so the rest of the deployment can be measured."""
+    key = secrets.token_urlsafe(24)
+    _apply(
+        {
+            "apiVersion": "v1",
+            "kind": "Secret",
+            "metadata": {"name": "agent-bom-control-plane", "namespace": NAMESPACE},
+            "type": "Opaque",
+            "stringData": {"AGENT_BOM_CONNECTIONS_KEY": _fernet_key(), "AGENT_BOM_API_KEYS": f"{key}:admin"},
+        }
+    )
+    return key
+
+
 def helm_uninstall(result: LaneResult, release: str, namespace: str) -> None:
     """Uninstall as a user would; a failing hook is a defect, then removal continues without hooks."""
     uninstall = run_measured(["helm", "uninstall", release, "--namespace", namespace, "--wait", "--timeout", "3m"], timeout=240)
@@ -208,10 +224,26 @@ def run_helm(result: LaneResult) -> None:
             "agent-bom", NAMESPACE, "-f", str(PILOT_VALUES), "--set", "controlPlane.observability.prometheusRule.enabled=false"
         )
         result.measurements["helm_pilot_install_without_rule_seconds"] = stock.seconds
-    state = dump_cluster_state("helm")
+    headers: dict[str, str] = {}
     if stock.returncode != 0:
         crash = kubectl("logs", "-n", NAMESPACE, "deployment/agent-bom-api", "--previous", "--tail", "40")
-        result.measurements["helm_api_crash_log"] = tail(crash.stdout + crash.stderr, 40)
+        crash_log = tail(crash.stdout + crash.stderr, 40)
+        result.measurements["helm_api_crash_log"] = crash_log
+        if "Refusing to expose" in crash_log:
+            result.defect(
+                "sqlite-pilot-profile-crashloops",
+                "The shipped sqlite-pilot values set AGENT_BOM_ALLOW_UNAUTHENTICATED_API=1 for an anonymous first run, "
+                "but the API refuses a non-loopback bind without auth, so the pod crash-loops",
+                f"kubectl create ns {NAMESPACE}; create the Secret and PVC the profile names; helm install agent-bom deploy/helm/agent-bom "
+                f"-n {NAMESPACE} -f deploy/helm/agent-bom/examples/eks-control-plane-sqlite-pilot-values.yaml "
+                "--set controlPlane.observability.prometheusRule.enabled=false; kubectl logs deployment/agent-bom-api -p",
+            )
+            headers = {"Authorization": f"Bearer {use_api_key_auth()}"}
+            kubectl("rollout", "restart", "deployment/agent-bom-api", "-n", NAMESPACE)
+            stock = helm_install(
+                "agent-bom", NAMESPACE, "-f", str(PILOT_VALUES), "--set", "controlPlane.observability.prometheusRule.enabled=false"
+            )
+    state = dump_cluster_state("helm")
     if not result.check(
         "helm_pilot_install", stock.returncode == 0, f"exit {stock.returncode}\n{tail(stock.stdout + stock.stderr)}\n{state}"
     ):
@@ -219,7 +251,7 @@ def run_helm(result: LaneResult) -> None:
     forward, base = port_forward_api()
     try:
         time.sleep(3)
-        assert_api(result, "helm_api", base, expect_write=False)
+        assert_api(result, "helm_api", base, expect_write=bool(headers), headers=headers)
     finally:
         forward.terminate()
     helm_uninstall(result, "agent-bom", NAMESPACE)
