@@ -142,7 +142,7 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
         response = client.get(path, headers=headers)
         pending = {key[1]: (future.running(), future.done()) for key, future in current_graph_builds._QUEUE.pending.items()}
         started = entered.wait(BUILD_START_SECONDS)
-        assert started, {
+        diagnostics = {
             "status": response.status_code,
             "served_old": response.json().get("scan_id") == old,
             "pending": pending,
@@ -150,8 +150,12 @@ def test_http_previous_view_marks_refresh_without_caching_freshness(estate, empt
             "coverage": response.json().get("collection_coverage"),
             "same_store": store is stores._get_graph_store(),
             "store_cache": str(current_graph_store.cache_info()),
-            "summaries": len(estate[2].list_summary(tenant_id=TENANT)),
+            "summaries": len(estate[0].list_summary(tenant_id=TENANT)),
+            "store_job_summaries": len(store._job_store.list_summary(tenant_id=TENANT)),
+            "generation": response.json().get("snapshot_generation"),
+            "cache_keys": list(store._cache),
         }
+        assert started, diagnostics
         assert response.status_code == 200, response.text
         assert response.json()["scan_id"] == old
         assert response.json()["collection_coverage"]["freshness"] == "previous_generation"
