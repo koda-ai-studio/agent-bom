@@ -21,13 +21,14 @@ type VerifyState = {
   /** Round-trip verification of a freshly-exported packet vs. a pasted one. */
   source: "export" | "paste";
   tamperedEntries: number;
+  unverifiableEntries: number;
 };
 
-function reportedTamperedEntries(payload: unknown): number {
+function reportedIntegrityCount(payload: unknown, field: "tampered" | "unverifiable"): number {
   if (!payload || typeof payload !== "object") return 0;
   const integrity = (payload as { integrity?: unknown }).integrity;
   if (!integrity || typeof integrity !== "object") return 0;
-  const value = (integrity as { tampered?: unknown }).tampered;
+  const value = (integrity as Record<string, unknown>)[field];
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
 }
 
@@ -102,7 +103,8 @@ export function AuditEvidencePanel() {
       setVerifyState({
         result,
         source: "export",
-        tamperedEntries: reportedTamperedEntries(packet.payload),
+        tamperedEntries: reportedIntegrityCount(packet.payload, "tampered"),
+        unverifiableEntries: reportedIntegrityCount(packet.payload, "unverifiable"),
       });
       setVerifyError(null);
     } catch (err) {
@@ -126,7 +128,8 @@ export function AuditEvidencePanel() {
       setVerifyState({
         result,
         source: "paste",
-        tamperedEntries: reportedTamperedEntries(packet.payload),
+        tamperedEntries: reportedIntegrityCount(packet.payload, "tampered"),
+        unverifiableEntries: reportedIntegrityCount(packet.payload, "unverifiable"),
       });
     } catch (err) {
       setVerifyState(null);
@@ -255,7 +258,8 @@ export function AuditEvidencePanel() {
         )}
 
         {verifyState && !verifyError && (() => {
-          const verifiedIntact = verifyState.result.valid && verifyState.tamperedEntries === 0;
+          const unverifiable = verifyState.result.valid && verifyState.tamperedEntries === 0 && verifyState.unverifiableEntries > 0;
+          const verifiedIntact = verifyState.result.valid && verifyState.tamperedEntries === 0 && !unverifiable;
           return (
           <div
             data-testid="audit-verify-result"
@@ -285,12 +289,14 @@ export function AuditEvidencePanel() {
                     : "text-[color:var(--status-danger)]"
                 }`}
               >
-                {verifiedIntact ? "PASS" : "FAIL"}
+                {unverifiable ? "CANNOT VERIFY" : verifiedIntact ? "PASS" : "FAIL"}
               </div>
               <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
                 {verifiedIntact
                   ? "Signature matches — the exported log is intact and tamper-evident."
-                  : verifyState.result.valid
+                  : unverifiable
+                    ? `Signature matches, but the original signing key changed or is unavailable (${verifyState.unverifiableEntries} entries).`
+                    : verifyState.result.valid
                     ? `Signature matches, but the payload reports tampered entries (${verifyState.tamperedEntries}).`
                     : "Signature mismatch — the packet has been altered or the signature is wrong."}
                 {verifyState.source === "export" ? " (fresh export round-trip)" : ""}

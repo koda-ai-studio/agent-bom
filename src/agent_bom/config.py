@@ -627,12 +627,8 @@ POSTGRES_POOL_TIMEOUT_SECONDS = _float("AGENT_BOM_POSTGRES_POOL_TIMEOUT_SECONDS"
 POSTGRES_STATEMENT_TIMEOUT_MS = _int("AGENT_BOM_POSTGRES_STATEMENT_TIMEOUT_MS", 15_000)
 POSTGRES_GRAPH_SEARCH_TIMEOUT_MS = _int("AGENT_BOM_POSTGRES_GRAPH_SEARCH_TIMEOUT_MS", 3_000)
 
-# Tenant isolation on Postgres relies on Row-Level Security. Postgres superusers
-# and roles with BYPASSRLS ignore ``FORCE ROW LEVEL SECURITY``, which silently
-# voids every tenant policy. By default the store refuses to start when the
-# connected role can bypass RLS. Set this to ``1`` only for single-tenant or
-# local dev deployments, where it downgrades the hard error to a one-time
-# warning. See ``agent_bom.api.postgres_common`` (#3665).
+# Superusers and BYPASSRLS roles bypass FORCE RLS. Allow only for local or
+# single-tenant development; see api.postgres_common.
 ALLOW_SUPERUSER_DB = _bool("AGENT_BOM_ALLOW_SUPERUSER_DB", False)
 
 # Compliance hub reference-table normalization (#3513). When enabled, repeated
@@ -648,6 +644,10 @@ DELTA_STREAM_FORMAT = _str("AGENT_BOM_DELTA_STREAM_FORMAT", "ndjson")
 DELTA_STREAM_AUTH_SCHEME = _str("AGENT_BOM_DELTA_STREAM_AUTH_SCHEME", "")
 DELTA_STREAM_AUTH_TOKEN = _str("AGENT_BOM_DELTA_STREAM_AUTH_TOKEN", "")
 DELTA_STREAM_SIGNING_SECRET = _str("AGENT_BOM_DELTA_STREAM_SIGNING_SECRET", "")
+
+AUTH_FAILURE_LIMIT = _int("AGENT_BOM_AUTH_FAILURE_LIMIT", 10)
+AUTH_BACKOFF_SECONDS = _int("AGENT_BOM_AUTH_BACKOFF_SECONDS", 30)
+AUTH_MAX_BACKOFF_SECONDS = _int("AGENT_BOM_AUTH_MAX_BACKOFF_SECONDS", 900)
 
 # ── Rate-limit fingerprint key rotation policy ──────────────────────────
 # Operators rotate AGENT_BOM_RATE_LIMIT_KEY periodically and record the

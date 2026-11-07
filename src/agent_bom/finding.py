@@ -777,7 +777,7 @@ def blast_radius_to_finding(br: object) -> "Finding":
         evidence["advisory_aliases"] = _sanitized_evidence_field(list(vuln.aliases))
     from agent_bom.advisory_ids import all_cve_identifiers
 
-    cve_ids = all_cve_identifiers(vuln.id, getattr(vuln, "aliases", []) or [])
+    cve_ids = all_cve_identifiers(vuln.id, [*(getattr(vuln, "aliases", []) or []), *(getattr(vuln, "upstream_ids", []) or [])])
     if cve_ids:
         evidence["cve_ids"] = cve_ids
     if getattr(br, "symbol_reachability", None):

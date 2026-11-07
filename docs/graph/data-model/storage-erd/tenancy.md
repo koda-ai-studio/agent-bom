@@ -5,7 +5,7 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-24 tables.
+25 tables.
 
 Tables from other domains drawn for their relations: `agents`, `cis_benchmark_checks`, `exceptions`, `findings`, `job_queue`, `policy_results`, `scan_jobs`.
 
@@ -39,6 +39,9 @@ erDiagram
     text grant_id PK
     text tenant_id
     text identity_id
+  }
+  api_auth_failure_limits {
+    text source PK
   }
   api_keys {
     text key_id PK
@@ -189,6 +192,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `agent_conditional_access_policies` | Postgres, SQLite | 6 |  | persistent |
 | `agent_identities` | Postgres, SQLite | 7 |  | persistent |
 | `agent_identity_jit_grants` | Postgres, SQLite | 8 |  | persistent |
+| `api_auth_failure_limits` | Postgres, SQLite | 6 |  | persistent |
 | `api_keys` | Postgres, SQLite | 20 |  | persistent |
 | `api_rate_limit_hits` | Postgres | 2 |  | persistent |
 | `api_rate_limits` | Postgres | 4 |  | persistent |

@@ -165,11 +165,7 @@ def test_preflight_can_write_secret_files(tmp_path: Path) -> None:
     ):
         path = secrets_dir / name
         assert len(path.read_text(encoding="utf-8")) >= 32
-        # 0644 (world-readable): compose bind-mounts these host files into
-        # /run/secrets/* preserving HOST perms, and the non-root container
-        # users (postgres UID 70, the API app user) must read them. See the
-        # generated-secret write path for the full rationale.
-        assert oct(path.stat().st_mode & 0o777) == "0o644"
+        assert oct(path.stat().st_mode & 0o777) == "0o600"
 
 
 def test_secret_generation_does_not_require_hosted_url_configuration(
@@ -201,3 +197,15 @@ def test_cli_returns_nonzero_without_printing_secret_values(
     assert "hosted POC preflight failed" in captured.err
     assert secret_value not in captured.out
     assert secret_value not in captured.err
+
+
+def test_secret_generation_repairs_permissions_without_rotating(tmp_path):
+    from scripts.deploy.hosted_poc_preflight import _write_secret_files
+
+    _seed_secret_files(tmp_path)
+    path = tmp_path / "deploy/secrets/api_key"
+    before = path.read_bytes()
+    path.chmod(0o644)
+    _write_secret_files(tmp_path, force=False)
+    assert path.read_bytes() == before
+    assert path.stat().st_mode & 0o777 == 0o600

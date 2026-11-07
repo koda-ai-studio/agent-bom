@@ -37,6 +37,14 @@ const sampleDomains: OverviewResponse["domains"] = {
 };
 
 describe("OverviewCockpit", () => {
+  it("marks unavailable posture as incomplete when persisted findings exist", () => {
+    render(<OverviewCockpit {...baseProps} grade="N/A" score={undefined}
+      severity={{ critical: 114, high: 117, medium: 896, low: 0, total: 1127 }} />);
+    expect(screen.getByTestId("overview-posture-score")).toHaveTextContent("Coverage incomplete");
+    expect(screen.getByText("Findings are available, but coverage is incomplete. Review scan warnings before grading posture.")).toBeVisible();
+    expect(screen.queryByText("Awaiting scan")).not.toBeInTheDocument();
+  });
+
   const baseProps = {
     grade: "F",
     score: 37,
@@ -590,7 +598,7 @@ describe("OverviewCockpit", () => {
       <OverviewCockpit {...baseProps} grade="—" score={undefined} scans={0} latestScan={null} />,
     );
     expect(screen.getByTestId("overview-freshness")).toHaveTextContent("No completed scan evidence");
-    expect(screen.getByText(/Connect a surface or run a scan to grade posture/i)).toBeInTheDocument();
+    expect(screen.getByText(/Findings are available, but coverage is incomplete/i)).toBeInTheDocument();
   });
 
   it("labels posture and freshness as loading before the overview hydrates", () => {

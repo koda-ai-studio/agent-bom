@@ -48,6 +48,8 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.api import audit_log
+
 if TYPE_CHECKING:
     from fastapi import APIRouter
 
@@ -58,8 +60,7 @@ logger = logging.getLogger(__name__)
 _MAX_CLIENTS = 2048
 _MAX_CODES = 4096
 
-# Default lifetimes (seconds). Codes are short-lived (single-use); access
-# tokens default to one hour. Both are clamped to sane bounds.
+# Default lifetimes (seconds): single-use codes and one-hour tokens, both clamped.
 _DEFAULT_CODE_TTL = 60
 _DEFAULT_TOKEN_TTL = 3600
 _MAX_TOKEN_TTL = 24 * 3600
@@ -710,6 +711,12 @@ def _basic_auth_from_header(authorization: str | None) -> tuple[str, str] | None
     return client_id, secret
 
 
+def _mark_token_auth_failure(request: Any, form: dict, error: str) -> None:
+    request.state.authentication_failed = error in {"invalid_client", "invalid_grant"}
+    if request.state.authentication_failed and (credential := str(form.get("client_secret") or form.get("code") or "")):
+        request.state.auth_credential_fingerprint = audit_log.fingerprint_auth_credential(credential)
+
+
 def build_oauth_as_router(server: OAuthAuthorizationServer) -> APIRouter:
     """Build a FastAPI router exposing the OAuth 2.1 AS endpoints.
 
@@ -785,8 +792,8 @@ def build_oauth_as_router(server: OAuthAuthorizationServer) -> APIRouter:
             issued = server.token(form, basic_auth=basic_auth, request_base_url=_request_base_url(request))
         except OAuthError as exc:
             headers = {"WWW-Authenticate": "Basic"} if exc.status == 401 else None
+            _mark_token_auth_failure(request, form, exc.error)
             return JSONResponse(exc.to_dict(), status_code=exc.status, headers=headers)
-        # Tokens must never be cached (OAuth 2.1 §token-response).
         return JSONResponse(issued, headers={"Cache-Control": "no-store", "Pragma": "no-cache"})
 
     return router

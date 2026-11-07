@@ -261,3 +261,20 @@ async def test_valid_token_without_read_scope_grants_no_authority(verifier, sign
     result = await verifier.verify_token(token(signing_key, scope="admin"))
     assert result is not None
     assert result.scopes == []  # SDK required_scopes rejects this token with 403.
+
+
+def test_invalid_oauth_tokens_use_shared_source_backoff(oauth_env, monkeypatch, verifier):
+    from agent_bom.api import audit_log
+    from agent_bom.mcp_server_factory import create_fastmcp_server
+
+    monkeypatch.setenv("AGENT_BOM_AUTH_FAILURE_LIMIT", "2")
+    monkeypatch.setattr(audit_log, "log_action", lambda *args, **kwargs: None)
+    monkeypatch.setattr("agent_bom.mcp_tools.oauth.OAuthTokenVerifier", lambda config: verifier)
+    server = create_fastmcp_server(
+        host="0.0.0.0", port=8000, bearer_token=None, version="test", token_verifier_factory=Mock(), oauth_enabled=True
+    )
+    with TestClient(server.streamable_http_app(host="0.0.0.0"), base_url="https://mcp.example", client=("192.0.2.71", 1000)) as client:
+        assert client.post("/mcp", headers={"authorization": "Bearer invalid-test-token"}).status_code == 401
+        response = client.post("/mcp", headers={"authorization": "Bearer invalid-test-token"})
+        assert response.status_code == 429
+        assert int(response.headers["retry-after"]) > 0

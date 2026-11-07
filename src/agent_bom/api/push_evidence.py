@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
 from typing import cast
 
 from agent_bom.api.audit_log import log_action
@@ -13,6 +12,7 @@ from agent_bom.api.push_models import normalize_push_coverage
 from agent_bom.domain.mcp_model import server_dict_counts_as_mcp_server
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.output.json_fmt import _build_finding_summary
+from agent_bom.output.report_compaction import compact_report_sections
 from agent_bom.security import (
     sanitize_command_args,
     sanitize_env_vars,
@@ -30,11 +30,10 @@ def normalize_pushed_report(body: PushPayload, *, fallback_scan_id: str) -> dict
     push clients still send `blast_radii` and `agent_type`. Normalizing here
     keeps graph persistence, UI pages, and downstream exporters aligned.
     """
-    report = cast(dict, sanitize_sensitive_payload(body.model_dump()))
-    blast_radius = deepcopy(report.get("blast_radius") or report.get("blast_radii") or [])
+    report = cast(dict, sanitize_sensitive_payload(compact_report_sections(body.model_dump())))
+    blast_radius = report.get("blast_radius") or report.get("blast_radii") or []
     report["blast_radius"] = blast_radius
-    if "blast_radii" not in report:
-        report["blast_radii"] = deepcopy(blast_radius)
+    report = compact_report_sections(report)
     report["scan_id"] = str(report.get("scan_id") or fallback_scan_id)
 
     normalized_agents: list[dict] = []

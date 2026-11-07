@@ -333,7 +333,10 @@ so they cannot regress silently, but they are not part of this reference.
 ## PostgreSQL Control Plane Tuning
 | Env var | Type | Default | Description |
 |---|---|---|---|
-| `AGENT_BOM_ALLOW_SUPERUSER_DB` | `bool` | `False` | Tenant isolation on Postgres relies on Row-Level Security. Postgres superusers and roles with BYPASSRLS ignore ``FORCE ROW LEVEL SECURITY``, which silently voids every tenant policy. By default the store refuses to start when the connected  |
+| `AGENT_BOM_ALLOW_SUPERUSER_DB` | `bool` | `False` | Superusers and BYPASSRLS roles bypass FORCE RLS. Allow only for local or single-tenant development; see api.postgres_common. |
+| `AGENT_BOM_AUTH_BACKOFF_SECONDS` | `int` | `30` | — |
+| `AGENT_BOM_AUTH_FAILURE_LIMIT` | `int` | `10` | — |
+| `AGENT_BOM_AUTH_MAX_BACKOFF_SECONDS` | `int` | `900` | — |
 | `AGENT_BOM_DELTA_STREAM_AUTH_SCHEME` | `str` | `''` | — |
 | `AGENT_BOM_DELTA_STREAM_AUTH_TOKEN` | `str` | `''` | — |
 | `AGENT_BOM_DELTA_STREAM_DESTINATION_ID` | `str` | `'delta-stream-default'` | — |

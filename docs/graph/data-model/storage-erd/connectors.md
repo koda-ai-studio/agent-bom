@@ -102,7 +102,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `delivery_ledger` | SQLite | 7 |  | persistent |
 | `delivery_log` | SQLite | 10 |  | persistent |
 | `delta_stream_watermarks` | SQLite | 5 |  | persistent |
-| `endpoint_connections` | Postgres | 6 |  | persistent |
+| `endpoint_connections` | Postgres, SQLite | 6 |  | persistent |
 | `endpoint_sync_events` | Postgres, SQLite | 5 |  | persistent |
 | `endpoint_syncs` | Postgres, SQLite | 5 |  | persistent |
 | `export_destinations` | Postgres, SQLite | 12 |  | persistent |

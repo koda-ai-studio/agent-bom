@@ -216,7 +216,7 @@ def _analytics_summary_rows(
 
 # "auto" lifespan logs a failed startup as "unsupported" and serves 500s; "on"
 # exits. Idle keep-alive and an in-flight cap bound a slow-connection flood.
-_UVICORN_SERVER_KWARGS: dict[str, Any] = {"lifespan": "on", "timeout_keep_alive": 5, "limit_concurrency": 500}
+_UVICORN_SERVER_KWARGS: dict[str, Any] = {"lifespan": "on", "timeout_keep_alive": 5, "limit_concurrency": 500, "proxy_headers": False}
 
 
 @click.command("serve")

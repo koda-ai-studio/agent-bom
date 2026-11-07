@@ -309,6 +309,8 @@ class _AIStackProjection:
         self.graph = graph
         self.data_source = data_source
         self.observability_fids: list[str] = []
+        self.package_index: dict[str, list[tuple[str, str, bool]]] | None = None
+        self.dependency_pairs: set[tuple[str, str, str]] = set()
 
     def _ensure_model(self, ref: str, *, source: str = "ai-inventory") -> str | None:
         label = str(ref or "").strip()
@@ -391,6 +393,8 @@ class _AIStackProjection:
                         data_sources=[self.data_source, "ai-inventory"],
                     )
                 )
+                assert self.package_index is not None
+                self.package_index.setdefault(package_name.lower(), []).append((ecosystem.lower(), pkg_id, False))
             self._depends_on(fid, pkg_id, name)
 
     def _package_ids(self, package_name: str, ecosystem: str) -> list[str]:
@@ -398,22 +402,27 @@ class _AIStackProjection:
 
         Manifest packages carry no ``name`` attribute: their label is ``name@version``.
         """
-        wanted = package_name.lower()
-        matches: list[UnifiedNode] = []
-        for node in self.graph.nodes_by_type(EntityType.PACKAGE):
-            attrs = node.attributes
-            if str(attrs.get("ecosystem") or ecosystem).lower() != ecosystem.lower():
-                continue
-            version = str(attrs.get("version") or "")
-            name = str(attrs.get("name") or "")
-            if not name:
-                name = node.label[: -len(version) - 1] if version and node.label.endswith(f"@{version}") else node.label
-            if name.lower() == wanted:
-                matches.append(node)
-        pinned = [node.id for node in matches if str(node.attributes.get("version") or "") not in {"", "latest", "unknown"}]
-        return pinned or [node.id for node in matches]
+        if self.package_index is None:
+            self.package_index = {}
+            # Stream every page once; retain identities, not mutable node objects.
+            # Read-only iteration avoids write-back of unchanged workspace nodes.
+            for node in self.graph.iter_nodes_by_type(EntityType.PACKAGE):
+                attrs = node.attributes
+                version = str(attrs.get("version") or "")
+                name = str(attrs.get("name") or "")
+                if not name:
+                    name = node.label[: -len(version) - 1] if version and node.label.endswith(f"@{version}") else node.label
+                self.package_index.setdefault(name.lower(), []).append(
+                    (str(attrs.get("ecosystem") or "").lower(), node.id, version not in {"", "latest", "unknown"})
+                )
+        matches = [row for row in self.package_index.get(package_name.lower(), []) if not row[0] or row[0] == ecosystem.lower()]
+        return [node_id for _, node_id, pinned in matches if pinned] or [node_id for _, node_id, _ in matches]
 
     def _depends_on(self, framework_id: str, package_id: str, framework: str) -> None:
+        pair = (framework_id, package_id, framework)
+        if pair in self.dependency_pairs:
+            return
+        self.dependency_pairs.add(pair)
         self.graph.add_edge(
             UnifiedEdge(
                 source=framework_id,

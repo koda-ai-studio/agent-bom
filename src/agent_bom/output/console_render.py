@@ -177,6 +177,13 @@ def print_agent_tree(report: AIBOMReport) -> None:
         _console().print()
 
 
+def _add_blast_column(table: Table, findings: list) -> bool:
+    show = any(finding.affected_agents for finding in findings)
+    if show:
+        table.add_column("Blast", justify="center", no_wrap=True)
+    return show
+
+
 def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
     """Print blast radius analysis for vulnerabilities."""
     all_cve = cve_findings(report)
@@ -193,10 +200,9 @@ def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
     table.add_column("Severity", no_wrap=True)
     table.add_column("EPSS", justify="center", no_wrap=True)
     table.add_column("KEV", justify="center", no_wrap=True)
-    table.add_column("Blast", justify="center", no_wrap=True)
+    show_blast = _add_blast_column(table, all_cve)
     table.add_column("Threats", ratio=3)
     table.add_column("Fix", ratio=2)
-
     # Filter to actionable findings only — UNKNOWN severity transitive deps with no creds/tools are noise. Users see all with --verbose.
     actionable = [finding for finding in all_cve if is_actionable_finding(finding)]
     # --fixable-only: keep only entries that have a fix available
@@ -223,10 +229,8 @@ def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
             epss_style = "red bold" if epss_pct >= 70 else "yellow" if epss_pct >= 30 else "dim"
             epss_display = f"[{epss_style}]{epss_pct}%[/{epss_style}]"
 
-        # KEV indicator
         kev_display = "[red bold]🔥[/red bold]" if finding.is_kev else "—"
 
-        # Malicious package indicator
         if is_package_malicious(finding):
             kev_display += " [yellow bold]⚠[/yellow bold]" if is_suspected(package_malicious_reason(finding)) else " [red bold]☠[/red bold]"
 
@@ -259,7 +263,7 @@ def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
             _finding_sev_badge(finding),
             epss_display,
             kev_display,
-            blast_display,
+            *([blast_display] * show_blast),
             threats_display,
             fix,
         )

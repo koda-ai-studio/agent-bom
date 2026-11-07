@@ -26,6 +26,27 @@ beforeEach(() => {
 });
 
 describe("Audit trail", () => {
+  it("reports lost signing continuity as unverifiable, never a clean result", async () => {
+    apiMock.getAuditIntegrity.mockResolvedValue({ verified: 0, checked: 78, tampered: 0, unverifiable: 78,
+      error: "Cannot verify: signing key changed" });
+    render(<AuditLogPage />);
+    expect(await screen.findByText("Cannot verify: signing key changed")).toBeVisible();
+    expect(screen.queryByText("No integrity exceptions detected")).not.toBeInTheDocument();
+  });
+
+  it("collapses repeated campaign rows without changing event pagination or losing receipts", async () => {
+    const campaign = { ...event, action: "risk_campaign.membership_observed", resource: "campaign-1" };
+    apiMock.listAuditEntries.mockResolvedValue({ entries: [campaign, { ...campaign, entry_id: "receipt-2" }], total: 100 });
+    render(<AuditLogPage />);
+    const row = await screen.findByRole("button", { name: /risk_campaign.membership_observed/ });
+    expect(row).toHaveTextContent("2 events");
+    fireEvent.click(row);
+    expect(within(screen.getByRole("list")).getByText(/receipt-2/)).toBeVisible();
+    expect(screen.getByText("100 matching events")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() => expect(apiMock.listAuditEntries).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50, limit: 50 })));
+  });
+
   it("leads with events and distinguishes filtered totals from control-plane integrity", async () => {
     render(<AuditLogPage />);
     expect(await screen.findByRole("button", { name: /gateway.policy.denied/ })).toBeVisible();

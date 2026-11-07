@@ -10,6 +10,7 @@ from typing import Any
 import click
 from rich.rule import Rule
 
+from agent_bom.cli._terminal_sections import stage_status
 from agent_bom.cli.agents._discovery_state import DiscoveryRun
 from agent_bom.cli.agents._warning_dedupe import dedupe_hardening_warnings
 from agent_bom.discovery.carriers import (
@@ -53,11 +54,12 @@ def load_inventory_file(run: DiscoveryRun) -> None:
 
 
 def print_discovery_header(run: DiscoveryRun) -> None:
-    run.con.print(Rule("Discovery", style="blue"))
+    if not run.quiet:
+        run.con.print(Rule("Discovery", style="blue"))
 
 
 def _discover_from(run: DiscoveryRun, project_dir: Any) -> Any:
-    with run.con.status("[bold]Discovering agents and MCP servers...[/bold]", spinner="dots"):
+    with stage_status(run.con, "[bold]Discovering agents and MCP servers...[/bold]", enabled=not run.quiet and not run.verbose):
         return run.discover(
             project_dir=project_dir,
             dynamic=run.dynamic_discovery,

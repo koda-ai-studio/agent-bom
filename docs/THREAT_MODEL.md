@@ -315,3 +315,17 @@ security review, publication or live provider qualification.
 - Go checksum candidates carry unknown reachability and low confidence; a
   historical checksum cannot raise a declared direct requirement
   (`tests/test_go_sum_pre_117_supplement.py`).
+
+## Authentication rejection boundary
+
+| Threat | Control | Remaining boundary |
+| --- | --- | --- |
+| Spoofed forwarding headers | Authentication source resolution requires an allowlisted transport peer and declared proxy depth; owned launchers preserve the socket peer | A trusted proxy must replace/append forwarding headers correctly; direct ASGI operators must disable server-side header rewriting |
+| Credential or tenant lockout targeting | Backoff keys contain only validated source addresses, never presented credentials or claimed tenants | A shared NAT source shares its temporary block; authentication already in flight may complete |
+| Distributed guessing | Replicas atomically update one source budget in the shared database; escalation returns a bounded `Retry-After` | Different sources have different allowances; this does not replace perimeter DDoS controls |
+| Store failure bypass | Authentication admission fails closed with 503 on observed store failure; admission cache is bounded to one second/4,096 sources, and per-source work caps isolate overload | Health/static/preflight remain available; general read/write quotas are separate |
+| Anonymous fallback abuse | Only explicitly enabled, credential-free requests to declared non-auth routes avoid the failed-auth state lookup; the principal resolver, route roles and general quotas still execute | Presented credentials, auth/SCIM routes and unclassified routes retain admission. Anonymous writes require the existing no-auth role grant; configuring credentials clamps fallback to viewer. Removing a credential never grants an authenticated identity or bypasses authorization. |
+| Audit flooding or credential disclosure | Failure receipts carry source, status, and a purpose-separated HMAC-SHA256 fingerprint keyed by the audit signing key; per-source and deployment-wide sampling bounds writes | The reserved operator chain is inaccessible through tenant audit routes. Samples omit attempts and are not an independent collector; no raw key, cookie, JWT, or query string is stored. Logs alone cannot validate credential guesses; fingerprints change with audit-key rotation. |
+| Stale credential authorization | Salted scrypt hashes and constant-time comparisons; cached KDF results require fresh durable records; expiry, rotation overlap, and revocation are checked on each verification | Operator configuration must be changed consistently across replicas; in-flight requests are not retroactively canceled |
+| Missing tenant root | Postgres key creation locks and checks the tenant root before insertion; an absent root returns 409 | Tenant provisioning remains an explicit authorized operation; key issuance does not silently create tenants |
+| Ephemeral audit key loss | Persisted key-identity diagnostics distinguish unavailable verification from an altered row | A database owner can alter that diagnostic metadata; use a stable externally managed signing key and independent retention for audit assurance |

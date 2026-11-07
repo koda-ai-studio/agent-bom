@@ -9,6 +9,7 @@ Populate before `docker compose up` (or run
 `python scripts/deploy/hosted_poc_preflight.py --write-secret --skip-compose`):
 
 ```bash
+umask 077
 mkdir -p deploy/secrets
 
 # Postgres: bootstrap/admin (init+migrations), app (tenant-bound runtime), and
@@ -31,20 +32,25 @@ printf %s "$(python -c 'from cryptography.fernet import Fernet; print(Fernet.gen
 
 # Optional confidential OIDC client: provision this value from the IdP or
 # secret manager. Compose mounts only this dedicated directory read-only.
-# install -m 0644 /secure/path/to/oidc-client-secret \
+# install -m 0600 /secure/path/to/oidc-client-secret \
 #   deploy/secrets/oidc/client_secret
 
-# 0644 (world-readable), NOT 0400: compose bind-mounts these host files into
-# /run/secrets/* preserving host perms (the mode/uid/gid long-syntax fields are
-# swarm-only, ignored by compose), and the non-root container users — postgres
-# UID 70 running initdb, the API app user — must read them. On a single-tenant
-# self-host VM the host filesystem is the trust boundary; swarm/k8s use
-# per-container secret perms instead.
-chmod 0644 deploy/secrets/postgres_password deploy/secrets/postgres_app_password \
+# Source files are owner-only. For bind mounts, provision a separate
+# per-service mount owned by the container UID; verify read access before
+# starting services. Compose file-secret mode/uid/gid overrides do not change
+# the host file's ownership. Do not make credentials world-readable.
+chmod 0600 deploy/secrets/postgres_password deploy/secrets/postgres_app_password \
   deploy/secrets/postgres_maintenance_password \
   deploy/secrets/api_key deploy/secrets/audit_hmac_key \
   deploy/secrets/browser_session_signing_key deploy/secrets/connections_key
 ```
+
+`make secrets` creates files with mode 0600 from the first write and repairs
+existing file permissions without replacing their contents. It refuses symlink
+destinations. Permission changes alone do not provision container ownership:
+non-root containers need a secret mount they can read. Verify the intended
+container UID and mounted-file access before starting a bind-mounted stack;
+use per-service secret provisioning rather than widening host permissions.
 
 `*.example` files are non-secret documentation placeholders only.
 Compose defaults to the real `deploy/secrets/*` paths so a shared stack fails

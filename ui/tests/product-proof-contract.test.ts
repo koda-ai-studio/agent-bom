@@ -10,6 +10,11 @@ const graphPage = ["app/graph/graph-page-client.tsx", "hooks/use-graph-page-data
 const exposurePath = fs.readFileSync(path.join(process.cwd(), "components", "exposure-path-command-center.tsx"), "utf8");
 
 describe("product proof capture contract", () => {
+  it("pins the optional advice status instead of querying an absent API", () => {
+    expect(source).toContain('await page.route("**/v1/ai/status"');
+    expect(source).toContain('schema_version: "ai.status.v1"');
+  });
+
   it("opens the selected path before capturing its mobile canvas", () => {
     const start = source.indexOf('"security-graph-mobile-live.png", async');
     const block = source.slice(start, source.indexOf("await capture(", start + 1));

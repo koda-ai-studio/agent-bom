@@ -112,8 +112,23 @@ def _fast_demo_story(*, tenant_id: str):
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+def story_boot_seed_calls(monkeypatch: pytest.MonkeyPatch):
+    from agent_bom.api import server as api_server
+
+    calls = []
+    original = api_server._demo_boot_seed.start_demo_estate_boot_seed
+
+    def counted(after=None):
+        calls.append(after)
+        return original(after)
+
+    monkeypatch.setattr(api_server._demo_boot_seed, "start_demo_estate_boot_seed", counted)
+    return calls
+
+
 @pytest.fixture()
-def story_client(monkeypatch: pytest.MonkeyPatch, tmp_path):
+def story_client(monkeypatch: pytest.MonkeyPatch, tmp_path, story_boot_seed_calls):
     monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "1")
     monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "story.db"))
     monkeypatch.setenv("AGENT_BOM_GRAPH_DB", str(tmp_path / "story-graph.db"))
@@ -129,6 +144,9 @@ def story_client(monkeypatch: pytest.MonkeyPatch, tmp_path):
     api_stores._store = None
     api_stores._graph_store = None
     monkeypatch.setattr(demo_routes, "build_enterprise_demo_story", _fast_demo_story)
+    # These cache/offload contracts use a stub story and do not consume the
+    # persisted estate. Real boot seeding has separate bootstrap/readiness tests.
+    monkeypatch.setattr(api_server._demo_boot_seed, "start_demo_estate_boot_seed", lambda _after: None)
     demo_routes.reset_demo_story_cache()
     try:
         with TestClient(api_server.app) as client:
@@ -914,3 +932,7 @@ def test_disabled_demo_status_is_an_explicit_not_enabled_404(monkeypatch: pytest
     response = TestClient(app).get("/v1/demo-estate/status")
     assert response.status_code == 404
     assert "not enabled" in response.text
+
+
+def test_story_cache_fixture_does_not_launch_a_full_estate_seed(story_client, story_boot_seed_calls):
+    assert story_boot_seed_calls == []
