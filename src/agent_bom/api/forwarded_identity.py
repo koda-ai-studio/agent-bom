@@ -8,7 +8,13 @@ so authentication throttles and runtime conditional-access policy cannot drift.
 from __future__ import annotations
 
 import os
-from ipaddress import IPv4Network, IPv6Network, ip_address, ip_network
+from collections.abc import Mapping
+from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
+
+# The source for a trusted forwarded entry that is not an address. Kept apart from
+# the proxy's own address, so failures under it cannot block every client behind
+# the proxy, and shared, so rotating unreadable values buys no fresh budget.
+UNPARSEABLE_FORWARDED_SOURCE = "unparseable-forwarded-address"
 
 
 def trusted_proxy_hops() -> int:
@@ -34,13 +40,82 @@ def trusted_proxy_networks() -> tuple[IPv4Network | IPv6Network, ...]:
         return ()
 
 
-def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback: str = "") -> str:
+def forwarded_for_header(headers: Mapping[str, str]) -> str:
+    """Return every X-Forwarded-For line as one list, in received order.
+
+    HTTP treats repeated field lines as one comma-joined value. Reading only
+    the first line would let a caller choose the entry a proxy appended to a
+    later line, and so choose its own source address.
+    """
+    getlist = getattr(headers, "getlist", None)
+    return ",".join(getlist("x-forwarded-for")) if getlist else str(headers.get("x-forwarded-for", ""))
+
+
+def peer_is_trusted_proxy(peer_host: str) -> bool:
+    """Whether this transport peer is inside the configured proxy networks."""
+    try:
+        peer = ip_address(peer_host)
+    except ValueError:
+        return False
+    return any(peer in network for network in trusted_proxy_networks())
+
+
+def failure_limit_source(address: str) -> str:
+    """Group an address for failed-authentication limits.
+
+    One IPv6 customer is routinely delegated at least a /64, so a per-address
+    limit gives one caller billions of fresh budgets. IPv4-mapped addresses
+    count as the IPv4 address they carry.
+    """
+    try:
+        parsed = ip_address(address)
+    except ValueError:
+        return address
+    if isinstance(parsed, IPv6Address):
+        if parsed.ipv4_mapped is not None:
+            return str(parsed.ipv4_mapped)
+        # From the integer, so a zone suffix cannot name a fresh budget.
+        return str(ip_network((int(parsed), 64), strict=False))
+    return str(parsed)
+
+
+def forwarded_entry_address(entry: str) -> str | None:
+    """The address in one forwarded entry, allowing the forms proxies write.
+
+    Accepts a bare address, a quoted one, IPv4 with a port, and bracketed IPv6
+    with or without a port. Anything else is not an address.
+    """
+    value = entry.strip().strip('"')
+    if value.startswith("["):
+        end = value.find("]")
+        rest = value[end + 1 :] if end > 0 else "x"
+        if rest and not (rest.startswith(":") and rest[1:].isdigit()):
+            return None
+        value = value[1:end]
+    elif value.count(":") == 1:
+        host, port = value.split(":")
+        if not port.isdigit():
+            return None
+        value = host
+    try:
+        return str(ip_address(value))
+    except ValueError:
+        return None
+
+
+def resolve_forwarded_client_ip(
+    *, peer_host: str, forwarded_for: str, fallback: str = "", bounded: bool = True, unparseable: str | None = None
+) -> str:
     """Resolve a client address only through a declared trusted proxy chain.
 
     The direct transport peer remains authoritative unless it belongs to an
     allowlisted proxy CIDR and a bounded positive hop count is configured.
     Malformed, oversized, or shorter-than-declared chains fall back to the
-    transport peer instead of trusting caller-supplied input.
+    transport peer instead of trusting caller-supplied input. With ``bounded``
+    false, length is not a reason to fall back: only the trailing hops are trusted,
+    and a caller who pads the chain must not move onto the proxy's own budget.
+    A trusted entry that is not an address resolves to ``unparseable`` when given,
+    rather than to the proxy itself.
     """
     host = str(peer_host or fallback)
     hops = trusted_proxy_hops()
@@ -51,10 +126,10 @@ def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback:
         peer = None
     if hops > 0 and networks and peer is not None and any(peer in network for network in networks):
         forwarded = [part.strip() for part in str(forwarded_for or "").split(",") if part.strip()]
-        if hops <= len(forwarded) <= 32:
-            candidate = forwarded[-hops]
-            try:
-                host = str(ip_address(candidate))
-            except ValueError:
-                pass  # not an IP literal: keep the socket peer address
+        if hops <= len(forwarded) and (not bounded or len(forwarded) <= 32):
+            address = forwarded_entry_address(forwarded[-hops])
+            if address is not None:
+                host = address
+            elif unparseable is not None:
+                host = unparseable
     return host

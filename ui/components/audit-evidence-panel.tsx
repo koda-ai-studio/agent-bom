@@ -22,6 +22,7 @@ type VerifyState = {
   source: "export" | "paste";
   tamperedEntries: number;
   unverifiableEntries: number;
+  overBudget: boolean;
 };
 
 function reportedIntegrityCount(payload: unknown, field: "tampered" | "unverifiable"): number {
@@ -30,6 +31,12 @@ function reportedIntegrityCount(payload: unknown, field: "tampered" | "unverifia
   if (!integrity || typeof integrity !== "object") return 0;
   const value = (integrity as Record<string, unknown>)[field];
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function reportedOverBudget(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  const integrity = (payload as { integrity?: unknown }).integrity;
+  return !!integrity && typeof integrity === "object" && (integrity as { status?: unknown }).status === "not_verified_over_budget";
 }
 
 function downloadPacket(packet: AuditExportPacket): void {
@@ -105,6 +112,7 @@ export function AuditEvidencePanel() {
         source: "export",
         tamperedEntries: reportedIntegrityCount(packet.payload, "tampered"),
         unverifiableEntries: reportedIntegrityCount(packet.payload, "unverifiable"),
+        overBudget: reportedOverBudget(packet.payload),
       });
       setVerifyError(null);
     } catch (err) {
@@ -130,6 +138,7 @@ export function AuditEvidencePanel() {
         source: "paste",
         tamperedEntries: reportedIntegrityCount(packet.payload, "tampered"),
         unverifiableEntries: reportedIntegrityCount(packet.payload, "unverifiable"),
+        overBudget: reportedOverBudget(packet.payload),
       });
     } catch (err) {
       setVerifyState(null);
@@ -295,7 +304,9 @@ export function AuditEvidencePanel() {
                 {verifiedIntact
                   ? "Signature matches — the exported log is intact and tamper-evident."
                   : unverifiable
-                    ? `Signature matches, but the original signing key changed or is unavailable (${verifyState.unverifiableEntries} entries).`
+                    ? verifyState.overBudget
+                      ? `Signature matches, but the audit chain was not verified: ${verifyState.unverifiableEntries} entries exceed this export's verification limit.`
+                      : `Signature matches, but the original signing key changed or is unavailable (${verifyState.unverifiableEntries} entries).`
                     : verifyState.result.valid
                     ? `Signature matches, but the payload reports tampered entries (${verifyState.tamperedEntries}).`
                     : "Signature mismatch — the packet has been altered or the signature is wrong."}

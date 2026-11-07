@@ -188,22 +188,27 @@ class AuditChain(ReadModel):
     name: str
     algorithm: str
     algorithms: list[str] | None = None
-    verified: int
+    verified: int | None
     tampered: int
     unverifiable: int = 0
     checked: int
     tenant_scoped: bool
     source: str | None = None
     error: str | None = None
+    status: str | None = None
+    total_entries: int | None = None
+    verification_limit: int | None = None
 
 
 class AuditIntegrityResponse(ReadResponse):
-    verified: int
+    verified: int | None
     tampered: int
     unverifiable: int = 0
     checked: int
     algorithms: list[str]
     chains: list[AuditChain]
+    status: str | None = None
+    error: str | None = None
 
 
 class AuditExportFilters(ReadModel):
@@ -216,10 +221,13 @@ class AuditExportFilters(ReadModel):
 
 class AuditExportIntegrity(ReadModel):
     error: str | None = None
-    verified: int
+    verified: int | None
     tampered: int
     unverifiable: int = 0
     checked: int
+    status: str | None = None
+    total_entries: int | None = None
+    verification_limit: int | None = None
 
 
 class AuditExportResponse(ReadResponse):

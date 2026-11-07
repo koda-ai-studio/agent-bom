@@ -615,6 +615,22 @@ controlPlane:
       # IRSA for async findings export to customer S3 (set eks.amazonaws.com/role-arn).
       annotations: {}
       automountServiceAccountToken: true
+    # Source address for authentication failure limits. Behind an ingress the
+    # API sees only the ingress pods, so without these every client shares one
+    # budget and about ten bad logins refuse everyone, including valid keys.
+    # hops: trusted proxies appending to X-Forwarded-For (usually 1).
+    # cidrs: networks the API sees those proxies connect from (pod or node
+    # CIDRs). Enabling controlPlane.ingress without them fails rendering, unless
+    # fromSecret reads both from the Secret named in secretName (keys
+    # AGENT_BOM_TRUSTED_PROXY_HOPS and AGENT_BOM_TRUSTED_PROXY_CIDRS; a pod whose
+    # Secret lacks either does not start), or sharedSourceAccepted records that
+    # one shared budget is intended.
+    trustedProxy:
+      hops: 0
+      cidrs: []
+      fromSecret: false
+      secretName: ""
+      sharedSourceAccepted: false
     # Shared-state guards use the largest initial/scaler/fallback count, not
     # merely the number of pods present at installation time.
     replicas: 2

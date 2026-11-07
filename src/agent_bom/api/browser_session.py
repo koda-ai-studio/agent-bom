@@ -39,6 +39,16 @@ class BrowserSessionError(Exception):
     """Raised when a browser session token is absent, invalid, or expired."""
 
 
+class MalformedBrowserSessionError(BrowserSessionError):
+    """The presented value was never one of our sessions.
+
+    Expired and revoked sessions, and sessions signed before a signing-key
+    change, are a person who needs to sign in again and stay plain
+    ``BrowserSessionError``. Their shape proves no guess: forging a signature
+    needs the signing key, whether or not an attempt is counted.
+    """
+
+
 def _env_flag(name: str) -> bool:
     return env_bool(name, False, on_invalid="default")
 
@@ -181,23 +191,26 @@ def _verify_static_key_binding(payload: dict[str, Any], signing_key: bytes) -> N
 def _verified_session_payload(token: str) -> tuple[dict[str, Any], bytes]:
     """Authenticate the envelope without granting access or requiring a live login key."""
     if not token or "." not in token:
-        raise BrowserSessionError("browser session cookie is missing or malformed")
+        raise MalformedBrowserSessionError("browser session cookie is missing or malformed")
     encoded_payload, encoded_signature = token.split(".", 1)
     try:
         payload_ascii = encoded_payload.encode("ascii")
         supplied = _b64decode(encoded_signature)
     except Exception as exc:  # noqa: BLE001
-        raise BrowserSessionError("browser session signature is malformed") from exc
+        raise MalformedBrowserSessionError("browser session signature is malformed") from exc
     if len(supplied) != hashlib.sha256().digest_size:
-        raise BrowserSessionError("browser session signature is malformed")
+        raise MalformedBrowserSessionError("browser session signature is malformed")
     signing_key = _signing_key()
     expected = hmac.new(signing_key, payload_ascii, hashlib.sha256).digest()
-    if not hmac.compare_digest(supplied, expected):
-        raise BrowserSessionError("browser session signature is invalid")
+    signed = hmac.compare_digest(supplied, expected)
     try:
         payload: dict[str, Any] = json.loads(_b64decode(encoded_payload).decode("utf-8"))
     except Exception as exc:  # noqa: BLE001
-        raise BrowserSessionError("browser session payload is invalid") from exc
+        raise MalformedBrowserSessionError("browser session payload is invalid") from exc
+    if not signed:
+        if isinstance(payload, dict) and payload.get("exp") and payload.get("nonce"):
+            raise BrowserSessionError("browser session signature is invalid")
+        raise MalformedBrowserSessionError("browser session signature is invalid")
     exp = int(payload.get("exp") or 0)
     if exp <= int(datetime.now(timezone.utc).timestamp()):
         raise BrowserSessionError("browser session is expired")

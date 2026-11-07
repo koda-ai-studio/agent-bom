@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 
-from agent_bom.api.forwarded_identity import resolve_forwarded_client_ip
+from agent_bom.api.forwarded_identity import forwarded_for_header, resolve_forwarded_client_ip
 from agent_bom.api.gateway_context import authorized_context_headers
 from agent_bom.runtime.gateway_relay_contract import MAX_GATEWAY_RELAY_MESSAGE_BYTES
 from agent_bom.security import sanitize_text
@@ -31,7 +31,7 @@ def _request_source_ip(request: Request) -> str:
     client = getattr(request, "client", None)
     return resolve_forwarded_client_ip(
         peer_host=getattr(client, "host", "") or "",
-        forwarded_for=request.headers.get("x-forwarded-for", ""),
+        forwarded_for=forwarded_for_header(request.headers),
     )
 
 

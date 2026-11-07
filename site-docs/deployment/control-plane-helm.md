@@ -328,6 +328,12 @@ controlPlane:
     adminSecretRef:
       name: agent-bom-control-plane-admin
   api:
+    # Replace with the subnets your ingress connects to the API from. Without
+    # this, every client behind it shares one authentication failure budget.
+    trustedProxy:
+      hops: 1
+      cidrs:
+        - 10.0.0.0/16
     envFrom:
       - secretRef:
           name: agent-bom-control-plane-auth

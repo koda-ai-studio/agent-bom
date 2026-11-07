@@ -27,6 +27,7 @@ from uuid import uuid4
 import httpx
 import uvicorn
 
+from agent_bom.api import audit_log
 from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
 from agent_bom.api.runtime_event_store import SQLiteRuntimeEventStore, set_runtime_event_store
 from agent_bom.api.server import app, configure_api
@@ -102,7 +103,9 @@ def run(output: Path, *, backend: str, replicas: int = 1) -> dict:
             }
         ),
     )
-    os.environ.setdefault("AGENT_BOM_AUDIT_HMAC_KEY", uuid4().hex + uuid4().hex)
+    # Replicas read this key when they import the audit module. This process has
+    # already imported it, and must verify their rows with the same key.
+    audit_log._HMAC_KEY = os.environ.setdefault("AGENT_BOM_AUDIT_HMAC_KEY", uuid4().hex + uuid4().hex).encode()
     runtime, pool = _runtime(output, backend)
     attempts = []
     guard = threading.Lock()
@@ -212,11 +215,9 @@ def run(output: Path, *, backend: str, replicas: int = 1) -> dict:
             for job in jobs:
                 job.result(timeout=300)
         elapsed = time.perf_counter() - started
-        from agent_bom.api.audit_log import get_audit_log
-
         counts = []
         audit_counts = []
-        audit = get_audit_log()
+        audit = audit_log.get_audit_log()
         for tenant in [reader, *(f"{prefix}-writer-{i}" for i in range(4))]:
             token = set_current_tenant(tenant)
             try:
@@ -227,7 +228,8 @@ def run(output: Path, *, backend: str, replicas: int = 1) -> dict:
                 counts.append(all(row.tenant_id == tenant for row in rows))
                 expected_audit = 1026 if tenant == reader else 10
                 entries = audit.list_entries(tenant_id=tenant, limit=2000)
-                verified, tampered = audit.verify_integrity(tenant_id=tenant)
+                # This receipt requires the whole chain, which outgrows the default budget.
+                verified, tampered = audit.verify_integrity(tenant_id=tenant, limit=2000)
                 audit_counts.append(len(entries))
                 counts.append(len(entries) == expected_audit and verified == expected_audit and tampered == 0)
             finally:

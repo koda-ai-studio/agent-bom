@@ -40,6 +40,21 @@ describe("AuditEvidencePanel", () => {
     expect(result).not.toHaveTextContent("reports tampered entries");
   });
 
+  it("says an over-budget chain was not verified, without blaming the signing key", async () => {
+    apiMock.verifyAuditPacket.mockResolvedValue({ valid: true, payload_bytes: 96 });
+    render(<AuditEvidencePanel />);
+    fireEvent.change(screen.getByLabelText("Exported audit packet"), { target: { value: JSON.stringify({
+      payload: { entries: [], integrity: { verified: null, tampered: 0, unverifiable: 1026, checked: 0, status: "not_verified_over_budget" } },
+      signature: SIGNATURE,
+    }) } });
+    fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+    const result = await screen.findByTestId("audit-verify-result");
+    expect(result).toHaveAttribute("data-valid", "false");
+    expect(result).toHaveTextContent("CANNOT VERIFY");
+    expect(result).toHaveTextContent("1026 entries exceed");
+    expect(result).not.toHaveTextContent("signing key changed");
+  });
+
   it("exports a signed packet and verifies the fresh round-trip as PASS", async () => {
     const packet = { payload: { entries: [], integrity: { verified: 3 } }, signature: SIGNATURE };
     apiMock.exportAuditPacket.mockResolvedValue(packet);

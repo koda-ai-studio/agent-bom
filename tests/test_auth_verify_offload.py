@@ -71,7 +71,7 @@ async def test_websocket_handshake_verifies_off_the_loop_thread() -> None:
     loop_thread = threading.get_ident()
     seen: dict[str, Any] = {}
 
-    def _record(_token: str, *, bearer: bool = True) -> None:
+    def _record(_token: str, *, bearer: bool = True, rejected: list[bool] | None = None) -> None:
         seen["thread"] = threading.get_ident()
         return None
 

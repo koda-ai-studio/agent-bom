@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import threading
 from datetime import datetime, timezone
@@ -42,12 +43,16 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+_logger = logging.getLogger(__name__)
 _DEFAULT_BUSY_MS = 30000
 _STAMP_BUSY_MS = 100
 
 
 class SQLiteKeyStore:
     """SQLite-backed API key store; only scrypt hashes and salts are persisted."""
+
+    # A WAL read does not wait for writers.
+    has_keys_is_local = True
 
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
@@ -226,8 +231,9 @@ class SQLiteKeyStore:
                 conn.commit()
             except sqlite3.OperationalError as exc:
                 conn.rollback()
+                # A usage timestamp must not turn a verified key into an error, whatever stopped it.
                 if exc.sqlite_errorcode & 0xFF not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
-                    raise
+                    _logger.warning("API key last-used time not recorded (%s)", type(exc).__name__)
             finally:
                 conn.execute(f"PRAGMA busy_timeout={_DEFAULT_BUSY_MS}")
 

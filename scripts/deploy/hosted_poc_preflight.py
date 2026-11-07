@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import base64
 import os
+import re
 import secrets
 import stat
 import subprocess
@@ -179,6 +180,25 @@ def _fernet_key() -> str:
     return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode("ascii")
 
 
+def _restrict_secret_file(path: Path) -> None:
+    """Owner and one group only, never world-readable.
+
+    Non-swarm compose bind-mounts a secret file with its host owner and mode;
+    the long-syntax uid/gid/mode fields do not apply. The containers run as
+    other non-root UIDs (postgres 70, the API image's abom user), so a 0600 file
+    owned by the operator is unreadable inside them on Linux. Each compose
+    service joins this group through group_add with AGENT_BOM_SECRETS_GID, which
+    `make platform-up` and `make fullstack-up` set. Anyone else on the host,
+    outside the operator's primary group, still cannot read the file.
+    """
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        os.fchown(descriptor, -1, os.getgid())
+        os.fchmod(descriptor, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP)
+    finally:
+        os.close(descriptor)
+
+
 def _write_secret_files(root: Path, *, force: bool) -> None:
     secrets_dir = _secrets_dir(root)
     secrets_dir.mkdir(parents=True, exist_ok=True)
@@ -199,14 +219,16 @@ def _write_secret_files(root: Path, *, force: bool) -> None:
         if secret_path.is_symlink():
             raise ValueError("Secret destination must not be a symbolic link")
         if secret_path.exists() and not force:
-            secret_path.chmod(stat.S_IRUSR | stat.S_IWUSR)
+            _restrict_secret_file(secret_path)
             print(f"secret already exists: {secret_path}")
             continue
         descriptor = os.open(secret_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
             os.fchmod(stream.fileno(), 0o600)
             stream.write(writers[name]())
-        print(f"wrote {secret_path} with mode 0600")
+        _restrict_secret_file(secret_path)
+        print(f"wrote {secret_path} with mode 0640")
+    print(f"export AGENT_BOM_SECRETS_GID={os.getgid()}  # lets the compose services read these files")
 
 
 def _compose_config(root: Path) -> str:
@@ -259,6 +281,9 @@ def _validate_compose_config(errors: list[str], rendered: str) -> None:
 
     if "AGENT_BOM_SESSION_COOKIE_SECURE=1" not in rendered and 'AGENT_BOM_SESSION_COOKIE_SECURE: "1"' not in rendered:
         _fail(errors, "compose output must set AGENT_BOM_SESSION_COOKIE_SECURE=1")
+    for trust_setting in ("AGENT_BOM_TRUSTED_PROXY_HOPS", "AGENT_BOM_TRUSTED_PROXY_CIDRS"):
+        if not re.search(rf"{trust_setting}[:=]\s*[\"']?[^\s\"']", rendered):
+            _fail(errors, f"compose output must set {trust_setting}, or all clients share one authentication failure budget")
     if "AGENT_BOM_POSTGRES_PASSWORD_FILE" not in rendered:
         _fail(errors, "compose output must mount AGENT_BOM_POSTGRES_PASSWORD_FILE for agent_bom_app")
     for file_env in (

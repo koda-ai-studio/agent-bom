@@ -341,6 +341,8 @@ def create_api_key_record(
 
 
 class KeyStore:
+    has_keys_is_local = True
+
     """Thread-safe in-memory API key store."""
 
     def __init__(self) -> None:

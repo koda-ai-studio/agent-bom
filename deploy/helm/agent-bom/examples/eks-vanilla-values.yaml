@@ -31,6 +31,11 @@ controlPlane:
     create: true
     name: agent-bom-control-plane
   api:
+    # The quickstart Secret supplies AGENT_BOM_TRUSTED_PROXY_HOPS and _CIDRS. Without
+    # them, every client behind the ingress shares one authentication failure budget.
+    trustedProxy:
+      fromSecret: true
+      secretName: agent-bom-control-plane-auth
     replicas: 2
     env:
       - name: AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT
