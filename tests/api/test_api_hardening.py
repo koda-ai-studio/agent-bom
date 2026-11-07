@@ -514,7 +514,7 @@ async def test_browser_session_exchange_has_targeted_rate_limit(monkeypatch):
     reset_auth_state_for_tests()
     monkeypatch.setenv("AGENT_BOM_AUTH_SESSION_ATTEMPTS_PER_MINUTE", "2")
     monkeypatch.setenv("AGENT_BOM_API_KEY", "valid-key")
-    request = SimpleNamespace(headers={}, client=SimpleNamespace(host="203.0.113.10"))
+    request = SimpleNamespace(state=SimpleNamespace(), headers={}, client=SimpleNamespace(host="203.0.113.10"))
 
     with pytest.raises(HTTPException) as first:
         await enterprise.create_browser_session(request, Response(), enterprise.BrowserSessionRequest(api_key="bad-1"))
@@ -629,7 +629,7 @@ async def test_static_browser_session_exchange_fails_closed_when_clustered(monke
     monkeypatch.setenv("AGENT_BOM_API_KEY", "valid-key")
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "stable-browser-session-key")
     monkeypatch.setenv("AGENT_BOM_CONTROL_PLANE_REPLICAS", "2")
-    request = SimpleNamespace(headers={}, client=SimpleNamespace(host="203.0.113.20"))
+    request = SimpleNamespace(state=SimpleNamespace(), headers={}, client=SimpleNamespace(host="203.0.113.20"))
 
     with pytest.raises(HTTPException) as error:
         await enterprise.create_browser_session(request, Response(), enterprise.BrowserSessionRequest(api_key="valid-key"))
@@ -2176,6 +2176,7 @@ async def test_auth_session_xff_spoof_does_not_reset_bruteforce_window(monkeypat
 
     def make_request(spoofed_xff: str):
         return SimpleNamespace(
+            state=SimpleNamespace(),
             headers={"x-forwarded-for": spoofed_xff},
             client=SimpleNamespace(host="203.0.113.10"),
         )
@@ -2205,6 +2206,7 @@ async def test_auth_session_trusted_proxy_uses_proxy_appended_client_address(mon
 
     def make_request(attacker_hop: str):
         return SimpleNamespace(
+            state=SimpleNamespace(),
             headers={"x-forwarded-for": f"{attacker_hop}, 198.51.100.20"},
             client=SimpleNamespace(host="10.0.0.5"),
         )

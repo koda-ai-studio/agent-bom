@@ -9611,6 +9611,11 @@ export interface components {
             tampered: number;
             /** Tenant Scoped */
             tenant_scoped: boolean;
+            /**
+             * Unverifiable
+             * @default 0
+             */
+            unverifiable: number;
             /** Verified */
             verified: number;
         } & {
@@ -9673,8 +9678,15 @@ export interface components {
         AuditExportIntegrity: {
             /** Checked */
             checked: number;
+            /** Error */
+            error?: string | null;
             /** Tampered */
             tampered: number;
+            /**
+             * Unverifiable
+             * @default 0
+             */
+            unverifiable: number;
             /** Verified */
             verified: number;
         } & {
@@ -9719,6 +9731,11 @@ export interface components {
             checked: number;
             /** Tampered */
             tampered: number;
+            /**
+             * Unverifiable
+             * @default 0
+             */
+            unverifiable: number;
             /** Verified */
             verified: number;
         } & {

@@ -651,3 +651,104 @@ unit tests do not establish production login or directory acceptance.
 
 Rollback restores a compatible application and issuer configuration together.
 Never disable authentication or enable the public tier as a recovery shortcut.
+
+## Authentication failure throttling
+
+API and MCP HTTP authentication share source-based backoff. The default is ten
+failed authentications in 60 seconds, followed by a 30-second block; subsequent
+blocks double to 900 seconds. One hour without failures resets escalation.
+Configure `AGENT_BOM_AUTH_FAILURE_LIMIT`, `AGENT_BOM_AUTH_BACKOFF_SECONDS`, and
+`AGENT_BOM_AUTH_MAX_BACKOFF_SECONDS` on every replica with the same values.
+The response is 429 with `Retry-After` and `X-RateLimit-Scope: auth-source`.
+
+The state uses the existing Postgres rate-limit pool and migration-owned
+`api_auth_failure_limits` table. SQLite processes share it when they use the
+same `AGENT_BOM_DB` path: authentication state lives in the owner-only
+`<database>.auth-limits.db` sidecar so a scan-ingest write transaction cannot
+lock its budget. Without a persistent database it is process-local.
+At most eight state operations may be outstanding per application, with at most
+two from one source. Capacity exhaustion returns 503 for that request without
+queuing or tripping a process-wide breaker. Timed-out work keeps its slot until
+it exits. A dedicated eight-thread pool separates auth state from background
+work. Operations completing after 500 ms fail closed for that request; their
+completion time is recorded in the worker, so delayed event-loop delivery of
+an on-time result does not create an outage.
+Postgres auth transactions bound pool acquisition, statement execution and lock
+waits to 400 ms each. Pool saturation and SQL cancellation/lock timeouts fail
+that request closed without activating the global outage cooldown.
+SQLite busy/locked responses likewise indicate contention, not a global outage;
+they return 503 for that request and allow immediate recovery when the lock clears.
+
+Admission reads are cached for at most one second and 4,096 source addresses.
+Concurrent cold requests from the same source share one admission lookup, with
+at most eight outstanding source lookups and 64 waiting requests per source.
+Lookup tasks are shared only within their owning event loop; cache and capacity
+accounting remain synchronized across loops serving the same application.
+Excess waiters receive 503; canceling a waiter does not cancel the shared read.
+A failure invalidates that source locally; atomic shared-store updates still
+decide the failure count and backoff. Another replica's block or a new outage
+may take up to one second to become visible through an existing admission
+cache entry. Once a store exception is observed, all local admission cache
+entries are cleared and a five-second outage cooldown fails auth closed with
+503, including valid credentials. A slot/deadline timeout does not trigger
+that global cooldown. Health, static assets and CORS preflight bypass the
+check; ordinary read/write limits retain their existing behavior.
+This cache holds source admission only; key validity and revocation still use
+the current durable credential record on every request.
+
+When the operator explicitly enables anonymous access, credential-free requests
+to declared non-auth routes do not query failed-authentication state. They still
+pass through the anonymous principal resolver, route authorization, and ordinary
+global/read/write quotas. Viewers cannot perform analyst/admin operations;
+anonymous writes require the operator's existing no-auth role configuration.
+Configuring credentials clamps anonymous fallback to viewer, even when
+`AGENT_BOM_NO_AUTH_ROLE` requests a higher role. Presented keys, sessions and
+proxy identity headers, auth endpoints, configured SCIM paths, and unclassified
+routes retain authentication admission. Removing credentials grants only the
+access already explicitly configured for anonymous callers; it cannot grant
+an authenticated identity or bypass the role gate.
+
+Only source addresses incur backoff; a claimed key or tenant cannot consume
+another source's allowance. Backoff rejects requests from the blocked source
+before credential verification, including valid keys and sessions. Users behind
+one NAT or unconfigured load balancer therefore share the block. Configure both
+`AGENT_BOM_TRUSTED_PROXY_CIDRS` and `AGENT_BOM_TRUSTED_PROXY_HOPS` on every
+replica. Proxy-auth configuration without source trust warns at startup; when
+no proxy is declared, the first ignored forwarded header warns once without
+logging its contents. A proxy cannot be detected before it makes a request.
+Owned API/MCP launchers disable server-side proxy-header rewriting. For direct
+ASGI deployment, use `uvicorn --no-proxy-headers` to preserve the transport peer.
+
+API-key, browser-session, OIDC and MCP bearer/OAuth authentication rejections
+enter the failure budget. Cookies do not turn generic 400/403 validation or
+authorization responses into login failures. OAuth token handlers explicitly
+mark invalid-client and invalid-grant failures; ordinary protocol validation
+does not consume this budget.
+
+`auth.failed` receipts use the reserved `__auth_security__` operator chain,
+not the default tenant's audit chain. Tenant audit list, integrity and export
+routes cannot select that chain; privileged operator collection uses the
+underlying audit store/database. Receipts contain the validated source, status
+and an audit-keyed HMAC-SHA256 credential fingerprint in `hmac_sha256`, with a
+separate purpose prefix. Logs alone cannot validate credential guesses. Raw
+keys, cookies, tokens and credentials are never retained. Rotating the audit
+signing key changes these fingerprints, so correlation does not continue across
+rotation; retained receipts are not rewritten. Preserve prior verification keys
+under the operator's evidence-retention policy.
+
+Receipt admission permits at most three per source and 100 per deployment per
+minute. Blocked requests do not append another receipt. These sampled records
+establish observed failures, not an exhaustive attempt count or independent
+collector evidence.
+
+For persisted SQLite audit logs without a configured HMAC key, a changed or
+unrecorded signing-key identity yields `unverifiable` rows and an explicit
+cannot-verify reason. It never yields a clean/verified result. Local key-identity
+metadata is a diagnostic receipt, not independent tamper evidence. With a
+configured key, every HMAC and chain checkpoint is still verified when the full
+chain fits the requested limit; changed rows and truncation retain their existing
+tamper results. A larger chain returns `unverifiable` with its total and requested
+limit in the explanation, rather than walking an unbounded history or claiming
+a partial chain is verified. The HTTP limit is at most 10,000 entries; larger
+histories require offline verification with an explicitly larger budget. Configure
+`AGENT_BOM_AUDIT_HMAC_KEY` before using persistent audit logs as evidence.

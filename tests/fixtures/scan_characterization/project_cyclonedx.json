@@ -655,7 +655,7 @@
    }
   },
   "serialNumber": "urn:uuid:<UUID>",
-  "specVersion": "1.7",
+  "specVersion": "1.6",
   "version": 1
  },
  "exit_code": 1

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Any
 
+from agent_bom.api.api_key_record import TenantNotProvisionedError
 from agent_bom.api.auth import ApiKey, Role, verify_api_key
 from agent_bom.api.exception_store import (
     ExceptionStatus,
@@ -190,6 +192,7 @@ class PostgresKeyStore:
             scim_subject_id=row[13] if len(row) > 13 else None,
             owner=row[14] if len(row) > 14 else None,
             principal_id=row[15] if len(row) > 15 else None,
+            last_used=row[16] if len(row) > 16 else None,
         )
 
     @staticmethod
@@ -219,6 +222,8 @@ class PostgresKeyStore:
 
     def add(self, key: ApiKey) -> None:
         with _tenant_connection(self._pool) as conn:
+            if not conn.execute("SELECT team_id FROM teams WHERE team_id = %s FOR KEY SHARE", (key.tenant_id,)).fetchone():
+                raise TenantNotProvisionedError("Tenant is not provisioned; create the tenant before issuing API keys")
             self._insert_key(conn, key, update_existing=True)
             conn.commit()
 
@@ -300,7 +305,7 @@ class PostgresKeyStore:
                 """SELECT
                        key_id, key_hash, key_salt, key_prefix, name, role, team_id, scopes,
                        created_at, expires_at, revoked_at, rotation_overlap_until, replacement_key_id,
-                       scim_subject_id, owner, principal_id
+                       scim_subject_id, owner, principal_id, last_used
                    FROM api_keys
                    WHERE key_id = %s""",
                 (key_id,),
@@ -312,7 +317,7 @@ class PostgresKeyStore:
             SELECT
                 key_id, key_hash, key_salt, key_prefix, name, role, team_id, scopes,
                 created_at, expires_at, revoked_at, rotation_overlap_until, replacement_key_id,
-                scim_subject_id, owner, principal_id
+                scim_subject_id, owner, principal_id, last_used
             FROM api_keys
             WHERE TRUE
         """
@@ -344,12 +349,16 @@ class PostgresKeyStore:
                     """SELECT
                            key_id, key_hash, key_salt, key_prefix, name, role, team_id, scopes,
                            created_at, expires_at, revoked_at, rotation_overlap_until, replacement_key_id,
-                           scim_subject_id, owner, principal_id
+                           scim_subject_id, owner, principal_id, last_used
                        FROM api_keys
                        WHERE key_prefix = %s""",
                     (prefix,),
                 ).fetchall()
-        return verify_api_key(raw_key, [self._row_to_key(row) for row in rows])
+                key = verify_api_key(raw_key, [self._row_to_key(row) for row in rows])
+                if key is not None:
+                    key.last_used = datetime.now(timezone.utc).isoformat()
+                    conn.execute("UPDATE api_keys SET last_used = %s WHERE key_id = %s", (key.last_used, key.key_id))
+                return key
 
     def has_keys(self) -> bool:
         with bypass_tenant_rls():

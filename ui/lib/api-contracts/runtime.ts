@@ -377,4 +377,6 @@ export interface AuditIntegrityResponse {
   verified: number;
   tampered: number;
   checked: number;
+  unverifiable?: number;
+  error?: string | null;
 }

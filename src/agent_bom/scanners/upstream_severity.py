@@ -29,6 +29,7 @@ from agent_bom.models import Package, Severity, Vulnerability
 from agent_bom.scanners.advisory_merge import advisory_keys
 from agent_bom.scanners.enrichment_apply import apply_epss_entry, apply_kev_entry
 from agent_bom.scanners.risk import cvss_to_severity, parse_cvss_vector, severity_from_label
+from agent_bom.scanners.state import record_scan_warning
 from agent_bom.vuln_compliance import tag_vulnerability
 
 _logger = logging.getLogger(__name__)
@@ -153,4 +154,10 @@ def resolve_upstream_advisory_severity(packages: list[Package], *, db_path: Path
         if candidates:
             _apply_score(vuln, pkg, max(candidates, key=_Score.rank))
             resolved += 1
+    missing = sum(vuln.severity == Severity.UNKNOWN for _, vuln in targets)
+    if missing:
+        record_scan_warning(
+            f"Severity is missing for {missing} distro advisories: their upstream CVEs have no rating in this scan or local database. "
+            "These findings remain unknown, not low risk. Run `agent-bom db update` to populate local severity data."
+        )
     return resolved

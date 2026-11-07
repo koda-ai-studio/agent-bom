@@ -46,11 +46,35 @@ def _reset_managed_profile_state():
     agent_identity.set_local_identity_verifier(None)
 
 
+@pytest.fixture
+def auth_operation_diagnostics(monkeypatch):
+    from agent_bom.api.auth_failure_policy import AuthFailurePolicy, AuthProtectionUnavailableError
+
+    operations = []
+    original = AuthFailurePolicy._call
+
+    async def measured(self, function, *args, **kwargs):
+        began = time.monotonic()
+        outcome = "completed"
+        try:
+            return await original(self, function, *args, **kwargs)
+        except AuthProtectionUnavailableError as exc:
+            outcome = str(exc)  # Internal static reason; never contains credentials or backend text.
+            raise
+        finally:
+            operations.append((function.__name__, outcome, round(time.monotonic() - began, 4)))
+
+    monkeypatch.setattr(AuthFailurePolicy, "_call", measured)
+    return operations
+
+
 @pytest.mark.parametrize(
     ("outcome", "read_delay"),
     [(outcome, 0) for outcome in ["allow", "profile_block", "policy_block", "pii", "secret", "visual"]] + [("pii", 0.06)],
 )
-def test_gateway_call_survives_ingest_restart_and_authenticated_reconnect(tmp_path, monkeypatch, outcome, read_delay):
+def test_gateway_call_survives_ingest_restart_and_authenticated_reconnect(
+    tmp_path, monkeypatch, outcome, read_delay, auth_operation_diagnostics
+):
     secret = "runtime-acceptance-proxy-secret-32-bytes"
     monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
     monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH", "1")
@@ -229,4 +253,5 @@ def test_gateway_call_survives_ingest_restart_and_authenticated_reconnect(tmp_pa
     reader.cookies.set(SESSION_COOKIE_NAME, foreign)
     assert reader.get("/v1/gateway/feed/stream", headers={"Last-Event-ID": batches[-1]["id"]}).status_code == 400
     reader.cookies.clear()
-    assert reader.get("/v1/gateway/feed/stream").status_code == 401
+    denied = reader.get("/v1/gateway/feed/stream")
+    assert denied.status_code == 401, (denied.text, auth_operation_diagnostics)

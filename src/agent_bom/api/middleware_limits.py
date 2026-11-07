@@ -293,11 +293,20 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
     fine-grained per-tenant budgets.
     """
 
-    def __init__(self, app: ASGIApp, rpm: int = DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM):
+    def __init__(
+        self,
+        app: ASGIApp,
+        rpm: int = DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM,
+        anonymous_request: Callable[[StarletteRequest], bool] | None = None,
+    ):
         super().__init__(app)
         self._rpm = _validate_rate_limit("global_ip_rpm", rpm, max_rpm=MAX_RATE_LIMIT_RPM * 5)
         self._window = 60
         self._store = _build_admission_rate_limit_store(self._window)
+        from agent_bom.api.auth_failure_policy import AuthFailurePolicy
+
+        self._auth_failures = AuthFailurePolicy()
+        self._anonymous_request = anonymous_request
 
     def _bucket_key(self, request: StarletteRequest) -> str:
         client_ip = request.client.host if request.client else "unknown"
@@ -312,6 +321,12 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path in RateLimitMiddleware._HEALTH_EXEMPT_PATHS:
             return await call_next(request)
 
+        if request.method == "OPTIONS":
+            return await call_next(request)
+        if self._anonymous_request is None or not self._anonymous_request(request):
+            if denied := await self._auth_failures.before(request):
+                return denied
+
         now = time.time()
         key = self._bucket_key(request)
         hit_count, reset_at = await record_rate_limit_hit(self._store, key, now)
@@ -325,7 +340,8 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
                     "X-RateLimit-Scope": "global-ip",
                 },
             )
-        return await call_next(request)
+        response = await call_next(request)
+        return await self._auth_failures.after(request, response)
 
 
 def _shared_rate_limit_required() -> bool:

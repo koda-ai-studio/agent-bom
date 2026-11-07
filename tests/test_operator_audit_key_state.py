@@ -1,0 +1,97 @@
+"""Losing an ephemeral signing key is not evidence of altered audit rows."""
+
+from types import SimpleNamespace
+
+import pytest
+
+from agent_bom.api import audit_log
+from agent_bom.api.routes.enterprise_routes.governance import audit_integrity
+
+
+def _integrity(monkeypatch, store):
+    monkeypatch.setattr(audit_log, "get_audit_log", lambda: store)
+    return audit_integrity(SimpleNamespace(state=SimpleNamespace(tenant_id="default")), limit=1000, include_runtime=False)
+
+
+def test_key_identity_setup_preserves_first_signature_warning(monkeypatch, tmp_path, caplog):
+    monkeypatch.setattr(audit_log, "_HMAC_ENV_KEY", None)
+    monkeypatch.setattr(audit_log, "_EPHEMERAL_KEY_WARNED", False)
+    store = audit_log.SQLiteAuditLog(str(tmp_path / "warning.db"))
+    assert not audit_log._EPHEMERAL_KEY_WARNED
+    store.append(audit_log.AuditEntry(action="test.first"))
+    assert audit_log._EPHEMERAL_KEY_WARNED
+    assert "AGENT_BOM_AUDIT_HMAC_KEY" in caplog.text
+
+
+def test_restart_with_ephemeral_key_reports_unverifiable(monkeypatch, tmp_path):
+    monkeypatch.setattr(audit_log, "_HMAC_ENV_KEY", None)
+    monkeypatch.setattr(audit_log, "_HMAC_KEY", b"first-test-key")
+    path = str(tmp_path / "audit.db")
+    first = audit_log.SQLiteAuditLog(path)
+    first.append(audit_log.AuditEntry(action="test.first"))
+    monkeypatch.setattr(audit_log, "_HMAC_KEY", b"second-test-key")
+    reopened = audit_log.SQLiteAuditLog(path)
+    result = _integrity(monkeypatch, reopened)
+    assert result["tampered"] == 0
+    assert result["verified"] == 0
+    assert result["unverifiable"] == 1
+    assert result["checked"] == 1
+    assert "key changed" in result["chains"][0]["error"].lower()
+
+
+def test_configured_key_detects_exact_tampered_row(monkeypatch, tmp_path):
+    store = audit_log.SQLiteAuditLog(str(tmp_path / "audit.db"), hmac_key=b"stable-test-key")
+    for action in ("first", "second", "third"):
+        store.append(audit_log.AuditEntry(action=action))
+    store._conn.execute("UPDATE audit_log SET action = 'changed' WHERE action = 'second'")
+    store._conn.commit()
+    result = _integrity(monkeypatch, store)
+    assert (result["verified"], result["tampered"]) == (2, 1)
+
+
+def test_unverifiable_count_respects_limit_and_tenant(monkeypatch, tmp_path):
+    monkeypatch.setattr(audit_log, "_HMAC_ENV_KEY", None)
+    monkeypatch.setattr(audit_log, "_HMAC_KEY", b"first-test-key")
+    path = str(tmp_path / "bounded-audit.db")
+    first = audit_log.SQLiteAuditLog(path)
+    for tenant in ["default"] * 5 + ["other"] * 3:
+        first.append(audit_log.AuditEntry(action="test.record", details={"tenant_id": tenant}))
+    monkeypatch.setattr(audit_log, "_HMAC_KEY", b"replacement-test-key")
+    reopened = audit_log.SQLiteAuditLog(path)
+    monkeypatch.setattr(audit_log, "get_audit_log", lambda: reopened)
+    request = SimpleNamespace(state=SimpleNamespace(tenant_id="default"))
+    result = audit_integrity(request, limit=2, include_runtime=False)
+    assert result["unverifiable"] == result["checked"] == 2
+    request.state.tenant_id = "absent"
+    assert audit_integrity(request, limit=2, include_runtime=False)["checked"] == 0
+
+
+@pytest.mark.parametrize("persistent", [False, True])
+def test_integrity_does_not_walk_a_chain_larger_than_the_requested_budget(monkeypatch, tmp_path, persistent):
+    store = (
+        audit_log.SQLiteAuditLog(str(tmp_path / "bounded-stable.db"), hmac_key=b"stable-test-key")
+        if persistent
+        else audit_log.InMemoryAuditLog()
+    )
+    for number in range(5):
+        store.append(audit_log.AuditEntry(action=f"test.{number}", details={"tenant_id": "default"}))
+    monkeypatch.setattr(audit_log, "get_audit_log", lambda: store)
+    monkeypatch.setattr(audit_log, "_verify_audit_chain_with_checkpoint", lambda *_args: pytest.fail("unbounded verification"))
+    if persistent:
+        monkeypatch.setattr(store, "_list_entries_chronological", lambda **_kwargs: pytest.fail("unbounded verification"))
+    request = SimpleNamespace(state=SimpleNamespace(tenant_id="default"))
+    result = audit_integrity(request, limit=2, include_runtime=False)
+    assert (result["verified"], result["tampered"], result["unverifiable"]) == (0, 0, 2)
+    assert "5 entries exceed the requested limit of 2" in result["chains"][0]["error"]
+
+
+def test_postgres_integrity_checks_budget_before_fetching_entries(monkeypatch):
+    from agent_bom.api.audit_key_state import AuditVerificationLimitExceededError
+    from agent_bom.api.postgres_audit import PostgresAuditLog
+
+    store = PostgresAuditLog.__new__(PostgresAuditLog)
+    monkeypatch.setattr(store, "count", lambda **_kwargs: 5)
+    monkeypatch.setattr(store, "_list_entries_chronological", lambda **_kwargs: pytest.fail("unbounded verification"))
+    with pytest.raises(AuditVerificationLimitExceededError) as error:
+        store.verify_integrity(limit=2, tenant_id="default")
+    assert error.value.total == 5

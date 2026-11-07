@@ -1831,6 +1831,10 @@ components:
         tenant_scoped:
           title: Tenant Scoped
           type: boolean
+        unverifiable:
+          default: 0
+          title: Unverifiable
+          type: integer
         verified:
           title: Verified
           type: integer
@@ -1948,8 +1952,17 @@ components:
         checked:
           title: Checked
           type: integer
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
         tampered:
           title: Tampered
+          type: integer
+        unverifiable:
+          default: 0
+          title: Unverifiable
           type: integer
         verified:
           title: Verified
@@ -2022,6 +2035,10 @@ components:
           type: integer
         tampered:
           title: Tampered
+          type: integer
+        unverifiable:
+          default: 0
+          title: Unverifiable
           type: integer
         verified:
           title: Verified

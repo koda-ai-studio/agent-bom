@@ -37,11 +37,12 @@ from agent_bom.api.audit_details import _safe_audit_label as _safe_audit_label
 from agent_bom.api.audit_details import _sanitize_detail_key as _sanitize_detail_key
 from agent_bom.api.audit_details import _sanitize_detail_value as _sanitize_detail_value
 from agent_bom.api.audit_details import sanitize_audit_details as sanitize_audit_details
+from agent_bom.api.audit_key_state import record_key_identity, require_verification_budget
 from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.settings import env_bool, env_int
 
-__all__ = ["_AUDIT_DETAIL_KEY_RE", "_MAX_AUDIT_DETAILS_JSON_BYTES", "_MAX_AUDIT_DETAIL_COLLECTION_ITEMS",
+__all__ = ["AUTH_FAILURE_AUDIT_TENANT", "_AUDIT_DETAIL_KEY_RE", "_MAX_AUDIT_DETAILS_JSON_BYTES", "_MAX_AUDIT_DETAIL_COLLECTION_ITEMS",
     "_MAX_AUDIT_DETAIL_DEPTH", "_MAX_AUDIT_DETAIL_KEYS", "_MAX_AUDIT_DETAIL_KEY_LENGTH", "_MAX_AUDIT_DETAIL_STRING_LENGTH",
     "_safe_audit_label", "_sanitize_detail_key", "_sanitize_detail_value", "sanitize_audit_details"]  # fmt: skip
 
@@ -196,6 +197,7 @@ else:
 # The operator warning is raised where audit evidence is produced (API startup, first signature), not at import: CLI reports import this
 # module only to describe signing posture, and a log line there lands mid-report.
 _EPHEMERAL_KEY_WARNED = False
+AUTH_FAILURE_AUDIT_TENANT = "__auth_security__"
 
 
 def warn_if_ephemeral_hmac_key() -> None:
@@ -281,6 +283,11 @@ class AuditEntry:
 def sign_export_payload(payload: bytes) -> str:
     """Sign an exported audit payload so downstream consumers can verify it."""
     return _hmac_sha256_hex(_default_signing_key(), payload)
+
+
+def fingerprint_auth_credential(credential: str) -> str:
+    """Correlate failed credentials without an offline guessing oracle in logs."""
+    return sign_export_payload(b"auth-failure-credential\x00" + credential.encode())
 
 
 def verify_export_payload(payload: bytes, signature: str) -> bool:
@@ -481,6 +488,7 @@ class InMemoryAuditLog:
             filtered = self._entries
             if tenant_id is not None:
                 filtered = [e for e in filtered if str((e.details or {}).get("tenant_id", "")) == tenant_id]
+            require_verification_budget(len(filtered), limit)
             entries = filtered
             checkpoint = self._checkpoint_by_tenant.get(tenant_id or "default")
         return _verify_audit_chain_with_checkpoint(entries, checkpoint)
@@ -496,6 +504,7 @@ class SQLiteAuditLog:
         self._last_sig_by_tenant: dict[str, str] = defaultdict(str)
         self._append_lock = threading.Lock()
         self._init_db()
+        self._original_key_identity = record_key_identity(self._conn, hmac_key or _HMAC_KEY)
         self._hydrate_last_signatures()
         if os.path.exists(self._db_path):
             os.chmod(self._db_path, 0o600)
@@ -832,6 +841,7 @@ class SQLiteAuditLog:
         """Verify chain-hashed HMAC signatures. Returns (verified_count, tampered_count)."""
         tenant_key = tenant_id or "default"
         total = self.count(tenant_id=tenant_id)
+        require_verification_budget(total, limit)
         fetch_limit = total if total else limit
         entries = self._list_entries_chronological(limit=fetch_limit, tenant_id=tenant_id)
         checkpoint = self._get_checkpoint(tenant_key)

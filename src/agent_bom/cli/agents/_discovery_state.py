@@ -63,6 +63,7 @@ class DiscoveryRun:
     verbose: bool
     os_packages: bool
     workstation_sweep: bool
+    quiet: bool = False
     extra_projects: tuple = ()
     extra_config_dirs: tuple = ()
     extra_inventories: tuple = ()

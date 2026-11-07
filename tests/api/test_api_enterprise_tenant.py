@@ -993,6 +993,7 @@ async def test_list_audit_entries_and_integrity_are_tenant_scoped(monkeypatch):
             "algorithm": "hmac-sha256",
             "verified": 1,
             "tampered": 0,
+            "unverifiable": 0,
             "checked": 1,
             "tenant_scoped": True,
         }

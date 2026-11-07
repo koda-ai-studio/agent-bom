@@ -2712,6 +2712,11 @@
             "title": "Tenant Scoped",
             "type": "boolean"
           },
+          "unverifiable": {
+            "default": 0,
+            "title": "Unverifiable",
+            "type": "integer"
+          },
           "verified": {
             "title": "Verified",
             "type": "integer"
@@ -2877,8 +2882,24 @@
             "title": "Checked",
             "type": "integer"
           },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
           "tampered": {
             "title": "Tampered",
+            "type": "integer"
+          },
+          "unverifiable": {
+            "default": 0,
+            "title": "Unverifiable",
             "type": "integer"
           },
           "verified": {
@@ -2975,6 +2996,11 @@
           },
           "tampered": {
             "title": "Tampered",
+            "type": "integer"
+          },
+          "unverifiable": {
+            "default": 0,
+            "title": "Unverifiable",
             "type": "integer"
           },
           "verified": {
