@@ -12,12 +12,14 @@ from __future__ import annotations
 import argparse
 import base64
 import html
+import io
 import json
 import os
 import re
 import secrets
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 from pathlib import Path
@@ -31,6 +33,7 @@ import identity_realm as realm  # noqa: E402
 from common import REPO_ROOT, RESULTS_DIR, LaneResult, agent_bom_command, free_port, tail  # noqa: E402
 
 KEYCLOAK_IMAGE = "agent-bom-qualification-keycloak"
+KEYCLOAK_UID = 1000  # The official image runs as this user.
 POSTGRES_IMAGE = "postgres:16-alpine"
 NETWORK = "qualification-identity"
 _MCP_HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json", "MCP-Protocol-Version": "2025-06-18"}
@@ -64,13 +67,22 @@ def make_certificates(directory: Path) -> Path:
     return directory / "ca.pem"
 
 
-def start_keycloak(workdir: Path, realm_doc: dict[str, Any], certs: Path) -> None:
+def realm_archive(realm_doc: dict[str, Any]) -> bytes:
+    """The realm import as an in-memory tar, so its per-run credentials never reach the runner's disk."""
+    body = json.dumps(realm_doc).encode()
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w") as archive:
+        folder = tarfile.TarInfo("import")
+        folder.type, folder.mode, folder.uid = tarfile.DIRTYPE, 0o750, KEYCLOAK_UID
+        archive.addfile(folder)
+        member = tarfile.TarInfo("import/realm.json")
+        member.size, member.mode, member.uid = len(body), 0o600, KEYCLOAK_UID
+        archive.addfile(member, io.BytesIO(body))
+    return buffer.getvalue()
+
+
+def start_keycloak(realm_doc: dict[str, Any], certs: Path) -> None:
     database_password = secrets.token_urlsafe(24)
-    import_dir = workdir / "import"
-    import_dir.mkdir()
-    (import_dir / "realm.json").write_text(json.dumps(realm_doc), encoding="utf-8")
-    (import_dir / "realm.json").chmod(0o644)
-    import_dir.chmod(0o755)
     _docker("network", "create", NETWORK)
     _docker(
         "run",
@@ -89,15 +101,23 @@ def start_keycloak(workdir: Path, realm_doc: dict[str, Any], certs: Path) -> Non
     )
     _docker("build", "-t", KEYCLOAK_IMAGE, str(REPO_ROOT / "deploy" / "keycloak"))
     _docker(
-        "run", "-d", "--name", "qualification-keycloak", "--network", NETWORK, "-p", "127.0.0.1:8443:8443",
+        "create", "--name", "qualification-keycloak", "--network", NETWORK, "-p", "127.0.0.1:8443:8443",
         "-e", "KC_DB_URL=jdbc:postgresql://qualification-kc-db:5432/keycloak",
         "-e", "KC_DB_USERNAME=keycloak", "-e", f"KC_DB_PASSWORD={database_password}",
         "-e", f"KC_HOSTNAME={realm.ISSUER_ORIGIN}", "-e", "KC_HOSTNAME_STRICT=true", "-e", "KC_CACHE=local",
         "-e", "KC_HTTPS_CERTIFICATE_FILE=/certs/server.pem", "-e", "KC_HTTPS_CERTIFICATE_KEY_FILE=/certs/server.key",
         "-e", "KC_BOOTSTRAP_ADMIN_USERNAME=qualification-admin", "-e", f"KC_BOOTSTRAP_ADMIN_PASSWORD={secrets.token_urlsafe(24)}",
-        "-v", f"{certs}:/certs:ro", "-v", f"{import_dir}:/opt/keycloak/data/import:ro",
+        "-v", f"{certs}:/certs:ro",
         KEYCLOAK_IMAGE, "start", "--optimized", "--import-realm",
     )  # fmt: skip
+    subprocess.run(  # noqa: S603, S607
+        ["docker", "cp", "-", "qualification-keycloak:/opt/keycloak/data"],
+        input=realm_archive(realm_doc),
+        capture_output=True,
+        check=True,
+        timeout=60,
+    )
+    _docker("start", "qualification-keycloak")
 
 
 def stop_keycloak() -> None:
@@ -113,7 +133,7 @@ def wait_for_issuer(ca: Path, timeout: float = 300) -> bool:
             if httpx.get(f"{realm.ISSUER}/.well-known/openid-configuration", verify=str(ca), timeout=5).status_code == 200:
                 return True
         except httpx.HTTPError:
-            pass
+            pass  # Keycloak is still starting; the loop retries until its deadline.
         time.sleep(3)
     return False
 
@@ -174,7 +194,7 @@ class Service:
                 if httpx.get(url, timeout=3).status_code < 500:
                     return True
             except httpx.HTTPError:
-                pass
+                pass  # Not listening yet; the loop retries until its deadline.
             time.sleep(1)
         return False
 
@@ -497,7 +517,7 @@ def run(result: LaneResult, workdir: Path) -> None:
     )
     ca = make_certificates(workdir / "certs")
     started = time.monotonic()
-    start_keycloak(workdir, realm_doc, workdir / "certs")
+    start_keycloak(realm_doc, workdir / "certs")
     ready = wait_for_issuer(ca)
     result.measurements["keycloak_ready_seconds"] = round(time.monotonic() - started, 1)
     if not result.check(

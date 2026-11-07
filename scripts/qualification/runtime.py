@@ -129,7 +129,7 @@ class ProxySession:
             self.process.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "test/exit"}) + "\n")
             self.process.stdin.close()
         except (BrokenPipeError, OSError):
-            pass
+            pass  # The process already closed its input; wait() below reports its exit.
         try:
             return self.process.wait(timeout=30)
         except subprocess.TimeoutExpired:

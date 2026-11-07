@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import io
 import json
 import sys
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -48,10 +50,12 @@ def _report(**overrides) -> dict:
 def test_result_fails_on_failed_check_and_on_defect(tmp_path: Path) -> None:
     ok = common.LaneResult("x", "ok")
     ok.check("a", True)
-    assert ok.passed and ok.write(tmp_path) == 0
+    ok_exit = ok.write(tmp_path)
+    assert ok.passed and ok_exit == 0
     failed = common.LaneResult("x", "bad")
     failed.check("a", False, "why")
-    assert not failed.passed and failed.write(tmp_path) == 1
+    failed_exit = failed.write(tmp_path)
+    assert not failed.passed and failed_exit == 1
     defect = common.LaneResult("x", "defect")
     defect.check("a", True)
     defect.defect("D1", "broken", "run it")
@@ -348,3 +352,12 @@ def test_workflow_has_all_seven_lanes() -> None:
     workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     assert {"accuracy", "performance", "platforms", "action", "identity", "runtime", "deploy"} <= set(workflow["jobs"])
     assert workflow["jobs"]["platforms"]["strategy"]["matrix"]["os"] == ["ubuntu-latest", "windows-latest", "macos-latest"]
+
+
+def test_realm_archive_is_readable_only_by_keycloak_and_holds_the_document() -> None:
+    import identity
+
+    with tarfile.open(fileobj=io.BytesIO(identity.realm_archive({"realm": "x"}))) as archive:
+        member = archive.getmember("import/realm.json")
+        assert member.mode == 0o600 and member.uid == identity.KEYCLOAK_UID
+        assert json.loads(archive.extractfile(member).read()) == {"realm": "x"}

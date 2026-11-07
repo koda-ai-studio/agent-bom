@@ -143,7 +143,7 @@ class ApiServer:
                 if line.startswith("VmHWM:"):
                     return round(int(line.split()[1]) / 1024, 1)
         except OSError:
-            pass
+            pass  # The process already exited or /proc is absent, so peak memory is unknown.
         return None
 
     def stop(self) -> None:
