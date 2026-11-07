@@ -65,7 +65,7 @@ def test_native_harness_requires_owned_listener_and_records_deadline(tmp_path, m
             return ("127.0.0.1", 43210)
 
     def collect(**kwargs):
-        assert kwargs["timeout_seconds"] == 30 and kwargs["max_items"] == 64
+        assert kwargs["timeout_seconds"] == 30 and kwargs["max_items"] == qualification.MAX_ITEMS
         data = payload()
         data["listeners"] = [{"port": 43210 if observed else 1}]
         return data

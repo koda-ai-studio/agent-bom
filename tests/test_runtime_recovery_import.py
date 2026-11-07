@@ -7,6 +7,7 @@ import pytest
 
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, SQLiteRuntimeEventStore
 from agent_bom.api.storage.registry_import import import_registries, read_source
+from tests.sqlite_snapshot import checkpointed_bytes
 
 TABLES = ["runtime_observations", "runtime_sessions"]
 
@@ -119,7 +120,7 @@ def test_runtime_recovery_refuses_to_drop_native_revision_history(tmp_path, monk
         conn.execute(
             "INSERT INTO runtime_observation_revisions VALUES (?, ?, ?, ?, ?)", ("source", "observation", 1, "retained-digest", "{}")
         )
-    before = path.read_bytes()
+    before = checkpointed_bytes(path)
     monkeypatch.setattr(
         "agent_bom.api.storage.registry_import.postgres_common._get_pool", lambda: pytest.fail("target opened before source validation")
     )

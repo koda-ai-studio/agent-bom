@@ -7,6 +7,7 @@ import pytest
 
 from agent_bom.api.compliance_hub_store import SQLiteComplianceHubStore
 from agent_bom.api.storage.registry_import import import_registries, read_source
+from tests.sqlite_snapshot import checkpointed_bytes
 
 
 def seed(path):
@@ -35,7 +36,7 @@ def seed(path):
 def test_compliance_recovery_reads_full_snapshot_without_mutating_source(tmp_path):
     path = tmp_path / "compliance.db"
     seed(path)
-    before = path.read_bytes()
+    before = checkpointed_bytes(path)
     records = read_source(path, {"source": "target"}, ["compliance_hub"])
     assert len(records) == 1 and records[0][1].tenant_id == "target"
     assert path.read_bytes() == before
@@ -65,7 +66,7 @@ def test_recovery_preserves_legacy_and_classified_payloads(tmp_path, context):
         if context is not None:
             payload["path_context"] = context
         conn.execute("UPDATE compliance_hub_findings SET payload=?", (encode_hub_payload(payload),))
-    before = path.read_bytes()
+    before = checkpointed_bytes(path)
     records = read_source(path, {"source": "target"}, ["compliance_hub"])
     assert records[0][1].tables["compliance_hub_findings"][0]["payload"] == payload
     assert path.read_bytes() == before
@@ -83,7 +84,7 @@ def test_recovery_rejects_unrecognized_context(tmp_path, table):
         payload = decode_hub_payload(conn.execute(f"SELECT payload FROM {table}").fetchone()[0])
         payload["path_context"] = "private-context-placeholder"
         conn.execute(f"UPDATE {table} SET payload=?", (encode_hub_payload(payload),))
-    before = path.read_bytes()
+    before = checkpointed_bytes(path)
     with pytest.raises(ValueError, match="redaction"):
         read_source(path, {"source": "target"}, ["compliance_hub"])
     assert path.read_bytes() == before

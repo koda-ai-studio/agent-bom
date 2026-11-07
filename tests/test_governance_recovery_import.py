@@ -1,8 +1,6 @@
 """Recovery preserves disabled policies, quarantine, and historical waiver decisions."""
 
 import os
-import sqlite3
-from contextlib import closing
 from uuid import uuid4
 
 import pytest
@@ -11,6 +9,7 @@ from agent_bom.api.exception_store import ExceptionStatus, SQLiteExceptionStore,
 from agent_bom.api.fleet_store import FleetAgent, FleetEndpoint, FleetLifecycleState, SQLiteFleetStore
 from agent_bom.api.policy_store import GatewayPolicy, SQLitePolicyStore
 from agent_bom.api.storage.registry_import import import_registries, read_source
+from tests.sqlite_snapshot import checkpointed_bytes
 
 TABLES = ["fleet_agents", "fleet_endpoints", "gateway_policies", "exceptions"]
 
@@ -28,10 +27,7 @@ def test_recovery_decodes_iac_scope_without_changing_the_decision(tmp_path, reso
         revoked_at="2026-10-02T00:00:00Z",
     )
     SQLiteExceptionStore(str(path)).put(waiver, tenant_id="source")
-    # The store's connection can close at any point and checkpoint its WAL into the file.
-    with closing(sqlite3.connect(path)) as conn:
-        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-    before = path.read_bytes()
+    before = checkpointed_bytes(path)
     [(table, record, payload)] = read_source(path, {"source": "target"}, ["exceptions"])
     assert table == "exceptions"
     assert record.iac_resource == resource
@@ -88,7 +84,7 @@ def seed(path, *, iac=False):
 def test_governance_recovery_reads_without_reactivating_or_mutating_source(tmp_path):
     path = tmp_path / "governance.db"
     seed(path)
-    before = path.read_bytes()
+    before = checkpointed_bytes(path)
     records = read_source(path, {"source": "target"}, TABLES)
     by_table = {t: payload for t, _, payload in records}
     assert by_table["fleet_agents"]["lifecycle_state"] == "decommissioned"
