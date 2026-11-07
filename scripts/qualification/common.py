@@ -21,6 +21,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+# Windows runners default to cp1252, which cannot print the CLI's own check marks.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 SCHEMA_VERSION = 1
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULTS_DIR = REPO_ROOT / "qualification-results"

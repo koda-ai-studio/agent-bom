@@ -250,7 +250,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends libxml2-dev libxmlsec1-dev libxmlsec1-openssl pkg-config
+          sudo apt-get install -y --no-install-recommends libxml2-dev libxmlsec1-dev pkg-config
           uv sync --frozen --no-dev --extra api --extra oidc --extra saml
       - name: Run the identity lane
         shell: bash

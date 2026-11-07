@@ -93,7 +93,8 @@ def test_accuracy_counts_unique_advisories_and_unknown_severity() -> None:
     assert measured["unknown_severity"] == 1
     assert measured["agents"] == 1
     assert measured["mcp_servers"] == 2
-    assert measured["credential_findings"] == 1
+    assert measured["credential_references"] == 1
+    assert measured["credential_findings"] == 0
     assert measured["grade"] == "C"
     assert measured["outcome"] == "complete"
 
@@ -124,6 +125,34 @@ def test_accuracy_sentinel_miss_fails() -> None:
     result = common.LaneResult("accuracy", "t")
     accuracy.assert_report(result, target, _report(), returncode=1)
     assert "known_advisories_found" in [item["name"] for item in result.checks if not item["ok"]]
+
+
+def test_accuracy_flags_all_unknown_severity() -> None:
+    target = accuracy.Target(name="t", kind="image", ref="x", sentinels=(), min_packages=1)
+    result = common.LaneResult("accuracy", "t")
+    report = _report(blast_radius=[{"vulnerability_id": "DSA-1", "severity": "unknown"}])
+    accuracy.assert_report(result, target, report, returncode=1)
+    assert "advisories_have_severity" in [item["name"] for item in result.checks if not item["ok"]]
+
+
+def test_accuracy_flags_phantom_mcp_and_false_malicious() -> None:
+    target = accuracy.Target(
+        name="t", kind="repo", ref="x", sentinels=(), min_packages=1, expect_no_mcp_servers=True, known_legitimate=("good",)
+    )
+    result = common.LaneResult("accuracy", "t")
+    finding = {"finding_type": "MALICIOUS_PACKAGE", "evidence": {"package_name": "good"}}
+    accuracy.assert_report(result, target, _report(findings=[finding]), returncode=1)
+    failed = [item["name"] for item in result.checks if not item["ok"]]
+    assert "no_phantom_mcp_servers" in failed
+    assert "no_false_malicious_verdicts" in failed
+
+
+def test_platform_quickstart_names_persistence_defect() -> None:
+    result = common.LaneResult("platforms", "x")
+    run = common.RunResult(1, 1.0, None, "", "Error: Completed scan could not be verified in the control-plane database.")
+    platforms.record_quickstart_defect(result, run, sys.executable, missing_module="zstandard")
+    assert result.defects[0]["id"] == "quickstart-run-fails-on-clean-install"
+    assert "zstandard" in result.defects[0]["summary"]
 
 
 def test_accuracy_targets_are_pinned_exactly() -> None:

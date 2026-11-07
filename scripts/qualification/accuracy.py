@@ -35,6 +35,10 @@ class Target:
     sentinels: tuple[str, ...]
     min_packages: int
     commit: str = ""
+    # Ground truth: the target contains no MCP configuration at all.
+    expect_no_mcp_servers: bool = False
+    # Real, long-standing projects the target pins; OSV has no malicious record for them.
+    known_legitimate: tuple[str, ...] = ()
 
 
 TARGETS = {
@@ -48,6 +52,9 @@ TARGETS = {
             # libs/langchain/poetry.lock pins aiohttp 3.8.5 and cryptography 41.0.3.
             sentinels=("CVE-2024-23334", "CVE-2023-49083"),
             min_packages=100,
+            # Tagged in 2023, a year before MCP existed.
+            expect_no_mcp_servers=True,
+            known_legitimate=("ctransformers", "parsing"),
         ),
         Target(
             name="juice-shop-v15.0.0",
@@ -57,13 +64,14 @@ TARGETS = {
             # package.json pins jsonwebtoken 0.4.0 and express-jwt 0.1.3 exactly.
             sentinels=("CVE-2015-9235", "CVE-2020-15084"),
             min_packages=50,
+            expect_no_mcp_servers=True,
         ),
         Target(
             name="nginx-1.21.6",
             kind="image",
             ref="nginx:1.21.6@sha256:2bcabc23b45489fb0885d69a06ba1d648aeda973fae7bb981bafbb884165e514",
-            # Debian 11 base layer of the image ships zlib with this fix missing.
-            sentinels=("CVE-2022-37434",),
+            # OSV answers Debian 11 zlib1g with this advisory; its upstream is CVE-2022-37434.
+            sentinels=("DSA-5218-1",),
             min_packages=50,
         ),
         Target(
@@ -112,13 +120,22 @@ def measurements(report: dict[str, Any]) -> dict[str, Any]:
         "unknown_severity": severity.get("unknown", 0),
         "agents": summary.get("total_agents", 0),
         "mcp_servers": summary.get("total_mcp_servers", 0),
-        "credential_findings": len(report.get("credential_risk_ranking") or []),
+        "credential_findings": (finding_summary.get("by_type") or {}).get("CREDENTIAL_EXPOSURE", 0),
+        "credential_references": len(report.get("credential_risk_ranking") or []),
         "grade": report.get("posture_grade", ""),
         "outcome": (report.get("scan_run") or {}).get("outcome", ""),
         "scan_run_issues": len((report.get("scan_run") or {}).get("issues") or []),
         "coverage_warnings": len(report.get("coverage_warnings") or []),
         "lockfile_backed_packages": inventory.get("lockfile_backed_packages"),
         "declaration_only_packages": inventory.get("declaration_only_packages"),
+    }
+
+
+def malicious_packages(report: dict[str, Any]) -> set[str]:
+    return {
+        str((finding.get("evidence") or {}).get("package_name"))
+        for finding in report.get("findings") or []
+        if finding.get("finding_type") == "MALICIOUS_PACKAGE"
     }
 
 
@@ -141,6 +158,22 @@ def assert_report(result: LaneResult, target: Target, report: dict[str, Any], *,
     )
     result.check("grade_present", bool(measured["grade"]), measured["grade"])
     result.check("scan_outcome_recorded", measured["outcome"] in {"complete", "partial", "failed"}, measured["outcome"])
+    unknown = measured["unknown_severity"]
+    result.check(
+        "advisories_have_severity",
+        unknown < measured["unique_advisories"] or not unknown,
+        f"{unknown} of {measured['unique_advisories']} unknown",
+    )
+    if target.expect_no_mcp_servers:
+        result.check(
+            "no_phantom_mcp_servers",
+            measured["mcp_servers"] == 0,
+            f"{measured['mcp_servers']} MCP servers in a target with no MCP configuration",
+        )
+    flagged = malicious_packages(report)
+    result.measurements["malicious_packages"] = sorted(flagged)
+    wrongly_flagged = sorted(flagged & set(target.known_legitimate))
+    result.check("no_false_malicious_verdicts", not wrongly_flagged, f"legitimate packages called malicious: {wrongly_flagged}")
     found = advisory_ids(report)
     missing = sorted(set(target.sentinels) - found)
     result.check(

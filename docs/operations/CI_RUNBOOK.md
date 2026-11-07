@@ -230,6 +230,42 @@ resuming. Do not automatically revert or tag over missing or failing evidence.
 
 ---
 
+## Qualification workflow
+
+`.github/workflows/qualification.yml` measures real-world accuracy, performance
+and platform behaviour on standard hosted runners, so results do not depend on a
+loaded laptop. It never runs per PR: it runs when dispatched, and on pull requests
+that change the workflow or `scripts/qualification/`. It uses no repository
+secrets; every identity, credential and estate is synthetic and generated per run.
+
+```bash
+gh workflow run qualification.yml                                # every lane
+gh workflow run qualification.yml -f lanes=accuracy,performance  # no spaces
+```
+
+| Lane | What it proves |
+| --- | --- |
+| `accuracy` | Scans pinned targets (commit or digest; target code is never run) and asserts inventory, severity totals, grade and independently confirmed advisories |
+| `performance` | Real API process on SQLite and on a Postgres service: ingest, graph, findings and report timings at fixed estate sizes, then a bulk step toward 1M findings that records the largest size reached and why it stopped |
+| `platforms` | Clean source install on Linux, Windows and macOS, then the first-run commands with their output asserted |
+| `action` | `action.yml` on a docs-only and a with-packages fixture, with SARIF validated against the 2.1.0 schema |
+| `identity` | `deploy/keycloak` with a synthetic realm: API OIDC, browser login, MCP OAuth (including another tenant's token being refused) and SAML |
+| `runtime` | Real proxy and gateway processes under real traffic; upstreams record what reached them |
+| `deploy` | `compose.yaml`, and Helm on `kind` with the repo's values, asserting health and API reads |
+
+Each lane writes one JSON document per variant under `qualification-results/`,
+uploaded as a `qualification-*` artifact, and adds a table to the step summary.
+The `report` job combines them. A failing lane means a failed check or a named
+product defect: read its `defects` and `checks`, reproduce with the command it
+records, and fix the product. Do not weaken the lane.
+
+The `report` job compares timings and memory with
+`scripts/qualification/baseline.json`. Refresh it only from a real run, using
+`python scripts/qualification/baseline.py --results <downloaded artifacts> --write`
+to print the values, and keep its stated source and tolerance accurate.
+
+---
+
 ## Documentation-only fast path
 
 The CI path classifier treats a change as documentation-only only when every

@@ -170,6 +170,8 @@ def run_helm(result: LaneResult) -> None:
     resources = kubectl("get", "cronjob,job,daemonset,deployment", "-n", "scanner-only", "-o", "name").stdout.split()
     result.check("helm_default_values_create_workloads", bool(resources), resources)
 
+    # The default and pilot releases both own the cluster-scoped agent-bom-reader ClusterRole.
+    run_measured(["helm", "uninstall", "scanner", "--namespace", "scanner-only", "--wait", "--timeout", "2m"], timeout=180)
     prepare_pilot_namespace()
     stock = helm_install("agent-bom", NAMESPACE, "-f", str(PILOT_VALUES))
     result.measurements["helm_pilot_install_seconds"] = stock.seconds

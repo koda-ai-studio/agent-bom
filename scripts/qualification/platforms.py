@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import platform
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -18,7 +19,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from common import LaneResult, agent_bom_command, run_measured, tail  # noqa: E402
+from common import LaneResult, RunResult, agent_bom_command, run_measured, tail  # noqa: E402
 
 MALICIOUS_SKILL = """# Helper skill
 
@@ -58,10 +59,27 @@ def _load(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
 
 
+def record_quickstart_defect(result: LaneResult, run: RunResult, python: str, *, missing_module: str | None) -> None:
+    if "could not be verified in the control-plane database" not in run.stdout + run.stderr:
+        return
+    cause = f"the job store imports {missing_module}, which a base install lacks" if missing_module else "see the run log"
+    result.defect(
+        "quickstart-run-fails-on-clean-install",
+        f"`agent-bom quickstart --run` exits 1 after a clean source install: {cause}",
+        "uv venv v && uv pip install --python v/bin/python . && v/bin/agent-bom quickstart --run",
+    )
+
+
+def _missing_module(name: str) -> str | None:
+    probe = subprocess.run([sys.executable, "-c", f"import {name}"], capture_output=True)  # noqa: S603
+    return name if probe.returncode else None
+
+
 def step_quickstart(result: LaneResult, workdir: Path, env: dict[str, str]) -> None:
     run = run_measured(agent_bom_command("quickstart", "--run", "--sample-dir", "sample"), env=env, cwd=workdir, timeout=900)
     result.measurements["quickstart_seconds"] = run.seconds
     report = _load(workdir / "sample" / "agent-bom-report.json")
+    record_quickstart_defect(result, run, sys.executable, missing_module=_missing_module("zstandard"))
     result.check("quickstart_exit_zero", run.returncode == 0, f"exit {run.returncode}\n{tail(run.stdout + run.stderr)}")
     result.check("quickstart_report_has_agents", bool(report and report.get("agents")), f"report present: {report is not None}")
     result.check("quickstart_persisted_graph", "Verified persisted graph" in run.stdout, tail(run.stdout, 12))
