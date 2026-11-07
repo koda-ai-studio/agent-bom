@@ -225,9 +225,9 @@ class SQLiteKeyStore:
                 conn.execute("UPDATE api_keys SET last_used = ? WHERE key_id = ?", (when, key_id))
                 conn.commit()
             except sqlite3.OperationalError as exc:
+                conn.rollback()
                 if exc.sqlite_errorcode & 0xFF not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
                     raise
-                conn.rollback()
             finally:
                 conn.execute(f"PRAGMA busy_timeout={_DEFAULT_BUSY_MS}")
 
