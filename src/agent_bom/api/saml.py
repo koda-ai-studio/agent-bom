@@ -9,7 +9,8 @@ agent-bom control-plane auth model:
 - the control plane returns a short-lived API key that the UI/API already knows
   how to enforce, audit, expire, and scope by tenant. An IdP's browser form post
   (the HTTP-POST binding) receives that key as an HttpOnly browser session
-  instead; a JSON client receives it in the response body
+  instead, and is accepted only from the browser that started that login at
+  ``/v1/auth/saml/start``; a JSON client receives the key in the response body
 
 Configuration via environment variables::
 
@@ -28,6 +29,7 @@ Configuration via environment variables::
 
 from __future__ import annotations
 
+import hmac
 import os
 from dataclasses import dataclass
 from typing import Any, cast
@@ -257,18 +259,30 @@ class SAMLConfig:
             raise SAMLError(f"Invalid generated SAML metadata: {', '.join(errors)}")
         return cast(str, metadata)
 
-    def verify_response(self, saml_response: str, relay_state: str | None = None) -> SAMLAssertion:
+    def begin_login(self, relay_state: str) -> tuple[str, str]:
+        """Build an AuthnRequest; returns the IdP redirect URL and the request id its response must answer."""
+        auth = _build_saml_auth(_build_request_context(self.sp_acs_url, ""), self.settings_dict())
+        redirect_url = auth.login(return_to=relay_state)
+        return str(redirect_url), str(auth.get_last_request_id())
+
+    def verify_response(self, saml_response: str, relay_state: str | None = None, request_id: str | None = None) -> SAMLAssertion:
+        """Verify a response; with ``request_id``, it must answer exactly that AuthnRequest."""
         if not saml_response.strip():
             raise SAMLError("SAMLResponse is required")
         request_context = _build_request_context(self.sp_acs_url, saml_response, relay_state)
         auth = _build_saml_auth(request_context, self.settings_dict())
-        auth.process_response()
+        auth.process_response(**({} if request_id is None else {"request_id": request_id}))
         errors = auth.get_errors()
         if errors:
             reason = getattr(auth, "get_last_error_reason", lambda: "")() or ", ".join(errors)
             raise SAMLError(f"SAML assertion validation failed: {reason}")
         if not auth.is_authenticated():
             raise SAMLError("SAML assertion did not authenticate a subject")
+        if request_id is not None:
+            # python3-saml only compares InResponseTo when the response carries one.
+            answered = str(auth.get_last_response_in_response_to() or "")
+            if not hmac.compare_digest(answered.encode("utf-8"), request_id.encode("utf-8")):
+                raise SAMLError("SAML response InResponseTo does not answer this login")
 
         attributes = auth.get_attributes() or {}
         if self.require_role_attribute and not saml_attributes_have_role_signal(attributes, self.role_attribute):
@@ -318,6 +332,7 @@ def describe_saml_posture() -> dict[str, object]:
         "runtime_available": saml_runtime_available(),
         "install_hint": SAML_INSTALL_HINT,
         "metadata_endpoint": "/v1/auth/saml/metadata",
+        "login_endpoint": "/v1/auth/saml/start",
         "role_attribute": config.role_attribute,
         "tenant_attribute": config.tenant_attribute,
         "require_role_attribute": config.require_role_attribute,

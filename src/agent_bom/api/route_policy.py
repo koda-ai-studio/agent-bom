@@ -43,6 +43,7 @@ PUBLIC_OPERATIONS: frozenset[tuple[str, str]] = frozenset(
             "/v1/auth/snowflake/login",
             "/v1/auth/snowflake/callback",
             "/v1/auth/saml/metadata",
+            "/v1/auth/saml/start",
         )
     ]
     + [

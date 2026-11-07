@@ -549,6 +549,12 @@ You still own:
 - expose `GET /v1/auth/saml/metadata` to your IdP admins and keep
   `POST /v1/auth/saml/login` (the SAML HTTP-POST ACS URL) on the same ingress
   hostname as the dashboard, which is where it redirects after sign-in
+- start browser sign-in at `GET /v1/auth/saml/start`, and point any IdP app tile
+  or bookmark there. As a deliberate limit, the form-post ACS accepts only a
+  response to a login that started in the same browser, so unsolicited and
+  IdP-initiated posts are refused; the IdP must allow unsigned AuthnRequests and
+  return `InResponseTo`. Serve the ACS over https. Plain http works only for
+  non-production local development, with the IdP on the same site
 - enable PDBs when you are running multi-replica workloads
 
 ## Current boundary
