@@ -12,8 +12,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
+from agent_bom.domain.mcp_model import agent_is_repository_inventory
 from agent_bom.graph.agent_projection import AgentScope, _inventory_node_id, repository_manifest_node_id
-from agent_bom.graph.projection_support import _is_repository_inventory, _is_sbom_import
+from agent_bom.graph.projection_support import _file_inventory_surface, _is_repository_inventory, _is_sbom_import
 from agent_bom.graph.types import EntityType
 from agent_bom.output.graph_policy import _provider_label
 from agent_bom.security import sanitize_path_label
@@ -27,12 +28,14 @@ def _static_inventory(agent: "Agent") -> AgentScope | None:
     record = {
         "name": agent.name,
         "source": agent.source,
+        "metadata": agent.metadata,
         "mcp_servers": [{"surface": getattr(srv.surface, "value", srv.surface), "command": srv.command} for srv in agent.mcp_servers],
     }
     scope = AgentScope(agent_dict=record, agent_metadata={}, agent_discovery_provenance=None)
     scope.sbom_import = _is_sbom_import(record)
-    scope.repository_inventory = _is_repository_inventory(record)
-    if not (scope.sbom_import or scope.repository_inventory):
+    scope.file_surface = _file_inventory_surface(record)
+    scope.repository_inventory = not scope.file_surface and _is_repository_inventory(record)
+    if not (scope.sbom_import or scope.repository_inventory or scope.file_surface):
         return None
     scope.static_inventory = True
     scope.inventory_type = EntityType.DIRECTORY if scope.repository_inventory else EntityType.SOURCE_FILE
@@ -81,14 +84,16 @@ def append_agent_elements(elements: list[dict], agent: "Agent", providers_seen: 
 def server_node_id(agent: "Agent", static: AgentScope | None, server: "MCPServer") -> str:
     """An SBOM's components hang off its file node; a repository manifest is its own directory."""
     if static is None:
+        if agent.source == "project" and agent_is_repository_inventory("project", [(server.surface, server.command)]):
+            return f"directory:manifest:{agent_graph_id_for(agent).removeprefix('agent:')}:{server.name}"
         return mcp_server_graph_id_for(server, agent)
-    return static.agent_id if static.sbom_import else repository_manifest_node_id(static, server.name)
+    return static.agent_id if static.sbom_import or static.file_surface else repository_manifest_node_id(static, server.name)
 
 
 def append_server_elements(elements: list[dict], aid: str, static: AgentScope | None, server_data: dict[str, Any]) -> None:
     """Append a server node and its agent edge; an SBOM's file node already stands for its server."""
     sid = server_data["id"]
-    if static is None:
+    if static is None and not sid.startswith("directory:manifest:"):
         elements.append({"data": server_data})
         elements.append(
             {
@@ -108,4 +113,4 @@ def append_server_elements(elements: list[dict], aid: str, static: AgentScope | 
 
 
 def package_edge_type(static: AgentScope | None) -> str:
-    return "contains" if static is not None and static.sbom_import else "depends_on"
+    return "contains" if static is not None and (static.sbom_import or static.file_surface) else "depends_on"

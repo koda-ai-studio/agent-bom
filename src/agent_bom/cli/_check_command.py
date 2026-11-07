@@ -2,8 +2,8 @@
 
 ``run_check`` runs ``CHECK_STAGES`` in order over one mutable ``CheckRun``.
 Every stage either returns (the next stage runs) or ends the command with
-``sys.exit`` carrying the documented exit code (0 clean, 1 unsafe/malicious,
-2 incomplete).
+``sys.exit`` carrying the documented exit code (0 clean, 1 unsafe, malicious
+or suspected malicious, 2 incomplete).
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ from agent_bom.cli._check_support import (
     _vulns_at_or_above,
 )
 from agent_bom.cli._common import _sync_runtime_consoles
+from agent_bom.evidence.malicious_basis import is_suspected, malicious_headline, malicious_message, malicious_verdict_value
 from agent_bom.resolvers.latest_stable import PRERELEASE_NOTE, PRERELEASE_VERSION_SOURCE, resolved_version_source
 from agent_bom.vuln_freshness import db_stale_days_threshold, db_staleness, set_allow_stale_db
 
@@ -248,21 +249,21 @@ def _record_data_evidence(run: CheckRun, coverage_warnings: list[dict]) -> None:
 
 def _gate_malicious(run: CheckRun) -> None:
     # ── Malicious-package gate (fail closed) ─────────────────────────────────
-    # A package flagged as malicious (typosquat, dependency-confusion, or a
-    # known-malicious MAL- advisory) is a BLOCK regardless of CVE rows. Reading
-    # only vuln rows let such a package report "No known vulnerabilities" and
-    # exit 0 — a pre-install gate must never install a malicious package, and
-    # this decision is independent of --exit-zero / --fail-on-severity, which
-    # only govern vulnerability triage.
+    # A flagged package (typosquat, dependency-confusion, or a known-malicious
+    # MAL- advisory) is a BLOCK regardless of CVE rows. Reading only vuln rows
+    # let such a package report "No known vulnerabilities" and exit 0, and this
+    # decision is independent of --exit-zero / --fail-on-severity, which only
+    # govern vulnerability triage. Only the wording follows the evidence: a name
+    # match blocks as firmly as an advisory but reads as suspected.
     malicious_pkg = next((p for p in run.pkgs if getattr(p, "is_malicious", False)), None)
     if malicious_pkg is not None:
         reason = malicious_pkg.malicious_reason or "flagged as malicious (typosquat / dependency confusion / known-malicious advisory)"
-        message = f"MALICIOUS package {malicious_pkg.name}@{malicious_pkg.version} — {reason}. Do not install."
+        message = malicious_message(f"{malicious_pkg.name}@{malicious_pkg.version}", malicious_pkg.malicious_reason or reason)
         if run.structured_output:
             _emit(
                 run,
                 ecosystems=run.ecosystems,
-                verdict="malicious",
+                verdict=malicious_verdict_value(malicious_pkg.malicious_reason),
                 message=message,
                 exit_code=1,
                 vulnerabilities=run.vulns,
@@ -271,7 +272,9 @@ def _gate_malicious(run: CheckRun) -> None:
             )
             sys.exit(1)
         if run.quiet:
-            click.echo(f"{run.name}@{run.version}: MALICIOUS — {reason}")
+            click.echo(f"{run.name}@{run.version}: {malicious_headline(malicious_pkg.malicious_reason)} — {reason}")
+        elif is_suspected(malicious_pkg.malicious_reason):
+            run.console.print(f"  [yellow]⚠ {message}[/yellow]\n")
         else:
             run.console.print(f"  [red]✗ MALICIOUS: {message}[/red]\n")
         sys.exit(1)

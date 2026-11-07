@@ -1,4 +1,4 @@
-"""Directory legal links resolve to owner-review drafts built by MkDocs."""
+"""Directory legal links resolve to pages built by MkDocs that say who runs what."""
 
 import json
 from pathlib import Path
@@ -12,8 +12,8 @@ def test_claude_directory_legal_links_have_real_pages():
     for field, slug in (("privacyPolicyUrl", "privacy"), ("termsOfServiceUrl", "terms")):
         assert manifest[field] == BASE + slug + "/"
         page = (ROOT / "site-docs" / f"{slug}.md").read_text(encoding="utf-8")
-        assert "Owner review required before publication" in page
-        assert "DRAFT" in page
+        assert "DRAFT" not in page
+        assert "offers no public hosted service" in page
         assert f"{slug}.md" in (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
 
 

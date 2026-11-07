@@ -21,7 +21,7 @@ Use the agent-bom `check` MCP tool to vet one package before it is installed.
 2. Call `check`. If the user named no version, say that the latest published version was checked.
 3. Answer in this order:
    - a verdict in one line: safe to add, upgrade first, or do not install
-   - malicious or typosquat signals, if any, and the legitimate name it imitates
+   - malicious or typosquat signals, if any, and the legitimate name it imitates. `suspected_malicious` is a name match, not a report of malware: say so, and say not to install it until its name and publisher are confirmed on the registry
    - CVEs with severity, KEV status and the first fixed version
 4. If the package is fine but the user is adding an MCP server, suggest running the `scan` skill (Claude Code: `/agent-bom:scan`) afterwards to see what credentials and tools the new server can reach.
 

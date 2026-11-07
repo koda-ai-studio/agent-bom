@@ -44,8 +44,10 @@ from agent_bom.discovery.platform_config import _read_json_config_no_symlink as 
 from agent_bom.discovery.platform_config import detect_installed_agents as detect_installed_agents
 from agent_bom.discovery.platform_config import expand_path as expand_path
 from agent_bom.discovery.platform_config import get_platform as get_platform
+from agent_bom.discovery.workload_servers import compose_service_env, k8s_container_endpoint
 from agent_bom.floating_refs import classify_image_reference
 from agent_bom.models import Agent, AgentStatus, AgentType, MCPServer, TransportType
+from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.security import sanitize_env_vars, sanitize_log_label
 
 console = Console(stderr=True)
@@ -263,17 +265,8 @@ def discover_compose_mcp_servers(project_dir: Optional[str] = None) -> Optional[
         parsed_image = parse_image_ref(image)
         pkg_name, pkg_version = parsed_image.name, parsed_image.version
 
-        # Extract env vars (list or dict format)
-        raw_env = svc_def.get("environment", {})
-        env: dict[str, str] = {}
-        if isinstance(raw_env, list):
-            for entry in raw_env:
-                if isinstance(entry, str) and "=" in entry:
-                    k, _, v = entry.partition("=")
-                    env[k] = v
-        elif isinstance(raw_env, dict):
-            env = {k: str(v) for k, v in raw_env.items()}
-
+        env = compose_service_env(svc_def.get("environment", {}))
+        plaintext_secrets = plaintext_env_secrets(env)
         # Redact sensitive values
         env = sanitize_env_vars(env)
 
@@ -297,6 +290,7 @@ def discover_compose_mcp_servers(project_dir: Optional[str] = None) -> Optional[
             packages=packages,
             config_path=str(compose_path),
             security_warnings=[floating.to_security_warning()] if floating else [],
+            plaintext_env_secrets=plaintext_secrets,
         )
         mcp_servers.append(server)
 
@@ -641,17 +635,10 @@ def discover_k8s_mcp_servers(
             if not (has_label_signal or has_image_signal or has_env_signal):
                 continue
 
-            transport = TransportType.STDIO
-            url = ""
-            ports = container.get("ports", [])
-            if ports:
-                # Assume SSE/HTTP if the container exposes a port
-                transport = TransportType.SSE
-                port_num = ports[0].get("containerPort", 8000)
-                svc_name = labels.get("app", labels.get("app.kubernetes.io/name", pod_name))
-                url = f"http://{svc_name}.{pod_ns}.svc.cluster.local:{port_num}"
+            transport, url = k8s_container_endpoint(container, labels, pod_name, pod_ns)
 
             raw_env = {e.get("name", ""): e.get("value", "") for e in env_vars if e.get("name")}
+            plaintext_secrets = plaintext_env_secrets(raw_env)
             env = sanitize_env_vars(raw_env)
 
             container_name = container.get("name", "mcp")
@@ -668,6 +655,7 @@ def discover_k8s_mcp_servers(
                 url=url,
                 config_path=f"k8s://{pod_ns}/{pod_name}",
                 connection_metadata=pod_hosting_metadata(pod, cluster=context or "", provider_ids=provider_ids),
+                plaintext_env_secrets=plaintext_secrets,
             )
             mcp_servers.append(server)
 

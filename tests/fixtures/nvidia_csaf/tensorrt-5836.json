@@ -1,0 +1,115 @@
+{
+ "document": {
+  "category": "csaf_security_advisory",
+  "title": "Security Bulletin: NVIDIA TensorRT - May 2026",
+  "tracking": {
+   "id": "5836"
+  },
+  "notes": [
+   {
+    "category": "legal_disclaimer",
+    "text": "Trimmed from NVIDIA/product-security 2026/5836/5836.json, retrieved 2026-11-06. Product tree and product_status are unmodified."
+   }
+  ]
+ },
+ "product_tree": {
+  "branches": [
+   {
+    "branches": [
+     {
+      "branches": [
+       {
+        "category": "product_name",
+        "name": "TensorRT",
+        "product": {
+         "name": "TensorRT",
+         "product_id": "all_tensorrt",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:tensorrt:*:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "product_family",
+      "name": "NVIDIA Product Family"
+     },
+     {
+      "branches": [
+       {
+        "category": "product_version",
+        "name": "TensorRT",
+        "product": {
+         "name": "All versions prior to v10.16.1",
+         "product_id": "all_tensorrt_all_versions_prior_to_v10_16_1",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:tensorrt:all_versions_prior_to_v10_16_1:*:*:*:*:*:*:*"
+         }
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "TensorRT",
+        "product": {
+         "name": "v10.16.1",
+         "product_id": "all_tensorrt_v10_16_1",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:tensorrt:v10_16_1:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "architecture",
+      "name": "All"
+     }
+    ],
+    "category": "vendor",
+    "name": "NVIDIA"
+   }
+  ]
+ },
+ "vulnerabilities": [
+  {
+   "cve": "CVE-2026-24188",
+   "notes": [
+    {
+     "category": "summary",
+     "text": "NVIDIA TensorRT contains a vulnerability where an attacker could cause an out-of-bounds write. A successful exploit of this vulnerability might lead to data tampering.",
+     "title": "Vulnerability description"
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "attackComplexity": "LOW",
+      "attackVector": "NETWORK",
+      "availabilityImpact": "LOW",
+      "baseScore": 8.2,
+      "baseSeverity": "HIGH",
+      "confidentialityImpact": "NONE",
+      "integrityImpact": "HIGH",
+      "privilegesRequired": "NONE",
+      "scope": "UNCHANGED",
+      "userInteraction": "NONE",
+      "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:H/A:L",
+      "version": "3.1"
+     },
+     "products": [
+      "all_tensorrt_all_versions_prior_to_v10_16_1"
+     ]
+    }
+   ],
+   "cwe": {
+    "id": "CWE-787",
+    "name": "Out-of-bounds Write"
+   },
+   "product_status": {
+    "fixed": [
+     "all_tensorrt_v10_16_1"
+    ],
+    "known_affected": [
+     "all_tensorrt_all_versions_prior_to_v10_16_1"
+    ]
+   }
+  }
+ ]
+}

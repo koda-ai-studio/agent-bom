@@ -690,10 +690,11 @@ def test_check_malicious_package_json_verdict(monkeypatch):
 
     assert result.exit_code == 1
     payload = json.loads(result.output)
-    assert payload["verdict"] == "malicious"
+    assert payload["verdict"] == "suspected_malicious"
     assert payload["exit_code"] == 1
     assert "Dependency confusion risk" in payload["message"]
-    assert payload["canonical_verdict"] == "malicious"
+    assert payload["canonical_verdict"] == "suspected_malicious"
+    assert payload["malicious_basis"] == "dependency_confusion"
     assert payload["is_malicious"] is True
     assert payload["malicious_reason"] == "Dependency confusion risk"
     assert payload["lookup_mode"] == "online"

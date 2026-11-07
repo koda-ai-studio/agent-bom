@@ -7,6 +7,7 @@ from typing import Any
 from rich.console import Console
 from rich.panel import Panel
 
+from agent_bom.autodiscover import package_not_on_registry_message, packages_not_on_registry
 from agent_bom.constants import is_credential_key
 from agent_bom.core.suppression_score import risk_rank_key
 
@@ -16,10 +17,10 @@ def render_posture_summary(agents: list[Any], blast_radii: list[Any]) -> None:
     total_vulns = len(blast_radii)
     crit = sum(1 for br in blast_radii if br.vulnerability.severity.value == "critical")
     high = sum(1 for br in blast_radii if br.vulnerability.severity.value == "high")
-    agent_names = [a.name for a in agents]
+    agent_names = [a.name for a in agents if a.counts_as_agent]
     agent_list_str = ", ".join(agent_names[:3]) + (f" +{len(agent_names) - 3}" if len(agent_names) > 3 else "")
-    agent_count = len(agents)
-    server_count = sum(len(a.mcp_servers) for a in agents)
+    agent_count = len(agent_names)
+    server_count = sum(a.total_mcp_servers for a in agents)
     credential_server_count = sum(
         1
         for agent in agents
@@ -47,7 +48,8 @@ def render_posture_summary(agents: list[Any], blast_radii: list[Any]) -> None:
             else "Review findings with agent-bom agents"
         )
     else:
-        action = "No vulnerabilities found — supply chain looks clean"
+        missing = packages_not_on_registry([pkg for agent in agents for server in agent.mcp_servers for pkg in server.packages])
+        action = package_not_on_registry_message(missing) if missing else "No vulnerabilities found — supply chain looks clean"
 
     lines = [
         f"[bold]Agents:[/bold]   {agent_count} configured ({agent_list_str})",

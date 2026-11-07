@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+from agent_bom.domain.mcp_model import FRAMEWORK_AGENTS_METADATA_KEY
 from agent_bom.evidence.scan_run import ScanIssue
 from agent_bom.kubernetes.inventory_manifests import manifest_inventory_with_issues
 from agent_bom.models import Agent, AgentType, MCPServer, ServerSurface
@@ -410,7 +411,10 @@ def _append_ai_inventory_agent(root: Path, ai_report: Any, agents: list[Agent], 
             source="ai-inventory",
             discovery_provenance=ai_provenance,
             mcp_servers=[MCPServer(name="ai-inventory", surface=ServerSurface.AI_INVENTORY, packages=ai_packages)],
-            metadata={"project_root": str(root.resolve())},
+            metadata={
+                "project_root": str(root.resolve()),
+                **({FRAMEWORK_AGENTS_METADATA_KEY: True} if ai_report.framework_agents else {}),
+            },
         )
     )
 

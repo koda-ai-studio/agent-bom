@@ -232,7 +232,9 @@ def autodetect_iac(run: DiscoveryRun) -> None:
     iac_paths, inventory = run.iac_paths, run.inventory
     explicit_target = run.no_discover or run.skill_only or run.images or run.image_tars or run.sbom_file
     if not iac_paths and not inventory and not explicit_target:
-        _auto_iac = _top_level_iac_files(Path(run.project) if run.project else Path.cwd())
+        named = [Path(path) for path in run.filesystem_paths if Path(path).is_dir()]
+        roots = [Path(run.project)] if run.project else named or ([] if run.filesystem_paths else [Path.cwd()])
+        _auto_iac = [iac_file for root in roots for iac_file in _top_level_iac_files(root)]
         if _auto_iac:
             run.iac_paths = tuple(_auto_iac)
             run.con.print(f"[bold blue]Auto-detected {len(_auto_iac)} IaC file(s)[/bold blue]")

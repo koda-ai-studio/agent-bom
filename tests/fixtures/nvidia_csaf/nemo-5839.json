@@ -1,0 +1,201 @@
+{
+ "document": {
+  "category": "csaf_security_advisory",
+  "title": "Security Bulletin: NVIDIA NeMo - June 2026",
+  "tracking": {
+   "id": "5839"
+  },
+  "notes": [
+   {
+    "category": "legal_disclaimer",
+    "text": "Trimmed from NVIDIA/product-security 2026/5839/5839.json, retrieved 2026-11-06. Product tree and product_status are unmodified."
+   }
+  ]
+ },
+ "product_tree": {
+  "branches": [
+   {
+    "branches": [
+     {
+      "branches": [
+       {
+        "category": "product_name",
+        "name": "NVIDIA NeMo Framework",
+        "product": {
+         "name": "NVIDIA NeMo Framework",
+         "product_id": "all_platforms_nvidia_nemo_framework",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:nvidia_nemo_framework:*:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "product_family",
+      "name": "NVIDIA Product Family"
+     },
+     {
+      "branches": [
+       {
+        "category": "product_version",
+        "name": "NVIDIA NeMo Framework",
+        "product": {
+         "name": "Versions 0.0 to 2.7.2",
+         "product_id": "all_platforms_nvidia_nemo_framework_versions_0_0_to_2_7_2",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:nvidia_nemo_framework:versions_0_0_to_2_7_2:*:*:*:*:*:*:*"
+         }
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "NVIDIA NeMo Framework",
+        "product": {
+         "name": "2.7.3",
+         "product_id": "all_platforms_nvidia_nemo_framework_2_7_3",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:nvidia_nemo_framework:2_7_3:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "architecture",
+      "name": "All platforms"
+     }
+    ],
+    "category": "vendor",
+    "name": "NVIDIA"
+   }
+  ]
+ },
+ "vulnerabilities": [
+  {
+   "cve": "CVE-2026-24155",
+   "notes": [
+    {
+     "category": "summary",
+     "text": "NVIDIA NeMo Framework for all platforms contains a code injection vulnerability. A successful exploit of this vulnerability might lead to code execution, escalation of privileges, information disclosure, and data tampering.",
+     "title": "Vulnerability description"
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "attackComplexity": "LOW",
+      "attackVector": "LOCAL",
+      "availabilityImpact": "HIGH",
+      "baseScore": 7.8,
+      "baseSeverity": "HIGH",
+      "confidentialityImpact": "HIGH",
+      "integrityImpact": "HIGH",
+      "privilegesRequired": "LOW",
+      "scope": "UNCHANGED",
+      "userInteraction": "NONE",
+      "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "version": "3.1"
+     },
+     "products": [
+      "all_platforms_nvidia_nemo_framework_versions_0_0_to_2_7_2"
+     ]
+    }
+   ],
+   "cwe": {
+    "id": "CWE-94",
+    "name": "Improper Control of Generation of Code ('Code Injection')"
+   },
+   "product_status": {
+    "fixed": [
+     "all_platforms_nvidia_nemo_framework_2_7_3"
+    ],
+    "known_affected": [
+     "all_platforms_nvidia_nemo_framework_versions_0_0_to_2_7_2"
+    ]
+   }
+  },
+  {
+   "cve": "CVE-2026-24252",
+   "notes": [
+    {
+     "category": "summary",
+     "text": "NVIDIA NeMo for Linux contains a vulnerability where an attacker may cause OS command injection. A successful exploit of this vulnerability may lead to code execution, data tampering, escalation of privileges and information disclosure.",
+     "title": "Vulnerability description"
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "attackComplexity": "LOW",
+      "attackVector": "LOCAL",
+      "availabilityImpact": "HIGH",
+      "baseScore": 7.8,
+      "baseSeverity": "HIGH",
+      "confidentialityImpact": "HIGH",
+      "integrityImpact": "HIGH",
+      "privilegesRequired": "LOW",
+      "scope": "UNCHANGED",
+      "userInteraction": "NONE",
+      "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "version": "3.1"
+     },
+     "products": [
+      "all_platforms_nvidia_nemo_framework_versions_0_0_to_2_7_2"
+     ]
+    }
+   ],
+   "cwe": {
+    "id": "CWE-78",
+    "name": "Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+   },
+   "product_status": {
+    "fixed": [
+     "all_platforms_nvidia_nemo_framework_2_7_3"
+    ],
+    "known_affected": [
+     "all_platforms_nvidia_nemo_framework_versions_0_0_to_2_7_2"
+    ]
+   }
+  },
+  {
+   "cve": "CVE-2026-24228",
+   "notes": [
+    {
+     "category": "summary",
+     "text": " NVIDIA NeMo Framework for Linux contains a vulnerability where an attacker may cause deserialization of untrusted data. A successful exploit of this vulnerability may lead to code execution, escalation of privileges, data tampering, and information disclosure.",
+     "title": "Vulnerability description"
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "attackComplexity": "LOW",
+      "attackVector": "LOCAL",
+      "availabilityImpact": "HIGH",
+      "baseScore": 7.8,
+      "baseSeverity": "HIGH",
+      "confidentialityImpact": "HIGH",
+      "integrityImpact": "HIGH",
+      "privilegesRequired": "LOW",
+      "scope": "UNCHANGED",
+      "userInteraction": "NONE",
+      "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "version": "3.1"
+     },
+     "products": [
+      "all_platforms_nvidia_nemo_framework_versions_0_0_to_2_7_2"
+     ]
+    }
+   ],
+   "cwe": {
+    "id": "CWE-502",
+    "name": "Deserialization of Untrusted Data"
+   },
+   "product_status": {
+    "fixed": [
+     "all_platforms_nvidia_nemo_framework_2_7_3"
+    ],
+    "known_affected": [
+     "all_platforms_nvidia_nemo_framework_versions_0_0_to_2_7_2"
+    ]
+   }
+  }
+ ]
+}

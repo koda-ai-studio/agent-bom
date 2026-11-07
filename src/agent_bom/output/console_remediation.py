@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from rich.rule import Rule
 
 from agent_bom.core.severity import severity_rank
+from agent_bom.evidence.malicious_basis import is_suspected
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType, blast_radius_to_finding
 from agent_bom.models import AIBOMReport, Severity
 from agent_bom.output.compact import _pct
@@ -16,6 +17,7 @@ from agent_bom.output.finding_views import (
     finding_references,
     finding_severity,
     package_ecosystem,
+    package_malicious_reason,
     package_name,
     package_version,
 )
@@ -322,6 +324,7 @@ def _add_remediation_finding(g: dict, finding: Finding, severity_order: dict[Sev
     g["max_risk_score"] = max(g["max_risk_score"], finding.risk_score or 0.0)
     if getattr(finding, "is_malicious", False) or bool((finding.evidence or {}).get("package_is_malicious")):
         g["is_malicious"] = True
+        g["malicious_reason"] = package_malicious_reason(finding)
 
 
 def _update_remediation_fix(g: dict, finding: Finding, ecosystem: str, current: str) -> None:
@@ -405,11 +408,16 @@ def _finish_remediation_group(g: dict) -> dict:
 
 def _remediation_action(g: dict) -> str:
     if g["is_malicious"]:
-        action = f"Remove {g['package']} from all environments immediately"
+        g["suspected"] = is_suspected(g.get("malicious_reason"))
+        action = (
+            f"Confirm {g['package']} is the package you intended; remove it if not"
+            if g["suspected"]
+            else f"Remove {g['package']} from all environments immediately"
+        )
         g["fix"] = None
         g["command"] = build_remove_command(g["ecosystem"], g["package"])
         g["verify_command"] = None
-        g["reason"] = "known malicious package"
+        g["reason"] = g.get("malicious_reason") or "known malicious package"
     elif g["fix"]:
         action = f"Upgrade {g['package']} to {g['fix']}"
         g["command"] = build_fix_command(g["ecosystem"], g["package"], g["fix"])
@@ -435,7 +443,27 @@ def _fixable_severity_styles() -> dict[Severity, str]:
     return sev_style
 
 
-def _print_malicious(malicious: list[dict]) -> None:
+def _print_suspected(suspected: list[dict]) -> None:
+    if suspected:
+        _console().print(
+            f"  [yellow bold]⚠ {len(suspected)} SUSPECTED MALICIOUS package(s) — a name match, not a report of malware. "
+            "Confirm each on its registry; remove it if it is not what you intended:[/yellow bold]\n"
+        )
+        for item in suspected:
+            _console().print(
+                f"    [black on yellow] SUSPECTED [/black on yellow] "
+                f"[yellow bold]Confirm {item['package']}@{item['current']}[/yellow bold] [dim]({item.get('reason')})[/dim]"
+            )
+            if item.get("command"):
+                _console().print(f"      [dim]if unintended: $ {item['command']}[/dim]")
+            if item["agents"]:
+                _console().print(f"      [dim]agents:[/dim]  {', '.join(item['agents'][:3])}")
+        _console().print()
+
+
+def _print_malicious(flagged: list[dict]) -> None:
+    _print_suspected([item for item in flagged if item.get("suspected")])
+    malicious = [item for item in flagged if not item.get("suspected")]
     if malicious:
         _console().print(
             f"  [red bold]☠ {len(malicious)} MALICIOUS package(s) — remove immediately (do not wait for a patch):[/red bold]\n"

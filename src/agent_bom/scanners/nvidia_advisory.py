@@ -1,7 +1,7 @@
 """Supplemental NVIDIA security advisory enrichment.
 
 Fetches CSAF 2.0 advisories from NVIDIA's product-security GitHub repo and
-cross-references against GPU/ML packages found in scans.  This catches
+matches them to packages a bulletin's product actually identifies.  This catches
 NVIDIA CVEs that may not yet be indexed by OSV.dev's PyPI advisory database.
 """
 
@@ -25,18 +25,13 @@ logger = logging.getLogger(__name__)
 # GitHub raw URL for the NVIDIA product-security repo
 _GITHUB_API = "https://api.github.com/repos/NVIDIA/product-security/contents"
 
-# Map NVIDIA product names (from CSAF) to PyPI package prefixes.
-# Advisory product names are lowercased for matching.
-#
-# Two categories of entries:
-#   1. Direct NVIDIA packages (nvidia-*, cuda-*): explicitly ship NVIDIA binaries.
-#   2. Bundling frameworks (torch, jax, vllm, etc.): their PyPI wheels bundle CUDA/cuDNN
-#      binaries at specific versions. When NVIDIA publishes a CUDA Toolkit or cuDNN advisory,
-#      these packages are also affected because they vendor the vulnerable CUDA code.
+# CSAF product names (normalised by ``_product_key``) mapped to the PyPI packages
+# that ARE that product: NVIDIA's own redistributions of it. A package that links,
+# bundles or talks to a product is not identified by a bulletin about that product:
+# a CUDA Toolkit fix is not a torch release, and a Triton server fix is not a
+# tritonclient release. Those packages get their advisories from their own feeds.
 _NVIDIA_PRODUCT_MAP: dict[str, list[str]] = {
     "cuda toolkit": [
-        # Direct NVIDIA CUDA packages
-        "cuda-python",
         "nvidia-cuda-runtime-cu11",
         "nvidia-cuda-runtime-cu12",
         "nvidia-cuda-cupti-cu11",
@@ -54,85 +49,19 @@ _NVIDIA_PRODUCT_MAP: dict[str, list[str]] = {
         "nvidia-curand-cu11",
         "nvidia-curand-cu12",
         "nvidia-nvjitlink-cu12",
-        # Frameworks that bundle CUDA — affected by CUDA Toolkit CVEs
-        "torch",
-        "torchvision",
-        "torchaudio",
-        "jax",
-        "jaxlib",
-        "vllm",
-        "triton",  # OpenAI Triton compiles to CUDA PTX; CUDA driver vulnerabilities apply
-        "cupy",
-        "cupy-cuda11x",
-        "cupy-cuda12x",
-        "accelerate",  # Wraps CUDA training loops
-        "bitsandbytes",  # CUDA quantization kernels
-        "flash-attn",  # CUDA attention kernels
-        "xformers",  # Meta's CUDA memory-efficient attention
     ],
-    "cudnn": [
-        # Direct NVIDIA cuDNN packages
-        "nvidia-cudnn-cu11",
-        "nvidia-cudnn-cu12",
-        # Frameworks that bundle cuDNN
-        "torch",
-        "torchvision",
-        "torchaudio",
-        "jax",
-        "jaxlib",
-    ],
-    "nccl": [
-        # Direct NVIDIA NCCL packages
-        "nvidia-nccl-cu11",
-        "nvidia-nccl-cu12",
-        # Frameworks that use NCCL for multi-GPU collective operations
-        "torch",
-        "torchvision",
-    ],
-    "tensorrt": [
-        "tensorrt",
-        "nvidia-tensorrt",
-        "torch-tensorrt",  # PyTorch TensorRT integration
-    ],
-    "container toolkit": [
-        "nvidia-container-toolkit",
-    ],
-    "nvjpeg": [],  # Not typically a PyPI package, but tracked for image scans
-    "triton inference server": [
-        "tritonclient",
-        "tritonclientutils",
-    ],
-    "nim": [
-        # NVIDIA NIM (Inference Microservices) — containerized API for NVIDIA models
-        "nvidia-nim",
-        "nim-client",
-        "openai",  # NIM exposes OpenAI-compatible API; clients using openai SDK hit NIM endpoints
-    ],
-    "nemo": [
-        # NVIDIA NeMo — end-to-end framework for LLM training/fine-tuning
-        "nemo",
-        "nemo-toolkit",
-        "nemo-guardrails",
-        "megatron-core",
-    ],
-    "nemoclaw": [
-        # NVIDIA NemoClaw — open-source agentic AI platform (announced 2025)
-        "nemoclaw",
-        "nemo-agent",
-    ],
-    "morpheus": [
-        # NVIDIA Morpheus — AI cybersecurity framework
-        "morpheus-sdk",
-        "morpheus",
-    ],
-    "rapids": [
-        # NVIDIA RAPIDS — GPU-accelerated data science
-        "cudf",
-        "cuml",
-        "cugraph",
-        "cupy",
-        "raft-dask",
-    ],
+    "cudnn": ["nvidia-cudnn-cu11", "nvidia-cudnn-cu12"],
+    "nccl": ["nvidia-nccl-cu11", "nvidia-nccl-cu12"],
+    "tensorrt": ["tensorrt", "nvidia-tensorrt"],
+    "container toolkit": ["nvidia-container-toolkit"],
+    "nvjpeg": [],  # Ships in images and the toolkit, not as a PyPI package
+    "triton inference server": [],  # Ships as a container; tritonclient is a separate client library
+    "nim": ["nvidia-nim"],
+    "nemo framework": ["nemo-toolkit"],
+    "megatron lm": ["megatron-core"],
+    "nemoclaw": ["nemoclaw"],
+    "morpheus": ["morpheus-sdk", "morpheus"],
+    "rapids": ["cudf", "cuml", "cugraph", "raft-dask"],
 }
 
 # Reverse map: PyPI package name → NVIDIA product names it belongs to
@@ -159,12 +88,19 @@ _FIXED_ID_TOKENS: dict[str, tuple[str, ...]] = {
     "container toolkit": ("container_toolkit",),
 }
 _EXCLUDED_ID_TOKENS = ("windows", "vgpu", "virtual_gpu", "guest_driver")
-_ID_VERSION_RE = re.compile(r"(?:^|_)v?([0-9]+(?:_[0-9]+)+)$")
+# ``13_4_u1`` is CUDA Toolkit "13.4 Update 1"; NVIDIA numbers that release 13.4.1.
+_ID_VERSION_RE = re.compile(r"(?:^|_)[vr]?([0-9]+(?:_u?[0-9]+)+)$")
 
 
 def _normalise(name: str) -> str:
     """Normalise package name for comparison (lowercase, underscores)."""
     return name.lower().replace("-", "_")
+
+
+def _product_key(name: str) -> str:
+    """A CSAF product name as ``_NVIDIA_PRODUCT_MAP`` spells it: ``NVIDIA® CUDA Toolkit`` -> ``cuda toolkit``."""
+    words = re.sub(r"[®™]", "", name).replace("-", " ").lower().split()
+    return " ".join(words[1:] if words[:1] == ["nvidia"] else words)
 
 
 def get_nvidia_products_for_package(pkg_name: str) -> list[str]:
@@ -191,7 +127,7 @@ def nvidia_products_for(pkg: Package) -> list[str]:
 
 def _id_version(product_id: str) -> str | None:
     match = _ID_VERSION_RE.search(str(product_id))
-    return match[1].replace("_", ".") if match else None
+    return match[1].replace("_u", ".").replace("_", ".") if match else None
 
 
 def _branch_fixed_version(fixed_ids: list[str], product: str, version: str) -> str | None:
@@ -424,6 +360,51 @@ def _identified_component_vulns(csaf: dict, csaf_vulns: list[Vulnerability], pkg
     return out
 
 
+def _csaf_product_ids(csaf: dict) -> dict[str, str]:
+    """Each CSAF ``product_id`` mapped to its product's normalised name."""
+    names: dict[str, str] = {}
+
+    def walk(branches: list, depth: int = 0) -> None:
+        if depth > 8:
+            return
+        for branch in branches:
+            product = branch.get("product") or {}
+            if product.get("product_id"):
+                names[str(product["product_id"])] = _product_key(str(branch.get("name") or product.get("name") or ""))
+            walk(branch.get("branches") or [], depth + 1)
+
+    walk((csaf.get("product_tree") or {}).get("branches") or [])
+    return names
+
+
+def _product_vulns(csaf: dict, csaf_vulns: list[Vulnerability], product: str) -> list[Vulnerability]:
+    """Copies of the CVEs whose ``product_status`` names ``product``, each with that product's own fix.
+
+    A bulletin can list several products; one's fix says nothing about another.
+    A fix that cannot be read as a version cannot be compared, so it is not asserted.
+    """
+    names = _csaf_product_ids(csaf)
+    by_cve = {vuln.id: vuln for vuln in csaf_vulns}
+    out: list[Vulnerability] = []
+    for vuln_data in csaf.get("vulnerabilities", []):
+        vuln = by_cve.get(str(vuln_data.get("cve", "")))
+        status = vuln_data.get("product_status") or {}
+        fixed_ids = [str(pid) for pid in status.get("fixed") or [] if names.get(str(pid)) == product]
+        affected = any(names.get(str(pid)) == product for pid in status.get("known_affected") or [])
+        if vuln is None or not (affected or fixed_ids):
+            continue
+        fixes = sorted(
+            {fix for pid in fixed_ids if (fix := _id_version(pid))},
+            key=cmp_to_key(lambda a, b: compare_version_order(a, b, "generic") or 0),
+        )
+        if fixed_ids and not fixes:
+            continue
+        scoped = copy.deepcopy(vuln)
+        scoped.fixed_version = fixes[0] if fixes else None
+        out.append(scoped)
+    return out
+
+
 def _apply_csaf_to_packages(
     csaf: dict,
     csaf_vulns: list[Vulnerability],
@@ -442,7 +423,7 @@ def _apply_csaf_to_packages(
             if _identity_product(pkg) == product:
                 added += _add_new_vulns(pkg, _identified_component_vulns(csaf, csaf_vulns, pkg, product), compare=False)
             else:
-                added += _add_new_vulns(pkg, csaf_vulns)
+                added += _add_new_vulns(pkg, _product_vulns(csaf, csaf_vulns, product))
     return added
 
 

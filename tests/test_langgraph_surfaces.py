@@ -169,6 +169,10 @@ def test_same_layout_projects_get_distinct_framework_agents_owned_by_their_proje
 def test_project_agent_contains_its_top_level_framework_graphs(report: dict) -> None:
     graph = build_unified_graph_from_report(report)
     host = next(n for n in graph.nodes_by_type(EntityType.AGENT) if n.attributes.get("code_agents"))
-    contained = {graph.nodes[e.target].label for e in graph.adjacency.get(host.id, []) if e.relationship == RelationshipType.CONTAINS}
+    contained = {
+        graph.nodes[e.target].label
+        for e in graph.adjacency.get(host.id, [])
+        if e.relationship == RelationshipType.CONTAINS and graph.nodes[e.target].entity_type == EntityType.AGENT
+    }
 
     assert contained == {"builder"}  # research_builder nests under its research node

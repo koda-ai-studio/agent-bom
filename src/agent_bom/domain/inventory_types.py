@@ -72,6 +72,8 @@ class ServerSurface(str, Enum):
     SAST = "sast"
     AI_INVENTORY = "ai-inventory"
     DATA_CONNECTION = "data-connection"  # a data-platform CLI connection profile, e.g. Snowflake CLI
+    NOTEBOOK = "notebook"  # a Jupyter notebook's packages and credential references
+    CI_WORKFLOW = "ci-workflow"  # a CI workflow file's packages and credential references
     OTHER = "other"
 
 

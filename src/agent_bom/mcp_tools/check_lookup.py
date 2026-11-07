@@ -7,6 +7,7 @@ from typing import Any
 from urllib.parse import quote
 
 from agent_bom import http_client
+from agent_bom.evidence.malicious_basis import malicious_message, malicious_verdict_value
 from agent_bom.malicious import check_typosquat, is_malicious_osv_record
 from agent_bom.scanners.local_data_freshness import CheckDataEvidence, check_data_evidence
 from agent_bom.scanners.osv_details import OSV_API_URL
@@ -132,7 +133,7 @@ async def unpublished_malware_reason(published: bool, name: str, version: str, e
 
 def malicious_verdict(pkg, name: str, reason: str, service_result) -> str:
     pkg.is_malicious, pkg.malicious_reason = True, reason
-    return service_result("malicious", f"MALICIOUS package {name} — {reason}. Do not install.")
+    return service_result(malicious_verdict_value(reason), malicious_message(name, reason))
 
 
 def unresolved_result(pkg, name: str, eco: str, malicious_reason: str | None, service_result) -> str:

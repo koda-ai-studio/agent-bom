@@ -1,0 +1,18 @@
+{
+  "source": "Synthetic values written for this corpus; each line records what the rules must and must not report.",
+  "findings": [
+    {"file": ".env", "line": 1, "type": "Generic API Key"},
+    {"file": ".env", "line": 2, "type": ".env password"},
+    {"file": "config.yaml", "line": 1, "type": "Generic API Key"},
+    {"file": "config.yaml", "line": 6, "type": "US SSN"},
+    {"file": "config.yaml", "line": 7, "type": "US SSN"},
+    {"file": "config.yaml", "line": 8, "type": "US Phone Number"},
+    {"file": "locales/fr_FR.json", "line": 6, "type": "Hardcoded password"},
+    {"file": "notes.md", "line": 2, "type": "Generic API Key"},
+    {"file": "settings.py", "line": 10, "type": "Generic API Key"},
+    {"file": "settings.py", "line": 11, "type": "Hardcoded password"},
+    {"file": "settings.py", "line": 12, "type": "Generic API Key"},
+    {"file": "settings.py", "line": 13, "type": "Connection String"},
+    {"file": "src/messages.ts", "line": 4, "type": "Hardcoded password"}
+  ]
+}

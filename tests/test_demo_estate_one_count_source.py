@@ -9,6 +9,7 @@ the estate), each response must say which one it carries.
 
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests._demo_estate_fixtures import VIEWER
@@ -169,8 +170,10 @@ def _check_unique_credentials_match_the_posture_dimension_on_the_same_inventory(
     assert details.startswith(f"{len(names)} unique credentials"), (sorted(names), details)
 
 
-def test_every_surface_reads_one_count_source(demo_estate_client: TestClient) -> None:
+def test_every_surface_reads_one_count_source(demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """One bootstrap, every check: the seed is the expensive part."""
+    # This compares counts. A stalled runner passing the facet deadline is labelled partial, which is correct.
+    monkeypatch.setattr("agent_bom.api.finding_facets._FACET_DEADLINE_SECONDS", 60)
     surfaces = _surfaces(demo_estate_client)
     _check_issue_severity_is_one_number_on_every_surface(surfaces)
     _check_occurrence_counts_are_labelled_as_a_different_unit(surfaces)

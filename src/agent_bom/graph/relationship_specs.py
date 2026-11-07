@@ -187,8 +187,10 @@ _SPECS: tuple[RelationshipSpec, ...] = (
             (E.CLUSTER, E.RESOURCE),
             (E.RESOURCE, E.CONTAINER),
             (E.RESOURCE, E.SERVICE_ACCOUNT),
-            # A project agent contains the framework graphs its source declares.
+            # A project agent contains the framework graphs its source declares
+            # and the manifest directories its repository holds.
             (E.AGENT, E.AGENT),
+            (E.AGENT, E.DIRECTORY),
             # Organization hierarchy: a parent organization nests sub-organizations.
             (E.ORG, E.ORG),
             # Warehouse hierarchy (database -> schema) and a directory's code modules.

@@ -12,6 +12,7 @@ from rich.tree import Tree
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_worst_first_rank
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.core.terminal import safe_emoji as safe_emoji
+from agent_bom.evidence.malicious_basis import is_suspected
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.cis_posture import ERROR, INCOMPLETE, NOT_EVALUATED, PASS, cis_pass_rate, cis_verdict
 from agent_bom.output.compact import _compact_detail, _coverage_bar
@@ -36,6 +37,7 @@ from agent_bom.output.finding_views import (
     is_actionable_finding,
     is_package_malicious,
     package_ecosystem,
+    package_malicious_reason,
     package_name,
     package_version,
     sanitize_output_text,
@@ -226,7 +228,7 @@ def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
 
         # Malicious package indicator
         if is_package_malicious(finding):
-            kev_display += " [red bold]☠[/red bold]"
+            kev_display += " [yellow bold]⚠[/yellow bold]" if is_suspected(package_malicious_reason(finding)) else " [red bold]☠[/red bold]"
 
         # Blast column: agents/creds compact
         blast_parts = []
