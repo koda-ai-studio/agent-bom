@@ -247,6 +247,7 @@ def test_every_postgres_store_guards_runtime_schema_ddl() -> None:
             "rate_limit_store.py",
             "proxy_replay_store.py",
             "shared_auth_state.py",
+            "auth_failure_store.py",
             "storage/gateway_delivery.py",
         )
     )
@@ -302,6 +303,7 @@ def test_migration_schema_covers_every_runtime_postgres_table_and_component() ->
             "storage/gateway_delivery.py",
             "lifecycle_store.py",
             "shared_auth_state.py",
+            "auth_failure_store.py",
         )
     )
     runtime_paths.extend(_sql_layer_bootstrap_modules())
@@ -314,8 +316,8 @@ def test_migration_schema_covers_every_runtime_postgres_table_and_component() ->
     migration_sql = (ROOT / "deploy" / "supabase" / "postgres" / "runtime-schema.sql").read_text()
     authority_sql = _schema_authority_sql()
 
-    runtime_tables = set(re.findall(r"CREATE TABLE IF NOT EXISTS\s+([a-z_]+)", runtime_source, re.IGNORECASE))
-    migrated_tables = set(re.findall(r"CREATE TABLE IF NOT EXISTS\s+([a-z_]+)", authority_sql, re.IGNORECASE))
+    runtime_tables = set(re.findall(r"CREATE TABLE IF NOT EXISTS\s+(?:public\.)?([a-z_]+)", runtime_source, re.IGNORECASE))
+    migrated_tables = set(re.findall(r"CREATE TABLE IF NOT EXISTS\s+(?:public\.)?([a-z_]+)", authority_sql, re.IGNORECASE))
     assert runtime_tables - migrated_tables == set()
 
     components = set(re.findall(r'(?:ensure_postgres_schema_version\(\w+,\s*|\.bootstrap\(\s*)"([^"]+)"', runtime_source))
