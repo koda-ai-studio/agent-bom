@@ -155,6 +155,23 @@ def test_platform_quickstart_names_persistence_defect() -> None:
     assert "zstandard" in result.defects[0]["summary"]
 
 
+def test_platform_quickstart_names_windows_lookup_defect() -> None:
+    result = common.LaneResult("platforms", "x")
+    run = common.RunResult(1, 1.0, None, "", "Error: Could not locate the 'agent-bom' executable to run the scan.")
+    platforms.record_quickstart_defect(result, run, sys.executable, missing_module=None)
+    assert result.defects[0]["id"] == "quickstart-run-cannot-find-itself-on-windows"
+
+
+def test_accuracy_failures_become_named_defects() -> None:
+    target = accuracy.Target(name="t", kind="image", ref="img", sentinels=(), min_packages=1)
+    result = common.LaneResult("accuracy", "t")
+    report = _report(blast_radius=[{"vulnerability_id": "DSA-1", "severity": "unknown"}])
+    accuracy.assert_report(result, target, report, returncode=1)
+    accuracy.record_defects(result, target)
+    assert [defect["id"] for defect in result.defects] == ["advisories-have-no-severity"]
+    assert "img" in result.defects[0]["reproduction"]
+
+
 def test_accuracy_targets_are_pinned_exactly() -> None:
     for target in accuracy.TARGETS.values():
         if target.kind == "repo":
@@ -266,7 +283,13 @@ def test_baseline_extract_reads_lane_metrics(tmp_path: Path) -> None:
     lane = common.LaneResult("performance", "sqlite")
     lane.check("ok", True)
     lane.measurements["estates"] = {
-        "small": {"ingest_seconds": 1.5, "graph": {"p95_ms": 9.0}, "findings": {"p95_ms": 4.0}, "api_peak_rss_mb": 300}
+        "small": {
+            "ingest_status": "stored",
+            "ingest_seconds": 1.5,
+            "graph": {"p95_ms": 9.0},
+            "findings": {"p95_ms": 4.0},
+            "api_peak_rss_mb": 300,
+        }
     }
     lane.write(tmp_path)
     metrics = baseline.extract(tmp_path)
@@ -274,6 +297,18 @@ def test_baseline_extract_reads_lane_metrics(tmp_path: Path) -> None:
     assert metrics["performance/sqlite/small/graph_p95_ms"] == 9.0
     assert metrics["performance/sqlite/small/findings_p95_ms"] == 4.0
     assert metrics["performance/sqlite/small/api_peak_rss_mb"] == 300
+
+
+def test_baseline_ignores_unfinished_estates_and_unreached_scale(tmp_path: Path) -> None:
+    lane = common.LaneResult("performance", "sqlite")
+    lane.check("ok", True)
+    lane.measurements["estates"] = {
+        "done": {"ingest_status": "stored", "ingest_seconds": 1.0},
+        "probe": {"ingest_status": "timed_out", "ingest_seconds": 600.0},
+    }
+    lane.measurements["scale"] = {"reached_target": False, "elapsed_seconds": 1500.0, "steps": []}
+    lane.write(tmp_path)
+    assert baseline.extract(tmp_path) == {"performance/sqlite/done/ingest_seconds": 1.0}
 
 
 def test_workflow_is_manual_and_path_limited_with_read_only_permissions() -> None:

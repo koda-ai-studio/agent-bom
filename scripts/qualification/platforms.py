@@ -60,6 +60,13 @@ def _load(path: Path) -> Any:
 
 
 def record_quickstart_defect(result: LaneResult, run: RunResult, python: str, *, missing_module: str | None) -> None:
+    if "Could not locate the 'agent-bom' executable" in run.stdout + run.stderr:
+        result.defect(
+            "quickstart-run-cannot-find-itself-on-windows",
+            "`agent-bom quickstart --run` looks beside the interpreter for `agent-bom` without .exe, so it needs the venv on PATH",
+            "uv venv v && uv pip install --python v\\Scripts\\python.exe . && v\\Scripts\\agent-bom.exe quickstart --run",
+        )
+        return
     if "could not be verified in the control-plane database" not in run.stdout + run.stderr:
         return
     cause = f"the job store imports {missing_module}, which a base install lacks" if missing_module else "see the run log"

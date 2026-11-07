@@ -48,10 +48,16 @@ def extract(directory: Path) -> dict[str, float]:
         prefix = f"{document['lane']}/{document['variant']}"
         measured = document.get("measurements") or {}
         for estate, values in (measured.get("estates") or {}).items():
+            if values.get("ingest_status") != "stored":
+                continue
             for name, keys in _ESTATE_METRICS.items():
                 value = _dig(values, keys)
                 if isinstance(value, (int, float)):
                     metrics[f"{prefix}/{estate}/{name}"] = float(value)
+        scale = measured.get("scale") or {}
+        if scale.get("reached_target"):
+            metrics[f"{prefix}/scale/elapsed_seconds"] = float(scale["elapsed_seconds"])
+            metrics[f"{prefix}/scale/findings_p95_ms"] = float(scale["steps"][-1]["findings_read"]["p95_ms"])
         if document["lane"] == "accuracy":
             for name in ("duration_seconds", "peak_rss_mb"):
                 if isinstance(measured.get(name), (int, float)):

@@ -152,6 +152,24 @@ def port_forward_api() -> tuple[subprocess.Popen[bytes], str]:
     return process, f"http://127.0.0.1:{port}"
 
 
+def helm_uninstall(result: LaneResult, release: str, namespace: str) -> None:
+    """Uninstall as a user would; a failing hook is a defect, then removal continues without hooks."""
+    uninstall = run_measured(["helm", "uninstall", release, "--namespace", namespace, "--wait", "--timeout", "3m"], timeout=240)
+    error = uninstall.stdout + uninstall.stderr
+    result.check(f"helm_uninstall_{release}", uninstall.returncode == 0, tail(error))
+    if uninstall.returncode == 0:
+        return
+    hook_log = kubectl("logs", "-n", namespace, "-l", "app.kubernetes.io/component=teardown-hook", "--tail", "25").stdout
+    result.measurements[f"helm_uninstall_{release}_hook_log"] = tail(hook_log, 25)
+    if not any(defect["id"] == "helm-uninstall-hook-fails" for defect in result.defects):
+        result.defect(
+            "helm-uninstall-hook-fails",
+            f"`helm uninstall` exits 1 because the pre-delete cleanup Job fails: {tail(hook_log, 3) or tail(error, 2)}",
+            "kind create cluster && helm install x deploy/helm/agent-bom -n x --create-namespace --wait && helm uninstall x -n x --wait",
+        )
+    run_measured(["helm", "uninstall", release, "--namespace", namespace, "--no-hooks", "--wait", "--timeout", "3m"], timeout=240)
+
+
 def run_helm(result: LaneResult) -> None:
     tools = {
         name: subprocess.run(command, capture_output=True, text=True).stdout.strip()[:120]
@@ -171,7 +189,7 @@ def run_helm(result: LaneResult) -> None:
     result.check("helm_default_values_create_workloads", bool(resources), resources)
 
     # The default and pilot releases both own the cluster-scoped agent-bom-reader ClusterRole.
-    run_measured(["helm", "uninstall", "scanner", "--namespace", "scanner-only", "--wait", "--timeout", "2m"], timeout=180)
+    helm_uninstall(result, "scanner", "scanner-only")
     prepare_pilot_namespace()
     stock = helm_install("agent-bom", NAMESPACE, "-f", str(PILOT_VALUES))
     result.measurements["helm_pilot_install_seconds"] = stock.seconds
@@ -201,8 +219,7 @@ def run_helm(result: LaneResult) -> None:
         assert_api(result, "helm_api", base, expect_write=False)
     finally:
         forward.terminate()
-    uninstall = run_measured(["helm", "uninstall", "agent-bom", "--namespace", NAMESPACE, "--wait", "--timeout", "3m"], timeout=240)
-    result.check("helm_uninstall", uninstall.returncode == 0, tail(uninstall.stdout + uninstall.stderr))
+    helm_uninstall(result, "agent-bom", NAMESPACE)
 
 
 def main() -> int:

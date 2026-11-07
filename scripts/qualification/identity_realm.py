@@ -132,6 +132,7 @@ def _saml_client(acs_url: str) -> dict[str, Any]:
         "attributes": {
             "saml_assertion_consumer_url_post": acs_url,
             "saml_idp_initiated_sso_url_name": SAML_URL_NAME,
+            "saml.authnstatement": "true",
             "saml.assertion.signature": "true",
             "saml.server.signature": "true",
             "saml.client.signature": "false",

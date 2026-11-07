@@ -181,6 +181,31 @@ def assert_report(result: LaneResult, target: Target, report: dict[str, Any], *,
     )
 
 
+_DEFECTS = {
+    "advisories_have_severity": (
+        "advisories-have-no-severity",
+        "every advisory in a fresh-install scan has unknown severity and no CVE id",
+    ),
+    "no_phantom_mcp_servers": (
+        "workflows-and-notebooks-counted-as-mcp-servers",
+        "summary.total_mcp_servers counts non-MCP items in a target with no MCP",
+    ),
+    "no_false_malicious_verdicts": (
+        "typosquat-guess-reported-as-malicious",
+        "a name-distance guess is reported as a critical malicious package",
+    ),
+}
+
+
+def record_defects(result: LaneResult, target: Target) -> None:
+    """Name the product defect behind a failed ground-truth check, with its reproduction."""
+    command = f"agent-bom scan <checkout of {target.ref}@{target.commit}>" if target.kind == "repo" else f"agent-bom image {target.ref}"
+    for item in result.checks:
+        if not item["ok"] and item["name"] in _DEFECTS:
+            defect_id, summary = _DEFECTS[item["name"]]
+            result.defect(defect_id, f"{summary}: {item['detail']}", f"{command} -f json -o report.json (fresh HOME, no local advisory DB)")
+
+
 def fetch_repo(target: Target, destination: Path) -> None:
     git = ["git", "-c", "core.hooksPath=/dev/null", "-c", "protocol.file.allow=never", "-C", str(destination)]
     env = {**os.environ, "GIT_LFS_SKIP_SMUDGE": "1", "GIT_TERMINAL_PROMPT": "0"}
@@ -219,6 +244,7 @@ def run_target(target: Target, workdir: Path) -> LaneResult:
     result.measurements.update(measurements(report))
     print(tail(run.stdout, 15))
     assert_report(result, target, report, returncode=run.returncode)
+    record_defects(result, target)
     return result
 
 
