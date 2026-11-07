@@ -7,6 +7,7 @@ import pytest
 
 from agent_bom.api.scim_store import SCIMGroup, SCIMUser, SQLiteSCIMStore
 from agent_bom.api.storage.registry_import import import_registries, read_source
+from tests.sqlite_snapshot import checkpointed_bytes
 
 TABLES = ["scim_users", "scim_groups"]
 
@@ -21,7 +22,7 @@ def seed(path):
 def test_scim_recovery_requires_complete_read_only_snapshot(tmp_path):
     path = tmp_path / "scim.db"
     user, group = seed(path)
-    before = path.read_bytes()
+    before = checkpointed_bytes(path)
     rows = read_source(path, {"source": "target"}, TABLES)
     restored = next(record for table, record, _ in rows if table == "scim_users")
     assert not restored.active and restored.updated_at == user.updated_at
