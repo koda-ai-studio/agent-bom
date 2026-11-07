@@ -1,18 +1,5 @@
 {{- if .Values.teardownHooks.enabled }}
-{{- $defaults := .Values.controlPlane.externalSecrets }}
-{{- $secrets := list }}
-{{- if $defaults.enabled }}
-{{- $secrets = $defaults.secrets }}
-{{- if not $secrets }}
-{{- $secrets = list (dict "target" $defaults.target) }}
-{{- end }}
-{{- end }}
-{{- $targetSecretNames := list }}
-{{- range $secret := $secrets }}
-{{- $target := default (dict) (get $secret "target") }}
-{{- $targetSecretNames = append $targetSecretNames (default $defaults.target.name (get $target "name")) }}
-{{- end }}
-{{- $targetSecretNames = concat $targetSecretNames (.Values.teardownHooks.extraTargetSecrets | default list) }}
+{{- $targetSecretNames := include "agent-bom.teardownTargetSecrets" . | fromJsonArray }}
 {{- range $hook := list "pre-delete" "post-delete" }}
 ---
 apiVersion: batch/v1
@@ -51,7 +38,7 @@ spec:
             - --namespace
             - {{ $.Release.Namespace }}
             - --label-selector
-            - app.kubernetes.io/name={{ include "agent-bom.name" $ }},app.kubernetes.io/instance={{ $.Release.Name }},app.kubernetes.io/managed-by={{ $.Release.Service }}
+            - app.kubernetes.io/name={{ include "agent-bom.name" $ }},app.kubernetes.io/instance={{ $.Release.Name }},app.kubernetes.io/managed-by={{ $.Release.Service }},app.kubernetes.io/component!=teardown-hook
             {{- range $targetName := $targetSecretNames }}
             - --target-secret
             - {{ $targetName | quote }}

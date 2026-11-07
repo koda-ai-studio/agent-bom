@@ -51470,6 +51470,22 @@
               "schema": {
                 "$ref": "#/components/schemas/SAMLLoginRequest"
               }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "RelayState": {
+                    "type": "string"
+                  },
+                  "SAMLResponse": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "SAMLResponse"
+                ],
+                "type": "object"
+              }
             }
           },
           "required": true
@@ -51486,6 +51502,12 @@
               }
             },
             "description": "Successful Response"
+          },
+          "303": {
+            "description": "IdP form post verified: browser session started, redirected to the dashboard."
+          },
+          "413": {
+            "description": "SAML form exceeds the size limit."
           },
           "4XX": {
             "content": {

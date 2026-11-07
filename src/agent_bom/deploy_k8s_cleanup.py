@@ -123,7 +123,10 @@ def execute_cleanup(operations: list[CleanupOperation]) -> int:
 
     failed = 0
     for operation in operations:
-        query = {"labelSelector": operation.label_selector} if operation.target == "collection" and operation.label_selector else None
+        query = None
+        if operation.target == "collection" and operation.label_selector:
+            # batch/v1 Jobs orphan their pods unless the delete asks for propagation.
+            query = {"labelSelector": operation.label_selector, "propagationPolicy": "Background"}
         status, body = _request("DELETE", operation.api_path, query=query)
         if status in {200, 202, 404}:
             suffix = operation.name or operation.label_selector or ""

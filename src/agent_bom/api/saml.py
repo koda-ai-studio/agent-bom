@@ -7,7 +7,9 @@ agent-bom control-plane auth model:
 - agent-bom verifies the assertion against operator-supplied SAML metadata
 - the verified subject is mapped to the same role/tenant model used by OIDC
 - the control plane returns a short-lived API key that the UI/API already knows
-  how to enforce, audit, expire, and scope by tenant
+  how to enforce, audit, expire, and scope by tenant. An IdP's browser form post
+  (the HTTP-POST binding) receives that key as an HttpOnly browser session
+  instead; a JSON client receives it in the response body
 
 Configuration via environment variables::
 

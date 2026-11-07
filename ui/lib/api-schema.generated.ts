@@ -28275,6 +28275,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SAMLLoginRequest"];
+                "application/x-www-form-urlencoded": {
+                    RelayState?: string;
+                    SAMLResponse: string;
+                };
             };
         };
         responses: {
@@ -28288,6 +28292,20 @@ export interface operations {
                         [key: string]: unknown;
                     };
                 };
+            };
+            /** @description IdP form post verified: browser session started, redirected to the dashboard. */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description SAML form exceeds the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
             "4XX": {

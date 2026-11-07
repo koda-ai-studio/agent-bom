@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import secrets
 import time
+from collections.abc import Callable, Coroutine
 from datetime import datetime, timedelta, timezone
+from typing import Any
+from urllib.parse import parse_qs
 
-from fastapi import APIRouter, HTTPException, Request
+import anyio.to_thread
+from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.routing import APIRoute
 
+from agent_bom.api import audit_log
 from agent_bom.api.models import SAMLLoginRequest
 from agent_bom.api.routes.enterprise_routes._session_helpers import (
     _check_auth_session_rate_limit,
@@ -25,6 +31,10 @@ from agent_bom.core.settings import env_raw
 from agent_bom.security import sanitize_error, sanitize_text
 
 router = APIRouter()
+
+SAML_FORM_MAX_BYTES = 1024 * 1024
+_SAML_FORM_MAX_FIELDS = 8
+_SAML_FORM_CONTENT_TYPE = "application/x-www-form-urlencoded"
 
 
 def _snowflake_login_nonce(state: str) -> str:
@@ -131,7 +141,6 @@ def snowflake_oauth_callback(
     absent). Role defaults to the configured least-privilege role and is only
     elevated by an explicit SCIM mapping for the user.
     """
-    from agent_bom.api.audit_log import log_action
     from agent_bom.api.auth import Role, resolve_scim_user_role
     from agent_bom.api.oidc import OIDCError
     from agent_bom.api.oidc_browser import OIDC_PKCE_COOKIE_NAME, open_pkce_cookie
@@ -185,7 +194,7 @@ def snowflake_oauth_callback(
     )
     secure = _session_cookie_secure(request)
     response.delete_cookie(OIDC_PKCE_COOKIE_NAME, httponly=True, secure=secure, samesite="lax", path="/")
-    log_action(
+    audit_log.log_action(
         "auth.snowflake_oauth_login",
         actor=subject,
         resource="auth/snowflake",
@@ -225,11 +234,7 @@ def saml_relay_state() -> dict:
     }
 
 
-@router.post("/auth/saml/login", tags=["enterprise"], status_code=201)
-def saml_login(req: SAMLLoginRequest) -> dict:
-    """Verify a SAML assertion and return a short-lived API key."""
-    from agent_bom.api.audit_log import log_action
-    from agent_bom.api.auth import Role, create_api_key, get_key_store, resolve_scim_user_role
+def _verify_saml_login(req: SAMLLoginRequest) -> tuple[Any, Any]:
     from agent_bom.api.saml import SAML_INSTALL_HINT, SAMLConfig, SAMLError, saml_runtime_available
 
     if not saml_runtime_available():
@@ -244,11 +249,16 @@ def saml_login(req: SAMLLoginRequest) -> dict:
         _consume_saml_response_once(req.saml_response, ttl_seconds=cfg.session_ttl_seconds)
     except SAMLError as exc:
         raise HTTPException(status_code=401, detail=sanitize_error(exc)) from exc
+    return cfg, assertion
+
+
+def _mint_saml_key(cfg: Any, assertion: Any) -> tuple[str, Any]:
+    from agent_bom.api.auth import Role, create_api_key, resolve_scim_user_role
 
     expires_at = (datetime.now(timezone.utc) + timedelta(seconds=cfg.session_ttl_seconds)).isoformat()
     scim_resolution = resolve_scim_user_role(assertion.tenant_id, assertion.subject)
     scim_subject_id = scim_resolution.user_id if scim_resolution.user_id else assertion.subject
-    raw_key, api_key = create_api_key(
+    return create_api_key(
         name=f"saml:{assertion.subject}",
         role=Role(assertion.role),
         expires_at=expires_at,
@@ -261,8 +271,13 @@ def saml_login(req: SAMLLoginRequest) -> dict:
         scim_subject_id=scim_subject_id,
         principal_id=scim_subject_id,
     )
+
+
+def _record_saml_login(api_key: Any, assertion: Any) -> None:
+    from agent_bom.api.auth import get_key_store
+
     get_key_store().add(api_key)
-    log_action(
+    audit_log.log_action(
         "auth.saml_login",
         actor=assertion.subject,
         resource=f"key/{api_key.key_id}",
@@ -270,6 +285,13 @@ def saml_login(req: SAMLLoginRequest) -> dict:
         tenant_id=assertion.tenant_id,
         session_index=assertion.session_index,
     )
+
+
+def saml_login(req: SAMLLoginRequest) -> dict:
+    """Verify a SAML assertion and return a short-lived API key."""
+    cfg, assertion = _verify_saml_login(req)
+    raw_key, api_key = _mint_saml_key(cfg, assertion)
+    _record_saml_login(api_key, assertion)
     return {
         "raw_key": raw_key,
         "key_id": api_key.key_id,
@@ -280,3 +302,94 @@ def saml_login(req: SAMLLoginRequest) -> dict:
         "attributes": assertion.attributes,
         "message": "Use this short-lived key as Authorization: Bearer <key> for the control-plane session.",
     }
+
+
+async def _read_saml_form(request: Request) -> SAMLLoginRequest:
+    """Parse the HTTP-POST binding from a bounded body; unknown controls are ignored, as the binding allows."""
+    raw = bytearray()
+    async for chunk in request.stream():
+        raw += chunk
+        if len(raw) > SAML_FORM_MAX_BYTES:
+            raise HTTPException(status_code=413, detail="SAML form exceeds the size limit")
+    try:
+        fields = parse_qs(
+            raw.decode("ascii"),
+            keep_blank_values=True,
+            strict_parsing=bool(raw),
+            max_num_fields=_SAML_FORM_MAX_FIELDS,
+            errors="strict",
+        )
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Malformed SAML form") from None
+    responses = fields.get("SAMLResponse", [])
+    relay_states = fields.get("RelayState", [])
+    if len(responses) != 1 or not responses[0].strip() or len(relay_states) > 1:
+        raise HTTPException(status_code=422, detail="SAML form requires one SAMLResponse and at most one RelayState")
+    return SAMLLoginRequest(saml_response=responses[0], relay_state=relay_states[0] if relay_states else None)
+
+
+def _saml_browser_login(request: Request, req: SAMLLoginRequest) -> RedirectResponse:
+    """Finish an IdP form post: the key backs an HttpOnly session and never reaches the page.
+
+    The redirect target is fixed. RelayState only ever redeems a server-issued
+    one-time nonce, so a submitted value cannot steer the browser anywhere.
+    """
+    _check_auth_session_rate_limit(request)
+    cfg, assertion = _verify_saml_login(req)
+    _raw_key, api_key = _mint_saml_key(cfg, assertion)
+    response = RedirectResponse(url="/", status_code=303, headers={"Cache-Control": "no-cache, no-store"})
+    _set_browser_session_cookie(
+        response,
+        request,
+        subject=api_key.name,
+        role=api_key.role.value,
+        tenant_id=api_key.tenant_id,
+        auth_method="saml",
+        key_id=api_key.key_id,
+        scopes=[],
+    )
+    _record_saml_login(api_key, assertion)
+    return response
+
+
+class _SAMLAssertionConsumerRoute(APIRoute):
+    """Serve the SAML HTTP-POST binding beside the typed JSON contract on one path."""
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        json_handler = super().get_route_handler()
+
+        async def handler(request: Request) -> Response:
+            content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+            if content_type != _SAML_FORM_CONTENT_TYPE:
+                return await json_handler(request)
+            login = await _read_saml_form(request)
+            return await anyio.to_thread.run_sync(_saml_browser_login, request, login)
+
+        return handler
+
+
+router.add_api_route(
+    "/auth/saml/login",
+    saml_login,
+    methods=["POST"],
+    tags=["enterprise"],
+    status_code=201,
+    route_class_override=_SAMLAssertionConsumerRoute,
+    responses={
+        303: {"description": "IdP form post verified: browser session started, redirected to the dashboard."},
+        413: {"description": "SAML form exceeds the size limit."},
+    },
+    openapi_extra={
+        "requestBody": {
+            "content": {
+                _SAML_FORM_CONTENT_TYPE: {
+                    "schema": {
+                        "type": "object",
+                        "required": ["SAMLResponse"],
+                        "properties": {"SAMLResponse": {"type": "string"}, "RelayState": {"type": "string"}},
+                    }
+                }
+            }
+        }
+    },
+)

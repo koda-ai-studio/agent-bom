@@ -145,11 +145,10 @@ python scripts/install_helm_profile.py synthetic-enterprise-story --print-comman
 python scripts/install_helm_profile.py synthetic-enterprise-story
 ```
 
-The profile is single-node SQLite, seeds only the synthetic estate, disables
-the scanner, and grants anonymous viewer access. Change the example ingress
-host before installation. For a shared or persistent environment, remove
-`AGENT_BOM_ALLOW_UNAUTHENTICATED_API`, configure API-key or OIDC authentication,
-and keep synthetic and live collection in separate deployments.
+The profile is single-node SQLite, seeds only the synthetic estate, and disables
+the scanner. Sign in with the `AGENT_BOM_API_KEYS` key from that Secret; a
+`:viewer` key suits a read-only demonstration. Change the example ingress host
+before installation. Keep synthetic and live collection in separate deployments.
 
 Validate the rendered profile without installing it:
 

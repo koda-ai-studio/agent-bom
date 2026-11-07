@@ -7,6 +7,7 @@ import binascii
 import json
 from typing import Any
 
+import zstandard as zstd
 from pydantic_core import from_json
 
 MAX_WINDOW_BYTES = 16 * 1024 * 1024
@@ -14,8 +15,6 @@ MAX_WINDOW_BYTES = 16 * 1024 * 1024
 
 def decode_zstd_json(encoded: object, *, max_bytes: int, expected_size: int | None = None) -> Any:
     """Reject oversized frames before allocation, unknown-size bombs and trailing data."""
-    import zstandard as zstd
-
     # A zstd frame may be slightly larger than its input. Bound the base64 text
     # before allocating decoded bytes, while allowing encoder framing overhead.
     max_encoded = 4 * ((max_bytes + 64 * 1024 + 2) // 3)

@@ -30,24 +30,21 @@ from agent_bom.security import sanitize_sensitive_payload
 
 AuditBacklogDestination = Literal["noop", "spillover", "dlq", "dropped"]
 _DEFAULT_MIN_DLQ_BYTES = 1024 * 1024
-_MACOS_TMP_ALIAS = Path(os.sep) / "tmp"
-_MACOS_CANONICAL_TMP = Path(os.sep) / "private" / "tmp"
+# Root-owned, read-only links on the sealed macOS system volume; the default
+# per-user temp directory (/var/folders/...) lives behind the second one.
+_MACOS_FIXED_ALIASES = (Path(os.sep) / "tmp", Path(os.sep) / "var")
+_MACOS_CANONICAL_ROOT = Path(os.sep) / "private"
 _STORE_LOCKS: dict[tuple[str, str], threading.RLock] = {}
 _STORE_LOCKS_GUARD = threading.Lock()
 _ACTIVE_CLAIMS: set[str] = set()
 
 
 def canonical_runtime_state_path(path: Path) -> Path:
-    """Resolve only macOS's fixed ``/tmp`` alias without following arbitrary links."""
+    """Resolve only macOS's fixed ``/tmp`` and ``/var`` aliases without following arbitrary links."""
 
     expanded = Path(path).expanduser()
-    if sys.platform == "darwin" and expanded.is_absolute():
-        try:
-            relative = expanded.relative_to(_MACOS_TMP_ALIAS)
-        except ValueError:
-            pass
-        else:
-            return _MACOS_CANONICAL_TMP / relative
+    if sys.platform == "darwin" and any(expanded.is_relative_to(alias) for alias in _MACOS_FIXED_ALIASES):
+        return _MACOS_CANONICAL_ROOT / expanded.relative_to(os.sep)
     return expanded
 
 
