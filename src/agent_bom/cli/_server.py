@@ -33,6 +33,7 @@ from agent_bom.cli._server_posture import _scim_bearer_enabled as _scim_bearer_e
 from agent_bom.cli._server_posture import _should_auto_generate_dev_key as _should_auto_generate_dev_key
 from agent_bom.cli._server_posture import _uvicorn_tls_kwargs as _uvicorn_tls_kwargs
 from agent_bom.core.settings import env_list, env_raw, env_str
+from agent_bom.logging_config import json_logging_active
 from agent_bom.storage import state_home
 from agent_bom.storage.state_home import demo_estate_default_persist as _demo_estate_default_persist
 
@@ -86,7 +87,6 @@ def _emit_startup_notice(text: str, *, secret: str | None = None) -> None:
 
     ``secret`` is shown on the terminal only; it is never written to a log stream.
     """
-    from agent_bom.logging_config import json_logging_active
 
     if json_logging_active():
         withheld = " A dev API key was issued; it is not written to JSON logs, run without --log-json to see it." if secret else ""
@@ -98,7 +98,6 @@ def _emit_startup_notice(text: str, *, secret: str | None = None) -> None:
 
 
 def _warn_stdio_bearer_token() -> None:
-    from agent_bom.logging_config import json_logging_active
 
     message = "--bearer-token applies only to SSE / Streamable HTTP transports"
     if json_logging_active():
