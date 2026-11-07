@@ -1313,6 +1313,7 @@
         "summary",
         "severity",
         "severity_source",
+        "severity_note",
         "confidence",
         "cvss_score",
         "fixed_version",
