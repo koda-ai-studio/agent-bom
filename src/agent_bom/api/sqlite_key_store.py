@@ -214,11 +214,6 @@ class SQLiteKeyStore:
         key = verify_api_key(raw_key, [self._row_to_key(row) for row in rows])
         if key is not None:
             key.last_used = _now()
-            try:
-                self._write("UPDATE api_keys SET last_used = ? WHERE key_id = ?", (key.last_used, key.key_id))
-            except sqlite3.OperationalError as exc:
-                # A usage timestamp must not turn a verified key into an error while another writer holds the file.
-                _logger.warning("API key last-used time not recorded (%s)", type(exc).__name__)
             self._stamp_last_used(key.key_id, key.last_used)
         return key
 
