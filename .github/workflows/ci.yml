@@ -178,7 +178,7 @@ jobs:
           if printf '%s\n' "$changed" | grep -E '^(src/|tests/|scripts/|pyproject\.toml|uv\.lock|action\.yml|contracts/|data/|\.github/workflows/ci\.yml$|\.github/actions/)' > /dev/null; then
             python=true
           fi
-          if printf '%s\n' "$dependency_changed" | grep -E '^(deploy/endpoints/|scripts/(build-[^/]+|qualify_endpoint_collectors\.py|render_homebrew_formula\.py)|src/agent_bom/endpoint/|src/agent_bom/cli/_runtime\.py|tests/test_endpoint[^/]*\.py|tests/test_cli_runtime\.py|pyproject\.toml|uv\.lock|\.github/actions/setup-python/|site-docs/deployment/aws-company-rollout\.md$)' > /dev/null; then
+          if printf '%s\n' "$dependency_changed" | grep -E '^(deploy/endpoints/|scripts/(build-[^/]+|qualify_endpoint_collectors\.py|render_homebrew_formula\.py)|src/agent_bom/endpoint/|src/agent_bom/cli/_runtime\.py|src/agent_bom/core/file_lock\.py|src/agent_bom/storage/projection_cache\.py|tests/test_endpoint[^/]*\.py|tests/test_projection_cache_lease\.py|tests/test_cli_runtime\.py|pyproject\.toml|uv\.lock|\.github/actions/setup-python/|site-docs/deployment/aws-company-rollout\.md$)' > /dev/null; then
             endpoint=true
           fi
           if printf '%s\n' "$changed" | grep -E '^(deploy/helm/agent-bom/|scripts/validate_helm_profiles\.py$|\.github/workflows/ci\.yml$)' > /dev/null; then
@@ -1209,6 +1209,11 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --frozen --extra dev
+
+      # File locking differs per OS, and this is the matrix that reaches Windows.
+      - name: Prove projection cache leases on this OS
+        run: uv run pytest tests/test_projection_cache_lease.py --noconftest -q
+        shell: bash
 
       - name: Qualify native endpoint collectors
         env:
