@@ -13,6 +13,7 @@ from agent_bom.api.models import CredentialRefRecord, SourceCredentialMode, Sour
 from agent_bom.api.schedule_store import ScanSchedule, SQLiteScheduleStore
 from agent_bom.api.source_store import SQLiteSourceStore
 from agent_bom.api.storage.registry_import import import_registries, read_source
+from tests.sqlite_snapshot import checkpointed_bytes
 
 TABLES = ["credential_refs", "sources", "scan_schedules", "access_review_campaigns", "access_review_items"]
 
@@ -75,7 +76,7 @@ def seed(path, suffix=""):
 def test_control_plane_import_reads_models_without_changing_source(tmp_path):
     path = tmp_path / "legacy.db"
     seed(path)
-    before = path.read_bytes()
+    before = checkpointed_bytes(path)
     records = read_source(path, {"source": "target"}, TABLES)
     assert len(records) == 5
     assert all(r.tenant_id == "target" for _, r, _ in records)
