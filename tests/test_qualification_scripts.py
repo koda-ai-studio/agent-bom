@@ -311,6 +311,15 @@ def test_baseline_ignores_unfinished_estates_and_unreached_scale(tmp_path: Path)
     assert baseline.extract(tmp_path) == {"performance/sqlite/done/ingest_seconds": 1.0}
 
 
+def test_committed_baseline_states_its_source_and_margin() -> None:
+    document = json.loads(baseline.BASELINE_PATH.read_text(encoding="utf-8"))
+    assert document["source"].startswith("runs ")
+    assert document["tolerance"] > 1
+    assert document["tolerance_reason"]
+    assert all(value > 0 for value in document["metrics"].values())
+    assert {key.split("/")[0] for key in document["metrics"]} == {"accuracy", "performance"}
+
+
 def test_workflow_is_manual_and_path_limited_with_read_only_permissions() -> None:
     workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
     triggers = workflow[True]
