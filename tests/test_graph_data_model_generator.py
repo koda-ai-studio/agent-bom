@@ -11,6 +11,7 @@ import pytest
 
 from agent_bom.core.entity_types import EntityType
 from agent_bom.graph.edge_evidence import EDGE_EVIDENCE_TIERS
+from agent_bom.graph.emitter_scan import scan_source
 from agent_bom.graph.relationship_specs import TraversalClass
 from agent_bom.graph.types import RelationshipType
 
@@ -33,6 +34,23 @@ def _load_generator():
 def _all_docs_text() -> str:
     gen = _load_generator()
     return "\n".join(gen.render().values())
+
+
+def test_reading_nodes_by_type_is_not_emitting_them(tmp_path: Path) -> None:
+    (tmp_path / "reader.py").write_text(
+        "from agent_bom.graph.types import EntityType\n"
+        "def read(graph):\n"
+        "    next(graph.iter_nodes_by_type(EntityType.SOURCE_FILE), None)\n"
+        "    return graph.nodes_by_type(EntityType.SOURCE_FILE)\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "writer.py").write_text(
+        "from agent_bom.graph.types import EntityType\n"
+        "def write(graph, build):\n"
+        "    graph.add_node(build(entity_type=EntityType.SOURCE_FILE))\n",
+        encoding="utf-8",
+    )
+    assert scan_source(tmp_path).entity_emitters["source_file"] == {"writer.py"}
 
 
 def test_check_mode_passes_on_committed_docs() -> None:

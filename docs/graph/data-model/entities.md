@@ -23,7 +23,7 @@ Id formats:
 
 ## `agent`
 
-Emitted by: `api/graph_page_stack.py`, `graph/agent_context.py`, `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/endpoint_overlay.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/interaction_risk_ids.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_agent_runtime.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/delta_digest.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_agent_runtime.py`
 
 ## `api_gateway`
 
@@ -43,7 +43,7 @@ Emitted by: `graph/ci_graph_overlay.py`, `graph/pipeline_overlay.py`; demo fixtu
 
 ## `cloud_resource`
 
-Emitted by: `api/cloud_scan_results.py`, `api/graph_page_stack.py`, `graph/benchmark_projection.py`, `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_compute_projection.py`, `graph/cloud_rbac.py`, `graph/cloud_service_projection.py`, `graph/cloud_storage_projection.py`, `graph/finding_projection.py`, `graph/gpu_projection.py`, `graph/hosting_projection.py`, `graph/kubernetes_context.py`, `graph/normalized_resource_projection.py`, `graph/resource_aliases.py`, `graph/side_scan_projection.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_agent_runtime.py`, `demo_estate/showcase_graph.py`
+Emitted by: `api/cloud_scan_results.py`, `api/graph_page_stack.py`, `graph/benchmark_projection.py`, `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_compute_projection.py`, `graph/cloud_rbac.py`, `graph/cloud_service_projection.py`, `graph/cloud_storage_projection.py`, `graph/finding_projection.py`, `graph/gpu_projection.py`, `graph/hosting_projection.py`, `graph/kubernetes_context.py`, `graph/normalized_resource_projection.py`, `graph/side_scan_projection.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_agent_runtime.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -96,7 +96,7 @@ Emitted by: —
 
 ## `data_store`
 
-Emitted by: `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_governance.py`, `graph/builder_snowflake_lane.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_service_projection.py`, `graph/cnapp_overlay.py`, `graph/resource_aliases.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_governance.py`, `graph/builder_snowflake_lane.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_service_projection.py`, `graph/cnapp_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 Id formats:
 
@@ -195,7 +195,7 @@ Id formats:
 
 ## `package`
 
-Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/blast_projection.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/rollup_issues.py`, `graph/side_scan_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_packages.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/blast_projection.py`, `graph/framework_topology_projection.py`, `graph/rollup_issues.py`, `graph/side_scan_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_packages.py`
 
 Id formats:
 
@@ -273,7 +273,7 @@ Id formats:
 
 ## `vulnerability`
 
-Emitted by: `api/graph_page_stack.py`, `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/dependency_reach.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_finding_nodes.py`, `demo_estate/showcase_packages.py`
+Emitted by: `api/graph_page_stack.py`, `graph/blast_projection.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_finding_nodes.py`, `demo_estate/showcase_packages.py`
 
 Id formats:
 
