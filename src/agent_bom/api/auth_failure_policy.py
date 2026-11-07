@@ -117,9 +117,11 @@ class AuthFailurePolicy:
             try:
                 async with asyncio.timeout(0.5):
                     pending = _AUTH_WORKERS.submit(contextvars.copy_context().run, work)
-                    task = asyncio.wrap_future(pending)
-                    # Release capacity even if the request event loop closes.
+                    # Release before publishing the result to the request loop:
+                    # its next operation must not count this completed work.
+                    # This also runs if the request event loop has closed.
                     pending.add_done_callback(release)
+                    task = asyncio.wrap_future(pending)
                     # A timed-out request retains its slot until the SQL exits.
                     value, completed_at = await asyncio.shield(task)
                     if completed_at > deadline:

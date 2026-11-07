@@ -629,3 +629,50 @@ def test_timed_out_admission_releases_capacity_after_its_loop_closes(monkeypatch
     assert policy._outstanding == 0
     assert policy._source_work == {}
     assert policy._unavailable_until == 0
+
+
+@pytest.mark.asyncio
+async def test_completed_auth_work_releases_capacity_before_publishing_result(monkeypatch):
+    import asyncio
+    import threading
+    from types import SimpleNamespace
+
+    from agent_bom.api import auth_failure_policy
+
+    policy = auth_failure_policy.AuthFailurePolicy()
+    work_gate, callback_gate = threading.Event(), threading.Event()
+    registered = 0
+    wrap_future = asyncio.wrap_future
+
+    def pause_after_delivery(future):
+        nonlocal registered
+        wrapped = wrap_future(future)
+        # The event loop may resume after result delivery while this worker
+        # has not yet run later completion callbacks.
+        if registered < 2:
+            future.add_done_callback(lambda _done: callback_gate.wait(3))
+        registered += 1
+        return wrapped
+
+    def work():
+        assert work_gate.wait(3)
+        return 0
+
+    clock_and_tasks = SimpleNamespace(**vars(asyncio))
+    clock_and_tasks.wrap_future = pause_after_delivery
+    monkeypatch.setattr(auth_failure_policy, "asyncio", clock_and_tasks)
+    tasks = [asyncio.create_task(policy._call(work, admission_source="192.0.2.19")) for _ in range(2)]
+    try:
+        async with asyncio.timeout(2):
+            while registered < 2:
+                await asyncio.sleep(0)
+            work_gate.set()
+            assert await asyncio.gather(*tasks) == [0, 0]
+            # Both prior operations have finished: another operation from the
+            # same source must not be refused as if they were still running.
+            assert await policy._call(lambda: 0, admission_source="192.0.2.19") == 0
+        assert policy._outstanding == 0
+        assert policy._source_work == {}
+    finally:
+        work_gate.set()
+        callback_gate.set()
