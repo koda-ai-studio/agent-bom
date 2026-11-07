@@ -656,7 +656,7 @@ function JobRow({ job }: { job: JobListItem }) {
           <span className="sr-only">· Scan ID {job.job_id}</span>
         </div>
       </div>
-      <div className="flex items-center gap-3 text-xs">
+      <div className="flex w-full flex-wrap items-center gap-3 text-xs sm:w-auto">
         {job.status === "done" && (
           <>
             {critCount != null && critCount > 0 && (

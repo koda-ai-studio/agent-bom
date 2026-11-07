@@ -1808,6 +1808,10 @@ export async function installRoutes(page, fixtureGraph = graph) {
     providers: [],
   }));
   await page.route("**/version", (route) => fulfill(route, { version: RELEASE_VERSION, name: "agent-bom" }));
+  await page.route("**/v1/ai/status", (route) => fulfill(route, {
+    schema_version: "ai.status.v1", state: "off", reason: "AI advice is disabled for this fixture.",
+    advisory_only: true, model: null, last_run: null,
+  }));
   await page.route("**/v1/auth/me", (route) => fulfill(route, {
     authenticated: true,
     auth_required: false,

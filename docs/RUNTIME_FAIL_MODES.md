@@ -666,8 +666,9 @@ The state uses the existing Postgres rate-limit pool and migration-owned
 same `AGENT_BOM_DB` path: authentication state lives in the owner-only
 `<database>.auth-limits.db` sidecar so a scan-ingest write transaction cannot
 lock its budget. Without a persistent database it is process-local.
-At most eight state operations may be outstanding per worker; timed-out work
-keeps its slot until it exits. A five-second local cooldown bounds outage
+At most eight state operations may be outstanding per application; timed-out
+work keeps its slot until it exits. A dedicated eight-thread process pool keeps
+auth checks out of the general background-work queue. A five-second local cooldown bounds outage
 pressure. State errors or a 500 ms deadline fail closed with 503, including otherwise
 valid authentication. Health probes, static assets, and CORS preflight bypass
 this check. General request limits retain their existing behavior.

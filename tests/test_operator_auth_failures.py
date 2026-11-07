@@ -235,3 +235,35 @@ async def test_sqlite_ingest_write_lock_does_not_block_auth_budget(monkeypatch, 
             assert await policy.before(request) is None
         finally:
             writer.rollback()
+
+
+@pytest.mark.asyncio
+async def test_auth_checks_do_not_queue_behind_unrelated_executor_work():
+    import asyncio
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from types import SimpleNamespace
+
+    from agent_bom.api.auth_failure_policy import AuthFailurePolicy
+
+    loop = asyncio.get_running_loop()
+    gate = threading.Event()
+    started = threading.Event()
+    executor = ThreadPoolExecutor(max_workers=1)
+    loop.set_default_executor(executor)
+
+    def unrelated_work():
+        started.set()
+        gate.wait(5)
+
+    blocker = loop.run_in_executor(None, unrelated_work)
+    policy = AuthFailurePolicy()
+    request = SimpleNamespace(client=SimpleNamespace(host="192.0.2.99"), headers={})
+    try:
+        while not started.is_set():
+            await asyncio.sleep(0)
+        assert await policy.before(request) is None
+    finally:
+        gate.set()
+        await blocker
+        executor.shutdown(wait=True)

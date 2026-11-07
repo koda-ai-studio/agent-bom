@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import hashlib
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -16,6 +19,8 @@ from agent_bom.api.forwarded_identity import resolve_forwarded_client_ip
 from agent_bom.api.middleware_limits import RateLimitMiddleware, _build_rate_limit_store
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore
 from agent_bom.core.settings import env_raw
+
+_AUTH_WORKERS = ThreadPoolExecutor(max_workers=8, thread_name_prefix="auth-state")
 
 
 def _positive_setting(name: str, default: int, maximum: int) -> int:
@@ -76,7 +81,8 @@ class AuthFailurePolicy:
         try:
             async with asyncio.timeout(0.5):
                 await self._work_slots.acquire()
-                task = asyncio.create_task(asyncio.to_thread(function, *args, **kwargs))
+                work = partial(function, *args, **kwargs)
+                task = asyncio.get_running_loop().run_in_executor(_AUTH_WORKERS, contextvars.copy_context().run, work)
                 task.add_done_callback(release)
                 # A timed-out request retains its slot until the SQL exits.
                 return await asyncio.shield(task)

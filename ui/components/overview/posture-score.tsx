@@ -38,7 +38,9 @@ export function derivePostureBlurb({
   severity: SeverityCounts;
   graded: boolean;
 }): string {
-  if (!graded) return "Connect a surface or run a scan to grade posture.";
+  if (!graded) return severity.total > 0 || critical > 0 || high > 0
+    ? "Findings are available, but coverage is incomplete. Review scan warnings before grading posture."
+    : "Connect a surface or run a scan to grade posture.";
   const rated = severity.critical + severity.high + severity.medium + severity.low;
   const openIssues = Math.max(severity.total, rated);
   const unrated = openIssues - rated;
