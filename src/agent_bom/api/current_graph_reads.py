@@ -1,6 +1,6 @@
 """Graph store reads the current-estate wrapper answers from its projection; every other method passes through."""
 
-_READS = frozenset(
+GRAPH_READS = frozenset(
     {
         "load_graph",
         "load_rollup_graph",

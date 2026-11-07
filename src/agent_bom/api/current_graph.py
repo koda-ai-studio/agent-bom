@@ -34,7 +34,7 @@ from agent_bom.api.current_graph_builds import current_view_coverage, resolve_re
 from agent_bom.api.current_graph_builds import generation_rotating as _generation_rotating
 from agent_bom.api.current_graph_counts import count_current_nodes
 from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
-from agent_bom.api.current_graph_reads import _READS as _READS
+from agent_bom.api.current_graph_reads import GRAPH_READS as _READS
 from agent_bom.api.file_lock import exclusive_file_lock
 from agent_bom.api.finding_read_context import cached_read, forget_read, on_scope_exit, read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key

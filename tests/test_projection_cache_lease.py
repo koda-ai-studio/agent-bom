@@ -224,7 +224,7 @@ def test_a_lease_never_outwaits_a_stuck_sweeper(tmp_path):
         with pytest.raises(TimeoutError):
             projection_cache.acquire_projection_lease(path, wait_seconds=0.1)
     finally:
-        file_lock.release_lock(fd, exclusive=True)
+        os.close(fd)
 
 
 @pytest.mark.skipif(os.name == "nt", reason="an open file cannot be unlinked on Windows, so no orphaned marker can exist")
@@ -240,7 +240,7 @@ def test_a_waiter_on_a_marker_the_sweep_unlinked_moves_to_a_new_one(tmp_path):
         time.sleep(0.05)
         marker.unlink()
     finally:
-        file_lock.release_lock(fd, exclusive=True)
+        os.close(fd)
     waiter.join(timeout=10)
     assert acquired, "the waiter never got a lease"
 

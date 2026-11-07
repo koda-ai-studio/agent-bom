@@ -265,8 +265,10 @@ def _reclaim(path: Path, *, dry_run: bool) -> bool:
     marker = lease_path(path)
     marker_existed = marker.exists()
     try:
-        fd = os.open(marker, os.O_CREAT | os.O_RDWR, 0o600)
+        fd = _open_marker(marker)
     except OSError:
+        fd = None
+    if fd is None:
         logger.debug("projection cache sweep could not open a lease marker")
         return False
     held = reclaimed = drop_marker = False
