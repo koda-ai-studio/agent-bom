@@ -13,6 +13,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from fastapi.responses import PlainTextResponse
 
 from agent_bom.api.audit_key_state import control_plane_integrity
+from agent_bom.api.audit_log import AUTH_FAILURE_AUDIT_TENANT
 from agent_bom.api.models import ExceptionRequest, IssueStatusUpdateRequest
 from agent_bom.api.read_models import SiemConnectorsResponse, TrendsResponse, documented
 from agent_bom.api.read_models.enterprise import (
@@ -42,6 +43,13 @@ _logger = logging.getLogger("agent_bom.api.routes.enterprise")
 # ── Audit Log ────────────────────────────────────────────────────────────────
 
 
+def _request_audit_tenant(request: Request) -> str:
+    tenant = require_request_tenant_id(request)
+    if tenant == AUTH_FAILURE_AUDIT_TENANT:
+        raise HTTPException(status_code=403, detail="Authentication security evidence is restricted to operator collection")
+    return tenant
+
+
 @router.get("/audit", **documented(AuditEntriesResponse), tags=["enterprise"])
 def list_audit_entries(
     request: Request,
@@ -54,7 +62,7 @@ def list_audit_entries(
     """List audit log entries with optional filters."""
     from agent_bom.api.audit_log import get_audit_log
 
-    tenant_id = require_request_tenant_id(request)
+    tenant_id = _request_audit_tenant(request)
     store = get_audit_log()
     entries = store.list_entries(action=action, resource=resource, since=since, limit=limit, offset=offset, tenant_id=tenant_id)
     return {
@@ -88,7 +96,7 @@ def audit_integrity(
     from agent_bom.api.audit_log import get_audit_log
     from agent_bom.audit_integrity import verify_audit_jsonl_chain
 
-    tenant_id = require_request_tenant_id(request)
+    tenant_id = _request_audit_tenant(request)
 
     control_plane = control_plane_integrity(get_audit_log(), limit=limit, tenant_id=tenant_id)
     chains: list[dict[str, Any]] = [
@@ -150,7 +158,7 @@ def export_audit_entries(
     if fmt not in {"json", "jsonl"}:
         raise HTTPException(status_code=400, detail="format must be one of: json, jsonl")
 
-    tenant_id = require_request_tenant_id(request)
+    tenant_id = _request_audit_tenant(request)
     actor = getattr(request.state, "api_key_name", "") or "system"
     store = get_audit_log()
     entries = store.list_entries(action=action, resource=resource, since=since, limit=limit, offset=offset, tenant_id=tenant_id)

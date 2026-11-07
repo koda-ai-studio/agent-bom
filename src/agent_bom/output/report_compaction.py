@@ -11,9 +11,7 @@ def compact_report_sections(report: dict[str, Any]) -> dict[str, Any]:
     it must be another copy.
     """
     result = dict(report)
-    entities = result.get("ai_bom_entities")
-    if isinstance(entities, dict) and "packages" in entities and result.get("packages") == entities["packages"]:
-        result.pop("packages", None)
+    # Root packages is a public JSON contract, even when it aliases the entity table.
     if "blast_radius" in result and result.get("blast_radii") == result["blast_radius"]:
         result.pop("blast_radii", None)
     return result

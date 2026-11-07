@@ -423,6 +423,7 @@
     "packages": [],
     "schema_version": "1"
    },
+   "packages": [],
    "posture_grade": "N/A",
    "posture_grade_label": "N/A",
    "posture_scorecard": {
@@ -2887,6 +2888,58 @@
     ],
     "schema_version": "1"
    },
+   "packages": [
+    {
+     "canonical_id": "<UUID>",
+     "discovery_provenance": {
+      "confidence": "medium",
+      "observed_via": [
+       "local_discovery"
+      ],
+      "resolved_from_registry": false,
+      "source_type": "local_discovery",
+      "version_provenance": {
+       "confidence": "unknown",
+       "declared_name": "express",
+       "legacy_version_source": "detected",
+       "pinned": true,
+       "pinned_version": "4.18.2",
+       "resolved_from_registry": false,
+       "resolved_version": "4.18.2",
+       "source_precedence": 0,
+       "version_source": "unknown"
+      },
+      "version_source": "detected"
+     },
+     "distro_name": null,
+     "distro_version": null,
+     "ecosystem": "npm",
+     "floating_reference": false,
+     "floating_reference_reason": null,
+     "id": "<UUID>",
+     "is_malicious": false,
+     "malicious_reason": null,
+     "name": "express",
+     "occurrence_count": 0,
+     "occurrences": [],
+     "purl": null,
+     "source_package": null,
+     "version": "4.18.2",
+     "version_provenance": {
+      "confidence": "unknown",
+      "declared_name": "express",
+      "legacy_version_source": "detected",
+      "pinned": true,
+      "pinned_version": "4.18.2",
+      "resolved_from_registry": false,
+      "resolved_version": "4.18.2",
+      "source_precedence": 0,
+      "version_source": "unknown"
+     },
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
+    }
+   ],
    "posture_grade": "D",
    "posture_grade_label": "D",
    "posture_scorecard": {
@@ -5552,6 +5605,58 @@
     ],
     "schema_version": "1"
    },
+   "packages": [
+    {
+     "canonical_id": "<UUID>",
+     "discovery_provenance": {
+      "confidence": "medium",
+      "observed_via": [
+       "local_discovery"
+      ],
+      "resolved_from_registry": false,
+      "source_type": "local_discovery",
+      "version_provenance": {
+       "confidence": "unknown",
+       "declared_name": "express",
+       "legacy_version_source": "detected",
+       "pinned": true,
+       "pinned_version": "4.18.2",
+       "resolved_from_registry": false,
+       "resolved_version": "4.18.2",
+       "source_precedence": 0,
+       "version_source": "unknown"
+      },
+      "version_source": "detected"
+     },
+     "distro_name": null,
+     "distro_version": null,
+     "ecosystem": "npm",
+     "floating_reference": false,
+     "floating_reference_reason": null,
+     "id": "<UUID>",
+     "is_malicious": false,
+     "malicious_reason": null,
+     "name": "express",
+     "occurrence_count": 0,
+     "occurrences": [],
+     "purl": null,
+     "source_package": null,
+     "version": "4.18.2",
+     "version_provenance": {
+      "confidence": "unknown",
+      "declared_name": "express",
+      "legacy_version_source": "detected",
+      "pinned": true,
+      "pinned_version": "4.18.2",
+      "resolved_from_registry": false,
+      "resolved_version": "4.18.2",
+      "source_precedence": 0,
+      "version_source": "unknown"
+     },
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
+    }
+   ],
    "posture_grade": "D",
    "posture_grade_label": "D",
    "posture_scorecard": {
@@ -7606,6 +7711,58 @@
     ],
     "schema_version": "1"
    },
+   "packages": [
+    {
+     "canonical_id": "<UUID>",
+     "discovery_provenance": {
+      "confidence": "medium",
+      "observed_via": [
+       "local_discovery"
+      ],
+      "resolved_from_registry": false,
+      "source_type": "local_discovery",
+      "version_provenance": {
+       "confidence": "unknown",
+       "declared_name": "express",
+       "legacy_version_source": "detected",
+       "pinned": true,
+       "pinned_version": "4.18.2",
+       "resolved_from_registry": false,
+       "resolved_version": "4.18.2",
+       "source_precedence": 0,
+       "version_source": "unknown"
+      },
+      "version_source": "detected"
+     },
+     "distro_name": null,
+     "distro_version": null,
+     "ecosystem": "npm",
+     "floating_reference": false,
+     "floating_reference_reason": null,
+     "id": "<UUID>",
+     "is_malicious": false,
+     "malicious_reason": null,
+     "name": "express",
+     "occurrence_count": 0,
+     "occurrences": [],
+     "purl": null,
+     "source_package": null,
+     "version": "4.18.2",
+     "version_provenance": {
+      "confidence": "unknown",
+      "declared_name": "express",
+      "legacy_version_source": "detected",
+      "pinned": true,
+      "pinned_version": "4.18.2",
+      "resolved_from_registry": false,
+      "resolved_version": "4.18.2",
+      "source_precedence": 0,
+      "version_source": "unknown"
+     },
+     "vulnerability_count": null,
+     "vulnerability_status": "not_scanned"
+    }
+   ],
    "posture_grade": "C",
    "posture_grade_label": "C",
    "posture_scorecard": {
@@ -9498,6 +9655,58 @@
     ],
     "schema_version": "1"
    },
+   "packages": [
+    {
+     "canonical_id": "<UUID>",
+     "discovery_provenance": {
+      "confidence": "medium",
+      "observed_via": [
+       "local_discovery"
+      ],
+      "resolved_from_registry": false,
+      "source_type": "local_discovery",
+      "version_provenance": {
+       "confidence": "unknown",
+       "declared_name": "express",
+       "legacy_version_source": "detected",
+       "pinned": true,
+       "pinned_version": "4.18.2",
+       "resolved_from_registry": false,
+       "resolved_version": "4.18.2",
+       "source_precedence": 0,
+       "version_source": "unknown"
+      },
+      "version_source": "detected"
+     },
+     "distro_name": null,
+     "distro_version": null,
+     "ecosystem": "npm",
+     "floating_reference": false,
+     "floating_reference_reason": null,
+     "id": "<UUID>",
+     "is_malicious": false,
+     "malicious_reason": null,
+     "name": "express",
+     "occurrence_count": 0,
+     "occurrences": [],
+     "purl": null,
+     "source_package": null,
+     "version": "4.18.2",
+     "version_provenance": {
+      "confidence": "unknown",
+      "declared_name": "express",
+      "legacy_version_source": "detected",
+      "pinned": true,
+      "pinned_version": "4.18.2",
+      "resolved_from_registry": false,
+      "resolved_version": "4.18.2",
+      "source_precedence": 0,
+      "version_source": "unknown"
+     },
+     "vulnerability_count": 0,
+     "vulnerability_status": "scanned"
+    }
+   ],
    "posture_grade": "B",
    "posture_grade_label": "B",
    "posture_scorecard": {
@@ -12116,6 +12325,58 @@
     ],
     "schema_version": "1"
    },
+   "packages": [
+    {
+     "canonical_id": "<UUID>",
+     "discovery_provenance": {
+      "confidence": "medium",
+      "observed_via": [
+       "local_discovery"
+      ],
+      "resolved_from_registry": false,
+      "source_type": "local_discovery",
+      "version_provenance": {
+       "confidence": "unknown",
+       "declared_name": "express",
+       "legacy_version_source": "detected",
+       "pinned": true,
+       "pinned_version": "4.18.2",
+       "resolved_from_registry": false,
+       "resolved_version": "4.18.2",
+       "source_precedence": 0,
+       "version_source": "unknown"
+      },
+      "version_source": "detected"
+     },
+     "distro_name": null,
+     "distro_version": null,
+     "ecosystem": "npm",
+     "floating_reference": false,
+     "floating_reference_reason": null,
+     "id": "<UUID>",
+     "is_malicious": false,
+     "malicious_reason": null,
+     "name": "express",
+     "occurrence_count": 0,
+     "occurrences": [],
+     "purl": null,
+     "source_package": null,
+     "version": "4.18.2",
+     "version_provenance": {
+      "confidence": "unknown",
+      "declared_name": "express",
+      "legacy_version_source": "detected",
+      "pinned": true,
+      "pinned_version": "4.18.2",
+      "resolved_from_registry": false,
+      "resolved_version": "4.18.2",
+      "source_precedence": 0,
+      "version_source": "unknown"
+     },
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
+    }
+   ],
    "posture_grade": "D",
    "posture_grade_label": "D",
    "posture_scorecard": {
@@ -14643,6 +14904,58 @@
     ],
     "schema_version": "1"
    },
+   "packages": [
+    {
+     "canonical_id": "<UUID>",
+     "discovery_provenance": {
+      "confidence": "medium",
+      "observed_via": [
+       "local_discovery"
+      ],
+      "resolved_from_registry": false,
+      "source_type": "local_discovery",
+      "version_provenance": {
+       "confidence": "unknown",
+       "declared_name": "express",
+       "legacy_version_source": "detected",
+       "pinned": true,
+       "pinned_version": "4.18.2",
+       "resolved_from_registry": false,
+       "resolved_version": "4.18.2",
+       "source_precedence": 0,
+       "version_source": "unknown"
+      },
+      "version_source": "detected"
+     },
+     "distro_name": null,
+     "distro_version": null,
+     "ecosystem": "npm",
+     "floating_reference": false,
+     "floating_reference_reason": null,
+     "id": "<UUID>",
+     "is_malicious": false,
+     "malicious_reason": null,
+     "name": "express",
+     "occurrence_count": 0,
+     "occurrences": [],
+     "purl": null,
+     "source_package": null,
+     "version": "4.18.2",
+     "version_provenance": {
+      "confidence": "unknown",
+      "declared_name": "express",
+      "legacy_version_source": "detected",
+      "pinned": true,
+      "pinned_version": "4.18.2",
+      "resolved_from_registry": false,
+      "resolved_version": "4.18.2",
+      "source_precedence": 0,
+      "version_source": "unknown"
+     },
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
+    }
+   ],
    "posture_grade": "D",
    "posture_grade_label": "D",
    "posture_scorecard": {
@@ -16618,6 +16931,58 @@
     ],
     "schema_version": "1"
    },
+   "packages": [
+    {
+     "canonical_id": "<UUID>",
+     "discovery_provenance": {
+      "confidence": "medium",
+      "observed_via": [
+       "local_discovery"
+      ],
+      "resolved_from_registry": false,
+      "source_type": "local_discovery",
+      "version_provenance": {
+       "confidence": "unknown",
+       "declared_name": "express",
+       "legacy_version_source": "detected",
+       "pinned": true,
+       "pinned_version": "4.18.2",
+       "resolved_from_registry": false,
+       "resolved_version": "4.18.2",
+       "source_precedence": 0,
+       "version_source": "unknown"
+      },
+      "version_source": "detected"
+     },
+     "distro_name": null,
+     "distro_version": null,
+     "ecosystem": "npm",
+     "floating_reference": false,
+     "floating_reference_reason": null,
+     "id": "<UUID>",
+     "is_malicious": false,
+     "malicious_reason": null,
+     "name": "express",
+     "occurrence_count": 0,
+     "occurrences": [],
+     "purl": null,
+     "source_package": null,
+     "version": "4.18.2",
+     "version_provenance": {
+      "confidence": "unknown",
+      "declared_name": "express",
+      "legacy_version_source": "detected",
+      "pinned": true,
+      "pinned_version": "4.18.2",
+      "resolved_from_registry": false,
+      "resolved_version": "4.18.2",
+      "source_precedence": 0,
+      "version_source": "unknown"
+     },
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
+    }
+   ],
    "posture_grade": "N/A",
    "posture_grade_label": "N/A",
    "posture_scorecard": {
@@ -19079,6 +19444,58 @@
     ],
     "schema_version": "1"
    },
+   "packages": [
+    {
+     "canonical_id": "<UUID>",
+     "discovery_provenance": {
+      "confidence": "medium",
+      "observed_via": [
+       "local_discovery"
+      ],
+      "resolved_from_registry": false,
+      "source_type": "local_discovery",
+      "version_provenance": {
+       "confidence": "unknown",
+       "declared_name": "express",
+       "legacy_version_source": "detected",
+       "pinned": true,
+       "pinned_version": "4.18.2",
+       "resolved_from_registry": false,
+       "resolved_version": "4.18.2",
+       "source_precedence": 0,
+       "version_source": "unknown"
+      },
+      "version_source": "detected"
+     },
+     "distro_name": null,
+     "distro_version": null,
+     "ecosystem": "npm",
+     "floating_reference": false,
+     "floating_reference_reason": null,
+     "id": "<UUID>",
+     "is_malicious": false,
+     "malicious_reason": null,
+     "name": "express",
+     "occurrence_count": 0,
+     "occurrences": [],
+     "purl": null,
+     "source_package": null,
+     "version": "4.18.2",
+     "version_provenance": {
+      "confidence": "unknown",
+      "declared_name": "express",
+      "legacy_version_source": "detected",
+      "pinned": true,
+      "pinned_version": "4.18.2",
+      "resolved_from_registry": false,
+      "resolved_version": "4.18.2",
+      "source_precedence": 0,
+      "version_source": "unknown"
+     },
+     "vulnerability_count": 1,
+     "vulnerability_status": "scanned"
+    }
+   ],
    "posture_grade": "D",
    "posture_grade_label": "D",
    "posture_scorecard": {

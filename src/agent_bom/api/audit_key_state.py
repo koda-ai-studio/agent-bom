@@ -10,6 +10,19 @@ from __future__ import annotations
 import hashlib
 
 
+class AuditVerificationLimitExceededError(ValueError):
+    """A full chain cannot be checked within the requested entry budget."""
+
+    def __init__(self, total: int, limit: int):
+        self.total, self.limit = total, limit
+        super().__init__("Audit verification entry budget exceeded")
+
+
+def require_verification_budget(total: int, limit: int) -> None:
+    if total > limit:
+        raise AuditVerificationLimitExceededError(total, limit)
+
+
 def record_key_identity(connection, key: bytes) -> str:
     connection.execute(
         "CREATE TABLE IF NOT EXISTS audit_key_identity (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), fingerprint TEXT NOT NULL)"
@@ -45,5 +58,14 @@ def control_plane_integrity(store, *, limit: int, tenant_id: str) -> dict:
             "checked": count,
             "error": "Cannot verify: signing key changed or the previous ephemeral key is unavailable.",
         }
-    verified, tampered = store.verify_integrity(limit=limit, tenant_id=tenant_id)
+    try:
+        verified, tampered = store.verify_integrity(limit=limit, tenant_id=tenant_id)
+    except AuditVerificationLimitExceededError as exc:
+        return {
+            "verified": 0,
+            "tampered": 0,
+            "unverifiable": limit,
+            "checked": limit,
+            "error": f"Cannot verify: {exc.total} entries exceed the requested limit of {limit}; no complete chain was checked.",
+        }
     return {"verified": verified, "tampered": tampered, "unverifiable": 0, "checked": verified + tampered}

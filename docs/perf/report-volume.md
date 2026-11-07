@@ -124,11 +124,10 @@ contents private; the measurement does not require publishing them.
 - No production-size estate was available; the 20x tiled run shows the writer's
   memory shape, not real-world compression ratios.
 
-## Canonical section compaction
+## Compatibility and duplicate sections
 
-New JSON reports omit the duplicate top-level `packages` alias; use
-`ai_bom_entities.packages`. Ingest accepts both layouts and removes the alias
-only when the two tables are equal. Legacy `blast_radii` normalizes to
+The public root `packages` field remains available alongside
+`ai_bom_entities.packages`. Ingest normalizes legacy `blast_radii` to
 `blast_radius` without storing a second identical section. Different legacy
 content, package occurrences, findings, and the inventory replay projection
-remain intact. This changes report shape, not finding membership or coverage.
+remain intact. No reduction of the saved report's root package table is claimed.

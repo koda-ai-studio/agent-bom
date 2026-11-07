@@ -676,14 +676,9 @@ source records from experimental seed matches.
 
 ### `inventory_snapshot.packages`
 
-JSON reports keep the canonical flattened package table in
-`ai_bom_entities.packages`. The former top-level `packages` compatibility copy
-is omitted when it is identical. Consumers of that alias should read
-`ai_bom_entities.packages`. Ingest still accepts older reports and retains a
-distinct top-level package table when its content differs.
-
-`inventory_snapshot.packages` retains the inventory replay schema; it is a
-separate projection and is not discarded as a duplicate.
+JSON reports retain both the top-level `packages` array and
+`ai_bom_entities.packages` for compatibility with existing consumers.
+`inventory_snapshot.packages` retains its separate replay schema.
 
 Nested `agents[].mcp_servers[].packages` remains present so consumers can
 reconstruct where a package was found. The flattened

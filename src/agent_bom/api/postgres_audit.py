@@ -14,6 +14,7 @@ from agent_bom.api.audit_log import (
     AuditEntry,
     _AuditChainCheckpoint,
     _verify_audit_chain_with_checkpoint,
+    require_verification_budget,
 )
 from agent_bom.api.storage.audit_schema import AUDIT_FORK_GUARD_INDEX, ensure_audit_fork_guard
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
@@ -562,11 +563,10 @@ class PostgresAuditLog:
 
     def verify_integrity(self, limit: int = 1000, tenant_id: str | None = None) -> tuple[int, int]:
         tenant_key = tenant_id or "default"
-        # One scope around all three reads: the count, the walk and the
-        # checkpoint must describe the same tenant, or the comparison between
-        # them is meaningless and reports a clean log as tampered.
+        # Count, walk and checkpoint must share one tenant scope, or a clean log can be reported as tampered.
         with _tenant_scope(tenant_id):
             total = self.count(tenant_id=tenant_id)
+            require_verification_budget(total, limit)
             fetch_limit = total if total else limit
             entries = self._list_entries_chronological(limit=fetch_limit, tenant_id=tenant_id)
             checkpoint = self._get_checkpoint(tenant_key)

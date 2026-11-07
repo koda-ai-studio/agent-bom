@@ -11,7 +11,8 @@ import math
 import os
 import sqlite3
 import threading
-from contextlib import contextmanager
+from abc import ABC, abstractmethod
+from contextlib import AbstractContextManager, contextmanager
 from typing import Any
 
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore
@@ -24,26 +25,11 @@ _TABLE = """CREATE TABLE IF NOT EXISTS api_auth_failure_limits (
 )"""
 
 
-class SQLiteAuthFailureStore:
-    def __init__(self, path: str = ":memory:") -> None:
-        if path != ":memory:":
-            descriptor = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
-            os.close(descriptor)
-            os.chmod(path, 0o600)
-        self._connection = sqlite3.connect(path, check_same_thread=False, timeout=5)
-        self._connection.execute("PRAGMA journal_mode=WAL")
-        self._connection.execute(_TABLE)
-        self._connection.commit()
-        self._connection.execute("PRAGMA busy_timeout=400")
-        self._lock = threading.Lock()
-
-    @contextmanager
-    def transaction(self, source: str):
-        with self._lock:
-            conn = self._connection
-            conn.execute("BEGIN IMMEDIATE")
-            with conn:
-                yield conn.execute
+class AuthFailureStore(ABC):
+    @abstractmethod
+    def transaction(self, source: str) -> AbstractContextManager[Any]:
+        """Serialize one source and yield the backend SQL executor."""
+        raise NotImplementedError
 
     def remaining(self, source: str, now: float) -> int:
         with self.transaction(source) as execute:
@@ -99,7 +85,29 @@ class SQLiteAuthFailureStore:
         return True
 
 
-class PostgresAuthFailureStore(SQLiteAuthFailureStore):
+class SQLiteAuthFailureStore(AuthFailureStore):
+    def __init__(self, path: str = ":memory:") -> None:
+        if path != ":memory:":
+            descriptor = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+            os.close(descriptor)
+            os.chmod(path, 0o600)
+        self._connection = sqlite3.connect(path, check_same_thread=False, timeout=5)
+        self._connection.execute("PRAGMA journal_mode=WAL")
+        self._connection.execute(_TABLE)
+        self._connection.commit()
+        self._connection.execute("PRAGMA busy_timeout=400")
+        self._lock = threading.Lock()
+
+    @contextmanager
+    def transaction(self, source: str):
+        with self._lock:
+            conn = self._connection
+            conn.execute("BEGIN IMMEDIATE")
+            with conn:
+                yield conn.execute
+
+
+class PostgresAuthFailureStore(AuthFailureStore):
     """Share the existing Postgres rate-limit pool, with transaction locks."""
 
     def __init__(self, rate_limit_store: Any) -> None:
@@ -111,11 +119,17 @@ class PostgresAuthFailureStore(SQLiteAuthFailureStore):
 
     @contextmanager
     def transaction(self, source: str):
+        try:
+            with self._pool.connection(timeout=0.4) as conn:
+                conn.execute("SET LOCAL statement_timeout = '400ms'")
+                conn.execute("SET LOCAL lock_timeout = '400ms'")
+                conn.execute("SELECT pg_advisory_xact_lock(%s)", (PostgresRateLimitStore._advisory_key("auth:" + source),))
 
-        with self._pool.connection() as conn:
-            conn.execute("SELECT pg_advisory_xact_lock(%s)", (PostgresRateLimitStore._advisory_key("auth:" + source),))
+                def execute(sql, parameters):
+                    return conn.execute(sql.replace("?", "%s"), parameters)
 
-            def execute(sql, parameters):
-                return conn.execute(sql.replace("?", "%s"), parameters)
-
-            yield execute
+                yield execute
+        except Exception as exc:  # broad-except: Classify optional-driver contention without importing it in SQLite installations.
+            if getattr(exc, "sqlstate", None) in {"55P03", "57014"} or type(exc).__name__ == "PoolTimeout":
+                raise TimeoutError("Authentication database capacity exhausted") from exc
+            raise

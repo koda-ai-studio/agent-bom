@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -82,7 +81,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
 
     _check_auth_session_rate_limit(request)
     raw_key = body.api_key.strip()
-    request.state.auth_credential_fingerprint = hashlib.sha256(raw_key.encode()).hexdigest()
+    request.state.auth_credential_fingerprint = audit_log.fingerprint_auth_credential(raw_key)
     if not raw_key:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
