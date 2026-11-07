@@ -29,6 +29,7 @@ from agent_bom.output.dependency_hierarchy import dependency_count_label
 from agent_bom.output.inventory_label import inventory_counts, inventory_subjects
 from agent_bom.output.kernel_header_console import collapse_kernel_header_findings, print_findings_heading, print_kernel_groups_only
 from agent_bom.output.possibly_affected import print_possibly_affected
+from agent_bom.verbose_hint import verbose_hint
 
 # The cross-cutting helpers (`console`, `_sev_badge`, `build_remediation_plan`)
 # live in the package's __init__. Import lazily inside functions to avoid a
@@ -287,7 +288,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
                 hint_bits.append(f"{elevated} elevated server(s)")
             hint_text = " · ".join(hint_bits) if hint_bits else "drivers and credentials"
             lines.append("")
-            lines.append(f"  [dim]→ Run with[/dim] [bold]--verbose[/bold] [dim]for[/dim] {hint_text}")
+            lines.append(f"  [dim]→ Run with[/dim] [bold]{verbose_hint()}[/bold] [dim]for[/dim] {hint_text}")
 
         console.print(
             Panel(
@@ -858,7 +859,7 @@ def print_compact_cis_posture(report: AIBOMReport, limit: int = 5) -> None:
                 console.print(f"       [dim]→ {_compact_detail(rem['fix_console'], limit=110)}[/dim]")
 
         if len(actionable) > limit:
-            console.print(f"    [dim]... {len(actionable) - limit} more (use --verbose for full plan)[/dim]")
+            console.print(f"    [dim]... {len(actionable) - limit} more (use {verbose_hint()} for full plan)[/dim]")
 
     console.print()
 

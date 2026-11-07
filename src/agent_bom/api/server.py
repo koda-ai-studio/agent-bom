@@ -180,22 +180,14 @@ def _log_rate_limit_key_status() -> None:
         from agent_bom.api.middleware import get_rate_limit_key_status
 
         _rl_status = get_rate_limit_key_status()
-        if _rl_status["status"] == "max_age_exceeded":
-            _logger.error(
-                "rate_limit_key_rotation status=%s age_days=%s message=%s",
-                _rl_status["status"],
-                _rl_status["age_days"],
-                _rl_status["message"],
-            )
-        elif _rl_status["status"] in {"rotation_due", "ephemeral", "unknown_age"}:
-            _logger.warning(
-                "rate_limit_key_rotation status=%s age_days=%s message=%s",
-                _rl_status["status"],
-                _rl_status["age_days"],
-                _rl_status["message"],
-            )
-        else:
-            _logger.info("rate_limit_key_rotation status=%s age_days=%s", _rl_status["status"], _rl_status["age_days"])
+        status = _rl_status["status"]
+        if status == "ok":
+            _logger.info("rate_limit_key_rotation status=%s age_days=%s", status, _rl_status["age_days"])
+            return
+        # An ephemeral key in a single local process loses nothing on restart, so the status carries severity "info".
+        level = logging.ERROR if status == "max_age_exceeded" else logging.INFO if _rl_status.get("severity") == "info" else logging.WARNING
+        age, message = _rl_status["age_days"], _rl_status["message"]
+        _logger.log(level, "rate_limit_key_rotation status=%s age_days=%s message=%s", status, age, message)
     except Exception:
         _logger.debug("rate_limit_key_rotation status check skipped", exc_info=False)
 

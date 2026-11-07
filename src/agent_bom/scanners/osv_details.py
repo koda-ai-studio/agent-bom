@@ -12,6 +12,7 @@ from rich.console import Console
 from agent_bom.core.errors import DegradedCoverage, UpstreamError, UpstreamInvalidResponseError
 from agent_bom.http_client import OfflineModeError, create_client, request_with_retry
 from agent_bom.scanners.upstream import upstream_request
+from agent_bom.verbose_hint import verbose_hint
 
 _logger = logging.getLogger(__name__)
 
@@ -116,7 +117,7 @@ async def enrich_results_if_needed(
         _logger.warning("OSV detail enrichment skipped (vulnerability summaries may be incomplete): %s", type(exc).__name__)
         console.print(
             "  [yellow]⚠[/yellow] OSV detail enrichment skipped — vulnerability summaries may be incomplete."
-            " [dim]Use --verbose for details.[/dim]"
+            f" [dim]Use {verbose_hint()} for details.[/dim]"
         )
         record_scan_warning("OSV detail enrichment skipped")
         return results

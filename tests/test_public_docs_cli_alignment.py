@@ -227,7 +227,7 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
     assert hero.count("img.shields.io") <= 5, "the badge rows are capped at five badges"
     assert "docs/GALLERY.md" in hero
     quick_start = readme.split("## Quick start", 1)[1].split("\n## ", 1)[0]
-    command = "```bash\nuvx agent-bom scan . --no-discover -f html -o agent-bom-report.html\n```"
+    command = "```bash\nuvx agent-bom scan . -f html -o agent-bom-report.html\n```"
     assert command in quick_start
     assert "docs/images/demo-latest.gif" in quick_start.split("<details>", 1)[0], "the proof visual is visible, not collapsed"
     assert "[Measured matcher proof](site-docs/features/scanning.md#reproducible-matching-evidence)" in readme

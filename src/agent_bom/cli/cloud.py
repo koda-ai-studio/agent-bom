@@ -16,6 +16,7 @@ import click
 
 from agent_bom import __version__
 from agent_bom.cli._entry import make_entry_point
+from agent_bom.cli._focused_options import verbose_option
 from agent_bom.cli._grouped_help import GroupedGroup
 from agent_bom.cli._param_source import invoke_forwarding
 
@@ -97,7 +98,8 @@ cloud.add_command(resilience_cmd, "resilience")
 @click.option("--cis", is_flag=True, default=True, help="Run CIS benchmark (default: on)")
 @click.option("--no-cis", is_flag=True, help="Skip CIS benchmark")
 @click.option("--quiet", "-q", is_flag=True)
-def snowflake_cmd(output_format: str, output_path: Optional[str], cis: bool, no_cis: bool, quiet: bool) -> None:
+@verbose_option
+def snowflake_cmd(output_format: str, output_path: Optional[str], cis: bool, no_cis: bool, quiet: bool, verbose: bool) -> None:
     """Scan Snowflake for Cortex Agents, MCP servers, and CIS compliance."""
     from agent_bom.cli.agents import scan
 
@@ -112,6 +114,7 @@ def snowflake_cmd(output_format: str, output_path: Optional[str], cis: bool, no_
         output_format=output_format,
         output=output_path,
         quiet=quiet,
+        verbose=verbose,
     )
 
 
@@ -119,7 +122,8 @@ def snowflake_cmd(output_format: str, output_path: Optional[str], cis: bool, no_
 @click.option("-f", "--format", "output_format", default="console", help="Output format")
 @click.option("-o", "--output", "output_path", help="Output file path")
 @click.option("--quiet", "-q", is_flag=True)
-def databricks_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> None:
+@verbose_option
+def databricks_cmd(output_format: str, output_path: Optional[str], quiet: bool, verbose: bool) -> None:
     """Scan Databricks for clusters, libraries, and security best practices."""
     from agent_bom.cli.agents import scan
 
@@ -134,6 +138,7 @@ def databricks_cmd(output_format: str, output_path: Optional[str], quiet: bool) 
         output_format=output_format,
         output=output_path,
         quiet=quiet,
+        verbose=verbose,
     )
 
 
@@ -142,7 +147,8 @@ def databricks_cmd(output_format: str, output_path: Optional[str], quiet: bool) 
 @click.option("-f", "--format", "output_format", default="console", help="Output format")
 @click.option("-o", "--output", "output_path", help="Output file path")
 @click.option("--quiet", "-q", is_flag=True)
-def huggingface_cmd(verify_hashes: bool, output_format: str, output_path: Optional[str], quiet: bool) -> None:
+@verbose_option
+def huggingface_cmd(verify_hashes: bool, output_format: str, output_path: Optional[str], quiet: bool, verbose: bool) -> None:
     """Scan HuggingFace for model provenance, hash verification, and licensing."""
     from agent_bom.cli.agents import scan
 
@@ -157,6 +163,7 @@ def huggingface_cmd(verify_hashes: bool, output_format: str, output_path: Option
         output_format=output_format,
         output=output_path,
         quiet=quiet,
+        verbose=verbose,
     )
 
 
@@ -164,7 +171,8 @@ def huggingface_cmd(verify_hashes: bool, output_format: str, output_path: Option
 @click.option("-f", "--format", "output_format", default="console", help="Output format")
 @click.option("-o", "--output", "output_path", help="Output file path")
 @click.option("--quiet", "-q", is_flag=True)
-def ollama_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> None:
+@verbose_option
+def ollama_cmd(output_format: str, output_path: Optional[str], quiet: bool, verbose: bool) -> None:
     """Scan Ollama for local model registry and provenance."""
     from agent_bom.cli.agents import scan
 
@@ -178,6 +186,7 @@ def ollama_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> N
         output_format=output_format,
         output=output_path,
         quiet=quiet,
+        verbose=verbose,
     )
 
 
@@ -185,7 +194,8 @@ def ollama_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> N
 @click.option("-f", "--format", "output_format", default="console", help="Output format")
 @click.option("-o", "--output", "output_path", help="Output file path")
 @click.option("--quiet", "-q", is_flag=True)
-def posture_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> None:
+@verbose_option
+def posture_cmd(output_format: str, output_path: Optional[str], quiet: bool, verbose: bool) -> None:
     """Unified cross-cloud AI security posture summary.
 
     Auto-detects available cloud credentials and scans all configured providers.
@@ -209,6 +219,7 @@ def posture_cmd(output_format: str, output_path: Optional[str], quiet: bool) -> 
         output_format=output_format,
         output=output_path,
         quiet=quiet,
+        verbose=verbose,
     )
 
 

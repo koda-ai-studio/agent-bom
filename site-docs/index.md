@@ -15,12 +15,13 @@ are vulnerable, and what each one can reach. Local scans need no account.
 [Try it in your browser](https://koda-ai-studio.github.io/agent-bom/demo/) first, no install.
 
 ```bash
-uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
+uvx agent-bom scan . -f html -o agent-bom-report.html
 ```
 
 Open `agent-bom-report.html` to inspect inventory, findings, coverage and fix
 guidance. Run the same scan again later and agent-bom prints what changed since
-the last one. `--no-discover` excludes workstation-wide discovery. No MCP
+the last one. The scan stays inside the repository, including its secrets and
+personal data, and does not read agent configuration elsewhere on the machine. No MCP
 configuration? Package findings remain useful; agent/tool relationships require
 discovered configuration or an explicit inventory.
 [Measured matching accuracy on real repositories](features/real-repository-accuracy.md).
@@ -69,7 +70,7 @@ With [uv installed](https://docs.astral.sh/uv/getting-started/installation/),
 scan the repository you want to inspect:
 
 ```bash
-uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
+uvx agent-bom scan . -f html -o agent-bom-report.html
 ```
 
 Open `agent-bom-report.html` and review the affected package, recorded agent

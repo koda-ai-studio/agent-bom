@@ -105,11 +105,27 @@ provides headroom; measure peak resident memory with your inventory and expected
 concurrency before choosing production limits.
 
 Pushed results (`POST /v1/results/push`) are bounded by
-`AGENT_BOM_API_RESULT_PUSH_MAX_BYTES`. Parsing one maximum-size body into the
-report model takes roughly eight times its size, so keep the memory limit at
-least eight times that budget plus baseline for each maximum-size push a pod
-may handle at once. The chart's test suite enforces the single-push floor for
-API and worker pods.
+`AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` (default 192 MiB). That is a body cap,
+not a sizing promise: peak memory grows with the estate in the push much faster
+than the body size. Peak API resident memory with one push in flight, measured
+by `scripts/qualification/performance.py`:
+
+| Agents per push | Push body | Package instances | Peak on SQLite | Peak on PostgreSQL |
+| --- | --- | --- | --- | --- |
+| 25 | under 1 MB | — | 335 MB | 333 MB |
+| 1,000 | 3.8 MB | — | 730 MB | 789 MB |
+| 5,000 | 18 MB | 116,907 | 2.4 GB | 4.1 GB |
+
+Which limit to set for the API pod (and worker pods, which parse queued pushes):
+
+- up to about 1,000 agents per push: the `2Gi` default
+- about 5,000 agents per push: at least `3Gi` on SQLite or `5Gi` on PostgreSQL,
+  or split the estate into pushes of about 1,000 agents
+- several large pushes per pod at once: add one peak per concurrent push
+
+With `2Gi` containers the API was OOM-killed at 5,000 agents on both backends.
+Data already committed stayed committed and the API recovered after the
+restart, but the push in flight failed and must be resent.
 
 Repeated reads use a per-process cache of at most 64 responses, keyed by tenant,
 query parameters and evidence revisions, including graph snapshot replacements.

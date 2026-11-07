@@ -18,9 +18,16 @@ def is_project_agent(agent) -> bool:
 
 
 def inventory_counts(report: AIBOMReport) -> tuple[int, int]:
-    """Return ``(agents, projects)`` with the project pseudo-agents split out."""
+    """Return ``(agents, projects)`` with the project pseudo-agents split out.
+
+    ``report.total_agents`` already leaves out repository-only inventory, so
+    subtracting every project from it went negative. Agents are counted here
+    directly: those the report counts, less the ``project:`` records shown as
+    projects.
+    """
     projects = sum(1 for agent in report.agents if is_project_agent(agent))
-    return report.total_agents - projects, projects
+    agents = sum(1 for agent in report.agents if agent.counts_as_agent and not is_project_agent(agent))
+    return agents, projects
 
 
 def _plural(count: int, noun: str) -> str:

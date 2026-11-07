@@ -29,6 +29,7 @@ from agent_bom.scanners.osv_details import enrich_results_if_needed as enrich_re
 from agent_bom.scanners.osv_details import enrich_vuln_details as enrich_vuln_details
 from agent_bom.scanners.osv_details import vuln_needs_enrichment as vuln_needs_enrichment
 from agent_bom.scanners.upstream import upstream_request
+from agent_bom.verbose_hint import verbose_hint
 from agent_bom.version_utils import compare_version_order, is_prerelease_version
 
 __all__ = [
@@ -576,7 +577,7 @@ async def query_osv_batch_impl(
             "%d packages had CVE lookup errors — vulnerability detection may be incomplete",
             len(lookup_errors),
         )
-        console.print(f"  [yellow]⚠[/yellow] {len(lookup_errors)} packages had lookup errors [dim](use --verbose for details)[/dim]")
+        console.print(f"  [yellow]⚠[/yellow] {len(lookup_errors)} packages had lookup errors [dim](use {verbose_hint()} for details)[/dim]")
         record_scan_warning(f"{len(lookup_errors)} package lookup error(s)")
         # Structured signal so a caller can fail closed deterministically
         # instead of string-matching the warning above. A zero-vuln result for

@@ -3,6 +3,7 @@
 import re
 from io import StringIO
 
+import click
 from rich.console import Console
 
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
@@ -255,7 +256,11 @@ def test_compact_summary_default_offers_verbose_hint_when_drivers_weak():
     agent = _make_agent(servers=[server])
     br = _blast(vuln, pkg, [agent], [server], creds=["AWS_SECRET_ACCESS_KEY"])
     report = AIBOMReport(agents=[agent], blast_radii=[br])
-    output = _plain(_capture(print_compact_summary, report))
+    from agent_bom.cli.agents import scan
+
+    # The hint names --verbose only for a command that accepts it, as `scan` does.
+    with click.Context(scan, info_name="scan"):
+        output = _plain(_capture(print_compact_summary, report))
     assert "Top Drivers" not in output  # moved to --verbose
     assert "--verbose" in output  # hint surfaces
     assert "weak driver" in output or "credential" in output  # hint mentions what's behind it
