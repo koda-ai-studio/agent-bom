@@ -133,7 +133,7 @@ Two signals, both explicit:
 | OpenSSF `MAL-` IDs in OSV results | [`malicious.py:is_malicious_vuln`](../src/agent_bom/malicious.py) | OSV.dev (already batch-queried by the scanner) |
 | Typosquat heuristic against popular-package list | [`malicious.py flag_typosquats`](../src/agent_bom/malicious.py) | `difflib.SequenceMatcher` distance to curated top-N |
 
-Every scan emits `package.is_malicious` + `package.malicious_reason` on the `Package` model ([`models.py`](../src/agent_bom/models.py)). Flagged in CLI output as `!! MALICIOUS` and surfaced in the dashboard `/findings` view.
+Every scan emits `package.is_malicious` + `package.malicious_reason` on the `Package` model ([`models.py`](../src/agent_bom/models.py)). `malicious_basis` separates a known-malicious advisory from a name match, which blocks the same way but reads as suspected. Flagged in CLI output as `MALICIOUS` or `SUSPECTED MALICIOUS` and surfaced in the dashboard `/findings` view.
 
 ### 2.4 Malicious / misconfigured MCP servers: "What if a vendor ships a compromised MCP?"
 

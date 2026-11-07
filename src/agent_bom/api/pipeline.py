@@ -68,6 +68,7 @@ from agent_bom.api.stores import (
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.config import API_SCAN_WORKER_RECYCLE_JOBS, API_SCAN_WORKERS
 from agent_bom.core.tenancy import require_explicit_tenant_id
+from agent_bom.evidence.scan_run import ScanOutcome
 from agent_bom.security import sanitize_error, sanitize_text, sanitize_text_memo
 
 _logger = logging.getLogger(__name__)
@@ -473,8 +474,9 @@ def _publish_static_findings(ctx: ScanContext, ast_only_result: Any | None) -> N
 def _publish_no_agents(ctx: ScanContext) -> None:
     job = ctx.job
     scan_run = ctx.build_scan_run(has_usable_evidence=False)
+    unreachable = scan_run.outcome is ScanOutcome.FAILED
     job.result = {
-        "status": "no_agents_found",
+        "status": "failed" if unreachable else "no_agents_found",
         "agents": [],
         "vulnerabilities": [],
         "blast_radius": [],
@@ -493,7 +495,9 @@ def _publish_no_agents(ctx: ScanContext) -> None:
     job.result_document = empty_document
     if empty_note:
         job.progress.append(empty_note)
-    job.status = JobStatus.DONE
+    # Every requested target failed: the same terminal state as a pipeline error, not an empty estate.
+    job.status = JobStatus.FAILED if unreachable else JobStatus.DONE
+    job.error = "; ".join(scan_run.warnings)[:1_000] if unreachable else None
     job.completed_at = _now()
 
 

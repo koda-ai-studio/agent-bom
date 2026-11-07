@@ -16,6 +16,7 @@ check never fails the scan it runs inside.
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import Any, Literal
 
 ValidationStatus = Literal["valid", "invalid", "unknown"]
@@ -47,6 +48,41 @@ _INVALID_CREDENTIAL_CODES = frozenset(
         "AuthFailure",
     }
 )
+
+
+# sts:GetCallerIdentity needs both halves of an AWS credential pair. The
+# access key id is already captured by the "AWS Access Key" credential
+# pattern's own match; this second, capturing regex locates the paired secret
+# key's *value* so the pair can be handed to boto3 for a single read-only
+# call. The captured value is used only in-process for that call — it is
+# never stored on a SecretFinding, returned, or logged.
+_AWS_SECRET_VALUE_RE = re.compile(
+    r"(?:aws_secret_access_key|secret_?key)['\"]?\s*[=:]\s*['\"]?([A-Za-z0-9/+=]{40})(?![A-Za-z0-9/+=])",
+    re.IGNORECASE,
+)
+
+
+def aws_secret_candidates(lines: list[str]) -> list[tuple[int, str]]:
+    """Return (line_number, secret_value) pairs found anywhere in the file."""
+    candidates: list[tuple[int, str]] = []
+    for line_num, line in enumerate(lines, 1):
+        match = _AWS_SECRET_VALUE_RE.search(line)
+        if match:
+            candidates.append((line_num, match.group(1)))
+    return candidates
+
+
+def nearest_aws_secret(candidates: list[tuple[int, str]], line_num: int) -> str | None:
+    """Pair an AWS Access Key finding with the secret key value closest to it.
+
+    AWS credentials are conventionally written as two adjacent lines (e.g.
+    ``AWS_ACCESS_KEY_ID=`` / ``AWS_SECRET_ACCESS_KEY=`` in a ``.env`` file); the
+    nearest candidate by line distance is the most likely pair in a file that
+    may hold more than one credential set.
+    """
+    if not candidates:
+        return None
+    return min(candidates, key=lambda c: abs(c[0] - line_num))[1]
 
 
 def _build_sts_client(access_key_id: str, secret_access_key: str) -> Any:

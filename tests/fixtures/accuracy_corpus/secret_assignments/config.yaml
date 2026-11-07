@@ -1,0 +1,8 @@
+api_key: abcdefghijklmnopqrstuvwxyz
+upstream_api_key: process.env.PROVIDER_SERVICE_API_KEY
+image: 'https://cdn.invalid/products/123456789.jpg'
+thumb: assets/images/123-45-6789.png
+link: https://store.invalid/item/?id=4155550199
+ssn: 123-45-6789
+callback: https://api.invalid/lookup?ssn=123-45-6790
+phone: 415-555-0199

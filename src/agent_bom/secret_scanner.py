@@ -32,7 +32,7 @@ from pathlib import Path
 from agent_bom import config
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.runtime.patterns import PII_PATTERNS
-from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator
+from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator, aws_secret_candidates, nearest_aws_secret
 from agent_bom.scanners.build_metadata import mask_build_config_quantities
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus
 from agent_bom.scanners.public_source_samples import mask_public_docstrings, mask_public_module_links
@@ -42,6 +42,7 @@ from agent_bom.scanners.secret_lines import is_comment_line, match_credential, m
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
 from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
+from agent_bom.scanners.secret_value_shape import QUOTED_STRING_EXTENSIONS, LineLocators, is_translation_file
 from agent_bom.scanners.source_pii import machine_identity_match, source_pii_match
 from agent_bom.traversal import iter_discovery_files
 
@@ -185,40 +186,8 @@ _PII_CONTEXT_RE = re.compile(
 _MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 _MAX_FILES = 10_000  # Scan one file at a time; report partial coverage if this budget is exhausted.
 
+
 # ── AWS live-secret validation (opt-in) ─────────────────────────────────────
-# sts:GetCallerIdentity needs both halves of an AWS credential pair. The
-# access key id is already captured by the "AWS Access Key" credential
-# pattern's own match; this second, capturing regex locates the paired secret
-# key's *value* so the pair can be handed to boto3 for a single read-only
-# call. The captured value is used only in-process for that call — it is
-# never stored on a SecretFinding, returned, or logged.
-_AWS_SECRET_VALUE_RE = re.compile(
-    r"(?:aws_secret_access_key|secret_?key)['\"]?\s*[=:]\s*['\"]?([A-Za-z0-9/+=]{40})(?![A-Za-z0-9/+=])",
-    re.IGNORECASE,
-)
-
-
-def _aws_secret_candidates(lines: list[str]) -> list[tuple[int, str]]:
-    """Return (line_number, secret_value) pairs found anywhere in the file."""
-    candidates: list[tuple[int, str]] = []
-    for line_num, line in enumerate(lines, 1):
-        match = _AWS_SECRET_VALUE_RE.search(line)
-        if match:
-            candidates.append((line_num, match.group(1)))
-    return candidates
-
-
-def _nearest_aws_secret(candidates: list[tuple[int, str]], line_num: int) -> str | None:
-    """Pair an AWS Access Key finding with the secret key value closest to it.
-
-    AWS credentials are conventionally written as two adjacent lines (e.g.
-    ``AWS_ACCESS_KEY_ID=`` / ``AWS_SECRET_ACCESS_KEY=`` in a ``.env`` file); the
-    nearest candidate by line distance is the most likely pair in a file that
-    may hold more than one credential set.
-    """
-    if not candidates:
-        return None
-    return min(candidates, key=lambda c: abs(c[0] - line_num))[1]
 
 
 def _log_aws_validation_attempt(file_path: str, line_number: int, outcome: str) -> None:
@@ -357,9 +326,13 @@ def _pii_type(file_path: Path, line: str) -> str | None:
     """Return the first personal value, continuing past non-personal matches."""
     if not _should_scan_pii_line(file_path, line):
         return None
+    locators: LineLocators | None = None
     for name, pattern in PII_PATTERNS:
         for match in pattern.finditer(line):
             if machine_identity_match(name, match):
+                continue
+            locators = locators or LineLocators(line)
+            if locators.contains(match.start(), match.end()):
                 continue
             if file_path.suffix.lower() in _PII_CODE_EXTENSIONS and not source_pii_match(line, name, match):
                 break
@@ -371,6 +344,26 @@ def _pii_type(file_path: Path, line: str) -> str | None:
                     break
             return name
     return None
+
+
+def _aws_pair_status(
+    aws_validator: AwsCredentialValidator,
+    access_key: str,
+    paired_secret: str | None,
+    rel_path: str,
+    line_num: int,
+) -> ValidationStatus:
+    """Validate an access key with its paired secret.
+
+    With no secret key value to pair in this file no sts:GetCallerIdentity call
+    is possible, the same "unknown" verdict the generic validator returns for an
+    unsupported credential type, not a distinct failure state.
+    """
+    if paired_secret is None:
+        return "unknown"
+    status = aws_validator.validate(access_key, paired_secret)
+    _log_aws_validation_attempt(rel_path, line_num, status)
+    return status
 
 
 def _scan_file(
@@ -395,31 +388,24 @@ def _scan_file(
     findings: list[SecretFinding] = []
     lines = mask_public_module_links(mask_public_docstrings(content, file_path), file_path).split("\n")
     pii_lines = mask_build_config_quantities("\n".join(lines), file_path).split("\n")
-    aws_secrets = _aws_secret_candidates(lines) if aws_validator is not None else []
+    aws_secrets = aws_secret_candidates(lines) if aws_validator is not None else []
+    code_file = file_path.suffix.lower() in QUOTED_STRING_EXTENSIONS
+    translation_file = is_translation_file(rel_path)
 
     # Check each line against all patterns
     for line_num, line in enumerate(lines, 1):
         if is_comment_line(line):
             continue
 
-        credential = match_credential(line)
+        credential = match_credential(line, code_file=code_file)
         if credential is not None:
             secret_type, secret_match = credential
             validation_status: ValidationStatus | None = (
                 validator.validate(secret_type, secret_match.group(0)) if validator is not None else None
             )
             if secret_type == "AWS Access Key" and aws_validator is not None:
-                paired_secret = _nearest_aws_secret(aws_secrets, line_num)
-                if paired_secret is not None:
-                    validation_status = aws_validator.validate(secret_match.group(0), paired_secret)
-                    _log_aws_validation_attempt(rel_path, line_num, validation_status)
-                else:
-                    # Enrichment was requested but no secret key value could
-                    # be paired in this file, so no sts:GetCallerIdentity
-                    # call was possible — consistent with the "unsupported
-                    # credential type" verdict the generic validator already
-                    # returns, not a distinct failure state.
-                    validation_status = "unknown"
+                paired_secret = nearest_aws_secret(aws_secrets, line_num)
+                validation_status = _aws_pair_status(aws_validator, secret_match.group(0), paired_secret, rel_path, line_num)
             findings.append(
                 SecretFinding(
                     file_path=rel_path,
@@ -432,7 +418,7 @@ def _scan_file(
                 )
             )
 
-        file_secret = match_file_secret(line)
+        file_secret = match_file_secret(line, code_file=code_file, translation_file=translation_file)
         if file_secret is not None:
             findings.append(
                 SecretFinding(

@@ -481,6 +481,11 @@ SPDX 3 (`cpe23`) and appears on the package's graph node under the scanned host.
 Findings come from NVD CPE ranges in the local database and, online, from
 NVIDIA CSAF bulletins. A CSAF finding is reported only when the bulletin lists
 a Linux fix on the component's own driver branch, for example R550 or R535.
+For PyPI packages, a bulletin applies only when its CVE names a product that
+identifies the package, such as `nvidia-cublas-cu12` for CUDA Toolkit or
+`nemo-toolkit` for NeMo Framework, and the fix comes from that product's entry.
+Packages that bundle or call a product, such as `torch` or `tritonclient`, get no
+finding from these bulletins.
 NVD rows that apply only through a separate platform condition, such as some
 Windows-only CUDA advisories, are not yet distinguished from Linux rows.
 

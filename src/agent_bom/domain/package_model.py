@@ -12,6 +12,7 @@ from agent_bom.core.package_artifacts import normalize_artifact_version, package
 from agent_bom.core.packages import normalize_package_name as normalize_package_name
 from agent_bom.core.severity import Severity as Severity
 from agent_bom.domain.vulnerability_model import Vulnerability
+from agent_bom.evidence.malicious_basis import malicious_basis
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
 __all__ = ["Package", "PackageOccurrence", "normalize_package_name", "parse_debian_source_name"]
@@ -72,11 +73,12 @@ class Package:
     version_conflicts: list[dict[str, Any]] = field(default_factory=list)  # Conflicting source/version observations
     floating_reference: bool = False  # True when the package/source ref is mutable (latest/main/no digest)
     floating_reference_reason: Optional[str] = None  # Why the ref is mutable
-    is_malicious: bool = False  # True if flagged as known malicious (MAL- prefix in OSV)
+    is_malicious: bool = False  # Blocks every gate; ``malicious_basis`` says whether it is known or only suspected
     malicious_reason: Optional[str] = None  # Why this package is flagged (e.g. "MAL-2024-1234")
     license: Optional[str] = None  # SPDX license identifier (e.g. "MIT", "Apache-2.0")
     license_expression: Optional[str] = None  # Full SPDX expression (e.g. "Apache-2.0 AND MIT")
     deps_dev_resolved: bool = False  # True if resolved via deps.dev API
+    registry_not_found: bool = False  # True when the public registry answered 404 for this name
 
     # Supply chain metadata (populated by deps.dev enrichment or SBOM ingestion)
     supplier: Optional[str] = None  # Organization or individual that supplied the package
@@ -146,6 +148,10 @@ class Package:
     @property
     def has_vulnerabilities(self) -> bool:
         return len(self.vulnerabilities) > 0
+
+    @property
+    def malicious_basis(self) -> Optional[str]:
+        return malicious_basis(self.malicious_reason) if self.is_malicious else None
 
     @property
     def primary_occurrence(self) -> Optional[PackageOccurrence]:

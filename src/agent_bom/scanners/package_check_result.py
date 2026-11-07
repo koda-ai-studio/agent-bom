@@ -29,6 +29,7 @@ class PackageCheckResult:
     purl: str | None = None
     is_malicious: bool = False
     malicious_reason: str | None = None
+    malicious_basis: str | None = None
     exit_code: int = 0
     source_context: dict[str, Any] = field(default_factory=dict)
     # Freshness of the vuln data behind the verdict (scan-report shape) and
@@ -70,6 +71,7 @@ class PackageCheckResult:
             "lookup_mode": self.lookup_mode,
             "is_malicious": self.is_malicious,
             "malicious_reason": self.malicious_reason,
+            "malicious_basis": self.malicious_basis,
             "vulnerability_count": len(self.vulnerabilities),
             "vulnerability_details": list(self.vulnerabilities),
             "scan_warnings": list(self.warnings),

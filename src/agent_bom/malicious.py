@@ -174,6 +174,10 @@ _KNOWN_LEGITIMATE: dict[str, frozenset[str]] = {
             "beautifulsoup",
             # Globality's OpenAPI spec library, published since 2016.
             "openapi",
+            # GGML model bindings (marella/ctransformers), 30 releases from 2023; two edits from ``transformers``.
+            "ctransformers",
+            # Jason Evans's LR(1) parser generator, published since 2012; two edits from ``pyparsing``.
+            "parsing",
         }
     ),
 }

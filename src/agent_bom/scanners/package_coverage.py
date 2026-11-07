@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES
+from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES  # noqa: F401
 from agent_bom.malicious import check_dependency_confusion, check_typosquat
 from agent_bom.models import Package
 from agent_bom.scanners.local_data_freshness import local_db_untrusted, record_untrusted_local_data
+from agent_bom.scanners.nvidia_advisory import nvidia_products_for
 from agent_bom.scanners.package_matching import _db_ecosystems_for_package as _db_ecosystems_for_package
 from agent_bom.scanners.package_matching import _emit_scan_warning as _emit_scan_warning
 from agent_bom.scanners.package_matching import _scanners_patchable as _scanners_patchable
@@ -204,15 +205,7 @@ async def _run_supplemental_check(label: str, packages: list[Package], check: An
 async def _scan_supplemental_advisories(scannable: list[Package], offline: bool) -> int:
     """Query NVIDIA, AMD PSIRT and GitHub advisories; return the additional CVE count."""
     added = 0
-    # nvidia_advisory.py maps NVIDIA CSAF products to bundling frameworks (torch,
-    # jax, vllm, etc.) so we pass ALL AI packages — not just nvidia-prefixed ones.
-    nvidia_packages = [
-        p
-        for p in scannable
-        if p.name.lower().replace("-", "_") in _AI_FRAMEWORK_PACKAGES
-        or p.name.lower().replace("-", "") in _AI_FRAMEWORK_PACKAGES
-        or (p.cpe or "").startswith("cpe:2.3:a:nvidia:")
-    ]
+    nvidia_packages = [p for p in scannable if nvidia_products_for(p)]
     if nvidia_packages and not offline:
         added += await _run_supplemental_check("NVIDIA", nvidia_packages, _check_nvidia)
 

@@ -68,6 +68,7 @@ def _merge_server(target: MCPServer, incoming: MCPServer) -> None:
     target.resources = _merge_by_stable_id(target.resources, incoming.resources)
     target.packages = _merge_by_stable_id(target.packages, incoming.packages)
     target.env = {**incoming.env, **target.env}
+    target.plaintext_env_secrets = {**incoming.plaintext_env_secrets, **target.plaintext_env_secrets}
     target.security_blocked = target.security_blocked or incoming.security_blocked
     target.security_warnings = _merge_strings(target.security_warnings, incoming.security_warnings)
     existing_intel = {

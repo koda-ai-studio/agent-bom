@@ -1,0 +1,157 @@
+{
+ "document": {
+  "category": "csaf_security_advisory",
+  "title": "Security Bulletin: NVIDIA\u00ae CUDA Toolkit - November 2026",
+  "tracking": {
+   "id": "5910"
+  },
+  "notes": [
+   {
+    "category": "legal_disclaimer",
+    "text": "Trimmed from NVIDIA/product-security 2026/5910/5910.json, retrieved 2026-11-06. Product tree and product_status are unmodified."
+   }
+  ]
+ },
+ "product_tree": {
+  "branches": [
+   {
+    "branches": [
+     {
+      "branches": [
+       {
+        "category": "product_name",
+        "name": "CUDA Toolkit",
+        "product": {
+         "name": "CUDA Toolkit",
+         "product_id": "all_cuda_toolkit",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:cuda_toolkit:*:*:*:*:*:*:*:*"
+         }
+        }
+       },
+       {
+        "category": "product_name",
+        "name": "NVJPEG",
+        "product": {
+         "name": "NVJPEG",
+         "product_id": "linux_x86_64_linux_sbsa_jetson_windows_linux_for_tegra_driveos_nvjpeg",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:nvjpeg:*:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "product_family",
+      "name": "NVIDIA Product Family"
+     },
+     {
+      "branches": [
+       {
+        "category": "product_version",
+        "name": "CUDA Toolkit",
+        "product": {
+         "name": "0 to 13.4.1",
+         "product_id": "all_cuda_toolkit_0_to_13_4_1",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:cuda_toolkit:0_to_13_4_1:*:*:*:*:*:*:*"
+         }
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "CUDA Toolkit",
+        "product": {
+         "name": "13.4 U1",
+         "product_id": "all_cuda_toolkit_13_4_u1",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:cuda_toolkit:13_4_u1:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "architecture",
+      "name": "All"
+     },
+     {
+      "branches": [
+       {
+        "category": "product_version",
+        "name": "NVJPEG",
+        "product": {
+         "name": "26.07",
+         "product_id": "linux_x86_64_linux_sbsa_jetson_windows_linux_for_tegra_driveos_nvjpeg_26_07",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:nvjpeg:26_07:*:*:*:*:*:*:*"
+         }
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "NVJPEG",
+        "product": {
+         "name": "0 to 26.06",
+         "product_id": "linux_x86_64_linux_sbsa_jetson_windows_linux_for_tegra_driveos_nvjpeg_0_to_26_06",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:nvjpeg:0_to_26_06:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "architecture",
+      "name": "Linux x86_64, Linux sbsa Jetson, Windows, Linux for Tegra, DriveOS"
+     }
+    ],
+    "category": "vendor",
+    "name": "NVIDIA"
+   }
+  ]
+ },
+ "vulnerabilities": [
+  {
+   "cve": "CVE-2026-65160",
+   "notes": [
+    {
+     "category": "summary",
+     "text": "NVIDIA nvJPEG contains a vulnerability where an attacker could cause a divide-by-zero. A successful exploit of this vulnerability might lead to denial of service.",
+     "title": "Vulnerability description"
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "attackComplexity": "LOW",
+      "attackVector": "LOCAL",
+      "availabilityImpact": "HIGH",
+      "baseScore": 5.5,
+      "baseSeverity": "MEDIUM",
+      "confidentialityImpact": "NONE",
+      "integrityImpact": "NONE",
+      "privilegesRequired": "NONE",
+      "scope": "UNCHANGED",
+      "userInteraction": "REQUIRED",
+      "vectorString": "CVSS:3.1/AV:L/AC:L/PR:N/UI:R/S:U/C:N/I:N/A:H",
+      "version": "3.1"
+     },
+     "products": [
+      "all_cuda_toolkit_0_to_13_4_1",
+      "linux_x86_64_linux_sbsa_jetson_windows_linux_for_tegra_driveos_nvjpeg_0_to_26_06"
+     ]
+    }
+   ],
+   "cwe": {
+    "id": "CWE-369",
+    "name": "Divide By Zero"
+   },
+   "product_status": {
+    "fixed": [
+     "linux_x86_64_linux_sbsa_jetson_windows_linux_for_tegra_driveos_nvjpeg_26_07",
+     "all_cuda_toolkit_13_4_u1"
+    ],
+    "known_affected": [
+     "all_cuda_toolkit_0_to_13_4_1",
+     "linux_x86_64_linux_sbsa_jetson_windows_linux_for_tegra_driveos_nvjpeg_0_to_26_06"
+    ]
+   }
+  }
+ ]
+}
