@@ -9,7 +9,8 @@ import click
 from agent_bom.cli._common import SEVERITY_ORDER
 from agent_bom.cli.agents._context import ScanContext
 from agent_bom.evidence.cloud_posture import cloud_posture
-from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
+from agent_bom.evidence.malicious_basis import malicious_label
+from agent_bom.evidence.scan_run import NOTHING_TO_SCAN, ScanOutcome, effective_scan_run
 from agent_bom.output import to_json
 
 
@@ -398,7 +399,8 @@ def compute_exit_code(
                     if getattr(finding, "is_malicious", False):
                         asset_kind = "package" if finding.asset.asset_type == "package" else finding.asset.asset_type.replace("_", " ")
                         reason = finding.malicious_reason or f"known malicious {asset_kind}"
-                        con.print(f"\n  [red]Exiting with code 1: malicious {asset_kind} {finding.asset.name} ({reason})[/red]")
+                        label = malicious_label(finding.malicious_reason)
+                        con.print(f"\n  [red]Exiting with code 1: {label} {asset_kind} {finding.asset.name} ({reason})[/red]")
                     else:
                         con.print(f"\n  [red]Exiting with code 1: found {sev} finding ({finding.finding_type.value})[/red]")
                 exit_code = 1
@@ -437,16 +439,18 @@ def compute_exit_code(
                 f"Upgrade to --fail-on-severity to enforce."
             )
 
-    # A known-malicious package is a fail-closed BLOCK regardless of the opt-in
+    # A flagged package is a fail-closed BLOCK regardless of the opt-in
     # --fail-on-malicious flag, mirroring `check`, which always exits 1 on a
-    # malicious verdict. A default scan silently exiting 0 on a typosquat /
-    # dependency-confusion / known-malicious advisory would let it install.
+    # malicious or suspected-malicious verdict. A default scan silently exiting 0
+    # on a typosquat / dependency-confusion / known-malicious advisory would let
+    # it install.
     if exit_code == 0:
         for br in _active_blast_radii:
             if getattr(br.package, "is_malicious", False):
                 if not quiet:
                     reason = getattr(br.package, "malicious_reason", None) or "known malicious package"
-                    con.print(f"\n  [red]Exiting with code 1: malicious package {br.package.name} ({reason})[/red]")
+                    label = malicious_label(getattr(br.package, "malicious_reason", None))
+                    con.print(f"\n  [red]Exiting with code 1: {label} package {br.package.name} ({reason})[/red]")
                 exit_code = 1
                 break
         if exit_code == 0 and report:
@@ -455,7 +459,8 @@ def compute_exit_code(
                     if not quiet:
                         asset_kind = "package" if finding.asset.asset_type == "package" else finding.asset.asset_type.replace("_", " ")
                         reason = finding.malicious_reason or f"known malicious {asset_kind}"
-                        con.print(f"\n  [red]Exiting with code 1: malicious {asset_kind} {finding.asset.name} ({reason})[/red]")
+                        label = malicious_label(finding.malicious_reason)
+                        con.print(f"\n  [red]Exiting with code 1: {label} {asset_kind} {finding.asset.name} ({reason})[/red]")
                     exit_code = 1
                     break
             if exit_code == 0:
@@ -465,7 +470,8 @@ def compute_exit_code(
                             if getattr(pkg, "is_malicious", False):
                                 if not quiet:
                                     reason = getattr(pkg, "malicious_reason", None) or "known malicious package"
-                                    con.print(f"\n  [red]Exiting with code 1: malicious package {pkg.name} ({reason})[/red]")
+                                    label = malicious_label(getattr(pkg, "malicious_reason", None))
+                                    con.print(f"\n  [red]Exiting with code 1: {label} package {pkg.name} ({reason})[/red]")
                                 exit_code = 1
                                 break
                         if exit_code:
@@ -532,7 +538,11 @@ def compute_exit_code(
     # process exit even when the partial artifact contains zero findings.
     if report is not None:
         scan_outcome = _execution_outcome(report)
-        if scan_outcome is not ScanOutcome.COMPLETE:
+        nothing_scanned = next((issue for issue in effective_scan_run(report).issues if issue.code == NOTHING_TO_SCAN), None)
+        if nothing_scanned is not None:
+            # A repository without dependencies is normal in CI. The report withholds the grade instead of failing the job.
+            click.echo(f"agent-bom: {nothing_scanned.message}", err=True)
+        elif scan_outcome is not ScanOutcome.COMPLETE:
             if not quiet and not ctx.cloud_provider_failures:
                 con.print(
                     f"\n  [red]Exiting with code 1: scan execution was {scan_outcome.value}; "
@@ -544,7 +554,7 @@ def compute_exit_code(
     # them say is that a non-zero exit is the scanner working as designed — to a
     # first-time reader a red "Exiting with code 1" is indistinguishable from a
     # crash. State the contract once, plainly, without changing the code itself.
-    if exit_code != 0 and not quiet:
+    if exit_code == 1 and not quiet:
         con.print(
             "\n  [dim]Exit code 1 is a scan verdict, not a scanner error — the reason is above and the "
             f"report records findings and coverage limits.\n  Exit-code contract: {EXIT_CODE_CONTRACT_URL}[/dim]"

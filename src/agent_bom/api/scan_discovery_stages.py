@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from agent_bom.api.scan_context import ScanContext
+from agent_bom.evidence.scan_run import nothing_to_scan_message
 from agent_bom.security import sanitize_error, sanitize_text
 
 _logger = logging.getLogger("agent_bom.api.pipeline")
@@ -275,6 +277,8 @@ def _discover_filesystems(ctx: ScanContext) -> None:
             fs_pkgs, _strategy = scan_filesystem(fs_path)
             if fs_pkgs:
                 ctx.agents.append(build_filesystem_carrier(fs_path, fs_pkgs))
+            else:
+                ctx.warnings_all.append(nothing_to_scan_message([Path(fs_path).name]))
         except Exception as fs_exc:  # noqa: BLE001
             ctx.record_coverage_warning(f"Filesystem scan error: {sanitize_error(fs_exc, generic=True)}")
 

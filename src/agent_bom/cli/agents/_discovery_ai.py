@@ -10,6 +10,7 @@ from rich.table import Table as AiTable
 
 from agent_bom.cli.agents._discovery_state import DiscoveryRun
 from agent_bom.cli.agents._framework_topology_view import print_framework_topology
+from agent_bom.domain.mcp_model import FRAMEWORK_AGENTS_METADATA_KEY
 from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface
 
 _SEV_COLORS = {"critical": "red bold", "high": "red", "medium": "yellow", "low": "dim", "info": "dim"}
@@ -122,7 +123,10 @@ def _attach_sdk_packages(run: DiscoveryRun, ai_report: Any, first_path: Any) -> 
             config_path=str(first_path),
             source="ai-inventory",
             mcp_servers=[server],
-            metadata=_project_root_metadata(first_path),
+            metadata={
+                **_project_root_metadata(first_path),
+                **({FRAMEWORK_AGENTS_METADATA_KEY: True} if ai_report.framework_agents else {}),
+            },
         )
         run.ctx.agents.append(ai_agent)
 

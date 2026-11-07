@@ -1,0 +1,13 @@
+import os
+
+openai_api_key = get_from_dict_or_env(values, "openai_api_key", "OPENAI_API_KEY")
+self.mathpix_api_key = get_from_dict_or_env(kwargs, "mathpix_api_key", "MATHPIX_API_KEY")
+client = Wrapper(weather_service_api_key=weather_service_api_key)
+llm = Client(api_key=self.provider_service_api_key,)
+service_api_key = settings.provider_service_api_key
+DB_PASSWORD = os.environ["DB_PASSWORD"]
+ACCESS_TOKEN = fetch_access_token()
+api_key = "fixture-0value-0not-0real-00"
+admin_password = "Tr0ub4dor-fixture-7"
+ENDPOINT = "https://api.invalid/v1?api_key=abcdefghijklmnopqrstuvwxyz"
+DATABASE_URL = "postgres://app:Tr0ub4dor7fixture@db.invalid/app"

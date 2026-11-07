@@ -22,7 +22,9 @@ from rich.markup import escape
 from agent_bom.discovery.continue_config import continue_legacy_servers
 from agent_bom.discovery.coverage import report_blocked_server
 from agent_bom.discovery.mcp_metadata import connection_metadata
+from agent_bom.discovery.server_definition import args_field, blocked_mcp_server, string_field
 from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, ServerSurface, TransportType
+from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.security import (
     SecurityError,
     sanitize_env_vars,
@@ -36,18 +38,6 @@ logger = logging.getLogger(__name__)
 
 def _display_label(value: object, max_len: int = 500) -> str:
     return escape(sanitize_log_label(value, max_len=max_len))
-
-
-def _string_field(value: object) -> str:
-    return value if isinstance(value, str) else ""
-
-
-def _args_field(value: object) -> list[str]:
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, list):
-        return [item for item in value if isinstance(item, str)]
-    return []
 
 
 def _auto_approved_tool_names(value: object) -> list[str]:
@@ -144,15 +134,8 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
             validate_mcp_server_config(server_def)
         except SecurityError as e:
             report_blocked_server(name, e)
-            # Include blocked server in report for visibility — no silent skips
-            blocked_server = MCPServer(
-                name=name,
-                command=_string_field(server_def.get("command", "")),
-                config_path=config_path,
-                security_blocked=True,
-                security_warnings=[str(e)],
-            )
-            servers.append(blocked_server)
+            # Include blocked server in report for visibility — no silent skips.
+            servers.append(blocked_mcp_server(name, server_def, config_path, e))
             continue
 
         # Determine transport type
@@ -162,19 +145,19 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
         vscode_type = server_def.get("type", "")
         if vscode_type == "sse":
             transport = TransportType.SSE
-            url = _string_field(server_def.get("uri") or server_def.get("url"))
+            url = string_field(server_def.get("uri") or server_def.get("url"))
         elif vscode_type == "http":
             transport = TransportType.STREAMABLE_HTTP
-            url = _string_field(server_def.get("uri") or server_def.get("url"))
+            url = string_field(server_def.get("uri") or server_def.get("url"))
         elif "url" in server_def or "uri" in server_def:
-            url = _string_field(server_def.get("url") or server_def.get("uri"))
+            url = string_field(server_def.get("url") or server_def.get("uri"))
             if url and "sse" in url.lower():
                 transport = TransportType.SSE
             else:
                 transport = TransportType.STREAMABLE_HTTP
 
-        command = _string_field(server_def.get("command", ""))
-        args = _args_field(server_def.get("args", []))
+        command = string_field(server_def.get("command", ""))
+        args = args_field(server_def.get("args", []))
         raw_env = server_def.get("env", {})
 
         # Retain environment names while redacting credential values.
@@ -215,6 +198,7 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
             security_warnings=security_warnings,
             identity_bindings=identity_bindings,
             connection_metadata=connection_metadata(server_def, config_data),
+            plaintext_env_secrets=plaintext_env_secrets(raw_env),
         )
 
         # Detect privilege indicators from command/args
@@ -289,9 +273,9 @@ def parse_codex_config(config_path: str) -> list[MCPServer]:
 
         # Determine transport
         transport = TransportType.STDIO
-        url = _string_field(server_def.get("url"))
-        command = _string_field(server_def.get("command", ""))
-        args = _args_field(server_def.get("args", []))
+        url = string_field(server_def.get("url"))
+        command = string_field(server_def.get("command", ""))
+        args = args_field(server_def.get("args", []))
 
         if url:
             transport = TransportType.SSE if "sse" in url.lower() else TransportType.STREAMABLE_HTTP
@@ -300,7 +284,7 @@ def parse_codex_config(config_path: str) -> list[MCPServer]:
         env = sanitize_env_vars(raw_env) if isinstance(raw_env, dict) else {}
 
         # Bearer token env var → track as credential
-        bearer_var = _string_field(server_def.get("bearer_token_env_var"))
+        bearer_var = string_field(server_def.get("bearer_token_env_var"))
         if bearer_var:
             env[bearer_var] = "***REDACTED***"
 
@@ -312,6 +296,7 @@ def parse_codex_config(config_path: str) -> list[MCPServer]:
             transport=transport,
             url=url,
             config_path=config_path,
+            plaintext_env_secrets=plaintext_env_secrets(raw_env),
             connection_metadata=connection_metadata(server_def, data),
         )
         servers.append(server)
@@ -366,6 +351,7 @@ def parse_goose_config(config_path: str) -> list[MCPServer]:
             transport=transport,
             url=url,
             config_path=config_path,
+            plaintext_env_secrets=plaintext_env_secrets(raw_env),
         )
         servers.append(server)
 

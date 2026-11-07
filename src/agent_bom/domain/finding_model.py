@@ -12,6 +12,7 @@ from agent_bom.core.sla import finding_owner, finding_sla_fields
 from agent_bom.core.vex_policy import vex_row_fields
 from agent_bom.domain.asset_identity import canonical_asset_id, finding_asset_occurrence_id
 from agent_bom.evidence.finding_lanes import model_lane_fields
+from agent_bom.evidence.malicious_basis import malicious_row_fields
 
 if TYPE_CHECKING:
     from agent_bom.domain.remediation_model import Remediation
@@ -112,7 +113,7 @@ class Finding:
     network_exploitable: bool = False
     epss_score: Optional[float] = None
     is_kev: bool = False  # CISA Known Exploited Vulnerability
-    is_malicious: bool = False  # Known-malicious package (MAL- IDs, typosquat, etc.)
+    is_malicious: bool = False  # Blocking flag: known malware, or a suspected typosquat (see ``malicious_basis``)
     malicious_reason: Optional[str] = None
 
     # Remediation
@@ -517,8 +518,7 @@ class Finding:
             **finding_advisory_metadata(self.evidence),
             "epss_score": self.epss_score,
             "is_kev": self.is_kev,
-            "is_malicious": self.is_malicious,
-            "malicious_reason": self.malicious_reason,
+            **malicious_row_fields(self.malicious_reason, self.is_malicious),
             "fixed_version": self.fixed_version,
             "remediation_guidance": self.remediation_guidance,
             # Advisory remediation is omitted when absent.

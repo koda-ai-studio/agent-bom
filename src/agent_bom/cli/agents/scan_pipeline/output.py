@@ -6,6 +6,7 @@ import time as _time
 from pathlib import Path
 from typing import Any
 
+from agent_bom.autodiscover import package_not_on_registry_message, packages_not_on_registry
 from agent_bom.cli._common import logger
 from agent_bom.cli.agents._output import render_output
 from agent_bom.cli.agents._posture import render_posture_summary
@@ -315,7 +316,11 @@ def _print_completion(opts: ScanOptions, st: ScanState) -> None:
             and st.report.total_vulnerabilities == 0
             and not [f for f in st.report.to_findings() if f.finding_type.value != "CVE"]
         ):
-            st.con.print("\n  [green]→[/green] no vulnerabilities found — supply chain looks clean")
+            _missing = packages_not_on_registry(st.all_packages)
+            if _missing:
+                st.con.print(f"\n  [yellow]⚠[/yellow] {package_not_on_registry_message(_missing)}")
+            else:
+                st.con.print("\n  [green]→[/green] no vulnerabilities found — supply chain looks clean")
 
 
 def run_output(opts: ScanOptions, st: ScanState) -> None:

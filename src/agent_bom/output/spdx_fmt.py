@@ -338,7 +338,7 @@ def _package_statements(pkg: Any) -> list[str]:
     if pkg.is_malicious:
         # Surface the malicious flag so a MAL- package is distinguishable from
         # an ordinary library in the SBOM.
-        statements.append(f"agent-bom:malicious=true reason={pkg.malicious_reason or 'flagged malicious'}")
+        statements.append(f"agent-bom:malicious=true basis={pkg.malicious_basis} reason={pkg.malicious_reason or 'flagged malicious'}")
     # SPDX 3.0.1 has no modelled slot for a verification verdict; an ``other``
     # Annotation is the core-profile mechanism for it. ``verifiedUsing`` carries
     # the digest; this carries whether it was checked, and what came back.

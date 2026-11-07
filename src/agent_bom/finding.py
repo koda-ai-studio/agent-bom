@@ -33,6 +33,7 @@ from agent_bom.domain.finding_types import _occurrence_evidence_qualifier as _oc
 from agent_bom.domain.finding_types import _stable_id as _stable_id
 from agent_bom.domain.finding_types import cites_cis_control
 from agent_bom.domain.finding_types import stable_id as stable_id
+from agent_bom.evidence.malicious_basis import malicious_basis, malicious_evidence_fields, malicious_label, malicious_remediation
 from agent_bom.security import sanitize_text
 
 if TYPE_CHECKING:
@@ -107,9 +108,7 @@ def _remediation_guidance_for_vulnerability(vuln: object, pkg: object) -> str:
 
     package_name = getattr(pkg, "name", "the affected package") or "the affected package"
     if getattr(pkg, "is_malicious", False):
-        reason = getattr(pkg, "malicious_reason", None)
-        detail = f" ({reason})" if isinstance(reason, str) and reason.strip() else ""
-        return f"Remove {package_name} from all environments immediately{detail}."
+        return malicious_remediation(package_name, getattr(pkg, "malicious_reason", None))
 
     ecosystem = getattr(pkg, "ecosystem", None)
     fixed_version = _forward_fixed_version(getattr(vuln, "fixed_version", None), getattr(pkg, "version", None), ecosystem)
@@ -761,9 +760,7 @@ def blast_radius_to_finding(br: object) -> "Finding":
             evidence[f"package_{key}"] = value
     if getattr(pkg, "is_malicious", False):
         evidence["package_is_malicious"] = True
-        reason = getattr(pkg, "malicious_reason", None)
-        if isinstance(reason, str) and reason.strip():
-            evidence["malicious_reason"] = reason.strip()
+        evidence.update(malicious_evidence_fields(getattr(pkg, "malicious_reason", None)))
     if vuln.references:
         evidence["references"] = _sanitized_evidence_field(vuln.references[:5])
 
@@ -934,6 +931,7 @@ def malicious_package_to_finding(
         "ecosystem": ecosystem,
         "package_is_malicious": True,
         "malicious_reason": reason,
+        "malicious_basis": malicious_basis(reason),
         "finding_kind": "malicious-package",
     }
     finding = Finding(
@@ -941,7 +939,7 @@ def malicious_package_to_finding(
         source=FindingSource.MCP_SCAN,
         asset=Asset(name=name, asset_type="package", identifier=identifier),
         severity="critical",
-        title=f"Malicious package: {name}@{version}",
+        title=f"{malicious_label(reason).capitalize()} package: {name}@{version}",
         description=reason,
         is_malicious=True,
         malicious_reason=reason,

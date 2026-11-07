@@ -7,6 +7,19 @@ from typing import Any, cast
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
+_PROMPT_SECURITY_CATEGORIES = frozenset(
+    {
+        "over_permission",
+        "schema_risk",
+        "dangerous_combo",
+        "cve_exposure",
+        "tool_collision",
+        "remote_code_launcher",
+        "plaintext_secret",
+        "unscoped_filesystem",
+    }
+)
+
 
 def enforcement_dict_to_finding(raw: dict) -> "Finding":
     """Promote a passive/full MCP enforcement row to the unified stream."""
@@ -18,7 +31,7 @@ def enforcement_dict_to_finding(raw: dict) -> "Finding":
     recommendation = sanitize_text(raw.get("recommendation", "") or "", max_len=1_000)
     severity = sanitize_text(raw.get("severity", "high") or "high", max_len=40)
     finding_type = FindingType.TOOL_DRIFT if "drift" in category else FindingType.INJECTION
-    if category in {"over_permission", "schema_risk", "dangerous_combo", "cve_exposure", "tool_collision"}:
+    if category in _PROMPT_SECURITY_CATEGORIES:
         finding_type = FindingType.PROMPT_SECURITY
     surface_name = sanitize_text(raw.get("surface_name") or tool_name or server_name, max_len=200)
     surface_type = raw.get("surface_type") or ("mcp_tool" if tool_name else "mcp_server")

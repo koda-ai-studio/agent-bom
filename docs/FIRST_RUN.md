@@ -472,8 +472,8 @@ the result.
 ## 5. Gate CI on the result
 
 Severity gating defaults to `high`, the same as the GitHub Action: a plain scan
-with a high or critical vulnerability exits `1` after writing its report. Known-malicious packages
-(typosquat / dependency confusion) and incomplete scans also fail closed with
+with a high or critical vulnerability exits `1` after writing its report. Known-malicious packages,
+suspected ones (typosquat / dependency confusion) and incomplete scans also fail closed with
 no flag set.
 
 Adjust the severity threshold or choose an explicit reporting-only scan:

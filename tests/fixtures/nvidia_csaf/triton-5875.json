@@ -1,0 +1,180 @@
+{
+ "document": {
+  "category": "csaf_security_advisory",
+  "title": "Security Bulletin - Triton Inference Server - August 2026",
+  "tracking": {
+   "id": "5875"
+  },
+  "notes": [
+   {
+    "category": "legal_disclaimer",
+    "text": "Trimmed from NVIDIA/product-security 2026/5875/5875.json, retrieved 2026-11-06. Product tree and product_status are unmodified."
+   }
+  ]
+ },
+ "product_tree": {
+  "branches": [
+   {
+    "branches": [
+     {
+      "branches": [
+       {
+        "category": "product_name",
+        "name": "Triton Inference Server",
+        "product": {
+         "name": "Triton Inference Server",
+         "product_id": "linux_triton_inference_server",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:triton_inference_server:*:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "product_family",
+      "name": "NVIDIA Product Family"
+     },
+     {
+      "branches": [
+       {
+        "category": "product_version",
+        "name": "Triton Inference Server",
+        "product": {
+         "name": "26.07",
+         "product_id": "linux_triton_inference_server_26_07",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:triton_inference_server:26_07:*:*:*:*:*:*:*"
+         }
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Triton Inference Server",
+        "product": {
+         "name": "0.0-26.03",
+         "product_id": "linux_triton_inference_server_0_026_03",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:triton_inference_server:0_026_03:*:*:*:*:*:*:*"
+         }
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Triton Inference Server",
+        "product": {
+         "name": "0.0-26.06",
+         "product_id": "linux_triton_inference_server_0_026_06",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:triton_inference_server:0_026_06:*:*:*:*:*:*:*"
+         }
+        }
+       },
+       {
+        "category": "product_version",
+        "name": "Triton Inference Server",
+        "product": {
+         "name": "26.04",
+         "product_id": "linux_triton_inference_server_26_04",
+         "product_identification_helper": {
+          "cpe": "cpe:2.3:a:nvidia:triton_inference_server:26_04:*:*:*:*:*:*:*"
+         }
+        }
+       }
+      ],
+      "category": "architecture",
+      "name": "Linux"
+     }
+    ],
+    "category": "vendor",
+    "name": "NVIDIA"
+   }
+  ]
+ },
+ "vulnerabilities": [
+  {
+   "cve": "CVE-2026-16497",
+   "notes": [
+    {
+     "category": "summary",
+     "text": "NVIDIA Triton Inference Server for Linux contains a vulnerability where an attacker could cause excessive iteration. A successful exploit of this vulnerability might lead to denial of service.",
+     "title": "Vulnerability description"
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "attackComplexity": "LOW",
+      "attackVector": "NETWORK",
+      "availabilityImpact": "HIGH",
+      "baseScore": 7.5,
+      "baseSeverity": "HIGH",
+      "confidentialityImpact": "NONE",
+      "integrityImpact": "NONE",
+      "privilegesRequired": "NONE",
+      "scope": "UNCHANGED",
+      "userInteraction": "NONE",
+      "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "version": "3.1"
+     },
+     "products": [
+      "linux_triton_inference_server_0_026_06"
+     ]
+    }
+   ],
+   "cwe": {
+    "id": "CWE-834",
+    "name": "Excessive Iteration"
+   },
+   "product_status": {
+    "fixed": [
+     "linux_triton_inference_server_26_07"
+    ],
+    "known_affected": [
+     "linux_triton_inference_server_0_026_06"
+    ]
+   }
+  },
+  {
+   "cve": "CVE-2026-47625",
+   "notes": [
+    {
+     "category": "summary",
+     "text": "NVIDIA Triton Inference Server for Linux contains a vulnerability where an attacker could abuse missing authorization. A successful exploit of this vulnerability might lead to information disclosure, data tampering, and denial of service.",
+     "title": "Vulnerability description"
+    }
+   ],
+   "scores": [
+    {
+     "cvss_v3": {
+      "attackComplexity": "LOW",
+      "attackVector": "NETWORK",
+      "availabilityImpact": "HIGH",
+      "baseScore": 7.5,
+      "baseSeverity": "HIGH",
+      "confidentialityImpact": "NONE",
+      "integrityImpact": "NONE",
+      "privilegesRequired": "NONE",
+      "scope": "UNCHANGED",
+      "userInteraction": "NONE",
+      "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "version": "3.1"
+     },
+     "products": [
+      "linux_triton_inference_server_0_026_03"
+     ]
+    }
+   ],
+   "cwe": {
+    "id": "CWE-862",
+    "name": "Missing Authorization"
+   },
+   "product_status": {
+    "fixed": [
+     "linux_triton_inference_server_26_04"
+    ],
+    "known_affected": [
+     "linux_triton_inference_server_0_026_03"
+    ]
+   }
+  }
+ ]
+}

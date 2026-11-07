@@ -60,6 +60,23 @@ inventory. Changed descriptors can contribute separate observations.
 | `rendered_prompts: not_inspected` | Rendered prompt messages were not assessed |
 | `authorization_bypass: not_assessed` | Authentication findings are configuration observations, not verified anonymous access or bypasses |
 
+## Launch recipes
+
+Each configured `command`, `args` and `env` is read as text. It is never run,
+including for a server the launcher check blocked. These findings do not depend
+on `--live`.
+
+| Finding (`evidence.category`) | Severity | What it reports |
+|---|---|---|
+| `remote_code_launcher` | critical | A shell or language one-liner that downloads or decodes code and runs it. `evidence.technique` names how |
+| `remote_code_launcher` | high | A package runner pointed at an unpinned URL or git source. A registry package, or a source pinned to a commit or hash, is not reported |
+| `plaintext_secret` | critical | A literal value in `env` matching a known credential format. `evidence.plaintext_env_refs` lists the variable names and `evidence.detected_formats` the formats |
+| `plaintext_secret` | high | A literal value under a credential-named variable. A reference such as `${VAR}`, or a secret-store URI, is not reported |
+| `unscoped_filesystem` | high | A filesystem server, or a container mount for one, rooted at the host root. A home directory or other subdirectory is not reported |
+
+Severity follows the rest of the audit, so each of these exits `1`. Values are
+never echoed in any output format.
+
 Exit `1` means a high/critical finding. Exit `2` means no discovered MCP servers,
 an audit error, or incomplete requested live listing without a high/critical
 finding. Exit `0` means no high/critical finding within the inspected scope;

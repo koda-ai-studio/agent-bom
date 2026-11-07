@@ -10,6 +10,7 @@ from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.core.severity import severity_basis
 from agent_bom.evidence.iac_identity import prepare_iac_occurrences
+from agent_bom.evidence.malicious_basis import package_basis_fields
 from agent_bom.exploitability import fused_triage_priority
 from agent_bom.finding import Finding, _forward_fixed_version
 from agent_bom.models import AIBOMReport, BlastRadius
@@ -538,6 +539,7 @@ def _blast_radius_json_entry(
         "package_version_provenance": package_version_provenance(br.package),
         "is_malicious": br.package.is_malicious,
         "malicious_reason": br.package.malicious_reason,
+        **package_basis_fields(br.package.malicious_reason, br.package.is_malicious),
         "scorecard_score": br.package.scorecard_score,
         "scorecard_repo": br.package.scorecard_repo,
         "scorecard_lookup_state": br.package.scorecard_lookup_state,

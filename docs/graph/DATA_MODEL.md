@@ -86,10 +86,10 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `called` | `runtime` | runtime | directed | yes | `agent`, `tool_call` | `server`, `tool` | 4 | CR, RT | 2 (+1 demo) |
 | `can_access` | `authority` | identity | directed | yes | `account`, `agent`, `application`, `cloud_resource`, `cluster`, `container` (+10 more) | `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container` (+10 more) | 184 | FU, LT, MT | 5 (+2 demo) |
 | `configures` | `structural` | code_topology | directed | yes | `config_file` | `agent`, `ci_job`, `server`, `tool` | 4 | — | 2 |
-| `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+20 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+22 more) | 99 | FU, BR | 18 (+4 demo) |
+| `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+20 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+22 more) | 100 | FU, BR | 18 (+4 demo) |
 | `correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `code_module`, `server` | `agent`, `data_store`, `server` | 5 | — | 2 |
 | `cross_account_trust` | `authority` | identity | directed | yes | `account`, `federated_identity`, `role`, `service_principal` | `account`, `federated_identity`, `role`, `service_principal` | 16 | — | 2 |
-| `defines` | `structural` | code_topology | directed | yes | `source_file` | `ci_job`, `code_module`, `tool` | 3 | — | 4 |
+| `defines` | `structural` | code_topology | directed | yes | `source_file` | `ci_job`, `code_module`, `tool` | 3 | — | 6 |
 | `delegated_to` | `runtime` | runtime | directed | yes | `agent` | `agent` | 1 | RT | 1 |
 | `depends_on` | `dependency` | inventory | directed | yes | `ci_job`, `cloud_resource`, `code_module`, `config_file`, `container`, `data_store` (+6 more) | `ci_job`, `cloud_resource`, `code_module`, `container`, `data_store`, `package` | 15 | FU, BR | 14 (+2 demo) |
 | `exhibits_drift` | `governance` | governance | bidirectional | yes | `agent` | `drift_incident` | 1 | — | 1 |

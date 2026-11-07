@@ -12,6 +12,7 @@ from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import normalize_severity
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.domain.inventory_types import DEV_DEPENDENCY_SCOPES
+from agent_bom.evidence.malicious_basis import malicious_basis
 from agent_bom.finding import Finding, FindingType, blast_radius_to_finding
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
 from agent_bom.security import sanitize_log_label, sanitize_text, text_requires_redaction
@@ -262,6 +263,17 @@ def is_dev_dependency(finding: Finding) -> bool:
 
 def is_package_malicious(finding: Finding) -> bool:
     return bool(evidence(finding, "package_is_malicious", False))
+
+
+def package_malicious_reason(finding: Finding) -> str | None:
+    return finding.malicious_reason or evidence(finding, "malicious_reason", None)
+
+
+def package_malicious_basis(finding: Finding) -> str | None:
+    """Evidence kind behind a flagged package; ``None`` on an unflagged one."""
+    if not (finding.is_malicious or is_package_malicious(finding)):
+        return None
+    return malicious_basis(package_malicious_reason(finding))
 
 
 def is_actionable_finding(finding: Finding) -> bool:

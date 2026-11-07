@@ -90,7 +90,8 @@ def test_api_pipeline_requested_image_failure_has_failed_scan_outcome(monkeypatc
 
     _run_scan_sync(job)
 
-    assert job.status == JobStatus.DONE
+    assert job.status == JobStatus.FAILED
+    assert job.error and "secret" not in job.error
     assert job.result is not None
     assert job.result["scan_run"]["outcome"] == "failed"
     assert job.result["scan_run"]["issues"][0]["code"] == "collector_failed"

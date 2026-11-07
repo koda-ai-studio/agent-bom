@@ -212,12 +212,14 @@
   "pypi": [
    "beautifulsoup",
    "boto",
+   "ctransformers",
    "fabric2",
    "fabric3",
    "httpx2",
    "langchainhub",
    "openapi",
-   "pandasql"
+   "pandasql",
+   "parsing"
   ]
  },
  "known_malicious": [
