@@ -6,6 +6,7 @@ import hmac
 import logging
 import os
 import secrets
+import time
 from collections.abc import Awaitable, Callable, Iterable
 from typing import TYPE_CHECKING
 
@@ -180,6 +181,9 @@ def dashboard_spa_routes() -> frozenset[str]:
     return _DASHBOARD_SPA_ROUTES
 
 
+_KEYS_PRESENT_REUSE_SECONDS = 5.0
+
+
 class APIKeyMiddleware(BaseHTTPMiddleware):
     """Optional API key authentication via Bearer token or X-API-Key header.
 
@@ -261,6 +265,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         # middleware deliberately does NOT re-read the env itself, so it fails closed unless an operator's configured posture explicitly
         # enables it.
         self._allow_unauthenticated = bool(allow_unauthenticated)
+        self._keys_present_until = 0.0
         self._trusted_proxy_auth = _env_flag("AGENT_BOM_TRUST_PROXY_AUTH")
         from agent_bom.api.secret_source import resolve_secret
 
@@ -369,6 +374,25 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return False
         return route_policy(request.method, request.url.path) is not None
 
+    async def _credentials_configured(self) -> bool:
+        """Whether keys exist, for the anonymous role, without holding the event loop on a remote read.
+
+        A local store answers on the loop with its current state. For a remote one, "keys
+        exist" may be reused briefly, as it only ever restricts the anonymous role.
+        "No keys" is never reused, so a newly added key applies at once.
+        """
+        if self._api_key:
+            return True
+        store = get_key_store()
+        if getattr(store, "has_keys_is_local", False):
+            return store.has_keys()
+        if time.monotonic() < self._keys_present_until:
+            return True
+        present = await anyio.to_thread.run_sync(store.has_keys)
+        if present:
+            self._keys_present_until = time.monotonic() + _KEYS_PRESENT_REUSE_SECONDS
+        return present
+
     async def _serve_anonymous(self, request: StarletteRequest, call_next: RequestResponseEndpoint) -> Response:
         """Serve a credential-less request as the configured NO_AUTH_ROLE.
 
@@ -380,8 +404,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         from agent_bom.api.auth import Role
         from agent_bom.rbac import effective_no_auth_role
 
-        credentials_configured = bool(self._api_key) or await anyio.to_thread.run_sync(get_key_store().has_keys)
-        role = effective_no_auth_role(credentials_configured=credentials_configured)
+        role = effective_no_auth_role(credentials_configured=await self._credentials_configured())
         # Combined mode: when credentials (a static API key or any stored keys) are also configured, the anonymous fallback is strictly
         # read-only — otherwise NO_AUTH_ROLE=admin would hand an unauthenticated caller admin
         # (they could mint admin keys). NO_AUTH_ROLE elevation only applies to a
@@ -602,10 +625,6 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         from agent_bom.api.auth import Role, get_key_store
 
         store = get_key_store()
-        # On Postgres this reads through the maintenance role and appends an audit receipt, so it can wait on the audit table. It must never
-        # hold the event loop that answers every other caller.
-        if not await anyio.to_thread.run_sync(store.has_keys):
-            return Absent()
         # ``store.verify`` runs a ~21ms scrypt derivation (in-memory store) or a blocking DB read (Postgres store); offload it to a worker
         # thread so it never stalls the async event loop while unrelated requests wait.
         api_key = await anyio.to_thread.run_sync(store.verify, raw_key)
@@ -833,11 +852,11 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Trusted proxy authentication is not securely configured"},
             )
         presented_secret = request.headers.get("x-agent-bom-proxy-secret", "").strip()
-        if not hmac.compare_digest(presented_secret, self._trusted_proxy_secret):
+        if not hmac.compare_digest(presented_secret.encode(), self._trusted_proxy_secret.encode()):
             request.state.authentication_failed = bool(presented_secret)
             return JSONResponse(status_code=401, content={"detail": "Unauthorized — invalid trusted proxy attestation"})
         presented_issuer = request.headers.get("x-agent-bom-auth-issuer", "").strip()
-        if self._trusted_proxy_issuer and not hmac.compare_digest(presented_issuer, self._trusted_proxy_issuer):
+        if self._trusted_proxy_issuer and not hmac.compare_digest(presented_issuer.encode(), self._trusted_proxy_issuer.encode()):
             return JSONResponse(status_code=401, content={"detail": "Unauthorized — invalid trusted proxy issuer"})
         if not tenant_id:
             return JSONResponse(

@@ -90,24 +90,28 @@ def record_key_identity(connection, key: bytes) -> str:
     return str(connection.execute("SELECT fingerprint FROM audit_key_identity WHERE singleton = 1").fetchone()[0])
 
 
+def _cannot_verify(count: int) -> dict:
+    return {
+        "verified": 0,
+        "tampered": 0,
+        "unverifiable": count,
+        "checked": count,
+        "error": "Cannot verify with this key: the signing key changed or the previous key is unavailable.",
+    }
+
+
 def control_plane_integrity(store, *, limit: int, tenant_id: str) -> dict:
     from agent_bom.api import audit_log
 
-    unavailable = (
-        isinstance(store, audit_log.SQLiteAuditLog)
-        and store._hmac_key is None
-        and not audit_log._HMAC_ENV_KEY
-        and not key_matches_identity(audit_log._default_signing_key(), store._original_key_identity)
-    )
-    if unavailable:
-        count = min(limit, store.count(tenant_id=tenant_id))
-        return {
-            "verified": 0,
-            "tampered": 0,
-            "unverifiable": count,
-            "checked": count,
-            "error": "Cannot verify: signing key changed or the previous ephemeral key is unavailable.",
-        }
+    is_local = isinstance(store, audit_log.SQLiteAuditLog)
+    identity = store._original_key_identity if is_local else ""
+    key = (store._hmac_key or audit_log._default_signing_key()) if is_local else b""
+    recorded = bool(identity) and identity != _LEGACY_UNRECORDED
+    configured = is_local and (store._hmac_key is not None or bool(audit_log._HMAC_ENV_KEY))
+    # A recorded identity tells a different key from altered rows exactly. An old
+    # log without one, on an ephemeral key, cannot be told apart at all.
+    if is_local and ((recorded and not key_matches_identity(key, identity)) or (not recorded and not configured)):
+        return _cannot_verify(min(limit, store.count(tenant_id=tenant_id)))
     try:
         verified, tampered = store.verify_integrity(limit=limit, tenant_id=tenant_id)
     except AuditVerificationLimitExceededError as exc:
@@ -125,4 +129,11 @@ def control_plane_integrity(store, *, limit: int, tenant_id: str) -> dict:
                 "Request a higher limit, up to 10,000 here, or verify offline with an explicitly larger budget."
             ),
         }
+    # With no recorded identity, every row failing means a different key or a
+    # complete rewrite, and neither is a clean result nor proof of tampering.
+    identity_known = is_local and recorded
+    if not identity_known and type(store).__name__ != "InMemoryAuditLog" and not verified and tampered:
+        total = store.count(tenant_id=tenant_id)
+        if tampered >= total > 0:
+            return _cannot_verify(total)
     return {"verified": verified, "tampered": tampered, "unverifiable": 0, "checked": verified + tampered}

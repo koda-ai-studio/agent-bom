@@ -49,6 +49,9 @@ _logger = logging.getLogger(__name__)
 class SQLiteKeyStore:
     """SQLite-backed API key store; only scrypt hashes and salts are persisted."""
 
+    # A WAL read does not wait for writers.
+    has_keys_is_local = True
+
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
         self._local = threading.local()

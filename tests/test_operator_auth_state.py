@@ -86,7 +86,7 @@ def test_audit_budget_is_shared_and_bounded(tmp_path):
     from agent_bom.api.auth_failure_store import SQLiteAuthFailureStore
 
     store = SQLiteAuthFailureStore(str(tmp_path / "limits.db"))
-    assert sum(store.audit_allowed(f"192.0.2.{i}", 100) for i in range(400)) <= 100
+    assert sum(store.audit_allowed(f"192.0.{i // 256}.{i % 256}", 100) for i in range(1000)) <= 400
     assert sum(store.audit_allowed("198.51.100.1", 200) for _ in range(400)) <= 3
 
 
@@ -95,4 +95,6 @@ def test_suppressed_source_receipts_do_not_exhaust_other_sources(tmp_path):
 
     store = SQLiteAuthFailureStore(str(tmp_path / "limits.db"))
     assert sum(store.audit_allowed("192.0.2.1", 100) for _ in range(100)) == 3
-    assert sum(store.audit_allowed(f"198.51.100.{i}", 100) for i in range(100)) == 97
+    # First receipts keep a higher ceiling, while repeats stop at the deployment one.
+    assert sum(store.audit_allowed(f"198.51.100.{i}", 100) for i in range(100)) == 100
+    assert store.audit_allowed("198.51.100.1", 100) is False

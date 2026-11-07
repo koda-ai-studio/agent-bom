@@ -194,11 +194,13 @@ class OIDCProviderUnavailableError(OIDCError):
     counts_as_failed_credential = False
 
 
-def _classified_oidc_error(exc: Exception, message: str) -> OIDCError:
+def classified_oidc_error(exc: Exception, message: str) -> OIDCError:
+    """Only the provider's own refusal, or a token that fails checks, is about the credential."""
     names = {cls.__name__ for cls in type(exc).__mro__}
+    status = getattr(exc, "code", None)
     if "ExpiredSignatureError" in names:
         return OIDCTokenExpiredError(message)
-    if "PyJWKClientConnectionError" in names:
+    if "PyJWKClientConnectionError" in names or (status >= 500 if isinstance(status, int) else isinstance(exc, OSError)):
         return OIDCProviderUnavailableError(message)
     return OIDCError(message)
 
@@ -252,7 +254,7 @@ def verify_oidc_token(
         jwks_client = PyJWKClient(jwks_uri, cache_jwk_set=True, lifespan=_JWKS_CACHE_TTL)
         signing_key = jwks_client.get_signing_key_from_jwt(token)
     except Exception as exc:
-        raise _classified_oidc_error(exc, f"Failed to resolve signing key: {exc}") from exc
+        raise classified_oidc_error(exc, f"Failed to resolve signing key: {exc}") from exc
 
     decode_kwargs: dict[str, Any] = {
         "algorithms": list(OIDC_ALLOWED_ALGORITHMS),
@@ -265,7 +267,7 @@ def verify_oidc_token(
     try:
         claims = jwt.decode(token, signing_key.key, **decode_kwargs)
     except PyJWTError as exc:
-        raise _classified_oidc_error(exc, f"JWT verification failed: {exc}") from exc
+        raise classified_oidc_error(exc, f"JWT verification failed: {exc}") from exc
 
     if required_nonce is not None:
         token_nonce = claims.get("nonce")

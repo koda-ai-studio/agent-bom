@@ -99,7 +99,8 @@ class AuthFailureReceipts:
 
     def _write(self, receipt: _Receipt) -> None:
         if not receipt.allowed(receipt.source, receipt.observed_at):
-            return  # Over the documented sampling budget: not a loss.
+            self._dropped("over_budget", log=False)  # Expected under a flood, but never invisible.
+            return
         audit_log.log_action(
             "auth.failed",
             actor="unauthenticated",
@@ -138,12 +139,12 @@ class AuthFailureReceipts:
             else:
                 self._queued_by_source.pop(source, None)
 
-    def _dropped(self, reason: str, error: str = "") -> None:
+    def _dropped(self, reason: str, error: str = "", *, log: bool = True) -> None:
         metrics.record_auth_receipt_dropped(reason)
         now = time.monotonic()
         with self._lock:
             self._unrecorded_drops += 1
-            should_log = now - self._last_logged >= _LOG_INTERVAL_SECONDS
+            should_log = log and now - self._last_logged >= _LOG_INTERVAL_SECONDS
             if should_log:
                 self._last_logged = now
             total = self._unrecorded_drops

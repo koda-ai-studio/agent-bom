@@ -37,8 +37,10 @@ def test_bad_keys_from_eight_clients_are_limited_and_audited(monkeypatch):
 
     assert statuses.count(429) > 0
     assert RECEIPTS.flush()
-    assert 0 < len(events) <= 24
-    assert all(action == "auth.failed" for action, _ in events)
+    receipts = [action for action, _ in events if action == "auth.failed"]
+    assert 0 < len(receipts) <= 24
+    # Suppressed receipts are reported, never silently lost.
+    assert {action for action, _ in events} <= {"auth.failed", "auth.receipts_dropped"}
     assert "invalid-test-key" not in repr(events)
     assert "forged" not in repr(events)
 

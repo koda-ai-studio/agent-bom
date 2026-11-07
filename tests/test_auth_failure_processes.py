@@ -282,10 +282,11 @@ def test_public_reads_ignore_backoff_and_auth_state(backend_server):
 
 
 def test_sqlite_held_audit_lock_does_not_refuse_other_callers(workdir):
-    server = _Server({"AGENT_BOM_DB": str(workdir / "api.db"), "AGENT_BOM_AUDIT_DB": str(workdir / "audit.db")}, workdir / "api.log")
+    # The API stores its audit log in AGENT_BOM_DB, so this is the lock its receipts wait on.
+    server = _server("sqlite", workdir)
     try:
         _wait_ready(server)
-        holder = sqlite3.connect(str(workdir / "audit.db"), isolation_level=None, timeout=5)
+        holder = sqlite3.connect(str(workdir / "api.db"), isolation_level=None, timeout=5)
         holder.execute("BEGIN IMMEDIATE")
         try:
             attacker = [
@@ -298,25 +299,6 @@ def test_sqlite_held_audit_lock_does_not_refuse_other_callers(workdir):
             holder.close()
         assert Counter(innocent) == {200: 20}, (Counter(innocent), Counter(failed))
         assert 503 not in failed
-    finally:
-        server.stop()
-
-
-def test_sqlite_write_lock_on_the_shared_file_does_not_refuse_a_valid_key(workdir):
-    server = _server("sqlite", workdir)
-    try:
-        _wait_ready(server)
-        holder = sqlite3.connect(str(workdir / "api.db"), isolation_level=None, timeout=5)
-        holder.execute("BEGIN IMMEDIATE")
-        try:
-            attacker = _start_client(server.port, 4, [("x-api-key", "wrong"), ("x-forwarded-for", "198.51.100.10")])
-            innocent = _client(server.port, 5, server.valid("198.51.100.200"))
-            failed = _finish(attacker)
-        finally:
-            holder.rollback()
-            holder.close()
-        assert Counter(innocent) == {200: 5}, Counter(innocent)
-        assert set(failed) == {401}, Counter(failed)
     finally:
         server.stop()
 

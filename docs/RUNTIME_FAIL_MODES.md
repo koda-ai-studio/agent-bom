@@ -666,13 +666,15 @@ The state uses the existing Postgres rate-limit pool and migration-owned
 same `AGENT_BOM_DB` path: authentication state lives in the owner-only
 `<database>.auth-limits.db` sidecar so a scan-ingest write transaction cannot
 lock its budget. Without a persistent database it is process-local.
-At most eight state operations may be outstanding per application, at most four
-of them failure writes and at most two from one source. An admission check that
-cannot get a slot returns 503 without queuing or tripping a process-wide breaker.
-Timed-out work keeps its slot until it exits. A dedicated eight-thread pool
-separates auth state from background work. Operations completing after 500 ms
-fail closed for that request; their completion time is recorded in the worker, so
-delayed event-loop delivery of an on-time result does not create an outage.
+Eight dedicated threads separate auth state from background work. At most 64
+operations may be running or queued for them per application, at most four of them
+failure writes and at most two from one source, so a burst of distinct callers waits
+briefly rather than being refused. Beyond that bound, an admission check returns 503
+without tripping a process-wide breaker. Operations completing after 500 ms, including
+time queued, fail closed for that request. A queued operation nobody is waiting for is
+abandoned; one already running keeps its slot until it exits. Completion time is
+recorded in the worker, so delayed event-loop delivery of an on-time result does not
+create an outage.
 Postgres auth transactions bound pool acquisition, statement execution and lock
 waits to 400 ms each. Pool saturation and SQL cancellation/lock timeouts fail
 that request closed without activating the global outage cooldown.
@@ -706,13 +708,16 @@ requests until then receive 503.
 
 Receipts are written by two dedicated workers with their own queue of 256, at most
 eight per source, so an audit stall or a flood from one source cannot refuse anyone
-or hold an answer. A receipt that cannot be queued or written increments
-`agent_bom_auth_receipts_dropped_total{reason}` (`queue_full`, `source_queue_full`,
-`write_failed`), logs an error at most once a minute, and is reported by an
-`auth.receipts_dropped` audit entry with the count once writes succeed again.
+or hold an answer. Every failure increments
+`agent_bom_auth_failures_total{reason="failed_credential"}`, whatever happens to its
+receipt. A receipt that is not written increments
+`agent_bom_auth_receipts_dropped_total{reason}` (`over_budget`, `queue_full`,
+`source_queue_full`, `write_failed`) and is reported by an `auth.receipts_dropped`
+audit entry with the count once writes succeed again. All but `over_budget` also log an
+error at most once a minute.
 At exit the process waits two seconds for queued receipts and logs an error if any
 remain. Those, and a gap not yet recorded, are then lost, with the log and metric the
-only record. Sampling, described below, is not a drop.
+only record.
 
 Admission reads are cached for at most one second and 4,096 source addresses.
 Concurrent cold requests from the same source share one admission lookup, with
@@ -731,13 +736,17 @@ revocation still use the current durable credential record on every request.
 
 | Request | During a backoff | Auth store down |
 |---|---|---|
-| `/health`, `/healthz`, `/livez`, `/readyz`, `/ping`, static assets, CORS preflight | Served | Served |
-| `GET`/`HEAD` of `/`, `/version`, `/docs`, `/redoc`, `/openapi.json`, `/brand/mark.svg`, `/.well-known/*` | Served | Served |
+| `GET`/`HEAD` of `/health`, `/healthz`, `/livez`, `/readyz`, `/ping`, static assets; CORS preflight with `Origin` and `Access-Control-Request-Method` | Served | Served |
+| `GET`/`HEAD` of `/`, `/version`, `/docs`, `/redoc`, `/openapi.json`, `/brand/mark.svg` | Served | Served |
 | Anonymous route, when the operator enabled anonymous access | Served | Served, if the route's own data store answers |
 | Anything presenting a credential, or `/v1/auth/*`, SCIM and unclassified routes | 429 | 503 |
 
-These public documents verify nothing, so neither a source's backoff nor the auth
-store has any bearing on them. They still pass the coarse per-IP limit, whose
+These exact operations verify nothing, so neither a source's backoff nor the auth
+store has any bearing on them. Any other method on those paths, a plain `OPTIONS`, and
+every other path can reach a key check, so they are limited like everything else; a
+test walks every route and method to hold this. On the API, `/.well-known/*` is one of
+those other paths. The standalone MCP server serves its OAuth discovery documents there
+without a check. They still pass the coarse per-IP limit, whose
 shared store degrades to local limits in an outage. `AGENT_BOM_DISABLE_DOCS`
 still removes the documentation routes.
 
@@ -768,7 +777,9 @@ one NAT or unconfigured load balancer therefore share the block.
 
 Configure both `AGENT_BOM_TRUSTED_PROXY_CIDRS` and `AGENT_BOM_TRUSTED_PROXY_HOPS`
 on every replica. Every `X-Forwarded-For` line is combined in received order before
-hops are counted, so a second line cannot select or forge the source. An IPv6 source
+hops are counted, so a second line cannot select or forge the source. Only the
+trailing trusted hops are read for this limit, so padding the chain changes nothing;
+other consumers still treat a chain over 32 entries as untrusted. An IPv6 source
 is limited as its /64, since one customer routinely holds at least that much, and an
 IPv4-mapped address counts as its IPv4 address. A receipt for such a source also
 records the exact address as `client_address`.
@@ -802,7 +813,7 @@ Only the handler that verified a credential marks a failure, by setting
 | Wrong API key, in `Authorization: Bearer`, `X-API-Key` or `POST /v1/auth/session` | Nothing presented, including the logged-out dashboard's `/v1/auth/me` |
 | Unsupported `Authorization` scheme | Proxy identity headers with no attestation secret |
 | Unreadable browser-session cookie | Expired or revoked session, or one signed before a signing-key change |
-| JWT that fails verification, including a bad signature on an expired token | Expired JWT with a valid signature; identity provider unreachable |
+| JWT that fails verification, including a bad signature on an expired token | Expired JWT with a valid signature; identity provider or token endpoint unreachable or returning 5xx |
 | Wrong SCIM bearer or wrong proxy attestation secret | Inactive SCIM user or inactive trial, whose identity did verify |
 | Invalid trial invitation, failed OIDC code exchange or SAML assertion | Missing OIDC or SAML state; missing report download token on a valid key |
 | OAuth `invalid_client` and `invalid_grant`; standalone MCP 401 when a token was presented | Generic 400/403 validation or authorization errors; MCP challenge with no token |
@@ -823,15 +834,20 @@ signing key changes these fingerprints, so correlation does not continue across
 rotation; retained receipts are not rewritten. Preserve prior verification keys
 under the operator's evidence-retention policy.
 
-Receipt admission permits at most three per source and 100 per deployment per
-minute. Blocked requests do not append another receipt. These sampled records
+Receipt admission permits at most three per source per minute, and 100 per deployment
+for repeat receipts. A source's first receipt in the window has a ceiling of 400, so a
+spray from many sources cannot erase the next source's only record. Blocked requests do not append another receipt. These sampled records
 establish observed failures, not an exhaustive attempt count or independent
 collector evidence.
 
 For persisted SQLite audit logs without a configured HMAC key, a changed or
 unrecorded signing-key identity yields `unverifiable` rows and an explicit
 cannot-verify reason. It never yields a clean/verified result. Local key-identity
-metadata is a diagnostic receipt, not independent tamper evidence. It is a salted
+metadata is a diagnostic receipt, not independent tamper evidence. A recorded
+identity that does not match the key in use, configured or not, reports `unverifiable`
+rather than tampered; altered rows under the matching key stay exact. With no recorded
+identity, as on Postgres, every row failing also reports `unverifiable`, since that
+means a different key or a complete rewrite. It is a salted
 HMAC of the key's digest, and a database opened with an older unsalted digest is
 upgraded in place, including when its original key is gone. Testing a candidate key
 against it costs about one HMAC-SHA-256, the same as testing one against any stored

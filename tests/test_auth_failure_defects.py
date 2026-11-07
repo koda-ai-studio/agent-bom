@@ -48,16 +48,16 @@ def _failing_app(status=401, mark=True):
 
 
 @pytest.mark.asyncio
-async def test_key_store_presence_check_does_not_hold_the_event_loop(monkeypatch):
+async def test_key_store_read_does_not_hold_the_event_loop(monkeypatch):
     from agent_bom.api import auth
     from agent_bom.api.middleware import APIKeyMiddleware
 
     release = threading.Event()
 
     class SlowStore:
-        def has_keys(self):
+        def verify(self, _raw):
             release.wait(2)
-            return False
+            return None
 
     monkeypatch.setattr(auth, "_key_store", SlowStore())
 

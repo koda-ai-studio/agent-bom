@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from agent_bom.api import audit_log
+from agent_bom.api import audit_log, metrics
 from agent_bom.api.auth_failure_receipts import RECEIPTS
 from agent_bom.api.auth_failure_store import PostgresAuthFailureStore, SQLiteAuthFailureStore
 from agent_bom.api.forwarded_identity import (
@@ -30,7 +30,9 @@ from agent_bom.api.rate_limit_store import PostgresRateLimitStore
 from agent_bom.core.settings import env_raw
 
 _AUTH_WORKERS = ThreadPoolExecutor(max_workers=8, thread_name_prefix="auth-state")
-_MAX_OUTSTANDING = 8
+# Operations waiting or running. A burst of distinct sources waits briefly for one
+# of the eight workers rather than being refused; the deadline still applies.
+_MAX_OUTSTANDING = 64
 _MAX_SOURCE_OUTSTANDING = 2
 # Reads answer every authenticating caller, so failure writes cannot occupy all
 # the workers while they wait on a store's write lock.
@@ -126,7 +128,7 @@ class AuthFailurePolicy:
         peer = request.client.host if request.client else ""
         forwarded = forwarded_for_header(request.headers)
         self._warn_source_conditions(request, peer, forwarded)
-        return resolve_forwarded_client_ip(peer_host=peer or "unknown", forwarded_for=forwarded)
+        return resolve_forwarded_client_ip(peer_host=peer or "unknown", forwarded_for=forwarded, bounded=False)
 
     def source(self, request) -> str:
         return failure_limit_source(self._client_address(request))
@@ -220,6 +222,9 @@ class AuthFailurePolicy:
                     self._note_store_success()
                     if completed_at <= deadline:
                         return value
+                # A read still queued has no one waiting for it; do not spend a worker on it.
+                if pending is not None:
+                    pending.cancel()
                 raise
         except TimeoutError as exc:
             # Slow work or local overload is scoped to this request. It cannot
@@ -249,7 +254,7 @@ class AuthFailurePolicy:
                 return self.unavailable()
             task = self._source_reads.get(read_key)
             if task is None:
-                if len(self._source_reads) >= 8:
+                if len(self._source_reads) >= _MAX_OUTSTANDING:
                     return self.unavailable()
                 task = asyncio.create_task(self._read_source(source))
                 self._source_reads[read_key] = task
@@ -337,6 +342,7 @@ class AuthFailurePolicy:
         failed = response.status_code in {400, 401, 403} and getattr(request.state, "authentication_failed", False)
         if not failed:
             return response
+        metrics.record_auth_failure("failed_credential")
         source, now = self.source(request), time.time()
         with self._state_lock:
             self._source_cache.pop(source, None)
@@ -360,9 +366,11 @@ class AuthFailureMiddleware(BaseHTTPMiddleware):
         self.policy = AuthFailurePolicy()
 
     async def dispatch(self, request, call_next):
-        if RateLimitMiddleware.needs_no_auth_state(request.url.path, request.method):
-            return await call_next(request)
-        if request.method == "OPTIONS":
+        path, method = request.url.path, request.method
+        # OAuth discovery is public here: the SDK verifies bearers only on its transport routes.
+        if RateLimitMiddleware.needs_no_auth_state(path, method, request.headers) or (
+            method in {"GET", "HEAD"} and path.startswith("/.well-known/")
+        ):
             return await call_next(request)
         if denied := await self.policy.before(request):
             return denied

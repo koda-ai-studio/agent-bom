@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -182,3 +184,96 @@ def test_make_targets_pass_the_operator_group():
     makefile = (_REPO / "Makefile").read_text()
     assert "AGENT_BOM_SECRETS_GID=$$(id -g) docker compose -f deploy/docker-compose.platform.yml" in makefile
     assert "AGENT_BOM_SECRETS_GID=$$(id -g) docker compose -f deploy/docker-compose.fullstack.yml" in makefile
+
+
+# Every documented install
+
+
+def _documented_helm_commands() -> list[tuple[str, list[str]]]:
+    """Each `helm install`/`upgrade --install` in the docs, as its value arguments."""
+    files = [*_REPO.glob("site-docs/**/*.md"), *_REPO.glob("docs/**/*.md"), *_REPO.glob("deploy/**/*.md"), _REPO / "README.md"]
+    found: dict[str, tuple[str, list[str]]] = {}
+    for path in files:
+        lines = path.read_text(errors="replace").splitlines()
+        for index, line in enumerate(lines):
+            if not re.search(r"^\s*(#\s*)?helm (upgrade --install|install) ", line):
+                continue
+            command, cursor = line.lstrip("# "), index
+            while command.rstrip().endswith("\\") and cursor + 1 < len(lines):
+                cursor += 1
+                command = command.rstrip()[:-1] + " " + lines[cursor].lstrip("# ")
+            try:
+                parts = shlex.split(command, comments=True)
+            except ValueError:
+                continue
+            arguments: list[str] = []
+            for position, part in enumerate(parts):
+                if part in {"-f", "--values", "--set", "--set-string", "--set-json"} and position + 1 < len(parts):
+                    arguments += [part, parts[position + 1]]
+            found.setdefault(command, (path.relative_to(_REPO).as_posix(), arguments))
+    return list(found.values())
+
+
+def _renderable(arguments: list[str]) -> list[str] | None:
+    """Resolve repository value files; a value file only the reader has cannot be rendered here."""
+    resolved = list(arguments)
+    for position, value in enumerate(arguments[:-1]):
+        if value in {"-f", "--values"}:
+            candidates = [
+                _REPO / arguments[position + 1],
+                _CHART / arguments[position + 1],
+                _CHART / "examples" / Path(arguments[position + 1]).name,
+            ]
+            existing = next((candidate for candidate in candidates if candidate.exists()), None)
+            if existing is None:
+                return None
+            resolved[position + 1] = str(existing)
+    return resolved
+
+
+def test_every_documented_helm_install_renders():
+    commands = _documented_helm_commands()
+    assert len(commands) >= 5
+    failures = []
+    rendered = 0
+    for source, arguments in commands:
+        resolved = _renderable(arguments)
+        if resolved is None:
+            continue
+        result = _helm(*resolved)
+        rendered += 1
+        if result.returncode != 0:
+            failures.append((source, arguments, " ".join(result.stderr.split())[:200]))
+    assert rendered >= 5
+    assert failures == []
+
+
+def test_every_documented_values_block_with_an_ingress_declares_trusted_proxies():
+    missing = []
+    for path in [*_REPO.glob("site-docs/**/*.md"), *_REPO.glob("docs/**/*.md"), *_REPO.glob("deploy/**/*.md")]:
+        for block in re.findall(r"```ya?ml\n(.*?)```", path.read_text(errors="replace"), flags=re.DOTALL):
+            try:
+                values = yaml.safe_load(block)
+            except yaml.YAMLError:
+                continue
+            plane = values.get("controlPlane") if isinstance(values, dict) else None
+            if not isinstance(plane, dict) or not (plane.get("ingress") or {}).get("enabled"):
+                continue
+            trusted = (plane.get("api") or {}).get("trustedProxy") or {}
+            if not ((trusted.get("hops") and trusted.get("cidrs")) or trusted.get("fromSecret") or trusted.get("sharedSourceAccepted")):
+                missing.append(path.relative_to(_REPO).as_posix())
+    assert missing == []
+
+
+@pytest.mark.parametrize("overlay", ["collector-mtls-values.yaml", "control-plane-identity-values.yaml"])
+def test_overlays_render_on_their_documented_base(overlay):
+    examples = _CHART / "examples"
+    result = _helm("-f", str(examples / "eks-production-values.yaml"), "-f", str(examples / overlay))
+    assert result.returncode == 0, result.stderr
+
+
+def test_terraform_domain_declares_trusted_proxies():
+    source = (_REPO / "deploy/terraform/platform-eks/main.tf").read_text()
+    block = source[source.index("ingress_values = var.domain") :]
+    assert "trustedProxy" in block[: block.index("ingress = {")]
+    assert "var.cluster_vpc_cidr" in source[source.index("ingress_trusted_proxy_cidrs = (") :]

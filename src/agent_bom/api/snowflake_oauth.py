@@ -36,7 +36,7 @@ from typing import Any
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
-from agent_bom.api.oidc import OIDCError
+from agent_bom.api.oidc import OIDCError, classified_oidc_error
 from agent_bom.security import sanitize_error, validate_url
 
 _SNOWFLAKE_TIMEOUT = 10
@@ -172,7 +172,7 @@ def exchange_code_for_tokens(cfg: SnowflakeOAuthConfig, *, code: str, code_verif
         with urlopen(request, timeout=_SNOWFLAKE_TIMEOUT) as resp:  # noqa: S310  # nosec B310 — validated above
             payload = json.loads(resp.read())
     except Exception as exc:  # noqa: BLE001
-        raise OIDCError(f"Snowflake OAuth token exchange failed: {sanitize_error(exc)}") from exc
+        raise classified_oidc_error(exc, f"Snowflake OAuth token exchange failed: {sanitize_error(exc)}") from exc
     if not isinstance(payload, dict):
         raise OIDCError("Snowflake OAuth token endpoint returned a non-object payload")
     return payload

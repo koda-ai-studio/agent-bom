@@ -74,13 +74,15 @@ def failure_limit_source(address: str) -> str:
     return str(parsed)
 
 
-def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback: str = "") -> str:
+def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback: str = "", bounded: bool = True) -> str:
     """Resolve a client address only through a declared trusted proxy chain.
 
     The direct transport peer remains authoritative unless it belongs to an
     allowlisted proxy CIDR and a bounded positive hop count is configured.
     Malformed, oversized, or shorter-than-declared chains fall back to the
-    transport peer instead of trusting caller-supplied input.
+    transport peer instead of trusting caller-supplied input. With ``bounded``
+    false, length is not a reason to fall back: only the trailing hops are trusted,
+    and a caller who pads the chain must not move onto the proxy's own budget.
     """
     host = str(peer_host or fallback)
     hops = trusted_proxy_hops()
@@ -91,7 +93,7 @@ def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback:
         peer = None
     if hops > 0 and networks and peer is not None and any(peer in network for network in networks):
         forwarded = [part.strip() for part in str(forwarded_for or "").split(",") if part.strip()]
-        if hops <= len(forwarded) <= 32:
+        if hops <= len(forwarded) and (not bounded or len(forwarded) <= 32):
             candidate = forwarded[-hops]
             try:
                 host = str(ip_address(candidate))
