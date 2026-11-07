@@ -110,7 +110,7 @@ def prepare_pilot_namespace() -> None:
     )
 
 
-def helm_install(release: str, namespace: str, *extra: str, timeout: str = "8m") -> Any:
+def helm_install(release: str, namespace: str, *extra: str, timeout: str = "5m") -> Any:
     return run_measured(
         [
             "helm",
@@ -209,6 +209,9 @@ def run_helm(result: LaneResult) -> None:
         )
         result.measurements["helm_pilot_install_without_rule_seconds"] = stock.seconds
     state = dump_cluster_state("helm")
+    if stock.returncode != 0:
+        crash = kubectl("logs", "-n", NAMESPACE, "deployment/agent-bom-api", "--previous", "--tail", "40")
+        result.measurements["helm_api_crash_log"] = tail(crash.stdout + crash.stderr, 40)
     if not result.check(
         "helm_pilot_install", stock.returncode == 0, f"exit {stock.returncode}\n{tail(stock.stdout + stock.stderr)}\n{state}"
     ):
