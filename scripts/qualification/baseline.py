@@ -66,17 +66,24 @@ def extract(directory: Path) -> dict[str, float]:
 
 
 def compare(baseline: dict[str, Any], measured: dict[str, float]) -> tuple[list[dict[str, float | str]], list[str]]:
-    """Return metrics beyond ``baseline * tolerance`` and baseline metrics that were not measured."""
+    """Return metrics beyond their limit and baseline metrics that were not measured.
+
+    A latency's limit is the larger of its ratio and its absolute slack, so a small
+    baseline does not fail on one slow sample from a shared runner.
+    """
     tolerance = float(baseline["tolerance"])
+    slack_ms = float(baseline.get("latency_slack_ms", 0))
     regressions: list[dict[str, float | str]] = []
     missing: list[str] = []
     for metric, base_value in sorted(baseline["metrics"].items()):
         if metric not in measured:
             missing.append(metric)
-        elif measured[metric] > float(base_value) * tolerance:
-            regressions.append(
-                {"metric": metric, "baseline": base_value, "measured": measured[metric], "limit": round(float(base_value) * tolerance, 3)}
-            )
+            continue
+        limit = float(base_value) * tolerance
+        if metric.endswith("_ms"):
+            limit = max(limit, float(base_value) + slack_ms)
+        if measured[metric] > limit:
+            regressions.append({"metric": metric, "baseline": base_value, "measured": measured[metric], "limit": round(limit, 3)})
     return regressions, missing
 
 

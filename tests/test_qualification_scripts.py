@@ -292,6 +292,17 @@ def test_baseline_compare_flags_only_beyond_tolerance() -> None:
     assert missing == ["performance/sqlite/ingest_seconds"]
 
 
+def test_latency_slack_only_widens_small_latency_budgets() -> None:
+    base = {
+        "tolerance": 2.0,
+        "latency_slack_ms": 150,
+        "metrics": {"small_p95_ms": 33.0, "large_p95_ms": 900.0, "ingest_seconds": 1.0},
+    }
+    assert baseline.compare(base, {"small_p95_ms": 146.0, "large_p95_ms": 900.0, "ingest_seconds": 1.0}) == ([], [])
+    regressions, _missing = baseline.compare(base, {"small_p95_ms": 184.0, "large_p95_ms": 1801.0, "ingest_seconds": 2.1})
+    assert sorted(row["metric"] for row in regressions) == ["ingest_seconds", "large_p95_ms", "small_p95_ms"]
+
+
 def test_baseline_extract_reads_lane_metrics(tmp_path: Path) -> None:
     lane = common.LaneResult("performance", "sqlite")
     lane.check("ok", True)
