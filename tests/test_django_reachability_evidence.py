@@ -35,15 +35,33 @@ def test_unknown_analysis_is_not_upgraded_by_dependency_association():
 
 
 def test_imported_django_handler_does_not_emit_source_syntax_warnings(tmp_path):
-    import ast
-    import warnings
-
-    from agent_bom.ast.django_entrypoints import django_entries
+    import subprocess
+    import sys
 
     urls = tmp_path / "urls.py"
     urls.write_text('from django.urls import path\nfrom views import handler\nurlpatterns = [path("", handler)]\n')
     (tmp_path / "views.py").write_text('def handler(request):\n    return "private-value\\q"\n')
-    with warnings.catch_warnings(record=True) as emitted:
-        warnings.simplefilter("always")
-        assert django_entries(tmp_path, urls, ast.parse(urls.read_text()))
-    assert not emitted
+    # Warning capture is process-global before Python 3.14; unrelated background
+    # work must not enter this assertion about the imported source parser.
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import ast, sys, warnings
+from pathlib import Path
+from agent_bom.ast.django_entrypoints import django_entries
+project = Path(sys.argv[1])
+urls = project / "urls.py"
+with warnings.catch_warnings(record=True) as emitted:
+    warnings.simplefilter("always")
+    assert django_entries(project, urls, ast.parse(urls.read_text()))
+assert not emitted, [(str(w.message), w.filename) for w in emitted]
+""",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
