@@ -112,4 +112,12 @@ describe("insights risk helpers", () => {
       }),
     ]);
   });
+
+  it("counts server objects by name, not by object identity", () => {
+    const rows = [
+      { vulnerability_id: "CVE-1", severity: "high", package: "pillow", affected_agents: ["a"], affected_servers: [{ name: "fs" }], blast_score: 10 },
+      { vulnerability_id: "CVE-2", severity: "high", package: "pillow", affected_agents: ["a"], affected_servers: [{ name: "fs" }, "fs"], blast_score: 10 },
+    ] as unknown as BlastRadius[];
+    expect(buildBlastRadiusSummary(rows)[0]).toMatchObject({ server_count: 1, agent_count: 1 });
+  });
 });

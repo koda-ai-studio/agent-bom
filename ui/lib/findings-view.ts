@@ -140,7 +140,7 @@ const SEVERITY_FILTER_METADATA: Record<
   medium: { label: "Medium", color: "text-yellow-400", facetKey: "medium" },
   low: { label: "Low", color: "text-blue-400", facetKey: "low" },
   info: { label: "Info", color: "text-[var(--text-tertiary)]", facetKey: "info" },
-  unrated: { label: "Unrated", color: "text-[var(--text-muted)]", facetKey: "unknown" },
+  unrated: { label: "Unrated", color: "text-[var(--text-tertiary)]", facetKey: "unknown" },
 };
 
 /** Build the visible chips from the same canonical list the contract test checks. */

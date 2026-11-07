@@ -1,3 +1,4 @@
+import { entityNames } from "@/lib/entity-names";
 import { severityRank } from "@/lib/severity";
 import type { Agent, BlastRadius, ScanResult, Vulnerability } from "@/lib/api";
 import type { EpssVsCvssPoint, PipelineStats } from "@/components/charts";
@@ -174,10 +175,10 @@ export function buildBlastRadiusSummary(blasts: BlastRadius[], limit = 8): Blast
     }
     entry.score = Math.max(entry.score, blastPriority(blast));
     entry.vulnerabilities.add(blast.vulnerability_id);
-    for (const agent of blast.affected_agents ?? []) {
+    for (const agent of entityNames(blast.affected_agents)) {
       entry.agents.add(agent);
     }
-    for (const server of blast.affected_servers ?? []) {
+    for (const server of entityNames(blast.affected_servers)) {
       entry.servers.add(server);
     }
     grouped.set(name, entry);

@@ -118,19 +118,19 @@ const STATUS_STYLES: Record<
     border: "border-emerald-500 animate-pulse",
     bg: "bg-emerald-500/15",
     icon: Loader2,
-    iconColor: "text-emerald-400 animate-spin",
+    iconColor: "text-[color:var(--status-success)] animate-spin",
   },
   done: {
     border: "border-emerald-500/80",
     bg: "bg-emerald-500/10",
     icon: CheckCircle,
-    iconColor: "text-emerald-400",
+    iconColor: "text-[color:var(--status-success)]",
   },
   failed: {
     border: "border-red-500/80",
     bg: "bg-red-500/12",
     icon: XCircle,
-    iconColor: "text-red-400",
+    iconColor: "text-[color:var(--status-danger)]",
   },
   skipped: {
     border: "border-dashed border-[var(--border-subtle)]",

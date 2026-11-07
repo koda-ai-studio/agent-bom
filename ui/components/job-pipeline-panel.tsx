@@ -335,7 +335,7 @@ export function JobPipelinePanel({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-emerald-400">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--accent)]">
             Scan pipeline DAG
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -426,7 +426,7 @@ export function JobPipelinePanel({
           Loading persisted pipeline events…
         </div>
       ) : null}
-      {error ? <p className="mt-3 text-sm text-amber-300">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[color:var(--status-warn)]">{error}</p> : null}
 
       {steps.size > 0 && <nav aria-label="Scan stages" className="mt-3 flex flex-wrap gap-1">
         {PIPELINE_GRAPH.map((node) => <button key={node.id} type="button"

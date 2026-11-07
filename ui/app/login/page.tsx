@@ -30,7 +30,7 @@ function TrialInvitationForm() {
         </p>
         <button
           type="submit"
-          className="mt-3 w-full rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-medium text-[var(--on-accent)] transition hover:bg-emerald-400"
+          className="mt-3 w-full rounded-xl bg-[color:var(--accent)] px-4 py-2.5 text-sm font-medium text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)]"
         >
           Continue with invitation
         </button>

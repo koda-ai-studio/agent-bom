@@ -143,6 +143,47 @@ describe("LoginPage", () => {
     expect(screen.queryByText(/no API key is configured/i)).not.toBeInTheDocument();
   });
 
+  it("renders SSO buttons from the public health modes when the session call is unauthorized", async () => {
+    apiMock.getAuthMe.mockReset();
+    apiMock.getAuthMe.mockRejectedValue(new Error("401 Unauthorized"));
+    apiMock.health.mockResolvedValue({
+      status: "ok",
+      version: "0",
+      auth_required: true,
+      auth_configured: true,
+      configured_auth_modes: ["api_key", "saml_sso", "oidc_browser"],
+      sso_provider: "okta",
+      unauthenticated_allowed: false,
+    });
+
+    render(<AuthProvider><LoginPage /></AuthProvider>);
+
+    const oidcLink = await screen.findByRole("link", { name: /sign in with okta/i });
+    expect(oidcLink).toHaveAttribute("href", "/v1/auth/oidc/login");
+    const samlLink = screen.getByRole("link", { name: /sign in with saml/i });
+    expect(samlLink).toHaveAttribute("href", "/v1/auth/saml/start");
+    expect(screen.getByText("Sign in with Okta, or use an API key as a fallback.")).toBeInTheDocument();
+    expect(screen.getByLabelText("API key")).toBeInTheDocument();
+  });
+
+  it("falls back to the generic SSO label when health names no provider", async () => {
+    apiMock.getAuthMe.mockReset();
+    apiMock.getAuthMe.mockRejectedValue(new Error("401 Unauthorized"));
+    apiMock.health.mockResolvedValue({
+      status: "ok",
+      version: "0",
+      auth_required: true,
+      auth_configured: true,
+      configured_auth_modes: ["oidc_browser"],
+      unauthenticated_allowed: false,
+    });
+
+    render(<AuthProvider><LoginPage /></AuthProvider>);
+
+    expect(await screen.findByRole("link", { name: /^sign in with sso$/i })).toHaveAttribute("href", "/v1/auth/oidc/login");
+    expect(screen.queryByRole("link", { name: /sign in with saml/i })).not.toBeInTheDocument();
+  });
+
   it("shows Sign in with SSO when browser OIDC is configured", async () => {
     apiMock.getAuthMe.mockReset();
     apiMock.getAuthMe.mockResolvedValue({

@@ -15,6 +15,7 @@ import type {
 } from "@/components/charts";
 import type { ExposurePathView } from "@/components/overview-cockpit";
 import { buildFindingsHref, buildSecurityGraphHref } from "@/lib/attack-paths";
+import { entityNames } from "@/lib/entity-names";
 import { severityRank } from "@/lib/severity";
 
 // ─── Shared dashboard aggregation ───────────────────────────────────────────
@@ -234,7 +235,11 @@ export function blastCredentials(blast: BlastRadius): string[] {
 }
 
 export function blastAgents(blast: BlastRadius): string[] {
-  return blast.affected_agents ?? [];
+  return entityNames(blast.affected_agents);
+}
+
+function blastServers(blast: Pick<BlastRadius, "affected_servers">): string[] {
+  return entityNames(blast.affected_servers);
 }
 
 function execExposureSemanticKey(
@@ -259,8 +264,9 @@ function canonicalOccurrenceKey(id: string, assetId?: string | null): string {
 function coversOverviewRisk(blast: BlastRadius, risk: OverviewTopRisk): boolean {
   if (blast.vulnerability_id !== risk.vulnerability_id || !blast.package || blast.package !== risk.package) return false;
   const agents = blastAgents(blast);
-  if (!agents.length || occurrenceNames(agents) !== occurrenceNames(risk.affected_agents)) return false;
-  if (risk.affected_servers?.length && occurrenceNames(blast.affected_servers) !== occurrenceNames(risk.affected_servers)) return false;
+  if (!agents.length || occurrenceNames(agents) !== occurrenceNames(entityNames(risk.affected_agents))) return false;
+  const riskServers = blastServers(risk);
+  if (riskServers.length && occurrenceNames(blastServers(blast)) !== occurrenceNames(riskServers)) return false;
   if (blast.canonical_id || risk.canonical_id) {
     if (!blast.canonical_id || blast.canonical_id !== risk.canonical_id) return false;
     const assetId = blast.asset?.canonical_id ?? blast.asset?.stable_id;
@@ -286,13 +292,12 @@ export function buildExposurePathView(
   void _index; // Retain call compatibility; identity must not depend on fetch order.
   const agents = blastAgents(blast);
   const credentials = blastCredentials(blast);
+  const servers = blastServers(blast);
   const nodes: ExposurePathView["nodes"] = [
     { type: "cve", label: blast.vulnerability_id, severity: blast.severity?.toLowerCase() },
   ];
   if (blast.package) nodes.push({ type: "package", label: blast.package });
-  if (blast.affected_servers && blast.affected_servers.length > 0) {
-    nodes.push({ type: "server", label: blast.affected_servers[0]! });
-  }
+  if (servers.length > 0) nodes.push({ type: "server", label: servers[0]! });
   if (agents.length > 0) nodes.push({ type: "agent", label: agents[0]! });
   if (credentials.length > 0) nodes.push({ type: "credential", label: credentials[0]! });
   return {
@@ -300,16 +305,16 @@ export function buildExposurePathView(
       blast.vulnerability_id,
       blast.package,
       agents[0],
-      blast.affected_servers?.[0],
+      servers[0],
     ) + (blast.canonical_id
       ? canonicalOccurrenceKey(blast.canonical_id, blast.asset?.canonical_id ?? blast.asset?.stable_id)
       : `::snapshot:${encodeURIComponent(scanId ?? "unknown")}`)
-      + `::package:${encodeURIComponent(blast.package ?? "")}::agents:${encodeURIComponent(occurrenceNames(agents))}::servers:${encodeURIComponent(occurrenceNames(blast.affected_servers))}`,
+      + `::package:${encodeURIComponent(blast.package ?? "")}::agents:${encodeURIComponent(occurrenceNames(agents))}::servers:${encodeURIComponent(occurrenceNames(servers))}`,
     nodes,
     riskScore: blast.risk_score ?? blast.blast_score / 10,
     ...(blast.impact_category ? { impactCategory: blast.impact_category } : {}),
     affectedWorkloads: agents,
-    affectedServices: blast.affected_servers ?? [],
+    affectedServices: servers,
     ...(blast.fixed_version ? { fixedVersion: blast.fixed_version } : {}),
     href: buildSecurityGraphHref({
       scanId,
@@ -347,9 +352,11 @@ export function buildTopRiskExposurePath(
       : { type: "cve", label: risk.vulnerability_id },
   ];
   if (risk.package) nodes.push({ type: "package", label: risk.package });
-  const agent = risk.affected_agents?.[0];
+  const riskAgents = entityNames(risk.affected_agents);
+  const riskServers = blastServers(risk);
+  const agent = riskAgents[0];
   if (agent) nodes.push({ type: "agent", label: agent });
-  else if (risk.affected_servers?.[0]) nodes.push({ type: "server", label: risk.affected_servers[0] });
+  else if (riskServers[0]) nodes.push({ type: "server", label: riskServers[0] });
 
   // The canonical id names this exact occurrence; a CVE filter would open the
   // CVE's first row, which may be a different asset than the one ranked here.
@@ -362,15 +369,15 @@ export function buildTopRiskExposurePath(
       : "/findings";
 
   return {
-    key: execExposureSemanticKey(risk.vulnerability_id, risk.package, agent, risk.affected_servers?.[0])
+    key: execExposureSemanticKey(risk.vulnerability_id, risk.package, agent, riskServers[0])
       + (risk.canonical_id ? canonicalOccurrenceKey(risk.canonical_id, risk.asset_id)
-        + `::package:${encodeURIComponent(risk.package ?? "")}::agents:${encodeURIComponent(occurrenceNames(risk.affected_agents))}::servers:${encodeURIComponent(occurrenceNames(risk.affected_servers))}` : ""),
+        + `::package:${encodeURIComponent(risk.package ?? "")}::agents:${encodeURIComponent(occurrenceNames(riskAgents))}::servers:${encodeURIComponent(occurrenceNames(riskServers))}` : ""),
     nodes,
     riskScore: risk.risk_score ?? 0,
     ...(risk.impact_category ? { impactCategory: risk.impact_category } : {}),
     ...(risk.fixed_version ? { fixedVersion: risk.fixed_version } : {}),
-    affectedWorkloads: risk.affected_agents ?? [],
-    affectedServices: risk.affected_servers ?? [],
+    affectedWorkloads: riskAgents,
+    affectedServices: riskServers,
     ownership: { owner: risk.owner ?? null, sla_due_at: risk.sla_due_at ?? null, sla_due_at_source: risk.sla_due_at_source ?? null },
     href,
   };

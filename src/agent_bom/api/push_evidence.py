@@ -23,6 +23,27 @@ from agent_bom.security import (
 )
 
 
+def _entity_names(values: object) -> list[str]:
+    """Coerce a pushed name list to ``list[str]``, reading ``name`` or ``id`` from objects."""
+    names: list[str] = []
+    for value in values if isinstance(values, list) else []:
+        if isinstance(value, dict):
+            value = value.get("name") or value.get("id")
+        if isinstance(value, str) and value.strip():
+            names.append(value.strip())
+    return names
+
+
+def _normalize_blast_row(row: object) -> object:
+    if not isinstance(row, dict):
+        return row
+    normalized = dict(row)
+    for field in ("affected_servers", "affected_agents"):
+        if field in normalized:
+            normalized[field] = _entity_names(normalized[field])
+    return normalized
+
+
 def normalize_pushed_report(body: PushPayload, *, fallback_scan_id: str) -> dict:
     """Coerce pushed payloads onto the canonical scan report contract.
 
@@ -32,7 +53,7 @@ def normalize_pushed_report(body: PushPayload, *, fallback_scan_id: str) -> dict
     """
     report = cast(dict, sanitize_sensitive_payload(compact_report_sections(body.model_dump())))
     blast_radius = report.get("blast_radius") or report.get("blast_radii") or []
-    report["blast_radius"] = blast_radius
+    report["blast_radius"] = [_normalize_blast_row(row) for row in blast_radius]
     report = compact_report_sections(report)
     report["scan_id"] = str(report.get("scan_id") or fallback_scan_id)
 

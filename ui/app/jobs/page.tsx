@@ -32,11 +32,11 @@ function downloadJson(data: unknown, filename: string) {
 function StatusIcon({ status }: { status: JobStatus }) {
   switch (status) {
     case "done":
-      return <CheckCircle2 className="w-4 h-4 text-emerald-400" />;
+      return <CheckCircle2 className="w-4 h-4 text-[color:var(--status-success)]" />;
     case "failed":
-      return <XCircle className="w-4 h-4 text-red-400" />;
+      return <XCircle className="w-4 h-4 text-[color:var(--status-danger)]" />;
     case "running":
-      return <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />;
+      return <Loader2 className="w-4 h-4 text-[color:var(--severity-low)] animate-spin" />;
     case "cancelled":
       return <XCircle className="w-4 h-4 text-[var(--text-tertiary)]" />;
     default:
@@ -50,9 +50,9 @@ function statusLabel(s: string) {
 
 function statusColor(s: JobStatus) {
   switch (s) {
-    case "done":      return "text-emerald-400";
-    case "failed":    return "text-red-400";
-    case "running":   return "text-blue-400";
+    case "done":      return "text-[color:var(--status-success)]";
+    case "failed":    return "text-[color:var(--status-danger)]";
+    case "running":   return "text-[color:var(--severity-low)]";
     case "cancelled": return "text-[var(--text-tertiary)]";
     default:          return "text-[var(--text-secondary)]";
   }
@@ -237,7 +237,7 @@ function JobsPageContent() {
           )}
           <Link
             href="/scan"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[color:var(--accent)] hover:bg-[color:var(--accent-strong)] text-[color:var(--accent-contrast)] text-sm font-medium rounded-lg transition-colors"
           >
             <ShieldAlert className="w-3.5 h-3.5" />
             New Scan
@@ -248,7 +248,7 @@ function JobsPageContent() {
       {loading && <p className="text-[var(--text-tertiary)] text-sm">Loading jobs…</p>}
       {error && (
         <div className="flex items-center gap-3 p-3 bg-[color:var(--severity-critical-bg)] border border-[color:var(--severity-critical-border)] rounded-lg">
-          <p className="text-red-400 text-sm flex-1">{error}</p>
+          <p className="text-[color:var(--status-danger)] text-sm flex-1">{error}</p>
           <button onClick={loadJobs} className="text-xs text-[var(--text-secondary)] hover:text-[var(--foreground)] px-2 py-1 border border-[var(--border-subtle)] rounded">Retry</button>
         </div>
       )}
@@ -258,7 +258,7 @@ function JobsPageContent() {
           <Clock className="w-8 h-8 text-[var(--text-tertiary)] mx-auto mb-3" />
           <p className="text-[var(--text-tertiary)] text-sm">No scan jobs yet.</p>
           <p className="text-[var(--text-tertiary)] text-xs mt-1">
-            <Link href="/scan" className="text-emerald-500 hover:text-emerald-400">Run your first scan</Link> to see results here.
+            <Link href="/scan" className="text-[color:var(--accent)] hover:text-[color:var(--accent-strong)]">Run your first scan</Link> to see results here.
           </p>
         </div>
       )}
@@ -270,7 +270,7 @@ function JobsPageContent() {
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-emerald-400">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[color:var(--status-success)]">
                 Source → job → evidence
               </p>
               <h2 className="mt-1 text-base font-semibold text-[var(--foreground)]">Control-plane workflow</h2>
@@ -332,7 +332,7 @@ function JobsPageContent() {
                   </p>
                   <Link
                     href="/scan"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-200 transition hover:border-emerald-400 hover:bg-emerald-800/20"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] px-3 py-1.5 text-xs font-medium text-[color:var(--accent)] transition hover:border-[color:var(--accent)] hover:bg-[color:var(--accent-soft-hover)]"
                   >
                     <ShieldAlert className="h-3.5 w-3.5" />
                     Run a scan
@@ -429,7 +429,7 @@ function JobsPageContent() {
                         <Link
                           href={`/scan?id=${encodeURIComponent(job.job_id)}`}
                           onClick={(event) => event.stopPropagation()}
-                          className="font-mono text-xs text-[var(--text-secondary)] hover:text-emerald-300"
+                          className="font-mono text-xs text-[var(--text-secondary)] hover:text-[color:var(--accent)]"
                         >
                           {job.job_id.slice(0, 8)}…
                         </Link>
@@ -460,7 +460,7 @@ function JobsPageContent() {
                         {evidenceReady ? (
                           <div className="space-y-2">
                             {outcome === "partial" ? (
-                              <p className="text-[11px] font-medium text-amber-300">
+                              <p className="text-[11px] font-medium text-[color:var(--status-warn)]">
                                 Partial evidence · {job.warning_count ?? 0} warning{job.warning_count === 1 ? "" : "s"}
                               </p>
                             ) : null}
@@ -483,7 +483,7 @@ function JobsPageContent() {
                             </div>
                           </div>
                         ) : (
-                          <span className={outcome === "failed" ? "text-xs text-red-300" : "text-xs text-[var(--text-tertiary)]"}>
+                          <span className={outcome === "failed" ? "text-xs text-[color:var(--status-danger)]" : "text-xs text-[var(--text-tertiary)]"}>
                             {outcome === "failed" ? "Scan failed — evidence incomplete" : "Available when complete"}
                           </span>
                         )}
@@ -492,7 +492,7 @@ function JobsPageContent() {
                         <button
                           onClick={(e) => handleDelete(job.job_id, e)}
                           disabled={deleting === job.job_id}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-tertiary)] hover:text-red-400 transition-all rounded"
+                          className="opacity-0 group-hover:opacity-100 p-1 text-[var(--text-tertiary)] hover:text-[color:var(--status-danger)] transition-all rounded"
                           title="Delete job"
                         >
                           {deleting === job.job_id
