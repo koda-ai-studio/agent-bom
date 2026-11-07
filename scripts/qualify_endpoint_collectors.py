@@ -21,6 +21,8 @@ from agent_bom import __version__
 from agent_bom.endpoint.inventory import _default_runner, collect_endpoint_inventory
 
 CORE = {"applications", "processes", "services", "listeners"}
+# The product default. A lower cap can fill on a busy host before the fixture listener is reached.
+MAX_ITEMS = 1000
 ALL = CORE | {"containers", "images"}
 STATUSES = {"complete", "partial", "unsupported", "unavailable", "permission_denied"}
 
@@ -60,7 +62,7 @@ def main() -> int:
             "system": platform.system(),
             "machine": platform.machine(),
             "python": platform.python_version(),
-            "max_items": 64,
+            "max_items": MAX_ITEMS,
             "command_timeout_seconds": args.timeout_seconds,
             "evidence": "native-host-collector-execution",
             "universal_os_coverage": False,
@@ -87,8 +89,8 @@ def main() -> int:
                 listener.bind(("127.0.0.1", 0))
                 listener.listen(1)
                 port = listener.getsockname()[1]
-                inventory = collect_endpoint_inventory(max_items=64, timeout_seconds=args.timeout_seconds, runner=runner)
-                receipt.update(assess(inventory, system=platform.system(), max_items=64))
+                inventory = collect_endpoint_inventory(max_items=MAX_ITEMS, timeout_seconds=args.timeout_seconds, runner=runner)
+                receipt.update(assess(inventory, system=platform.system(), max_items=MAX_ITEMS))
                 receipt["fixture_listener_observed"] = any(row.get("port") == port for row in inventory.get("listeners", []))
                 receipt["passed"] = receipt["passed"] and receipt["fixture_listener_observed"]
             receipt["commands"] = commands
