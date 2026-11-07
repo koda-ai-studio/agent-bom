@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 from pydantic import AnyHttpUrl, TypeAdapter
 
+from agent_bom.mcp_tools.http_server import install_http_runner
 from agent_bom.mcp_tools.public_tier import PublicTierGate, PublicTierTokenVerifier, public_tier_guard
 
 _HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
@@ -130,6 +131,7 @@ def create_fastmcp_server(
     )
     # Set the actual agent-bom version (FastMCP defaults to SDK version)
     mcp._lowlevel_server.version = version
+    install_http_runner(mcp)
     if anonymous_credential is not None:
         _install_public_gate(mcp, anonymous_credential)
     return mcp

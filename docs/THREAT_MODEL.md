@@ -315,3 +315,16 @@ security review, publication or live provider qualification.
 - Go checksum candidates carry unknown reachability and low confidence; a
   historical checksum cannot raise a declared direct requirement
   (`tests/test_go_sum_pre_117_supplement.py`).
+
+## Authentication rejection boundary
+
+| Threat | Control | Remaining boundary |
+| --- | --- | --- |
+| Spoofed forwarding headers | Authentication source resolution requires an allowlisted transport peer and declared proxy depth; owned launchers preserve the socket peer | A trusted proxy must replace/append forwarding headers correctly; direct ASGI operators must disable server-side header rewriting |
+| Credential or tenant lockout targeting | Backoff keys contain only validated source addresses, never presented credentials or claimed tenants | A shared NAT source shares its temporary block; authentication already in flight may complete |
+| Distributed guessing | Replicas atomically update one source budget in the shared database; escalation returns a bounded `Retry-After` | Different sources have different allowances; this does not replace perimeter DDoS controls |
+| Store failure bypass | Authentication admission fails closed with 503 when shared state cannot be read/written within its deadline | Health/static/preflight remain available; general read/write quotas are separate |
+| Audit flooding or credential disclosure | Failure receipts carry source, status, and a SHA-256 fingerprint; per-source and deployment-wide sampling bounds writes | Sampled receipts omit attempts and are not an independent collector; no raw key, cookie, JWT, or query string is stored |
+| Stale credential authorization | Salted scrypt hashes and constant-time comparisons; cached KDF results require fresh durable records; expiry, rotation overlap, and revocation are checked on each verification | Operator configuration must be changed consistently across replicas; in-flight requests are not retroactively canceled |
+| Missing tenant root | Postgres key creation locks and checks the tenant root before insertion; an absent root returns 409 | Tenant provisioning remains an explicit authorized operation; key issuance does not silently create tenants |
+| Ephemeral audit key loss | Persisted key-identity diagnostics distinguish unavailable verification from an altered row | A database owner can alter that diagnostic metadata; use a stable externally managed signing key and independent retention for audit assurance |

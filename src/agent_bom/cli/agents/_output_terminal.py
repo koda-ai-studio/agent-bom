@@ -206,7 +206,7 @@ def _emit_console_report(
 
 def _emit_stdout_standard(blast_radii: Any, exclude_unfixable: Any, offline_html: Any, output_format: Any, report: Any) -> bool:
     if output_format == "cyclonedx":
-        sys.stdout.write(json.dumps(to_cyclonedx(report), indent=2))
+        sys.stdout.write(json.dumps(to_cyclonedx(report, spec_version="1.6"), indent=2))
         return True
     elif output_format == "sarif":
         sys.stdout.write(json.dumps(to_sarif(report, exclude_unfixable=exclude_unfixable), indent=2))

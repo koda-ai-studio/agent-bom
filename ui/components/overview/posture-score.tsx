@@ -237,7 +237,7 @@ export function PostureHero({
               ) : null}
             </>
           ) : (
-            localReport ? "Posture unavailable" : "Awaiting scan"
+            localReport ? "Posture unavailable" : severity.total > 0 || critical > 0 || high > 0 ? "Coverage incomplete" : "Awaiting scan"
           )}
         </p>
         {coverage ? (

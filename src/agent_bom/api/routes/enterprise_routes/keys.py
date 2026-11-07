@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -9,6 +10,8 @@ import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
+from agent_bom.api import audit_log
+from agent_bom.api.api_key_record import TenantNotProvisionedError
 from agent_bom.api.browser_session import SIGNED_OUT_COOKIE_NAME
 from agent_bom.api.models import CreateKeyRequest, RotateKeyRequest
 from agent_bom.api.read_models._base import documented
@@ -39,7 +42,6 @@ def create_loopback_dev_session(request: Request, response: Response) -> None:
     This endpoint lets a separately served local Next.js UI obtain the same
     browser session as the packaged, same-origin dashboard.
     """
-    from agent_bom.api.audit_log import log_action
     from agent_bom.api.dev_auth_state import get_dev_api_key, get_dev_api_role
 
     if get_dev_api_key() is None:
@@ -58,7 +60,7 @@ def create_loopback_dev_session(request: Request, response: Response) -> None:
         tenant_id="default",
         auth_method="browser_session_dev_key",
     )
-    log_action(
+    audit_log.log_action(
         "auth.browser_session_created",
         actor="loopback-dev-key",
         resource="auth/dev-session",
@@ -76,11 +78,11 @@ async def create_browser_session(request: Request, response: Response, body: Bro
     reverse-proxy OIDC. The raw key is never returned and should be typed only
     into the first-party UI served from the same origin as the API.
     """
-    from agent_bom.api.audit_log import log_action
     from agent_bom.api.auth import OPERATOR_KEY_ID_PREFIX, get_key_store
 
     _check_auth_session_rate_limit(request)
     raw_key = body.api_key.strip()
+    request.state.auth_credential_fingerprint = hashlib.sha256(raw_key.encode()).hexdigest()
     if not raw_key:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
@@ -101,7 +103,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
             auth_method="browser_session_static_api_key",
             static_api_key=static_key,
         )
-        log_action(
+        audit_log.log_action(
             "auth.browser_session_created",
             actor="static-key",
             resource="auth/session",
@@ -128,7 +130,7 @@ async def create_browser_session(request: Request, response: Response, body: Bro
                 scopes=list(api_key.scopes),
                 operator_key_hash=api_key.key_hash if api_key.key_id.startswith(OPERATOR_KEY_ID_PREFIX) else None,
             )
-            log_action(
+            audit_log.log_action(
                 "auth.browser_session_created",
                 actor=api_key.name,
                 resource="auth/session",
@@ -145,7 +147,6 @@ async def create_browser_session(request: Request, response: Response, body: Bro
 @router.delete("/auth/session", tags=["enterprise"], status_code=204)
 def delete_browser_session(request: Request, response: Response) -> Response:
     """Clear the same-origin browser session cookie."""
-    from agent_bom.api.audit_log import log_action
 
     try:
         _clear_browser_session_cookie(response, request)
@@ -157,7 +158,7 @@ def delete_browser_session(request: Request, response: Response) -> Response:
         return unavailable
     tenant_id = getattr(request.state, "tenant_id", None) or "default"
     actor = getattr(request.state, "api_key_name", "") or "browser-session"
-    log_action("auth.browser_session_cleared", actor=actor, resource="auth/session", tenant_id=tenant_id)
+    audit_log.log_action("auth.browser_session_cleared", actor=actor, resource="auth/session", tenant_id=tenant_id)
     response.status_code = 204
     return response
 
@@ -165,7 +166,6 @@ def delete_browser_session(request: Request, response: Response) -> Response:
 @router.post("/auth/keys", tags=["enterprise"], status_code=201)
 def create_key(request: Request, req: CreateKeyRequest) -> dict:
     """Create a new API key. Returns the raw key once — store it securely."""
-    from agent_bom.api.audit_log import log_action
     from agent_bom.api.auth import Role, create_api_key, get_key_store, key_durability_fields, resolve_scim_subject_binding, scopes_allow
     from agent_bom.rbac import role_rank
 
@@ -205,9 +205,13 @@ def create_key(request: Request, req: CreateKeyRequest) -> dict:
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
-    get_key_store().add(api_key)
 
-    log_action(
+    try:
+        get_key_store().add(api_key)
+    except TenantNotProvisionedError as exc:
+        raise HTTPException(status_code=409, detail="Tenant is not provisioned; create the tenant before issuing API keys") from exc
+
+    audit_log.log_action(
         "auth.key_created",
         actor=actor,
         resource=f"key/{api_key.key_id}",
@@ -245,7 +249,6 @@ def rotate_key(
     completely missing body. All RotateKeyRequest fields default to None
     (inherit name from the current key, no expiry change, default overlap).
     """
-    from agent_bom.api.audit_log import log_action
     from agent_bom.api.auth import (
         create_api_key,
         get_api_key_policy,
@@ -285,7 +288,7 @@ def rotate_key(
     store.add(replacement)
     if not store.mark_rotating(current_key.key_id, replacement_key_id=replacement.key_id, overlap_until=overlap_until):
         raise HTTPException(status_code=409, detail=f"Key {key_id} could not be marked for rotation")
-    log_action(
+    audit_log.log_action(
         "auth.key_rotated",
         actor=actor,
         resource=f"key/{current_key.key_id}",

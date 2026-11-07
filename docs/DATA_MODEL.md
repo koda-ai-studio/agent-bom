@@ -676,12 +676,14 @@ source records from experimental seed matches.
 
 ### `inventory_snapshot.packages`
 
-JSON reports now expose flattened packages in both the top-level `packages`
-array and `inventory_snapshot.packages`. The invariant is:
+JSON reports keep the canonical flattened package table in
+`ai_bom_entities.packages`. The former top-level `packages` compatibility copy
+is omitted when it is identical. Consumers of that alias should read
+`ai_bom_entities.packages`. Ingest still accepts older reports and retains a
+distinct top-level package table when its content differs.
 
-```text
-top-level packages == ai_bom_entities.packages == inventory_snapshot.packages
-```
+`inventory_snapshot.packages` retains the inventory replay schema; it is a
+separate projection and is not discarded as a duplicate.
 
 Nested `agents[].mcp_servers[].packages` remains present so consumers can
 reconstruct where a package was found. The flattened
@@ -716,7 +718,7 @@ represent, but the canonical report keeps everything.
 |---|---|---|---|
 | JSON | `json_fmt.py` | Full report, lossless | nothing |
 | SARIF 2.1 | `sarif.py` | Findings, locations, fix recommendations | runtime trace, fleet membership |
-| CycloneDX 1.7 (+ ML BOM) | `cyclonedx_fmt.py` | Components, vulnerabilities, services, ML-BOM `model` blocks | dashboard-only attributes |
+| CycloneDX 1.6 CLI / 1.7 library (+ ML BOM) | `cyclonedx_fmt.py` | Components, vulnerabilities, services, ML-BOM `model` blocks | dashboard-only attributes |
 | SPDX 3.0 | `spdx_fmt.py` | Packages, relationships, licenses, vulnerability assessments | runtime + agent context |
 | HTML | `html.py` | Interactive dashboard view | suitable for emailed PDF |
 | Graph JSON | `graph_export.py` | `UnifiedGraph` nodes/edges/paths | textual narratives |

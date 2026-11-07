@@ -37,6 +37,13 @@ const sampleDomains: OverviewResponse["domains"] = {
 };
 
 describe("OverviewCockpit", () => {
+  it("marks unavailable posture as incomplete when persisted findings exist", () => {
+    render(<OverviewCockpit {...baseProps} grade="N/A" score={undefined}
+      severity={{ critical: 114, high: 117, medium: 896, low: 0, total: 1127 }} />);
+    expect(screen.getByTestId("overview-posture-score")).toHaveTextContent("Coverage incomplete");
+    expect(screen.queryByText("Awaiting scan")).not.toBeInTheDocument();
+  });
+
   const baseProps = {
     grade: "F",
     score: 37,

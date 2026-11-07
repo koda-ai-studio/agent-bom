@@ -37,6 +37,7 @@ from agent_bom.api.audit_details import _safe_audit_label as _safe_audit_label
 from agent_bom.api.audit_details import _sanitize_detail_key as _sanitize_detail_key
 from agent_bom.api.audit_details import _sanitize_detail_value as _sanitize_detail_value
 from agent_bom.api.audit_details import sanitize_audit_details as sanitize_audit_details
+from agent_bom.api.audit_key_state import record_key_identity
 from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.settings import env_bool, env_int
@@ -496,6 +497,8 @@ class SQLiteAuditLog:
         self._last_sig_by_tenant: dict[str, str] = defaultdict(str)
         self._append_lock = threading.Lock()
         self._init_db()
+
+        self._original_key_identity = record_key_identity(self._conn, hmac_key or _default_signing_key())
         self._hydrate_last_signatures()
         if os.path.exists(self._db_path):
             os.chmod(self._db_path, 0o600)

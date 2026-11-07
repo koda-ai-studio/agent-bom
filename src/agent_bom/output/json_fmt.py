@@ -39,6 +39,7 @@ from agent_bom.output.json_inventory import _snapshot_payload as _snapshot_paylo
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
 from agent_bom.output.json_writer import write_json_document, write_json_file
 from agent_bom.output.possibly_affected import json_section as possibly_affected_json
+from agent_bom.output.report_compaction import compact_report_sections
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
 from agent_bom.output.vulnerability_counts import report_summary
 from agent_bom.redaction.payload import StreamingRedaction
@@ -886,7 +887,7 @@ def to_json(report: AIBOMReport) -> dict:
     result["credential_risk_ranking"] = compute_credential_risk_ranking(report)
     result["incident_correlation"] = compute_incident_correlation(report)
 
-    return prepare_iac_occurrences(result)
+    return prepare_iac_occurrences(compact_report_sections(result))
 
 
 def redact_json_payload(report_json: dict[str, Any]) -> dict[str, Any]:

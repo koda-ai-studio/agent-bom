@@ -20,6 +20,7 @@ import { AuditEvidencePanel } from "@/components/audit-evidence-panel";
 import { PageLaneHeader } from "@/components/page-lane";
 import { Collapsible } from "@/components/collapsible";
 import { nowForRelativeTime } from "@/lib/relative-clock";
+import { groupAuditEntries } from "@/lib/audit-groups";
 
 const PAGE_SIZE = 50;
 const FIELD = "min-w-0 rounded-md border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-2 text-sm";
@@ -152,7 +153,8 @@ export default function AuditLogPage() {
           <strong className={integrity?.tampered ? "text-red-600 dark:text-red-400" : ""}>
             {loading ? "Checking integrity…" : !integrity ? "Integrity unavailable" : integrity.tampered
               ? `${integrity.tampered.toLocaleString()} integrity exceptions need review`
-              : integrity.checked ? "No integrity exceptions detected" : "No records checked"}
+              : integrity.unverifiable ? integrity.error || "Cannot verify: signing key changed"
+                : integrity.checked ? "No integrity exceptions detected" : "No records checked"}
           </strong>
           {integrity && !loading && <span className="text-[var(--text-secondary)]">
             {integrity.verified.toLocaleString()} verified / {integrity.checked.toLocaleString()} checked
@@ -196,7 +198,8 @@ export default function AuditLogPage() {
           <div aria-hidden="true" className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)_1rem] gap-3 py-2 text-xs text-[var(--text-tertiary)] lg:grid">
             <span>Action</span><span>Actor</span><span>Resource</span><span>Recorded outcome</span><span>Time</span><span />
           </div>
-          {entries.map((entry) => {
+          {groupAuditEntries(entries).map((group) => {
+            const entry = group[0]!;
             const isExpanded = expanded.has(entry.entry_id);
             const outcome = textDetail(entry, "outcome") || textDetail(entry, "decision") || textDetail(entry, "status") || "Not recorded";
             const finding = textDetail(entry, "finding_id");
@@ -208,7 +211,7 @@ export default function AuditLogPage() {
             return <div key={entry.entry_id}>
               <button aria-expanded={isExpanded} aria-controls={`evidence-${entry.entry_id}`} onClick={() => toggleExpand(entry.entry_id)}
                 className="grid w-full grid-cols-[minmax(0,1fr)_1rem] gap-2 py-4 text-left text-sm hover:bg-[var(--surface-elevated)] focus-visible:outline-2 focus-visible:outline-emerald-500 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)_1rem] lg:gap-3">
-                <span className="break-words font-medium">{entry.action}</span>
+                <span className="break-words font-medium">{entry.action}{group.length > 1 && <span className="ml-2 text-xs text-[var(--text-secondary)]">{group.length} events</span>}</span>
                 <span className="col-start-1 break-words text-[var(--text-secondary)] lg:col-auto"><span className="lg:hidden">Actor: </span>{entry.actor}</span>
                 <span className="col-start-1 break-all text-[var(--text-secondary)] lg:col-auto">{entry.resource}</span>
                 <span className="col-start-1 text-[var(--text-secondary)] lg:col-auto"><span className="lg:hidden">Outcome: </span>{outcome}</span>
@@ -216,6 +219,10 @@ export default function AuditLogPage() {
                 <Chevron className="col-start-2 row-start-1 h-4 w-4 self-center lg:col-start-6" />
               </button>
               {isExpanded && <div id={`evidence-${entry.entry_id}`} className="space-y-3 border-l-2 border-emerald-600 pb-4 pl-4 text-sm">
+                {group.length > 1 && <div>
+                  <p>Repeated campaign details on this page. Every original event is retained.</p>
+                  <ul className="mt-2 space-y-1 break-all text-xs">{group.map((item) => <li key={item.entry_id}>{item.entry_id} · {formatDate(item.timestamp)}</li>)}</ul>
+                </div>}
                 <p className="break-all text-xs text-[var(--text-secondary)]">Event ID: {entry.entry_id} · {entry.hmac_signature ? "Signature recorded; the aggregate check does not provide a per-event verdict." : "No signature recorded."}</p>
                 <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
                   {([["agent_id", "Agent"], ["owner", "Owner"], ["reason", "Reason"], ["rotated_from", "Previous identity"], ["source_receipt_id", "Source receipt"]] as const).map(([key, label]) => textDetail(entry, key) && <div key={key}>
@@ -233,7 +240,7 @@ export default function AuditLogPage() {
                   {(finding || cve) && <a href={`${ASSET_BASE}/findings?${new URLSearchParams(finding ? { finding } : { cve })}`}>Open finding →</a>}
                 </div>
                 <details><summary className="cursor-pointer text-[var(--text-secondary)]">Structured event evidence</summary>
-                  <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs text-[var(--text-secondary)]">{JSON.stringify(entry, null, 2)}</pre>
+                  <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs text-[var(--text-secondary)]">{JSON.stringify(group.length > 1 ? group : entry, null, 2)}</pre>
                 </details>
               </div>}
             </div>;

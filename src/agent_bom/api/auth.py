@@ -430,7 +430,10 @@ class KeyStore:
         # unchanged.
         with self._lock:
             keys_snapshot = list(self._keys)
-        return verify_api_key(raw_key, keys_snapshot)
+        key = verify_api_key(raw_key, keys_snapshot)
+        if key is not None:
+            key.last_used = datetime.now(timezone.utc).isoformat()
+        return key
 
     def has_keys(self) -> bool:
         with self._lock:

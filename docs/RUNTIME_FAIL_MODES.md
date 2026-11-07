@@ -651,3 +651,48 @@ unit tests do not establish production login or directory acceptance.
 
 Rollback restores a compatible application and issuer configuration together.
 Never disable authentication or enable the public tier as a recovery shortcut.
+
+## Authentication failure throttling
+
+API and MCP HTTP authentication share source-based backoff. The default is ten
+failed authentications in 60 seconds, followed by a 30-second block; subsequent
+blocks double to 900 seconds. One hour without failures resets escalation.
+Configure `AGENT_BOM_AUTH_FAILURE_LIMIT`, `AGENT_BOM_AUTH_BACKOFF_SECONDS`, and
+`AGENT_BOM_AUTH_MAX_BACKOFF_SECONDS` on every replica with the same values.
+The response is 429 with `Retry-After` and `X-RateLimit-Scope: auth-source`.
+
+The state uses the existing Postgres rate-limit pool and migration-owned
+`api_auth_failure_limits` table. SQLite processes share it when they use the
+same `AGENT_BOM_DB` path: authentication state lives in the owner-only
+`<database>.auth-limits.db` sidecar so a scan-ingest write transaction cannot
+lock its budget. Without a persistent database it is process-local.
+At most eight state operations may be outstanding per worker; timed-out work
+keeps its slot until it exits. A five-second local cooldown bounds outage
+pressure. State errors or a 500 ms deadline fail closed with 503, including otherwise
+valid authentication. Health probes, static assets, and CORS preflight bypass
+this check. General request limits retain their existing behavior.
+
+Only source addresses incur backoff; a claimed key or tenant cannot consume
+another source's failure allowance. Users behind one NAT address share that
+source's block. Forwarded addresses require both
+`AGENT_BOM_TRUSTED_PROXY_CIDRS` and `AGENT_BOM_TRUSTED_PROXY_HOPS`.
+The owned API/MCP launchers disable server-side proxy-header rewriting. When
+launching an ASGI app directly, pass `uvicorn --no-proxy-headers` so that the
+application receives the real transport peer.
+
+API key, browser-session, OIDC, and MCP bearer/OAuth rejections enter this
+budget. Authenticated authorization denials do not. `auth.failed` receipts use
+the operator/default audit chain, a validated `source`, status, and a SHA-256
+credential fingerprint in `payload_sha256`; raw headers and credentials are
+never retained. Admission permits at most three receipts per source and 100
+per deployment per minute. Blocked requests do not append another receipt.
+These sampled records establish observed failures, not an exhaustive attempt
+count or independent collector evidence.
+
+For persisted SQLite audit logs without a configured HMAC key, a changed or
+unrecorded signing-key identity yields `unverifiable` rows and an explicit
+cannot-verify reason. It never yields a clean/verified result. Local key-identity
+metadata is a diagnostic receipt, not independent tamper evidence. With a
+configured key, every HMAC and chain checkpoint is still verified; changed
+rows and truncation retain their existing tamper results. Configure
+`AGENT_BOM_AUDIT_HMAC_KEY` before using persistent audit logs as evidence.

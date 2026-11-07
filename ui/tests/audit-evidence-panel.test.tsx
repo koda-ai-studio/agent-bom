@@ -27,6 +27,19 @@ afterEach(() => {
 });
 
 describe("AuditEvidencePanel", () => {
+  it("keeps lost signing continuity unverifiable even when the export signature matches", async () => {
+    apiMock.verifyAuditPacket.mockResolvedValue({ valid: true, payload_bytes: 96 });
+    render(<AuditEvidencePanel />);
+    fireEvent.change(screen.getByLabelText("Exported audit packet"), { target: { value: JSON.stringify({
+      payload: { entries: [], integrity: { verified: 0, tampered: 0, unverifiable: 3 } }, signature: SIGNATURE,
+    }) } });
+    fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+    const result = await screen.findByTestId("audit-verify-result");
+    expect(result).toHaveAttribute("data-valid", "false");
+    expect(result).toHaveTextContent("CANNOT VERIFY");
+    expect(result).not.toHaveTextContent("reports tampered entries");
+  });
+
   it("exports a signed packet and verifies the fresh round-trip as PASS", async () => {
     const packet = { payload: { entries: [], integrity: { verified: 3 } }, signature: SIGNATURE };
     apiMock.exportAuditPacket.mockResolvedValue(packet);

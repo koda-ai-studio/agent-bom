@@ -12,6 +12,7 @@ import anyio.to_thread
 from fastapi import APIRouter, Header, HTTPException, Query, Request, Response
 from fastapi.responses import PlainTextResponse
 
+from agent_bom.api.audit_key_state import control_plane_integrity
 from agent_bom.api.models import ExceptionRequest, IssueStatusUpdateRequest
 from agent_bom.api.read_models import SiemConnectorsResponse, TrendsResponse, documented
 from agent_bom.api.read_models.enterprise import (
@@ -88,14 +89,13 @@ def audit_integrity(
     from agent_bom.audit_integrity import verify_audit_jsonl_chain
 
     tenant_id = require_request_tenant_id(request)
-    verified, tampered = get_audit_log().verify_integrity(limit=limit, tenant_id=tenant_id)
+
+    control_plane = control_plane_integrity(get_audit_log(), limit=limit, tenant_id=tenant_id)
     chains: list[dict[str, Any]] = [
         {
             "name": "control_plane",
             "algorithm": "hmac-sha256",
-            "verified": verified,
-            "tampered": tampered,
-            "checked": verified + tampered,
+            **control_plane,
             "tenant_scoped": True,
         }
     ]
@@ -119,13 +119,15 @@ def audit_integrity(
                 }
             )
 
+    total_unverifiable = sum(int(chain.get("unverifiable", 0)) for chain in chains)
     total_verified = sum(int(chain["verified"]) for chain in chains)
     total_tampered = sum(int(chain["tampered"]) for chain in chains)
     algorithms = sorted({algorithm for chain in chains for algorithm in str(chain["algorithm"]).split(",") if algorithm})
     return {
         "verified": total_verified,
         "tampered": total_tampered,
-        "checked": total_verified + total_tampered,
+        "unverifiable": total_unverifiable,
+        "checked": total_verified + total_tampered + total_unverifiable,
         "algorithms": algorithms,
         "chains": chains,
     }
@@ -152,7 +154,8 @@ def export_audit_entries(
     actor = getattr(request.state, "api_key_name", "") or "system"
     store = get_audit_log()
     entries = store.list_entries(action=action, resource=resource, since=since, limit=limit, offset=offset, tenant_id=tenant_id)
-    verified, tampered = store.verify_integrity(limit=min(limit, 10_000), tenant_id=tenant_id)
+
+    integrity = control_plane_integrity(store, limit=min(limit, 10_000), tenant_id=tenant_id)
 
     log_action(
         "audit.export",
@@ -187,11 +190,7 @@ def export_audit_entries(
             "limit": limit,
             "offset": offset,
         },
-        "integrity": {
-            "verified": verified,
-            "tampered": tampered,
-            "checked": verified + tampered,
-        },
+        "integrity": integrity,
         "entries": [entry.to_dict() for entry in entries],
     }
     payload = json.dumps(body, sort_keys=True).encode()

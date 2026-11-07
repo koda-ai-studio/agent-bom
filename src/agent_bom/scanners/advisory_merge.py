@@ -156,4 +156,32 @@ def merge_advisory_clusters(records: list[Vulnerability], *, fix_fallback: bool 
             for field in ("kev_date_added", "kev_due_date", "kev_cve_id"):
                 setattr(result, field, getattr(kev_record, field))
         merged.append(result)
-    return sorted(merged, key=lambda record: record.id)
+    return sorted(_collapse_covered_distro_rollups(merged), key=lambda record: record.id)
+
+
+def _collapse_covered_distro_rollups(records: list[Vulnerability]) -> list[Vulnerability]:
+    """Remove a Debian rollup only when its CVEs and fix are already represented.
+
+    Upstream links describe fixes, not identity aliases. Keep distinct CVEs
+    separate and retain rollups with missing CVEs or different release fixes.
+    All records in this call belong to the same package occurrence.
+    """
+    by_cve = {record.id: record for record in records if record.id.startswith("CVE-")}
+    retained = []
+    for record in records:
+        cves = {cve for value in record.upstream_ids if (cve := derive_cve_from_advisory_id(value))}
+        covered = (
+            record.id.startswith(("DSA-", "DLA-"))
+            and cves
+            and cves <= by_cve.keys()
+            and all(not record.fixed_version or by_cve[cve].fixed_version == record.fixed_version for cve in cves)
+        )
+        if not covered:
+            retained.append(record)
+            continue
+        reference = f"https://security-tracker.debian.org/tracker/{record.id}"
+        for cve in cves:
+            target = by_cve[cve]
+            target.references = sorted({*target.references, *record.references, reference})
+            target.advisory_sources = sorted({*target.advisory_sources, *record.advisory_sources})
+    return retained

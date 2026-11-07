@@ -204,3 +204,46 @@ def test_postgres_operator_session_binding_survives_reload_but_not_rotation(monk
     finally:
         store.remove(record.key_id)
         reset_pool()
+
+
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="AGENT_BOM_POSTGRES_URL not set")
+def test_postgres_missing_tenant_key_creation_returns_conflict(monkeypatch):
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from fastapi import HTTPException
+
+    from agent_bom.api import auth
+    from agent_bom.api.postgres_access import PostgresKeyStore
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.routes.enterprise_routes.keys import CreateKeyRequest, create_key
+
+    tenant = "missing-" + uuid4().hex
+    store = PostgresKeyStore()
+    monkeypatch.setattr(auth, "get_key_store", lambda: store)
+    request = SimpleNamespace(state=SimpleNamespace(tenant_id=tenant, api_key_role="admin"))
+    context = set_current_tenant(tenant)
+    try:
+        with pytest.raises(HTTPException) as result:
+            create_key(request, CreateKeyRequest(name="reader", role="viewer"))
+        assert result.value.status_code == 409
+        assert "Tenant is not provisioned" in result.value.detail
+    finally:
+        reset_current_tenant(context)
+
+
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="AGENT_BOM_POSTGRES_URL not set")
+def test_postgres_auth_backoff_is_shared_and_atomic():
+    from concurrent.futures import ThreadPoolExecutor
+    from uuid import uuid4
+
+    from agent_bom.api.auth_failure_store import PostgresAuthFailureStore
+    from agent_bom.api.rate_limit_store import PostgresRateLimitStore
+
+    source = "test-" + uuid4().hex
+    one = PostgresAuthFailureStore(PostgresRateLimitStore())
+    two = PostgresAuthFailureStore(PostgresRateLimitStore())
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        futures = [workers.submit(store.record, source, 100, limit=4, base=10, maximum=60) for store in (one, two, one, two)]
+        assert sorted(f.result() for f in futures) == [0, 0, 0, 10]
+    assert two.remaining(source, 101) == 9

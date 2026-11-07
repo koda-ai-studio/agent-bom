@@ -6,7 +6,7 @@ Generate Software Bills of Materials in industry-standard formats.
 
 | Format | Standard | Output |
 |--------|----------|--------|
-| `cyclonedx` | CycloneDX 1.7 | JSON |
+| `cyclonedx` | CycloneDX 1.6 | JSON |
 | `spdx` | SPDX 3.0.1 | JSON-LD |
 | `spdx2` | SPDX 2.3 | JSON |
 
