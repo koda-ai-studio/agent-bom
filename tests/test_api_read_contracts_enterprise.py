@@ -46,6 +46,7 @@ NON_JSON_ENTERPRISE_GETS = frozenset(
         "/v1/auth/snowflake/login",
         "/v1/auth/snowflake/callback",
         "/v1/auth/saml/metadata",
+        "/v1/auth/saml/start",
     }
 )
 

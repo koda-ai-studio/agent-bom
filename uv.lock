@@ -55,6 +55,7 @@ dependencies = [
     { name = "tree-sitter-javascript" },
     { name = "tree-sitter-typescript" },
     { name = "urllib3" },
+    { name = "zstandard" },
 ]
 
 [package.optional-dependencies]
@@ -151,7 +152,6 @@ all = [
     { name = "wandb" },
     { name = "watchdog" },
     { name = "werkzeug" },
-    { name = "zstandard" },
 ]
 api = [
     { name = "fastapi" },
@@ -159,7 +159,6 @@ api = [
     { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "werkzeug" },
-    { name = "zstandard" },
 ]
 aws = [
     { name = "boto3" },
@@ -282,7 +281,6 @@ dev = [
     { name = "types-toml" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "werkzeug" },
-    { name = "zstandard" },
 ]
 dev-all = [
     { name = "alembic" },
@@ -311,7 +309,6 @@ dev-all = [
     { name = "types-toml" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "werkzeug" },
-    { name = "zstandard" },
 ]
 docs = [
     { name = "mkdocs-material" },
@@ -392,7 +389,6 @@ ui = [
     { name = "starlette" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "werkzeug" },
-    { name = "zstandard" },
 ]
 visual = [
     { name = "pillow" },
@@ -565,7 +561,7 @@ requires-dist = [
     { name = "wandb", marker = "extra == 'wandb'", specifier = ">=0.16" },
     { name = "watchdog", marker = "extra == 'watch'", specifier = ">=4.0" },
     { name = "werkzeug", marker = "extra == 'api'", specifier = ">=3.1.9" },
-    { name = "zstandard", marker = "extra == 'api'", specifier = ">=0.23" },
+    { name = "zstandard", specifier = ">=0.23" },
 ]
 provides-extras = ["api", "otel", "ui", "aws", "azure", "gcp", "coreweave", "databricks", "snowflake", "nebius", "huggingface", "wandb", "openai", "ai-enrich", "graph", "pdf", "postgres", "watch", "runtime", "visual", "mcp-server", "sigstore", "lake", "sca-import", "snyk", "interactive", "oidc", "saml", "cloud", "all", "docs", "dev", "dev-all"]
 

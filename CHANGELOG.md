@@ -54,6 +54,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
+- `agent-bom quickstart --run` completes on a plain `pip install agent-bom`. `zstandard` moved from the `api` extra to the base dependencies, because stored finding and job payloads need it on the CLI path too.
+- `agent-bom quickstart --run` finds `agent-bom.exe` beside the interpreter on Windows when the venv is not on `PATH`.
+- `POST /v1/auth/saml/login` accepts the `application/x-www-form-urlencoded` form an IdP's browser posts, as the SAML HTTP-POST binding defines. The form is capped at 1 MiB and shares the browser-session attempt limit. A verified post starts an HttpOnly browser session backed by the short-lived key and redirects to `/`; the key never reaches the page. JSON callers are unchanged. RelayState stays a one-time server nonce and is never a redirect target.
+- Added `GET /v1/auth/saml/start`. SAML form POST binds to the browser that started the login there: RelayState, a short-lived cookie and the response's `InResponseTo` must all match that login. Unsolicited and IdP-initiated form posts are not accepted, even with `AGENT_BOM_SAML_ALLOW_IDP_INITIATED`, which applies only to the JSON route. Point an IdP app tile or bookmark at the start URL.
+- `helm uninstall` no longer exits 1: the teardown hook's Role grants `deletecollection`, which it always needed, and the hook no longer selects its own Job. Deleting a Job now also removes its pods.
+- On macOS, gateway and proxy audit state under `/var/folders` no longer fails closed with HTTP 503. `/var` is canonicalized like `/tmp`; a symlink anywhere else in the path is still refused.
+- **Behaviour change:** the `sqlite-pilot` and `synthetic-enterprise-story` Helm profiles crash-looped because the API refuses a non-loopback bind without authentication. They no longer ask for anonymous access: the `agent-bom-control-plane` Secret must now carry `AGENT_BOM_API_KEYS`, and the pod stops at `CreateContainerConfigError` without it.
+- **Behaviour change:** the teardown hook's Role drops `get` and `list`, and holds `delete` on Secrets only for the names it removes, or no Secret access when there are none.
 - `ctransformers` and `parsing` are no longer flagged as typosquats. Both are established PyPI projects.
 - A scan no longer says `supply chain looks clean` when the public registry has never heard of a package. It names the package, records a `package_not_on_registry` issue, and grades `N/A` if no scanned package exists. The exit code does not change, because private packages are normal.
 - The `scan` skill's frontmatter is valid YAML again; an unquoted colon in its description broke parsing in the Claude and Codex plugins.

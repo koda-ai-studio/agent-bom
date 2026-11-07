@@ -73,10 +73,9 @@ def test_synthetic_enterprise_story_profile_is_explicit_and_demo_only() -> None:
 
     assert profile.values_files == (examples / "synthetic-enterprise-story-values.yaml",)
     values = yaml.safe_load(profile.values_files[0].read_text())
-    env = {row["name"]: row["value"] for row in values["controlPlane"]["api"]["env"]}
-    assert env["AGENT_BOM_DEMO_ESTATE"] == "1"
-    assert env["AGENT_BOM_ALLOW_UNAUTHENTICATED_API"] == "1"
-    assert env["AGENT_BOM_NO_AUTH_ROLE"] == "viewer"
+    env = {row["name"]: row for row in values["controlPlane"]["api"]["env"]}
+    assert env["AGENT_BOM_DEMO_ESTATE"]["value"] == "1"
+    assert env["AGENT_BOM_API_KEYS"]["valueFrom"]["secretKeyRef"]["name"] == "agent-bom-control-plane"
     assert values["scanner"]["enabled"] is False
 
 

@@ -12,6 +12,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import secrets
 import threading
 from datetime import datetime, timedelta, timezone
@@ -31,6 +32,7 @@ _SIGNING_KEY_LOCK = threading.Lock()
 # One configured-key fingerprint and derived key per process. Never retain
 # tokens or authentication decisions; revocation and expiry remain live reads.
 _SIGNING_KEY_CACHE: tuple[bytes, bytes] | None = None
+_SAML_REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,128}")
 
 
 class BrowserSessionError(Exception):
@@ -227,6 +229,25 @@ def verify_csrf(payload: dict[str, Any], csrf_cookie: str, csrf_header: str) -> 
     nonce = str(payload.get("nonce") or "")
     actual = hashlib.sha256(f"{nonce}:{csrf_cookie}".encode("utf-8")).hexdigest()
     return hmac.compare_digest(actual, expected)
+
+
+def _saml_login_digest(relay_state: str, request_id: str) -> str:
+    material = f"saml-login-binding-v1\0{relay_state}\0{request_id}".encode("utf-8", "surrogatepass")
+    return _b64encode(hmac.new(_signing_key(), material, hashlib.sha256).digest())
+
+
+def seal_saml_login(relay_state: str, request_id: str) -> str:
+    """Cookie value binding a browser to one login: the request id and a keyed digest of it with the relay state."""
+    return f"{request_id}.{_saml_login_digest(relay_state, request_id)}"
+
+
+def open_saml_login(cookie: str, relay_state: str) -> str | None:
+    """The request id when ``cookie`` was sealed for ``relay_state``, otherwise ``None``."""
+    request_id, separator, digest = cookie.rpartition(".")
+    if not separator or not _SAML_REQUEST_ID.fullmatch(request_id) or not relay_state:
+        return None
+    expected = _saml_login_digest(relay_state, request_id).encode("ascii")
+    return request_id if hmac.compare_digest(expected, digest.encode("utf-8", "surrogatepass")) else None
 
 
 def revoke_browser_session_token(token: str) -> bool:
