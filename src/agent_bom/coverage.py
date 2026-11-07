@@ -346,6 +346,63 @@ def _record_end_of_life_notes(packages: Sequence["Package"]) -> dict[tuple[str, 
     return {}
 
 
+# OSV publishes per-CVE Debian records (``DEBIAN-CVE-*``) only for supported
+# releases; after end of life a live ``Debian:<n>`` query returns DSA/DLA
+# advisories alone. The Debian Security Tracker keeps the release, so local
+# tracker rows are what complete the answer.
+_LIVE_FEED_PARTIAL_AFTER_EOL = frozenset({"debian"})
+
+
+def _live_feed_partial_warnings(candidates: dict[tuple[str, str], int], conn: Optional[sqlite3.Connection]) -> list[dict]:
+    warnings: list[dict] = []
+    for (family, release_key), pkg_count in sorted(candidates.items()):
+        if family not in _LIVE_FEED_PARTIAL_AFTER_EOL or end_of_life_release(release_key) is None:
+            continue
+        release_rows = 0
+        if conn is not None:
+            try:
+                release_rows = _count_release_rows(conn, release_key)
+            except sqlite3.Error as exc:
+                _logger.debug("coverage check release count failed for %s: %s", release_key, exc)
+        if release_rows > _MAX_ROWS_FOR_UNCOVERED:
+            continue
+        warnings.append(
+            CoverageWarning(
+                ecosystem=family,
+                release=release_key,
+                reason="release_live_feed_partial",
+                detail=(
+                    f"Vulnerability coverage for {release_key} is incomplete: the release is end of life and the "
+                    f"live advisory feed now carries only {family} security advisories for it, not every fixed "
+                    f"CVE, and the local DB holds no {release_key} tracker data. {pkg_count} package(s) may be "
+                    f"under-reported. Run `agent-bom db update --source {family}` for full coverage."
+                ),
+                package_count=pkg_count,
+                advisory_rows=release_rows,
+            ).to_dict()
+        )
+    return warnings
+
+
+def _release_absent_warning(family: str, release_key: str, family_rows: int, release_rows: int, pkg_count: int) -> dict:
+    return CoverageWarning(
+        ecosystem=family,
+        release=release_key,
+        reason="release_advisories_absent",
+        detail=(
+            f"Vulnerability coverage for {release_key} is incomplete. The local "
+            f"advisory data carries {family_rows} advisories for {family} overall but "
+            f"only {release_rows} for {release_key}, while this scan target has "
+            f"{pkg_count} {family} package(s) from that release. This release is "
+            f"likely end-of-life and no longer carried by the data source — results "
+            f"UNDER-report and a low or zero vulnerability count is NOT a clean bill "
+            f"of health. Re-scan against a source that tracks end-of-life releases."
+        ),
+        package_count=pkg_count,
+        advisory_rows=release_rows,
+    ).to_dict()
+
+
 def detect_release_coverage_gaps(
     packages: Sequence["Package"],
     *,
@@ -384,11 +441,16 @@ def detect_release_coverage_gaps(
     if conn is None:
         conn = _open_readonly_db()
         owns_conn = conn is not None
+    live_gaps = _live_feed_partial_warnings(supported_candidates, conn)
+    warnings.extend(live_gaps)
     if conn is None:
         return warnings
+    live_gap_releases = {gap["release"] for gap in live_gaps}
 
     try:
         for (family, release_key), pkg_count in sorted(supported_candidates.items()):
+            if release_key in live_gap_releases:
+                continue
             try:
                 family_rows = _count_family_rows(conn, family)
             except sqlite3.Error as exc:
@@ -401,24 +463,7 @@ def detect_release_coverage_gaps(
             release_rows = _count_release_rows(conn, release_key)
             if release_rows > _MAX_ROWS_FOR_UNCOVERED:
                 continue
-            warnings.append(
-                CoverageWarning(
-                    ecosystem=family,
-                    release=release_key,
-                    reason="release_advisories_absent",
-                    detail=(
-                        f"Vulnerability coverage for {release_key} is incomplete. The local "
-                        f"advisory data carries {family_rows} advisories for {family} overall but "
-                        f"only {release_rows} for {release_key}, while this scan target has "
-                        f"{pkg_count} {family} package(s) from that release. This release is "
-                        f"likely end-of-life and no longer carried by the data source — results "
-                        f"UNDER-report and a low or zero vulnerability count is NOT a clean bill "
-                        f"of health. Re-scan against a source that tracks end-of-life releases."
-                    ),
-                    package_count=pkg_count,
-                    advisory_rows=release_rows,
-                ).to_dict()
-            )
+            warnings.append(_release_absent_warning(family, release_key, family_rows, release_rows, pkg_count))
         return warnings
     finally:
         if owns_conn:

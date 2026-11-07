@@ -253,15 +253,7 @@ def parse_skill_file(path: Path) -> SkillScanResult:
 
     # pip install packages
     for match in _PIP_INSTALL_RE.finditer(code_text):
-        specs = match.group(1).strip()
-        # An inline-code span or a comment ends the command; the prose after it is not a spec.
-        specs = re.split(r"[#`]", specs, maxsplit=1)[0].strip()
-        if not specs:
-            continue
-        for spec in re.split(r"\s+", specs):
-            spec = spec.strip("'\"")
-            if not spec or spec.startswith("-"):
-                continue
+        for spec in _install_arguments(match.group(1)):
             name = re.split(r"[><=!~]", spec)[0].split("[")[0]
             if not name or len(name) < 2 or not re.match(r"^[\w][\w.-]*$", name):
                 continue
@@ -272,15 +264,7 @@ def parse_skill_file(path: Path) -> SkillScanResult:
 
     # npm install packages
     for match in _NPM_INSTALL_RE.finditer(code_text):
-        specs = match.group(1).strip()
-        # An inline-code span or a comment ends the command; the prose after it is not a spec.
-        specs = re.split(r"[#`]", specs, maxsplit=1)[0].strip()
-        if not specs:
-            continue
-        for spec in re.split(r"\s+", specs):
-            spec = spec.strip("'\"")
-            if not spec or spec.startswith("-"):
-                continue
+        for spec in _install_arguments(match.group(1)):
             name, version = _parse_pkg_spec(spec, "@")
             if not name:
                 continue
@@ -340,6 +324,47 @@ def parse_skill_file(path: Path) -> SkillScanResult:
         raw_content={str(path): content},
         metadata=metadata,
     )
+
+
+_SHELL_CONTROL_RE = re.compile(r"&&|\|\||[;|&]")
+_REDIRECT_RE = re.compile(r"^\d*(?:>>?|<<?|>&|&>>?)")
+_ENV_ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=(?!=)")
+
+
+def _install_arguments(raw: str) -> list[str]:
+    """Package arguments of one install command, up to the first shell operator.
+
+    A comment, an inline-code span, a control operator (``&&``, ``||``, ``;``,
+    ``|``, ``&``) or a command substitution ends the command. Redirects with
+    their targets, environment assignments and options are not packages.
+    """
+    text = re.split(r"[#`]|\$\(", raw, maxsplit=1)[0]
+    control = _SHELL_CONTROL_RE.search(text)
+    if control:
+        # ``2>&1`` and ``&>`` are redirects, not the ``&`` control operator.
+        while control and control.group() == "&" and _is_redirect_ampersand(text, control.start()):
+            control = _SHELL_CONTROL_RE.search(text, control.end())
+        if control:
+            text = text[: control.start()]
+    arguments: list[str] = []
+    skip_target = False
+    for token in text.split():
+        if skip_target:
+            skip_target = False
+            continue
+        redirect = _REDIRECT_RE.match(token)
+        if redirect:
+            skip_target = redirect.end() == len(token)
+            continue
+        token = token.strip("'\"")
+        if not token or token.startswith(("-", "$")) or _ENV_ASSIGNMENT_RE.match(token):
+            continue
+        arguments.append(token)
+    return arguments
+
+
+def _is_redirect_ampersand(text: str, index: int) -> bool:
+    return (index > 0 and text[index - 1] in "<>") or text[index + 1 : index + 2] == ">"
 
 
 def _strip_jsonc(raw: str) -> str:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from agent_bom.parsers.skills import (
     discover_skill_files,
     parse_skill_file,
@@ -572,3 +574,31 @@ def test_inline_install_commands_stop_at_the_closing_backtick(tmp_path):
     )
     found = {(pkg.name, pkg.ecosystem) for pkg in parse_skill_file(skill).packages}
     assert found == {("requests", "pypi"), ("left-pad", "npm")}
+
+
+@pytest.mark.parametrize(
+    "command,expected",
+    [
+        ("npm install && npm test", set()),
+        ("npm install left-pad && npm run build", {("left-pad", "npm")}),
+        ("npm install left-pad || true", {("left-pad", "npm")}),
+        ("npm install left-pad; npm run x", {("left-pad", "npm")}),
+        ("npm install left-pad | tee log", {("left-pad", "npm")}),
+        ("npm install left-pad > out.txt 2>&1", {("left-pad", "npm")}),
+        ("npm install left-pad 2>/dev/null", {("left-pad", "npm")}),
+        ("npm install left-pad &", {("left-pad", "npm")}),
+        ("npm install left-pad >> install.log", {("left-pad", "npm")}),
+        ("npm install CI=1 left-pad", {("left-pad", "npm")}),
+        ("pip install requests || pip install httpx", {("requests", "pypi")}),
+        ("pip install requests; echo done", {("requests", "pypi")}),
+        ("pip install requests httpx&&pytest", {("requests", "pypi"), ("httpx", "pypi")}),
+        ("pip install requests==2.32.3 > /dev/null", {("requests", "pypi")}),
+        ("PIP_NO_CACHE_DIR=1 pip install requests", {("requests", "pypi")}),
+        ("pip install $(cat reqs.txt)", set()),
+        ("npx -y left-pad && echo hi", {("left-pad", "npm")}),
+    ],
+)
+def test_shell_operators_redirects_and_env_assignments_never_become_packages(tmp_path, command, expected):
+    skill = tmp_path / "SKILL.md"
+    skill.write_text(f"```bash\n{command}\n```\n")
+    assert {(pkg.name, pkg.ecosystem) for pkg in parse_skill_file(skill).packages} == expected

@@ -698,7 +698,7 @@ def test_go_binary_version_correct():
     pkg = next((p for p in result.packages if p.name == "github.com/spf13/cobra"), None)
     assert pkg is not None
     assert pkg.version == "v1.8.0"
-    assert pkg.ecosystem == "golang"
+    assert pkg.ecosystem == "go"
     assert "pkg:golang/github.com/spf13/cobra@v1.8.0" == pkg.purl
 
 
@@ -707,14 +707,14 @@ def test_go_binary_outside_bin_dirs_skipped():
     binary = _make_go_binary([("github.com/some/pkg", "v1.0.0")])
     tar = _make_docker_save_tar([{"var/tmp/binary": binary}])
     result = parse_oci_tarball(tar)
-    assert not any(p.ecosystem == "golang" for p in result.packages)
+    assert not any(p.ecosystem == "go" for p in result.packages)
 
 
 def test_go_binary_no_magic_skipped():
     """File without Go buildinfo magic is skipped."""
     tar = _make_docker_save_tar([{"usr/bin/notgo": b"\x7fELF\x00" * 100}])
     result = parse_oci_tarball(tar)
-    assert not any(p.ecosystem == "golang" for p in result.packages)
+    assert not any(p.ecosystem == "go" for p in result.packages)
 
 
 # ── Ruby gem parsing ──────────────────────────────────────────────────────────

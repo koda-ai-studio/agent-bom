@@ -291,7 +291,7 @@ def test_layer_extraction_matches_golden(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_golden_covers_every_ecosystem_branch() -> None:
     golden = json.loads(GOLDEN.read_text())
     ecosystems = {package["ecosystem"] for package in golden["packages"]}
-    assert ecosystems == {"pypi", "npm", "deb", "apk", "rpm", "maven", "golang", "gem", "nuget", "composer", "cargo", "swift"}
+    assert ecosystems == {"pypi", "npm", "deb", "apk", "rpm", "maven", "go", "gem", "nuget", "composer", "cargo", "swift"}
     assert {run["label"] for run in golden["runs"] if run["error"]} == {"legacy_ndb_invalid"}
     assert any(run["whiteouts"] for run in golden["runs"])
     assert any(package["occurrences"] and package["source_package"] for package in golden["packages"])

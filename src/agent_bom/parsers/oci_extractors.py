@@ -15,6 +15,7 @@ from typing import IO
 
 from agent_bom.package_utils import parse_debian_source_name
 from agent_bom.parsers.cpython_runtime import _python_metadata_kind, extract_cpython_runtime
+from agent_bom.parsers.go_buildinfo import go_toolchain_version as go_toolchain_version
 from agent_bom.parsers.gpu_stack import extract_gpu_stack_layer
 from agent_bom.parsers.image_runtimes import runtime_binary_paths, runtime_spec
 from agent_bom.parsers.oci_io import (
@@ -413,11 +414,15 @@ def _add_go_buildinfo(scan: _LayerScan, member_name: str, member: tarfile.TarInf
             return
         f.seek(0)
         chunk = _go_buildinfo_window(f)
+    # Ecosystem ``go`` like every other Go source, so OSV is asked under ``Go``.
+    toolchain = go_toolchain_version(chunk)
+    if toolchain:
+        scan.add(member_name, "stdlib", toolchain, "go", f"pkg:golang/stdlib@v{toolchain}")
     for m in _GO_DEP_LINE_RE.finditer(chunk):
         mod_path = m.group(1).decode("utf-8", errors="ignore").strip()
         mod_ver = m.group(2).decode("utf-8", errors="ignore").strip()
         if mod_path and mod_ver:
-            scan.add(member_name, mod_path, mod_ver, "golang", f"pkg:golang/{mod_path}@{mod_ver}")
+            scan.add(member_name, mod_path, mod_ver, "go", f"pkg:golang/{mod_path}@{mod_ver}")
 
 
 def _extract_go_binaries(scan: _LayerScan) -> None:
