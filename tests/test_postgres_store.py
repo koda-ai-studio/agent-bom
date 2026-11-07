@@ -150,7 +150,9 @@ class MockConnection:
                 ordered = ordered[: int(limit)]
             cursor.rows = [(r[0], r[1], r[2], r[3], r[4], r[6], r[7], r[8]) for r in ordered]
         elif sql_lower.startswith("select"):
-            if "from scan_jobs" in sql_lower and "concat_ws(chr(31)" in sql_lower:
+            if "from teams" in sql_lower and "team_id = %s" in sql_lower:
+                cursor.rows = [(params[0],)] if params[0] in self._store.get("teams", {}) else []
+            elif "from scan_jobs" in sql_lower and "concat_ws(chr(31)" in sql_lower:
                 # Versioned payload read: (team_id, version token, payload or NULL).
                 held, *filters = params
                 rows = list(self._store.get("scan_jobs", {}).values())
@@ -893,6 +895,7 @@ def test_key_store_add_get_list_verify_remove(monkeypatch, mock_pool, mock_maint
 
     store = PostgresKeyStore(pool=mock_pool, maintenance_pool=mock_maintenance_pool)
     raw_key, api_key = create_api_key("alpha-admin", Role.ADMIN, tenant_id="tenant-alpha")
+    mock_pool._conn._store["teams"] = {"tenant-alpha": ("tenant-alpha",)}
     store.add(api_key)
 
     mock_pool._conn._store.setdefault("api_keys", {})[api_key.key_id] = (
@@ -969,6 +972,7 @@ def test_key_store_mark_rotating_updates_overlap_metadata(mock_pool):
 
     store = PostgresKeyStore(pool=mock_pool)
     _, api_key = create_api_key("alpha-admin", Role.ADMIN, tenant_id="tenant-alpha")
+    mock_pool._conn._store["teams"] = {"tenant-alpha": ("tenant-alpha",)}
     store.add(api_key)
 
     mock_pool._conn._store.setdefault("api_keys", {})[api_key.key_id] = (

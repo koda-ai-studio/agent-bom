@@ -527,8 +527,7 @@ def test_json_includes_ai_bom_entities():
     assert "ai_bom_entities" in data
     assert data["ai_bom_entities"]["schema_version"] == "1.0"
     assert data["ai_bom_entities"]["summary"]["agents"] == 1
-    assert "packages" not in data  # Canonical flat packages live in ai_bom_entities.
-    assert data["ai_bom_entities"]["packages"]
+    assert data["packages"] == data["ai_bom_entities"]["packages"]
 
 
 def test_json_summary_distinguishes_total_vs_unique_packages():

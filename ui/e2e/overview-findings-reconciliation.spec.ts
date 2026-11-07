@@ -204,7 +204,7 @@ for (const theme of ["light", "dark"] as const) {
 
     await page.goto("/");
     await page.getByRole("tab", { name: "Posture", exact: true }).click();
-    await expect(page.getByText("Current findings · configured window")).toBeVisible();
+    await expect(page.getByText("Current finding occurrences · configured window")).toBeVisible();
     const critical = page.getByRole("link", { name: /^Critical 7/i });
     const high = page.getByRole("link", { name: /^High 28/i });
     await expect(critical).toHaveAttribute("href", "/findings?scope=all&severity=critical");
