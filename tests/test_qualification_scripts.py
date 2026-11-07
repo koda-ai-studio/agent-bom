@@ -1,0 +1,277 @@
+"""Unit tests for the pure parts of the cloud qualification lanes."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+import pytest
+import yaml
+
+QUALIFICATION = Path(__file__).resolve().parents[1] / "scripts" / "qualification"
+sys.path.insert(0, str(QUALIFICATION))
+
+import accuracy  # noqa: E402
+import action_check  # noqa: E402
+import baseline  # noqa: E402
+import common  # noqa: E402
+import performance  # noqa: E402
+import platforms  # noqa: E402
+import summarize  # noqa: E402
+
+WORKFLOW = QUALIFICATION.parents[1] / ".github" / "workflows" / "qualification.yml"
+
+
+def _report(**overrides) -> dict:
+    report = {
+        "summary": {"total_agents": 1, "total_mcp_servers": 2, "total_packages": 10, "total_vulnerabilities": 3},
+        "finding_summary": {
+            "total": 4,
+            "by_severity": {"critical": 1, "high": 1, "medium": 2, "low": 0, "unknown": 0},
+            "by_type": {"CVE": 3, "COMBINATION": 1},
+        },
+        "blast_radius": [
+            {"vulnerability_id": "CVE-1", "severity": "critical"},
+            {"vulnerability_id": "CVE-1", "severity": "critical"},
+            {"vulnerability_id": "CVE-2", "severity": "high"},
+            {"vulnerability_id": "CVE-3", "severity": "unknown"},
+        ],
+        "credential_risk_ranking": [{"credential": "API_TOKEN"}],
+        "posture_grade": "C",
+        "scan_run": {"outcome": "complete"},
+    }
+    report.update(overrides)
+    return report
+
+
+def test_result_fails_on_failed_check_and_on_defect(tmp_path: Path) -> None:
+    ok = common.LaneResult("x", "ok")
+    ok.check("a", True)
+    assert ok.passed and ok.write(tmp_path) == 0
+    failed = common.LaneResult("x", "bad")
+    failed.check("a", False, "why")
+    assert not failed.passed and failed.write(tmp_path) == 1
+    defect = common.LaneResult("x", "defect")
+    defect.check("a", True)
+    defect.defect("D1", "broken", "run it")
+    assert not defect.passed
+    assert json.loads((tmp_path / "x-bad.json").read_text())["checks"][0]["detail"] == "why"
+
+
+def test_result_with_no_checks_is_not_a_pass() -> None:
+    assert not common.LaneResult("x").passed
+
+
+def test_percentile_is_nearest_rank_and_handles_empty() -> None:
+    assert common.percentile([], 95) == 0.0
+    assert common.percentile([1.0, 2.0, 3.0, 4.0, 100.0], 50) == 3.0
+    assert common.percentile([1.0, 2.0, 3.0, 4.0, 100.0], 95) == 100.0
+    assert common.latency_summary([])["samples"] == 0
+
+
+def test_run_measured_reports_exit_code_output_and_memory(tmp_path: Path) -> None:
+    result = common.run_measured([sys.executable, "-c", "print('hi'); raise SystemExit(3)"], log_dir=tmp_path)
+    assert result.returncode == 3
+    assert "hi" in result.stdout
+    assert not result.timed_out
+    if sys.platform != "win32":
+        assert result.peak_rss_mb and result.peak_rss_mb > 1
+
+
+def test_run_measured_kills_on_timeout(tmp_path: Path) -> None:
+    result = common.run_measured([sys.executable, "-c", "import time; time.sleep(30)"], timeout=0.5, log_dir=tmp_path)
+    assert result.timed_out
+    assert result.returncode != 0
+
+
+def test_accuracy_counts_unique_advisories_and_unknown_severity() -> None:
+    measured = accuracy.measurements(_report())
+    assert measured["packages"] == 10
+    assert measured["unique_advisories"] == 3
+    assert measured["advisory_severity"] == {"critical": 1, "high": 1, "unknown": 1}
+    assert measured["unknown_severity"] == 1
+    assert measured["agents"] == 1
+    assert measured["mcp_servers"] == 2
+    assert measured["credential_findings"] == 1
+    assert measured["grade"] == "C"
+    assert measured["outcome"] == "complete"
+
+
+def test_accuracy_finds_advisories_through_aliases() -> None:
+    report = _report(blast_radius=[{"vulnerability_id": "GHSA-a", "aliases": ["CVE-9"], "severity": "high"}])
+    assert accuracy.advisory_ids(report) == {"GHSA-A", "CVE-9"}
+
+
+@pytest.mark.parametrize(
+    ("change", "failed_check"),
+    [
+        ({"summary": {"total_packages": 0, "total_vulnerabilities": 3}}, "inventory_has_packages"),
+        ({"blast_radius": []}, "reports_advisories"),
+        ({"posture_grade": ""}, "grade_present"),
+        ({"finding_summary": {"total": 9, "by_severity": {"high": 1}}}, "severity_counts_sum_to_total"),
+    ],
+)
+def test_accuracy_structure_checks_catch_bad_reports(change: dict, failed_check: str) -> None:
+    target = accuracy.Target(name="t", kind="image", ref="x", sentinels=(), min_packages=1)
+    result = common.LaneResult("accuracy", "t")
+    accuracy.assert_report(result, target, _report(**change), returncode=1)
+    assert failed_check in [item["name"] for item in result.checks if not item["ok"]]
+
+
+def test_accuracy_sentinel_miss_fails() -> None:
+    target = accuracy.Target(name="t", kind="image", ref="x", sentinels=("CVE-404",), min_packages=1)
+    result = common.LaneResult("accuracy", "t")
+    accuracy.assert_report(result, target, _report(), returncode=1)
+    assert "known_advisories_found" in [item["name"] for item in result.checks if not item["ok"]]
+
+
+def test_accuracy_targets_are_pinned_exactly() -> None:
+    for target in accuracy.TARGETS.values():
+        if target.kind == "repo":
+            assert len(target.commit) == 40
+        else:
+            assert "@sha256:" in target.ref
+        assert target.sentinels
+
+
+def test_summary_renders_each_lane_status_and_defects(tmp_path: Path) -> None:
+    failing = common.LaneResult("deploy", "helm")
+    failing.check("install", False, "no CRD")
+    failing.defect("D1", "chart needs CRD", "helm install")
+    failing.measurements["seconds"] = 3
+    failing.write(tmp_path)
+    passing = common.LaneResult("runtime", "proxy")
+    passing.check("blocks", True)
+    passing.skip("saml", "no path")
+    passing.write(tmp_path)
+    text = summarize.render(summarize.load(tmp_path))
+    assert "| deploy | helm | failed |" in text
+    assert "| runtime | proxy | passed |" in text
+    assert "D1" in text and "chart needs CRD" in text
+    assert "saml" in text and "no path" in text
+    assert "install" in text
+
+
+def test_summary_of_nothing_says_so(tmp_path: Path) -> None:
+    assert "No qualification results" in summarize.render(summarize.load(tmp_path))
+
+
+def test_sarif_validation_accepts_valid_and_rejects_invalid() -> None:
+    valid = {
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [
+            {
+                "tool": {"driver": {"name": "agent-bom", "rules": [{"id": "CVE-1"}]}},
+                "results": [
+                    {
+                        "ruleId": "CVE-1",
+                        "message": {"text": "m"},
+                        "locations": [{"physicalLocation": {"artifactLocation": {"uri": "requirements.txt"}}}],
+                    }
+                ],
+            }
+        ],
+    }
+    assert action_check.sarif_problems(valid) == []
+    missing_message = json.loads(json.dumps(valid))
+    del missing_message["runs"][0]["results"][0]["message"]
+    assert action_check.sarif_problems(missing_message)
+    no_location = json.loads(json.dumps(valid))
+    no_location["runs"][0]["results"][0]["locations"] = []
+    assert action_check.sarif_problems(no_location)
+
+
+def test_platform_output_assertions_reject_empty_reports() -> None:
+    assert platforms.check_report_problems({"summary": {"total_packages": 1, "total_vulnerabilities": 1}, "findings": [{}]}) == []
+    assert platforms.check_report_problems({"summary": {"total_packages": 0}}) != []
+
+
+def test_estate_profiles_are_fixed_and_cover_the_audited_size() -> None:
+    names = [profile.name for profile in performance.ESTATES]
+    assert "audited-1169-findings" in names
+    audited = next(profile for profile in performance.ESTATES if profile.name == "audited-1169-findings")
+    report, _summary = performance.generate(audited)
+    assert len(report["blast_radius"]) == 1008
+
+
+def test_scale_steps_reach_one_million() -> None:
+    assert performance.SCALE_STEPS[-1] == 1_000_000
+    assert list(performance.SCALE_STEPS) == sorted(performance.SCALE_STEPS)
+
+
+def test_scale_runner_records_largest_size_and_why_it_stopped() -> None:
+    ingested: list[int] = []
+
+    def ingest(start: int, size: int) -> tuple[bool, str]:
+        ingested.append(size)
+        return (start < 20, "HTTP 503" if start >= 20 else "")
+
+    outcome = performance.scale_up(ingest, lambda total: {"total": total}, steps=(10, 40, 100), batch=10, budget_seconds=60)
+    assert outcome["largest_reached"] == 20
+    assert outcome["target"] == 100
+    assert outcome["reached_target"] is False
+    assert "HTTP 503" in outcome["stop_reason"]
+    assert [row["findings"] for row in outcome["steps"]] == [10]
+
+
+def test_scale_runner_stops_at_time_budget_without_claiming_target() -> None:
+    outcome = performance.scale_up(lambda start, size: (True, ""), lambda total: {}, steps=(10, 20), batch=10, budget_seconds=0)
+    assert outcome["reached_target"] is False
+    assert "budget" in outcome["stop_reason"]
+
+
+def test_baseline_compare_flags_only_beyond_tolerance() -> None:
+    base = {"tolerance": 2.0, "metrics": {"performance/sqlite/graph_p95_ms": 100.0, "performance/sqlite/ingest_seconds": 10.0}}
+    measured = {"performance/sqlite/graph_p95_ms": 190.0, "performance/sqlite/ingest_seconds": 25.0, "new/metric": 1.0}
+    regressions, missing = baseline.compare(base, measured)
+    assert [row["metric"] for row in regressions] == ["performance/sqlite/ingest_seconds"]
+    assert missing == []
+    regressions, missing = baseline.compare(base, {"performance/sqlite/graph_p95_ms": 1.0})
+    assert regressions == []
+    assert missing == ["performance/sqlite/ingest_seconds"]
+
+
+def test_baseline_extract_reads_lane_metrics(tmp_path: Path) -> None:
+    lane = common.LaneResult("performance", "sqlite")
+    lane.check("ok", True)
+    lane.measurements["estates"] = {
+        "small": {"ingest_seconds": 1.5, "graph": {"p95_ms": 9.0}, "findings": {"p95_ms": 4.0}, "api_peak_rss_mb": 300}
+    }
+    lane.write(tmp_path)
+    metrics = baseline.extract(tmp_path)
+    assert metrics["performance/sqlite/small/ingest_seconds"] == 1.5
+    assert metrics["performance/sqlite/small/graph_p95_ms"] == 9.0
+    assert metrics["performance/sqlite/small/findings_p95_ms"] == 4.0
+    assert metrics["performance/sqlite/small/api_peak_rss_mb"] == 300
+
+
+def test_workflow_is_manual_and_path_limited_with_read_only_permissions() -> None:
+    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    triggers = workflow[True]
+    assert set(triggers) == {"workflow_dispatch", "pull_request"}
+    assert set(triggers["pull_request"]["paths"]) == {".github/workflows/qualification.yml", "scripts/qualification/**"}
+    assert "lanes" in triggers["workflow_dispatch"]["inputs"]
+    assert workflow["permissions"] == {"contents": "read"}
+
+
+def test_workflow_jobs_are_bounded_hosted_and_use_no_secrets() -> None:
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "secrets." not in text
+    workflow = yaml.safe_load(text)
+    for name, job in workflow["jobs"].items():
+        assert job.get("timeout-minutes"), name
+        strategy = job.get("strategy")
+        if strategy:
+            assert strategy["fail-fast"] is False, name
+        for step in job["steps"]:
+            uses = step.get("uses", "")
+            if uses and not uses.startswith("./"):
+                assert len(uses.split("@")[1]) == 40, uses
+
+
+def test_workflow_has_all_seven_lanes() -> None:
+    workflow = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+    assert {"accuracy", "performance", "platforms", "action", "identity", "runtime", "deploy"} <= set(workflow["jobs"])
+    assert workflow["jobs"]["platforms"]["strategy"]["matrix"]["os"] == ["ubuntu-latest", "windows-latest", "macos-latest"]
