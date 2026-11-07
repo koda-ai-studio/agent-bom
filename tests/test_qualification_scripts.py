@@ -370,3 +370,34 @@ def test_realm_archive_is_readable_only_by_keycloak_and_holds_the_document() -> 
         member = archive.getmember("import/realm.json")
         assert member.mode == 0o600 and member.uid == identity.KEYCLOAK_UID
         assert json.loads(archive.extractfile(member).read()) == {"realm": "x"}
+
+
+def _ingest_outcome(monkeypatch, answers: list[tuple[int, dict]]) -> dict:
+    import performance
+
+    replies = iter(answers)
+    monkeypatch.setattr(performance, "http_json", lambda *_args, **_kwargs: (*next(replies), 0))
+    monkeypatch.setattr(performance.time, "sleep", lambda _seconds: None)
+    server = type("Server", (), {"base": "http://api", "headers": {}})()
+    return performance.push_estate(server, {"scan_id": "s"})
+
+
+def test_ingest_poll_keeps_its_job_through_overload_and_records_the_retries(monkeypatch) -> None:
+    outcome = _ingest_outcome(
+        monkeypatch,
+        [
+            (202, {"job_id": "j", "status": "queued"}),
+            (503, {"detail": "busy"}),
+            (429, {"detail": "slow"}),
+            (200, {"status": "stored", "job_id": "j"}),
+        ],
+    )
+    assert outcome["ingest_status"] == "stored"
+    assert outcome["job_id"] == "j"
+    assert outcome["poll_retries"] == {"503": 1, "429": 1}
+
+
+def test_ingest_poll_refusal_says_why(monkeypatch) -> None:
+    outcome = _ingest_outcome(monkeypatch, [(202, {"job_id": "j", "status": "queued"}), (404, {"detail": "no such job"})])
+    assert outcome["ingest_status"] == "poll_refused"
+    assert "HTTP 404" in outcome["detail"] and "no such job" in outcome["detail"]

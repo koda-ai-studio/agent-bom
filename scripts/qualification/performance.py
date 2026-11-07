@@ -43,6 +43,7 @@ from generate_graph_benchmark_estate import generate_estate  # noqa: E402
 READ_REPEATS = 20
 READ_TIMEOUT_SECONDS = 120
 INGEST_TIMEOUT_SECONDS = 600
+POLL_RETRY_STATUSES = frozenset({429, 502, 503, 504})
 HEALTH_POLL_SECONDS = 1.0
 HEALTH_TIMEOUT_SECONDS = 30
 SCALE_STEPS = (10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000)
@@ -223,16 +224,30 @@ def push_estate(server: ApiServer, report: dict[str, Any]) -> dict[str, Any]:
         outcome["ingest_status"] = "refused"
         outcome["detail"] = str(receipt)[:500]
         return outcome
+    job_id = outcome_job(receipt)
     deadline = time.monotonic() + INGEST_TIMEOUT_SECONDS
-    while status == 202 or (isinstance(receipt, dict) and receipt.get("status") not in {"stored", "failed", None}):
+    retried: dict[str, int] = {}
+    while (
+        status in POLL_RETRY_STATUSES
+        or status == 202
+        or (isinstance(receipt, dict) and receipt.get("status") not in {"stored", "failed", None})
+    ):
         if time.monotonic() > deadline:
-            receipt = {**receipt, "status": "timed_out"} if isinstance(receipt, dict) else {"status": "timed_out"}
+            receipt = {"status": "timed_out"}
+            status = 200
             break
+        if status in POLL_RETRY_STATUSES:
+            retried[str(status)] = retried.get(str(status), 0) + 1
         time.sleep(0.25)
-        status, receipt, _size = http_json(f"{server.base}/v1/results/push/{outcome_job(receipt)}", headers=server.headers, timeout=60)
-    outcome["job_id"] = outcome_job(receipt)
+        status, receipt, _size = http_json(f"{server.base}/v1/results/push/{job_id}", headers=server.headers, timeout=60)
+    if retried:
+        outcome["poll_retries"] = retried
+    outcome["job_id"] = job_id
     outcome["ingest_status"] = receipt.get("status") if isinstance(receipt, dict) else "unknown"
     outcome["ingest_seconds"] = round(time.perf_counter() - began, 3)
+    if status >= 400:
+        outcome["ingest_status"] = "poll_refused"
+        outcome["detail"] = f"HTTP {status}: {str(receipt)[:500]}"
     return outcome
 
 
