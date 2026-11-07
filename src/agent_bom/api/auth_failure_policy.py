@@ -194,35 +194,27 @@ class AuthFailurePolicy:
             if completed is not None and not completed.cancelled():
                 completed.exception()  # Consume failures after a response timed out.
 
-        def work():
-            value = function(*args, **kwargs)
-            return value, time.monotonic()
-
         try:
-            deadline = time.monotonic() + 0.5
             pending = None
             try:
                 async with asyncio.timeout(0.5):
-                    pending = _AUTH_WORKERS.submit(contextvars.copy_context().run, work)
+                    pending = _AUTH_WORKERS.submit(contextvars.copy_context().run, function, *args, **kwargs)
                     # Release before publishing the result to the request loop:
                     # its next operation must not count this completed work.
                     # This also runs if the request event loop has closed.
                     pending.add_done_callback(release)
                     task = asyncio.wrap_future(pending)
                     # A timed-out request retains its slot until the SQL exits.
-                    value, completed_at = await asyncio.shield(task)
+                    value = await asyncio.shield(task)
                     self._note_store_success()
-                    if completed_at > deadline:
-                        raise TimeoutError
                     return value
             except TimeoutError:
-                # A busy event loop can deliver a completed store read after
-                # its timer. Use the worker's completion time, never stale state.
-                if pending is not None and pending.done():
-                    value, completed_at = pending.result()
+                # The deadline bounds waiting for an answer that has not arrived. A
+                # stalled host can fire this timer after the store answered, and that
+                # answer is still correct, including a block it found.
+                if pending is not None and pending.done() and not pending.cancelled() and pending.exception() is None:
                     self._note_store_success()
-                    if completed_at <= deadline:
-                        return value
+                    return pending.result()
                 # A read still queued has no one waiting for it; do not spend a worker on it.
                 if pending is not None:
                     pending.cancel()

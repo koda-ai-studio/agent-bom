@@ -670,11 +670,10 @@ Eight dedicated threads separate auth state from background work. At most 64
 operations may be running or queued for them per application, at most four of them
 failure writes and at most two from one source, so a burst of distinct callers waits
 briefly rather than being refused. Beyond that bound, an admission check returns 503
-without tripping a process-wide breaker. Operations completing after 500 ms, including
-time queued, fail closed for that request. A queued operation nobody is waiting for is
-abandoned; one already running keeps its slot until it exits. Completion time is
-recorded in the worker, so delayed event-loop delivery of an on-time result does not
-create an outage.
+without tripping a process-wide breaker. A caller waits at most 500 ms, including time
+queued, for an answer, and is then refused with 503. A queued operation nobody is waiting
+for is abandoned; one already running keeps its slot until it exits. An answer that has
+already arrived when a stalled host fires that timer is used, because it is correct.
 Postgres auth transactions bound pool acquisition, statement execution and lock
 waits to 400 ms each. Pool saturation and SQL cancellation/lock timeouts fail
 that request closed without activating the global outage cooldown.

@@ -198,6 +198,34 @@ async def test_a_stalled_store_stays_bounded_and_abandons_queued_reads(monkeypat
     assert policy._source_work == {}
 
 
+@pytest.mark.asyncio
+async def test_a_read_that_never_finishes_in_time_still_fails_closed_at_the_deadline(monkeypatch):
+    policy = AuthFailurePolicy()
+    gate = threading.Event()
+    monkeypatch.setattr(policy.store, "remaining", lambda *_args: gate.wait(1.5) and 0)
+    started = time.monotonic()
+    response = await policy.before(_request("198.51.100.77"))
+    elapsed = time.monotonic() - started
+    gate.set()
+    assert response.status_code == 503
+    assert elapsed < 1.0
+    assert policy._unavailable_until == 0
+
+
+@pytest.mark.asyncio
+async def test_a_block_found_by_a_late_read_is_still_enforced(monkeypatch):
+    policy = AuthFailurePolicy()
+    loop = asyncio.get_running_loop()
+
+    def blocked(*_args):
+        loop.call_soon_threadsafe(time.sleep, 0.9)
+        time.sleep(0.55)
+        return 30
+
+    monkeypatch.setattr(policy.store, "remaining", blocked)
+    assert (await policy.before(_request("198.51.100.78"))).status_code == 429
+
+
 # Audit write errors
 
 

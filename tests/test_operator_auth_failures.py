@@ -289,7 +289,7 @@ async def test_auth_checks_do_not_queue_behind_unrelated_executor_work():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("store_delay", [0, 0.65])
+@pytest.mark.parametrize("store_delay", [0, 0.55])
 async def test_completed_auth_check_is_not_an_outage_when_loop_delivery_is_delayed(monkeypatch, store_delay):
     import asyncio
     import time
@@ -303,19 +303,15 @@ async def test_completed_auth_check_is_not_an_outage_when_loop_delivery_is_delay
     def completed_check(*_args):
         # The store finishes before its deadline; an unrelated callback delays
         # delivery of the result. That must not open the outage circuit.
-        loop.call_soon_threadsafe(time.sleep, 0.65)
+        loop.call_soon_threadsafe(time.sleep, 0.9)
         time.sleep(store_delay)
         return 0
 
     monkeypatch.setattr(policy.store, "remaining", completed_check)
     request = SimpleNamespace(client=SimpleNamespace(host="192.0.2.98"), headers={})
-    response = await policy.before(request)
-    if store_delay:
-        assert response.status_code == 503
-        assert policy._unavailable_until == 0  # A slow operation is not a global outage.
-    else:
-        assert response is None
-        assert policy._unavailable_until == 0
+    # The answer arrived and is correct, so a stalled host does not refuse the caller.
+    assert await policy.before(request) is None
+    assert policy._unavailable_until == 0
 
 
 @pytest.mark.asyncio
