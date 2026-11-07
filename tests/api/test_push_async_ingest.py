@@ -177,10 +177,11 @@ async def test_a_slow_commit_never_blocks_the_event_loop(monkeypatch: pytest.Mon
     """While one push spends seconds committing, other endpoints and a same-key retry answer at once."""
 
     started = threading.Event()
+    release = threading.Event()
 
     def _slow_graph(_job, _report, **_kwargs) -> None:  # noqa: ANN001
         started.set()
-        time.sleep(3.0)
+        release.wait(30)
 
     monkeypatch.setattr("agent_bom.api.routes.observability._persist_graph_snapshot", _slow_graph)
     transport = httpx.ASGITransport(app=app)
@@ -188,21 +189,16 @@ async def test_a_slow_commit_never_blocks_the_event_loop(monkeypatch: pytest.Mon
         slow = asyncio.create_task(client.post("/v1/results/push", json=_payload("slow-sync")))
         assert await asyncio.to_thread(started.wait, 10)
 
-        began = time.monotonic()
+        # The commit stays held until both answer, so this cannot depend on how fast the runner is.
         health = await client.get("/health")
-        health_elapsed = time.monotonic() - began
-
-        began = time.monotonic()
         retry = await client.post("/v1/results/push", json=_payload("slow-sync"))
-        retry_elapsed = time.monotonic() - began
+        assert not slow.done()
+        release.set()
 
         committed = await slow
 
     assert health.status_code == 200
-    # The commit holds its fence for 3 s; anything near that would mean the loop waited on it.
-    assert health_elapsed < 0.75, health_elapsed
     assert retry.status_code == 202, retry.text
-    assert retry_elapsed < 1.0, retry_elapsed
     assert retry.headers["Retry-After"]
     assert retry.json()["job_id"] == committed.json()["job_id"]
     assert committed.status_code == 201
