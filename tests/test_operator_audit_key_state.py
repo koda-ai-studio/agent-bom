@@ -35,3 +35,20 @@ def test_configured_key_detects_exact_tampered_row(monkeypatch, tmp_path):
     store._conn.commit()
     result = _integrity(monkeypatch, store)
     assert (result["verified"], result["tampered"]) == (2, 1)
+
+
+def test_unverifiable_count_respects_limit_and_tenant(monkeypatch, tmp_path):
+    monkeypatch.setattr(audit_log, "_HMAC_ENV_KEY", None)
+    monkeypatch.setattr(audit_log, "_HMAC_KEY", b"first-test-key")
+    path = str(tmp_path / "bounded-audit.db")
+    first = audit_log.SQLiteAuditLog(path)
+    for tenant in ["default"] * 5 + ["other"] * 3:
+        first.append(audit_log.AuditEntry(action="test.record", details={"tenant_id": tenant}))
+    monkeypatch.setattr(audit_log, "_HMAC_KEY", b"replacement-test-key")
+    reopened = audit_log.SQLiteAuditLog(path)
+    monkeypatch.setattr(audit_log, "get_audit_log", lambda: reopened)
+    request = SimpleNamespace(state=SimpleNamespace(tenant_id="default"))
+    result = audit_integrity(request, limit=2, include_runtime=False)
+    assert result["unverifiable"] == result["checked"] == 2
+    request.state.tenant_id = "absent"
+    assert audit_integrity(request, limit=2, include_runtime=False)["checked"] == 0

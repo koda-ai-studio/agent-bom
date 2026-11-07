@@ -37,7 +37,7 @@ def control_plane_integrity(store, *, limit: int, tenant_id: str) -> dict:
         and store._original_key_identity != hashlib.sha256(audit_log._default_signing_key()).hexdigest()
     )
     if unavailable:
-        count = store.count(tenant_id=tenant_id)
+        count = min(limit, store.count(tenant_id=tenant_id))
         return {
             "verified": 0,
             "tampered": 0,
