@@ -244,17 +244,30 @@ def evaluated_control_status(sev_breakdown: dict[str, int]) -> str:
 DISTRO_SEVERITY_TYPES = frozenset({"ubuntu", "debian", "alpine", "redhat", "red hat", "rhel", "suse", "almalinux", "rocky", "amazon"})
 
 
+LINKED_CVE_SOURCE_PREFIX = "upstream_cve:"
+
+
+def severity_linked_cve(severity_source: Optional[str]) -> Optional[str]:
+    """The CVE that supplied a linked severity, or ``None`` for any other source."""
+    if severity_source and severity_source.lower().startswith(LINKED_CVE_SOURCE_PREFIX):
+        return severity_source[len(LINKED_CVE_SOURCE_PREFIX) :] or None
+    return None
+
+
 def severity_basis(severity_source: Optional[str]) -> Optional[str]:
-    """Collapse a detailed ``severity_source`` into cvss / advisory / distro / default.
+    """Collapse a detailed ``severity_source`` into cvss / linked_cve / advisory / distro / default.
 
     ``default`` marks a namespace fallback with no score or rating behind it,
-    which surfaces render as unscored.
+    which surfaces render as unscored. ``linked_cve`` is a distro advisory rated
+    by a CVE it links to, named by :func:`severity_linked_cve`.
     """
     if not severity_source or severity_source == "unknown":
         return None
     source = severity_source.lower()
     if source == "cvss":
         return "cvss"
+    if source.startswith(LINKED_CVE_SOURCE_PREFIX):
+        return "linked_cve"
     if source.endswith("_heuristic"):
         return "default"
     if source.startswith("distro") or any(name in source for name in DISTRO_SEVERITY_TYPES):

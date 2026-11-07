@@ -30,6 +30,12 @@ export function severityText(severity: string, provenance?: { severity_label?: s
   return provenance?.severity_source?.toLowerCase().endsWith("_heuristic") ? `${severity} (unscored)` : severity;
 }
 
+/** Where a severity came from, naming the CVE when a distro advisory inherited it. */
+export function severitySourceLabel(source: string | null | undefined): string | undefined {
+  if (!source) return undefined;
+  return source.toLowerCase().startsWith("upstream_cve:") ? `Linked CVE ${source.slice("upstream_cve:".length)}` : source;
+}
+
 export function severityDot(severity: string): string {
   switch (severity?.toLowerCase()) {
     case "critical":

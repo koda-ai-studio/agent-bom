@@ -160,15 +160,18 @@ gate, including the default `high` gate, because an unscored vulnerability
 must not silently pass CI. To keep that rare, a distro fix advisory that has no
 severity of its own (Debian `DLA-`/`DSA-`, Ubuntu `USN-`, AlmaLinux `ALSA-`,
 Red Hat `RHSA-`, and similar) takes the highest severity of the upstream CVEs it
-fixes. The upstream scores come from records the scan already holds and from the
-local vulnerability database; no extra network request is made, and the
-finding's `severity_source` names the CVE that supplied the score
-(`upstream_cve:CVE-…`). EPSS and KEV attach through the same upstream CVEs. The
-advisory ID stays in `vulnerability_id` and `advisory_ids`, never in `cve_ids`.
+fixes. The scores come from records the scan already holds, then the local
+vulnerability database, then `api.osv.dev` for a scan that is not `--offline`
+([how and within what limits](../features/scanning.md#distro-advisories-and-linked-cves)).
+The finding's `severity_source` names the CVE that supplied the score
+(`upstream_cve:CVE-…`), and `severity_linked_cve` repeats it on its own. EPSS and
+KEV attach through the same upstream CVEs. The advisory ID stays in
+`vulnerability_id` and `advisory_ids`, never in `cve_ids`.
 
 An advisory stays `unknown`, and keeps failing closed, when none of its upstream
-CVEs has a score in that data. Run `agent-bom db update` to refresh the local
-database, or review the finding and accept it with an ignore rule.
+CVEs has a usable score, and `severity_note` says why. Run `agent-bom db update`
+to refresh the local database, or review the finding and accept it with an
+ignore rule.
 
 The unreserved codes (`0`, `1`, `2`, `130`) are stable today. Codes `3`, `4`, `5` are
 reserved so future product growth has a clean place to land without re-numbering

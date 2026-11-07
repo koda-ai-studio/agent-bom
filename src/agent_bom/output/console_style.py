@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from rich.console import Console
 
-from agent_bom.core.severity import severity_basis
+from agent_bom.core.severity import severity_basis, severity_linked_cve
 from agent_bom.core.terminal import safe_emoji as safe_emoji
 from agent_bom.models import Severity
 from agent_bom.output.finding_views import (
@@ -48,8 +48,10 @@ def _sev_badge(severity: Severity) -> str:
 
 
 def _finding_sev_badge(finding) -> str:
-    unscored = severity_basis((getattr(finding, "evidence", None) or {}).get("severity_source")) == "default"
-    return _sev_badge(finding_severity(finding)) + (" [dim](unscored)[/dim]" if unscored else "")
+    source = (getattr(finding, "evidence", None) or {}).get("severity_source")
+    linked_cve = severity_linked_cve(source)
+    suffix = " [dim](unscored)[/dim]" if severity_basis(source) == "default" else f" [dim](via {linked_cve})[/dim]" if linked_cve else ""
+    return _sev_badge(finding_severity(finding)) + suffix
 
 
 def _console() -> Console:

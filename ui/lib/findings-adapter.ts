@@ -93,6 +93,7 @@ export function collectUnifiedFindings(findings: UnifiedFinding[]): LaneFinding[
       published_at: finding.published_at ?? recordString(evidence, "published_at"),
       modified_at: finding.modified_at ?? recordString(evidence, "modified_at"),
       severity_source: finding.severity_source ?? recordString(evidence, "severity_source"),
+      severity_note: finding.severity_note ?? recordString(evidence, "severity_note"),
       confidence: finding.confidence ?? recordNumber(evidence, "confidence"),
       match_confidence_tier:
         finding.match_confidence_tier ?? recordString(evidence, "match_confidence_tier"),

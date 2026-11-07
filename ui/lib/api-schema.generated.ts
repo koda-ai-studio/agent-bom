@@ -14748,6 +14748,10 @@ export interface components {
             schema_version?: string | null;
             /** Severity */
             severity: string;
+            /** Severity Linked Cve */
+            severity_linked_cve?: string | null;
+            /** Severity Note */
+            severity_note?: string | null;
             /** Severity Source */
             severity_source?: string | null;
             /** Sla Due At */
