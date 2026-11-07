@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-import statistics
+import math
 import time
 
 import httpx
@@ -26,6 +26,20 @@ INGEST_BUDGET_SECONDS = 5.0
 ADMISSION_BUDGET_SECONDS = 2.0
 HEALTH_P99_BUDGET_SECONDS = 0.25
 BASELINE_RATIO = 4.0
+
+
+def _observed_p99(samples: list[float]) -> float:
+    # A measured percentile is an order statistic, not an extrapolation past
+    # the slowest observation. With fewer than 100 samples, p99 is the maximum.
+    return sorted(samples)[math.ceil(0.99 * len(samples)) - 1]
+
+
+@pytest.mark.parametrize(
+    ("samples", "expected"),
+    [([0.004] * 29 + [0.216], 0.216), ([0.004] * 99 + [0.3], 0.004), ([0.216] * 2 + [0.004] * 99, 0.216)],
+)
+def test_health_p99_is_an_observed_nearest_rank(samples: list[float], expected: float) -> None:
+    assert _observed_p99(samples) == expected
 
 
 @pytest.fixture
@@ -143,7 +157,7 @@ async def test_event_loop_stays_live_while_a_10x_push_is_admitted_and_retried(
             await client.get("/health")
             latencies.append(time.monotonic() - began)
             await asyncio.sleep(0.01)
-        baseline_p99 = statistics.quantiles(latencies, n=100)[98]
+        baseline_p99 = _observed_p99(latencies)
         latencies.clear()
         prober = asyncio.create_task(_probe())
         await asyncio.sleep(0.2)
@@ -157,9 +171,12 @@ async def test_event_loop_stays_live_while_a_10x_push_is_admitted_and_retried(
     assert (first.status_code, retry.status_code) == (202, 202)
     assert first.json()["job_id"] == retry.json()["job_id"]
     assert len(latencies) >= 20
-    p99 = statistics.quantiles(latencies, n=100)[98]
+    p99 = _observed_p99(latencies)
     # 250 ms on a quiet runner; on a saturated one, no worse than 4x the idle p99.
     budget = max(HEALTH_P99_BUDGET_SECONDS, BASELINE_RATIO * baseline_p99)
     assert p99 < budget, (
-        f"/health p99 {p99 * 1000:.0f} ms during a 10x admission (idle p99 {baseline_p99 * 1000:.0f} ms, budget {budget * 1000:.0f} ms)"
+        f"/health p99 {p99 * 1000:.0f} ms during a 10x admission "
+        f"(idle p99 {baseline_p99 * 1000:.0f} ms, budget {budget * 1000:.0f} ms, "
+        f"samples {len(latencies)}, max {max(latencies) * 1000:.0f} ms, "
+        f"slowest_ms {[round(value * 1000, 1) for value in sorted(latencies)[-5:]]})"
     )
