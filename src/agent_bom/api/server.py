@@ -516,8 +516,7 @@ def configure_api(
     _cors_origins = effective_origins
     _apply_cors_middleware(_cors_origins)
 
-    _api_key = api_key
-    _rate_limit_rpm = validated_rate_limit_rpm
+    _api_key, _rate_limit_rpm = api_key, validated_rate_limit_rpm
 
     from agent_bom.api.secret_source import secret_is_configured
 
@@ -569,7 +568,8 @@ def configure_api(
         MaxBodySizeMiddleware, path_limits={"/v1/results/push": effective_result_push_max_bytes(_config.API_RESULT_PUSH_MAX_BYTES)}
     )
     _replace_middleware(APIKeyMiddleware, api_key=api_key, allow_unauthenticated=allow_unauthenticated)
-    _replace_middleware(GlobalRateLimitMiddleware, rpm=global_ip_rate_limit_rpm())
+    anonymous_read = APIKeyMiddleware.anonymous_viewer_read if allow_unauthenticated else None
+    _replace_middleware(GlobalRateLimitMiddleware, rpm=global_ip_rate_limit_rpm(), anonymous_read=anonymous_read)
     _host_guard.configure_host_policy(posture.listener_host, _cors_origins)
     _replace_middleware(_host_guard.HostAllowlistMiddleware)  # Host check precedes limits, auth, routes, cookies.
     # Wrap admission denials with security/correlation headers without reading bodies.

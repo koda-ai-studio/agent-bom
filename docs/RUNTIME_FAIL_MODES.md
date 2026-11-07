@@ -696,6 +696,15 @@ check; ordinary read/write limits retain their existing behavior.
 This cache holds source admission only; key validity and revocation still use
 the current durable credential record on every request.
 
+When the operator explicitly enables anonymous access, credential-free GET/HEAD
+requests to declared viewer routes do not query failed-authentication state.
+They still pass through the anonymous principal resolver, route authorization,
+and ordinary global/read quotas. This keeps public demo reads independent of
+an authentication-store outage or source backoff. Presented keys, sessions and
+proxy identity headers, auth endpoints, mutations, and unclassified routes
+retain authentication admission. Removing credentials grants only the access
+already explicitly configured for anonymous viewers; it cannot grant a role.
+
 Only source addresses incur backoff; a claimed key or tenant cannot consume
 another source's allowance. Backoff rejects requests from the blocked source
 before credential verification, including valid keys and sessions. Users behind
