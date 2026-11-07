@@ -397,6 +397,7 @@
   "tests/test_auth_failure_boundary.py": 14.31,
   "tests/test_auth_failure_defects.py": 9.18,
   "tests/test_auth_failure_deployment.py": 7.86,
+  "tests/test_auth_failure_forwarding.py": 5.0,
   "tests/test_auth_failure_processes.py": 114.83,
   "tests/test_auth_failure_retest.py": 6.72,
   "tests/test_auth_key_principal_id_4274.py": 0.37,

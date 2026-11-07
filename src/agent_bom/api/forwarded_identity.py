@@ -11,6 +11,11 @@ import os
 from collections.abc import Mapping
 from ipaddress import IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
 
+# The source for a trusted forwarded entry that is not an address. Kept apart from
+# the proxy's own address, so failures under it cannot block every client behind
+# the proxy, and shared, so rotating unreadable values buys no fresh budget.
+UNPARSEABLE_FORWARDED_SOURCE = "unparseable-forwarded-address"
+
 
 def trusted_proxy_hops() -> int:
     """Return the configured positive proxy depth, or zero when invalid."""
@@ -74,7 +79,33 @@ def failure_limit_source(address: str) -> str:
     return str(parsed)
 
 
-def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback: str = "", bounded: bool = True) -> str:
+def forwarded_entry_address(entry: str) -> str | None:
+    """The address in one forwarded entry, allowing the forms proxies write.
+
+    Accepts a bare address, a quoted one, IPv4 with a port, and bracketed IPv6
+    with or without a port. Anything else is not an address.
+    """
+    value = entry.strip().strip('"')
+    if value.startswith("["):
+        end = value.find("]")
+        rest = value[end + 1 :] if end > 0 else "x"
+        if rest and not (rest.startswith(":") and rest[1:].isdigit()):
+            return None
+        value = value[1:end]
+    elif value.count(":") == 1:
+        host, port = value.split(":")
+        if not port.isdigit():
+            return None
+        value = host
+    try:
+        return str(ip_address(value))
+    except ValueError:
+        return None
+
+
+def resolve_forwarded_client_ip(
+    *, peer_host: str, forwarded_for: str, fallback: str = "", bounded: bool = True, unparseable: str | None = None
+) -> str:
     """Resolve a client address only through a declared trusted proxy chain.
 
     The direct transport peer remains authoritative unless it belongs to an
@@ -83,6 +114,8 @@ def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback:
     transport peer instead of trusting caller-supplied input. With ``bounded``
     false, length is not a reason to fall back: only the trailing hops are trusted,
     and a caller who pads the chain must not move onto the proxy's own budget.
+    A trusted entry that is not an address resolves to ``unparseable`` when given,
+    rather than to the proxy itself.
     """
     host = str(peer_host or fallback)
     hops = trusted_proxy_hops()
@@ -94,9 +127,9 @@ def resolve_forwarded_client_ip(*, peer_host: str, forwarded_for: str, fallback:
     if hops > 0 and networks and peer is not None and any(peer in network for network in networks):
         forwarded = [part.strip() for part in str(forwarded_for or "").split(",") if part.strip()]
         if hops <= len(forwarded) and (not bounded or len(forwarded) <= 32):
-            candidate = forwarded[-hops]
-            try:
-                host = str(ip_address(candidate))
-            except ValueError:
-                pass  # not an IP literal: keep the socket peer address
+            address = forwarded_entry_address(forwarded[-hops])
+            if address is not None:
+                host = address
+            elif unparseable is not None:
+                host = unparseable
     return host

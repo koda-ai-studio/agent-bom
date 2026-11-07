@@ -237,7 +237,7 @@ def _ws_auth_from_token(token: str, *, bearer: bool = True, rejected: list[bool]
         return None
 
     static_key = resolve_secret("AGENT_BOM_API_KEY")
-    if static_key and _hmac.compare_digest(token, static_key):
+    if static_key and _hmac.compare_digest(token.encode(), static_key.encode()):
         return _WebSocketAuthContext(tenant_id="default", role="admin", auth_method="static_api_key")
 
     from agent_bom.api.auth import get_key_store

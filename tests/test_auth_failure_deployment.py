@@ -68,9 +68,11 @@ def test_helm_shared_source_can_be_accepted_explicitly():
 
 
 def test_helm_settings_supplied_by_a_secret_render_no_conflicting_values():
-    result = _helm(*_INGRESS, "--set", "controlPlane.api.trustedProxy.fromSecret=true")
+    result = _helm(
+        *_INGRESS, "--set", "controlPlane.api.trustedProxy.fromSecret=true", "--set", "controlPlane.api.trustedProxy.secretName=s"
+    )
     assert result.returncode == 0, result.stderr
-    assert "AGENT_BOM_TRUSTED_PROXY_CIDRS" not in _api_env(result.stdout)
+    assert _api_env(result.stdout)["AGENT_BOM_TRUSTED_PROXY_CIDRS"] == ""  # Read from the Secret, never a literal.
 
 
 def test_helm_settings_supplied_through_env_are_honoured():

@@ -27,6 +27,9 @@ Call with (dict "root" $ "component" "api"|"worker").
 {{- if and $cp.ingress.enabled (not $proxyConfigured) (not $trustedProxy.sharedSourceAccepted) -}}
 {{- fail "controlPlane.ingress.enabled requires controlPlane.api.trustedProxy.hops and .cidrs: without them every client behind the ingress shares one authentication failure budget and about ten bad logins refuse everyone. Set them, set controlPlane.api.trustedProxy.fromSecret=true if a Secret in envFrom supplies both variables, or set controlPlane.api.trustedProxy.sharedSourceAccepted=true to accept one shared budget." -}}
 {{- end -}}
+{{- if and $trustedProxy.fromSecret (not $trustedProxy.secretName) -}}
+{{- fail "controlPlane.api.trustedProxy.fromSecret requires controlPlane.api.trustedProxy.secretName, the Secret holding AGENT_BOM_TRUSTED_PROXY_HOPS and AGENT_BOM_TRUSTED_PROXY_CIDRS" -}}
+{{- end -}}
 {{- $roleEnv := list "AGENT_BOM_API_ROLE" "AGENT_BOM_DISTRIBUTED_SCANS" -}}
 {{- range $entry := $cp.api.env -}}
 {{- if eq (get $entry "name") "AGENT_BOM_CONTROL_PLANE_REPLICAS" -}}
@@ -179,7 +182,15 @@ spec:
               value: {{ $cp.autoCorrelation.maxAgeHours | quote }}
             {{- include "agent-bom.nvdApiKeyEnv" $root | nindent 12 }}
           {{- $trustedProxy := $api.trustedProxy | default dict }}
-          {{- if and $trustedProxy.hops $trustedProxy.cidrs }}
+          {{- if $trustedProxy.fromSecret }}
+            {{- range $name := list "AGENT_BOM_TRUSTED_PROXY_HOPS" "AGENT_BOM_TRUSTED_PROXY_CIDRS" }}
+            - name: {{ $name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $trustedProxy.secretName | quote }}
+                  key: {{ $name }}
+            {{- end }}
+          {{- else if and $trustedProxy.hops $trustedProxy.cidrs }}
             - name: AGENT_BOM_TRUSTED_PROXY_HOPS
               value: {{ $trustedProxy.hops | quote }}
             - name: AGENT_BOM_TRUSTED_PROXY_CIDRS

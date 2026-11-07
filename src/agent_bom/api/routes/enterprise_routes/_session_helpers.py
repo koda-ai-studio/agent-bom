@@ -14,7 +14,14 @@ from fastapi import HTTPException, Request, Response
 
 from agent_bom.api import host_guard as _host_guard
 from agent_bom.api.dev_auth_state import get_dev_api_key, get_dev_api_role
-from agent_bom.api.forwarded_identity import resolve_forwarded_client_ip, trusted_proxy_hops, trusted_proxy_networks
+from agent_bom.api.forwarded_identity import (
+    UNPARSEABLE_FORWARDED_SOURCE,
+    failure_limit_source,
+    forwarded_for_header,
+    resolve_forwarded_client_ip,
+    trusted_proxy_hops,
+    trusted_proxy_networks,
+)
 from agent_bom.core.settings import env_raw
 from agent_bom.security import sanitize_error
 
@@ -56,11 +63,15 @@ def _client_fingerprint(request: Request) -> str:
     Nth-from-rightmost entry and fall back to the transport peer when the chain
     is missing, malformed, oversized, or shorter than declared.
     """
-    return resolve_forwarded_client_ip(
+    address = resolve_forwarded_client_ip(
         peer_host=request.client.host if request.client else "",
-        forwarded_for=request.headers.get("x-forwarded-for") or "",
+        forwarded_for=forwarded_for_header(request.headers),
         fallback="unknown",
-    )[:128]
+        bounded=False,
+        unparseable=UNPARSEABLE_FORWARDED_SOURCE,
+    )
+    # The same source as the failed-authentication limit, so neither can be sidestepped alone.
+    return failure_limit_source(address)[:128]
 
 
 def _auth_session_limit() -> int:

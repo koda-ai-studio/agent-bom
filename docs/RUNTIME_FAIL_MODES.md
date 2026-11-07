@@ -785,7 +785,9 @@ one NAT or unconfigured load balancer therefore share the block.
 ### Source identity behind a proxy
 
 Configure both `AGENT_BOM_TRUSTED_PROXY_CIDRS` and `AGENT_BOM_TRUSTED_PROXY_HOPS`
-on every replica. Every `X-Forwarded-For` line is combined in received order before
+on every replica. The session attempt limit on `/v1/auth/session` and the OIDC, SAML
+and Snowflake sign-in routes uses the same source, and a blank key is refused before
+it spends any attempts. Every `X-Forwarded-For` line is combined in received order before
 hops are counted, so a second line cannot select or forge the source. Only the
 trailing trusted hops are read for this limit, so padding the chain changes nothing;
 other consumers still treat a chain over 32 entries as untrusted. An IPv6 source
@@ -795,7 +797,7 @@ records the exact address as `client_address`.
 
 | Profile | Behaviour |
 |---|---|
-| Helm with `controlPlane.ingress.enabled` | Rendering fails unless `controlPlane.api.trustedProxy.hops` and `.cidrs` are set (or both variables in `controlPlane.api.env`), `.fromSecret=true` records that a Secret in `envFrom` supplies them, or `.sharedSourceAccepted=true` records that one budget is intended |
+| Helm with `controlPlane.ingress.enabled` | Rendering fails unless `controlPlane.api.trustedProxy.hops` and `.cidrs` are set (or both variables in `controlPlane.api.env`), `.fromSecret=true` with `.secretName` reads both from that Secret as required keys, so a pod without them does not start, or `.sharedSourceAccepted=true` records that one budget is intended |
 | Compose hosted-POC overlay | One hop, trusting Docker's default address pools `172.16.0.0/12` and `192.168.0.0/16`. Override both variables for a custom pool. `hosted_poc_preflight.py` fails if either is empty |
 | Compose platform and fullstack | Both variables pass through and default to empty, for a loopback bind with no proxy |
 
@@ -807,6 +809,7 @@ Each condition below warns once per process, without logging header contents:
 | Forwarded header from a peer outside the CIDRs | The peer address is used. If it is your proxy, correct the CIDRs |
 | Only `X-Real-IP` arrives | It is not used. Configure the proxy to send `X-Forwarded-For` |
 | No transport peer, as on a unix socket | Forwarded addresses cannot be trusted and all clients share one budget. Listen on TCP behind the proxy |
+| A trusted entry that cannot be read as an address | Ports (`203.0.113.7:51234`, `[2001:db8::7]:443`) and quotes are accepted. Anything else is limited as one shared `unparseable-forwarded-address` source, never as the proxy's own address, so it cannot block clients whose entries are readable. Check what the proxy writes |
 
 A proxy cannot be detected before it makes a request. Owned API/MCP launchers
 disable server-side proxy-header rewriting. For direct ASGI deployment, use

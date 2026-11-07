@@ -35,6 +35,7 @@ controlPlane:
     # them, every client behind the ingress shares one authentication failure budget.
     trustedProxy:
       fromSecret: true
+      secretName: agent-bom-control-plane-auth
     replicas: 2
     env:
       - name: AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT

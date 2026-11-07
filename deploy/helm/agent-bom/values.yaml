@@ -621,12 +621,15 @@ controlPlane:
     # hops: trusted proxies appending to X-Forwarded-For (usually 1).
     # cidrs: networks the API sees those proxies connect from (pod or node
     # CIDRs). Enabling controlPlane.ingress without them fails rendering, unless
-    # fromSecret records that a Secret in envFrom supplies both variables, or
-    # sharedSourceAccepted records that one shared budget is intended.
+    # fromSecret reads both from the Secret named in secretName (keys
+    # AGENT_BOM_TRUSTED_PROXY_HOPS and AGENT_BOM_TRUSTED_PROXY_CIDRS; a pod whose
+    # Secret lacks either does not start), or sharedSourceAccepted records that
+    # one shared budget is intended.
     trustedProxy:
       hops: 0
       cidrs: []
       fromSecret: false
+      secretName: ""
       sharedSourceAccepted: false
     # Shared-state guards use the largest initial/scaler/fallback count, not
     # merely the number of pods present at installation time.

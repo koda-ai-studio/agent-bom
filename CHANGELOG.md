@@ -72,6 +72,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Audit integrity is now scored per entry. Entries from a key's first use onward are verified exactly, entries no held key can check are counted as unverifiable, and links and counts are checked either way.
 - Websocket authentication now follows the same source limit and failure counting as HTTP.
 - Dropped failed-authentication receipts are recorded within seconds, with their window and sources.
+- The session attempt limit uses every forwarded header line and the trusted-proxy settings, as the failure limit does, and a blank key no longer spends attempts. Forwarded entries written with a port are read as addresses; unreadable ones are limited apart from the proxy's own address.
+- `controlPlane.api.trustedProxy.fromSecret` now requires `secretName` and reads both settings from that Secret as required keys.
 - All `X-Forwarded-For` lines are combined before trusted hops are counted, so a second line can neither evade the failure limit nor frame another address. IPv6 sources are limited by /64.
 - Attempts refused for capacity still count toward the failure limit.
 - The stored audit signing-key identity is now a salted HMAC. Existing unsalted digests are upgraded in place.

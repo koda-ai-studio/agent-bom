@@ -79,11 +79,12 @@ async def create_browser_session(request: Request, response: Response, body: Bro
     """
     from agent_bom.api.auth import OPERATOR_KEY_ID_PREFIX, get_key_store
 
-    _check_auth_session_rate_limit(request)
     raw_key = body.api_key.strip()
-    request.state.auth_credential_fingerprint = audit_log.fingerprint_auth_credential(raw_key)
+    # Nothing presented, nothing to check: refused before it can spend anyone's attempts.
     if not raw_key:
         raise HTTPException(status_code=401, detail="Invalid API key")
+    _check_auth_session_rate_limit(request)
+    request.state.auth_credential_fingerprint = audit_log.fingerprint_auth_credential(raw_key)
 
     from agent_bom.api.secret_source import resolve_secret
 

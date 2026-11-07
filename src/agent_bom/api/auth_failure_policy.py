@@ -18,6 +18,7 @@ from agent_bom.api import audit_log, metrics
 from agent_bom.api.auth_failure_receipts import RECEIPTS
 from agent_bom.api.auth_failure_store import PostgresAuthFailureStore, SQLiteAuthFailureStore
 from agent_bom.api.forwarded_identity import (
+    UNPARSEABLE_FORWARDED_SOURCE,
     failure_limit_source,
     forwarded_for_header,
     peer_is_trusted_proxy,
@@ -129,7 +130,16 @@ class AuthFailurePolicy:
         peer = client.host if client else ""
         forwarded = forwarded_for_header(request.headers)
         self._warn_source_conditions(request, peer, forwarded)
-        return resolve_forwarded_client_ip(peer_host=peer or "unknown", forwarded_for=forwarded, bounded=False)
+        address = resolve_forwarded_client_ip(
+            peer_host=peer or "unknown", forwarded_for=forwarded, bounded=False, unparseable=UNPARSEABLE_FORWARDED_SOURCE
+        )
+        if address == UNPARSEABLE_FORWARDED_SOURCE:
+            self._warn_source_once(
+                "unparseable-forwarded",
+                "A trusted X-Forwarded-For entry could not be read as an address. Those requests share one separate "
+                "authentication failure source, apart from the proxy's own address. Check what the proxy writes.",
+            )
+        return address
 
     def source(self, request) -> str:
         return failure_limit_source(self._client_address(request))
