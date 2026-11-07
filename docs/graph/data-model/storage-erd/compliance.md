@@ -5,7 +5,7 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-12 tables.
+13 tables.
 
 Tables from other domains drawn for their relations: `gateway_policies`, `scan_jobs`, `teams`.
 
@@ -31,6 +31,9 @@ erDiagram
   audit_events {
     string entry_id PK
     string tenant_id PK
+  }
+  audit_key_identity {
+    integer singleton PK
   }
   audit_log {
     text entry_id PK
@@ -112,6 +115,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `attestation_replay` | SQLite | 4 |  | persistent |
 | `audit_chain_checkpoint` | Postgres, SQLite | 4 |  | persistent |
 | `audit_events` | ClickHouse | 10 | yes | persistent |
+| `audit_key_identity` | Postgres | 2 |  | persistent |
 | `audit_log` | Postgres, SQLite | 10 |  | persistent |
 | `cis_benchmark_checks` | Postgres, ClickHouse | 22 | yes | persistent |
 | `compliance_controls` | ClickHouse | 11 | yes | persistent |

@@ -137,6 +137,7 @@ def test_storage_index_lists_every_table_from_the_ddl() -> None:
     gen = _load_generator()
     storage = gen.graph_data_model_storage
     tables = storage.extract_tables(gen.SOURCE_ROOT)
+    assert tables["api_auth_failure_limits"].dialects == ["postgres", "sqlite"]
     assert len(tables) > 100
     assert {"graph_nodes", "graph_edges", "scan_jobs", "teams", "hub_findings_current"} <= set(tables)
     index = gen.render()[storage.INDEX_DOC]

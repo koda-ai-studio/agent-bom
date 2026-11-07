@@ -46,7 +46,7 @@ _DOMAIN_SPECS: tuple[tuple[str, str, str, str], ...] = (
         "tenancy",
         "Tenancy, identity and access",
         (
-            "teams api_keys auth_session_attempts revoked_session_nonces credential_refs idempotency_keys "
+            "teams api_keys api_auth_failure_limits auth_session_attempts revoked_session_nonces credential_refs idempotency_keys "
             "model_provider_keys model_virtual_keys tenant_score_config_overrides"
         ),
         ("managed_trial_ agent_bom_tenant_ tenant_ api_rate_limit scim_ access_review_ agent_identit agent_conditional_"),
@@ -152,7 +152,7 @@ _ADD_FK = re.compile(r"FOREIGN\s+KEY\s*\(([^)]*)\)\s*REFERENCES\s+([\w.\"]+)\s*\
 _ADD_PK = re.compile(r"ADD\s+CONSTRAINT\s+\w+\s+PRIMARY\s+KEY\s*\(([^)]*)\)", re.IGNORECASE)
 _DDL_HINT = re.compile(r"CREATE\s+(?:\w+\s+)*TABLE|ADD\s+COLUMN|FOREIGN\s+KEY", re.IGNORECASE)
 _IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
-_PG_MARKERS = re.compile(r"\b(JSONB|TIMESTAMPTZ|BIGSERIAL|SERIAL|BYTEA|PARTITION\s+BY|DOUBLE\s+PRECISION|UUID)\b|::|public\.", re.I)
+_PG_MARKERS = re.compile(r"\b(JSONB|TIMESTAMPTZ|BIGSERIAL|SERIAL|BYTEA|PARTITION\s+BY|UUID)\b|::|public\.", re.I)
 _SQLITE_MARKERS = re.compile(r"\bAUTOINCREMENT\b|\bWITHOUT\s+ROWID\b|\bSTRICT\b", re.I)
 _SNOWFLAKE_MARKERS = re.compile(r"\b(VARIANT|TIMESTAMP_NTZ|TIMESTAMP_LTZ|TIMESTAMP_TZ)\b", re.I)
 _CONSTRAINT_HEADS = ("PRIMARY", "FOREIGN", "UNIQUE", "CONSTRAINT", "CHECK", "INDEX", "PROJECTION", "EXCLUDE", "PERIOD")
