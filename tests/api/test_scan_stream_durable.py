@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -125,9 +126,20 @@ async def test_durable_progress_is_redacted_like_the_local_stream(replica_store:
 @pytest.mark.asyncio
 async def test_stream_ends_when_the_durable_job_is_deleted(replica_store: SQLiteJobStore) -> None:
     replica_store.put(_job("deleted-elsewhere", JobStatus.RUNNING, ["started"]))
+    first_read = threading.Event()
+    read_status = replica_store.get_status_view
+
+    def observed_read(*args: Any, **kwargs: Any) -> Any:
+        view = read_status(*args, **kwargs)
+        if view is not None:
+            first_read.set()
+        return view
+
+    replica_store.get_status_view = observed_read  # type: ignore[method-assign]
 
     async def replica_a_deletes() -> None:
-        await asyncio.sleep(0.05)
+        # Delete only once the stream has seen the job, so app start-up time cannot reorder the race.
+        assert await asyncio.to_thread(first_read.wait, 10)
         replica_store.delete("deleted-elsewhere", tenant_id="default")
 
     status, events = await _stream("deleted-elsewhere", replica_a_deletes)
