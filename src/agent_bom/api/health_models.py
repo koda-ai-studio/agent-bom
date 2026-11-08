@@ -97,7 +97,7 @@ class PublicHealthResponse(BaseModel):
     auth_configured: bool = False
     configured_auth_modes: list[str] = Field(default_factory=list)
     sso_provider: SsoProvider | None = Field(
-        default_factory=lambda: public_sso_provider(),
+        default_factory=public_sso_provider,
         description=(
             "Brand of the browser sign-in button: one of four fixed labels derived from the configured OIDC issuer "
             "host, or null when browser OIDC is off. Never the issuer, tenant or client id."

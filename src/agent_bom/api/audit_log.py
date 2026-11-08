@@ -206,7 +206,8 @@ def warn_if_ephemeral_hmac_key(*, durable: bool | None = None) -> None:
     if _HMAC_ENV_KEY or _EPHEMERAL_KEY_WARNED:
         return
     if not (durable or postgres_deployment_configured() or env_first("AGENT_BOM_AUDIT_DB", "AGENT_BOM_DB")):
-        return logger.info("AGENT_BOM_AUDIT_HMAC_KEY not set — the in-memory audit log is signed with a per-process key")
+        logger.info("AGENT_BOM_AUDIT_HMAC_KEY not set — the in-memory audit log is signed with a per-process key")
+        return
     _EPHEMERAL_KEY_WARNED = True
     logger.warning("AGENT_BOM_AUDIT_HMAC_KEY not set — durable audit signatures use a per-process key and fail to verify after restart")
 

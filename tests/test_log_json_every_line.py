@@ -115,6 +115,7 @@ def test_api_server_writes_only_json_lines(tmp_path: Path, via_env: bool) -> Non
             try:
                 urllib.request.urlopen(f"http://127.0.0.1:{port}/v1/jobs?token=s3cret", timeout=5)
             except OSError:
+                # Only the access log line matters; the request's own outcome is irrelevant here.
                 pass
         finally:
             proc.terminate()
