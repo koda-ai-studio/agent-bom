@@ -3,17 +3,120 @@
 from __future__ import annotations
 
 import asyncio
+import atexit
 import hashlib
 import logging
 import threading
 import time
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from typing import Any
+
+from agent_bom.api.postgres_common import _get_pool, _guard_rls_capable_role, _new_application_pool
+from agent_bom.config import POSTGRES_POOL_MAX_SIZE
 
 _logger = logging.getLogger(__name__)
 
-SHARED_STORE_TIMEOUT_SECONDS = 0.5
+# How long a request waits for the shared store, including this process's own
+# scheduling. The database bounds its work at 400 ms; the longer wait covers
+# CPU-heavy ingest and graph threads in the same process, which delay every
+# thread here, so local load does not demote limits to per-process ones.
+SHARED_STORE_TIMEOUT_SECONDS = 2.0
+_POOL_WAIT_SECONDS = 0.4
 SHARED_STORE_COOLDOWN_SECONDS = 5.0
 SHARED_STORE_WARNING_INTERVAL_SECONDS = 60.0
+
+
+_ADMISSION_POOL_MAX_SIZE = 4
+_admission_pools: dict[str, tuple[Any, Any]] = {}
+_admission_pools_lock = threading.Lock()
+
+
+def admission_state_pool(purpose: str) -> Any:
+    """A small autocommit pool for one kind of admission state: ``auth`` or ``rate_limit``.
+
+    Ingest, graph and report work hold the application pool for seconds at a
+    time; admission checks must not queue behind them, nor authentication behind
+    rate limiting. Autocommit lets a check travel as one round trip. Each adds at
+    most four connections per process. A new application pool, after a reset,
+    replaces it.
+    """
+    app_pool = _get_pool()
+    with _admission_pools_lock:
+        current = _admission_pools.get(purpose)
+        if current is None or current[0] is not app_pool:
+            if current is not None:
+                current[1].close()
+            size = max(1, min(_ADMISSION_POOL_MAX_SIZE, POSTGRES_POOL_MAX_SIZE))
+            current = _admission_pools[purpose] = (app_pool, _new_application_pool(min_size=1, max_size=size, autocommit=True))
+        pool = current[1]
+    _guard_rls_capable_role(pool)
+    return pool
+
+
+def _close_admission_pools() -> None:
+    with _admission_pools_lock:
+        for _app_pool, pool in _admission_pools.values():
+            pool.close()
+        _admission_pools.clear()
+
+
+atexit.register(_close_admission_pools)
+
+# Per-transaction bounds, so they hold behind a transaction-mode connection pooler.
+_ADMISSION_BOUNDS = ("SET LOCAL statement_timeout = '400ms'", "SET LOCAL lock_timeout = '400ms'")
+
+
+def _open_bounded(conn: Any, statements: Sequence[tuple[str, Any]], *, commit: bool) -> list[Any]:
+    with conn.pipeline():
+        conn.execute("BEGIN")
+        for bound in _ADMISSION_BOUNDS:
+            conn.execute(bound)
+        cursors = [conn.execute(sql, params) for sql, params in statements]
+        if commit:
+            conn.execute("COMMIT")
+    return cursors
+
+
+def _roll_back(conn: Any) -> None:
+    try:
+        conn.execute("ROLLBACK")
+    except Exception:  # broad-except: the connection may already be gone, and the pool discards it.
+        _logger.debug("Rollback after a bounded admission query failed", exc_info=False)
+
+
+def bounded_round_trip(conn: Any, statements: Sequence[tuple[str, Any]]) -> Any:
+    """Run parameterised *statements* as one transaction in one network round trip.
+
+    The statements are pipelined between BEGIN and COMMIT with 400 ms statement
+    and lock bounds. Under a CPU-heavy ingest each round trip waits to win the
+    interpreter lock back, so admission checks keep their count at one. Returns
+    the last statement's cursor. *conn* must be in autocommit mode.
+    """
+    done = False
+    try:
+        cursor = _open_bounded(conn, statements, commit=True)[-1]
+        done = True
+        return cursor
+    finally:
+        if not done:
+            _roll_back(conn)
+
+
+@contextmanager
+def bounded_transaction(conn: Any, statements: Sequence[tuple[str, Any]]) -> Iterator[list[Any]]:
+    """Open a transaction with 400 ms bounds and run *statements* in its first round trip.
+
+    The caller continues in the transaction; it commits on exit and rolls back on error.
+    """
+    done = False
+    try:
+        yield _open_bounded(conn, statements, commit=False)
+        conn.execute("COMMIT")
+        done = True
+    finally:
+        if not done:
+            _roll_back(conn)
 
 
 class InMemoryRateLimitStore:
@@ -101,16 +204,44 @@ class InMemoryRateLimitStore:
             return len(timestamps)
 
 
+# The statements of one operation reach the server as this thread sends them, so
+# under a CPU-heavy ingest its transaction can stay open for hundreds of
+# milliseconds. A hit therefore takes no lock another hit could wait on: pruning
+# skips rows another transaction is already deleting.
+_PRUNE_ALL = "DELETE FROM api_rate_limit_hits WHERE ctid IN (SELECT ctid FROM api_rate_limit_hits WHERE hit_at < %s FOR UPDATE SKIP LOCKED)"
+_PRUNE_BUCKET = (
+    "DELETE FROM api_rate_limit_hits WHERE ctid IN "
+    "(SELECT ctid FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at < %s FOR UPDATE SKIP LOCKED)"
+)
+_LOCK = "SELECT pg_advisory_xact_lock(%s)"
+# Counts the window as it stood, then records the hit when below the limit (always, without one).
+_RECORD = """
+WITH current_window AS (
+    SELECT COUNT(*) AS hits, MIN(hit_at) AS oldest
+    FROM api_rate_limit_hits WHERE bucket_key = %(key)s AND hit_at >= %(start)s
+), added AS (
+    INSERT INTO api_rate_limit_hits (bucket_key, hit_at)
+    SELECT %(key)s, %(now)s FROM current_window
+    WHERE %(limit)s::bigint IS NULL OR hits < %(limit)s::bigint
+    RETURNING 1
+)
+SELECT hits, oldest, (SELECT COUNT(*) FROM added) FROM current_window
+"""
+_COUNT = "SELECT COUNT(*) FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at >= %s"
+
+
 class PostgresRateLimitStore:
-    """Shared sliding-window limiter backed by Postgres for horizontal scaling."""
+    """Shared sliding-window limiter backed by Postgres for horizontal scaling.
+
+    It uses a small autocommit admission pool of its own.
+    Each operation is one round trip and one transaction, bounded to 400 ms by
+    the database. A budget consumed with ``consume_if_below`` is exact across
+    replicas; a request hit can miss hits still in flight on other replicas.
+    """
 
     def __init__(self, window_seconds: int = 60, pool: Any = None) -> None:
         self._window = window_seconds
-        if pool is None:
-            from agent_bom.api.postgres_common import _get_pool
-
-            pool = _get_pool()
-        self._pool = pool
+        self._pool = pool if pool is not None else admission_state_pool("rate_limit")
         self._next_global_prune = 0.0
         self._init_tables()
 
@@ -129,35 +260,36 @@ class PostgresRateLimitStore:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_api_rate_limit_hits_bucket_hit_at ON api_rate_limit_hits (bucket_key, hit_at)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_api_rate_limit_hits_hit_at ON api_rate_limit_hits (hit_at)")
 
+    def _run(self, statements: list[tuple[str, Any]]) -> Any:
+        with self._pool.connection(timeout=_POOL_WAIT_SECONDS) as conn:
+            return bounded_round_trip(conn, statements).fetchone()
+
+    def _consume(self, key: str, now: float, limit: int | None) -> tuple[int, float | None, bool]:
+        """Prune, count and conditionally record one hit; returns (prior hits, oldest, added)."""
+        start = now - self._window
+        statements: list[tuple[str, Any]] = []
+        # Buckets that never return are trimmed by a table-wide prune at most
+        # once per window per process.
+        if now >= self._next_global_prune:
+            self._next_global_prune = now + self._window
+            statements.append((_PRUNE_ALL, (start,)))
+        if limit is not None:
+            # An exact budget serializes its bucket; a request limit stays lock-free.
+            statements.append((_LOCK, (self._advisory_key(key),)))
+        statements += [
+            (_PRUNE_BUCKET, (key, start)),
+            (_RECORD, {"key": key, "start": start, "now": now, "limit": limit}),
+        ]
+        row = self._run(statements)
+        hits = int(row[0]) if row and row[0] is not None else 0
+        oldest = float(row[1]) if row and row[1] is not None else None
+        return hits, oldest, bool(row and row[2])
+
     def hit(self, key: str, now: float) -> tuple[int, int]:
         """Record a request and return (hit_count, reset_epoch)."""
-        window_start = now - self._window
-        with self._pool.connection() as conn:
-            conn.execute(
-                "DELETE FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at < %s",
-                (key, window_start),
-            )
-            # Buckets that never return are trimmed by a table-wide prune at
-            # most once per window per process, off the per-request path.
-            if now >= self._next_global_prune:
-                self._next_global_prune = now + self._window
-                conn.execute("DELETE FROM api_rate_limit_hits WHERE hit_at < %s", (window_start,))
-            conn.execute(
-                "INSERT INTO api_rate_limit_hits (bucket_key, hit_at) VALUES (%s, %s)",
-                (key, now),
-            )
-            row = conn.execute(
-                """
-                SELECT COUNT(*), MIN(hit_at)
-                FROM api_rate_limit_hits
-                WHERE bucket_key = %s AND hit_at >= %s
-                """,
-                (key, window_start),
-            ).fetchone()
-        count = int(row[0]) if row and row[0] is not None else 1
-        oldest = float(row[1]) if row and row[1] is not None else now
-        reset_at = int(oldest + self._window)
-        return count, reset_at
+        hits, oldest, _added = self._consume(key, now, None)
+        oldest_at = min(oldest, now) if oldest is not None else now
+        return hits + 1, int(oldest_at + self._window)
 
     @staticmethod
     def _advisory_key(key: str) -> int:
@@ -165,35 +297,16 @@ class PostgresRateLimitStore:
         return int.from_bytes(digest[:8], "big", signed=True)
 
     def consume_if_below(self, key: str, now: float, limit: int) -> tuple[bool, int, int]:
-        """Atomically consume one unit using a transaction advisory lock."""
+        """Atomically consume one unit under the bucket's transaction advisory lock."""
 
-        window_start = now - self._window
-        with self._pool.connection() as conn:
-            conn.execute("SELECT pg_advisory_xact_lock(%s)", (self._advisory_key(key),))
-            conn.execute("DELETE FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at < %s", (key, window_start))
-            row = conn.execute(
-                "SELECT COUNT(*), MIN(hit_at) FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at >= %s",
-                (key, window_start),
-            ).fetchone()
-            current = int(row[0]) if row and row[0] is not None else 0
-            oldest = float(row[1]) if row and row[1] is not None else now
-            accepted = current < limit
-            if accepted:
-                conn.execute("INSERT INTO api_rate_limit_hits (bucket_key, hit_at) VALUES (%s, %s)", (key, now))
-                current += 1
-                if current == 1:
-                    oldest = now
-        return accepted, current, int(oldest + self._window)
+        hits, oldest, added = self._consume(key, now, limit)
+        oldest_at = oldest if oldest is not None else now
+        return added, hits + int(added), int(oldest_at + self._window)
 
     def count(self, key: str, now: float) -> int:
         """Return current sliding-window usage without consuming a unit."""
 
-        window_start = now - self._window
-        with self._pool.connection() as conn:
-            row = conn.execute(
-                "SELECT COUNT(*) FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at >= %s",
-                (key, window_start),
-            ).fetchone()
+        row = self._run([(_COUNT, (key, now - self._window))])
         return int(row[0]) if row and row[0] is not None else 0
 
 

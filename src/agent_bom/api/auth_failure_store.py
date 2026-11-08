@@ -10,7 +10,6 @@ outage.
 
 from __future__ import annotations
 
-import atexit
 import math
 import os
 import sqlite3
@@ -22,10 +21,8 @@ from contextlib import AbstractContextManager, contextmanager
 from ipaddress import ip_network
 from typing import Any, TypeVar
 
-from agent_bom.api.postgres_common import _get_pool, _guard_rls_capable_role, _new_application_pool
-from agent_bom.api.rate_limit_store import PostgresRateLimitStore
+from agent_bom.api.rate_limit_store import PostgresRateLimitStore, admission_state_pool, bounded_round_trip, bounded_transaction
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
-from agent_bom.config import POSTGRES_POOL_MAX_SIZE
 
 _TABLE = """CREATE TABLE IF NOT EXISTS api_auth_failure_limits (
     source TEXT PRIMARY KEY, failures INTEGER NOT NULL, strikes INTEGER NOT NULL,
@@ -136,10 +133,21 @@ class SQLiteAuthFailureStore(AuthFailureStore):
     WAL readers do not wait for the writer. A second writer waits at most the
     busy timeout. An in-memory database exists only on its one connection, and
     takes a bounded lock around that connection instead.
+
+    Writers in this process queue on one lock per file for the same bound. SQLite's
+    busy handler polls with growing sleeps, so concurrent writers left to it starve
+    one another well inside 400 ms.
     """
+
+    _writers: dict[str, threading.Lock] = {}
+    _writers_guard = threading.Lock()
 
     def __init__(self, path: str = ":memory:") -> None:
         self._path = path
+        self._writer: threading.Lock | None = None
+        if path != ":memory:":
+            with self._writers_guard:
+                self._writer = self._writers.setdefault(os.path.realpath(path), threading.Lock())
         self._local = threading.local()
         self._memory_lock: threading.Lock | None = None
         self._memory_connection: sqlite3.Connection | None = None
@@ -190,6 +198,8 @@ class SQLiteAuthFailureStore(AuthFailureStore):
 
     @contextmanager
     def transaction(self, source: str):
+        if self._writer is not None and not self._writer.acquire(timeout=_BUSY_TIMEOUT_SECONDS):
+            raise TimeoutError("Authentication database capacity exhausted")
         try:
             with self._memory_guard():
                 conn = self._connection()
@@ -199,6 +209,9 @@ class SQLiteAuthFailureStore(AuthFailureStore):
         except sqlite3.OperationalError as exc:
             _raise_if_busy(exc)
             raise
+        finally:
+            if self._writer is not None:
+                self._writer.release()
 
 
 def _raise_if_busy(exc: sqlite3.OperationalError) -> None:
@@ -220,66 +233,6 @@ def _is_dead_connection(exc: BaseException) -> bool:
     }
 
 
-_SQL_BOUNDS = "SET LOCAL statement_timeout = '400ms'; SET LOCAL lock_timeout = '400ms'"
-# Several statements cannot take parameters, so the source is a quoted literal. Standard
-# conforming strings are pinned in the same statement, so only quotes need doubling.
-_BOUNDED_READ = (
-    "SET LOCAL statement_timeout = '400ms'; SET LOCAL lock_timeout = '400ms'; "
-    "SET LOCAL standard_conforming_strings = on; "
-    "SELECT blocked_until FROM api_auth_failure_limits WHERE source = {}"
-)
-
-
-def sql_string_literal(value: str) -> str:
-    """Quote *value* as a standard SQL string literal; NUL cannot appear in a Postgres string."""
-    if "\x00" in value:
-        raise ValueError("NUL byte in an authentication source")
-    return "'" + value.replace("'", "''") + "'"
-
-
-_AUTH_STATE_POOL_MAX_SIZE = 4
-_auth_state_pool_lock = threading.Lock()
-_auth_state_pool: tuple[Any, Any] | None = None
-
-
-def _close_auth_state_pool() -> None:
-    global _auth_state_pool
-    with _auth_state_pool_lock:
-        if _auth_state_pool is not None:
-            _auth_state_pool[1].close()
-        _auth_state_pool = None
-
-
-def auth_state_pool() -> Any:
-    """A small autocommit pool reserved for authentication state.
-
-    Ingest, graph and report work hold the application pool for seconds at a
-    time; admission must not queue behind them. Autocommit lets a read travel
-    as one round trip. A new application pool, after a reset, replaces it.
-    """
-    global _auth_state_pool
-    app_pool = _get_pool()
-    with _auth_state_pool_lock:
-        if _auth_state_pool is None or _auth_state_pool[0] is not app_pool:
-            if _auth_state_pool is not None:
-                _auth_state_pool[1].close()
-            size = max(1, min(_AUTH_STATE_POOL_MAX_SIZE, POSTGRES_POOL_MAX_SIZE))
-            _auth_state_pool = (app_pool, _new_application_pool(min_size=1, max_size=size, autocommit=True))
-        pool = _auth_state_pool[1]
-    _guard_rls_capable_role(pool)
-    return pool
-
-
-atexit.register(_close_auth_state_pool)
-
-
-def _last_result(cursor: Any) -> Any:
-    """The rows of the final statement in a multi-statement query."""
-    while getattr(cursor, "description", True) is None and cursor.nextset():
-        pass
-    return cursor
-
-
 class PostgresAuthFailureStore(AuthFailureStore):
     """A dedicated autocommit pool: admission is one round trip, writes take a transaction lock.
 
@@ -292,7 +245,7 @@ class PostgresAuthFailureStore(AuthFailureStore):
     _MAX_DEAD_CONNECTIONS = 32
 
     def __init__(self, pool: Any = None) -> None:
-        self._pool = pool if pool is not None else auth_state_pool()
+        self._pool = pool if pool is not None else admission_state_pool("auth")
 
         with self._pool.connection() as conn:
             if ensure_postgres_schema_version(conn, "auth_failure_limits"):
@@ -313,9 +266,8 @@ class PostgresAuthFailureStore(AuthFailureStore):
     @contextmanager
     def transaction(self, source: str):
         lock = int(PostgresRateLimitStore._advisory_key("auth:" + source))
-        with self._bounded() as conn, conn.transaction():
-            # One round trip: both bounds, then the source's lock.
-            conn.execute(f"{_SQL_BOUNDS}; SELECT pg_advisory_xact_lock({lock})")
+        # One round trip: the transaction, both bounds, then the source's lock.
+        with self._bounded() as conn, bounded_transaction(conn, [("SELECT pg_advisory_xact_lock(%s)", (lock,))]):
 
             def execute(sql, parameters):
                 return conn.execute(sql.replace("?", "%s"), parameters)
@@ -323,10 +275,9 @@ class PostgresAuthFailureStore(AuthFailureStore):
             yield execute
 
     def _blocked_until(self, source: str) -> float | None:
-        query = _BOUNDED_READ.format(sql_string_literal(source))
         with self._bounded() as conn:
-            # A single implicit transaction: the bounds apply to the read and end with it.
-            row = _last_result(conn.execute(query)).fetchone()
+            cursor = bounded_round_trip(conn, [("SELECT blocked_until FROM api_auth_failure_limits WHERE source = %s", (source,))])
+            row = cursor.fetchone()
         return float(row[0]) if row else None
 
     def _past_dead_connections(self, operation: Callable[[], _T]) -> _T:
