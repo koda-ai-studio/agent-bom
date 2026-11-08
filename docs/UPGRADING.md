@@ -1,6 +1,6 @@
-# Upgrade to 0.113.1
+# Upgrade to 0.114.0
 
-These instructions target 0.113.1 once its artifacts are published.
+These instructions target 0.114.0 once its artifacts are published.
 The source version alone does not establish package or image availability.
 
 ## Preserve configuration and evidence
@@ -26,8 +26,8 @@ agent-bom --version
 ```
 
 These commands select the latest published package. Confirm the reported
-version is 0.113.1 or a later release whose upgrade notes you have reviewed;
-if it remains 0.113.0 or older, this upgrade has not been applied.
+version is 0.114.0 or a later release whose upgrade notes you have reviewed;
+if it remains 0.113.2 or older, this upgrade has not been applied.
 
 For a uv-managed CLI installation, use `uv tool upgrade agent-bom` after
 publication and verify the resulting version. Preserve any additional cloud
@@ -41,19 +41,34 @@ keep the image role aligned with your deployment manifest. Follow the
 [deployment guide](../site-docs/deployment/overview.md) for your selected
 profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
 
-## Changes from 0.113.0
+## Changes from 0.113.2
 
-- **Navigation.** The sidebar exposes all platform groups without a product-view
-  preset. Retired browser preferences no longer hide pages or reporting.
-  Permissions, deployment capabilities and local report scope still apply.
-- **Continue discovery.** User-level `~/.continue/config.yaml` joins legacy
-  JSON discovery. Review the discovered config paths after upgrading; inventory
-  can now include previously missed servers. Discovery does not launch them.
-- **Persistence.** Apply Postgres migrations through `20261102_10` using your
-  deployment's migration procedure. `20261102_01` adds IaC exception scope
-  columns; `20261102_10` brings existing databases up to the fleet endpoint and
-  retry-safe trend scan schema. Both are additive and idempotent. Preserve the
-  same database, identity settings, signing keys and retained reports.
+- **Helm ingress.** Enabling `controlPlane.ingress` fails rendering unless
+  `controlPlane.api.trustedProxy` declares the proxy in front of the API, or
+  `sharedSourceAccepted` records that all clients share one authentication
+  failure budget. `trustedProxy.fromSecret` requires `secretName`.
+- **Demo Helm profiles.** `sqlite-pilot` and `synthetic-enterprise-story` no
+  longer run without authentication. Add `AGENT_BOM_API_KEYS` to the
+  `agent-bom-control-plane` Secret before upgrading; without it the pod stops at
+  `CreateContainerConfigError`.
+- **Teardown hook.** Its Role grants `deletecollection`, drops `get` and
+  `list`, and holds `delete` on Secrets only for the names it removes. Review
+  any policy that pins the previous Role.
+- **Compose secrets and names.** Secret files are mode 0640 with your primary
+  group and are read through `group_add`. For a direct `docker compose up`, set
+  `AGENT_BOM_SECRETS_GID`. Fixed `container_name` values are removed; address
+  containers through `docker compose` service names.
+- **End-of-life Debian.** Scans of an end-of-life Debian release read `partial`
+  until `agent-bom db update --source debian` loads the Debian Security Tracker
+  data.
+- **Health.** `/health` adds `sso_provider` (`okta`, `entra`, `google`,
+  `generic` or null). It never includes the issuer, tenant or client id.
+- **Persistence.** Apply Postgres migrations through `20261106_01`.
+  `20261105_02` adds a dispatch attempt count, `20261105_03` adds per-finding
+  lifecycle tables and cannot be downgraded (restore a reviewed backup to roll
+  back), `20261105_04` adds AI assessment tables and `20261106_01` adds shared
+  authentication state. The cleanup tick seeds lifecycle dates from retained
+  scans after upgrade.
 - **Finding counts.** `20261104_01` adds KEV, issue-group and coverage columns to
   current findings and backfills them in committed batches. Plan for up to one
   extra copy of `hub_findings_current` and its indexes on disk during the
@@ -75,6 +90,20 @@ profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
   [STORAGE_BACKENDS.md](STORAGE_BACKENDS.md#kev-follows-the-cisa-catalog) for when
   one is available, and rerun `agent-bom db update` once to record completeness on
   an existing vulnerability database.
+
+## Earlier changes from 0.113.0
+
+- **Navigation.** The sidebar exposes all platform groups without a product-view
+  preset. Retired browser preferences no longer hide pages or reporting.
+  Permissions, deployment capabilities and local report scope still apply.
+- **Continue discovery.** User-level `~/.continue/config.yaml` joins legacy
+  JSON discovery. Review the discovered config paths after upgrading; inventory
+  can now include previously missed servers. Discovery does not launch them.
+- **Persistence.** Apply Postgres migrations through `20261102_10` using your
+  deployment's migration procedure. `20261102_01` adds IaC exception scope
+  columns; `20261102_10` brings existing databases up to the fleet endpoint and
+  retry-safe trend scan schema. Both are additive and idempotent. Preserve the
+  same database, identity settings, signing keys and retained reports.
 - **Scheduled scans.** Dispatch rechecks leadership and the current tenant-owned
   schedule. This fails closed for stale due-list records, but does not guarantee
   exactly-once execution after a crash or leadership loss after the final check.

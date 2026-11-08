@@ -4,7 +4,7 @@ description: >-
   Diagnose issues, check prerequisites, and validate configurations. Use when:
   "doctor", "debug", "why failing", "validate config", "check prerequisites",
   "something is broken", "db status", "fix my setup".
-version: 0.113.2
+version: 0.114.0
 license: Apache-2.0
 compatibility: >-
   Requires Python 3.11+. Install via pipx or pip. No credentials required.

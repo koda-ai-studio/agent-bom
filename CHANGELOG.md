@@ -9,6 +9,23 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.114.0] - 2026-11-08
+
+### Highlights
+- Every finding has a scan-driven lifecycle that outlasts scan retention: status, first and last seen, resolved and reopened dates, a `resolution_reason`, and a `stale` label for open findings not seen recently.
+- AI triage is measured against a labelled dataset and appears beside each finding as labelled advice that never changes scanner severity; "Explain this path" writes each sentence from recorded graph edges.
+- Container scan accuracy: end-of-life Debian releases read `partial` until local tracker data is loaded, multi-page OSV results are followed, kernel header packages are not matched against kernel advisories, and Go binaries and their standard library are looked up.
+
+### Upgrade notes
+- Enabling `controlPlane.ingress` in Helm requires `controlPlane.api.trustedProxy` (or `sharedSourceAccepted`); rendering fails without it.
+- The `sqlite-pilot` and `synthetic-enterprise-story` Helm profiles require `AGENT_BOM_API_KEYS` in the `agent-bom-control-plane` Secret.
+- The Helm teardown hook's Role grants `deletecollection`, drops `get` and `list`, and holds `delete` on Secrets only for the names it removes.
+- Compose secret files are mode 0640 with your primary group and are read through `group_add`. Set `AGENT_BOM_SECRETS_GID` for a direct `docker compose up`.
+- The compose files no longer set fixed `container_name` values. Scripts that address containers by the old names should use `docker compose` service names.
+- Scans of end-of-life Debian releases read `partial` until `agent-bom db update --source debian` loads the Debian Security Tracker data.
+- `/health` adds `sso_provider` (`okta`, `entra`, `google`, `generic` or null).
+- Apply Postgres migrations through `20261106_01`. `20261104_01` and `20261105_01` backfill existing rows in bounded batches; `20261105_03` cannot be downgraded. See [0.114.0 upgrade guidance](docs/UPGRADING.md) for disk headroom, duration and rollback.
+
 ### Added
 - Helm `controlPlane.logging.json` (default `false`) and `AGENT_BOM_LOG_JSON` in the fullstack, platform and pilot compose files (default `0`) switch the API and worker pods to JSON logs.
 - AI triage is measured: a labelled dataset and `scripts/ai_triage_eval.py` score false-positive precision and recall, severe dismissals, calibration, invalid responses, injection resistance, latency and tokens per model, and CI replays recorded responses so a regression fails. Results are in `docs/AI_ENRICHMENT.md`.
@@ -18,14 +35,16 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Finding dates now outlast scan retention: `first_seen`, `last_seen`, resolved and reopened dates live in their own per-finding table, written in the same transaction as the scan. A resolved finding stays listed after its scans expire, and late, repeated or concurrent scans cannot move a finding's state incorrectly. The cleanup tick seeds existing dates from retained scans after upgrade, outside any read. Reads no longer rebuild findings for every retained scan.
 - Every resolved finding states why: `resolution_reason` is `no_longer_detected` or `asset_deleted`. `asset_deleted` needs a complete AWS inventory covering the asset's account, region and service, with no warnings or missing permissions, from the same source and scope. Other sources never produce it; see `docs/FINDING_LIFECYCLE.md`.
 - `stale` marks an open finding not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). It stays open and counted, can be filtered with `status=stale` on the API, `--status stale` on the CLI and the Status filter on the Findings page, and never resolves anything.
+- `docs/PLUGIN_SUBMISSION.md` and `make plugin-submission-check`, which stops a directory submission that would ship stale pins or draft legal pages. It stays red until the next release.
+- Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
-- Shared request rate limits on Postgres no longer queue in the database during a large ingest. A hit made three or four round trips, each waiting for CPU-bound ingest and graph threads to release the interpreter, and held its row locks across those waits, so other hits on the same bucket waited in the database (25 statements waited 0.4 to 0.8 s in a measured run; none after). A hit is now one pipelined round trip on a small pool of its own (at most four connections per process), takes no lock another hit waits on, carries 400 ms database bounds, and a request waits up to two seconds. A store outage still falls back to process-local limits. Under sustained CPU-bound load in the API process the fallback can still occur, because the request itself waits for the interpreter.
+- Shared request rate limits on Postgres no longer queue in the database during a large ingest. A hit made three or four round trips, each waiting for CPU-bound ingest and graph threads to release the interpreter, and held its row locks across those waits, so other hits on the same bucket waited in the database (25 statements waited 0.4 to 0.8 s in a measured run; none after). A hit is now one pipelined round trip on a small admission pool shared with authentication state (at most four connections per process), takes no lock another hit waits on, carries 400 ms database bounds, and a request waits up to two seconds. A store outage still falls back to process-local limits. Under sustained CPU-bound load in the API process the fallback can still occur, because the request itself waits for the interpreter.
 - Authentication state queries on Postgres bind every value as a parameter and pipeline their transaction, 400 ms bounds and query in one round trip, instead of sending several statements as one string.
 - Wrong keys no longer get 503 instead of 401 when several arrive at once on SQLite. Failure writers competed for the authentication sidecar through SQLite's busy handler, which polls with growing sleeps, so a writer could lose until its 400 ms bound even when the total work fit inside it. Writers in a process now queue on one lock for the same bound.
 - Graph and findings reads stay fast on large estates. Effective-reach scoring walked every graph edge once per vulnerability, server and advisory row; on a 5,000-agent estate that background work held the CPU for minutes after each ingest, so the first `/v1/graph` read took 99 s and later reads were refused with 429. It now walks the edges once, with identical scores. Graph snapshot statistics (node, edge and relationship counts) are computed once per committed snapshot revision instead of on every page, on SQLite and Postgres. Measured locally at 5,000 agents: graph read p95 fell from 99 s to 2.2 s (first read after ingest 99 s to 21 s) and findings reads from 2.0 s to 32 ms; responses are unchanged.
 - Dashboard text and form fields now meet WCAG AA contrast in both themes. Page lane labels and scope chips used fixed dark-theme colours, so in light mode "Posture" read at 2.34:1 and "Governance" at 2.35:1; they now use theme tokens and read at 4.5:1 or better. Filled actions use the accent text token instead of white (3.65:1 before on the Security graph), the focused "Skip to content" link reads at 9.8:1 in dark mode instead of 1.92:1, and status chips use the status tokens. Form fields now draw their border with `--border-strong` (about 1.4:1 before, 3:1 or better now). Light `--status-success`, `--status-warn` and `--border-strong` and dark `--status-danger` were adjusted so each clears its threshold on every surface, and a test checks these token pairs in both themes.
-- Valid API keys no longer get 503 "Authentication protection unavailable" while a large ingest or graph read runs on Postgres. That work keeps the API's own threads busy, and each of the six round trips in an admission check had to wait for them, so checks missed their 500 ms deadline. Admission state now has its own pool of at most four connections per process, a check is one round trip with the same 400 ms database bounds, and a caller waits up to two seconds for local scheduling. A store error or an outage still fails closed. In a 5,000-agent ingest on Postgres, 4 of 1,490 valid-key checks got 503 before and none after.
+- Valid API keys no longer get 503 "Authentication protection unavailable" while a large ingest or graph read runs on Postgres. That work keeps the API's own threads busy, and each of the six round trips in an admission check had to wait for them, so checks missed their 500 ms deadline. Authentication and rate-limit state now share their own pool of at most four connections per process, a check is one round trip with the same 400 ms database bounds, and a caller waits up to two seconds for local scheduling. A store error or an outage still fails closed. In a 5,000-agent ingest on Postgres, 4 of 1,490 valid-key checks got 503 before and none after.
 - A scan of an end-of-life Debian release without local Debian Security Tracker data no longer reports `complete`. After end of life, OSV's per-CVE Debian records stop listing the release and a live query returns only DSA/DLA advisories, so fixes shipped without one were missed. The scan is now `partial` with a `vulnerability_coverage_gap` that names `agent-bom db update --source debian`. On `nginx:1.21.6` (Debian 11) from a clean install: 195 fixed CVEs in 53 packages, outcome `partial`; after `db update --source debian`: 320 fixed CVEs in 63 packages, outcome `complete`.
 - OSV results that span several pages are now fetched. A query with more than about 1,000 advisories returns a `next_page_token`; the scan treated it as an invalid response and marked every package in the batch as failed. Each paginated query now follows its token within firm bounds of 10 extra pages and 60 seconds per batch. A package cut off by either bound keeps the advisories read so far, is not cached, and gets an `osv_result_page_limit` coverage gap naming it, so the scan is `partial`.
 - Kernel header and UAPI packages (`linux-libc-dev`, `linux-headers-*`, RPM `kernel-headers` and `kernel-devel`, Alpine `linux-headers`) are no longer matched against kernel advisories. A container runs on the host kernel, so those CVEs are not exposure for the image and buried its real findings. The packages stay in the inventory and one scan note per scan gives their count and the reason; real kernel packages (`linux-image-*`, `kernel`) are still matched. `redis:7.0.11` from a clean install: 8,161 CVEs, 198 s and 722 MB peak memory before; 290 CVEs, 23 s and 229 MB after, with outcome `complete`.
@@ -81,10 +100,6 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The GitHub Action reads OSV's application-ecosystem archives by default (`vuln-db-scope: application`, about 0.3 GB instead of 2.9 GB). OS and other packages are answered by live OSV, and the JSON report, SARIF run properties, job summary and pull request comment state the scope. Set `vuln-db-scope: full` for the previous behaviour. The Action's cache key changes, so the first run after upgrading builds a new database.
 - A first `--auto-update-db` refresh caps NVD at 60 seconds, newest CVEs first, and reports it as partial; later refreshes resume it. `AGENT_BOM_NVD_TIME_BUDGET_SECONDS` overrides the cap.
 - `--auto-update-db` prints the time each source took.
-
-### Added
-- `docs/PLUGIN_SUBMISSION.md` and `make plugin-submission-check`, which stops a directory submission that would ship stale pins or draft legal pages. It stays red until the next release.
-- Review cases for each plugin directory in `docs/PLUGIN_REVIEW_CASES.md`, with machine-readable copies, and negative eval cases for over-triggering, chat history requests and live server launches.
 
 ### Fixed
 - A database restart no longer extends an authentication outage: dead pooled connections are retried, the breaker opens only after three consecutive store errors, and one success closes it. In a private Postgres restart test, valid keys went from 25.7 s of 503s to 0.4 s.
@@ -183,8 +198,11 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Image inventory without an evaluated agent entrypoint retains unknown dependency reachability, preserving structural CVE paths without claiming execution.
 - Graph path technique enrichment reuses the batch hop index instead of repeatedly reading the same adjacency lists.
 - Scanner and install guard agree on scoped package typo warnings: unknown namespaces retain leaf checks, lookalike scopes target known scoped packages, and legitimate scoped package names remain clean.
-
 - Keep distributed scan recovery lease-owned and publish pushed-result completion only after graph persistence.
+- The sign-in page shows SSO buttons to signed-out visitors. It reads the configured sign-in modes and the provider family from `/health`.
+- Overview no longer fails to render when a finding's `affected_servers` holds objects; ingest stores server and agent names or ids.
+- Text that used a removed colour token is readable again in both themes.
+- Graph links accept every layer the graph URL supports.
 
 ## [0.113.2] - 2026-11-03
 
@@ -4760,7 +4778,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.2...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.114.0...HEAD
+[0.114.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.2...v0.114.0
 [0.113.2]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.1...v0.113.2
 [0.113.1]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.0...v0.113.1
 [0.113.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.112.1...v0.113.0

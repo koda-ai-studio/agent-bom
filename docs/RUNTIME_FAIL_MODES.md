@@ -662,8 +662,8 @@ Never disable authentication or enable the public tier as a recovery shortcut.
 ## Shared request rate limits
 
 On Postgres, request rate limits (the per-IP ceiling and the per-tenant budgets)
-are shared by every replica through `api_rate_limit_hits` and a pool of their own,
-at most four autocommit connections per process, separate from authentication state. A hit is one round trip: its
+are shared by every replica through `api_rate_limit_hits` and the admission pool,
+at most four autocommit connections per process, shared with authentication state. A hit is one round trip: its
 transaction, 400 ms statement and lock bounds, the prune of that bucket and the
 count-and-record statement are pipelined, with every value bound as a parameter.
 A hit takes no lock another hit waits on, so concurrent hits on other replicas can
@@ -690,7 +690,7 @@ Configure `AGENT_BOM_AUTH_FAILURE_LIMIT`, `AGENT_BOM_AUTH_BACKOFF_SECONDS`, and
 The response is 429 with `Retry-After` and `X-RateLimit-Scope: auth-source`.
 
 On Postgres the state uses the migration-owned `api_auth_failure_limits` table
-through a pool of its own: at most four autocommit connections per process, with the application role and its
+through the admission pool it shares with rate limits: at most four autocommit connections per process, with the application role and its
 row-level-security check. Ingest, graph and report work hold the application pool
 for seconds, so admission never queues behind them. An admission read is one round
 trip: its transaction, `SET LOCAL` 400 ms statement and lock bounds, the read with

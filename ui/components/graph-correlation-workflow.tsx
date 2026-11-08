@@ -39,6 +39,8 @@ export type GraphCorrelationOutcome = {
   target: string;
   finding?: string | undefined;
   packageName?: string | undefined;
+  /** "absent" only when every hop is loaded and none is a package. */
+  packageHop?: "present" | "absent" | "unknown" | undefined;
   risk: number;
   hops: number;
   runtimeObserved: boolean;
@@ -284,7 +286,7 @@ export function GraphCorrelationWorkflow({
                   <div className="gc-impact-route">
                     <div><span className="gc-impact-label">Entry point</span><strong>{boundOutcome.source}</strong></div>
                     <ArrowRight className="gc-impact-arrow" aria-hidden="true" />
-                    <div><span className="gc-impact-label">Vulnerable package</span><strong>{boundOutcome.packageName ?? "Package unavailable"}</strong>{boundOutcome.finding && <span className="gc-impact-finding">{boundOutcome.finding}</span>}</div>
+                    <div><span className="gc-impact-label">Vulnerable package</span><strong>{boundOutcome.packageName ?? (boundOutcome.packageHop === "absent" ? "No package on this path" : "Package unavailable")}</strong>{boundOutcome.finding && <span className="gc-impact-finding">{boundOutcome.finding}</span>}</div>
                     <ArrowRight className="gc-impact-arrow" aria-hidden="true" />
                     <div><span className="gc-impact-label">Path target</span><strong>{boundOutcome.target}</strong></div>
                   </div>

@@ -366,4 +366,4 @@ or follow the [maintainer path](GOVERNANCE.md) ([review owners](MAINTAINERS.md))
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
-Source version: **v0.113.2** · Latest release: **v0.113.2** · [Changelog](CHANGELOG.md)
+Source version: **v0.114.0** · Latest release: **v0.113.2** · [Changelog](CHANGELOG.md)
