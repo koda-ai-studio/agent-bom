@@ -20,6 +20,7 @@ __all__ = [
     "_DYNAMIC_RELATIONSHIP_VALUES",
     "_FINDING_ENTITY_TYPE_VALUES",
     "decode_graph_cursor",
+    "empty_snapshot_stats",
     "encode_graph_cursor",
     "revision_cached_stats",
 ]
@@ -47,6 +48,22 @@ MAX_NODE_PAGE_OFFSET = 10_000
 _STATS_CACHE: OrderedDict[tuple[Any, ...], dict[str, Any]] = OrderedDict()
 _STATS_CACHE_LOCK = threading.Lock()
 _STATS_CACHE_MAX = 256
+
+
+def empty_snapshot_stats() -> dict[str, Any]:
+    """Stats for a snapshot that does not exist."""
+    return {
+        "total_nodes": 0,
+        "total_edges": 0,
+        "node_types": {},
+        "severity_counts": {},
+        "relationship_types": {},
+        "attack_path_count": 0,
+        "interaction_risk_count": 0,
+        "max_attack_path_risk": 0.0,
+        "highest_interaction_risk": 0.0,
+        "analysis_status": {},
+    }
 
 
 def revision_cached_stats(

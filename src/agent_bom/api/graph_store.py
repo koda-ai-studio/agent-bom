@@ -29,7 +29,7 @@ from agent_bom.api.graph_store_support import _CREATE_PRESET_TABLE_SQLITE as _CR
 from agent_bom.api.graph_store_support import _DYNAMIC_RELATIONSHIP_VALUES as _DYNAMIC_RELATIONSHIP_VALUES
 from agent_bom.api.graph_store_support import _FINDING_ENTITY_TYPE_VALUES as _FINDING_ENTITY_TYPE_VALUES
 from agent_bom.api.graph_store_support import MAX_NODE_PAGE_OFFSET as MAX_NODE_PAGE_OFFSET
-from agent_bom.api.graph_store_support import SQLITE_INVENTORY_SEARCH_CLAUSE, revision_cached_stats
+from agent_bom.api.graph_store_support import SQLITE_INVENTORY_SEARCH_CLAUSE, empty_snapshot_stats, revision_cached_stats
 from agent_bom.api.graph_store_support import _assert_offset_within_cap as _assert_offset_within_cap
 from agent_bom.api.graph_store_support import _attach_sibling_relationships as _attach_sibling_relationships
 from agent_bom.api.graph_store_support import _drilldown_subtree_budget as _drilldown_subtree_budget
@@ -466,33 +466,11 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
         tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
         conn = self._open_ro_conn()
         if conn is None:
-            return {
-                "total_nodes": 0,
-                "total_edges": 0,
-                "node_types": {},
-                "severity_counts": {},
-                "relationship_types": {},
-                "attack_path_count": 0,
-                "interaction_risk_count": 0,
-                "max_attack_path_risk": 0.0,
-                "highest_interaction_risk": 0.0,
-                "analysis_status": {},
-            }
+            return empty_snapshot_stats()
         try:
             effective_scan_id, _created_at = sqlite_graph_store._resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
             if not effective_scan_id:
-                return {
-                    "total_nodes": 0,
-                    "total_edges": 0,
-                    "node_types": {},
-                    "severity_counts": {},
-                    "relationship_types": {},
-                    "attack_path_count": 0,
-                    "interaction_risk_count": 0,
-                    "max_attack_path_risk": 0.0,
-                    "highest_interaction_risk": 0.0,
-                    "analysis_status": {},
-                }
+                return empty_snapshot_stats()
             return revision_cached_stats(
                 str(self._db_path),
                 tenant_id,
