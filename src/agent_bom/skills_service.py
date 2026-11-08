@@ -59,14 +59,7 @@ class SkillFileReport:
             "path": str(self.path),
             "status": self.status,
             "bundle": self.bundle.to_dict(),
-            "packages": [
-                {
-                    "name": pkg.name,
-                    "version": pkg.version,
-                    "ecosystem": pkg.ecosystem,
-                }
-                for pkg in self.scan.packages
-            ],
+            "packages": [{"name": pkg.name, "version": pkg.version, "ecosystem": pkg.ecosystem} for pkg in self.scan.packages],
             "servers": [
                 {
                     "name": server.name,
