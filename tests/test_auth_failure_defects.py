@@ -104,6 +104,10 @@ class _StalePool:
             def execute(self, *_args):
                 return Cursor()
 
+            @contextmanager
+            def pipeline(self):
+                yield
+
         yield Connection()
 
 
@@ -805,12 +809,50 @@ def test_static_key_request_does_not_verify_again_for_its_rate_limit_bucket(monk
         assert client.get("/v1/findings", headers={"x-api-key": "valid-test-credential"}).status_code == 200
 
 
-def test_a_source_is_quoted_as_a_standard_sql_string():
-    from agent_bom.api.auth_failure_store import _BOUNDED_READ, sql_string_literal
+def test_a_failed_bounded_read_rolls_back_and_raises():
+    from agent_bom.api.rate_limit_store import bounded_round_trip
 
-    assert sql_string_literal("203.0.113.7") == "'203.0.113.7'"
-    assert sql_string_literal("x'; DROP TABLE t; --") == "'x''; DROP TABLE t; --'"
-    assert sql_string_literal("a\\b") == "'a\\b'"
-    assert "standard_conforming_strings = on" in _BOUNDED_READ
-    with pytest.raises(ValueError):
-        sql_string_literal("a\x00b")
+    sent = []
+
+    class CanceledError(Exception):
+        sqlstate = "57014"
+
+    class Connection:
+        def execute(self, sql, parameters=None):
+            sent.append(sql)
+
+        @contextmanager
+        def pipeline(self):
+            yield
+            raise CanceledError()
+
+    with pytest.raises(CanceledError):
+        bounded_round_trip(Connection(), [("SELECT pg_sleep(%s)", (1,))])
+    # The connection returns to the pool outside any transaction.
+    assert sent[-1] == "ROLLBACK"
+
+
+def test_concurrent_sqlite_failure_writes_queue_instead_of_starving(tmp_path):
+    # Ten writers, each holding the sidecar for 35 ms, need 350 ms in all. SQLite's
+    # busy handler polls with growing sleeps, so without a local queue a writer can keep
+    # losing until its 400 ms bound and a wrong key is answered 503 instead of 401.
+    store = SQLiteAuthFailureStore(str(tmp_path / "limits.db"))
+    refused = []
+    start = threading.Barrier(10)
+
+    def write(number: int) -> None:
+        start.wait()
+        try:
+            with store.transaction(f"192.0.2.{number}") as execute:
+                execute("SELECT 1", ())
+                time.sleep(0.035)
+        except TimeoutError:
+            refused.append(number)
+
+    for _ in range(2):
+        threads = [threading.Thread(target=write, args=(n,)) for n in range(10)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+    assert refused == []

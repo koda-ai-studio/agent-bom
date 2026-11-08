@@ -192,8 +192,12 @@ class _RecordingConn:
         self._statements.append(" ".join(str(sql).split()))
         return self
 
+    def pipeline(self):
+        self._statements.append("<pipeline>")
+        return self
+
     def fetchone(self):
-        return (1, 0.0)
+        return (1, 0.0, 1)
 
     def __enter__(self):
         return self
@@ -206,7 +210,7 @@ class _RecordingPool:
     def __init__(self) -> None:
         self.statements: list[str] = []
 
-    def connection(self):
+    def connection(self, timeout=None):
         return _RecordingConn(self.statements)
 
 
@@ -220,6 +224,9 @@ def test_postgres_hot_path_prune_is_bucket_scoped_and_global_prune_is_periodic()
     now = time.time()
     store.hit("ip:a", now)
     store.hit("ip:b", now + 1)
+    # One pipeline, so one round trip, per hit, carrying its own database bounds.
+    assert pool.statements.count("<pipeline>") == 2
+    assert pool.statements.count("SET LOCAL statement_timeout = '400ms'") == 2
     deletes = [sql for sql in pool.statements if sql.startswith("DELETE")]
     bucket_deletes = [sql for sql in deletes if "bucket_key = %s" in sql]
     global_deletes = [sql for sql in deletes if "bucket_key" not in sql]
