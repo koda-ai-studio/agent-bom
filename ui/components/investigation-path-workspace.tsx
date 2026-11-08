@@ -175,7 +175,7 @@ export function InvestigationTools({ scope, deployment, exposure }: {
     <div role="group" aria-label="Investigation tools" className="my-3 flex flex-wrap gap-1">
       {panels.map(panel => <button key={panel.id} type="button" aria-pressed={active === panel.id}
         aria-controls="investigation-tool-panel" onClick={() => setActive(panel.id)}
-        className={`min-h-11 rounded-lg px-3 py-2 text-sm ${active === panel.id ? "bg-emerald-600 text-white" : "border border-outline text-ink-secondary"}`}>
+        className={`min-h-11 rounded-lg px-3 py-2 text-sm ${active === panel.id ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]" : "border border-outline text-ink-secondary"}`}>
         {panel.label}
       </button>)}
     </div>

@@ -40,7 +40,7 @@ export function AccountMenu() {
         {session ? <div className="flex min-w-0 items-center gap-3">
           <Building2 className="h-5 w-5 shrink-0 text-ink-secondary" aria-hidden="true" />
           <span className="min-w-0 flex-1" title={session.tenant_id}><span className="block text-xs text-ink-secondary">Tenant ID</span><span className="block truncate text-sm font-medium">{session.tenant_id}</span></span>
-          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-300">Active</span>
+          <span className="rounded-full border border-[color:var(--status-success-border)] bg-[color:var(--status-success-bg)] text-[color:var(--status-success)] px-2.5 py-1 text-xs font-medium">Active</span>
         </div> : <p className="text-xs text-ink-secondary">No active workspace is available in offline mode.</p>}
       </section>
       <section aria-labelledby="account-theme-label" className="border-b border-outline py-4">

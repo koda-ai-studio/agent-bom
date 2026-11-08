@@ -769,7 +769,7 @@ function CompliancePageContent() {
             onClick={() => setViewMode(key)}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
               viewMode === key
-                ? "bg-[color:var(--accent-soft)] text-[color:var(--accent)]"
+                ? "bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]"
                 : "text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)]"
             }`}
           >

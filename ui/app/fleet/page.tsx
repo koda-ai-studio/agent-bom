@@ -257,7 +257,7 @@ export default function FleetPage() {
             onClick={handleSync}
             disabled={syncing || !canManageFleet}
             title={!canManageFleet ? "Admin role required to sync fleet state" : undefined}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[color:var(--accent)] hover:bg-[color:var(--accent-strong)] disabled:opacity-50 text-[color:var(--accent-contrast)] rounded-lg text-sm font-medium transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing..." : "Sync Now"}

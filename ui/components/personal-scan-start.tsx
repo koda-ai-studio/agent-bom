@@ -11,7 +11,7 @@ export function PersonalScanStart({ onPreview }: { onPreview: () => void }) {
     <code aria-label="Local scan command" className="block whitespace-pre-wrap break-words rounded-lg bg-surface p-3 text-xs leading-5 [overflow-wrap:anywhere]">{LOCAL_COMMAND}</code>
     <div className="flex flex-wrap gap-2">
       <CopyTextButton text={LOCAL_COMMAND} label="Copy local scan command" />
-      <button type="button" onClick={onPreview} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600">Open a report</button>
+      <button type="button" onClick={onPreview} className="rounded-lg bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--accent-contrast)] hover:bg-[color:var(--accent-strong)]">Open a report</button>
     </div>
     <p className="text-sm leading-6 text-ink-secondary">Result: report.json on your machine. Preview it below, review coverage, investigate a finding, then fix and rescan the same project. Previewing does not upload the report to the control plane.</p>
   </div>;

@@ -629,7 +629,7 @@ export function UnifiedRow({
             <CategoryChip category={row.category} />
             {isCloud && isOrganizationScope(connection!) ? (
               <span
-                className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-200"
+                className="inline-flex items-center rounded-full border border-[color:var(--status-success-border)] bg-[color:var(--status-success-bg)] text-[color:var(--status-success)] px-2 py-0.5 text-[10px] font-medium"
                 title="Connections scan fans out across organization member accounts"
                 data-testid="connection-org-scope-chip"
               >

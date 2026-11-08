@@ -9,7 +9,7 @@ export default function NotFound() {
       <p className="text-sm text-[var(--text-secondary)]">The page you are looking for does not exist.</p>
       <Link
         href="/"
-        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-md text-sm text-white transition-colors"
+        className="px-4 py-2 bg-[color:var(--accent)] hover:bg-[color:var(--accent-strong)] rounded-md text-sm text-[color:var(--accent-contrast)] transition-colors"
       >
         Back to Overview
       </Link>
