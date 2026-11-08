@@ -551,7 +551,7 @@ export default function GatewayPage() {
                 ) : (
                   <ShieldAlert className="w-5 h-5 text-red-400" />
                 )}
-                <span className={`text-sm font-semibold ${evalResult.allowed ? "text-emerald-300" : "text-red-300"}`}>
+                <span className={`text-sm font-semibold ${evalResult.allowed ? "text-[color:var(--status-success)]" : "text-[color:var(--status-danger)]"}`}>
                   {evalResult.allowed ? "Allowed" : "Blocked"}
                 </span>
               </div>

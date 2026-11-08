@@ -49,7 +49,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <SidebarLayoutProvider>
       <a
         href="#main-content"
-        className="fixed left-4 top-3 z-[100] -translate-y-20 rounded-lg bg-[color:var(--accent)] px-3 py-2 text-sm font-semibold text-white shadow-lg transition-transform focus:translate-y-0"
+        className="fixed left-4 top-3 z-[100] -translate-y-20 rounded-lg bg-[color:var(--accent)] px-3 py-2 text-sm font-semibold text-[color:var(--accent-contrast)] shadow-lg transition-transform focus:translate-y-0"
       >
         Skip to content
       </a>

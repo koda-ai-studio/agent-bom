@@ -144,7 +144,7 @@ export function LoginPanel({
             <div className="mx-auto mb-4 flex justify-center">
               <BrandLogo />
             </div>
-            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-500">Workspace access</p>
+            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-[color:var(--accent)]">Workspace access</p>
             <h1 className="text-center text-2xl font-semibold tracking-tight text-[var(--foreground)]">{title}</h1>
             <p className="mt-2 text-center text-sm leading-5 text-[var(--text-secondary)]">
               {ssoConfigured

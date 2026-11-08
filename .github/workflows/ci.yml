@@ -1931,6 +1931,7 @@ jobs:
             tests/test_graph_adjacency_page.py \
             tests/test_graph_cross_vendor_index.py \
             tests/test_graph_page_edge_budget_postgres.py \
+            tests/test_graph_snapshot_stats_cache_postgres.py \
             tests/test_vex_graph_severity_counts_postgres.py \
             tests/test_postgres_gateway_activity.py \
             tests/test_postgres_gateway_delivery.py \

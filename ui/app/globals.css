@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./connections.css";
 @import "./graph-card-text.css";
+@import "./form-fields.css";
 
 /* Tailwind's dark variant follows the same explicit selector as the runtime
  * theme toggle; it must not depend on the host operating-system preference. */
@@ -100,7 +101,7 @@
   --status-warn: #fbbf24;
   --status-warn-bg: rgba(251, 191, 36, 0.14);
   --status-warn-border: rgba(251, 191, 36, 0.45);
-  --status-danger: var(--severity-critical);
+  --status-danger: #ff8a8a;
   --status-danger-bg: var(--severity-critical-bg);
   --status-danger-border: var(--severity-critical-border);
 
@@ -143,7 +144,7 @@
   --surface-metric: #eef3fa;
   --surface-muted: rgba(190, 198, 212, 0.5);
   --border-subtle: rgba(130, 145, 168, 0.26);
-  --border-strong: rgba(90, 105, 128, 0.72);
+  --border-strong: rgba(90, 105, 128, 0.85);
   --text-secondary: #374151;
   --text-tertiary: #55627a;
   --shadow-color: rgba(15, 23, 42, 0.1);
@@ -187,10 +188,10 @@
   --severity-ring-medium: #a17a00;
   --severity-ring-low: #2563eb;
 
-  --status-success: #047857;
+  --status-success: #046c4e;
   --status-success-bg: rgba(5, 150, 105, 0.1);
   --status-success-border: rgba(5, 150, 105, 0.38);
-  --status-warn: #b45309;
+  --status-warn: #a34a07;
   --status-warn-bg: rgba(217, 119, 6, 0.1);
   --status-warn-border: rgba(217, 119, 6, 0.38);
   --status-danger: var(--severity-critical);
@@ -451,7 +452,7 @@ body {
 .ep-view-toggle { @apply inline-flex items-center overflow-hidden rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]; }
 .ep-path-frame { @apply rounded-lg bg-[color:var(--surface-panel)] p-3; }
 .ep-graph-hint { @apply rounded-2xl border border-dashed border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]/60 px-4 py-6 text-center text-xs text-[color:var(--text-secondary)]; }
-.ep-primary-action { @apply inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 sm:text-sm; }
+.ep-primary-action { @apply inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg bg-[color:var(--accent)] px-3 py-2 text-xs font-semibold text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)] sm:text-sm; }
 .ep-details { @apply rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]/70; }
 .ep-details-summary { @apply flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[15px] font-medium text-[color:var(--foreground)]; }
 .ep-details-summary::-webkit-details-marker { display: none; }
@@ -515,7 +516,7 @@ body {
 .gc-package { @apply rounded-full border border-sky-500/30 bg-sky-500/10 px-2.5 py-1 text-sky-700 dark:text-sky-200; }
 .gc-finding { @apply rounded-full border border-orange-500/30 bg-orange-500/10 px-2.5 py-1 text-orange-700 dark:text-orange-200; }
 .gc-runtime-summary { @apply mt-3 max-w-3xl text-[15px] leading-6 text-[color:var(--text-secondary)]; }
-.gc-primary { @apply rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500; }
+.gc-primary { @apply rounded-lg bg-[color:var(--accent)] px-3 py-2 font-semibold text-[color:var(--accent-contrast)] hover:bg-[color:var(--accent-strong)]; }
 .gc-primary-inline { @apply mt-5 inline-flex min-h-11 items-center gap-3; }
 .gc-open-path { @apply rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 font-semibold text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-300; }
 .gc-metadata { @apply mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[15px] text-[color:var(--text-secondary)]; }
@@ -525,11 +526,11 @@ body {
 .gc-receipt { @apply min-w-0 rounded-md bg-[color:var(--surface-elevated)] px-2.5 py-2 text-[10px]; }
 .gc-empty { @apply mt-4 rounded-xl border border-dashed border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-xs text-[color:var(--text-secondary)]; }
 .gc-form { @apply border-t border-[color:var(--border-subtle)] p-3; }
-.gc-input { @apply mt-1 w-full rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2 text-sm text-[color:var(--foreground)]; }
+.gc-input { @apply mt-1 w-full rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--surface)] px-3 py-2 text-sm text-[color:var(--foreground)]; }
 .gc-snapshots { @apply mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3; }
 .gc-snapshot { @apply flex min-w-0 items-start gap-2 rounded-xl border p-3 text-xs; }
 .gc-form-actions { @apply mt-3 flex flex-wrap items-center gap-4 text-xs text-[color:var(--text-secondary)]; }
-.gc-submit { @apply rounded-lg bg-emerald-600 px-3 py-2 font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50; }
+.gc-submit { @apply rounded-lg bg-[color:var(--accent)] px-3 py-2 font-medium text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50; }
 .gc-chevron { @apply h-4 w-4 text-[color:var(--text-tertiary)] transition group-open:rotate-180; }
 .gc-step-title { @apply text-xs font-semibold leading-4 text-[color:var(--foreground)]; }
 .gc-step-detail { @apply truncate text-xs text-[color:var(--text-tertiary)]; }
@@ -686,8 +687,8 @@ body {
 .attack-flow-loading { @apply flex h-[80vh] items-center justify-center text-[var(--text-secondary)]; }
 .attack-flow-error { @apply flex h-[80vh] flex-col items-center justify-center gap-3 text-[var(--text-secondary)]; }
 .graph-page-header { @apply px-4 py-2; background: var(--background); }
-.graph-page-select { @apply rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] focus:border-sky-600 focus:outline-none; }
-.graph-page-search { @apply min-w-[10rem] flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus:border-sky-600 focus:outline-none; }
+.graph-page-select { @apply rounded-md border border-[var(--border-strong)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] focus:border-sky-600 focus:outline-none; }
+.graph-page-search { @apply min-w-[10rem] flex-1 rounded-md border border-[var(--border-strong)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus:border-sky-600 focus:outline-none; }
 /* In the phone search panel the field shrinks so the submit button stays inside the panel. */
 [data-testid="mobile-graph-search"] form, [data-testid="mobile-graph-search"] .graph-page-search { min-width: 0; }
 .graph-page-action { @apply cursor-pointer rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40; }
@@ -726,7 +727,7 @@ body {
 .agents-cloud-chip { @apply rounded border border-sky-500/30 bg-sky-500/10 px-1.5 py-0.5 font-mono text-[10px] text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300; }
 .agents-flow-drawer { @apply absolute right-4 top-4 z-50 w-72 overflow-hidden rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] shadow-2xl; }
 .agents-collapse-toggle { @apply cursor-pointer text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)]; }
-.agents-scan-action { @apply flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500; }
+.agents-scan-action { @apply flex items-center gap-2 rounded-lg bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--accent-contrast)] transition-colors hover:bg-[color:var(--accent-strong)]; }
 .agents-section-label { @apply flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-tertiary)]; }
 .agents-row-button { @apply flex w-full items-center justify-between px-4 py-3 transition-colors hover:bg-[color:var(--surface-elevated)]/50; }
 .agents-icon-button { @apply shrink-0 rounded p-0.5 text-[color:var(--text-tertiary)] transition-colors hover:text-[color:var(--foreground)]; }
@@ -918,7 +919,7 @@ main > div {
 .investigation-workspace { @apply grid min-w-0 gap-3; grid-template-columns: minmax(0, 1fr); }
 .investigation-panel-switch { @apply flex gap-1 rounded-lg border border-outline bg-surface p-1; }
 .investigation-panel-switch button { @apply min-h-11 flex-1 rounded-md px-3 text-sm text-ink-secondary; }
-.investigation-panel-switch button[aria-pressed="true"] { @apply bg-emerald-600 text-white; }
+.investigation-panel-switch button[aria-pressed="true"] { @apply bg-[color:var(--accent)] text-[color:var(--accent-contrast)]; }
 .investigation-workspace[data-mobile-panel="path"] > .investigation-queue,
 .investigation-workspace[data-mobile-panel="queue"] > .investigation-selected-path { display: none; }
 .investigation-queue-body { max-height: min(38rem, 65svh); overflow: auto; }

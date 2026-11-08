@@ -150,7 +150,7 @@ export default function AuditLogPage() {
       {!showAdmin && <>
       <section aria-label="Control-plane integrity" className="border-y border-[var(--border-subtle)] py-3 text-sm">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <strong className={integrity?.tampered ? "text-red-600 dark:text-red-400" : ""}>
+          <strong className={integrity?.tampered ? "text-[color:var(--status-danger)]" : ""}>
             {loading ? "Checking integrity…" : !integrity ? "Integrity unavailable" : integrity.tampered
               ? `${integrity.tampered.toLocaleString()} integrity exceptions need review`
               : integrity.unverifiable ? integrity.error || "Cannot verify: signing key changed"
@@ -194,7 +194,7 @@ export default function AuditLogPage() {
               onChange={(e) => { setResourceFilter(e.target.value); setPage(0); }} />
           </label>
         </div>
-        {error && !loading && <p role="alert" className="py-4 text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {error && !loading && <p role="alert" className="py-4 text-sm text-[color:var(--status-danger)]">{error}</p>}
         {!loading && !error && entries.length === 0 && <p className="py-6 text-sm text-[var(--text-secondary)]">No events match this scope. Adjust the filters or record an action to begin an audit trail.</p>}
         {!loading && !error && entries.length > 0 && <div className="divide-y divide-[var(--border-subtle)] border-y border-[var(--border-subtle)]">
           <div aria-hidden="true" className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,2fr)_minmax(0,1fr)_minmax(0,1.4fr)_1rem] gap-3 py-2 text-xs text-[var(--text-tertiary)] lg:grid">

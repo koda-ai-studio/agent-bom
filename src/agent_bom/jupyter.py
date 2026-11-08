@@ -12,6 +12,7 @@ import re
 from pathlib import Path
 
 from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface
+from agent_bom.parsers.install_commands import parse_install_commands
 
 logger = logging.getLogger(__name__)
 
@@ -101,21 +102,14 @@ def _extract_code_cells(notebook_path: Path) -> list[str]:
 def _parse_pip_packages(line: str) -> list[tuple[str, str]]:
     """Parse package names and versions from a pip install line."""
     results = []
-    # Remove flags like -q, --quiet, -U, --upgrade, --no-cache-dir
-    cleaned = re.sub(r"\s-[-\w]+(?:\s+\S+)?", " ", line)
-    # One requirement per whitespace-separated token: ``"anthropic>=2.0.0,<3"``
-    # is a single package with a version range, not ``anthropic`` plus a
-    # package called ``3``.
-    for token in cleaned.split():
-        token = token.strip("\"'")
+    # One requirement per shell token: ``"anthropic>=2.0.0,<3"`` is a single
+    # package with a version range, not ``anthropic`` plus a package called ``3``.
+    for _ecosystem, token in parse_install_commands(f"pip install {line}").packages:
         match = _PKG_SPEC_RE.match(token)
         if not match:
             continue
         name = match.group(1).strip()
         version = match.group(2) or ""
-        # Skip if it looks like a flag or URL
-        if name.startswith("-") or name.startswith("http") or name.startswith("git+"):
-            continue
         if name:
             results.append((name, version))
     return results

@@ -47,7 +47,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-from agent_bom.context_graph import ContextGraph, EdgeKind, GraphNode, NodeKind, _finding_package_identity, build_context_graph
+from agent_bom.context_graph import ContextGraph, EdgeKind, GraphEdge, GraphNode, NodeKind, _finding_package_identity, build_context_graph
 
 # ── Capability weighting (deterministic) ──────────────────────────────────
 #
@@ -272,19 +272,45 @@ class ReachScore:
 # ── Graph traversal ───────────────────────────────────────────────────────
 
 
-def _affected_servers(graph: ContextGraph, vuln_node_id: str) -> list[str]:
+@dataclass
+class _ReachIndex:
+    """One walk of ``graph.edges``, so scoring every vuln, server and row stays linear.
+
+    Built for one scoring pass; a graph mutated afterwards needs a new index.
+    """
+
+    vulnerable_to: dict[str, list[GraphEdge]] = field(default_factory=dict)
+    users: dict[str, set[str]] = field(default_factory=dict)
+    sharers: dict[object, set[str]] = field(default_factory=dict)
+
+    @classmethod
+    def of(cls, graph: ContextGraph) -> _ReachIndex:
+        index = cls()
+
+        def agent_label(node_id: str) -> str | None:
+            node = graph.nodes.get(node_id)
+            return node.label if node and node.kind == NodeKind.AGENT else None
+
+        for edge in graph.edges:
+            if edge.kind == EdgeKind.VULNERABLE_TO:
+                index.vulnerable_to.setdefault(edge.target, []).append(edge)
+            if edge.kind == EdgeKind.USES and (label := agent_label(edge.source)) is not None:
+                index.users.setdefault(edge.target, set()).add(label)
+            if edge.kind == EdgeKind.SHARES_SERVER:
+                labels = index.sharers.setdefault(edge.metadata.get("server"), set())
+                labels.update(label for endpoint in (edge.source, edge.target) if (label := agent_label(endpoint)) is not None)
+        return index
+
+
+def _affected_servers(graph: ContextGraph, vuln_node_id: str, index: _ReachIndex | None = None) -> list[str]:
     """Return server-node IDs that point at this vuln via VULNERABLE_TO.
 
     The graph stores VULNERABLE_TO as ``server -> vuln`` (with reverse
-    adjacency for traversal).  We scan ``edges`` directly so the result
+    adjacency for traversal).  We read ``edges`` directly so the result
     is independent of dict ordering and stays deterministic.
     """
-    out: list[str] = []
-    for edge in graph.edges:
-        if edge.kind == EdgeKind.VULNERABLE_TO and edge.target == vuln_node_id:
-            out.append(edge.source)
-    out.sort()
-    return out
+    index = index or _ReachIndex.of(graph)
+    return sorted(edge.source for edge in index.vulnerable_to.get(vuln_node_id, ()))
 
 
 def _tools_for_server(graph: ContextGraph, server_id: str) -> list[GraphNode]:
@@ -313,7 +339,7 @@ def _creds_for_server(graph: ContextGraph, server_id: str) -> list[GraphNode]:
     return creds
 
 
-def _agents_for_server(graph: ContextGraph, server_id: str) -> list[str]:
+def _agents_for_server(graph: ContextGraph, server_id: str, index: _ReachIndex | None = None) -> list[str]:
     """Agents that can pivot through the given server (sorted).
 
     Start with direct ``USES`` ownership, then fold in the graph-derived
@@ -332,20 +358,9 @@ def _agents_for_server(graph: ContextGraph, server_id: str) -> list[str]:
     if owner:
         out.add(str(owner))
 
-    for edge in graph.edges:
-        if edge.kind == EdgeKind.USES and edge.target == server_id:
-            agent = graph.nodes.get(edge.source)
-            if agent and agent.kind == NodeKind.AGENT:
-                out.add(agent.label)
-
-        if edge.kind != EdgeKind.SHARES_SERVER:
-            continue
-        if edge.metadata.get("server") != server_name:
-            continue
-        for endpoint_id in (edge.source, edge.target):
-            agent = graph.nodes.get(endpoint_id)
-            if agent and agent.kind == NodeKind.AGENT:
-                out.add(agent.label)
+    index = index or _ReachIndex.of(graph)
+    out |= index.users.get(server_id, set())
+    out |= index.sharers.get(server_name, set())
 
     # Backward-compatible fallback for callers that manually connect
     # server -> agent in adjacency without using graph.edges.
@@ -373,7 +388,7 @@ def _max_capability_weight(tool: GraphNode) -> tuple[float, str]:
 # ── Public API ────────────────────────────────────────────────────────────
 
 
-def compute(node: GraphNode, graph: ContextGraph) -> ReachScore:
+def compute(node: GraphNode, graph: ContextGraph, index: _ReachIndex | None = None) -> ReachScore:
     """Compute the deterministic effective-reach score for a CVE node.
 
     ``node`` must be a :class:`NodeKind.VULNERABILITY` graph node; for
@@ -382,22 +397,24 @@ def compute(node: GraphNode, graph: ContextGraph) -> ReachScore:
     finding-shaped nodes too.
     """
     symbol_reachability = node.metadata.get("symbol_reachability")
+    index = index or _ReachIndex.of(graph)
     return ReachScore(
         cvss=float(node.metadata.get("cvss_score") or 0.0),
         epss=float(node.metadata.get("epss_score") or 0.0),
         is_kev=bool(node.metadata.get("is_kev")),
         symbol_reachability=str(symbol_reachability) if symbol_reachability else None,
-        **_server_context(graph, _affected_servers(graph, node.id)),
+        **_server_context(graph, _affected_servers(graph, node.id, index), index),
     )
 
 
-def _server_context(graph: ContextGraph, server_ids: list[str]) -> dict:
+def _server_context(graph: ContextGraph, server_ids: list[str], index: _ReachIndex | None = None) -> dict:
     """Tool, credential and agent reach of exactly ``server_ids``."""
     tool_capability = 0.0
     cred_visibility = 0.0
     reachable_tools: list[str] = []
     reachable_creds: list[str] = []
     reachable_agents: set[str] = set()
+    index = index or _ReachIndex.of(graph)
 
     for server_id in server_ids:
         for tool in _tools_for_server(graph, server_id):
@@ -413,7 +430,7 @@ def _server_context(graph: ContextGraph, server_ids: list[str]) -> dict:
                 cred_visibility = visibility
             if cred.label not in reachable_creds:
                 reachable_creds.append(cred.label)
-        for agent_name in _agents_for_server(graph, server_id):
+        for agent_name in _agents_for_server(graph, server_id, index):
             reachable_agents.add(agent_name)
 
     return {
@@ -426,7 +443,7 @@ def _server_context(graph: ContextGraph, server_ids: list[str]) -> dict:
     }
 
 
-def _occurrence_servers(graph: ContextGraph, blast_row: dict) -> list[str]:
+def _occurrence_servers(graph: ContextGraph, blast_row: dict, index: _ReachIndex | None = None) -> list[str]:
     """Servers the graph links to this one occurrence (vuln + package + owners)."""
     _ecosystem, name, version = _finding_package_identity(blast_row)
     package_ref = f"{name}@{version}" if version else name
@@ -434,8 +451,8 @@ def _occurrence_servers(graph: ContextGraph, blast_row: dict) -> list[str]:
     servers = set(blast_row.get("affected_servers") or [])
     target = f"vuln:{blast_row.get('vulnerability_id', '')}"
     out: list[str] = []
-    for edge in graph.edges:
-        if edge.kind != EdgeKind.VULNERABLE_TO or edge.target != target or package_ref not in edge.metadata.get("packages", []):
+    for edge in (index or _ReachIndex.of(graph)).vulnerable_to.get(target, ()):
+        if package_ref not in edge.metadata.get("packages", []):
             continue
         server = graph.nodes.get(edge.source)
         if server is None or (agents and server.metadata.get("agent") not in agents) or (servers and server.label not in servers):
@@ -460,11 +477,12 @@ def occurrence_contexts(graph: ContextGraph, blast_data: list[dict]) -> dict[str
     owning agent, over only the servers the graph links to that agent.
     """
     servers_by_key: dict[str, set[str]] = {}
+    index = _ReachIndex.of(graph)
     for blast_row in blast_data:
         identities = {str(blast_row[key]) for key in ("canonical_id", "finding_id") if blast_row.get(key)}
         if not identities or not blast_row.get("vulnerability_id"):
             continue
-        for server_id in _occurrence_servers(graph, blast_row):
+        for server_id in _occurrence_servers(graph, blast_row, index):
             agent = str((graph.nodes[server_id].metadata or {}).get("agent") or "")
             if not agent:
                 continue
@@ -472,7 +490,7 @@ def occurrence_contexts(graph: ContextGraph, blast_data: list[dict]) -> dict[str
                 servers_by_key.setdefault(_occurrence_key(identity, agent), set()).add(server_id)
     out: dict[str, dict[str, object]] = {}
     for key, server_ids in servers_by_key.items():
-        context = _server_context(graph, sorted(server_ids))
+        context = _server_context(graph, sorted(server_ids), index)
         if context["reachable_agents"]:
             out[key] = {**context, **{name: list(context[name]) for name in _CONTEXT_LISTS}}
     return out
@@ -538,10 +556,11 @@ def annotate_graph(graph: ContextGraph) -> dict[str, ReachScore]:
     object (e.g. the API layer attaching it to findings).
     """
     scores: dict[str, ReachScore] = {}
+    index = _ReachIndex.of(graph)
     for node_id, node in graph.nodes.items():
         if node.kind != NodeKind.VULNERABILITY:
             continue
-        score = compute(node, graph)
+        score = compute(node, graph, index)
         scores[node_id] = score
         node.metadata["effective_reach"] = score.as_breakdown()
 
