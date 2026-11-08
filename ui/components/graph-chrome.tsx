@@ -517,7 +517,7 @@ export function GraphEvidenceExportButton({
         {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
         Download graph evidence
       </button>
-      {error ? <span className="text-xs text-red-300">{error}</span> : null}
+      {error ? <span className="text-xs text-[color:var(--status-danger)]">{error}</span> : null}
     </div>
   );
 }

@@ -650,7 +650,7 @@ export function ScanForm({ initialConnectionId, initialPreset }: ScanFormProps) 
                   type="button"
                   onClick={handleCloudScan}
                   disabled={authLoading || loading || !cloudScanReady}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--accent)] px-4 py-3 text-sm font-semibold text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   {loading ? "Starting collectors…" : "Run cloud scan"} <ArrowRight className="h-4 w-4" />
@@ -661,7 +661,7 @@ export function ScanForm({ initialConnectionId, initialPreset }: ScanFormProps) 
                   onClick={handleSourceRun}
                   disabled={authLoading || loading || !sourceRunReady}
                   title={sourceRunDisabledReason}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--accent)] px-4 py-3 text-sm font-semibold text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   {loading ? "Starting source…" : "Run source"} <ArrowRight className="h-4 w-4" />
@@ -670,7 +670,7 @@ export function ScanForm({ initialConnectionId, initialPreset }: ScanFormProps) 
                 <button
                   type="submit"
                   disabled={authLoading || loading || !repoScanReady}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[color:var(--accent)] px-4 py-3 text-sm font-semibold text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-48"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   {loading ? "Starting collectors…" : target === "repository" ? "Scan repository" : "Start scan"}

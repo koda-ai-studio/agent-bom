@@ -654,10 +654,10 @@ export function isContinuousMode(connection: CloudConnectionRecord): boolean {
 export function statusTone(status: string): string {
   switch (status) {
     case "active":
-      return "border-emerald-500/30 dark:border-emerald-900/60 bg-emerald-500/10 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300";
+      return "border-[color:var(--status-success-border)] bg-[color:var(--status-success-bg)] text-[color:var(--status-success)]";
     case "error":
-      return "border-red-500/30 dark:border-red-900/60 bg-red-500/10 dark:bg-red-950/30 text-red-700 dark:text-red-300";
+      return "border-[color:var(--status-danger-border)] bg-[color:var(--status-danger-bg)] text-[color:var(--status-danger)]";
     default:
-      return "border-amber-500/30 dark:border-amber-900/60 bg-amber-500/10 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300";
+      return "border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] text-[color:var(--status-warn)]";
   }
 }

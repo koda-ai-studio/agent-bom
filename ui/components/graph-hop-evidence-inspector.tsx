@@ -53,7 +53,7 @@ export function GraphHopEvidenceInspector({
         <h3 className="text-sm font-semibold">Evidence at each hop</h3>
         <p className="text-xs text-ink-secondary">{filtered.length} of {countLabel(rows.length, "relationship")} · inspect one hop at a time</p>
       </div>
-      <label className="flex min-w-0 items-center gap-2 rounded-lg border border-outline px-2 py-1.5">
+      <label className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-strong px-2 py-1.5">
         <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
         <span className="sr-only">Filter hop evidence</span>
         <input value={query} onChange={event => { setQuery(event.target.value); setPage(0); setSelected(null); }}

@@ -690,7 +690,7 @@ function EmptyState() {
       <p className="text-ink-tertiary text-sm">No scans yet.</p>
       <Link
         href="/scan"
-        className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm font-medium transition-colors"
+        className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-[color:var(--accent)] hover:bg-[color:var(--accent-strong)] text-[color:var(--accent-contrast)] rounded-lg text-sm font-medium transition-colors"
       >
         New Scan
         <ArrowRight className="w-3.5 h-3.5" />

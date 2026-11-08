@@ -368,7 +368,7 @@ export function ComplianceMatrix({
               }}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
                 activeStatus === s
-                  ? "bg-emerald-600 text-white border-emerald-600"
+                  ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)] border-emerald-600"
                   : "bg-[color:var(--surface)] text-[color:var(--text-secondary)] border-[color:var(--border-subtle)] hover:border-[color:var(--border-strong)]"
               }`}
             >

@@ -40,7 +40,7 @@ export default function GlobalError({
           <button
             type="button"
             onClick={reset}
-            className="rounded-md bg-emerald-600 px-4 py-2 text-sm text-white transition-colors hover:bg-emerald-500"
+            className="rounded-md bg-[color:var(--accent)] px-4 py-2 text-sm text-[color:var(--accent-contrast)] transition-colors hover:bg-[color:var(--accent-strong)]"
           >
             Try again
           </button>

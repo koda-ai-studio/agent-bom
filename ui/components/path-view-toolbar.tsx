@@ -27,7 +27,7 @@ export function PathViewToggle({ view, onChange }: {
         return (
           <button key={key} type="button" onClick={() => onChange(key)} aria-pressed={active} aria-label={label} title={label}
             className={`flex min-h-8 items-center justify-center gap-1.5 px-2.5 py-1 text-xs font-medium transition max-sm:min-h-11 max-sm:min-w-11 ${
-              active ? "bg-emerald-600 text-white" : "text-ink-secondary hover:text-foreground"
+              active ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]" : "text-ink-secondary hover:text-foreground"
             }`}>
             <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="max-sm:sr-only">{label}</span>
