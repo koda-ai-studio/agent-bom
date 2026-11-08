@@ -7,7 +7,8 @@ from typing import Any
 import click
 
 PULL_MODE_HELP = (
-    "How to fetch images: auto (registry over the OCI distribution API, Docker daemon only if that fails), "
+    "How to fetch images: auto (a reference with no registry host that the local Docker daemon already holds is "
+    "scanned from the daemon; otherwise the registry over the OCI distribution API, then the daemon if that fails), "
     "registry (never the daemon) or daemon (never the registry)."
 )
 

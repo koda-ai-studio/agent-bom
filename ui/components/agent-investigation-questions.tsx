@@ -40,7 +40,7 @@ export function AgentInvestigationQuestions({ path, scanId, onConnections }: {
     <p className="mt-1 text-ink-secondary">Selected path · snapshot evidence.</p>
     <div role="group" aria-label="Investigation questions" className="my-3 grid grid-cols-2 gap-2">
       {QUESTIONS.map((item, index) => <button key={item} aria-label={item} type="button" aria-pressed={question === item} onClick={() => setQuestion(current => current === item ? null : item)}
-        className={`min-h-11 rounded-lg border border-outline px-3 py-2 ${question === item ? "bg-emerald-600 text-white" : "text-foreground"}`}>{SHORT_LABELS[index]}</button>)}
+        className={`min-h-11 rounded-lg border border-outline px-3 py-2 ${question === item ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]" : "text-foreground"}`}>{SHORT_LABELS[index]}</button>)}
     </div>
     <section aria-label={question ?? "Choose an investigation question"} className="space-y-3">
       {question === "Reach & connections" && <>

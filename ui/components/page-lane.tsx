@@ -7,8 +7,8 @@ export function PageScopeChip({ lane }: { lane: PageLane }) {
     <span
       className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
       style={{
-        borderColor: `${meta.accent}55`,
-        backgroundColor: `${meta.accent}14`,
+        borderColor: `color-mix(in srgb, ${meta.accent} 33%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${meta.accent} 8%, transparent)`,
         color: meta.accent,
       }}
     >

@@ -214,3 +214,22 @@ def test_pip_install_quoted_range_does_not_invent_a_package(tmp_path: Path):
     agents, _ = scan_jupyter_notebooks(tmp_path)
     names = {p.name for p in agents[0].mcp_servers[0].packages}
     assert names == {"anthropic", "python-docx", "pillow", "python-dotenv"}
+
+
+def test_pip_install_options_consume_only_their_own_values(tmp_path: Path):
+    """A flag never swallows the next package; ``-r`` files and chained commands are not packages."""
+    nb = _make_notebook(
+        [_code_cell("!pip install openai --upgrade langchain -r requirements.txt --index-url https://pypi.example/simple httpx; echo done")]
+    )
+    (tmp_path / "setup.ipynb").write_text(json.dumps(nb))
+    agents, _ = scan_jupyter_notebooks(tmp_path)
+    names = {p.name for p in agents[0].mcp_servers[0].packages}
+    assert names == {"openai", "langchain", "httpx"}
+
+
+def test_pip_install_urls_and_vcs_specs_are_not_packages(tmp_path: Path):
+    vcs = "gi" + "t+https://example.invalid/org/tool.git"
+    nb = _make_notebook([_code_cell(f"%pip install {vcs} https://example.invalid/pkg.whl httplib2")])
+    (tmp_path / "setup.ipynb").write_text(json.dumps(nb))
+    agents, _ = scan_jupyter_notebooks(tmp_path)
+    assert {p.name for p in agents[0].mcp_servers[0].packages} == {"httplib2"}

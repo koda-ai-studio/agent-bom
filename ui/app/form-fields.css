@@ -1,0 +1,9 @@
+/*
+ * Form-field boundaries need 3:1 against the surface they sit on (WCAG 1.4.11);
+ * --border-subtle is a divider weight and is too faint for that. Unlayered, so
+ * it lifts every field that borrows the divider token, while focus and hover
+ * keep their own colours.
+ */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"]), select, textarea):not(:focus, :focus-visible, :hover) {
+  border-color: var(--border-strong);
+}

@@ -295,10 +295,10 @@ export function ExposurePathCommandCenter({
             </section>
             <div className="ep-evidence-score">
               <div className="ep-evidence-meta">
-                <ShieldAlert className="h-3.5 w-3.5 text-red-300" />
+                <ShieldAlert className="h-3.5 w-3.5 text-[color:var(--status-danger)]" />
                 <span>CVSS {evidence?.cvssScore ?? "n/a"}</span>
                 <span>EPSS {typeof evidence?.epssScore === "number" ? evidence.epssScore.toFixed(3) : "n/a"}</span>
-                {evidence?.isKev && <span className="font-semibold text-red-300">KEV</span>}
+                {evidence?.isKev && <span className="font-semibold text-[color:var(--status-danger)]">KEV</span>}
               </div>
             </div>
           </aside>

@@ -123,7 +123,7 @@ export function FrameworkCoveragePanel({ items, onFocusFramework, cloudCisHref }
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-emerald-700 dark:text-emerald-300">
+          <span className="rounded-full border border-[color:var(--status-success-border)] bg-[color:var(--status-success-bg)] text-[color:var(--status-success)] px-2.5 py-1">
             {summary.passing} passing
           </span>
           <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2.5 py-1 text-yellow-700 dark:text-yellow-200">
@@ -151,7 +151,7 @@ export function FrameworkCoveragePanel({ items, onFocusFramework, cloudCisHref }
               onClick={() => setCategory(value)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 category === value
-                  ? "bg-emerald-600 text-white"
+                  ? "bg-[color:var(--accent)] text-[color:var(--accent-contrast)]"
                   : "bg-[color:var(--surface-muted)] text-[color:var(--text-secondary)] hover:text-[color:var(--foreground)]"
               }`}
             >
