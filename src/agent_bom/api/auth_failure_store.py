@@ -221,11 +221,22 @@ def _is_dead_connection(exc: BaseException) -> bool:
 
 
 _SQL_BOUNDS = "SET LOCAL statement_timeout = '400ms'; SET LOCAL lock_timeout = '400ms'"
-# The source is bound as a quoted literal by the driver: several statements cannot take parameters.
+# Several statements cannot take parameters, so the source is a quoted literal. Standard
+# conforming strings are pinned in the same statement, so only quotes need doubling.
 _BOUNDED_READ = (
     "SET LOCAL statement_timeout = '400ms'; SET LOCAL lock_timeout = '400ms'; "
+    "SET LOCAL standard_conforming_strings = on; "
     "SELECT blocked_until FROM api_auth_failure_limits WHERE source = {}"
 )
+
+
+def sql_string_literal(value: str) -> str:
+    """Quote *value* as a standard SQL string literal; NUL cannot appear in a Postgres string."""
+    if "\x00" in value:
+        raise ValueError("NUL byte in an authentication source")
+    return "'" + value.replace("'", "''") + "'"
+
+
 _AUTH_STATE_POOL_MAX_SIZE = 4
 _auth_state_pool_lock = threading.Lock()
 _auth_state_pool: tuple[Any, Any] | None = None
@@ -312,9 +323,7 @@ class PostgresAuthFailureStore(AuthFailureStore):
             yield execute
 
     def _blocked_until(self, source: str) -> float | None:
-        from psycopg import sql
-
-        query = sql.SQL(_BOUNDED_READ).format(sql.Literal(source))
+        query = _BOUNDED_READ.format(sql_string_literal(source))
         with self._bounded() as conn:
             # A single implicit transaction: the bounds apply to the read and end with it.
             row = _last_result(conn.execute(query)).fetchone()
