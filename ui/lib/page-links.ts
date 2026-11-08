@@ -1,3 +1,5 @@
+import { GRAPH_URL_LAYER_ALIASES, GRAPH_URL_LAYERS } from "@/lib/graph-url-layers";
+
 type QueryValue = string | number | boolean | null | undefined;
 
 function buildHref(path: string, values: ReadonlyArray<readonly [string, QueryValue]>): string {
@@ -62,28 +64,10 @@ export function remediationHref(input: { q?: string | undefined; scan?: string |
   return buildHref("/remediation", [["q", input.q], ["scan", input.scan], ["finding", input.finding], ["view", input.view]]);
 }
 
-const GRAPH_LAYERS = new Set([
-  "provider", "agent", "org", "account", "user", "group", "role", "policy",
-  "serviceAccount", "servicePrincipal", "federatedIdentity", "environment", "fleet",
-  "cluster", "server", "sharedServer", "package", "model", "framework", "dataset",
-  "container", "cloudResource", "vulnerability", "misconfiguration", "credential", "tool",
-  "managedIdentity", "accessGrant", "accessPolicy", "driftIncident", "dataStore",
-]);
-
-const GRAPH_LAYER_ALIASES: Readonly<Record<string, string>> = {
-  service_account: "serviceAccount",
-  service_principal: "servicePrincipal",
-  federated_identity: "federatedIdentity",
-  cloud_resource: "cloudResource",
-  managed_identity: "managedIdentity",
-  access_grant: "accessGrant",
-  access_policy: "accessPolicy",
-  drift_incident: "driftIncident",
-  data_store: "dataStore",
-};
+const GRAPH_LAYERS: ReadonlySet<string> = new Set(GRAPH_URL_LAYERS);
 
 export function graphLayerHref(entityKind: string): string {
   const normalized = entityKind.trim();
-  const layer = GRAPH_LAYER_ALIASES[normalized] ?? normalized;
+  const layer = GRAPH_URL_LAYER_ALIASES[normalized] ?? normalized;
   return GRAPH_LAYERS.has(layer) ? buildHref("/graph", [["layers", layer]]) : "/graph";
 }

@@ -41,3 +41,17 @@ describe("typed page links", () => {
     );
   });
 });
+
+describe("graphLayerHref", () => {
+  it("links every layer the graph URL accepts, in either spelling", async () => {
+    const { GRAPH_URL_LAYERS, GRAPH_URL_LAYER_ALIASES } = await import("@/lib/graph-url-layers");
+    const { graphLayerHref } = await import("@/lib/page-links");
+    for (const layer of GRAPH_URL_LAYERS) {
+      expect(graphLayerHref(layer)).toBe(`/graph?layers=${layer}`);
+    }
+    for (const [alias, layer] of Object.entries(GRAPH_URL_LAYER_ALIASES)) {
+      expect(graphLayerHref(alias)).toBe(`/graph?layers=${layer}`);
+    }
+    expect(graphLayerHref("source_file")).toBe("/graph?layers=sourceFile");
+  });
+});

@@ -30,6 +30,7 @@ import {
 import type { UnifiedGraphResponse } from "@/lib/api-types";
 import type { ChangeKind } from "@/lib/graph-utils";
 import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
+import { GRAPH_URL_LAYERS } from "@/lib/graph-url-layers";
 
 // ───────────────────────────────────────────────────────────────────────
 // Public types
@@ -574,47 +575,7 @@ export function evidenceLensPasses(
 // URL state codec
 // ───────────────────────────────────────────────────────────────────────
 
-const URL_LAYER_KEYS: LineageNodeType[] = [
-  "provider",
-  "agent",
-  "org",
-  "account",
-  "user",
-  "group",
-  "role",
-  "policy",
-  "serviceAccount",
-  "servicePrincipal",
-  "federatedIdentity",
-  "environment",
-  "fleet",
-  "cluster",
-  "server",
-  "sharedServer",
-  "package",
-  "model",
-  "framework",
-  "dataset",
-  "container",
-  "cloudResource",
-  "vulnerability",
-  "misconfiguration",
-  "credential",
-  "tool",
-  "managedIdentity",
-  "accessGrant",
-  "accessPolicy",
-  "driftIncident",
-  "dataStore",
-  "directory",
-  "sourceFile",
-  "configFile",
-  "codeModule",
-  "ciJob",
-  "toolCall",
-  "blueprint",
-  "apiGateway",
-];
+const URL_LAYER_KEYS: readonly LineageNodeType[] = GRAPH_URL_LAYERS;
 
 /** Encode a FilterState into URLSearchParams (deterministic, no defaults). */
 export function encodeFiltersToParams(filters: FilterState): URLSearchParams {
