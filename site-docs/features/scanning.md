@@ -192,7 +192,10 @@ request). Credentials are looked up only when the registry asks for them:
 `credHelpers`, `credsStore`; `DOCKER_CONFIG` is honoured). Only the credential's
 source is reported, never its value. For a multi-arch image the platform comes
 from the index: `linux/amd64` unless `--platform` names another; an unknown
-platform fails with the list of available ones.
+platform fails with the list of available ones. That default applies to
+registry pulls only: when the scan goes through the Docker daemon (table below)
+without `--platform`, the daemon's stored copy is scanned, usually the host's
+architecture.
 
 Every manifest and blob is checked against its digest. Layers are downloaded
 one at a time into a temporary file and go through the same bounds as archive
