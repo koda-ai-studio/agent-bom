@@ -1,69 +1,16 @@
-"""Regression tests for Postgres-backed sliding-window rate limiting."""
+"""Postgres-backed sliding-window rate limiting, on a private Postgres cluster."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import socket
+import threading
+import time
+from collections import Counter
+
+import pytest
 
 from agent_bom.api.middleware import InMemoryRateLimitStore, PostgresRateLimitStore
-
-
-@dataclass
-class _FakeCursor:
-    rows: list[tuple] = field(default_factory=list)
-    rowcount: int = 0
-
-    def fetchone(self):
-        return self.rows[0] if self.rows else None
-
-
-@dataclass
-class _FakeConnection:
-    hits: list[tuple[str, float]] = field(default_factory=list)
-    executed: list[tuple[str, tuple | None]] = field(default_factory=list)
-
-    def execute(self, sql: str, params: tuple | None = None):
-        self.executed.append((sql, params))
-        normalized = " ".join(sql.strip().lower().split())
-        if normalized.startswith("create table") or normalized.startswith("create index"):
-            return _FakeCursor()
-        if normalized.startswith("select pg_advisory_xact_lock"):
-            return _FakeCursor(rows=[(None,)])
-        if normalized.startswith("delete from api_rate_limit_hits"):
-            if params and len(params) == 2:
-                bucket_key, raw_cutoff = params
-                cutoff = float(raw_cutoff)
-                self.hits = [(key, hit_at) for key, hit_at in self.hits if key != bucket_key or hit_at >= cutoff]
-            else:
-                cutoff = float(params[0]) if params else 0.0
-                self.hits = [(key, hit_at) for key, hit_at in self.hits if hit_at >= cutoff]
-            return _FakeCursor()
-        if "insert into api_rate_limit_hits" in normalized:
-            self.hits.append((params[0], float(params[1])))
-            return _FakeCursor()
-        if "select count(*), min(hit_at)" in normalized:
-            bucket_key, window_start = params
-            matching = [hit_at for key, hit_at in self.hits if key == bucket_key and hit_at >= float(window_start)]
-            oldest = min(matching) if matching else None
-            return _FakeCursor(rows=[(len(matching), oldest)])
-        if "select count(*)" in normalized:
-            bucket_key, window_start = params
-            matching = [hit_at for key, hit_at in self.hits if key == bucket_key and hit_at >= float(window_start)]
-            return _FakeCursor(rows=[(len(matching),)])
-        return _FakeCursor()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        return False
-
-
-class _FakePool:
-    def __init__(self) -> None:
-        self._conn = _FakeConnection()
-
-    def connection(self):
-        return self._conn
+from tests.test_auth_failure_processes import postgres, workdir  # noqa: F401 - fixtures
 
 
 def _fixed_window_count(key: str, now: float, *, window_seconds: int, timestamps: list[float]) -> int:
@@ -90,42 +37,136 @@ def test_sliding_window_blocks_cross_bucket_burst_that_fixed_window_allowed():
     assert _fixed_window_count("tenant:read", next_bucket_start, window_seconds=window, timestamps=timestamps) == 1
 
 
-def test_postgres_rate_limit_store_matches_in_memory_sliding_window():
-    pool = _FakePool()
+@pytest.fixture
+def pool(postgres):  # noqa: F811
+    from psycopg_pool import ConnectionPool
+
+    with ConnectionPool(postgres.admin_url, min_size=1, max_size=8, kwargs={"autocommit": True}) as connections:
+        yield connections
+
+
+def _hits(pool) -> list[tuple[str, float]]:
+    with pool.connection() as conn:
+        return [(row[0], float(row[1])) for row in conn.execute("SELECT bucket_key, hit_at FROM api_rate_limit_hits")]
+
+
+def test_postgres_store_matches_the_in_memory_sliding_window(pool):
     store = PostgresRateLimitStore(window_seconds=60, pool=pool)
     memory = InMemoryRateLimitStore(window_seconds=60)
     base = 1_700_000_100.0
-
-    for offset in (0.0, 5.0, 10.0, 55.0):
-        now = base + offset
-        pg_count, pg_reset = store.hit("tenant:scan", now)
-        mem_count, mem_reset = memory.hit("tenant:scan", now)
-        assert pg_count == mem_count
-        assert pg_reset == mem_reset
+    for offset in (0.0, 5.0, 10.0, 55.0, 61.0, 130.0):
+        assert store.hit("tenant:scan", base + offset) == memory.hit("tenant:scan", base + offset)
 
 
-def test_postgres_rate_limit_store_prunes_stale_hits():
-    pool = _FakePool()
+def test_postgres_store_prunes_stale_hits(pool):
     store = PostgresRateLimitStore(window_seconds=60, pool=pool)
     base = 1_700_000_200.0
-
     store.hit("tenant:read", base)
+    store.hit("tenant:other", base)
+    # Within a prune interval a bucket prunes only itself.
+    store._next_global_prune = base + 1_000
     store.hit("tenant:read", base + 120.0)
+    assert sorted(_hits(pool)) == [("tenant:other", base), ("tenant:read", base + 120.0)]
+    # The periodic table-wide prune trims buckets that never return.
+    store._next_global_prune = 0.0
+    store.hit("tenant:read", base + 240.0)
+    assert _hits(pool) == [("tenant:read", base + 240.0)]
 
-    assert any("DELETE FROM api_rate_limit_hits" in sql for sql, _ in pool._conn.executed)
-    assert not any(hit_at == base for _, hit_at in pool._conn.hits)
-    assert any(hit_at == base + 120.0 for _, hit_at in pool._conn.hits)
 
-
-def test_postgres_rate_limit_store_consumes_below_limit_atomically() -> None:
-    pool = _FakePool()
+def test_postgres_store_consumes_below_limit(pool):
     store = PostgresRateLimitStore(window_seconds=60, pool=pool)
     base = 1_700_000_300.0
-
-    assert store.consume_if_below("tenant:credit", base, 2)[:2] == (True, 1)
-    assert store.consume_if_below("tenant:credit", base + 1, 2)[:2] == (True, 2)
-    assert store.consume_if_below("tenant:credit", base + 2, 2)[:2] == (False, 2)
+    assert store.consume_if_below("tenant:credit", base, 2) == (True, 1, int(base + 60))
+    assert store.consume_if_below("tenant:credit", base + 1, 2) == (True, 2, int(base + 60))
+    assert store.consume_if_below("tenant:credit", base + 2, 2) == (False, 2, int(base + 60))
     assert store.count("tenant:credit", base + 2) == 2
+    assert store.count("tenant:credit", base + 61) == 1
 
-    statements = [" ".join(sql.lower().split()) for sql, _params in pool._conn.executed]
-    assert any(statement.startswith("select pg_advisory_xact_lock") for statement in statements)
+
+@pytest.mark.parametrize("key", ["ip:x'; DROP TABLE api_rate_limit_hits; --", "tenant:a\\b", "tenant:é'\"$$"])
+def test_bucket_keys_are_stored_exactly_as_given(pool, key):
+    store = PostgresRateLimitStore(window_seconds=60, pool=pool)
+    assert store.hit(key, 1_700_000_400.0)[0] == 1
+    assert store.count(key, 1_700_000_400.0) == 1
+    assert _hits(pool) == [(key, 1_700_000_400.0)]
+
+
+def test_concurrent_sessions_never_admit_past_the_limit(pool):
+    store = PostgresRateLimitStore(window_seconds=60, pool=pool)
+    base = 1_700_000_600.0
+    results: list[bool] = []
+    lock = threading.Lock()
+
+    def consume(offset: int) -> None:
+        for n in range(5):
+            accepted = store.consume_if_below("tenant:shared", base + offset * 0.01 + n * 0.001, 10)[0]
+            with lock:
+                results.append(accepted)
+
+    threads = [threading.Thread(target=consume, args=(n,)) for n in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert Counter(results) == {True: 10, False: 30}
+
+
+def test_the_database_bounds_each_operation_and_leaves_the_connection_clean(pool):
+    from agent_bom.api.rate_limit_store import bounded_round_trip
+
+    with pool.connection() as conn:
+        started = time.monotonic()
+        with pytest.raises(Exception) as raised:
+            bounded_round_trip(conn, [("SELECT pg_sleep(%s)", (2,))])
+        assert getattr(raised.value, "sqlstate", None) == "57014"
+        assert time.monotonic() - started < 1.5
+        # Rolled back, and the bounds ended with the transaction.
+        assert conn.execute("SHOW statement_timeout").fetchone() == ("0",)
+
+
+def test_a_held_budget_lock_is_bounded_by_the_lock_timeout(pool):
+    store = PostgresRateLimitStore(window_seconds=60, pool=pool)
+    with pool.connection() as holder:
+        holder.execute("BEGIN")
+        holder.execute("SELECT pg_advisory_xact_lock(%s)", (store._advisory_key("tenant:held"),))
+        started = time.monotonic()
+        with pytest.raises(Exception) as raised:
+            store.consume_if_below("tenant:held", 1_700_000_700.0, 5)
+        holder.execute("ROLLBACK")
+    # Lock and statement bounds are equal, so either may cancel the wait first.
+    assert getattr(raised.value, "sqlstate", None) in {"55P03", "57014"}
+    assert time.monotonic() - started < 1.5
+
+
+def test_a_hit_is_one_network_round_trip(postgres):  # noqa: F811
+    from psycopg_pool import ConnectionPool
+
+    # Every reply from the server is held back 300 ms, so each round trip costs at least that.
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(1)
+    delay = [0.0]
+
+    def pump(source, target, replies):
+        while data := source.recv(65536):
+            if replies and delay[0]:
+                time.sleep(delay[0])
+            target.sendall(data)
+
+    def accept():
+        client, _ = listener.accept()
+        upstream = socket.create_connection(("127.0.0.1", postgres.port))
+        threading.Thread(target=pump, args=(client, upstream, False), daemon=True).start()
+        threading.Thread(target=pump, args=(upstream, client, True), daemon=True).start()
+
+    threading.Thread(target=accept, daemon=True).start()
+    url = postgres.admin_url.replace(f":{postgres.port}/", f":{listener.getsockname()[1]}/") + "?sslmode=disable"
+    with ConnectionPool(url, min_size=1, max_size=1, kwargs={"autocommit": True}) as proxied:
+        store = PostgresRateLimitStore(window_seconds=60, pool=proxied)
+        store.hit("tenant:trip", 1_700_000_800.0)
+        delay[0] = 0.3
+        started = time.monotonic()
+        assert store.hit("tenant:trip", 1_700_000_801.0)[0] == 2
+        elapsed = time.monotonic() - started
+        delay[0] = 0.0
+    assert 0.3 <= elapsed < 0.6, elapsed

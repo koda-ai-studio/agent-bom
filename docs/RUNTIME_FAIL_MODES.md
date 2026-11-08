@@ -659,6 +659,27 @@ unit tests do not establish production login or directory acceptance.
 Rollback restores a compatible application and issuer configuration together.
 Never disable authentication or enable the public tier as a recovery shortcut.
 
+## Shared request rate limits
+
+On Postgres, request rate limits (the per-IP ceiling and the per-tenant budgets)
+are shared by every replica through `api_rate_limit_hits` and a pool of their own,
+at most four autocommit connections per process, separate from authentication state. A hit is one round trip: its
+transaction, 400 ms statement and lock bounds, the prune of that bucket and the
+count-and-record statement are pipelined, with every value bound as a parameter.
+A hit takes no lock another hit waits on, so concurrent hits on other replicas can
+each be admitted before seeing the other; budgets consumed through
+`consume_if_below` (websocket handshakes, AI explain, trial scan credits) take the
+bucket's transaction lock and stay exact.
+
+A request waits at most two seconds for the shared store, including this process's
+own scheduling: CPU-heavy ingest and graph threads in the same process delay every
+thread. Sustained CPU-bound work in the API process can still delay a request past
+that wait, and limits are then per process until the store answers again.
+The store's own work is bounded by the database at 400 ms, and taking a connection
+at 400 ms. A store error or a wait past two seconds still degrades to process-local
+limits for five seconds, logs `Shared rate-limit store unavailable` at most once a
+minute, and retries the shared store after that.
+
 ## Authentication failure throttling
 
 API and MCP HTTP authentication share source-based backoff. The default is ten
@@ -669,11 +690,14 @@ Configure `AGENT_BOM_AUTH_FAILURE_LIMIT`, `AGENT_BOM_AUTH_BACKOFF_SECONDS`, and
 The response is 429 with `Retry-After` and `X-RateLimit-Scope: auth-source`.
 
 On Postgres the state uses the migration-owned `api_auth_failure_limits` table
-through a pool of its own: at most four autocommit connections per process, with
-the application role and its row-level-security check. Ingest, graph and report
-work hold the application pool for seconds, so admission never queues behind them.
-An admission read is one round trip that carries its own 400 ms statement and lock
-bounds; a failure write takes the source's transaction lock in a transaction. SQLite processes share it when they use the
+through a pool of its own: at most four autocommit connections per process, with the application role and its
+row-level-security check. Ingest, graph and report work hold the application pool
+for seconds, so admission never queues behind them. An admission read is one round
+trip: its transaction, `SET LOCAL` 400 ms statement and lock bounds, the read with
+the source bound as a parameter, and the commit are pipelined together. A failure
+write opens its transaction, bounds and the source's transaction lock in one round
+trip, then continues in that transaction. `SET LOCAL` keeps the bounds working
+behind a transaction-mode connection pooler. SQLite processes share it when they use the
 same `AGENT_BOM_DB` path: authentication state lives in the owner-only
 `<database>.auth-limits.db` sidecar so a scan-ingest write transaction cannot
 lock its budget. Without a persistent database it is process-local.
@@ -692,8 +716,8 @@ Postgres auth transactions bound pool acquisition, statement execution and lock
 waits to 400 ms each. Pool saturation and SQL cancellation/lock timeouts fail
 that request closed without activating the global outage cooldown.
 SQLite uses one connection per worker. Admission reads never wait for a writer,
-so one stalled transaction blocks no other source's check. A second writer waits
-at most 400 ms. The process-local in-memory database has one connection, and a
+so one stalled transaction blocks no other source's check. Writers in one process
+queue on a lock, and a writer waits at most 400 ms for it or for another process. The process-local in-memory database has one connection, and a
 bounded lock around it gives the same 400 ms limit to every operation.
 
 A failed attempt that cannot be written is never lost. Its count waits in memory,
