@@ -77,6 +77,7 @@ class SkillFileReport:
                 for server in self.scan.servers
             ],
             "credential_env_vars": list(self.scan.credential_env_vars),
+            "manifest_references": list(self.scan.manifest_references),
             "audit": {
                 "passed": self.audit.passed,
                 "packages_checked": self.audit.packages_checked,

@@ -96,3 +96,30 @@ def test_registry_mode_and_server_scans_never_consult_the_local_daemon(setup):
     assert strategy == "registry"
     assert daemon.scanned == []
     assert not [c for c in daemon.commands if c[:3] == ["docker", "image", "inspect"]]
+
+
+def _image_help() -> str:
+    from click.testing import CliRunner
+
+    from agent_bom.cli._focused_commands import image_cmd
+
+    result = CliRunner().invoke(image_cmd, ["--help"], terminal_width=400)
+    assert result.exit_code == 0, result.output
+    return " ".join(result.output.split())
+
+
+def test_image_help_describes_the_local_first_daemon_path_the_scan_takes(setup, monkeypatch):
+    _hub, daemon = setup
+    platforms: list[str | None] = []
+    monkeypatch.setattr("agent_bom.image._scan_with_docker", lambda ref, platform=None: platforms.append(platform) or daemon.scan(ref))
+
+    _packages, strategy = scan_image("acme/app:dev")
+
+    assert strategy == "native" and platforms == [None], "auto mode scans the daemon's stored copy, with no platform forced"
+    text = _image_help()
+    assert "only with --pull-mode daemon or when the registry pull fails" not in text
+    assert "Docker daemon only if that fails" not in text
+    assert "no registry host" in text and "already holds" in text
+    assert "multi-arch images (default linux/amd64)" not in text
+    assert "registry pull (default linux/amd64)" in text
+    assert "without it the daemon's stored copy is scanned" in text

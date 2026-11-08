@@ -589,7 +589,7 @@ def test_inline_install_commands_stop_at_the_closing_backtick(tmp_path):
         ("npm install left-pad &", {("left-pad", "npm")}),
         ("npm install left-pad >> install.log", {("left-pad", "npm")}),
         ("npm install CI=1 left-pad", {("left-pad", "npm")}),
-        ("pip install requests || pip install httpx", {("requests", "pypi")}),
+        ("pip install requests || pip install httpx", {("requests", "pypi"), ("httpx", "pypi")}),
         ("pip install requests; echo done", {("requests", "pypi")}),
         ("pip install requests httpx&&pytest", {("requests", "pypi"), ("httpx", "pypi")}),
         ("pip install requests==2.32.3 > /dev/null", {("requests", "pypi")}),
@@ -602,3 +602,95 @@ def test_shell_operators_redirects_and_env_assignments_never_become_packages(tmp
     skill = tmp_path / "SKILL.md"
     skill.write_text(f"```bash\n{command}\n```\n")
     assert {(pkg.name, pkg.ecosystem) for pkg in parse_skill_file(skill).packages} == expected
+
+
+def _installs(tmp_path, command: str):
+    skill = tmp_path / "SKILL.md"
+    skill.write_text(f"```bash\n{command}\n```\n")
+    return parse_skill_file(skill)
+
+
+@pytest.mark.parametrize(
+    "command,expected",
+    [
+        ("pip install -r requirements.txt", set()),
+        ("pip install --requirement=requirements-dev.txt", set()),
+        ("pip install -c constraints.txt requests", {("requests", "pypi")}),
+        ("pip install --constraint constraints.txt requests", {("requests", "pypi")}),
+        ("pip install -e . requests", {("requests", "pypi")}),
+        ("pip install --editable src/pkg requests", {("requests", "pypi")}),
+        ("pip install -i https://pypi.example/simple requests", {("requests", "pypi")}),
+        ("pip install --index-url https://pypi.example/simple requests", {("requests", "pypi")}),
+        ("pip install --extra-index-url https://pypi.example/simple requests", {("requests", "pypi")}),
+        ("pip install -f wheels requests", {("requests", "pypi")}),
+        ("pip install --find-links wheels requests", {("requests", "pypi")}),
+        ("pip install --target vendor requests", {("requests", "pypi")}),
+        ("pip install --prefix opt requests", {("requests", "pypi")}),
+        ("pip install --upgrade requests", {("requests", "pypi")}),
+        ("python -m pip install -U requests", {("requests", "pypi")}),
+        ("uv pip install -r requirements.txt httpx", {("httpx", "pypi")}),
+        ("uv add --dev pytest 'httpx>=0.27'", {("pytest", "pypi"), ("httpx", "pypi")}),
+        ("uv add -r requirements.txt --group lint ruff", {("ruff", "pypi")}),
+        ("pipx install --python python3.12 black", {("black", "pypi")}),
+        ("pipx install poetry==1.8.3", {("poetry", "pypi")}),
+        ("npm i left-pad", {("left-pad", "npm")}),
+        ("npm i -D @types/node@20.11.0", {("@types/node", "npm")}),
+        ("npm add --registry https://npm.example lodash@4.17.21", {("lodash", "npm")}),
+        ("npm install --save-dev @scope/tool", {("@scope/tool", "npm")}),
+        ("npm install -w packages/api express", {("express", "npm")}),
+        ("npm install ./local-dir git" + "hub:user/repo express", {("express", "npm")}),
+        ("yarn add react@18.3.1", {("react", "npm")}),
+        ("yarn add -D @babel/core", {("@babel/core", "npm")}),
+        ("pnpm add --filter web zod", {("zod", "npm")}),
+        ("pnpm add -w -D typescript", {("typescript", "npm")}),
+        ("npm install", set()),
+        ("yarn install", set()),
+        ("pip install -r requirements.txt > /dev/null 2>&1", set()),
+        ("CI=1 npm i left-pad 2>/dev/null; echo $(pip install evil)", {("left-pad", "npm")}),
+    ],
+)
+def test_install_options_that_take_a_value_consume_it(tmp_path, command, expected):
+    assert {(pkg.name, pkg.ecosystem) for pkg in _installs(tmp_path, command).packages} == expected
+
+
+def test_requirement_files_are_manifest_references_not_packages(tmp_path):
+    from agent_bom.parsers.skill_audit import audit_skill_result
+
+    result = _installs(tmp_path, "pip install -r requirements.txt\nuv pip install --requirement=dev-requirements.txt -rextra.txt")
+
+    assert result.packages == []
+    assert result.manifest_references == ["requirements.txt", "dev-requirements.txt", "extra.txt"]
+    titles = [finding.title for finding in audit_skill_result(result).findings]
+    assert not [title for title in titles if "requirements" in title], titles
+
+
+def test_every_install_segment_on_one_line_is_parsed(tmp_path):
+    line = (
+        "pip install requests==2.32.3 && npm i left-pad; yarn add @scope/ui@1.2.3 || pnpm add zod"
+        " && uv add httpx && pipx install black | tee log && pip install -r reqs.txt flask"
+    )
+
+    result = _installs(tmp_path, line)
+
+    found = {(pkg.name, pkg.version, pkg.ecosystem) for pkg in result.packages}
+    assert found == {
+        ("requests", "2.32.3", "pypi"),
+        ("left-pad", "latest", "npm"),
+        ("@scope/ui", "1.2.3", "npm"),
+        ("zod", "latest", "npm"),
+        ("httpx", "latest", "pypi"),
+        ("black", "latest", "pypi"),
+        ("flask", "latest", "pypi"),
+    }
+    assert result.manifest_references == ["reqs.txt"]
+
+
+def test_scan_merges_manifest_references(tmp_path):
+    first = tmp_path / "CLAUDE.md"
+    second = tmp_path / "SKILL.md"
+    first.write_text("```bash\npip install -r requirements.txt\n```\n")
+    second.write_text("```bash\npip install -r requirements.txt -c constraints.txt\n```\n")
+
+    merged = scan_skill_files([first, second])
+
+    assert merged.manifest_references == ["requirements.txt"]

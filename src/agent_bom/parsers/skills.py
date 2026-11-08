@@ -5,7 +5,7 @@ Supported files: CLAUDE.md, .cursorrules, skill.md, skills/*.md,
 file passed via --skill.
 
 Extracts:
-  1. Code blocks with npx/uvx/pip/npm commands → Package objects
+  1. Code blocks with npx/uvx launchers and pip/uv/pipx/npm/yarn/pnpm installs → Package objects
   2. MCP server config JSON blocks → MCPServer objects
   3. Env var references matching credential patterns → credential names
   4. YAML frontmatter metadata (SKILL.md format) → SkillMetadata
@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from agent_bom.models import MCPServer, Package, TransportType
+from agent_bom.parsers.install_commands import parse_install_commands
 from agent_bom.parsers.npm_semver import npm_exact_version
 from agent_bom.parsers.skill_launchers import _parse_pkg_spec, collect_launcher_packages, collect_mcp_launcher_packages
 from agent_bom.traversal import iter_discovery_files
@@ -45,14 +46,6 @@ SKILL_FILE_NAMES: list[str] = [
 
 # ─── Regex patterns ──────────────────────────────────────────────────────────
 
-_PIP_INSTALL_RE = re.compile(
-    r"pip\s+install\s+(?:-[\w-]+\s+)*(.+?)(?:\s*$|\s*&&|\s*\\)",
-    re.MULTILINE,
-)
-_NPM_INSTALL_RE = re.compile(
-    r"npm\s+install\s+(?:-[\w-]+\s+)*(.+?)(?:\s*$|\s*&&|\s*\\)",
-    re.MULTILINE,
-)
 _ENV_VAR_RE = re.compile(r"\b([A-Z][A-Z0-9_]{2,})\b")
 _MCP_JSON_RE = re.compile(
     r"```(?:json|jsonc)?\s*\n(?P<body>\{[\s\S]*?\"mcpServers\"[\s\S]*?\})\s*\n```",
@@ -221,6 +214,7 @@ class SkillScanResult:
     raw_content: dict[str, str] = field(default_factory=dict)  # source_file -> raw text for audit analysis
     metadata: SkillMetadata | None = None  # Parsed frontmatter (SKILL.md format)
     metadata_by_file: dict[str, SkillMetadata] = field(default_factory=dict)
+    manifest_references: list[str] = field(default_factory=list)  # requirement files named by ``-r``, not packages
 
 
 # ─── Parsing ─────────────────────────────────────────────────────────────────
@@ -251,27 +245,17 @@ def parse_skill_file(path: Path) -> SkillScanResult:
 
     collect_launcher_packages(code_text, packages, seen_packages)
 
-    # pip install packages
-    for match in _PIP_INSTALL_RE.finditer(code_text):
-        for spec in _install_arguments(match.group(1)):
-            name = re.split(r"[><=!~]", spec)[0].split("[")[0]
-            if not name or len(name) < 2 or not re.match(r"^[\w][\w.-]*$", name):
-                continue
-            key = (name.lower(), "pypi")
-            if key not in seen_packages:
-                seen_packages.add(key)
-                packages.append(_pip_install_package(name, spec[len(name) :]))
-
-    # npm install packages
-    for match in _NPM_INSTALL_RE.finditer(code_text):
-        for spec in _install_arguments(match.group(1)):
+    installs = parse_install_commands(code_text)
+    for ecosystem, spec in installs.packages:
+        if ecosystem == "npm":
             name, version = _parse_pkg_spec(spec, "@")
-            if not name:
-                continue
-            key = (name.lower(), "npm")
-            if key not in seen_packages:
-                seen_packages.add(key)
-                packages.append(_npm_install_package(name, version))
+        else:
+            name = re.split(r"[><=!~;]", spec)[0].split("[")[0]
+        key = (name.lower(), ecosystem)
+        if key in seen_packages:
+            continue
+        seen_packages.add(key)
+        packages.append(_npm_install_package(name, version) if ecosystem == "npm" else _pip_install_package(name, spec[len(name) :]))
 
     # MCP server JSON blocks
     for match in _MCP_JSON_RE.finditer(content):
@@ -323,48 +307,8 @@ def parse_skill_file(path: Path) -> SkillScanResult:
         source_files=[str(path)],
         raw_content={str(path): content},
         metadata=metadata,
+        manifest_references=installs.manifest_references,
     )
-
-
-_SHELL_CONTROL_RE = re.compile(r"&&|\|\||[;|&]")
-_REDIRECT_RE = re.compile(r"^\d*(?:>>?|<<?|>&|&>>?)")
-_ENV_ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=(?!=)")
-
-
-def _install_arguments(raw: str) -> list[str]:
-    """Package arguments of one install command, up to the first shell operator.
-
-    A comment, an inline-code span, a control operator (``&&``, ``||``, ``;``,
-    ``|``, ``&``) or a command substitution ends the command. Redirects with
-    their targets, environment assignments and options are not packages.
-    """
-    text = re.split(r"[#`]|\$\(", raw, maxsplit=1)[0]
-    control = _SHELL_CONTROL_RE.search(text)
-    if control:
-        # ``2>&1`` and ``&>`` are redirects, not the ``&`` control operator.
-        while control and control.group() == "&" and _is_redirect_ampersand(text, control.start()):
-            control = _SHELL_CONTROL_RE.search(text, control.end())
-        if control:
-            text = text[: control.start()]
-    arguments: list[str] = []
-    skip_target = False
-    for token in text.split():
-        if skip_target:
-            skip_target = False
-            continue
-        redirect = _REDIRECT_RE.match(token)
-        if redirect:
-            skip_target = redirect.end() == len(token)
-            continue
-        token = token.strip("'\"")
-        if not token or token.startswith(("-", "$")) or _ENV_ASSIGNMENT_RE.match(token):
-            continue
-        arguments.append(token)
-    return arguments
-
-
-def _is_redirect_ampersand(text: str, index: int) -> bool:
-    return (index > 0 and text[index - 1] in "<>") or text[index + 1 : index + 2] == ">"
 
 
 def _strip_jsonc(raw: str) -> str:
@@ -697,5 +641,9 @@ def scan_skill_files(paths: list[Path]) -> SkillScanResult:
             if cred not in seen_creds:
                 seen_creds.add(cred)
                 merged.credential_env_vars.append(cred)
+
+        for reference in result.manifest_references:
+            if reference not in merged.manifest_references:
+                merged.manifest_references.append(reference)
 
     return merged
