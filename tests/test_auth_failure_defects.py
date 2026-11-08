@@ -197,10 +197,10 @@ async def test_repeated_store_errors_open_the_breaker_and_one_success_closes_it(
 
 def test_receipt_writes_do_not_use_authentication_capacity(monkeypatch):
     gate = threading.Event()
-    started = []
+    started = threading.Event()
 
     def stalled(*_args, **_kwargs):
-        started.append(1)
+        started.set()
         gate.wait(5)
 
     monkeypatch.setattr(audit_log, "log_action", stalled)
@@ -213,7 +213,8 @@ def test_receipt_writes_do_not_use_authentication_capacity(monkeypatch):
             ]
             assert statuses == [401, 401, 401]
             assert time.monotonic() - begun < 2  # A stalled audit store does not delay the answer.
-            assert started
+            # Receipts are written in the background; the write starts, but nothing waits for it.
+            assert started.wait(5)
     finally:
         gate.set()
         assert RECEIPTS.flush()
