@@ -95,3 +95,5 @@ f4a1ca473a1e1a691e3d19856acbd8b65aa01028:tests/test_secret_assignment_accuracy.p
 f4a1ca473a1e1a691e3d19856acbd8b65aa01028:tests/test_secret_assignment_accuracy.py:generic-api-key:100
 f4a1ca473a1e1a691e3d19856acbd8b65aa01028:tests/test_secret_assignment_accuracy.py:generic-api-key:123
 f4a1ca473a1e1a691e3d19856acbd8b65aa01028:tests/test_secret_assignment_accuracy.py:generic-api-key:134
+# Synthetic docstring sample later assembled at runtime (test_secret_docstring_samples.py).
+d4a0276d2a55d1e9eaeeeffa987eb2f6a5afbebe:tests/test_secret_docstring_samples.py:generic-api-key:51
