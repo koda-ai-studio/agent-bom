@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import base64
+import copy
 import json
+import threading
+from collections import OrderedDict
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 __all__ = [
@@ -17,6 +21,7 @@ __all__ = [
     "_FINDING_ENTITY_TYPE_VALUES",
     "decode_graph_cursor",
     "encode_graph_cursor",
+    "revision_cached_stats",
 ]
 
 if TYPE_CHECKING:
@@ -37,6 +42,43 @@ _FINDING_ENTITY_TYPE_VALUES = frozenset(entity_type.value for entity_type in FIN
 # Past this threshold callers must switch to the flat keyset ``cursor=`` path.
 # Shallow, human-scale offset browsing below the cap stays supported.
 MAX_NODE_PAGE_OFFSET = 10_000
+
+
+_STATS_CACHE: OrderedDict[tuple[Any, ...], dict[str, Any]] = OrderedDict()
+_STATS_CACHE_LOCK = threading.Lock()
+_STATS_CACHE_MAX = 256
+
+
+def revision_cached_stats(
+    store_key: str,
+    tenant_id: str,
+    scan_id: str,
+    filters: tuple[Any, ...],
+    revision: Callable[[], str],
+    compute: Callable[[], dict[str, Any]],
+) -> dict[str, Any]:
+    """Snapshot stats computed once per committed read revision.
+
+    Every write of a snapshot commits a new ``read_revision``, so a key that
+    carries it can never answer for other rows. The revision is read again
+    after computing and the value is kept only when it did not move, so stats
+    that straddled a concurrent re-save are returned but never remembered.
+    """
+    before = revision()
+    key = (store_key, tenant_id, scan_id, before, filters)
+    if before:
+        with _STATS_CACHE_LOCK:
+            hit = _STATS_CACHE.get(key)
+            if hit is not None:
+                _STATS_CACHE.move_to_end(key)
+                return copy.deepcopy(hit)
+    value = compute()
+    if before and revision() == before:
+        with _STATS_CACHE_LOCK:
+            _STATS_CACHE[key] = copy.deepcopy(value)
+            while len(_STATS_CACHE) > _STATS_CACHE_MAX:
+                _STATS_CACHE.popitem(last=False)
+    return value
 
 
 def _assert_offset_within_cap(offset: int, cursor: str | None) -> None:

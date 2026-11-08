@@ -29,7 +29,7 @@ from agent_bom.api.graph_store_support import _CREATE_PRESET_TABLE_SQLITE as _CR
 from agent_bom.api.graph_store_support import _DYNAMIC_RELATIONSHIP_VALUES as _DYNAMIC_RELATIONSHIP_VALUES
 from agent_bom.api.graph_store_support import _FINDING_ENTITY_TYPE_VALUES as _FINDING_ENTITY_TYPE_VALUES
 from agent_bom.api.graph_store_support import MAX_NODE_PAGE_OFFSET as MAX_NODE_PAGE_OFFSET
-from agent_bom.api.graph_store_support import SQLITE_INVENTORY_SEARCH_CLAUSE
+from agent_bom.api.graph_store_support import SQLITE_INVENTORY_SEARCH_CLAUSE, revision_cached_stats
 from agent_bom.api.graph_store_support import _assert_offset_within_cap as _assert_offset_within_cap
 from agent_bom.api.graph_store_support import _attach_sibling_relationships as _attach_sibling_relationships
 from agent_bom.api.graph_store_support import _drilldown_subtree_budget as _drilldown_subtree_budget
@@ -40,6 +40,7 @@ from agent_bom.api.graph_store_support import decode_graph_cursor as decode_grap
 from agent_bom.api.graph_store_support import encode_graph_cursor as encode_graph_cursor
 from agent_bom.api.storage.sqlite_graph_search import scoped_search_expression
 from agent_bom.db import graph_store as sqlite_graph_store
+from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.graph import RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_status_map_to_dict
 from agent_bom.graph.completeness import COMPLIANCE_NODE_BUDGET, graph_completeness
@@ -492,121 +493,132 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                     "highest_interaction_risk": 0.0,
                     "analysis_status": {},
                 }
+            return revision_cached_stats(
+                str(self._db_path),
+                tenant_id,
+                effective_scan_id,
+                (tuple(sorted(entity_types or ())), min_severity_rank),
+                lambda: read_snapshot_identity(conn, tenant_id, effective_scan_id, True, "?")[1],
+                lambda: self._live_snapshot_stats(conn, tenant_id, effective_scan_id, entity_types, min_severity_rank),
+            )
+        finally:
+            conn.close()
 
-            analysis_row = conn.execute(
-                "SELECT analysis_status FROM graph_snapshots WHERE scan_id = ? AND tenant_id = ?",
+    @staticmethod
+    def _live_snapshot_stats(
+        conn: sqlite3.Connection, tenant_id: str, effective_scan_id: str, entity_types: set[str] | None, min_severity_rank: int
+    ) -> dict[str, Any]:
+        analysis_row = conn.execute(
+            "SELECT analysis_status FROM graph_snapshots WHERE scan_id = ? AND tenant_id = ?",
+            (effective_scan_id, tenant_id),
+        ).fetchone()
+        analysis_status = analysis_status_map_to_dict(
+            analysis_status_map_from_dict(json.loads((analysis_row[0] if analysis_row else "{}") or "{}"))
+        )
+
+        node_where = ["tenant_id = ?", "scan_id = ?"]
+        params: list[Any] = [tenant_id, effective_scan_id]
+        if entity_types:
+            placeholders = ",".join("?" for _ in entity_types)
+            node_where.append(f"entity_type IN ({placeholders})")
+            params.extend(sorted(entity_types))
+        sev_sql, sev_params = severity_floor_sql(min_severity_rank)
+        if sev_sql:
+            node_where.append(sev_sql)
+            params.extend(sev_params)
+        where_sql = " AND ".join(node_where)
+
+        # Unfiltered node/edge totals AND the entity-type / severity breakdowns are materialised on the snapshot row at write time.
+        # Re-deriving them here re-scans graph_nodes with two GROUP BYs (1-2s at 500k-1M nodes) plus a double id-membership edge
+        # subquery, so read the stored values and only fall back to the live queries when the snapshot row is missing or the cached
+        # breakdown was never populated (older snapshots). Any active entity-type or severity filter narrows the set, so the recompute
+        # path still runs.
+        filters_active = bool(entity_types) or bool(min_severity_rank)
+        stored_node_count: int | None = None
+        stored_edge_count: int | None = None
+        cached_node_types: dict[str, int] | None = None
+        cached_severity_counts: dict[str, int] | None = None
+        if not filters_active:
+            snap_row = conn.execute(
+                "SELECT node_count, edge_count, risk_summary, node_type_counts FROM graph_snapshots WHERE scan_id = ? AND tenant_id = ?",
                 (effective_scan_id, tenant_id),
             ).fetchone()
-            analysis_status = analysis_status_map_to_dict(
-                analysis_status_map_from_dict(json.loads((analysis_row[0] if analysis_row else "{}") or "{}"))
-            )
+            if snap_row is not None:
+                stored_node_count = snap_row[0] if snap_row[0] is not None else None
+                stored_edge_count = snap_row[1] if snap_row[1] is not None else None
+                # node_type_counts is NULL for snapshots written before the breakdown was materialised — fall back to the live GROUP BY
+                # for those. risk_summary already carries the severity counts.
+                if snap_row[3] is not None:
+                    cached_node_types = {str(k): int(v) for k, v in json.loads(snap_row[3]).items()}
+                    cached_severity_counts = {str(k): int(v) for k, v in json.loads(snap_row[2] or "{}").items() if k}
 
-            node_where = ["tenant_id = ?", "scan_id = ?"]
-            params: list[Any] = [tenant_id, effective_scan_id]
-            if entity_types:
-                placeholders = ",".join("?" for _ in entity_types)
-                node_where.append(f"entity_type IN ({placeholders})")
-                params.extend(sorted(entity_types))
-            sev_sql, sev_params = severity_floor_sql(min_severity_rank)
-            if sev_sql:
-                node_where.append(sev_sql)
-                params.extend(sev_params)
-            where_sql = " AND ".join(node_where)
-
-            # Unfiltered node/edge totals AND the entity-type / severity breakdowns are materialised on the snapshot row at write time.
-            # Re-deriving them here re-scans graph_nodes with two GROUP BYs (1-2s at 500k-1M nodes) plus a double id-membership edge
-            # subquery, so read the stored values and only fall back to the live queries when the snapshot row is missing or the cached
-            # breakdown was never populated (older snapshots). Any active entity-type or severity filter narrows the set, so the recompute
-            # path still runs.
-            filters_active = bool(entity_types) or bool(min_severity_rank)
-            stored_node_count: int | None = None
-            stored_edge_count: int | None = None
-            cached_node_types: dict[str, int] | None = None
-            cached_severity_counts: dict[str, int] | None = None
-            if not filters_active:
-                snap_row = conn.execute(
-                    "SELECT node_count, edge_count, risk_summary, node_type_counts "
-                    "FROM graph_snapshots WHERE scan_id = ? AND tenant_id = ?",
-                    (effective_scan_id, tenant_id),
-                ).fetchone()
-                if snap_row is not None:
-                    stored_node_count = snap_row[0] if snap_row[0] is not None else None
-                    stored_edge_count = snap_row[1] if snap_row[1] is not None else None
-                    # node_type_counts is NULL for snapshots written before the breakdown was materialised — fall back to the live GROUP BY
-                    # for those. risk_summary already carries the severity counts.
-                    if snap_row[3] is not None:
-                        cached_node_types = {str(k): int(v) for k, v in json.loads(snap_row[3]).items()}
-                        cached_severity_counts = {str(k): int(v) for k, v in json.loads(snap_row[2] or "{}").items() if k}
-
-            if stored_node_count is not None:
-                total_nodes = stored_node_count
-            else:
-                total_nodes = conn.execute(
-                    f"SELECT COUNT(*) FROM graph_nodes WHERE {where_sql}",  # nosec B608 - where_sql is built from static clause fragments
-                    params,
-                ).fetchone()[0]
-            if cached_node_types is not None:
-                node_types = cached_node_types
-            else:
-                node_type_rows = conn.execute(
-                    f"SELECT entity_type, COUNT(*) FROM graph_nodes WHERE {where_sql} GROUP BY entity_type",  # nosec B608 - where_sql is built from static clause fragments
-                    params,
-                ).fetchall()
-                node_types = {str(row[0]): int(row[1]) for row in node_type_rows}
-            if cached_severity_counts is not None:
-                severity_counts = cached_severity_counts
-            else:
-                severity_rows = conn.execute(
-                    f"SELECT severity, COUNT(*) FROM graph_nodes WHERE {where_sql} AND {FINDING_SEVERITY_SQLITE[0]} GROUP BY severity",  # nosec B608 - where_sql is built from static clause fragments
-                    [*params, *FINDING_SEVERITY_SQLITE[1]],
-                ).fetchall()
-                severity_counts = {str(row[0]): int(row[1]) for row in severity_rows}
-            if stored_edge_count is not None:
-                total_edges = stored_edge_count
-            else:
-                total_edges = conn.execute(
-                    f"""
-                    SELECT COUNT(*)
-                    FROM graph_edges
-                    WHERE tenant_id = ? AND scan_id = ?
-                      AND EXISTS (SELECT 1 FROM graph_nodes WHERE id = graph_edges.source_id AND {where_sql})
-                      AND EXISTS (SELECT 1 FROM graph_nodes WHERE id = graph_edges.target_id AND {where_sql})
-                    """,  # nosec B608 - where_sql is built from static clause fragments
-                    [tenant_id, effective_scan_id, *params, *params],
-                ).fetchone()[0]
-            rel_rows = conn.execute(
+        if stored_node_count is not None:
+            total_nodes = stored_node_count
+        else:
+            total_nodes = conn.execute(
+                f"SELECT COUNT(*) FROM graph_nodes WHERE {where_sql}",  # nosec B608 - where_sql is built from static clause fragments
+                params,
+            ).fetchone()[0]
+        if cached_node_types is not None:
+            node_types = cached_node_types
+        else:
+            node_type_rows = conn.execute(
+                f"SELECT entity_type, COUNT(*) FROM graph_nodes WHERE {where_sql} GROUP BY entity_type",  # nosec B608 - where_sql is built from static clause fragments
+                params,
+            ).fetchall()
+            node_types = {str(row[0]): int(row[1]) for row in node_type_rows}
+        if cached_severity_counts is not None:
+            severity_counts = cached_severity_counts
+        else:
+            severity_rows = conn.execute(
+                f"SELECT severity, COUNT(*) FROM graph_nodes WHERE {where_sql} AND {FINDING_SEVERITY_SQLITE[0]} GROUP BY severity",  # nosec B608 - where_sql is built from static clause fragments
+                [*params, *FINDING_SEVERITY_SQLITE[1]],
+            ).fetchall()
+            severity_counts = {str(row[0]): int(row[1]) for row in severity_rows}
+        if stored_edge_count is not None:
+            total_edges = stored_edge_count
+        else:
+            total_edges = conn.execute(
                 f"""
-                SELECT relationship, COUNT(*)
+                SELECT COUNT(*)
                 FROM graph_edges
                 WHERE tenant_id = ? AND scan_id = ?
                   AND EXISTS (SELECT 1 FROM graph_nodes WHERE id = graph_edges.source_id AND {where_sql})
                   AND EXISTS (SELECT 1 FROM graph_nodes WHERE id = graph_edges.target_id AND {where_sql})
-                GROUP BY relationship
                 """,  # nosec B608 - where_sql is built from static clause fragments
                 [tenant_id, effective_scan_id, *params, *params],
-            ).fetchall()
-            attack_row = conn.execute(
-                "SELECT COUNT(*), COALESCE(MAX(composite_risk), 0.0) FROM attack_paths WHERE tenant_id = ? AND scan_id = ?",
-                (tenant_id, effective_scan_id),
-            ).fetchone()
-            interaction_row = conn.execute(
-                "SELECT COUNT(*), COALESCE(MAX(risk_score), 0.0) FROM interaction_risks WHERE tenant_id = ? AND scan_id = ?",
-                (tenant_id, effective_scan_id),
-            ).fetchone()
-            return {
-                "total_nodes": int(total_nodes or 0),
-                "total_edges": int(total_edges or 0),
-                "node_types": node_types,
-                "severity_counts": severity_counts,
-                "relationship_types": {str(row[0]): int(row[1]) for row in rel_rows},
-                "attack_path_count": int((attack_row[0] if attack_row else 0) or 0),
-                "interaction_risk_count": int((interaction_row[0] if interaction_row else 0) or 0),
-                "max_attack_path_risk": float((attack_row[1] if attack_row else 0.0) or 0.0),
-                "highest_interaction_risk": float((interaction_row[1] if interaction_row else 0.0) or 0.0),
-                "analysis_status": analysis_status,
-            }
-        finally:
-            conn.close()
+            ).fetchone()[0]
+        rel_rows = conn.execute(
+            f"""
+            SELECT relationship, COUNT(*)
+            FROM graph_edges
+            WHERE tenant_id = ? AND scan_id = ?
+              AND EXISTS (SELECT 1 FROM graph_nodes WHERE id = graph_edges.source_id AND {where_sql})
+              AND EXISTS (SELECT 1 FROM graph_nodes WHERE id = graph_edges.target_id AND {where_sql})
+            GROUP BY relationship
+            """,  # nosec B608 - where_sql is built from static clause fragments
+            [tenant_id, effective_scan_id, *params, *params],
+        ).fetchall()
+        attack_row = conn.execute(
+            "SELECT COUNT(*), COALESCE(MAX(composite_risk), 0.0) FROM attack_paths WHERE tenant_id = ? AND scan_id = ?",
+            (tenant_id, effective_scan_id),
+        ).fetchone()
+        interaction_row = conn.execute(
+            "SELECT COUNT(*), COALESCE(MAX(risk_score), 0.0) FROM interaction_risks WHERE tenant_id = ? AND scan_id = ?",
+            (tenant_id, effective_scan_id),
+        ).fetchone()
+        return {
+            "total_nodes": int(total_nodes or 0),
+            "total_edges": int(total_edges or 0),
+            "node_types": node_types,
+            "severity_counts": severity_counts,
+            "relationship_types": {str(row[0]): int(row[1]) for row in rel_rows},
+            "attack_path_count": int((attack_row[0] if attack_row else 0) or 0),
+            "interaction_risk_count": int((interaction_row[0] if interaction_row else 0) or 0),
+            "max_attack_path_risk": float((attack_row[1] if attack_row else 0.0) or 0.0),
+            "highest_interaction_risk": float((interaction_row[1] if interaction_row else 0.0) or 0.0),
+            "analysis_status": analysis_status,
+        }
 
     def query_inventory(
         self,

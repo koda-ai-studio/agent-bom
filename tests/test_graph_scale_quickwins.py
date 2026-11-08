@@ -90,10 +90,11 @@ def test_snapshot_stats_reads_stored_counts(tmp_path):
     assert baseline["total_edges"] == 2
     assert baseline["total_nodes"] == 3
 
-    # Tamper the materialised counts. A stored-count read returns the sentinels;
+    # Tamper the materialised counts as a committed write would (new read revision).
+    # A stored-count read returns the sentinels;
     # a recompute over graph_edges/graph_nodes would ignore them.
     conn = sqlite3.connect(store._db_path)
-    conn.execute("UPDATE graph_snapshots SET node_count = 777, edge_count = 999 WHERE scan_id = 'scale-scan'")
+    conn.execute("UPDATE graph_snapshots SET node_count = 777, edge_count = 999, read_revision = 'tampered' WHERE scan_id = 'scale-scan'")
     conn.commit()
     conn.close()
 

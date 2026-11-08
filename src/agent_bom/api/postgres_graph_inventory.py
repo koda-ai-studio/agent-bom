@@ -11,6 +11,8 @@ from agent_bom.api.graph_store import (
     decode_graph_cursor,
     encode_graph_cursor,
 )
+from agent_bom.api.graph_store_support import revision_cached_stats
+from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.db.graph_store import normalize_graph_tenant_id
 from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_status_map_to_dict
 from agent_bom.graph.severity_floor import finding_severity_count_sql, severity_floor_sql
@@ -316,6 +318,61 @@ def _edge_breakdowns(
     return total_edges, list(rel_rows)
 
 
+def _live_snapshot_stats(
+    conn: Any, tenant_id: str, effective_scan_id: str, where_sql: str, params: list[Any], filters_active: bool
+) -> dict[str, Any]:
+    analysis_row = conn.execute(
+        "SELECT analysis_status FROM graph_snapshots WHERE scan_id = %s AND tenant_id = %s",
+        (effective_scan_id, tenant_id),
+    ).fetchone()
+    analysis_status = analysis_status_map_to_dict(
+        analysis_status_map_from_dict(_decode_json_object(analysis_row[0] if analysis_row else None))
+    )
+    # Unfiltered node/edge totals AND the entity-type / severity breakdowns
+    # are materialised on the snapshot row at write time. Re-deriving them
+    # here costs two GROUP BYs over graph_nodes plus a double id-membership
+    # edge subquery on every paged /v1/graph call — O(estate) per page view
+    # of an estate that only grows. Read the stored values and fall back to
+    # the live queries only when the snapshot row is missing or the
+    # breakdown was never populated (snapshots older than the column). Any
+    # active entity-type or severity filter narrows the set, so the
+    # recompute path still runs then. Kept identical to the SQLite backend:
+    # a count that depends on which store answered is not a count.
+    stored: tuple[int | None, int | None, dict[str, int] | None, dict[str, int] | None] = (None, None, None, None)
+    if not filters_active:
+        stored = _stored_snapshot_counts(conn, tenant_id=tenant_id, scan_id=effective_scan_id)
+    total_nodes, node_types, severity_counts = _node_breakdowns(conn, where_sql=where_sql, params=params, stored=stored)
+    total_edges, rel_rows = _edge_breakdowns(
+        conn,
+        tenant_id=tenant_id,
+        scan_id=effective_scan_id,
+        where_sql=where_sql,
+        params=params,
+        stored_edge_count=stored[1],
+        filters_active=filters_active,
+    )
+    attack_row = conn.execute(
+        "SELECT COUNT(*), COALESCE(MAX(composite_risk), 0.0) FROM attack_paths WHERE tenant_id = %s AND scan_id = %s",
+        (tenant_id, effective_scan_id),
+    ).fetchone()
+    interaction_row = conn.execute(
+        "SELECT COUNT(*), COALESCE(MAX(risk_score), 0.0) FROM interaction_risks WHERE tenant_id = %s AND scan_id = %s",
+        (tenant_id, effective_scan_id),
+    ).fetchone()
+    return {
+        "total_nodes": total_nodes,
+        "total_edges": total_edges,
+        "node_types": node_types,
+        "severity_counts": severity_counts,
+        "relationship_types": {str(row[0]): int(row[1]) for row in rel_rows},
+        "attack_path_count": int((attack_row[0] if attack_row else 0) or 0),
+        "interaction_risk_count": int((interaction_row[0] if interaction_row else 0) or 0),
+        "max_attack_path_risk": float((attack_row[1] if attack_row else 0.0) or 0.0),
+        "highest_interaction_risk": float((interaction_row[1] if interaction_row else 0.0) or 0.0),
+        "analysis_status": analysis_status,
+    }
+
+
 class PostgresGraphInventoryMixin(PostgresGraphQueryMixin):
     """Answer the inventory contract and snapshot statistics from Postgres."""
 
@@ -337,57 +394,16 @@ class PostgresGraphInventoryMixin(PostgresGraphQueryMixin):
         )
 
         with _tenant_connection(self._pool) as conn:
-            analysis_row = conn.execute(
-                "SELECT analysis_status FROM graph_snapshots WHERE scan_id = %s AND tenant_id = %s",
-                (effective_scan_id, tenant_id),
-            ).fetchone()
-            analysis_status = analysis_status_map_to_dict(
-                analysis_status_map_from_dict(_decode_json_object(analysis_row[0] if analysis_row else None))
+            return revision_cached_stats(
+                f"postgres:{id(self._pool)}",
+                tenant_id,
+                effective_scan_id,
+                (tuple(sorted(entity_types or ())), min_severity_rank),
+                lambda: read_snapshot_identity(conn, tenant_id, effective_scan_id, True, "%s")[1],
+                lambda: _live_snapshot_stats(
+                    conn, tenant_id, effective_scan_id, where_sql, params, bool(entity_types) or bool(min_severity_rank)
+                ),
             )
-            # Unfiltered node/edge totals AND the entity-type / severity breakdowns
-            # are materialised on the snapshot row at write time. Re-deriving them
-            # here costs two GROUP BYs over graph_nodes plus a double id-membership
-            # edge subquery on every paged /v1/graph call — O(estate) per page view
-            # of an estate that only grows. Read the stored values and fall back to
-            # the live queries only when the snapshot row is missing or the
-            # breakdown was never populated (snapshots older than the column). Any
-            # active entity-type or severity filter narrows the set, so the
-            # recompute path still runs then. Kept identical to the SQLite backend:
-            # a count that depends on which store answered is not a count.
-            filters_active = bool(entity_types) or bool(min_severity_rank)
-            stored: tuple[int | None, int | None, dict[str, int] | None, dict[str, int] | None] = (None, None, None, None)
-            if not filters_active:
-                stored = _stored_snapshot_counts(conn, tenant_id=tenant_id, scan_id=effective_scan_id)
-            total_nodes, node_types, severity_counts = _node_breakdowns(conn, where_sql=where_sql, params=params, stored=stored)
-            total_edges, rel_rows = _edge_breakdowns(
-                conn,
-                tenant_id=tenant_id,
-                scan_id=effective_scan_id,
-                where_sql=where_sql,
-                params=params,
-                stored_edge_count=stored[1],
-                filters_active=filters_active,
-            )
-            attack_row = conn.execute(
-                "SELECT COUNT(*), COALESCE(MAX(composite_risk), 0.0) FROM attack_paths WHERE tenant_id = %s AND scan_id = %s",
-                (tenant_id, effective_scan_id),
-            ).fetchone()
-            interaction_row = conn.execute(
-                "SELECT COUNT(*), COALESCE(MAX(risk_score), 0.0) FROM interaction_risks WHERE tenant_id = %s AND scan_id = %s",
-                (tenant_id, effective_scan_id),
-            ).fetchone()
-            return {
-                "total_nodes": total_nodes,
-                "total_edges": total_edges,
-                "node_types": node_types,
-                "severity_counts": severity_counts,
-                "relationship_types": {str(row[0]): int(row[1]) for row in rel_rows},
-                "attack_path_count": int((attack_row[0] if attack_row else 0) or 0),
-                "interaction_risk_count": int((interaction_row[0] if interaction_row else 0) or 0),
-                "max_attack_path_risk": float((attack_row[1] if attack_row else 0.0) or 0.0),
-                "highest_interaction_risk": float((interaction_row[1] if interaction_row else 0.0) or 0.0),
-                "analysis_status": analysis_status,
-            }
 
     def query_inventory(
         self,
