@@ -25,6 +25,13 @@ def _env_flag(name: str) -> bool:
     return env_bool(name, False, on_invalid="default")
 
 
+def _scan_exit_code(report: Any, policy_result: Any) -> int:
+    """A file that could not be scanned is incomplete, whatever the rest of the run decided."""
+    if any(file_report.scan_failed for file_report in report.files):
+        return 2
+    return 1 if policy_result.failed else 0
+
+
 def _resolve_ci_fail_verdict(ci: bool, fail_on_verdict: str | None, audit_only: bool = False) -> str | None:
     """Fail on malicious content by default; CI also gates suspicious content.
 
@@ -322,8 +329,7 @@ def skills_scan_cmd(
         if output_path:
             output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    if policy_result.failed:
-        sys.exit(1)
+    sys.exit(_scan_exit_code(report, policy_result))
 
 
 @skills_group.command("rescan")

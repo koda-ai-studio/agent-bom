@@ -13,18 +13,12 @@ from typing import Iterable
 
 from agent_bom.integrity import verify_instruction_file
 from agent_bom.parsers.skill_audit import SkillAuditResult, audit_skill_result
-from agent_bom.parsers.skills import (
-    SKILL_DISCOVERY_SKIP_DIRS,
-    SkillScanResult,
-    looks_like_instruction_surface,
-    parse_skill_file,
-)
+from agent_bom.parsers.skills import SkillScanResult, parse_skill_file
 from agent_bom.parsers.trust_assessment import ProvenanceVerdict, ReviewVerdict, TrustAssessmentResult, Verdict, assess_trust
 from agent_bom.security import sanitize_command_args, sanitize_error
-from agent_bom.skill_bundles import SkillBundle, build_skill_bundle
+from agent_bom.skill_bundles import SkillBundle, build_skill_bundle, discover_explicit_skill_files
 from agent_bom.skill_intel import ThreatIntelResult, ThreatIntelStatus, lookup_bundle_threat_intel
 from agent_bom.skills_catalog import catalog_scan_timestamp, load_skills_catalog, save_skills_catalog
-from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +46,14 @@ class SkillFileReport:
     bundle: SkillBundle
     threat_intel: ThreatIntelResult | None = None
     status: str = ThreatIntelStatus.CLEAN.value
+    scan_failed: bool = False
 
     def to_dict(self) -> dict:
         """Serialize the file report to JSON-compatible data."""
         return {
             "path": str(self.path),
             "status": self.status,
+            **({"scan_failed": True} if self.scan_failed else {}),
             "bundle": self.bundle.to_dict(),
             "packages": [{"name": pkg.name, "version": pkg.version, "ecosystem": pkg.ecosystem} for pkg in self.scan.packages],
             "servers": [
@@ -142,6 +138,7 @@ class SkillsScanReport:
                 "suspicious_files": suspicious,
                 "malicious_files": malicious,
                 "blocked_files": sum(1 for report in self.files if report.trust.review_verdict.value == "blocked"),
+                "failed_files": sum(1 for report in self.files if report.scan_failed),
                 "high_risk_files": sum(1 for report in self.files if report.trust.review_verdict.value == "high_risk"),
                 "clean_files": status_counts.get("clean", 0),
                 "suspicious_status_files": status_counts.get("suspicious", 0),
@@ -184,30 +181,6 @@ class SkillsRescanReport:
         }
 
 
-def _discover_explicit_skill_files(directory: Path) -> list[Path]:
-    """Discover skill-like files inside a directory explicitly requested by the user.
-
-    Test material is skipped relative to ``directory``: walking a project root
-    does not pull in its ``tests`` tree, while pointing the scan *at* a fixture
-    tree (``skills scan tests/fixtures/skills/…``) still resolves its files.
-    """
-    found: list[Path] = []
-    seen: set[Path] = set()
-    allow_docs_skills = "docs" in directory.parts and "skills" in directory.parts
-    for path in iter_discovery_files(directory, extra_skip_dirs=SKILL_DISCOVERY_SKIP_DIRS):
-        if not looks_like_instruction_surface(
-            path,
-            allow_docs_skills=allow_docs_skills,
-            scan_root=directory,
-        ):
-            continue
-        resolved = path.resolve()
-        if resolved not in seen:
-            seen.add(resolved)
-            found.append(resolved)
-    return sorted(found)
-
-
 def resolve_skill_targets(paths: Iterable[str | Path] | None = None, *, cwd: Path | None = None) -> list[Path]:
     """Resolve files/directories to concrete skill/instruction files."""
     base_dir = cwd or Path.cwd()
@@ -226,7 +199,7 @@ def resolve_skill_targets(paths: Iterable[str | Path] | None = None, *, cwd: Pat
 
         discovered: list[Path]
         if candidate.is_dir():
-            discovered = _discover_explicit_skill_files(candidate)
+            discovered = discover_explicit_skill_files(candidate)
         elif candidate.is_file():
             discovered = [candidate]
         else:
@@ -410,6 +383,7 @@ def _failed_skill_file_report(path: Path, exc: BaseException) -> SkillFileReport
         audit=SkillAuditResult(passed=False),
         trust=TrustAssessmentResult(
             source_file=str(path),
+            verdict=Verdict.SUSPICIOUS,
             review_verdict=ReviewVerdict.REVIEW,
             provenance_verdict=ProvenanceVerdict.UNVERIFIED,
             recommendations=[f"Skill scan failed: {safe}"],
@@ -424,6 +398,7 @@ def _failed_skill_file_report(path: Path, exc: BaseException) -> SkillFileReport
             referenced_file_count=0,
         ),
         status=ThreatIntelStatus.UNAVAILABLE.value,
+        scan_failed=True,
     )
 
 

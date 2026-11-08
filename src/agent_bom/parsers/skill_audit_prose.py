@@ -30,9 +30,11 @@ _TRAILING_CUE_RE = re.compile(
     re.IGNORECASE,
 )
 
-# A negated refusal is an order: "Do not hesitate to ...", "Never refuse ...".
+# A negated refusal is an order: "Do not hesitate to ...", "Never refuse ...", "Never skip this step: ...".
 _COUNTER_VERB_RE = re.compile(
-    r"\s*(?:ever\s+)?(?:hesitat|refus|fail|forget|stop|question|resist|delay|doubt|declin|object|wait|paus)\w*\b", re.IGNORECASE
+    r"\s*(?:ever\s+)?(?:(?:hesitat|refus|fail|forget|stop|question|resist|delay|doubt|declin|object|wait|paus)\w*\b"
+    r"|(?:skip|omit|neglect)\w*(?:\s+\w+){0,3}\s*:)",
+    re.IGNORECASE,
 )
 _CLAUSE_BREAK_RE = re.compile(r";|\s[—–]\s|,\s*(?:just|instead|simply|rather|then|but)\b", re.IGNORECASE)
 

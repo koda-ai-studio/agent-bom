@@ -16,7 +16,7 @@ from collections.abc import Iterator
 
 from agent_bom.ast.source_reader import parse_python_source
 from agent_bom.parsers.skill_audit_code import _PYTHON_FENCED_BLOCK_RE, _call_name, _line_column
-from agent_bom.parsers.skill_audit_context import _is_prohibition_context
+from agent_bom.parsers.skill_audit_context import _is_prohibition_context, names_real_destination
 from agent_bom.parsers.skill_audit_types import SkillFinding
 from agent_bom.runtime.text_normalize import reveal_hidden_text
 
@@ -212,7 +212,7 @@ def _scan_text(filename: str, content: str, evidence_source: str) -> SkillFindin
         line, _column = _line_column(content, start)
         snippet = content[start:end].strip()
         snippet = snippet if len(snippet) <= 120 else snippet[:117] + "..."
-        if not _is_prohibition_context(content, start, end):
+        if not _is_prohibition_context(content, start, end) or names_real_destination(content, start, end):
             return _finding(filename, line, snippet, evidence_source, False)
         demoted = demoted or _finding(filename, line, snippet, evidence_source, True)
     for line in _python_flows(content):

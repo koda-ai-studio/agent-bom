@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from agent_bom.finding import stable_id
+from agent_bom.parsers.skills import SKILL_DISCOVERY_SKIP_DIRS, looks_like_instruction_surface
+from agent_bom.traversal import iter_discovery_files
 
 _MARKDOWN_LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 _LOCAL_PATH_TOKEN_RE = re.compile(
@@ -165,3 +167,27 @@ def build_skill_bundle(path: Path, content: str | None = None) -> SkillBundle:
         referenced_file_count=max(0, len(files) - 1),
         files=files,
     )
+
+
+def discover_explicit_skill_files(directory: Path) -> list[Path]:
+    """Discover skill-like files inside a directory explicitly requested by the user.
+
+    Test material is skipped relative to ``directory``: walking a project root
+    does not pull in its ``tests`` tree, while pointing the scan *at* a fixture
+    tree (``skills scan tests/fixtures/skills/…``) still resolves its files.
+    """
+    found: list[Path] = []
+    seen: set[Path] = set()
+    allow_docs_skills = "docs" in directory.parts and "skills" in directory.parts
+    for path in iter_discovery_files(directory, extra_skip_dirs=SKILL_DISCOVERY_SKIP_DIRS):
+        if not looks_like_instruction_surface(
+            path,
+            allow_docs_skills=allow_docs_skills,
+            scan_root=directory,
+        ):
+            continue
+        resolved = path.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            found.append(resolved)
+    return sorted(found)

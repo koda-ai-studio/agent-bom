@@ -20,7 +20,7 @@ from agent_bom.parsers.skill_audit_code import (
     _line_column,
     _open_mode_is_mutating,
 )
-from agent_bom.parsers.skill_audit_context import _is_prohibition_context
+from agent_bom.parsers.skill_audit_context import _is_prohibition_context, names_real_destination
 from agent_bom.parsers.skill_audit_exfil import scan_env_exfiltration
 from agent_bom.parsers.skill_audit_hidden import scan_hidden_instructions
 from agent_bom.parsers.skill_audit_patterns import _BEHAVIORAL_PATTERNS
@@ -28,7 +28,7 @@ from agent_bom.parsers.skill_audit_secrets import scan_hardcoded_secrets
 from agent_bom.parsers.skill_audit_types import SkillFinding
 
 
-def _first_actionable_match(pattern: re.Pattern, content: str) -> tuple[re.Match | None, bool]:
+def _first_actionable_match(pattern: re.Pattern, content: str, *, sends_data: bool = False) -> tuple[re.Match | None, bool]:
     """Return the first match plus whether it only survives as policy prose.
 
     Prefers a directive match. Falls back to the first suppressed match so the
@@ -36,7 +36,8 @@ def _first_actionable_match(pattern: re.Pattern, content: str) -> tuple[re.Match
     """
     demoted: re.Match | None = None
     for candidate in pattern.finditer(content):
-        if _is_prohibition_context(content, candidate.start(), candidate.end()):
+        real_receiver = sends_data and names_real_destination(content, candidate.start(), candidate.end())
+        if not real_receiver and _is_prohibition_context(content, candidate.start(), candidate.end()):
             if demoted is None:
                 demoted = candidate
             continue
@@ -85,7 +86,7 @@ def _scan_behavioral_risks(raw_content: dict[str, str]) -> list[SkillFinding]:
 
             candidates: list[tuple[re.Match, bool, str, str, str]] = []
             for text, evidence_source in passes:
-                found, demoted = _first_actionable_match(bp.pattern, text)
+                found, demoted = _first_actionable_match(bp.pattern, text, sends_data=bp.category == "credential_exfiltration")
                 demoted = demoted and not _hidden_from_readers(evidence_source, candidates)
                 severity = bp.severity
                 confidence = "high" if bp.severity in {"critical", "high"} else "medium"
