@@ -18,9 +18,9 @@ export function buildCorrelationOutcome({ path, card, actions, nodeById, scanId,
       !correlationOutcomeMatchesOutput(scanId, graphScanId, fixFirstScanId)
     ) return null;
     const labels = card?.sequence_labels ?? path.hops.map((hop) => nodeById.get(hop)?.label ?? hop);
-    const packageNode = path.hops
-      .map((hop) => nodeById.get(hop))
-      .find((node) => node?.entity_type === "package");
+    const hopNodes = path.hops.map((hop) => nodeById.get(hop));
+    const packageNode = hopNodes.find((node) => node?.entity_type === "package");
+    const packageHop = packageNode ? "present" : hopNodes.every(Boolean) ? "absent" : "unknown";
     const finding = card?.affected.finding_labels?.[0] ?? path.vuln_ids[0];
     const reasons = card?.risk_reasons ?? [];
     const hopReceipts = path.hop_evidence ?? [];
@@ -37,6 +37,7 @@ export function buildCorrelationOutcome({ path, card, actions, nodeById, scanId,
       target: labels.at(-1) ?? path.target,
       finding,
       packageName: packageNode?.label,
+      packageHop,
       risk: path.composite_risk,
       hops: directedHopCount,
       runtimeObserved: reasons.some((reason) => reason.kind === "runtime_observed") || hopReceipts.some((receipt) => receipt.runtime_observed_state === "observed"),

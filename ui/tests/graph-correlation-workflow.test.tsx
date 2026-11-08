@@ -121,6 +121,19 @@ describe("GraphCorrelationWorkflow", () => {
     expect(screen.getByRole("button", { name: "Open top path" })).toBeVisible();
   });
 
+  it("says a path has no package hop instead of calling the package unavailable", async () => {
+    render(<GraphCorrelationWorkflow snapshots={snapshots} initialRun={run("complete")} outcome={{ ...outcome, packageName: undefined, packageHop: "absent" }} onOpenSnapshot={vi.fn()} />);
+    expect(await screen.findByTestId("graph-correlation-decision")).toBeInTheDocument();
+    expect(screen.getByText("No package on this path")).toBeVisible();
+    expect(screen.queryByText("Package unavailable")).not.toBeInTheDocument();
+  });
+
+  it("keeps the package unavailable when the path is not fully loaded", async () => {
+    render(<GraphCorrelationWorkflow snapshots={snapshots} initialRun={run("complete")} outcome={{ ...outcome, packageName: undefined, packageHop: "unknown" }} onOpenSnapshot={vi.fn()} />);
+    expect(await screen.findByTestId("graph-correlation-decision")).toBeInTheDocument();
+    expect(screen.getByText("Package unavailable")).toBeVisible();
+  });
+
   it("does not preselect evidence outside the confirmed freshness bound", () => {
     const stale = { ...snapshots[0]!, scan_id: "stale-repo", created_at: "2026-08-01T00:00:00Z" };
     render(<GraphCorrelationWorkflow snapshots={[stale, snapshots[1]!]} onOpenSnapshot={vi.fn()} />);

@@ -22,7 +22,7 @@ export function FindingLaneTabs({ lane, counts, approximate, onChange }: {
         </button>;
       })}
     </div>
-    <p className="text-xs text-ink-secondary">{current.hint} {!counts && <span>Counts are unavailable.</span>} Tab counts: canonical issues in the current filter scope{approximate ? " (partial; lower bounds)" : ""}.
+    <p className="text-xs text-ink-secondary">{current.hint} {counts ? <>Tab counts: canonical issues in the current filter scope{approximate ? " (partial; lower bounds)" : ""}.</> : <span>Tab counts are unavailable.</span>}
       {lane === "cloud" && <> Table rows and severity counts group those issues by control; resource findings remain expandable.</>}
       {lane === "all" && <> <Link className="underline" href="/">Overview</Link> · <Link className="underline" href="/security-graph">Investigation</Link></>}
     </p>
