@@ -336,6 +336,20 @@ def test_rescan_skill_catalog_works_inside_existing_event_loop(tmp_path):
     assert report.entries[0]["exists"] is True
 
 
+def test_scan_report_lists_requirement_files_as_manifest_references(tmp_path):
+    skill_file = tmp_path / "SKILL.md"
+    skill_file.write_text("```bash\npip install -r requirements.txt requests\n```\n")
+
+    payload = scan_skill_targets([skill_file], catalog_path=tmp_path / "catalog.json").to_dict()
+
+    file_report = payload["files"][0]
+    assert file_report["manifest_references"] == ["requirements.txt"]
+    assert [pkg["name"] for pkg in file_report["packages"]] == ["requests"]
+    schema = json.loads(Path("config/schemas/skills-scan.schema.json").read_text())
+    file_schema = schema["properties"]["files"]["items"]["properties"]
+    assert file_schema["manifest_references"] == {"type": "array", "items": {"type": "string"}}
+
+
 def test_skills_output_schemas_exist():
     """Versioned skills schemas should ship with the repo for downstream tooling."""
     scan_schema = Path("config/schemas/skills-scan.schema.json")

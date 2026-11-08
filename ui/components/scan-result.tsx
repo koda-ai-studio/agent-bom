@@ -798,7 +798,7 @@ function RemediationPlan({ items }: { items: RemediationItem[] }) {
           )}
           <div className="flex items-start gap-2 bg-[color:var(--severity-critical-bg)] border border-[color:var(--severity-critical-border)] rounded-lg px-3 py-2">
             <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-red-300/80">{item.risk_narrative}</p>
+            <p className="text-xs text-[color:var(--status-danger)]">{item.risk_narrative}</p>
           </div>
         </div>
       ))}

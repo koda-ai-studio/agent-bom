@@ -54,7 +54,7 @@ export function FirstScanGuide({ onImport }: { onImport: (data: ScanResult) => v
           <h3 className="font-medium">Scan in this control plane</h3>
           <p className="text-sm leading-6 text-ink-secondary">Choose a repository, image or mounted project in the scan form. The browser does not scan your workstation automatically.</p>
           {loading ? <p role="status" className="text-sm text-ink-secondary">Checking scan access…</p> : canScan ? (
-            <Link href="/scan" className="inline-flex rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600">Choose a scan target</Link>
+            <Link href="/scan" className="inline-flex rounded-lg bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--accent-contrast)] hover:bg-[color:var(--accent-strong)]">Choose a scan target</Link>
           ) : anonymous ? (
             <p className="text-sm text-ink-secondary">This deployment&rsquo;s anonymous access is read-only, so scans cannot start from the browser. Sign in with a scan-capable credential, or preview a saved report below.</p>
           ) : <p className="text-sm text-ink-secondary">Your role cannot start scans here. Ask an administrator for scan access, or preview a saved report below.</p>}

@@ -53,7 +53,12 @@ def _has_finding_at_or_above(findings, threshold: str = "high") -> bool:
     type=click.Path(dir_okay=False, file_okay=True, path_type=str),
     help="Scan a docker save / OCI image tarball without a Docker daemon.",
 )
-@click.option("--platform", help="Target platform for multi-arch images (default linux/amd64), e.g. linux/arm64")
+@click.option(
+    "--platform",
+    help="Platform to select from a multi-arch image on a registry pull (default linux/amd64), e.g. linux/arm64. "
+    "On the Docker daemon path it is passed to Docker; without it the daemon's stored copy is scanned, "
+    "usually the host's architecture.",
+)
 @_image_supply_chain_options
 @_scan_format_option()
 @click.option("-o", "--output", "output_path", help="Output file path")
@@ -101,8 +106,10 @@ def image_cmd(
 
     Images are pulled straight from their registry (no Docker daemon needed;
     credentials come from ~/.docker/config.json or --registry-user/--registry-pass
-    on `scan`). The daemon is used only with --pull-mode daemon or when the
-    registry pull fails.
+    on `scan`). The local Docker daemon is used instead when a reference with no
+    registry host (nginx:latest, acme/app:dev) names an image the daemon already
+    holds, so it never resolves to a same-named Docker Hub image; when the
+    registry pull fails; with --pull-mode daemon; and with --offline.
 
     \b
     Examples:

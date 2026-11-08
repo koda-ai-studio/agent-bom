@@ -9,10 +9,14 @@ agent-bom image <image:tag> --platform linux/amd64 --format json --output image-
 ```
 
 A registry pull selects that platform's manifest from the image index (the
-default is `linux/amd64`). When the scan falls back to the Docker daemon
-(`--pull-mode daemon`, or a failed registry pull), the platform is passed to
-Docker pull, archive save, and the stopped container used by the
-filesystem-export fallback; Docker must then support `save --platform`.
+default is `linux/amd64`; a single-platform image is scanned as published).
+The Docker daemon is used instead in `auto` mode when a reference with no
+registry host (`nginx:latest`, `acme/app:dev`) names an image the daemon
+already holds, when the registry pull fails, with `--pull-mode daemon`, and
+with `--offline`. On that path `--platform` is passed to Docker pull, archive
+save, and the stopped container used by the filesystem-export fallback; Docker
+must then support `save --platform`. Without `--platform` the daemon's stored
+copy is scanned, usually the host's architecture, not `linux/amd64`.
 Signature, attestation, base-image and layer-secret evidence, and the
 server-side registry policy, are described in `site-docs/features/scanning.md`.
 

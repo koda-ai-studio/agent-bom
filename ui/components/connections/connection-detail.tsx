@@ -63,7 +63,7 @@ export function ConnectionDetailDrawer({
           <span className="min-w-0 break-all font-mono text-[11px] text-ink-tertiary">{connection.role_ref}</span>
           {isOrganizationScope(connection) ? (
             <span
-              className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-200"
+              className="inline-flex items-center rounded-full border border-[color:var(--status-success-border)] bg-[color:var(--status-success-bg)] text-[color:var(--status-success)] px-2 py-0.5 text-[10px] font-medium"
               data-testid="connection-org-scope-chip"
             >
               Organization
