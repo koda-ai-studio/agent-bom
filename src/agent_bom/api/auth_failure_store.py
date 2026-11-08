@@ -245,7 +245,7 @@ class PostgresAuthFailureStore(AuthFailureStore):
     _MAX_DEAD_CONNECTIONS = 32
 
     def __init__(self, pool: Any = None) -> None:
-        self._pool = pool if pool is not None else admission_state_pool("auth")
+        self._pool = pool if pool is not None else admission_state_pool()
 
         with self._pool.connection() as conn:
             if ensure_postgres_schema_version(conn, "auth_failure_limits"):

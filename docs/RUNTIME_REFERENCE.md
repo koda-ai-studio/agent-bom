@@ -55,7 +55,7 @@ Shared database availability, capacity, TLS and backup remain operator duties.
 Budget `AGENT_BOM_POSTGRES_POOL_MIN_SIZE` and `AGENT_BOM_POSTGRES_POOL_MAX_SIZE`
 across every API and gateway process, including rollout overlap and verification
 jobs. API idempotency fencing uses an additional pool of up to four connections
-per process, and authentication and rate-limit state each use one more of up to four. The bootstrap application role permits 20 connections: default
+per process, and authentication and rate-limit state share one more of up to four. The bootstrap application role permits 20 connections: default
 five-connection minimums can exhaust it with four replicas alone. Size pools
 and the database role limit together before enabling autoscaling; raising the
 replica count does not raise database capacity. Upstream connection pools and

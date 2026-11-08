@@ -28,40 +28,41 @@ SHARED_STORE_WARNING_INTERVAL_SECONDS = 60.0
 
 
 _ADMISSION_POOL_MAX_SIZE = 4
-_admission_pools: dict[str, tuple[Any, Any]] = {}
-_admission_pools_lock = threading.Lock()
+_admission_pool: tuple[Any, Any] | None = None
+_admission_pool_lock = threading.Lock()
 
 
-def admission_state_pool(purpose: str) -> Any:
-    """A small autocommit pool for one kind of admission state: ``auth`` or ``rate_limit``.
+def admission_state_pool() -> Any:
+    """The small autocommit pool that authentication and rate-limit state share.
 
     Ingest, graph and report work hold the application pool for seconds at a
-    time; admission checks must not queue behind them, nor authentication behind
-    rate limiting. Autocommit lets a check travel as one round trip. Each adds at
-    most four connections per process. A new application pool, after a reset,
-    replaces it.
+    time; admission checks must not queue behind them. Autocommit lets a check
+    travel as one round trip, so each holds a connection only briefly. One pool
+    keeps the role's connection budget: it adds at most four connections per
+    process. A new application pool, after a reset, replaces it.
     """
+    global _admission_pool
     app_pool = _get_pool()
-    with _admission_pools_lock:
-        current = _admission_pools.get(purpose)
-        if current is None or current[0] is not app_pool:
-            if current is not None:
-                current[1].close()
+    with _admission_pool_lock:
+        if _admission_pool is None or _admission_pool[0] is not app_pool:
+            if _admission_pool is not None:
+                _admission_pool[1].close()
             size = max(1, min(_ADMISSION_POOL_MAX_SIZE, POSTGRES_POOL_MAX_SIZE))
-            current = _admission_pools[purpose] = (app_pool, _new_application_pool(min_size=1, max_size=size, autocommit=True))
-        pool = current[1]
+            _admission_pool = (app_pool, _new_application_pool(min_size=1, max_size=size, autocommit=True))
+        pool = _admission_pool[1]
     _guard_rls_capable_role(pool)
     return pool
 
 
-def _close_admission_pools() -> None:
-    with _admission_pools_lock:
-        for _app_pool, pool in _admission_pools.values():
-            pool.close()
-        _admission_pools.clear()
+def _close_admission_pool() -> None:
+    global _admission_pool
+    with _admission_pool_lock:
+        if _admission_pool is not None:
+            _admission_pool[1].close()
+        _admission_pool = None
 
 
-atexit.register(_close_admission_pools)
+atexit.register(_close_admission_pool)
 
 # Per-transaction bounds, so they hold behind a transaction-mode connection pooler.
 _ADMISSION_BOUNDS = ("SET LOCAL statement_timeout = '400ms'", "SET LOCAL lock_timeout = '400ms'")
@@ -241,7 +242,7 @@ class PostgresRateLimitStore:
 
     def __init__(self, window_seconds: int = 60, pool: Any = None) -> None:
         self._window = window_seconds
-        self._pool = pool if pool is not None else admission_state_pool("rate_limit")
+        self._pool = pool if pool is not None else admission_state_pool()
         self._next_global_prune = 0.0
         self._init_tables()
 
