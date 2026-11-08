@@ -533,48 +533,9 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
         # subquery, so read the stored values and only fall back to the live queries when the snapshot row is missing or the cached
         # breakdown was never populated (older snapshots). Any active entity-type or severity filter narrows the set, so the recompute
         # path still runs.
-        filters_active = bool(entity_types) or bool(min_severity_rank)
-        stored_node_count: int | None = None
-        stored_edge_count: int | None = None
-        cached_node_types: dict[str, int] | None = None
-        cached_severity_counts: dict[str, int] | None = None
-        if not filters_active:
-            snap_row = conn.execute(
-                "SELECT node_count, edge_count, risk_summary, node_type_counts FROM graph_snapshots WHERE scan_id = ? AND tenant_id = ?",
-                (effective_scan_id, tenant_id),
-            ).fetchone()
-            if snap_row is not None:
-                stored_node_count = snap_row[0] if snap_row[0] is not None else None
-                stored_edge_count = snap_row[1] if snap_row[1] is not None else None
-                # node_type_counts is NULL for snapshots written before the breakdown was materialised — fall back to the live GROUP BY
-                # for those. risk_summary already carries the severity counts.
-                if snap_row[3] is not None:
-                    cached_node_types = {str(k): int(v) for k, v in json.loads(snap_row[3]).items()}
-                    cached_severity_counts = {str(k): int(v) for k, v in json.loads(snap_row[2] or "{}").items() if k}
-
-        if stored_node_count is not None:
-            total_nodes = stored_node_count
-        else:
-            total_nodes = conn.execute(
-                f"SELECT COUNT(*) FROM graph_nodes WHERE {where_sql}",  # nosec B608 - where_sql is built from static clause fragments
-                params,
-            ).fetchone()[0]
-        if cached_node_types is not None:
-            node_types = cached_node_types
-        else:
-            node_type_rows = conn.execute(
-                f"SELECT entity_type, COUNT(*) FROM graph_nodes WHERE {where_sql} GROUP BY entity_type",  # nosec B608 - where_sql is built from static clause fragments
-                params,
-            ).fetchall()
-            node_types = {str(row[0]): int(row[1]) for row in node_type_rows}
-        if cached_severity_counts is not None:
-            severity_counts = cached_severity_counts
-        else:
-            severity_rows = conn.execute(
-                f"SELECT severity, COUNT(*) FROM graph_nodes WHERE {where_sql} AND {FINDING_SEVERITY_SQLITE[0]} GROUP BY severity",  # nosec B608 - where_sql is built from static clause fragments
-                [*params, *FINDING_SEVERITY_SQLITE[1]],
-            ).fetchall()
-            severity_counts = {str(row[0]): int(row[1]) for row in severity_rows}
+        total_nodes, node_types, severity_counts, stored_edge_count = SQLiteGraphStore._node_breakdowns(
+            conn, tenant_id, effective_scan_id, where_sql, params, filters_active=bool(entity_types) or bool(min_severity_rank)
+        )
         if stored_edge_count is not None:
             total_edges = stored_edge_count
         else:
@@ -619,6 +580,54 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
             "highest_interaction_risk": float((interaction_row[1] if interaction_row else 0.0) or 0.0),
             "analysis_status": analysis_status,
         }
+
+    @staticmethod
+    def _node_breakdowns(
+        conn: sqlite3.Connection, tenant_id: str, effective_scan_id: str, where_sql: str, params: list[Any], *, filters_active: bool
+    ) -> tuple[Any, dict[str, int], dict[str, int], int | None]:
+        """``(total nodes, entity-type counts, severity counts, stored edge count)``, stored values first."""
+        stored_node_count: int | None = None
+        stored_edge_count: int | None = None
+        cached_node_types: dict[str, int] | None = None
+        cached_severity_counts: dict[str, int] | None = None
+        if not filters_active:
+            snap_row = conn.execute(
+                "SELECT node_count, edge_count, risk_summary, node_type_counts FROM graph_snapshots WHERE scan_id = ? AND tenant_id = ?",
+                (effective_scan_id, tenant_id),
+            ).fetchone()
+            if snap_row is not None:
+                stored_node_count = snap_row[0] if snap_row[0] is not None else None
+                stored_edge_count = snap_row[1] if snap_row[1] is not None else None
+                # node_type_counts is NULL for snapshots written before the breakdown was materialised — fall back to the live GROUP BY
+                # for those. risk_summary already carries the severity counts.
+                if snap_row[3] is not None:
+                    cached_node_types = {str(k): int(v) for k, v in json.loads(snap_row[3]).items()}
+                    cached_severity_counts = {str(k): int(v) for k, v in json.loads(snap_row[2] or "{}").items() if k}
+
+        if stored_node_count is not None:
+            total_nodes = stored_node_count
+        else:
+            total_nodes = conn.execute(
+                f"SELECT COUNT(*) FROM graph_nodes WHERE {where_sql}",  # nosec B608 - where_sql is built from static clause fragments
+                params,
+            ).fetchone()[0]
+        if cached_node_types is not None:
+            node_types = cached_node_types
+        else:
+            node_type_rows = conn.execute(
+                f"SELECT entity_type, COUNT(*) FROM graph_nodes WHERE {where_sql} GROUP BY entity_type",  # nosec B608 - where_sql is built from static clause fragments
+                params,
+            ).fetchall()
+            node_types = {str(row[0]): int(row[1]) for row in node_type_rows}
+        if cached_severity_counts is not None:
+            severity_counts = cached_severity_counts
+        else:
+            severity_rows = conn.execute(
+                f"SELECT severity, COUNT(*) FROM graph_nodes WHERE {where_sql} AND {FINDING_SEVERITY_SQLITE[0]} GROUP BY severity",  # nosec B608 - where_sql is built from static clause fragments
+                [*params, *FINDING_SEVERITY_SQLITE[1]],
+            ).fetchall()
+            severity_counts = {str(row[0]): int(row[1]) for row in severity_rows}
+        return total_nodes, node_types, severity_counts, stored_edge_count
 
     def query_inventory(
         self,
