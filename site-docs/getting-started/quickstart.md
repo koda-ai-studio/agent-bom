@@ -12,12 +12,14 @@ pip install agent-bom
 ## Scan a project and save the evidence
 
 ```bash
-agent-bom scan . --no-discover -f html -o agent-bom-report.html
+agent-bom scan . -f html -o agent-bom-report.html
 ```
 
 Open `agent-bom-report.html` to inspect inventory, findings, coverage and fix
-guidance. This scans only the selected project's manifests, lockfiles and MCP
-configuration. No MCP configuration? Package findings remain useful; agent/tool
+guidance. This scans only the selected project: manifests, lockfiles, MCP
+configuration, secrets and personal data, skills and IaC. It does not read agent
+configuration elsewhere on the machine. Adding `--no-discover` would also turn
+off the project's secret, personal-data, skill, dataset and training-pipeline scanning. No MCP configuration? Package findings remain useful; agent/tool
 relationships need discovered configuration or an explicit inventory.
 A non-zero exit can be a security verdict or incomplete assessment; inspect the
 saved report and its coverage warnings. After a reviewed fix, rerun the command

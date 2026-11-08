@@ -169,6 +169,7 @@ def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> di
     first: Any = None
     preparing_deadline = time.monotonic() + PREPARING_WAIT_SECONDS
     preparing = 0
+    first_error: str | None = None
     for _ in range(repeats):
         while True:
             began = time.perf_counter()
@@ -182,10 +183,14 @@ def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> di
         if status == 200:
             latencies.append(elapsed)
             first = first if first is not None else body
+        elif first_error is None:
+            first_error = f"HTTP {status}: {str(body)[:300]}"
     summary: dict[str, Any] = {**latency_summary(latencies), "statuses": statuses, "response_bytes": size}
     summary["cold_ms"] = round(latencies[0], 3) if latencies else None
     if preparing:
         summary["preparing_retries"] = preparing
+    if first_error:
+        summary["first_error"] = first_error
     return {"timing": summary, "body": first}
 
 

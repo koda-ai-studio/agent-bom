@@ -34,6 +34,24 @@
       "description": "Demo estate mode only: 'pending' while the demo seed is still writing, so early reads see partial data; 'complete' once it has landed. Null outside demo mode. Liveness stays 200 either way; /readyz returns 503 while pending.",
       "title": "Demo Seed"
     },
+    "sso_provider": {
+      "anyOf": [
+        {
+          "enum": [
+            "okta",
+            "entra",
+            "google",
+            "generic"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Brand of the browser sign-in button: one of four fixed labels derived from the configured OIDC issuer host, or null when browser OIDC is off. Never the issuer, tenant or client id.",
+      "title": "Sso Provider"
+    },
     "status": {
       "default": "ok",
       "title": "Status",

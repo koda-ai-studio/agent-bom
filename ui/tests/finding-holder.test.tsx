@@ -65,6 +65,7 @@ describe("finding holder", () => {
 
   it("falls back to the MCP server, then the reaching workload", () => {
     expect(findingHolder(vuln({ affected_servers: ["etl-server"] })).label).toBe("MCP server etl-server");
+    expect(findingHolder(vuln({ affected_servers: [{ name: "etl-server" }] as unknown as string[] })).label).toBe("MCP server etl-server");
     expect(findingHolder(vuln({ graph_reachable_from: ["kubernetes:workload:c/ns/pharmacy-gateway-05"] })).label).toBe("Workload pharmacy-gateway-05");
   });
 

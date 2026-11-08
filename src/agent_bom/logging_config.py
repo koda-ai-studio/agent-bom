@@ -22,6 +22,8 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from agent_bom.core.settings import env_flag, env_str
+
 
 class AccessLogPathFilter(logging.Filter):
     """Omit queries from Uvicorn access records before any handler formats them."""
@@ -34,11 +36,37 @@ class AccessLogPathFilter(logging.Filter):
         return True
 
 
-def api_log_config(default_config: dict[str, Any]) -> dict[str, Any]:
-    """Keep Uvicorn's logging behavior without retaining query credentials."""
+_JSON_FORMATTER = {"()": "agent_bom.logging_config.JSONFormatter"}
+
+
+def json_logging_requested(flag: Optional[bool] = None) -> bool:
+    """JSON logs when the flag is set, otherwise when ``AGENT_BOM_LOG_JSON`` asks for them."""
+    return bool(flag) or env_flag("AGENT_BOM_LOG_JSON")
+
+
+def json_logging_active() -> bool:
+    """Whether ``setup_logging`` configured the agent_bom logger for JSON."""
+    return any(isinstance(handler.formatter, JSONFormatter) for handler in logging.getLogger("agent_bom").handlers)
+
+
+def api_log_config(
+    default_config: dict[str, Any],
+    *,
+    json_output: Optional[bool] = None,
+    level: Optional[str] = None,
+) -> dict[str, Any]:
+    """Keep Uvicorn's logging behavior without retaining query credentials.
+
+    With JSON requested, Uvicorn's server and access records use the JSON
+    formatter, and the root logger does too so that worker processes, which do
+    not run ``setup_logging``, never fall back to plain text.
+    """
     config = deepcopy(default_config)
     config.setdefault("filters", {})["access_path"] = {"()": "agent_bom.logging_config.AccessLogPathFilter"}
     config["handlers"]["access"].setdefault("filters", []).append("access_path")
+    if json_logging_requested(json_output):
+        config["formatters"] = {"default": dict(_JSON_FORMATTER), "access": dict(_JSON_FORMATTER)}
+        config["root"] = {"handlers": ["default"], "level": (level or env_str("AGENT_BOM_LOG_LEVEL", "WARNING")).upper()}
     return config
 
 
@@ -46,7 +74,7 @@ class JSONFormatter(logging.Formatter):
     """Structured JSON log formatter for production / SIEM ingestion."""
 
     def format(self, record: logging.LogRecord) -> str:
-        entry = {
+        entry: dict[str, Any] = {
             "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
@@ -56,6 +84,9 @@ class JSONFormatter(logging.Formatter):
             entry["exception"] = self.formatException(record.exc_info)
         if hasattr(record, "context"):
             entry["context"] = record.context
+        if record.name == "uvicorn.access" and isinstance(record.args, tuple) and len(record.args) == 5:
+            client, method, path, version, status = record.args
+            entry["http"] = {"client": client, "method": method, "path": path, "version": version, "status": status}
         return json.dumps(entry, default=str)
 
 
@@ -93,12 +124,15 @@ def setup_logging(
         log_file: Path to log file. Falls back to AGENT_BOM_LOG_FILE env var.
     """
     level = level or os.environ.get("AGENT_BOM_LOG_LEVEL", "WARNING")
-    if json_output is None:
-        json_output = os.environ.get("AGENT_BOM_LOG_JSON", "").strip() in ("1", "true")
+    # CLI flags pass False when unset; the environment still turns JSON on.
+    json_output = json_logging_requested(json_output)
     log_file = log_file or os.environ.get("AGENT_BOM_LOG_FILE")
 
     root = logging.getLogger("agent_bom")
     root.setLevel(getattr(logging, (level or "WARNING").upper(), logging.WARNING))
+    # Under JSON the server also gives the root logger a JSON handler; stop
+    # agent_bom records reaching it twice.
+    root.propagate = not json_output
 
     # Remove existing handlers to avoid duplicates on re-init
     root.handlers.clear()

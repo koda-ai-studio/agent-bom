@@ -317,3 +317,23 @@ def test_pushed_sbom_metadata_uses_canonical_completeness(imported, expected):
         body["agents"][0]["metadata"] = {"sbom_import": imported}
     report = _normalize_pushed_report(PushPayload(**body), fallback_scan_id="report")
     assert report["scan_run"]["outcome"] == expected
+
+
+def test_push_coerces_object_affected_servers_to_names():
+    """Rows with server objects are stored on the ``list[str]`` contract the UI reads."""
+    body = {
+        "agents": [],
+        "blast_radius": [
+            {
+                "vulnerability_id": "CVE-2026-000001",
+                "severity": "high",
+                "package": "requests",
+                "affected_agents": ["agent-a", {"name": "agent-b"}],
+                "affected_servers": [{"name": "srv-a"}, "srv-b", {"id": "srv-c"}, {"name": ""}, 7, None],
+            }
+        ],
+    }
+    report = _normalize_pushed_report(PushPayload(**body), fallback_scan_id="report")
+    row = report["blast_radius"][0]
+    assert row["affected_servers"] == ["srv-a", "srv-b", "srv-c"]
+    assert row["affected_agents"] == ["agent-a", "agent-b"]

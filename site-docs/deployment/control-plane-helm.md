@@ -153,8 +153,10 @@ expired lease) through a KEDA `postgresql` trigger. That trigger needs a
 `TriggerAuthentication` whose connection uses the maintenance role with
 `app.bypass_rls=1`; the queue is under forced row-level security, so the app
 role counts zero rows. Workers parse queued pushes, so size their memory like
-the API: at least eight times `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` per
-maximum-size push in flight (`values.yaml` documents the default envelope).
+the API from the measured table in
+[Performance and sizing](performance-and-sizing.md): the `2Gi` default fits
+pushes of about 1,000 agents; about 5,000 agents per push needs at least `3Gi`
+on SQLite or `5Gi` on PostgreSQL.
 
 ### PostgreSQL connection budget
 
@@ -511,6 +513,14 @@ You still own:
 - use anti-affinity and a control-plane `PriorityClass` when you expect node pressure
 - enable topology spread when you run multi-AZ EKS
 - keep same-origin ingress unless you have a strong reason not to
+- set `controlPlane.logging.json=true` when a log pipeline parses the pods'
+  output. It sets `AGENT_BOM_LOG_JSON=1` on the API and worker pods, so every
+  line is one JSON object: the startup summary becomes a single event and the
+  Uvicorn access log carries `http.method`, `http.path` (query removed) and
+  `http.status`. The compose files read the same variable
+  (`AGENT_BOM_LOG_JSON=1 docker compose ...`), and `agent-bom api` /
+  `agent-bom serve` accept `--log-json`. It is off by default. Under JSON
+  logging a loopback dev API key is not printed; run without it to see the key.
 - use distinct `envFrom` / Secrets for app, maintenance, and migration/admin
   Postgres credentials; use the auth Secret for API keys, OIDC issuer,
   audience, optional required nonce, SAML IdP/SP metadata values, and audit

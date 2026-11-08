@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from starlette.testclient import TestClient
 
@@ -86,3 +88,38 @@ def test_auth_me_reports_sso_provider_when_browser_oidc_configured(monkeypatch) 
         for key in list(_BROWSER_ENV) + ["AGENT_BOM_OIDC_ISSUER", "AGENT_BOM_OIDC_JWKS_URI"]:
             monkeypatch.delenv(key, raising=False)
         api_server.configure_api_from_env()
+
+
+def test_public_health_lists_sign_in_modes_and_provider_without_auth(monkeypatch) -> None:
+    """A signed-out visitor learns which sign-in buttons to show, and nothing more."""
+    from agent_bom.api import server as api_server
+
+    for key, value in _BROWSER_ENV.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("AGENT_BOM_OIDC_ISSUER", "https://acme.okta.com/oauth2/default")
+    monkeypatch.setenv("AGENT_BOM_OIDC_JWKS_URI", "https://acme.okta.com/oauth2/default/v1/keys")
+    monkeypatch.delenv("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", raising=False)
+    try:
+        api_server.configure_api_from_env()
+        client = TestClient(app)
+        assert client.get("/v1/auth/me").status_code == 401
+        response = client.get("/health")
+        assert response.status_code == 200
+        body = response.json()
+        assert "oidc_browser" in body["configured_auth_modes"]
+        assert body["sso_provider"] == "okta"
+        serialized = json.dumps(body)
+        assert "acme" not in serialized
+        assert "client-123" not in serialized
+    finally:
+        for key in list(_BROWSER_ENV) + ["AGENT_BOM_OIDC_ISSUER", "AGENT_BOM_OIDC_JWKS_URI"]:
+            monkeypatch.delenv(key, raising=False)
+        monkeypatch.setenv("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", "1")
+        api_server.configure_api_from_env()
+
+
+def test_public_health_has_no_provider_without_browser_oidc(monkeypatch) -> None:
+    for key in _BROWSER_ENV:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.delenv("AGENT_BOM_OIDC_ISSUER", raising=False)
+    assert TestClient(app).get("/health").json()["sso_provider"] is None

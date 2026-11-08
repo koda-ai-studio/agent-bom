@@ -33,11 +33,13 @@ are vulnerable, and what each one can reach. Local scans need no account.
 From the repository you want to inspect, with [uv installed](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
+uvx agent-bom scan . -f html -o agent-bom-report.html
 ```
 
-Open `agent-bom-report.html` for inventory, findings and fix guidance. Run the
-same scan again later and agent-bom prints what changed since the last one.
+Open `agent-bom-report.html` for inventory, findings and fix guidance. The scan
+stays inside this repository: packages, MCP configuration, secrets and personal
+data, skills and IaC; it does not read agent configuration elsewhere on the machine.
+Run the same scan again later and agent-bom prints what changed since the last one.
 No MCP configuration in the project? Package findings still apply.
 No project handy? Run `uvx agent-bom scan --demo --offline` for a bundled sample;
 Exit `1` is expected there because the sample trips the security gate. A non-zero

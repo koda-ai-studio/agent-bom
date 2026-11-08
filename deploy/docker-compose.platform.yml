@@ -41,7 +41,6 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: agent-bom-platform-db
     # Started as the postgres user directly: the image's privilege drop discards
     # supplementary groups, which its init scripts need to read the secret files.
     user: postgres
@@ -92,7 +91,6 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: agent-bom:latest
-    container_name: agent-bom-migrate
     group_add:
       - "${AGENT_BOM_SECRETS_GID:-65534}"
     working_dir: /opt/agent-bom
@@ -124,7 +122,6 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: agent-bom:latest
-    container_name: agent-bom-api
     group_add:
       - "${AGENT_BOM_SECRETS_GID:-65534}"
     command: api --host 0.0.0.0 --port 8422
@@ -159,6 +156,8 @@ services:
       - AGENT_BOM_DISABLE_DOCS=1
       - AGENT_BOM_SKIP_UPDATE_CHECK=1
       - AGENT_BOM_API_LOCAL_PATH_SCANS=disabled
+      # 1 makes every log line one JSON object, including access logs.
+      - AGENT_BOM_LOG_JSON=${AGENT_BOM_LOG_JSON:-0}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://ui:3000}
       - NVD_API_KEY=${NVD_API_KEY:-}
     secrets:
@@ -193,7 +192,6 @@ services:
       context: ../ui
       dockerfile: Dockerfile
     image: agentbom/agent-bom-ui:0.113.2
-    container_name: agent-bom-ui
     ports:
       - "${AGENT_BOM_UI_BIND_HOST:-127.0.0.1}:${UI_PORT:-3000}:3000"
     environment:

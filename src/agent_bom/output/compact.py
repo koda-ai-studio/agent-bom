@@ -16,6 +16,7 @@ from rich.panel import Panel
 from rich.rule import Rule
 from rich.table import Table
 
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.cis_posture import finding_free_posture
@@ -287,7 +288,7 @@ def print_compact_summary(report: AIBOMReport, *, verbose: bool = False) -> None
                 hint_bits.append(f"{elevated} elevated server(s)")
             hint_text = " · ".join(hint_bits) if hint_bits else "drivers and credentials"
             lines.append("")
-            lines.append(f"  [dim]→ Run with[/dim] [bold]--verbose[/bold] [dim]for[/dim] {hint_text}")
+            lines.append(f"  [dim]→ Run with[/dim] [bold]{verbose_hint()}[/bold] [dim]for[/dim] {hint_text}")
 
         console.print(
             Panel(
@@ -858,7 +859,7 @@ def print_compact_cis_posture(report: AIBOMReport, limit: int = 5) -> None:
                 console.print(f"       [dim]→ {_compact_detail(rem['fix_console'], limit=110)}[/dim]")
 
         if len(actionable) > limit:
-            console.print(f"    [dim]... {len(actionable) - limit} more (use --verbose for full plan)[/dim]")
+            console.print(f"    [dim]... {len(actionable) - limit} more (use {verbose_hint()} for full plan)[/dim]")
 
     console.print()
 

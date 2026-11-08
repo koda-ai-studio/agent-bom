@@ -65,8 +65,27 @@ def _client(port: int, count: int, headers: list[tuple[str, str]], path: str = _
     return _finish(_start_client(port, count, headers, path, method))
 
 
+# The API process with CPU-bound threads of its own, started on a signal file, that hold
+# the interpreter lock in long encode/decode calls as a large ingest and graph read do.
+_BUSY_API = """
+import json, os, runpy, sys, threading, time
+signal_file, workers = sys.argv.pop(1), int(sys.argv.pop(1))
+packages = lambda n: [{"name": f"p-{n}-{m}", "version": "1.0"} for m in range(40)]
+report = {"agents": [{"name": f"agent-{n}", "packages": packages(n)} for n in range(1500)]}
+def burn():
+    while not os.path.exists(signal_file):
+        time.sleep(0.1)
+    while True:
+        json.loads(json.dumps(report))
+for _ in range(workers):
+    threading.Thread(target=burn, daemon=True).start()
+sys.argv[0] = "agent-bom"
+runpy.run_module("agent_bom", run_name="__main__")
+"""
+
+
 class _Server:
-    def __init__(self, env: dict[str, str], log: Path):
+    def __init__(self, env: dict[str, str], log: Path, launcher: list[str] | None = None):
         self.port = _free_port()
         self.key = secrets.token_hex(24)
         self.log_path = log
@@ -89,7 +108,7 @@ class _Server:
         environment.update(env)
         self._log = log.open("w")
         self.process = subprocess.Popen(
-            [sys.executable, "-m", "agent_bom", "api", "--host", "127.0.0.1", "--port", str(self.port)],
+            [sys.executable, *(launcher or ["-m", "agent_bom"]), "api", "--host", "127.0.0.1", "--port", str(self.port)],
             env=environment,
             cwd=str(log.parent),
             stdout=self._log,
@@ -348,6 +367,29 @@ def test_postgres_restart_does_not_extend_outage_for_valid_keys(workdir, postgre
         # connections must add nothing beyond that.
         print(f"recovered in {recovered:.1f}s: {Counter(statuses)}")
         assert recovered < 12, (recovered, Counter(statuses))
+    finally:
+        server.stop()
+
+
+def test_postgres_valid_keys_are_admitted_while_the_api_is_cpu_bound(workdir, postgres):
+    # A large ingest keeps the API's own threads busy for minutes. Admission
+    # must not lose its deadline to them: every valid key, from sources with
+    # nothing cached, is answered 200 rather than 503.
+    burn = workdir / "burn"
+    env = {
+        "AGENT_BOM_POSTGRES_URL": postgres.url,
+        "AGENT_BOM_POSTGRES_MAINTENANCE_URL": postgres.url.replace("agent_bom_app", "agent_bom_maintenance"),
+    }
+    server = _Server(env, workdir / "api.log", launcher=["-c", _BUSY_API, str(burn), "2"])
+    try:
+        _wait_ready(server)
+        burn.touch()
+        time.sleep(1)
+        statuses: list[int] = []
+        for wave in range(4):
+            clients = [_start_client(server.port, 3, server.valid(f"198.18.{wave}.{n}")) for n in range(1, 11)]
+            statuses += [status for client in clients for status in _finish(client)]
+        assert Counter(statuses) == {200: 120}, (Counter(statuses), server.log_path.read_text()[-1500:])
     finally:
         server.stop()
 

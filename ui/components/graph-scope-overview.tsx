@@ -48,7 +48,7 @@ export function GraphScopeOverview(props: Props) {
             nodesDraggable={false} nodesConnectable={false} proOptions={{ hideAttribution: true }}
             onEdgeClick={(_, edge) => { const recorded = props.edges.find(row => row.source === edge.source && row.target === edge.target); if (recorded) setEdgeDetail(`${recorded.count} recorded relationship${recorded.count === 1 ? "" : "s"}: ${recorded.relationships.join(", ").replaceAll("_", " ")} · ${recorded.directions?.join(", ") || "direction not recorded"}.`); }}
             onNodeClick={(_, node) => { const item = props.items.find(item => item.id === node.id); if (item) props.onInvestigate(item); }}>
-            <Background color="var(--border)" gap={20} size={1} />
+            <Background color="var(--border-subtle)" gap={20} size={1} />
             <Controls showInteractive={false} className={CONTROLS_CLASS} />
           </ReactFlow>
         </div>

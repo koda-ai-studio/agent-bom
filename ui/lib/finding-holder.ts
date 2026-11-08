@@ -1,4 +1,5 @@
 import { agentDisplayName } from "@/lib/display-name";
+import { entityNames } from "@/lib/entity-names";
 import { findingAssetKind } from "@/lib/finding-exposure";
 
 export interface ReachingEntity {
@@ -38,7 +39,7 @@ type HolderInput = {
 export function findingHolder(vuln: HolderInput): FindingHolder {
   const agents = vuln.agents ?? [];
   if (agents.length) return { label: agents.map((agent) => agentDisplayName(agent)).join(", "), kind: "agents", title: agents.join(", ") };
-  const server = vuln.affected_servers?.[0];
+  const server = entityNames(vuln.affected_servers)[0];
   if (server) return { label: `MCP server ${server}`, kind: "server", title: server };
   const reacher = vuln.graph_reachable_from?.[0];
   if (reacher) {

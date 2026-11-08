@@ -9,6 +9,17 @@ from pydantic import BaseModel, Field
 from agent_bom.core.settings import env_bool
 from agent_bom.demo_estate.boot_seed import demo_seed_state
 
+SsoProvider = Literal["okta", "entra", "google", "generic"]
+_SSO_PROVIDERS: tuple[SsoProvider, ...] = ("okta", "entra", "google", "generic")
+
+
+def public_sso_provider() -> SsoProvider | None:
+    """Brand of the browser sign-in button, safe to show a signed-out visitor."""
+    from agent_bom.api.oidc_browser import configured_browser_sso_provider
+
+    provider = configured_browser_sso_provider()
+    return next((brand for brand in _SSO_PROVIDERS if brand == provider), None)
+
 
 class VersionInfo(BaseModel):
     version: str
@@ -85,6 +96,13 @@ class PublicHealthResponse(BaseModel):
     auth_required: bool = True
     auth_configured: bool = False
     configured_auth_modes: list[str] = Field(default_factory=list)
+    sso_provider: SsoProvider | None = Field(
+        default_factory=public_sso_provider,
+        description=(
+            "Brand of the browser sign-in button: one of four fixed labels derived from the configured OIDC issuer "
+            "host, or null when browser OIDC is off. Never the issuer, tenant or client id."
+        ),
+    )
     unauthenticated_allowed: bool = False
     demo_seed: Literal["pending", "complete"] | None = Field(
         default_factory=demo_seed_state,

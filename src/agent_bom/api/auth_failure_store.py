@@ -2,13 +2,15 @@
 
 State contains only source addresses and counters, never credentials or tenants.
 SQLite replicas must share the same database file; Postgres replicas share the
-existing rate-limit pool. A state-store failure is propagated to fail closed.
-Only a connection that was already dead is retried: a pool holds several after
-a database restart, and each is one failed attempt rather than an outage.
+database through a small pool of their own. A state-store failure is propagated
+to fail closed. Only a connection that was already dead is retried: a pool holds
+several after a database restart, and each is one failed attempt rather than an
+outage.
 """
 
 from __future__ import annotations
 
+import atexit
 import math
 import os
 import sqlite3
@@ -20,8 +22,10 @@ from contextlib import AbstractContextManager, contextmanager
 from ipaddress import ip_network
 from typing import Any, TypeVar
 
+from agent_bom.api.postgres_common import _get_pool, _guard_rls_capable_role, _new_application_pool
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
+from agent_bom.config import POSTGRES_POOL_MAX_SIZE
 
 _TABLE = """CREATE TABLE IF NOT EXISTS api_auth_failure_limits (
     source TEXT PRIMARY KEY, failures INTEGER NOT NULL, strikes INTEGER NOT NULL,
@@ -216,37 +220,114 @@ def _is_dead_connection(exc: BaseException) -> bool:
     }
 
 
+_SQL_BOUNDS = "SET LOCAL statement_timeout = '400ms'; SET LOCAL lock_timeout = '400ms'"
+# Several statements cannot take parameters, so the source is a quoted literal. Standard
+# conforming strings are pinned in the same statement, so only quotes need doubling.
+_BOUNDED_READ = (
+    "SET LOCAL statement_timeout = '400ms'; SET LOCAL lock_timeout = '400ms'; "
+    "SET LOCAL standard_conforming_strings = on; "
+    "SELECT blocked_until FROM api_auth_failure_limits WHERE source = {}"
+)
+
+
+def sql_string_literal(value: str) -> str:
+    """Quote *value* as a standard SQL string literal; NUL cannot appear in a Postgres string."""
+    if "\x00" in value:
+        raise ValueError("NUL byte in an authentication source")
+    return "'" + value.replace("'", "''") + "'"
+
+
+_AUTH_STATE_POOL_MAX_SIZE = 4
+_auth_state_pool_lock = threading.Lock()
+_auth_state_pool: tuple[Any, Any] | None = None
+
+
+def _close_auth_state_pool() -> None:
+    global _auth_state_pool
+    with _auth_state_pool_lock:
+        if _auth_state_pool is not None:
+            _auth_state_pool[1].close()
+        _auth_state_pool = None
+
+
+def auth_state_pool() -> Any:
+    """A small autocommit pool reserved for authentication state.
+
+    Ingest, graph and report work hold the application pool for seconds at a
+    time; admission must not queue behind them. Autocommit lets a read travel
+    as one round trip. A new application pool, after a reset, replaces it.
+    """
+    global _auth_state_pool
+    app_pool = _get_pool()
+    with _auth_state_pool_lock:
+        if _auth_state_pool is None or _auth_state_pool[0] is not app_pool:
+            if _auth_state_pool is not None:
+                _auth_state_pool[1].close()
+            size = max(1, min(_AUTH_STATE_POOL_MAX_SIZE, POSTGRES_POOL_MAX_SIZE))
+            _auth_state_pool = (app_pool, _new_application_pool(min_size=1, max_size=size, autocommit=True))
+        pool = _auth_state_pool[1]
+    _guard_rls_capable_role(pool)
+    return pool
+
+
+atexit.register(_close_auth_state_pool)
+
+
+def _last_result(cursor: Any) -> Any:
+    """The rows of the final statement in a multi-statement query."""
+    while getattr(cursor, "description", True) is None and cursor.nextset():
+        pass
+    return cursor
+
+
 class PostgresAuthFailureStore(AuthFailureStore):
-    """Share the existing Postgres rate-limit pool, with transaction locks."""
+    """A dedicated autocommit pool: admission is one round trip, writes take a transaction lock.
+
+    Each round trip releases the interpreter lock and must win it back. Under a
+    CPU-heavy ingest or graph read that wait dominates, so the hot path keeps
+    the count of trips to one rather than six.
+    """
 
     # One attempt per connection a pool can hold, within one operation's bound.
     _MAX_DEAD_CONNECTIONS = 32
 
-    def __init__(self, rate_limit_store: Any) -> None:
-        self._pool = rate_limit_store._pool
+    def __init__(self, pool: Any = None) -> None:
+        self._pool = pool if pool is not None else auth_state_pool()
 
         with self._pool.connection() as conn:
             if ensure_postgres_schema_version(conn, "auth_failure_limits"):
                 conn.execute(_TABLE)
 
     @contextmanager
-    def transaction(self, source: str):
+    def _bounded(self):
         try:
             with self._pool.connection(timeout=_BUSY_TIMEOUT_SECONDS) as conn:
-                conn.execute("SET LOCAL statement_timeout = '400ms'")
-                conn.execute("SET LOCAL lock_timeout = '400ms'")
-                conn.execute("SELECT pg_advisory_xact_lock(%s)", (PostgresRateLimitStore._advisory_key("auth:" + source),))
-
-                def execute(sql, parameters):
-                    return conn.execute(sql.replace("?", "%s"), parameters)
-
-                yield execute
+                yield conn
         except Exception as exc:  # broad-except: Classify optional-driver contention without importing it in SQLite installations.
             if getattr(exc, "sqlstate", None) in {"55P03", "57014"} or type(exc).__name__ == "PoolTimeout":
                 raise TimeoutError("Authentication database capacity exhausted") from exc
             if _is_dead_connection(exc):
                 raise DeadConnectionError("Authentication database connection closed") from exc
             raise
+
+    @contextmanager
+    def transaction(self, source: str):
+        lock = int(PostgresRateLimitStore._advisory_key("auth:" + source))
+        with self._bounded() as conn, conn.transaction():
+            # One round trip: both bounds, then the source's lock.
+            conn.execute(f"{_SQL_BOUNDS}; SELECT pg_advisory_xact_lock({lock})")
+
+            def execute(sql, parameters):
+                return conn.execute(sql.replace("?", "%s"), parameters)
+
+            yield execute
+
+    def _blocked_until(self, source: str) -> float | None:
+        query = _BOUNDED_READ.format(sql_string_literal(source))
+        with self._bounded() as conn:
+            # A single implicit transaction: the bounds apply to the read and end with it.
+            row = _last_result(conn.execute(query)).fetchone()
+        return float(row[0]) if row else None
 
     def _past_dead_connections(self, operation: Callable[[], _T]) -> _T:
         """Run an operation, moving past connections the server has already closed.
@@ -266,7 +347,8 @@ class PostgresAuthFailureStore(AuthFailureStore):
                     raise
 
     def remaining(self, source: str, now: float) -> int:
-        return self._past_dead_connections(lambda: super(PostgresAuthFailureStore, self).remaining(source, now))
+        blocked = self._past_dead_connections(lambda: self._blocked_until(source))
+        return max(0, math.ceil(blocked - now)) if blocked is not None else 0
 
     def record(self, source: str, now: float, *, limit: int, base: int, maximum: int, count: int = 1) -> int:
         return self._past_dead_connections(

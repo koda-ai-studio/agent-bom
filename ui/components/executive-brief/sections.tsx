@@ -4,7 +4,7 @@ import { type ExecutiveBrief, type SlaTone, briefComponent, briefFindingHref, br
 
 const SLA_TONE_CLASS: Record<SlaTone, string> = {
   danger: "border-[color:var(--status-danger)] text-[color:var(--status-danger)]",
-  warning: "border-[color:var(--status-warning)] text-[color:var(--status-warning)]",
+  warning: "border-[color:var(--status-warn)] text-[color:var(--status-warn)]",
   ok: "border-[color:var(--status-success)] text-[color:var(--status-success)]",
   muted: "border-outline text-ink-tertiary",
 };

@@ -22272,6 +22272,11 @@ export interface components {
              */
             demo_seed?: ("pending" | "complete") | null;
             /**
+             * Sso Provider
+             * @description Brand of the browser sign-in button: one of four fixed labels derived from the configured OIDC issuer host, or null when browser OIDC is off. Never the issuer, tenant or client id.
+             */
+            sso_provider?: ("okta" | "entra" | "google" | "generic") | null;
+            /**
              * Status
              * @default ok
              */

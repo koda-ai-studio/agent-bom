@@ -9562,9 +9562,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-00"
-        }
+        "agent-00000-mcp-00"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9594,9 +9592,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-00"
-        }
+        "agent-00000-mcp-00"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9626,9 +9622,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-00"
-        }
+        "agent-00000-mcp-00"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9658,9 +9652,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-01"
-        }
+        "agent-00000-mcp-01"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9690,9 +9682,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-01"
-        }
+        "agent-00000-mcp-01"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9722,9 +9712,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-01"
-        }
+        "agent-00000-mcp-01"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9754,9 +9742,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-01"
-        }
+        "agent-00000-mcp-01"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9786,9 +9772,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-01"
-        }
+        "agent-00000-mcp-01"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9818,9 +9802,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-02"
-        }
+        "agent-00000-mcp-02"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9850,9 +9832,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-02"
-        }
+        "agent-00000-mcp-02"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9882,9 +9862,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-03"
-        }
+        "agent-00000-mcp-03"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9914,9 +9892,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-04"
-        }
+        "agent-00000-mcp-04"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9946,9 +9922,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-05"
-        }
+        "agent-00000-mcp-05"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -9978,9 +9952,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-06"
-        }
+        "agent-00000-mcp-06"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10010,9 +9982,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-07"
-        }
+        "agent-00000-mcp-07"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10042,9 +10012,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-08"
-        }
+        "agent-00000-mcp-08"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10074,9 +10042,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-09"
-        }
+        "agent-00000-mcp-09"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10106,9 +10072,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-09"
-        }
+        "agent-00000-mcp-09"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10138,9 +10102,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-10"
-        }
+        "agent-00000-mcp-10"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10170,9 +10132,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-10"
-        }
+        "agent-00000-mcp-10"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10202,9 +10162,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-10"
-        }
+        "agent-00000-mcp-10"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10234,9 +10192,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-11"
-        }
+        "agent-00000-mcp-11"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10266,9 +10222,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-13"
-        }
+        "agent-00000-mcp-13"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10298,9 +10252,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-15"
-        }
+        "agent-00000-mcp-15"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10330,9 +10282,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-17"
-        }
+        "agent-00000-mcp-17"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10362,9 +10312,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-18"
-        }
+        "agent-00000-mcp-18"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10394,9 +10342,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-18"
-        }
+        "agent-00000-mcp-18"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10426,9 +10372,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-20"
-        }
+        "agent-00000-mcp-20"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10458,9 +10402,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-21"
-        }
+        "agent-00000-mcp-21"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10490,9 +10432,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-21"
-        }
+        "agent-00000-mcp-21"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10522,9 +10462,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-21"
-        }
+        "agent-00000-mcp-21"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10554,9 +10492,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-21"
-        }
+        "agent-00000-mcp-21"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10586,9 +10522,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-22"
-        }
+        "agent-00000-mcp-22"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10618,9 +10552,7 @@
         "agent-00000"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00000-mcp-23"
-        }
+        "agent-00000-mcp-23"
       ],
       "exposed_credentials": [
         "AGENT_00000_TOKEN"
@@ -10650,9 +10582,7 @@
         "agent-00002"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00002-mcp-00"
-        }
+        "agent-00002-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10679,9 +10609,7 @@
         "agent-00003"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00003-mcp-01"
-        }
+        "agent-00003-mcp-01"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10709,9 +10637,7 @@
         "agent-00005"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00005-mcp-00"
-        }
+        "agent-00005-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10737,9 +10663,7 @@
         "agent-00006"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00006-mcp-00"
-        }
+        "agent-00006-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10764,9 +10688,7 @@
         "agent-00007"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00007-mcp-00"
-        }
+        "agent-00007-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10791,9 +10713,7 @@
         "agent-00007"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00007-mcp-02"
-        }
+        "agent-00007-mcp-02"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10819,9 +10739,7 @@
         "agent-00007"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00007-mcp-03"
-        }
+        "agent-00007-mcp-03"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10849,9 +10767,7 @@
         "agent-00009"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00009-mcp-01"
-        }
+        "agent-00009-mcp-01"
       ],
       "exposed_credentials": [
         "AGENT_00009_TOKEN"
@@ -10881,9 +10797,7 @@
         "agent-00011"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00011-mcp-00"
-        }
+        "agent-00011-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10909,9 +10823,7 @@
         "agent-00011"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00011-mcp-00"
-        }
+        "agent-00011-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10937,9 +10849,7 @@
         "agent-00014"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00014-mcp-00"
-        }
+        "agent-00014-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10966,9 +10876,7 @@
         "agent-00014"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00014-mcp-01"
-        }
+        "agent-00014-mcp-01"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -10996,9 +10904,7 @@
         "agent-00014"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00014-mcp-02"
-        }
+        "agent-00014-mcp-02"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11023,9 +10929,7 @@
         "agent-00014"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00014-mcp-03"
-        }
+        "agent-00014-mcp-03"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11050,9 +10954,7 @@
         "agent-00014"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00014-mcp-05"
-        }
+        "agent-00014-mcp-05"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11080,9 +10982,7 @@
         "agent-00015"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00015-mcp-00"
-        }
+        "agent-00015-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11107,9 +11007,7 @@
         "agent-00015"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00015-mcp-01"
-        }
+        "agent-00015-mcp-01"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11135,9 +11033,7 @@
         "agent-00018"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00018-mcp-00"
-        }
+        "agent-00018-mcp-00"
       ],
       "exposed_credentials": [
         "AGENT_00018_TOKEN"
@@ -11167,9 +11063,7 @@
         "agent-00019"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00019-mcp-00"
-        }
+        "agent-00019-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11197,9 +11091,7 @@
         "agent-00020"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00020-mcp-00"
-        }
+        "agent-00020-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11226,9 +11118,7 @@
         "agent-00023"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00023-mcp-00"
-        }
+        "agent-00023-mcp-00"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11256,9 +11146,7 @@
         "agent-00023"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00023-mcp-01"
-        }
+        "agent-00023-mcp-01"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11286,9 +11174,7 @@
         "agent-00023"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00023-mcp-03"
-        }
+        "agent-00023-mcp-03"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11316,9 +11202,7 @@
         "agent-00023"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00023-mcp-10"
-        }
+        "agent-00023-mcp-10"
       ],
       "exposed_credentials": [],
       "exposed_tools": [
@@ -11346,9 +11230,7 @@
         "agent-00024"
       ],
       "affected_servers": [
-        {
-          "name": "agent-00024-mcp-01"
-        }
+        "agent-00024-mcp-01"
       ],
       "exposed_credentials": [],
       "exposed_tools": [

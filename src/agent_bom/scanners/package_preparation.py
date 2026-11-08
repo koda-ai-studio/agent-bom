@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from agent_bom.coverage import SCAN_NOTE_KIND, CoverageWarning
 from agent_bom.models import Package
+from agent_bom.output.kernel_headers import is_kernel_header_package
 from agent_bom.package_utils import canonical_package_identity, normalize_package_name, package_purl
 from agent_bom.resolvers.registry_budget import consume_registry_warnings
 from agent_bom.scanners import cpython_advisory as runtime_cve
@@ -14,7 +16,13 @@ from agent_bom.scanners.package_matching import _scanners_patchable
 from agent_bom.scanners.package_versions import is_unresolved_package as _is_unresolved_package
 from agent_bom.scanners.package_versions import is_unresolved_version as _is_unresolved_version
 from agent_bom.scanners.scan_options import _logger, _package_db_key
-from agent_bom.scanners.state import _bump_scan_perf, record_coverage_warning, reset_scan_performance, reset_scan_warnings_only
+from agent_bom.scanners.state import (
+    _bump_scan_perf,
+    peek_coverage_warnings,
+    record_coverage_warning,
+    reset_scan_performance,
+    reset_scan_warnings_only,
+)
 
 
 def _target_venv_python(project_dir: str | None) -> str | None:
@@ -260,8 +268,44 @@ def _select_scannable_packages(packages: list[Package]) -> list[Package]:
     if non_osv_packages:
         _bump_scan_perf("skipped_non_osv_ecosystems", len(non_osv_packages))
     scannable = [p for p in packages if not _is_unresolved_package(p) and p.ecosystem.lower() not in _NON_OSV_ECOSYSTEMS]
+    scannable = _without_kernel_headers(scannable)
 
     # Warn about packages that could not be resolved — no silent failures
     still_unresolved = [p for p in packages if _is_unresolved_package(p) and p.ecosystem.lower() not in _NON_OSV_ECOSYSTEMS]
     _warn_unresolved_packages(still_unresolved)
     return scannable
+
+
+_KERNEL_HEADER_NOTE_PATH = "kernel-header-packages"
+_KERNEL_HEADER_REASON = "kernel advisories on header packages are not image exposure; assess the host kernel"
+
+
+def _without_kernel_headers(packages: list[Package]) -> list[Package]:
+    """Leave kernel header/UAPI packages out of the advisory lookup, with one note per scan.
+
+    They are versioned with the distro kernel and match the whole kernel CVE
+    stream, yet a container runs on the host kernel. Real kernel packages
+    (``linux-image-*``, ``kernel``) are still matched.
+    """
+    headers = [p for p in packages if is_kernel_header_package(p)]
+    if not headers:
+        return packages
+    _bump_scan_perf("skipped_kernel_header_packages", len(headers))
+    _record_kernel_header_note(headers)
+    return [p for p in packages if not is_kernel_header_package(p)]
+
+
+def _record_kernel_header_note(headers: list[Package]) -> None:
+    release = f"kernel-note:{_KERNEL_HEADER_NOTE_PATH}"
+    earlier = next((w for w in peek_coverage_warnings() if w.get("release") == release), None)
+    labels = sorted({*(earlier or {}).get("packages", []), *(f"{p.name}@{p.version}" for p in headers)})
+    shown = ", ".join(labels[:5]) + (f" (+{len(labels) - 5} more)" if len(labels) > 5 else "")
+    note = CoverageWarning(
+        ecosystem="kernel",
+        release=release,
+        reason="kernel_header_packages_not_assessed",
+        detail=f"{len(labels)} kernel header package(s) were not matched against advisories ({shown}): {_KERNEL_HEADER_REASON}.",
+        package_count=len(labels),
+        advisory_rows=0,
+    ).to_dict()
+    record_coverage_warning({**note, "kind": SCAN_NOTE_KIND, "packages": labels}, replace=earlier is not None)

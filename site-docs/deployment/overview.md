@@ -24,7 +24,7 @@ authorization roles.
 From the project you want to inspect, with [uv installed](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```bash
-uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
+uvx agent-bom scan . -f html -o agent-bom-report.html
 ```
 
 Open the report, review coverage, fix a finding and rescan the same scope.

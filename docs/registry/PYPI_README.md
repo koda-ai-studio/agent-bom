@@ -14,11 +14,13 @@ With [uv installed](https://docs.astral.sh/uv/getting-started/installation/), ru
 from the repository you want to inspect:
 
 ```bash
-uvx agent-bom scan . --no-discover -f html -o agent-bom-report.html
+uvx agent-bom scan . -f html -o agent-bom-report.html
 ```
 
-Open `agent-bom-report.html` for inventory, findings and fix guidance. Run the
-same scan again later and agent-bom prints what changed since the last one.
+Open `agent-bom-report.html` for inventory, findings and fix guidance. The scan
+stays inside this repository: packages, MCP configuration, secrets and personal
+data, skills and IaC; it does not read agent configuration elsewhere on the machine.
+Run the same scan again later and agent-bom prints what changed since the last one.
 No MCP configuration? Package findings still apply. Incomplete evidence is not
 a clean result: [what a scan does and does not establish](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md#what-this-scan-does-and-does-not-establish).
 For a bundled sample, run `uvx agent-bom scan --demo --offline`; status `1` is

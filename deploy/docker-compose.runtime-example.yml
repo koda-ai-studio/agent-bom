@@ -19,7 +19,6 @@ services:
   # ── MCP server (the target being monitored) ───────────────────────────────
   mcp-server:
     image: node:20-slim
-    container_name: mcp-filesystem-server
     command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
     volumes:
       - workspace:/workspace
@@ -32,7 +31,6 @@ services:
       context: ..
       dockerfile: deploy/docker/Dockerfile.runtime
     image: agentbom/agent-bom:0.113.2
-    container_name: agent-bom-runtime-proxy
     depends_on:
       - mcp-server
     environment:

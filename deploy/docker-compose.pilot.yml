@@ -22,7 +22,6 @@
 services:
   api:
     image: agentbom/agent-bom:${AGENT_BOM_IMAGE_TAG:-0.113.2}
-    container_name: agent-bom-pilot-api
     restart: unless-stopped
     command: >
       api
@@ -40,6 +39,8 @@ services:
       # --persist still targets the product state dir.
       AGENT_BOM_DEMO_ESTATE: ${AGENT_BOM_DEMO_ESTATE:-0}
       AGENT_BOM_SKIP_UPDATE_CHECK: "1"
+      # 1 makes every log line one JSON object, including access logs.
+      AGENT_BOM_LOG_JSON: ${AGENT_BOM_LOG_JSON:-0}
       # Local no-auth pilots resolve to a role. Default to analyst so a first-run
       # operator can connect a cloud + run a scan (viewer is read-only and would
       # 403 on create/scan). DEMO_ESTATE still clamps to viewer for public demos.
@@ -71,7 +72,6 @@ services:
 
   ui:
     image: agentbom/agent-bom-ui:${AGENT_BOM_IMAGE_TAG:-0.113.2}
-    container_name: agent-bom-pilot-ui
     restart: unless-stopped
     environment:
       # The browser same-origins to this UI; the UI's Node server proxies

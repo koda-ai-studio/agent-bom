@@ -430,3 +430,11 @@ def test_a_read_that_never_becomes_ready_stays_a_failure(monkeypatch) -> None:
     monkeypatch.setattr(performance, "PREPARING_WAIT_SECONDS", -1)
     server = type("Server", (), {"base": "http://api", "headers": {}})()
     assert performance.timed_reads(server, "/v1/graph", repeats=1)["timing"]["statuses"] == {"503": 1}
+
+
+def test_a_failed_read_records_why(monkeypatch) -> None:
+    replies = iter([(429, {"detail": "slow down"}, 0), (200, {"ok": 1}, 2)])
+    monkeypatch.setattr(performance, "http_json", lambda *_args, **_kwargs: next(replies))
+    server = type("Server", (), {"base": "http://api", "headers": {}})()
+    timing = performance.timed_reads(server, "/v1/findings", repeats=2)["timing"]
+    assert timing["first_error"].startswith("HTTP 429") and "slow down" in timing["first_error"]

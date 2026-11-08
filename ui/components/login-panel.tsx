@@ -48,12 +48,17 @@ export function LoginPanel({
   const submissionPending = useRef(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [authUnconfigured, setAuthUnconfigured] = useState(false);
+  // A signed-out visitor cannot read /v1/auth/me, so sign-in buttons come from the public health probe.
+  const [publicSignIn, setPublicSignIn] = useState<{ modes: string[]; ssoProvider: string | null }>({ modes: [], ssoProvider: null });
   const signedIn = Boolean(session && (!session.auth_required || session.authenticated));
 
   useEffect(() => {
     if (loading || signedIn) return;
     api.health().then(
-      (health) => setAuthUnconfigured(health.auth_configured === false && !health.unauthenticated_allowed),
+      (health) => {
+        setAuthUnconfigured(health.auth_configured === false && !health.unauthenticated_allowed);
+        setPublicSignIn({ modes: health.configured_auth_modes ?? [], ssoProvider: health.sso_provider ?? null });
+      },
       () => {},
     );
   }, [loading, signedIn]);
@@ -75,7 +80,7 @@ export function LoginPanel({
       <BrandLogo /><h1 className="text-2xl font-semibold">{signOutConfirmed ? "Signed out" : "Browser locked"}</h1>
       <p className="text-sm leading-6 text-ink-secondary">Your identity provider or reverse proxy may still have an active session. Continue when you are ready to sign in again.</p>
       {!signOutConfirmed && <><p role="alert" className="text-sm text-ink-secondary">{signOutError || "Server sign-out has not been confirmed. Retry to revoke the local session."}</p><button type="button" onClick={() => void signOut()} className="rounded-lg border border-outline px-4 py-2">Retry sign-out</button></>}
-      <button type="button" onClick={() => void resumeSession()} className="rounded-lg bg-emerald-500 px-4 py-2 font-medium text-[var(--on-accent)]">Continue to sign in</button>
+      <button type="button" onClick={() => void resumeSession()} className="rounded-lg bg-[color:var(--accent)] px-4 py-2 font-medium text-[color:var(--accent-contrast)]">Continue to sign in</button>
     </div>;
   }
 
@@ -101,7 +106,7 @@ export function LoginPanel({
           <button
             type="button"
             onClick={() => void refresh()}
-            className="mt-6 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:bg-emerald-400"
+            className="mt-6 rounded-xl bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)]"
           >
             Retry connection
           </button>
@@ -111,7 +116,7 @@ export function LoginPanel({
   }
 
   if (!error || isAuthFailure(error)) {
-    const configuredModes = session?.configured_modes ?? [];
+    const configuredModes = [...new Set([...publicSignIn.modes, ...(session?.configured_modes ?? [])])];
     const browserOidcConfigured = configuredModes.includes("oidc_browser");
     const snowflakeOauthConfigured = configuredModes.includes("snowflake_oauth");
     const samlConfigured = configuredModes.includes("saml_sso");
@@ -123,7 +128,7 @@ export function LoginPanel({
     // An unauthenticated page load is not evidence that a submitted key was rejected.
     const shownError = formError;
     const rule = <span className="h-px flex-1 bg-[var(--surface-elevated)]" />;
-    const ssoPreset = ssoLoginPreset(session?.sso_provider);
+    const ssoPreset = ssoLoginPreset(publicSignIn.ssoProvider ?? session?.sso_provider);
     const apiKeyDivider = (
       <div className="mt-6 flex items-center gap-3 text-[11px] uppercase tracking-[0.2em] text-[var(--text-tertiary)]">
         {rule}

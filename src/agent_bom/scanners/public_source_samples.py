@@ -97,3 +97,29 @@ def mask_public_module_links(content: str, path: Path) -> str:
                 assert end is not None
                 lines[number - 1] = (line[:start] + b" " * (end - start) + line[end:]).decode()
     return "".join(lines)
+
+
+_DOCSTRING_OWNERS = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+
+
+def python_docstring_lines(content: str, path: Path) -> frozenset[int]:
+    """1-based line numbers inside module, class and function docstrings of a Python file.
+
+    Only a string that the parser places as a docstring counts; a string bound
+    to a name or passed to a call is code. Unparseable or oversized source has
+    no docstring lines.
+    """
+    if path.suffix.lower() != ".py" or len(content.encode("utf-8")) > _MAX_PARSE_BYTES:
+        return frozenset()
+    try:
+        tree = ast.parse(content)
+    except (SyntaxError, ValueError, RecursionError):
+        return frozenset()
+    numbers: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, _DOCSTRING_OWNERS) or not node.body:
+            continue
+        first = node.body[0]
+        if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant) and isinstance(first.value.value, str):
+            numbers.update(range(first.lineno, (first.end_lineno or first.lineno) + 1))
+    return frozenset(numbers)

@@ -147,7 +147,7 @@ def generate_estate(*, agents: int, seed: int, vulnerable_package_rate: float) -
                             "package_version": packages[-1]["version"],
                             "fixed_version": f"{packages[-1]['version']}.1",
                             "affected_agents": [agent_name],
-                            "affected_servers": [{"name": server_name}],
+                            "affected_servers": [server_name],
                             "exposed_tools": [f"{server_name}-tool-{i:02d}" for i in range(min(tool_count, 4))],
                             "exposed_credentials": [f"{agent_name.upper().replace('-', '_')}_TOKEN"] if agent_idx % 9 == 0 else [],
                             "owasp_tags": ["LLM03", "LLM02"],

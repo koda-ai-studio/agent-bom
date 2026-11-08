@@ -238,11 +238,10 @@ def test_postgres_auth_backoff_is_shared_and_atomic():
     from uuid import uuid4
 
     from agent_bom.api.auth_failure_store import PostgresAuthFailureStore
-    from agent_bom.api.rate_limit_store import PostgresRateLimitStore
 
     source = "test-" + uuid4().hex
-    one = PostgresAuthFailureStore(PostgresRateLimitStore())
-    two = PostgresAuthFailureStore(PostgresRateLimitStore())
+    one = PostgresAuthFailureStore()
+    two = PostgresAuthFailureStore()
     with ThreadPoolExecutor(max_workers=2) as workers:
         futures = [workers.submit(store.record, source, 100, limit=4, base=10, maximum=60) for store in (one, two, one, two)]
         assert sorted(f.result() for f in futures) == [0, 0, 0, 10]

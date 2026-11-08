@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Iterator
 from rich.panel import Panel
 from rich.rule import Rule
 
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.output.brand_tokens import lane_title
 from agent_bom.output.compact import _compact_detail
 
@@ -75,7 +76,7 @@ def print_collapsed_warnings(
         con.print(f"  [yellow]{prefix}[/yellow] {_compact_detail(warning, 100)}")
     remaining = len(clean) - min(len(clean), max_visible)
     if remaining > 0:
-        con.print(f"  [dim]… {remaining} more warning(s) — use --verbose to expand[/dim]")
+        con.print(f"  [dim]… {remaining} more warning(s) — use {verbose_hint()} to expand[/dim]")
 
 
 def print_provider_discovery_result(

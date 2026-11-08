@@ -182,9 +182,21 @@ def emit_cli_runtime_summary(
     err: bool = False,
     force_ascii: bool = False,
 ) -> None:
-    """Print the BOM mark + product title + aligned key/value rows for serve/gateway."""
+    """Print the BOM mark + product title + aligned key/value rows for serve/gateway.
+
+    Under JSON logging the block becomes one structured event on the log
+    stream, so a log pipeline never sees a plain-text line.
+    """
 
     import click
+
+    from agent_bom.logging_config import json_logging_active
+
+    if json_logging_active():
+        import logging
+
+        logging.getLogger("agent_bom.startup").info(title, extra={"context": dict(rows)})
+        return
 
     click.echo("", err=err)
     for line in cli_mark_lines(force_ascii=force_ascii):

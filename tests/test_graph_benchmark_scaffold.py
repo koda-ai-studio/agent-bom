@@ -21,6 +21,10 @@ def test_synthetic_estate_has_skewed_topology_and_sources() -> None:
     assert summary["skew"]["servers_per_agent"]["p95"] > summary["skew"]["servers_per_agent"]["median"]
     assert summary["skew"]["tools_per_server"]["p99"] > summary["skew"]["tools_per_server"]["median"]
     assert {"local", "k8s-fleet", "operator-push", "cloud-inventory"}.issubset(set(report["scan_sources"]))
+    server_names = {server["name"] for agent in report["agents"] for server in agent["mcp_servers"]}
+    for row in report["blast_radius"]:
+        assert row["affected_servers"] and all(isinstance(name, str) for name in row["affected_servers"])
+        assert set(row["affected_servers"]) <= server_names
 
 
 def test_api_request_plan_covers_issue_2145_hot_paths() -> None:

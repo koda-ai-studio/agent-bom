@@ -37,6 +37,17 @@ function makeBlast(overrides: Partial<BlastRadius> = {}): BlastRadius {
 }
 
 describe("buildExposurePathView", () => {
+  it("reads server objects by name or id instead of throwing", () => {
+    const servers = [{ name: "agent-00000-mcp-00" }, { id: "srv-by-id" }, "mcp-fs", { name: "" }, 7, null];
+    const blast = makeBlast({ affected_servers: servers as unknown as string[] });
+    const view = buildExposurePathView(blast, "scan-1");
+    expect(view.nodes.find((node) => node.type === "server")?.label).toBe("agent-00000-mcp-00");
+    expect(view.affectedServices).toEqual(["agent-00000-mcp-00", "srv-by-id", "mcp-fs"]);
+    expect(view.key).toBe(buildExposurePathView(makeBlast({ affected_servers: ["agent-00000-mcp-00", "srv-by-id", "mcp-fs"] }), "scan-1").key);
+    const risk = makeTopRisk({ vulnerability_id: blast.vulnerability_id, package: blast.package ?? null, affected_agents: blast.affected_agents, affected_servers: [{ name: "agent-00000-mcp-00" }] as unknown as string[] });
+    expect(() => buildExecExposurePaths([{ ...blast, scanId: "scan-1" }], [risk])).not.toThrow();
+  });
+
   it("preserves impact and every affected workload for the executive summary", () => {
     const view = buildExposurePathView(makeBlast({ impact_category: "availability", affected_agents: ["claims-api", "billing-api"], fixed_version: "5.4" }), "scan-1");
     expect(view.impactCategory).toBe("availability");

@@ -13,9 +13,9 @@ from agent_bom.config import SCANNER_BATCH_SIZE as _BATCH_SIZE
 from agent_bom.config import SCANNER_OSV_BATCH_CONCURRENCY as OSV_BATCH_CONCURRENCY
 from agent_bom.core.errors import (
     UpstreamError,
-    UpstreamInvalidResponseError,
     UpstreamRateLimitedError,
 )
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.core.versions.osv import is_release_range, range_limits, range_match_state, range_windows
 from agent_bom.core.versions.osv import is_valid_fix_version as is_valid_fix_version
 from agent_bom.cpe_match import cpe_identity
@@ -24,6 +24,7 @@ from agent_bom.http_client import OfflineModeError, create_client, request_with_
 from agent_bom.models import Package
 from agent_bom.os_advisory import OS_DISTRO_COMPARATOR_FAMILIES
 from agent_bom.package_utils import normalize_package_name
+from agent_bom.scanners.osv_batch import follow_result_pages, merge_batch_response, page_limit_failures, query_failures
 from agent_bom.scanners.osv_details import OSV_API_URL as OSV_API_URL
 from agent_bom.scanners.osv_details import enrich_results_if_needed as enrich_results_if_needed
 from agent_bom.scanners.osv_details import enrich_vuln_details as enrich_vuln_details
@@ -199,58 +200,6 @@ def _next_unaffected_fixes(windows: list, current_version: str, ecosystem: str, 
             continue
         (prereleases if is_prerelease_version(fixed, ecosystem) else stable).append(fixed)
     return stable or (prereleases if allow_prerelease else [])
-
-
-def _collect_batch_vulns(
-    data: Any,
-    batch_start: int,
-    batch_len: int,
-    pkg_index: dict[int, tuple[Package, str]],
-    partial: dict[str, list[dict]],
-    console: Console,
-) -> None:
-    """Merge one ``/v1/querybatch`` payload into ``partial``; raise on a malformed shape."""
-    if not isinstance(data, dict):
-        raise ValueError(f"unexpected payload type: {type(data).__name__}")
-    osv_results = data.get("results")
-    if not isinstance(osv_results, list):
-        raise ValueError("OSV results must be an array")
-    if len(osv_results) != batch_len:
-        _logger.warning(
-            "OSV batch response length mismatch: sent %d queries, got %d results. Some packages may have missed vulnerability detection.",
-            batch_len,
-            len(osv_results),
-        )
-        console.print(
-            f"  [yellow]⚠[/yellow] OSV batch response length mismatch:"
-            f" sent {batch_len} queries, got {len(osv_results)} results."
-            f" [dim]Some packages may have missed vulnerability detection.[/dim]"
-        )
-    incomplete = len(osv_results) != batch_len
-    for index, result in enumerate(osv_results[:batch_len]):
-        if not isinstance(result, dict):
-            raise ValueError("OSV result must be an object")
-        if result.get("error") or result.get("next_page_token"):
-            incomplete = True
-        vulns = result.get("vulns", [])
-        if not isinstance(vulns, list) or any(
-            not isinstance(vuln, dict) or not isinstance(vuln.get("id"), str) or not vuln["id"].strip() for vuln in vulns
-        ):
-            raise ValueError("OSV vulnerabilities must contain advisory identifiers")
-        pkg_match = pkg_index.get(batch_start + index)
-        if not vulns or not pkg_match:
-            continue
-        pkg_obj = pkg_match[0]
-        key = f"{pkg_obj.ecosystem.lower()}:{normalize_package_name(pkg_obj.name, pkg_obj.ecosystem)}@{pkg_obj.version}"
-        existing = partial.setdefault(key, [])
-        seen_ids = {item.get("id") for item in existing}
-        for vuln in vulns:
-            if vuln.get("id") not in seen_ids:
-                existing.append(vuln)
-                seen_ids.add(vuln.get("id"))
-    if incomplete:
-        # Retain observed findings, but never cache this incomplete batch.
-        raise ValueError("OSV batch response is incomplete")
 
 
 def _cache_ecosystem(pkg: Package, ecosystems: list[str]) -> str:
@@ -475,9 +424,7 @@ async def query_osv_batch_impl(
         batch_starts = list(range(0, len(queries), batch_size))
         batch_concurrency = max(1, min(OSV_BATCH_CONCURRENCY, len(batch_starts)))
 
-        # Pipeline-wide rate-limit gate: a 429 in any batch closes it so every
-        # other in-flight/queued batch pauses before its next request instead of
-        # piling on while one batch backs off.
+        # A 429 in any batch closes this gate so every other batch pauses before its next request.
         rate_gate = asyncio.Event()
         rate_gate.set()
 
@@ -508,29 +455,31 @@ async def query_osv_batch_impl(
             batch_errors: list[tuple[str, str, UpstreamError]] = []
             bump_scan_perf("osv_batches", 1)
 
-            def _fail_batch(failure: UpstreamError) -> None:
-                for idx in range(batch_start, min(batch_start + len(batch), len(queries))):
-                    pkg_err = pkg_index.get(idx)
-                    if pkg_err:
-                        batch_errors.append((pkg_err[0].name, pkg_err[0].ecosystem, failure))
-
-            async with semaphore:
-                await rate_gate.wait()
+            async def _fetch(indexes: list[int], request_queries: list[dict]) -> dict[int, str] | None:
+                await rate_gate.wait()  # page tokens, or None once the failure is recorded
                 try:
-                    response = await upstream_request("osv", request_with_retry_fn, client, "POST", OSV_BATCH_URL, json={"queries": batch})
+                    response = await upstream_request(
+                        "osv", request_with_retry_fn, client, "POST", OSV_BATCH_URL, json={"queries": request_queries}
+                    )
                 except UpstreamError as failure:
                     await _handle_batch_failure(failure)
-                    _fail_batch(failure)
-                    return partial, batch_errors
+                    batch_errors.extend(query_failures(indexes, pkg_index, failure))
+                    return None
+                tokens, parse_failure = merge_batch_response(response.json, indexes, pkg_index, partial, console)
+                if parse_failure is not None:
+                    batch_errors.extend(query_failures(indexes, pkg_index, parse_failure))
+                return tokens
 
-                try:
-                    _collect_batch_vulns(response.json(), batch_start, len(batch), pkg_index, partial, console)
-                    completed_queries.update(range(batch_start, batch_start + len(batch)))
-                    _record_batch_answered(bump_scan_perf)
-                except (ValueError, KeyError, AttributeError, TypeError) as exc:
-                    record_enrichment_source("osv", "failure", error=f"parse error: {type(exc).__name__}")
-                    console.print("  [red]✗[/red] OSV returned an invalid or incomplete response")
-                    _fail_batch(UpstreamInvalidResponseError("osv", f"parse error: {type(exc).__name__}"))
+            async with semaphore:
+                batch_indexes = list(range(batch_start, batch_start + len(batch)))
+                tokens = await _fetch(batch_indexes, batch)
+                if tokens is None:
+                    return partial, batch_errors
+                unfinished = await follow_result_pages(tokens, queries, _fetch, bump_scan_perf)
+                if unfinished.limit_reached:
+                    batch_errors.extend(page_limit_failures(console, unfinished.indexes, pkg_index))
+                completed_queries.update(idx for idx in batch_indexes if idx not in unfinished.indexes)
+                _record_batch_answered(bump_scan_perf)
             return partial, batch_errors
 
         batch_sem = asyncio.Semaphore(batch_concurrency)
@@ -576,7 +525,7 @@ async def query_osv_batch_impl(
             "%d packages had CVE lookup errors — vulnerability detection may be incomplete",
             len(lookup_errors),
         )
-        console.print(f"  [yellow]⚠[/yellow] {len(lookup_errors)} packages had lookup errors [dim](use --verbose for details)[/dim]")
+        console.print(f"  [yellow]⚠[/yellow] {len(lookup_errors)} packages had lookup errors [dim](use {verbose_hint()} for details)[/dim]")
         record_scan_warning(f"{len(lookup_errors)} package lookup error(s)")
         # Structured signal so a caller can fail closed deterministically
         # instead of string-matching the warning above. A zero-vuln result for

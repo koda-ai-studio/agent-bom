@@ -552,6 +552,11 @@ controlPlane:
   autoCorrelation:
     enabled: true
     maxAgeHours: 168
+  # Structured logs for the API and worker pods. When true, sets
+  # AGENT_BOM_LOG_JSON=1: every line, including the startup summary and the
+  # Uvicorn access log (queries stripped), is one JSON object. Off by default.
+  logging:
+    json: false
   serviceMesh:
     enabled: false
     provider: istio
@@ -713,14 +718,21 @@ controlPlane:
       annotations: {}
     # Allow headroom for graph and scan payloads, response caching, and concurrent
     # cold reads. Measure peak resident memory against the deployed inventory.
-    # Push sizing: POST /v1/results/push accepts a decoded body up to
-    # AGENT_BOM_API_RESULT_PUSH_MAX_BYTES. Parsing JSON into the report model
-    # costs roughly 8x the body, so the memory limit must stay at least
-    # 8 x that budget plus baseline for one maximum-size push in flight. The 2Gi
-    # default covers the 192 MiB default budget (~1.5 GiB parse) with headroom; raise the
-    # limit (or lower the budget) before raising the budget or expecting several
-    # maximum-size pushes per pod at once. With controlPlane.worker.enabled the
-    # queued ingest runs on worker pods, which need the same envelope.
+    # Push sizing: peak API memory during POST /v1/results/push grows with the
+    # estate in the push, far faster than the body size. Measured peaks
+    # (scripts/qualification/performance.py, one push in flight):
+    #   agents  body     SQLite   Postgres
+    #   25      <1 MB    335 MB   333 MB
+    #   1,000   3.8 MB   730 MB   789 MB
+    #   5,000   18 MB    2.4 GB   4.1 GB   (116,907 package instances)
+    # The 2Gi default fits pushes of about 1,000 agents. At 5,000 agents a 2Gi
+    # pod was OOM-killed on both backends (committed data recovered after the
+    # restart). For ~5,000 agents per push set at least 3Gi on SQLite or 5Gi
+    # on Postgres, or split the estate into smaller pushes. The 192 MiB
+    # AGENT_BOM_API_RESULT_PUSH_MAX_BYTES default is a body cap, not a sizing
+    # promise: no listed limit parses a push that large. With
+    # controlPlane.worker.enabled the queued ingest runs on worker pods, which
+    # need the same envelope.
     resources:
       requests:
         memory: "512Mi"

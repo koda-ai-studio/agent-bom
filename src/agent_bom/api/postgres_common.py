@@ -314,7 +314,7 @@ def resolve_postgres_maintenance_secret() -> str | None:
     return unquote(parsed.password)
 
 
-def _new_application_pool(*, min_size: int, max_size: int) -> ConnectionPool:
+def _new_application_pool(*, min_size: int, max_size: int, autocommit: bool = False) -> ConnectionPool:
     """Build a bounded app-role pool with the shared password/IAM contract."""
 
     try:
@@ -327,7 +327,7 @@ def _new_application_pool(*, min_size: int, max_size: int) -> ConnectionPool:
     url = resolve_postgres_url()
     auth_mode = postgres_auth_mode()
     password = resolve_postgres_secret() if auth_mode != AUTH_MODE_IAM else None
-    kwargs: dict[str, object] = {}
+    kwargs: dict[str, object] = {"autocommit": True} if autocommit else {}
     if POSTGRES_CONNECT_TIMEOUT_SECONDS > 0:
         kwargs["connect_timeout"] = POSTGRES_CONNECT_TIMEOUT_SECONDS
     if password is not None:

@@ -668,8 +668,12 @@ Configure `AGENT_BOM_AUTH_FAILURE_LIMIT`, `AGENT_BOM_AUTH_BACKOFF_SECONDS`, and
 `AGENT_BOM_AUTH_MAX_BACKOFF_SECONDS` on every replica with the same values.
 The response is 429 with `Retry-After` and `X-RateLimit-Scope: auth-source`.
 
-The state uses the existing Postgres rate-limit pool and migration-owned
-`api_auth_failure_limits` table. SQLite processes share it when they use the
+On Postgres the state uses the migration-owned `api_auth_failure_limits` table
+through a pool of its own: at most four autocommit connections per process, with
+the application role and its row-level-security check. Ingest, graph and report
+work hold the application pool for seconds, so admission never queues behind them.
+An admission read is one round trip that carries its own 400 ms statement and lock
+bounds; a failure write takes the source's transaction lock in a transaction. SQLite processes share it when they use the
 same `AGENT_BOM_DB` path: authentication state lives in the owner-only
 `<database>.auth-limits.db` sidecar so a scan-ingest write transaction cannot
 lock its budget. Without a persistent database it is process-local.
@@ -677,8 +681,11 @@ Eight dedicated threads separate auth state from background work. At most 64
 operations may be running or queued for them per application, at most four of them
 failure writes and at most two from one source, so a burst of distinct callers waits
 briefly rather than being refused. Beyond that bound, an admission check returns 503
-without tripping a process-wide breaker. A caller waits at most 500 ms, including time
-queued, for an answer, and is then refused with 503. A queued operation nobody is waiting
+without tripping a process-wide breaker. A caller waits at most two seconds, including
+time queued and this process's own scheduling, for an answer, and is then refused with
+503. The store's own work is bounded at 400 ms by the database; the longer wait covers
+CPU-heavy ingest and graph reads in the same process, which delay every thread there,
+so valid keys are not refused for local load. A queued operation nobody is waiting
 for is abandoned; one already running keeps its slot until it exits. An answer that has
 already arrived when a stalled host fires that timer is used, because it is correct.
 Postgres auth transactions bound pool acquisition, statement execution and lock

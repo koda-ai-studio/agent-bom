@@ -339,7 +339,7 @@ export function KeyLifecyclePanel({
               <button
                 type="submit"
                 disabled={busyAction === "create"}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:bg-emerald-400 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)] disabled:opacity-60"
               >
                 {busyAction === "create" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Create key
@@ -402,7 +402,7 @@ export function KeyLifecyclePanel({
               <button
                 type="submit"
                 disabled={busyAction === "rotate"}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:bg-sky-400 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)] disabled:opacity-60"
               >
                 {busyAction === "rotate" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
                 Rotate key
@@ -550,7 +550,7 @@ export function KeyLifecyclePanel({
                     <button
                       type="submit"
                       disabled={busyAction === "quota"}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:bg-emerald-400 disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--accent-contrast)] transition hover:bg-[color:var(--accent-strong)] disabled:opacity-60"
                     >
                       {busyAction === "quota" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                       Save overrides

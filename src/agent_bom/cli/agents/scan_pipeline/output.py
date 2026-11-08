@@ -13,6 +13,7 @@ from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.scan_memory import remember_and_report
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
+from agent_bom.core.verbose_hint import verbose_hint
 from agent_bom.output import print_diff
 
 
@@ -307,7 +308,8 @@ def _print_completion(opts: ScanOptions, st: ScanState) -> None:
             _fixable = sum(1 for br in st.blast_radii if br.vulnerability.fixed_version)
             if _fixable:
                 st.con.print(
-                    f"\n  [green]→[/green] {_fixable} fixable — [bold]-f html[/bold] for full report · [bold]--verbose[/bold] for details"
+                    f"\n  [green]→[/green] {_fixable} fixable — [bold]-f html[/bold] for full report"
+                    f" · [bold]{verbose_hint()}[/bold] for details"
                 )
         elif (
             _execution_outcome is ScanOutcome.COMPLETE

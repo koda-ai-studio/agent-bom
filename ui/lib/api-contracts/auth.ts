@@ -55,6 +55,8 @@ export interface HealthResponse {
   auth_required?: boolean | undefined;
   auth_configured?: boolean | undefined;
   configured_auth_modes?: string[] | undefined;
+  /** Brand of the browser sign-in button; null when browser OIDC is off. Public on /health. */
+  sso_provider?: "okta" | "entra" | "google" | "generic" | null | undefined;
   unauthenticated_allowed?: boolean | undefined;
   /** Demo estate mode only: "pending" while the seed is still writing. */
   demo_seed?: "pending" | "complete" | null | undefined;

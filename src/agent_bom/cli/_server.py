@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -32,6 +33,7 @@ from agent_bom.cli._server_posture import _scim_bearer_enabled as _scim_bearer_e
 from agent_bom.cli._server_posture import _should_auto_generate_dev_key as _should_auto_generate_dev_key
 from agent_bom.cli._server_posture import _uvicorn_tls_kwargs as _uvicorn_tls_kwargs
 from agent_bom.core.settings import env_list, env_raw, env_str
+from agent_bom.logging_config import json_logging_active
 from agent_bom.storage import state_home
 from agent_bom.storage.state_home import demo_estate_default_persist as _demo_estate_default_persist
 
@@ -78,6 +80,30 @@ def _emit_runtime_summary(title: str, rows: list[tuple[str, str]], *, err: bool 
     from agent_bom.output.brand_tokens import emit_cli_runtime_summary
 
     emit_cli_runtime_summary(title, rows, err=err)
+
+
+def _emit_startup_notice(text: str, *, secret: str | None = None) -> None:
+    """A startup notice as plain text, or as a JSON log event under JSON logging.
+
+    ``secret`` is shown on the terminal only; it is never written to a log stream.
+    """
+
+    if json_logging_active():
+        withheld = " A dev API key was issued; it is not written to JSON logs, run without --log-json to see it." if secret else ""
+        logging.getLogger("agent_bom.startup").info(" ".join(text.split()) + withheld)
+        return
+    if secret:
+        click.secho(secret, fg="cyan", bold=True)
+    click.echo(text)
+
+
+def _warn_stdio_bearer_token() -> None:
+
+    message = "--bearer-token applies only to SSE / Streamable HTTP transports"
+    if json_logging_active():
+        logging.getLogger(__name__).warning(message)
+    else:
+        click.echo(f"  Warning:   {message}", err=True)
 
 
 _MCP_WORKFLOW_NAMES = (
@@ -457,21 +483,17 @@ def serve_cmd(
     ]
     _emit_runtime_summary("agent-bom serve", rows)
     if seeded_connection_key:
-        click.echo(
+        _emit_startup_notice(
             f"  Connection secrets: auto-sealed at rest with a locally generated key ({seeded_connection_key}).\n"
             "  Set AGENT_BOM_CONNECTIONS_KEY / _FILE or a managed provider to bring your own; "
             "AGENT_BOM_NO_AUTO_CONNECTIONS_KEY=1 disables auto-seeding.\n"
         )
     if dev_api_key:
-        click.secho(
-            f"  Dev API key (loopback only): {dev_api_key}",
-            fg="cyan",
-            bold=True,
-        )
-        click.echo(
+        _emit_startup_notice(
             "  The local dashboard uses this automatically. Send it as "
             "'Authorization: Bearer <key>' for CLI/API calls.\n"
-            "  Ephemeral (per-process, not saved). Set AGENT_BOM_NO_AUTO_DEV_KEY=1 to disable.\n"
+            "  Ephemeral (per-process, not saved). Set AGENT_BOM_NO_AUTO_DEV_KEY=1 to disable.\n",
+            secret=f"  Dev API key (loopback only): {dev_api_key}",
         )
 
     try:
@@ -480,7 +502,7 @@ def serve_cmd(
         _fail_missing_optional_dependencies("agent-bom serve", "ui", ["Uvicorn"])
     _uvicorn.run(
         "agent_bom.api.server:app",
-        log_config=api_log_config(_uvicorn.config.LOGGING_CONFIG),
+        log_config=api_log_config(_uvicorn.config.LOGGING_CONFIG, json_output=log_json, level=log_level),
         host=host,
         port=port,
         reload=reload,
@@ -741,7 +763,7 @@ def api_cmd(
     ]
     _emit_runtime_summary("agent-bom API", rows)
     if seeded_connection_key:
-        click.echo(
+        _emit_startup_notice(
             f"  Connection secrets: auto-sealed at rest with a locally generated key ({seeded_connection_key}).\n"
             "  Set AGENT_BOM_CONNECTIONS_KEY / _FILE or a managed provider to bring your own; "
             "AGENT_BOM_NO_AUTO_CONNECTIONS_KEY=1 disables auto-seeding.\n"
@@ -749,7 +771,7 @@ def api_cmd(
 
     uvicorn.run(
         "agent_bom.api.server:app",
-        log_config=api_log_config(uvicorn.config.LOGGING_CONFIG),
+        log_config=api_log_config(uvicorn.config.LOGGING_CONFIG, json_output=log_json, level=log_level),
         host=host,
         port=port,
         reload=reload,
@@ -917,6 +939,6 @@ def mcp_server_cmd(
         server.run(transport=transport, host=host, port=port)
     else:
         if bearer_token:
-            click.echo("  Warning:   --bearer-token applies only to SSE / Streamable HTTP transports", err=True)
+            _warn_stdio_bearer_token()
         _emit_mcp_stdio_workflow_splash(profile=profile)
         server.run(transport="stdio")

@@ -12,7 +12,7 @@ from rich.console import Console
 
 from agent_bom.models import Package
 from agent_bom.scan_cache import ScanCache
-from agent_bom.scanners import osv, state
+from agent_bom.scanners import osv, osv_batch, state
 
 
 @pytest.fixture
@@ -118,13 +118,68 @@ async def test_open_circuit_keeps_uncached_packages_incomplete(cache, monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_paginated_result_keeps_findings_but_is_not_cached(cache, monkeypatch):
+async def test_paginated_result_keeps_findings_but_is_not_cached_when_next_page_fails(cache, monkeypatch):
     package = Package(name="requests", version="2.19.0", ecosystem="pypi")
     payload = {"results": [{"vulns": [{"id": "GHSA-known"}], "next_page_token": "more"}]}
-    result, _ = await query(cache, [package], [payload], monkeypatch)
+    result, calls = await query(cache, [package], [payload, None], monkeypatch)
+    assert calls[1]["queries"][0]["page_token"] == "more"
     assert result["pypi:requests@2.19.0"] == [{"id": "GHSA-known"}]
     assert cache.get("pypi", "requests", "2.19.0") is None
     assert state.peek_coverage_warnings()
+
+
+@pytest.mark.asyncio
+async def test_paginated_result_is_followed_to_the_last_page(cache, monkeypatch):
+    big = Package(name="linux-libc-dev", version="6.1.27-1", ecosystem="pypi")
+    small = Package(name="zlib", version="1.2.13", ecosystem="pypi")
+    first = {"results": [{"vulns": [{"id": "CVE-page-1"}], "next_page_token": "t1"}, {"vulns": [{"id": "CVE-zlib"}]}]}
+    second = {"results": [{"vulns": [{"id": "CVE-page-2"}], "next_page_token": "t2"}]}
+    last = {"results": [{"vulns": [{"id": "CVE-page-3"}]}]}
+    result, calls = await query(cache, [big, small], [first, second, last], monkeypatch)
+    assert len(calls) == 3
+    assert calls[1]["queries"] == [dict(calls[0]["queries"][0], page_token="t1")]
+    assert calls[2]["queries"] == [dict(calls[0]["queries"][0], page_token="t2")]
+    assert [v["id"] for v in result["pypi:linux-libc-dev@6.1.27-1"]] == ["CVE-page-1", "CVE-page-2", "CVE-page-3"]
+    assert result["pypi:zlib@1.2.13"] == [{"id": "CVE-zlib"}]
+    assert len(cache.get("pypi", "linux-libc-dev", "6.1.27-1")) == 3
+    assert cache.get("pypi", "zlib", "1.2.13") == [{"id": "CVE-zlib"}]
+    assert not state.peek_coverage_warnings()
+
+
+@pytest.mark.asyncio
+async def test_unfinished_pagination_marks_only_that_package_incomplete(cache, monkeypatch):
+    monkeypatch.setattr(osv_batch, "MAX_PAGE_FOLLOWUPS", 1)
+    big = Package(name="big", version="1.0", ecosystem="pypi")
+    small = Package(name="small", version="1.0", ecosystem="pypi")
+    first = {"results": [{"vulns": [{"id": "A"}], "next_page_token": "t1"}, {}]}
+    second = {"results": [{"vulns": [{"id": "B"}], "next_page_token": "t2"}]}
+    result, calls = await query(cache, [big, small], [first, second], monkeypatch)
+    assert len(calls) == 2
+    assert [v["id"] for v in result["pypi:big@1.0"]] == ["A", "B"]
+    assert cache.get("pypi", "big", "1.0") is None
+    assert cache.get("pypi", "small", "1.0") == []
+    warnings = [w for w in state.peek_coverage_warnings() if w.get("kind") == "remote_lookup_error"]
+    assert warnings and all("small" not in json.dumps(w) for w in warnings)
+    [capped] = [w for w in state.peek_coverage_warnings() if w.get("reason") == "osv_result_page_limit"]
+    assert "big@1.0" in capped["detail"] and "small" not in capped["detail"]
+
+
+@pytest.mark.asyncio
+async def test_page_follow_ups_stop_at_the_time_bound_and_name_the_package(cache, monkeypatch):
+    monkeypatch.setattr(osv_batch, "PAGE_DEADLINE_SECONDS", 0.0)
+    big = Package(name="linux", version="6.1.27-1", ecosystem="pypi")
+    first = {"results": [{"vulns": [{"id": "A"}], "next_page_token": "t1"}]}
+    result, calls = await query(cache, [big], [first], monkeypatch)
+    assert len(calls) == 1
+    assert result["pypi:linux@6.1.27-1"] == [{"id": "A"}]
+    assert cache.get("pypi", "linux", "6.1.27-1") is None
+    [capped] = [w for w in state.peek_coverage_warnings() if w.get("reason") == "osv_result_page_limit"]
+    assert "linux@6.1.27-1" in capped["detail"]
+
+
+def test_page_bounds_are_firm():
+    assert osv_batch.MAX_PAGE_FOLLOWUPS <= 10
+    assert 0 < osv_batch.PAGE_DEADLINE_SECONDS <= 60
 
 
 @pytest.mark.asyncio

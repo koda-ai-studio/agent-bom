@@ -19,7 +19,7 @@ from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from agent_bom.api import audit_log, metrics
-from agent_bom.api.auth_failure_policy import AuthFailureMiddleware, AuthFailurePolicy
+from agent_bom.api.auth_failure_policy import _ADMISSION_DEADLINE_SECONDS, AuthFailureMiddleware, AuthFailurePolicy
 from agent_bom.api.auth_failure_receipts import AuthFailureReceipts
 from agent_bom.api.auth_failure_store import SQLiteAuthFailureStore
 from agent_bom.api.forwarded_identity import resolve_forwarded_client_ip
@@ -179,7 +179,7 @@ async def test_a_stalled_store_stays_bounded_and_abandons_queued_reads(monkeypat
 
     def stalled(source, _now):
         calls.append(source)
-        gate.wait(1.5)
+        gate.wait(_ADMISSION_DEADLINE_SECONDS + 1)
         return 0
 
     monkeypatch.setattr(policy.store, "remaining", stalled)
@@ -188,7 +188,7 @@ async def test_a_stalled_store_stays_bounded_and_abandons_queued_reads(monkeypat
     elapsed = time.monotonic() - started
     gate.set()
     assert all(response.status_code == 503 for response in responses)
-    assert elapsed < 1.2  # Refused at the deadline, not after draining a queue.
+    assert elapsed < _ADMISSION_DEADLINE_SECONDS + 0.7  # Refused at the deadline, not after draining a queue.
     assert len(calls) <= 8  # Reads abandoned at the deadline never run.
     for _ in range(200):
         if policy._outstanding == 0:
@@ -202,13 +202,13 @@ async def test_a_stalled_store_stays_bounded_and_abandons_queued_reads(monkeypat
 async def test_a_read_that_never_finishes_in_time_still_fails_closed_at_the_deadline(monkeypatch):
     policy = AuthFailurePolicy()
     gate = threading.Event()
-    monkeypatch.setattr(policy.store, "remaining", lambda *_args: gate.wait(1.5) and 0)
+    monkeypatch.setattr(policy.store, "remaining", lambda *_args: gate.wait(_ADMISSION_DEADLINE_SECONDS + 1) and 0)
     started = time.monotonic()
     response = await policy.before(_request("198.51.100.77"))
     elapsed = time.monotonic() - started
     gate.set()
     assert response.status_code == 503
-    assert elapsed < 1.0
+    assert elapsed < _ADMISSION_DEADLINE_SECONDS + 0.5
     assert policy._unavailable_until == 0
 
 

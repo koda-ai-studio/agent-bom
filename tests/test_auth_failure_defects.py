@@ -803,3 +803,14 @@ def test_static_key_request_does_not_verify_again_for_its_rate_limit_bucket(monk
     app.add_middleware(APIKeyMiddleware, api_key="valid-test-credential", allow_unauthenticated=False)
     with TestClient(app) as client:
         assert client.get("/v1/findings", headers={"x-api-key": "valid-test-credential"}).status_code == 200
+
+
+def test_a_source_is_quoted_as_a_standard_sql_string():
+    from agent_bom.api.auth_failure_store import _BOUNDED_READ, sql_string_literal
+
+    assert sql_string_literal("203.0.113.7") == "'203.0.113.7'"
+    assert sql_string_literal("x'; DROP TABLE t; --") == "'x''; DROP TABLE t; --'"
+    assert sql_string_literal("a\\b") == "'a\\b'"
+    assert "standard_conforming_strings = on" in _BOUNDED_READ
+    with pytest.raises(ValueError):
+        sql_string_literal("a\x00b")
