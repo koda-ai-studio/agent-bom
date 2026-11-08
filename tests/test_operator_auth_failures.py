@@ -378,7 +378,7 @@ async def test_one_source_cannot_exhaust_auth_workers_or_open_global_breaker(mon
     import time
     from types import SimpleNamespace
 
-    from agent_bom.api.auth_failure_policy import AuthFailurePolicy
+    from agent_bom.api.auth_failure_policy import _ADMISSION_DEADLINE_SECONDS, AuthFailurePolicy
 
     policy = AuthFailurePolicy()
     calls = []
@@ -386,7 +386,7 @@ async def test_one_source_cannot_exhaust_auth_workers_or_open_global_breaker(mon
     def remaining(source, _now):
         calls.append(source)
         if source == "192.0.2.11":
-            time.sleep(1.2)
+            time.sleep(_ADMISSION_DEADLINE_SECONDS + 0.7)
         return 0
 
     monkeypatch.setattr(policy.store, "remaining", remaining)
@@ -407,7 +407,7 @@ async def test_one_source_cannot_exhaust_auth_workers_or_open_global_breaker(mon
         assert await policy.before(request("192.0.2.14")) is None
     finally:
         await asyncio.gather(*flood)
-        await asyncio.sleep(1.25)
+        await asyncio.sleep(_ADMISSION_DEADLINE_SECONDS + 0.75)
 
 
 @pytest.mark.parametrize("status", [400, 403])
@@ -630,7 +630,7 @@ def test_timed_out_admission_releases_capacity_after_its_loop_closes(monkeypatch
     request = SimpleNamespace(client=SimpleNamespace(host="192.0.2.18"), headers={})
 
     def remaining(_source, _now):
-        assert release.wait(2)
+        assert release.wait(auth_failure_policy._ADMISSION_DEADLINE_SECONDS + 2)
         return 0
 
     monkeypatch.setattr(policy.store, "remaining", remaining)

@@ -39,6 +39,11 @@ _MAX_SOURCE_OUTSTANDING = 2
 # the workers while they wait on a store's write lock.
 _MAX_OUTSTANDING_WRITES = 4
 _MAX_PENDING_SOURCES = 4096
+# How long a caller waits for its answer, including queueing and this process's own
+# scheduling. The store's work is bounded separately, at 400 ms, by the database.
+# CPU-heavy ingest and graph reads in the same process delay every thread by up to
+# seconds, so a shorter wait refuses valid keys for local load, not store trouble.
+_ADMISSION_DEADLINE_SECONDS = 2.0
 # Consecutive store errors, with no success between them, that show an outage.
 _OUTAGE_FAILURES = 3
 _OUTAGE_SECONDS = 5.0
@@ -79,9 +84,7 @@ class AuthFailurePolicy:
         rate_store = _build_rate_limit_store(60)
         sqlite_path = env_raw("AGENT_BOM_DB")
         auth_path = sqlite_path + ".auth-limits.db" if sqlite_path and sqlite_path != ":memory:" else ":memory:"
-        self.store = (
-            PostgresAuthFailureStore(rate_store) if isinstance(rate_store, PostgresRateLimitStore) else SQLiteAuthFailureStore(auth_path)
-        )
+        self.store = PostgresAuthFailureStore() if isinstance(rate_store, PostgresRateLimitStore) else SQLiteAuthFailureStore(auth_path)
         if env_raw("AGENT_BOM_TRUST_PROXY_AUTH") or env_raw("AGENT_BOM_TRUSTED_PROXY_HOPS") or env_raw("AGENT_BOM_TRUSTED_PROXY_CIDRS"):
             self._warn_ignored_forwarding()
 
@@ -207,13 +210,14 @@ class AuthFailurePolicy:
         try:
             pending = None
             try:
-                async with asyncio.timeout(0.5):
+                async with asyncio.timeout(_ADMISSION_DEADLINE_SECONDS):
                     pending = _AUTH_WORKERS.submit(contextvars.copy_context().run, function, *args, **kwargs)
                     # Release before publishing the result to the request loop:
                     # its next operation must not count this completed work.
                     # This also runs if the request event loop has closed.
                     pending.add_done_callback(release)
                     task = asyncio.wrap_future(pending)
+                    task.add_done_callback(lambda done: done.cancelled() or done.exception())
                     # A timed-out request retains its slot until the SQL exits.
                     value = await asyncio.shield(task)
                     self._note_store_success()

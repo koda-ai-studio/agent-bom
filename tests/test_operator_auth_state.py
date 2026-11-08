@@ -25,10 +25,23 @@ def test_postgres_auth_operations_bound_pool_and_sql_waits():
     from agent_bom.api.auth_failure_store import PostgresAuthFailureStore
 
     queries = []
+    transactions = []
+
+    class Cursor:
+        description = ("blocked_until",)
+
+        def fetchone(self):
+            return None
 
     class Connection:
         def execute(self, sql, parameters=()):
             queries.append(sql)
+            return Cursor()
+
+        @contextmanager
+        def transaction(self):
+            transactions.append(1)
+            yield
 
     class Pool:
         @contextmanager
@@ -36,11 +49,20 @@ def test_postgres_auth_operations_bound_pool_and_sql_waits():
             assert timeout == 0.4
             yield Connection()
 
+    bounds = "SET LOCAL statement_timeout = '400ms'; SET LOCAL lock_timeout = '400ms'"
     store = PostgresAuthFailureStore.__new__(PostgresAuthFailureStore)
     store._pool = Pool()
     with store.transaction("192.0.2.1"):
         pass
-    assert queries[:2] == ["SET LOCAL statement_timeout = '400ms'", "SET LOCAL lock_timeout = '400ms'"]
+    # Bounds and the source lock travel together, inside the write's transaction.
+    assert transactions == [1]
+    assert len(queries) == 1 and queries[0].startswith(bounds + "; SELECT pg_advisory_xact_lock(")
+
+    # Admission is one bounded round trip, with no write lock and no transaction to open.
+    queries.clear()
+    assert store.remaining("192.0.2.1", 100) == 0
+    assert transactions == [1] and len(queries) == 1
+    assert bounds in str(queries[0]) and "api_auth_failure_limits" in str(queries[0])
 
 
 @pytest.mark.parametrize("sqlstate", ["55P03", "57014"])
