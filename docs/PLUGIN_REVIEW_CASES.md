@@ -196,4 +196,4 @@ Machine-readable: `integrations/codex/review-cases.json`. Setup: python scripts/
    - Expected result: Says it will not use those flags, and offers a configuration audit.
    - Last run (2026-11-05): not run. Not run with a model
 
-How the positive cases were run: Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.113.2 and with this branch. Codex was not available, so no model ran these prompts.
+How the positive cases were run: Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.114.0 and with this branch. Codex was not available, so no model ran these prompts.
