@@ -50,10 +50,9 @@ def _publish_pages(root: Path) -> None:
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def test_current_tree_is_blocked_on_the_stale_release() -> None:
-    problems = gate.problems(ROOT)
-    assert any(gate.MINIMUM_RELEASE in problem for problem in problems)
-    assert gate.main(["--root", str(ROOT)]) == 1
+def test_current_tree_passes_once_pins_name_the_release() -> None:
+    assert gate.problems(ROOT) == []
+    assert gate.main(["--root", str(ROOT)]) == 0
 
 
 def test_a_release_above_the_floor_with_published_pages_passes(tmp_path: Path) -> None:
