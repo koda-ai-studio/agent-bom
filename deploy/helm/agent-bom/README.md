@@ -47,14 +47,14 @@ under `deploy/helm/agent-bom/examples/`.
 
 ```bash
 # Scanner CronJob only (default)
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom --create-namespace
 
 # API + UI control plane (use a shipped profile; it includes Postgres wiring)
 python scripts/install_helm_profile.py focused-pilot
 
 # Custom scan schedule
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom --create-namespace \
   --set scanner.schedule="0 */2 * * *"
 ```
@@ -82,7 +82,7 @@ release. The chart rejects that configuration. For the production profile,
 install the secret-sync release first and wait for its four target Secrets:
 
 ```bash
-helm upgrade --install agent-bom-secrets oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm upgrade --install agent-bom-secrets oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml \
   -f deploy/helm/agent-bom/examples/eks-production-secret-sync-values.yaml
@@ -99,7 +99,7 @@ kubectl get -n agent-bom secret \
   agent-bom-control-plane-admin \
   agent-bom-control-plane-auth
 
-helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom \
   -f deploy/helm/agent-bom/examples/eks-production-values.yaml
 ```

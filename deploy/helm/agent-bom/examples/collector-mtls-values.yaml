@@ -3,7 +3,7 @@
 # Use with a mesh-hardened control plane (Istio STRICT) or app-native TLS on the API.
 # The scanner CronJob presents a client certificate when pushing fleet sync results.
 #
-#   helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+#   helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
 #     -f deploy/helm/agent-bom/examples/eks-production-values.yaml \
 #     -f deploy/helm/agent-bom/examples/eks-istio-kyverno-values.yaml \
 #     -f deploy/helm/agent-bom/examples/collector-mtls-values.yaml

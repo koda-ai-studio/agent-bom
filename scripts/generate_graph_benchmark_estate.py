@@ -180,7 +180,8 @@ def generate_estate(*, agents: int, seed: int, vulnerable_package_rate: float) -
 
     report = {
         "scan_id": f"graph-benchmark-estate-{agents}-{seed}",
-        "generated_at": "2026-05-13T00:00:00Z",
+        # A fixed date ages past graph retention and the built graph is pruned.
+        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "tool_version": "benchmark-scaffold",
         "scan_sources": sorted(source for source, count in source_counts.items() if count),
         "agents": report_agents,

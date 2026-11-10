@@ -16,7 +16,7 @@
       "last_run": {
         "date": "2026-11-05",
         "result": "pass",
-        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.113.2 and with this branch. Codex was not available, so no model ran these prompts.",
+        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.114.0 and with this branch. Codex was not available, so no model ran these prompts.",
         "observed": "canonical_verdict malicious, naming GHSA-mh6f-8j2x-4483"
       }
     },
@@ -32,7 +32,7 @@
       "last_run": {
         "date": "2026-11-05",
         "result": "pass",
-        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.113.2 and with this branch. Codex was not available, so no model ran these prompts.",
+        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.114.0 and with this branch. Codex was not available, so no model ran these prompts.",
         "observed": "Audit: three high findings on demo-remote. Exit 1 means findings; the JSON is complete."
       }
     },
@@ -47,7 +47,7 @@
       "last_run": {
         "date": "2026-11-05",
         "result": "pass",
-        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.113.2 and with this branch. Codex was not available, so no model ran these prompts.",
+        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.114.0 and with this branch. Codex was not available, so no model ran these prompts.",
         "observed": "summary: 1 malicious file, 6 findings"
       }
     },
@@ -62,7 +62,7 @@
       "last_run": {
         "date": "2026-11-05",
         "result": "pass",
-        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.113.2 and with this branch. Codex was not available, so no model ran these prompts.",
+        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.114.0 and with this branch. Codex was not available, so no model ran these prompts.",
         "observed": "findings[] holds CVE-2024-3651 for idna@3.6, fixed_version 3.7"
       }
     },
@@ -77,7 +77,7 @@
       "last_run": {
         "date": "2026-11-05",
         "result": "pass",
-        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.113.2 and with this branch. Codex was not available, so no model ran these prompts.",
+        "how": "Exact commands from the skill, against a throwaway HOME, with uvx --from agent-bom==0.114.0 and with this branch. Codex was not available, so no model ran these prompts.",
         "observed": "remediation_plan: idna to 3.15"
       }
     }

@@ -220,7 +220,7 @@ variable "chart_path" {
 variable "chart_version" {
   description = "Exact published chart version; it also selects the image tags the chart pins. Release tooling keeps this default on the latest published release."
   type        = string
-  default     = "0.113.2"
+  default     = "0.114.0"
 
   validation {
     condition     = var.chart_version == "" || can(regex("^[0-9]+\\.[0-9]+\\.[0-9]+$", var.chart_version))

@@ -3,7 +3,7 @@
 # Serves /.well-known/openid-configuration on the gateway hostname while
 # authorization/token/JWKS traffic goes to the buyer's existing IdP.
 #
-#   helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+#   helm upgrade --install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
 #     -f deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml \
 #     -f deploy/helm/agent-bom/examples/oidc-discovery-shim-values.yaml \
 #     --set-file gateway.upstreamsYaml=deploy/helm/agent-bom/examples/gateway-upstreams.example.yaml
