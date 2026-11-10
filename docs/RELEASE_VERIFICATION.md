@@ -146,7 +146,7 @@ npx playwright test e2e/route-catalog-smoke.spec.ts e2e/jobs-workflow.spec.ts \
 ## Download release assets
 
 ```bash
-TAG=v0.113.2
+TAG=v0.114.0
 VERSION="${TAG#v}"
 mkdir -p /tmp/agent-bom-release && cd /tmp/agent-bom-release
 gh release download "$TAG" --repo koda-ai-studio/agent-bom

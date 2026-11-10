@@ -163,16 +163,16 @@ agent-bom iac . --k8s-live --k8s-all-namespaces
 
 ```bash
 # Install with defaults
-helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom --create-namespace
 
 # Enable the optional node-wide runtime monitor
-helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom --create-namespace \
   --set monitor.enabled=true
 
 # Package the API + UI control plane
-helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom --create-namespace \
   --set controlPlane.enabled=true \
   --set controlPlane.postgresSecrets.enabled=true \
@@ -184,7 +184,7 @@ helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0
   --set controlPlane.ingress.enabled=true
 
 # Custom schedule
-helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom --create-namespace \
   --set scanner.schedule="0 */2 * * *"
 ```

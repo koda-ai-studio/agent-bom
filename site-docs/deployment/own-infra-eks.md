@@ -339,7 +339,7 @@ and follow
 Example:
 
 ```bash
-helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.113.2 \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0.114.0 \
   -n agent-bom --create-namespace \
   --set controlPlane.enabled=true \
   --set controlPlane.postgresSecrets.enabled=true \
