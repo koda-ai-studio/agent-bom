@@ -92,7 +92,7 @@ _REPORT_PRINT_CSS = """\
       tr,.stat-card,.graph-container{break-inside:avoid}
       thead{display:table-header-group}
       .report-disclosure{border:0;padding:0}
-      .graph-view-switch,.graph-relationships{display:none!important}
+      .graph-view-switch,.graph-relationships,.graph-draw-more,.graph-pan-hint{display:none!important}
       .row-detail-toggle{display:none!important}
       .graph-container[hidden]{display:flex!important}
       .report-disclosure>summary,.agent-summary,.agent-name{color:#0f172a}
@@ -261,6 +261,10 @@ def render_styles(status_color: str) -> str:
     .pg-hidden{{display:none}}
     .deferred-note{{margin-top:14px}}
     .graph-bound-note{{margin:0 0 10px;font-size:.76rem;color:#94a3b8;line-height:1.5}}
+    .graph-bound-note p{{margin:0 0 6px}}
+    .graph-bound-note .graph-pan-hint:empty{{display:none}}
+    .graph-draw-more{{background:#1e293b;color:#cbd5e1;border:1px solid #475569;border-radius:7px;padding:6px 12px;cursor:pointer;font:inherit;font-size:.76rem;margin:0 0 6px}}
+    .graph-draw-more:hover{{border-color:#94a3b8;color:#f1f5f9}}
     .pager-btn:focus-visible,.pager-size:focus-visible{{outline:2px solid #10b981;outline-offset:2px}}
     @media print{{
       .tab-bar,.pager{{display:none!important}}

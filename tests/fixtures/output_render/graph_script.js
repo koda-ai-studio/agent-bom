@@ -111,6 +111,7 @@
 
 
   var GRAPH_DRAW_LIMIT = 600;
+  var GRAPH_FIRST_DRAW = 60;
   var GRAPH_SEVERITY_RANK = {critical: 4, high: 3, medium: 2, low: 1};
   function isFindingNode(data) {
     var t = data.type || '';
@@ -120,15 +121,23 @@
     var sev = data.severity || (data.type || '').replace('cve_', '');
     return GRAPH_SEVERITY_RANK[sev] || 0;
   }
+  // A grouped node stands for every finding it holds.
+  function findingWeight(data) { return data.count > 1 ? data.count : 1; }
   // follow: 'out' when edges run from a finding toward what it reaches, 'in' when they run toward the finding.
   // inventoryFirst: the inventory is the subject, so it takes up to half the room before findings.
-  function boundGraph(elements, limit, follow, inventoryFirst) {
+  // priority: record ids drawn before anything else (search matches), or null.
+  function boundGraph(elements, limit, follow, inventoryFirst, priority) {
     var nodes = [], edges = [];
     elements.forEach(function(e) { (e.data.source !== undefined ? edges : nodes).push(e); });
     var findings = nodes.filter(function(n) { return isFindingNode(n.data); });
-    var result = {elements: elements, bounded: false, totalNodes: nodes.length, totalFindings: findings.length,
-      totalEdges: edges.length, drawnNodes: nodes.length, drawnFindings: findings.length};
+    var weight = findings.reduce(function(sum, n) { return sum + findingWeight(n.data); }, 0);
+    var assets = nodes.length - findings.length;
+    var result = {elements: elements, bounded: false, totalNodes: nodes.length, totalFindings: weight,
+      totalEdges: edges.length, drawnNodes: nodes.length, drawnFindings: weight, totalAssets: assets, drawnAssets: assets};
     if (nodes.length <= limit) return result;
+    function wanted(data) {
+      return !!priority && (priority[data.id] === true || (data.members || []).some(function(id) { return priority[id] === true; }));
+    }
     var byId = {}, next = {};
     nodes.forEach(function(n) { byId[n.data.id] = n; });
     edges.forEach(function(e) {
@@ -136,7 +145,7 @@
       var to = follow === 'out' ? e.data.target : e.data.source;
       (next[from] = next[from] || []).push(to);
     });
-    var kept = {}, count = 0, drawnFindings = 0;
+    var kept = {}, count = 0, drawnFindings = 0, drawnAssets = 0;
     // The path from one finding, without other findings or nodes already drawn.
     function path(id) {
       var found = [id], seen = {}, stack = [id];
@@ -149,25 +158,25 @@
       }
       return found;
     }
-    if (inventoryFirst) {
+    function keepAssets(room, test) {
       nodes.forEach(function(n) {
-        if (count < Math.floor(limit / 2) && !isFindingNode(n.data)) { kept[n.data.id] = true; count++; }
+        if (count < room && !kept[n.data.id] && !isFindingNode(n.data) && test(n.data)) { kept[n.data.id] = true; count++; drawnAssets++; }
       });
     }
-    var ranked = findings.map(function(n, i) { return {n: n, i: i, r: findingRank(n.data)}; });
-    ranked.sort(function(a, b) { return b.r - a.r || a.i - b.i; });
+    if (priority) keepAssets(Math.floor(limit / 2), wanted);
+    if (inventoryFirst) keepAssets(Math.floor(limit / 2), function() { return true; });
+    var ranked = findings.map(function(n, i) { return {n: n, i: i, r: findingRank(n.data), p: wanted(n.data) ? 1 : 0}; });
+    ranked.sort(function(a, b) { return b.p - a.p || b.r - a.r || a.i - b.i; });
     for (var k = 0; k < ranked.length; k++) {
       var ids = path(ranked[k].n.data.id);
       if (count + ids.length > limit) break;
       ids.forEach(function(id) { kept[id] = true; });
-      count += ids.length; drawnFindings++;
+      count += ids.length; drawnAssets += ids.length - 1; drawnFindings += findingWeight(ranked[k].n.data);
     }
-    nodes.forEach(function(n) {
-      if (count < limit && !kept[n.data.id] && !isFindingNode(n.data)) { kept[n.data.id] = true; count++; }
-    });
+    keepAssets(limit, function() { return true; });
     result.elements = nodes.filter(function(n) { return kept[n.data.id]; }).concat(
       edges.filter(function(e) { return kept[e.data.source] && kept[e.data.target]; }));
-    result.bounded = true; result.drawnNodes = count; result.drawnFindings = drawnFindings;
+    result.bounded = true; result.drawnNodes = count; result.drawnFindings = drawnFindings; result.drawnAssets = drawnAssets;
     return result;
   }
   function relationshipRows(elements) {
@@ -183,20 +192,269 @@
     if (!el) return [];
     try { return JSON.parse(el.textContent); } catch (e) { return []; }
   }
-  function noteGraphBound(container, bound) {
-    if (!bound.bounded) return;
-    var note = document.createElement('p');
-    note.className = 'graph-bound-note';
-    note.textContent = 'Diagram draws ' + bound.drawnFindings.toLocaleString() + ' of ' + bound.totalFindings.toLocaleString() +
-      ' findings, most severe first, and ' + (bound.drawnNodes - bound.drawnFindings).toLocaleString() + ' of ' +
-      (bound.totalNodes - bound.totalFindings).toLocaleString() + ' assets. Relationships lists all ' +
-      bound.totalEdges.toLocaleString() + ' recorded relationships, and the findings tables list every finding.';
-    container.parentNode.before(note);
-  }
   // Layout runs in its own task after load, so a large graph never holds the page back.
   function afterLoad(draw) {
     if (document.readyState === 'complete') { setTimeout(draw, 0); return; }
     window.addEventListener('load', function() { setTimeout(draw, 0); });
+  }
+
+  var GRAPH_READABLE_ZOOM = 0.8;
+  function splitGraph(elements) {
+    var nodes = [], edges = [];
+    elements.forEach(function(e) { (e.data.source !== undefined ? edges : nodes).push(e); });
+    return {nodes: nodes, edges: edges};
+  }
+  function groupLabel(data, count) {
+    var sev = data.severity || (data.type || '').replace('cve_', '');
+    var noun = (data.type === 'cve' || (data.type || '').indexOf('cve_') === 0) ? 'CVEs' : 'findings';
+    return count + ' ' + (sev && sev !== 'cve' ? sev + ' ' : '') + noun;
+  }
+  // Findings that share a severity and exactly the same neighbours become one node listing its members.
+  // Ids in keep (search matches) are always drawn on their own.
+  function groupFindings(elements, keep) {
+    var parts = splitGraph(elements), finding = {}, links = {}, solo = {};
+    parts.nodes.forEach(function(n) { if (isFindingNode(n.data)) finding[n.data.id] = true; });
+    parts.edges.forEach(function(e) {
+      var s = e.data.source, t = e.data.target, type = e.data.type || '';
+      if (finding[s] && finding[t]) { solo[s] = solo[t] = true; return; }
+      if (finding[s]) (links[s] = links[s] || []).push('>' + type + '>' + t);
+      else if (finding[t]) (links[t] = links[t] || []).push('<' + type + '<' + s);
+    });
+    var buckets = {}, order = [];
+    parts.nodes.forEach(function(n) {
+      var id = n.data.id;
+      if (!finding[id] || solo[id] || n.data.count || (keep && keep[id])) return;
+      var key = (n.data.type || '') + '|' + (n.data.severity || '') + '|' + (links[id] || []).sort().join('\u0001');
+      if (!buckets[key]) { buckets[key] = []; order.push(key); }
+      buckets[key].push(n);
+    });
+    var groupOf = {}, groupNode = {}, made = false;
+    order.forEach(function(key, index) {
+      var members = buckets[key];
+      if (members.length < 2) return;
+      made = true;
+      var first = members[0].data, ids = members.map(function(m) { return m.data.id; });
+      var names = members.slice(0, 12).map(function(m) { return m.data.label || m.data.id; });
+      var label = groupLabel(first, members.length);
+      var id = 'group:' + index + ':' + first.id;
+      groupNode[id] = {data: {id: id, type: first.type, severity: first.severity, severityClass: first.severityClass,
+        count: members.length, members: ids, label: label,
+        tip: label + ' on the same path: ' + names.join(', ') + (members.length > 12 ? ', and ' + (members.length - 12) + ' more' : '')}};
+      ids.forEach(function(m) { groupOf[m] = id; });
+    });
+    if (!made) return elements;
+    var out = [], placed = {}, seen = {}, edgeIndex = 0;
+    parts.nodes.forEach(function(n) {
+      var g = groupOf[n.data.id];
+      if (!g) out.push(n);
+      else if (!placed[g]) { placed[g] = true; out.push(groupNode[g]); }
+    });
+    parts.edges.forEach(function(e) {
+      var s = groupOf[e.data.source] || e.data.source, t = groupOf[e.data.target] || e.data.target;
+      if (s === e.data.source && t === e.data.target) { out.push(e); return; }
+      var key = s + '\u0001' + t + '\u0001' + (e.data.type || '');
+      if (seen[key]) return;
+      seen[key] = true;
+      var data = Object.assign({}, e.data, {id: 'group-edge:' + (edgeIndex++), source: s, target: t});
+      out.push({data: data});
+    });
+    return out;
+  }
+  // severities: {critical: true, ...} for the checked boxes, or null for no filter.
+  // Findings with an unranked severity stay, and so do assets that never had a relationship.
+  function filterBySeverity(elements, severities) {
+    if (!severities) return elements;
+    var parts = splitGraph(elements), drop = {}, dropped = 0;
+    parts.nodes.forEach(function(n) {
+      var sev = n.data.severity || (n.data.type || '').replace('cve_', '');
+      if (isFindingNode(n.data) && GRAPH_SEVERITY_RANK[sev] && !severities[sev]) { drop[n.data.id] = true; dropped++; }
+    });
+    if (!dropped) return elements;
+    var linked = {}, hadEdge = {};
+    var edges = parts.edges.filter(function(e) {
+      hadEdge[e.data.source] = hadEdge[e.data.target] = true;
+      if (drop[e.data.source] || drop[e.data.target]) return false;
+      linked[e.data.source] = linked[e.data.target] = true;
+      return true;
+    });
+    var nodes = parts.nodes.filter(function(n) {
+      var id = n.data.id;
+      return !drop[id] && (linked[id] || !hadEdge[id] || isFindingNode(n.data));
+    });
+    return nodes.concat(edges);
+  }
+  // Ids of every recorded node whose label contains the (lower-case) query, drawn or not.
+  function searchRecords(elements, query) {
+    var found = {};
+    if (!query || !query.trim()) return found;
+    elements.forEach(function(e) {
+      if (e.data.source !== undefined) return;
+      if (String(e.data.label || e.data.id).toLowerCase().indexOf(query) >= 0) found[e.data.id] = true;
+    });
+    return found;
+  }
+  function countRecords(elements) {
+    var parts = splitGraph(elements), findings = 0;
+    parts.nodes.forEach(function(n) { if (isFindingNode(n.data)) findings++; });
+    return {findings: findings, assets: parts.nodes.length - findings, edges: parts.edges.length};
+  }
+  // state: {limit, follow, inventoryFirst, severities, matches}. Totals always describe the full record.
+  function graphView(recorded, state) {
+    var filtered = filterBySeverity(recorded, state.severities || null);
+    var matches = state.matches && Object.keys(state.matches).length ? state.matches : null;
+    var grouped = groupFindings(filtered, matches);
+    var view = boundGraph(grouped, state.limit, state.follow, !!state.inventoryFirst, matches);
+    var all = state.totals || countRecords(recorded);
+    var shown = filtered === recorded ? all : countRecords(filtered);
+    view.totalFindings = all.findings; view.totalAssets = all.assets; view.totalEdges = all.edges;
+    view.hiddenBySeverity = all.findings - shown.findings;
+    view.grouped = grouped !== filtered && view.elements.some(function(e) { return e.data.count > 1; });
+    view.limit = state.limit;
+    view.bounded = view.drawnFindings < view.totalFindings || view.drawnAssets < view.totalAssets;
+    return view;
+  }
+  function graphNoteText(view) {
+    if (!view.bounded && !view.grouped) return '';
+    var n = function(value) { return value.toLocaleString('en-US'); };
+    var text = 'Diagram draws ' + n(view.drawnFindings) + ' of ' + n(view.totalFindings) + ' findings, most severe first, and ' +
+      n(view.drawnAssets) + ' of ' + n(view.totalAssets) + ' assets.';
+    if (view.grouped) text += ' Findings with the same severity and path are drawn as one group; hover a group to see its members.';
+    if (view.hiddenBySeverity) text += ' The severity filter hides ' + n(view.hiddenBySeverity) + ' findings.';
+    return text + ' Relationships lists all ' + n(view.totalEdges) + ' recorded relationships, and the findings tables list every finding.';
+  }
+  // Top-left corners for boxes packed into rows whose width suits the given aspect ratio,
+  // never wider than maxWidth (the container at a readable zoom) unless one box is wider.
+  function packBoxes(boxes, aspect, gap, maxWidth) {
+    var area = 0, widest = 0;
+    boxes.forEach(function(b) { area += (b.w + gap) * (b.h + gap); widest = Math.max(widest, b.w); });
+    var rowWidth = Math.max(widest, Math.min(Math.sqrt(area * (aspect > 0 ? aspect : 1.6)), maxWidth || Infinity));
+    var x = 0, y = 0, rowHeight = 0;
+    return boxes.map(function(b) {
+      if (x > 0 && x + b.w > rowWidth) { x = 0; y += rowHeight + gap; rowHeight = 0; }
+      var at = {x: x, y: y};
+      x += b.w + gap; rowHeight = Math.max(rowHeight, b.h);
+      return at;
+    });
+  }
+  function componentRank(part) {
+    var rank = 0;
+    part.nodes().forEach(function(n) { if (isFindingNode(n.data())) rank = Math.max(rank, findingRank(n.data())); });
+    return rank;
+  }
+  // Lay out each disconnected path on its own and pack them into rows, most severe first.
+  function layoutGraph(graph, options) {
+    var base = Object.assign({name: 'dagre', animate: false, fit: false}, options);
+    var box = graph.container();
+    // A diagram drawn on a hidden tab is packed again when it is first shown at its real width.
+    graph.scratch('agentBomLayout', {options: options, width: box ? box.clientWidth : 0});
+    var parts = graph.elements().components();
+    if (parts.length < 2) { graph.layout(base).run(); return; }
+    var ranked = parts.map(function(part, i) { return {part: part, i: i, r: componentRank(part)}; });
+    ranked.sort(function(a, b) { return b.r - a.r || a.i - b.i; });
+    ranked.forEach(function(item) { item.part.layout(base).run(); });
+    var boxes = ranked.map(function(item) { return item.part.boundingBox(); });
+    var width = box && box.clientWidth ? box.clientWidth : window.innerWidth;
+    var aspect = box && box.clientHeight ? box.clientWidth / box.clientHeight : (window.innerWidth < 700 ? 0.75 : 2);
+    // Leave room for the padding and the zoom buttons on the right.
+    var offsets = packBoxes(boxes.map(function(b) { return {w: b.w, h: b.h}; }), aspect, 48, (width - 160) / GRAPH_READABLE_ZOOM);
+    ranked.forEach(function(item, i) {
+      var dx = offsets[i].x - boxes[i].x1, dy = offsets[i].y - boxes[i].y1;
+      item.part.nodes().positions(function(node) { var p = node.position(); return {x: p.x + dx, y: p.y + dy}; });
+    });
+  }
+  // Fit the whole diagram unless that makes labels unreadable; then open on the top-left, most severe corner.
+  function fitReadable(graph, padding) {
+    graph.fit(graph.elements(), padding);
+    if (!graph.elements().length || graph.zoom() >= GRAPH_READABLE_ZOOM) return false;
+    var box = graph.elements().boundingBox();
+    graph.zoom(GRAPH_READABLE_ZOOM);
+    graph.pan({x: padding - box.x1 * GRAPH_READABLE_ZOOM, y: padding - box.y1 * GRAPH_READABLE_ZOOM});
+    return true;
+  }
+  // config: {graph, container, recorded, view, state, layout, bar, onRedraw}
+  function mountGraphView(config) {
+    var graph = config.graph, state = config.state, view = config.view;
+    var note = document.createElement('div');
+    note.className = 'graph-bound-note';
+    var text = document.createElement('p');
+    var more = document.createElement('button');
+    more.type = 'button'; more.className = 'graph-draw-more'; more.textContent = 'Draw more';
+    var hint = document.createElement('p');
+    hint.className = 'graph-pan-hint';
+    note.append(text, more, hint);
+    config.container.parentNode.before(note);
+    var bar = config.bar, search = bar ? bar.querySelector('input[type="search"]') : null;
+    var status = bar ? bar.querySelector('.graph-search-status') : null;
+    function drawnIds() {
+      var ids = {};
+      graph.nodes().forEach(function(node) {
+        ids[node.id()] = node;
+        (node.data('members') || []).forEach(function(id) { ids[id] = node; });
+      });
+      return ids;
+    }
+    function describe(zoomedIn) {
+      text.textContent = graphNoteText(view);
+      note.hidden = !text.textContent;
+      more.hidden = !view.bounded || state.limit >= GRAPH_DRAW_LIMIT;
+      more.textContent = 'Draw more (up to ' + Math.min(state.limit * 2, GRAPH_DRAW_LIMIT) + ' nodes)';
+      hint.textContent = zoomedIn ? 'Shown at a readable size from the most severe paths: drag to pan, or use the fit button to see the whole diagram.' : '';
+    }
+    function highlight() {
+      graph.elements().removeClass('faded highlighted');
+      if (!state.matches) { if (status) status.textContent = ''; return; }
+      var wanted = Object.keys(state.matches), drawn = drawnIds(), hits = graph.collection(), shown = 0;
+      wanted.forEach(function(id) { if (drawn[id]) { shown++; hits = hits.union(drawn[id]); } });
+      if (status) {
+        status.textContent = !wanted.length ? 'No recorded node matches' :
+          wanted.length.toLocaleString('en-US') + ' recorded match' + (wanted.length === 1 ? '' : 'es') + ', ' + shown.toLocaleString('en-US') + ' drawn';
+      }
+      if (!hits.length) { if (wanted.length === 0) graph.elements().addClass('faded'); return; }
+      graph.elements().not(hits.closedNeighborhood()).addClass('faded');
+      hits.addClass('highlighted');
+      // Bring the matches into view at a readable size.
+      graph.fit(hits.closedNeighborhood(), 80);
+      if (graph.zoom() > 1.5 || graph.zoom() < GRAPH_READABLE_ZOOM) {
+        graph.zoom(Math.min(1.5, Math.max(graph.zoom(), GRAPH_READABLE_ZOOM)));
+        graph.center(hits);
+      }
+    }
+    function redraw() {
+      view = graphView(config.recorded, state);
+      graph.batch(function() { graph.elements().remove(); graph.add(view.elements); });
+      layoutGraph(graph, config.layout);
+      var zoomedIn = fitReadable(graph, 40);
+      highlight(); describe(zoomedIn);
+      if (config.onRedraw) config.onRedraw(view);
+    }
+    more.addEventListener('click', function() { state.limit = Math.min(state.limit * 2, GRAPH_DRAW_LIMIT); redraw(); });
+    if (bar) {
+      var boxes = Array.from(bar.querySelectorAll('input[type="checkbox"][value]'));
+      boxes.forEach(function(box) {
+        box.addEventListener('change', function() {
+          var on = {}, all = true;
+          boxes.forEach(function(b) { if (b.checked) on[b.value] = true; else all = false; });
+          state.severities = all ? null : on;
+          redraw();
+        });
+      });
+    }
+    if (search) {
+      var timer = null;
+      search.addEventListener('input', function() {
+        clearTimeout(timer);
+        timer = setTimeout(function() {
+          var query = search.value.toLowerCase();
+          state.matches = query.trim() ? searchRecords(config.recorded, query) : null;
+          var drawn = drawnIds();
+          var missing = state.matches && Object.keys(state.matches).some(function(id) { return !drawn[id]; });
+          if (missing) redraw(); else highlight();
+        }, 250);
+      });
+    }
+    graph.on('agent-bom:fitted', function(event, zoomedIn) { describe(zoomedIn); });
+    describe(false);
+    return {redraw: redraw, view: function() { return view; }};
   }
   function addGraphViews(graph, container, recorded) {
     var canvas = container.parentNode;
@@ -251,8 +509,10 @@
       width = container.clientWidth; height = container.clientHeight;
       fitting = true;
       graph.resize();
+      var laidOut = graph.scratch('agentBomLayout');
+      if (!fitted && laidOut && !laidOut.width) layoutGraph(graph, laidOut.options);
       if (!fitted || (resized && !userMoved)) {
-        graph.fit(graph.elements(), 40);
+        graph.emit('agent-bom:fitted', [fitReadable(graph, 40)]);
         fitted = true;
       }
       fitting = false;
@@ -272,7 +532,8 @@
   }
   function drawSupplyChainGraph() {
   var GRAPH_RECORDED = readGraphData('agentBomGraphElements');
-  var GRAPH_BOUND = boundGraph(GRAPH_RECORDED, GRAPH_DRAW_LIMIT, 'in', true);
+  var GRAPH_STATE = {limit: GRAPH_FIRST_DRAW, follow: 'in', inventoryFirst: true, severities: null, matches: null};
+  var GRAPH_BOUND = graphView(GRAPH_RECORDED, GRAPH_STATE);
   var GRAPH_ELEMENTS = GRAPH_BOUND.elements;
   // Cytoscape: Supply chain graph with dagre hierarchical layout
   var cyContainer = document.getElementById('cy');
@@ -513,24 +774,19 @@
           },
         },
       ],
-      layout: {
-        name: 'dagre',
-        rankDir: window.innerWidth < 700 ? 'TB' : 'LR',
-        nodeSep: 50,
-        rankSep: 80,
-        edgeSep: 15,
-        padding: 30,
-        animate: false,
-        fit: true,
-      },
+      layout: {name: 'null'},
       minZoom: 0.15,
       maxZoom: 4,
       wheelSensitivity: 0.3,
       autoungrabify: false,
     });
+    var GRAPH_LAYOUT = {rankDir: window.innerWidth < 700 ? 'TB' : 'LR', nodeSep: 50, rankSep: 80, edgeSep: 15, padding: 30};
+    layoutGraph(cy, GRAPH_LAYOUT);
     cy.ready(function() { fitGraphWhenVisible(cy, cyContainer); });
     addGraphViews(cy, cyContainer, GRAPH_RECORDED);
-    noteGraphBound(cyContainer, GRAPH_BOUND);
+    mountGraphView({graph: cy, container: cyContainer, recorded: GRAPH_RECORDED, view: GRAPH_BOUND, state: GRAPH_STATE,
+      layout: GRAPH_LAYOUT, bar: cyContainer.parentNode.querySelector('.graph-filter-bar'),
+      onRedraw: function(view) { renderSupplyStats(view); }});
 
     // Tooltip
     var tip = document.getElementById('tip');
@@ -563,7 +819,8 @@
     function showSidebar(node) {
       var d = node.data();
       var t = d.type || '';
-      var isCveNode = t === 'cve' || t.indexOf('cve_')===0;
+      // A group node lists its members in its tip; it has no single advisory to link to.
+      var isCveNode = (t === 'cve' || t.indexOf('cve_')===0) && !(d.count > 1);
       var typeLabels = {'provider':'Provider','agent':'Agent','server_clean':'MCP Server','server_cred':'MCP Server','server_vuln':'MCP Server','pkg_vuln':'Package','cve':'Vulnerability'};
       var typeLabel = typeLabels[t] || (isCveNode ? 'Vulnerability' : t);
       var typeColors = {'provider':'#818cf8','agent':'#3b82f6','server_clean':'#10b981','server_cred':'#f59e0b','server_vuln':'#ef4444','pkg_vuln':'#dc2626'};
@@ -717,49 +974,6 @@
         setTimeout(function() { cy.resize(); cy.fit(cy.elements(), 40); }, 100);
       }
     });
-    // Graph severity filter
-    document.querySelectorAll('.graph-sev-filter').forEach(function(cb) {
-      cb.addEventListener('change', function() {
-        var checked = Array.from(document.querySelectorAll('.graph-sev-filter:checked')).map(function(c) { return c.value; });
-        cy.nodes().forEach(function(n) {
-          var t = n.data('type') || '';
-          if (t === 'cve' || t.startsWith('cve_')) {
-            var sev = n.data('severity') || t.replace('cve_', '');
-            if (checked.indexOf(sev) === -1) {
-              n.style('display', 'none');
-              n.connectedEdges().style('display', 'none');
-            } else {
-              n.style('display', 'element');
-              n.connectedEdges().style('display', 'element');
-            }
-          }
-        });
-      });
-    });
-
-    // Graph search
-    var graphSearchInput = document.getElementById('graphSearch');
-    if (graphSearchInput) {
-      graphSearchInput.addEventListener('input', function() {
-        var q = this.value.toLowerCase();
-        if (!q) {
-          cy.elements().removeClass('faded highlighted');
-          return;
-        }
-        cy.elements().removeClass('faded highlighted');
-        var matched = cy.nodes().filter(function(n) {
-          return (n.data('label') || '').toLowerCase().indexOf(q) >= 0;
-        });
-        if (matched.length > 0) {
-          var hood = matched.closedNeighborhood();
-          cy.elements().not(hood).addClass('faded');
-          matched.addClass('highlighted');
-        } else {
-          cy.elements().addClass('faded');
-        }
-      });
-    }
-
     // Context menu (right-click on nodes)
     var ctxMenu = document.createElement('div');
     ctxMenu.className = 'cy-ctx-menu';
@@ -804,7 +1018,7 @@
       }});
 
       // Vulnerability node: open in OSV
-      if (t === 'cve' || t.indexOf('cve_')===0) {
+      if ((t === 'cve' || t.indexOf('cve_')===0) && !(d.count > 1)) {
         var vid = d.label || '';
         items.push({sep:true});
         items.push({icon:'&#x1f517;',label:'Open in OSV',action:function(){
@@ -908,23 +1122,27 @@
       cy.animate({ center: { x: targetX, y: targetY }, duration: 300 });
     });
 
-    // Node statistics overlay
+    // Node statistics overlay; a group counts every finding it holds.
     var nodeStats = document.createElement('div');
     nodeStats.style.cssText = 'position:absolute;bottom:12px;right:12px;background:rgba(15,23,42,.9);border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:.72rem;color:#64748b;z-index:10;backdrop-filter:blur(8px)';
+    cyContainer.parentNode.appendChild(nodeStats);
+    function renderSupplyStats(view) {
     var nodeCounts = {};
     cy.nodes().forEach(function(n) {
       var t = n.data('type') || 'other';
       if (t === 'cve' || t.indexOf('cve_')===0) t = 'cve';
       else if (t.indexOf('server_')===0) t = 'server';
-      nodeCounts[t] = (nodeCounts[t] || 0) + 1;
+      nodeCounts[t] = (nodeCounts[t] || 0) + findingWeight(n.data());
     });
     var statsHTML = [];
     if (nodeCounts.agent) statsHTML.push('<span style="color:#3b82f6">' + nodeCounts.agent + ' agents</span>');
     if (nodeCounts.server) statsHTML.push('<span style="color:#10b981">' + nodeCounts.server + ' servers</span>');
     if (nodeCounts.pkg_vuln) statsHTML.push('<span style="color:#dc2626">' + nodeCounts.pkg_vuln + ' packages</span>');
     if (nodeCounts.cve) statsHTML.push('<span style="color:#f87171">' + nodeCounts.cve + ' CVEs</span>');
-    nodeStats.innerHTML = (GRAPH_BOUND.bounded ? 'Drawn: ' : '') + statsHTML.join(' &middot; ');
-    cyContainer.parentNode.appendChild(nodeStats);
+    if (nodeCounts.finding) statsHTML.push('<span style="color:#fca5a5">' + nodeCounts.finding + ' findings</span>');
+    nodeStats.innerHTML = (view.bounded ? 'Drawn: ' : '') + statsHTML.join(' &middot; ');
+    }
+    renderSupplyStats(GRAPH_BOUND);
 
   } else if (cyContainer) {
     cyContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#4ade80;font-size:.9rem">&#x2705; No supply chain nodes to display</div>';
@@ -938,7 +1156,8 @@
   }
   function drawAttackFlowGraph() {
   var ATTACK_FLOW_RECORDED = readGraphData('agentBomAttackFlow');
-  var ATTACK_FLOW_BOUND = boundGraph(ATTACK_FLOW_RECORDED, GRAPH_DRAW_LIMIT, 'out');
+  var ATTACK_FLOW_STATE = {limit: GRAPH_FIRST_DRAW, follow: 'out', inventoryFirst: false, severities: null, matches: null};
+  var ATTACK_FLOW_BOUND = graphView(ATTACK_FLOW_RECORDED, ATTACK_FLOW_STATE);
   var ATTACK_FLOW = ATTACK_FLOW_BOUND.elements;
   // Cytoscape: CVE Attack Flow graph
   var cyAtkContainer = document.getElementById('cyAttack');
@@ -1179,6 +1398,10 @@
           },
         },
         {
+          selector: 'node[count > 1]',
+          style: {'label': 'data(label)', 'width': 176, 'height': 44, 'text-max-width': 164, 'font-size': 12},
+        },
+        {
           selector: 'node[type="directory"], node[type="source_file"], node[type="config_file"]',
           style: {
             'label': function(node) { var label = node.data('label') || ''; return label === '.' ? 'Project root' : label.replace(/^project:/, ''); },
@@ -1186,23 +1409,18 @@
           },
         },
       ],
-      layout: {
-        name: 'dagre',
-        rankDir: window.innerWidth < 700 ? 'TB' : 'LR',
-        nodeSep: 40,
-        rankSep: 100,
-        edgeSep: 12,
-        padding: 30,
-        animate: false,
-        fit: true,
-      },
+      layout: {name: 'null'},
       minZoom: 0.15,
       maxZoom: 4,
       wheelSensitivity: 0.3,
     });
+    var ATTACK_FLOW_LAYOUT = {rankDir: window.innerWidth < 700 ? 'TB' : 'LR', nodeSep: 40, rankSep: 100, edgeSep: 12, padding: 30};
+    layoutGraph(cyAtk, ATTACK_FLOW_LAYOUT);
     cyAtk.ready(function() { fitGraphWhenVisible(cyAtk, cyAtkContainer); });
     addGraphViews(cyAtk, cyAtkContainer, ATTACK_FLOW_RECORDED);
-    noteGraphBound(cyAtkContainer, ATTACK_FLOW_BOUND);
+    mountGraphView({graph: cyAtk, container: cyAtkContainer, recorded: ATTACK_FLOW_RECORDED, view: ATTACK_FLOW_BOUND,
+      state: ATTACK_FLOW_STATE, layout: ATTACK_FLOW_LAYOUT, bar: cyAtkContainer.parentNode.querySelector('.graph-filter-bar'),
+      onRedraw: function(view) { renderAttackStats(view); }});
 
     // Attack flow tooltip
     cyAtk.on('mouseover', 'node', function(e) {
@@ -1267,14 +1485,16 @@
       animateAttackEdges();
     }
 
-    // Attack flow node count stats
+    // Attack flow node count stats; a group counts every finding it holds.
     var afStats = document.createElement('div');
     afStats.style.cssText = 'position:absolute;bottom:12px;right:12px;background:rgba(15,23,42,.9);border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:.72rem;color:#64748b;z-index:10;backdrop-filter:blur(8px)';
+    cyAtkContainer.parentNode.appendChild(afStats);
+    function renderAttackStats(view) {
     var afCounts = {};
     cyAtk.nodes().forEach(function(n) {
       var t = n.data('type') || 'other';
       if (t === 'cve' || t.indexOf('cve_')===0) t = 'cve';
-      afCounts[t] = (afCounts[t] || 0) + 1;
+      afCounts[t] = (afCounts[t] || 0) + findingWeight(n.data());
     });
     var afParts = [];
     if (afCounts.cve) afParts.push('<span style="color:#f87171">' + afCounts.cve + ' CVEs</span>');
@@ -1284,8 +1504,9 @@
     if (afCounts.credential) afParts.push('<span style="color:#fbbf24">' + afCounts.credential + ' creds</span>');
     if (afCounts.tool) afParts.push('<span style="color:#818cf8">' + afCounts.tool + ' tools</span>');
     if (afCounts.agent) afParts.push('<span style="color:#3b82f6">' + afCounts.agent + ' agents</span>');
-    afStats.innerHTML = (ATTACK_FLOW_BOUND.bounded ? 'Drawn: ' : '') + afParts.join(' &middot; ');
-    cyAtkContainer.parentNode.appendChild(afStats);
+    afStats.innerHTML = (view.bounded ? 'Drawn: ' : '') + afParts.join(' &middot; ');
+    }
+    renderAttackStats(ATTACK_FLOW_BOUND);
   }
 
   }

@@ -113,6 +113,28 @@ def _attack_flow_elements(
     return _json_for_script(elements, indent=None)
 
 
+_FILTER_SEVERITIES = (("critical", "Crit", "#fca5a5"), ("high", "High", "#fb923c"), ("medium", "Med", "#fbbf24"), ("low", "Low", "#94a3b8"))
+
+
+def graph_filter_bar(search_id: str) -> str:
+    """Severity boxes and a search box that act on every recorded node of a diagram, not just the drawn ones."""
+    boxes = "".join(
+        f'<label style="display:flex;align-items:center;gap:3px;font-size:.72rem;color:{color};cursor:pointer">'
+        f'<input type="checkbox" class="graph-sev-filter" value="{value}" checked> {label}</label>'
+        for value, label, color in _FILTER_SEVERITIES
+    )
+    return (
+        '<div class="graph-filter-bar" style="position:absolute;top:12px;left:12px;display:flex;gap:8px;align-items:center;'
+        'z-index:10;background:rgba(15,23,42,.92);padding:8px 12px;border-radius:8px;border:1px solid #334155;backdrop-filter:blur(8px)">'
+        f"{boxes}"
+        '<span style="width:1px;height:16px;background:#334155"></span>'
+        f'<input type="search" id="{search_id}" placeholder="Search all records&hellip;" aria-label="Search all recorded findings and assets" '
+        'style="padding:4px 8px;background:#0f172a;border:1px solid #334155;border-radius:4px;color:#e2e8f0;font-size:.72rem;width:150px;outline:none">'
+        '<span class="graph-search-status" aria-live="polite" style="font-size:.7rem;color:#94a3b8"></span>'
+        "</div>"
+    )
+
+
 def _attack_flow_section(findings: list["Finding"]) -> str:
     """Build the CVE attack flow graph section (only when vulns exist)."""
     if not findings:
@@ -132,6 +154,7 @@ def _attack_flow_section(findings: list["Finding"]) -> str:
         "</span></div>"
         '<div class="graph-container">'
         '<div id="cyAttack" class="cy-graph"></div>'
+        f"{graph_filter_bar('afSearch')}"
         '<div class="graph-controls" style="top:12px;right:12px">'
         '<button class="graph-btn" id="afZoomIn" title="Zoom in">+</button>'
         '<button class="graph-btn" id="afZoomOut" title="Zoom out">&minus;</button>'
