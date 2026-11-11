@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from pydantic import Field
+
 from agent_bom.api.read_models._base import Num, ReadModel, ReadResponse
 
 # ── unified asset inventory ──────────────────────────────────────────────────
@@ -135,6 +137,46 @@ class InventoryAssetsResponse(ReadResponse):
     completeness: InventoryCompleteness
 
 
+class ServingRuntimeEvidence(ReadModel):
+    name: str
+    version: str | None
+    identity: str = Field(description="confirmed when the response proved the runtime, declared when only the operator named it")
+
+
+class ServingEndpointEvidence(ReadModel):
+    url: str
+    host: str
+    port: int | None
+
+
+class ServingModelEvidence(ReadModel):
+    served_name: str
+    artifact_ref: str | None
+    digest: str | None
+    version: str | None
+    state: str | None
+
+
+class ServingCollectionEvidence(ReadModel):
+    status: str = Field(description="success or partial; failed endpoints produce no asset")
+    completeness: str
+    observed_at: str
+    permissions_used: list[str]
+    request_identity: str = Field(description="bearer when a configured token was sent, anonymous otherwise; never the token")
+    not_collected: list[str] = Field(description="settings the probe did not read, such as bind, TLS, authentication and quotas")
+    detail: str
+
+
+class ServingEvidence(ReadModel):
+    """What one serving-endpoint probe recorded for one model, kept as separate identities."""
+
+    runtime: ServingRuntimeEvidence
+    endpoint: ServingEndpointEvidence
+    model: ServingModelEvidence
+    unknown_identities: dict[str, str | None] = Field(description="container, GPU, calling agent and principal; null means not collected")
+    collection: ServingCollectionEvidence
+
+
 class InventoryAssetDetailResponse(ReadResponse):
     schema_version: str
     evidence_scope: str
@@ -153,6 +195,9 @@ class InventoryAssetDetailResponse(ReadResponse):
     impact_status: str
     next_cursor: str | None
     completeness: dict[str, Any]
+    serving_evidence: ServingEvidence | None = Field(
+        default=None, description="Serving-endpoint evidence for a model asset discovered by --serving-endpoint; null for other assets"
+    )
 
 
 # ── posture webhook outbox ───────────────────────────────────────────────────

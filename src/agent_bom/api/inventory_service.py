@@ -571,4 +571,10 @@ async def build_asset_detail(
         "impact_status": "not_evaluated",
         "next_cursor": context["next_cursor"],
         "completeness": context["completeness"],
+        "serving_evidence": _serving_evidence(node),
     }
+
+
+def _serving_evidence(node: Any) -> dict[str, Any] | None:
+    evidence = (node.attributes or {}).get("serving_evidence")
+    return evidence if isinstance(evidence, dict) and evidence else None

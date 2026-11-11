@@ -155,7 +155,8 @@ Every model record carries `metadata.serving_evidence`. It keeps the runtime
 (name, version, and whether the identity was confirmed or only declared), the
 endpoint (URL, host, port), the model artifact (served name, artifact
 reference, digest, version, state) and the collection (status, completeness,
-observation time, reads sent) as separate fields. Container, GPU, calling
+observation time, reads sent, and `request_identity`: `bearer` or `anonymous`)
+as separate fields. Container, GPU, calling
 agent and principal are `null` because an endpoint listing cannot supply
 them. Bind address, public reachability, TLS, authentication, model-load
 policy, rate limits, quotas, logging and persistence are listed under
@@ -163,15 +164,50 @@ policy, rate limits, quotas, logging and persistence are listed under
 or of missing authentication. Each `--serving-endpoint` value is probed
 separately, so one failed endpoint is reported beside a successful one.
 URLs with embedded credentials, a query or a fragment are refused, and
-redirects are not followed. Bearer-token authentication to a protected
-endpoint is not supported yet, so a protected endpoint reports `denied`.
+redirects are not followed.
+
+A protected endpoint can be given a bearer token with
+`--serving-token-env URL=AGENT_BOM_SERVING_TOKEN_<NAME>`. The token is read
+from `<NAME>_FILE` or the variable itself, goes only to that URL, and only over
+https or to loopback. It is never accepted on the command line or in the URL,
+and never recorded. See [PERMISSIONS.md](PERMISSIONS.md) for the full rules.
+Sending a token proves only that this request carried one; whether the endpoint
+enforces authentication stays `not_collected`.
+
+```bash
+export AGENT_BOM_SERVING_TOKEN_VLLM_FILE=/run/secrets/vllm-api-key
+agent-bom agents --serving-endpoint vllm=https://vllm.internal:8000 \
+  --serving-token-env https://vllm.internal:8000=AGENT_BOM_SERVING_TOKEN_VLLM
+```
 
 The outcomes are qualified in `tests/cloud/test_serving_runtime_qualification.py`
 and `tests/cloud/test_ollama_outcomes.py` against loopback fixtures that copy
 each runtime's documented responses. No runtime is installed or started, and
 no model is downloaded. This is not certification against a live provider.
-The records reach JSON reports and the graph as agents. The API, MCP tools
-and HTML reports do not yet show `serving_evidence` as its own view.
+The tests also cover the token path (`tests/cloud/test_serving_endpoint_auth.py`).
+
+`serving_evidence` appears in:
+
+- JSON reports, under each agent's `metadata`.
+- The graph, as an attribute of the agent node.
+- `GET /v1/inventory/assets/{asset_id}` and the `inventory_asset` MCP tool,
+  as a typed top-level `serving_evidence` field. It is `null` for other
+  assets, and the tenant scoping is the same as the rest of the response.
+- The HTML report's agent cards, with rows for runtime, endpoint, model
+  artifact, collection and what was not collected. Values the endpoint did not
+  report are labelled "not reported".
+
+A rescan detects changes through the stored graph diff (`/v1/graph/diff` and
+the graph-diff MCP tool):
+
+- If the served name stays the same but its artifact, digest, version or
+  runtime changes, the node is marked changed, with an attribute delta such
+  as `serving_evidence.model.digest`.
+- If the endpoint now serves a different model, the old node is removed and
+  a new one is added.
+- Observation time alone never counts as a change.
+
+`tests/test_serving_change_detection.py` covers this.
 
 ## GPU fleet scanning patterns
 

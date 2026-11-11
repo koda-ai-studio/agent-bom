@@ -10,6 +10,7 @@ from agent_bom.output.html._common import (
     _esc,
     _sev_badge,
 )
+from agent_bom.output.html.sections_serving import serving_evidence_html
 from agent_bom.security import sanitize_launch_command, sanitize_path_label
 
 
@@ -201,6 +202,7 @@ def _inventory_cards(report: "AIBOMReport") -> str:
             f'<div style="font-size:.72rem;color:#475569;margin-bottom:12px">'
             f"{_esc(agent.agent_type.value)} &middot; {_esc(sanitize_path_label(agent.config_path) if agent.config_path else '')}"
             f"</div>"
+            f"{serving_evidence_html(agent.metadata)}"
             f"{servers_content}"
             f"</div>"
             f"</details>"

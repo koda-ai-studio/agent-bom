@@ -684,3 +684,5 @@ AGENT_BOM_AI_CAPACITY_WAIT_SECONDS
 AGENT_BOM_AI_RUN_DEADLINE_SECONDS
 AGENT_BOM_AI_NUM_CTX
 AGENT_BOM_AI_LOCAL_AUDIT
+# Prefix for operator-named serving bearer-token variables (AGENT_BOM_SERVING_TOKEN_<NAME>, or <that>_FILE); names are chosen per endpoint via --serving-token-env, so there is no fixed variable to declare in config.py.
+AGENT_BOM_SERVING_TOKEN_

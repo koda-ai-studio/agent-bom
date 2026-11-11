@@ -39,7 +39,7 @@ def _print_scanner_verdicts(con: Any, verdicts: list) -> None:
         con.print(f"  [{style}]{icon}[/{style}]  {v.scanner_id:<18} [{style}]{detail}[/{style}]")
 
 
-def _model_serving_reads(ollama_flag: bool, ollama_host: str | None, serving_endpoints: tuple[tuple[str, str], ...]) -> list[str]:
+def _model_serving_reads(ollama_flag: bool, ollama_host: str | None, serving_targets: tuple[tuple[str, str, str | None], ...]) -> list[str]:
     from agent_bom.cloud.serving_runtimes import SERVING_RUNTIMES
 
     ollama = [
@@ -48,7 +48,8 @@ def _model_serving_reads(ollama_flag: bool, ollama_host: str | None, serving_end
     return (ollama if ollama_flag else []) + [
         f"  [green]Would query:[/green]  {runtime} endpoint {endpoint} "
         f"({SERVING_RUNTIMES[runtime].method} {SERVING_RUNTIMES[runtime].path})"
-        for runtime, endpoint in serving_endpoints
+        f"{f', bearer token from {token_env}' if token_env else ''}"
+        for runtime, endpoint, token_env in serving_targets
     ]
 
 
@@ -96,7 +97,7 @@ def emit_dry_run_plan(
     mcp_registry_flag: bool,
     snyk_flag: bool,
     enrich: bool,
-    serving_endpoints: tuple[tuple[str, str], ...] = (),
+    serving_targets: tuple[tuple[str, str, str | None], ...] = (),
 ) -> None:
     """Render the dry-run access plan and data-audit block."""
     from agent_bom.discovery import get_all_discovery_paths
@@ -175,7 +176,7 @@ def emit_dry_run_plan(
         reads.append("  [green]Would query:[/green]  MLflow Tracking Server (models, experiments)")
     if openai_flag:
         reads.append("  [green]Would query:[/green]  OpenAI Assistants/Fine-tuning APIs")
-    reads.extend(_model_serving_reads(ollama_flag, ollama_host, serving_endpoints))
+    reads.extend(_model_serving_reads(ollama_flag, ollama_host, serving_targets))
     if mcp_registry_flag:
         reads.append("  [green]Would query:[/green]  https://registry.modelcontextprotocol.io/v0/servers  (Official MCP Registry, no auth)")
     if snyk_flag:

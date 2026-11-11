@@ -19,6 +19,11 @@ outcome produces an explicit incomplete warning and no records, so a failed
 endpoint can never read as a verified empty estate. Nothing falls back to local
 files. Listing a model proves neither public reachability, authentication,
 TLS, load policy, quotas nor logging; those stay ``not_collected``.
+
+A protected endpoint can be paired with a bearer token held in a dedicated
+environment variable (see :mod:`agent_bom.cloud.serving_auth`). The token goes
+only to that endpoint, redirects are never followed, and evidence records only
+whether a token was sent.
 """
 
 from __future__ import annotations
@@ -33,6 +38,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from agent_bom.cloud.serving_auth import ServingAuthError, bearer_token, validate_token_env_name
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, Package
 from agent_bom.security import SecurityError, validate_url
@@ -97,6 +103,7 @@ class EndpointObservation:
     models: list[ServedModel] = field(default_factory=list)
     runtime_version: str | None = None
     runtime_identity: str = "declared"
+    request_identity: str = "anonymous"
     permissions_used: tuple[str, ...] = ()
     observed_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -239,7 +246,8 @@ def _request(client: httpx.Client, method: str, url: str) -> Any:
         kwargs: dict[str, Any] = {"json": {}} if method == "POST" else {}
         with client.stream(method, url, **kwargs) as response:
             if response.status_code in (401, 403):
-                raise _ProbeError("denied", f"HTTP {response.status_code}")
+                rejected = ": the bearer token was rejected" if "authorization" in client.headers else ""
+                raise _ProbeError("denied", f"HTTP {response.status_code}{rejected}")
             if response.status_code != 200:
                 raise _ProbeError("unavailable", f"HTTP {response.status_code}")
             body = b""
@@ -257,18 +265,34 @@ def _request(client: httpx.Client, method: str, url: str) -> Any:
         raise _ProbeError("unavailable", "response was not JSON") from exc
 
 
-def probe_endpoint(runtime: str, endpoint: str, *, timeout: float = _DEFAULT_TIMEOUT) -> EndpointObservation:
-    """Probe one endpoint of one declared runtime and classify the outcome."""
+def probe_endpoint(runtime: str, endpoint: str, *, timeout: float = _DEFAULT_TIMEOUT, token_env: str | None = None) -> EndpointObservation:
+    """Probe one endpoint of one declared runtime and classify the outcome.
+
+    ``token_env`` names the dedicated variable holding this endpoint's bearer
+    token; the value is resolved here and never leaves the request headers.
+    """
     spec = SERVING_RUNTIMES.get(runtime)
     if spec is None:
         raise ValueError(f"Unknown serving runtime '{runtime}'. Available: {', '.join(sorted(SERVING_RUNTIMES))}")
+    if token_env is not None:
+        token_env = validate_token_env_name(token_env)
+    request_identity = "bearer" if token_env else "anonymous"
     try:
         base = normalize_endpoint(endpoint)
     except _ProbeError as failure:
-        return EndpointObservation(runtime=runtime, endpoint="", status=failure.status, detail=failure.detail)
+        return EndpointObservation(
+            runtime=runtime, endpoint="", status=failure.status, detail=failure.detail, request_identity=request_identity
+        )
     permissions = [_declared(runtime, spec.method, spec.path)]
-    observation = EndpointObservation(runtime=runtime, endpoint=base, status="unavailable")
-    with httpx.Client(timeout=timeout, follow_redirects=False) as client:
+    observation = EndpointObservation(runtime=runtime, endpoint=base, status="unavailable", request_identity=request_identity)
+    headers: dict[str, str] = {}
+    if token_env:
+        try:
+            headers["Authorization"] = f"Bearer {bearer_token(token_env, base)}"
+        except ServingAuthError as failure:
+            observation.detail = str(failure)
+            return observation
+    with httpx.Client(timeout=timeout, follow_redirects=False, headers=headers) as client:
         try:
             models, dropped, version, confirmed = spec.parse(_request(client, spec.method, base + spec.path))
         except _ProbeError as failure:
@@ -327,6 +351,7 @@ def serving_evidence(observation: EndpointObservation, model: ServedModel) -> di
             "completeness": observation.completeness,
             "observed_at": observation.observed_at,
             "permissions_used": list(observation.permissions_used),
+            "request_identity": observation.request_identity,
             "not_collected": list(NOT_COLLECTED),
             "detail": observation.detail,
         },
@@ -373,9 +398,9 @@ def observation_to_agents(observation: EndpointObservation) -> list[Agent]:
     return agents
 
 
-def discover(runtime: str, endpoint: str, timeout: float = _DEFAULT_TIMEOUT) -> tuple[list[Agent], list[str]]:
+def discover(runtime: str, endpoint: str, timeout: float = _DEFAULT_TIMEOUT, token_env: str | None = None) -> tuple[list[Agent], list[str]]:
     """Discover served models from one endpoint; failures return no agents and one warning."""
-    observation = probe_endpoint(runtime, endpoint, timeout=timeout)
+    observation = probe_endpoint(runtime, endpoint, timeout=timeout, token_env=token_env)
     warning = outcome_warning(observation)
     if observation.status not in {"success", "partial"}:
         return [], [warning] if warning else []

@@ -251,6 +251,8 @@ class ScanOptions:
     k8s_live_all_namespaces: bool = False
     k8s_live_context: Optional[str] = None
     serving_endpoints: tuple = ()
+    serving_token_envs: tuple = ()
+    serving_targets: tuple = field(default=(), init=False)
     extra_projects: tuple = field(default=(), init=False)
     extra_config_dirs: tuple = field(default=(), init=False)
     extra_inventories: tuple = field(default=(), init=False)
@@ -271,6 +273,12 @@ class ScanOptions:
             )
         if "-" in self.extra_inventories:
             raise click.UsageError("--inventory - (stdin) must be the first --inventory value.")
+        from agent_bom.cloud.serving_auth import pair_token_envs
+
+        try:
+            self.serving_targets = tuple(pair_token_envs(self.serving_endpoints, self.serving_token_envs))
+        except ValueError as exc:
+            raise click.BadParameter(str(exc), param_hint="'--serving-token-env'") from None
 
     @property
     def all_projects(self) -> tuple[str, ...]:
