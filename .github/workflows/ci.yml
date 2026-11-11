@@ -1342,7 +1342,7 @@ jobs:
       - name: Run isolated graph and findings read budgets
         if: matrix.shard == 0
         # Wall-clock gates run without xdist/coverage or competing test workers.
-        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py -q -m graph_performance
+        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py tests/test_workflow_resource_budget.py -q -m graph_performance
 
       - name: Graph accuracy fixture guard (#2259)
         if: >-
@@ -1472,7 +1472,7 @@ jobs:
       # Smoke is skipped when these shards run; keep its isolated timing gates.
       - name: Run isolated graph and findings read budgets
         if: matrix.shard == 0
-        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py -q -m graph_performance
+        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py tests/test_workflow_resource_budget.py -q -m graph_performance
 
       # Keep the non-pytest guards too.
       - name: Graph accuracy fixture guard (#2259)
@@ -1732,9 +1732,15 @@ jobs:
           printf '%s' 'maintenancepass' > "${AGENT_BOM_POSTGRES_MAINTENANCE_PASSWORD_FILE}"
 
       - name: Install Postgres client
+        # The runner image ships a PostgreSQL client; reach for the package
+        # mirrors only when it is missing, so a mirror outage cannot fail CI.
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends postgresql-client
+          if command -v psql >/dev/null 2>&1; then
+            psql --version
+          else
+            sudo apt-get -o Acquire::Retries=5 update -qq
+            sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends postgresql-client
+          fi
 
       - name: Verify Alembic bootstrap and init.sql forward upgrade
         env:

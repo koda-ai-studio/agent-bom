@@ -300,6 +300,167 @@ A pilot tenant with **200 agents, a scan per agent every 6 h, and
 TTL + retention knobs: `AGENT_BOM_API_MAX_RETAINED_JOBS_PER_TENANT`
 (default 1000), `AGENT_BOM_AUDIT_RETENTION_DAYS` (default 90).
 
+The per-job rates above cover job metadata only. A pushed job also stores its
+full result and graph snapshot; the measured growth for a 200-agent push is in
+the next section.
+
+---
+
+## End-to-end workflow budgets
+
+Component benchmarks above time one function. This section measures one complete
+workflow in one process: collect → scan and enrich → push ingest → retained
+storage → graph and API reads → report export → retention → rebuild, plus a
+restart, a SIGKILL during ingest, and two concurrent API processes.
+
+**Profiles** (`scripts/perf/workflow_profiles.py`): the estate comes from
+`scripts/generate_graph_benchmark_estate.py`, seed 2145, 8% vulnerable packages.
+It becomes a schema-valid `--inventory` file, and OCI image references are
+dropped because an inventory cannot carry them.
+
+| Profile | Agents | Store | API processes | Concurrent pushes | Reads per endpoint | CPU / memory envelope |
+|---|---:|---|---:|---:|---:|---|
+| `ci-budget` | 12 | SQLite | 1 | 1 | 8 | 2 CPU / 2 GiB |
+| `small-self-hosted` | 200 | SQLite | 1 | 1 | 30 | 2 CPU / 2 GiB |
+| `small-self-hosted-postgres` | 200 | Postgres 16 | 1 | 1 | 30 | 2 CPU / 2 GiB |
+| `multi-replica-local` | 200 each | Postgres 16 | 2 | 2 | 30 | 2 CPU / 2 GiB each |
+
+The envelope matches the pilot Helm API limit. It is checked against the
+measured numbers, not enforced: macOS has no cgroups.
+
+**How it runs.** The real `agent-bom agents --inventory` command scans the
+estate. Every advisory, registry and KEV client is routed to a counting mock
+(`MockUpstream`), and a socket guard refuses and records any non-loopback
+connection; every run below recorded zero. The first OSV batch call returns
+503 so the client retry path runs. The API is the real ASGI app over SQLite
+files or `AGENT_BOM_POSTGRES_URL`. The findings report is built by the embedded
+report runner, because the in-process transport does not start the worker loop.
+Retention is the API maintenance sweep (`expire_jobs_and_snapshots`) with its
+TTL set to zero. The finding set `(advisory, package, version)` is compared
+exactly against the fixture after the scan, after storage, after the rebuild,
+across a restart and after a killed ingest.
+
+```bash
+python scripts/run_workflow_resource_benchmark.py --profile small-self-hosted --output /tmp/wf.json
+# Postgres: migrated database, app and maintenance roles
+AGENT_BOM_POSTGRES_MAINTENANCE_URL=postgresql://maint:...@127.0.0.1:PORT/agent_bom \
+  python scripts/run_workflow_resource_benchmark.py --profile small-self-hosted-postgres \
+  --profile multi-replica-local --postgres-url postgresql://app:...@127.0.0.1:PORT/agent_bom
+```
+
+Each phase runs in its own child process, so CPU-seconds and max RSS are the
+child's own `wait4` rusage. The runner exits non-zero if any phase crashes,
+any finding set differs, or any outbound connection is attempted.
+
+**Measured 2026-11-11** on an Apple M4 (10 cores, 16 GiB, macOS 27.0.1,
+Python 3.13.5, PostgreSQL 16.14 on loopback). The host was shared with other
+workloads (load average 5-9), so wall time is noisy and CPU-seconds are the
+primary signal. Raw results:
+[`perf/results/workflow-resource-budget-2026-11-11.json`](perf/results/workflow-resource-budget-2026-11-11.json).
+
+Cold run, 200 agents, 4,058 packages, 207 findings, 11,490 graph nodes:
+
+| Stage | SQLite CPU s | Postgres CPU s | Notes |
+|---|---:|---:|---|
+| Collection | 0.5 | 0.5 | 467 KB inventory |
+| Scan + enrichment | 25.9 | 21.6 | 268 upstream requests: 5 OSV batch calls (one an injected 503, retried), 207 advisory details, 56 capped registry/advisory/KEV lookups; JSON report 73.4 MB |
+| Push ingest | 60.2 | 46.8 | 147 MB sent (push + identical retry); admission 5.6 s; retry returned the same job |
+| Graph and API reads (150) | 33.4 | 22.2 | see latency below |
+| Report export | 17.1 | 12.4 | graph JSON 9.4 MB (5.5-7.4 s), GraphML 15.2 MB (5.2-8.0 s), findings NDJSON 0.68 MB (~2 s) |
+| Retention sweep | 0.05 | 0.01 | |
+| Rebuild (re-ingest) | 70.7 | 50.9 | |
+| **Whole child process** | **225** | **165** | peak RSS 1,661 / 1,874 MiB; steady (median during reads) 587 / 1,227 MiB |
+
+Read latency, cold-run process (p50 / p95 ms, nearest rank over 30 reads; bytes per response):
+
+| Read | SQLite | Postgres | Response |
+|---|---:|---:|---:|
+| `GET /v1/graph?limit=100` | 234 / 2,694 | 173 / 840 | 2.6 MB |
+| `GET /v1/graph/search?q=agent&limit=25` | 94 / 2,810 | 73 / 155 | 66 KB |
+| `GET /v1/graph/attack-paths?limit=25` | 84 / 1,207 | 68 / 732 | 512-542 KB |
+| `GET /v1/findings?limit=100` | 114 / 1,556 | 96 / 720 | 362 KB |
+| `GET /v1/jobs?limit=25` | 10 / 28 | 11 / 22 | < 1 KB |
+
+Storage:
+
+| | SQLite | Postgres |
+|---|---:|---:|
+| First push (fresh store) | +94.4 MB (WAL 11.1 MB) | +113.4 MB database, indexes 3.1 → 64.6 MB, 291.6 MB WAL written |
+| Second identical-estate push (warm) | +75.1 MB | +36.7 MB database, +31.9 MB indexes, 336 MB WAL |
+| After expiring every job | no shrink (94.8 / 175.9 MB) | no shrink (129.9 MB) |
+
+Writes cost more than reads: Postgres writes about 2.6x the database growth as
+WAL. Retention frees pages for reuse, but files do not shrink without
+`VACUUM`. Size the volume for peak retained jobs, not for the post-sweep count.
+
+Cold, warm, restart, cancellation and replicas:
+
+- **Warm** (same store, warm scan cache): upstream requests fell from 268 to 56,
+  because OSV batch and detail calls were answered from cache. Scan CPU did not
+  fall (29.6 s SQLite, 20.2 s Postgres), so scan cost is local analysis, not
+  network.
+- **Restart** (new process, same store): the stored finding digest matched the
+  run before the restart on both stores. The first `/v1/graph` read returned
+  **503 after 2.3 s** while the graph warmed. Afterwards, graph page p50 was
+  1.0-1.4 s (vs 0.17-0.23 s in a warm process), with p95 1.3-2.0 s.
+- **Cancellation** (SIGKILL right after the async push was admitted): the job was
+  left `pending`, and both SQLite files passed `PRAGMA integrity_check`. The
+  identical retry in a new process kept the same job id and was stored in 44 s
+  on SQLite and 54 s on Postgres, with exactly the expected 207 findings.
+- **Two API processes, one Postgres**: each pushed its own estate concurrently.
+  Both stored exactly their expected findings (207 and 209). Each process used
+  167-169 CPU-seconds with peak RSS 1,656-1,706 MiB; the pair took 179 s wall.
+  The database grew 183-190 MB across both pushes, with about 1.1 GB of WAL.
+
+Findings from these runs:
+
+- **Memory headroom is thin.** Peak RSS was 1.66 GiB on SQLite and 1.87-1.97 GiB
+  on Postgres, against a 2 GiB limit, for one 200-agent push plus a rebuild in
+  the same process. The peaks come from ingest and rebuild of the 73 MB report.
+  Larger estates need more memory, or ingest moved to a worker process
+  (`AGENT_BOM_API_ROLE=worker`).
+- **The report payload dominates bytes.** The CLI JSON report is about 367 KB
+  per agent, and it is sent twice when a client retries.
+- **The graph page grows with retained data.** `GET /v1/graph?limit=100` returned
+  2.6 MB, then 4.1 MB, then 6.7 MB as more jobs were stored, at the same limit.
+- **An identical re-push after retention is refused.** Once retention expires a
+  pushed job, an identical async push returns `409 ... no longer retained; push
+  again` on every attempt. The content idempotency key stays live for
+  `AGENT_BOM_IDEMPOTENCY_TTL_HOURS` (default 24), so "push again" cannot succeed
+  with the same content. A fresh `Idempotency-Key` works, and the rebuild above
+  uses one.
+
+**PR regression budget** (`tests/test_workflow_resource_budget.py`, runs in the
+isolated `graph_performance` CI step, about 20 s locally): `ci-budget` profile,
+fresh SQLite. Accuracy and request-shape checks are exact. Resource ceilings
+are several times the measurement, so a 4-vCPU runner does not flake:
+
+| Budget | Measured | Ceiling | Why this margin |
+|---|---:|---:|---|
+| Finding sets (scan = fixture, store = scan, rebuild = store) | 35 = 35 = 35 | exact | accuracy is not a tolerance |
+| Outbound connections | 0 | 0 | offline proof |
+| Upstream requests per package | 0.16 (93 / 573) | 0.5 | a new per-package call adds ≥ 1 per package |
+| JSON report | 10.6 MB | 24 MiB | sizes are near-deterministic; ~2x |
+| SQLite growth per push | 13.9 MB | 32 MiB | ~2x |
+| Largest read response | 2.0 MB | 4 MiB | ~2x |
+| Read p95 (8 samples, effectively max) | ≤ 2.0 s | 8 s | catches stalls only; latency is not a PR SLO |
+| CPU-seconds per stage | 0.03-5.5 | 2-25 | 3-5x for runner variance |
+| Whole run CPU-seconds | 17-27 | 90 | 3-5x |
+| Peak RSS | 410-540 MiB | 1,536 MiB | profile limit less runner headroom |
+
+The `small-self-hosted` SQLite profile runs nightly in `perf-scale-evidence.yml`
+(job `workflow-resource-budget`, or dispatch with `workflow_budget`). That job
+fails on any crash, finding mismatch or outbound connection; it has no timing
+gate.
+
+**Not measured here:** a real multi-node Kubernetes deployment, or replicas
+behind a load balancer (the replicas above are two local processes on one
+host); Postgres under the nightly job (it needs the migration and role setup
+from `postgres-scale-evidence.yml`); query plans and index choice for these
+reads (see `scripts/run_graph_postgres_explain.py`); migration cost; enforced
+cgroup CPU and memory limits; estates beyond 200 agents per push; and any
+monetary cost, because no provider prices were used.
+
 ---
 
 ## Adding a benchmark
