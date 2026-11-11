@@ -351,12 +351,14 @@
     if (parts.length < 2) { graph.layout(base).run(); return; }
     var ranked = parts.map(function(part, i) { return {part: part, i: i, r: componentRank(part)}; });
     ranked.sort(function(a, b) { return b.r - a.r || a.i - b.i; });
-    ranked.forEach(function(item) { item.part.layout(base).run(); });
+    // Packed paths are short, so a tighter rank gap lets more of them share a row.
+    var packed = Object.assign({}, base, {rankSep: Math.min(base.rankSep || 60, 60)});
+    ranked.forEach(function(item) { item.part.layout(packed).run(); });
     var boxes = ranked.map(function(item) { return item.part.boundingBox(); });
     var width = box && box.clientWidth ? box.clientWidth : window.innerWidth;
     var aspect = box && box.clientHeight ? box.clientWidth / box.clientHeight : (window.innerWidth < 700 ? 0.75 : 2);
-    // Leave room for the padding and the zoom buttons on the right.
-    var offsets = packBoxes(boxes.map(function(b) { return {w: b.w, h: b.h}; }), aspect, 48, (width - 160) / GRAPH_READABLE_ZOOM);
+    // Rows fill the container at a readable zoom, less the left padding and the zoom buttons on the right.
+    var offsets = packBoxes(boxes.map(function(b) { return {w: b.w, h: b.h}; }), aspect, 32, (width - 120) / GRAPH_READABLE_ZOOM);
     ranked.forEach(function(item, i) {
       var dx = offsets[i].x - boxes[i].x1, dy = offsets[i].y - boxes[i].y1;
       item.part.nodes().positions(function(node) { var p = node.position(); return {x: p.x + dx, y: p.y + dy}; });
@@ -680,7 +682,7 @@
             'underlay-color': '#ef4444',
             'underlay-padding': '6px',
             'underlay-opacity': 0.15,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {
@@ -700,7 +702,7 @@
             'underlay-color': '#fb923c',
             'underlay-padding': '4px',
             'underlay-opacity': 0.1,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {
@@ -1204,7 +1206,7 @@
             'underlay-color': '#ef4444',
             'underlay-padding': '6px',
             'underlay-opacity': 0.15,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {
@@ -1216,7 +1218,7 @@
             'underlay-color': '#fb923c',
             'underlay-padding': '4px',
             'underlay-opacity': 0.1,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {

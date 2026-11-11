@@ -48,7 +48,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'underlay-color': '#ef4444',
             'underlay-padding': '6px',
             'underlay-opacity': 0.15,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {
@@ -60,7 +60,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'underlay-color': '#fb923c',
             'underlay-padding': '4px',
             'underlay-opacity': 0.1,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {

@@ -53,7 +53,7 @@ _REPORT_LAYOUT_CSS = """
     .evidence-unavailable{color:#94a3b8;font-size:.8rem}
     :focus-visible{outline:2px solid #38bdf8;outline-offset:3px}
 
-    .graph-filter-bar{position:relative!important;top:auto!important;left:auto!important;flex-wrap:wrap;padding-right:50px!important}
+    .graph-filter-bar{position:relative!important;top:auto!important;left:auto!important;flex-wrap:wrap;padding-right:12px!important;margin-right:56px}
     @media screen and (max-width:700px){
       .tab-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:2px}
       .tab-btn{padding:9px 4px;font-size:.75rem;white-space:normal}
