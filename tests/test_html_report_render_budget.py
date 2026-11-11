@@ -25,9 +25,11 @@ from tests.html_report_scale_fixtures import scale_report
 
 _FINDINGS = 2000
 # Ceilings sit about 2-3x above the values measured on an Apple M4, so slower CI
-# runners pass while a regression in per-finding cost still fails.
+# runners pass while a regression in per-finding cost still fails. CPU is about
+# 3 s on an M4 and reached 8.1 s on a GitHub runner, so its ceiling is about
+# twice the slowest runner seen.
 _MAX_BYTES = 12_000_000
-_MAX_CPU_S = 8.0
+_MAX_CPU_S = 16.0
 _MAX_PEAK_RSS_GROWTH_MIB = 400
 _LISTS = ("vulnTable", "policyFindingsTable", "blastTable", "remediationList", "remediationNoFix")
 
