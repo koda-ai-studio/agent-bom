@@ -10,11 +10,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Upgrade notes
+- An inventory agent with no `config_path` of its own is no longer identified by the path of the inventory file it was read from, so scanning the same inventory from another path keeps its id. Its id changes once; reports list the earlier id in `previous_canonical_ids` and `previous_graph_ids`, so stored history and graph references follow it. Agents with their own `config_path`, `source_id` or device fingerprint keep their ids.
 - Postgres migration `20261111_01` drops seven indexes that no query uses: a trigram index on `LOWER(search_text)` (search text is stored lowercased), an `entity_type`-only index on `graph_nodes`, and four `scan_jobs` indexes that duplicate `idx_pg_jobs_*`. Drops run `CONCURRENTLY`, so no table is locked. At 200 agents, each push writes about 38% less WAL. The downgrade recreates them.
 - Parquet and Iceberg exports move to schema version 6, which appends `malicious_basis` after `sla_due_at_source`. 0.114.0 wrote that column at position 11 under version-5 metadata, which moved every later column; consumers that read 0.114.0 files by position should re-read them by name. Iceberg tables keep their field IDs and gain the column at the end.
 - Ollama model agents are named with the full `name:tag` (`ollama-model-llama3:8b` instead of `ollama-model-llama3`), so two tags of one model on one host are two assets. Their asset identities change once.
 
 ### Added
+- Resolved findings name the scan that proved them gone in `resolved_by_scan_id`, in `/v1/findings`, the `findings` MCP tool and the finding drawer. It stays after retention removes the scan (#6129).
 - `--serving-endpoint RUNTIME=URL` (repeatable) reads one vLLM, Text Generation Inference, Triton, llama.cpp or LM Studio endpoint with that runtime's documented read-only request. Each endpoint reports success, partial, denied, timeout or unavailable; only success and partial produce records, and a failed endpoint never falls back to local files. Each model records runtime, endpoint, artifact and collection evidence separately in `metadata.serving_evidence`. See [AI infrastructure scanning](docs/AI_INFRASTRUCTURE_SCANNING.md).
 - `--serving-token-env URL=AGENT_BOM_SERVING_TOKEN_<NAME>` sends a bearer token to one protected `--serving-endpoint`. The token comes from `<NAME>_FILE` or the variable, never from the command line or URL. It goes only to that URL, only over https or to loopback, never on a redirect, and is never recorded; evidence notes only `request_identity: bearer`. See [permissions](docs/PERMISSIONS.md).
 - `serving_evidence` is shown in `GET /v1/inventory/assets/{asset_id}` and the `inventory_asset` MCP tool as a typed field, and in the HTML report's agent cards. Runtime, endpoint, model artifact, collection and what was not collected are kept separate.
@@ -29,6 +31,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The findings pager names its buttons for screen readers, announces the current range, shows a focus ring and keeps keyboard focus in the pager when a press reaches the first or last page (#6128).
 
 ### Fixed
+- A finding resolved by a later push kept its advisory and dates but lost `package`, `package_version`, `ecosystem` and `scan_id` in `/v1/findings?status=resolved`. They are now served as on an open finding, including after retention (#6129).
+- Pushing the same content again after retention removed the earlier push returned `409` for up to 24 hours, because its idempotency key outlived the job. The push is now stored again; a replay while the job is still retained still returns its original receipt (#6129).
 - LangGraph and LangChain agents built with a model passed through a module-level string constant (`MODEL = "openai:gpt-4o-mini"`, then `create_agent(MODEL, ...)`) now record that model.
 - An Ollama endpoint that answers 401, 403 or times out reads as denied or timed out, not unavailable, and one malformed model entry no longer discards the rest of the inventory; the result is marked partial.
 - The HTML report showed a remediation SLA only for KEV findings, and a different date from the JSON export for those. It now takes the scan time as first seen when a finding has no history, as the JSON export does (#6128).

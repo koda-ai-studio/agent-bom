@@ -92,16 +92,18 @@ async def committed_push_response(job_id: str, *, tenant_id: str, source_id: str
 
     ``done`` replays the original stored receipt; ``pending``/``running`` returns
     the accepted receipt (and re-offers the job, which is idempotent); ``failed``
-    returns ``None`` so the caller re-admits the same deterministic job.
+    returns ``None`` so the caller re-admits the same deterministic job. So does
+    a job retention or deletion removed: the key outlives the data it answered
+    for, and the same content pushed again is new evidence to store.
     """
 
     status = await asyncio.to_thread(durable_job_status, job_id, tenant_id)
     if status is None:
-        raise HTTPException(status_code=409, detail="The pushed result for this idempotency key is no longer retained; push again.")
+        return None
     if status == JobStatus.DONE.value:
         job = await asyncio.to_thread(_load_job, job_id, tenant_id)
         if job is None:  # pragma: no cover - deleted between the two reads
-            raise HTTPException(status_code=409, detail="The pushed result for this idempotency key is no longer retained; push again.")
+            return None
         # Older writers published DONE before graph commit. Missing completion
         # evidence must remain retryable, never become a successful replay.
         if not _pushed_job_has_persisted_graph(job):

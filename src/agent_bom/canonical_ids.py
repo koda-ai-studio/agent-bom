@@ -293,6 +293,16 @@ def _relocated_config_graph_ids(record: Any) -> list[str]:
     return out
 
 
+def _inventory_document_graph_ids(record: Any) -> list[str]:
+    """The id an inventory agent had while its inventory file path was part of its identity."""
+    location = str(_field(record, "config_path") or "").strip()
+    if _field(record, "identity_config_path") != "" or not location:
+        return []
+    kind = _field(record, "agent_type") or _field(record, "type") or ""
+    identity = canonical_agent_id(str(getattr(kind, "value", kind)), str(_field(record, "name") or ""), config_path=location)
+    return [agent_graph_id(_field(record, "name"), f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}")]
+
+
 def previous_agent_graph_ids(record: Any) -> list[str]:
     """Candidate old spellings; persistence rejects ambiguous alias bindings."""
     current = agent_graph_id_for(record)
@@ -303,6 +313,7 @@ def previous_agent_graph_ids(record: Any) -> list[str]:
         return sorted(previous - {current})
     if not scope:
         previous.update(_relocated_config_graph_ids(record))
+        previous.update(_inventory_document_graph_ids(record))
     if not scope and _field(record, "source") == PROJECT_CONFIG_SOURCE and _field(record, "config_path"):
         # Do not hash a redacted basename as though it were the original path.
         # New exports carry these receipts from the full model before redaction.
@@ -552,6 +563,9 @@ def previous_agent_canonical_ids(agent: Any) -> list[str]:
     ]
     if not (agent.source_id or agent.device_fingerprint):
         prior.append(legacy_agent_id_v1(kind, agent.name, source=agent.source or "", config_path=agent.config_path))
+        if getattr(agent, "identity_config_path", None) == "" and agent.config_path:
+            # Inventory agents were identified by their inventory file path before it left identity.
+            prior.append(canonical_agent_id(kind, agent.name, config_path=agent.config_path))
     return list(dict.fromkeys(identity for identity in prior if identity != agent.stable_id))
 
 

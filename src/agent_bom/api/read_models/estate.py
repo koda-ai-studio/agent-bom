@@ -63,6 +63,7 @@ class FindingRow(ReadModel):
     lifecycle_status: str | None = None
     resolved_at: str | None = None
     resolution_reason: Literal["no_longer_detected", "asset_deleted"] | None = None
+    resolved_by_scan_id: str | None = Field(default=None, description="The scan that proved the finding gone; set only while resolved.")
     stale: bool | None = None
     last_resolved_at: str | None = None
     reopened_at: str | None = None

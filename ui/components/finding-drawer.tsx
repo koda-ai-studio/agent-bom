@@ -334,6 +334,7 @@ function EvidenceTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
             {vuln.last_observed || vuln.last_seen ? <KeyVal label="Last observed" value={formatFindingTimestamp(vuln.last_observed ?? vuln.last_seen)} /> : null}
             {vuln.resolved_at ? <KeyVal label="Resolved" value={formatFindingTimestamp(vuln.resolved_at)} /> : null}
             {resolutionReasonLabel(vuln.resolution_reason) ? <KeyVal label="Resolution" value={resolutionReasonLabel(vuln.resolution_reason) ?? ""} /> : null}
+            {vuln.resolved_at && vuln.resolved_by_scan_id ? <KeyVal label="Resolved by scan" value={vuln.resolved_by_scan_id} /> : null}
             {vuln.stale ? <KeyVal label="Coverage" value="Stale: asset not re-checked recently, still open" /> : null}
             {vuln.last_resolved_at && !vuln.resolved_at ? <KeyVal label="Last resolved" value={formatFindingTimestamp(vuln.last_resolved_at)} /> : null}
             {vuln.reopened_at ? <KeyVal label="Reopened" value={formatFindingTimestamp(vuln.reopened_at)} /> : null}

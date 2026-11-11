@@ -427,12 +427,10 @@ async def run_workflow(
                     info.update(await _expire_retained_jobs(http))
                 storage_retained = footprint()
                 with recorder.stage("rebuild") as info:
-                    # An identical push after retention is answered from the still-live content
-                    # idempotency key (24 h TTL); a rebuild needs a fresh key.
-                    identical, _ = await http.call("POST", "/v1/results/push", content=body, headers=PUSH_HEADERS)
-                    again = await _push(http, body, ingest_deadline_seconds, idempotency_key=f"rebuild-{pushed['job_id']}")
+                    # Retention removed the job, so the identical push is admitted again under
+                    # its content key rather than answered from the key's old receipt.
+                    again = await _push(http, body, ingest_deadline_seconds)
                     info.update(
-                        identical_repush_status=identical.status_code,
                         status=again["status"],
                         graph_nodes=again["graph_nodes"],
                         new_job=again["job_id"] != pushed["job_id"],

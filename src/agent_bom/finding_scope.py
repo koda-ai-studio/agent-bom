@@ -713,6 +713,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     for key, max_len in (
         ("source", 64),
         ("scan_id", 128),
+        ("resolved_by_scan_id", 128),
         ("canonical_id", 512),
         ("origin", 64),
         ("batch_id", 128),

@@ -31,7 +31,7 @@ from scripts.perf.workflow_profiles import MockUpstream, cli_push_body, expected
 _OPEN = {"open", "reopened"}
 GRAPH_REFRESH_DEADLINE_SECONDS = 60.0
 # Identity a resolved row must keep so a reader can still tell which package was fixed.
-RESOLVED_IDENTITY_FIELDS = ("package", "package_version", "ecosystem", "scan_id")
+RESOLVED_IDENTITY_FIELDS = ("package", "package_version", "ecosystem", "scan_id", "resolved_by_scan_id")
 
 
 async def stored_rows(http: Any, job_id: str) -> list[dict[str, Any]]:
@@ -186,15 +186,17 @@ def update_delete_failures(result: dict[str, Any]) -> list[str]:
     failures += [f"lifecycle {item}" for item in result.get("lifecycle_mismatches") or []]
     if result.get("deleted_still_open") or not result.get("deleted_resolved"):
         failures.append("deleted finding was not resolved as no_longer_detected")
+    if missing := result.get("resolved_row_missing_identity"):
+        failures.append(f"resolved row lost identity fields: {', '.join(missing)}")
     if result.get("graph_package_nodes_before", 0) < 1 or result.get("graph_package_nodes_after") != 0:
         failures.append(f"graph package nodes {result.get('graph_package_nodes_before')} -> {result.get('graph_package_nodes_after')}")
     return failures
 
 
 def known_gaps(equivalence: dict[str, Any]) -> list[str]:
-    """Product gaps the harness measures but does not fail on; each has a strict xfail test."""
-    missing = (equivalence.get("update_delete") or {}).get("resolved_row_missing_identity")
-    return [f"resolved row lost identity fields: {', '.join(missing)}"] if missing else []
+    """Product gaps the harness measures but does not fail on; none are open."""
+    del equivalence
+    return []
 
 
 def ingest_equivalence(scanned: list[dict[str, Any]], stored: list[dict[str, Any]], view: dict[FindingKey, Any]) -> dict[str, Any]:

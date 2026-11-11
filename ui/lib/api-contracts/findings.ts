@@ -506,6 +506,8 @@ export interface UnifiedFinding {
   resolved_at?: string | null | undefined;
   /** Why the finding is resolved: ``no_longer_detected`` or ``asset_deleted``. Null unless resolved. */
   resolution_reason?: string | null | undefined;
+  /** The scan that proved the finding gone. Null unless resolved. */
+  resolved_by_scan_id?: string | null | undefined;
   /** Still open, but its asset was not re-checked within the stale period. */
   stale?: boolean | undefined;
   reopened_at?: string | null | undefined;

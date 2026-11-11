@@ -69,6 +69,7 @@ def lifecycle_read(
         states = durable.live_states(session, tenant_id)
         if include_resolved:
             states.extend(durable.resolved_states(session, tenant_id, since, RESOLVED_READ_LIMIT))
+            durable.attach_resolving_job_ids(session, tenant_id, states)
         seeded = durable.backfilled(session, tenant_id)
         pending = not seeded and bool(durable.pending_job_ids(session, store.finding_lifecycle_dialect, tenant_id, 1))
     if pending:

@@ -522,6 +522,8 @@ def _inventory_agent(agent_data: dict, inventory_data: dict, inventory_provenanc
             agent_name=agent_data.get("name", "unknown"),
         ),
         config_path=agent_data.get("config_path", source_path),
+        # The inventory file is where the agent was read, not where it runs.
+        identity_config_path=None if agent_data.get("config_path") else "",
         mcp_servers=mcp_servers,
         version=agent_data.get("version"),
         source=agent_data.get("source", inventory_data.get("source")),

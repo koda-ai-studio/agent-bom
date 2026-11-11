@@ -65,6 +65,8 @@ def workflow_control_plane(tmp_path, monkeypatch: pytest.MonkeyPatch):
     db_dir.mkdir()
     db = str(db_dir / "control-plane.db")
     monkeypatch.setenv("AGENT_BOM_SCAN_CACHE", str(tmp_path / "scan-cache.db"))
+    # The scanner opens its cache once per process; another test's cache would answer for this estate.
+    monkeypatch.setattr("agent_bom.scanners.package_scan._scan_cache_instance", None)
     monkeypatch.delenv("AGENT_BOM_PUSH_INGEST_MODE", raising=False)
     originals = (stores._get_store(), stores._get_fleet_store(), stores._get_graph_store(), stores._get_idempotency_store())
     set_job_store(SQLiteJobStore(db))
@@ -141,7 +143,8 @@ async def test_ci_profile_workflow_stays_accurate_and_inside_its_resource_budget
     assert exports["findings_report"]["download_bytes"]
 
     assert stages["retention"]["jobs_removed"] >= 1 and stages["retention"]["jobs_after"] == 0, stages["retention"]
-    assert stages["rebuild"]["status"] == "stored" and stages["rebuild"]["new_job"], stages["rebuild"]
+    # The identical push re-admits the same deterministic job under its content key.
+    assert stages["rebuild"]["status"] == "stored" and not stages["rebuild"]["new_job"], stages["rebuild"]
 
     for name, ceiling in STAGE_CPU_SECONDS.items():
         assert stages[name]["cpu_seconds"] <= ceiling, (name, stages[name])
