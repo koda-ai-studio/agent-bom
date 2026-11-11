@@ -171,6 +171,12 @@ layout. Iceberg evolution matches names and retains existing field IDs, so
 existing catalog tables keep their original column identity and row values.
 The new field is nullable for older snapshots; it does not infer SLA provenance.
 
+Parquet schema version 6 appends nullable `malicious_basis` (known or
+suspected malicious package) after `sla_due_at_source`. Version 0.114.0
+emitted that field at position 11 under version-5 metadata, so its positional
+layout must not be assumed to match the version-5 or version-6 layouts.
+Iceberg tables keep their existing field IDs and add the column at the end.
+
 ## Snowflake and Databricks
 
 Both are valid security-lake destinations in real customer environments.

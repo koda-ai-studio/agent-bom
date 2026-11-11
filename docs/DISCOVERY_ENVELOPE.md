@@ -108,6 +108,7 @@ Supported cloud / SaaS / local providers populate the envelope at the end of
 | `huggingface` | `saas_read_only` |
 | `openai_provider` | `saas_read_only` |
 | `ollama` | `local_only` |
+| `serving_runtimes` | `runtime_probe` |
 
 Parametric tests in `tests/test_discovery_envelope.py` and
 `tests/test_discovery_envelope_lock_in.py` enforce that these providers

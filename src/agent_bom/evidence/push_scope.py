@@ -77,6 +77,7 @@ _IMPLICIT_EXTERNAL_TARGETS = (
     "mlflow_flag",
     "openai_flag",
     "ollama_flag",
+    "serving_endpoints",
     "smithery_flag",
     "mcp_registry_flag",
     "snyk_flag",

@@ -9,9 +9,11 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 import httpx
 
+from agent_bom.cloud.serving_runtimes import EndpointObservation, ServedModel, serving_evidence
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package
 from agent_bom.security import SecurityError, sanitize_error, sanitize_text, validate_url
@@ -24,6 +26,7 @@ _MANIFEST_DIR = Path.home() / ".ollama" / "models" / "manifests" / "registry.oll
 
 def discover(
     host: str | None = None,
+    timeout: float = 5.0,
 ) -> tuple[list[Agent], list[str]]:
     """Discover models within the selected Ollama collection scope.
 
@@ -42,9 +45,15 @@ def discover(
     resolved_host: str = configured_host or _DEFAULT_OLLAMA_HOST
 
     # ── Strategy 1: Ollama API ───────────────────────────────────────────
-    api_models = _discover_via_api(resolved_host)
+    outcome: dict[str, Any] = {}
+    api_models = _discover_via_api(resolved_host, outcome=outcome, timeout=timeout)
+    status = str(outcome.get("status", "success" if api_models is not None else "unavailable"))
     if api_models is not None:
-        agents = _agents_from_api(api_models, resolved_host)
+        if status == "partial":
+            warnings.append(
+                f"Ollama inventory at {resolved_host} is partial: {outcome.get('dropped', 0)} record(s) did not match /api/tags."
+            )
+        agents = _agents_from_api(api_models, resolved_host, status=status)
 
         attach_envelope_to_agents(
             agents,
@@ -55,15 +64,16 @@ def discover(
         )
         return agents, warnings
 
+    label = {"timeout": "timed out"}.get(status, status)
     if configured_host:
-        warnings.append("Ollama discovery incomplete: configured endpoint unavailable; local manifests were not substituted.")
+        warnings.append(f"Ollama discovery incomplete: configured endpoint {label}; local manifests were not substituted.")
         return agents, warnings
 
     # ── Strategy 2: Manifest directory scan ───────────────────────────────
     if _MANIFEST_DIR.is_dir():
         manifests = _discover_from_manifests()
         if manifests:
-            warnings.append("Ollama API unavailable; inventory is from local manifests only, not confirmed serving models.")
+            warnings.append(f"Ollama API {label}; inventory is from local manifests only, not confirmed serving models.")
             for model_name, model_tag, manifest_path in manifests:
                 server = MCPServer(
                     name=f"ollama/{model_name}:{model_tag}",
@@ -88,7 +98,7 @@ def discover(
         else:
             warnings.append("Ollama manifest directory found but no models detected")
     else:
-        warnings.append(f"Ollama not detected (no API at {resolved_host}, no manifests at {_MANIFEST_DIR})")
+        warnings.append(f"Ollama not detected (API at {resolved_host} {label}, no manifests at {_MANIFEST_DIR})")
 
     # Manifest inventory establishes downloaded artifacts, not API availability.
     attach_envelope_to_agents(
@@ -101,9 +111,15 @@ def discover(
     return agents, warnings
 
 
-def _agents_from_api(api_models: list[dict], host: str) -> list[Agent]:
+def _agents_from_api(api_models: list[dict], host: str, status: str = "success") -> list[Agent]:
     """Project API model metadata without inventing serving configuration."""
     agents: list[Agent] = []
+    observation = EndpointObservation(
+        runtime="ollama",
+        endpoint=host.rstrip("/"),
+        status=status,
+        permissions_used=("ollama:GET /api/tags",),
+    )
     for model in api_models:
         name = model.get("name", "unknown")
         size = model.get("size", 0)
@@ -151,19 +167,29 @@ def _agents_from_api(api_models: list[dict], host: str) -> list[Agent]:
             ],
         )
 
+        digest = model.get("digest")
+        served = ServedModel(served_name=name, artifact_ref=name, digest=digest if isinstance(digest, str) and digest else None)
+        # The full name:tag is the artifact identity; two tags of one model are distinct assets.
         agent = Agent(
-            name=f"ollama-model-{base_name}",
+            name=f"ollama-model-{name}",
             agent_type=AgentType.CUSTOM,
             config_path=host,
             source="ollama-api",
             mcp_servers=[server],
+            metadata={"serving_evidence": serving_evidence(observation, served)},
         )
         agents.append(agent)
     return agents
 
 
-def _discover_via_api(host: str) -> list[dict] | None:
-    """Try to get model list from Ollama HTTP API. Returns None if unreachable or refused."""
+def _discover_via_api(host: str, outcome: dict[str, Any] | None = None, timeout: float = 5.0) -> list[dict] | None:
+    """Try to get model list from Ollama HTTP API. Returns None if unreachable or refused.
+
+    ``outcome["status"]`` records ``success``, ``partial``, ``denied``, ``timeout``
+    or ``unavailable`` so callers never describe a refusal as an absent server.
+    """
+    result: dict[str, Any] = outcome if outcome is not None else {}
+    result["status"] = "unavailable"
     url = f"{host.rstrip('/')}/api/tags"
     try:
         # Ollama normally listens on localhost or a private address, so private
@@ -173,9 +199,16 @@ def _discover_via_api(host: str) -> list[dict] | None:
         logger.warning("Ollama endpoint refused by outbound URL policy: %s", sanitize_text(sanitize_error(exc)))
         return None
     try:
-        resp = httpx.get(url, timeout=5.0)
+        resp = httpx.get(url, timeout=timeout)
         if resp.status_code == 200:
-            return _api_models(resp)
+            return _api_models(resp, result)
+        if resp.status_code in (401, 403):
+            result["status"] = "denied"
+            return None
+    except httpx.TimeoutException as exc:
+        result["status"] = "timeout"
+        logger.debug("Ollama httpx API probe timed out: %s", sanitize_text(exc))
+        return None
     except (httpx.HTTPError, OSError, ValueError) as exc:
         logger.debug("Ollama httpx API probe failed: %s", sanitize_text(exc))
 
@@ -185,20 +218,31 @@ def _discover_via_api(host: str) -> list[dict] | None:
 
         fallback_resp = sync_get(url, timeout=3)
         if fallback_resp is not None and fallback_resp.status_code == 200:
-            return _api_models(fallback_resp)
+            return _api_models(fallback_resp, result)
     except (httpx.HTTPError, OSError, ValueError) as exc:
         logger.debug("Ollama sync API probe failed: %s", sanitize_text(exc))
 
     return None
 
 
-def _api_models(response: httpx.Response) -> list[dict] | None:
-    """Only an explicit models list establishes a successful inventory."""
+def _api_models(response: httpx.Response, outcome: dict[str, Any] | None = None) -> list[dict] | None:
+    """Only an explicit models list establishes a successful inventory.
+
+    Malformed entries are dropped and reported as partial; a list with no
+    usable entry at all is not a verified inventory.
+    """
     data = response.json()
     models = data.get("models") if isinstance(data, dict) else None
-    if not isinstance(models, list) or any(not isinstance(model, dict) for model in models):
+    if not isinstance(models, list):
         return None
-    return models
+    valid = [model for model in models if isinstance(model, dict) and isinstance(model.get("name"), str) and model["name"]]
+    dropped = len(models) - len(valid)
+    if dropped and not valid:
+        return None
+    if outcome is not None:
+        outcome["status"] = "partial" if dropped else "success"
+        outcome["dropped"] = dropped
+    return valid
 
 
 def _discover_from_manifests() -> list[tuple[str, str, Path]]:
