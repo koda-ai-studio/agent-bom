@@ -14,15 +14,19 @@ if TYPE_CHECKING:
     from agent_bom.models import AIBOMReport
 
 
-def _graph_policy_findings(report: "AIBOMReport") -> list["Finding"]:
+def _graph_policy_findings(report: "AIBOMReport", unified: list["Finding"] | None = None) -> list["Finding"]:
     """Unified-stream findings the CVE-centric builders never surface
-    (COMBINATION, PROMPT_SECURITY, NHI, CIEM, CIS, ...)."""
+    (COMBINATION, PROMPT_SECURITY, NHI, CIEM, CIS, ...).
+
+    ``unified`` is ``report.to_findings()`` when the caller already built it.
+    """
     from agent_bom.output.finding_views import _MACHINE_EXPORT_TYPES
 
-    return [finding for finding in report.to_findings() if finding.finding_type not in _MACHINE_EXPORT_TYPES]
+    stream = unified if unified is not None else report.to_findings()
+    return [finding for finding in stream if finding.finding_type not in _MACHINE_EXPORT_TYPES]
 
 
-def _graph_policy_finding_elements(report: "AIBOMReport") -> list[dict]:
+def _graph_policy_finding_elements(report: "AIBOMReport", unified: list["Finding"] | None = None) -> list[dict]:
     """Cytoscape elements for graph-derived / policy finding categories.
 
     The unified findings stream (the one JSON/API/MCP report) carries
@@ -30,7 +34,7 @@ def _graph_policy_finding_elements(report: "AIBOMReport") -> list[dict]:
     entry — linked to its agent asset node when present — so graph exports
     reconcile with every other scan surface.
     """
-    findings = _graph_policy_findings(report)
+    findings = _graph_policy_findings(report, unified)
     if not findings:
         return []
 

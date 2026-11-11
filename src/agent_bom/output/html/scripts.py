@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import re
+
 from agent_bom.output.html.graph_js_attack_flow import ATTACK_FLOW_GRAPH_JS
+from agent_bom.output.html.graph_js_bounds import GRAPH_BOUNDS_JS
 from agent_bom.output.html.graph_js_supply_chain import SUPPLY_CHAIN_GRAPH_JS, SUPPLY_CHAIN_SIDEBAR_JS
 from agent_bom.output.html.graph_js_supply_chain_tools import SUPPLY_CHAIN_TOOLS_JS
 from agent_bom.output.html.paginator_js import PAGINATOR_JS
+
+_GRAPH_DATA_BLOCK = re.compile(r'<script type="application/json" class="graph-data" id="[A-Za-z]+">.*?</script>\n?', re.DOTALL)
 
 _EXTERNAL_SCRIPT_TAGS = (
     '  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>\n',
@@ -94,7 +99,7 @@ SCALE_REPORT_SCRIPT = f"""<script>
   filterPolicyFindingsTable();
   ['blastTable', 'remediationList', 'remediationNoFix'].forEach(function(id) {{ makePaginator(id); }});
 
-  // ── Tabbed navigation ─────────────────────────────────────────────────────
+  // Tabbed navigation
   var tabBar = document.querySelector('.tab-bar');
   function tabForSection(id) {{
     var sec = document.getElementById(id);
@@ -350,7 +355,7 @@ PAGE_INTERACTIONS_JS = """\
 """
 
 GRAPH_VISIBILITY_JS = """\
-  function addGraphViews(graph, container) {
+  function addGraphViews(graph, container, recorded) {
     var canvas = container.parentNode;
     canvas.classList.toggle('small-graph', graph.nodes().length <= 20);
     var toolbar = document.createElement('div');
@@ -366,17 +371,18 @@ GRAPH_VISIBILITY_JS = """\
     var count = document.createElement('span'); count.setAttribute('aria-live', 'polite');
     pager.append(previous, count, next); panel.append(rows, pager);
     canvas.before(toolbar); canvas.after(panel);
-    var page = 0; var edges = graph.edges(); var size = window.innerWidth < 700 ? 5 : 15;
+    // Every recorded relationship, including those the bounded diagram leaves out.
+    var page = 0; var edges = relationshipRows(recorded); var size = window.innerWidth < 700 ? 5 : 15;
     function render() {
       rows.replaceChildren();
       edges.slice(page * size, (page + 1) * size).forEach(function(edge) {
         var item = document.createElement('li');
-        var source = document.createElement('strong'); source.textContent = edge.source().data('label');
-        var relation = document.createElement('span'); relation.textContent = (edge.data('type') || 'related to').replaceAll('_', ' ');
-        var target = document.createElement('strong'); target.textContent = edge.target().data('label');
+        var source = document.createElement('strong'); source.textContent = edge.source;
+        var relation = document.createElement('span'); relation.textContent = edge.relation;
+        var target = document.createElement('strong'); target.textContent = edge.target;
         item.append(source, relation, target); rows.append(item);
       });
-      count.textContent = edges.length ? (page * size + 1) + '–' + Math.min((page + 1) * size, edges.length) + ' of ' + edges.length + ' relationships' : 'No relationships recorded';
+      count.textContent = edges.length ? (page * size + 1) + '\\u2013' + Math.min((page + 1) * size, edges.length) + ' of ' + edges.length + ' relationships' : 'No relationships recorded';
       previous.disabled = page === 0; next.disabled = (page + 1) * size >= edges.length;
     }
     previous.onclick = function() { page--; render(); };
@@ -427,11 +433,24 @@ _GRAPH_SCRIPT_BODY = "".join(
     (
         SEVERITY_CHART_JS,
         BLAST_RADIUS_CHART_JS,
+        GRAPH_BOUNDS_JS,
         GRAPH_VISIBILITY_JS,
+        "  function drawSupplyChainGraph() {\n",
+        "  var GRAPH_RECORDED = readGraphData('agentBomGraphElements');\n",
+        "  var GRAPH_BOUND = boundGraph(GRAPH_RECORDED, GRAPH_DRAW_LIMIT, 'in', true);\n",
+        "  var GRAPH_ELEMENTS = GRAPH_BOUND.elements;\n",
         SUPPLY_CHAIN_GRAPH_JS,
         SUPPLY_CHAIN_SIDEBAR_JS,
         SUPPLY_CHAIN_TOOLS_JS,
+        "  }\n",
+        "  function drawAttackFlowGraph() {\n",
+        "  var ATTACK_FLOW_RECORDED = readGraphData('agentBomAttackFlow');\n",
+        "  var ATTACK_FLOW_BOUND = boundGraph(ATTACK_FLOW_RECORDED, GRAPH_DRAW_LIMIT, 'out');\n",
+        "  var ATTACK_FLOW = ATTACK_FLOW_BOUND.elements;\n",
         ATTACK_FLOW_GRAPH_JS,
+        "  }\n",
+        "  afterLoad(drawSupplyChainGraph);\n",
+        "  afterLoad(drawAttackFlowGraph);\n",
         PAGE_INTERACTIONS_JS,
         "})();\n</script>\n",
     )
@@ -439,24 +458,31 @@ _GRAPH_SCRIPT_BODY = "".join(
 
 
 def render_graph_script(chart_data_json: str, elements_json: str, attack_flow_json: str) -> str:
-    """Return the Chart.js + Cytoscape graph/interaction <script> block."""
+    """Return the Chart.js + Cytoscape graph/interaction <script> block and its graph data.
+
+    Graph data sits in inert JSON blocks that are parsed only when a graph is
+    drawn after the page loads. Each JSON value is already escaped for a
+    script element, so it cannot close its block.
+    """
     injected_data = f"""\
 <script>
 (function() {{
   // Injected data
   var CHART_DATA = {chart_data_json};
-  var GRAPH_ELEMENTS = {elements_json};
-  var ATTACK_FLOW = {attack_flow_json};
 
 """
-    return injected_data + _GRAPH_SCRIPT_BODY
+    data_blocks = (
+        f'<script type="application/json" class="graph-data" id="agentBomGraphElements">{elements_json}</script>\n'
+        f'<script type="application/json" class="graph-data" id="agentBomAttackFlow">{attack_flow_json}</script>\n'
+    )
+    return injected_data + _GRAPH_SCRIPT_BODY + data_blocks
 
 
 def _offline_assets_notice() -> str:
     return """
   <div class="offline-assets-banner" style="margin-bottom:16px;padding:12px 14px;border:1px solid #334155;border-radius:10px;background:#111827;color:#cbd5e1">
     <strong style="color:#f8fafc">Offline HTML mode</strong>
-    <span style="color:#94a3b8"> — external JavaScript assets were omitted. Static tables, findings, remediation, compliance, inventory, and evidence sections remain available.</span>
+    <span style="color:#94a3b8"> &mdash; external JavaScript assets were omitted. Static tables, findings, remediation, compliance, inventory, and evidence sections remain available.</span>
   </div>
 """
 
@@ -496,4 +522,5 @@ def _apply_offline_assets_mode(html: str) -> str:
     script_end = html.find("</script>", script_start) if script_start != -1 else -1
     if script_start != -1 and script_end != -1:
         html = html[:script_start] + "\n" + _offline_assets_script() + html[script_end + len("</script>") :]
-    return html
+    # Without the graph libraries nothing reads the graph data.
+    return _GRAPH_DATA_BLOCK.sub("", html)

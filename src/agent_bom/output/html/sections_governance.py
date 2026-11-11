@@ -241,7 +241,7 @@ def _enforcement_section(report: "AIBOMReport") -> str:
             f'<section id="enforcement">'
             f'<div class="sec-title">&#x1f6a8; Enforcement</div>'
             f'<div class="panel">{stats_html}'
-            f'<div class="empty-state">&#x2705; No enforcement findings — all checks passed.</div>'
+            f'<div class="empty-state">&#x2705; No enforcement findings &mdash; all checks passed.</div>'
             f"</div></section>"
         )
 

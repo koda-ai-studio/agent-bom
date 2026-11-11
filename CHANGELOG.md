@@ -22,11 +22,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Deployment support tiers list, for each profile, what was validated locally and what has not been installed live. See the [deployment overview](site-docs/deployment/overview.md).
 
 ### Changed
-- Standalone HTML reports put only the first page of vulnerabilities, policy findings, impact rows and remediation items in the page. The other records stay in the file as inert text, and the paginator loads them a page at a time. Search, filters, sorting and counts still cover every record, and printing loads them all. Without JavaScript, a notice says how many records are stored but not shown. A 2,000-finding report opens with about 16,000 page elements instead of 220,000 (#6128).
+- Standalone HTML reports put only the first page of vulnerabilities, policy findings, impact rows and remediation items in the page. The other records stay in the file as inert text, and the paginator loads them a page at a time. Search, filters, sorting and counts still cover every record, and printing loads them all. A 2,000-finding report opens with about 16,000 page elements instead of 220,000 (#6128).
+- Large HTML reports open. The graph layout took about 40 s of a 43 s load at 10,000 findings and never finished at 50,000. The two graphs now draw after the page loads, from data stored as JSON, and lay out at most 600 nodes: the most severe findings first with the assets on their paths, then the rest of the inventory. A note gives the drawn and recorded totals, and the Relationships view pages through every recorded relationship. On an Apple M4, a 50,000-finding report loads in about 1.5 s and both graphs are ready by about 2 s (#6128).
+- HTML export builds each finding projection once instead of five times, keeps the document one byte per character, joins long lists and graph data into it once, and streams it when writing a report file. On an Apple M4 at 50,000 findings, export CPU falls from about 79 s to 50 s and peak memory growth from about 1.8 GB to 0.9 GB. No record is dropped (#6128).
+- Vulnerability evidence in the HTML report adds the asset identifier and provenance (finding source, version source and confidence). Each row is checked field by field against the JSON export (#6128).
+- The findings pager names its buttons for screen readers, announces the current range, shows a focus ring and keeps keyboard focus in the pager when a press reaches the first or last page (#6128).
 
 ### Fixed
 - LangGraph and LangChain agents built with a model passed through a module-level string constant (`MODEL = "openai:gpt-4o-mini"`, then `create_agent(MODEL, ...)`) now record that model.
 - An Ollama endpoint that answers 401, 403 or times out reads as denied or timed out, not unavailable, and one malformed model entry no longer discards the rest of the inventory; the result is marked partial.
+- The HTML report showed a remediation SLA only for KEV findings, and a different date from the JSON export for those. It now takes the scan time as first seen when a finding has no history, as the JSON export does (#6128).
+- Without JavaScript, the HTML report showed and printed only the first page of each findings list. Every row now shows and prints, with its evidence open when printed, under a note giving the range it adds (#6128).
 - `GET /v1/graph` no longer returns `503 current_estate_building` on every request when all the evidence behind the current graph is older than `AGENT_BOM_GRAPH_RETENTION_DAYS`. Age retention was deleting the rebuildable current-estate view as soon as it was built. That view is now exempt from age retention and keeps its evidence time as `created_at` (#6228).
 
 ## [0.114.0] - 2026-11-08

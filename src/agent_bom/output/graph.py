@@ -47,6 +47,7 @@ from agent_bom.output.graph_policy import _summarize_package_vulns as _summarize
 from agent_bom.security import sanitize_launch_command, sanitize_text
 
 if TYPE_CHECKING:
+    from agent_bom.finding import Finding
     from agent_bom.models import AIBOMReport, BlastRadius
 
 __all__ = ["_CDN_FALLBACK_TAGS", "_GRAPH_HTML_TEMPLATE", "_PackageVulnSummary", "_SEVERITY_BADGE", "_VENDOR_JS_FILES",
@@ -61,6 +62,8 @@ def build_graph_elements(
     include_cve_nodes: bool = True,
     *,
     collapse_cves: bool = False,
+    findings: list["Finding"] | None = None,
+    unified_findings: list["Finding"] | None = None,
 ) -> list[dict]:
     """Build a Cytoscape.js-compatible element list with provider, agent, server, package, and CVE nodes.
 
@@ -88,7 +91,7 @@ def build_graph_elements(
     """
     from agent_bom.output.finding_views import cve_findings, topology_package_key, topology_vuln_dict
 
-    findings = cve_findings(report, blast_radii)
+    findings = findings if findings is not None else cve_findings(report, blast_radii)
     elements: list[dict] = []
     vuln_pkg_keys: set[tuple[str, str, str]] = {topology_package_key(finding) for finding in findings}
 
@@ -97,13 +100,10 @@ def build_graph_elements(
 
     cve_nodes_seen: set[str] = set()
 
-    # Build a lookup: (pkg_name, ecosystem) → list of vulnerability IDs
     pkg_to_vulns: dict[tuple[str, str, str], list[dict]] = {}
     for finding in findings:
         key = topology_package_key(finding)
-        if key not in pkg_to_vulns:
-            pkg_to_vulns[key] = []
-        pkg_to_vulns[key].append(topology_vuln_dict(finding))
+        pkg_to_vulns.setdefault(key, []).append(topology_vuln_dict(finding))
 
     for agent in report.agents:
         aid, static = append_agent_elements(elements, agent, providers_seen)
@@ -371,7 +371,7 @@ def build_graph_elements(
     _append_source_tool_elements(elements, report)
     append_framework_agent_elements(elements, report)
     _append_repo_structure_elements(elements, report, collapse_cves=collapse_cves, vuln_pkg_keys=vuln_pkg_keys)
-    elements.extend(_graph_policy_finding_elements(report))
+    elements.extend(_graph_policy_finding_elements(report, unified_findings))
     return stamp_export_entity_types(elements)
 
 
@@ -696,6 +696,7 @@ def _append_repo_structure_elements(
 def build_attack_flow_elements(
     report: "AIBOMReport",
     blast_radii: list["BlastRadius"] | None = None,
+    findings: list["Finding"] | None = None,
 ) -> list[dict]:
     """Build recorded CVE → package → context paths.
 
@@ -705,7 +706,7 @@ def build_attack_flow_elements(
     """
     from agent_bom.output.finding_views import cve_findings, package_ecosystem, package_name, package_version, severity_value
 
-    findings = cve_findings(report, blast_radii)
+    findings = findings if findings is not None else cve_findings(report, blast_radii)
     if not findings:
         return []
 
