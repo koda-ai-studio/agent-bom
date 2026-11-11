@@ -1872,7 +1872,7 @@ def test_graph_store_init_adds_query_indexes(mock_pool, mock_maintenance_pool):
     assert any("idx_pg_attack_paths_scan_risk" in sql for sql, _ in mock_pool._conn.executed)
     assert any("idx_pg_attack_paths_source_risk" in sql for sql, _ in mock_pool._conn.executed)
     assert any("idx_pg_graph_node_search_trgm" in sql for sql, _ in mock_pool._conn.executed)
-    assert any("idx_pg_graph_node_search_lower_trgm" in sql for sql, _ in mock_pool._conn.executed)
+    assert not any("idx_pg_graph_node_search_lower_trgm" in sql for sql, _ in mock_pool._conn.executed)
 
 
 def test_graph_snapshot_stats_uses_bounded_unfiltered_edge_aggregation():

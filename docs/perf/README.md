@@ -52,6 +52,12 @@ Current raw result artifact:
   — collect, scan, ingest, store, query, export, retention, rebuild, restart,
   SIGKILL cancellation and two-replica runs on SQLite and Postgres; summarized in
   [`PERFORMANCE_BENCHMARKS.md`](../PERFORMANCE_BENCHMARKS.md#end-to-end-workflow-budgets).
+- [`results/workflow-postgres-plans-2026-11-11.json`](results/workflow-postgres-plans-2026-11-11.json)
+  — Postgres hot-read plans at four tenants before and after migration
+  `20261111_01`, index usage, write and migration cost, the 200-agent Postgres
+  run with field equivalence, graph-page growth probes and the 1,000-agent push;
+  summarized in
+  [`PERFORMANCE_BENCHMARKS.md`](../PERFORMANCE_BENCHMARKS.md#postgres-query-plans-and-tenant-scoped-indexes).
 
 - [`results/image-scan-end-to-end-2026-10-26.json`](results/image-scan-end-to-end-2026-10-26.json)
   — `php:8.3.30-cli` and 40,000-package manifest before/after wall time, max

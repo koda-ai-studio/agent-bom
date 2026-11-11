@@ -7,6 +7,6 @@ JOIN graph_nodes gn
  AND gn.tenant_id = gns.tenant_id
 WHERE gns.tenant_id = 'default'
   AND gns.scan_id = 'graph-benchmark-estate-current'
-  AND LOWER(gns.search_text) LIKE '%langchain%'
+  AND gns.search_text LIKE '%langchain%'
 ORDER BY gn.severity_id DESC, gn.risk_score DESC, gn.label ASC, gn.id ASC
 LIMIT 50;

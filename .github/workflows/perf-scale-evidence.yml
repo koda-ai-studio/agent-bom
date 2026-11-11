@@ -293,3 +293,85 @@ jobs:
           name: workflow-resource-budget
           path: workflow-resource-budget.json
           if-no-files-found: ignore
+
+  workflow-resource-budget-postgres:
+    # Same cadence as the SQLite job. The database is migrated and its roles are
+    # provisioned exactly as in postgres-scale-evidence.yml; the API connects as
+    # the non-superuser app role so row-level security is in force.
+    if: github.event.schedule == '30 3 * * *' || (github.event_name == 'workflow_dispatch' && inputs.workflow_budget == true)
+    name: Workflow resource profile (small-self-hosted and two replicas, Postgres 16)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: agent_bom
+          POSTGRES_PASSWORD: agent_bom
+          POSTGRES_DB: agent_bom
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agent_bom"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      AGENT_BOM_POSTGRES_URL: postgresql://agent_bom_app:benchmark_app@localhost:5432/agent_bom
+      AGENT_BOM_AUDIT_HMAC_KEY: workflow-resource-budget-audit-signing-key
+      AGENT_BOM_POSTGRES_MAINTENANCE_URL: postgresql://agent_bom_maintenance:benchmark_maintenance@localhost:5432/agent_bom
+      AGENT_BOM_POSTGRES_ADMIN_URL: postgresql://agent_bom:agent_bom@localhost:5432/agent_bom
+      AGENT_BOM_POSTGRES_POOL_MIN_SIZE: "1"
+      AGENT_BOM_POSTGRES_POOL_MAX_SIZE: "4"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: "3.11"
+
+      - name: Install agent-bom (from source)
+        run: uv sync --frozen --extra api --extra dev --extra postgres
+
+      - name: Migrate ephemeral Postgres schema
+        env:
+          ALEMBIC_DATABASE_URL: postgresql+psycopg://agent_bom:agent_bom@localhost:5432/agent_bom
+        run: |
+          uv run python - <<'PY'
+          import os
+
+          import psycopg
+
+          with psycopg.connect(os.environ["AGENT_BOM_POSTGRES_ADMIN_URL"], autocommit=True) as connection:
+              connection.execute("ALTER DATABASE agent_bom SET init.app_password = 'benchmark_app'")
+              connection.execute("ALTER DATABASE agent_bom SET init.maintenance_password = 'benchmark_maintenance'")
+          PY
+          uv run alembic -c deploy/supabase/postgres/alembic.ini upgrade head
+
+      - name: Measure the Postgres workflow profiles
+        run: >-
+          uv run python scripts/run_workflow_resource_benchmark.py
+          --profile small-self-hosted-postgres --profile multi-replica-local
+          --postgres-url "$AGENT_BOM_POSTGRES_URL"
+          --output workflow-resource-budget-postgres.json
+
+      - name: Record hot-read query plans
+        if: always()
+        run: >-
+          uv run python scripts/run_graph_postgres_explain.py --run --hot-reads --hot-reads-only
+          --dsn "$AGENT_BOM_POSTGRES_URL"
+          --output-dir "$RUNNER_TEMP/workflow-query-plans"
+          --summary-output workflow-query-plans.json
+
+      - name: Upload measurement
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workflow-resource-budget-postgres
+          path: |
+            workflow-resource-budget-postgres.json
+            workflow-query-plans.json
+            ${{ runner.temp }}/workflow-query-plans/hot-reads/*.json
+          if-no-files-found: ignore

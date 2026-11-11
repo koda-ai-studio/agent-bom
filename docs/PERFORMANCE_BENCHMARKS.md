@@ -412,32 +412,36 @@ Cold, warm, restart, cancellation and replicas:
   167-169 CPU-seconds with peak RSS 1,656-1,706 MiB; the pair took 179 s wall.
   The database grew 183-190 MB across both pushes, with about 1.1 GB of WAL.
 
-Findings from these runs:
+Findings from these runs, re-checked on 2026-11-11 (see "Product findings,
+re-checked" below for the evidence behind each verdict):
 
-- **Memory headroom is thin.** Peak RSS was 1.66 GiB on SQLite and 1.87-1.97 GiB
-  on Postgres, against a 2 GiB limit, for one 200-agent push plus a rebuild in
-  the same process. The peaks come from ingest and rebuild of the 73 MB report.
-  Larger estates need more memory, or ingest moved to a worker process
-  (`AGENT_BOM_API_ROLE=worker`).
+- **Memory headroom is thin (confirmed).** Peak RSS was 1.66 GiB on SQLite and
+  1.87-1.97 GiB on Postgres, against a 2 GiB limit, for one 200-agent push plus a
+  rebuild in the same process. The peaks come from ingest and rebuild of the
+  73 MB report. Larger estates need more memory, or ingest moved to a worker
+  process (`AGENT_BOM_API_ROLE=worker`).
 - **The report payload dominates bytes.** The CLI JSON report is about 367 KB
   per agent, and it is sent twice when a client retries.
-- **The graph page grows with retained data.** `GET /v1/graph?limit=100` returned
-  2.6 MB, then 4.1 MB, then 6.7 MB as more jobs were stored, at the same limit.
-- **An identical re-push after retention is refused.** Once retention expires a
-  pushed job, an identical async push returns `409 ... no longer retained; push
-  again` on every attempt. The content idempotency key stays live for
-  `AGENT_BOM_IDEMPOTENCY_TTL_HOURS` (default 24), so "push again" cannot succeed
-  with the same content. A fresh `Idempotency-Key` works, and the rebuild above
-  uses one.
+- **The graph page grows with retained data (only for unscoped pushes).**
+  `GET /v1/graph?limit=100` returned 2.6 MB, then 4.1 MB, then 6.7 MB as more
+  jobs were stored, at the same limit. The harness then pushed raw reports with
+  no `source_id` or `target_scope`, which the API keeps as independent evidence.
+- **An identical re-push after retention is refused (confirmed).** Once
+  retention expires a pushed job, an identical async push returns `409 ... no
+  longer retained; push again` on every attempt. The content idempotency key
+  stays live for `AGENT_BOM_IDEMPOTENCY_TTL_HOURS` (default 24), so "push again"
+  cannot succeed with the same content. A fresh `Idempotency-Key` works, and the
+  rebuild above uses one.
 
 **PR regression budget** (`tests/test_workflow_resource_budget.py`, runs in the
-isolated `graph_performance` CI step, about 20 s locally): `ci-budget` profile,
+isolated `graph_performance` CI step, about 35 s locally): `ci-budget` profile,
 fresh SQLite. Accuracy and request-shape checks are exact. Resource ceilings
 are several times the measurement, so a 4-vCPU runner does not flake:
 
 | Budget | Measured | Ceiling | Why this margin |
 |---|---:|---:|---|
 | Finding sets (scan = fixture, store = scan, rebuild = store) | 35 = 35 = 35 | exact | accuracy is not a tolerance |
+| Field equivalence after ingest, rebuild and update/delete (see below) | no mismatch | exact | accuracy is not a tolerance |
 | Outbound connections | 0 | 0 | offline proof |
 | Upstream requests per package | 0.16 (93 / 573) | 0.5 | a new per-package call adds ≥ 1 per package |
 | JSON report | 10.6 MB | 24 MiB | sizes are near-deterministic; ~2x |
@@ -445,21 +449,182 @@ are several times the measurement, so a 4-vCPU runner does not flake:
 | Largest read response | 2.0 MB | 4 MiB | ~2x |
 | Read p95 (8 samples, effectively max) | ≤ 2.0 s | 8 s | catches stalls only; latency is not a PR SLO |
 | CPU-seconds per stage | 0.03-5.5 | 2-25 | 3-5x for runner variance |
-| Whole run CPU-seconds | 17-27 | 90 | 3-5x |
-| Peak RSS | 410-540 MiB | 1,536 MiB | profile limit less runner headroom |
+| Whole run CPU-seconds | 17-27; 35 with the update/delete stage | 120 | 3-5x |
+| Peak RSS | 410-645 MiB | 1,536 MiB | profile limit less runner headroom |
 
 The `small-self-hosted` SQLite profile runs nightly in `perf-scale-evidence.yml`
-(job `workflow-resource-budget`, or dispatch with `workflow_budget`). That job
-fails on any crash, finding mismatch or outbound connection; it has no timing
-gate.
+(job `workflow-resource-budget`, or dispatch with `workflow_budget`). The
+Postgres profiles run beside it in `workflow-resource-budget-postgres`: a
+Postgres 16 service migrated and role-provisioned exactly as in
+`postgres-scale-evidence.yml`, the API connected as the non-superuser
+`agent_bom_app`, `small-self-hosted-postgres` and `multi-replica-local`, then
+the hot-read plans below. Both jobs fail on any crash, finding mismatch,
+equivalence failure or outbound connection; neither has a timing gate.
+
+### How pushes are modelled
+
+The harness pushes what `agent-bom agents --inventory FILE --no-discover
+--push-url` sends (`cli_push_body` in `scripts/perf/workflow_profiles.py`): the
+sanitized report plus `source_id` and the `target_scope` the CLI hashes from the
+inventory path and collection options. The first version of this harness pushed
+the raw report. A push with neither field is independent evidence: it never
+replaces an earlier report and never resolves a finding
+([`FINDING_LIFECYCLE.md`](FINDING_LIFECYCLE.md#ingest-paths)). Results from the
+raw-report runs above are kept as measured; where the push shape changes a
+conclusion, the section below says so.
+
+### Equivalence through update, delete, retention and rebuild
+
+`scripts/perf/workflow_equivalence.py` and `workflow_lifecycle.py` compare, per
+finding `(advisory, package, version)`, the identity (`canonical_id`,
+`package_stable_id`, ecosystem), source (`primary_advisory_source`,
+`advisory_sources`, `severity_source`), time (`published_at`, `modified_at`),
+scope (`affected_agents`, `affected_servers`, `affected_agent_ids`, `asset`) and
+coverage (`advisory_coverage_state`) fields. Each check is exact:
+
+| After | Check |
+|---|---|
+| Ingest | stored rows equal the scan field for field; `/v1/findings` serves exactly the stored set as open |
+| Identical retry | the same job (unchanged) |
+| Retention and rebuild | rebuilt rows equal the first stored copy field for field; the open set equals the estate; every `finding_id` and `first_seen` is unchanged |
+| Update/delete push (one vulnerable package removed everywhere, another added to one more agent) | stored rows equal the new scan; the open set equals the new estate; the removed finding is `resolved` / `no_longer_detected`; the widened finding's scope carries the new agent; ids and `first_seen` are unchanged; the current graph drops the removed package node |
+| Restart | the newest stored job's key and field digests equal the last job the warm run stored |
+
+Measured 2026-11-11, 200 agents, Postgres 16 migrated to `20261111_01`, cold
+run: all checks passed. After the update push, the current graph dropped the
+removed package after **13.1 s** (0.7 s at 12 agents) because it rebuilds
+asynchronously; the removed finding left the open set at once.
+
+Two behaviours the checks surfaced:
+
+- **A resolved finding loses its package identity.** Right after a push resolves
+  it, `/v1/findings?status=resolved` serves the row with `package`,
+  `package_version`, `ecosystem` and `scan_id` null; the advisory, asset,
+  `finding_id`, dates and resolution are intact. Reproduced on SQLite and
+  Postgres; the harness reports it under `known_gaps` and
+  `tests/test_workflow_push_lifecycle_gaps.py` holds a strict xfail for it.
+- **An older report delivered after a newer one.** Pushing the original report
+  again after the update push (new key, older `generated_at`) left the finding
+  `resolved`, as the lifecycle rules say: evidence time wins over arrival. The
+  current graph, which follows the latest stored job, showed the removed package
+  again. Findings and graph disagree until the next current push. Measured on a
+  12-agent SQLite store; not a harness failure, because the harness now rebuilds
+  before the update.
+
+A third behaviour explains the raw-push graph growth: **agent ids embed a hash
+of the inventory file path.** Two scans of the same estate from different paths
+give every finding different `affected_agent_ids` and the graph different agent
+node ids. A CLI-scoped push replaces the earlier report, so the change is
+invisible; two unscoped pushes keep both copies.
+
+### A larger push: 1,000 agents
+
+Profile `large-push-sqlite` (1,000 agents, 19,105 packages, 827 findings), one
+cold run on SQLite under a 9 GiB RSS watchdog. **It does not fit in one push.**
+The CLI JSON report is 330 MB (about 330 KB per agent). The API refused it with
+`413`: it is over the default `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` (192 MiB),
+and over the 240 MiB cap that setting allows, so no configuration accepts it.
+The scan alone peaked at 2,431 MiB RSS, above the 2 GiB pilot limit, before
+ingest started; the run took 256 s to the rejection. An estate this size has to
+be pushed in several scans of at most about 550 agents each, by the 192 MiB
+default and this fixture's report size.
+
+### Postgres query plans and tenant-scoped indexes
+
+The statements behind the hot reads were taken from `pg_stat_statements` while
+the harness served `/v1/findings`, `/v1/inventory/assets`, `/v1/graph`,
+`/v1/graph/search`, `/v1/graph/incident-edges`, `/v1/graph/attack-paths`,
+`/v1/jobs` and `/v1/reports/{id}` on the 200-agent store. They are listed in
+`scripts/perf/postgres_hot_reads.py`, which imports the application's own SQL
+fragments where it has them, and explained with `EXPLAIN (ANALYZE, BUFFERS)` as
+`agent_bom_app` with `app.tenant_id` set, so row-level security is in the plan:
+
+```bash
+python scripts/run_graph_postgres_explain.py --run --hot-reads --hot-reads-only \
+  --dsn postgresql://agent_bom_app:...@HOST/agent_bom --output-dir /tmp/plans --summary-output /tmp/plans.json
+```
+
+With a single tenant, every row is that tenant's, so a plan that ignores the
+tenant looks the same as one that uses it. The estate's hot-table rows were
+therefore copied into three more tenants and the database analyzed (four
+tenants, 22,980 graph nodes, 25,480 edges and 3,712 lifecycle rows each; 880 MB).
+`scripts/perf/postgres_plans.py` flags a sequential scan of a tenant table past
+1,000 examined rows and any index on a tenant table whose leading key is not
+`tenant_id` or `team_id`.
+
+| Read | Statement | Plan (four tenants) | Rows | ms |
+|---|---|---|---:|---:|
+| `/v1/findings` | live lifecycle rows | bitmap `idx_finding_lifecycle_last_job` | 3,712 | 2.7 |
+| `/v1/findings` | lifecycle payloads by key | `finding_lifecycle_pkey` | 23 | 0.1 |
+| `/v1/findings` | job payload | sequential, `scan_jobs` (under 30 rows) | 1 | 11 |
+| `/v1/inventory/assets` | inventory page | `idx_pg_graph_nodes_scan_order` | 102 | 1.3 |
+| `/v1/graph` | current-graph node load | bitmap `idx_pg_graph_nodes_scan` | 11,490 | 47 |
+| `/v1/graph` | current-graph edge load | bitmap `idx_pg_graph_edges_scan` | 12,740 | 11 |
+| `/v1/graph/incident-edges` | out / in seek | `idx_pg_adjacency_out` / `_in` | 1 | 0.05 |
+| `/v1/graph/search?q=agent` | match count | bitmap `idx_pg_graph_node_search_severity` | 11,490 | 62 |
+| `/v1/reports/{id}` | retained report | sequential, `report_jobs` (8 rows) | 1 | 0.01 |
+
+No hot read scans a tenant table sequentially past the threshold, and every
+index used leads with the tenant. Raw plans and reviews:
+[`perf/results/workflow-postgres-plans-2026-11-11.json`](perf/results/workflow-postgres-plans-2026-11-11.json).
+
+What the plans also show:
+
+- `/v1/graph` pages do not query Postgres per request. A process loads the whole
+  current snapshot once (the node and edge loads above) and serves pages from
+  it, so the per-request cost is CPU and memory in the API process, not SQL.
+- `/v1/assets` reads the vulnerability-asset tracker, a local SQLite file per
+  API process, on every deployment. Pushes do not fill it: on the 200-agent
+  Postgres store it returned no assets. The Postgres asset read is
+  `/v1/inventory/assets`.
+- Graph search uses `idx_pg_graph_node_search_trgm` for selective terms. A GIN
+  trigram index cannot lead with `tenant_id` without `btree_gin`, so its
+  candidates span every tenant and scan: 144-163 candidate rows for 8 matches
+  of `agent-00164` at four tenants. Not changed here.
+
+**Indexes dropped** (migration `20261111_01_drop_redundant_indexes`, guarded by
+`tests/test_postgres_redundant_index_migration.py`). None was scanned once after
+two full 200-agent pushes and the reads above:
+
+| Index | Why it can never help | Size, four tenants |
+|---|---|---:|
+| `idx_pg_graph_node_search_lower_trgm` | GIN on `LOWER(search_text)`; `search_text` is stored lowercased and search filters `search_text LIKE`, so the expression never matches | 77 MB |
+| `idx_pg_graph_nodes_entity_type` | `entity_type` alone on a tenant table; every read filters tenant and scan first | 848 KB |
+| `idx_jobs_team_created`, `idx_jobs_batch`, `idx_jobs_parent`, `idx_jobs_schedule` | column-for-column duplicates of `idx_pg_jobs_*` | 16 KB each |
+
+`init.sql` now creates the `idx_pg_jobs_*` names, and neither bootstrap file nor
+the runtime DDL recreates a dropped index. Both bootstrap paths still render one
+schema (`check_postgres_schema_parity.py`).
+
+| Write cost per 200-agent push (same database, three pushes each, last pair interleaved) | With | Without |
+|---|---:|---:|
+| WAL written | 619 / 676 / 658 MB | 401 / 385 / 428 MB |
+| `graph_node_search` index size | 175 MB | 97 MB |
+
+That is about 38% less WAL per push. Ingest CPU (43-72 s) was too noisy at load
+9-10 to attribute. On a fresh database at the new head, the first 200-agent
+push wrote 200 MB of WAL and grew the database by 102 MB, against 292 MB and
+113 MB before.
+
+**Migration cost** on the 880 MB, four-tenant database: upgrade 1.1 s wall
+(about 0.9 s of that is Alembic start-up) and 0.26 MB of WAL; downgrade, which
+rebuilds all six indexes concurrently, 18.1 s and 42 MB of WAL; re-upgrade
+1.0 s. Both directions use `CONCURRENTLY`, so no table is locked.
+
+### Product findings, re-checked
+
+| Finding from the first runs | Verdict | Evidence |
+|---|---|---|
+| Peak RSS 1.66-1.97 GiB against the 2 GiB limit | **Confirmed, and exceeded** | 200 agents on Postgres: cold child 1,804 MiB and warm 1,772 MiB in the raw-push runs; with the update/delete push added (a second scan and push in the same process), the cold process peaked at 2,044.5 MiB. A 1,000-agent scan alone peaked at 2,431 MiB |
+| Identical push after retention returns 409 for up to 24 h | **Confirmed** | Every run records `identical_repush_status: 409`, raw and CLI-shaped bodies; strict xfail `test_identical_push_after_retention_is_admitted_again` |
+| `GET /v1/graph?limit=100` grows 2.6 → 6.7 MB with stored jobs | **Confirmed only for pushes without `source_id` and `target_scope`** | Three separate scans of one 12-agent estate: unscoped 1.98 → 3.45 MB and 1,630 → 1,849 nodes (agent ids embed a config-path hash, so the union holds both copies); CLI-scoped 1.97 MB and 1,630 nodes each time. At 200 agents on Postgres with CLI-scoped pushes the page stayed 2.55 MB across cold, warm and restart. Guarded by `test_rescans_pushed_by_one_cli_source_replace_rather_than_grow_the_graph`. Four identical bodies did not grow it in either mode |
+| First `/v1/graph` read after a restart returns 503 | **Confirmed as a timing condition, not on every restart** | A new process builds the current graph on its first read and waits `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default 2,000 ms); past that it answers `503 current_estate_building` with `Retry-After: 1` while the build finishes. 200 agents on Postgres: raw pushes (two independent reports to merge) 503 after 2.39 s; CLI-scoped pushes (one report) 200 after 1.27 s. At 12 agents both modes returned 200 in under 1.0 s. Larger estates will cross the budget whatever the push shape; nothing prewarms the current graph at start-up |
 
 **Not measured here:** a real multi-node Kubernetes deployment, or replicas
 behind a load balancer (the replicas above are two local processes on one
-host); Postgres under the nightly job (it needs the migration and role setup
-from `postgres-scale-evidence.yml`); query plans and index choice for these
-reads (see `scripts/run_graph_postgres_explain.py`); migration cost; enforced
-cgroup CPU and memory limits; estates beyond 200 agents per push; and any
-monetary cost, because no provider prices were used.
+host); the two-replica profile with CLI-shaped pushes (it runs nightly; locally
+it was measured only with raw pushes); SQLite query plans; enforced cgroup CPU
+and memory limits; and any monetary cost, because no provider prices were used.
 
 ---
 

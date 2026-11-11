@@ -171,6 +171,13 @@ async def test_a_burst_of_distinct_sources_queues_rather_than_being_refused(monk
     assert [response.status_code for response in responses if response is not None] == []
 
 
+# A stalled read returns this long after the deadline, and a refusal must arrive
+# within the slack: wrong behaviour takes at least 5 s more, so a loaded runner's
+# scheduling delay cannot be mistaken for it.
+_STALL_PAST_DEADLINE_SECONDS = 5.0
+_SCHEDULING_SLACK_SECONDS = 2.0
+
+
 @pytest.mark.asyncio
 async def test_a_stalled_store_stays_bounded_and_abandons_queued_reads(monkeypatch):
     policy = AuthFailurePolicy()
@@ -179,7 +186,7 @@ async def test_a_stalled_store_stays_bounded_and_abandons_queued_reads(monkeypat
 
     def stalled(source, _now):
         calls.append(source)
-        gate.wait(_ADMISSION_DEADLINE_SECONDS + 1)
+        gate.wait(_ADMISSION_DEADLINE_SECONDS + _STALL_PAST_DEADLINE_SECONDS)
         return 0
 
     monkeypatch.setattr(policy.store, "remaining", stalled)
@@ -188,7 +195,7 @@ async def test_a_stalled_store_stays_bounded_and_abandons_queued_reads(monkeypat
     elapsed = time.monotonic() - started
     gate.set()
     assert all(response.status_code == 503 for response in responses)
-    assert elapsed < _ADMISSION_DEADLINE_SECONDS + 0.7  # Refused at the deadline, not after draining a queue.
+    assert elapsed < _ADMISSION_DEADLINE_SECONDS + _SCHEDULING_SLACK_SECONDS  # Refused at the deadline, not when a stalled read returns.
     assert len(calls) <= 8  # Reads abandoned at the deadline never run.
     for _ in range(200):
         if policy._outstanding == 0:
@@ -202,13 +209,14 @@ async def test_a_stalled_store_stays_bounded_and_abandons_queued_reads(monkeypat
 async def test_a_read_that_never_finishes_in_time_still_fails_closed_at_the_deadline(monkeypatch):
     policy = AuthFailurePolicy()
     gate = threading.Event()
-    monkeypatch.setattr(policy.store, "remaining", lambda *_args: gate.wait(_ADMISSION_DEADLINE_SECONDS + 1) and 0)
+    stall = _ADMISSION_DEADLINE_SECONDS + _STALL_PAST_DEADLINE_SECONDS
+    monkeypatch.setattr(policy.store, "remaining", lambda *_args: gate.wait(stall) and 0)
     started = time.monotonic()
     response = await policy.before(_request("198.51.100.77"))
     elapsed = time.monotonic() - started
     gate.set()
     assert response.status_code == 503
-    assert elapsed < _ADMISSION_DEADLINE_SECONDS + 0.5
+    assert elapsed < _ADMISSION_DEADLINE_SECONDS + _SCHEDULING_SLACK_SECONDS
     assert policy._unavailable_until == 0
 
 

@@ -13,6 +13,7 @@ import json
 import threading
 from collections import Counter
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -88,6 +89,19 @@ PROFILES: dict[str, WorkflowProfile] = {
             memory_limit_mib=2048,
         ),
         WorkflowProfile(
+            name="large-push-sqlite",
+            description="One 1,000-agent push on SQLite, measured against the same 2 GiB pilot limit",
+            agents=1000,
+            seed=ESTATE_SEED,
+            vulnerable_package_rate=0.08,
+            store="sqlite",
+            api_replicas=1,
+            concurrent_pushes=1,
+            query_repeats=5,
+            cpu_limit=2.0,
+            memory_limit_mib=2048,
+        ),
+        WorkflowProfile(
             name="multi-replica-local",
             description="Two API processes sharing one Postgres, each pushing its own estate concurrently",
             agents=200,
@@ -138,6 +152,33 @@ def inventory_from_estate(report: dict[str, Any]) -> dict[str, Any]:
             for agent in report["agents"]
         ],
     }
+
+
+WORKFLOW_PUSH_SOURCE_ID = "workflow-benchmark-host"
+# The operator's inventory file. Every phase scans a copy, but the push scope models
+# one host re-running one command, so a later push replaces the earlier one.
+WORKFLOW_INVENTORY_TARGET = Path("/srv/agent-bom/inventory.json")
+
+
+def cli_push_body(
+    report_bytes: bytes, inventory_target: Path = WORKFLOW_INVENTORY_TARGET, *, source_id: str = WORKFLOW_PUSH_SOURCE_ID
+) -> bytes:
+    """The body ``agent-bom agents --inventory PATH --no-discover --push-url`` sends for this report.
+
+    The CLI sanitizes the report, adds the endpoint ``source_id`` and the
+    ``target_scope`` it hashes from the inventory path and collection options, so
+    a later push of the same inventory path replaces this one. The content
+    idempotency key the CLI also adds is left out: the harness sets keys per push.
+    """
+    from types import SimpleNamespace
+
+    from agent_bom.evidence.push_scope import cli_target_scope
+    from agent_bom.push import sanitize_results
+
+    scope = cli_target_scope(SimpleNamespace(inventory=str(inventory_target), no_discover=True))
+    body = sanitize_results({**json.loads(report_bytes), "target_scope": scope}, source_id=source_id)
+    body.pop("idempotency_key", None)
+    return json.dumps(body).encode()
 
 
 def vulnerable_versions(report: dict[str, Any]) -> dict[tuple[str, str], str]:
