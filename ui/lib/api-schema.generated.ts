@@ -19334,6 +19334,8 @@ export interface components {
             scan_id: string;
             /** Schema Version */
             schema_version: string;
+            /** @description Serving-endpoint evidence for a model asset discovered by --serving-endpoint; null for other assets */
+            serving_evidence?: components["schemas"]["ServingEvidence"] | null;
             /** Snapshot Generation */
             snapshot_generation: string;
             /** Sources */
@@ -24313,6 +24315,93 @@ export interface components {
             scanned_scopes?: number | null;
             /** State */
             state: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ServingCollectionEvidence */
+        ServingCollectionEvidence: {
+            /** Completeness */
+            completeness: string;
+            /** Detail */
+            detail: string;
+            /**
+             * Not Collected
+             * @description settings the probe did not read, such as bind, TLS, authentication and quotas
+             */
+            not_collected: string[];
+            /** Observed At */
+            observed_at: string;
+            /** Permissions Used */
+            permissions_used: string[];
+            /**
+             * Request Identity
+             * @description bearer when a configured token was sent, anonymous otherwise; never the token
+             */
+            request_identity: string;
+            /**
+             * Status
+             * @description success or partial; failed endpoints produce no asset
+             */
+            status: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ServingEndpointEvidence */
+        ServingEndpointEvidence: {
+            /** Host */
+            host: string;
+            /** Port */
+            port: number | null;
+            /** Url */
+            url: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ServingEvidence
+         * @description What one serving-endpoint probe recorded for one model, kept as separate identities.
+         */
+        ServingEvidence: {
+            collection: components["schemas"]["ServingCollectionEvidence"];
+            endpoint: components["schemas"]["ServingEndpointEvidence"];
+            model: components["schemas"]["ServingModelEvidence"];
+            runtime: components["schemas"]["ServingRuntimeEvidence"];
+            /**
+             * Unknown Identities
+             * @description container, GPU, calling agent and principal; null means not collected
+             */
+            unknown_identities: {
+                [key: string]: string | null;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** ServingModelEvidence */
+        ServingModelEvidence: {
+            /** Artifact Ref */
+            artifact_ref: string | null;
+            /** Digest */
+            digest: string | null;
+            /** Served Name */
+            served_name: string;
+            /** State */
+            state: string | null;
+            /** Version */
+            version: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ServingRuntimeEvidence */
+        ServingRuntimeEvidence: {
+            /**
+             * Identity
+             * @description confirmed when the response proved the runtime, declared when only the operator named it
+             */
+            identity: string;
+            /** Name */
+            name: string;
+            /** Version */
+            version: string | null;
         } & {
             [key: string]: unknown;
         };

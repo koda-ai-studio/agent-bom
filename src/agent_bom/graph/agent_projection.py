@@ -199,6 +199,7 @@ def _add_agent_node(graph: UnifiedGraph, agent: AgentScope) -> None:
                 "cloud_state": agent.agent_metadata.get("cloud_state"),
                 "cloud_scope": agent.agent_metadata.get("cloud_scope"),
                 "cloud_principal": agent.agent_metadata.get("cloud_principal"),
+                **({"serving_evidence": serving} if (serving := agent.agent_metadata.get("serving_evidence")) else {}),
             },
             dimensions=NodeDimensions(
                 agent_type="" if agent.static_inventory else agent.agent_type,

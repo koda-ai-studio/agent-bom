@@ -28758,6 +28758,17 @@
             "title": "Schema Version",
             "type": "string"
           },
+          "serving_evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServingEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Serving-endpoint evidence for a model asset discovered by --serving-endpoint; null for other assets"
+          },
           "snapshot_generation": {
             "title": "Snapshot Generation",
             "type": "string"
@@ -43701,6 +43712,226 @@
           "state"
         ],
         "title": "ServiceState",
+        "type": "object"
+      },
+      "ServingCollectionEvidence": {
+        "additionalProperties": true,
+        "properties": {
+          "completeness": {
+            "title": "Completeness",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "not_collected": {
+            "description": "settings the probe did not read, such as bind, TLS, authentication and quotas",
+            "items": {
+              "type": "string"
+            },
+            "title": "Not Collected",
+            "type": "array"
+          },
+          "observed_at": {
+            "title": "Observed At",
+            "type": "string"
+          },
+          "permissions_used": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions Used",
+            "type": "array"
+          },
+          "request_identity": {
+            "description": "bearer when a configured token was sent, anonymous otherwise; never the token",
+            "title": "Request Identity",
+            "type": "string"
+          },
+          "status": {
+            "description": "success or partial; failed endpoints produce no asset",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "completeness",
+          "observed_at",
+          "permissions_used",
+          "request_identity",
+          "not_collected",
+          "detail"
+        ],
+        "title": "ServingCollectionEvidence",
+        "type": "object"
+      },
+      "ServingEndpointEvidence": {
+        "additionalProperties": true,
+        "properties": {
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "port": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Port"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "host",
+          "port"
+        ],
+        "title": "ServingEndpointEvidence",
+        "type": "object"
+      },
+      "ServingEvidence": {
+        "additionalProperties": true,
+        "description": "What one serving-endpoint probe recorded for one model, kept as separate identities.",
+        "properties": {
+          "collection": {
+            "$ref": "#/components/schemas/ServingCollectionEvidence"
+          },
+          "endpoint": {
+            "$ref": "#/components/schemas/ServingEndpointEvidence"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ServingModelEvidence"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/ServingRuntimeEvidence"
+          },
+          "unknown_identities": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "container, GPU, calling agent and principal; null means not collected",
+            "title": "Unknown Identities",
+            "type": "object"
+          }
+        },
+        "required": [
+          "runtime",
+          "endpoint",
+          "model",
+          "unknown_identities",
+          "collection"
+        ],
+        "title": "ServingEvidence",
+        "type": "object"
+      },
+      "ServingModelEvidence": {
+        "additionalProperties": true,
+        "properties": {
+          "artifact_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Ref"
+          },
+          "digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Digest"
+          },
+          "served_name": {
+            "title": "Served Name",
+            "type": "string"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "served_name",
+          "artifact_ref",
+          "digest",
+          "version",
+          "state"
+        ],
+        "title": "ServingModelEvidence",
+        "type": "object"
+      },
+      "ServingRuntimeEvidence": {
+        "additionalProperties": true,
+        "properties": {
+          "identity": {
+            "description": "confirmed when the response proved the runtime, declared when only the operator named it",
+            "title": "Identity",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "identity"
+        ],
+        "title": "ServingRuntimeEvidence",
         "type": "object"
       },
       "SeverityCounts": {

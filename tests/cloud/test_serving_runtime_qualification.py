@@ -202,9 +202,10 @@ def test_package_detection_is_not_endpoint_evidence(tmp_path):
     assert component.component_type is AIComponentType.INFERENCE_SERVER
     assert not hasattr(component, "endpoint") and not hasattr(component, "serving_evidence")
 
-    # Endpoint evidence is produced only by the two endpoint probes.
+    # Endpoint evidence is produced only by the two endpoint probes; views only read or copy it.
     src = Path(__file__).resolve().parents[2] / "src" / "agent_bom"
-    writers = sorted(str(p.relative_to(src)) for p in src.rglob("*.py") if '"serving_evidence"' in p.read_text(encoding="utf-8"))
+    producer = '"serving_evidence": serving_evidence('
+    writers = sorted(str(p.relative_to(src)) for p in src.rglob("*.py") if producer in p.read_text(encoding="utf-8"))
     assert writers == ["cloud/ollama.py", "cloud/serving_runtimes.py"]
 
 

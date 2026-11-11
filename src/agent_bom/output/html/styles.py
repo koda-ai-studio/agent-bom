@@ -313,6 +313,9 @@ def render_styles(status_color: str) -> str:
     details[open] .agent-summary::before{{transform:rotate(90deg)}}
     .agent-detail{{padding:18px 22px;border-top:1px solid #0b112060}}
     .server-card{{background:#0b1120;border-radius:8px;padding:14px 16px;margin-bottom:10px;border-left:3px solid #334155;border:1px solid #ffffff04;border-left:3px solid #334155}}
+    .serving-evidence{{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 14px;margin:0 0 12px;padding:10px 14px;background:#0b1120;border-radius:8px;font-size:.74rem}}
+    .serving-evidence dt{{color:#64748b;font-weight:600}}
+    .serving-evidence dd{{margin:0;color:#cbd5e1;overflow-wrap:anywhere}}
     .pkg-row{{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #0a162830;font-size:.78rem}}
     .pkg-row:last-child{{border-bottom:none}}
     .pkg-name{{color:#e2e8f0}}

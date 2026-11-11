@@ -1,21 +1,21 @@
 {
  "demo": {
-  "html": "5082e57f31d5be1a3562ee2130952d141a50f7de6539fbc866545af4f4522705",
-  "html_offline": "4f7546776ab33af61d1c7f5fef6a0544a8c0f388a07fb8ad4644d87ddbd3e69d",
+  "html": "e83e26d04d5a33b8d3b824d1a49ba9a69befaaa35391bfe4b59d9611240a0bea",
+  "html_offline": "53606f82c9244fb272fedb2899538cbb79ca12c64d7fbb272ff8ea241881f62d",
   "sarif_exclude_unfixable": "e079e19b1e717188a9c0a01b442db76e6ae77413610f6540c82bb657b16973a6",
   "sarif_file": "9da109f44394ced141ce0cd41cf6b3689e6f3dddb9c221fd9b24011fa26688cd",
   "sarif_stdout": "e079e19b1e717188a9c0a01b442db76e6ae77413610f6540c82bb657b16973a6"
  },
  "empty": {
-  "html": "b832dd0ac1ed20380fbdc05f95770f32b063c435f796eb3bed9233b13eab746f",
-  "html_offline": "2de2a61e7b301b3f174f125fd0ac66f2c8a20caa02d7e8843ede86c06022dbf0",
+  "html": "befeefba4616aa3bce2f39761fd0b8a571d3aecd895db9694c222da12971b2fc",
+  "html_offline": "5d00f4fac479e1b9d7cccaa854a2d922a45ed257d2023446f097ce23873206bd",
   "sarif_exclude_unfixable": "443126d556126709d4c80bc44f573c69af3105ddb4a6ee86d4a649a811be9a05",
   "sarif_file": "dae062ed8d78e3efaef7ae08ec85030cde5514eb35bbbdd30b1e38eb13d6fee2",
   "sarif_stdout": "443126d556126709d4c80bc44f573c69af3105ddb4a6ee86d4a649a811be9a05"
  },
  "rich": {
-  "html": "72351d75092aab35aca11a854b64fb79a536ae62c2d6d4919f0c13030ffaf596",
-  "html_offline": "1c8b4dc3e80f0551a7f17356eda28b6de931dcdfdaa2a8bc4897400beedc5855",
+  "html": "27ea4ed33c7a452cee4759f6a9bfd6f1c7b7d24171bcfe9e3e9e66ae7ea4bb99",
+  "html_offline": "1836c1dfb0bcfa1e6098450bcb3ee8f745b66fb0ca4ec1eb14d4a6c05766cafa",
   "sarif_exclude_unfixable": "0eb9a16ea73a02e29c3d838deae030e4e06df9fad0a48f7dea4e192339b742b1",
   "sarif_file": "314e087249d213a592a2580470e8c106fab1be3b4807f17bdfc046785132afd3",
   "sarif_stdout": "ff211334576907037a6f1e9dbbd9f00a3a8df28551ffabb2809cd7536cea875d"

@@ -31,7 +31,24 @@ agent-bom reads only what you explicitly ask it to scan:
 | GitHub Actions | `--gha` | `.github/workflows/*.yml` files; reports AI/credential use plus unpinned remote actions, `pull_request_target`, and missing top-level `permissions:` policies |
 | SBOM files | `--sbom` | CycloneDX JSON/XML or SPDX JSON/tag-value you provide |
 | Ollama models | `--ollama`, optionally `--ollama-host` or `OLLAMA_HOST` | `GET /api/tags` on the selected endpoint; no inference or model downloads. Only the implicit localhost default can fall back to local model manifests. |
-| Self-hosted serving endpoints | `--serving-endpoint RUNTIME=URL` (repeatable; `vllm`, `tgi`, `triton`, `llamacpp`, `lmstudio`) | The runtime's documented model listing and metadata reads on that endpoint only, such as `GET /v1/models`, `GET /info` or Triton's `POST /v2/repository/index` listing request; no inference, model loads or downloads. No credentials are sent and a failed endpoint never falls back to local files. |
+| Self-hosted serving endpoints | `--serving-endpoint RUNTIME=URL` (repeatable; `vllm`, `tgi`, `triton`, `llamacpp`, `lmstudio`) | The runtime's documented model listing and metadata reads on that endpoint only, such as `GET /v1/models`, `GET /info` or Triton's `POST /v2/repository/index` listing request; no inference, model loads or downloads. No credentials are sent unless `--serving-token-env URL=AGENT_BOM_SERVING_TOKEN_<NAME>` pairs that endpoint with a bearer token (see below). A failed endpoint never falls back to local files. |
+
+**Bearer tokens for protected serving endpoints.** `--serving-token-env
+URL=ENV_NAME` sends `Authorization: Bearer <token>` to exactly one
+`--serving-endpoint` URL. The command line carries only the variable's name:
+
+- `ENV_NAME` must start with `AGENT_BOM_SERVING_TOKEN_`, so an unrelated
+  secret such as a cloud key cannot be sent by mistake.
+- The token is read from the file named by `ENV_NAME_FILE` when that is set
+  (it wins), otherwise from `ENV_NAME`. This is the same convention as the
+  control-plane secrets (`resolve_secret`).
+- The token is sent only over `https` or to a loopback address, only to the
+  paired endpoint, and never on a redirect, because redirects are not
+  followed.
+- A pairing for an endpoint that is not probed, or a token with characters a
+  bearer token cannot carry, is refused before any request is sent.
+- Evidence records `collection.request_identity: bearer` or `anonymous`,
+  never the value. A rejected token reads as `denied`.
 
 Ollama API inventory records the endpoint as a runtime probe. An unavailable
 configured endpoint reports incomplete discovery and never substitutes this
