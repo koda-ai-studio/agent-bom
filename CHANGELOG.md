@@ -9,6 +9,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Standalone HTML reports put only the first page of vulnerabilities, policy findings, impact rows and remediation items in the page. The other records stay in the file as inert text, and the paginator loads them a page at a time. Search, filters, sorting and counts still cover every record, and printing loads them all. Without JavaScript, a notice says how many records are stored but not shown. A 2,000-finding report opens with about 16,000 page elements instead of 220,000 (#6128).
+
+### Fixed
+- `GET /v1/graph` no longer returns `503 current_estate_building` on every request when all the evidence behind the current graph is older than `AGENT_BOM_GRAPH_RETENTION_DAYS`. Age retention was deleting the rebuildable current-estate view as soon as it was built. That view is now exempt from age retention and keeps its evidence time as `created_at` (#6228).
+
 ## [0.114.0] - 2026-11-08
 
 ### Highlights
