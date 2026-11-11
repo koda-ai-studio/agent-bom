@@ -42,18 +42,6 @@ logger = logging.getLogger(__name__)
 _MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 _DEFAULT_TIMEOUT = 5.0
 
-_SERVING_PERMISSIONS: tuple[str, ...] = (
-    "llamacpp:GET /props",
-    "llamacpp:GET /v1/models",
-    "lmstudio:GET /api/v0/models",
-    "tgi:GET /info",
-    "triton:GET /v2",
-    "triton:POST /v2/repository/index",
-    "vllm:GET /v1/models",
-    "vllm:GET /version",
-)
-"""Every read this module can issue; each probe reports the subset it actually sent."""
-
 NOT_COLLECTED = (
     "bind_address",
     "public_reachability",

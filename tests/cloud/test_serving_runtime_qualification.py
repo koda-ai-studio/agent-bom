@@ -33,15 +33,13 @@ def test_supported_runtimes_are_the_qualified_set():
 
 def test_permission_catalog_covers_every_read_and_matches_the_registry():
     from agent_bom.cloud import _PROVIDER_PERMISSIONS_USED
-    from agent_bom.cloud.serving_runtimes import _SERVING_PERMISSIONS
 
     issued = set()
     for runtime, spec in SERVING_RUNTIMES.items():
         issued.add(f"{runtime}:{spec.method} {spec.path}")
         if spec.metadata_path:
             issued.add(f"{runtime}:GET {spec.metadata_path}")
-    assert issued == set(_SERVING_PERMISSIONS)
-    assert _PROVIDER_PERMISSIONS_USED["serving"] == tuple(sorted(_SERVING_PERMISSIONS))
+    assert _PROVIDER_PERMISSIONS_USED["serving"] == tuple(sorted(issued))
 
 
 @pytest.mark.parametrize("runtime", PROBE_RUNTIMES)

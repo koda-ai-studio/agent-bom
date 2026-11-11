@@ -177,7 +177,8 @@ def _handler(routes: dict[tuple[str, str], Route]) -> type[BaseHTTPRequestHandle
                 self.end_headers()
                 self.wfile.write(payload)
             except (BrokenPipeError, ConnectionResetError):
-                pass
+                # Timeout cases close the client before the delayed reply is written.
+                return
 
         def do_GET(self) -> None:  # noqa: N802
             self._serve("GET")
