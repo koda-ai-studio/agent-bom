@@ -1,0 +1,1011 @@
+{
+  "environment": {
+    "host": "Apple M4, 10 cores, 16 GiB, macOS",
+    "load_average": "8-11 (shared host)",
+    "postgres": "16.14, private cluster on loopback"
+  },
+  "estate": {
+    "database_bytes_before_migration": 922746880,
+    "profile": "small-self-hosted-postgres (200 agents, seed 2145)",
+    "rows_per_tenant": {
+      "finding_lifecycle": 3712,
+      "graph_edges": 25480,
+      "graph_node_search": 22980,
+      "graph_nodes": 22980
+    },
+    "tenants": "tenant default plus three copies (noise-0..2) of its hot-table rows, ANALYZEd"
+  },
+  "generated_at": "2026-11-11",
+  "graph_page_growth_probe_ci_budget": {
+    "identical_body_4_pushes": {
+      "scoped_bytes": [
+        1972394,
+        1972394,
+        1972394,
+        1972394
+      ],
+      "total_nodes": 1630,
+      "unscoped_bytes": [
+        1982031,
+        1982031,
+        1982031,
+        1982031
+      ]
+    },
+    "three_separate_scans_of_one_estate": {
+      "scoped": {
+        "bytes": [
+          1972394,
+          1972394,
+          1972394
+        ],
+        "total_nodes": [
+          1630,
+          1630,
+          1630
+        ]
+      },
+      "unscoped": {
+        "bytes": [
+          1982031,
+          3451811,
+          3451811
+        ],
+        "total_nodes": [
+          1630,
+          1849,
+          1849
+        ]
+      }
+    }
+  },
+  "index_usage_after_two_full_pushes_and_reads": {
+    "idx_jobs_batch": {
+      "idx_scan": 0
+    },
+    "idx_jobs_parent": {
+      "idx_scan": 0
+    },
+    "idx_jobs_schedule": {
+      "idx_scan": 0
+    },
+    "idx_jobs_team_created": {
+      "idx_scan": 0
+    },
+    "idx_pg_graph_node_search_lower_trgm": {
+      "idx_scan": 0,
+      "size": "77 MB"
+    },
+    "idx_pg_graph_node_search_trgm": {
+      "idx_scan": 1,
+      "size": "77 MB"
+    },
+    "idx_pg_graph_nodes_entity_type": {
+      "idx_scan": 0,
+      "size": "848 kB"
+    },
+    "idx_pg_jobs_team_created": {
+      "idx_scan": 21
+    }
+  },
+  "large_push_1000_agents": {
+    "agents": 1000,
+    "findings_in_report": 827,
+    "packages": 19105,
+    "peak_rss_mib_before_rejection": 2431,
+    "profile": "large-push-sqlite",
+    "push_limit_cap_mib": 240,
+    "push_limit_default_bytes": 201326592,
+    "push_status": 413,
+    "report_bytes": 330244011,
+    "wall_seconds_to_rejection": 256.3,
+    "watchdog_ceiling_mib": 9216
+  },
+  "method": "Statements captured with pg_stat_statements while the harness served the hot reads; explained as agent_bom_app with app.tenant_id set (scripts/perf/postgres_hot_reads.py, scripts/run_graph_postgres_explain.py --run --hot-reads).",
+  "migration_20261111_01_cost": {
+    "downgrade": {
+      "wal_bytes": 42108832,
+      "wall_seconds": 18.07
+    },
+    "note": "Wall time includes about 0.9 s of Alembic start-up. DROP/CREATE INDEX CONCURRENTLY; no table lock.",
+    "re_upgrade": {
+      "wal_bytes": 45576,
+      "wall_seconds": 1.02
+    },
+    "upgrade": {
+      "wal_bytes": 261128,
+      "wall_seconds": 1.1
+    }
+  },
+  "plans_after_migration": {
+    "flagged": {},
+    "reads": {
+      "attack_paths_load": {
+        "endpoint": "GET /v1/graph/attack-paths",
+        "execution_ms": 0.024,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 1.701,
+        "scans": [
+          {
+            "index": null,
+            "node": "Seq Scan",
+            "relation": "attack_paths",
+            "rows": 0
+          }
+        ],
+        "shared_hit_blocks": 0,
+        "shared_read_blocks": 0
+      },
+      "findings_hub_page": {
+        "endpoint": "GET /v1/findings",
+        "execution_ms": 0.039,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 2.084,
+        "scans": [
+          {
+            "index": null,
+            "node": "Seq Scan",
+            "relation": "hub_findings_current",
+            "rows": 0
+          }
+        ],
+        "shared_hit_blocks": 3,
+        "shared_read_blocks": 0
+      },
+      "findings_job_result": {
+        "endpoint": "GET /v1/findings",
+        "execution_ms": 11.796,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.15,
+        "scans": [
+          {
+            "index": null,
+            "node": "Seq Scan",
+            "relation": "scan_jobs",
+            "rows": 1
+          }
+        ],
+        "shared_hit_blocks": 460,
+        "shared_read_blocks": 0
+      },
+      "findings_lifecycle_live": {
+        "endpoint": "GET /v1/findings",
+        "execution_ms": 4.36,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.249,
+        "scans": [
+          {
+            "index": "idx_finding_lifecycle_last_job",
+            "node": "Bitmap Index Scan",
+            "relation": "finding_lifecycle",
+            "rows": 3736
+          }
+        ],
+        "shared_hit_blocks": 716,
+        "shared_read_blocks": 0
+      },
+      "findings_lifecycle_payload": {
+        "endpoint": "GET /v1/findings",
+        "execution_ms": 0.139,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.429,
+        "scans": [
+          {
+            "index": "finding_lifecycle_pkey",
+            "node": "Index Scan",
+            "relation": "finding_lifecycle",
+            "rows": 23
+          }
+        ],
+        "shared_hit_blocks": 95,
+        "shared_read_blocks": 0
+      },
+      "graph_adjacency_in": {
+        "endpoint": "GET /v1/graph/incident-edges",
+        "execution_ms": 0.067,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.15,
+        "scans": [
+          {
+            "index": "idx_pg_adjacency_in",
+            "node": "Index Scan",
+            "relation": "graph_edges",
+            "rows": 1
+          }
+        ],
+        "shared_hit_blocks": 4,
+        "shared_read_blocks": 1
+      },
+      "graph_adjacency_out": {
+        "endpoint": "GET /v1/graph/incident-edges",
+        "execution_ms": 0.054,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.157,
+        "scans": [
+          {
+            "index": "idx_pg_adjacency_out",
+            "node": "Index Scan",
+            "relation": "graph_edges",
+            "rows": 1
+          }
+        ],
+        "shared_hit_blocks": 5,
+        "shared_read_blocks": 0
+      },
+      "graph_node_search": {
+        "endpoint": "GET /v1/graph/search",
+        "execution_ms": 111.309,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 3.447,
+        "scans": [
+          {
+            "index": "idx_pg_graph_node_search_severity",
+            "node": "Bitmap Index Scan",
+            "relation": "graph_node_search",
+            "rows": 11490
+          },
+          {
+            "index": "idx_pg_graph_nodes_scan_id_cover",
+            "node": "Index Only Scan",
+            "relation": "graph_nodes",
+            "rows": 1
+          }
+        ],
+        "shared_hit_blocks": 33126,
+        "shared_read_blocks": 2506
+      },
+      "graph_snapshot_edges": {
+        "endpoint": "GET /v1/graph (current-graph load)",
+        "execution_ms": 16.239,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 3.603,
+        "scans": [
+          {
+            "index": "idx_pg_graph_edges_scan",
+            "node": "Bitmap Index Scan",
+            "relation": "graph_edges",
+            "rows": 12740
+          }
+        ],
+        "shared_hit_blocks": 2006,
+        "shared_read_blocks": 0
+      },
+      "graph_snapshot_nodes": {
+        "endpoint": "GET /v1/graph (current-graph load)",
+        "execution_ms": 55.213,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.106,
+        "scans": [
+          {
+            "index": "idx_pg_graph_nodes_scan",
+            "node": "Bitmap Index Scan",
+            "relation": "graph_nodes",
+            "rows": 11490
+          }
+        ],
+        "shared_hit_blocks": 306,
+        "shared_read_blocks": 1737
+      },
+      "inventory_assets_page": {
+        "endpoint": "GET /v1/inventory/assets",
+        "execution_ms": 4.523,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.531,
+        "scans": [
+          {
+            "index": "idx_pg_graph_nodes_scan_order",
+            "node": "Index Scan",
+            "relation": "graph_nodes",
+            "rows": 102
+          }
+        ],
+        "shared_hit_blocks": 42,
+        "shared_read_blocks": 314
+      },
+      "jobs_page": {
+        "endpoint": "GET /v1/jobs",
+        "execution_ms": 0.028,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.121,
+        "scans": [
+          {
+            "index": null,
+            "node": "Seq Scan",
+            "relation": "scan_jobs",
+            "rows": 7
+          }
+        ],
+        "shared_hit_blocks": 1,
+        "shared_read_blocks": 0
+      },
+      "retained_report_lookup": {
+        "endpoint": "GET /v1/reports/{job_id}",
+        "execution_ms": 0.018,
+        "flags": [],
+        "notes": [],
+        "planning_ms": 0.107,
+        "scans": [
+          {
+            "index": null,
+            "node": "Seq Scan",
+            "relation": "report_jobs",
+            "rows": 1
+          }
+        ],
+        "shared_hit_blocks": 2,
+        "shared_read_blocks": 0
+      }
+    }
+  },
+  "plans_before_migration": {
+    "attack_paths_load": {
+      "endpoint": "GET /v1/graph/attack-paths",
+      "execution_ms": 0.017,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": null,
+          "node": "Seq Scan",
+          "relation": "attack_paths",
+          "rows": 0
+        }
+      ],
+      "shared_hit_blocks": 0,
+      "shared_read_blocks": 0
+    },
+    "findings_hub_page": {
+      "endpoint": "GET /v1/findings",
+      "execution_ms": 0.034,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": null,
+          "node": "Seq Scan",
+          "relation": "hub_findings_current",
+          "rows": 0
+        }
+      ],
+      "shared_hit_blocks": 3,
+      "shared_read_blocks": 0
+    },
+    "findings_job_result": {
+      "endpoint": "GET /v1/findings",
+      "execution_ms": 11.057,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": null,
+          "node": "Seq Scan",
+          "relation": "scan_jobs",
+          "rows": 1
+        }
+      ],
+      "shared_hit_blocks": 458,
+      "shared_read_blocks": 1
+    },
+    "findings_lifecycle_live": {
+      "endpoint": "GET /v1/findings",
+      "execution_ms": 2.728,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": "idx_finding_lifecycle_last_job",
+          "node": "Bitmap Index Scan",
+          "relation": "finding_lifecycle",
+          "rows": 3712
+        }
+      ],
+      "shared_hit_blocks": 656,
+      "shared_read_blocks": 0
+    },
+    "findings_lifecycle_payload": {
+      "endpoint": "GET /v1/findings",
+      "execution_ms": 0.097,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": "finding_lifecycle_pkey",
+          "node": "Index Scan",
+          "relation": "finding_lifecycle",
+          "rows": 23
+        }
+      ],
+      "shared_hit_blocks": 95,
+      "shared_read_blocks": 0
+    },
+    "graph_adjacency_in": {
+      "endpoint": "GET /v1/graph/incident-edges",
+      "execution_ms": 0.039,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": "idx_pg_adjacency_in",
+          "node": "Index Scan",
+          "relation": "graph_edges",
+          "rows": 1
+        }
+      ],
+      "shared_hit_blocks": 2,
+      "shared_read_blocks": 3
+    },
+    "graph_adjacency_out": {
+      "endpoint": "GET /v1/graph/incident-edges",
+      "execution_ms": 0.049,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": "idx_pg_adjacency_out",
+          "node": "Index Scan",
+          "relation": "graph_edges",
+          "rows": 1
+        }
+      ],
+      "shared_hit_blocks": 2,
+      "shared_read_blocks": 3
+    },
+    "graph_node_search": {
+      "endpoint": "GET /v1/graph/search",
+      "execution_ms": 62.325,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": "idx_pg_graph_node_search_severity",
+          "node": "Bitmap Index Scan",
+          "relation": "graph_node_search",
+          "rows": 11490
+        },
+        {
+          "index": "idx_pg_graph_nodes_scan_id_cover",
+          "node": "Index Only Scan",
+          "relation": "graph_nodes",
+          "rows": 1
+        }
+      ],
+      "shared_hit_blocks": 33129,
+      "shared_read_blocks": 1744
+    },
+    "graph_snapshot_edges": {
+      "endpoint": "GET /v1/graph (current-graph load)",
+      "execution_ms": 11.242,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": "idx_pg_graph_edges_scan",
+          "node": "Bitmap Index Scan",
+          "relation": "graph_edges",
+          "rows": 12740
+        }
+      ],
+      "shared_hit_blocks": 1,
+      "shared_read_blocks": 1576
+    },
+    "graph_snapshot_nodes": {
+      "endpoint": "GET /v1/graph (current-graph load)",
+      "execution_ms": 47.198,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": "idx_pg_graph_nodes_scan",
+          "node": "Bitmap Index Scan",
+          "relation": "graph_nodes",
+          "rows": 11490
+        }
+      ],
+      "shared_hit_blocks": 314,
+      "shared_read_blocks": 1408
+    },
+    "inventory_assets_page": {
+      "endpoint": "GET /v1/inventory/assets",
+      "execution_ms": 1.314,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": "idx_pg_graph_nodes_scan_order",
+          "node": "Index Scan",
+          "relation": "graph_nodes",
+          "rows": 102
+        }
+      ],
+      "shared_hit_blocks": 30,
+      "shared_read_blocks": 333
+    },
+    "jobs_page": {
+      "endpoint": "GET /v1/jobs",
+      "execution_ms": 0.016,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": null,
+          "node": "Seq Scan",
+          "relation": "scan_jobs",
+          "rows": 1
+        }
+      ],
+      "shared_hit_blocks": 1,
+      "shared_read_blocks": 0
+    },
+    "retained_report_lookup": {
+      "endpoint": "GET /v1/reports/{job_id}",
+      "execution_ms": 0.014,
+      "flags": [],
+      "notes": [],
+      "scans": [
+        {
+          "index": null,
+          "node": "Seq Scan",
+          "relation": "report_jobs",
+          "rows": 1
+        }
+      ],
+      "shared_hit_blocks": 2,
+      "shared_read_blocks": 0
+    }
+  },
+  "postgres_200_agent_run_after_migration": {
+    "environment": {
+      "cpu_count": 10,
+      "load_average": [
+        9.4990234375,
+        8.775390625,
+        9.1650390625
+      ],
+      "machine": "arm64",
+      "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+      "python": "3.13.5"
+    },
+    "failures": [],
+    "profiles": [
+      {
+        "cancel": {
+          "recover": {
+            "expected_findings": 207,
+            "findings_match_expected": true,
+            "integrity_check": null,
+            "jobs_after_kill": 3,
+            "jobs_after_retry": 3,
+            "process": {
+              "cpu_seconds": 71.794,
+              "exit_code": 0,
+              "max_rss_mib": 1226.9,
+              "wall_seconds": 76.99
+            },
+            "retry": {
+              "admission_ms": 5413.7,
+              "graph_nodes": 11490,
+              "job_id": "10000332-106c-53bf-9cf6-519debd6be45",
+              "retry_same_job": true,
+              "retry_status": 202,
+              "status": "stored"
+            },
+            "retry_to_stored_seconds": 60.57,
+            "statuses_after_kill": [
+              "pending",
+              "done",
+              "done"
+            ]
+          },
+          "victim": {
+            "cpu_seconds": 44.602,
+            "exit_code": -9,
+            "max_rss_mib": 911.9
+          }
+        },
+        "cold": {
+          "accuracy": {
+            "expected_findings": 207,
+            "job_id": "c1cef447-678d-5eae-873c-ae14876eaf35",
+            "rebuilt_matches_stored": true,
+            "scanned_matches_expected": true,
+            "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+            "stored_findings": 207,
+            "stored_matches_scanned": true,
+            "stored_projection_digest": "bbc916dc09b8c62732611c0c872f0418a1411411fa80603b93a19ecffd12bf39"
+          },
+          "equivalence": {
+            "failures": [],
+            "ingest": {
+              "open_count": 207,
+              "open_matches_stored": true,
+              "stored_mismatches": []
+            },
+            "known_gaps": [
+              "resolved row lost identity fields: ecosystem, package, package_version, scan_id"
+            ],
+            "rebuild": {
+              "lifecycle_mismatches": [],
+              "open_matches_expected": true,
+              "rebuilt_mismatches": []
+            },
+            "update_delete": {
+              "change": {
+                "added_agent": "agent-00001",
+                "deleted": "CVE-2026-000001|svc-00000-00-00|1.0.0",
+                "widened": "CVE-2026-000002|boto3|3.0.0"
+              },
+              "deleted_resolved": true,
+              "deleted_still_open": false,
+              "graph_package_nodes_after": 0,
+              "graph_package_nodes_before": 1,
+              "graph_refresh_seconds": 13.11,
+              "lifecycle_mismatches": [],
+              "open_matches_expected": true,
+              "open_missing": [],
+              "open_unexpected": [],
+              "resolved_row_missing_identity": [
+                "ecosystem",
+                "package",
+                "package_version",
+                "scan_id"
+              ],
+              "scanned_matches_expected": true,
+              "status": "stored",
+              "stored_digest": "0f10cfb32e209db8bd49bf42166b846f1888d0677d5c4f67790434c471727d65",
+              "stored_mismatches": [],
+              "stored_projection_digest": "be7e58f8fe282a156ce24fa151aedfed24514edaa62f15538ae48516e9b733e3",
+              "widened_scope_has_added_agent": true
+            }
+          },
+          "identical_repush_status": 409,
+          "process": {
+            "cpu_seconds": 348.836,
+            "exit_code": 0,
+            "max_rss_mib": 2044.5,
+            "wall_seconds": 404.58
+          },
+          "reads": {
+            "attack_paths": {
+              "p50_ms": 91.85,
+              "p95_ms": 698.6,
+              "response_bytes": 508072,
+              "status": 200
+            },
+            "findings_page": {
+              "p50_ms": 121.84,
+              "p95_ms": 282.45,
+              "response_bytes": 361892,
+              "status": 200
+            },
+            "graph_page": {
+              "p50_ms": 224.23,
+              "p95_ms": 959.94,
+              "response_bytes": 2553361,
+              "status": 200
+            },
+            "graph_search": {
+              "p50_ms": 96.14,
+              "p95_ms": 1464.42,
+              "response_bytes": 65910,
+              "status": 200
+            },
+            "jobs_page": {
+              "p50_ms": 13.12,
+              "p95_ms": 59.23,
+              "response_bytes": 467,
+              "status": 200
+            }
+          },
+          "stages": {
+            "collection": {
+              "cpu_seconds": 0.481,
+              "rss_peak_mib": 233.1,
+              "wall_seconds": 0.496
+            },
+            "graph_api": {
+              "cpu_seconds": 25.689,
+              "rss_peak_mib": 1076.6,
+              "wall_seconds": 29.924
+            },
+            "ingest": {
+              "cpu_seconds": 66.187,
+              "rss_peak_mib": 972.0,
+              "wall_seconds": 97.015
+            },
+            "rebuild": {
+              "cpu_seconds": 65.687,
+              "rss_peak_mib": 1262.6,
+              "wall_seconds": 77.655
+            },
+            "report_export": {
+              "cpu_seconds": 15.422,
+              "rss_peak_mib": 675.4,
+              "wall_seconds": 16.309
+            },
+            "retention": {
+              "cpu_seconds": 0.024,
+              "rss_peak_mib": 398.8,
+              "wall_seconds": 0.064
+            },
+            "scan_enrichment": {
+              "cpu_seconds": 31.134,
+              "rss_peak_mib": 392.8,
+              "wall_seconds": 35.52
+            },
+            "update_delete": {
+              "cpu_seconds": 118.466,
+              "rss_peak_mib": 2044.5,
+              "wall_seconds": 117.911
+            }
+          },
+          "storage": {
+            "after_ingest": {
+              "index_bytes": 52396032,
+              "total_bytes": 117922839,
+              "wal_bytes": 210479080
+            },
+            "after_rebuild": {
+              "index_bytes": 67829760,
+              "total_bytes": 178363415,
+              "wal_bytes": 427185080
+            },
+            "after_retention": {
+              "index_bytes": 52576256,
+              "total_bytes": 118537239,
+              "wal_bytes": 213991560
+            },
+            "before": {
+              "index_bytes": 3063808,
+              "total_bytes": 15850519,
+              "wal_bytes": 10453488
+            },
+            "ingest_growth_bytes": 102072320
+          }
+        },
+        "profile": {
+          "agents": 200,
+          "api_replicas": 1,
+          "concurrent_pushes": 1,
+          "cpu_limit": 2.0,
+          "description": "Same workload as small-self-hosted against a private Postgres 16 cluster",
+          "memory_limit_mib": 2048,
+          "name": "small-self-hosted-postgres",
+          "query_repeats": 30,
+          "seed": 2145,
+          "source": "scripts/generate_graph_benchmark_estate.py",
+          "store": "postgres",
+          "vulnerable_package_rate": 0.08
+        },
+        "restart": {
+          "findings_match_before_restart": true,
+          "first_graph_read_code": null,
+          "first_graph_read_ms": 1266.9,
+          "first_graph_read_retry_after": null,
+          "first_graph_read_status": 200,
+          "graph_ready_retries": 0,
+          "graph_ready_seconds": 1.27,
+          "graph_ready_status": 200,
+          "jobs": 2,
+          "process": {
+            "cpu_seconds": 24.028,
+            "exit_code": 0,
+            "max_rss_mib": 557.1,
+            "wall_seconds": 28.14
+          },
+          "statuses": [
+            "done",
+            "done"
+          ],
+          "stored_digest": "0f10cfb32e209db8bd49bf42166b846f1888d0677d5c4f67790434c471727d65",
+          "stored_findings": 206,
+          "stored_projection_digest": "5cfa46cf4cc6ce4ac0ad2c23ba4e497409e812fc42d8847e06d03e894ecfacb1",
+          "wall_seconds": 26.726
+        },
+        "warm": {
+          "accuracy": {
+            "expected_findings": 207,
+            "job_id": "8f2ae6d3-ad97-563c-a6a2-143ecb03d45c",
+            "rebuilt_matches_stored": true,
+            "scanned_matches_expected": true,
+            "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+            "stored_findings": 207,
+            "stored_matches_scanned": true,
+            "stored_projection_digest": "686cde18f24d3d689ca921edacc938a4712f27802deceb370c70848b04c5bd08"
+          },
+          "equivalence": {
+            "failures": [],
+            "ingest": {
+              "open_count": 207,
+              "open_matches_stored": true,
+              "stored_mismatches": []
+            },
+            "known_gaps": [
+              "resolved row lost identity fields: ecosystem, package, package_version, scan_id"
+            ],
+            "rebuild": {
+              "lifecycle_mismatches": [],
+              "open_matches_expected": true,
+              "rebuilt_mismatches": []
+            },
+            "update_delete": {
+              "change": {
+                "added_agent": "agent-00001",
+                "deleted": "CVE-2026-000001|svc-00000-00-00|1.0.0",
+                "widened": "CVE-2026-000002|boto3|3.0.0"
+              },
+              "deleted_resolved": true,
+              "deleted_still_open": false,
+              "graph_package_nodes_after": 0,
+              "graph_package_nodes_before": 1,
+              "graph_refresh_seconds": 13.26,
+              "lifecycle_mismatches": [],
+              "open_matches_expected": true,
+              "open_missing": [],
+              "open_unexpected": [],
+              "resolved_row_missing_identity": [
+                "ecosystem",
+                "package",
+                "package_version",
+                "scan_id"
+              ],
+              "scanned_matches_expected": true,
+              "status": "stored",
+              "stored_digest": "0f10cfb32e209db8bd49bf42166b846f1888d0677d5c4f67790434c471727d65",
+              "stored_mismatches": [],
+              "stored_projection_digest": "5cfa46cf4cc6ce4ac0ad2c23ba4e497409e812fc42d8847e06d03e894ecfacb1",
+              "widened_scope_has_added_agent": true
+            }
+          },
+          "identical_repush_status": 409,
+          "process": {
+            "cpu_seconds": 339.65,
+            "exit_code": 0,
+            "max_rss_mib": 1817.3,
+            "wall_seconds": 351.75
+          },
+          "reads": {
+            "attack_paths": {
+              "p50_ms": 75.7,
+              "p95_ms": 457.64,
+              "response_bytes": 508072,
+              "status": 200
+            },
+            "findings_page": {
+              "p50_ms": 108.68,
+              "p95_ms": 951.83,
+              "response_bytes": 361960,
+              "status": 200
+            },
+            "graph_page": {
+              "p50_ms": 183.94,
+              "p95_ms": 2080.15,
+              "response_bytes": 2553361,
+              "status": 200
+            },
+            "graph_search": {
+              "p50_ms": 98.83,
+              "p95_ms": 761.66,
+              "response_bytes": 65910,
+              "status": 200
+            },
+            "jobs_page": {
+              "p50_ms": 12.12,
+              "p95_ms": 132.58,
+              "response_bytes": 1199,
+              "status": 200
+            }
+          },
+          "stages": {
+            "collection": {
+              "cpu_seconds": 0.543,
+              "rss_peak_mib": 239.2,
+              "wall_seconds": 0.569
+            },
+            "graph_api": {
+              "cpu_seconds": 35.364,
+              "rss_peak_mib": 1554.1,
+              "wall_seconds": 33.892
+            },
+            "ingest": {
+              "cpu_seconds": 53.04,
+              "rss_peak_mib": 1655.1,
+              "wall_seconds": 56.14
+            },
+            "rebuild": {
+              "cpu_seconds": 56.682,
+              "rss_peak_mib": 1817.2,
+              "wall_seconds": 60.657
+            },
+            "report_export": {
+              "cpu_seconds": 14.08,
+              "rss_peak_mib": 1438.9,
+              "wall_seconds": 14.227
+            },
+            "retention": {
+              "cpu_seconds": 0.019,
+              "rss_peak_mib": 1397.1,
+              "wall_seconds": 0.047
+            },
+            "scan_enrichment": {
+              "cpu_seconds": 25.945,
+              "rss_peak_mib": 660.5,
+              "wall_seconds": 26.368
+            },
+            "update_delete": {
+              "cpu_seconds": 128.933,
+              "rss_peak_mib": 1783.0,
+              "wall_seconds": 134.102
+            }
+          },
+          "storage": {
+            "after_ingest": {
+              "index_bytes": 137289728,
+              "total_bytes": 294673431,
+              "wal_bytes": 249963088
+            },
+            "after_rebuild": {
+              "index_bytes": 149913600,
+              "total_bytes": 339680279,
+              "wal_bytes": 561026744
+            },
+            "after_retention": {
+              "index_bytes": 137445376,
+              "total_bytes": 295148567,
+              "wal_bytes": 256331664
+            },
+            "before": {
+              "index_bytes": 100286464,
+              "total_bytes": 215596055,
+              "wal_bytes": 2243880
+            },
+            "ingest_growth_bytes": 79077376
+          }
+        }
+      }
+    ]
+  },
+  "schema_version": 1,
+  "write_cost_per_200_agent_push": {
+    "graph_node_search_index_bytes": {
+      "after": "97 MB",
+      "before": "175 MB"
+    },
+    "note": "Unscoped pushes of one report into the 4-tenant database; the third pair was interleaved (downgrade, push, upgrade, push). CPU is too noisy at load 9-10 to attribute.",
+    "with_dropped_indexes": {
+      "ingest_cpu_seconds": [
+        46.64,
+        48.27,
+        63.01
+      ],
+      "wal_bytes": [
+        619143056,
+        675752456,
+        658238328
+      ]
+    },
+    "without": {
+      "ingest_cpu_seconds": [
+        43.43,
+        52.04,
+        72.19
+      ],
+      "wal_bytes": [
+        400542216,
+        385492368,
+        427888816
+      ]
+    }
+  }
+}

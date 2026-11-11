@@ -511,6 +511,24 @@ Two behaviours the checks surfaced:
   12-agent SQLite store; not a harness failure, because the harness now rebuilds
   before the update.
 
+A third behaviour explains the raw-push graph growth: **agent ids embed a hash
+of the inventory file path.** Two scans of the same estate from different paths
+give every finding different `affected_agent_ids` and the graph different agent
+node ids. A CLI-scoped push replaces the earlier report, so the change is
+invisible; two unscoped pushes keep both copies.
+
+### A larger push: 1,000 agents
+
+Profile `large-push-sqlite` (1,000 agents, 19,105 packages, 827 findings), one
+cold run on SQLite under a 9 GiB RSS watchdog. **It does not fit in one push.**
+The CLI JSON report is 330 MB (about 330 KB per agent). The API refused it with
+`413`: it is over the default `AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` (192 MiB),
+and over the 240 MiB cap that setting allows, so no configuration accepts it.
+The scan alone peaked at 2,431 MiB RSS, above the 2 GiB pilot limit, before
+ingest started; the run took 256 s to the rejection. An estate this size has to
+be pushed in several scans of at most about 550 agents each, by the 192 MiB
+default and this fixture's report size.
+
 ### Postgres query plans and tenant-scoped indexes
 
 The statements behind the hot reads were taken from `pg_stat_statements` while
@@ -597,9 +615,9 @@ rebuilds all six indexes concurrently, 18.1 s and 42 MB of WAL; re-upgrade
 
 | Finding from the first runs | Verdict | Evidence |
 |---|---|---|
-| Peak RSS 1.66-1.97 GiB against the 2 GiB limit | **Confirmed, and exceeded** | 200 agents on Postgres: cold child 1,804 MiB and warm 1,772 MiB in the raw-push runs; with the update/delete push added, the cold process peaked at 2,044.5 MiB |
+| Peak RSS 1.66-1.97 GiB against the 2 GiB limit | **Confirmed, and exceeded** | 200 agents on Postgres: cold child 1,804 MiB and warm 1,772 MiB in the raw-push runs; with the update/delete push added (a second scan and push in the same process), the cold process peaked at 2,044.5 MiB. A 1,000-agent scan alone peaked at 2,431 MiB |
 | Identical push after retention returns 409 for up to 24 h | **Confirmed** | Every run records `identical_repush_status: 409`, raw and CLI-shaped bodies; strict xfail `test_identical_push_after_retention_is_admitted_again` |
-| `GET /v1/graph?limit=100` grows 2.6 → 6.7 MB with stored jobs | **Confirmed only for pushes without `source_id` and `target_scope`** | Three separate scans of one 12-agent estate: unscoped 1.98 → 3.45 MB and 1,630 → 1,849 nodes (agent ids embed a config-path hash, so the union holds both copies); CLI-scoped 1.97 MB and 1,630 nodes each time, guarded by `test_rescans_pushed_by_one_cli_source_replace_rather_than_grow_the_graph`. Four identical bodies did not grow it in either mode |
+| `GET /v1/graph?limit=100` grows 2.6 → 6.7 MB with stored jobs | **Confirmed only for pushes without `source_id` and `target_scope`** | Three separate scans of one 12-agent estate: unscoped 1.98 → 3.45 MB and 1,630 → 1,849 nodes (agent ids embed a config-path hash, so the union holds both copies); CLI-scoped 1.97 MB and 1,630 nodes each time. At 200 agents on Postgres with CLI-scoped pushes the page stayed 2.55 MB across cold, warm and restart. Guarded by `test_rescans_pushed_by_one_cli_source_replace_rather_than_grow_the_graph`. Four identical bodies did not grow it in either mode |
 | First `/v1/graph` read after a restart returns 503 | **Confirmed as a timing condition, not on every restart** | A new process builds the current graph on its first read and waits `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default 2,000 ms); past that it answers `503 current_estate_building` with `Retry-After: 1` while the build finishes. 200 agents on Postgres: raw pushes (two independent reports to merge) 503 after 2.39 s; CLI-scoped pushes (one report) 200 after 1.27 s. At 12 agents both modes returned 200 in under 1.0 s. Larger estates will cross the budget whatever the push shape; nothing prewarms the current graph at start-up |
 
 **Not measured here:** a real multi-node Kubernetes deployment, or replicas
