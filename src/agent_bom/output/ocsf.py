@@ -128,8 +128,11 @@ _OCSF_STATUS_NEW = 1
 _OCSF_STATUS_SUPPRESSED = 4
 
 
-def finding_to_ocsf(finding: "Finding", product_version: str = "") -> dict[str, Any]:
+def finding_to_ocsf(finding: "Finding", product_version: str = "", *, observed_at: object = None) -> dict[str, Any]:
     """Convert a unified :class:`~agent_bom.finding.Finding` to OCSF v1.1.
+
+    ``observed_at`` (scan completion) anchors the SLA of a finding with no
+    recorded first sighting, so the deadline matches the JSON export.
 
     This is the Finding-native OCSF path (vs :func:`alert_to_ocsf`, which is
     runtime-alert-native). It preserves the fields the unified Finding now
@@ -189,17 +192,16 @@ def finding_to_ocsf(finding: "Finding", product_version: str = "") -> dict[str, 
         "exposed_credentials": list(finding.exposed_credentials),
         "exposed_tools": list(finding.exposed_tools),
     }
-    if finding.owner:
-        unmapped["owner"] = finding.owner
-    sla_due = finding.to_dict().get("sla_due_at")
-    if sla_due:
-        unmapped["sla_due_at"] = sla_due
-        unmapped["sla_due_at_source"] = finding.to_dict()["sla_due_at_source"]
-    from agent_bom.output.finding_views import workflow_status
+    from agent_bom.output.finding_views import export_workflow_fields
 
-    status_value = workflow_status(finding)
-    if status_value:
-        unmapped["workflow_status"] = status_value
+    workflow = export_workflow_fields(finding, observed_at)
+    if workflow["owner"]:
+        unmapped["owner"] = workflow["owner"]
+    if workflow["sla_due_at"]:
+        unmapped["sla_due_at"] = workflow["sla_due_at"]
+        unmapped["sla_due_at_source"] = workflow["sla_due_at_source"]
+    if workflow["workflow_status"]:
+        unmapped["workflow_status"] = workflow["workflow_status"]
     if ai_context:
         unmapped["ai_context"] = ai_context
     if suppression:
@@ -242,6 +244,6 @@ def finding_to_ocsf(finding: "Finding", product_version: str = "") -> dict[str, 
     )
 
 
-def findings_to_ocsf(findings: "list[Finding]", product_version: str = "") -> list[dict]:
+def findings_to_ocsf(findings: "list[Finding]", product_version: str = "", *, observed_at: object = None) -> list[dict]:
     """Convert a list of unified findings to OCSF v1.1 Security Findings."""
-    return [finding_to_ocsf(f, product_version) for f in findings]
+    return [finding_to_ocsf(f, product_version, observed_at=observed_at) for f in findings]

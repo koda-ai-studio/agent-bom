@@ -289,6 +289,10 @@ def test_cyclonedx_scopes_shared_cve_workflow_to_each_affected_component() -> No
     assert "agent-bom:owner" not in property_names
     assert "agent-bom:workflow_status" not in property_names
     assert property_names.count("agent-bom:sla_due_at") == 1
+    # The vulnerability-level deadline is the earliest affected component's, not a scan-time recompute.
+    flat = {prop["name"]: prop["value"] for prop in vulnerability["properties"]}
+    assert flat["agent-bom:sla_due_at"] == "2026-08-08T00:00:00+00:00"
+    assert flat["agent-bom:sla_due_at_source"] == "explicit"
     rendered = json.dumps(cdx)
-    assert rendered.count("2026-08-08T00:00:00+00:00") == 1
+    assert rendered.count("2026-08-08T00:00:00+00:00") == 2
     assert rendered.count("2026-08-15T00:00:00+00:00") == 1

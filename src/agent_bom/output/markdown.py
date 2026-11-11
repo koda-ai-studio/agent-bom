@@ -16,6 +16,7 @@ from agent_bom.output.exposure_path import exposure_path_brief_for_finding
 from agent_bom.output.finding_views import (
     cve_findings,
     evidence,
+    export_workflow_fields,
     has_high_or_critical,
     package_name,
     package_version,
@@ -26,7 +27,6 @@ from agent_bom.output.finding_views import (
     severity_value,
     unified_findings,
     with_output_sanitizer_cache,
-    workflow_status,
 )
 from agent_bom.output.possibly_affected import possibly_affected_rows
 from agent_bom.output.technique_evidence import markdown_atlas_sources
@@ -177,14 +177,13 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
                 lines.append(f"> {sanitize_output_text(finding.description)}")
                 lines.append("")
             lines.append(f"- **Severity**: {severity_value(finding).upper()}")
-            if finding.owner:
-                lines.append(f"- **Owner**: {sanitize_output_text(finding.owner)}")
-            sla_due = finding.to_dict().get("sla_due_at")
-            if sla_due:
-                lines.append(f"- **SLA due**: {sanitize_output_text(sla_due)}")
-            status = workflow_status(finding)
-            if status:
-                lines.append(f"- **Workflow status**: {sanitize_output_text(status)}")
+            workflow = export_workflow_fields(finding, report.generated_at)
+            if workflow["owner"]:
+                lines.append(f"- **Owner**: {sanitize_output_text(workflow['owner'])}")
+            if workflow["sla_due_at"]:
+                lines.append(f"- **SLA due**: {sanitize_output_text(workflow['sla_due_at'])}")
+            if workflow["workflow_status"]:
+                lines.append(f"- **Workflow status**: {sanitize_output_text(workflow['workflow_status'])}")
             severity_source = evidence(finding, "severity_source", "")
             if severity_source:
                 lines.append(f"- **Severity source**: {sanitize_output_text(severity_source)}")
