@@ -42,6 +42,26 @@ logger = logging.getLogger(__name__)
 _MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 _DEFAULT_TIMEOUT = 5.0
 
+# Every read this module may send. A probe refuses any request missing here.
+_SERVING_PERMISSIONS: tuple[str, ...] = (
+    "llamacpp:GET /props",
+    "llamacpp:GET /v1/models",
+    "lmstudio:GET /api/v0/models",
+    "tgi:GET /info",
+    "triton:GET /v2",
+    "triton:POST /v2/repository/index",
+    "vllm:GET /v1/models",
+    "vllm:GET /version",
+)
+
+
+def _declared(runtime: str, method: str, path: str) -> str:
+    permission = f"{runtime}:{method} {path}"
+    if permission not in _SERVING_PERMISSIONS:
+        raise ValueError(f"undeclared serving read: {permission}")
+    return permission
+
+
 NOT_COLLECTED = (
     "bind_address",
     "public_reachability",
@@ -246,7 +266,7 @@ def probe_endpoint(runtime: str, endpoint: str, *, timeout: float = _DEFAULT_TIM
         base = normalize_endpoint(endpoint)
     except _ProbeError as failure:
         return EndpointObservation(runtime=runtime, endpoint="", status=failure.status, detail=failure.detail)
-    permissions = [f"{runtime}:{spec.method} {spec.path}"]
+    permissions = [_declared(runtime, spec.method, spec.path)]
     observation = EndpointObservation(runtime=runtime, endpoint=base, status="unavailable")
     with httpx.Client(timeout=timeout, follow_redirects=False) as client:
         try:
@@ -257,7 +277,7 @@ def probe_endpoint(runtime: str, endpoint: str, *, timeout: float = _DEFAULT_TIM
             return observation
         metadata_failed = False
         if spec.metadata_path and spec.metadata_version:
-            permissions.append(f"{runtime}:GET {spec.metadata_path}")
+            permissions.append(_declared(runtime, "GET", spec.metadata_path))
             try:
                 version = spec.metadata_version(_request(client, "GET", base + spec.metadata_path))
                 confirmed = confirmed or (runtime == "triton" and version is not None)
