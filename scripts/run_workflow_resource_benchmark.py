@@ -206,6 +206,7 @@ def _workflow_failures(label: str, phase: dict[str, Any]) -> list[str]:
     failures = [f"{label}: {key} is false" for key in _ACCURACY_KEYS if result["accuracy"].get(key) is False]
     if result["network"]["blocked_connections"]:
         failures.append(f"{label}: live network attempted: {result['network']['blocked_connections']}")
+    failures += [f"{label}: equivalence {item}" for item in (result.get("equivalence") or {}).get("failures") or []]
     return failures
 
 

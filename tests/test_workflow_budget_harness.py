@@ -152,3 +152,67 @@ def test_evidence_failures_flag_crashed_phases_inaccurate_findings_and_live_netw
         "replicas": {"processes": [{"exit_code": 0}, {"exit_code": 0}], "results": [_phase()["result"], None]},
     }
     assert evidence_failures({"profiles": [replicas]}) == ["m/replica-1: no result"]
+
+
+def test_evidence_failures_include_equivalence_failures() -> None:
+    from scripts.run_workflow_resource_benchmark import evidence_failures
+
+    phase = _phase()
+    phase["result"]["equivalence"] = {"failures": ["update_delete: open_matches_expected"], "known_gaps": ["resolved row lost identity"]}
+    entry = {"profile": {"name": "p"}, "cold": phase}
+    assert evidence_failures({"profiles": [entry]}) == ["p/cold: equivalence update_delete: open_matches_expected"]
+
+
+def test_push_body_carries_the_cli_source_and_target_scope(tmp_path) -> None:
+    """``scan --push-url`` sends source_id and target_scope; without them a push replaces nothing."""
+    from agent_bom.evidence.push_scope import valid_target_scope
+    from scripts.perf.workflow_profiles import WORKFLOW_PUSH_SOURCE_ID, cli_push_body
+
+    inventory = tmp_path / "inventory.json"
+    report = {"agents": [{"name": "a", "config_path": "/secret/path"}], "blast_radius": [], "idempotency_key": "x"}
+    first = json.loads(cli_push_body(json.dumps(report).encode(), inventory))
+    second = json.loads(cli_push_body(json.dumps({**report, "blast_radius": [{"id": 1}]}).encode(), inventory))
+    other = json.loads(cli_push_body(json.dumps(report).encode(), tmp_path / "other.json"))
+
+    assert first["source_id"] == WORKFLOW_PUSH_SOURCE_ID
+    assert valid_target_scope(first["target_scope"])
+    assert first["target_scope"] == second["target_scope"] != other["target_scope"]
+    assert "idempotency_key" not in first, "the harness chooses the key per push"
+    assert "config_path" not in first["agents"][0]
+
+
+def _nightly_job(name: str) -> dict:
+    from pathlib import Path
+
+    import yaml
+
+    workflow = yaml.safe_load((Path(__file__).resolve().parents[1] / ".github/workflows/perf-scale-evidence.yml").read_text())
+    return workflow["jobs"][name]
+
+
+def test_nightly_postgres_workflow_job_migrates_like_postgres_scale_evidence_and_records_plans() -> None:
+    sqlite_job = _nightly_job("workflow-resource-budget")
+    job = _nightly_job("workflow-resource-budget-postgres")
+    assert job["if"] == sqlite_job["if"]
+    assert job["services"]["postgres"]["image"].startswith("postgres:16")
+    env = job["env"]
+    assert env["AGENT_BOM_POSTGRES_URL"].startswith("postgresql://agent_bom_app:")
+    assert env["AGENT_BOM_POSTGRES_MAINTENANCE_URL"].startswith("postgresql://agent_bom_maintenance:")
+    assert env["AGENT_BOM_AUDIT_HMAC_KEY"]
+
+    steps = {step.get("name"): step for step in job["steps"]}
+    migrate = steps["Migrate ephemeral Postgres schema"]["run"]
+    for required in ("init.app_password", "init.maintenance_password", "alembic -c deploy/supabase/postgres/alembic.ini upgrade head"):
+        assert required in migrate
+    assert "--extra postgres" in steps["Install agent-bom (from source)"]["run"]
+
+    measure = steps["Measure the Postgres workflow profiles"]["run"]
+    assert "--profile small-self-hosted-postgres" in measure and "--profile multi-replica-local" in measure
+    assert '--postgres-url "$AGENT_BOM_POSTGRES_URL"' in measure
+
+    plans = steps["Record hot-read query plans"]["run"]
+    assert "scripts/run_graph_postgres_explain.py" in plans and "--run" in plans and "--hot-reads" in plans
+
+    upload = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/upload-artifact@"))
+    assert upload["if"] == "always()"
+    assert "workflow-resource-budget-postgres.json" in upload["with"]["path"]

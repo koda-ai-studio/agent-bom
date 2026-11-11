@@ -7,11 +7,14 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path[:0] = [str(ROOT / "src"), str(ROOT)]
 DEFAULT_OUTPUT_DIR = ROOT / "docs" / "perf" / "results" / "postgres-graph-explain-sample"
 DEFAULT_SUMMARY = ROOT / "docs" / "perf" / "results" / "postgres-graph-explain-sample.json"
 
@@ -38,7 +41,7 @@ JOIN graph_nodes gn
  AND gn.tenant_id = gns.tenant_id
 WHERE gns.tenant_id = {tenant}
   AND gns.scan_id = {scan}
-  AND LOWER(gns.search_text) LIKE '%langchain%'
+  AND gns.search_text LIKE '%langchain%'
 ORDER BY gn.severity_id DESC, gn.risk_score DESC, gn.label ASC, gn.id ASC
 LIMIT 50;
 """.strip(),
@@ -175,6 +178,44 @@ def _run_psql(psql_bin: str, dsn: str, sql_path: Path, output_path: Path) -> dic
     return {"returncode": result.returncode, "output": str(output_path)}
 
 
+def summarize_hot_reads(review: dict[str, Any]) -> dict[str, Any]:
+    """Per-read timing, scans and flags from :func:`scripts.perf.postgres_hot_reads.review_hot_reads`, without raw plans."""
+    reads = {
+        name: {
+            key: entry[key]
+            for key in ("endpoint", "execution_ms", "planning_ms", "shared_hit_blocks", "shared_read_blocks", "scans", "flags", "notes")
+            if key in entry
+        }
+        for name, entry in review["reviews"].items()
+    }
+    return {
+        "status": "explain_analyze_measured",
+        "ids": review["ids"],
+        "reads": reads,
+        "flagged": {name: entry["flags"] for name, entry in reads.items() if entry["flags"]},
+    }
+
+
+def _hot_reads(args: argparse.Namespace, dsn: str) -> dict[str, Any]:
+    """Explain the workflow hot reads (``scripts/perf/postgres_hot_reads.py``) as the application role."""
+    from scripts.perf.postgres_hot_reads import HotReadIds, hot_reads, review_hot_reads
+
+    out_dir = args.output_dir / "hot-reads"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if args.dry_run:
+        ids = HotReadIds(args.tenant_id, args.scan_id, "<job_id>", "<report_id>", args.source_node, "<scope_hash>", ("<finding_key>",))
+        for read in hot_reads(ids):
+            (out_dir / f"{read.name}.sql").write_text(f"-- {read.endpoint}\n{read.sql};\n", encoding="utf-8")
+        return {"status": "sql_only_not_measured", "artifacts": _display_path(str(out_dir))}
+    import psycopg
+
+    with psycopg.connect(dsn) as conn:
+        review = review_hot_reads(conn, args.tenant_id)
+    for name, plan in review["plans"].items():
+        (out_dir / f"{name}.json").write_text(json.dumps(plan, indent=2, default=str) + "\n", encoding="utf-8")
+    return {**summarize_hot_reads(review), "artifacts": _display_path(str(out_dir))}
+
+
 def generate(args: argparse.Namespace) -> dict[str, Any]:
     queries = explain_queries(
         tenant_id=args.tenant_id,
@@ -208,11 +249,17 @@ def generate(args: argparse.Namespace) -> dict[str, Any]:
             "Dry-run writes EXPLAIN SQL only; it does not seed Postgres or execute EXPLAIN ANALYZE.",
             "Measured artifacts must be captured from a database loaded with the matching synthetic estate snapshots.",
         ]
+        if args.hot_reads:
+            summary["hot_reads"] = _hot_reads(args, "")
         return summary
 
     dsn = args.dsn or os.environ.get("AGENT_BOM_POSTGRES_DSN", "")
     if not dsn:
         raise SystemExit("AGENT_BOM_POSTGRES_DSN or --dsn is required unless --dry-run is used.")
+    if args.hot_reads:
+        summary["hot_reads"] = _hot_reads(args, dsn)
+        if args.hot_reads_only:
+            return summary
     plan_dir = args.output_dir / "plans"
     summary["plans"] = {name: _run_psql(args.psql_bin, dsn, Path(path), plan_dir / f"{name}.txt") for name, path in query_paths.items()}
     summary["gaps"] = [
@@ -236,6 +283,12 @@ def main() -> int:
     parser.add_argument("--summary-output", type=Path, default=DEFAULT_SUMMARY)
     parser.add_argument("--dry-run", action="store_true", help="Write SQL artifacts without running psql.")
     parser.add_argument("--run", action="store_true", help="Run psql against the configured DSN.")
+    parser.add_argument(
+        "--hot-reads",
+        action="store_true",
+        help="Also explain the workflow hot reads (findings, inventory assets, graph adjacency, retained reports) as the DSN role.",
+    )
+    parser.add_argument("--hot-reads-only", action="store_true", help="With --run --hot-reads, skip the psql graph queries.")
     args = parser.parse_args()
 
     if args.run:

@@ -219,12 +219,6 @@ class PostgresGraphStore(
                     ON graph_node_search USING gin (search_text gin_trgm_ops)
                     """
                 )
-                conn.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_pg_graph_node_search_lower_trgm
-                    ON graph_node_search USING gin (LOWER(search_text) gin_trgm_ops)
-                    """
-                )
                 conn.commit()
             except Exception as exc:
                 # Some managed Postgres environments restrict extension installs.

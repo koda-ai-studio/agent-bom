@@ -135,10 +135,10 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_jobs_status  ON scan_jobs(status);
 CREATE INDEX IF NOT EXISTS idx_jobs_created ON scan_jobs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_team_status  ON scan_jobs(team_id, status);
-CREATE INDEX IF NOT EXISTS idx_jobs_team_created ON scan_jobs(team_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_jobs_batch ON scan_jobs(team_id, batch_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_jobs_parent ON scan_jobs(team_id, parent_job_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_jobs_schedule ON scan_jobs(team_id, schedule_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pg_jobs_team_created ON scan_jobs(team_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pg_jobs_batch ON scan_jobs(team_id, batch_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pg_jobs_parent ON scan_jobs(team_id, parent_job_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pg_jobs_schedule ON scan_jobs(team_id, schedule_id, created_at DESC);
 
 -- ── Table: CIS Benchmark Checks ──────────────────────────────────────────────
 -- Normalized cloud CIS benchmark observations extracted from scan JSON blobs.
@@ -440,7 +440,6 @@ CREATE TABLE IF NOT EXISTS graph_nodes (
     PRIMARY KEY (id, scan_id, tenant_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_entity_type ON graph_nodes(entity_type);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_scan ON graph_nodes(tenant_id, scan_id);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_scan_order
     ON graph_nodes(tenant_id, scan_id, severity_id DESC, risk_score DESC, label);
@@ -694,8 +693,6 @@ CREATE INDEX IF NOT EXISTS idx_pg_graph_node_search_severity
     ON graph_node_search(tenant_id, scan_id, severity);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_node_search_trgm
     ON graph_node_search USING gin (search_text gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_pg_graph_node_search_lower_trgm
-    ON graph_node_search USING gin (LOWER(search_text) gin_trgm_ops);
 
 -- ── Tables: OSV Scan Cache ────────────────────────────────────────────────────
 

@@ -20,8 +20,10 @@ pytestmark = pytest.mark.graph_performance
 PROFILE = PROFILES["ci-budget"]
 # Measured 2026-11-10/11 on an Apple M4 (10 cores) shared with other agents, load
 # 6-18. CPU-seconds per stage: collection 0.1, scan 2.8-4.2, ingest 3.3-5.1,
-# graph reads 4.9-5.4, exports 2.9, retention 0.03, rebuild 1.3-5.5; whole run
-# 17-26. Ceilings are 3-5x so a 4-vCPU GitHub runner does not flake.
+# graph reads 4.9-5.4, exports 2.9, retention 0.03, rebuild 1.3-5.5; the
+# update/delete stage (a second scan, a push and the graph refresh) 12.2 on
+# 2026-11-11 at load 9; whole run 17-26 before that stage, 35 with it. Ceilings
+# are 3-5x so a 4-vCPU GitHub runner does not flake.
 STAGE_CPU_SECONDS = {
     "collection": 2.0,
     "scan_enrichment": 25.0,
@@ -30,9 +32,10 @@ STAGE_CPU_SECONDS = {
     "report_export": 15.0,
     "retention": 5.0,
     "rebuild": 20.0,
+    "update_delete": 40.0,
 }
-WORKFLOW_CPU_SECONDS = 90.0
-PEAK_RSS_MIB = 1536  # measured 410-540; the profile's 2 GiB limit less runner headroom
+WORKFLOW_CPU_SECONDS = 120.0
+PEAK_RSS_MIB = 1536  # measured 410-645; the profile's 2 GiB limit less runner headroom
 # Eight samples, so p95 is the slowest read: 2.0 s was observed at load ~18.
 # This ceiling only catches order-of-magnitude stalls; latency is not a PR SLO.
 READ_P95_MS = 8000.0
@@ -87,13 +90,30 @@ async def test_ci_profile_workflow_stays_accurate_and_inside_its_resource_budget
     result = await run_workflow(PROFILE, tmp_path / "work", footprint=sqlite_footprint(workflow_control_plane))
     stages = result["stages"]
 
-    assert list(stages) == ["collection", "scan_enrichment", "ingest", "graph_api", "report_export", "retention", "rebuild"]
+    assert list(stages) == [
+        "collection",
+        "scan_enrichment",
+        "ingest",
+        "graph_api",
+        "report_export",
+        "retention",
+        "rebuild",
+        "update_delete",
+    ]
     accuracy = result["accuracy"]
     assert accuracy["expected_findings"] > 0
     assert accuracy["scanned_matches_expected"], accuracy
     assert accuracy["stored_matches_scanned"], accuracy
     assert accuracy["rebuilt_matches_stored"], accuracy
     assert result["network"]["blocked_connections"] == []
+
+    # Identity, source, time, scope and coverage fields are equal after ingest, an
+    # update/delete push, retention and rebuild; lifecycle ids and first_seen survive.
+    equivalence = result["equivalence"]
+    assert equivalence["failures"] == [], equivalence
+    update = equivalence["update_delete"]
+    assert update["status"] == "stored" and update["deleted_resolved"] and not update["deleted_still_open"], update
+    assert update["graph_package_nodes_before"] >= 1 and update["graph_package_nodes_after"] == 0, update
 
     upstream = stages["scan_enrichment"]["upstream"]
     assert upstream["injected_failures"] == 1, "the retry path must run"

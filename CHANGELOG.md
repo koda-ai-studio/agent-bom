@@ -10,6 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Upgrade notes
+- Postgres migration `20261111_01` drops seven indexes that no query uses: a trigram index on `LOWER(search_text)` (search text is stored lowercased), an `entity_type`-only index on `graph_nodes`, and four `scan_jobs` indexes that duplicate `idx_pg_jobs_*`. Drops run `CONCURRENTLY`, so no table is locked. At 200 agents, each push writes about 38% less WAL. The downgrade recreates them.
 - Parquet and Iceberg exports move to schema version 6, which appends `malicious_basis` after `sla_due_at_source`. 0.114.0 wrote that column at position 11 under version-5 metadata, which moved every later column; consumers that read 0.114.0 files by position should re-read them by name. Iceberg tables keep their field IDs and gain the column at the end.
 - Ollama model agents are named with the full `name:tag` (`ollama-model-llama3:8b` instead of `ollama-model-llama3`), so two tags of one model on one host are two assets. Their asset identities change once.
 
