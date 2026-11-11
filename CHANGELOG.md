@@ -9,6 +9,17 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Upgrade notes
+- Parquet and Iceberg exports move to schema version 6, which appends `malicious_basis` after `sla_due_at_source`. 0.114.0 wrote that column at position 11 under version-5 metadata, which moved every later column; consumers that read 0.114.0 files by position should re-read them by name. Iceberg tables keep their field IDs and gain the column at the end.
+- Ollama model agents are named with the full `name:tag` (`ollama-model-llama3:8b` instead of `ollama-model-llama3`), so two tags of one model on one host are two assets. Their asset identities change once.
+
+### Added
+- `--serving-endpoint RUNTIME=URL` (repeatable) reads one vLLM, Text Generation Inference, Triton, llama.cpp or LM Studio endpoint with that runtime's documented read-only request. Each endpoint reports success, partial, denied, timeout or unavailable; only success and partial produce records, and a failed endpoint never falls back to local files. Each model records runtime, endpoint, artifact and collection evidence separately in `metadata.serving_evidence`. See [AI infrastructure scanning](docs/AI_INFRASTRUCTURE_SCANNING.md).
+- Deployment support tiers list, for each profile, what was validated locally and what has not been installed live. See the [deployment overview](site-docs/deployment/overview.md).
+
+### Fixed
+- An Ollama endpoint that answers 401, 403 or times out reads as denied or timed out, not unavailable, and one malformed model entry no longer discards the rest of the inventory; the result is marked partial.
+
 ## [0.114.0] - 2026-11-08
 
 ### Highlights
