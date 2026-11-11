@@ -59,15 +59,19 @@ once per digest lookup.
 Keyless verification reads at most 16 unique Sigstore bundle payloads, each
 at most 1 MiB, within the same aggregate discovery budget.
 
-A crossed limit or failed evidence download records an incomplete-coverage
-warning and an `unknown` signature verdict. It does not establish that the image
-is unsigned, and `--require-signature` fails closed. MCP image scans preserve
-these warnings across their worker-thread boundary. Registry scans retain the
+A crossed limit, a failed evidence download or a registry that refuses the
+lookup (for example HTTP 401 for a locally built image that was never pushed)
+records an `image_supply_chain_incomplete` scan note and an `unknown` signature
+verdict. It does not establish that the image is unsigned. The note is
+provenance evidence, not package coverage: the packages were still extracted
+and scanned, so the scan is not marked `partial` for it. `--require-signature`
+fails closed on `unknown`. MCP image scans preserve these notes across their
+worker-thread boundary. Registry scans retain the
 verified manifest digest, including SHA-512, for evidence lookup and image
 identity; changing a tag cannot overwrite an earlier digest's identity.
 Malformed registry manifests, descriptors and image configs are rejected before
 interpretation. Invalid child digests cannot become tag or cross-repository
-lookups. Malformed optional evidence remains `unknown` with a coverage warning.
+lookups. Malformed optional evidence remains `unknown` with a scan note.
 
 ## Verify a keyless image signature
 

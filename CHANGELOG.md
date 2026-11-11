@@ -34,6 +34,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The HTML report showed a remediation SLA only for KEV findings, and a different date from the JSON export for those. It now takes the scan time as first seen when a finding has no history, as the JSON export does (#6128).
 - Without JavaScript, the HTML report showed and printed only the first page of each findings list. Every row now shows and prints, with its evidence open when printed, under a note giving the range it adds (#6128).
 - `GET /v1/graph` no longer returns `503 current_estate_building` on every request when all the evidence behind the current graph is older than `AGENT_BOM_GRAPH_RETENTION_DAYS`. Age retention was deleting the rebuildable current-estate view as soon as it was built. That view is now exempt from age retention and keeps its evidence time as `created_at` (#6228).
+- An image scan no longer reports a partial result, or the image as not scanned, when only its signature or referrer lookup fails. The signature stays `unknown`, the scan records a note, and `--require-signature` still fails.
+- The daily `latest` image refresh had not published since 2026-11-03. It now scans the built image archive, accepts only reviewed coverage exceptions for the UI image's Node.js runtime, and rebuilds every layer, so OS package fixes reach `latest`.
 
 ## [0.114.0] - 2026-11-08
 
