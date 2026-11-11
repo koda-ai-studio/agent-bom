@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import importlib
 import ipaddress
 import json
 import math
@@ -167,7 +168,7 @@ class StageRecorder:
 @contextlib.contextmanager
 def mocked_upstream(upstream: MockUpstream) -> Iterator[None]:
     """Route every advisory/registry client the scanner creates to ``upstream``."""
-    import agent_bom.cli  # noqa: F401 - load the scan path so every module binding create_client is patched
+    importlib.import_module("agent_bom.cli")  # load the scan path so every module binding create_client is patched
     import agent_bom.enrichment  # noqa: F401
     import agent_bom.http_client as http_client
 
