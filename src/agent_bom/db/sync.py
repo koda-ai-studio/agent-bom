@@ -624,7 +624,19 @@ def _sync_nvd_source(
 
 # NVD is a default source: it carries CVEs (and CPE ranges for runtimes such as
 # PHP) that no other feed has yet. Its sync is incremental and newest first.
-DEFAULT_SYNC_SOURCES: tuple[str, ...] = ("osv", "alpine", "debian", "epss", "kev", "nvd")
+# "nodejs" refreshes the Node.js core advisory snapshot beside the DB file.
+DEFAULT_SYNC_SOURCES: tuple[str, ...] = ("osv", "alpine", "debian", "epss", "kev", "nvd", "nodejs")
+
+
+def _sync_nodejs_core(conn: sqlite3.Connection, db_path: Path) -> int:
+    """Write the Node.js core index snapshot next to the DB so a copied DB directory carries it."""
+    from agent_bom.scanners.nodejs_advisory_data import SNAPSHOT_FILENAME, sync_snapshot
+
+    count = sync_snapshot(db_path.parent / SNAPSHOT_FILENAME)
+    _update_sync_meta(conn, "nodejs", count, {"snapshot": SNAPSHOT_FILENAME})
+    return count
+
+
 __all__ = ["_CVSS_SEVERITY", "_cpe_version_bound", "_cvss_to_severity", "_extract_nvd_cpe_matches",
     "_extract_nvd_cve_fields", "_is_commit_bound", "_parse_alpine_secfix_tokens", "_parse_debian_tracker_release_entry",
     "_parse_ghsa_version_range", "_parse_osv_entry", "_window_coverage", "sync_nvd_incremental"]  # fmt: skip
@@ -758,6 +770,9 @@ def sync_db(
         if "nvd" in enabled:
             key = nvd_api_key or os.environ.get("NVD_API_KEY")
             run_source("nvd", lambda: _sync_nvd_source(conn, key, nvd_url, max_nvd_entries, notify, nvd_time_budget))
+        # Last, so an unreachable index cannot stop the advisory sources above from syncing.
+        if "nodejs" in enabled:
+            run_source("nodejs", lambda: _sync_nodejs_core(conn, path or DB_PATH))
     return results
 
 

@@ -233,11 +233,16 @@ async def scan_cpython_runtimes(packages: list[Package], *, offline: bool) -> in
 
 
 def propagate_runtime_assessments(packages: list[Package], scanned: list[Package]) -> None:
-    """Carry current lookup receipts to independently inventoried duplicates."""
-    assessed = {advisory_instance_key(package): package for package in scanned if is_cpython_runtime(package)}
+    """Carry current lookup receipts to independently inventoried duplicates (CPython and Node.js runtimes)."""
+    from agent_bom.scanners.nodejs_advisory import is_nodejs_runtime
+
+    def dedicated(package: Package) -> bool:
+        return is_cpython_runtime(package) or is_nodejs_runtime(package)
+
+    assessed = {advisory_instance_key(package): package for package in scanned if dedicated(package)}
     receipt_types = {"runtime_advisory_lookup", "runtime_advisory_fix"}
     for package in packages:
-        if not is_cpython_runtime(package):
+        if not dedicated(package):
             continue
         source = assessed.get(advisory_instance_key(package))
         if source is None or source is package:

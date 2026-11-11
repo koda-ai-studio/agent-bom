@@ -314,6 +314,36 @@ attestation, application exploitability, or proof that every upstream advisory
 has been published. Review remaining findings and coverage warnings before
 using the image in a deployment.
 
+### Node.js runtimes
+
+A Node.js runtime in an image (`ENV NODE_VERSION` with `/usr/local/bin/node`)
+or on a host is matched by exact release against the Node.js security working
+group's core advisory index (`vuln/core/index.json` in
+`github.com/nodejs/security-wg`, MIT licensed). A release is affected when it is
+inside an advisory's `vulnerable` range and outside its `patched` range. Each
+finding carries the CVE ID (or the working group's `NSWG-COR-<id>` when no CVE
+was assigned), the index severity, the advisory and index entry links,
+`advisory_sources: ["nodejs_security_wg"]`, and the lowest unaffected release on
+the same major line as its fixed version. A line the index lists no fix for,
+typically an end-of-life line, has no fixed version rather than a cross-major
+upgrade. Advisories scoped only to Windows are not applied.
+
+```bash
+agent-bom image node:24-bookworm-slim -f json -o node-findings.json
+```
+
+Online scans read the index directly (at most 4 MB, 20-second timeout).
+Offline scans, and online scans that cannot reach it, use the freshest dated
+snapshot: the one `agent-bom db update` writes beside the local DB (or the air-gap bundle in `AGENT_BOM_VULN_DB_BUNDLE_DIR`)
+(`nodejs_core_vulns.json`; `--source nodejs` refreshes only it), or the one
+shipped with the release. A snapshot older than `AGENT_BOM_DB_STALE_DAYS`
+(14 days by default) is not used. With no usable data the runtime keeps a
+`runtime_advisory_coverage_unknown` warning and the scan is `partial`, never
+clean. The package's `version_provenance.evidence` records the index URL, its
+sha256, whether it was `live`, `synced_snapshot` or `bundled_snapshot`, the
+date the index was fetched (`checked_at`) and the number of matched advisories.
+Local NVD CPE ranges for `nodejs:node.js` still apply alongside the index.
+
 ### Large images
 
 Image layers are streamed rather than held in memory: an uncompressed layer is
@@ -421,7 +451,8 @@ strict version grammar. An env-only runtime that duplicates an installed distro
 package of the same upstream release is dropped rather than counted twice.
 Runtime components are matched against the local NVD CPE applicability data
 (`agent-bom db update --source nvd`) by exact vendor and product at the
-`nvd_cpe_candidate` tier. Image tarballs passed to `agent-bom fs` get the same
+`nvd_cpe_candidate` tier; CPython and Node.js also have their own upstream
+sources (see [Node.js runtimes](#nodejs-runtimes)). Image tarballs passed to `agent-bom fs` get the same
 detection. Plain directory and VM-mount scans read the same runtimes from
 installed files instead; see [Hosts, VM snapshots and the GPU stack](#hosts-vm-snapshots-and-the-gpu-stack).
 
