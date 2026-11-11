@@ -43,6 +43,16 @@ profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
 
 ## Changes from 0.113.2
 
+- **MCP OAuth.** A server with `AGENT_BOM_MCP_OAUTH_*` settings refuses to
+  start ("Incomplete or invalid MCP OAuth configuration") until these are also
+  set: `AGENT_BOM_MCP_TENANT_ID`, `AGENT_BOM_MCP_OAUTH_INTROSPECTION_URL` on the
+  issuer's origin, `AGENT_BOM_MCP_OAUTH_INTROSPECTION_CLIENT_ID`, and
+  `AGENT_BOM_MCP_OAUTH_INTROSPECTION_CLIENT_SECRET` (or `_FILE`). Every token,
+  including a deployment probe's, needs a signed `tenant_id` claim equal to that
+  tenant. Configure the issuer's claim and introspection client before
+  upgrading the server; see
+  [MCP_OAUTH.md](MCP_OAUTH.md#self-hosted-keycloak-setup). A platform that keeps
+  the previous container when a health check fails will go on serving 0.113.2.
 - **Helm ingress.** Enabling `controlPlane.ingress` fails rendering unless
   `controlPlane.api.trustedProxy` declares the proxy in front of the API, or
   `sharedSourceAccepted` records that all clients share one authentication
