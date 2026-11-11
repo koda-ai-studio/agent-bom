@@ -69,3 +69,30 @@ exceptions:
       Remove when the Python base image ships a fixed pip package, when pip can
       be upgraded safely in the runtime image, or when pip can be removed from
       the runtime layer without breaking supported operations.
+
+# Accepted coverage gaps: a runtime in the image that no advisory source
+# agent-bom consults tracks, so the image scan is "partial" on every run.
+# scripts/check_image_coverage_exceptions.py accepts a partial scan only when
+# every gap is listed here for that image at the exact version and unexpired;
+# any other gap, blocking finding or malicious package still fails the gate.
+coverage_exceptions:
+  - id: ui-node-runtime-advisory-source-2026-11
+    reason_code: runtime_advisory_coverage_unknown
+    release: node:24.15.0
+    images:
+      - agentbom/agent-bom-ui
+    owner: msaad00
+    status: temporary_exception
+    reason: >-
+      The UI image runs the Node.js 24.15.0 binary from the pinned
+      node:24-bookworm-slim base. Node.js has no OSV ecosystem and agent-bom
+      has no dedicated Node.js runtime advisory source, so the scan records it
+      as not assessed. The Debian packages and npm dependencies in the image
+      are still scanned and gated. The base digest is refreshed by reviewed
+      pull requests, which change this version and require a new review.
+    opened_at: 2026-11-11
+    review_after: 2026-12-11
+    expires_at: 2027-02-09
+    remove_when: >-
+      Remove when agent-bom assesses the Node.js runtime against an advisory
+      source, or when the UI base image no longer ships a Node.js runtime.

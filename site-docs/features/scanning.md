@@ -255,7 +255,7 @@ agent-bom image ghcr.io/org/app:1.4 --cosign-key cosign.pub --require-signature
 | `invalid` | A signature fails the configured key/signer policy, its cryptographic proof fails, or it names another digest. |
 | `present-unverified` | A signature artifact exists without a configured trust policy, or uses unsupported legacy evidence. Presence alone is not evidence of trust. |
 | `unsigned` | The registry has no signature or bundle for the digest. |
-| `unknown` | Not looked up (archive scans, offline scans, a local image without a registry digest) or the lookup failed. |
+| `unknown` | Not looked up (archive scans, offline scans, a local image without a registry digest) or the lookup failed. A failed lookup is an `image_supply_chain_incomplete` scan note; it does not make the package scan `partial`. |
 
 `--require-signature` exits 1 unless the status is `verified`, which needs a
 cosign public key (`--cosign-key` or `AGENT_BOM_IMAGE_COSIGN_KEY`) or both
