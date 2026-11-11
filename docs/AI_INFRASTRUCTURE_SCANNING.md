@@ -126,6 +126,53 @@ agent-bom agents --image vllm/vllm-openai:latest
 agent-bom agents --image ghcr.io/huggingface/text-generation-inference:latest
 ```
 
+Scanning an inference server image finds the packages in it. It does not show
+that a server is running, which models it serves or who can call it.
+
+## Model-serving endpoint evidence
+
+Each kind of evidence is separate. Finding a package, image or model file does
+not count as endpoint, configuration or effective-access coverage.
+
+| Runtime | Package / image / file detection | Endpoint probe (read sent) | Runtime identity confirmed by | Model fields recorded |
+|---|---|---|---|---|
+| Ollama | `.gguf` model files; `~/.ollama` manifests | `--ollama` / `--ollama-host`: `GET /api/tags` | the `/api/tags` response shape | name:tag, digest; load state not reported |
+| vLLM | `vllm` package and import; `vllm/vllm-openai` image | `--serving-endpoint vllm=URL`: `GET /v1/models`, `GET /version` | `owned_by: vllm` | served id, `root` artifact, runtime version |
+| Text Generation Inference | `text-generation-inference` package; TGI image | `--serving-endpoint tgi=URL`: `GET /info` | `router` field | `model_id`, `model_sha` digest, runtime version |
+| Triton | `tritonclient` package; `nvidia/tritonserver` image | `--serving-endpoint triton=URL`: `POST /v2/repository/index` with an empty body (a listing request), `GET /v2` | server metadata `name: triton` | model name, version, state such as `READY` / `UNAVAILABLE` |
+| llama.cpp server | `llama-cpp-python` package; `.gguf` files | `--serving-endpoint llamacpp=URL`: `GET /v1/models`, `GET /props` | `owned_by: llamacpp` | served model path, `build_info` |
+| LM Studio | None | `--serving-endpoint lmstudio=URL`: `GET /api/v0/models` | native fields such as `compatibility_type` | model id, `loaded` / `not-loaded` state |
+
+Each endpoint probe has one of five outcomes:
+
+| Outcome | Result |
+|---|---|
+| `success` | One record per listed model. |
+| `partial` | Records that matched the documented shape are kept, with a partial warning. Records that did not match, or a failed metadata read, make it partial. |
+| `denied` (401/403), `timeout`, `unavailable` (refused, other status, redirect, wrong API shape, unsafe URL) | No records, an incomplete warning, a `collector_failed` scan issue and exit code 1. Nothing is replaced with local files or another endpoint's inventory. |
+
+Every model record carries `metadata.serving_evidence`. It keeps the runtime
+(name, version, and whether the identity was confirmed or only declared), the
+endpoint (URL, host, port), the model artifact (served name, artifact
+reference, digest, version, state) and the collection (status, completeness,
+observation time, reads sent) as separate fields. Container, GPU, calling
+agent and principal are `null` because an endpoint listing cannot supply
+them. Bind address, public reachability, TLS, authentication, model-load
+policy, rate limits, quotas, logging and persistence are listed under
+`not_collected`. A listener that answers is not proof of public reachability
+or of missing authentication. Each `--serving-endpoint` value is probed
+separately, so one failed endpoint is reported beside a successful one.
+URLs with embedded credentials, a query or a fragment are refused, and
+redirects are not followed. Bearer-token authentication to a protected
+endpoint is not supported yet, so a protected endpoint reports `denied`.
+
+The outcomes are qualified in `tests/cloud/test_serving_runtime_qualification.py`
+and `tests/cloud/test_ollama_outcomes.py` against loopback fixtures that copy
+each runtime's documented responses. No runtime is installed or started, and
+no model is downloaded. This is not certification against a live provider.
+The records reach JSON reports and the graph as agents. The API, MCP tools
+and HTML reports do not yet show `serving_evidence` as its own view.
+
 ## GPU fleet scanning patterns
 
 GPU node pools (EKS, GKE, AKS, Snowflake SPCS, Databricks), Kubernetes GPU

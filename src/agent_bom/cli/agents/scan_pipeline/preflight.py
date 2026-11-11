@@ -205,6 +205,7 @@ def _emit_dry_run(opts: ScanOptions, st: ScanState) -> None:
             openai_flag=opts.openai_flag,
             ollama_flag=opts.ollama_flag,
             ollama_host=opts.ollama_host,
+            serving_endpoints=opts.serving_endpoints,
             mcp_registry_flag=opts.mcp_registry_flag,
             snyk_flag=opts.snyk_flag,
             enrich=opts.enrich,
