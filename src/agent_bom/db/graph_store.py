@@ -431,7 +431,7 @@ def open_graph_db(db_path: str | Path) -> Generator[sqlite3.Connection, None, No
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph) -> None:
+def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph, *, apply_retention: bool = True) -> None:
     """Persist a UnifiedGraph as an immutable per-scan snapshot.
 
     Thin wrapper over :func:`save_graph_streaming` — the streamed path never
@@ -453,6 +453,7 @@ def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph) -> None:
         interaction_risks=graph.interaction_risks,
         analysis_status=graph.analysis_status,
         snapshot_paths=prepare_snapshot_paths(graph),
+        apply_retention=apply_retention,
     )
 
 
@@ -475,6 +476,7 @@ def save_graph_streaming(
     correlation_completed_at: str = "",
     correlation_execution_owner: str = "",
     snapshot_paths: Sequence[SnapshotPath] | None = None,
+    apply_retention: bool = True,
 ) -> dict[str, int]:
     """Persist a graph snapshot from streamed node/edge iterables.
 
@@ -546,16 +548,19 @@ def save_graph_streaming(
     conn.commit()
     logger.info("Saved graph: %d nodes, %d edges, %d attack paths (scan=%s)", node_count, edge_count, attack_path_count, scan)
 
-    # Enforce age-based retention on the post-save lifecycle hook. A purge failure must never fail the durable save that already committed
-    # above, so it is best-effort and logged with sanitized text.
+    if apply_retention:
+        _purge_after_save(conn)
+    return {"nodes": node_count, "edges": edge_count}
+
+
+def _purge_after_save(conn: sqlite3.Connection) -> None:
+    """Post-save age retention; best-effort, so it never fails the save that already committed."""
     try:
         result = purge_expired_graph_snapshots(conn)
         if result["purged_count"]:
             logger.info("Purged %d expired graph snapshot(s)", result["purged_count"])
     except Exception as exc:  # noqa: BLE001 - includes retention-store errors; nothing is deleted before they raise
         logger.warning("Graph snapshot retention purge skipped: %s", sanitize_text(str(exc)))
-
-    return {"nodes": node_count, "edges": edge_count}
 
 
 # ═══════════════════════════════════════════════════════════════════════════

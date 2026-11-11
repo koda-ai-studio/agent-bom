@@ -1201,6 +1201,11 @@
 
       table.querySelectorAll('.sort-arrow').forEach(function(a) { a.className = 'sort-arrow'; });
       arrow.className = 'sort-arrow ' + (asc ? 'asc' : 'desc');
+      // A paginated list sorts every stored record, not only the mounted page.
+      if (window.PAGINATORS && window.PAGINATORS[table.id] && window.PAGINATORS[table.id].sort) {
+        window.PAGINATORS[table.id].sort(col, asc);
+        return;
+      }
 
       rows.sort(function(a, b) {
         var at = (a.children[col] || {}).textContent || '';
@@ -1211,9 +1216,6 @@
         return asc ? at.localeCompare(bt) : bt.localeCompare(at);
       });
       rows.forEach(function(r) { tbody.appendChild(r); });
-      // Re-slice the current page after re-ordering the DOM (paginator lives in
-      // the standalone scale-report script; guard in case it did not load).
-      if (window.PAGINATORS && window.PAGINATORS[table.id]) window.PAGINATORS[table.id].resort();
     });
   });
 
