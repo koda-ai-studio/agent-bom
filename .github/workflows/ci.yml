@@ -1342,7 +1342,7 @@ jobs:
       - name: Run isolated graph and findings read budgets
         if: matrix.shard == 0
         # Wall-clock gates run without xdist/coverage or competing test workers.
-        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py -q -m graph_performance
+        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py tests/test_workflow_resource_budget.py -q -m graph_performance
 
       - name: Graph accuracy fixture guard (#2259)
         if: >-
@@ -1472,7 +1472,7 @@ jobs:
       # Smoke is skipped when these shards run; keep its isolated timing gates.
       - name: Run isolated graph and findings read budgets
         if: matrix.shard == 0
-        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py -q -m graph_performance
+        run: uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py tests/test_workflow_resource_budget.py -q -m graph_performance
 
       # Keep the non-pytest guards too.
       - name: Graph accuracy fixture guard (#2259)

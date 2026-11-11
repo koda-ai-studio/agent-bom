@@ -53,6 +53,7 @@ SMOKE_TESTS = (
 ISOLATED_GRAPH_BUDGETS = (
     "tests/api/test_graph_first_read_budget.py",
     "tests/test_push_ingest_perf_budget.py",
+    "tests/test_workflow_resource_budget.py",
 )
 
 
