@@ -292,7 +292,9 @@ def probe_endpoint(runtime: str, endpoint: str, *, timeout: float = _DEFAULT_TIM
         except ServingAuthError as failure:
             observation.detail = str(failure)
             return observation
-    with httpx.Client(timeout=timeout, follow_redirects=False, headers=headers) as client:
+    # A token over plain http (loopback only) must never be relayed through a proxy.
+    trust_env = not (headers and urlsplit(base).scheme == "http")
+    with httpx.Client(timeout=timeout, follow_redirects=False, headers=headers, trust_env=trust_env) as client:
         try:
             models, dropped, version, confirmed = spec.parse(_request(client, spec.method, base + spec.path))
         except _ProbeError as failure:

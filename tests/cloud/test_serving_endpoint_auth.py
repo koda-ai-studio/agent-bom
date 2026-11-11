@@ -126,6 +126,20 @@ def test_redirect_is_not_followed_so_the_token_cannot_leave(monkeypatch):
     assert elsewhere_seen == []
 
 
+def test_a_token_over_plain_http_is_never_relayed_through_a_proxy(monkeypatch):
+    token = _token()
+    monkeypatch.setenv(_ENV, token)
+    for name in ("HTTP_PROXY", "http_proxy", "ALL_PROXY", "all_proxy"):
+        monkeypatch.setenv(name, "http://127.0.0.1:9")
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.delenv("no_proxy", raising=False)
+    seen: list = []
+    with serving_fixture(SCENARIOS["vllm"]["success"], FixtureOptions(seen=seen, require_bearer=token)) as url:
+        observation = probe_endpoint("vllm", url, timeout=_TIMEOUT, token_env=_ENV)
+    assert observation.status == "success"
+    assert _auth_headers(seen) == [f"Bearer {token}", f"Bearer {token}"]
+
+
 # ── CLI wiring ──────────────────────────────────────────────────────────────
 
 
