@@ -85,19 +85,31 @@ def _chart_data(findings: list["Finding"]) -> str:
     return _json_for_script(chart)
 
 
-def _cytoscape_elements(report: "AIBOMReport", blast_radii: list["BlastRadius"]) -> str:
+def _cytoscape_elements(
+    report: "AIBOMReport",
+    blast_radii: list["BlastRadius"],
+    *,
+    findings: list["Finding"] | None = None,
+    unified_findings: list["Finding"] | None = None,
+) -> str:
     """Build Cytoscape element list using the shared graph builder."""
     from agent_bom.output.graph import _json_for_script, build_graph_elements, sanitize_graph_elements
 
-    elements, _ = sanitize_graph_elements(build_graph_elements(report, blast_radii, include_cve_nodes=True))
+    built = build_graph_elements(report, blast_radii, include_cve_nodes=True, findings=findings, unified_findings=unified_findings)
+    elements, _ = sanitize_graph_elements(built)
     return _json_for_script(elements, indent=None)
 
 
-def _attack_flow_elements(report: "AIBOMReport", blast_radii: list["BlastRadius"]) -> str:
+def _attack_flow_elements(
+    report: "AIBOMReport",
+    blast_radii: list["BlastRadius"],
+    *,
+    findings: list["Finding"] | None = None,
+) -> str:
     """Build attack flow element list showing CVE → impact propagation."""
     from agent_bom.output.graph import _json_for_script, build_attack_flow_elements, sanitize_graph_elements
 
-    elements, _ = sanitize_graph_elements(build_attack_flow_elements(report, blast_radii))
+    elements, _ = sanitize_graph_elements(build_attack_flow_elements(report, blast_radii, findings=findings))
     return _json_for_script(elements, indent=None)
 
 
@@ -112,7 +124,7 @@ def _attack_flow_section(findings: list["Finding"]) -> str:
 
     return (
         '<section id="attackflow">'
-        '<details class="report-disclosure"><summary>Finding paths — recorded impact context</summary>'
+        '<details class="report-disclosure"><summary>Finding paths &mdash; recorded impact context</summary>'
         '<div class="sec-title">&#x1f525; CVE Attack Flow'
         '<span style="font-size:.68rem;font-weight:400;opacity:.5;margin-left:8px">'
         f"{len(findings)} CVEs &#x2192; {total_agents} agent / asset contexts &#x2192; "

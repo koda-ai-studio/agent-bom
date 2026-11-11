@@ -4,11 +4,12 @@ Every record keeps its server-rendered markup. Only the visible page is parsed
 into the document; filters, whole-list search and sorting read attributes and
 text straight from the stored markup, so a 50,000-row list never becomes
 50,000 live rows. Printing mounts every record, so a printed or PDF export
-stays complete.
+stays complete. Without scripting the store renders as markup instead (see
+``deferred_rows``), so that copy is complete too.
 """
 
 PAGINATOR_JS = r"""
-  var ENTITIES = {amp: '&', lt: '<', gt: '>', quot: '"', nbsp: ' ', mdash: '—', ndash: '–', middot: '·', hellip: '…', rsaquo: '›', lsaquo: '‹'};
+  var ENTITIES = {amp: '&', lt: '<', gt: '>', quot: '"', nbsp: ' ', mdash: '\u2014', ndash: '\u2013', middot: '\u00b7', hellip: '\u2026', rsaquo: '\u203a', lsaquo: '\u2039'};
   function decodeText(s) {
     return s.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, function(m, e) {
       if (e[0] === '#') { var c = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10); return isNaN(c) ? m : String.fromCodePoint(c); }
@@ -43,14 +44,27 @@ PAGINATOR_JS = r"""
     return this.el;
   };
 
+  // Reaching the first or last page disables the button just pressed; keep keyboard focus in the pager.
+  function keepPagerFocus(bar) {
+    var active = document.activeElement;
+    if (!active || !active.disabled || !bar.contains(active)) return;
+    var act = active.getAttribute('data-act');
+    var others = act === 'next' || act === 'last' ? ['prev', 'first'] : ['next', 'last'];
+    for (var i = 0; i < others.length; i++) {
+      var button = bar.querySelector('[data-act="' + others[i] + '"]');
+      if (button && !button.disabled) { button.focus(); return; }
+    }
+  }
+
   function makePaginator(tableId, filterFn) {
     var table = document.getElementById(tableId);
     if (!table) return null;
     var body = table.tBodies && table.tBodies[0] ? table.tBodies[0] : table;
     var bar = document.querySelector('.pager[data-pager="' + tableId + '"]');
     var rows = Array.prototype.map.call(body.children, function(el) { var r = new Row(el.outerHTML); r.el = el; return r; });
-    var store = document.querySelector('script.deferred-rows[data-rows-for="' + tableId + '"]');
-    if (store) store.textContent.split('\n').forEach(function(html) { if (html) rows.push(new Row(html)); });
+    // Scripting on, so the store is raw text: a note and frame line, one row per line, a closing line.
+    var store = document.querySelector('noscript.deferred-rows[data-rows-for="' + tableId + '"]');
+    if (store) store.textContent.split('\n').slice(1, -1).forEach(function(html) { if (html) rows.push(new Row(html)); });
     var pageSize = bar ? (parseInt(bar.getAttribute('data-page-size'), 10) || 50) : 50;
     var page = 1;
     var matched = rows;
@@ -99,6 +113,7 @@ PAGINATOR_JS = r"""
         if (nx) nx.disabled = page >= pages;
         if (ls) ls.disabled = page >= pages;
         bar.style.display = pages > 1 ? '' : 'none';
+        keepPagerFocus(bar);
       }
     }
     function apply() { matched = filterFn ? rows.filter(filterFn) : rows; page = 1; render(); }

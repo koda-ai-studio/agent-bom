@@ -152,7 +152,7 @@ SUPPLY_CHAIN_TOOLS_JS = """\
       ctxMenu.classList.add('show');
     });
 
-    // Minimap — render a small overview of the full graph
+    // Minimap: render a small overview of the full graph
     var minimapEl = document.createElement('div');
     minimapEl.className = 'cy-minimap';
     cyContainer.parentNode.appendChild(minimapEl);
@@ -234,7 +234,7 @@ SUPPLY_CHAIN_TOOLS_JS = """\
     if (nodeCounts.server) statsHTML.push('<span style="color:#10b981">' + nodeCounts.server + ' servers</span>');
     if (nodeCounts.pkg_vuln) statsHTML.push('<span style="color:#dc2626">' + nodeCounts.pkg_vuln + ' packages</span>');
     if (nodeCounts.cve) statsHTML.push('<span style="color:#f87171">' + nodeCounts.cve + ' CVEs</span>');
-    nodeStats.innerHTML = statsHTML.join(' &middot; ');
+    nodeStats.innerHTML = (GRAPH_BOUND.bounded ? 'Drawn: ' : '') + statsHTML.join(' &middot; ');
     cyContainer.parentNode.appendChild(nodeStats);
 
   } else if (cyContainer) {
@@ -243,7 +243,7 @@ SUPPLY_CHAIN_TOOLS_JS = """\
 
   // Findings-table pagination, filtering, and tabs live in the standalone
   // scale-report script (below) so they keep working even if the CDN chart /
-  // graph libraries fail to load — the common case for an offline or emailed
+  // graph libraries fail to load, the common case for an offline or emailed
   // report. Nothing table/tab related runs here.
 
 """

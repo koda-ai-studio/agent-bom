@@ -1,9 +1,10 @@
 """Deterministic large-report fixtures and an export measurement for the standalone HTML report.
 
 Run ``python -m tests.html_report_scale_fixtures 2000 10000 50000`` (with
-``PYTHONPATH=src``) to print export CPU seconds, peak traced memory and file
-bytes for each size. Every size is generated from the same rules, so numbers
-are comparable across commits on one machine.
+``PYTHONPATH=src``) to print export CPU seconds, peak RSS growth and file
+bytes for each size, for ``to_html`` and for ``export_html`` (``"file"``),
+which streams to disk. Every size is generated from the same rules, so
+numbers are comparable across commits on one machine.
 """
 
 from __future__ import annotations
@@ -94,23 +95,37 @@ def _max_rss_mib() -> float:
     return rss / 2**20 if sys.platform == "darwin" else rss / 2**10
 
 
-def measure(total: int) -> dict[str, float]:
+def measure(total: int, to_file: bool = False) -> dict[str, object]:
     """Export CPU, the process peak-RSS growth during export, and the document size.
 
     Peak RSS only grows, so run one size per process (``__main__`` does).
     """
-    from agent_bom.output.html import to_html
+    import os
+    import tempfile
+
+    from agent_bom.output.html import export_html, to_html
 
     report, radii = scale_report(total)
     before = _max_rss_mib()
     started = time.process_time()
-    html = to_html(report, radii)
-    cpu = time.process_time() - started
+    if to_file:
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "report.html")
+            export_html(report, path, radii)
+            cpu = time.process_time() - started
+            growth = _max_rss_mib() - before
+            size = os.path.getsize(path)
+    else:
+        html = to_html(report, radii)
+        cpu = time.process_time() - started
+        growth = _max_rss_mib() - before
+        size = len(html)
     return {
         "findings": total,
+        "mode": "file" if to_file else "string",
         "cpu_s": round(cpu, 2),
-        "peak_rss_growth_mib": round(_max_rss_mib() - before, 1),
-        "bytes": len(html.encode()),
+        "peak_rss_growth_mib": round(growth, 1),
+        "bytes": size,
     }
 
 
@@ -118,8 +133,9 @@ if __name__ == "__main__":
     import json
     import subprocess
 
-    if len(sys.argv) == 3 and sys.argv[1] == "--one":
-        print(json.dumps(measure(int(sys.argv[2]))), flush=True)
+    if len(sys.argv) >= 3 and sys.argv[1] == "--one":
+        print(json.dumps(measure(int(sys.argv[2]), to_file=sys.argv[3:] == ["--file"])), flush=True)
     else:
         for size in sys.argv[1:] or ["2000"]:
-            subprocess.run([sys.executable, "-m", "tests.html_report_scale_fixtures", "--one", size], check=True)
+            for mode in ([], ["--file"]):
+                subprocess.run([sys.executable, "-m", "tests.html_report_scale_fixtures", "--one", size, *mode], check=True)

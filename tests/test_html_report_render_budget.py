@@ -26,11 +26,13 @@ from tests.html_report_scale_fixtures import scale_report
 _FINDINGS = 2000
 # Ceilings sit about 2-3x above the values measured on an Apple M4, so slower CI
 # runners pass while a regression in per-finding cost still fails. CPU is about
-# 3 s on an M4 and reached 8.1 s on a GitHub runner, so its ceiling is about
-# twice the slowest runner seen.
+# 2 s on an M4 (3 s before each projection was built once) and reached 8.1 s on
+# a GitHub runner, so its ceiling stays about twice the slowest runner seen.
+# Peak RSS growth is about 70 MiB on an M4 (220 MiB before the document became
+# one byte per character and stopped being copied by each rewrite).
 _MAX_BYTES = 12_000_000
 _MAX_CPU_S = 16.0
-_MAX_PEAK_RSS_GROWTH_MIB = 400
+_MAX_PEAK_RSS_GROWTH_MIB = 200
 _LISTS = ("vulnTable", "policyFindingsTable", "blastTable", "remediationList", "remediationNoFix")
 
 
@@ -48,13 +50,14 @@ def _mounted(document: str, list_id: str) -> str:
         body = document.index("<tbody>", start)
         return document[body : document.index("</tbody>", body)]
     segment = document[start : document.index(f'<div class="pager" data-pager="{list_id}"', start)]
-    return segment.split('<script type="text/html"', 1)[0]
+    return segment.split('<noscript class="deferred-rows"', 1)[0]
 
 
 def _deferred(document: str, list_id: str) -> list[str]:
-    pattern = rf'<script type="text/html" class="deferred-rows" data-rows-for="{list_id}">(.*?)</script>'
+    pattern = rf'<noscript class="deferred-rows" data-rows-for="{list_id}">(.*?)</noscript>'
     blocks = re.findall(pattern, document, flags=re.DOTALL)
-    return [row for block in blocks for row in block.split("\n") if row]
+    # The first line is the note and frame opening, the last the frame closing.
+    return [row for block in blocks for row in block.split("\n")[1:-1] if row]
 
 
 def _records(document: str, list_id: str) -> int:
@@ -97,12 +100,12 @@ def test_deferred_rows_are_inert_text_with_escaped_evidence(rendered):
     assert "<script>x</script>" not in document
     for list_id in _LISTS:
         for row in _deferred(document, list_id):
-            assert "</script" not in row.lower() and "<!--" not in row
+            assert "</noscript" not in row.lower() and "</script" not in row.lower() and "<!--" not in row
             assert "\n" not in row
     deferred = _deferred(document, "vulnTable")
     assert all('class="finding-evidence"' in row for row in deferred)
     assert sum("&lt;script&gt;x&lt;/script&gt;" in row for row in deferred) > len(deferred) // 2
-    assert "<noscript>" in document
+    assert '<noscript class="deferred-rows"' in document
 
 
 def test_export_stays_within_cpu_and_size_budget(rendered):
@@ -135,4 +138,4 @@ def test_small_report_has_no_deferred_rows():
     report, radii = scale_report(20)
     document = to_html(report, radii)
     assert 'class="deferred-rows"' not in document
-    assert "<noscript>" not in document
+    assert "<noscript" not in document

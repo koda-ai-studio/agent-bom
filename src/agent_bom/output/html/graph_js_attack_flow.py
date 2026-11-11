@@ -264,7 +264,8 @@ ATTACK_FLOW_GRAPH_JS = """\
       wheelSensitivity: 0.3,
     });
     cyAtk.ready(function() { fitGraphWhenVisible(cyAtk, cyAtkContainer); });
-    addGraphViews(cyAtk, cyAtkContainer);
+    addGraphViews(cyAtk, cyAtkContainer, ATTACK_FLOW_RECORDED);
+    noteGraphBound(cyAtkContainer, ATTACK_FLOW_BOUND);
 
     // Attack flow tooltip
     cyAtk.on('mouseover', 'node', function(e) {
@@ -346,7 +347,7 @@ ATTACK_FLOW_GRAPH_JS = """\
     if (afCounts.credential) afParts.push('<span style="color:#fbbf24">' + afCounts.credential + ' creds</span>');
     if (afCounts.tool) afParts.push('<span style="color:#818cf8">' + afCounts.tool + ' tools</span>');
     if (afCounts.agent) afParts.push('<span style="color:#3b82f6">' + afCounts.agent + ' agents</span>');
-    afStats.innerHTML = afParts.join(' &middot; ');
+    afStats.innerHTML = (ATTACK_FLOW_BOUND.bounded ? 'Drawn: ' : '') + afParts.join(' &middot; ');
     cyAtkContainer.parentNode.appendChild(afStats);
   }
 

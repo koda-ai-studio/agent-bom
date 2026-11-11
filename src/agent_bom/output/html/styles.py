@@ -82,6 +82,7 @@ _REPORT_PRINT_CSS = """\
     @page{size:A4;margin:12mm}
     @media print{
       body{background:#fff;color:#1e293b;font-size:12px}
+      details::details-content{content-visibility:visible;display:block}
       .sidebar,.graph-controls,.graph-filter-bar,.vuln-filter-bar,.policy-filter-bar,.toggle-btn,.inv-search,.print-btn,.node-sidebar,.sidebar-toggle,.cy-minimap{display:none!important}
       .container{margin-left:0;max-width:100%;padding:10px}
       footer{margin-left:0}
@@ -258,6 +259,9 @@ def render_styles(status_color: str) -> str:
     .pager-size-label{{display:flex;align-items:center;gap:6px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;font-size:.68rem;font-weight:700}}
     .pager-size{{background:#1e293b;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:.74rem;padding:4px 6px;outline:none}}
     .pg-hidden{{display:none}}
+    .deferred-note{{margin-top:14px}}
+    .graph-bound-note{{margin:0 0 10px;font-size:.76rem;color:#94a3b8;line-height:1.5}}
+    .pager-btn:focus-visible,.pager-size:focus-visible{{outline:2px solid #10b981;outline-offset:2px}}
     @media print{{
       .tab-bar,.pager{{display:none!important}}
       body.js-tabs .container>section[data-tab]{{display:block!important}}

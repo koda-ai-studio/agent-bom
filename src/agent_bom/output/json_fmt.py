@@ -604,16 +604,12 @@ def _blast_radius_rows(cve_pairs: list[tuple[Finding, BlastRadius]], exposure_pa
 
 def _export_findings_json(report: AIBOMReport) -> list[dict[str, Any]]:
     """Unified findings as exported, before prompt-scan / browser-extension rows are appended."""
-    from agent_bom.output.finding_views import apply_workload_runtime_evidence_for_export
+    from agent_bom.output.finding_views import anchor_first_seen, apply_workload_runtime_evidence_for_export
 
     export_findings = apply_workload_runtime_evidence_for_export(list(report.to_findings()))
-    # Anchor the remediation SLA window: scan completion is the authoritative first-observation time for a fresh scan's findings, so stamp
-    # it when the finding does not already carry a first-seen history. to_dict() then derives ``sla_due_at`` from this anchor (with the KEV
-    # override) — one source of truth for the report, the API job result, and every export.
-    scan_observed_at = report.generated_at.isoformat()
-    for finding in export_findings:
-        if not finding.first_seen:
-            finding.first_seen = scan_observed_at
+    # Scan completion is the authoritative first-observation time for a fresh scan's findings — one
+    # source of truth for the report, the API job result, and every export that shows an SLA.
+    anchor_first_seen(export_findings, report)
     return stamp_finding_node_ids([finding.to_dict() for finding in export_findings])
 
 

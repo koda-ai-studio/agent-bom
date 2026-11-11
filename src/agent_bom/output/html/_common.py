@@ -38,5 +38,16 @@ def _finding_sev_badge(finding) -> str:
     return _sev_badge(severity_display_label(sev, source)) if sev != "unknown" else _sev_badge(sev)
 
 
+def ascii_html(markup: str) -> str:
+    """Spell non-ASCII characters as character references.
+
+    Python stores a string at the width of its widest character, so one glyph
+    doubles the memory of a whole report. Only for markup: a reference is not
+    decoded inside ``<script>`` or ``<style>``.
+    """
+    return markup if markup.isascii() else markup.encode("ascii", "xmlcharrefreplace").decode("ascii")
+
+
 def _esc(s: object) -> str:
-    return sanitize_output_text(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    escaped = sanitize_output_text(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+    return ascii_html(escaped)
