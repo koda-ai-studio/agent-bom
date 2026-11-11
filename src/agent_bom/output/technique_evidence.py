@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from html import escape
 from typing import Any
 
+from agent_bom.core.timestamps import parse_timestamp
 from agent_bom.evidence.finding_response_fields import safe_atlas_mapping_evidence
 from agent_bom.output.finding_views import sanitize_output_text
 
@@ -87,10 +89,6 @@ def collapse_vulnerability_sla(entry: dict[str, Any]) -> dict[str, Any]:
     Each affected component's own deadline stays in its ``agent-bom:workflow``
     property, so a shared advisory loses no per-finding date.
     """
-    from datetime import datetime, timezone
-
-    from agent_bom.core.timestamps import parse_timestamp
-
     properties = entry.get("properties") or []
     deadlines = [str(prop["value"]) for prop in properties if prop.get("name") == _SLA_DUE]
     if len(deadlines) < 2:

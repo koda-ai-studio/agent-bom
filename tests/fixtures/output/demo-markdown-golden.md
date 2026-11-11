@@ -42,6 +42,7 @@
 > Test vulnerability
 
 - **Severity**: CRITICAL
+- **SLA due**: 2026-01-08T12:00:00+00:00
 - **CVSS**: 9.8
 - **Fix**: Upgrade to 4.17.21
 - **CWE**: CWE-1321
@@ -53,6 +54,7 @@
 > Test vulnerability
 
 - **Severity**: HIGH
+- **SLA due**: 2026-01-31T12:00:00+00:00
 - **CVSS**: 7.5
 - **Fix**: Upgrade to 2.31.0
 - **Reachability**: Unknown (code reachability not evaluated)

@@ -10,6 +10,7 @@ from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.compliance_utils import effective_blast_radius_tags
 from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import normalize_severity
+from agent_bom.core.sla import finding_owner
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.domain.inventory_types import DEV_DEPENDENCY_SCOPES
 from agent_bom.evidence.malicious_basis import malicious_basis
@@ -115,8 +116,6 @@ def export_workflow_fields(finding: Finding, observed_at: object) -> dict[str, A
     (scan completion, a datetime or ISO string), as ``anchor_first_seen`` does
     for JSON and HTML, without changing the finding. Empty values are ``None``.
     """
-    from agent_bom.core.sla import finding_owner
-
     anchor = observed_at.isoformat() if hasattr(observed_at, "isoformat") else (str(observed_at) if observed_at else None)
     sla = finding.sla_fields(anchor=anchor)
     return {

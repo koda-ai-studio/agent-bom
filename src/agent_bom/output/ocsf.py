@@ -129,10 +129,7 @@ _OCSF_STATUS_SUPPRESSED = 4
 
 
 def finding_to_ocsf(finding: "Finding", product_version: str = "", *, observed_at: object = None) -> dict[str, Any]:
-    """Convert a unified :class:`~agent_bom.finding.Finding` to OCSF v1.1.
-
-    ``observed_at`` (scan completion) anchors the SLA of a finding with no
-    recorded first sighting, so the deadline matches the JSON export.
+    """Convert a unified :class:`~agent_bom.finding.Finding` to OCSF v1.1; ``observed_at`` anchors an SLA with no history.
 
     This is the Finding-native OCSF path (vs :func:`alert_to_ocsf`, which is
     runtime-alert-native). It preserves the fields the unified Finding now
@@ -192,16 +189,9 @@ def finding_to_ocsf(finding: "Finding", product_version: str = "", *, observed_a
         "exposed_credentials": list(finding.exposed_credentials),
         "exposed_tools": list(finding.exposed_tools),
     }
-    from agent_bom.output.finding_views import export_workflow_fields
+    from agent_bom.output.finding_views import export_workflow_metadata
 
-    workflow = export_workflow_fields(finding, observed_at)
-    if workflow["owner"]:
-        unmapped["owner"] = workflow["owner"]
-    if workflow["sla_due_at"]:
-        unmapped["sla_due_at"] = workflow["sla_due_at"]
-        unmapped["sla_due_at_source"] = workflow["sla_due_at_source"]
-    if workflow["workflow_status"]:
-        unmapped["workflow_status"] = workflow["workflow_status"]
+    unmapped.update(export_workflow_metadata(finding, observed_at))
     if ai_context:
         unmapped["ai_context"] = ai_context
     if suppression:
