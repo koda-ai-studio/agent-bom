@@ -1,0 +1,2061 @@
+{
+  "machine": "Apple M4, 10 cores, 16 GiB, macOS 27.0.1, Python 3.13.5; shared with other workloads (load average 5-9)",
+  "postgres": "PostgreSQL 16.14, private initdb cluster on 127.0.0.1, schema migrated with alembic head",
+  "runs": {
+    "postgres_cancel_and_replicas": {
+      "environment": {
+        "cpu_count": 10,
+        "load_average": [
+          5.21875,
+          6.376953125,
+          7.34521484375
+        ],
+        "machine": "arm64",
+        "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "python": "3.13.5"
+      },
+      "failures": [],
+      "generated_at": "2026-11-11T13:08:00.564092+00:00",
+      "note": "same database reused, so its cold/warm growth includes earlier data; use it for cancel and the two-replica run",
+      "profiles": [
+        {
+          "cancel": {
+            "admitted_before_kill": true,
+            "killed_while_running": true,
+            "recover": {
+              "process": {
+                "cpu_seconds": 56.924,
+                "exit_code": 0,
+                "max_rss_mib": 1343.9,
+                "wall_seconds": 63.26
+              },
+              "result": {
+                "expected_findings": 207,
+                "findings_match_expected": true,
+                "integrity_check": null,
+                "jobs_after_kill": 2,
+                "jobs_after_retry": 2,
+                "retry": {
+                  "admission_ms": 4614.2,
+                  "graph_nodes": 11490,
+                  "job_id": "cdc27cfd-5460-570c-9f15-c5a74548ba01",
+                  "retry_same_job": true,
+                  "retry_status": 202,
+                  "status": "stored"
+                },
+                "retry_to_stored_seconds": 54.323,
+                "statuses_after_kill": [
+                  "pending",
+                  "done"
+                ]
+              }
+            },
+            "victim": {
+              "cpu_seconds": 31.611,
+              "exit_code": -9,
+              "max_rss_mib": 1062.0
+            }
+          },
+          "cold": {
+            "process": {
+              "cpu_seconds": 159.269,
+              "exit_code": 0,
+              "max_rss_mib": 1902.7,
+              "wall_seconds": 169.75
+            },
+            "result": {
+              "accuracy": {
+                "expected_findings": 207,
+                "job_id": "a93639bc-4366-55ad-bb03-86a4e2e7f755",
+                "missing_after_scan": [],
+                "rebuilt_matches_stored": true,
+                "scanned_matches_expected": true,
+                "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+                "stored_findings": 207,
+                "stored_matches_scanned": true,
+                "unexpected_after_scan": []
+              },
+              "network": {
+                "blocked_callers": [],
+                "blocked_connections": []
+              },
+              "process": {
+                "cpu_seconds": 154.005,
+                "rss_peak_mib": 1902.6,
+                "rss_steady_mib": 1365.5
+              },
+              "profile": {
+                "agents": 200,
+                "api_replicas": 1,
+                "concurrent_pushes": 1,
+                "cpu_limit": 2.0,
+                "description": "Same workload as small-self-hosted against a private Postgres 16 cluster",
+                "memory_limit_mib": 2048,
+                "name": "small-self-hosted-postgres",
+                "query_repeats": 30,
+                "seed": 2145,
+                "source": "scripts/generate_graph_benchmark_estate.py",
+                "store": "postgres",
+                "vulnerable_package_rate": 0.08
+              },
+              "stages": {
+                "collection": {
+                  "agents": 200,
+                  "cpu_seconds": 0.402,
+                  "inventory_bytes": 467246,
+                  "packages": 4058,
+                  "rss_end_mib": 237.3,
+                  "rss_median_mib": 225.9,
+                  "rss_peak_mib": 237.3,
+                  "wall_seconds": 0.412
+                },
+                "graph_api": {
+                  "cpu_seconds": 28.04,
+                  "reads": {
+                    "attack_paths": {
+                      "p50_ms": 56.23,
+                      "p95_ms": 227.46,
+                      "response_bytes": 517164,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "findings_page": {
+                      "p50_ms": 85.37,
+                      "p95_ms": 366.81,
+                      "response_bytes": 361925,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_page": {
+                      "p50_ms": 202.25,
+                      "p95_ms": 2118.55,
+                      "response_bytes": 4062808,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_search": {
+                      "p50_ms": 74.06,
+                      "p95_ms": 264.29,
+                      "response_bytes": 65630,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "jobs_page": {
+                      "p50_ms": 9.36,
+                      "p95_ms": 13.62,
+                      "response_bytes": 785,
+                      "samples": 30,
+                      "status": 200
+                    }
+                  },
+                  "request_bytes": 5910,
+                  "response_bytes": 138680744,
+                  "rss_end_mib": 1380.0,
+                  "rss_median_mib": 1365.5,
+                  "rss_peak_mib": 1480.5,
+                  "wall_seconds": 26.308
+                },
+                "ingest": {
+                  "admission_ms": 4937.0,
+                  "cpu_seconds": 43.311,
+                  "graph_nodes": 11490,
+                  "job_id": "a93639bc-4366-55ad-bb03-86a4e2e7f755",
+                  "request_bytes": 146861520,
+                  "response_bytes": 72422,
+                  "retry_same_job": true,
+                  "retry_status": 202,
+                  "rss_end_mib": 1344.2,
+                  "rss_median_mib": 1154.2,
+                  "rss_peak_mib": 1644.2,
+                  "status": "stored",
+                  "wall_seconds": 48.21
+                },
+                "rebuild": {
+                  "cpu_seconds": 45.953,
+                  "graph_nodes": 11490,
+                  "identical_repush_status": 409,
+                  "new_job": true,
+                  "rss_end_mib": 1477.9,
+                  "rss_median_mib": 1718.1,
+                  "rss_peak_mib": 1902.6,
+                  "status": "stored",
+                  "wall_seconds": 51.675
+                },
+                "report_export": {
+                  "cpu_seconds": 11.261,
+                  "findings_report": {
+                    "create_status": 202,
+                    "download_bytes": 698681,
+                    "retained_lookup_ms": 10.0,
+                    "retained_lookup_status": 200,
+                    "seconds_to_done": 1.803,
+                    "status": "done"
+                  },
+                  "graph_export_graphml": {
+                    "bytes": 15222696,
+                    "ms": 4647.9,
+                    "status": 200
+                  },
+                  "graph_export_json": {
+                    "bytes": 9361954,
+                    "ms": 4882.0,
+                    "status": 200
+                  },
+                  "request_bytes": 368,
+                  "response_bytes": 25284830,
+                  "rss_end_mib": 1325.3,
+                  "rss_median_mib": 1372.7,
+                  "rss_peak_mib": 1394.1,
+                  "wall_seconds": 11.333
+                },
+                "retention": {
+                  "cpu_seconds": 0.015,
+                  "jobs_after": 0,
+                  "jobs_before": 2,
+                  "jobs_removed": 2,
+                  "rss_end_mib": 1325.3,
+                  "rss_median_mib": 1325.3,
+                  "rss_peak_mib": 1325.3,
+                  "wall_seconds": 0.039
+                },
+                "scan_enrichment": {
+                  "cpu_seconds": 20.387,
+                  "exit_code": 1,
+                  "findings": 207,
+                  "report_bytes": 73416517,
+                  "rss_end_mib": 657.3,
+                  "rss_median_mib": 371.2,
+                  "rss_peak_mib": 658.3,
+                  "upstream": {
+                    "by_endpoint": {
+                      "api.github.com:GET": 25,
+                      "osv:querybatch": 5,
+                      "osv:vuln-detail": 207,
+                      "pypi.org:GET": 15,
+                      "registry.npmjs.org:GET": 15,
+                      "www.cisa.gov:GET": 1
+                    },
+                    "by_host": {
+                      "api.github.com": 25,
+                      "api.osv.dev": 212,
+                      "pypi.org": 15,
+                      "registry.npmjs.org": 15,
+                      "www.cisa.gov": 1
+                    },
+                    "injected_failures": 1,
+                    "request_bytes": 361286,
+                    "requests": 268,
+                    "response_bytes": 145146
+                  },
+                  "wall_seconds": 21.794
+                }
+              },
+              "storage": {
+                "after_ingest": {
+                  "index_bytes": 171810816,
+                  "total_bytes": 324926487,
+                  "wal_bytes": 422791568
+                },
+                "after_rebuild": {
+                  "index_bytes": 191717376,
+                  "total_bytes": 380140567,
+                  "wal_bytes": 912820624
+                },
+                "after_retention": {
+                  "index_bytes": 171958272,
+                  "total_bytes": 324942871,
+                  "wal_bytes": 431702000
+                },
+                "before": {
+                  "index_bytes": 142131200,
+                  "total_bytes": 291413015,
+                  "wal_bytes": 0
+                },
+                "ingest_growth_bytes": 33513472
+              }
+            }
+          },
+          "profile": {
+            "agents": 200,
+            "api_replicas": 1,
+            "concurrent_pushes": 1,
+            "cpu_limit": 2.0,
+            "description": "Same workload as small-self-hosted against a private Postgres 16 cluster",
+            "memory_limit_mib": 2048,
+            "name": "small-self-hosted-postgres",
+            "query_repeats": 30,
+            "seed": 2145,
+            "source": "scripts/generate_graph_benchmark_estate.py",
+            "store": "postgres",
+            "vulnerable_package_rate": 0.08
+          },
+          "restart": {
+            "process": {
+              "cpu_seconds": 81.316,
+              "exit_code": 0,
+              "max_rss_mib": 667.1,
+              "wall_seconds": 85.11
+            },
+            "result": {
+              "findings_match_before_restart": true,
+              "first_graph_read_ms": 2449.1,
+              "first_graph_read_status": 503,
+              "jobs": 1,
+              "reads": {
+                "attack_paths": {
+                  "p50_ms": 542.05,
+                  "p95_ms": 630.16,
+                  "response_bytes": 511608,
+                  "samples": 30,
+                  "status": 200
+                },
+                "findings_page": {
+                  "p50_ms": 202.03,
+                  "p95_ms": 222.99,
+                  "response_bytes": 361925,
+                  "samples": 30,
+                  "status": 200
+                },
+                "graph_page": {
+                  "p50_ms": 1272.35,
+                  "p95_ms": 1557.26,
+                  "response_bytes": 2562753,
+                  "samples": 30,
+                  "status": 200
+                },
+                "graph_search": {
+                  "p50_ms": 341.34,
+                  "p95_ms": 366.54,
+                  "response_bytes": 65567,
+                  "samples": 30,
+                  "status": 200
+                },
+                "jobs_page": {
+                  "p50_ms": 10.9,
+                  "p95_ms": 12.6,
+                  "response_bytes": 443,
+                  "samples": 30,
+                  "status": 200
+                }
+              },
+              "statuses": [
+                "done"
+              ],
+              "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+              "stored_findings": 207,
+              "wall_seconds": 84.095
+            }
+          },
+          "warm": {
+            "process": {
+              "cpu_seconds": 201.439,
+              "exit_code": 0,
+              "max_rss_mib": 1907.4,
+              "wall_seconds": 213.35
+            },
+            "result": {
+              "accuracy": {
+                "expected_findings": 207,
+                "job_id": "32d4d44d-93cb-5e1c-aec4-143ac4f32dc2",
+                "missing_after_scan": [],
+                "rebuilt_matches_stored": true,
+                "scanned_matches_expected": true,
+                "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+                "stored_findings": 207,
+                "stored_matches_scanned": true,
+                "unexpected_after_scan": []
+              },
+              "network": {
+                "blocked_callers": [],
+                "blocked_connections": []
+              },
+              "process": {
+                "cpu_seconds": 195.471,
+                "rss_peak_mib": 1907.3,
+                "rss_steady_mib": 1127.3
+              },
+              "profile": {
+                "agents": 200,
+                "api_replicas": 1,
+                "concurrent_pushes": 1,
+                "cpu_limit": 2.0,
+                "description": "Same workload as small-self-hosted against a private Postgres 16 cluster",
+                "memory_limit_mib": 2048,
+                "name": "small-self-hosted-postgres",
+                "query_repeats": 30,
+                "seed": 2145,
+                "source": "scripts/generate_graph_benchmark_estate.py",
+                "store": "postgres",
+                "vulnerable_package_rate": 0.08
+              },
+              "stages": {
+                "collection": {
+                  "agents": 200,
+                  "cpu_seconds": 0.395,
+                  "inventory_bytes": 467246,
+                  "packages": 4058,
+                  "rss_end_mib": 236.6,
+                  "rss_median_mib": 224.8,
+                  "rss_peak_mib": 236.6,
+                  "wall_seconds": 0.403
+                },
+                "graph_api": {
+                  "cpu_seconds": 66.85,
+                  "reads": {
+                    "attack_paths": {
+                      "p50_ms": 442.75,
+                      "p95_ms": 1297.82,
+                      "response_bytes": 518879,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "findings_page": {
+                      "p50_ms": 174.54,
+                      "p95_ms": 677.01,
+                      "response_bytes": 361925,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_page": {
+                      "p50_ms": 1063.44,
+                      "p95_ms": 1587.7,
+                      "response_bytes": 4062808,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_search": {
+                      "p50_ms": 286.53,
+                      "p95_ms": 1400.99,
+                      "response_bytes": 65630,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "jobs_page": {
+                      "p50_ms": 10.98,
+                      "p95_ms": 33.32,
+                      "response_bytes": 785,
+                      "samples": 30,
+                      "status": 200
+                    }
+                  },
+                  "request_bytes": 5910,
+                  "response_bytes": 137245654,
+                  "rss_end_mib": 1098.3,
+                  "rss_median_mib": 1127.3,
+                  "rss_peak_mib": 1603.4,
+                  "wall_seconds": 66.824
+                },
+                "ingest": {
+                  "admission_ms": 4728.2,
+                  "cpu_seconds": 42.626,
+                  "graph_nodes": 11490,
+                  "job_id": "32d4d44d-93cb-5e1c-aec4-143ac4f32dc2",
+                  "request_bytes": 146861574,
+                  "response_bytes": 72078,
+                  "retry_same_job": true,
+                  "retry_status": 202,
+                  "rss_end_mib": 1458.3,
+                  "rss_median_mib": 1394.1,
+                  "rss_peak_mib": 1611.9,
+                  "status": "stored",
+                  "wall_seconds": 47.627
+                },
+                "rebuild": {
+                  "cpu_seconds": 49.547,
+                  "graph_nodes": 11490,
+                  "identical_repush_status": 409,
+                  "new_job": true,
+                  "rss_end_mib": 1410.5,
+                  "rss_median_mib": 1535.7,
+                  "rss_peak_mib": 1907.3,
+                  "status": "stored",
+                  "wall_seconds": 55.717
+                },
+                "report_export": {
+                  "cpu_seconds": 11.506,
+                  "findings_report": {
+                    "create_status": 202,
+                    "download_bytes": 701622,
+                    "retained_lookup_ms": 8.9,
+                    "retained_lookup_status": 200,
+                    "seconds_to_done": 1.88,
+                    "status": "done"
+                  },
+                  "graph_export_graphml": {
+                    "bytes": 15222696,
+                    "ms": 4771.1,
+                    "status": 200
+                  },
+                  "graph_export_json": {
+                    "bytes": 9361954,
+                    "ms": 4991.3,
+                    "status": 200
+                  },
+                  "request_bytes": 368,
+                  "response_bytes": 25287771,
+                  "rss_end_mib": 1164.4,
+                  "rss_median_mib": 1161.4,
+                  "rss_peak_mib": 1164.4,
+                  "wall_seconds": 11.643
+                },
+                "retention": {
+                  "cpu_seconds": 0.013,
+                  "jobs_after": 0,
+                  "jobs_before": 2,
+                  "jobs_removed": 2,
+                  "rss_end_mib": 1164.4,
+                  "rss_median_mib": 1164.4,
+                  "rss_peak_mib": 1164.4,
+                  "wall_seconds": 0.041
+                },
+                "scan_enrichment": {
+                  "cpu_seconds": 20.16,
+                  "exit_code": 1,
+                  "findings": 207,
+                  "report_bytes": 73416612,
+                  "rss_end_mib": 650.4,
+                  "rss_median_mib": 369.3,
+                  "rss_peak_mib": 651.4,
+                  "upstream": {
+                    "by_endpoint": {
+                      "api.github.com:GET": 25,
+                      "pypi.org:GET": 15,
+                      "registry.npmjs.org:GET": 15,
+                      "www.cisa.gov:GET": 1
+                    },
+                    "by_host": {
+                      "api.github.com": 25,
+                      "pypi.org": 15,
+                      "registry.npmjs.org": 15,
+                      "www.cisa.gov": 1
+                    },
+                    "injected_failures": 0,
+                    "request_bytes": 0,
+                    "requests": 56,
+                    "response_bytes": 1176
+                  },
+                  "wall_seconds": 20.302
+                }
+              },
+              "storage": {
+                "after_ingest": {
+                  "index_bytes": 222519296,
+                  "total_bytes": 415136791,
+                  "wal_bytes": 467034584
+                },
+                "after_rebuild": {
+                  "index_bytes": 245882880,
+                  "total_bytes": 481352727,
+                  "wal_bytes": 1004060472
+                },
+                "after_retention": {
+                  "index_bytes": 222625792,
+                  "total_bytes": 415554583,
+                  "wal_bytes": 484838312
+                },
+                "before": {
+                  "index_bytes": 191717376,
+                  "total_bytes": 380140567,
+                  "wal_bytes": 56
+                },
+                "ingest_growth_bytes": 34996224
+              }
+            }
+          }
+        },
+        {
+          "profile": {
+            "agents": 200,
+            "api_replicas": 2,
+            "concurrent_pushes": 2,
+            "cpu_limit": 2.0,
+            "description": "Two API processes sharing one Postgres, each pushing its own estate concurrently",
+            "memory_limit_mib": 2048,
+            "name": "multi-replica-local",
+            "query_repeats": 30,
+            "seed": 2145,
+            "source": "scripts/generate_graph_benchmark_estate.py",
+            "store": "postgres",
+            "vulnerable_package_rate": 0.08
+          },
+          "replicas": {
+            "processes": [
+              {
+                "cpu_seconds": 167.196,
+                "exit_code": 0,
+                "max_rss_mib": 1705.7
+              },
+              {
+                "cpu_seconds": 169.495,
+                "exit_code": 0,
+                "max_rss_mib": 1655.8
+              }
+            ],
+            "results": [
+              {
+                "accuracy": {
+                  "expected_findings": 207,
+                  "job_id": "9ea1da5c-7905-5ac1-b26a-93b900a9a5a6",
+                  "missing_after_scan": [],
+                  "rebuilt_matches_stored": null,
+                  "scanned_matches_expected": true,
+                  "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+                  "stored_findings": 207,
+                  "stored_matches_scanned": true,
+                  "unexpected_after_scan": []
+                },
+                "network": {
+                  "blocked_callers": [],
+                  "blocked_connections": []
+                },
+                "process": {
+                  "cpu_seconds": 162.13,
+                  "rss_peak_mib": 1705.7,
+                  "rss_steady_mib": 1256.6
+                },
+                "profile": {
+                  "agents": 200,
+                  "api_replicas": 2,
+                  "concurrent_pushes": 2,
+                  "cpu_limit": 2.0,
+                  "description": "Two API processes sharing one Postgres, each pushing its own estate concurrently",
+                  "memory_limit_mib": 2048,
+                  "name": "multi-replica-local",
+                  "query_repeats": 30,
+                  "seed": 2145,
+                  "source": "scripts/generate_graph_benchmark_estate.py",
+                  "store": "postgres",
+                  "vulnerable_package_rate": 0.08
+                },
+                "stages": {
+                  "collection": {
+                    "agents": 200,
+                    "cpu_seconds": 0.434,
+                    "inventory_bytes": 467246,
+                    "packages": 4058,
+                    "rss_end_mib": 239.2,
+                    "rss_median_mib": 229.0,
+                    "rss_peak_mib": 239.2,
+                    "wall_seconds": 0.447
+                  },
+                  "graph_api": {
+                    "cpu_seconds": 62.847,
+                    "reads": {
+                      "attack_paths": {
+                        "p50_ms": 139.36,
+                        "p95_ms": 1803.22,
+                        "response_bytes": 528294,
+                        "samples": 30,
+                        "status": 200
+                      },
+                      "findings_page": {
+                        "p50_ms": 161.68,
+                        "p95_ms": 788.35,
+                        "response_bytes": 362017,
+                        "samples": 30,
+                        "status": 200
+                      },
+                      "graph_page": {
+                        "p50_ms": 420.59,
+                        "p95_ms": 3804.29,
+                        "response_bytes": 6657041,
+                        "samples": 30,
+                        "status": 200
+                      },
+                      "graph_search": {
+                        "p50_ms": 200.51,
+                        "p95_ms": 1156.95,
+                        "response_bytes": 65700,
+                        "samples": 30,
+                        "status": 200
+                      },
+                      "jobs_page": {
+                        "p50_ms": 15.88,
+                        "p95_ms": 201.8,
+                        "response_bytes": 1469,
+                        "samples": 30,
+                        "status": 200
+                      }
+                    },
+                    "request_bytes": 5910,
+                    "response_bytes": 190346027,
+                    "rss_end_mib": 801.5,
+                    "rss_median_mib": 1256.6,
+                    "rss_peak_mib": 1705.7,
+                    "wall_seconds": 61.361
+                  },
+                  "ingest": {
+                    "admission_ms": 7232.0,
+                    "cpu_seconds": 54.892,
+                    "graph_nodes": 11490,
+                    "job_id": "9ea1da5c-7905-5ac1-b26a-93b900a9a5a6",
+                    "request_bytes": 146865600,
+                    "response_bytes": 82742,
+                    "retry_same_job": true,
+                    "retry_status": 202,
+                    "rss_end_mib": 1203.6,
+                    "rss_median_mib": 1058.9,
+                    "rss_peak_mib": 1408.3,
+                    "status": "stored",
+                    "wall_seconds": 61.975
+                  },
+                  "report_export": {
+                    "cpu_seconds": 14.629,
+                    "findings_report": {
+                      "create_status": 202,
+                      "download_bytes": 1018111,
+                      "retained_lookup_ms": 12.5,
+                      "retained_lookup_status": 200,
+                      "seconds_to_done": 2.935,
+                      "status": "done"
+                    },
+                    "graph_export_graphml": {
+                      "bytes": 15222696,
+                      "ms": 6450.9,
+                      "status": 200
+                    },
+                    "graph_export_json": {
+                      "bytes": 9361954,
+                      "ms": 5769.2,
+                      "status": 200
+                    },
+                    "request_bytes": 368,
+                    "response_bytes": 25604259,
+                    "rss_end_mib": 621.0,
+                    "rss_median_mib": 725.7,
+                    "rss_peak_mib": 886.2,
+                    "wall_seconds": 15.155
+                  },
+                  "scan_enrichment": {
+                    "cpu_seconds": 25.57,
+                    "exit_code": 1,
+                    "findings": 207,
+                    "report_bytes": 73416517,
+                    "rss_end_mib": 533.6,
+                    "rss_median_mib": 328.3,
+                    "rss_peak_mib": 533.6,
+                    "upstream": {
+                      "by_endpoint": {
+                        "api.github.com:GET": 25,
+                        "osv:querybatch": 5,
+                        "osv:vuln-detail": 207,
+                        "pypi.org:GET": 15,
+                        "registry.npmjs.org:GET": 15,
+                        "www.cisa.gov:GET": 1
+                      },
+                      "by_host": {
+                        "api.github.com": 25,
+                        "api.osv.dev": 212,
+                        "pypi.org": 15,
+                        "registry.npmjs.org": 15,
+                        "www.cisa.gov": 1
+                      },
+                      "injected_failures": 1,
+                      "request_bytes": 361286,
+                      "requests": 268,
+                      "response_bytes": 145146
+                    },
+                    "wall_seconds": 28.096
+                  }
+                },
+                "storage": {
+                  "after_ingest": {
+                    "index_bytes": 369442816,
+                    "total_bytes": 692968471,
+                    "wal_bytes": 1117473688
+                  },
+                  "after_rebuild": null,
+                  "after_retention": null,
+                  "before": {
+                    "index_bytes": 275070976,
+                    "total_bytes": 510483479,
+                    "wal_bytes": 18630000
+                  },
+                  "ingest_growth_bytes": 182484992
+                }
+              },
+              {
+                "accuracy": {
+                  "expected_findings": 209,
+                  "job_id": "3f2b98d4-dd14-51cf-b56d-68b3e2bc3072",
+                  "missing_after_scan": [],
+                  "rebuilt_matches_stored": null,
+                  "scanned_matches_expected": true,
+                  "stored_digest": "8e8388c0edbe0c8b44d57b431fac8b23c28ba17b25f15c0e4bb17b23eb3cc967",
+                  "stored_findings": 209,
+                  "stored_matches_scanned": true,
+                  "unexpected_after_scan": []
+                },
+                "network": {
+                  "blocked_callers": [],
+                  "blocked_connections": []
+                },
+                "process": {
+                  "cpu_seconds": 164.511,
+                  "rss_peak_mib": 1653.2,
+                  "rss_steady_mib": 1130.6
+                },
+                "profile": {
+                  "agents": 200,
+                  "api_replicas": 2,
+                  "concurrent_pushes": 2,
+                  "cpu_limit": 2.0,
+                  "description": "Two API processes sharing one Postgres, each pushing its own estate concurrently",
+                  "memory_limit_mib": 2048,
+                  "name": "multi-replica-local",
+                  "query_repeats": 30,
+                  "seed": 2146,
+                  "source": "scripts/generate_graph_benchmark_estate.py",
+                  "store": "postgres",
+                  "vulnerable_package_rate": 0.08
+                },
+                "stages": {
+                  "collection": {
+                    "agents": 200,
+                    "cpu_seconds": 0.493,
+                    "inventory_bytes": 495872,
+                    "packages": 4374,
+                    "rss_end_mib": 239.4,
+                    "rss_median_mib": 227.5,
+                    "rss_peak_mib": 239.4,
+                    "wall_seconds": 0.513
+                  },
+                  "graph_api": {
+                    "cpu_seconds": 60.029,
+                    "reads": {
+                      "attack_paths": {
+                        "p50_ms": 116.15,
+                        "p95_ms": 2055.16,
+                        "response_bytes": 528294,
+                        "samples": 30,
+                        "status": 200
+                      },
+                      "findings_page": {
+                        "p50_ms": 149.66,
+                        "p95_ms": 1588.4,
+                        "response_bytes": 362017,
+                        "samples": 30,
+                        "status": 200
+                      },
+                      "graph_page": {
+                        "p50_ms": 395.97,
+                        "p95_ms": 3290.18,
+                        "response_bytes": 6657041,
+                        "samples": 30,
+                        "status": 200
+                      },
+                      "graph_search": {
+                        "p50_ms": 162.91,
+                        "p95_ms": 1436.2,
+                        "response_bytes": 65700,
+                        "samples": 30,
+                        "status": 200
+                      },
+                      "jobs_page": {
+                        "p50_ms": 14.38,
+                        "p95_ms": 492.73,
+                        "response_bytes": 1469,
+                        "samples": 30,
+                        "status": 200
+                      }
+                    },
+                    "request_bytes": 5910,
+                    "response_bytes": 192916708,
+                    "rss_end_mib": 916.7,
+                    "rss_median_mib": 1130.6,
+                    "rss_peak_mib": 1653.2,
+                    "wall_seconds": 58.284
+                  },
+                  "ingest": {
+                    "admission_ms": 7272.4,
+                    "cpu_seconds": 57.008,
+                    "graph_nodes": 12067,
+                    "job_id": "3f2b98d4-dd14-51cf-b56d-68b3e2bc3072",
+                    "request_bytes": 154754868,
+                    "response_bytes": 86010,
+                    "retry_same_job": true,
+                    "retry_status": 202,
+                    "rss_end_mib": 1310.9,
+                    "rss_median_mib": 1108.9,
+                    "rss_peak_mib": 1335.9,
+                    "status": "stored",
+                    "wall_seconds": 64.251
+                  },
+                  "report_export": {
+                    "cpu_seconds": 15.528,
+                    "findings_report": {
+                      "create_status": 202,
+                      "download_bytes": 1018111,
+                      "retained_lookup_ms": 10.6,
+                      "retained_lookup_status": 200,
+                      "seconds_to_done": 3.288,
+                      "status": "done"
+                    },
+                    "graph_export_graphml": {
+                      "bytes": 16183906,
+                      "ms": 6608.4,
+                      "status": 200
+                    },
+                    "graph_export_json": {
+                      "bytes": 9958375,
+                      "ms": 6195.7,
+                      "status": 200
+                    },
+                    "request_bytes": 368,
+                    "response_bytes": 27161890,
+                    "rss_end_mib": 833.9,
+                    "rss_median_mib": 831.5,
+                    "rss_peak_mib": 1002.4,
+                    "wall_seconds": 16.092
+                  },
+                  "scan_enrichment": {
+                    "cpu_seconds": 27.277,
+                    "exit_code": 1,
+                    "findings": 209,
+                    "report_bytes": 77360505,
+                    "rss_end_mib": 480.5,
+                    "rss_median_mib": 293.3,
+                    "rss_peak_mib": 493.7,
+                    "upstream": {
+                      "by_endpoint": {
+                        "api.github.com:GET": 25,
+                        "osv:querybatch": 6,
+                        "osv:vuln-detail": 209,
+                        "pypi.org:GET": 14,
+                        "registry.npmjs.org:GET": 16,
+                        "www.cisa.gov:GET": 1
+                      },
+                      "by_host": {
+                        "api.github.com": 25,
+                        "api.osv.dev": 215,
+                        "pypi.org": 14,
+                        "registry.npmjs.org": 16,
+                        "www.cisa.gov": 1
+                      },
+                      "injected_failures": 1,
+                      "request_bytes": 380845,
+                      "requests": 271,
+                      "response_bytes": 147400
+                    },
+                    "wall_seconds": 29.972
+                  }
+                },
+                "storage": {
+                  "after_ingest": {
+                    "index_bytes": 371220480,
+                    "total_bytes": 700046359,
+                    "wal_bytes": 1126860648
+                  },
+                  "after_rebuild": null,
+                  "after_retention": null,
+                  "before": {
+                    "index_bytes": 275070976,
+                    "total_bytes": 510483479,
+                    "wal_bytes": 18739720
+                  },
+                  "ingest_growth_bytes": 189562880
+                }
+              }
+            ],
+            "wall_seconds": 178.86
+          }
+        }
+      ],
+      "schema_version": 1
+    },
+    "postgres_fresh_database": {
+      "environment": {
+        "cpu_count": 10,
+        "load_average": [
+          7.21533203125,
+          7.453125,
+          8.17236328125
+        ],
+        "machine": "arm64",
+        "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "python": "3.13.5"
+      },
+      "failures": [],
+      "generated_at": "2026-11-11T13:00:00.239798+00:00",
+      "note": "cold, warm and restart on a freshly migrated database (--no-cancel)",
+      "profiles": [
+        {
+          "cold": {
+            "process": {
+              "cpu_seconds": 164.831,
+              "exit_code": 0,
+              "max_rss_mib": 1873.9,
+              "wall_seconds": 190.13
+            },
+            "result": {
+              "accuracy": {
+                "expected_findings": 207,
+                "job_id": "df2a6050-89a9-57d8-b8c1-749f184bfef6",
+                "missing_after_scan": [],
+                "rebuilt_matches_stored": true,
+                "scanned_matches_expected": true,
+                "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+                "stored_findings": 207,
+                "stored_matches_scanned": true,
+                "unexpected_after_scan": []
+              },
+              "network": {
+                "blocked_callers": [],
+                "blocked_connections": []
+              },
+              "process": {
+                "cpu_seconds": 157.759,
+                "rss_peak_mib": 1873.8,
+                "rss_steady_mib": 1226.8
+              },
+              "profile": {
+                "agents": 200,
+                "api_replicas": 1,
+                "concurrent_pushes": 1,
+                "cpu_limit": 2.0,
+                "description": "Same workload as small-self-hosted against a private Postgres 16 cluster",
+                "memory_limit_mib": 2048,
+                "name": "small-self-hosted-postgres",
+                "query_repeats": 30,
+                "seed": 2145,
+                "source": "scripts/generate_graph_benchmark_estate.py",
+                "store": "postgres",
+                "vulnerable_package_rate": 0.08
+              },
+              "stages": {
+                "collection": {
+                  "agents": 200,
+                  "cpu_seconds": 0.471,
+                  "inventory_bytes": 467246,
+                  "packages": 4058,
+                  "rss_end_mib": 238.7,
+                  "rss_median_mib": 227.4,
+                  "rss_peak_mib": 238.7,
+                  "wall_seconds": 0.474
+                },
+                "graph_api": {
+                  "cpu_seconds": 22.216,
+                  "reads": {
+                    "attack_paths": {
+                      "p50_ms": 68.22,
+                      "p95_ms": 732.35,
+                      "response_bytes": 511606,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "findings_page": {
+                      "p50_ms": 95.97,
+                      "p95_ms": 720.38,
+                      "response_bytes": 361925,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_page": {
+                      "p50_ms": 172.81,
+                      "p95_ms": 839.89,
+                      "response_bytes": 2562753,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_search": {
+                      "p50_ms": 72.59,
+                      "p95_ms": 154.89,
+                      "response_bytes": 65567,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "jobs_page": {
+                      "p50_ms": 10.95,
+                      "p95_ms": 21.75,
+                      "response_bytes": 443,
+                      "samples": 30,
+                      "status": 200
+                    }
+                  },
+                  "request_bytes": 5910,
+                  "response_bytes": 102441254,
+                  "rss_end_mib": 1232.8,
+                  "rss_median_mib": 1226.8,
+                  "rss_peak_mib": 1464.2,
+                  "wall_seconds": 23.351
+                },
+                "ingest": {
+                  "admission_ms": 5579.3,
+                  "cpu_seconds": 46.813,
+                  "graph_nodes": 11490,
+                  "job_id": "df2a6050-89a9-57d8-b8c1-749f184bfef6",
+                  "request_bytes": 146871108,
+                  "response_bytes": 96674,
+                  "retry_same_job": true,
+                  "retry_status": 202,
+                  "rss_end_mib": 1388.1,
+                  "rss_median_mib": 1396.6,
+                  "rss_peak_mib": 1557.6,
+                  "status": "stored",
+                  "wall_seconds": 60.069
+                },
+                "rebuild": {
+                  "cpu_seconds": 50.914,
+                  "graph_nodes": 11490,
+                  "identical_repush_status": 409,
+                  "new_job": true,
+                  "rss_end_mib": 1413.0,
+                  "rss_median_mib": 1540.4,
+                  "rss_peak_mib": 1873.8,
+                  "status": "stored",
+                  "wall_seconds": 59.396
+                },
+                "report_export": {
+                  "cpu_seconds": 12.42,
+                  "findings_report": {
+                    "create_status": 202,
+                    "download_bytes": 679748,
+                    "retained_lookup_ms": 9.7,
+                    "retained_lookup_status": 200,
+                    "seconds_to_done": 1.895,
+                    "status": "done"
+                  },
+                  "graph_export_graphml": {
+                    "bytes": 15222696,
+                    "ms": 5167.2,
+                    "status": 200
+                  },
+                  "graph_export_json": {
+                    "bytes": 9361954,
+                    "ms": 5530.7,
+                    "status": 200
+                  },
+                  "request_bytes": 368,
+                  "response_bytes": 25265897,
+                  "rss_end_mib": 1139.5,
+                  "rss_median_mib": 1218.3,
+                  "rss_peak_mib": 1242.9,
+                  "wall_seconds": 12.593
+                },
+                "retention": {
+                  "cpu_seconds": 0.014,
+                  "jobs_after": 0,
+                  "jobs_before": 1,
+                  "jobs_removed": 1,
+                  "rss_end_mib": 1139.5,
+                  "rss_median_mib": 1139.5,
+                  "rss_peak_mib": 1139.5,
+                  "wall_seconds": 0.032
+                },
+                "scan_enrichment": {
+                  "cpu_seconds": 21.645,
+                  "exit_code": 1,
+                  "findings": 207,
+                  "report_bytes": 73416517,
+                  "rss_end_mib": 654.8,
+                  "rss_median_mib": 371.4,
+                  "rss_peak_mib": 654.8,
+                  "upstream": {
+                    "by_endpoint": {
+                      "api.github.com:GET": 25,
+                      "osv:querybatch": 5,
+                      "osv:vuln-detail": 207,
+                      "pypi.org:GET": 15,
+                      "registry.npmjs.org:GET": 15,
+                      "www.cisa.gov:GET": 1
+                    },
+                    "by_host": {
+                      "api.github.com": 25,
+                      "api.osv.dev": 212,
+                      "pypi.org": 15,
+                      "registry.npmjs.org": 15,
+                      "www.cisa.gov": 1
+                    },
+                    "injected_failures": 1,
+                    "request_bytes": 361286,
+                    "requests": 268,
+                    "response_bytes": 145146
+                  },
+                  "wall_seconds": 22.999
+                }
+              },
+              "storage": {
+                "after_ingest": {
+                  "index_bytes": 64569344,
+                  "total_bytes": 129301527,
+                  "wal_bytes": 291608144
+                },
+                "after_rebuild": {
+                  "index_bytes": 88719360,
+                  "total_bytes": 197876759,
+                  "wal_bytes": 664001832
+                },
+                "after_retention": {
+                  "index_bytes": 64733184,
+                  "total_bytes": 129858583,
+                  "wal_bytes": 294285760
+                },
+                "before": {
+                  "index_bytes": 3137536,
+                  "total_bytes": 15916055,
+                  "wal_bytes": 56
+                },
+                "ingest_growth_bytes": 113385472
+              }
+            }
+          },
+          "profile": {
+            "agents": 200,
+            "api_replicas": 1,
+            "concurrent_pushes": 1,
+            "cpu_limit": 2.0,
+            "description": "Same workload as small-self-hosted against a private Postgres 16 cluster",
+            "memory_limit_mib": 2048,
+            "name": "small-self-hosted-postgres",
+            "query_repeats": 30,
+            "seed": 2145,
+            "source": "scripts/generate_graph_benchmark_estate.py",
+            "store": "postgres",
+            "vulnerable_package_rate": 0.08
+          },
+          "restart": {
+            "process": {
+              "cpu_seconds": 69.324,
+              "exit_code": 0,
+              "max_rss_mib": 631.5,
+              "wall_seconds": 72.64
+            },
+            "result": {
+              "findings_match_before_restart": true,
+              "first_graph_read_ms": 2341.8,
+              "first_graph_read_status": 503,
+              "jobs": 1,
+              "reads": {
+                "attack_paths": {
+                  "p50_ms": 448.26,
+                  "p95_ms": 460.67,
+                  "response_bytes": 516007,
+                  "samples": 30,
+                  "status": 200
+                },
+                "findings_page": {
+                  "p50_ms": 176.45,
+                  "p95_ms": 190.96,
+                  "response_bytes": 361925,
+                  "samples": 30,
+                  "status": 200
+                },
+                "graph_page": {
+                  "p50_ms": 1049.49,
+                  "p95_ms": 1257.35,
+                  "response_bytes": 2562753,
+                  "samples": 30,
+                  "status": 200
+                },
+                "graph_search": {
+                  "p50_ms": 285.41,
+                  "p95_ms": 313.3,
+                  "response_bytes": 65567,
+                  "samples": 30,
+                  "status": 200
+                },
+                "jobs_page": {
+                  "p50_ms": 9.51,
+                  "p95_ms": 12.32,
+                  "response_bytes": 443,
+                  "samples": 30,
+                  "status": 200
+                }
+              },
+              "statuses": [
+                "done"
+              ],
+              "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+              "stored_findings": 207,
+              "wall_seconds": 71.704
+            }
+          },
+          "warm": {
+            "process": {
+              "cpu_seconds": 174.03,
+              "exit_code": 0,
+              "max_rss_mib": 1972.6,
+              "wall_seconds": 185.17
+            },
+            "result": {
+              "accuracy": {
+                "expected_findings": 207,
+                "job_id": "c3166a49-96f6-59ba-a89c-e1c22320b4c6",
+                "missing_after_scan": [],
+                "rebuilt_matches_stored": true,
+                "scanned_matches_expected": true,
+                "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+                "stored_findings": 207,
+                "stored_matches_scanned": true,
+                "unexpected_after_scan": []
+              },
+              "network": {
+                "blocked_callers": [],
+                "blocked_connections": []
+              },
+              "process": {
+                "cpu_seconds": 168.465,
+                "rss_peak_mib": 1972.5,
+                "rss_steady_mib": 1378.6
+              },
+              "profile": {
+                "agents": 200,
+                "api_replicas": 1,
+                "concurrent_pushes": 1,
+                "cpu_limit": 2.0,
+                "description": "Same workload as small-self-hosted against a private Postgres 16 cluster",
+                "memory_limit_mib": 2048,
+                "name": "small-self-hosted-postgres",
+                "query_repeats": 30,
+                "seed": 2145,
+                "source": "scripts/generate_graph_benchmark_estate.py",
+                "store": "postgres",
+                "vulnerable_package_rate": 0.08
+              },
+              "stages": {
+                "collection": {
+                  "agents": 200,
+                  "cpu_seconds": 0.443,
+                  "inventory_bytes": 467246,
+                  "packages": 4058,
+                  "rss_end_mib": 237.6,
+                  "rss_median_mib": 226.4,
+                  "rss_peak_mib": 237.6,
+                  "wall_seconds": 0.458
+                },
+                "graph_api": {
+                  "cpu_seconds": 31.908,
+                  "reads": {
+                    "attack_paths": {
+                      "p50_ms": 62.15,
+                      "p95_ms": 586.55,
+                      "response_bytes": 518006,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "findings_page": {
+                      "p50_ms": 89.44,
+                      "p95_ms": 227.81,
+                      "response_bytes": 361925,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_page": {
+                      "p50_ms": 211.64,
+                      "p95_ms": 2525.18,
+                      "response_bytes": 4062808,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_search": {
+                      "p50_ms": 79.44,
+                      "p95_ms": 835.33,
+                      "response_bytes": 65630,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "jobs_page": {
+                      "p50_ms": 10.46,
+                      "p95_ms": 23.75,
+                      "response_bytes": 785,
+                      "samples": 30,
+                      "status": 200
+                    }
+                  },
+                  "request_bytes": 5910,
+                  "response_bytes": 138609356,
+                  "rss_end_mib": 1414.5,
+                  "rss_median_mib": 1378.6,
+                  "rss_peak_mib": 1500.0,
+                  "wall_seconds": 30.864
+                },
+                "ingest": {
+                  "admission_ms": 5895.4,
+                  "cpu_seconds": 47.75,
+                  "graph_nodes": 11490,
+                  "job_id": "c3166a49-96f6-59ba-a89c-e1c22320b4c6",
+                  "request_bytes": 146862526,
+                  "response_bytes": 74486,
+                  "retry_same_job": true,
+                  "retry_status": 202,
+                  "rss_end_mib": 1393.0,
+                  "rss_median_mib": 1234.8,
+                  "rss_peak_mib": 1634.1,
+                  "status": "stored",
+                  "wall_seconds": 53.224
+                },
+                "rebuild": {
+                  "cpu_seconds": 49.589,
+                  "graph_nodes": 11490,
+                  "identical_repush_status": 409,
+                  "new_job": true,
+                  "rss_end_mib": 1500.3,
+                  "rss_median_mib": 1508.6,
+                  "rss_peak_mib": 1972.5,
+                  "status": "stored",
+                  "wall_seconds": 55.391
+                },
+                "report_export": {
+                  "cpu_seconds": 11.873,
+                  "findings_report": {
+                    "create_status": 202,
+                    "download_bytes": 694537,
+                    "retained_lookup_ms": 10.8,
+                    "retained_lookup_status": 200,
+                    "seconds_to_done": 2.038,
+                    "status": "done"
+                  },
+                  "graph_export_graphml": {
+                    "bytes": 15222696,
+                    "ms": 4708.8,
+                    "status": 200
+                  },
+                  "graph_export_json": {
+                    "bytes": 9361954,
+                    "ms": 5288.7,
+                    "status": 200
+                  },
+                  "request_bytes": 368,
+                  "response_bytes": 25280686,
+                  "rss_end_mib": 1413.5,
+                  "rss_median_mib": 1415.2,
+                  "rss_peak_mib": 1440.9,
+                  "wall_seconds": 12.035
+                },
+                "retention": {
+                  "cpu_seconds": 0.016,
+                  "jobs_after": 0,
+                  "jobs_before": 2,
+                  "jobs_removed": 2,
+                  "rss_end_mib": 1413.5,
+                  "rss_median_mib": 1413.5,
+                  "rss_peak_mib": 1413.5,
+                  "wall_seconds": 0.038
+                },
+                "scan_enrichment": {
+                  "cpu_seconds": 22.327,
+                  "exit_code": 1,
+                  "findings": 207,
+                  "report_bytes": 73416612,
+                  "rss_end_mib": 656.3,
+                  "rss_median_mib": 370.3,
+                  "rss_peak_mib": 657.3,
+                  "upstream": {
+                    "by_endpoint": {
+                      "api.github.com:GET": 25,
+                      "pypi.org:GET": 15,
+                      "registry.npmjs.org:GET": 15,
+                      "www.cisa.gov:GET": 1
+                    },
+                    "by_host": {
+                      "api.github.com": 25,
+                      "pypi.org": 15,
+                      "registry.npmjs.org": 15,
+                      "www.cisa.gov": 1
+                    },
+                    "injected_failures": 0,
+                    "request_bytes": 0,
+                    "requests": 56,
+                    "response_bytes": 1176
+                  },
+                  "wall_seconds": 22.601
+                }
+              },
+              "storage": {
+                "after_ingest": {
+                  "index_bytes": 120725504,
+                  "total_bytes": 234855447,
+                  "wal_bytes": 350331808
+                },
+                "after_rebuild": {
+                  "index_bytes": 141983744,
+                  "total_bytes": 291683351,
+                  "wal_bytes": 785818528
+                },
+                "after_retention": {
+                  "index_bytes": 120848384,
+                  "total_bytes": 235068439,
+                  "wal_bytes": 351002440
+                },
+                "before": {
+                  "index_bytes": 88768512,
+                  "total_bytes": 198204439,
+                  "wal_bytes": 14318648
+                },
+                "ingest_growth_bytes": 36651008
+              }
+            }
+          }
+        }
+      ],
+      "schema_version": 1
+    },
+    "sqlite_small_self_hosted": {
+      "environment": {
+        "cpu_count": 10,
+        "load_average": [
+          8.3359375,
+          8.83935546875,
+          7.7060546875
+        ],
+        "machine": "arm64",
+        "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+        "python": "3.13.5"
+      },
+      "failures": [],
+      "generated_at": "2026-11-11T12:44:04.919540+00:00",
+      "note": "cold, warm and restart from one run; cancel re-run alone after a harness reaping fix",
+      "profiles": [
+        {
+          "cancel": {
+            "admitted_before_kill": true,
+            "killed_while_running": true,
+            "recover": {
+              "process": {
+                "cpu_seconds": 54.747,
+                "exit_code": 0,
+                "max_rss_mib": 1260.8,
+                "wall_seconds": 53.39
+              },
+              "result": {
+                "expected_findings": 207,
+                "findings_match_expected": true,
+                "integrity_check": {
+                  "control-plane.db": "ok",
+                  "control-plane.db.auth-limits.db": "ok"
+                },
+                "jobs_after_kill": 1,
+                "jobs_after_retry": 1,
+                "retry": {
+                  "admission_ms": 5052.8,
+                  "graph_nodes": 11490,
+                  "job_id": "cee65ef0-4ddd-591a-b129-484b0df2cdd3",
+                  "retry_same_job": true,
+                  "retry_status": 202,
+                  "status": "stored"
+                },
+                "retry_to_stored_seconds": 44.108,
+                "statuses_after_kill": [
+                  "pending"
+                ]
+              }
+            },
+            "victim": {
+              "cpu_seconds": 31.395,
+              "exit_code": -9,
+              "max_rss_mib": 1055.6
+            }
+          },
+          "cold": {
+            "process": {
+              "cpu_seconds": 225.424,
+              "exit_code": 0,
+              "max_rss_mib": 1661.4,
+              "wall_seconds": 246.96
+            },
+            "result": {
+              "accuracy": {
+                "expected_findings": 207,
+                "job_id": "e10ebc6e-e51a-5796-a1be-02457715f708",
+                "missing_after_scan": [],
+                "rebuilt_matches_stored": true,
+                "scanned_matches_expected": true,
+                "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+                "stored_findings": 207,
+                "stored_matches_scanned": true,
+                "unexpected_after_scan": []
+              },
+              "network": {
+                "blocked_callers": [],
+                "blocked_connections": []
+              },
+              "process": {
+                "cpu_seconds": 214.472,
+                "rss_peak_mib": 1661.3,
+                "rss_steady_mib": 587.3
+              },
+              "profile": {
+                "agents": 200,
+                "api_replicas": 1,
+                "concurrent_pushes": 1,
+                "cpu_limit": 2.0,
+                "description": "One API process on SQLite, sized to the pilot Helm request (2 CPU, 2 GiB limit)",
+                "memory_limit_mib": 2048,
+                "name": "small-self-hosted",
+                "query_repeats": 30,
+                "seed": 2145,
+                "source": "scripts/generate_graph_benchmark_estate.py",
+                "store": "sqlite",
+                "vulnerable_package_rate": 0.08
+              },
+              "stages": {
+                "collection": {
+                  "agents": 200,
+                  "cpu_seconds": 0.487,
+                  "inventory_bytes": 467246,
+                  "packages": 4058,
+                  "rss_end_mib": 232.8,
+                  "rss_median_mib": 221.4,
+                  "rss_peak_mib": 232.8,
+                  "wall_seconds": 0.499
+                },
+                "graph_api": {
+                  "cpu_seconds": 33.404,
+                  "reads": {
+                    "attack_paths": {
+                      "p50_ms": 83.86,
+                      "p95_ms": 1207.15,
+                      "response_bytes": 542079,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "findings_page": {
+                      "p50_ms": 113.56,
+                      "p95_ms": 1555.72,
+                      "response_bytes": 361925,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_page": {
+                      "p50_ms": 233.94,
+                      "p95_ms": 2693.52,
+                      "response_bytes": 2562753,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_search": {
+                      "p50_ms": 93.98,
+                      "p95_ms": 2809.93,
+                      "response_bytes": 65567,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "jobs_page": {
+                      "p50_ms": 9.95,
+                      "p95_ms": 28.26,
+                      "response_bytes": 443,
+                      "samples": 30,
+                      "status": 200
+                    }
+                  },
+                  "request_bytes": 5910,
+                  "response_bytes": 102813839,
+                  "rss_end_mib": 594.7,
+                  "rss_median_mib": 587.3,
+                  "rss_peak_mib": 1127.9,
+                  "wall_seconds": 41.247
+                },
+                "ingest": {
+                  "admission_ms": 5577.5,
+                  "cpu_seconds": 60.238,
+                  "graph_nodes": 11490,
+                  "job_id": "e10ebc6e-e51a-5796-a1be-02457715f708",
+                  "request_bytes": 146862676,
+                  "response_bytes": 75346,
+                  "retry_same_job": true,
+                  "retry_status": 202,
+                  "rss_end_mib": 462.1,
+                  "rss_median_mib": 834.2,
+                  "rss_peak_mib": 1284.1,
+                  "status": "stored",
+                  "wall_seconds": 63.483
+                },
+                "rebuild": {
+                  "cpu_seconds": 70.729,
+                  "graph_nodes": 11490,
+                  "identical_repush_status": 409,
+                  "new_job": true,
+                  "rss_end_mib": 975.4,
+                  "rss_median_mib": 1034.2,
+                  "rss_peak_mib": 1661.3,
+                  "status": "stored",
+                  "wall_seconds": 73.128
+                },
+                "report_export": {
+                  "cpu_seconds": 17.05,
+                  "findings_report": {
+                    "create_status": 202,
+                    "download_bytes": 681386,
+                    "retained_lookup_ms": 8.9,
+                    "retained_lookup_status": 200,
+                    "seconds_to_done": 2.54,
+                    "status": "done"
+                  },
+                  "graph_export_graphml": {
+                    "bytes": 15222696,
+                    "ms": 8005.8,
+                    "status": 200
+                  },
+                  "graph_export_json": {
+                    "bytes": 9361954,
+                    "ms": 7356.7,
+                    "status": 200
+                  },
+                  "request_bytes": 368,
+                  "response_bytes": 25267526,
+                  "rss_end_mib": 726.3,
+                  "rss_median_mib": 725.2,
+                  "rss_peak_mib": 764.0,
+                  "wall_seconds": 17.903
+                },
+                "retention": {
+                  "cpu_seconds": 0.053,
+                  "jobs_after": 0,
+                  "jobs_before": 1,
+                  "jobs_removed": 1,
+                  "rss_end_mib": 726.3,
+                  "rss_median_mib": 726.3,
+                  "rss_peak_mib": 726.3,
+                  "wall_seconds": 0.057
+                },
+                "scan_enrichment": {
+                  "cpu_seconds": 25.932,
+                  "exit_code": 1,
+                  "findings": 207,
+                  "report_bytes": 73416517,
+                  "rss_end_mib": 625.2,
+                  "rss_median_mib": 358.6,
+                  "rss_peak_mib": 625.2,
+                  "upstream": {
+                    "by_endpoint": {
+                      "api.github.com:GET": 25,
+                      "osv:querybatch": 5,
+                      "osv:vuln-detail": 207,
+                      "pypi.org:GET": 15,
+                      "registry.npmjs.org:GET": 15,
+                      "www.cisa.gov:GET": 1
+                    },
+                    "by_host": {
+                      "api.github.com": 25,
+                      "api.osv.dev": 212,
+                      "pypi.org": 15,
+                      "registry.npmjs.org": 15,
+                      "www.cisa.gov": 1
+                    },
+                    "injected_failures": 1,
+                    "request_bytes": 361286,
+                    "requests": 268,
+                    "response_bytes": 145146
+                  },
+                  "wall_seconds": 27.705
+                }
+              },
+              "storage": {
+                "after_ingest": {
+                  "files": 4,
+                  "total_bytes": 94403616,
+                  "wal_bytes": 11074592
+                },
+                "after_rebuild": {
+                  "files": 4,
+                  "total_bytes": 100903400,
+                  "wal_bytes": 13789672
+                },
+                "after_retention": {
+                  "files": 4,
+                  "total_bytes": 94768160,
+                  "wal_bytes": 11074592
+                },
+                "before": {
+                  "files": 0,
+                  "total_bytes": 0,
+                  "wal_bytes": 0
+                },
+                "ingest_growth_bytes": 94403616
+              }
+            }
+          },
+          "profile": {
+            "agents": 200,
+            "api_replicas": 1,
+            "concurrent_pushes": 1,
+            "cpu_limit": 2.0,
+            "description": "One API process on SQLite, sized to the pilot Helm request (2 CPU, 2 GiB limit)",
+            "memory_limit_mib": 2048,
+            "name": "small-self-hosted",
+            "query_repeats": 30,
+            "seed": 2145,
+            "source": "scripts/generate_graph_benchmark_estate.py",
+            "store": "sqlite",
+            "vulnerable_package_rate": 0.08
+          },
+          "restart": {
+            "process": {
+              "cpu_seconds": 87.553,
+              "exit_code": 0,
+              "max_rss_mib": 567.7,
+              "wall_seconds": 93.23
+            },
+            "result": {
+              "findings_match_before_restart": true,
+              "first_graph_read_ms": 2343.1,
+              "first_graph_read_status": 503,
+              "jobs": 1,
+              "reads": {
+                "attack_paths": {
+                  "p50_ms": 596.99,
+                  "p95_ms": 653.27,
+                  "response_bytes": 510270,
+                  "samples": 30,
+                  "status": 200
+                },
+                "findings_page": {
+                  "p50_ms": 222.81,
+                  "p95_ms": 343.9,
+                  "response_bytes": 361925,
+                  "samples": 30,
+                  "status": 200
+                },
+                "graph_page": {
+                  "p50_ms": 1401.51,
+                  "p95_ms": 2019.53,
+                  "response_bytes": 2562753,
+                  "samples": 30,
+                  "status": 200
+                },
+                "graph_search": {
+                  "p50_ms": 383.03,
+                  "p95_ms": 506.56,
+                  "response_bytes": 65567,
+                  "samples": 30,
+                  "status": 200
+                },
+                "jobs_page": {
+                  "p50_ms": 8.8,
+                  "p95_ms": 11.16,
+                  "response_bytes": 443,
+                  "samples": 30,
+                  "status": 200
+                }
+              },
+              "statuses": [
+                "done"
+              ],
+              "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+              "stored_findings": 207,
+              "wall_seconds": 92.035
+            }
+          },
+          "warm": {
+            "process": {
+              "cpu_seconds": 249.172,
+              "exit_code": 0,
+              "max_rss_mib": 1629.5,
+              "wall_seconds": 259.75
+            },
+            "result": {
+              "accuracy": {
+                "expected_findings": 207,
+                "job_id": "1585558b-953d-5646-a02a-c67feea3975a",
+                "missing_after_scan": [],
+                "rebuilt_matches_stored": true,
+                "scanned_matches_expected": true,
+                "stored_digest": "5e7f8eb9ce16abda62ba649041f6daa8a69dd4eec6a221289511106e9ff768c9",
+                "stored_findings": 207,
+                "stored_matches_scanned": true,
+                "unexpected_after_scan": []
+              },
+              "network": {
+                "blocked_callers": [],
+                "blocked_connections": []
+              },
+              "process": {
+                "cpu_seconds": 238.305,
+                "rss_peak_mib": 1572.1,
+                "rss_steady_mib": 877.3
+              },
+              "profile": {
+                "agents": 200,
+                "api_replicas": 1,
+                "concurrent_pushes": 1,
+                "cpu_limit": 2.0,
+                "description": "One API process on SQLite, sized to the pilot Helm request (2 CPU, 2 GiB limit)",
+                "memory_limit_mib": 2048,
+                "name": "small-self-hosted",
+                "query_repeats": 30,
+                "seed": 2145,
+                "source": "scripts/generate_graph_benchmark_estate.py",
+                "store": "sqlite",
+                "vulnerable_package_rate": 0.08
+              },
+              "stages": {
+                "collection": {
+                  "agents": 200,
+                  "cpu_seconds": 0.531,
+                  "inventory_bytes": 467246,
+                  "packages": 4058,
+                  "rss_end_mib": 225.3,
+                  "rss_median_mib": 213.8,
+                  "rss_peak_mib": 225.3,
+                  "wall_seconds": 0.547
+                },
+                "graph_api": {
+                  "cpu_seconds": 50.89,
+                  "reads": {
+                    "attack_paths": {
+                      "p50_ms": 88.34,
+                      "p95_ms": 600.85,
+                      "response_bytes": 514351,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "findings_page": {
+                      "p50_ms": 117.47,
+                      "p95_ms": 1949.14,
+                      "response_bytes": 361925,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_page": {
+                      "p50_ms": 310.96,
+                      "p95_ms": 3010.76,
+                      "response_bytes": 4062808,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "graph_search": {
+                      "p50_ms": 121.76,
+                      "p95_ms": 1817.0,
+                      "response_bytes": 65630,
+                      "samples": 30,
+                      "status": 200
+                    },
+                    "jobs_page": {
+                      "p50_ms": 9.67,
+                      "p95_ms": 35.35,
+                      "response_bytes": 785,
+                      "samples": 30,
+                      "status": 200
+                    }
+                  },
+                  "request_bytes": 5910,
+                  "response_bytes": 135218359,
+                  "rss_end_mib": 557.1,
+                  "rss_median_mib": 877.3,
+                  "rss_peak_mib": 1316.0,
+                  "wall_seconds": 50.66
+                },
+                "ingest": {
+                  "admission_ms": 6181.1,
+                  "cpu_seconds": 63.711,
+                  "graph_nodes": 11490,
+                  "job_id": "1585558b-953d-5646-a02a-c67feea3975a",
+                  "request_bytes": 146864566,
+                  "response_bytes": 79646,
+                  "retry_same_job": true,
+                  "retry_status": 202,
+                  "rss_end_mib": 761.3,
+                  "rss_median_mib": 988.6,
+                  "rss_peak_mib": 1329.0,
+                  "status": "stored",
+                  "wall_seconds": 63.649
+                },
+                "rebuild": {
+                  "cpu_seconds": 70.081,
+                  "graph_nodes": 11490,
+                  "identical_repush_status": 409,
+                  "new_job": true,
+                  "rss_end_mib": 1134.3,
+                  "rss_median_mib": 976.2,
+                  "rss_peak_mib": 1572.1,
+                  "status": "stored",
+                  "wall_seconds": 74.575
+                },
+                "report_export": {
+                  "cpu_seconds": 16.508,
+                  "findings_report": {
+                    "create_status": 202,
+                    "download_bytes": 696355,
+                    "retained_lookup_ms": 7.8,
+                    "retained_lookup_status": 200,
+                    "seconds_to_done": 2.682,
+                    "status": "done"
+                  },
+                  "graph_export_graphml": {
+                    "bytes": 15222696,
+                    "ms": 7216.4,
+                    "status": 200
+                  },
+                  "graph_export_json": {
+                    "bytes": 9361954,
+                    "ms": 8870.5,
+                    "status": 200
+                  },
+                  "request_bytes": 368,
+                  "response_bytes": 25282495,
+                  "rss_end_mib": 613.2,
+                  "rss_median_mib": 593.2,
+                  "rss_peak_mib": 708.5,
+                  "wall_seconds": 18.77
+                },
+                "retention": {
+                  "cpu_seconds": 0.093,
+                  "jobs_after": 0,
+                  "jobs_before": 2,
+                  "jobs_removed": 2,
+                  "rss_end_mib": 608.9,
+                  "rss_median_mib": 613.8,
+                  "rss_peak_mib": 613.8,
+                  "wall_seconds": 0.133
+                },
+                "scan_enrichment": {
+                  "cpu_seconds": 29.626,
+                  "exit_code": 1,
+                  "findings": 207,
+                  "report_bytes": 73416612,
+                  "rss_end_mib": 627.8,
+                  "rss_median_mib": 349.9,
+                  "rss_peak_mib": 627.8,
+                  "upstream": {
+                    "by_endpoint": {
+                      "api.github.com:GET": 25,
+                      "pypi.org:GET": 15,
+                      "registry.npmjs.org:GET": 15,
+                      "www.cisa.gov:GET": 1
+                    },
+                    "by_host": {
+                      "api.github.com": 25,
+                      "pypi.org": 15,
+                      "registry.npmjs.org": 15,
+                      "www.cisa.gov": 1
+                    },
+                    "injected_failures": 0,
+                    "request_bytes": 0,
+                    "requests": 56,
+                    "response_bytes": 1176
+                  },
+                  "wall_seconds": 30.937
+                }
+              },
+              "storage": {
+                "after_ingest": {
+                  "files": 4,
+                  "total_bytes": 175877304,
+                  "wal_bytes": 13913272
+                },
+                "after_rebuild": {
+                  "files": 4,
+                  "total_bytes": 176855528,
+                  "wal_bytes": 13789672
+                },
+                "after_retention": {
+                  "files": 4,
+                  "total_bytes": 175877304,
+                  "wal_bytes": 13913272
+                },
+                "before": {
+                  "files": 4,
+                  "total_bytes": 100772328,
+                  "wal_bytes": 13789672
+                },
+                "ingest_growth_bytes": 75104976
+              }
+            }
+          }
+        }
+      ],
+      "schema_version": 1
+    }
+  },
+  "schema_version": 1
+}
