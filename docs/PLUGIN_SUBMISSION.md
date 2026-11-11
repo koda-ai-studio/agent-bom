@@ -1,16 +1,15 @@
 # Submitting the agent-bom plugins
 
-**Do not submit yet.** The plugins pin agent-bom 0.113.2, which has known critical
-bugs fixed only on `main`, and its audit profile still offers `agent_activity`, the
-chat-history tool that the Claude directory policy forbids. Cut a release first.
+The plugins pin agent-bom 0.114.0. Started from their lock files, the default and audit
+servers offer 8 and 10 tools, and neither offers `agent_activity`, the chat-history tool
+that the Claude directory policy forbids.
 
 ```bash
 make plugin-submission-check
 ```
 
 This fails while any pin is below the release floor, either legal page is a draft, or
-review cases are missing. It is not part of `make preflight`, because it stays red until
-the steps below are done.
+review cases are missing. It is not part of `make preflight`.
 
 Rules change. Reread the linked pages before submitting; they were last checked on
 2026-11-05.
@@ -21,11 +20,11 @@ Rules change. Reread the linked pages before submitting; they were last checked 
 |---|---|---|
 | Name, version, description, author, license, icon | Ready | `claude plugin validate --strict --profile directory` passes on both Claude plugins; `scripts/build_codex_plugin_zip.py` checks the OpenAI limits |
 | Skill frontmatter and least-privilege tool lists | Ready | `tests/test_claude_code_plugin.py` |
-| Tool annotations match the code | Ready on `main`, not in 0.113.2 | `tests/test_plugin_directory_readiness.py`, [table](PERMISSIONS.md#plugin-hook-and-tool-hints) |
-| No chat history access | Ready on `main`, **fails in 0.113.2** | Discovery test with planted session files; the pinned audit profile still lists `agent_activity` |
+| Tool annotations match the code | Ready | `tests/test_plugin_directory_readiness.py`, [table](PERMISSIONS.md#plugin-hook-and-tool-hints) |
+| No chat history access | Ready | Discovery test with planted session files; `tools/list` on both pinned servers |
 | Network destinations disclosed | Ready | `tests/test_plugin_egress_hosts.py`, [PERMISSIONS](PERMISSIONS.md) |
 | Hook disclosure | Ready | Guard [README](../integrations/agent-bom-guard/README.md) and [privacy page](../site-docs/privacy.md) |
-| Repository limits (Claude) | Ready, close to one limit | About 8,800 files and folders against a limit of 10,000; 32 MiB archive against 50 MiB. Recheck before each submission |
+| Repository limits (Claude) | Ready, close to one limit | 9,120 files and folders against a limit of 10,000; 34 MiB archive against 50 MiB (2026-11-10). Recheck before each submission |
 | Review cases | Written and run | [PLUGIN_REVIEW_CASES.md](PLUGIN_REVIEW_CASES.md) |
 
 Evals on 2026-11-05 (branch code with recorded tool output, one run of each of 18 cases, no
@@ -36,8 +35,8 @@ three with a baseline has not been done.
 
 ## Steps for both directories
 
-1. Merge the open fix work and cut the release (`scripts/bump-version.py`). This moves
-   the versions, skill pins and `uv.lock`.
+1. For a new release, `scripts/bump-version.py` moves the versions, skill pins and
+   `uv.lock`. Submit from the release tag.
 2. Check that `site-docs/privacy.md` and `site-docs/terms.md` still match what the plugins
    do. They cover local and self-hosted use. A public hosted service needs a named operator,
    contact, law and retention added first.
@@ -91,7 +90,7 @@ Source: [submit](https://developers.openai.com/plugins/deploy/submission),
 **Choose the route before the first upload.** A skills-only plugin cannot have an MCP
 server added later; an MCP version would be a new plugin.
 
-### Route A: skills-only, desktop-only (ready after the release)
+### Route A: skills-only, desktop-only (ready)
 
 The package in `integrations/codex`, built by `python scripts/build_codex_plugin_zip.py`. It
 runs the pinned CLI from the shell, so it sets `requires_local_executor` and gets a

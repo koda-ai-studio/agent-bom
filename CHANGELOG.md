@@ -23,6 +23,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Container scan accuracy: end-of-life Debian releases read `partial` until local tracker data is loaded, multi-page OSV results are followed, kernel header packages are not matched against kernel advisories, and Go binaries and their standard library are looked up.
 
 ### Upgrade notes
+- An MCP server with OAuth (`AGENT_BOM_MCP_OAUTH_*`) refuses to start until `AGENT_BOM_MCP_TENANT_ID`, `AGENT_BOM_MCP_OAUTH_INTROSPECTION_URL`, `AGENT_BOM_MCP_OAUTH_INTROSPECTION_CLIENT_ID` and the introspection client secret are set, and it rejects tokens without a signed `tenant_id` claim equal to that tenant. Configure the issuer first; see [MCP_OAUTH.md](docs/MCP_OAUTH.md#self-hosted-keycloak-setup).
 - Enabling `controlPlane.ingress` in Helm requires `controlPlane.api.trustedProxy` (or `sharedSourceAccepted`); rendering fails without it.
 - The `sqlite-pilot` and `synthetic-enterprise-story` Helm profiles require `AGENT_BOM_API_KEYS` in the `agent-bom-control-plane` Secret.
 - The Helm teardown hook's Role grants `deletecollection`, drops `get` and `list`, and holds `delete` on Secrets only for the names it removes.
