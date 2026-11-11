@@ -27,10 +27,11 @@ from agent_bom.security import sanitize_sensitive_payload
 # Lake/Parquet schema version. v1 = the CVE+malicious 28-column table; v2 added
 # unified finding identity; v3 appends scan provenance, source/asset identity,
 # and persisted workflow context; v4 appends transitive runtime reach
-# provenance; v5 appends SLA deadline provenance. Every evolution is additive: no prior column
+# provenance; v5 appends SLA deadline provenance; v6 appends the malicious-package
+# basis (known vs suspected). Every evolution is additive: no prior column
 # is renamed, retyped, or reordered, so existing Iceberg/lake consumers keep
 # reading their original projection unchanged.
-PARQUET_SCHEMA_VERSION = "5"
+PARQUET_SCHEMA_VERSION = "6"
 
 
 def _require_pyarrow():
@@ -138,7 +139,6 @@ def _schema(pa):
             ("is_kev", pa.bool_()),
             ("is_malicious", pa.bool_()),
             ("malicious_reason", pa.string()),
-            ("malicious_basis", pa.string()),
             ("published_at", pa.string()),
             ("modified_at", pa.string()),
             ("fixed_version", pa.string()),
@@ -170,6 +170,7 @@ def _schema(pa):
             ("symbol_reachability_reason", pa.string()),
             ("runtime_dependency_chain", pa.string()),
             ("sla_due_at_source", pa.string()),
+            ("malicious_basis", pa.string()),
         ],
         metadata={b"agent_bom.parquet_schema_version": PARQUET_SCHEMA_VERSION.encode()},
     )

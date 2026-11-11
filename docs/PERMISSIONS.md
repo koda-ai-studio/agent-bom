@@ -31,6 +31,7 @@ agent-bom reads only what you explicitly ask it to scan:
 | GitHub Actions | `--gha` | `.github/workflows/*.yml` files; reports AI/credential use plus unpinned remote actions, `pull_request_target`, and missing top-level `permissions:` policies |
 | SBOM files | `--sbom` | CycloneDX JSON/XML or SPDX JSON/tag-value you provide |
 | Ollama models | `--ollama`, optionally `--ollama-host` or `OLLAMA_HOST` | `GET /api/tags` on the selected endpoint; no inference or model downloads. Only the implicit localhost default can fall back to local model manifests. |
+| Self-hosted serving endpoints | `--serving-endpoint RUNTIME=URL` (repeatable; `vllm`, `tgi`, `triton`, `llamacpp`, `lmstudio`) | The runtime's documented model listing and metadata reads on that endpoint only, such as `GET /v1/models`, `GET /info` or Triton's `POST /v2/repository/index` listing request; no inference, model loads or downloads. No credentials are sent and a failed endpoint never falls back to local files. |
 
 Ollama API inventory records the endpoint as a runtime probe. An unavailable
 configured endpoint reports incomplete discovery and never substitutes this

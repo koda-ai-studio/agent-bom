@@ -193,7 +193,7 @@ release testing, not that the files are broken.
 | **Supported** | Helm chart | `deploy/helm/agent-bom/` | The control-plane and runtime chart. Production values live in `examples/`. |
 | **Supported** | EKS Terraform | `deploy/terraform/platform-eks/` | The reference production install (`scripts/deploy/install.sh eks`). |
 | **Supported** | Read-only cloud connect | `deploy/terraform/connect-*`, `deploy/cloudformation/agent-bom-readonly-role.yaml` | Customer-side roles the control plane assumes. |
-| **Preview** | AKS / GKE | Helm chart plus `examples/aks-*` / `examples/gke-*` values | Same chart; cloud-specific workload-identity values have less live coverage than EKS. |
+| **Preview** | AKS / GKE | Helm chart plus `examples/aks-*` / `examples/gke-*` values | Same chart on a cluster you already run; cloud-specific workload-identity values render but have no recorded live install. |
 | **Preview** | Snowflake Native App / SPCS | `deploy/snowflake/` | Installation contract only. Native App scan dispatch is unavailable; see `deploy/snowflake/native-app/README.md`. |
 | **Preview** | Snowflake POV backend | `scripts/deploy/install.sh snowflake` | Self-hosted API/UI with explicit [backend parity](backend-parity.md) limits. |
 | **Preview** | Air-gapped image bundle | `scripts/release/build-airgap-image-bundle.sh` | See [Air-Gapped Image Bundle](airgapped-image-bundle.md). |
@@ -207,6 +207,31 @@ release testing, not that the files are broken.
 and ClickHouse schema and migrations that the supported Compose stacks mount.
 Contributions that keep a Community target working are welcome. Please open an
 issue before adding a new target.
+
+### Qualification evidence
+
+A tier says how much attention a target gets. This table says what has
+actually been exercised for the 0.114.0 chart and images, so a tier is never
+read as proof of a live installation. "Static" means the files were linted,
+rendered or validated locally without creating infrastructure or using cloud
+credentials. "Not tested" means no install in that environment is recorded.
+
+| Profile | Static validation | Live installation | Prerequisites the operator supplies |
+|---|---|---|---|
+| Docker Compose pilot, platform, `product` and `hosted-poc` overlays | `docker compose config` passes for each file and overlay (Compose v5.5.1); contract tests in `tests/test_compose_*.py` | Not tested in this qualification; the pilot installs with `scripts/deploy/install.sh pilot` | Docker host; for platform: TLS, authentication, PostgreSQL 16 and operational secrets |
+| Helm chart (22 example profiles) | `helm lint` and `helm template` for the default and every profile in `scripts/validate_helm_profiles.py` (Helm v4.1.4), with the ingress-path structural check; chart tests in `tests/test_helm_*.py` and `tests/test_deploy_profiles.py` | Not tested | An existing Kubernetes cluster, storage class, ingress controller and the Secrets each profile references |
+| EKS (`deploy/terraform/platform-eks`) | `terraform init -backend=false` and `terraform validate` pass (Terraform 1.15.4) | Not tested | AWS account and provisioner role, three pre-created Secrets Manager entries, External Secrets Operator. The module can create a minimal VPC and EKS cluster, or target an existing cluster, and provisions RDS, IRSA roles, S3 and the Helm releases |
+| AKS / GKE | Same chart; `aks-collector-workload-identity` and `gke-collector-workload-identity` profiles render | Not tested | A pre-existing cluster with workload identity enabled. `install.sh aks` / `gke` install Helm onto that cluster; nothing in `deploy/` provisions an AKS or GKE cluster |
+| Read-only cloud connect (`connect-*`, sidescan, `aws/baseline`, `azure/ingestion`) | `terraform validate` passes for all ten Terraform modules; `terraform fmt -check` passes | Not tested | Customer cloud account with rights to create the read-only roles |
+| Snowflake Native App / SPCS | `scripts/release/snowflake_native_app.py validate` passes; `tests/test_snowflake_native_app.py` | Not tested | Provider account with SPCS, compute pool, image repository and consumer grants. Defines API, UI, scanner and MCP runtime containers, but scan dispatch is unavailable: `core.trigger_scan()` refuses without creating a job, so this is not a full frontend/API/worker installation |
+| Databricks Apps | None: no Databricks Apps packaging exists | Unavailable | Not applicable. The Databricks collector and scheduled export are evidence integrations, not hosting |
+| Iceberg REST catalog export | `tests/test_iceberg_*.py` and `tests/test_parquet_export.py` pass with the locked `pyiceberg` 0.12.0 and `pyarrow` 25.0.1, including real in-memory catalog commits, field-ID retention across schema evolution and credential redaction | Not tested against Polaris or a hosted catalog | `agent-bom[lake]`, a catalog URL, credential and warehouse. Tenant namespaces, retry/idempotency and cross-engine reads are not qualified |
+| SQLite / PostgreSQL primary store, ClickHouse analytics | `tests/test_storage_tiers.py`, `tests/test_clickhouse_qualification.py` and `tests/test_clickhouse_tenant_isolation.py` pass without a live server | Not tested here; PostgreSQL migration contracts run in `make preflight` | SQLite for a single host; PostgreSQL for shared deployments. ClickHouse stays optional analytics and is never the primary store |
+
+Platform identity, tenant isolation, network egress, secrets, persistence,
+background jobs, upgrade and rollback, recovery, removal and resource
+consumption still need to be tested in each authorized environment before a
+profile above is described as qualified there.
 
 ## Enterprise Deployment Promise
 

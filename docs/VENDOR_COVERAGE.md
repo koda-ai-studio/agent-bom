@@ -12,7 +12,7 @@ credentialed run against that provider.
 
 ## Cloud and AI-infrastructure providers
 
-20 providers × 12 lanes; 180 cells are gaps (—).
+21 providers × 12 lanes; 191 cells are gaps (—).
 
 Legend: `✓` declared · `—` not declared in that source · benchmark posture is
 `implemented/official` control count (`n/a` = official count withheld because the
@@ -38,6 +38,7 @@ Kubernetes control count.
 | ollama | — | — | — | ✓ | — | — | — | — | — | — | — | — |
 | openai | — | — | — | ✓ | — | — | — | — | — | — | — | — |
 | runpod | — | — | — | ✓ | — | — | — | — | — | — | — | — |
+| serving | — | — | — | ✓ | — | — | — | — | — | — | — | — |
 | snowflake | ✓ | ✓ | ✓ | ✓ | ✓ | 14/n/a | — | — | — | — | — | — |
 | supabase | — | — | — | — | — | — | — | — | — | — | — | ✓ |
 | vastai | — | — | — | ✓ | — | — | — | — | — | — | — | — |
@@ -151,6 +152,7 @@ Lists: `side_scan_capabilities` = `src/agent_bom/cloud/side_scan_lifecycle_statu
 | ollama | — | ✓ |
 | openai | — | ✓ |
 | runpod | — | ✓ |
+| serving | — | ✓ |
 | vastai | — | ✓ |
 | wandb | — | ✓ |
 
