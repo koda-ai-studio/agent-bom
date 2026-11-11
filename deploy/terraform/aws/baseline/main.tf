@@ -63,8 +63,8 @@ resource "aws_iam_role" "scanner" {
 # Inline (PutRolePolicy): customer-managed CreatePolicy is often denied under
 # PowerUser + scoped provisioner policies; inline policies keep IRSA usable.
 resource "aws_iam_role_policy" "scanner" {
-  name   = "${var.name}-scanner"
-  role   = aws_iam_role.scanner.id
+  name = "${var.name}-scanner"
+  role = aws_iam_role.scanner.id
   # Co-located: Terraform resolves path.module under .terraform/modules/, so
   # climbing out to scripts/provision/ breaks for generated eks-reference roots.
   # IAM requires printable ASCII only (no UTF-8 punctuation in comments).

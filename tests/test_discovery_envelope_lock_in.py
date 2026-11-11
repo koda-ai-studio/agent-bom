@@ -49,6 +49,7 @@ PROVIDERS: list[tuple[str, ScanMode, RedactionStatus]] = [
     ("agent_bom.cloud.huggingface", ScanMode.SAAS_READ_ONLY, RedactionStatus.CENTRAL_SANITIZER_APPLIED),
     ("agent_bom.cloud.openai_provider", ScanMode.SAAS_READ_ONLY, RedactionStatus.CENTRAL_SANITIZER_APPLIED),
     ("agent_bom.cloud.ollama", ScanMode.LOCAL_ONLY, RedactionStatus.NOT_APPLICABLE),
+    ("agent_bom.cloud.serving_runtimes", ScanMode.RUNTIME_PROBE, RedactionStatus.NOT_APPLICABLE),
     ("agent_bom.cloud.lambda_labs", ScanMode.CLOUD_READ_ONLY, RedactionStatus.CENTRAL_SANITIZER_APPLIED),
     ("agent_bom.cloud.runpod", ScanMode.CLOUD_READ_ONLY, RedactionStatus.CENTRAL_SANITIZER_APPLIED),
     ("agent_bom.cloud.vastai", ScanMode.CLOUD_READ_ONLY, RedactionStatus.CENTRAL_SANITIZER_APPLIED),
@@ -145,6 +146,8 @@ _READ_ONLY_ACTION_EXCEPTIONS = {
     "iam:GenerateServiceLastAccessedDetails",  # creates an IAM usage report job; changes no IAM/resource configuration
     # Authorizes quota/billing attribution for otherwise read-only GCP calls.
     "serviceusage.services.use",
+    # Triton/KServe v2 repository index: a documented listing request sent as POST with an empty body.
+    "triton:POST /v2/repository/index",
 }
 
 
@@ -435,7 +438,7 @@ def test_docs_provider_table_matches_lock_in_matrix() -> None:
     documented = {
         match.group(1)
         for match in re.finditer(
-            r"^\| `([^`]+)` \| `(?:cloud_read_only|saas_read_only|local_only)` \|$",
+            r"^\| `([^`]+)` \| `(?:cloud_read_only|saas_read_only|local_only|runtime_probe)` \|$",
             docs,
             re.MULTILINE,
         )

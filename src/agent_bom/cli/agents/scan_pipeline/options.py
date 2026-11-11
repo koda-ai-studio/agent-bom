@@ -250,6 +250,7 @@ class ScanOptions:
     k8s_live_namespace: str = "default"
     k8s_live_all_namespaces: bool = False
     k8s_live_context: Optional[str] = None
+    serving_endpoints: tuple = ()
     extra_projects: tuple = field(default=(), init=False)
     extra_config_dirs: tuple = field(default=(), init=False)
     extra_inventories: tuple = field(default=(), init=False)

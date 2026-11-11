@@ -1,7 +1,8 @@
 """Cloud provider auto-discovery for AI agents and MCP servers.
 
 Discovers agents from AWS, Azure, GCP, CoreWeave, Databricks, Snowflake,
-Nebius, Hugging Face Hub, W&B, MLflow, OpenAI, Ollama (local), Lambda Labs,
+Nebius, Hugging Face Hub, W&B, MLflow, OpenAI, Ollama (local), self-hosted
+serving endpoints (vLLM, TGI, Triton, llama.cpp, LM Studio), Lambda Labs,
 RunPod, Vast.ai, and Crusoe Energy APIs.
 Each provider is an optional dependency — install with e.g. ``pip install 'agent-bom[aws]'``.
 """
@@ -34,6 +35,7 @@ _PROVIDERS: dict[str, str] = {
     "mlflow": "agent_bom.cloud.mlflow_provider",
     "openai": "agent_bom.cloud.openai_provider",
     "ollama": "agent_bom.cloud.ollama",
+    "serving": "agent_bom.cloud.serving_runtimes",
     "lambda": "agent_bom.cloud.lambda_labs",
     "runpod": "agent_bom.cloud.runpod",
     "vastai": "agent_bom.cloud.vastai",
@@ -91,6 +93,16 @@ _PROVIDER_PERMISSIONS_USED: dict[str, tuple[str, ...]] = {
     "mlflow": ("mlflow:experiments:read", "mlflow:models:read", "mlflow:runs:read"),
     "nebius": ("nebius:read",),
     "ollama": (),
+    "serving": (
+        "llamacpp:GET /props",
+        "llamacpp:GET /v1/models",
+        "lmstudio:GET /api/v0/models",
+        "tgi:GET /info",
+        "triton:GET /v2",
+        "triton:POST /v2/repository/index",
+        "vllm:GET /v1/models",
+        "vllm:GET /version",
+    ),
     "openai": ("openai:assistants:read", "openai:models:read", "openai:responses:read"),
     "snowflake": ("snowflake:show:read", "snowflake:account_usage:read"),
     "wandb": ("wandb:artifacts:read", "wandb:runs:read"),
@@ -103,7 +115,7 @@ _PROVIDER_PERMISSIONS_USED: dict[str, tuple[str, ...]] = {
 
 def _provider_capabilities(name: str) -> ExtensionCapabilities:
     scan_modes: tuple[str, ...]
-    if name == "ollama":
+    if name in {"ollama", "serving"}:
         scan_modes = ("runtime_probe",)
     elif name in {"aws", "azure", "gcp", "snowflake"}:
         scan_modes = ("direct_cloud_pull", "operator_pushed_inventory", "skill_invoked_pull")

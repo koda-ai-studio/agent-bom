@@ -9,10 +9,20 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Upgrade notes
+- Parquet and Iceberg exports move to schema version 6, which appends `malicious_basis` after `sla_due_at_source`. 0.114.0 wrote that column at position 11 under version-5 metadata, which moved every later column; consumers that read 0.114.0 files by position should re-read them by name. Iceberg tables keep their field IDs and gain the column at the end.
+- Ollama model agents are named with the full `name:tag` (`ollama-model-llama3:8b` instead of `ollama-model-llama3`), so two tags of one model on one host are two assets. Their asset identities change once.
+
+### Added
+- `--serving-endpoint RUNTIME=URL` (repeatable) reads one vLLM, Text Generation Inference, Triton, llama.cpp or LM Studio endpoint with that runtime's documented read-only request. Each endpoint reports success, partial, denied, timeout or unavailable; only success and partial produce records, and a failed endpoint never falls back to local files. Each model records runtime, endpoint, artifact and collection evidence separately in `metadata.serving_evidence`. See [AI infrastructure scanning](docs/AI_INFRASTRUCTURE_SCANNING.md).
+- Deployment support tiers list, for each profile, what was validated locally and what has not been installed live. See the [deployment overview](site-docs/deployment/overview.md).
+
 ### Changed
 - Standalone HTML reports put only the first page of vulnerabilities, policy findings, impact rows and remediation items in the page. The other records stay in the file as inert text, and the paginator loads them a page at a time. Search, filters, sorting and counts still cover every record, and printing loads them all. Without JavaScript, a notice says how many records are stored but not shown. A 2,000-finding report opens with about 16,000 page elements instead of 220,000 (#6128).
 
 ### Fixed
+- LangGraph and LangChain agents built with a model passed through a module-level string constant (`MODEL = "openai:gpt-4o-mini"`, then `create_agent(MODEL, ...)`) now record that model.
+- An Ollama endpoint that answers 401, 403 or times out reads as denied or timed out, not unavailable, and one malformed model entry no longer discards the rest of the inventory; the result is marked partial.
 - `GET /v1/graph` no longer returns `503 current_estate_building` on every request when all the evidence behind the current graph is older than `AGENT_BOM_GRAPH_RETENTION_DAYS`. Age retention was deleting the rebuildable current-estate view as soon as it was built. That view is now exempt from age retention and keeps its evidence time as `created_at` (#6228).
 
 ## [0.114.0] - 2026-11-08

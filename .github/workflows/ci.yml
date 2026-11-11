@@ -1732,9 +1732,15 @@ jobs:
           printf '%s' 'maintenancepass' > "${AGENT_BOM_POSTGRES_MAINTENANCE_PASSWORD_FILE}"
 
       - name: Install Postgres client
+        # The runner image ships a PostgreSQL client; reach for the package
+        # mirrors only when it is missing, so a mirror outage cannot fail CI.
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends postgresql-client
+          if command -v psql >/dev/null 2>&1; then
+            psql --version
+          else
+            sudo apt-get -o Acquire::Retries=5 update -qq
+            sudo apt-get -o Acquire::Retries=5 install -y --no-install-recommends postgresql-client
+          fi
 
       - name: Verify Alembic bootstrap and init.sql forward upgrade
         env:

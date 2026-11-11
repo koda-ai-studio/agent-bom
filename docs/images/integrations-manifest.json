@@ -117,6 +117,7 @@
   },
   "hidden": {
     "agent_type:custom": "Catch-all for user-declared agents; not a product.",
+    "cloud_provider:serving": "Self-hosted serving endpoint probe qualified against local API fixtures only, not live runtimes; see docs/AI_INFRASTRUCTURE_SCANNING.md.",
     "agent_type:replit-agent": "Enum value only: no config path and no workspace parser discover it yet.",
     "export_kind:snowflake": "Shown as a scanned data platform; export is a secondary capability.",
     "export_kind:databricks": "Shown as a scanned data platform; export is a secondary capability.",

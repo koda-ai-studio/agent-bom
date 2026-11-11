@@ -80,6 +80,7 @@ const PROVIDERS: Record<string, { value: string; label: string }> = {
   ollama: { value: "ollama", label: "Ollama" },
   openai: { value: "openai", label: "OpenAI" },
   runpod: { value: "runpod", label: "RunPod" },
+  serving: { value: "serving", label: "Model serving" },
   vastai: { value: "vastai", label: "Vast.ai" },
   wandb: { value: "wandb", label: "W&B" },
   okta: { value: "okta", label: "Okta" },
