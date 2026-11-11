@@ -24,6 +24,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Standalone HTML reports put only the first page of vulnerabilities, policy findings, impact rows and remediation items in the page. The other records stay in the file as inert text, and the paginator loads them a page at a time. Search, filters, sorting and counts still cover every record, and printing loads them all. Without JavaScript, a notice says how many records are stored but not shown. A 2,000-finding report opens with about 16,000 page elements instead of 220,000 (#6128).
 
 ### Fixed
+- LangGraph and LangChain agents built with a model passed through a module-level string constant (`MODEL = "openai:gpt-4o-mini"`, then `create_agent(MODEL, ...)`) now record that model.
 - An Ollama endpoint that answers 401, 403 or times out reads as denied or timed out, not unavailable, and one malformed model entry no longer discards the rest of the inventory; the result is marked partial.
 - `GET /v1/graph` no longer returns `503 current_estate_building` on every request when all the evidence behind the current graph is older than `AGENT_BOM_GRAPH_RETENTION_DAYS`. Age retention was deleting the rebuildable current-estate view as soon as it was built. That view is now exempt from age retention and keeps its evidence time as `created_at` (#6228).
 
