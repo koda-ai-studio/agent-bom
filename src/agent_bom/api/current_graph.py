@@ -139,7 +139,9 @@ class CurrentGraphStore:
             self._release_projection = weakref.finalize(self, release)
             sweep_sibling_projections(cache_path)
         self._cache_path = str(cache_path)
-        self._projection_store = SQLiteGraphStore(self._cache_path)
+        # Age retention would delete a projection whose evidence predates the window right after it
+        # is built, leaving no generation to serve; superseded generations are retired below instead.
+        self._projection_store = SQLiteGraphStore(self._cache_path, apply_retention=False)
         self._lock = _ProjectionLock()
         self._coverage: dict[str, dict[str, Any]] = {}
         self._cache: dict[str, tuple[str, tuple[tuple[str, str], ...], str]] = {}

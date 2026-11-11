@@ -30,6 +30,7 @@ from agent_bom.output.html._common import (
     _finding_sev_badge,
     _sev_badge,
 )
+from agent_bom.output.html.deferred_rows import bounded_rows
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
@@ -102,6 +103,7 @@ def _vuln_table(
     # Advisory AI-triage assessments joined by the finding id they describe.
     ai_assessments = {assessment.finding_id: assessment for assessment in getattr(report, "ai_finding_assessments", []) or []}
     rows = [_vuln_row(idx, finding, ai_assessments) for idx, finding in enumerate(sorted_findings)]
+    mounted, deferred = bounded_rows("vulnTable", rows, "vulnerabilities")
 
     headers = ["Finding / package", "Severity", "Fixed version", "Evidence"]
 
@@ -134,7 +136,7 @@ def _vuln_table(
         + "<thead><tr>"
         + "".join(f'<th data-col="{i}">{h} <span class="sort-arrow"></span></th>' for i, h in enumerate(headers))
         + "</tr></thead>"
-        + f"<tbody>{''.join(rows)}</tbody></table></div>"
+        + f"<tbody>{mounted}</tbody></table>{deferred}</div>"
         + _pager_controls("vulnTable", len(rows))
     )
 
@@ -179,6 +181,7 @@ def _blast_table(
             f"<td>{fix}</td>"
             f"</tr>"
         )
+    mounted, deferred = bounded_rows("blastTable", rows, "impact rows")
     headers = [
         "#",
         "Vuln ID",
@@ -191,10 +194,11 @@ def _blast_table(
         "Fix",
     ]
     return (
-        '<div class="table-wrap"><table class="data-table sortable">'
+        '<div class="table-wrap"><table class="data-table sortable" id="blastTable">'
         + "<thead><tr>"
         + "".join(f'<th data-col="{i}">{h} <span class="sort-arrow"></span></th>' for i, h in enumerate(headers))
-        + f"</tr></thead><tbody>{''.join(rows)}</tbody></table></div>"
+        + f"</tr></thead><tbody>{mounted}</tbody></table>{deferred}</div>"
+        + _pager_controls("blastTable", len(rows))
     )
 
 
@@ -262,16 +266,26 @@ def _remediation_list(findings: list["Finding"]) -> str:
         )
     nf_html = ""
     if no_fix:
-        nf_rows = "".join(
-            f'<div style="padding:9px 0;border-bottom:1px solid #1e293b;font-size:.82rem">'
+        nf_rows = [
+            f'<div class="no-fix-item" style="padding:9px 0;border-bottom:1px solid #1e293b;font-size:.82rem">'
             f"{_finding_sev_badge(finding)} "
             f'<code class="vuln-id">{_esc(finding.cve_id or finding.title)}</code> &mdash; '
             f'<strong style="color:#e2e8f0">{_esc(package_name(finding))}</strong>@{_esc(package_version(finding))}'
             f' &mdash; <span style="color:#475569">no fix available &mdash; monitor upstream</span></div>'
             for finding in no_fix
+        ]
+        nf_html = (
+            '<div style="margin-top:20px"><div class="subsection-label">No Fix Available</div>'
+            + _paged_list("remediationNoFix", nf_rows, "findings without a fix")
+            + "</div>"
         )
-        nf_html = '<div style="margin-top:20px"><div class="subsection-label">No Fix Available</div>' + nf_rows + "</div>"
-    return "".join(items) + nf_html
+    return (_paged_list("remediationList", items, "upgrades") if items else "") + nf_html
+
+
+def _paged_list(list_id: str, items: list[str], noun: str) -> str:
+    mounted, deferred = bounded_rows(list_id, items, noun)
+    pager = _pager_controls(list_id, len(items)) if deferred else ""
+    return f'<div id="{list_id}">{mounted}</div>{deferred}{pager}'
 
 
 def _workload_runtime_evidence_hint(finding: object) -> str:
@@ -331,6 +345,7 @@ def _policy_findings_section(findings: list["Finding"]) -> str:
         return ""
 
     rows = _policy_finding_rows(findings)
+    mounted, deferred = bounded_rows("policyFindingsTable", rows, "findings")
 
     headers = ["Severity", "Type", "Asset", "Finding", "Source", "Evidence", "Remediation"]
     header_html = "".join(f'<th data-col="{i}">{h} <span class="sort-arrow"></span></th>' for i, h in enumerate(headers))
@@ -379,7 +394,7 @@ def _policy_findings_section(findings: list["Finding"]) -> str:
         f"{filter_bar}"
         f'<div class="table-wrap"><table class="data-table sortable paginated" id="policyFindingsTable">'
         f"<thead><tr>{header_html}</tr></thead>"
-        f"<tbody>{''.join(rows)}</tbody></table></div>"
+        f"<tbody>{mounted}</tbody></table>{deferred}</div>"
         f"{_pager_controls('policyFindingsTable', len(rows))}"
         f"</div></section>"
     )

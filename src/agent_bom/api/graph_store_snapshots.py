@@ -90,7 +90,7 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
             conn.execute("BEGIN IMMEDIATE")
             conn.execute(_CREATE_PRESET_TABLE_SQLITE)
             ensure_search_index(conn)
-            sqlite_graph_store.save_graph(conn, graph)
+            sqlite_graph_store.save_graph(conn, graph, apply_retention=self._apply_retention)
             sqlite_graph_store._backfill_empty_tenant_ids(conn, _API_GRAPH_TENANT_TABLE_KEYS)
             conn.commit()
             checkpoint_wal(conn)
@@ -136,6 +136,7 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
                 evidence_manifest_sha256=evidence_manifest_sha256,
                 write_generation=write_generation,
                 snapshot_paths=snapshot_paths,
+                apply_retention=self._apply_retention,
             )
             sqlite_graph_store._backfill_empty_tenant_ids(conn, _API_GRAPH_TENANT_TABLE_KEYS)
             conn.commit()

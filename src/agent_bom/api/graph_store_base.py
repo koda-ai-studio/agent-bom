@@ -34,8 +34,10 @@ from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
 
 
 class SQLiteGraphStoreBase:
-    def __init__(self, db_path: str | Path | None = None) -> None:
+    def __init__(self, db_path: str | Path | None = None, *, apply_retention: bool = True) -> None:
         self._db_path = Path(db_path or sqlite_graph_store.default_graph_db_path()).expanduser()
+        # A rebuildable cache retires its own generations; age retention belongs to the scan history it derives from.
+        self._apply_retention = apply_retention
 
     def _open_rw_conn(self) -> sqlite3.Connection:
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
