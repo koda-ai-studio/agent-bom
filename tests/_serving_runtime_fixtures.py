@@ -21,6 +21,7 @@ import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
@@ -160,18 +161,33 @@ SCENARIOS: dict[str, dict[str, dict[tuple[str, str], Route]]] = {
 }
 
 
-def _handler(routes: dict[tuple[str, str], Route]) -> type[BaseHTTPRequestHandler]:
+@dataclass
+class FixtureOptions:
+    """Optional fixture behavior: request recording, a required bearer token, extra response headers."""
+
+    seen: list[tuple[str, str, dict[str, str]]] | None = None
+    require_bearer: str | None = None
+    response_headers: dict[tuple[str, str], dict[str, str]] = field(default_factory=dict)
+
+
+def _handler(routes: dict[tuple[str, str], Route], options: FixtureOptions) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         def _serve(self, method: str) -> None:
             length = int(self.headers.get("Content-Length") or 0)
             if length:
                 self.rfile.read(length)
+            if options.seen is not None:
+                options.seen.append((method, self.path, {k.lower(): v for k, v in self.headers.items()}))
             status, body, delay = routes.get((method, self.path), (404, {"error": "not found"}, 0.0))
+            if options.require_bearer is not None and self.headers.get("Authorization") != f"Bearer {options.require_bearer}":
+                status, body, delay = DENIED
             if delay:
                 time.sleep(delay)
             payload = json.dumps(body).encode()
             try:
                 self.send_response(status)
+                for name, value in options.response_headers.get((method, self.path), {}).items():
+                    self.send_header(name, value)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(payload)))
                 self.end_headers()
@@ -193,9 +209,9 @@ def _handler(routes: dict[tuple[str, str], Route]) -> type[BaseHTTPRequestHandle
 
 
 @contextmanager
-def serving_fixture(routes: dict[tuple[str, str], Route]) -> Iterator[str]:
+def serving_fixture(routes: dict[tuple[str, str], Route], options: FixtureOptions | None = None) -> Iterator[str]:
     """Serve *routes* on a random loopback port and yield its base URL."""
-    server = ThreadingHTTPServer(("127.0.0.1", 0), _handler(routes))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _handler(routes, options or FixtureOptions()))
     server.daemon_threads = True
     server.block_on_close = False
     thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.02}, daemon=True)

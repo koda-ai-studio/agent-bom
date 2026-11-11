@@ -13,6 +13,23 @@ _DRIFT_ATTRIBUTE_KEYS = (
     "iam_role_arn",
 )
 
+# Identity of what a serving endpoint serves; observation time and collection
+# detail change every scan and are deliberately not compared.
+_SERVING_DRIFT_FIELDS: dict[str, tuple[str, str]] = {
+    "serving_evidence.model.artifact_ref": ("model", "artifact_ref"),
+    "serving_evidence.model.digest": ("model", "digest"),
+    "serving_evidence.model.version": ("model", "version"),
+    "serving_evidence.runtime.name": ("runtime", "name"),
+    "serving_evidence.runtime.version": ("runtime", "version"),
+}
+_SERVING_SUMMARIES = {
+    "serving_evidence.model.artifact_ref": "Served model artifact changed",
+    "serving_evidence.model.digest": "Served model digest changed",
+    "serving_evidence.model.version": "Served model version changed",
+    "serving_evidence.runtime.name": "Serving runtime changed",
+    "serving_evidence.runtime.version": "Serving runtime version changed",
+}
+
 _SCALAR_DIFF_FIELDS = (
     "entity_type",
     "label",
@@ -82,6 +99,11 @@ def _scalar_projection(meta: dict[str, Any]) -> dict[str, Any]:
 def _drift_value(meta: dict[str, Any], field: str) -> Any:
     if field == "compliance_tags":
         return meta.get("compliance_tags") or []
+    if field in _SERVING_DRIFT_FIELDS:
+        section, key = _SERVING_DRIFT_FIELDS[field]
+        evidence = meta.get("attributes", {}).get("serving_evidence")
+        part = evidence.get(section) if isinstance(evidence, dict) else None
+        return part.get(key) if isinstance(part, dict) else None
     return meta.get("attributes", {}).get(field)
 
 
@@ -109,13 +131,15 @@ def summarize_attribute_delta(field: str, before: Any, after: Any) -> str:
         return "IAM attachment changed"
     if field == "compliance_tags":
         return "Compliance tags changed"
+    if field in _SERVING_SUMMARIES:
+        return _SERVING_SUMMARIES[field]
     return f"{field} changed"
 
 
 def attribute_deltas(old_meta: dict[str, Any], new_meta: dict[str, Any]) -> list[dict[str, Any]]:
     """Return canonical attribute deltas between two node snapshots."""
     deltas: list[dict[str, Any]] = []
-    for field in _DRIFT_ATTRIBUTE_KEYS:
+    for field in (*_DRIFT_ATTRIBUTE_KEYS, *_SERVING_DRIFT_FIELDS):
         before = _drift_value(old_meta, field)
         after = _drift_value(new_meta, field)
         if before == after:
