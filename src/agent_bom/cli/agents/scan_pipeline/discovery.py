@@ -328,7 +328,7 @@ def _discover_cloud(opts: ScanOptions, st: ScanState) -> None:
         openai_org_id=opts.openai_org_id,
         ollama_flag=opts.ollama_flag,
         ollama_host=opts.ollama_host,
-        serving_endpoints=opts.serving_endpoints,
+        serving_targets=opts.serving_targets,
         jira_discover=opts.jira_discover,
         jira_url=opts.jira_url,
         jira_user=opts.jira_user,
