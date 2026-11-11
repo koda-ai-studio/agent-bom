@@ -11,6 +11,7 @@ from agent_bom.output.json_fmt import to_json
 
 LOCAL_ONLY_PROVIDERS = {
     "ollama": "Discovers a local Ollama daemon; no external cloud/SaaS resource identity exists.",
+    "serving": "Reads one operator-named self-hosted serving endpoint; no cloud/SaaS resource identity exists.",
 }
 
 MOCKED_CLOUD_ORIGIN_PROVIDERS = {
