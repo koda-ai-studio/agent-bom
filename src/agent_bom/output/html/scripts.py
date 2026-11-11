@@ -5,6 +5,7 @@ from __future__ import annotations
 from agent_bom.output.html.graph_js_attack_flow import ATTACK_FLOW_GRAPH_JS
 from agent_bom.output.html.graph_js_supply_chain import SUPPLY_CHAIN_GRAPH_JS, SUPPLY_CHAIN_SIDEBAR_JS
 from agent_bom.output.html.graph_js_supply_chain_tools import SUPPLY_CHAIN_TOOLS_JS
+from agent_bom.output.html.paginator_js import PAGINATOR_JS
 
 _EXTERNAL_SCRIPT_TAGS = (
     '  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>\n',
@@ -39,74 +40,7 @@ SCALE_REPORT_SCRIPT = f"""<script>
   {PRINT_DETAILS_JS}
   window.PAGINATORS = window.PAGINATORS || {{}};
 
-  function makePaginator(tableId, filterFn) {{
-    var table = document.getElementById(tableId);
-    if (!table) return null;
-    var tbody = table.querySelector('tbody');
-    var bar = document.querySelector('.pager[data-pager="' + tableId + '"]');
-    var allRows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-    var pageSize = bar ? (parseInt(bar.getAttribute('data-page-size'), 10) || 50) : 50;
-    var page = 1;
-    var matched = allRows;
-    var infoEl = bar ? bar.querySelector('.pager-info') : null;
-    var headings = Array.from(table.querySelectorAll('thead th')).map(function(th) {{ return th.textContent.trim(); }});
-    function prepareRow(row) {{
-      if (row.dataset.detailsReady) return;
-      row.dataset.detailsReady = 'true';
-      Array.from(row.cells).forEach(function(cell, index) {{ cell.setAttribute('data-label', headings[index] || 'Evidence'); }});
-      if (table.classList.contains('finding-overview')) return;
-      var button = document.createElement('button');
-      button.className = 'row-detail-toggle'; button.textContent = 'Show evidence';
-      button.setAttribute('aria-expanded', 'false');
-      button.onclick = function() {{
-        var expanded = row.classList.toggle('row-expanded');
-        button.setAttribute('aria-expanded', String(expanded));
-        button.textContent = expanded ? 'Hide evidence' : 'Show evidence';
-      }};
-      if (row.cells[0]) row.cells[0].append(button);
-    }}
-    function render() {{
-      var total = matched.length;
-      var pages = Math.max(1, Math.ceil(total / pageSize));
-      if (page > pages) page = pages;
-      if (page < 1) page = 1;
-      var start = (page - 1) * pageSize;
-      var end = start + pageSize;
-      allRows.forEach(function(r) {{ r.classList.add('pg-hidden'); }});
-      matched.slice(start, end).forEach(function(r) {{ prepareRow(r); r.classList.remove('pg-hidden'); }});
-      if (bar) {{
-        if (infoEl) infoEl.innerHTML = total ? (start + 1) + '&ndash;' + Math.min(end, total) + ' of ' + total : '0 of 0';
-        var f = bar.querySelector('[data-act="first"]'), pv = bar.querySelector('[data-act="prev"]'),
-            nx = bar.querySelector('[data-act="next"]'), ls = bar.querySelector('[data-act="last"]');
-        if (f) f.disabled = page <= 1;
-        if (pv) pv.disabled = page <= 1;
-        if (nx) nx.disabled = page >= pages;
-        if (ls) ls.disabled = page >= pages;
-        bar.style.display = pages > 1 ? '' : 'none';
-      }}
-    }}
-    function apply() {{ matched = filterFn ? allRows.filter(filterFn) : allRows; page = 1; render(); }}
-    function resort() {{ allRows = Array.prototype.slice.call(tbody.querySelectorAll('tr')); apply(); }}
-    if (bar) {{
-      bar.addEventListener('click', function(e) {{
-        var act = e.target.getAttribute && e.target.getAttribute('data-act');
-        if (!act) return;
-        var pages = Math.max(1, Math.ceil(matched.length / pageSize));
-        if (act === 'first') page = 1;
-        else if (act === 'prev') page = Math.max(1, page - 1);
-        else if (act === 'next') page = Math.min(pages, page + 1);
-        else if (act === 'last') page = pages;
-        render();
-      }});
-      var sizeSel = bar.querySelector('.pager-size');
-      if (sizeSel) sizeSel.addEventListener('change', function() {{ pageSize = parseInt(this.value, 10) || 50; page = 1; render(); }});
-    }}
-    var api = {{ apply: apply, resort: resort, render: render }};
-    window.addEventListener('beforeprint', function() {{ allRows.forEach(prepareRow); }});
-    window.PAGINATORS[tableId] = api;
-    apply();
-    return api;
-  }}
+{PAGINATOR_JS}
 
   // Vulnerability table filter (drives its paginator).
   function vulnRowMatch(row) {{
@@ -143,11 +77,10 @@ SCALE_REPORT_SCRIPT = f"""<script>
   function filterPolicyFindingsTable() {{
     if (window.PAGINATORS.policyFindingsTable) window.PAGINATORS.policyFindingsTable.apply();
     var count = document.getElementById('policyVisibleCount');
-    var table = document.getElementById('policyFindingsTable');
-    if (count && table) {{
-      var all = table.querySelectorAll('tbody tr');
-      var vis = Array.prototype.slice.call(all).filter(policyRowMatch).length;
-      count.textContent = vis + ' of ' + all.length + ' shown';
+    var policy = window.PAGINATORS.policyFindingsTable;
+    if (count && policy) {{
+      var c = policy.counts();
+      count.textContent = c.matched + ' of ' + c.total + ' shown';
     }}
   }}
   makePaginator('policyFindingsTable', policyRowMatch);
@@ -159,6 +92,7 @@ SCALE_REPORT_SCRIPT = f"""<script>
   var policySearchInput = document.getElementById('policySearch');
   if (policySearchInput) policySearchInput.addEventListener('input', filterPolicyFindingsTable);
   filterPolicyFindingsTable();
+  ['blastTable', 'remediationList', 'remediationNoFix'].forEach(function(id) {{ makePaginator(id); }});
 
   // ── Tabbed navigation ─────────────────────────────────────────────────────
   var tabBar = document.querySelector('.tab-bar');
@@ -343,6 +277,11 @@ PAGE_INTERACTIONS_JS = """\
 
       table.querySelectorAll('.sort-arrow').forEach(function(a) { a.className = 'sort-arrow'; });
       arrow.className = 'sort-arrow ' + (asc ? 'asc' : 'desc');
+      // A paginated list sorts every stored record, not only the mounted page.
+      if (window.PAGINATORS && window.PAGINATORS[table.id] && window.PAGINATORS[table.id].sort) {
+        window.PAGINATORS[table.id].sort(col, asc);
+        return;
+      }
 
       rows.sort(function(a, b) {
         var at = (a.children[col] || {}).textContent || '';
@@ -353,9 +292,6 @@ PAGE_INTERACTIONS_JS = """\
         return asc ? at.localeCompare(bt) : bt.localeCompare(at);
       });
       rows.forEach(function(r) { tbody.appendChild(r); });
-      // Re-slice the current page after re-ordering the DOM (paginator lives in
-      // the standalone scale-report script; guard in case it did not load).
-      if (window.PAGINATORS && window.PAGINATORS[table.id]) window.PAGINATORS[table.id].resort();
     });
   });
 

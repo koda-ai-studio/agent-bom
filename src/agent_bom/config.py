@@ -318,9 +318,9 @@ FINDING_STALE_DAYS = _int("AGENT_BOM_FINDING_STALE_DAYS", 30)  # open findings u
 COMPLIANCE_DETECTIVE_EVIDENCE_MAX_AGE_DAYS = _int("AGENT_BOM_COMPLIANCE_DETECTIVE_EVIDENCE_MAX_AGE_DAYS", 90)
 
 # ── Graph Retention ───────────────────────────────────────────────────────
-# Age-based graph snapshot retention for self-hosted graph stores. Per-tenant
-# overrides resolve from ``AGENT_BOM_GRAPH_RETENTION_OVERRIDES`` (JSON map) and
-# the control-plane tenant retention store before this global default.
+# Age-based graph snapshot retention (not the rebuildable current-estate view,
+# which keeps its evidence time). Per-tenant overrides resolve from
+# ``AGENT_BOM_GRAPH_RETENTION_OVERRIDES`` (JSON map) and the tenant store first.
 
 GRAPH_RETENTION_DAYS = _int("AGENT_BOM_GRAPH_RETENTION_DAYS", 180)
 

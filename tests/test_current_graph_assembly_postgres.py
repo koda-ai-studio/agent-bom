@@ -116,3 +116,47 @@ def test_http_background_projection_retains_postgres_tenant_binding(migrated_fre
     assert {node["id"] for node in response.json()["nodes"]} == {"owned-package"}
     foreign = empty_estate_client.get("/v1/graph?limit=100&view=canvas", headers=proxy_headers(role="analyst", tenant="other-tenant"))
     assert foreign.status_code == 503 or not foreign.json().get("nodes")
+
+
+def test_http_current_graph_over_postgres_survives_evidence_older_than_retention(migrated_fresh_database, empty_estate_client, monkeypatch):  # noqa: F811
+    from datetime import datetime, timedelta, timezone
+
+    from agent_bom.api import stores
+    from agent_bom.api.current_graph import CurrentGraphStore
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from agent_bom.api.store import InMemoryJobStore
+    from agent_bom.graph import EntityType, UnifiedGraph, UnifiedNode
+    from tests.api.test_findings_owner_sla import _completed_job
+    from tests.auth_helpers import proxy_headers
+
+    monkeypatch.delenv("AGENT_BOM_GRAPH_RETENTION_DAYS", raising=False)
+    jobs, backing = InMemoryJobStore(), PostgresGraphStore()
+    scan = _completed_job(TENANT, [], generated_at=datetime.now(timezone.utc) - timedelta(days=181))
+    scan.target = {"path": "repo-a"}
+    scan.result.update(scan_id=scan.job_id, scan_run={"outcome": "complete"})
+    graph = UnifiedGraph(scan_id=scan.job_id, tenant_id=TENANT)
+    graph.add_node(UnifiedNode(id="aged-package", entity_type=EntityType.PACKAGE, label="aged-package"))
+    token = set_current_tenant(TENANT)
+    try:
+        backing.save_graph(graph)
+    finally:
+        reset_current_tenant(token)
+    jobs.put(scan)
+    monkeypatch.setattr(stores, "_store", jobs)
+    monkeypatch.setattr(stores, "_graph_store", backing)
+    builds: list[str] = []
+    materialize = CurrentGraphStore._materialize
+
+    def counted(self, tenant, identity, *args, **kwargs):
+        builds.append(identity)
+        return materialize(self, tenant, identity, *args, **kwargs)
+
+    monkeypatch.setattr(CurrentGraphStore, "_materialize", counted)
+    headers = proxy_headers(role="analyst", tenant=TENANT)
+    for _ in range(3):
+        response = empty_estate_client.get("/v1/graph?limit=100", headers=headers)
+        assert response.status_code == 200, response.text
+        assert {node["id"] for node in response.json()["nodes"]} == {"aged-package"}
+        assert response.json()["created_at"] == scan.completed_at
+    assert len(builds) == 1
