@@ -18,26 +18,33 @@ from scripts.perf.workflow_profiles import PROFILES
 pytestmark = pytest.mark.graph_performance
 
 PROFILE = PROFILES["ci-budget"]
-# CPU-seconds per stage. Local (M-series, 10 cores, load ~3): collection 0.01,
-# scan 2-4, ingest 1-2, graph reads ~0.6, exports ~0.4, rebuild 1-2.
+# Measured 2026-11-10/11 on an Apple M4 (10 cores) shared with other agents, load
+# 6-18. CPU-seconds per stage: collection 0.1, scan 2.8-4.2, ingest 3.3-5.1,
+# graph reads 4.9-5.4, exports 2.9, retention 0.03, rebuild 1.3-5.5; whole run
+# 17-26. Ceilings are 3-5x so a 4-vCPU GitHub runner does not flake.
 STAGE_CPU_SECONDS = {
     "collection": 2.0,
     "scan_enrichment": 25.0,
     "ingest": 20.0,
-    "graph_api": 15.0,
+    "graph_api": 20.0,
     "report_export": 15.0,
-    "retention": 10.0,
+    "retention": 5.0,
     "rebuild": 20.0,
 }
 WORKFLOW_CPU_SECONDS = 90.0
-PEAK_RSS_MIB = 1536  # the profile's 2 GiB limit minus headroom for the test runner
-READ_P95_MS = 2000.0
-# One OSV batch (plus the injected 503 retry), one detail call per advisory, and
-# at most one registry/feed lookup per package: fan-out must stay linear.
-UPSTREAM_REQUESTS_PER_PACKAGE = 3.0
-INGEST_GROWTH_BYTES = 64 * 1024 * 1024
-# Bytes are deterministic for the pinned fixture (largest: graph page ~1.9 MB at
-# limit=100), so this ceiling is ~2x, not a timing allowance.
+PEAK_RSS_MIB = 1536  # measured 410-540; the profile's 2 GiB limit less runner headroom
+# Eight samples, so p95 is the slowest read: 2.0 s was observed at load ~18.
+# This ceiling only catches order-of-magnitude stalls; latency is not a PR SLO.
+READ_P95_MS = 8000.0
+# Measured 93 upstream requests for 573 packages: one OSV batch plus the injected
+# retry, one detail call per advisory, capped registry/advisory lookups. A new
+# per-package call would add >= 573, so the ceiling is half a request per package.
+UPSTREAM_REQUESTS_PER_PACKAGE = 0.5
+# Sizes are near-deterministic for the pinned fixture, so these are ~2x:
+# SQLite growth 13.9 MB per push, CLI JSON report 10.6 MB, largest read
+# (graph page at limit=100) 2.0 MB.
+INGEST_GROWTH_BYTES = 32 * 1024 * 1024
+REPORT_BYTES = 24 * 1024 * 1024
 RESPONSE_BYTES_PER_READ = 4 * 1024 * 1024
 
 
@@ -91,6 +98,7 @@ async def test_ci_profile_workflow_stays_accurate_and_inside_its_resource_budget
     upstream = stages["scan_enrichment"]["upstream"]
     assert upstream["injected_failures"] == 1, "the retry path must run"
     assert upstream["by_endpoint"]["osv:querybatch"] >= 2
+    assert stages["scan_enrichment"]["report_bytes"] <= REPORT_BYTES, stages["scan_enrichment"]["report_bytes"]
     packages = stages["collection"]["packages"]
     assert upstream["requests"] <= UPSTREAM_REQUESTS_PER_PACKAGE * packages, upstream
 

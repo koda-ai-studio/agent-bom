@@ -33,11 +33,16 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 ROOT = Path(__file__).resolve().parents[1]
 CHILD_TIMEOUT_SECONDS = 1800
-_PASSTHROUGH = ("AGENT_BOM_DEFER_PRODUCT_PROOF", "AGENT_BOM_AUDIT_HMAC_KEY", "AGENT_BOM_POSTGRES_POOL_")
+_PASSTHROUGH = (
+    "AGENT_BOM_DEFER_PRODUCT_PROOF",
+    "AGENT_BOM_AUDIT_HMAC_KEY",
+    "AGENT_BOM_POSTGRES_POOL_",
+    "AGENT_BOM_POSTGRES_MAINTENANCE_URL",
+)
 
 
 def _child_env(workdir: Path, store: str, postgres_url: str | None) -> dict[str, str]:
@@ -81,17 +86,7 @@ def _spawn(phase: str, profile: str, workdir: Path, env: dict[str, str], extra: 
     return subprocess.Popen(command, env=env, stdout=log, stderr=subprocess.STDOUT, cwd=str(workdir))
 
 
-def _wait(process: subprocess.Popen[bytes], timeout: float = CHILD_TIMEOUT_SECONDS) -> dict[str, Any]:
-    deadline = time.monotonic() + timeout
-    while True:
-        pid, status, usage = os.wait4(process.pid, os.WNOHANG)
-        if pid:
-            break
-        if time.monotonic() > deadline:
-            process.kill()
-            pid, status, usage = os.wait4(process.pid, 0)
-            break
-        time.sleep(0.05)
+def _usage(process: subprocess.Popen[bytes], status: int, usage: Any) -> dict[str, Any]:
     process.returncode = os.waitstatus_to_exitcode(status)
     divisor = 1024 * 1024 if platform.system() == "Darwin" else 1024
     return {
@@ -101,14 +96,41 @@ def _wait(process: subprocess.Popen[bytes], timeout: float = CHILD_TIMEOUT_SECON
     }
 
 
+def _reap(process: subprocess.Popen[bytes], *, block: bool = False) -> dict[str, Any] | None:
+    """Reap ``process`` with wait4 so its own rusage is kept; None while it still runs.
+
+    Never call ``Popen.poll``/``wait`` on these children: they reap first and the rusage is lost.
+    """
+    pid, status, usage = os.wait4(process.pid, 0 if block else os.WNOHANG)
+    return _usage(process, status, usage) if pid else None
+
+
+def _wait(process: subprocess.Popen[bytes], timeout: float = CHILD_TIMEOUT_SECONDS) -> dict[str, Any]:
+    deadline = time.monotonic() + timeout
+    while (usage := _reap(process)) is None:
+        if time.monotonic() > deadline:
+            process.kill()
+            return cast(dict[str, Any], _reap(process, block=True))
+        time.sleep(0.05)
+    return usage
+
+
 def _read(workdir: Path, name: str) -> dict[str, Any] | None:
     path = workdir / f"{name}.json"
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
+def _with_log(usage: dict[str, Any], workdir: Path, phase: str) -> dict[str, Any]:
+    """Attach the tail of a failed child's log; the workdir is deleted after the run."""
+    log = workdir / f"{phase}.log"
+    if usage["exit_code"] != 0 and log.exists():
+        usage["log_tail"] = log.read_text(encoding="utf-8", errors="replace")[-4000:]
+    return usage
+
+
 def _run_phase(phase: str, profile: str, workdir: Path, env: dict[str, str], extra: list[str] | None = None) -> dict[str, Any]:
     began = time.perf_counter()
-    usage = _wait(_spawn(phase, profile, workdir, env, extra))
+    usage = _with_log(_wait(_spawn(phase, profile, workdir, env, extra)), workdir, phase)
     return {"process": {**usage, "wall_seconds": round(time.perf_counter() - began, 2)}, "result": _read(workdir, phase)}
 
 
@@ -116,13 +138,17 @@ def _cancel_then_recover(profile: str, workdir: Path, env: dict[str, str]) -> di
     marker = workdir / "cancel-admitted"
     victim = _spawn("cancel", profile, workdir, env)
     deadline = time.monotonic() + CHILD_TIMEOUT_SECONDS
-    while not marker.exists() and victim.poll() is None and time.monotonic() < deadline:
+    exited = None
+    while not marker.exists() and (exited := _reap(victim)) is None and time.monotonic() < deadline:
         time.sleep(0.01)
     admitted = marker.exists()
-    killed_while_running = victim.poll() is None
+    killed_while_running = exited is None
     if killed_while_running:
         os.kill(victim.pid, signal.SIGKILL)
-    victim_usage = _wait(victim)
+        exited = _reap(victim, block=True)
+    victim_usage = cast(dict[str, Any], exited)
+    if victim_usage["exit_code"] != -signal.SIGKILL:
+        victim_usage = _with_log(victim_usage, workdir, "cancel")
     recover = _run_phase("recover", profile, workdir, env)
     return {
         "admitted_before_kill": admitted,
@@ -138,7 +164,7 @@ def _replicas(profile_name: str, replicas: int, base: Path, env_for: Any) -> dic
     for index in range(replicas):
         workdir = base / f"replica-{index}"
         children.append((workdir, _spawn("replica", profile_name, workdir, env_for(workdir), ["--replica-index", str(index)])))
-    usages = [_wait(child) for _workdir, child in children]
+    usages = [_with_log(_wait(child), workdir, "replica") for workdir, child in children]
     return {
         "wall_seconds": round(time.perf_counter() - began, 2),
         "processes": usages,

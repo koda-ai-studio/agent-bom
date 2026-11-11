@@ -109,7 +109,7 @@ def _scan_estate(profile: WorkflowProfile, workdir: Path) -> tuple[bytes, set[tu
 
 
 async def _cancel_victim(profile: WorkflowProfile, workdir: Path) -> dict[str, Any]:
-    body, expected, _upstream = _scan_estate(profile, workdir)
+    body, expected, _upstream = await asyncio.to_thread(_scan_estate, profile, workdir)
     (workdir / "cancel-expected.json").write_text(
         json.dumps({"digest": findings_digest(expected), "count": len(expected)}), encoding="utf-8"
     )
