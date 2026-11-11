@@ -21,6 +21,7 @@ import httpx
 from scripts.generate_graph_benchmark_estate import generate_estate
 from scripts.perf.workflow_budget import (
     GRAPH_READS,
+    _finding_keys,
     _graph_reads,
     _Http,
     _push,
@@ -31,12 +32,15 @@ from scripts.perf.workflow_budget import (
     postgres_footprint,
     run_workflow,
     sqlite_footprint,
-    stored_findings,
+    stored_rows,
 )
+from scripts.perf.workflow_equivalence import projection_digest
 from scripts.perf.workflow_profiles import (
     PROFILES,
+    WORKFLOW_PUSH_SOURCE_ID,
     MockUpstream,
     WorkflowProfile,
+    cli_push_body,
     expected_findings,
     inventory_from_estate,
     vulnerable_versions,
@@ -70,26 +74,67 @@ async def _latest_findings(http: _Http) -> dict[str, Any]:
     statuses = [row.get("status") for row in rows]
     done = [row for row in rows if row.get("status") == "done"]
     if not done:
-        return {"jobs": len(rows), "statuses": statuses, "stored_findings": 0, "stored_digest": None}
+        return {"jobs": len(rows), "statuses": statuses, "stored_findings": 0, "stored_digest": None, "stored_projection_digest": None}
     newest = max(done, key=lambda row: str(row.get("completed_at") or row.get("created_at") or ""))
-    keys = await stored_findings(http, newest["job_id"])
-    return {"jobs": len(rows), "statuses": statuses, "stored_findings": len(keys), "stored_digest": findings_digest(keys)}
+    stored = await stored_rows(http, newest["job_id"])
+    keys = _finding_keys(stored)
+    return {
+        "jobs": len(rows),
+        "statuses": statuses,
+        "stored_findings": len(keys),
+        "stored_digest": findings_digest(keys),
+        "stored_projection_digest": projection_digest(stored),
+    }
+
+
+def _final_digests(warm: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Digests of the last job the warm run stored: the update/delete push when it ran, else the ingest."""
+    final = (warm.get("equivalence") or {}).get("update_delete") or warm["accuracy"]
+    return final.get("stored_digest"), final.get("stored_projection_digest")
+
+
+def _error_code(response: httpx.Response) -> str | None:
+    try:
+        error = response.json().get("error") or {}
+    except ValueError:
+        return None
+    details = error.get("details")
+    return str((details.get("code") if isinstance(details, dict) else None) or error.get("code") or "") or None
+
+
+async def _first_graph_read(http: _Http, deadline_seconds: float = 300.0) -> dict[str, Any]:
+    """The first graph read in a new process, then retries at ``Retry-After`` until one returns 200."""
+    began = time.perf_counter()
+    first, first_s = await http.call("GET", GRAPH_READS["graph_page"])
+    response, retries = first, 0
+    while response.status_code == 503 and time.perf_counter() - began < deadline_seconds:
+        await asyncio.sleep(min(float(response.headers.get("Retry-After") or 1), 5.0))
+        response, _ = await http.call("GET", GRAPH_READS["graph_page"])
+        retries += 1
+    return {
+        "first_graph_read_ms": round(first_s * 1000, 1),
+        "first_graph_read_status": first.status_code,
+        "first_graph_read_code": _error_code(first) if first.status_code != 200 else None,
+        "first_graph_read_retry_after": first.headers.get("Retry-After"),
+        "graph_ready_status": response.status_code,
+        "graph_ready_seconds": round(time.perf_counter() - began, 2),
+        "graph_ready_retries": retries,
+    }
 
 
 async def _restart(profile: WorkflowProfile, workdir: Path) -> dict[str, Any]:
     began = time.perf_counter()
     async with _client() as client:
         http = _Http(client)
-        first, first_s = await http.call("GET", GRAPH_READS["graph_page"])
+        first = await _first_graph_read(http)
         state = await _latest_findings(http)
         reads = await _graph_reads(http, profile.query_repeats)
     warm = json.loads((workdir / "warm.json").read_text(encoding="utf-8"))
     return {
-        "first_graph_read_ms": round(first_s * 1000, 1),
-        "first_graph_read_status": first.status_code,
+        **first,
         "reads": reads,
         **state,
-        "findings_match_before_restart": state["stored_digest"] == warm["accuracy"]["stored_digest"],
+        "findings_match_before_restart": (state["stored_digest"], state["stored_projection_digest"]) == _final_digests(warm),
         "wall_seconds": round(time.perf_counter() - began, 3),
     }
 
@@ -105,7 +150,7 @@ def _scan_estate(profile: WorkflowProfile, workdir: Path) -> tuple[bytes, set[tu
         _run_cli_scan(inventory_path, report_path)
     if guard.blocked:
         raise RuntimeError(f"scan attempted live network: {guard.blocked}")
-    return report_path.read_bytes(), expected_findings(report, inventory), upstream.snapshot()
+    return cli_push_body(report_path.read_bytes()), expected_findings(report, inventory), upstream.snapshot()
 
 
 async def _cancel_victim(profile: WorkflowProfile, workdir: Path) -> dict[str, Any]:
@@ -124,7 +169,7 @@ async def _cancel_victim(profile: WorkflowProfile, workdir: Path) -> dict[str, A
 
 async def _recover(workdir: Path) -> dict[str, Any]:
     integrity = None if os.environ.get("AGENT_BOM_POSTGRES_URL") else _sqlite_integrity(workdir)
-    body = (workdir / "cancel-report.json").read_bytes()
+    body = cli_push_body((workdir / "cancel-report.json").read_bytes())
     expected = json.loads((workdir / "cancel-expected.json").read_text(encoding="utf-8"))
     async with _client() as client:
         http = _Http(client)
@@ -152,7 +197,18 @@ def run_child(phase: str, profile_name: str, workdir: Path, *, replica_index: in
     elif phase == "replica":
         replica = dataclasses.replace(profile, seed=profile.seed + replica_index)
         # Tenant deletion would erase the other replicas' data; retention runs in the single-replica profiles.
-        result = asyncio.run(run_workflow(replica, workdir / phase, footprint=_footprint(workdir), retention=False))
+        # Each replica is its own host. The shared tenant serves both estates, so the
+        # single-estate equivalence checks run in the single-replica profiles.
+        result = asyncio.run(
+            run_workflow(
+                replica,
+                workdir / phase,
+                footprint=_footprint(workdir),
+                retention=False,
+                check_equivalence=False,
+                source_id=f"{WORKFLOW_PUSH_SOURCE_ID}-{replica_index}",
+            )
+        )
     elif phase == "restart":
         result = asyncio.run(_restart(profile, workdir))
     elif phase == "cancel":

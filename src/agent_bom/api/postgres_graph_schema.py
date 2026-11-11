@@ -31,7 +31,6 @@ _GRAPH_TABLES_DDL: tuple[str, ...] = (
                     PRIMARY KEY (id, scan_id, tenant_id)
                 )
                 """,
-    "CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_entity_type ON graph_nodes(entity_type)",
     "CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_scan ON graph_nodes(tenant_id, scan_id)",
     """
                 CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_scan_order

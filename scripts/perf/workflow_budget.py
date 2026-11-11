@@ -31,7 +31,25 @@ import httpx
 import psutil
 
 from scripts.generate_graph_benchmark_estate import generate_estate
-from scripts.perf.workflow_profiles import MockUpstream, WorkflowProfile, expected_findings, inventory_from_estate, vulnerable_versions
+from scripts.perf.workflow_equivalence import projection_digest
+from scripts.perf.workflow_lifecycle import (
+    equivalence_failures,
+    findings_view,
+    ingest_equivalence,
+    known_gaps,
+    rebuild_equivalence,
+    stored_rows,
+    update_delete,
+)
+from scripts.perf.workflow_profiles import (
+    WORKFLOW_PUSH_SOURCE_ID,
+    MockUpstream,
+    WorkflowProfile,
+    cli_push_body,
+    expected_findings,
+    inventory_from_estate,
+    vulnerable_versions,
+)
 
 MIB = 1024 * 1024
 TENANT = "default"
@@ -258,17 +276,8 @@ async def _push(http: _Http, body: bytes, deadline_seconds: float, *, idempotenc
 
 
 async def stored_findings(http: _Http, job_id: str) -> set[tuple[str, str, str]]:
-    """Every stored finding for ``job_id``, read back through the paged result-section API."""
-    rows: list[dict[str, Any]] = []
-    offset: int | None = 0
-    while offset is not None:
-        response, _ = await http.call("GET", f"/v1/scan/{job_id}/result/blast_radius?offset={offset}&limit=1000")
-        if response.status_code != 200:
-            raise RuntimeError(f"stored findings unreadable: {response.status_code} {response.text[:200]}")
-        page = response.json()
-        rows.extend(page.get("items") or [])
-        offset = page.get("next_offset")
-    return _finding_keys(rows)
+    """Every stored finding key for ``job_id``, read back through the paged result-section API."""
+    return _finding_keys(await stored_rows(http, job_id))
 
 
 async def _graph_reads(http: _Http, repeats: int) -> dict[str, Any]:
@@ -345,6 +354,8 @@ async def run_workflow(
     *,
     footprint: Callable[[], dict[str, int]],
     retention: bool = True,
+    check_equivalence: bool = True,
+    source_id: str = WORKFLOW_PUSH_SOURCE_ID,
     fail_first_batches: int = 1,
     ingest_deadline_seconds: float = 600.0,
 ) -> dict[str, Any]:
@@ -379,7 +390,7 @@ async def run_workflow(
             scanned = _finding_keys(scan_report.get("blast_radius") or [])
             info.update(exit_code=exit_code, report_bytes=report_path.stat().st_size, findings=len(scanned), upstream=upstream.snapshot())
 
-        body = report_path.read_bytes()
+        body = cli_push_body(report_path.read_bytes(), source_id=source_id)
         storage_before = footprint()
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://workflow", timeout=ingest_deadline_seconds
@@ -389,7 +400,8 @@ async def run_workflow(
             with recorder.stage("ingest") as info:
                 pushed = await _push(http, body, ingest_deadline_seconds)
                 info.update(pushed, request_bytes=http.request_bytes, response_bytes=http.response_bytes)
-            stored = await stored_findings(http, pushed["job_id"])
+            stored_ingest = await stored_rows(http, pushed["job_id"])
+            stored = _finding_keys(stored_ingest)
             storage_after = footprint()
 
             with recorder.stage("graph_api") as info:
@@ -402,6 +414,11 @@ async def run_workflow(
             with recorder.stage("report_export") as info:
                 http.request_bytes = http.response_bytes = 0
                 info.update(await _exports(http, pushed["job_id"]), request_bytes=http.request_bytes, response_bytes=http.response_bytes)
+
+            equivalence: dict[str, Any] = {}
+            view_ingest = await findings_view(http) if check_equivalence else {}
+            if check_equivalence:
+                equivalence["ingest"] = ingest_equivalence(scan_report.get("blast_radius") or [], stored_ingest, view_ingest)
 
             rebuilt: set[tuple[str, str, str]] | None = None
             storage_retained = storage_rebuilt = None
@@ -420,8 +437,21 @@ async def run_workflow(
                         graph_nodes=again["graph_nodes"],
                         new_job=again["job_id"] != pushed["job_id"],
                     )
-                rebuilt = await stored_findings(http, again["job_id"])
+                rebuilt_rows = await stored_rows(http, again["job_id"])
+                rebuilt = _finding_keys(rebuilt_rows)
                 storage_rebuilt = footprint()
+                if check_equivalence:
+                    equivalence["rebuild"] = rebuild_equivalence(
+                        stored_ingest, rebuilt_rows, view_ingest, await findings_view(http), expected
+                    )
+            if check_equivalence:
+                # Last, so the rebuild above re-ingests current evidence rather than a report
+                # older than this update (an older report cannot reopen a newer resolution).
+                with recorder.stage("update_delete") as info:
+                    equivalence["update_delete"] = await update_delete(
+                        http, report=report, inventory=inventory, inventory_path=inventory_path, source_id=source_id, before=view_ingest
+                    )
+                    info.update(status=equivalence["update_delete"]["status"])
 
     steady = recorder.stages["graph_api"]["rss_median_mib"]
     return {
@@ -444,7 +474,9 @@ async def run_workflow(
             "rebuilt_matches_stored": None if rebuilt is None else rebuilt == stored,
             "missing_after_scan": sorted(expected - scanned)[:10],
             "unexpected_after_scan": sorted(scanned - expected)[:10],
+            "stored_projection_digest": projection_digest(stored_ingest),
         },
+        "equivalence": {**equivalence, "failures": equivalence_failures(equivalence), "known_gaps": known_gaps(equivalence)},
         "network": {"blocked_connections": guard.blocked, "blocked_callers": sorted(set(guard.callers))},
         "process": {
             "cpu_seconds": round(time.process_time() - started_cpu, 3),

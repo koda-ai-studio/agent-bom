@@ -360,15 +360,15 @@ def test_scan_jobs_has_triggered_by():
 def test_scan_jobs_has_schedule_id_back_pointer():
     cols = _columns_for("scan_jobs")
     assert "schedule_id" in cols
-    assert "idx_jobs_schedule" in _indexes()
+    assert "idx_pg_jobs_schedule" in _indexes()
 
 
 def test_scan_jobs_has_batch_parent_child_columns():
     cols = _columns_for("scan_jobs")
     for col in ("batch_id", "parent_job_id", "child_job_ids", "target", "target_index", "target_count"):
         assert col in cols
-    assert "idx_jobs_batch" in _indexes()
-    assert "idx_jobs_parent" in _indexes()
+    assert "idx_pg_jobs_batch" in _indexes()
+    assert "idx_pg_jobs_parent" in _indexes()
 
 
 def test_scan_jobs_keeps_team_id_as_rls_column_with_api_tenant_translation():
@@ -671,10 +671,11 @@ def test_graph_hot_path_indexes_exist():
         "idx_pg_graph_edges_snapshot_key",
         "idx_pg_attack_paths_source_risk",
         "idx_pg_graph_node_search_trgm",
-        "idx_pg_graph_node_search_lower_trgm",
     ):
         assert index_name in indexes
-    assert "LOWER(search_text) gin_trgm_ops" in SQL
+    # search_text is stored lowercased and searched with ``search_text LIKE``; a
+    # LOWER(search_text) expression index is never chosen (dropped in 20261111_01).
+    assert "idx_pg_graph_node_search_lower_trgm" not in indexes
     assert "WHERE traversable = 1" in SQL
 
 
