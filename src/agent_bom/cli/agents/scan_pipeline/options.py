@@ -13,6 +13,8 @@ from typing import Any, Optional
 
 import click
 
+from agent_bom.cloud.serving_auth import pair_token_envs
+
 # Repeatable input flags: the first value stays on the primary field (every
 # stage that checks or rewrites it keeps working) and the rest land on the
 # paired ``extra_*`` tuple that the discovery stages iterate.
@@ -273,8 +275,6 @@ class ScanOptions:
             )
         if "-" in self.extra_inventories:
             raise click.UsageError("--inventory - (stdin) must be the first --inventory value.")
-        from agent_bom.cloud.serving_auth import pair_token_envs
-
         try:
             self.serving_targets = tuple(pair_token_envs(self.serving_endpoints, self.serving_token_envs))
         except ValueError as exc:
