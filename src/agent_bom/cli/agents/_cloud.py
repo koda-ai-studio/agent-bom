@@ -67,6 +67,13 @@ def _cis_status_badge(status_value: str) -> str:
     return _CIS_STATUS_STYLE.get(status_value, status_value)
 
 
+def _serving_provider_calls(serving_endpoints: tuple[tuple[str, str], ...], skill_only: bool) -> list[tuple[str, dict]]:
+    """One provider call per endpoint, so a failed endpoint is never hidden behind another's inventory."""
+    if skill_only:
+        return []
+    return [("serving", {"runtime": runtime, "endpoint": endpoint}) for runtime, endpoint in serving_endpoints]
+
+
 def run_cloud_discovery(
     ctx: ScanContext,
     *,
@@ -108,6 +115,7 @@ def run_cloud_discovery(
     openai_org_id: Any,
     ollama_flag: bool,
     ollama_host: Any,
+    serving_endpoints: tuple[tuple[str, str], ...] = (),
     jira_discover: bool = False,
     jira_url: Any = None,
     jira_user: Any = None,
@@ -163,6 +171,7 @@ def run_cloud_discovery(
         cloud_providers.append(("openai", {"api_key": openai_api_key, "organization": openai_org_id}))
     if not skill_only and ollama_flag:
         cloud_providers.append(("ollama", {"host": ollama_host}))
+    cloud_providers.extend(_serving_provider_calls(serving_endpoints, skill_only))
 
     _pre_cloud_idx = len(ctx.agents)
     quiet = ctx_quiet(ctx)

@@ -47,6 +47,7 @@ def _create_context(opts: ScanOptions, st: ScanState) -> None:
         or opts.mlflow_flag
         or opts.openai_flag
         or opts.ollama_flag
+        or bool(opts.serving_endpoints)
     )
 
 
@@ -327,6 +328,7 @@ def _discover_cloud(opts: ScanOptions, st: ScanState) -> None:
         openai_org_id=opts.openai_org_id,
         ollama_flag=opts.ollama_flag,
         ollama_host=opts.ollama_host,
+        serving_endpoints=opts.serving_endpoints,
         jira_discover=opts.jira_discover,
         jira_url=opts.jira_url,
         jira_user=opts.jira_user,
