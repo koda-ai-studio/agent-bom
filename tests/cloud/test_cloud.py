@@ -2474,12 +2474,13 @@ def test_ollama_discover_via_api():
         agents, warnings = discover(host="http://localhost:11434")
 
     assert len(agents) == 2
-    assert agents[0].name == "ollama-model-llama3"
+    # The agent carries the full name:tag so two tags of one model stay distinct assets.
+    assert agents[0].name == "ollama-model-llama3:8b"
     assert agents[0].source == "ollama-api"
     assert agents[0].mcp_servers[0].packages[0].name == "llama3"
     assert agents[0].mcp_servers[0].packages[0].version == "8b"
     assert agents[0].mcp_servers[0].packages[0].ecosystem == "ollama"
-    assert agents[1].name == "ollama-model-qwen2.5-coder"
+    assert agents[1].name == "ollama-model-qwen2.5-coder:7b-instruct-q4_K_M"
     assert agents[1].mcp_servers[0].packages[0].version == "7b-instruct-q4_K_M"
 
 

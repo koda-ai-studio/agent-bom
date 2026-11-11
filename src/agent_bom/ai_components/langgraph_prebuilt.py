@@ -39,14 +39,23 @@ class PrebuiltTopology:
 
 
 def model_bindings(tree: ast.Module) -> dict[str, str]:
-    """``name = ChatX(model="m")`` / ``init_chat_model("m")`` → ``{name: "m"}`` for module-level assignments."""
+    """``name = ChatX(model="m")`` / ``init_chat_model("m")`` / ``NAME = "m"`` → ``{name: "m"}`` at module level.
+
+    Callers read these only where a model is expected, so a plain string
+    constant is bound too: ``create_agent(MODEL, ...)`` is the common shape.
+    """
     bindings: dict[str, str] = {}
     for node in tree.body:
-        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Call):
+        value = node.value if isinstance(node, (ast.Assign, ast.AnnAssign)) else None
+        if isinstance(value, ast.Call):
+            ref = _model_literal(value)
+        elif isinstance(value, ast.Constant) and isinstance(value.value, str):
+            ref = value.value
+        else:
             continue
-        ref = _model_literal(node.value)
         if ref:
-            bindings.update({target.id: ref for target in node.targets if isinstance(target, ast.Name)})
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]  # type: ignore[attr-defined]
+            bindings.update({target.id: ref for target in targets if isinstance(target, ast.Name)})
     return bindings
 
 

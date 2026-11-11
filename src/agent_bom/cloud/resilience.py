@@ -165,6 +165,17 @@ _PROFILES: tuple[ProviderResilienceProfile, ...] = (
         evidence=("src/agent_bom/cloud/ollama.py",),
     ),
     ProviderResilienceProfile(
+        provider="serving",
+        surface="Operator-named self-hosted model serving endpoints",
+        pagination="not applicable: one bounded model-listing request per endpoint",
+        retry_backoff="no retries; a 5 second timeout reports the endpoint as timed out",
+        partial_failure="denied, timed-out or unavailable endpoints become explicit incomplete warnings with no records",
+        max_page_safety="responses capped at 4 MiB; redirects are not followed",
+        synthetic_scale_target=None,
+        status="not_applicable",
+        evidence=("src/agent_bom/cloud/serving_runtimes.py",),
+    ),
+    ProviderResilienceProfile(
         provider="lambda",
         surface="Lambda Labs GPU instances via REST API",
         pagination="single-page list (Lambda Cloud API returns all instances)",

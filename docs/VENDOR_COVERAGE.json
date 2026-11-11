@@ -362,7 +362,7 @@
     }
   ],
   "cloud_matrix": {
-    "gap_count": 180,
+    "gap_count": 191,
     "lanes": [
       {
         "id": "connect",
@@ -2223,6 +2223,119 @@
             "value": true
           },
           "api_connection": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/connection_store.py",
+              "symbol": "SUPPORTED_PROVIDERS"
+            },
+            "value": false
+          },
+          "change_events": {
+            "display": "—",
+            "source": {
+              "method": "glob",
+              "path": "src/agent_bom/cloud/*event_ingest.py",
+              "symbol": "module files"
+            },
+            "value": false
+          },
+          "cis_posture": {
+            "display": "—",
+            "source": {
+              "method": "json",
+              "path": "src/agent_bom/cloud/benchmark_inventory.json",
+              "symbol": "providers"
+            },
+            "value": null
+          },
+          "connect": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_connect_sources.py",
+              "symbol": "_CONNECT_SOURCES"
+            },
+            "value": false
+          },
+          "data_dspm": {
+            "display": "—",
+            "source": {
+              "method": "glob",
+              "path": "src/agent_bom/cloud/*_data_classifier.py",
+              "symbol": "module files"
+            },
+            "value": null
+          },
+          "deep_inventory": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
+              "symbol": "_INVENTORY_PROVIDERS"
+            },
+            "value": false
+          },
+          "identity_ciem": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/authorization_evidence.py",
+              "symbol": "AuthorizationProvider"
+            },
+            "value": null
+          },
+          "platform_inventory_cli": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cli/_cloud_group.py",
+              "symbol": "cloud_group.add_command"
+            },
+            "value": false
+          },
+          "runtime_workload": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/runtime_workload_evidence.py",
+              "symbol": "_VALID_PROVIDERS"
+            },
+            "value": false
+          },
+          "scheduled": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/api/connection_scheduler.py",
+              "symbol": "_SCHEDULABLE_PROVIDERS"
+            },
+            "value": false
+          },
+          "side_scan": {
+            "display": "—",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/side_scan_lifecycle_status.py",
+              "symbol": "side_scan_provider_capabilities"
+            },
+            "value": null
+          }
+        },
+        "provider": "serving"
+      },
+      {
+        "cells": {
+          "ai_discovery": {
+            "display": "✓",
+            "source": {
+              "method": "ast",
+              "path": "src/agent_bom/cloud/__init__.py",
+              "symbol": "_PROVIDERS"
+            },
+            "value": true
+          },
+          "api_connection": {
             "display": "✓",
             "source": {
               "method": "ast",
@@ -2981,6 +3094,7 @@
             "ollama",
             "openai",
             "runpod",
+            "serving",
             "snowflake",
             "vastai",
             "wandb"
@@ -3004,6 +3118,7 @@
         "ollama",
         "openai",
         "runpod",
+        "serving",
         "vastai",
         "wandb"
       ],

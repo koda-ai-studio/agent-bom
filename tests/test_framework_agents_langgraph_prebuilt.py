@@ -119,6 +119,23 @@ def test_model_passed_through_a_binding_is_recorded(tmp_path: Path) -> None:
     assert [c["name"] for c in agents["math_expert"]["capabilities"]] == ["add"]
 
 
+def test_model_passed_through_a_module_string_constant_is_recorded(tmp_path: Path) -> None:
+    agents = _scan(
+        tmp_path,
+        "from langchain.agents import create_agent\n"
+        "MODEL = 'openai:gpt-4o-mini'\n"
+        "MODEL_ID: str = 'gpt-4o'\n"
+        "PROMPT = 'route the request'\n"
+        "a = create_agent(MODEL, tools=[], system_prompt=PROMPT, name='a')\n"
+        "b = create_agent(model=MODEL_ID, tools=[], name='b')\n"
+        "c = create_agent(PROMPT_MISSING, tools=[], name='c')\n",
+    )
+
+    assert agents["a"]["model_refs"] == ["openai:gpt-4o-mini"]
+    assert agents["b"]["model_refs"] == ["gpt-4o"]
+    assert agents["c"]["model_refs"] == []
+
+
 def test_nested_supervisors_keep_their_names_and_nesting(tmp_path: Path) -> None:
     agents = _scan(tmp_path, _NESTED_SUPERVISOR)
 
