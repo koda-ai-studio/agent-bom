@@ -847,15 +847,13 @@ def test_refresh_latest_ui_applies_current_runtime_security_overlay():
     _assert_registry_layout_bridge(collector_overlay, needs_dockerignore=True)
 
 
-def test_refresh_latest_container_has_publish_budget_and_buildkit_cache():
-    """Daily latest refresh should not rebuild multi-arch images from cold every run."""
+def test_refresh_latest_container_has_publish_budget_and_rebuilds_os_layers():
+    """Daily latest refresh rebuilds from cold: a cached OS upgrade layer would republish stale packages."""
     workflow = (ROOT / ".github" / "workflows" / "refresh-latest-container.yml").read_text()
 
-    assert workflow.count("timeout-minutes: 30") >= 2
-    assert "cache-from: type=gha,scope=refresh-api-latest" in workflow
-    assert "cache-to: type=gha,mode=max,scope=refresh-api-latest" in workflow
-    assert "cache-from: type=gha,scope=refresh-ui-latest" in workflow
-    assert "cache-to: type=gha,mode=max,scope=refresh-ui-latest" in workflow
+    assert workflow.count("timeout-minutes: 45") == 3
+    assert "type=gha" not in workflow
+    assert workflow.count("no-cache: true") == 3
 
 
 def test_refresh_latest_keyless_signs_and_verifies_every_published_digest():

@@ -40,7 +40,7 @@ jobs:
     name: Rebuild and publish latest from latest release tag
     environment: docker-release
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
       id-token: write
@@ -158,7 +158,7 @@ jobs:
         run: make build-ui
 
       - name: Build refresh candidate image
-        run: docker build -t agent-bom:latest-refresh-test .
+        run: docker build --no-cache -t agent-bom:latest-refresh-test .
 
       - name: Smoke test refresh candidate
         run: docker run --rm agent-bom:latest-refresh-test --version
@@ -208,8 +208,13 @@ jobs:
         # OS-layer (apk) + app-dependency scanning at MEDIUM+ severity
         # (agent-bom has no separate UNKNOWN tier), unfixable findings excluded
         # (= ignore-unfixed), and the .image-scan-ignore CVE allowlist.
+        # Scan the exact locally built archive, as CI does: a local RepoDigest
+        # does not prove registry publication, so signature discovery belongs
+        # to the published-image gates.
         run: |
-          "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image agent-bom:latest-refresh-test \
+          set -euo pipefail
+          docker save agent-bom:latest-refresh-test -o "${RUNNER_TEMP}/refresh-candidate.tar"
+          "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image --tar "${RUNNER_TEMP}/refresh-candidate.tar" \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
             --format sarif --output image-refresh.sarif \
@@ -232,8 +237,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           build-args: VERSION=${{ steps.release.outputs.version }}
-          cache-from: type=gha,scope=refresh-api-latest
-          cache-to: type=gha,mode=max,scope=refresh-api-latest
+          # Rebuild every layer: the OS upgrade RUN lines and digest-pinned
+          # bases never change, so a cache hit would republish stale packages.
+          no-cache: true
           provenance: true
           sbom: true
           tags: |
@@ -312,7 +318,7 @@ jobs:
     name: Rebuild and publish UI latest from latest release tag
     environment: docker-release
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
       id-token: write
@@ -362,7 +368,8 @@ jobs:
           git checkout "${{ steps.release.outputs.main_sha }}" -- \
             ui/Dockerfile \
             .image-scan-ignore \
-            docs/security/image-exceptions.yaml
+            docs/security/image-exceptions.yaml \
+            scripts/check_image_coverage_exceptions.py
           # Release tags cut before the registry front doors moved under
           # docs/registry/ still carry them at the repo root. Mirror them into
           # the current layout so the overlaid Dockerfile, .dockerignore and
@@ -401,7 +408,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build refresh candidate UI image
-        run: docker build -f ui/Dockerfile -t agent-bom-ui:latest-refresh-test ui
+        run: docker build --no-cache -f ui/Dockerfile -t agent-bom-ui:latest-refresh-test ui
 
       - name: Smoke test refresh candidate UI
         run: |
@@ -432,20 +439,35 @@ jobs:
         # image is Debian (node:bookworm-slim) based; native OS-layer (dpkg) +
         # app-dependency scanning at MEDIUM+ severity (agent-bom has no separate
         # UNKNOWN tier), unfixable findings excluded (= ignore-unfixed), and the
-        # .image-scan-ignore CVE allowlist.
+        # .image-scan-ignore CVE allowlist. The image's Node.js runtime has no
+        # advisory source, so the scan is partial; a partial exit passes only
+        # when every gap is a reviewed, unexpired coverage exception for this
+        # image in docs/security/image-exceptions.yaml and nothing else blocks.
         run: |
-          "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image agent-bom-ui:latest-refresh-test \
+          set -euo pipefail
+          docker save agent-bom-ui:latest-refresh-test -o "${RUNNER_TEMP}/refresh-candidate.tar"
+          status=0
+          "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image --tar "${RUNNER_TEMP}/refresh-candidate.tar" \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
-            --format sarif --output image-refresh.sarif \
-            --fail-on-severity medium
+            --format json --output image-refresh.json \
+            --fail-on-severity medium || status=$?
+          if [ "$status" -eq 1 ]; then
+            "${RUNNER_TEMP}/abom-scanner/bin/python" scripts/check_image_coverage_exceptions.py \
+              --report image-refresh.json \
+              --exceptions docs/security/image-exceptions.yaml \
+              --image agentbom/agent-bom-ui \
+              --fail-on-severity medium
+          elif [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
 
       - name: Preserve image scan evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: refresh-ui-latest-scan-evidence
-          path: image-refresh.sarif
+          path: image-refresh.json
           if-no-files-found: warn
           retention-days: 30
 
@@ -459,8 +481,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             NEXT_PUBLIC_API_URL=
-          cache-from: type=gha,scope=refresh-ui-latest
-          cache-to: type=gha,mode=max,scope=refresh-ui-latest
+          # Rebuild every layer: the OS upgrade RUN lines and digest-pinned
+          # bases never change, so a cache hit would republish stale packages.
+          no-cache: true
           provenance: true
           sbom: true
           tags: |
@@ -537,7 +560,7 @@ jobs:
     # update rather than silently drifting during a scheduled build.
     environment: docker-release
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: read
       id-token: write
@@ -622,7 +645,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build refresh candidate collector image
-        run: docker build -f deploy/docker/Dockerfile.collector -t agent-bom-collector:latest-refresh-test .
+        run: docker build --no-cache -f deploy/docker/Dockerfile.collector -t agent-bom-collector:latest-refresh-test .
 
       - name: Smoke test refresh candidate
         run: |
@@ -630,8 +653,11 @@ jobs:
           docker run --rm --entrypoint python agent-bom-collector:latest-refresh-test -c "import boto3, azure.identity, google.cloud.resourcemanager_v3, snowflake.connector"
 
       - name: Image vulnerability refresh gate
+        # Scan the exact locally built archive (see the API refresh gate).
         run: |
-          "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image agent-bom-collector:latest-refresh-test \
+          set -euo pipefail
+          docker save agent-bom-collector:latest-refresh-test -o "${RUNNER_TEMP}/refresh-candidate.tar"
+          "${RUNNER_TEMP}/abom-scanner/bin/agent-bom" image --tar "${RUNNER_TEMP}/refresh-candidate.tar" \
             --ignore .image-scan-ignore \
             --exclude-unfixable \
             --format sarif --output image-refresh.sarif \
@@ -655,8 +681,9 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           build-args: VERSION=${{ steps.release.outputs.version }}
-          cache-from: type=gha,scope=refresh-collector-latest
-          cache-to: type=gha,mode=max,scope=refresh-collector-latest
+          # Rebuild every layer: the OS upgrade RUN lines and digest-pinned
+          # bases never change, so a cache hit would republish stale packages.
+          no-cache: true
           provenance: true
           sbom: true
           tags: |
