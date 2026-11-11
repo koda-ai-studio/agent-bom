@@ -163,6 +163,47 @@ def test_evidence_failures_include_equivalence_failures() -> None:
     assert evidence_failures({"profiles": [entry]}) == ["p/cold: equivalence update_delete: open_matches_expected"]
 
 
+def test_evidence_failures_flag_a_restart_that_cannot_serve_its_first_graph_read() -> None:
+    from scripts.run_workflow_resource_benchmark import evidence_failures
+
+    restart = {
+        "process": {"exit_code": 0, "max_rss_mib": 500},
+        "result": {
+            "findings_match_before_restart": True,
+            "first_graph_read_status": 503,
+            "first_graph_read_code": "current_estate_building",
+        },
+    }
+    entry = {"profile": {"name": "p", "memory_limit_mib": 2048}, "restart": restart}
+    assert evidence_failures({"profiles": [entry]}) == [
+        "p/restart: first graph read returned 503 (current_estate_building) after the start-up prewarm"
+    ]
+    restart["result"]["first_graph_read_status"] = 200
+    assert evidence_failures({"profiles": [entry]}) == []
+
+
+def test_evidence_failures_hold_every_process_to_the_profile_memory_budget() -> None:
+    from scripts.run_workflow_resource_benchmark import MEMORY_HEADROOM, evidence_failures
+
+    limit = 2048
+    budget = int(limit * MEMORY_HEADROOM)
+    assert budget <= 1640, "the pilot's 2 GiB limit needs real headroom, not a pass at 1,999 MiB"
+    cold = _phase()
+    cold["process"]["max_rss_mib"] = budget + 1
+    warm = _phase()
+    warm["process"]["max_rss_mib"] = budget
+    replicas = {"processes": [{"exit_code": 0, "max_rss_mib": budget + 50}], "results": [_phase()["result"]]}
+    recover = {"process": {"exit_code": 0, "max_rss_mib": budget + 2}, "result": {"findings_match_expected": True}}
+    entry = {"profile": {"name": "p", "memory_limit_mib": limit}, "cold": cold, "warm": warm, "cancel": {"recover": recover}}
+    other = {"profile": {"name": "m", "memory_limit_mib": limit}, "replicas": replicas}
+    over = f"MiB budget ({MEMORY_HEADROOM:.0%} of the {limit} MiB limit)"
+    assert evidence_failures({"profiles": [entry, other]}) == [
+        f"p/cold: peak RSS {budget + 1} MiB over the {budget} {over}",
+        f"p/cancel: peak RSS {budget + 2} MiB over the {budget} {over}",
+        f"m/replica-0: peak RSS {budget + 50} MiB over the {budget} {over}",
+    ]
+
+
 def test_push_body_carries_the_cli_source_and_target_scope(tmp_path) -> None:
     """``scan --push-url`` sends source_id and target_scope; without them a push replaces nothing."""
     from agent_bom.evidence.push_scope import valid_target_scope

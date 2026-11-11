@@ -250,9 +250,42 @@ def _normalize_request_payload(value: Any) -> Any:
     return value
 
 
+def _model_json_items(model: Any) -> Iterator[tuple[str, Any]]:
+    """``model.model_dump(mode="json")`` one top-level field at a time, so a large report is never copied whole."""
+    model_type = type(model)
+    names = {*model_type.model_fields, *(getattr(model, "model_extra", None) or {}), *model_type.model_computed_fields}
+    for name in sorted(names):
+        if name == "idempotency_key":
+            continue
+        part = model.model_dump(mode="json", include={name})
+        if name in part:
+            yield name, part.pop(name)
+
+
+def _dumps_by_field_name(model_type: Any) -> bool:
+    """True when ``model_dump`` keys are the plain field names, so per-field dumps keep the canonical order."""
+    decorators = getattr(model_type, "__pydantic_decorators__", None)
+    fields = getattr(model_type, "model_fields", None)
+    if decorators is None or fields is None or decorators.model_serializers:
+        return False
+    if (getattr(model_type, "model_config", {}) or {}).get("serialize_by_alias"):
+        return False
+    return not any(field.serialization_alias or field.alias for field in fields.values())
+
+
 def _request_json_chunks(value: Any, encoder: json.JSONEncoder) -> Iterator[str]:
     """Normalize one container at a time, retaining the existing canonical bytes."""
     if hasattr(value, "model_dump"):
+        if _dumps_by_field_name(type(value)):
+            yield "{"
+            for index, (key, item) in enumerate(_model_json_items(value)):
+                if index:
+                    yield ","
+                yield encoder.encode(key)
+                yield ":"
+                yield from _request_json_chunks(item, encoder)
+            yield "}"
+            return
         value = value.model_dump(mode="json")
     if isinstance(value, dict):
         # Preserve string-key collision order and recursive key exclusion. Only

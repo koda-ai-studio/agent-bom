@@ -21,6 +21,7 @@ from agent_bom.api.error_envelope import (
     with_middleware_error_envelope,
 )
 from agent_bom.core.settings import env_raw
+from agent_bom.push import RESULT_PUSH_JSONB_CEILING_BYTES
 
 #: Decoded/wire ratio above which a gzip push body is treated as a decompression
 #: bomb. Real JSON reports measure ~15-20:1 (154 MB -> 8.7 MB at 10k packages);
@@ -28,10 +29,6 @@ from agent_bom.core.settings import env_raw
 #: highly repetitive but honest report is never refused.
 MAX_GZIP_EXPANSION_RATIO = 100
 GZIP_RATIO_WARMUP_BYTES = 1024 * 1024
-
-#: A stored result must fit PostgreSQL's 255 MiB jsonb value limit even with the
-#: result codec off (``AGENT_BOM_JOB_RESULT_CODEC=none``).
-RESULT_PUSH_JSONB_CEILING_BYTES = 240 * 1024 * 1024
 
 
 def effective_result_push_max_bytes(configured: int) -> int:

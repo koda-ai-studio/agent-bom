@@ -195,6 +195,31 @@ def measure(profile_name: str, postgres_url: str | None, *, cancel: bool) -> dic
 
 
 _ACCURACY_KEYS = ("scanned_matches_expected", "stored_matches_scanned", "rebuilt_matches_stored")
+#: Peak RSS budget as a share of the profile's memory limit: a pass at 1,999 MiB of a
+#: 2 GiB limit is one allocator spike from an OOM kill.
+MEMORY_HEADROOM = 0.8
+
+
+def _memory_failure(label: str, usage: dict[str, Any], limit_mib: int | None) -> list[str]:
+    peak = usage.get("max_rss_mib")
+    if not limit_mib or peak is None:
+        return []
+    budget = int(limit_mib * MEMORY_HEADROOM)
+    if peak <= budget:
+        return []
+    return [f"{label}: peak RSS {peak:g} MiB over the {budget} MiB budget ({MEMORY_HEADROOM:.0%} of the {limit_mib} MiB limit)"]
+
+
+def _restart_failures(label: str, restart: dict[str, Any]) -> list[str]:
+    if restart["process"]["exit_code"] != 0 or not restart.get("result"):
+        return [f"{label}: child exited {restart['process']['exit_code']}"]
+    result = restart["result"]
+    failures = [] if result.get("findings_match_before_restart") else [f"{label}: findings changed across restart"]
+    status = result.get("first_graph_read_status")
+    if status not in (None, 200):
+        code = result.get("first_graph_read_code") or "no code"
+        failures.append(f"{label}: first graph read returned {status} ({code}) after the start-up prewarm")
+    return failures
 
 
 def _workflow_failures(label: str, phase: dict[str, Any]) -> list[str]:
@@ -215,25 +240,27 @@ def evidence_failures(evidence: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     for entry in evidence["profiles"]:
         name = entry["profile"]["name"]
+        limit = entry["profile"].get("memory_limit_mib")
         for phase in ("cold", "warm"):
             if phase in entry:
                 failures += _workflow_failures(f"{name}/{phase}", entry[phase])
+                failures += _memory_failure(f"{name}/{phase}", entry[phase]["process"], limit)
         restart = entry.get("restart")
         if restart:
-            if restart["process"]["exit_code"] != 0 or not restart.get("result"):
-                failures.append(f"{name}/restart: child exited {restart['process']['exit_code']}")
-            elif not restart["result"].get("findings_match_before_restart"):
-                failures.append(f"{name}/restart: findings changed across restart")
+            failures += _restart_failures(f"{name}/restart", restart)
+            failures += _memory_failure(f"{name}/restart", restart["process"], limit)
         recover = (entry.get("cancel") or {}).get("recover")
         if recover:
             if recover["process"]["exit_code"] != 0 or not recover.get("result"):
                 failures.append(f"{name}/cancel: recovery child exited {recover['process']['exit_code']}")
             elif not recover["result"].get("findings_match_expected"):
                 failures.append(f"{name}/cancel: retried push did not converge to the expected findings")
+            failures += _memory_failure(f"{name}/cancel", recover["process"], limit)
         replicas = entry.get("replicas")
         if replicas:
             for index, (usage, result) in enumerate(zip(replicas["processes"], replicas["results"], strict=True)):
                 failures += _workflow_failures(f"{name}/replica-{index}", {"process": usage, "result": result})
+                failures += _memory_failure(f"{name}/replica-{index}", usage, limit)
     return failures
 
 

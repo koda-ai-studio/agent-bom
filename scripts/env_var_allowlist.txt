@@ -651,6 +651,8 @@ AGENT_BOM_FINDING_WALK_CACHE  # Opt out of reusing a findings cursor walk's scan
 AGENT_BOM_FINDING_REACHABILITY_PREWARM  # Opt out of building the findings reachability index after snapshot commits; read at warm time
 AGENT_BOM_ROUTE_WARMUP  # Opt out of compiling the API route table on a boot thread; read once at startup
 AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS  # How long a current-estate read waits for an in-flight rebuild before serving the previous generation; read per request
+AGENT_BOM_CURRENT_GRAPH_PREWARM  # Opt out of preparing recent tenants' current graphs on a start-up thread; read once at startup
+AGENT_BOM_CURRENT_GRAPH_PREWARM_TENANT_SECONDS  # How long the start-up warm-up waits on one tenant's build before moving on; read once at startup
 # click envvars for the injection-protection mode flags (alert|enforce) on proxy and gateway serve.
 AGENT_BOM_GATEWAY_INJECTION_MODE
 AGENT_BOM_PROXY_INJECTION_MODE
