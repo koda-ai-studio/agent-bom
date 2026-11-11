@@ -108,6 +108,7 @@ def run_cloud_discovery(
     openai_org_id: Any,
     ollama_flag: bool,
     ollama_host: Any,
+    serving_endpoints: tuple[tuple[str, str], ...] = (),
     jira_discover: bool = False,
     jira_url: Any = None,
     jira_user: Any = None,
@@ -163,6 +164,11 @@ def run_cloud_discovery(
         cloud_providers.append(("openai", {"api_key": openai_api_key, "organization": openai_org_id}))
     if not skill_only and ollama_flag:
         cloud_providers.append(("ollama", {"host": ollama_host}))
+    # One provider call per endpoint, so one failed endpoint is recorded as failed
+    # instead of being hidden behind another endpoint's inventory.
+    if not skill_only:
+        for runtime, endpoint in serving_endpoints:
+            cloud_providers.append(("serving", {"runtime": runtime, "endpoint": endpoint}))
 
     _pre_cloud_idx = len(ctx.agents)
     quiet = ctx_quiet(ctx)

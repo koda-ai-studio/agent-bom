@@ -83,6 +83,7 @@ def emit_dry_run_plan(
     mcp_registry_flag: bool,
     snyk_flag: bool,
     enrich: bool,
+    serving_endpoints: tuple[tuple[str, str], ...] = (),
 ) -> None:
     """Render the dry-run access plan and data-audit block."""
     from agent_bom.discovery import get_all_discovery_paths
@@ -164,6 +165,12 @@ def emit_dry_run_plan(
     if ollama_flag:
         host = ollama_host or "http://localhost:11434"
         reads.append(f"  [green]Would query:[/green]  Ollama API ({host}/api/tags) + ~/.ollama/models manifests")
+    if serving_endpoints:
+        from agent_bom.cloud.serving_runtimes import SERVING_RUNTIMES
+
+        for runtime, endpoint in serving_endpoints:
+            spec = SERVING_RUNTIMES[runtime]
+            reads.append(f"  [green]Would query:[/green]  {runtime} endpoint {endpoint} ({spec.method} {spec.path})")
     if mcp_registry_flag:
         reads.append("  [green]Would query:[/green]  https://registry.modelcontextprotocol.io/v0/servers  (Official MCP Registry, no auth)")
     if snyk_flag:

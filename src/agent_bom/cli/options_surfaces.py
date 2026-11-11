@@ -10,6 +10,23 @@ from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
 _COMPLIANCE_EXPORT_CHOICES = tuple(sorted({framework.slug for framework in TAG_MAPPED_FRAMEWORKS} | {"nist-ai-rmf"}))
 
 
+def _validate_serving_endpoints(ctx: click.Context, param: click.Parameter, values: tuple[str, ...]) -> tuple[tuple[str, str], ...]:
+    from agent_bom.cloud.serving_runtimes import SERVING_RUNTIMES
+
+    parsed: list[tuple[str, str]] = []
+    for value in values:
+        runtime, sep, url = value.partition("=")
+        runtime = runtime.strip().lower()
+        if not sep or not runtime or not url.strip():
+            raise click.BadParameter(f"expected RUNTIME=URL, got {value!r}", ctx=ctx, param=param)
+        if runtime not in SERVING_RUNTIMES:
+            raise click.BadParameter(
+                f"unknown runtime {runtime!r}; choose from {', '.join(sorted(SERVING_RUNTIMES))}", ctx=ctx, param=param
+            )
+        parsed.append((runtime, url.strip()))
+    return tuple(parsed)
+
+
 def discovery_options(fn):
     """Agent frameworks, skills, browser extensions, Jupyter, model files, datasets, training pipelines, prompts."""
     return _apply(
@@ -323,6 +340,28 @@ def ml_platform_options(fn):
             click.option("--ollama", "ollama_flag", is_flag=True, help="Discover locally downloaded Ollama models"),
             click.option(
                 "--ollama-host", default=None, envvar="OLLAMA_HOST", metavar="URL", help="Ollama API host (default: http://localhost:11434)"
+            ),
+            click.option(
+                "--serving-endpoint",
+                "serving_endpoints",
+                multiple=True,
+                metavar="RUNTIME=URL",
+                callback=_validate_serving_endpoints,
+                help=(
+                    "Probe one self-hosted model-serving endpoint (vllm, tgi, triton, llamacpp, lmstudio). Repeatable. "
+                    "Records listed models only; bind, TLS, auth and quotas are not collected."
+                ),
+            ),
+            click.option(
+                "--serving-endpoint",
+                "serving_endpoints",
+                multiple=True,
+                metavar="RUNTIME=URL",
+                callback=_validate_serving_endpoints,
+                help=(
+                    "Probe one self-hosted model-serving endpoint (vllm, tgi, triton, llamacpp, lmstudio). Repeatable. "
+                    "Records listed models only; bind, TLS, auth and quotas are not collected."
+                ),
             ),
             click.option(
                 "--smithery",
