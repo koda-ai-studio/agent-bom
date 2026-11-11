@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TextIO
 
 from agent_bom.output.cis_posture import finding_free_posture
 from agent_bom.output.finding_views import cve_findings, severity_value, topology_package_key, with_output_sanitizer_cache
-from agent_bom.output.html._common import _esc
+from agent_bom.output.html._common import _esc, ascii_html
 from agent_bom.output.html.scripts import (
     SCALE_REPORT_SCRIPT,
     _apply_offline_assets_mode,
@@ -40,6 +40,7 @@ from agent_bom.output.html.sections import (
 )
 from agent_bom.output.html.sections_iac_exceptions import iac_exceptions_banner
 from agent_bom.output.html.sections_possibly_affected import possibly_affected_section
+from agent_bom.output.html.slots import Slots
 from agent_bom.output.html.styles import render_styles
 from agent_bom.output.html.tabs import _apply_tabs
 from agent_bom.output.next_steps import next_steps_html
@@ -54,15 +55,20 @@ def to_html(
     blast_radii: list["BlastRadius"] | None = None,
     *,
     offline_assets: bool = False,
+    _write_to: TextIO | None = None,
 ) -> str:
-    from agent_bom.output.finding_views import apply_workload_runtime_evidence_for_export
+    """Render the report. With ``_write_to``, write it there piece by piece and return ``""``."""
+    from agent_bom.output.finding_views import anchor_first_seen, apply_workload_runtime_evidence_for_export
 
     blast_radii = blast_radii or []
-    findings = apply_workload_runtime_evidence_for_export(cve_findings(report, blast_radii))
-    policy_findings = apply_workload_runtime_evidence_for_export(_non_cve_findings(report))
+    slots = Slots()
+    # Each projection converts every record, so build each one once and share it.
+    findings = anchor_first_seen(apply_workload_runtime_evidence_for_export(cve_findings(report, blast_radii)), report)
+    unified = report.to_findings()
+    policy_findings = anchor_first_seen(apply_workload_runtime_evidence_for_export(_non_cve_findings(report, unified)), report)
     generated = report.generated_at.strftime("%Y-%m-%d %H:%M:%S UTC")
-    elements_json = _cytoscape_elements(report, blast_radii)
-    attack_flow_json = _attack_flow_elements(report, blast_radii)
+    elements_json = _cytoscape_elements(report, blast_radii, findings=findings, unified_findings=unified)
+    attack_flow_json = _attack_flow_elements(report, blast_radii, findings=findings)
     chart_data_json = _chart_data(findings)
     crit = sum(1 for finding in findings if severity_value(finding) == "critical")
     policy_crit = sum(1 for finding in policy_findings if str(finding.severity).lower() == "critical")
@@ -91,7 +97,7 @@ def to_html(
             f'<div class="sec-title">&#x26a0;&#xfe0f; Vulnerabilities'
             f'<sup style="font-size:.7rem;color:#475569;margin-left:6px">{len(findings)}</sup>'
             f"</div>"
-            f'<div class="panel">{_vuln_table(report, blast_radii, findings=findings)}</div>'
+            f'<div class="panel">{slots.hold(_vuln_table(report, blast_radii, findings=findings))}</div>'
             f"</section>"
             f'<section id="exposure-paths">'
             f'<div class="sec-title">&#x1f9ed; Exposure Paths'
@@ -105,14 +111,15 @@ def to_html(
             f'<sup style="font-size:.65rem;color:#475569;margin-left:6px;font-weight:400">'
             f"risk = CVSS + agents + creds + tools + KEV/EPSS boosts (max 10)"
             f"</sup></div>"
-            f'<div class="panel">{_blast_table(report, blast_radii, findings=findings)}</div>'
+            f'<div class="panel">{slots.hold(_blast_table(report, blast_radii, findings=findings))}</div>'
             f"</section>"
             f'<section id="remediation">'
             f'<div class="sec-title">&#x1f527; Remediation Plan</div>'
-            f'<div class="panel">{_remediation_list(findings)}</div>'
+            f'<div class="panel">{slots.hold(_remediation_list(findings))}</div>'
             f"</section>"
         )
     policy_section = _policy_findings_section(policy_findings)
+    policy_section = slots.hold_section(policy_section) if policy_section else ""
 
     # Compliance section
     compliance_html = _compliance_section(findings)
@@ -135,7 +142,7 @@ def to_html(
     # Determine node counts for graph subtitle
     vuln_node_count = len({topology_package_key(finding) for finding in findings})
     graph_note = (
-        f"agents + servers + {vuln_node_count} vulnerable pkg(s) only — {report.total_packages - vuln_node_count} clean packages hidden"
+        f"agents + servers + {vuln_node_count} vulnerable pkg(s) only - {report.total_packages - vuln_node_count} clean packages hidden"
         if report.total_packages > vuln_node_count
         else "recorded inventory and package relationships"
     )
@@ -256,7 +263,73 @@ def to_html(
     {_summary_cards(report, findings, policy_findings)}
   </section>
 
-  <!-- Charts row -->
+  {_charts_and_graph_panel(graph_note)}
+
+  <!-- Agent inventory (collapsible) -->
+  <section id="inventory">
+    <div class="sec-title">Agent and Asset Inventory</div>
+    <input type="text" class="inv-search" id="invSearch" placeholder="Search agents, servers, packages&hellip;">
+    {_inventory_cards(report)}
+  </section>
+
+  <!-- AI component inventory -->
+  {ai_inv_section}
+
+  <!-- Skill audit -->
+  {skill_section}
+
+  <!-- Trust assessment -->
+  {trust_section}
+
+  <!-- Enforcement -->
+  {enforce_section}
+
+  <!-- CIS benchmark posture (issue #665) -->
+  {cis_bench_section}
+
+  <!-- Attack flow graph (only when vulns exist) -->
+  {_attack_flow_section(findings)}
+
+  <!-- Vuln / Blast / Remediation -->
+  {policy_section}
+  {vuln_sections}{possibly_affected_section(report)}
+
+  <!-- Compliance posture -->
+  {compliance_html}
+
+</div>
+
+<footer>{next_steps_html(report)}
+  Generated by <strong style="color:#475569">agent-bom</strong> v{_esc(report.tool_version)} &middot;
+  <a href="https://github.com/koda-ai-studio/agent-bom">github.com/koda-ai-studio/agent-bom</a> &middot;
+  Vulnerability data: OSV.dev &middot; NVD &middot; CISA KEV &middot; EPSS
+</footer>
+
+{SCALE_REPORT_SCRIPT}
+
+{render_graph_script(chart_data_json, slots.hold(elements_json), slots.hold(attack_flow_json))}
+
+</body>
+</html>"""
+    if offline_assets:
+        # Navigation and pagination have no network dependency.
+        html = _apply_offline_assets_mode(html)
+    tab_counts = {
+        "findings": total_vulns + len(policy_findings),
+        "agents": len(report.agents),
+    }
+    # Escaped values and templates are ASCII already; this only catches a stray
+    # glyph. Scripts and styles are ASCII, so a reference only lands in markup.
+    skeleton = _apply_tabs(ascii_html(html), tab_counts)
+    if _write_to is None:
+        return slots.fill(skeleton)
+    slots.write(skeleton, _write_to)
+    return ""
+
+
+def _charts_and_graph_panel(graph_note: str) -> str:
+    """The risk charts and the supply-chain graph panel; their content is drawn by script."""
+    return f"""<!-- Charts row -->
   <section id="charts">
     <div class="sec-title">Risk Overview</div>
     <div class="charts-row">
@@ -310,62 +383,7 @@ def to_html(
       <span><i style="background:#dc2626"></i>Vulnerable package</span>
       <span><i class="diamond" style="background:#f87171"></i>CVE</span>
     </div>
-  </section>
-
-  <!-- Agent inventory (collapsible) -->
-  <section id="inventory">
-    <div class="sec-title">Agent and Asset Inventory</div>
-    <input type="text" class="inv-search" id="invSearch" placeholder="Search agents, servers, packages&hellip;">
-    {_inventory_cards(report)}
-  </section>
-
-  <!-- AI component inventory -->
-  {ai_inv_section}
-
-  <!-- Skill audit -->
-  {skill_section}
-
-  <!-- Trust assessment -->
-  {trust_section}
-
-  <!-- Enforcement -->
-  {enforce_section}
-
-  <!-- CIS benchmark posture (issue #665) -->
-  {cis_bench_section}
-
-  <!-- Attack flow graph (only when vulns exist) -->
-  {_attack_flow_section(findings)}
-
-  <!-- Vuln / Blast / Remediation -->
-  {policy_section}
-  {vuln_sections}{possibly_affected_section(report)}
-
-  <!-- Compliance posture -->
-  {compliance_html}
-
-</div>
-
-<footer>{next_steps_html(report)}
-  Generated by <strong style="color:#475569">agent-bom</strong> v{_esc(report.tool_version)} &middot;
-  <a href="https://github.com/koda-ai-studio/agent-bom">github.com/koda-ai-studio/agent-bom</a> &middot;
-  Vulnerability data: OSV.dev &middot; NVD &middot; CISA KEV &middot; EPSS
-</footer>
-
-{SCALE_REPORT_SCRIPT}
-
-{render_graph_script(chart_data_json, elements_json, attack_flow_json)}
-
-</body>
-</html>"""
-    if offline_assets:
-        # Navigation and pagination have no network dependency.
-        html = _apply_offline_assets_mode(html)
-    tab_counts = {
-        "findings": total_vulns + len(policy_findings),
-        "agents": len(report.agents),
-    }
-    return _apply_tabs(html, tab_counts)
+  </section>"""
 
 
 def export_html(
@@ -375,5 +393,6 @@ def export_html(
     *,
     offline_assets: bool = False,
 ) -> None:
-    """Write the HTML report to a file."""
-    Path(output_path).write_text(to_html(report, blast_radii or [], offline_assets=offline_assets), encoding="utf-8")
+    """Write the HTML report to a file, piece by piece, with the same bytes as ``to_html``."""
+    with Path(output_path).open("w", encoding="utf-8") as handle:
+        to_html(report, blast_radii, offline_assets=offline_assets, _write_to=handle)

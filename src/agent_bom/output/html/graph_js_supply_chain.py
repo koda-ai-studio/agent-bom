@@ -258,7 +258,8 @@ SUPPLY_CHAIN_GRAPH_JS = """\
       autoungrabify: false,
     });
     cy.ready(function() { fitGraphWhenVisible(cy, cyContainer); });
-    addGraphViews(cy, cyContainer);
+    addGraphViews(cy, cyContainer, GRAPH_RECORDED);
+    noteGraphBound(cyContainer, GRAPH_BOUND);
 
     // Tooltip
     var tip = document.getElementById('tip');

@@ -137,13 +137,14 @@ def test_large_finding_set_windows_rows_not_all_visible():
 
     # Every finding is present in the file (self-contained, nothing dropped)...
     assert html.count("data-cvss=") == n
-    # ...but rows beyond the first page are windowed out by default so the page
-    # does not paint 2000 rows at once. Only the vuln table overflows a page
-    # (the policy table's _POLICY_N rows fit on one page).
-    hidden_rows = html.count('class="pg-row pg-hidden"')
-    assert hidden_rows == n - _PAGE_SIZE
-    # First page of vulns + all policy rows stay visible.
-    assert html.count('class="pg-row"') == _PAGE_SIZE + _POLICY_N
+    # ...but rows beyond the first page are stored outside the live document so
+    # the page does not paint 2000 rows at once. Only the vuln table overflows a
+    # page (the policy table's _POLICY_N rows fit on one page).
+    store = html.split('<noscript class="deferred-rows" data-rows-for="vulnTable">', 1)[1].split("</noscript>", 1)[0]
+    assert store.count('class="pg-row"') == n - _PAGE_SIZE
+    # Every row is markup a browser without scripting shows; none is hidden by a class.
+    assert html.count('class="pg-row"') == n + _POLICY_N
+    assert "pg-hidden" not in store and 'class="pg-row pg-hidden"' not in html
 
 
 def test_large_report_is_single_self_contained_file():

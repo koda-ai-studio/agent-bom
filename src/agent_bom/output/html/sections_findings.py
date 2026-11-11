@@ -30,39 +30,14 @@ from agent_bom.output.html._common import (
     _finding_sev_badge,
     _sev_badge,
 )
-from agent_bom.output.html.deferred_rows import bounded_rows
+from agent_bom.output.html.deferred_rows import _pager_controls as _pager_controls
+from agent_bom.output.html.deferred_rows import _table_frame, bounded_rows
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
 
 # Reachability cell colors, keyed by the state from ``reachability_label``.
 _REACH_COLOR = {"reachable": "#f87171", "unreachable": "#94a3b8", "unknown": "#94a3b8"}
-
-
-def _pager_controls(table_id: str, total: int, page_size: int = _PAGE_SIZE) -> str:
-    """Server-rendered pagination bar bound to a table by ``data-pager``.
-
-    Rendered for every findings table so the controls exist in the static file
-    (and in tests); the paginator JS wires the buttons and hides the whole bar
-    when the filtered set fits on a single page.
-    """
-    return (
-        f'<div class="pager" data-pager="{table_id}" data-page-size="{page_size}">'
-        '<button class="pager-btn" data-act="first" title="First page">&laquo;</button>'
-        '<button class="pager-btn" data-act="prev" title="Previous page">&lsaquo; Prev</button>'
-        f'<span class="pager-info">1&ndash;{min(page_size, total)} of {total}</span>'
-        '<button class="pager-btn" data-act="next" title="Next page">Next &rsaquo;</button>'
-        '<button class="pager-btn" data-act="last" title="Last page">&raquo;</button>'
-        '<span class="pager-sep"></span>'
-        '<label class="pager-size-label">Rows'
-        '<select class="pager-size">'
-        '<option value="25">25</option>'
-        f'<option value="50"{" selected" if page_size == 50 else ""}>50</option>'
-        '<option value="100">100</option>'
-        '<option value="250">250</option>'
-        "</select></label>"
-        "</div>"
-    )
 
 
 def _vuln_table(
@@ -103,9 +78,10 @@ def _vuln_table(
     # Advisory AI-triage assessments joined by the finding id they describe.
     ai_assessments = {assessment.finding_id: assessment for assessment in getattr(report, "ai_finding_assessments", []) or []}
     rows = [_vuln_row(idx, finding, ai_assessments) for idx, finding in enumerate(sorted_findings)]
-    mounted, deferred = bounded_rows("vulnTable", rows, "vulnerabilities")
-
     headers = ["Finding / package", "Severity", "Fixed version", "Evidence"]
+    mounted, deferred = bounded_rows(
+        "vulnTable", rows, "vulnerabilities", frame=_table_frame(headers, "data-table paginated finding-overview")
+    )
 
     filter_bar = (
         '<div class="vuln-filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;'
@@ -129,16 +105,15 @@ def _vuln_table(
         "</div>"
     )
 
-    return (
+    head = (
         hint
         + filter_bar
         + '<div class="table-wrap"><table class="data-table sortable paginated finding-overview" id="vulnTable">'
         + "<thead><tr>"
         + "".join(f'<th data-col="{i}">{h} <span class="sort-arrow"></span></th>' for i, h in enumerate(headers))
-        + "</tr></thead>"
-        + f"<tbody>{mounted}</tbody></table>{deferred}</div>"
-        + _pager_controls("vulnTable", len(rows))
+        + "</tr></thead><tbody>"
     )
+    return "".join([head, *mounted, "</tbody></table>", *deferred, "</div>", _pager_controls("vulnTable", len(rows))])
 
 
 def _blast_table(
@@ -181,7 +156,6 @@ def _blast_table(
             f"<td>{fix}</td>"
             f"</tr>"
         )
-    mounted, deferred = bounded_rows("blastTable", rows, "impact rows")
     headers = [
         "#",
         "Vuln ID",
@@ -193,13 +167,14 @@ def _blast_table(
         "Flags",
         "Fix",
     ]
-    return (
+    mounted, deferred = bounded_rows("blastTable", rows, "impact rows", frame=_table_frame(headers))
+    head = (
         '<div class="table-wrap"><table class="data-table sortable" id="blastTable">'
         + "<thead><tr>"
         + "".join(f'<th data-col="{i}">{h} <span class="sort-arrow"></span></th>' for i, h in enumerate(headers))
-        + f"</tr></thead><tbody>{mounted}</tbody></table>{deferred}</div>"
-        + _pager_controls("blastTable", len(rows))
+        + "</tr></thead><tbody>"
     )
+    return "".join([head, *mounted, "</tbody></table>", *deferred, "</div>", _pager_controls("blastTable", len(rows))])
 
 
 def _exposure_path_section(
@@ -284,8 +259,9 @@ def _remediation_list(findings: list["Finding"]) -> str:
 
 def _paged_list(list_id: str, items: list[str], noun: str) -> str:
     mounted, deferred = bounded_rows(list_id, items, noun)
-    pager = _pager_controls(list_id, len(items)) if deferred else ""
-    return f'<div id="{list_id}">{mounted}</div>{deferred}{pager}'
+    # The paginator shows one page of a long list, so the controls exist whenever it has more.
+    pager = _pager_controls(list_id, len(items)) if len(items) > _PAGE_SIZE else ""
+    return "".join([f'<div id="{list_id}">', *mounted, "</div>", *deferred, pager])
 
 
 def _workload_runtime_evidence_hint(finding: object) -> str:
@@ -307,14 +283,14 @@ def _workload_runtime_evidence_hint(finding: object) -> str:
         "runtime_activity_observed": "#38bdf8",
         "no_runtime_signal": "#94a3b8",
     }.get(state, "#94a3b8")
-    title = "CWPP runtime/EDR evidence — additive; not a clean-workload assertion"
+    title = "CWPP runtime/EDR evidence &mdash; additive; not a clean-workload assertion"
     return (
         f'<br><span class="workload-runtime-evidence" data-state="{_esc(state)}" '
         f'title="{title}" style="font-size:.6rem;color:{color}">{_esc(label)}</span>'
     )
 
 
-def _non_cve_findings(report: "AIBOMReport") -> list["Finding"]:
+def _non_cve_findings(report: "AIBOMReport", unified: list["Finding"] | None = None) -> list["Finding"]:
     """Return unified findings not already represented in the CVE or CIS tables.
 
     Cloud CIS benchmark FAILures are lifted into the unified stream by
@@ -325,7 +301,7 @@ def _non_cve_findings(report: "AIBOMReport") -> list["Finding"]:
     no ``benchmark`` marker and have no dedicated table, so they stay here.
     """
     findings: list[Finding] = []
-    for finding in report.to_findings():
+    for finding in unified if unified is not None else report.to_findings():
         if finding.finding_type == FindingType.CVE:
             continue
         evidence = finding.evidence if isinstance(finding.evidence, dict) else {}
@@ -345,9 +321,8 @@ def _policy_findings_section(findings: list["Finding"]) -> str:
         return ""
 
     rows = _policy_finding_rows(findings)
-    mounted, deferred = bounded_rows("policyFindingsTable", rows, "findings")
-
     headers = ["Severity", "Type", "Asset", "Finding", "Source", "Evidence", "Remediation"]
+    mounted, deferred = bounded_rows("policyFindingsTable", rows, "findings", frame=_table_frame(headers, "data-table paginated"))
     header_html = "".join(f'<th data-col="{i}">{h} <span class="sort-arrow"></span></th>' for i, h in enumerate(headers))
     severity_filters = "".join(
         f'<label style="display:flex;align-items:center;gap:4px;font-size:.78rem;color:{color};cursor:pointer">'
@@ -382,7 +357,7 @@ def _policy_findings_section(findings: list["Finding"]) -> str:
         '<span id="policyVisibleCount" style="margin-left:auto;font-size:.72rem;color:#64748b"></span>'
         "</div>"
     )
-    return (
+    head = (
         f'<section id="policyfindings">'
         f'<div class="sec-title">&#x1f6e1;&#xfe0f; Policy &amp; Security Findings'
         f'<sup style="font-size:.7rem;color:#475569;margin-left:6px">{len(findings)}</sup></div>'
@@ -393,11 +368,10 @@ def _policy_findings_section(findings: list["Finding"]) -> str:
         f"</div>"
         f"{filter_bar}"
         f'<div class="table-wrap"><table class="data-table sortable paginated" id="policyFindingsTable">'
-        f"<thead><tr>{header_html}</tr></thead>"
-        f"<tbody>{mounted}</tbody></table>{deferred}</div>"
-        f"{_pager_controls('policyFindingsTable', len(rows))}"
-        f"</div></section>"
+        f"<thead><tr>{header_html}</tr></thead><tbody>"
     )
+    tail = f"</div>{_pager_controls('policyFindingsTable', len(rows))}</div></section>"
+    return "".join([head, *mounted, "</tbody></table>", *deferred, tail])
 
 
 _CIS_CLOUD_LABELS = {
@@ -437,9 +411,9 @@ def _vuln_metric_cells(finding: Finding) -> tuple[str, str, str, str, str, str, 
                 f'title="CISA BOD 22-01 remediation due date">due {_esc(kev_due)}</div>'
             )
     elif exploit_level == "likely_exploited":
-        kev = '<span class="badge-exploit-likely" title="EPSS ≥ 0.5 or percentile ≥ 95 — exploitation likely">EXPL</span>'
+        kev = '<span class="badge-exploit-likely" title="EPSS &ge; 0.5 or percentile &ge; 95 &mdash; exploitation likely">EXPL</span>'
     elif exploit_level == "public_exploit":
-        kev = '<span class="badge-exploit-public" title="EPSS percentile ≥ 80 — public exploit code">PoC</span>'
+        kev = '<span class="badge-exploit-public" title="EPSS percentile &ge; 80 &mdash; public exploit code">PoC</span>'
     else:
         kev = '<span class="evidence-unavailable">No exploitation signal recorded</span>'
     fix = (
@@ -495,6 +469,15 @@ def _vuln_summary(finding: Finding, ai_assessments: dict[str, Any]) -> str:
     return summary
 
 
+def _vuln_provenance(finding: Finding) -> str:
+    """Who recorded the finding, and how sure the version match is."""
+    recorded = evidence(finding, "package_version_provenance", None)
+    recorded = recorded if isinstance(recorded, dict) else {}
+    source = recorded.get("version_source") or "unknown"
+    confidence = recorded.get("confidence") or "unknown"
+    return _esc(f"{finding.source.value}; version source {source}, confidence {confidence}")
+
+
 def _vuln_row(idx: int, finding: Finding, ai_assessments: dict[str, Any]) -> str:
     sev, cvss_bar, epss, exploit_level, kev_due_attr, kev, fix, reach_state, reach_cell = _vuln_metric_cells(finding)
     summary = _vuln_summary(finding, ai_assessments)
@@ -538,13 +521,14 @@ def _vuln_row(idx: int, finding: Finding, ai_assessments: dict[str, Any]) -> str
                 ("Code reachability", reach_cell),
                 ("Agent / asset context", agents_s),
                 ("Exposed credentials", creds_s),
+                ("Asset", _esc(finding.asset.identifier or finding.asset.name)),
+                ("Provenance", _vuln_provenance(finding)),
             )
         )
         + f'</dl><div class="finding-description">{summary}</div></details>'
     )
-    pg_cls = " pg-hidden" if idx >= _PAGE_SIZE else ""
     return (
-        f'<tr class="pg-row{pg_cls}" data-severity="{sev}" data-kev="{"1" if finding.is_kev else "0"}"{kev_due_attr} '
+        f'<tr class="pg-row" data-severity="{sev}" data-kev="{"1" if finding.is_kev else "0"}"{kev_due_attr} '
         f'data-exploit-likelihood="{exploit_level}" '
         f'data-reachability="{reach_state}" '
         f'data-match-tier="{_esc(tier or "")}" '
@@ -581,9 +565,8 @@ def _policy_finding_rows(findings: list[Finding]) -> list[str]:
         remediation = finding.remediation_guidance or ""
         description_html = f'<br><span style="color:#94a3b8">{_esc(description)}</span>' if description else ""
         remediation_html = _esc(remediation) if remediation else '<span style="color:#334155">&mdash;</span>'
-        pg_cls = " pg-hidden" if idx >= _PAGE_SIZE else ""
         rows.append(
-            f'<tr class="pg-row{pg_cls}" data-severity="{sev}" data-type="{_esc(finding.finding_type.value)}" '
+            f'<tr class="pg-row" data-severity="{sev}" data-type="{_esc(finding.finding_type.value)}" '
             f'data-source="{_esc(finding.source.value)}" data-asset-type="{_esc(finding.asset.asset_type)}">'
             f"<td>{_sev_badge(sev)}</td>"
             f'<td><code style="color:#c4b5fd;font-size:.75rem">{_esc(finding.finding_type.value)}</code></td>'

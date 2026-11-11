@@ -2,8 +2,6 @@
 (function() {
   // Injected data
   var CHART_DATA = __CHART_DATA__;
-  var GRAPH_ELEMENTS = __GRAPH_ELEMENTS__;
-  var ATTACK_FLOW = __ATTACK_FLOW__;
 
   // Chart.js: Severity donut
   var sevCtx = document.getElementById('sevChart');
@@ -111,7 +109,96 @@
     blastCtx.parentNode.replaceChild(p2, blastCtx);
   }
 
-  function addGraphViews(graph, container) {
+
+  var GRAPH_DRAW_LIMIT = 600;
+  var GRAPH_SEVERITY_RANK = {critical: 4, high: 3, medium: 2, low: 1};
+  function isFindingNode(data) {
+    var t = data.type || '';
+    return t === 'cve' || t.indexOf('cve_') === 0 || t === 'finding';
+  }
+  function findingRank(data) {
+    var sev = data.severity || (data.type || '').replace('cve_', '');
+    return GRAPH_SEVERITY_RANK[sev] || 0;
+  }
+  // follow: 'out' when edges run from a finding toward what it reaches, 'in' when they run toward the finding.
+  // inventoryFirst: the inventory is the subject, so it takes up to half the room before findings.
+  function boundGraph(elements, limit, follow, inventoryFirst) {
+    var nodes = [], edges = [];
+    elements.forEach(function(e) { (e.data.source !== undefined ? edges : nodes).push(e); });
+    var findings = nodes.filter(function(n) { return isFindingNode(n.data); });
+    var result = {elements: elements, bounded: false, totalNodes: nodes.length, totalFindings: findings.length,
+      totalEdges: edges.length, drawnNodes: nodes.length, drawnFindings: findings.length};
+    if (nodes.length <= limit) return result;
+    var byId = {}, next = {};
+    nodes.forEach(function(n) { byId[n.data.id] = n; });
+    edges.forEach(function(e) {
+      var from = follow === 'out' ? e.data.source : e.data.target;
+      var to = follow === 'out' ? e.data.target : e.data.source;
+      (next[from] = next[from] || []).push(to);
+    });
+    var kept = {}, count = 0, drawnFindings = 0;
+    // The path from one finding, without other findings or nodes already drawn.
+    function path(id) {
+      var found = [id], seen = {}, stack = [id];
+      seen[id] = true;
+      while (stack.length) {
+        (next[stack.pop()] || []).forEach(function(to) {
+          if (seen[to] || kept[to] || !byId[to] || isFindingNode(byId[to].data)) return;
+          seen[to] = true; found.push(to); stack.push(to);
+        });
+      }
+      return found;
+    }
+    if (inventoryFirst) {
+      nodes.forEach(function(n) {
+        if (count < Math.floor(limit / 2) && !isFindingNode(n.data)) { kept[n.data.id] = true; count++; }
+      });
+    }
+    var ranked = findings.map(function(n, i) { return {n: n, i: i, r: findingRank(n.data)}; });
+    ranked.sort(function(a, b) { return b.r - a.r || a.i - b.i; });
+    for (var k = 0; k < ranked.length; k++) {
+      var ids = path(ranked[k].n.data.id);
+      if (count + ids.length > limit) break;
+      ids.forEach(function(id) { kept[id] = true; });
+      count += ids.length; drawnFindings++;
+    }
+    nodes.forEach(function(n) {
+      if (count < limit && !kept[n.data.id] && !isFindingNode(n.data)) { kept[n.data.id] = true; count++; }
+    });
+    result.elements = nodes.filter(function(n) { return kept[n.data.id]; }).concat(
+      edges.filter(function(e) { return kept[e.data.source] && kept[e.data.target]; }));
+    result.bounded = true; result.drawnNodes = count; result.drawnFindings = drawnFindings;
+    return result;
+  }
+  function relationshipRows(elements) {
+    var labels = {};
+    elements.forEach(function(e) { if (e.data.source === undefined) labels[e.data.id] = e.data.label || e.data.id; });
+    function name(id) { return String(labels[id] !== undefined ? labels[id] : id).replace(/\n/g, ' '); }
+    return elements.filter(function(e) { return e.data.source !== undefined; }).map(function(e) {
+      return {source: name(e.data.source), relation: (e.data.type || 'related to').split('_').join(' '), target: name(e.data.target)};
+    });
+  }
+  function readGraphData(id) {
+    var el = document.getElementById(id);
+    if (!el) return [];
+    try { return JSON.parse(el.textContent); } catch (e) { return []; }
+  }
+  function noteGraphBound(container, bound) {
+    if (!bound.bounded) return;
+    var note = document.createElement('p');
+    note.className = 'graph-bound-note';
+    note.textContent = 'Diagram draws ' + bound.drawnFindings.toLocaleString() + ' of ' + bound.totalFindings.toLocaleString() +
+      ' findings, most severe first, and ' + (bound.drawnNodes - bound.drawnFindings).toLocaleString() + ' of ' +
+      (bound.totalNodes - bound.totalFindings).toLocaleString() + ' assets. Relationships lists all ' +
+      bound.totalEdges.toLocaleString() + ' recorded relationships, and the findings tables list every finding.';
+    container.parentNode.before(note);
+  }
+  // Layout runs in its own task after load, so a large graph never holds the page back.
+  function afterLoad(draw) {
+    if (document.readyState === 'complete') { setTimeout(draw, 0); return; }
+    window.addEventListener('load', function() { setTimeout(draw, 0); });
+  }
+  function addGraphViews(graph, container, recorded) {
     var canvas = container.parentNode;
     canvas.classList.toggle('small-graph', graph.nodes().length <= 20);
     var toolbar = document.createElement('div');
@@ -127,17 +214,18 @@
     var count = document.createElement('span'); count.setAttribute('aria-live', 'polite');
     pager.append(previous, count, next); panel.append(rows, pager);
     canvas.before(toolbar); canvas.after(panel);
-    var page = 0; var edges = graph.edges(); var size = window.innerWidth < 700 ? 5 : 15;
+    // Every recorded relationship, including those the bounded diagram leaves out.
+    var page = 0; var edges = relationshipRows(recorded); var size = window.innerWidth < 700 ? 5 : 15;
     function render() {
       rows.replaceChildren();
       edges.slice(page * size, (page + 1) * size).forEach(function(edge) {
         var item = document.createElement('li');
-        var source = document.createElement('strong'); source.textContent = edge.source().data('label');
-        var relation = document.createElement('span'); relation.textContent = (edge.data('type') || 'related to').replaceAll('_', ' ');
-        var target = document.createElement('strong'); target.textContent = edge.target().data('label');
+        var source = document.createElement('strong'); source.textContent = edge.source;
+        var relation = document.createElement('span'); relation.textContent = edge.relation;
+        var target = document.createElement('strong'); target.textContent = edge.target;
         item.append(source, relation, target); rows.append(item);
       });
-      count.textContent = edges.length ? (page * size + 1) + '–' + Math.min((page + 1) * size, edges.length) + ' of ' + edges.length + ' relationships' : 'No relationships recorded';
+      count.textContent = edges.length ? (page * size + 1) + '\u2013' + Math.min((page + 1) * size, edges.length) + ' of ' + edges.length + ' relationships' : 'No relationships recorded';
       previous.disabled = page === 0; next.disabled = (page + 1) * size >= edges.length;
     }
     previous.onclick = function() { page--; render(); };
@@ -182,6 +270,10 @@
     document.addEventListener('agent-bom:report-tab', refresh);
     refresh();
   }
+  function drawSupplyChainGraph() {
+  var GRAPH_RECORDED = readGraphData('agentBomGraphElements');
+  var GRAPH_BOUND = boundGraph(GRAPH_RECORDED, GRAPH_DRAW_LIMIT, 'in', true);
+  var GRAPH_ELEMENTS = GRAPH_BOUND.elements;
   // Cytoscape: Supply chain graph with dagre hierarchical layout
   var cyContainer = document.getElementById('cy');
   if (cyContainer && GRAPH_ELEMENTS.length > 0) {
@@ -437,7 +529,8 @@
       autoungrabify: false,
     });
     cy.ready(function() { fitGraphWhenVisible(cy, cyContainer); });
-    addGraphViews(cy, cyContainer);
+    addGraphViews(cy, cyContainer, GRAPH_RECORDED);
+    noteGraphBound(cyContainer, GRAPH_BOUND);
 
     // Tooltip
     var tip = document.getElementById('tip');
@@ -748,7 +841,7 @@
       ctxMenu.classList.add('show');
     });
 
-    // Minimap — render a small overview of the full graph
+    // Minimap: render a small overview of the full graph
     var minimapEl = document.createElement('div');
     minimapEl.className = 'cy-minimap';
     cyContainer.parentNode.appendChild(minimapEl);
@@ -830,7 +923,7 @@
     if (nodeCounts.server) statsHTML.push('<span style="color:#10b981">' + nodeCounts.server + ' servers</span>');
     if (nodeCounts.pkg_vuln) statsHTML.push('<span style="color:#dc2626">' + nodeCounts.pkg_vuln + ' packages</span>');
     if (nodeCounts.cve) statsHTML.push('<span style="color:#f87171">' + nodeCounts.cve + ' CVEs</span>');
-    nodeStats.innerHTML = statsHTML.join(' &middot; ');
+    nodeStats.innerHTML = (GRAPH_BOUND.bounded ? 'Drawn: ' : '') + statsHTML.join(' &middot; ');
     cyContainer.parentNode.appendChild(nodeStats);
 
   } else if (cyContainer) {
@@ -839,9 +932,14 @@
 
   // Findings-table pagination, filtering, and tabs live in the standalone
   // scale-report script (below) so they keep working even if the CDN chart /
-  // graph libraries fail to load — the common case for an offline or emailed
+  // graph libraries fail to load, the common case for an offline or emailed
   // report. Nothing table/tab related runs here.
 
+  }
+  function drawAttackFlowGraph() {
+  var ATTACK_FLOW_RECORDED = readGraphData('agentBomAttackFlow');
+  var ATTACK_FLOW_BOUND = boundGraph(ATTACK_FLOW_RECORDED, GRAPH_DRAW_LIMIT, 'out');
+  var ATTACK_FLOW = ATTACK_FLOW_BOUND.elements;
   // Cytoscape: CVE Attack Flow graph
   var cyAtkContainer = document.getElementById('cyAttack');
   if (cyAtkContainer && ATTACK_FLOW.length > 0) {
@@ -1103,7 +1201,8 @@
       wheelSensitivity: 0.3,
     });
     cyAtk.ready(function() { fitGraphWhenVisible(cyAtk, cyAtkContainer); });
-    addGraphViews(cyAtk, cyAtkContainer);
+    addGraphViews(cyAtk, cyAtkContainer, ATTACK_FLOW_RECORDED);
+    noteGraphBound(cyAtkContainer, ATTACK_FLOW_BOUND);
 
     // Attack flow tooltip
     cyAtk.on('mouseover', 'node', function(e) {
@@ -1185,10 +1284,13 @@
     if (afCounts.credential) afParts.push('<span style="color:#fbbf24">' + afCounts.credential + ' creds</span>');
     if (afCounts.tool) afParts.push('<span style="color:#818cf8">' + afCounts.tool + ' tools</span>');
     if (afCounts.agent) afParts.push('<span style="color:#3b82f6">' + afCounts.agent + ' agents</span>');
-    afStats.innerHTML = afParts.join(' &middot; ');
+    afStats.innerHTML = (ATTACK_FLOW_BOUND.bounded ? 'Drawn: ' : '') + afParts.join(' &middot; ');
     cyAtkContainer.parentNode.appendChild(afStats);
   }
 
+  }
+  afterLoad(drawSupplyChainGraph);
+  afterLoad(drawAttackFlowGraph);
   // Table sorting
   document.querySelectorAll('.data-table.sortable th').forEach(function(th) {
     th.addEventListener('click', function() {
@@ -1273,3 +1375,5 @@
   }
 })();
 </script>
+<script type="application/json" class="graph-data" id="agentBomGraphElements">__GRAPH_ELEMENTS__</script>
+<script type="application/json" class="graph-data" id="agentBomAttackFlow">__ATTACK_FLOW__</script>

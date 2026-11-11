@@ -29,7 +29,7 @@ def possibly_affected_section(report: Any) -> str:
     header = "".join(f"<th>{_esc(title)}</th>" for title in _HEADERS)
     return (
         '<section id="possibly-affected">'
-        '<div class="sec-title">&#x2753; Possibly affected — verify distro advisory'
+        '<div class="sec-title">&#x2753; Possibly affected &mdash; verify distro advisory'
         f'<sup style="font-size:.7rem;color:#475569;margin-left:6px">{len(rows)}</sup></div>'
         '<div class="panel"><p style="font-size:.8rem;color:#64748b;margin:0 0 8px">'
         "A distro package ships a product these advisories name, and no distro record decides it. "

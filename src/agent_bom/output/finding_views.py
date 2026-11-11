@@ -95,6 +95,19 @@ def apply_workload_runtime_evidence_for_export(findings: list[Finding]) -> list[
     return findings
 
 
+def anchor_first_seen(findings: list[Finding], report: AIBOMReport) -> list[Finding]:
+    """Stamp scan completion as the first observation of findings with no history.
+
+    ``Finding.to_dict()`` derives ``sla_due_at`` from this anchor (with the KEV
+    override), so every export that renders an SLA shows the same date.
+    """
+    observed_at = report.generated_at.isoformat()
+    for finding in findings:
+        if not finding.first_seen:
+            finding.first_seen = observed_at
+    return findings
+
+
 def machine_export_findings(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) -> list[Finding]:
     """Rows for flat machine exports (CSV/Parquet): CVE findings plus synthesized
     malicious-package findings.
