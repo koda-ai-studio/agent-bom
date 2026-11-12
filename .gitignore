@@ -80,3 +80,6 @@ agent-bom-report.json
 
 # Go runtime worker binaries (local builds; not release artifacts)
 .ci-local/
+
+# Local output of scripts/qualification/ lanes
+qualification-results/

@@ -1232,7 +1232,7 @@ test("ranked paths reach the first viewport instead of sitting under a tower of 
 
   const paths = page.getByTestId("selected-exposure-path");
   await expect(paths).toBeVisible();
-  await expect(page.getByText("Browse 2 paths & filters", { exact: true })).toBeVisible();
+  await expect(page.getByText("2 paths", { exact: true })).toBeVisible();
   const box = await paths.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.y).toBeLessThan(900);
@@ -2001,7 +2001,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.goto(`/security-graph?lens=attack-path&scan=${scanId}${mode === "finding" ? "&cve=page-finding-25" : ""}`);
       if (mode === "filter") {
         await openPathQueue(page);
-        await page.getByText("Filters & presets", { exact: true }).click();
+        await page.getByText("Filters", { exact: true }).click();
         await page.getByRole("button", { name: "Static", exact: true }).click();
       }
       await expect(page.getByRole("heading", { name: "No matching paths in loaded pages" })).toBeVisible();
@@ -2372,6 +2372,7 @@ test("opening the full graph from a selected path keeps that path", async ({ pag
   await page.goto(`/security-graph?lens=attack-path&scan=${scanId}&path=top`);
   const detail = page.getByTestId("selected-exposure-path");
   await expect(detail.getByRole("heading", { name: "Claude Desktop → CVE-2025-7783" })).toBeVisible();
+  await detail.getByLabel("Graph options", { exact: true }).click();
   const lineage = page.getByRole("link", { name: /^Open lineage/ }).first();
   await expect(lineage).toHaveAttribute("href", /^\/graph\?/);
   await expect(lineage).toHaveAttribute("href", /path=/);

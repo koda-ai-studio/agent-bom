@@ -3589,12 +3589,24 @@ async function main() {
       await securityGraphPage
         .getByTestId("selected-exposure-path")
         .waitFor({ state: "visible", timeout: 30_000 });
+      const pathViewport = securityGraphPage.getByRole("region", { name: "Scrollable exposure path", exact: true });
+      for (const width of [1280, 1440]) {
+        await securityGraphPage.setViewportSize({ width, height: 980 });
+        await expect.poll(() => pathViewport.evaluate(element => {
+          const frame = element.getBoundingClientRect();
+          return [...element.querySelectorAll(".react-flow__node")].filter(node => {
+            const box = node.getBoundingClientRect();
+            return box.left < frame.left - 2 || box.right > frame.right + 2;
+          }).map(node => node.getAttribute("data-id"));
+        }), { message: "The complete selected desktop path is visible before any scrolling" }).toEqual([]);
+      }
       const findingEdge = securityGraphPage.locator('.react-flow__edge[data-id*="vulnerable_to"]');
       await expect(findingEdge).toHaveCount(1);
       const findingEdgeId = await findingEdge.getAttribute("data-id");
       const findingLabel = securityGraphPage.locator(`.graph-relationship-label[data-edge-id="${findingEdgeId}"]`);
       await expect(findingLabel).toHaveCount(0);
       await expect(findingEdge.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+      await findingEdge.locator(".react-flow__edge-path").scrollIntoViewIfNeeded();
       const point = await findingEdge.locator(".react-flow__edge-path").evaluate((path) => {
         const at = path.getPointAtLength(path.getTotalLength() / 2);
         const screen = new DOMPoint(at.x, at.y).matrixTransform(path.getScreenCTM());
@@ -3606,11 +3618,13 @@ async function main() {
       await expect(findingLabel).toHaveCount(0);
       await findingEdge.focus();
       await expect(findingLabel).toHaveText(/Has finding/);
-      await securityGraphPage.getByRole("link", { name: "Open lineage", exact: true }).focus();
+      await securityGraphPage.getByLabel("Graph options", { exact: true }).focus();
       await expect(findingLabel).toHaveCount(0);
       for (const verb of [/Assumes/i, /Can Access/i, /Depends On/i]) {
         await expect(securityGraphPage.locator(".graph-relationship-label").filter({ hasText: verb })).toBeVisible();
       }
+      await securityGraphPage.getByRole("region", { name: "Scrollable exposure path", exact: true }).evaluate(element => { element.scrollLeft = 0; });
+      await scrollTo(securityGraphPage, 0);
     }, {
       expectedText: ["Investigation", "contractor-reviewer", "Developer Copilot", "CVE-2025-29927"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],

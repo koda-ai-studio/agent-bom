@@ -615,7 +615,20 @@ idempotency key. A process exit between writes cannot certify completion.
 Distributed scan and push jobs use dispatch leases for recovery. Creation age
 never fails a job that holds a queue row, including old admissions reclaimed by
 another worker. Live owners renew their leases; expired leases can be reclaimed,
-and stale tokens cannot acknowledge successor claims. Local in-process jobs
+and stale tokens cannot acknowledge successor claims.
+
+A job claimed by a replica that dies, such as an asynchronous push whose pod is
+force-deleted mid-ingest, is picked up by any live replica, or the replacement
+pod, without a client retry. It waits at most the claim lease plus one claim
+poll: `AGENT_BOM_API_SCAN_LEASE_SECONDS` (default 120) plus
+`AGENT_BOM_API_SCAN_CLAIM_POLL_SECONDS` (default 3), so about two minutes. The
+new owner re-reads the job and ingests it once; an admission that was already
+committed is not run again. A live owner renews its leases on a dedicated
+thread every poll (at most a sixth of the lease), so a slow claim loop or a
+busy event loop cannot let a running job's lease lapse. During shutdown the
+replica stops claiming but keeps renewing until its in-flight jobs drain. A
+lease shorter than a database outage can still lapse on a live owner; the job
+may then run on two replicas, so keep the lease well above expected outages. Local in-process jobs
 retain the age timeout and restart cleanup. Lease renewal is worker liveness
 evidence, not proof of forward progress; a live but stalled worker still
 requires operational diagnosis. These rules preserve tenant scoping and fail
@@ -642,6 +655,14 @@ outage during ingest, keeps its queue row so the lease can expire and the job ca
 be redelivered. Worker reads retry briefly first, and a store error never marks
 the report failed. Without distributed dispatch the job stays `pending`: a resubmit
 re-offers it, and the age timeout or next restart fails it otherwise.
+
+Without distributed dispatch, one process runs each job at most once at a time.
+A dispatch that arrives while the same tenant's job is still held by a finishing
+worker, such as an identical push after retention or the retry of a failed push,
+is recorded rather than dropped. When the worker finishes it re-reads the job and
+runs it again only if it is `pending`, so a replay of the admission it just
+finished does not run twice. If that read fails or the executor is shutting
+down, the job stays `pending` for the next resubmit, the age timeout or restart.
 
 ## Hosted MCP OAuth
 
