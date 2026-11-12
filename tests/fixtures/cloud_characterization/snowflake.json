@@ -112,7 +112,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "cortex:svc_b",
@@ -224,7 +225,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "cortex-agent:Agent A",
@@ -318,7 +320,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "cortex-agent:agent_b",
@@ -412,7 +415,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "cortex-agent:agent_c",
@@ -506,7 +510,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "mcp-server:mcp_ok",
@@ -632,7 +637,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "mcp-server:bad name",
@@ -715,7 +721,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "mcp-server:MCP_LIST",
@@ -796,7 +803,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "audit:agent:shadow_agent",
@@ -877,7 +885,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "audit:mcp-server:\"shadow_mcp",
@@ -958,7 +967,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "snowflake-tools:test-acct",
@@ -1110,7 +1120,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "streamlit:app1",
@@ -1175,7 +1186,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "sf-notebook:NB_ONE",
@@ -1562,7 +1574,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "sf-notebook:NB\u0001BAD",
@@ -1649,7 +1662,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "sf-notebook:NB_FAIL",
@@ -1736,7 +1750,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     }
    ],
    [
@@ -1938,7 +1953,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "cortex:svc_b",
@@ -2050,7 +2066,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "mcp-server:mcp_ok",
@@ -2131,7 +2148,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "mcp-server:bad name",
@@ -2212,7 +2230,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "mcp-server:MCP_LIST",
@@ -2293,7 +2312,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "audit:agent:shadow_agent",
@@ -2374,7 +2394,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "audit:mcp-server:\"shadow_mcp",
@@ -2455,7 +2476,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "snowflake-tools:test-acct",
@@ -2607,7 +2629,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "streamlit:app1",
@@ -2672,7 +2695,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "sf-notebook:NB_ONE",
@@ -2757,7 +2781,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "sf-notebook:NB\u0001BAD",
@@ -2842,7 +2867,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     },
     {
      "name": "sf-notebook:NB_FAIL",
@@ -2927,7 +2953,8 @@
       "captured_at": "<now>"
      },
      "source_id": null,
-     "device_fingerprint": null
+     "device_fingerprint": null,
+     "identity_config_path": null
     }
    ],
    [

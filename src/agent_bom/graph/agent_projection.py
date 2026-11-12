@@ -9,6 +9,7 @@ from typing import Any, Protocol
 from agent_bom.asset_provenance import sanitize_discovery_provenance
 from agent_bom.canonical_ids import (
     agent_graph_id_for,
+    agent_identity_location,
     canonical_agent_id,
     canonical_graph_node_id,
     mcp_server_graph_id_for,
@@ -177,7 +178,7 @@ def _add_agent_node(graph: UnifiedGraph, agent: AgentScope) -> None:
                     agent.agent_name,
                     source_id=agent.agent_scope,
                     device_fingerprint=str(agent.agent_dict.get("device_fingerprint") or ""),
-                    config_path=str(agent.agent_dict.get("config_path") or ""),
+                    config_path=agent_identity_location(agent.agent_dict),
                 ),
                 "source_ids": source_ids(source_id=agent.agent_scope, stable_id=agent.agent_dict.get("stable_id")),
                 "status": agent.agent_dict.get("status", ""),

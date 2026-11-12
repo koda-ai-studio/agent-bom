@@ -41,7 +41,7 @@ def _best_scan_seconds(tmp_path: Path, name: str, source: str) -> tuple[float, l
     root.mkdir()
     _write(root, source)
     timings = []
-    for _ in range(2):
+    for _ in range(3):
         started = time.perf_counter()
         agents = _scan(root)
         timings.append(time.perf_counter() - started)
@@ -52,6 +52,9 @@ def _best_scan_seconds(tmp_path: Path, name: str, source: str) -> tuple[float, l
 # quadratic scan costs a hundred times, so the ratio separates the two on a
 # loaded CI runner where an absolute wall-clock budget does not.
 _LINEAR_CEILING = 30
+# A baseline of a few tens of milliseconds is mostly fixed overhead and jitter,
+# which inflates the ratio; below this floor the ratio is taken against it.
+_BASELINE_FLOOR_SECONDS = 0.15
 
 
 # ── Hostile input: bounded time and bounded output ───────────────────────────
@@ -66,7 +69,7 @@ def test_many_graphs_in_one_file_scan_in_linear_time(tmp_path: Path):
     small, _ = _best_scan_seconds(tmp_path, "small", source(300))
     large, agents = _best_scan_seconds(tmp_path, "large", source(3000))
 
-    assert large < max(small, 0.05) * _LINEAR_CEILING, f"300 graphs {small:.2f}s, 3,000 graphs {large:.2f}s"
+    assert large < max(small, _BASELINE_FLOOR_SECONDS) * _LINEAR_CEILING, f"300 graphs {small:.2f}s, 3,000 graphs {large:.2f}s"
     edges = sum(len(agent["topology_edges"]) for agent in agents)
     assert edges <= MAX_EDGES_PER_FILE
     assert any(route["reason"].startswith("truncated") for route in _all_unresolved(agents))
@@ -81,7 +84,7 @@ def test_huge_goto_list_over_a_shared_function_is_capped(tmp_path: Path):
     small, _ = _best_scan_seconds(tmp_path, "small", source(400))
     large, agents = _best_scan_seconds(tmp_path, "large", source(4000))
 
-    assert large < max(small, 0.05) * _LINEAR_CEILING, f"400 x 400 goto {small:.2f}s, 4,000 x 4,000 goto {large:.2f}s"
+    assert large < max(small, _BASELINE_FLOOR_SECONDS) * _LINEAR_CEILING, f"400 x 400 goto {small:.2f}s, 4,000 x 4,000 goto {large:.2f}s"
     edges = sum(len(agent["topology_edges"]) for agent in agents)
     assert edges <= MAX_EDGES_PER_FILE
     n0 = next(agent for agent in agents if agent["name"] == "n0")

@@ -1,10 +1,10 @@
 """The image refresh gate accepts only reviewed, exact, unexpired coverage gaps.
 
-The UI image ships the Node.js runtime binary, which no advisory source agent-bom
-consults tracks, so its scan is honestly ``partial``. The gate may accept that
-one gap only when it is listed in ``docs/security/image-exceptions.yaml``; any
-other coverage gap, an expired or mismatched exception, or a blocking finding
-must still fail.
+A runtime no advisory source agent-bom consults tracks leaves an image scan
+honestly ``partial``. The gate may accept such a gap only when it is listed in
+``docs/security/image-exceptions.yaml``; any other coverage gap, an expired or
+mismatched exception, or a blocking finding must still fail. The fixtures use a
+Node.js gap as the shape of such a report.
 """
 
 from __future__ import annotations
@@ -184,8 +184,10 @@ def test_cli_exit_codes(tmp_path, capsys):
 
 def test_committed_coverage_exceptions_are_reviewed_and_bounded():
     data = yaml.safe_load((ROOT / "docs" / "security" / "image-exceptions.yaml").read_text())
-    entries = data.get("coverage_exceptions") or []
-    assert entries, "the UI refresh gate relies on a reviewed coverage exception"
+    entries = data.get("coverage_exceptions")
+    assert isinstance(entries, list), "coverage_exceptions stays a list, empty when no gap is accepted"
+    # Node.js runtimes have their own advisory source, so a Node.js gap is a real failure to fix, not to accept.
+    assert not [entry for entry in entries if str(entry.get("release", "")).startswith("node:")]
     required = {
         "id",
         "reason_code",

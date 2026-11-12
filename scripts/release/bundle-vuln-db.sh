@@ -30,6 +30,16 @@ mkdir -p "$OUTPUT_DIR"
 DEST="$OUTPUT_DIR/vulns.db"
 cp "$SOURCE" "$DEST"
 
+# The Node.js core advisory snapshot `agent-bom db update` writes beside the DB.
+NODEJS_FILE="nodejs_core_vulns.json"
+BUNDLED_FILES=(vulns.db "$KEV_FILE" "$EPSS_FILE")
+if [[ -f "$(dirname "$SOURCE")/$NODEJS_FILE" ]]; then
+  cp "$(dirname "$SOURCE")/$NODEJS_FILE" "$OUTPUT_DIR/$NODEJS_FILE"
+  BUNDLED_FILES+=("$NODEJS_FILE")
+else
+  echo "warning: ${NODEJS_FILE} not found beside ${SOURCE}; offline scans will report Node.js runtimes as not assessed" >&2
+fi
+
 echo "Downloading CISA KEV catalog …"
 curl -fsSL "$KEV_URL" -o "$OUTPUT_DIR/$KEV_FILE"
 
@@ -46,7 +56,7 @@ fi
 
 (
   cd "$OUTPUT_DIR"
-  sha256sum vulns.db "$KEV_FILE" "$EPSS_FILE" > sha256sums.txt
+  sha256sum "${BUNDLED_FILES[@]}" > sha256sums.txt
   sha256sum vulns.db > sha256sums-vulns.db.txt
 )
 echo "Wrote ${DEST}, ${OUTPUT_DIR}/${KEV_FILE}, ${OUTPUT_DIR}/${EPSS_FILE}, and ${OUTPUT_DIR}/sha256sums.txt"

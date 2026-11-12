@@ -435,12 +435,12 @@ re-checked" below for the evidence behind each verdict):
   `GET /v1/graph?limit=100` returned 2.6 MB, then 4.1 MB, then 6.7 MB as more
   jobs were stored, at the same limit. The harness then pushed raw reports with
   no `source_id` or `target_scope`, which the API keeps as independent evidence.
-- **An identical re-push after retention is refused (confirmed).** Once
-  retention expires a pushed job, an identical async push returns `409 ... no
-  longer retained; push again` on every attempt. The content idempotency key
-  stays live for `AGENT_BOM_IDEMPOTENCY_TTL_HOURS` (default 24), so "push again"
-  cannot succeed with the same content. A fresh `Idempotency-Key` works, and the
-  rebuild above uses one.
+- **An identical re-push after retention was refused** (fixed). Once retention
+  expired a pushed job, an identical push returned `409 ... no longer retained;
+  push again` for as long as its idempotency key lived
+  (`AGENT_BOM_IDEMPOTENCY_TTL_HOURS`, default 24). A replayed key whose job is
+  gone now re-admits the same deterministic job, and the rebuild above uses the
+  identical push.
 
 **PR regression budget** (`tests/test_workflow_resource_budget.py`, runs in the
 isolated `graph_performance` CI step, about 35 s locally): `ci-budget` profile,
@@ -507,25 +507,23 @@ asynchronously; the removed finding left the open set at once.
 
 Two behaviours the checks surfaced:
 
-- **A resolved finding loses its package identity.** Right after a push resolves
-  it, `/v1/findings?status=resolved` serves the row with `package`,
-  `package_version`, `ecosystem` and `scan_id` null; the advisory, asset,
-  `finding_id`, dates and resolution are intact. Reproduced on SQLite and
-  Postgres; the harness reports it under `known_gaps` and
-  `tests/test_workflow_push_lifecycle_gaps.py` holds a strict xfail for it.
+- **A resolved finding lost its package identity** (fixed). `/v1/findings?status=resolved`
+  served the row with `package`, `package_version`, `ecosystem` and `scan_id`
+  null. They are now served, with `resolved_by_scan_id`, and the harness fails
+  the update stage if any is missing.
 - **An older report delivered after a newer one.** Pushing the original report
   again after the update push (new key, older `generated_at`) left the finding
   `resolved`, as the lifecycle rules say: evidence time wins over arrival. The
   current graph, which follows the latest stored job, showed the removed package
   again. Findings and graph disagree until the next current push. Measured on a
-  12-agent SQLite store; not a harness failure, because the harness now rebuilds
-  before the update.
+  12-agent SQLite store. Not reproduced on 2026-11-11 at 4 agents on SQLite: the
+  current graph selects each scope's newest report by its own time, and
+  `tests/test_workflow_push_lifecycle_gaps.py` guards it nightly.
 
-A third behaviour explains the raw-push graph growth: **agent ids embed a hash
-of the inventory file path.** Two scans of the same estate from different paths
-give every finding different `affected_agent_ids` and the graph different agent
-node ids. A CLI-scoped push replaces the earlier report, so the change is
-invisible; two unscoped pushes keep both copies.
+A third behaviour explained the raw-push graph growth: **agent ids embedded a
+hash of the inventory file path** (fixed). An inventory agent without its own
+`config_path` is now identified without the inventory path, and reports carry
+the earlier id in `previous_canonical_ids` and `previous_graph_ids`.
 
 ### A larger push: 1,000 agents
 
@@ -638,8 +636,8 @@ rebuilds all six indexes concurrently, 18.1 s and 42 MB of WAL; re-upgrade
 | Finding from the first runs | Verdict | Evidence |
 |---|---|---|
 | Peak RSS 1.66-1.97 GiB against the 2 GiB limit | **Confirmed, and exceeded** | 200 agents on Postgres: cold child 1,804 MiB and warm 1,772 MiB in the raw-push runs; with the update/delete push added (a second scan and push in the same process), the cold process peaked at 2,044.5 MiB. A 1,000-agent scan alone peaked at 2,431 MiB |
-| Identical push after retention returns 409 for up to 24 h | **Confirmed** | Every run records `identical_repush_status: 409`, raw and CLI-shaped bodies; strict xfail `test_identical_push_after_retention_is_admitted_again` |
-| `GET /v1/graph?limit=100` grows 2.6 → 6.7 MB with stored jobs | **Confirmed only for pushes without `source_id` and `target_scope`** | Three separate scans of one 12-agent estate: unscoped 1.98 → 3.45 MB and 1,630 → 1,849 nodes (agent ids embed a config-path hash, so the union holds both copies); CLI-scoped 1.97 MB and 1,630 nodes each time. At 200 agents on Postgres with CLI-scoped pushes the page stayed 2.55 MB across cold, warm and restart. Guarded by `test_rescans_pushed_by_one_cli_source_replace_rather_than_grow_the_graph`. Four identical bodies did not grow it in either mode |
+| Identical push after retention returns 409 for up to 24 h | **Confirmed, then fixed** | Runs before the fix recorded `409` for raw and CLI-shaped bodies; the push is now stored again (`test_identical_push_after_retention_is_admitted_again`, `tests/api/test_push_replay_after_retention.py`) |
+| `GET /v1/graph?limit=100` grows 2.6 → 6.7 MB with stored jobs | **Confirmed only for pushes without `source_id` and `target_scope`** | Three separate scans of one 12-agent estate: unscoped 1.98 → 3.45 MB and 1,630 → 1,849 nodes (agent ids embedded the inventory path hash, so the union held both copies; fixed, see above); CLI-scoped 1.97 MB and 1,630 nodes each time. At 200 agents on Postgres with CLI-scoped pushes the page stayed 2.55 MB across cold, warm and restart. Guarded by `test_rescans_pushed_by_one_cli_source_replace_rather_than_grow_the_graph`. Four identical bodies did not grow it in either mode |
 | First `/v1/graph` read after a restart returns 503 | **Confirmed as a timing condition, not on every restart** | A new process builds the current graph on its first read and waits `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default 2,000 ms); past that it answers `503 current_estate_building` with `Retry-After: 1` while the build finishes. 200 agents on Postgres: raw pushes (two independent reports to merge) 503 after 2.39 s; CLI-scoped pushes (one report) 200 after 1.27 s. At 12 agents both modes returned 200 in under 1.0 s. Larger estates will cross the budget whatever the push shape; nothing prewarms the current graph at start-up |
 
 **Re-measured 2026-11-11 after the fixes** (200 agents, cold / warm / restart

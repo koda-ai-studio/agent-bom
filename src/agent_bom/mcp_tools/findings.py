@@ -41,6 +41,7 @@ _SUMMARY_FIELDS = (
     "status",
     "lifecycle_status",
     "resolution_reason",
+    "resolved_by_scan_id",
     "stale",
     "finding_node_id",
     "owner",

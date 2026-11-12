@@ -181,6 +181,10 @@ Prompts, responses, file contents and credential values are never sent.
   - `api.deps.dev`: license and project metadata a package registry does not
     provide
   - `proxy.golang.org` and `sum.golang.org`: Go module versions and checksums
+  - `raw.githubusercontent.com`: the Node.js security working group's core
+    advisory index and CPython release headers, when a scanned image or host
+    ships those runtimes (the Node.js index is also fetched by a local database
+    update); nothing about your project is sent
   - `osv-vulnerabilities.storage.googleapis.com`, `secdb.alpinelinux.org`,
     `security-tracker.debian.org`, `deb.freexian.com` and `epss.cyentia.com`
     (a redirect): only when the local advisory database is refreshed, which no

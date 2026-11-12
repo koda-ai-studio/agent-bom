@@ -13,6 +13,7 @@ from typing import Any
 from agent_bom.api.finding_job_metadata import _normalized_evidence_timestamp
 from agent_bom.api.finding_lifecycle import lifecycle_fields
 from agent_bom.api.finding_lifecycle_fold import FindingState
+from agent_bom.api.finding_row_shapes import _package_identity
 from agent_bom.evidence.finding_observation import FindingObservationStatus, ReconfirmationReason
 from agent_bom.evidence.finding_project import REPORT_ID_FIELD
 
@@ -32,6 +33,7 @@ def _stamp(row: dict[str, Any], state: FindingState, peers: Sequence[FindingStat
             resolution_reason=state.resolution_reason,
         )
     )
+    stamped["resolved_by_scan_id"] = state.resolved_job_id if state.status == "resolved" else None
     return stamped
 
 
@@ -62,10 +64,34 @@ def _preferred(states: Sequence[FindingState]) -> FindingState:
     return max(states, key=lambda state: str(state.resolved_at))
 
 
+def _with_package_identity(row: dict[str, Any]) -> None:
+    """A stored stream row keeps its package under ``evidence``; serve it where live rows carry it.
+
+    Only rows that name a package are filled, so a finding on a cloud resource or
+    a file never gains its asset's name as a package.
+    """
+    evidence = row.get("evidence")
+    named = isinstance(evidence, dict) and evidence.get("package_name")
+    purl = str(row.get("purl") or row.get("package_purl") or "")
+    if not (named or row.get("package") or row.get("package_name") or purl.startswith("pkg:")):
+        return
+    name, version, ecosystem = _package_identity(row)
+    if name and not row.get("package"):
+        row["package"] = f"{name}@{version}" if version else name
+    if version and not row.get("package_version"):
+        row["package_version"] = version
+    if ecosystem and not row.get("ecosystem"):
+        row["ecosystem"] = ecosystem
+
+
 def _restored_row(state: FindingState, peers: Sequence[FindingState]) -> dict[str, Any]:
+    """A row no retained scan serves, rebuilt from durable history with the identity a live row has."""
     source = state.payload or state.new_row or {}
     row = {**source, "canonical_id": state.canonical_id}
     row.setdefault("id", state.canonical_id)
+    _with_package_identity(row)
+    # The latest scan that reported it; ``scan_id`` filters accept a job id.
+    row["scan_id"] = row.get("scan_id") or state.last_job_id or None
     if state.report_canonical_id:
         row[REPORT_ID_FIELD] = state.report_canonical_id
     stamped = _stamp(row, state, peers)

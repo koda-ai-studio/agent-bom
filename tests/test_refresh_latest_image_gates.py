@@ -8,8 +8,9 @@
   gate scanned the candidate from the daemon and asked Docker Hub for its
   signatures. The gates scan the saved archive instead, as CI does: a local
   RepoDigest does not prove registry publication.
-* The UI image's Node.js runtime has no advisory source; its gate accepts that
-  gap only through a reviewed coverage exception.
+* A runtime no advisory source assessed leaves a gate scan partial; the UI gate
+  accepts such a gap only through a reviewed coverage exception (none is listed
+  now that Node.js runtimes have their own source).
 """
 
 from __future__ import annotations

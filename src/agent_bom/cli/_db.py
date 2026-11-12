@@ -31,14 +31,16 @@ def db_cmd() -> None:
     "--source",
     "sources",
     multiple=True,
-    type=click.Choice(["osv", "alpine", "debian", "epss", "kev", "ghsa", "nvd"], case_sensitive=False),
-    help="Which sources to sync (default: osv, alpine, debian, epss, kev, nvd). Repeatable. "
+    type=click.Choice(["osv", "alpine", "debian", "epss", "kev", "ghsa", "nvd", "nodejs"], case_sensitive=False),
+    help="Which sources to sync (default: osv, alpine, debian, epss, kev, nvd, nodejs). Repeatable. "
     "Use --source alpine to sync Alpine package secfix data from Alpine secdb. "
     "Use --source debian to sync the Debian Security Tracker (authoritative per-release "
     "status + backported fixes, including end-of-life releases such as buster/Debian 10). "
     "Use --source ghsa to sync GitHub Security Advisories (all ecosystems). "
     "Use --source nvd to ingest CVEs NVD published or modified recently, with their CPE ranges "
-    "(14-day window without NVD_API_KEY, 120 days with it), and backfill unknown severities.",
+    "(14-day window without NVD_API_KEY, 120 days with it), and backfill unknown severities. "
+    "Use --source nodejs to refresh the Node.js security working group core advisory snapshot "
+    "that offline scans of Node.js runtimes read (written next to the DB file).",
 )
 @click.option("--path", "db_path", type=click.Path(), default=None, help="Override DB file path.")
 @click.option(

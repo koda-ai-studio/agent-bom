@@ -69,6 +69,8 @@ export interface EnrichedVuln extends Vulnerability {
   last_seen?: string | undefined;
   resolved_at?: string | undefined;
   resolution_reason?: string | null | undefined;
+  /** The scan that proved the finding gone; set only while resolved. */
+  resolved_by_scan_id?: string | null | undefined;
   stale?: boolean | undefined;
   reopened_at?: string | undefined;
   last_resolved_at?: string | undefined;
