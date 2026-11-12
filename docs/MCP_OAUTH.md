@@ -144,10 +144,23 @@ issued automatically for each run. Client-credentials authentication avoids
 browser SSO in CI. Workload federation is a separate provider-specific setup.
 
 ```bash
+PYTHONPATH=src python scripts/deploy/write_hosted_tool_names.py \
+  --full /tmp/hosted-tool-names.json --read-only /tmp/hosted-read-only-tool-names.json
 PYTHONPATH=src python scripts/deploy/probe_with_oauth.py -- \
   --base-url https://mcp.example.com/mcp --server-card --require-mcp-auth \
-  --expected-version RELEASE_VERSION --expected-tool-count RELEASE_TOOL_COUNT
+  --expected-version RELEASE_VERSION \
+  --expected-tool-names-file /tmp/hosted-tool-names.json \
+  --expected-read-only-tool-names-file /tmp/hosted-read-only-tool-names.json
 ```
+
+An OAuth server registers only the read-only tools of its profile, so the
+default `scan` profile serves 7 tools there (`scan` is left out because it
+stores its result) instead of the 8 in the `MCP default tools` metric. The
+helper tells the probe which scheme its credential came from (`oauth2` or
+`bearer`); the server card must declare that scheme, list exactly the matching
+tool names, and mark every tool `readOnlyHint: true` under OAuth. Run the names
+script from the release checkout, so the names come from the same registration
+filter the server uses.
 
 The helper requests a bounded read token, then passes it through the probe's
 process environment rather than its command line or logs. It rejects redirects,

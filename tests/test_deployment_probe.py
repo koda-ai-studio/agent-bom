@@ -165,6 +165,85 @@ def test_validate_server_card_release_requires_exact_version_tools_and_schemas()
         validate_server_card_release(payload, expected_version="0.100.0", expected_tool_count=2)
 
 
+_FULL = ["check", "compliance", "exposure_paths", "generate_sbom", "intel_lookup", "policy_check", "remediate", "scan"]
+_READ_ONLY = [name for name in _FULL if name != "scan"]
+
+
+def _card(names, *, scheme, read_only_hint=True):
+    tools = [
+        {"name": name, "inputSchema": {"type": "object"}, "annotations": {"readOnlyHint": read_only_hint and name != "scan"}}
+        for name in names
+    ]
+    return {
+        "serverInfo": {"version": "0.114.0"},
+        "tools": tools,
+        "capabilities": {"read_only": all(tool["annotations"]["readOnlyHint"] for tool in tools)},
+        "authentication": {"required": True, "schemes": [scheme]},
+    }
+
+
+def _validate(card, **kwargs):
+    return validate_server_card_release(
+        card, expected_version="0.114.0", expected_tool_names=_FULL, expected_read_only_tool_names=_READ_ONLY, **kwargs
+    )
+
+
+def test_oauth_card_is_held_to_the_read_only_registered_set():
+    """The v0.114.0 hosted card (OAuth, 7 read-only tools) is the exact contract."""
+    assert _validate(_card(_READ_ONLY, scheme="oauth2"), expected_auth_scheme="oauth2")
+    with pytest.raises(ValueError, match="tool set mismatch"):
+        _validate(_card(_FULL, scheme="oauth2"), expected_auth_scheme="oauth2")
+
+
+def test_bearer_card_is_held_to_the_full_default_profile():
+    assert _validate(_card(_FULL, scheme="bearer"), expected_auth_scheme="bearer")
+    with pytest.raises(ValueError, match="tool set mismatch"):
+        _validate(_card(_READ_ONLY, scheme="bearer"), expected_auth_scheme="bearer")
+
+
+def test_oauth_card_exposing_a_write_tool_fails_closed():
+    card = _card(_READ_ONLY, scheme="oauth2")
+    card["tools"][0]["annotations"]["readOnlyHint"] = False
+    with pytest.raises(ValueError, match="non-read-only"):
+        _validate(card, expected_auth_scheme="oauth2")
+    extra = _card([*_READ_ONLY, "graph_correlate"], scheme="oauth2")
+    with pytest.raises(ValueError, match="tool set mismatch.*graph_correlate"):
+        _validate(extra, expected_auth_scheme="oauth2")
+    renamed = _card([*_READ_ONLY[:-1], "endpoint_sync"], scheme="oauth2")
+    with pytest.raises(ValueError, match="tool set mismatch"):
+        _validate(renamed, expected_auth_scheme="oauth2")
+
+
+def test_card_must_declare_the_auth_scheme_the_probe_used():
+    with pytest.raises(ValueError, match="authentication scheme mismatch"):
+        _validate(_card(_FULL, scheme="bearer"), expected_auth_scheme="oauth2")
+    with pytest.raises(ValueError, match="authentication scheme mismatch"):
+        _validate(_card(_READ_ONLY, scheme="oauth2"), expected_auth_scheme="bearer")
+
+
+def test_oauth_card_without_a_read_only_expectation_fails_closed():
+    with pytest.raises(ValueError, match="read-only"):
+        validate_server_card_release(_card(_READ_ONLY, scheme="oauth2"), expected_version="0.114.0", expected_tool_names=_FULL)
+
+
+def test_server_card_cli_selects_the_read_only_names_for_an_oauth_card(monkeypatch, capsys, tmp_path):
+    import json
+
+    full, read_only = tmp_path / "full.json", tmp_path / "read-only.json"
+    full.write_text(json.dumps(_FULL))
+    read_only.write_text(json.dumps(_READ_ONLY))
+    body = json.dumps(_card(_READ_ONLY, scheme="oauth2")).encode()
+    monkeypatch.setattr("agent_bom.deployment_probe.urllib.request.urlopen", lambda *_a, **_k: _Response(body))
+    arguments = ["--server-card", "--expected-version", "0.114.0", "--expected-tool-names-file", str(full)]
+    arguments += ["--expected-read-only-tool-names-file", str(read_only), "--expected-auth-scheme", "oauth2"]
+    assert main(arguments) == 0
+    assert json.loads(capsys.readouterr().out)["serverInfo"]["version"] == "0.114.0"
+    assert main([*arguments[:-1], "bearer"]) == 1
+    assert "authentication scheme mismatch" in capsys.readouterr().err
+    with pytest.raises(SystemExit):
+        main([*arguments, "--expected-tool-count", "8"])
+
+
 @pytest.mark.parametrize("sse", [False, True])
 @pytest.mark.parametrize("anonymous_status", [401, 403])
 def test_authenticated_initialize_accepts_json_and_event_stream(monkeypatch, sse, anonymous_status):
