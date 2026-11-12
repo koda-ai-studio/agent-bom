@@ -82,7 +82,6 @@ def test_claude_servers_run_the_locked_launcher_from_the_plugin_root() -> None:
     # Live introspection stays off unless the user declares their own server.
     # Ambient tokens stay out of the servers: blank values override what the client inherited.
     env = {
-        "AGENT_BOM_MCP_WORKSPACE_ROOTS": "${CLAUDE_PROJECT_DIR}",
         "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0",
         "GITHUB_TOKEN": "",
         "GH_TOKEN": "",
