@@ -40,8 +40,8 @@ export function pathCardEdges(edges: Edge[], zoom: number): Edge[] {
 }
 
 /** Path nodes get room for a package name and version on one line. */
-export function pathCardNodeStyle(zoom: number): CSSProperties {
-  return { ...readableGraphNodeStyle(zoom), "--graph-node-card-width": "300px" } as CSSProperties;
+export function pathCardNodeStyle(zoom: number, captionWidth = 300): CSSProperties {
+  return { ...readableGraphNodeStyle(zoom), "--graph-node-card-width": `${captionWidth}px` } as CSSProperties;
 }
 
 /**

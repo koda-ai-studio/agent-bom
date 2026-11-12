@@ -300,12 +300,11 @@ function InvestigationFlow({
         controls={controls}
         layoutControls={presentation.enabled ? layoutControls : null}
       />}
-      {linearWidth && <p className="border-b border-outline px-3 py-1.5 text-xs text-ink-secondary">Follow the path left to right · scroll horizontally to inspect every hop.</p>}
       <div className="min-h-0 flex-1 overflow-x-auto" role={linearWidth ? "region" : undefined} tabIndex={linearWidth ? 0 : undefined} aria-label={linearWidth ? "Scrollable exposure path" : undefined}>
       <div style={{ height: "100%", width: linearWidth ?? "100%" }} ref={surfaceRef} className={`relative min-h-0 flex-1 ${roundedBottom ? "overflow-hidden rounded-b-2xl" : ""}`} {...wheelGate.handlers}>
         <WheelZoomHint visible={wheelGate.hintVisible} />
         <ReactFlow
-          style={embedded ? pathCardNodeStyle(viewport.zoom) : readableGraphNodeStyle(viewport.zoom)}
+          style={embedded || linearWidth ? pathCardNodeStyle(viewport.zoom, linearWidth ? 220 : 300) : readableGraphNodeStyle(viewport.zoom)}
           key={`${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "fresh"}`}
           nodes={presentation.nodes}
           edges={presentedEdges}

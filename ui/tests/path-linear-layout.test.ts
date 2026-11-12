@@ -12,6 +12,12 @@ describe("readable linear investigation paths", () => {
     expect(result.width).toBeGreaterThan(808);
     expect(result.nodes.map(node => node.id)).toEqual(nodes.map(node => node.id));
   });
+  it("shows all seven hops in a full-width desktop canvas without horizontal scrolling", () => {
+    const result = linearPathLayout(nodes, hops, 1280)!;
+    expect(result.width).toBe(1280);
+    const xs = result.nodes.map(node => node.position.x);
+    expect((Math.max(...xs) - Math.min(...xs) + 220) * 0.7 + 96).toBeLessThanOrEqual(1280);
+  });
   it("fits short paths without forcing extra horizontal scrolling", () => {
     expect(linearPathLayout(nodes.slice(0, 2), ["g", "b"], 1200)!.width).toBe(1200);
   });
