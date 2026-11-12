@@ -247,6 +247,12 @@ def agent_graph_id_for(record: Any) -> str:
     return agent_graph_id(_field(record, "name"), agent_identity_scope(record) or agent_config_scope(record))
 
 
+def agent_identity_location(record: Any) -> str:
+    """The location an agent's id is derived from: ``identity_config_path`` when set, else ``config_path``."""
+    override = _field(record, "identity_config_path")
+    return str(override if override is not None else _field(record, "config_path") or "")
+
+
 def agent_config_scope(record: Any) -> str:
     """Config identity for every agent without a stronger endpoint scope.
 
@@ -259,7 +265,7 @@ def agent_config_scope(record: Any) -> str:
     identity = identity or canonical_agent_id(
         str(_field(record, "agent_type") or _field(record, "type") or ""),
         str(_field(record, "name") or ""),
-        config_path=str(_field(record, "config_path")),
+        config_path=agent_identity_location(record),
     )
     return f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}"
 

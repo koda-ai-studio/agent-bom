@@ -57,10 +57,10 @@ def inventory(
     inventory_source: Optional[str] = None
     with discovery_stdout, discovery_stderr:
         if demo:
-            from agent_bom.demo import DEMO_INVENTORY
+            from agent_bom.demo import demo_inventory_document
 
             inventory_source = "agent-bom --demo"
-            agents = build_agents_from_inventory(DEMO_INVENTORY, inventory_source)
+            agents = build_agents_from_inventory(demo_inventory_document(), inventory_source)
         elif config:
             config_path = Path(config)
             inventory_source = str(config_path)

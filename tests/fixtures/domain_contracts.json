@@ -1079,7 +1079,8 @@
         "discovery_provenance",
         "discovery_envelope",
         "source_id",
-        "device_fingerprint"
+        "device_fingerprint",
+        "identity_config_path"
       ]
     },
     "BlastRadius": {
