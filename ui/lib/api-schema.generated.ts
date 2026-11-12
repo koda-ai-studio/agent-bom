@@ -4288,6 +4288,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/agent-architecture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Architecture
+         * @description Multi-agent harnesses declared in source: layers, flow edges, unresolved routes and the security overlay.
+         *
+         *     A harness is the tree of framework agents joined by declared delegation or
+         *     crew membership. Each agent carries its role (harness, orchestrator,
+         *     subgraph, sub_agent), its layer below the harness root, literal model
+         *     references, and what the graph records for it: severity, risk score,
+         *     findings it is vulnerable to and outgoing reach. Flow edges keep their
+         *     ``declared`` provenance; routes the scanner could not resolve are listed,
+         *     never dropped. ``coverage.gaps`` names what is not modelled yet.
+         */
+        get: operations["get_agent_architecture_v1_graph_agent_architecture_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/graph/agents": {
         parameters: {
             query?: never;
@@ -9370,6 +9398,44 @@ export interface components {
             total_tools: number;
             /** Total Vulnerabilities */
             total_vulnerabilities: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AgentHarness */
+        AgentHarness: {
+            /** Agent Count */
+            agent_count: number;
+            declared_in?: components["schemas"]["HarnessProject"] | null;
+            /** Entry Agent Ids */
+            entry_agent_ids: string[];
+            /** File Path */
+            file_path: string;
+            /** Flow Edges */
+            flow_edges: components["schemas"]["HarnessFlowEdge"][];
+            /** Framework */
+            framework: string;
+            /** Harness Id */
+            harness_id: string;
+            /** Harness Kind */
+            harness_kind: string;
+            /** Label */
+            label: string;
+            /** Layer Count */
+            layer_count: number;
+            /** Layers */
+            layers: components["schemas"]["HarnessLayer"][];
+            /** Line Number */
+            line_number: number;
+            /** Models */
+            models: string[];
+            /** Orchestrator Ids */
+            orchestrator_ids: string[];
+            security: components["schemas"]["HarnessSecurity"];
+            truncated: components["schemas"]["HarnessTruncation"];
+            /** Unresolved Route Count */
+            unresolved_route_count: number;
+            /** Unresolved Routes */
+            unresolved_routes: components["schemas"]["HarnessUnresolvedRoute"][];
         } & {
             [key: string]: unknown;
         };
@@ -16632,6 +16698,30 @@ export interface components {
         GraphActiveEdgesResponse: {
             [key: string]: unknown;
         }[];
+        /**
+         * GraphAgentArchitectureResponse
+         * @description Multi-agent harnesses declared in the snapshot: layers, flow edges, unresolved routes and the security overlay.
+         */
+        GraphAgentArchitectureResponse: {
+            coverage: components["schemas"]["HarnessCoverage"];
+            /** Harnesses */
+            harnesses: components["schemas"]["AgentHarness"][];
+            pagination: components["schemas"]["HarnessPagination"];
+            /** Scan Id */
+            scan_id: string;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: "v1";
+            /** Snapshot Generation */
+            snapshot_generation: string;
+            summary: components["schemas"]["HarnessSummary"];
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphAgentRecord */
         GraphAgentRecord: {
             /** Data Sources */
@@ -18791,6 +18881,217 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HarnessAgent */
+        HarnessAgent: {
+            /** Credential Refs */
+            credential_refs: string[];
+            /** Dynamic Edges */
+            dynamic_edges: boolean;
+            /** Entry */
+            entry: boolean;
+            /** File Path */
+            file_path: string;
+            /** Framework */
+            framework: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Layer */
+            layer: number;
+            /** Line Number */
+            line_number: number;
+            /** Model Refs */
+            model_refs: string[];
+            /** Parent Id */
+            parent_id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "harness" | "orchestrator" | "subgraph" | "sub_agent";
+            security: components["schemas"]["HarnessAgentSecurity"];
+            /** Tools */
+            tools: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * HarnessAgentSecurity
+         * @description What the graph records for the agent: its severity and risk, findings it is vulnerable to, outgoing reach.
+         */
+        HarnessAgentSecurity: {
+            /** Findings */
+            findings: number;
+            /** Max Finding Severity */
+            max_finding_severity: string;
+            /** Reach */
+            reach: {
+                [key: string]: number;
+            };
+            /** Risk Score */
+            risk_score: number;
+            /** Severity */
+            severity: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessCoverage */
+        HarnessCoverage: {
+            /** Complete */
+            complete: boolean;
+            /** Framework Agent Cap */
+            framework_agent_cap: number;
+            /** Frameworks Modelled */
+            frameworks_modelled: string[];
+            /** Gaps */
+            gaps: string[];
+            /** Model */
+            model: string;
+            /**
+             * Provenance
+             * @constant
+             */
+            provenance: "declared";
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * HarnessFlowEdge
+         * @description A declared edge between two agents of the harness; ``kind`` is read from its recorded evidence.
+         */
+        HarnessFlowEdge: {
+            /** Branches */
+            branches: string[];
+            /** Conditional */
+            conditional: boolean;
+            /** Confidence */
+            confidence: string;
+            /** Evidence */
+            evidence: string;
+            /** File Path */
+            file_path: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "entry" | "sequential" | "conditional" | "handoff" | "fan_out" | "subgraph" | "finish" | "member" | "peer";
+            /** Line Number */
+            line_number: number;
+            /** Provenance */
+            provenance: string;
+            /**
+             * Relationship
+             * @enum {string}
+             */
+            relationship: "delegated_to" | "shares_server";
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessLayer */
+        HarnessLayer: {
+            /** Agents */
+            agents: components["schemas"]["HarnessAgent"][];
+            /** Layer */
+            layer: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessPagination */
+        HarnessPagination: {
+            /** Cursor */
+            cursor: string;
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number;
+            /** Next Cursor */
+            next_cursor: string;
+            /** Offset */
+            offset: number;
+            /** Returned */
+            returned: number;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessProject */
+        HarnessProject: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Risk Score */
+            risk_score: number;
+            /** Severity */
+            severity: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessSecurity */
+        HarnessSecurity: {
+            /** Agents With Findings */
+            agents_with_findings: number;
+            /** Credential Refs */
+            credential_refs: string[];
+            /** Findings */
+            findings: number;
+            /** Max Risk Score */
+            max_risk_score: number;
+            /** Max Severity */
+            max_severity: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessSummary */
+        HarnessSummary: {
+            /** Framework Agents */
+            framework_agents: number;
+            /** Frameworks */
+            frameworks: {
+                [key: string]: number;
+            };
+            /** Harnesses */
+            harnesses: number;
+            /** Placed Agents */
+            placed_agents: number;
+            /** Unplaced Framework Agents */
+            unplaced_framework_agents: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessTruncation */
+        HarnessTruncation: {
+            /** Agents */
+            agents: boolean;
+            /** Flow Edges */
+            flow_edges: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessUnresolvedRoute */
+        HarnessUnresolvedRoute: {
+            /** Agent Id */
+            agent_id: string;
+            /** Evidence */
+            evidence: string;
+            /** Line Number */
+            line_number: number;
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "unresolved";
+        } & {
+            [key: string]: unknown;
         };
         /** HealthResponse */
         HealthResponse: {
@@ -35814,6 +36115,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_agent_architecture_v1_graph_agent_architecture_get: {
+        parameters: {
+            query?: {
+                /** @description Scan ID; omit for the current estate */
+                scan_id?: string | null;
+                /** @description Generation from the first page; required for continuation */
+                snapshot_generation?: string | null;
+                /** @description Harness offset */
+                offset?: number;
+                /** @description Max harnesses per page */
+                limit?: number;
+                /** @description next_cursor from the previous page (replaces offset) */
+                cursor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphAgentArchitectureResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
