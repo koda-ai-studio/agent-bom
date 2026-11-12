@@ -18,7 +18,7 @@
     "cve",
     "ai-agents"
   ],
-  "documentationUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-code/README.md",
+  "documentationUrl": "https://github.com/koda-ai-studio/agent-bom/blob/main/integrations/claude-directory/README.md",
   "supportUrl": "https://github.com/koda-ai-studio/agent-bom/issues",
   "privacyPolicyUrl": "https://koda-ai-studio.github.io/agent-bom/privacy/",
   "termsOfServiceUrl": "https://koda-ai-studio.github.io/agent-bom/terms/"
