@@ -829,7 +829,7 @@ export default function AttackPathInvestigationContent() {
           subtitle={`${pathQueueCounts.queueRows} from the path queue. ${pathQueueCounts.snapshotTotal} snapshot paths. ${pathQueueCounts.materializedPaths} materialized · ${pathQueueCounts.derivedPaths} derived. ${
             graphData?.count_metadata?.source === "derived_graph_paths" ? "Ranked from bounded graph traversal." : "Ranked from persisted scan paths."
           }`}
-          compactQueue queueInitiallyOpen={!hasFocusContext || Boolean(focus.crossVendor)} scope={<PathVendorScopeChips scanId={selectedScanId} value={focus.crossVendor}
+          compactQueue queueInitiallyOpen={Boolean(focus.crossVendor)} scope={<PathVendorScopeChips scanId={selectedScanId} value={focus.crossVendor}
             onChange={scope => router.replace(investigationHref(pathname, searchParams.toString(), { [CROSS_VENDOR_PARAM]: scope || null, selected_path: null }), { scroll: false })} />}
           filters={
             <>

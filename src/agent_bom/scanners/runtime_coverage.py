@@ -10,6 +10,7 @@ from agent_bom.coverage import RUNTIME_COVERAGE_UNKNOWN, CoverageWarning, runtim
 from agent_bom.cpe_match import cpe_identity
 from agent_bom.models import Package
 from agent_bom.scanners.cpython_advisory import is_cpython_runtime
+from agent_bom.scanners.nodejs_advisory import is_nodejs_runtime
 from agent_bom.scanners.package_matching import _osv_ecosystems_for_package
 
 _logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ _logger = logging.getLogger(__name__)
 
 def _has_dedicated_runtime_source(pkg: Package, *, offline: bool) -> bool:
     """Runtimes with their own advisory lookup, which records its own coverage gap on failure."""
-    if is_cpython_runtime(pkg):
+    if is_cpython_runtime(pkg) or is_nodejs_runtime(pkg):
         return True
     return not offline and (pkg.cpe or "").startswith("cpe:2.3:a:nvidia:")
 

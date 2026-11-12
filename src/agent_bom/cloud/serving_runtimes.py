@@ -40,7 +40,7 @@ import httpx
 
 from agent_bom.cloud.serving_auth import ServingAuthError, bearer_token, validate_token_env_name
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
-from agent_bom.models import Agent, AgentType, MCPServer, Package
+from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface
 from agent_bom.security import SecurityError, validate_url
 
 logger = logging.getLogger(__name__)
@@ -377,6 +377,7 @@ def observation_to_agents(observation: EndpointObservation) -> list[Agent]:
         server = MCPServer(
             name=f"{observation.runtime}/{model.served_name}",
             url=observation.endpoint,
+            surface=ServerSurface.AI_INVENTORY,
             packages=[Package(name=model.served_name, version=model.version or "unknown", ecosystem=observation.runtime)],
         )
         agents.append(

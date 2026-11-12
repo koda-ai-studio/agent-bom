@@ -32,6 +32,10 @@ CONDITIONAL_HOSTS: Final[dict[str, str]] = {
     "api.deps.dev": "license and project metadata when the package registry has none",
     "proxy.golang.org": "Go module versions and dependencies",
     "sum.golang.org": "Go module checksums",
+    "raw.githubusercontent.com": (
+        "the Node.js security working group core advisory index and CPython release headers, "
+        "when a scanned image or host ships those runtimes, and the Node.js index during a local database update"
+    ),
 }
 
 # Reached only when the local advisory database is refreshed: `agent-bom db update`,

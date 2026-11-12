@@ -9,10 +9,12 @@ from copy import deepcopy
 from agent_bom.advisory_ids import upstream_advisory_ids
 from agent_bom.checksums import add_checksum
 from agent_bom.core.severity import severity_linked_cve
+from agent_bom.db.intel_catalog import CANONICAL_INTEL_SOURCES
 from agent_bom.models import Package, Vulnerability
 from agent_bom.scanners.enrichment_apply import apply_epss_entry
 
 _CONTEXT_ROLES = {"ai-agent", "mcp-server", "dependency-surface"}
+_VENDOR_FEEDS = frozenset({"nvidia_csaf", "amd_psirt", "intel_psirt", "nodejs_security_wg"})
 
 
 def software_components(document: dict) -> list[dict]:
@@ -139,9 +141,18 @@ def imported_composition_complete(document: dict) -> bool | None:
 
 
 def vulnerability_source(vuln: Vulnerability) -> dict[str, str]:
-    """Preserve the distinction between imported assertions and feed lookups."""
+    """Preserve the distinction between imported assertions and feed lookups.
+
+    A finding only a vendor feed produced (no OSV record) names that feed, as
+    the intel source catalog lists it, instead of OSV.
+    """
     if vuln.severity_source == "sbom":
         return {"name": "SBOM"}
+    if "osv" not in vuln.advisory_sources:
+        catalog = {source.source_id: source for source in CANONICAL_INTEL_SOURCES if source.source_id in _VENDOR_FEEDS}
+        feed = next((catalog[source] for source in vuln.advisory_sources if source in catalog), None)
+        if feed is not None:
+            return {"name": feed.display_name, "url": feed.homepage_url}
     return {"name": "OSV", "url": f"https://osv.dev/vulnerability/{vuln.id}"}
 
 

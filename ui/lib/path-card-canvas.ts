@@ -23,12 +23,15 @@ export function pathCardCanvasHeight(nodes: ReadonlyArray<{ position: { y: numbe
  * Strokes of a constant on-screen weight. Flow-unit strokes
  * thin out as a short path is fitted wide, turning tier dashes into faint dots.
  */
-export function pathCardEdges(edges: Edge[], zoom: number): Edge[] {
+export function pathCardEdges(edges: Edge[], zoom: number, showPathLabels = false): Edge[] {
   const scale = 1 / Math.max(Number.isFinite(zoom) ? zoom : 1, 0.16);
   return edges.map(edge => {
     const dashed = Boolean(edge.style?.strokeDasharray);
     return {
       ...edge,
+      ...(showPathLabels && edge.label != null && edge.data?.labelVisibility !== "hide"
+        && edge.data?.relationship !== "vulnerable_to"
+        ? { data: { ...edge.data, labelVisibility: "show" } } : {}),
       style: {
         ...edge.style,
         strokeWidth: 2 * scale,
@@ -40,8 +43,8 @@ export function pathCardEdges(edges: Edge[], zoom: number): Edge[] {
 }
 
 /** Path nodes get room for a package name and version on one line. */
-export function pathCardNodeStyle(zoom: number): CSSProperties {
-  return { ...readableGraphNodeStyle(zoom), "--graph-node-card-width": "300px" } as CSSProperties;
+export function pathCardNodeStyle(zoom: number, captionWidth = 300): CSSProperties {
+  return { ...readableGraphNodeStyle(zoom), "--graph-node-card-width": `${captionWidth}px` } as CSSProperties;
 }
 
 /**

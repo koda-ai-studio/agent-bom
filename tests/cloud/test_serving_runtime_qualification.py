@@ -7,10 +7,13 @@ warning; it never becomes a successful or local-only result.
 
 from __future__ import annotations
 
+import json
 from unittest.mock import patch
 
 import pytest
+from click.testing import CliRunner
 
+from agent_bom.cli import main
 from agent_bom.cloud import discover_from_provider
 from agent_bom.cloud.serving_runtimes import SERVING_RUNTIMES, probe_endpoint
 from tests._serving_runtime_fixtures import SCENARIOS, closed_port_url, serving_fixture
@@ -235,3 +238,28 @@ def test_undeclared_owner_is_reported_as_declared_runtime_only():
         observation = probe_endpoint("vllm", url, timeout=_TIMEOUT)
     assert observation.status in {"success", "partial"}
     assert observation.runtime_identity == "declared"
+
+
+@pytest.mark.parametrize("runtime", PROBE_RUNTIMES)
+def test_successful_probe_scans_complete_without_counting_models_as_unresolved_packages(runtime, tmp_path):
+    """A served model is endpoint inventory, not a package with an advisory feed.
+
+    A live llama.cpp server listed its model and the scan still exited 1: the
+    model counted as an unresolved package version, and the endpoint was judged
+    as an MCP server (no authentication observed, non-TLS transport, no agent
+    identity) although authentication is never collected from a model listing.
+    """
+    out = tmp_path / "report.json"
+    with serving_fixture(SCENARIOS[runtime]["success"]) as url:
+        result = CliRunner().invoke(
+            main,
+            ["agents", "--no-discover", "--offline", "--quiet", "-f", "json", "-o", str(out), "--serving-endpoint", f"{runtime}={url}"],
+            env={"HOME": str(tmp_path)},
+        )
+    report = json.loads(out.read_text())
+    assert {a["metadata"]["serving_evidence"]["model"]["served_name"] for a in report["agents"]} == EXPECTED_MODELS[runtime]
+    assert [warning["release"] for warning in report["coverage_warnings"]] == []
+    assert [finding["title"] for finding in report["findings"]] == []
+    assert {s["surface"] for a in report["agents"] for s in a["mcp_servers"]} == {"ai-inventory"}
+    assert report["scan_run"]["outcome"] == "complete", report["scan_run"]["issues"]
+    assert result.exit_code == 0, result.output

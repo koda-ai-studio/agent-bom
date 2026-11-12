@@ -34,7 +34,7 @@ export function InvestigationToolbar({ embedded, compact, stepper, controls, lay
       data-testid="security-graph-interaction-band"
     >
       {embedded && <PathToolbarLead compact={Boolean(stepper)} />}
-      {compact ? <>
+      {compact || embedded ? <>
         {stepper && <StepperControls stepper={stepper} />}
         <details className="relative">
           <summary aria-label="Graph options" title="Graph options" className="graph-page-action flex min-h-11 min-w-11 justify-center cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"><SlidersHorizontal className="h-4 w-4" /><span className="sr-only">Graph options</span></summary>
