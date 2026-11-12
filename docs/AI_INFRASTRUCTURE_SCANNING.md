@@ -182,9 +182,41 @@ agent-bom agents --serving-endpoint vllm=https://vllm.internal:8000 \
 
 The outcomes are qualified in `tests/cloud/test_serving_runtime_qualification.py`
 and `tests/cloud/test_ollama_outcomes.py` against loopback fixtures that copy
-each runtime's documented responses. No runtime is installed or started, and
-no model is downloaded. This is not certification against a live provider.
-The tests also cover the token path (`tests/cloud/test_serving_endpoint_auth.py`).
+each runtime's documented responses. The tests also cover the token path
+(`tests/cloud/test_serving_endpoint_auth.py`).
+
+### Live runtime checks
+
+On 2026-11-11, `scripts/qualification/serving.py` ran each runtime that has an
+arm64 image from its vendor in Docker Engine 29.8.0 in Docker Desktop (Apple silicon, CPU only)
+with a tiny model, then ran `agent-bom agents --no-discover --offline` against
+it. "Auth" is the status the runtime returned for no token / a wrong token /
+the right token.
+
+| Runtime | Image and model | Auth on the inventory read | agent-bom result |
+|---|---|---|---|
+| llama.cpp | `ghcr.io/ggml-org/llama.cpp:server` (build `b12282-aa75ff323`), Qwen2.5-0.5B-Instruct Q4_K_M GGUF | With `--api-key`: `/v1/models`, `/models`, `/props` and `/slots` return 401 / 401 / 200, body `{"error":{"message":"Invalid API Key","type":"authentication_error","code":401}}`; `/health` stays 200 without a token. Without a key every read is open | `success`, identity confirmed (`owned_by: llamacpp`), version from `/props` `build_info`, served name is the model path; `/v1/models` has no `root`, so `artifact_ref` is empty. No token: `denied (HTTP 401)`; wrong token: `denied (HTTP 401: the bearer token was rejected)` |
+| vLLM | `vllm/vllm-openai-cpu:latest` (vLLM 0.33.0), `facebook/opt-125m` | With `VLLM_API_KEY`: `/v1/models` 401 / 401 / 200 (`{"error":"Unauthorized"}`); `/version`, `/health` and `/metrics` stay 200 without a token | `success`, identity confirmed (`owned_by: vllm`), version `0.33.0` from `/version`, `artifact_ref` from `root`; no / wrong token `denied (HTTP 401)` |
+| Ollama | `ollama/ollama:latest` (0.40.16), `qwen2.5:0.5b` | No authentication in the runtime | `success` with name:tag and digest |
+| Triton | `nvcr.io/nvidia/tritonserver` publishes `linux/arm64` (26.10-py3: 10.4 GB compressed) | Not run: the image needs more free disk than this shared host had | Fixture-qualified only |
+| TGI | `ghcr.io/huggingface/text-generation-inference` `latest` and `latest-intel-cpu` publish `linux/amd64` only | Not run on arm64 | Fixture-qualified only |
+| LM Studio | Desktop application; no headless image | Not run. Its documentation shows the server at `http://localhost:1234` (`/api/v0/models`), binds `127.0.0.1` by default, and `lms server start` without `--port` reuses the last port, so 1234 is the documented example rather than a guaranteed default. Authentication is off by default; the status for a missing or wrong token is not documented. LM Studio now recommends its `/api/v1/*` REST API, which agent-bom does not read yet | Fixture-qualified only |
+
+Sources for LM Studio: lmstudio.ai/docs/developer/rest/endpoints,
+lmstudio.ai/docs/cli/server-start and
+lmstudio.ai/docs/developer/core/authentication, read 2026-11-11.
+
+Two defects the live run found are fixed: a successful probe used to exit 1,
+because each served model counted as a package with an unresolved version and
+the endpoint was judged as an MCP server (three high "MCP configuration"
+findings about authentication, TLS and agent identity, which a model listing
+cannot show). Served models are now AI inventory, not MCP servers or
+advisory-scanned packages; `test_successful_probe_scans_complete_without_counting_models_as_unresolved_packages`
+covers every runtime.
+
+A runtime that protects its listing can still answer `/health`, `/version` or
+`/metrics` without a token, so a 200 on those is not evidence that the
+endpoint is unauthenticated.
 
 `serving_evidence` appears in:
 

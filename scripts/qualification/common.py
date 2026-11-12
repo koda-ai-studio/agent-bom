@@ -114,6 +114,15 @@ def _rss_to_mb(ru_maxrss: int) -> float:
     return round(ru_maxrss / divisor, 1)
 
 
+def secret_env(values: dict[str, str]) -> tuple[list[str], dict[str, str]]:
+    """``docker run -e NAME`` arguments plus the environment that carries the values.
+
+    Docker copies each named variable from its own environment, so secrets
+    reach the container without touching disk or the command line.
+    """
+    return [arg for name in values for arg in ("-e", name)], {**os.environ, **values}
+
+
 def run_measured(
     command: list[str],
     *,
