@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Accept a ``partial`` image scan only for reviewed, exact coverage exceptions.
 
-An image gate fails closed when the scan is ``partial``. Some images ship a
-runtime that no advisory source agent-bom consults tracks (the UI image's
-Node.js binary), so their scan is honestly partial on every run. This check
+An image gate fails closed when the scan is ``partial``. An image may ship a
+runtime that no advisory source agent-bom consults tracks, so its scan is
+honestly partial on every run. This check
 runs only after the scanner exited ``1`` and passes only when every reason for
 that exit is a coverage gap listed under ``coverage_exceptions`` in
 ``docs/security/image-exceptions.yaml`` for this image, at the exact runtime

@@ -38,6 +38,10 @@ def _detect_ecosystem(name: str, version: str = "unknown") -> Optional[str]:
 
         pypi_resp = sync_get(f"https://pypi.org/pypi/{name}/json", timeout=3, max_retries=0)
         npm_resp = sync_get(f"https://registry.npmjs.org/{name}", timeout=3, max_retries=0)
+        # Only a 200 or 404 answers the question. A timeout, rate limit or
+        # server error leaves that registry unknown, not empty.
+        if any(resp is None or resp.status_code not in (200, 404) for resp in (pypi_resp, npm_resp)):
+            return None
         on_pypi = _response_has_version(pypi_resp, "pypi", version)
         on_npm = _response_has_version(npm_resp, "npm", version)
 

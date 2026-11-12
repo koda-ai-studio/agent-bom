@@ -200,6 +200,8 @@ contents or credential values are included in those requests.
 | Alpine security database | `https://secdb.alpinelinux.org` | _(none — full download during `db update`)_ | Alpine advisories | None |
 | Debian security tracker | `https://security-tracker.debian.org/tracker/data/json` | _(none — full download during `db update`)_ | Debian advisories | None |
 | Debian extended LTS tracker | `https://deb.freexian.com/extended-lts/tracker/data/json` | _(none — full download during `db update`)_ | Debian ELTS advisories | None |
+| Node.js security working group | `https://raw.githubusercontent.com/nodejs/security-wg/main/vuln/core/index.json` | _(none — full download, at most 4 MB with a 20-second timeout, when an online scan finds a Node.js runtime, and during `db update`)_ | Node.js core advisories: CVE IDs, vulnerable and patched release ranges, severity. `db update` keeps a dated copy beside the DB file for offline scans | None |
+| CPython release header | `https://raw.githubusercontent.com/python/cpython/v{version}/Include/patchlevel.h` | The CPython release tag, when an online scan finds a CPython runtime | The release's version header, to verify the tag before the OSV lookup | None |
 | Package downloads for the plugin launchers | `https://files.pythonhosted.org/`, `https://github.com/` (a managed Python, or a repository you name) | Package file requests | The pinned release and locked dependencies | None |
 
 `src/agent_bom/core/egress_hosts.py` is the list the plugin READMEs are checked against.

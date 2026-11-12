@@ -11,13 +11,14 @@ from agent_bom.models import Agent, AgentType, AIBOMReport, MCPServer, Package
 from agent_bom.scanners.runtime_coverage import detect_runtime_coverage_gaps
 
 
-def _node() -> Package:
+def _ruby() -> Package:
+    # Ruby has no OSV ecosystem and no dedicated advisory source, so only local CPE ranges assess it.
     return Package(
-        name="node",
-        version="18.20.8",
+        name="ruby",
+        version="3.4.11",
         ecosystem="generic",
-        purl="pkg:generic/nodejs/node@18.20.8",
-        cpe="cpe:2.3:a:nodejs:node.js:18.20.8:*:*:*:*:*:*:*",
+        purl="pkg:generic/ruby-lang/ruby@3.4.11",
+        cpe="cpe:2.3:a:ruby-lang:ruby:3.4.11:*:*:*:*:*:*:*",
     )
 
 
@@ -29,21 +30,21 @@ def _cpe_db(*rows: tuple[str, str]) -> sqlite3.Connection:
 
 
 def test_runtime_without_any_advisory_source_is_a_coverage_gap() -> None:
-    (gap,) = detect_runtime_coverage_gaps([_node()], offline=False, conn=None)
+    (gap,) = detect_runtime_coverage_gaps([_ruby()], offline=False, conn=None)
     assert gap["reason"] == RUNTIME_COVERAGE_UNKNOWN
     assert gap["ecosystem"] == "generic"
-    assert gap["release"] == "node:18.20.8"
+    assert gap["release"] == "ruby:3.4.11"
     assert gap["package_count"] == 1
     assert gap["advisory_rows"] == 0
 
 
 def test_runtime_with_no_local_cpe_ranges_is_a_coverage_gap() -> None:
-    gaps = detect_runtime_coverage_gaps([_node()], offline=False, conn=_cpe_db(("python", "python")))
-    assert [gap["release"] for gap in gaps] == ["node:18.20.8"]
+    gaps = detect_runtime_coverage_gaps([_ruby()], offline=False, conn=_cpe_db(("python", "python")))
+    assert [gap["release"] for gap in gaps] == ["ruby:3.4.11"]
 
 
 def test_runtime_with_local_cpe_ranges_was_assessed() -> None:
-    assert detect_runtime_coverage_gaps([_node()], offline=False, conn=_cpe_db(("nodejs", "node.js"))) == []
+    assert detect_runtime_coverage_gaps([_ruby()], offline=False, conn=_cpe_db(("ruby-lang", "ruby"))) == []
 
 
 @pytest.mark.parametrize(
@@ -51,8 +52,9 @@ def test_runtime_with_local_cpe_ranges_was_assessed() -> None:
     [
         Package(name="left-pad", version="1.0.0", ecosystem="npm"),
         Package(name="requests", version="2.31.0", ecosystem="pypi"),
-        # CPython has its own upstream advisory lookup that records its own gap.
+        # CPython and Node.js have their own upstream advisory sources that record their own gaps.
         Package(name="cpython", version="3.12.1", ecosystem="generic", cpe="cpe:2.3:a:python:python:3.12.1:*:*:*:*:*:*:*"),
+        Package(name="node", version="18.20.8", ecosystem="generic", cpe="cpe:2.3:a:nodejs:node.js:18.20.8:*:*:*:*:*:*:*"),
     ],
 )
 def test_packages_with_an_advisory_source_are_not_runtime_gaps(package: Package) -> None:
@@ -62,14 +64,14 @@ def test_packages_with_an_advisory_source_are_not_runtime_gaps(package: Package)
 def test_runtime_that_already_has_findings_was_assessed() -> None:
     from agent_bom.models import Severity, Vulnerability
 
-    node = _node()
-    node.vulnerabilities = [Vulnerability(id="CVE-2025-1", summary="x", severity=Severity.HIGH)]
-    assert detect_runtime_coverage_gaps([node], offline=False, conn=None) == []
+    ruby = _ruby()
+    ruby.vulnerabilities = [Vulnerability(id="CVE-2025-1", summary="x", severity=Severity.HIGH)]
+    assert detect_runtime_coverage_gaps([ruby], offline=False, conn=None) == []
 
 
 def test_unassessed_judgement_matches_runtime_gap_and_unsupported_rpm() -> None:
-    gaps = detect_runtime_coverage_gaps([_node()], offline=False, conn=None)
-    assert package_vulnerability_unassessed(_node(), gaps) is True
+    gaps = detect_runtime_coverage_gaps([_ruby()], offline=False, conn=None)
+    assert package_vulnerability_unassessed(_ruby(), gaps) is True
     assert package_vulnerability_unassessed(Package(name="left-pad", version="1.0.0", ecosystem="npm"), gaps) is False
     rpm = Package(name="bash", version="5.1-1.el9", ecosystem="rpm", distro_name="sles", distro_version="15")
     assert package_vulnerability_unassessed(rpm, []) is True
@@ -85,10 +87,10 @@ def test_inventory_reports_unassessed_runtime_as_not_scanned() -> None:
     from agent_bom.output.json_inventory import _build_ai_bom_entities_snapshot
 
     npm = Package(name="left-pad", version="1.0.0", ecosystem="npm")
-    gaps = detect_runtime_coverage_gaps([_node()], offline=False, conn=None)
-    packages = {p["name"]: p for p in _build_ai_bom_entities_snapshot(_report(_node(), npm, coverage_warnings=gaps))["packages"]}
-    assert packages["node"]["vulnerability_status"] == "not_scanned"
-    assert packages["node"]["vulnerability_count"] is None
+    gaps = detect_runtime_coverage_gaps([_ruby()], offline=False, conn=None)
+    packages = {p["name"]: p for p in _build_ai_bom_entities_snapshot(_report(_ruby(), npm, coverage_warnings=gaps))["packages"]}
+    assert packages["ruby"]["vulnerability_status"] == "not_scanned"
+    assert packages["ruby"]["vulnerability_count"] is None
     assert packages["left-pad"]["vulnerability_status"] == "scanned"
     assert packages["left-pad"]["vulnerability_count"] == 0
 
@@ -118,5 +120,5 @@ async def test_scan_packages_records_runtime_gap(monkeypatch) -> None:
     monkeypatch.setattr(package_scan, "_query_osv_results", _no_results)
     monkeypatch.setattr(package_scan, "_scan_supplemental_advisories", _no_supplemental)
     with capture_coverage_warnings() as warnings:
-        await package_scan.scan_packages([_node()], options=package_scan.default_scan_options(offline=False))
-    assert any(w.get("reason") == RUNTIME_COVERAGE_UNKNOWN and w.get("release") == "node:18.20.8" for w in warnings)
+        await package_scan.scan_packages([_ruby()], options=package_scan.default_scan_options(offline=False))
+    assert any(w.get("reason") == RUNTIME_COVERAGE_UNKNOWN and w.get("release") == "ruby:3.4.11" for w in warnings)

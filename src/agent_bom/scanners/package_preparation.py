@@ -11,6 +11,7 @@ from agent_bom.output.kernel_headers import is_kernel_header_package
 from agent_bom.package_utils import canonical_package_identity, normalize_package_name, package_purl
 from agent_bom.resolvers.registry_budget import consume_registry_warnings
 from agent_bom.scanners import cpython_advisory as runtime_cve
+from agent_bom.scanners.nodejs_advisory import is_nodejs_runtime, scan_nodejs_runtimes
 from agent_bom.scanners.package_matching import _emit_scan_warning as _emit_scan_warning
 from agent_bom.scanners.package_matching import _scanners_patchable
 from agent_bom.scanners.package_versions import is_unresolved_package as _is_unresolved_package
@@ -147,10 +148,14 @@ def _prepare_packages(packages: list[Package]) -> list[Package]:
 
 
 async def _scan_runtime_packages(packages: list[Package], offline: bool) -> tuple[list[Package], int]:
-    """Scan CPython runtimes separately; return the remaining packages and runtime vuln count."""
+    """Scan CPython and Node.js runtimes against their dedicated sources; return the remaining packages and vuln count.
+
+    Node.js runtimes stay in the package list so local NVD CPE ranges can still add findings.
+    """
     reset_scan_warnings_only()
     runtime_packages = [package for package in packages if runtime_cve.is_cpython_runtime(package)]
     runtime_count = await runtime_cve.scan_cpython_runtimes(runtime_packages, offline=offline)
+    runtime_count += await scan_nodejs_runtimes([package for package in packages if is_nodejs_runtime(package)], offline=offline)
     packages = [package for package in packages if not runtime_cve.is_cpython_runtime(package)]
     try:
         from agent_bom.resolver import reset_performance_stats as _reset_resolver_performance
