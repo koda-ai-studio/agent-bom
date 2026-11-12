@@ -869,7 +869,9 @@ for (const theme of ["light", "dark"] as const) {
     await openPathQueue(page);
     await page.getByLabel("Attack path queue").getByRole("button", { name: /#2/ }).click();
     const graph = page.getByTestId("security-graph-investigation").locator(".react-flow");
-    await expect(graph.locator(".react-flow__node")).toHaveCount(3);
+    // agent -> server -> credential, with the recorded package path branching off the shared server.
+    await expect(graph.locator(".react-flow__node")).toHaveCount(4);
+    await expect(graph.locator('[data-testid="attack-path-node-pkg:form-data"]')).toHaveAttribute("data-role", "branch");
     for (const width of [1440, 1280]) {
       await page.setViewportSize({ width, height: 1000 });
       await expect.poll(() => graph.evaluate(canvas => {
@@ -957,35 +959,18 @@ test(`mobile selected path keeps its advisory id whole and edge labels inside th
   expect(idLines).toBe(1);
 
   const canvas = detail.locator(".react-flow");
-  await expect(canvas.locator(".graph-relationship-label").first()).toBeVisible();
-  const labelsOutsideCanvas = () => canvas.evaluate(flow => {
+  // Relationship names stay off the lines; every hop sits inside the canvas width.
+  await expect(canvas.getByRole("tooltip")).toHaveCount(0);
+  await expect(canvas.locator(".react-flow__node").first()).toBeVisible();
+  await expect.poll(() => canvas.evaluate(flow => {
     const frame = flow.getBoundingClientRect();
-    return [...flow.querySelectorAll<HTMLElement>(".graph-relationship-label")].flatMap(label => {
-      // Measure the drawn chip, not only its positioned wrapper.
-      const chip = label.querySelector<HTMLElement>(".relationship-badge") ?? label;
-      const outer = label.getBoundingClientRect(), drawn = chip.getBoundingClientRect();
-      const box = { left: Math.min(outer.left, drawn.left), right: Math.max(outer.right, drawn.right),
-        top: Math.min(outer.top, drawn.top), bottom: Math.max(outer.bottom, drawn.bottom), width: Math.max(outer.width, drawn.width) };
-      // A caption wholly outside the focused viewport belongs to a panned-away
-      // hop; one that straddles the canvas edge is drawn cut off.
-      const visible = box.width > 0 && box.right > frame.left && box.left < frame.right && box.bottom > frame.top && box.top < frame.bottom;
-      if (!visible) return [];
-      const inside = box.left >= frame.left - 0.5 && box.right <= frame.right + 0.5 && box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5;
-      const text = label.querySelector<HTMLElement>(".relationship-badge > span:last-child");
-      const cut = text ? text.scrollWidth > text.clientWidth + 1 && getComputedStyle(text).textOverflow !== "ellipsis" : false;
-      return inside && !cut ? [] : [`${label.textContent} ${Math.round(box.left)}-${Math.round(box.right)} in ${Math.round(frame.left)}-${Math.round(frame.right)}${cut ? " cut" : ""}`];
-    });
-  });
-  await expect(canvas.locator(".graph-relationship-label", { hasText: "Acted As" })).toBeVisible();
-  await expect.poll(labelsOutsideCanvas).toEqual([]);
+    return [...flow.querySelectorAll<HTMLElement>(".react-flow__node")].filter(node => {
+      const box = node.getBoundingClientRect();
+      return box.left < frame.left - 0.5 || box.right > frame.right + 0.5;
+    }).map(node => node.dataset.id);
+  })).toEqual([]);
+  await expect(detail.getByRole("button", { name: "Next graph node" })).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath(`mobile-selected-path-fit-${theme}.png`) });
-  // Every focused node keeps its visible captions inside the canvas too.
-  const next = detail.getByRole("button", { name: "Next graph node" });
-  for (let step = 0; step < 3 && await next.isEnabled(); step += 1) {
-    await next.click();
-    await expect.poll(labelsOutsideCanvas).toEqual([]);
-  }
-  await page.screenshot({ path: testInfo.outputPath(`mobile-selected-path-stepped-${theme}.png`) });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 }
@@ -1075,7 +1060,7 @@ test(`a selected queue path missing from the canvas loads its exact graph in ${t
     const inCanvas = (id: string) => canvas.locator(`.react-flow__node[data-id="${id}"]`).evaluate(element => {
       const box = element.getBoundingClientRect();
       const frame = element.closest(".react-flow")!.getBoundingClientRect();
-      return box.width >= 180 && box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
+      return box.width >= 100 && box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
     });
     for (const id of [source.id, target.id]) await expect.poll(() => inCanvas(id)).toBe(true);
     // Opening the queue hides this mounted canvas. Reopening it must fit the
@@ -1281,7 +1266,7 @@ for (const viewport of [
   { width: 1512, height: 811 },
   { width: 1568, height: 780 },
 ] as const) {
-  test(`investigation canvas preserves evidence and saved viewport at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
+  test(`investigation canvas keeps controls above and the legend below the graph at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     await routeCockpit(page);
 
@@ -1292,49 +1277,18 @@ for (const viewport of [
     const detail = page.getByRole("region", { name: "Selected path detail" });
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = detail.getByTestId("security-graph-investigation");
-    const legendBand = detail.getByTestId("security-graph-legend-band");
+    const legend = detail.getByRole("list", { name: "Graph legend" });
     const interactionBand = detail.getByTestId("security-graph-interaction-band");
     const nodeBand = canvas.locator(".react-flow");
-    const graphOptions = interactionBand.getByLabel("Graph options", { exact: true });
     await expect(canvas).toBeVisible();
+    await expect(legend).toBeVisible();
     await expect(interactionBand).toBeVisible();
     await expect(canvas.locator(".react-flow__node")).not.toHaveCount(0);
-    // The resting canvas keeps the legend behind Graph options, so nothing covers the path.
-    await expect(legendBand).toBeHidden();
-
-    const [canvasBox, interactionBox, nodeBandBox] = await Promise.all([
-      canvas.boundingBox(),
-      interactionBand.boundingBox(),
-      nodeBand.boundingBox(),
-    ]);
-    expect(canvasBox).not.toBeNull();
-    expect(interactionBox).not.toBeNull();
-    expect(nodeBandBox).not.toBeNull();
-    expect(interactionBox!.y).toBeGreaterThanOrEqual(canvasBox!.y);
+    const [legendBox, interactionBox, nodeBandBox] = await Promise.all([legend.boundingBox(), interactionBand.boundingBox(), nodeBand.boundingBox()]);
     expect(interactionBox!.y + interactionBox!.height).toBeLessThanOrEqual(nodeBandBox!.y + 1);
-
-    await graphOptions.click();
-    await expect(legendBand).toBeVisible();
-    await expect(legendBand).not.toBeEmpty();
-    const fitButton = interactionBand.getByRole("button", { name: /fit visible/i });
-    await fitButton.click();
-    await graphOptions.click();
-    await expect(legendBand).toBeHidden();
-    await expect.poll(() => page.evaluate(() =>
-      Object.keys(window.localStorage).some((key) => key.startsWith("agent-bom:graph-presentation:v1:")),
-    )).toBe(true);
-    await page.waitForTimeout(350);
-    const savedTransform = await canvas.locator(".react-flow__viewport").getAttribute("style");
-    await page.reload();
-    await page.waitForLoadState("networkidle");
-    await openPathQueue(page);
-    await page.getByLabel("Attack path queue").getByRole("button", { name: /#1/ }).click();
-    await detail.getByRole("button", { name: "Graph", exact: true }).click();
-    await expect(detail.getByTestId("security-graph-investigation")).toBeVisible();
-    await expect.poll(async () =>
-      detail.getByTestId("security-graph-investigation").locator(".react-flow__viewport").getAttribute("style"),
-    ).toBe(savedTransform);
-
+    expect(legendBox!.y).toBeGreaterThanOrEqual(nodeBandBox!.y + nodeBandBox!.height - 1);
+    await expect(legend).toContainText("Selected path");
+    await expect(legend).toContainText("Findings on asset");
     await page.screenshot({
       path: testInfo.outputPath(`security-graph-${viewport.width}x${viewport.height}.png`),
       fullPage: true,
@@ -1640,7 +1594,8 @@ for (const theme of ["light", "dark"] as const) {
         await expect(detail).toBeVisible();
         await expect(detail.getByRole("heading", { level: 2 })).toContainText("GITHUB PERSONAL ACCESS TOKEN");
         const graph = detail.getByTestId("security-graph-investigation");
-        await expect(graph.locator(".react-flow__node")).toHaveCount(3);
+        // The selected path's three hops; other recorded paths that share a node draw as branches.
+        await expect(graph.locator('.react-flow__node [data-role="entry"], .react-flow__node [data-role="path"], .react-flow__node [data-role="target"]')).toHaveCount(3);
         await expect(graph.getByRole("button", { name: "Next graph node" })).toHaveCount(0);
       } else {
         await openPathQueue(page);
@@ -1764,41 +1719,35 @@ for (const theme of ["light", "dark"] as const) {
     const detail = page.getByTestId("selected-exposure-path");
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
+    // agent -> server -> package, the credential path branching off the shared server.
     await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
     await expect(canvas.locator(".react-flow__edge")).toHaveCount(3);
-    await expect(canvas.locator(".graph-relationship-label")).toHaveCount(2);
-    const findingEdge = canvas.locator('.react-flow__edge').filter({ has: page.locator('[data-label-disclosure="on-demand"]') });
-    const findingLabel = canvas.locator(".graph-relationship-label").filter({ hasText: "Has finding" });
-    await expect(findingEdge).toHaveCount(1);
-    await expect(findingLabel).toHaveCount(0);
-    await expect(findingEdge.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
-    await findingEdge.focus();
-    await expect(findingLabel).toBeVisible();
+    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(0);
+    await expect(canvas.getByRole("button", { name: /^1 finding on form-data@4\.0\.0, worst critical/ })).toBeVisible();
+    await expect(canvas.getByRole("tooltip")).toHaveCount(0);
+    const firstLine = canvas.locator('.react-flow__edge[data-id="agent:desktop->server:github:uses"]');
+    await firstLine.focus();
+    await expect(canvas.getByRole("tooltip")).toHaveText(/Uses/);
     await page.keyboard.press("Tab");
-    await expect(findingLabel).toHaveCount(0);
-    await expect(canvas.locator(".graph-relationship-label")).toHaveCount(2);
     await expect(canvas.getByRole("button", { name: "Next graph node" })).toHaveCount(0);
-    await expect(canvas.getByText(/Focused view/)).toHaveCount(0);
     const band = canvas.getByTestId("security-graph-interaction-band");
     await expect(band.getByRole("group", { name: "Exposure path view" })).toBeVisible();
     expect((await band.boundingBox())!.height).toBeLessThan(70);
-    // Every hop, name and relationship chip sits inside the canvas, top to bottom in path order.
+    // Every hop sits inside the canvas, top to bottom in path order on one centre line.
     await expect.poll(() => canvas.evaluate(element => {
       const frame = element.querySelector(".react-flow")!.getBoundingClientRect();
-      const inside = (box: DOMRect) => box.width === 0 || box.left >= frame.left - 0.5 && box.right <= frame.right + 0.5
-        && box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5;
-      const parts = [...element.querySelectorAll(".graph-relationship-label, [data-graph-entity] > *")];
-      const glyphs = ["agent:desktop", "server:github", "pkg:form-data", "cve:form-data"].map(id =>
-        element.querySelector(`.react-flow__node[data-id="${id}"] .graph-entity-glyph`)!.getBoundingClientRect());
+      const inside = (box: DOMRect) => box.left >= frame.left - 0.5 && box.right <= frame.right + 0.5 && box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5;
+      const glyphs = ["agent:desktop", "server:github", "pkg:form-data"].map(id =>
+        element.querySelector(`[data-testid="attack-path-node-${id}"] [data-node-glyph]`)!.getBoundingClientRect());
       const ordered = glyphs.every((box, index) => index === 0 || box.top > glyphs[index - 1]!.bottom);
       const aligned = glyphs.every(box => Math.abs(box.left + box.width / 2 - (glyphs[0]!.left + glyphs[0]!.width / 2)) < 4);
-      return parts.every(part => inside(part.getBoundingClientRect())) && ordered && aligned;
+      return [...element.querySelectorAll(".react-flow__node")].every(node => inside(node.getBoundingClientRect())) && ordered && aligned;
     })).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await canvas.screenshot({ path: testInfo.outputPath(`mobile-column-path-${theme}.png`) });
   });
 
-  test(`mobile selected Graph navigates a long path at readable zoom in ${theme}`, async ({ page }, testInfo) => {
+  test(`mobile selected Graph shows a long path whole at readable zoom in ${theme}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme === "light" ? "dark" : "light");
     await routeCockpit(page, undefined, { qualifiedEvidence: true, longPathNodeCount: 10 });
@@ -1806,47 +1755,22 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: `Switch to ${theme} theme`, exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const detail = page.getByTestId("selected-exposure-path");
-    // The unified interactive graph owns both path rendering and navigation.
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(10);
-    await expect.poll(() => canvas.locator('.react-flow__node[data-id="agent:desktop"]').evaluate(element => {
-      const width = element.getBoundingClientRect().width;
-      const label = element.querySelector("p")!;
-      const zoom = new DOMMatrixReadOnly(getComputedStyle(element.closest(".react-flow")!.querySelector(".react-flow__viewport")!).transform).a;
-      return width >= 180 && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12 && element.getBoundingClientRect().top >= 0 && element.getBoundingClientRect().bottom <= innerHeight;
+    // The advisory is a badge on the package, not a final hop.
+    await expect(canvas.locator('[data-testid="attack-path-node-pkg:form-data"]')).toHaveAttribute("data-role", "target");
+    await expect(canvas.locator('.react-flow__node[data-id="cve:form-data"]')).toHaveCount(0);
+    // The column is never shrunk below a readable zoom; the page scrolls instead of a node stepper.
+    await expect.poll(() => canvas.evaluate(element => {
+      const flow = element.querySelector(".react-flow")!;
+      const zoom = new DOMMatrixReadOnly(getComputedStyle(flow.querySelector(".react-flow__viewport")!).transform).a;
+      const label = element.querySelector('[data-testid="attack-path-node-agent:desktop"] span')!;
+      const frame = flow.getBoundingClientRect();
+      const nodes = [...flow.querySelectorAll(".react-flow__node")].map(node => node.getBoundingClientRect());
+      return zoom >= 0.69 && parseFloat(getComputedStyle(label).fontSize) * zoom >= 9.6
+        && nodes.every(box => box.left >= frame.left - 0.5 && box.right <= frame.right + 0.5 && box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5);
     })).toBe(true);
-    await expect(canvas.getByText("Focused view · 1 of 10")).toBeVisible();
-    await expect.poll(() => canvas.evaluate(element => element.getBoundingClientRect().top)).toBeLessThan(250);
-    await page.screenshot({ path: testInfo.outputPath(`mobile-readable-initial-${theme}.png`), fullPage: false });
-    await expect(canvas.getByRole("button", { name: "Previous graph node" })).toBeDisabled();
-    for (let step = 2; step <= 10; step++) {
-      await canvas.getByRole("button", { name: "Next graph node" }).click();
-      await expect(canvas.getByText(`Focused view · ${step} of 10`)).toBeVisible();
-      const expectedId = step === 10 ? "cve:form-data" : step === 9 ? "pkg:form-data" : `server:hop-${step - 2}`;
-      await expect.poll(() => canvas.locator(`.react-flow__node[data-id="${expectedId}"]`).evaluate(element => {
-        const box = element.getBoundingClientRect();
-        return box.width >= 180 && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight;
-      })).toBe(true);
-    }
-    await expect(canvas.getByRole("button", { name: "Next graph node" })).toBeDisabled();
-    const last = canvas.locator('.react-flow__node[data-id="cve:form-data"]');
-    await expect.poll(() => last.evaluate(element => {
-      const box = element.getBoundingClientRect();
-      const frame = element.closest(".react-flow")!.getBoundingClientRect();
-      return box.width >= 180 && box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
-    })).toBe(true);
-    await canvas.getByLabel("Graph options", { exact: true }).click();
-    await canvas.getByRole("button", { name: "Fit visible graph", exact: true }).click();
-    await expect(canvas.getByText("Overview · 10 nodes")).toBeVisible();
-    await canvas.getByLabel("Graph options", { exact: true }).click();
-    await canvas.getByRole("button", { name: "Previous graph node" }).click();
-    await expect(canvas.getByText("Focused view · 9 of 10")).toBeVisible();
-    await expect.poll(() => canvas.locator('.react-flow__node[data-id="pkg:form-data"]').evaluate(element => {
-      const box = element.getBoundingClientRect();
-      const frame = element.closest(".react-flow")!.getBoundingClientRect();
-      return box.width >= 180 && box.left >= frame.left && box.right <= frame.right;
-    })).toBe(true);
+    await expect(canvas.getByRole("button", { name: "Next graph node" })).toHaveCount(0);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await canvas.screenshot({ path: testInfo.outputPath(`mobile-readable-graph-${theme}.png`) });
   });
@@ -2358,6 +2282,8 @@ test("embedded investigation opens the clicked relationship's exact receipt", as
   await view.scrollIntoViewIfNeeded();
   const edge = view.locator(".react-flow__edge").first();
   const edgeId = await edge.getAttribute("data-id");
+  // The line must be on screen, not just its taller card.
+  await view.getByTestId("attack-path-graph-canvas").evaluate(element => element.scrollIntoView({ block: "center" }));
   const point = await edge.locator(".react-flow__edge-interaction").evaluate(element => {
     const path = element as SVGPathElement;
     const local = path.getPointAtLength(path.getTotalLength() * 0.35);

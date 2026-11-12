@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { PathReachSummary } from "@/components/path-reach-summary";
@@ -14,6 +14,9 @@ const path = {
 describe("path reach summary", () => {
   it("draws the credentials and tools the path's server exposes, with a route to them", () => {
     render(<PathReachSummary path={path} scanId="scan-1" />);
+    // Collapsed below the graph: the counts read at a glance, detail on demand.
+    expect(screen.getByText("OPENAI_API_KEY")).not.toBeVisible();
+    fireEvent.click(screen.getByText("Reported exposure"));
     expect(screen.getByText("OPENAI_API_KEY")).toBeVisible();
     expect(screen.getByText("eval_expression")).toBeVisible();
     expect(screen.getByText(/1 credential · 2 tools/)).toBeVisible();
