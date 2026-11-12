@@ -9,6 +9,10 @@ controlPlane:
     adminSecretRef:
       name: agent-bom-control-plane-admin
   api:
+    # The auth Secret in envFrom supplies request attestation
+    # (AGENT_BOM_TRUST_PROXY_AUTH*, see control-plane-auth-secret.example.yaml).
+    listenerAttestation:
+      fromSecret: true
     # Replace with the subnets the ingress connects to the API from. Without
     # this, every client behind the ingress shares one authentication failure budget.
     trustedProxy:

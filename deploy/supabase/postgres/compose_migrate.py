@@ -279,6 +279,82 @@ def _reconcile_runtime_role_passwords(admin_url: str) -> None:
         engine.dispose()
 
 
+# Required CONNECTION LIMIT per fixed runtime role. Helm derives both from the
+# replica counts and pool sizes it renders; other installs leave them unset.
+CONNECTION_LIMIT_ENV = (
+    ("agent_bom_app", "AGENT_BOM_POSTGRES_APP_CONNECTION_LIMIT"),
+    ("agent_bom_maintenance", "AGENT_BOM_POSTGRES_MAINTENANCE_CONNECTION_LIMIT"),
+)
+_ROLE_LIMIT_SQL = """
+    SELECT t.rolconnlimit,
+           s.rolsuper OR (s.rolcreaterole AND EXISTS (
+             SELECT 1 FROM pg_auth_members m
+             WHERE m.member = s.oid AND m.roleid = t.oid AND m.admin_option
+           ))
+    FROM pg_roles t, pg_roles s
+    WHERE s.rolname = session_user AND t.rolname = %s
+"""
+
+
+def required_connection_limits() -> dict[str, int]:
+    required: dict[str, int] = {}
+    for role, name in CONNECTION_LIMIT_ENV:
+        raw = os.environ.get(name, "").strip()
+        if not raw:
+            continue
+        try:
+            value = int(raw)
+        except ValueError:
+            value = 0
+        if value < 1:
+            raise SystemExit(f"error: {name} must be a positive integer, got {raw!r}")
+        required[role] = value
+    return required
+
+
+def reconcile_connection_limits(connection: Any, required: dict[str, int]) -> None:
+    """Raise each runtime role's CONNECTION LIMIT to cover what its processes can open; never lower one."""
+    for role, needed in required.items():
+        row = connection.execute(_ROLE_LIMIT_SQL, (role,)).fetchone()
+        if row is None:
+            print(f"compose-migrate: role {role} does not exist; give it CONNECTION LIMIT {needed} or more", flush=True)  # noqa: T201
+            continue
+        current, can_alter = int(row[0]), bool(row[1])
+        if current == -1 or current >= needed:
+            continue
+        if not can_alter:
+            raise SystemExit(
+                f"error: {role} CONNECTION LIMIT is {current}, below the {needed} connections the configured replicas can open, "
+                f"and the migration role cannot change it. Run as a role administrator: ALTER ROLE {role} CONNECTION LIMIT {needed}"
+            )
+        # Role names come from CONNECTION_LIMIT_ENV and the limit is an int.
+        connection.execute(f"ALTER ROLE {role} CONNECTION LIMIT {int(needed)}")
+        print(f"compose-migrate: {role} CONNECTION LIMIT {current} -> {needed}", flush=True)  # noqa: T201
+    row = connection.execute("SELECT current_setting('max_connections')").fetchone()
+    server_max = int(row[0]) if row else 0
+    total = sum(required.values())
+    if server_max and total > server_max:
+        print(  # noqa: T201
+            f"compose-migrate: warning: max_connections={server_max} is below the {total} connections the runtime roles may open; "
+            "raise max_connections or lower controlPlane.postgres.pool.maxSize",
+            flush=True,
+        )
+
+
+def _reconcile_runtime_role_connection_limits(admin_url: str) -> None:
+    required = required_connection_limits()
+    if not required:
+        return
+    import sqlalchemy
+
+    engine = sqlalchemy.create_engine(admin_url)
+    try:
+        with engine.begin() as conn:
+            reconcile_connection_limits(conn.connection.driver_connection, required)
+    finally:
+        engine.dispose()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run Postgres migrations and reconcile the fixed runtime roles.")
     parser.add_argument("--config", default=ALEMBIC_CONFIG, help="Alembic configuration path relative to the repository root.")
@@ -296,6 +372,7 @@ def main(argv: list[str] | None = None) -> int:
         _run_alembic(root, args.config, "stamp", BASELINE_REVISION)
     _run_alembic(root, args.config, "upgrade", "head")
     _reconcile_runtime_role_passwords(url)
+    _reconcile_runtime_role_connection_limits(url)
     print("compose-migrate: upgrade head OK", flush=True)  # noqa: T201 -- migration CLI progress
     return 0
 

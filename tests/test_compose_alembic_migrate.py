@@ -2,12 +2,27 @@
 
 from __future__ import annotations
 
+import importlib.util
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from deploy.supabase.postgres import compose_migrate as cm
+
+def _load_compose_migrate():
+    # Loaded by path: the qualification lane tests put scripts/qualification
+    # (which has its own deploy.py) first on sys.path, shadowing the deploy package.
+    path = Path(__file__).resolve().parents[1] / "deploy/supabase/postgres/compose_migrate.py"
+    spec = importlib.util.spec_from_file_location("abom_compose_migrate_under_test", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+cm = _load_compose_migrate()
 
 
 def test_resolve_database_url_requires_explicit_admin_url(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

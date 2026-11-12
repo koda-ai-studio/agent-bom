@@ -157,8 +157,8 @@ evidence (`scripts/run_scale_evidence.py`) is in-process and tops out at
 1k–10k entities. A clustered Postgres run at 50k+ entities is the next
 piece needed before claiming "elastic at 1M edges." Until that lands, keep
 your `maxReplicas` calibrated to your Postgres connection-pool capacity.
-Use `AGENT_BOM_POSTGRES_POOL_MAX_SIZE` in `controlPlane.api.env` and include
-the separate fencing and maintenance pools, process count, and rollout headroom.
+Size `controlPlane.postgres.pool.maxSize`; the chart derives the role
+connection limits from it, the process count and rollout headroom.
 See [PostgreSQL connection budget](control-plane-helm.md#postgresql-connection-budget).
 
 Graph store-backed builds auto-enable for larger API snapshots, but the

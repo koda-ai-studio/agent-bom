@@ -160,20 +160,39 @@ on SQLite or `5Gi` on PostgreSQL.
 
 ### PostgreSQL connection budget
 
-Budget all pools in `src/agent_bom/api/postgres_common.py`, not only the main
-application pool. Each API or worker process can open:
+Set pool sizes with `controlPlane.postgres.pool.minSize` (default 2) and
+`.maxSize` (default 20); the chart renders them as
+`AGENT_BOM_POSTGRES_POOL_MIN_SIZE` / `_MAX_SIZE` and rejects either variable
+set by hand in `controlPlane.api.env`. Each API or worker process can open, as
+`agent_bom_app`:
 
-- Application pool: `max(1, AGENT_BOM_POSTGRES_POOL_MIN_SIZE, AGENT_BOM_POSTGRES_POOL_MAX_SIZE)`.
-- Idempotency fencing pool: `max(1, min(4, AGENT_BOM_POSTGRES_POOL_MAX_SIZE))`.
-- Maintenance pool: the same bound as the fencing pool, with separate credentials.
+- Application pool: `minSize` kept open, growing to `maxSize`.
+- Admission pool (authentication and rate-limit state): `min(4, maxSize)`.
+- Idempotency fencing pool: `min(4, maxSize)`.
+- Graph builds: up to 4 direct connections, one per concurrent build.
 
-With the default minimum 5 and maximum 20, that is **28 direct connections per
-API process**. Six replicas with one process each can use 168; the KEDA example's
-12 replicas can use 336. Threads share a process's pools; extra API processes
-multiply this budget. Add gateway/other clients, migrations, backups, and
-operational reserve separately. Reserve capacity for rolling-update surge and
-terminating pods too; the steady-state scaler maximum is not a hard bound on
-all concurrently existing pods. See
+and, as `agent_bom_maintenance`, a pool of `min(4, maxSize)`. With the defaults
+that is **32 application and 4 maintenance connections per process**, of which
+about 4 stay open while idle.
+
+The migration Job sets both roles' `CONNECTION LIMIT` from this budget after
+every upgrade: every API and worker process at its largest configured count
+(replicas, HPA maximum, KEDA fallback) plus the 25% rolling-update surge, plus
+5 application and 4 maintenance connections for the post-install verification
+Job and operator sessions. Three API replicas give 4 processes and a limit of
+133; an HPA maximum of 6 gives 8 processes and 261. The Job only raises a
+limit, never lowers it, and fails the upgrade with the `ALTER ROLE` statement
+to run when the migration role cannot administer the runtime role. Set
+`controlPlane.postgres.connectionLimits.app` / `.maintenance` to pin a larger
+value; one below the budget fails rendering. With
+`controlPlane.migrations.enabled=false`, apply the same limits yourself.
+Earlier migrations pinned `agent_bom_app` at 20, below what two idle
+replicas hold during a rolling update; revision `20261112_01` raises a bounded
+limit to at least 100 on every install path.
+
+Postgres `max_connections` must cover both limits plus its reserved
+connections; the migration Job prints a warning when it does not. Add
+gateway/other clients and backups separately. See
 [Kubernetes Deployment updates](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/).
 
 For a connection pooler, budget client slots and database connections
@@ -300,8 +319,40 @@ runtime model.
 - multi-replica API deployments now require a PostgreSQL-backed shared rate-limit
   store; the chart exports the replica floor and the API fails closed instead of
   silently falling back to process-local limits
+- a clustered or production API (more than one replica, an autoscaler,
+  `AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT=1` or `AGENT_BOM_DEPLOYMENT_ENV=production`)
+  on a non-loopback listener refuses to start without request attestation:
+  trusted-proxy auth (`AGENT_BOM_TRUST_PROXY_AUTH=1` with
+  `AGENT_BOM_TRUST_PROXY_AUTH_SECRET` of at least 32 bytes and
+  `AGENT_BOM_TRUST_PROXY_AUTH_ISSUER`) or app-native mTLS
+  (`AGENT_BOM_TLS_CERT_FILE`, `_KEY_FILE`, `_CLIENT_CA_FILE`,
+  `_REQUIRE_CLIENT_CERT=1`). The chart fails rendering when
+  `controlPlane.api.env` shows neither, unless
+  `controlPlane.api.listenerAttestation.fromSecret=true` records that a Secret
+  in `controlPlane.api.envFrom` supplies them
+  (see `examples/control-plane-auth-secret.example.yaml`)
 - same-origin ingress avoids default CORS sprawl
-- network policy stays enabled, with configurable ingress restrictions
+- network policy stays enabled: API and UI pods admit their own namespace and
+  `controlPlane.networkPolicy.ingressNamespaces` (default `ingress-nginx`).
+  A `NodePort` or `LoadBalancer` Service receives traffic from outside the
+  cluster, so set `controlPlane.networkPolicy.ingressCIDRs` to the client, load
+  balancer or node ranges (node CIDRs when `externalTrafficPolicy` is
+  `Cluster`, since traffic then arrives from the node); each CIDR is admitted to
+  the component's port only. Without it, or a rule in `additionalIngress`, the
+  chart fails rendering instead of installing a Service the policy blocks
+
+### Graceful termination
+
+A terminating API pod first sleeps `controlPlane.api.shutdown.preStopSleepSeconds`
+(default 10) while still serving, so Kubernetes can remove it from Service
+endpoints and kube-proxy or the load balancer stop routing to it. SIGTERM then
+turns `/readyz` to 503 at once, closes the listener, gives in-flight requests up
+to `gracefulShutdownSeconds` (default 10) and background work (scans, report
+jobs) up to `drainSeconds` (default 25). Their sum plus 5 s must fit
+`controlPlane.api.terminationGracePeriodSeconds` (default 60), or rendering
+fails. Workers serve no Service, skip the sleep and need
+`gracefulShutdownSeconds + drainSeconds + 5` within
+`controlPlane.worker.terminationGracePeriodSeconds` (default 45).
 
 ## Minimal values example
 
@@ -339,6 +390,10 @@ controlPlane:
     envFrom:
       - secretRef:
           name: agent-bom-control-plane-auth
+    # Two replicas: the API refuses to start without request attestation. The
+    # auth Secret supplies AGENT_BOM_TRUST_PROXY_AUTH, _SECRET and _ISSUER.
+    listenerAttestation:
+      fromSecret: true
   ingress:
     enabled: true
     className: nginx
@@ -538,8 +593,8 @@ You still own:
 - set `AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT=1` for multi-replica production
   control planes so the API refuses to start if the shared limiter backend is unavailable
 - tune Postgres-backed control planes explicitly with
-  `AGENT_BOM_POSTGRES_POOL_MIN_SIZE`, `AGENT_BOM_POSTGRES_POOL_MAX_SIZE`,
-  `AGENT_BOM_POSTGRES_CONNECT_TIMEOUT_SECONDS`, and
+  `controlPlane.postgres.pool.minSize` / `.maxSize` (which also size the role
+  connection limits), `AGENT_BOM_POSTGRES_CONNECT_TIMEOUT_SECONDS`, and
   `AGENT_BOM_POSTGRES_STATEMENT_TIMEOUT_MS`
 - enable `controlPlane.observability.prometheusRule.enabled=true` when the cluster already runs Prometheus Operator
 - keep `monitor.enabled=true` and `monitor.serviceMonitor.enabled=true` in the production preset unless your platform team has a different scrape contract

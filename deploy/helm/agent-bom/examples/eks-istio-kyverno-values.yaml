@@ -38,8 +38,14 @@ controlPlane:
     envFrom:
       - secretRef:
           name: agent-bom-control-plane-auth
+    # Delegated mTLS still needs trusted-proxy attestation: the auth Secret
+    # supplies AGENT_BOM_TRUST_PROXY_AUTH_SECRET and _ISSUER.
+    listenerAttestation:
+      fromSecret: true
     env:
       - name: AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT
+        value: "1"
+      - name: AGENT_BOM_TRUST_PROXY_AUTH
         value: "1"
       - name: AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE
         value: delegated
