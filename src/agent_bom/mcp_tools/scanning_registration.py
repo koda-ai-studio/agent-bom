@@ -309,7 +309,8 @@ def _register_check(
             Field(
                 description=(
                     "Package ecosystem: 'npm', 'pypi', 'go', 'cargo', 'maven', 'nuget', "
-                    "'rubygems', 'composer', 'swift', 'pub', 'hex', 'conda', 'deb', 'apk', or 'rpm'."
+                    "'rubygems', 'composer', 'swift', 'pub', 'hex', 'conda', 'deb', 'apk', or 'rpm'. "
+                    "deb, apk and rpm read the server's own OS package data, so a public lookup server refuses them."
                 )
             ),
         ] = "npm",
@@ -345,7 +346,8 @@ def _register_check(
             ecosystem: Package ecosystem — "npm", "pypi", "go", "cargo",
                        "maven", "nuget", "rubygems", "composer", "swift",
                        "pub", "hex", "conda", "deb", "apk", or "rpm".
-                       Defaults to "npm".
+                       Defaults to "npm". deb, apk and rpm read the server's
+                       own OS package data and are refused on a public server.
 
         Returns:
             JSON with package, version, ecosystem, vulnerability count,

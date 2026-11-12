@@ -26,6 +26,7 @@ MANIFESTS = (
     "integrations/agent-bom-guard/.claude-plugin/plugin.json",
     "integrations/codex/plugin.json",
     "integrations/codex/.codex-plugin/plugin.json",
+    "integrations/openai-mcp/plugin.json",
 )
 _PIN = re.compile(r"agent-bom(?:\[[a-z]+\])?==(\d[^\s\"',`]*)")
 _LEGAL_PAGES = ("site-docs/privacy.md", "site-docs/terms.md")

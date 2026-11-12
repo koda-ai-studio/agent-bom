@@ -93,6 +93,11 @@ POLICY: dict[str, BasePolicy] = {
         expected_tags=("3.12.15-slim",),
         rationale="MCP-over-SSE runtime; Debian slim matches the rest of deploy/docker/.",
     ),
+    "deploy/docker/Dockerfile.public-mcp": BasePolicy(
+        image="python",
+        expected_tags=("3.12.15-slim",),
+        rationale="Public lookup MCP server; same Debian slim base as Dockerfile.sse.",
+    ),
     "deploy/docker/Dockerfile.snowpark": BasePolicy(
         image="python",
         expected_tags=("3.11.17-slim",),

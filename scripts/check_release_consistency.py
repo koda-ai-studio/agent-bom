@@ -129,6 +129,11 @@ MANAGED_VERSION_REFS: list[tuple[Path, re.Pattern[str], str]] = [
         "MCP Dockerfile ARG",
     ),
     (
+        ROOT / "deploy" / "docker" / "Dockerfile.public-mcp",
+        re.compile(r"^ARG VERSION=([0-9]+\.[0-9]+\.[0-9]+)$", re.M),
+        "public lookup MCP Dockerfile ARG",
+    ),
+    (
         ROOT / "deploy" / "docker" / "Dockerfile.snowpark",
         re.compile(r"^ARG VERSION=([0-9]+\.[0-9]+\.[0-9]+)$", re.M),
         "Snowpark Dockerfile ARG",

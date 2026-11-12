@@ -3,6 +3,8 @@
 from collections.abc import Callable
 from typing import Any
 
+from agent_bom.mcp_tools.openai_challenge import attach_challenge_route
+
 
 def attach_metadata_routes(
     mcp: Any,
@@ -17,6 +19,7 @@ def attach_metadata_routes(
     from agent_bom.mcp_server_metadata import build_health_payload, build_root_metadata, build_server_card
 
     public_fields = {"public_readonly": anonymous_tools is not None, "anonymous_tools": list(anonymous_tools or [])}
+    attach_challenge_route(mcp)
 
     @mcp.custom_route("/.well-known/mcp/server-card.json", methods=["GET"])
     async def server_card_route(request):

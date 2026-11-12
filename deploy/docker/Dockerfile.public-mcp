@@ -1,0 +1,107 @@
+# Public lookup MCP server: no login, two read-only tools (check, intel_lookup).
+#
+# A separate internet-facing deployment, on its own hostname, for directory
+# listings that need a public endpoint. It never accepts OAuth (startup refuses
+# the combination) and registers no other tool, prompt or resource. The
+# authenticated hosted server keeps using Dockerfile.sse and railway.json.
+#
+# At start it syncs a scoped advisory database (OSV PyPI and npm, CISA KEV,
+# FIRST EPSS: about 250 MB downloaded, 70 to 150 seconds) so intel_lookup does
+# not answer from an empty database, then serves streamable HTTP on $PORT.
+# If the sync fails the server still starts and intel_lookup reports the
+# database as unsynced instead of claiming an advisory does not exist.
+#
+# Build:   docker build -f deploy/docker/Dockerfile.public-mcp -t agent-bom-public-mcp .
+# Run:     docker run -p 8423:8423 -e AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS=0 agent-bom-public-mcp
+# Test:    curl http://localhost:8423/health
+#
+# Environment variables (see docs/PLUGIN_SUBMISSION.md, "Route B"):
+#   PORT                                     Injected by the platform.
+#   AGENT_BOM_MCP_PUBLIC_URL                 https://<public host>, no path.
+#   AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS  Proxies that append X-Forwarded-For (1 behind one edge).
+#   AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT   Calls per client per 60 s window (default 30).
+#   AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT    Anonymous calls per 60 s window, all clients (default 300).
+#   AGENT_BOM_OPENAI_APPS_CHALLENGE          Domain-verification token; unset serves 404.
+# Do not set AGENT_BOM_MCP_BEARER_TOKEN or any AGENT_BOM_MCP_OAUTH_* variable here.
+
+## ── Builder stage ────────────────────────────────────────────────────────────
+FROM python:3.12.15-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f AS builder
+
+WORKDIR /app
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG SSL_CERT_FILE
+ARG REQUESTS_CA_BUNDLE
+ARG CURL_CA_BUNDLE
+ARG PIP_CERT
+ENV HTTP_PROXY=${HTTP_PROXY} \
+    HTTPS_PROXY=${HTTPS_PROXY} \
+    NO_PROXY=${NO_PROXY} \
+    SSL_CERT_FILE=${SSL_CERT_FILE} \
+    REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE} \
+    CURL_CA_BUNDLE=${CURL_CA_BUNDLE} \
+    PIP_CERT=${PIP_CERT}
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff /uv /uvx /bin/
+COPY pyproject.toml uv.lock README.md LICENSE ./
+COPY docs/registry/PYPI_README.md ./docs/registry/
+COPY src/ ./src/
+
+RUN uv sync --locked --no-dev --no-editable --extra mcp-server
+
+## ── Runtime stage ────────────────────────────────────────────────────────────
+FROM python:3.12.15-slim@sha256:05cda9777409a9c3ffddd94a4c476b79f0769a0b4857f0c7ed9226b6800b0d6f
+
+ARG VERSION=0.114.0
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ARG SSL_CERT_FILE
+ARG REQUESTS_CA_BUNDLE
+ARG CURL_CA_BUNDLE
+ARG PIP_CERT
+
+LABEL org.opencontainers.image.title="agent-bom public lookup MCP server"
+LABEL org.opencontainers.image.description="No-login MCP server with two read-only lookups: package vulnerability check and advisory lookup"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.source="https://github.com/koda-ai-studio/agent-bom"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL io.modelcontextprotocol.server.transport="streamable-http"
+
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/LICENSE /app/LICENSE
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
+RUN python -m pip uninstall --yes setuptools wheel pip \
+    && rm -rf /root/.cache/pip
+
+RUN addgroup --system abom && adduser --system --ingroup abom abom
+# The advisory database must live under HOME or /tmp (db/schema.py).
+RUN mkdir -p /home/abom/.agent-bom/db && chown -R abom:abom /home/abom
+USER abom
+
+ENV HOME=/home/abom
+ENV PYTHONUNBUFFERED=1
+ENV VIRTUAL_ENV=/app/.venv
+ENV PATH="/app/.venv/bin:${PATH}"
+ENV PORT=8423
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
+ENV SSL_CERT_FILE=${SSL_CERT_FILE}
+ENV REQUESTS_CA_BUNDLE=${REQUESTS_CA_BUNDLE}
+ENV CURL_CA_BUNDLE=${CURL_CA_BUNDLE}
+ENV PIP_CERT=${PIP_CERT}
+
+EXPOSE ${PORT}
+
+# The server answers /health only after the advisory sync, so allow for it.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=240s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8423}/health')" || exit 1
+
+# Shell form so $PORT expands at runtime. The flags are fixed in the image, so
+# a mistyped variable cannot widen this deployment beyond the two lookups.
+CMD agent-bom db update --source osv --osv-ecosystem pypi --osv-ecosystem npm --source kev --source epss || echo "advisory sync failed; intel_lookup will report an unsynced database" >&2; exec agent-bom mcp server --transport streamable-http --host 0.0.0.0 --port ${PORT} --public-readonly --profile public

@@ -21,7 +21,7 @@ SPEC.loader.exec_module(gate)
 
 def _copy_tree(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
-    for relative in ("integrations/claude-code", "integrations/agent-bom-guard", "integrations/codex"):
+    for relative in ("integrations/claude-code", "integrations/agent-bom-guard", "integrations/codex", "integrations/openai-mcp"):
         shutil.copytree(ROOT / relative, root / relative)
     (root / "site-docs").mkdir(parents=True)
     for page in ("privacy.md", "terms.md"):

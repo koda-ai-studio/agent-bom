@@ -124,6 +124,12 @@ PROFILES = {
         frozenset({"compliance-report"}),
         _COMMON_RESOURCES | {"policy://template", "compliance://framework-controls"},
     ),
+    "public": ToolProfile(
+        "Anonymous package and advisory lookups for an internet-facing read-only server; no prompts or resources.",
+        frozenset({"check", "intel_lookup"}),
+        frozenset(),
+        frozenset(),
+    ),
     "guided": ToolProfile("Compatibility catalog for all eight workflow prompts.", _GUIDED_TOOL_NAMES, None, None),
     "full": ToolProfile("Explicit compatibility catalog with all tools and optional plugins.", None, None, None),
 }

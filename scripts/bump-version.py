@@ -33,6 +33,7 @@ VERSION_LOCATIONS: list[tuple[str, re.Pattern, str]] = [
     # Dockerfiles
     ("deploy/docker/Dockerfile.runtime", re.compile(r"^(ARG VERSION=)\S+", re.M), r"\g<1>{v}"),
     ("deploy/docker/Dockerfile.sse", re.compile(r"^(ARG VERSION=)\S+", re.M), r"\g<1>{v}"),
+    ("deploy/docker/Dockerfile.public-mcp", re.compile(r"^(ARG VERSION=)\S+", re.M), r"\g<1>{v}"),
     ("deploy/docker/Dockerfile.mcp", re.compile(r"^(ARG VERSION=)\S+", re.M), r"\g<1>{v}"),
     ("deploy/docker/Dockerfile.collector", re.compile(r"^(ARG VERSION=)\S+", re.M), r"\g<1>{v}"),
     # MCP Registry server.json (version field + pypi identifier version)

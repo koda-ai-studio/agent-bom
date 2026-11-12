@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -260,3 +262,13 @@ SYNC_META_SOURCE_LABELS: dict[str, str] = {
 def sync_meta_source_label(source_id: str) -> str:
     """Map a ``sync_meta.source`` id to its human display label (OSV/GHSA/…)."""
     return SYNC_META_SOURCE_LABELS.get(source_id.strip().lower(), source_id.upper())
+
+
+def sync_coverage(conn: sqlite3.Connection) -> dict[str, Any]:
+    """What an advisory miss was checked against; an unsynced database proves nothing."""
+    rows = conn.execute("SELECT source, last_synced, record_count FROM sync_meta WHERE record_count > 0 ORDER BY source").fetchall()
+    sources = [str(row[0]) for row in rows]
+    if not sources:
+        note = "The local advisory database has not been synced, so a miss does not mean the advisory does not exist."
+        return {"synced": False, "sources": [], "note": note}
+    return {"synced": True, "sources": sources, "last_synced": max((str(row[1]) for row in rows if row[1]), default=None)}

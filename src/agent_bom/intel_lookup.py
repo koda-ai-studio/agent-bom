@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import unquote
 
 from agent_bom.db.intel_catalog import CANONICAL_INTEL_SOURCES as CANONICAL_INTEL_SOURCES
-from agent_bom.db.intel_catalog import SYNC_META_SOURCE_LABELS, sync_meta_source_label
+from agent_bom.db.intel_catalog import SYNC_META_SOURCE_LABELS, sync_coverage, sync_meta_source_label
 from agent_bom.db.intel_catalog import VENDOR_ADVISORY_SOURCE_IDS as VENDOR_ADVISORY_SOURCE_IDS
 from agent_bom.db.intel_catalog import IntelSource as IntelSource
 from agent_bom.db.lookup import LocalVuln, _current_severity, lookup_package
@@ -470,7 +470,7 @@ def lookup_advisory(advisory_id: str, *, db_path: Path | None = None) -> dict[st
                 (upper_id,),
             ).fetchall()
         if not rows:
-            return {"schema_version": "intel.lookup.v1", "found": False, "query": raw_id, "advisory": None}
+            return {"schema_version": "intel.lookup.v1", "found": False, "query": raw_id, "advisory": None, "database": sync_coverage(conn)}
         first = rows[0]
         aliases = [alias for alias in (first["aliases"] or "").split(",") if alias]
         cwes = [cwe for cwe in (first["cwe_ids"] or "").split(",") if cwe]
