@@ -57,7 +57,7 @@ def test_cli_uses_focused_default():
 
 
 @pytest.mark.parametrize(
-    "profile, count", [("scan", 8), ("graph", 18), ("cloud", 6), ("runtime", 7), ("audit", 10), ("guided", 29), ("full", 99)]
+    "profile, count", [("scan", 8), ("graph", 19), ("cloud", 6), ("runtime", 7), ("audit", 10), ("guided", 29), ("full", 100)]
 )
 def test_live_card_and_health_match_active_surface(profile, count):
     from starlette.testclient import TestClient
