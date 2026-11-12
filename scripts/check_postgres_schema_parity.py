@@ -44,6 +44,18 @@ _IGNORED_LINE = re.compile(
     re.I,
 )
 _IGNORED_STATEMENT = re.compile(r"^\s*(CREATE|DROP)\s+DATABASE\b|^\s*ALTER\s+DATABASE\b", re.I)
+# A PostgreSQL 16.16 server stamps every column with a `pg_attver` option whose
+# value differs per database. Its own pg_dump hides it; an older client prints it
+# as `ALTER COLUMN ... SET (pg_attver=N)`. It is server bookkeeping, not schema.
+_COLUMN_OPTIONS = re.compile(r"^(ALTER TABLE ONLY \S+ ALTER COLUMN \S+ SET) \((.*)\)$", re.I)
+
+
+def _without_attribute_version(statement: str) -> str:
+    match = _COLUMN_OPTIONS.match(statement)
+    if match is None or "pg_attver=" not in match.group(2):
+        return statement
+    options = [part.strip() for part in match.group(2).split(",") if not part.strip().startswith("pg_attver=")]
+    return f"{match.group(1)} ({', '.join(options)})" if options else ""
 
 
 def _pg_dump(url: str) -> str:
@@ -90,7 +102,7 @@ def _statements(dump: str) -> set[str]:
         # Splitting on ";\n" leaves the final statement of a dump carrying its
         # terminator while every other one lost it, which would make a
         # statement's identity depend on where it happened to appear.
-        statement = " ".join(raw.split()).rstrip(";").strip()
+        statement = _without_attribute_version(" ".join(raw.split()).rstrip(";").strip())
         if not statement or _IGNORED_STATEMENT.match(statement):
             continue
         statements.add(statement)
