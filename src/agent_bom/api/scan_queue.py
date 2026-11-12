@@ -23,7 +23,7 @@ import logging
 import os
 import threading
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agent_bom.config import (
     API_SCAN_CLAIM_POLL_SECONDS,
@@ -32,24 +32,50 @@ from agent_bom.config import (
 )
 from agent_bom.core.settings import env_str
 
+if TYPE_CHECKING:
+    from agent_bom.api.models import ScanJob
+
 _logger = logging.getLogger(__name__)
 _local_dispatch_lock = threading.Lock()
-_local_dispatches: set[str] = set()
+# Held claim per (tenant, job) -> the job of a dispatch refused while it was held, if any.
+_local_dispatches: dict[tuple[str, str], ScanJob | None] = {}
 
 
-def claim_local_dispatch(job_id: str) -> bool:
-    """Claim one in-process handoff; a fresh process may reclaim durable PENDING jobs."""
+def _dispatch_key(job: ScanJob) -> tuple[str, str]:
+    return (job.tenant_id, job.job_id)
 
+
+def claim_local_dispatch(job: ScanJob) -> bool:
+    """Claim one in-process handoff; a fresh process may reclaim durable PENDING jobs.
+
+    A refused claim is not dropped: it is recorded as a rerun request that the
+    worker holding the claim acts on in :func:`finish_local_dispatch`, so a job
+    re-admitted while its previous worker is still unwinding is not stranded.
+    """
+
+    key = _dispatch_key(job)
     with _local_dispatch_lock:
-        if job_id in _local_dispatches:
+        if key in _local_dispatches:
+            _local_dispatches[key] = job
             return False
-        _local_dispatches.add(job_id)
+        _local_dispatches[key] = None
         return True
 
 
-def release_local_dispatch(job_id: str) -> None:
+def finish_local_dispatch(job: ScanJob) -> ScanJob | None:
+    """End a worker's handoff; return a dispatch refused meanwhile, keeping the claim for it."""
+
+    key = _dispatch_key(job)
     with _local_dispatch_lock:
-        _local_dispatches.discard(job_id)
+        rerun = _local_dispatches.pop(key, None)
+        if rerun is not None:
+            _local_dispatches[key] = None
+        return rerun
+
+
+def release_local_dispatch(job: ScanJob) -> None:
+    with _local_dispatch_lock:
+        _local_dispatches.pop(_dispatch_key(job), None)
 
 
 def reset_local_dispatches_for_tests() -> None:

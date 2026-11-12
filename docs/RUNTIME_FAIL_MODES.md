@@ -643,6 +643,14 @@ be redelivered. Worker reads retry briefly first, and a store error never marks
 the report failed. Without distributed dispatch the job stays `pending`: a resubmit
 re-offers it, and the age timeout or next restart fails it otherwise.
 
+Without distributed dispatch, one process runs each job at most once at a time.
+A dispatch that arrives while the same tenant's job is still held by a finishing
+worker, such as an identical push after retention or the retry of a failed push,
+is recorded rather than dropped. When the worker finishes it re-reads the job and
+runs it again only if it is `pending`, so a replay of the admission it just
+finished does not run twice. If that read fails or the executor is shutting
+down, the job stays `pending` for the next resubmit, the age timeout or restart.
+
 ## Hosted MCP OAuth
 
 OAuth authentication is fail-closed and independent of gateway fail-mode flags.
