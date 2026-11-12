@@ -60,7 +60,7 @@ ARG CURL_CA_BUNDLE
 ARG PIP_CERT
 
 LABEL org.opencontainers.image.title="agent-bom MCP Server"
-LABEL org.opencontainers.image.description="Security scanner for AI infrastructure — MCP server with streamable HTTP transport"
+LABEL org.opencontainers.image.description="AI supply-chain BOM: agents, MCP servers, AI packages and recorded reach. MCP server (streamable HTTP)."
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/koda-ai-studio/agent-bom"
 LABEL org.opencontainers.image.licenses="Apache-2.0"

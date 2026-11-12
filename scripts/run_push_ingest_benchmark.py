@@ -104,6 +104,72 @@ async def run(agents: int, seed: int, mode: str, readers: int) -> dict:
     }
 
 
+def _idle_now() -> bool:
+    from agent_bom.api import (
+        current_graph_builds,
+        exec_read_prewarm,
+        finding_reachability_prewarm,
+        graph_rollup_prewarm,
+        posture_counts_cache,
+    )
+
+    with current_graph_builds._QUEUE.lock:
+        builds = bool(current_graph_builds._QUEUE.pending)
+    worker = exec_read_prewarm._WORKER
+    return not (
+        builds
+        or (worker is not None and worker.is_alive())
+        or not graph_rollup_prewarm.wait_idle(0)
+        or not finding_reachability_prewarm.wait_idle(0)
+        or not posture_counts_cache.wait_for_posture_precompute(0)
+    )
+
+
+def drain_background_work(timeout: float) -> list[str]:
+    """Finish every worker a push commit starts; return the ones still busy at the deadline.
+
+    A pushed job reads ``stored`` before its worker records the posture trend
+    and schedules warm-ups, and each of those can queue the next. The control
+    plane may only be deleted once all of them are idle.
+    """
+    from concurrent.futures import wait
+
+    from agent_bom.api import (
+        current_graph_builds,
+        exec_read_prewarm,
+        finding_reachability_prewarm,
+        graph_rollup_prewarm,
+        pipeline,
+        posture_counts_cache,
+    )
+
+    deadline = time.monotonic() + timeout
+
+    def remaining() -> float:
+        return max(0.0, deadline - time.monotonic())
+
+    pipeline.shutdown_scan_executor(wait=True, cancel_futures=False)
+    while True:
+        busy: list[str] = []
+        if not graph_rollup_prewarm.wait_idle(remaining()):
+            busy.append("graph rollup warm-up")
+        if not finding_reachability_prewarm.wait_idle(remaining()):
+            busy.append("finding reachability warm-up")
+        with current_graph_builds._QUEUE.lock:
+            builds = list(current_graph_builds._QUEUE.pending.values())
+        if wait(builds, timeout=remaining()).not_done:
+            busy.append("current graph build")
+        if not posture_counts_cache.wait_for_posture_precompute(remaining()):
+            busy.append("posture precompute")
+        worker = exec_read_prewarm._WORKER
+        if worker is not None:
+            worker.join(remaining())
+            if worker.is_alive():
+                busy.append("executive read warm-up")
+        if busy or _idle_now():
+            return busy
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--agents", type=int, default=50)
@@ -111,10 +177,18 @@ def main() -> int:
     parser.add_argument("--mode", choices=("async", "sync"), default="async")
     parser.add_argument("--readers", type=int, default=4, help="concurrent probes: one /health plus N-1 /v1/jobs readers")
     parser.add_argument("--health-p99-ms", type=float, default=250.0)
+    parser.add_argument("--drain-seconds", type=float, default=600.0, help="bound on finishing post-commit work before cleanup")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="push-bench-") as workdir:
         _configure_environment(workdir)
-        result = asyncio.run(run(args.agents, args.seed, args.mode, args.readers))
+        try:
+            result = asyncio.run(run(args.agents, args.seed, args.mode, args.readers))
+        finally:
+            busy = drain_background_work(args.drain_seconds)
+        if busy:
+            # Deleting the database under a live worker is the failure this drain prevents; never do it.
+            print(f"post-commit work still running after {args.drain_seconds:.0f} s: {', '.join(busy)}", file=sys.stderr)
+            os._exit(1)
     print(json.dumps(result, sort_keys=True))
     ok = result["ingest_status"] == "stored" and result["jobs_stored"] == 1 and result["health_p99_ms"] < args.health_p99_ms
     return 0 if ok else 1

@@ -28,8 +28,8 @@ tagline under the nav lockup — the wordmark is enough.
 - **No lockup tagline:** Do not ship “BOM for humans & agents” (or similar) under
   the mark/wordmark. Human UI and headless/agent surfaces are both first-class;
   that is product behavior, not a subtitle.
-- **Meta / prose description:** "AI supply-chain BOM: every agent, MCP server and
-  AI package, and what each one can reach."
+- **Meta / prose description:** "AI supply-chain BOM: supported agents, MCP servers
+  and AI packages, and what each one can reach."
 - **Positioning line (README hero):** the same sentence, followed by one audience
   line: "For AppSec and platform engineers. Self-host free; local scans need no
   account." and the one command `uvx agent-bom scan .`.

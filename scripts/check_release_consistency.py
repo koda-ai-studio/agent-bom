@@ -60,7 +60,7 @@ SITE_INDEX = ROOT / "site-docs" / "index.md"
 TOP_DOCKERFILE = ROOT / "Dockerfile"
 PYPROJECT = ROOT / "pyproject.toml"
 MCP_REGISTRY = ROOT / "src" / "agent_bom" / "mcp_registry.json"
-CANONICAL_TAGLINE = "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach."
+CANONICAL_TAGLINE = "AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach."
 CANONICAL_TAGLINE_SURFACES: list[Path] = [
     README,
     PYPI_README,
@@ -76,10 +76,16 @@ CANONICAL_TAGLINE_SURFACES: list[Path] = [
     ROOT / "integrations" / "smithery.yaml",
     GLAMA_SERVER,
     ROOT / "src" / "agent_bom" / "output" / "brand_tokens.py",
+    ROOT / "docs" / "AGENT_CAPABILITY.md",
+    ROOT / "docs" / "images" / "social-preview.source.svg",
+    ROOT / "ui" / "app" / "layout.tsx",
+    ROOT / ".github" / "workflows" / "release.yml",
+    ROOT / ".github" / "workflows" / "refresh-latest-container.yml",
 ]
 # Pre-rebrand copy that must not reappear on any public surface (regex, case-insensitive).
 STALE_TAGLINE_RE = re.compile(
-    r"open security scanner|security scanner (?:and graph )?for (?:AI|agentic) infrastructure|Discover\. Scan\. Correlate\. Act",
+    r"open security scanner|security scanner (?:and graph )?for (?:AI|agentic) infrastructure|Discover\. Scan\. Correlate\. Act"
+    r"|every agent, MCP server and AI package",
     re.IGNORECASE,
 )
 STALE_TAGLINE_SURFACES: list[Path] = [
@@ -88,6 +94,8 @@ STALE_TAGLINE_SURFACES: list[Path] = [
     ROOT / "src" / "agent_bom" / "cli" / "__init__.py",
     ROOT / "integrations" / "mcp-registry" / "server.json",
     ROOT / "docs" / "images" / "social-preview.source.svg",
+    ROOT / "deploy" / "docker" / "Dockerfile.sse",
+    ROOT / "deploy" / "docker" / "Dockerfile.mcp",
 ]
 # registry.modelcontextprotocol.io rejects server.json descriptions over 100 chars (HTTP 422).
 MCP_REGISTRY_DESCRIPTION_MAX = 100

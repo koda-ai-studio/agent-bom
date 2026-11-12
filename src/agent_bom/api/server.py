@@ -159,6 +159,7 @@ from agent_bom.api.server_storage import (  # noqa: E402, F401
     _apply_worker_thread_limit,
     _backend_name,
     _control_plane_backend,
+    _freeze_startup_heap,
     _log_control_plane_auth_posture,
     _postgres_portability_health,
     _preflight_postgres_tenant_isolation,
@@ -298,6 +299,7 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     # cluster. No-op on single-node / non-Postgres deployments.
     _scan_worker = await _scan_queue_module.start_dispatch_worker(_get_store())
 
+    _freeze_startup_heap()
     demo_seed_task: asyncio.Task[None] | None = None
     if os.environ.get("AGENT_BOM_DEMO_ESTATE", "").strip().lower() in {"1", "true", "yes", "on"}:
         from agent_bom.config import demo_story_prewarm_enabled

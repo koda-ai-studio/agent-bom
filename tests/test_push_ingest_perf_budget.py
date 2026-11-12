@@ -10,6 +10,7 @@ concurrent readers are nightly (``perf-scale-evidence.yml``).
 from __future__ import annotations
 
 import asyncio
+import gc
 import json
 import math
 import time
@@ -17,6 +18,7 @@ import time
 import httpx
 import pytest
 
+from agent_bom.api import server_storage
 from scripts.generate_graph_benchmark_estate import generate_estate
 
 pytestmark = pytest.mark.graph_performance
@@ -60,7 +62,11 @@ def sqlite_control_plane(tmp_path, monkeypatch: pytest.MonkeyPatch):
     stores.set_idempotency_store(SQLiteIdempotencyStore(db))
     reset_local_dispatches_for_tests()
     monkeypatch.delenv("AGENT_BOM_PUSH_INGEST_MODE", raising=False)
+    # Measure the heap API start-up leaves: start-up objects frozen out of full collections.
+    server_storage._freeze_startup_heap.cache_clear()
+    server_storage._freeze_startup_heap()
     yield stores
+    gc.unfreeze()
     from agent_bom.api import finding_reachability_prewarm, graph_rollup_prewarm, pipeline
 
     # Large estates queue minutes of warm-up on a loaded runner; drain before restoring stores.
