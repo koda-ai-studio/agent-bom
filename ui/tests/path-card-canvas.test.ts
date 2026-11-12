@@ -37,6 +37,19 @@ describe("pathCardEdges", () => {
     { id: "depends", source: "b", target: "c", data: { relationship: "depends_on" }, style: { strokeWidth: 1.5, opacity: 1 } },
   ];
 
+  it("keeps selected-path relationship captions visible while honoring hidden and on-demand labels", () => {
+    const labelled: Edge[] = [
+      { id: "access", source: "a", target: "b", label: "Can Access", data: { relationship: "can_access", labelVisibility: "auto" } },
+      { id: "hidden", source: "b", target: "c", label: "Uses", data: { relationship: "uses", labelVisibility: "hide" } },
+      { id: "finding", source: "c", target: "d", label: "Vulnerable To", data: { relationship: "vulnerable_to", labelVisibility: "auto" } },
+    ];
+    const result = pathCardEdges(labelled, 0.7, true);
+    expect(result[0]!.data?.labelVisibility).toBe("show");
+    expect(result[1]!.data?.labelVisibility).toBe("hide");
+    expect(result[2]!.data?.labelVisibility).toBe("auto");
+    expect(pathCardEdges(labelled, 0.7)[0]!.data?.labelVisibility).toBe("auto");
+  });
+
   it("keeps strokes and dashes a constant, legible screen size at any zoom", () => {
     const [dashed, solid] = pathCardEdges(edges, 0.5);
     expect(dashed!.style?.strokeWidth).toBe(4);
