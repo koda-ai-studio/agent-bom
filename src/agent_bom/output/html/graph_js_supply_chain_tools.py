@@ -28,49 +28,6 @@ SUPPLY_CHAIN_TOOLS_JS = """\
         setTimeout(function() { cy.resize(); cy.fit(cy.elements(), 40); }, 100);
       }
     });
-    // Graph severity filter
-    document.querySelectorAll('.graph-sev-filter').forEach(function(cb) {
-      cb.addEventListener('change', function() {
-        var checked = Array.from(document.querySelectorAll('.graph-sev-filter:checked')).map(function(c) { return c.value; });
-        cy.nodes().forEach(function(n) {
-          var t = n.data('type') || '';
-          if (t === 'cve' || t.startsWith('cve_')) {
-            var sev = n.data('severity') || t.replace('cve_', '');
-            if (checked.indexOf(sev) === -1) {
-              n.style('display', 'none');
-              n.connectedEdges().style('display', 'none');
-            } else {
-              n.style('display', 'element');
-              n.connectedEdges().style('display', 'element');
-            }
-          }
-        });
-      });
-    });
-
-    // Graph search
-    var graphSearchInput = document.getElementById('graphSearch');
-    if (graphSearchInput) {
-      graphSearchInput.addEventListener('input', function() {
-        var q = this.value.toLowerCase();
-        if (!q) {
-          cy.elements().removeClass('faded highlighted');
-          return;
-        }
-        cy.elements().removeClass('faded highlighted');
-        var matched = cy.nodes().filter(function(n) {
-          return (n.data('label') || '').toLowerCase().indexOf(q) >= 0;
-        });
-        if (matched.length > 0) {
-          var hood = matched.closedNeighborhood();
-          cy.elements().not(hood).addClass('faded');
-          matched.addClass('highlighted');
-        } else {
-          cy.elements().addClass('faded');
-        }
-      });
-    }
-
     // Context menu (right-click on nodes)
     var ctxMenu = document.createElement('div');
     ctxMenu.className = 'cy-ctx-menu';
@@ -115,7 +72,7 @@ SUPPLY_CHAIN_TOOLS_JS = """\
       }});
 
       // Vulnerability node: open in OSV
-      if (t === 'cve' || t.indexOf('cve_')===0) {
+      if ((t === 'cve' || t.indexOf('cve_')===0) && !(d.count > 1)) {
         var vid = d.label || '';
         items.push({sep:true});
         items.push({icon:'&#x1f517;',label:'Open in OSV',action:function(){
@@ -219,23 +176,27 @@ SUPPLY_CHAIN_TOOLS_JS = """\
       cy.animate({ center: { x: targetX, y: targetY }, duration: 300 });
     });
 
-    // Node statistics overlay
+    // Node statistics overlay; a group counts every finding it holds.
     var nodeStats = document.createElement('div');
     nodeStats.style.cssText = 'position:absolute;bottom:12px;right:12px;background:rgba(15,23,42,.9);border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:.72rem;color:#64748b;z-index:10;backdrop-filter:blur(8px)';
+    cyContainer.parentNode.appendChild(nodeStats);
+    function renderSupplyStats(view) {
     var nodeCounts = {};
     cy.nodes().forEach(function(n) {
       var t = n.data('type') || 'other';
       if (t === 'cve' || t.indexOf('cve_')===0) t = 'cve';
       else if (t.indexOf('server_')===0) t = 'server';
-      nodeCounts[t] = (nodeCounts[t] || 0) + 1;
+      nodeCounts[t] = (nodeCounts[t] || 0) + findingWeight(n.data());
     });
     var statsHTML = [];
     if (nodeCounts.agent) statsHTML.push('<span style="color:#3b82f6">' + nodeCounts.agent + ' agents</span>');
     if (nodeCounts.server) statsHTML.push('<span style="color:#10b981">' + nodeCounts.server + ' servers</span>');
     if (nodeCounts.pkg_vuln) statsHTML.push('<span style="color:#dc2626">' + nodeCounts.pkg_vuln + ' packages</span>');
     if (nodeCounts.cve) statsHTML.push('<span style="color:#f87171">' + nodeCounts.cve + ' CVEs</span>');
-    nodeStats.innerHTML = (GRAPH_BOUND.bounded ? 'Drawn: ' : '') + statsHTML.join(' &middot; ');
-    cyContainer.parentNode.appendChild(nodeStats);
+    if (nodeCounts.finding) statsHTML.push('<span style="color:#fca5a5">' + nodeCounts.finding + ' findings</span>');
+    nodeStats.innerHTML = (view.bounded ? 'Drawn: ' : '') + statsHTML.join(' &middot; ');
+    }
+    renderSupplyStats(GRAPH_BOUND);
 
   } else if (cyContainer) {
     cyContainer.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#4ade80;font-size:.9rem">&#x2705; No supply chain nodes to display</div>';

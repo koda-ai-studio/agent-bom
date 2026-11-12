@@ -26,6 +26,7 @@ from agent_bom.output.finding_views import (
     cve_findings,
     evidence,
     exploit_likelihood_value,
+    export_workflow_fields,
     finding_severity,
     package_name,
     package_version,
@@ -437,25 +438,12 @@ def _cve_sarif_result(
     related_locations = _exposure_related_locations(exposure_path)
     if related_locations:
         result["relatedLocations"] = related_locations
-    # Ownership + remediation SLA (single source of truth in agent_bom.graph.sla). The
-    # scan-completion time anchors the deadline when the finding carries no
-    # first-seen history, matching the JSON report spine.
-    from agent_bom.graph.sla import finding_owner, finding_sla_fields
-
-    finding_sla = finding_sla_fields(
-        {
-            **finding.to_dict(),
-            "first_seen": finding.first_seen or report.generated_at.isoformat(),
-        }
-    )
     result_properties: dict[str, Any] = {
         "advisory_id": rule_id,
         "asset_canonical_id": finding.asset.stable_id,
         "occurrence_id": finding.id,
         "canonical_id": finding.id,
-        "owner": finding_owner(finding.owner),
-        "sla_due_at": finding_sla["sla_due_at"],
-        "sla_due_at_source": finding_sla["sla_due_at_source"],
+        **export_workflow_fields(finding, report.generated_at),
         **({"blast_score": finding.risk_score} if finding.risk_score is not None else {"risk_score_status": "not_assessed"}),
         "match_confidence_tier": evidence(finding, "match_confidence_tier"),
         **severity_provenance_properties(finding),
@@ -698,7 +686,7 @@ def _unified_finding_result(finding: Finding, rule_id: str, level: str, evidence
             )
         },
         **_sarif_fingerprint_fields(stable_input=fp_input),
-        "properties": _unified_finding_properties(finding, rule_id, evidence),
+        "properties": {**_unified_finding_properties(finding, rule_id, evidence), **export_workflow_fields(finding, report.generated_at)},
     }
     if file_path is not None:
         finding_result["locations"] = [_sarif_location(file_path, start_line)]

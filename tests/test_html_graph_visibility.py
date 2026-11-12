@@ -13,7 +13,9 @@ import pytest
 def test_hidden_graph_refits_on_resize_but_preserves_a_user_view(graph_kind: str, user_moved: bool) -> None:
     from agent_bom.output.html import scripts
     from agent_bom.output.html.graph_js_attack_flow import ATTACK_FLOW_GRAPH_JS
+    from agent_bom.output.html.graph_js_bounds import GRAPH_BOUNDS_JS
     from agent_bom.output.html.graph_js_supply_chain import SUPPLY_CHAIN_GRAPH_JS
+    from agent_bom.output.html.graph_js_view import GRAPH_VIEW_JS
 
     source = SUPPLY_CHAIN_GRAPH_JS if graph_kind == "supply" else ATTACK_FLOW_GRAPH_JS
     ready = re.search(r"\.ready\(function\(\) \{ (.*?) \}\);", source)
@@ -36,9 +38,11 @@ const graph = { on(name, callback) {events.push(callback);}, resize() { calls.re
 elements() { return ['node']; }, fit(nodes, padding) {
   if (nodes[0] !== 'node' || padding !== 40) throw new Error('wrong graph scope');
   calls.fit++;
-} };
+}, zoom() { return 1; }, scratch() { return undefined; }, emit() {} };
 const cy = graph, cyAtk = graph, cyContainer = element, cyAtkContainer = element;
 """
+        + GRAPH_BOUNDS_JS
+        + GRAPH_VIEW_JS
         + visibility
         + ready.group(1)
         + """

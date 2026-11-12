@@ -113,17 +113,9 @@ def _scan_outcome_banner(report: "AIBOMReport") -> str:
 
 def _headline_row(finding: "Finding", observed_at: datetime | None = None) -> dict[str, object]:
     """Headline row; a finding with no recorded first sighting is anchored to this scan, as the JSON export does."""
-    from agent_bom.graph.sla import finding_sla_fields
+    from agent_bom.output.finding_views import export_workflow_fields
 
-    sla = finding_sla_fields(
-        {
-            "severity": finding.effective_severity(),
-            "first_seen": finding.first_seen or (observed_at.isoformat() if observed_at else None),
-            "evidence": finding.evidence,
-            "sla_due_at": finding.sla_due_at,
-            "sla_due_at_source": finding.sla_due_at_source or ("explicit" if finding.sla_due_at is not None else None),
-        }
-    )
+    workflow = export_workflow_fields(finding, observed_at)
     return {
         "id": finding.vulnerability_id or finding.id,
         "title": finding.title,
@@ -131,8 +123,8 @@ def _headline_row(finding: "Finding", observed_at: datetime | None = None) -> di
         "risk_score": finding.risk_score,
         "affected_agents": finding.affected_agents
         or ([finding.asset.name] if finding.asset.asset_type == "agent" and finding.asset.name else []),
-        "owner": finding.owner,
-        "sla_due_at": sla.get("sla_due_at"),
+        "owner": workflow["owner"],
+        "sla_due_at": workflow["sla_due_at"],
         "suppressed": bool(finding.suppressed),
     }
 

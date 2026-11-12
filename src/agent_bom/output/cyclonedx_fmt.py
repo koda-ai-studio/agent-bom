@@ -35,15 +35,15 @@ from agent_bom.output.dependency_hierarchy import (
 from agent_bom.output.finding_views import (
     atlas_receipts_by_vulnerability,
     cve_findings,
+    export_workflow_metadata,
     package_ecosystem,
     package_name,
     package_version,
-    workflow_status,
 )
 from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.package_attributes import cyclonedx_identifiers, cyclonedx_malicious_properties
 from agent_bom.output.possibly_affected import cyclonedx_vulnerabilities as undecided_cdx
-from agent_bom.output.technique_evidence import scoped_vulnerability_properties
+from agent_bom.output.technique_evidence import collapse_vulnerability_sla, scoped_vulnerability_properties
 from agent_bom.sbom_formats.cyclonedx import merge_properties as _merge_properties
 from agent_bom.sbom_formats.cyclonedx import merge_vulnerability_observation as _merge_vulnerability_observation
 from agent_bom.sbom_formats.cyclonedx import vulnerability_enrichment_properties, vulnerability_ratings, vulnerability_source
@@ -156,14 +156,16 @@ def _cyclonedx_vulnerability(
     from agent_bom.graph.sla import sla_due_at as _compute_sla_due_at
 
     workflow_data = workflow or {}
-    sla_due = _compute_sla_due_at(
+    # A matched finding's deadline (its own first sighting, or this scan) wins over a recompute.
+    sla_due = workflow_data.get("sla_due_at") or _compute_sla_due_at(
         vuln.severity.value,
         observed_at,
         kev_due_date=vuln.kev_due_date,
     )
     if sla_due is not None:
+        source = workflow_data.get("sla_due_at_source", "severity-kev/v1")
         vuln_properties.append({"name": "agent-bom:sla_due_at", "value": sla_due})
-        vuln_properties.append({"name": "agent-bom:sla_due_at_source", "value": "severity-kev/v1"})
+        vuln_properties.append({"name": "agent-bom:sla_due_at_source", "value": source})
     vuln_properties.extend(scoped_vulnerability_properties(pkg_ref, workflow_data, atlas_receipts))
     if vuln.is_kev or vuln.epss_score is not None:
         vuln_properties.append({"name": "agent-bom:exploit_likelihood", "value": vuln.exploit_likelihood})
@@ -550,16 +552,7 @@ def to_cyclonedx(report: AIBOMReport, *, spec_version: str = "1.7") -> dict:
     atlas_by_vulnerability = atlas_receipts_by_vulnerability(report)
     workflow_by_vulnerability: dict[tuple[str, str, str | None, str], dict[str, str]] = {}
     for finding in cve_findings(report):
-        workflow: dict[str, str] = {}
-        if finding.owner:
-            workflow["owner"] = finding.owner
-        sla_due = finding.to_dict().get("sla_due_at")
-        if sla_due:
-            workflow["sla_due_at"] = str(sla_due)
-            workflow["sla_due_at_source"] = str(finding.to_dict()["sla_due_at_source"])
-        status = workflow_status(finding)
-        if status:
-            workflow["workflow_status"] = status
+        workflow = export_workflow_metadata(finding, report.generated_at)
         if workflow:
             workflow_by_vulnerability[
                 (package_ecosystem(finding), package_name(finding), package_version(finding), finding.cve_id or finding.id)
@@ -802,7 +795,8 @@ def to_cyclonedx(report: AIBOMReport, *, spec_version: str = "1.7") -> dict:
     components = _merge_bom_ref_items(components)
     services = _merge_bom_ref_items(services)
     dependencies = _merge_dependencies(dependencies)
-    vulnerabilities_cdx = [vulnerabilities_by_id[key] for key in sorted(vulnerabilities_by_id)] + undecided_cdx(report, _sanitize_bom_ref)
+    vulnerabilities_cdx = [collapse_vulnerability_sla(vulnerabilities_by_id[key]) for key in sorted(vulnerabilities_by_id)]
+    vulnerabilities_cdx += undecided_cdx(report, _sanitize_bom_ref)
 
     cdx = {
         "bomFormat": "CycloneDX",

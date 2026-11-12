@@ -48,7 +48,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'underlay-color': '#ef4444',
             'underlay-padding': '6px',
             'underlay-opacity': 0.15,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {
@@ -60,7 +60,7 @@ ATTACK_FLOW_GRAPH_JS = """\
             'underlay-color': '#fb923c',
             'underlay-padding': '4px',
             'underlay-opacity': 0.1,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {
@@ -242,6 +242,10 @@ ATTACK_FLOW_GRAPH_JS = """\
           },
         },
         {
+          selector: 'node[count > 1]',
+          style: {'label': 'data(label)', 'width': 176, 'height': 44, 'text-max-width': 164, 'font-size': 12},
+        },
+        {
           selector: 'node[type="directory"], node[type="source_file"], node[type="config_file"]',
           style: {
             'label': function(node) { var label = node.data('label') || ''; return label === '.' ? 'Project root' : label.replace(/^project:/, ''); },
@@ -249,23 +253,18 @@ ATTACK_FLOW_GRAPH_JS = """\
           },
         },
       ],
-      layout: {
-        name: 'dagre',
-        rankDir: window.innerWidth < 700 ? 'TB' : 'LR',
-        nodeSep: 40,
-        rankSep: 100,
-        edgeSep: 12,
-        padding: 30,
-        animate: false,
-        fit: true,
-      },
+      layout: {name: 'null'},
       minZoom: 0.15,
       maxZoom: 4,
       wheelSensitivity: 0.3,
     });
+    var ATTACK_FLOW_LAYOUT = {rankDir: window.innerWidth < 700 ? 'TB' : 'LR', nodeSep: 40, rankSep: 100, edgeSep: 12, padding: 30};
+    layoutGraph(cyAtk, ATTACK_FLOW_LAYOUT);
     cyAtk.ready(function() { fitGraphWhenVisible(cyAtk, cyAtkContainer); });
     addGraphViews(cyAtk, cyAtkContainer, ATTACK_FLOW_RECORDED);
-    noteGraphBound(cyAtkContainer, ATTACK_FLOW_BOUND);
+    mountGraphView({graph: cyAtk, container: cyAtkContainer, recorded: ATTACK_FLOW_RECORDED, view: ATTACK_FLOW_BOUND,
+      state: ATTACK_FLOW_STATE, layout: ATTACK_FLOW_LAYOUT, bar: cyAtkContainer.parentNode.querySelector('.graph-filter-bar'),
+      onRedraw: function(view) { renderAttackStats(view); }});
 
     // Attack flow tooltip
     cyAtk.on('mouseover', 'node', function(e) {
@@ -330,14 +329,16 @@ ATTACK_FLOW_GRAPH_JS = """\
       animateAttackEdges();
     }
 
-    // Attack flow node count stats
+    // Attack flow node count stats; a group counts every finding it holds.
     var afStats = document.createElement('div');
     afStats.style.cssText = 'position:absolute;bottom:12px;right:12px;background:rgba(15,23,42,.9);border:1px solid #334155;border-radius:8px;padding:8px 14px;font-size:.72rem;color:#64748b;z-index:10;backdrop-filter:blur(8px)';
+    cyAtkContainer.parentNode.appendChild(afStats);
+    function renderAttackStats(view) {
     var afCounts = {};
     cyAtk.nodes().forEach(function(n) {
       var t = n.data('type') || 'other';
       if (t === 'cve' || t.indexOf('cve_')===0) t = 'cve';
-      afCounts[t] = (afCounts[t] || 0) + 1;
+      afCounts[t] = (afCounts[t] || 0) + findingWeight(n.data());
     });
     var afParts = [];
     if (afCounts.cve) afParts.push('<span style="color:#f87171">' + afCounts.cve + ' CVEs</span>');
@@ -347,8 +348,9 @@ ATTACK_FLOW_GRAPH_JS = """\
     if (afCounts.credential) afParts.push('<span style="color:#fbbf24">' + afCounts.credential + ' creds</span>');
     if (afCounts.tool) afParts.push('<span style="color:#818cf8">' + afCounts.tool + ' tools</span>');
     if (afCounts.agent) afParts.push('<span style="color:#3b82f6">' + afCounts.agent + ' agents</span>');
-    afStats.innerHTML = (ATTACK_FLOW_BOUND.bounded ? 'Drawn: ' : '') + afParts.join(' &middot; ');
-    cyAtkContainer.parentNode.appendChild(afStats);
+    afStats.innerHTML = (view.bounded ? 'Drawn: ' : '') + afParts.join(' &middot; ');
+    }
+    renderAttackStats(ATTACK_FLOW_BOUND);
   }
 
 """
