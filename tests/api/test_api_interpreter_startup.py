@@ -32,13 +32,14 @@ def test_startup_moves_existing_objects_out_of_later_collections(unfrozen_heap):
     assert gc.get_count()[2] == 0
 
 
-def test_the_heap_is_frozen_once_per_process(unfrozen_heap):
+def test_the_heap_is_frozen_once_per_process(unfrozen_heap, monkeypatch):
+    # The frozen count itself shrinks as frozen objects are freed, so count the calls.
+    calls: list[str] = []
+    monkeypatch.setattr(gc, "collect", lambda *args: calls.append("collect") or 0)
+    monkeypatch.setattr(gc, "freeze", lambda: calls.append("freeze"))
     server_storage._freeze_startup_heap()
-    frozen = gc.get_freeze_count()
-    survivors = [[index] for index in range(1000)]
     server_storage._freeze_startup_heap()
-    assert gc.get_freeze_count() == frozen
-    del survivors
+    assert calls == ["collect", "freeze"]
 
 
 def test_api_lifespan_freezes_the_startup_heap(unfrozen_heap):
