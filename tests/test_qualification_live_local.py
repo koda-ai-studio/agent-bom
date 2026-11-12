@@ -179,3 +179,18 @@ def test_serving_images_come_from_the_runtime_vendors() -> None:
         "ollama": "ollama/ollama:latest",
     }
     assert serving.GGUF_URL.startswith("https://huggingface.co/Qwen/")
+
+
+def test_secret_env_names_variables_and_carries_values_only_in_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("PATH", "/usr/bin")
+    value = "pw-" + "x" * 8
+    args, env = common.secret_env({"POSTGRES_PASSWORD": value, "ALEMBIC_DATABASE_URL": f"postgresql://u:{value}@db/x"})
+    assert args == ["-e", "POSTGRES_PASSWORD", "-e", "ALEMBIC_DATABASE_URL"]
+    assert all(value not in arg for arg in args)
+    assert env["POSTGRES_PASSWORD"] == value
+    assert env["PATH"] == "/usr/bin"
+
+
+def test_lanes_never_write_secrets_to_env_files() -> None:
+    for script in QUALIFICATION.glob("*.py"):
+        assert "--env-file" not in script.read_text(encoding="utf-8"), script.name

@@ -14,8 +14,8 @@ outbound-network guard stays strict.
     python scripts/qualification/cgroup_limits.py --image agent-bom:local --profile small-self-hosted
     python scripts/qualification/cgroup_limits.py --image agent-bom:local --profile small-self-hosted-postgres
 
-Passwords and keys are generated per run, passed through a 0600 ``--env-file``
-and never written to the result.
+Passwords and keys are generated per run, handed to docker through its process
+environment (``-e NAME``), and never written to disk or to the result.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from common import REPO_ROOT, LaneResult, run_measured, tail  # noqa: E402
+from common import REPO_ROOT, LaneResult, run_measured, secret_env, tail  # noqa: E402
 
 MIB = 1024 * 1024
 SAMPLER = """#!/bin/sh
@@ -124,18 +124,16 @@ def phase_digest(evidence: dict[str, Any]) -> dict[str, Any]:
     return digest
 
 
-def docker(*args: str, timeout: float = 600) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout)  # noqa: S603, S607
+def docker(*args: str, timeout: float = 600, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout, env=env)  # noqa: S603, S607
 
 
-def start_postgres(image: str, prefix: str, env_dir: Path) -> tuple[str, Path]:
-    """A private Postgres 16 migrated to head with the app and maintenance roles; returns its name and the harness env file."""
+def start_postgres(image: str, prefix: str) -> tuple[str, dict[str, str]]:
+    """A private Postgres 16 migrated to head with the app and maintenance roles; returns its name and the harness's secret values."""
     name = f"{prefix}-pg"
     admin, app, maintenance = (secrets.token_hex(16) for _ in range(3))
-    admin_env = env_dir / "postgres.env"
-    admin_env.write_text(f"POSTGRES_USER=agent_bom\nPOSTGRES_DB=agent_bom\nPOSTGRES_PASSWORD={admin}\n", encoding="utf-8")
-    admin_env.chmod(0o600)
-    started = docker("run", "-d", "--name", name, "--env-file", str(admin_env), "postgres:16-alpine", "-c", "max_connections=200")
+    boot_args, boot_env = secret_env({"POSTGRES_USER": "agent_bom", "POSTGRES_DB": "agent_bom", "POSTGRES_PASSWORD": admin})
+    started = docker("run", "-d", "--name", name, *boot_args, "postgres:16-alpine", "-c", "max_connections=200", env=boot_env)
     if started.returncode != 0:
         raise RuntimeError(f"postgres did not start: {started.stderr}")
     deadline = time.monotonic() + 120
@@ -149,24 +147,21 @@ def start_postgres(image: str, prefix: str, env_dir: Path) -> tuple[str, Path]:
         f"ALTER DATABASE agent_bom SET init.maintenance_password = '{maintenance}';"
     )
     docker("exec", name, "psql", "-U", "agent_bom", "-d", "agent_bom", "-qc", settings)
-    migrate_env = env_dir / "migrate.env"
-    migrate_env.write_text(f"ALEMBIC_DATABASE_URL=postgresql+psycopg://agent_bom:{admin}@127.0.0.1:5432/agent_bom\n", encoding="utf-8")
-    migrate_env.chmod(0o600)
+    migrate_args, migrate_env = secret_env({"ALEMBIC_DATABASE_URL": f"postgresql+psycopg://agent_bom:{admin}@127.0.0.1:5432/agent_bom"})
     migrated = docker(
-        "run", "--rm", "--network", f"container:{name}", "--env-file", str(migrate_env), "-w", "/opt/agent-bom",
+        "run", "--rm", "--network", f"container:{name}", *migrate_args, "-w", "/opt/agent-bom",
         "--entrypoint", "alembic", image, "-c", "deploy/supabase/postgres/alembic.ini", "upgrade", "head",
+        env=migrate_env,
     )  # fmt: skip
     if migrated.returncode != 0:
         raise RuntimeError(f"migration failed: {tail(migrated.stderr, 5)}")
-    harness_env = env_dir / "harness.env"
-    harness_env.write_text(
-        f"WORKFLOW_BENCH_POSTGRES_URL=postgresql://agent_bom_app:{app}@127.0.0.1:5432/agent_bom\n"
-        f"AGENT_BOM_POSTGRES_MAINTENANCE_URL=postgresql://agent_bom_maintenance:{maintenance}@127.0.0.1:5432/agent_bom\n"
-        f"AGENT_BOM_AUDIT_HMAC_KEY={secrets.token_hex(32)}\nAGENT_BOM_POSTGRES_POOL_MIN_SIZE=1\nAGENT_BOM_POSTGRES_POOL_MAX_SIZE=4\n",
-        encoding="utf-8",
-    )
-    harness_env.chmod(0o600)
-    return name, harness_env
+    return name, {
+        "WORKFLOW_BENCH_POSTGRES_URL": f"postgresql://agent_bom_app:{app}@127.0.0.1:5432/agent_bom",
+        "AGENT_BOM_POSTGRES_MAINTENANCE_URL": f"postgresql://agent_bom_maintenance:{maintenance}@127.0.0.1:5432/agent_bom",
+        "AGENT_BOM_AUDIT_HMAC_KEY": secrets.token_hex(32),
+        "AGENT_BOM_POSTGRES_POOL_MIN_SIZE": "1",
+        "AGENT_BOM_POSTGRES_POOL_MAX_SIZE": "4",
+    }
 
 
 def run_profile(result: LaneResult, args: argparse.Namespace, out: Path, env_dir: Path) -> None:
@@ -181,14 +176,16 @@ def run_profile(result: LaneResult, args: argparse.Namespace, out: Path, env_dir
         "-e", "AGENT_BOM_DEFER_PRODUCT_PROOF=1", "-e", "AGENT_BOM_SKIP_UPDATE_CHECK=1",
     ]  # fmt: skip
     postgres = None
+    run_env: dict[str, str] | None = None
     if args.profile.endswith("postgres") or args.profile.startswith("multi-replica"):
-        postgres, harness_env = start_postgres(args.image, args.name_prefix, env_dir)
-        command += ["--network", f"container:{postgres}", "--env-file", str(harness_env)]
+        postgres, harness_values = start_postgres(args.image, args.name_prefix)
+        harness_args, run_env = secret_env(harness_values)
+        command += ["--network", f"container:{postgres}", *harness_args]
     command += ["--entrypoint", "sh", args.image, "/sampler.sh", label, "--profile", args.profile]
     if args.no_cancel:
         command.append("--no-cancel")
     try:
-        run = run_measured(command, timeout=args.timeout)
+        run = run_measured(command, env=run_env, timeout=args.timeout)
         result.measurements[f"{label}_wall_seconds"] = run.seconds
         state = json.loads(docker("inspect", container, "--format", "{{json .State}}").stdout or "{}")
         cgroup = parse_keyvalues((out / f"{label}.cgroup").read_text(encoding="utf-8")) if (out / f"{label}.cgroup").exists() else {}

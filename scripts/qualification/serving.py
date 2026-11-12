@@ -35,7 +35,7 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from common import LaneResult, agent_bom_command, run_measured, tail  # noqa: E402
+from common import LaneResult, agent_bom_command, run_measured, secret_env, tail  # noqa: E402
 
 IMAGES = {
     "llamacpp": "ghcr.io/ggml-org/llama.cpp:server",
@@ -48,8 +48,8 @@ TOKEN_ENV = "AGENT_BOM_SERVING_TOKEN_QUALIFICATION"
 READS = {"llamacpp": ["/v1/models", "/props", "/health"], "vllm": ["/v1/models", "/version", "/health", "/metrics"]}
 
 
-def docker(*args: str, timeout: float = 900) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout)  # noqa: S603, S607
+def docker(*args: str, timeout: float = 900, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["docker", *args], capture_output=True, text=True, timeout=timeout, env=env)  # noqa: S603, S607
 
 
 def published_port(container: str, port: int) -> str:
@@ -64,7 +64,7 @@ def wait_ready(url: str, timeout: float = 600) -> bool:
             if httpx.get(url, timeout=3).status_code == 200:
                 return True
         except httpx.HTTPError:
-            pass
+            pass  # not listening yet; retried until the deadline
         time.sleep(2)
     return False
 
@@ -188,11 +188,10 @@ def run_lane(result: LaneResult, runtimes: list[str], models: Path, prefix: str)
                         started.append(container)
                         env = ["-e", "VLLM_CPU_KVCACHE_SPACE=1"]
                         command = ["--model", "facebook/opt-125m", "--dtype", "bfloat16", "--max-model-len", "512"]
+                        key_env: dict[str, str] | None = None
                         if key:
-                            env_file = key.with_suffix(".env")
-                            env_file.write_text(f"VLLM_API_KEY={key.read_text(encoding='utf-8')}\n", encoding="utf-8")
-                            env_file.chmod(0o600)
-                            env += ["--env-file", str(env_file)]
+                            key_args, key_env = secret_env({"VLLM_API_KEY": key.read_text(encoding="utf-8")})
+                            env += key_args
                         docker(
                             "run",
                             "-d",
@@ -206,6 +205,7 @@ def run_lane(result: LaneResult, runtimes: list[str], models: Path, prefix: str)
                             *env,
                             image,
                             *command,
+                            env=key_env,
                         )
                         return published_port(container, 8000)
 

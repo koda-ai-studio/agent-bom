@@ -34,28 +34,23 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from common import LaneResult, tail  # noqa: E402
+from common import LaneResult, secret_env, tail  # noqa: E402
 from replicas import Estate, build_estate, replica_view, stored_findings, wait_stored  # noqa: E402
 
 ALEMBIC_INI = "deploy/supabase/postgres/alembic.ini"
 
 
-def docker(*args: str, timeout: float = 900, stdin: bytes | None = None) -> subprocess.CompletedProcess[bytes]:
-    return subprocess.run(["docker", *args], capture_output=True, input=stdin, timeout=timeout)  # noqa: S603, S607
+def docker(
+    *args: str, timeout: float = 900, stdin: bytes | None = None, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(["docker", *args], capture_output=True, input=stdin, timeout=timeout, env=env)  # noqa: S603, S607
 
 
-def checked(*args: str, timeout: float = 900) -> str:
-    completed = docker(*args, timeout=timeout)
+def checked(*args: str, timeout: float = 900, env: dict[str, str] | None = None) -> str:
+    completed = docker(*args, timeout=timeout, env=env)
     if completed.returncode != 0:
         raise RuntimeError(f"docker {' '.join(args[:3])} failed: {tail(completed.stderr.decode(errors='replace'), 6)}")
     return completed.stdout.decode(errors="replace").strip()
-
-
-def env_file(directory: Path, name: str, values: dict[str, str]) -> Path:
-    path = directory / f"{name}.env"
-    path.write_text("".join(f"{key}={value}\n" for key, value in values.items()), encoding="utf-8")
-    path.chmod(0o600)
-    return path
 
 
 class Stack:
@@ -77,8 +72,8 @@ class Stack:
 
     def postgres(self, name: str) -> str:
         container = f"{self.prefix}-{name}"
-        boot = env_file(
-            self.workdir, name, {"POSTGRES_USER": "agent_bom", "POSTGRES_DB": "agent_bom", "POSTGRES_PASSWORD": self.passwords["admin"]}
+        boot_args, boot_env = secret_env(
+            {"POSTGRES_USER": "agent_bom", "POSTGRES_DB": "agent_bom", "POSTGRES_PASSWORD": self.passwords["admin"]}
         )
         checked(
             "run",
@@ -89,9 +84,9 @@ class Stack:
             self.network,
             "-v",
             f"{container}-data:/var/lib/postgresql/data",
-            "--env-file",
-            str(boot),
+            *boot_args,
             "postgres:16-alpine",
+            env=boot_env,
         )
         deadline = time.monotonic() + 120
         while docker("exec", container, "pg_isready", "-U", "agent_bom", "-d", "agent_bom").returncode != 0:
@@ -107,14 +102,13 @@ class Stack:
         return container
 
     def alembic(self, image: str, database: str, *command: str) -> str:
-        migrate = env_file(self.workdir, "alembic", {"ALEMBIC_DATABASE_URL": self.url("admin", database, "postgresql+psycopg")})
+        migrate_args, migrate_env = secret_env({"ALEMBIC_DATABASE_URL": self.url("admin", database, "postgresql+psycopg")})
         checked(
             "run",
             "--rm",
             "--network",
             self.network,
-            "--env-file",
-            str(migrate),
+            *migrate_args,
             "-w",
             "/opt/agent-bom",
             "--entrypoint",
@@ -123,6 +117,7 @@ class Stack:
             "-c",
             ALEMBIC_INI,
             *command,
+            env=migrate_env,
         )
         return checked("exec", database, "psql", "-U", "agent_bom", "-d", "agent_bom", "-tAc", "select version_num from alembic_version")
 
@@ -134,7 +129,7 @@ class Stack:
             "AGENT_BOM_POSTGRES_URL": self.url("app", database),
             "AGENT_BOM_POSTGRES_MAINTENANCE_URL": self.url("maintenance", database),
         }
-        api_env = env_file(self.workdir, "api", values)
+        api_args, api_env = secret_env(values)
         checked(
             "run",
             "-d",
@@ -144,14 +139,14 @@ class Stack:
             self.network,
             "-p",
             "127.0.0.1::8422",
-            "--env-file",
-            str(api_env),
+            *api_args,
             image,
             "api",
             "--host",
             "0.0.0.0",
             "--port",
             "8422",
+            env=api_env,
         )
         base = "http://" + checked("port", container, "8422").split()[0]
         deadline = time.monotonic() + 180
@@ -160,7 +155,7 @@ class Stack:
                 if httpx.get(base + "/health", timeout=2).status_code == 200:
                     return container, base
             except httpx.HTTPError:
-                pass
+                pass  # not listening yet; retried until the deadline
             if docker("inspect", container, "--format", "{{.State.Running}}").stdout.strip() == b"false":
                 break
             time.sleep(1)
