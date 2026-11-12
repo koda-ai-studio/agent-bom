@@ -1007,7 +1007,7 @@ jobs:
       - name: Install Playwright from the UI lockfile
         run: |
           cd ui
-          npm ci --ignore-scripts --no-audit
+          npm ci
           npx playwright install chromium
 
       - name: Fetch the report's pinned scripts from the npm registry
