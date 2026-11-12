@@ -195,3 +195,16 @@ it("separates impact from the overview and offers an explicit width control", as
   await user.click(screen.getByRole("button", { name: "Reset drawer width" }));
   expect(panel.style.width).toBe("");
 });
+
+it("names the scan that resolved a finding, and nothing for an open one", async () => {
+  const user = userEvent.setup();
+  const resolved = { ...base, scan_id: "scan-saw-it", lifecycle_status: "resolved", resolved_at: "2026-10-03T10:00:00+00:00", resolution_reason: "no_longer_detected", resolved_by_scan_id: "scan-cleared-it" };
+  const { unmount } = render(<FindingDrawer vuln={resolved} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  await user.click(screen.getByRole("tab", { name: "Evidence" }));
+  expect(screen.getByLabelText("Resolved by scan: scan-cleared-it")).toBeVisible();
+  expect(screen.getByLabelText("Scan: scan-saw-it")).toBeVisible();
+  unmount();
+  render(<FindingDrawer vuln={{ ...base, lifecycle_status: "open", resolved_by_scan_id: null }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  await user.click(screen.getByRole("tab", { name: "Evidence" }));
+  expect(screen.queryByText("Resolved by scan:")).not.toBeInTheDocument();
+});

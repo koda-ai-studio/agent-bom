@@ -70,9 +70,9 @@ def _discover_agents_with_demo_fallback() -> list[Any]:
 
         return discover_all()
 
-    from agent_bom.demo import DEMO_INVENTORY
+    from agent_bom.demo import demo_inventory_document
 
-    return build_agents_from_inventory(DEMO_INVENTORY, "agent-bom --demo")
+    return build_agents_from_inventory(demo_inventory_document(), "agent-bom --demo")
 
 
 def _host_agents_for_tenant(tenant_id: str) -> list[Any] | None:
@@ -183,7 +183,7 @@ def _serialize_agent(
     gateway_index: dict[tuple[str, str], dict[str, Any]] | None = None,
     observation_index: dict[str, MCPObservation] | None = None,
 ) -> dict:
-    payload = asdict(agent)
+    payload = {key: value for key, value in asdict(agent).items() if key != "identity_config_path"}
     payload["display_name"] = agent_payload_display_name(payload)
     payload["canonical_id"] = agent.canonical_id
     payload["stable_id"] = agent.stable_id

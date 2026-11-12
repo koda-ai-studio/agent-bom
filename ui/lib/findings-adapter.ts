@@ -149,6 +149,7 @@ export function collectUnifiedFindings(findings: UnifiedFinding[]): LaneFinding[
       last_seen: finding.last_seen ?? undefined,
       resolved_at: finding.resolved_at ?? undefined,
       resolution_reason: finding.resolution_reason ?? null,
+      resolved_by_scan_id: finding.resolved_by_scan_id ?? null,
       stale: finding.stale ?? false,
       reopened_at: finding.reopened_at ?? undefined,
       last_resolved_at: finding.last_resolved_at ?? undefined,
