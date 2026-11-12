@@ -15,7 +15,7 @@ class _PackageWithVulnerabilities(Protocol):
         """Vulnerabilities already attached to the package."""
 
 
-PRIMARY_ADVISORY_SOURCES: tuple[str, ...] = ("osv", "ghsa", "nvidia_csaf", "amd_psirt", "intel_psirt")
+PRIMARY_ADVISORY_SOURCES: tuple[str, ...] = ("osv", "ghsa", "nvidia_csaf", "amd_psirt", "intel_psirt", "nodejs_security_wg")
 ENRICHMENT_ADVISORY_SOURCES: tuple[str, ...] = ("nvd", "epss", "cisa_kev")
 _PREFERRED_SOURCE_ORDER: tuple[str, ...] = PRIMARY_ADVISORY_SOURCES + ENRICHMENT_ADVISORY_SOURCES
 
