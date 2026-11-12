@@ -209,7 +209,7 @@ def _discover_via_api(host: str, outcome: dict[str, Any] | None = None, timeout:
         result["status"] = "timeout"
         logger.debug("Ollama httpx API probe timed out: %s", sanitize_text(exc))
         return None
-    except (httpx.HTTPError, OSError, ValueError) as exc:
+    except (httpx.HTTPError, httpx.InvalidURL, OSError, ValueError) as exc:
         logger.debug("Ollama httpx API probe failed: %s", sanitize_text(exc))
 
     # Fallback: try with sync httpx client (retry-capable)
@@ -219,7 +219,7 @@ def _discover_via_api(host: str, outcome: dict[str, Any] | None = None, timeout:
         fallback_resp = sync_get(url, timeout=3)
         if fallback_resp is not None and fallback_resp.status_code == 200:
             return _api_models(fallback_resp, result)
-    except (httpx.HTTPError, OSError, ValueError) as exc:
+    except (httpx.HTTPError, httpx.InvalidURL, OSError, ValueError) as exc:
         logger.debug("Ollama sync API probe failed: %s", sanitize_text(exc))
 
     return None

@@ -34,14 +34,14 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import SplitResult, urlsplit
 
 import httpx
 
 from agent_bom.cloud.serving_auth import ServingAuthError, bearer_token, validate_token_env_name
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, Package
-from agent_bom.security import SecurityError, validate_url
+from agent_bom.security import SecurityError, url_port, validate_url
 
 logger = logging.getLogger(__name__)
 
@@ -221,8 +221,8 @@ SERVING_RUNTIMES: dict[str, RuntimeSpec] = {
 }
 
 
-def normalize_endpoint(endpoint: str) -> str:
-    """Return ``scheme://host[:port][/path]`` or raise ``_ProbeError`` for an unsafe endpoint."""
+def _checked_parts(endpoint: str) -> SplitResult:
+    """Split *endpoint*, raising ``_ProbeError`` for a URL no probe may send to."""
     try:
         parts = urlsplit(str(endpoint).strip())
     except ValueError as exc:
@@ -233,6 +233,25 @@ def normalize_endpoint(endpoint: str) -> str:
         raise _ProbeError("unavailable", "endpoint URLs with embedded credentials are refused")
     if parts.query or parts.fragment:
         raise _ProbeError("unavailable", "endpoint URLs with a query or fragment are refused")
+    try:
+        url_port(parts.netloc)
+    except ValueError as exc:
+        raise _ProbeError("unavailable", "endpoint port must be a number from 1 to 65535") from exc
+    return parts
+
+
+def endpoint_syntax_error(endpoint: str) -> str | None:
+    """Why *endpoint* can never be probed, without resolving it; ``None`` when well formed."""
+    try:
+        _checked_parts(endpoint)
+    except _ProbeError as failure:
+        return failure.detail
+    return None
+
+
+def normalize_endpoint(endpoint: str) -> str:
+    """Return ``scheme://host[:port][/path]`` or raise ``_ProbeError`` for an unsafe endpoint."""
+    parts = _checked_parts(endpoint)
     normalized = f"{parts.scheme}://{parts.netloc}{parts.path.rstrip('/')}"
     try:
         validate_url(normalized, allowed_schemes=("http", "https"), allow_private=True)
@@ -257,7 +276,7 @@ def _request(client: httpx.Client, method: str, url: str) -> Any:
                     raise _ProbeError("unavailable", "response exceeded the size bound")
     except httpx.TimeoutException as exc:
         raise _ProbeError("timeout", "request timed out") from exc
-    except httpx.HTTPError as exc:
+    except (httpx.HTTPError, httpx.InvalidURL) as exc:
         raise _ProbeError("unavailable", type(exc).__name__) from exc
     try:
         return httpx.Response(200, content=body).json()
