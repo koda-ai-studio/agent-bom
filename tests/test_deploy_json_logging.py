@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests._helm_render import ATTESTED_API_SET_ARGS
+
 ROOT = Path(__file__).resolve().parents[1]
 HELM_DIR = ROOT / "deploy" / "helm" / "agent-bom"
 COMPOSE_WITH_API = [
@@ -21,7 +23,17 @@ COMPOSE_WITH_API = [
 def _control_plane_containers(*sets: str) -> dict[str, dict]:
     # Workers need the shared Postgres queue, so render from the BYO Postgres profile.
     profile = HELM_DIR / "examples" / "byo-postgres-values.yaml"
-    args = ["helm", "template", "abom", str(HELM_DIR), "-f", str(profile), "--set", "controlPlane.worker.enabled=true"]
+    args = [
+        "helm",
+        "template",
+        "abom",
+        str(HELM_DIR),
+        "-f",
+        str(profile),
+        "--set",
+        "controlPlane.worker.enabled=true",
+        *ATTESTED_API_SET_ARGS,
+    ]
     for item in sets:
         args += ["--set", item]
     rendered = subprocess.run(args, check=True, capture_output=True, text=True).stdout

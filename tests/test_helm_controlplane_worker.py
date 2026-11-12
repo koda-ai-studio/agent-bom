@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests._helm_render import ATTESTED_API
+
 ROOT = Path(__file__).resolve().parents[1]
 CHART = ROOT / "deploy/helm/agent-bom"
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm not installed")
@@ -24,6 +26,7 @@ _POSTGRES = {
 
 def _render(control_plane: dict | None = None, *, postgres: bool = True, pdb: bool = True) -> subprocess.CompletedProcess[str]:
     values: dict = {"controlPlane": {"enabled": True, **(control_plane or {})}, "pdb": {"enabled": pdb}}
+    values["controlPlane"]["api"] = {**ATTESTED_API, **values["controlPlane"].get("api", {})}
     if postgres:
         values["controlPlane"]["postgresSecrets"] = _POSTGRES
     return subprocess.run(

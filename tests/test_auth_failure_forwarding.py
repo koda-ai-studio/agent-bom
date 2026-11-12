@@ -14,6 +14,7 @@ from starlette.datastructures import Headers
 
 from agent_bom.api import forwarded_identity
 from agent_bom.api.forwarded_identity import resolve_forwarded_client_ip
+from tests._helm_render import ATTESTED_API_SET_ARGS
 
 UNPARSEABLE_FORWARDED_SOURCE = getattr(forwarded_identity, "UNPARSEABLE_FORWARDED_SOURCE", "unparseable-forwarded-address")
 
@@ -180,6 +181,7 @@ _INGRESS = (
     "controlPlane.ingress.enabled=true",
     "--set",
     "controlPlane.api.trustedProxy.fromSecret=true",
+    *ATTESTED_API_SET_ARGS,
 )
 
 

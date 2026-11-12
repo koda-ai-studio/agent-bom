@@ -181,6 +181,8 @@ helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0
   --set controlPlane.postgresSecrets.adminSecretRef.name=agent-bom-control-plane-admin \
   --set controlPlane.api.trustedProxy.hops=1 \
   --set 'controlPlane.api.trustedProxy.cidrs={REPLACE_ME_INGRESS_CIDR}' \
+  --set 'controlPlane.api.envFrom[0].secretRef.name=agent-bom-control-plane-auth' \
+  --set controlPlane.api.listenerAttestation.fromSecret=true \
   --set controlPlane.ingress.enabled=true
 
 # Custom schedule

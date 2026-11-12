@@ -96,8 +96,8 @@ def test_kind_values_run_the_documented_postgres_profile_with_replicas() -> None
     assert api["replicas"] == 3 and api["service"]["type"] == "NodePort"
     assert values["controlPlane"]["postgresSecrets"]["enabled"] is True
     assert {"name": "AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT", "value": "1"} in api["env"]
-    rule = values["controlPlane"]["networkPolicy"]["additionalIngress"][0]
-    assert rule["ports"] == [{"port": 8422, "protocol": "TCP"}]
+    assert values["controlPlane"]["networkPolicy"]["ingressCIDRs"] == ["172.16.0.0/12", "10.244.0.0/16"]
+    assert api["listenerAttestation"] == {"fromSecret": True}
 
 
 def test_kind_secrets_are_distinct_and_carry_trusted_proxy_attestation() -> None:

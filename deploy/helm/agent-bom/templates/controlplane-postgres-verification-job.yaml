@@ -48,6 +48,11 @@ spec:
           env:
             - name: AGENT_BOM_POSTGRES_PROVIDER
               value: {{ .Values.controlPlane.postgres.provider | quote }}
+            # One probe needs few connections; leave the role's budget to the API.
+            - name: AGENT_BOM_POSTGRES_POOL_MIN_SIZE
+              value: "1"
+            - name: AGENT_BOM_POSTGRES_POOL_MAX_SIZE
+              value: "2"
             - name: AGENT_BOM_POSTGRES_URL
               valueFrom:
                 secretKeyRef:

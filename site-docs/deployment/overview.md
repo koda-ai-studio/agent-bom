@@ -249,24 +249,56 @@ ones. Each lane in `scripts/qualification/` writes its checks to
 | Upgrade 0.114.0 → this build, rollback, backup and restore, removal | `upgrade.py --from-image agentbom/agent-bom:0.114.0` | Migration `20261106_01` → `20261111_01` took 15 s; the new API served the same jobs, findings and graph and stored a new push. Downgrade back to `20261106_01` took 24 s, and the 0.114.0 API served both pushes. A `pg_dump` (1.7 MB) restored into a new Postgres served the backed-up push. Removing the containers, volumes and network left nothing |
 | Enforced CPU and memory limits | `cgroup_limits.py` | See [performance benchmarks](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERFORMANCE_BENCHMARKS.md#enforced-cgroup-limits): no OOM kill at 2 CPU or 1 CPU with 2 GiB, before or after #6244 (peak anonymous memory 1,784-1,972 MiB on SQLite). After #6244 the harness's 80% memory budget and its restart check fail under both limits |
 
-What a multi-replica install needs beyond the values a single replica uses:
+What a multi-replica install needs beyond the values a single replica uses
+(the chart now enforces or derives each of these):
 
-- **Postgres connections.** Migrations cap `agent_bom_app` at 20 connections
-  for every replica, worker and hook together. An idle API replica held 5-6
-  (`AGENT_BOM_POSTGRES_POOL_MAX_SIZE=8`), so three replicas plus one rolling
-  surge exceed the cap. Raise the role's limit to cover
-  (replicas + surge + workers) × per-replica connections before scaling out.
+- **Postgres connections.** The chart's migration Job raises the
+  `agent_bom_app` and `agent_bom_maintenance` connection limits after every
+  upgrade to cover the API replicas, the rolling-update surge and the workers
+  at the pool sizes in `controlPlane.postgres.pool`. It never lowers a limit,
+  and when the migration role cannot change it the Job fails with the
+  `ALTER ROLE` statement to run.
 - **Listener posture.** More than one replica (the chart default is 2) makes
   the API refuse a non-loopback listener without trusted-proxy attestation
-  (`AGENT_BOM_TRUST_PROXY_AUTH`, `_SECRET`, `_ISSUER`) or delegated mTLS
-  evidence. The chart renders without them and the pods then fail to start.
+  (`AGENT_BOM_TRUST_PROXY_AUTH`, `_SECRET`, `_ISSUER`) or app-native mTLS.
+  `helm template` now fails without them; when a Secret supplies them, set
+  `controlPlane.api.listenerAttestation.fromSecret=true`.
 - **NetworkPolicy.** The chart's policy admits only the `ingress-nginx`
-  namespace. A `NodePort` or `LoadBalancer` Service needs
-  `controlPlane.networkPolicy.additionalIngress` for the node or load-balancer
-  range.
+  namespace. A `NodePort` or `LoadBalancer` Service now fails rendering unless
+  `controlPlane.networkPolicy.ingressCIDRs` (component port only) or
+  `additionalIngress` admits the node or load-balancer range.
 - **Verification hook.** `postgres-verify` fails the release when Postgres
-  TLS is not active (`tls_not_active`), as intended. The kind run used a
-  Postgres without TLS and turned the hook off.
+  TLS is not active (`tls_not_active`), as intended. The 2026-11-11 run used a
+  Postgres without TLS and turned the hook off; the 2026-11-12 rollout below
+  ran with TLS and the hook on.
+
+#### Replica rollout on kind
+
+On 2026-11-12 the chart from this checkout ran on kind (Kubernetes from kind
+v0.32.0, Helm v4.1.4) with three API replicas behind a `NodePort` Service, one
+PostgreSQL 16 with TLS (`max_connections=200`), the chart's migration Job and
+its post-install verification Job enabled. The trusted-proxy attestation came
+from the auth Secret (`controlPlane.api.listenerAttestation.fromSecret=true`)
+and the NetworkPolicy admitted the node and pod ranges through
+`controlPlane.networkPolicy.ingressCIDRs`. Checks ran with the replica lane
+(`scripts/qualification/replicas.py`): a fresh connection per read, one read
+every 100 ms with a 10 s timeout, through `kubectl rollout restart` of the API
+Deployment.
+
+| Check | Result |
+|---|---|
+| Install with `--wait`, migration and verification hooks | Passed in 79 s; verification `status: ready`, `tls: true` |
+| Role connection limits after migration | `agent_bom_app` 133 (4 processes with the surge × 32 + 5), `agent_bom_maintenance` 32 (kept, above the 20 needed) |
+| Spread, concurrent and idempotent pushes, per-replica consistency, a replica killed mid-ingest | All passed |
+| Rolling restart under reads, run 1 | 530 reads, 0 failed; rollout 119 s; p95 272 ms, max 1.8 s |
+| Rolling restart under reads, run 2 | 485 reads, 0 failed; rollout 129 s; p95 330 ms, max 2.0 s |
+| Rolling restart under reads, run 3 | 514 reads, 0 failed; rollout 155 s; p95 454 ms, max 3.1 s |
+| Control: `controlPlane.api.shutdown.preStopSleepSeconds=0` | 576 reads, 2 failed (`RemoteProtocolError`) |
+| Control: `agent_bom_app` set back to `CONNECTION LIMIT 20` | Surge pod in `CrashLoopBackOff` with `too many connections for role "agent_bom_app"`; rollout recovered once the limit was 133 again |
+
+Before these fixes the same lane could not finish a rolling restart, and 2 to
+5 of 300 to 500 reads failed with connection resets or 10 s timeouts. One host ran everything, so latencies include contention. This is
+not a qualification of any managed Kubernetes service.
 
 ## Enterprise Deployment Promise
 
