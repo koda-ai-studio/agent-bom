@@ -10,6 +10,7 @@ from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.compliance_utils import effective_blast_radius_tags
 from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import normalize_severity
+from agent_bom.core.sla import finding_owner
 from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.domain.inventory_types import DEV_DEPENDENCY_SCOPES
 from agent_bom.evidence.malicious_basis import malicious_basis
@@ -106,6 +107,31 @@ def anchor_first_seen(findings: list[Finding], report: AIBOMReport) -> list[Find
         if not finding.first_seen:
             finding.first_seen = observed_at
     return findings
+
+
+def export_workflow_fields(finding: Finding, observed_at: object) -> dict[str, Any]:
+    """Owner, SLA deadline with its source, and workflow status, exactly as the JSON export reports them.
+
+    A finding with no recorded first sighting is anchored to ``observed_at``
+    (scan completion, a datetime or ISO string), as ``anchor_first_seen`` does
+    for JSON and HTML, without changing the finding. Empty values are ``None``.
+    """
+    anchor = observed_at.isoformat() if hasattr(observed_at, "isoformat") else (str(observed_at) if observed_at else None)
+    sla = finding.sla_fields(anchor=anchor)
+    return {
+        "owner": finding_owner(finding.owner),
+        "sla_due_at": sla["sla_due_at"],
+        "sla_due_at_source": sla["sla_due_at_source"],
+        "workflow_status": workflow_status(finding) or None,
+    }
+
+
+def export_workflow_metadata(finding: Finding, observed_at: object) -> dict[str, str]:
+    """``export_workflow_fields`` without empty values, for formats that omit absent metadata."""
+    fields = export_workflow_fields(finding, observed_at)
+    if not fields["sla_due_at"]:
+        fields["sla_due_at_source"] = None
+    return {key: str(value) for key, value in fields.items() if value}
 
 
 def machine_export_findings(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) -> list[Finding]:

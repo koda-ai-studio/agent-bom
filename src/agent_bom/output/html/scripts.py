@@ -8,6 +8,7 @@ from agent_bom.output.html.graph_js_attack_flow import ATTACK_FLOW_GRAPH_JS
 from agent_bom.output.html.graph_js_bounds import GRAPH_BOUNDS_JS
 from agent_bom.output.html.graph_js_supply_chain import SUPPLY_CHAIN_GRAPH_JS, SUPPLY_CHAIN_SIDEBAR_JS
 from agent_bom.output.html.graph_js_supply_chain_tools import SUPPLY_CHAIN_TOOLS_JS
+from agent_bom.output.html.graph_js_view import GRAPH_VIEW_JS
 from agent_bom.output.html.paginator_js import PAGINATOR_JS
 
 _GRAPH_DATA_BLOCK = re.compile(r'<script type="application/json" class="graph-data" id="[A-Za-z]+">.*?</script>\n?', re.DOTALL)
@@ -408,8 +409,10 @@ GRAPH_VISIBILITY_JS = """\
       width = container.clientWidth; height = container.clientHeight;
       fitting = true;
       graph.resize();
+      var laidOut = graph.scratch('agentBomLayout');
+      if (!fitted && laidOut && !laidOut.width) layoutGraph(graph, laidOut.options);
       if (!fitted || (resized && !userMoved)) {
-        graph.fit(graph.elements(), 40);
+        graph.emit('agent-bom:fitted', [fitReadable(graph, 40)]);
         fitted = true;
       }
       fitting = false;
@@ -434,10 +437,12 @@ _GRAPH_SCRIPT_BODY = "".join(
         SEVERITY_CHART_JS,
         BLAST_RADIUS_CHART_JS,
         GRAPH_BOUNDS_JS,
+        GRAPH_VIEW_JS,
         GRAPH_VISIBILITY_JS,
         "  function drawSupplyChainGraph() {\n",
         "  var GRAPH_RECORDED = readGraphData('agentBomGraphElements');\n",
-        "  var GRAPH_BOUND = boundGraph(GRAPH_RECORDED, GRAPH_DRAW_LIMIT, 'in', true);\n",
+        "  var GRAPH_STATE = {limit: GRAPH_FIRST_DRAW, follow: 'in', inventoryFirst: true, severities: null, matches: null};\n",
+        "  var GRAPH_BOUND = graphView(GRAPH_RECORDED, GRAPH_STATE);\n",
         "  var GRAPH_ELEMENTS = GRAPH_BOUND.elements;\n",
         SUPPLY_CHAIN_GRAPH_JS,
         SUPPLY_CHAIN_SIDEBAR_JS,
@@ -445,7 +450,8 @@ _GRAPH_SCRIPT_BODY = "".join(
         "  }\n",
         "  function drawAttackFlowGraph() {\n",
         "  var ATTACK_FLOW_RECORDED = readGraphData('agentBomAttackFlow');\n",
-        "  var ATTACK_FLOW_BOUND = boundGraph(ATTACK_FLOW_RECORDED, GRAPH_DRAW_LIMIT, 'out');\n",
+        "  var ATTACK_FLOW_STATE = {limit: GRAPH_FIRST_DRAW, follow: 'out', inventoryFirst: false, severities: null, matches: null};\n",
+        "  var ATTACK_FLOW_BOUND = graphView(ATTACK_FLOW_RECORDED, ATTACK_FLOW_STATE);\n",
         "  var ATTACK_FLOW = ATTACK_FLOW_BOUND.elements;\n",
         ATTACK_FLOW_GRAPH_JS,
         "  }\n",
