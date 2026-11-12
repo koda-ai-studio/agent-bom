@@ -283,6 +283,9 @@ jobs:
       - name: Install agent-bom (from source)
         run: uv sync --frozen --extra api --extra dev
 
+      - name: Push lifecycle guards (re-push after retention, resolved identity, late reports, agent ids)
+        run: uv run pytest tests/test_workflow_push_lifecycle_gaps.py -q -m graph_performance
+
       - name: Measure collect, scan, ingest, store, query, export, retain, rebuild, restart and cancel
         run: uv run python scripts/run_workflow_resource_benchmark.py --profile small-self-hosted --output workflow-resource-budget.json
 

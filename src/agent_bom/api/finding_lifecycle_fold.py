@@ -99,6 +99,8 @@ class FindingState:
     payload: dict[str, Any] | None = None
     new_row: dict[str, Any] | None = field(default=None, repr=False)
     changed: bool = False
+    # Read-side only: the scan recorded at ``resolved_at`` in this scope, named by ``attach_resolving_scans``.
+    resolved_job_id: str | None = None
 
     @property
     def live(self) -> bool:
@@ -339,6 +341,23 @@ def _cached_evidence(job: Any, rows_for_job: RowsForJob, cache: dict[Any, ScanEv
     return cache[key]
 
 
+ScanRecord = tuple[str, str, str, bool]
+
+
+def attach_resolving_scans(states: Iterable[FindingState], scans: Iterable[ScanRecord]) -> None:
+    """Name the scan behind each resolution in force: the one its scope recorded at ``resolved_at``.
+
+    ``scans`` holds ``(scope_hash, evidence_at, job_id, complete)``; when two scans
+    share an instant, a complete one wins, then the lowest job id, so every read agrees.
+    """
+    by_time: dict[tuple[str, str], str] = {}
+    for scope_hash, at, job_id, _complete in sorted(scans, key=lambda scan: (not scan[3], scan[2])):
+        by_time.setdefault((scope_hash, at), job_id)
+    for state in states:
+        resolved = not state.live and bool(state.resolved_at)
+        state.resolved_job_id = by_time.get((state.scope_hash, str(state.resolved_at))) if resolved else None
+
+
 def replay_lifecycle(
     jobs: Iterable[Any], rows_for_job: RowsForJob, *, cache: dict[Any, ScanEvidence | None] | None = None
 ) -> list[FindingState]:
@@ -362,4 +381,6 @@ def replay_lifecycle(
         apply_evidence(states, evidence, (), own_payload)
         for state in states.values():
             state.changed = False
-    return [state for states in by_scope.values() for state in states.values()]
+    folded = [state for states in by_scope.values() for state in states.values()]
+    attach_resolving_scans(folded, ((item.scope_hash, item.at, item.job_id, item.complete) for item in built))
+    return folded

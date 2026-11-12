@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from agent_bom.demo import DEMO_INVENTORY
+from agent_bom.demo import demo_inventory_document
 from agent_bom.demo_estate.compute_identity_lane import compute_lane_report
 from agent_bom.demo_estate.enterprise_composition import build_demo_estate
 from agent_bom.demo_estate.enterprise_findings import build_estate_findings
@@ -189,7 +189,7 @@ def project_mcp_auth_findings(graph: UnifiedGraph, findings: list[Finding]) -> N
 
 def demo_mcp_auth_findings() -> list[Finding]:
     """The MCP authentication findings the demo scan reports, from the same inventory."""
-    return evaluate_mcp_auth_posture(build_agents_from_inventory(DEMO_INVENTORY, "agent-bom --demo"))
+    return evaluate_mcp_auth_posture(build_agents_from_inventory(demo_inventory_document(), "agent-bom --demo"))
 
 
 __all__ = [

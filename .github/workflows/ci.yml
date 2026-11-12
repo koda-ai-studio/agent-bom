@@ -1923,6 +1923,8 @@ jobs:
             tests/test_postgres_ai_assessments.py \
             tests/api/test_finding_lifecycle_sequences.py \
             tests/api/test_finding_durable_lifecycle.py \
+            tests/api/test_resolved_finding_identity.py \
+            tests/api/test_push_replay_after_retention.py \
             tests/test_job_result_codec.py \
             tests/test_graph_snapshot_ownership.py \
             tests/test_current_graph_assembly_postgres.py \

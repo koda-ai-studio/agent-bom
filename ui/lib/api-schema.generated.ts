@@ -14750,6 +14750,11 @@ export interface components {
             resolution_reason?: ("no_longer_detected" | "asset_deleted") | null;
             /** Resolved At */
             resolved_at?: string | null;
+            /**
+             * Resolved By Scan Id
+             * @description The scan that proved the finding gone; set only while resolved.
+             */
+            resolved_by_scan_id?: string | null;
             /** Resolved Occurrence Count */
             resolved_occurrence_count?: number | null;
             /** Risk Score */
