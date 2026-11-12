@@ -3,7 +3,9 @@
 Cytoscape drops a style property it cannot parse and logs a warning, so an
 invalid value silently renders as the default. The static contract below runs
 everywhere; the browser test loads a real report in Chromium and asserts that
-Cytoscape logs no style warning.
+Cytoscape logs no style warning. CI (``html-report-browser``) serves the
+report's pinned scripts from the same versions' npm tarballs and requires the
+browser test to run.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from agent_bom.output.html.graph_js_attack_flow import ATTACK_FLOW_GRAPH_JS
 from agent_bom.output.html.graph_js_supply_chain import SUPPLY_CHAIN_GRAPH_JS, SUPPLY_CHAIN_SIDEBAR_JS
 from agent_bom.output.html.graph_js_supply_chain_tools import SUPPLY_CHAIN_TOOLS_JS
 from agent_bom.output.html.graph_js_view import GRAPH_VIEW_JS
+from agent_bom.output.html.scripts import _EXTERNAL_SCRIPT_TAGS
 from tests.html_report_scale_fixtures import scale_report
 
 _REPO = Path(__file__).resolve().parents[1]
@@ -39,6 +42,7 @@ _FONT_WEIGHTS = {"normal", "bold", "bolder", "lighter", "100", "200", "300", "40
 _COLOR = re.compile(r"^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|[a-z]+|rgba?\(.*\)|hsla?\(.*\))$")
 _COLOR_PROPS = re.compile(r"'((?:[a-z-]+-)?color)':\s*'([^']*)'")
 _FONT_WEIGHT = re.compile(r"'font-weight':\s*(?:'([^']*)'|(\d+))")
+_PINNED_SPEC = re.compile(r"https://[^/]+/(?:npm/)?([a-z.-]+@[0-9.]+)/")
 
 
 @pytest.mark.parametrize("name", sorted(_SCRIPTS))
@@ -58,6 +62,18 @@ def test_style_colors_are_values_cytoscape_parses(name):
         assert _COLOR.match(value), f"{name}: {prop}: {value} is refused by Cytoscape; use a colour plus an opacity"
 
 
+def test_ci_fetches_exactly_the_script_versions_the_report_loads():
+    pinned = set()
+    for tag in _EXTERNAL_SCRIPT_TAGS:
+        match = _PINNED_SPEC.search(tag)
+        assert match is not None, tag
+        pinned.add(match.group(1))
+    ci = (_REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    fetch = re.search(r"for spec in ([^;]+); do", ci)
+    assert fetch is not None
+    assert set(fetch.group(1).split()) == pinned
+
+
 def _node_modules() -> Path | None:
     candidates = [os.environ.get("AGENT_BOM_PLAYWRIGHT_NODE_MODULES"), str(_REPO / "ui" / "node_modules")]
     for candidate in candidates:
@@ -75,11 +91,33 @@ def _account_home() -> str:
         return os.environ.get("HOME", "")
 
 
+def _unavailable(reason: str) -> None:
+    # CI sets AGENT_BOM_REQUIRE_REPORT_BROWSER so a missing browser fails instead of passing silently.
+    if os.environ.get("AGENT_BOM_REQUIRE_REPORT_BROWSER") == "1":
+        pytest.fail(reason)
+    pytest.skip(reason)
+
+
 _BROWSER_SCRIPT = r"""
+const fs = require('fs');
+const path = require('path');
 const { chromium } = require('playwright');
+const vendor = process.env.AGENT_BOM_REPORT_JS_DIR || '';
+const served = [];
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage();
+  if (vendor) {
+    // Serve each pinned CDN script from the same version's npm tarball; nothing reaches a CDN.
+    await page.route(/^https:\/\/(unpkg\.com|cdn\.jsdelivr\.net)\//, route => {
+      const rel = new URL(route.request().url()).pathname.replace(/^\/npm\//, '/').replace(/^\//, '');
+      // jsdelivr minifies on request; the npm tarball ships the unminified build of the same version.
+      const file = [rel, rel.replace(/\.min\.js$/, '.js')].map(r => path.join(vendor, r)).find(f => fs.existsSync(f));
+      if (!file) return route.abort();
+      served.push(rel);
+      return route.fulfill({status: 200, contentType: 'application/javascript', body: fs.readFileSync(file)});
+    });
+  }
   const messages = [];
   page.on('console', m => messages.push({type: m.type(), text: m.text()}));
   page.on('pageerror', e => messages.push({type: 'pageerror', text: e.message}));
@@ -92,7 +130,7 @@ const { chromium } = require('playwright');
       null, {timeout: 30000});
     drawn = await page.evaluate(() => ['cy', 'cyAttack'].filter(id => document.querySelector('#' + id + ' canvas')));
   }
-  console.log(JSON.stringify({loaded, drawn, messages}));
+  console.log(JSON.stringify({loaded, drawn, served, messages}));
   await browser.close();
 })().catch(e => { console.error(e); process.exit(1); });
 """
@@ -102,7 +140,7 @@ def test_report_graphs_load_in_chromium_without_cytoscape_style_warnings(tmp_pat
     node = shutil.which("node")
     modules = _node_modules()
     if not node or modules is None:
-        pytest.skip("Node.js and Playwright (ui/node_modules or AGENT_BOM_PLAYWRIGHT_NODE_MODULES) are required")
+        _unavailable("Node.js and Playwright (ui/node_modules or AGENT_BOM_PLAYWRIGHT_NODE_MODULES) are required")
     report, blast = scale_report(40)
     page = tmp_path / "report.html"
     page.write_text(to_html(report, blast), encoding="utf-8")
@@ -115,11 +153,13 @@ def test_report_graphs_load_in_chromium_without_cytoscape_style_warnings(tmp_pat
     except subprocess.TimeoutExpired:
         pytest.fail("Chromium did not finish loading the report")
     if result.returncode != 0 and "Executable doesn't exist" in result.stderr:
-        pytest.skip("Playwright's Chromium is not installed")
+        _unavailable("Playwright's Chromium is not installed")
     assert result.returncode == 0, result.stderr
     outcome = json.loads(result.stdout.strip().splitlines()[-1])
     if not outcome["loaded"]:
-        pytest.skip("Cytoscape could not be fetched from its CDN")
+        _unavailable("Cytoscape could not be loaded from AGENT_BOM_REPORT_JS_DIR or its CDN")
+    if os.environ.get("AGENT_BOM_REPORT_JS_DIR"):
+        assert len(outcome["served"]) == len(_EXTERNAL_SCRIPT_TAGS), outcome["served"]
     assert outcome["drawn"] == ["cy", "cyAttack"]
     style_warnings = [m["text"] for m in outcome["messages"] if "style property" in m["text"]]
     assert style_warnings == []
