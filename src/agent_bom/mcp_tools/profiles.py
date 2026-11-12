@@ -74,6 +74,7 @@ PROFILES = {
                 "exposure_paths",
                 "executive_brief",
                 "cross_vendor_paths",
+                "agent_architecture",
                 "should_i_deploy",
                 "graph_reach",
                 "graph_diff",

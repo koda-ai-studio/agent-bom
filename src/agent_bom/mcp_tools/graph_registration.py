@@ -6,6 +6,7 @@ from typing import Annotated, Any, Callable, Literal
 
 from pydantic import Field
 
+from agent_bom.mcp_tools.agent_architecture import agent_architecture_impl
 from agent_bom.mcp_tools.brief import executive_brief_impl
 from agent_bom.mcp_tools.cross_vendor_paths import cross_vendor_paths_impl
 from agent_bom.mcp_tools.findings import finding_detail_impl, findings_query_impl
@@ -93,6 +94,49 @@ def _register_exposure_paths(
             finding_id=finding_id,
             credential_id=credential_id,
             node_id=node_id,
+            cursor=cursor,
+            _truncate_response=truncate_response,
+        )
+
+
+def _register_agent_architecture(
+    mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
+) -> None:
+    @mcp.tool(annotations=read_only, title="Agent Architecture")
+    async def agent_architecture(
+        tenant_id: Annotated[str, _TENANT] = "default",
+        scan_id: Annotated[
+            str | None, Field(max_length=256, description="Optional historical scan ID. Omit for the current estate.")
+        ] = None,
+        offset: Annotated[
+            int, Field(ge=0, le=100_000, description="Harness offset; send snapshot_generation from the first page with it.")
+        ] = 0,
+        limit: Annotated[int, Field(ge=1, le=50, description="Maximum harnesses to return.")] = 20,
+        snapshot_generation: Annotated[
+            str | None, Field(max_length=128, description="snapshot_generation from the first page; required when offset > 0.")
+        ] = None,
+        cursor: Annotated[
+            str | None, Field(max_length=1024, description="pagination.next_cursor from the previous page; replaces offset.")
+        ] = None,
+    ) -> str:
+        """Return the multi-agent harnesses declared in source: layers, flow edges and the security overlay.
+
+        Each harness is a tree of framework agents (LangGraph graphs, nodes and
+        subgraphs; CrewAI crews and members) with each agent's role, layer,
+        literal model references, tools, credential env-var names, and what the
+        graph records for it (severity, risk score, findings, outgoing reach).
+        Flow edges are ``declared`` from code; unresolved routes are listed, not
+        dropped. ``coverage.gaps`` names what is not modelled. Matches
+        ``/v1/graph/agent-architecture``.
+        """
+        return await execute_tool_async(
+            "agent_architecture",
+            agent_architecture_impl,
+            tenant_id=tenant_id,
+            scan_id=scan_id,
+            offset=offset,
+            limit=limit,
+            snapshot_generation=snapshot_generation,
             cursor=cursor,
             _truncate_response=truncate_response,
         )
@@ -395,6 +439,7 @@ def register_graph_agent_tools(
     for register in (
         _register_executive_brief,
         _register_cross_vendor_paths,
+        _register_agent_architecture,
     ):
         register(mcp, read_only, execute_tool_async, truncate_response)
     _register_should_i_deploy(mcp, read_only, execute_tool_async, truncate_response, result_owner)

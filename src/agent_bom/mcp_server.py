@@ -22,6 +22,7 @@ Full profile Tools (99):
     graph_reach         — Page what can reach a node (or what it reaches) over recorded edges
     graph_diff          — What changed between two graph snapshots (summary or paged rows)
     cross_vendor_paths  — Attack paths whose source and target sit in different vendors
+    agent_architecture  — Multi-agent harness layers, declared flow and security overlay
     findings_query      — Query tenant findings exactly as /v1/findings, compact rows
     finding_detail      — One finding with its graph paths, reachers and triage state
     policy_check        — Evaluate a policy against scan results

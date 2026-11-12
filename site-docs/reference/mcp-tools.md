@@ -16,14 +16,14 @@ admin role, the tool-specific write scope, and an audit reason; stdio cannot
 invoke them.
 
 `agent-bom mcp server` and the programmatic server default to eight focused
-scan tools. Use `--profile full` for the complete 99-tool catalog.
+scan tools. Use `--profile full` for the complete 100-tool catalog.
 
 <details>
-<summary>Explicit full-profile catalog (99 tools)</summary>
+<summary>Explicit full-profile catalog (100 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `affected_assets`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `executive_brief`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
-`graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `findings_query`, `finding_detail`,
+`graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `cross_vendor_paths`, `agent_architecture`, `findings_query`, `finding_detail`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
@@ -152,6 +152,12 @@ graph_diff(view="detail", change="added", entity_type="vulnerability", limit=50)
 Attack paths whose source and target are recorded in different vendors, exactly as `GET /v1/graph/attack-paths/cross-vendor`, in queue order with per-vendor-pair facets.
 ```
 cross_vendor_paths(source_vendor="snowflake", target_vendor="aws")
+```
+
+### agent_architecture
+Multi-agent harnesses declared in source, exactly as `GET /v1/graph/agent-architecture`: agents by layer and role, declared flow edges, unresolved routes, literal model references and each agent's recorded findings and reach.
+```
+agent_architecture(limit=10)
 ```
 
 ### findings_query

@@ -107,6 +107,7 @@ _SERVER_CARD_TOOLS = [
         "description": "Attack paths whose source and target nodes are in different recorded vendors, with path counts per vendor pair",
         "annotations": {"readOnlyHint": True},
     },
+    {"name": "agent_architecture", "description": "Multi-agent harness layers, flow and findings", "annotations": {"readOnlyHint": True}},
     {
         "name": "graph_reach",
         "description": "Page what can reach a graph node (or what it reaches) over recorded edges, with walk completeness",
@@ -596,8 +597,7 @@ def build_server_card(
                 "SBOMs",
             ],
             "registry_servers": registry_servers,
-            # Scanner/graph tools are read-only; Shield / identity / ticket tools
-            # are write-gated. Do not claim a fully read-only server.
+            # Scanner/graph tools are read-only; Shield/identity/ticket tools are write-gated: never claim a read-only server.
             "read_only": False,
         },
         "license": "Apache-2.0",
