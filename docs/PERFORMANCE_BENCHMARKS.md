@@ -349,8 +349,17 @@ AGENT_BOM_POSTGRES_MAINTENANCE_URL=postgresql://maint:...@127.0.0.1:PORT/agent_b
 ```
 
 Each phase runs in its own child process, so CPU-seconds and max RSS are the
-child's own `wait4` rusage. The runner exits non-zero if any phase crashes,
-any finding set differs, or any outbound connection is attempted.
+child's own `wait4` rusage. Since 2026-11-11 the CLI scans (the first scan and
+the update/delete rescan) run in a process of their own
+(`scripts/perf/workflow_scan_child.py`), as they would on a collector host: the
+measured process is the API plus the harness's HTTP client, and the scan
+stage reports the scan process's CPU and peak RSS as `scan_process`. Before
+that, the scan's own peak (650-800 MiB at 200 agents) and the allocator arenas
+it never returned were charged to the API. The runner exits non-zero if any
+phase crashes, any finding set differs, any outbound connection is attempted,
+any process peaks above 80% of the profile's memory limit (1,638 MiB of
+2 GiB), or the restart's first graph read is not 200 after the start-up
+prewarm.
 
 **Measured 2026-11-11** on an Apple M4 (10 cores, 16 GiB, macOS 27.0.1,
 Python 3.13.5, PostgreSQL 16.14 on loopback). The host was shared with other
@@ -450,7 +459,8 @@ are several times the measurement, so a 4-vCPU runner does not flake:
 | Read p95 (8 samples, effectively max) | ≤ 2.0 s | 8 s | catches stalls only; latency is not a PR SLO |
 | CPU-seconds per stage | 0.03-5.5 | 2-25 | 3-5x for runner variance |
 | Whole run CPU-seconds | 17-27; 35 with the update/delete stage | 120 | 3-5x |
-| Peak RSS | 410-645 MiB | 1,536 MiB | profile limit less runner headroom |
+| Peak RSS, API process (scan in its own process) | 514 MiB (scan process 134 MiB) | 1,024 MiB | 2x; half the profile limit |
+| First zero-wait graph read after a simulated restart and the start-up prewarm | 200 | 200 | exact |
 
 The `small-self-hosted` SQLite profile runs nightly in `perf-scale-evidence.yml`
 (job `workflow-resource-budget`, or dispatch with `workflow_budget`). The
@@ -528,6 +538,18 @@ The scan alone peaked at 2,431 MiB RSS, above the 2 GiB pilot limit, before
 ingest started; the run took 256 s to the rejection. An estate this size has to
 be pushed in several scans of at most about 550 agents each, by the 192 MiB
 default and this fixture's report size.
+
+The cap is a storage limit, not a transport one: one push is stored as one job
+result, which must fit PostgreSQL's jsonb value limit, so chunking one report
+into parts would only move the refusal to the commit. Since 2026-11-11 the CLI
+says so before it costs an upload. It measures the serialized report; past
+240 MiB it sends nothing, and on a 413 it reads the server's `max_bytes` and
+does not retry. The run fails with, for this fixture, "The report is 314.7 MiB
+decoded (1,000 agents); this control plane accepts at most 192.0 MiB per push
+... Push at most 549 agents per push: split the inventory into files of that
+many agents and run one scan per file". Each inventory path is its own target
+scope, so each file's next push replaces only its own evidence and the current
+estate is their union. Guarded by `tests/test_push_size_limit.py`.
 
 ### Postgres query plans and tenant-scoped indexes
 
@@ -619,6 +641,32 @@ rebuilds all six indexes concurrently, 18.1 s and 42 MB of WAL; re-upgrade
 | Identical push after retention returns 409 for up to 24 h | **Confirmed** | Every run records `identical_repush_status: 409`, raw and CLI-shaped bodies; strict xfail `test_identical_push_after_retention_is_admitted_again` |
 | `GET /v1/graph?limit=100` grows 2.6 → 6.7 MB with stored jobs | **Confirmed only for pushes without `source_id` and `target_scope`** | Three separate scans of one 12-agent estate: unscoped 1.98 → 3.45 MB and 1,630 → 1,849 nodes (agent ids embed a config-path hash, so the union holds both copies); CLI-scoped 1.97 MB and 1,630 nodes each time. At 200 agents on Postgres with CLI-scoped pushes the page stayed 2.55 MB across cold, warm and restart. Guarded by `test_rescans_pushed_by_one_cli_source_replace_rather_than_grow_the_graph`. Four identical bodies did not grow it in either mode |
 | First `/v1/graph` read after a restart returns 503 | **Confirmed as a timing condition, not on every restart** | A new process builds the current graph on its first read and waits `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default 2,000 ms); past that it answers `503 current_estate_building` with `Retry-After: 1` while the build finishes. 200 agents on Postgres: raw pushes (two independent reports to merge) 503 after 2.39 s; CLI-scoped pushes (one report) 200 after 1.27 s. At 12 agents both modes returned 200 in under 1.0 s. Larger estates will cross the budget whatever the push shape; nothing prewarms the current graph at start-up |
+
+**Re-measured 2026-11-11 after the fixes** (200 agents, cold / warm / restart
+processes, same host at load average 9-15; the CLI scans in their own process,
+so the figures are the API plus the harness client):
+
+| | Postgres before | Postgres after | SQLite before | SQLite after |
+|---|---:|---:|---:|---:|
+| Peak RSS, cold | 1,738 MiB | 1,335 MiB | 1,502 MiB | 1,403 MiB |
+| Peak RSS, warm | 1,696 MiB | 1,397 MiB | 1,568 MiB | 1,614 MiB |
+| Scan process peak (not in the API) | in process | 276 MiB | in process | 249-270 MiB |
+| First `/v1/graph?limit=100` after restart | 200 in 3.4 s, built on read | 200 in 1.0 s | 200 in 3.2 s | 200 in 1.2 s |
+
+The 2,044.5 MiB figure above came from the same profile at higher load; the
+peak moves with how background graph work overlaps a push. Where it came from
+(labelled RSS timeline): the pushes, not the reads. At each push the server
+holds the request body, the validated report and its admission copy, while a
+retry of the same body validates and fingerprints a second copy, and the
+current-estate rebuild, roll-up warm-up, reachability warm-up and exec warm-up
+each load the whole graph or stored evidence on their own threads. Three
+changes: the scans moved out of the measured process; the push fingerprint
+serializes one field at a time (148 → 53 MiB transient); and the post-commit
+warm-ups take turns (one slot, `api/graph_warmup_slot.py`). No record is
+dropped; the accuracy and equivalence checks pass in every run. SQLite warm is
+still only 24 MiB under the nightly budget: the next cut is push admission,
+which keeps the raw body, the validated model and the admission copy alive
+together (about 400 MiB at 200 agents).
 
 **Not measured here:** a real multi-node Kubernetes deployment, or replicas
 behind a load balancer (the replicas above are two local processes on one

@@ -149,6 +149,9 @@ os.environ.setdefault("AGENT_BOM_DEMO_STORY_PREWARM", "0")
 os.environ.setdefault("AGENT_BOM_POSTURE_PRECOMPUTE", "0")
 # The post-seed/post-push exec-read warm-up is a background thread too; its own tests opt in.
 os.environ.setdefault("AGENT_BOM_EXEC_PREWARM", "0")
+# The start-up current-graph prewarm reads jobs on a background thread after the lifespan
+# starts; tests that count store reads would see it. Its own tests opt in.
+os.environ.setdefault("AGENT_BOM_CURRENT_GRAPH_PREWARM", "0")
 # A plain scan joins the CISA KEV catalog; keep the suite hermetic by reading
 # only local caches (the isolated state dir has none, so KEV reads "unknown").
 os.environ.setdefault("AGENT_BOM_KEV_DEFAULT_JOIN", "cache")

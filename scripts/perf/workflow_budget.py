@@ -17,8 +17,11 @@ import importlib
 import ipaddress
 import json
 import math
+import os
+import platform
 import socket
 import statistics
+import subprocess
 import sys
 import threading
 import time
@@ -232,6 +235,30 @@ def _run_cli_scan(inventory_path: Path, output: Path) -> int:
     return CliRunner().invoke(main, args, catch_exceptions=False).exit_code
 
 
+_SCAN_CHILD = Path(__file__).resolve().with_name("workflow_scan_child.py")
+_ROOT = Path(__file__).resolve().parents[2]
+
+
+def scan_in_child(
+    inventory_path: Path, output: Path, vulnerable: dict[tuple[str, str], str], *, fail_first_batches: int = 0
+) -> dict[str, Any]:
+    """Run the CLI scan in its own process (see ``workflow_scan_child``); return its receipt and rusage."""
+    spec = output.with_name(f"{output.name}.spec.json")
+    triples = [[name, version, advisory] for (name, version), advisory in sorted(vulnerable.items())]
+    request = {"inventory": str(inventory_path), "output": str(output), "vulnerable": triples, "fail_first_batches": fail_first_batches}
+    spec.write_text(json.dumps(request), encoding="utf-8")
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(_ROOT / "src"), str(_ROOT)])}
+    process = subprocess.Popen([sys.executable, str(_SCAN_CHILD), str(spec)], env=env)
+    _pid, status, usage = os.wait4(process.pid, 0)
+    process.returncode = os.waitstatus_to_exitcode(status)
+    if process.returncode != 0:
+        raise RuntimeError(f"scan child exited {process.returncode}")
+    receipt: dict[str, Any] = json.loads(Path(f"{output}.scan.json").read_text(encoding="utf-8"))
+    divisor = 1024 * 1024 if platform.system() == "Darwin" else 1024
+    receipt["process"] = {"cpu_seconds": round(usage.ru_utime + usage.ru_stime, 3), "max_rss_mib": round(usage.ru_maxrss / divisor, 1)}
+    return receipt
+
+
 class _Http:
     """Thin client wrapper that records bytes and latency per call."""
 
@@ -382,13 +409,25 @@ async def run_workflow(
             )
         expected = expected_findings(report, inventory)
 
-        upstream = MockUpstream(vulnerable=vulnerable_versions(report), fail_first_batches=fail_first_batches)
         report_path = workdir / "report.json"
-        with recorder.stage("scan_enrichment") as info, mocked_upstream(upstream):
-            exit_code = await asyncio.to_thread(_run_cli_scan, inventory_path, report_path)
+        with recorder.stage("scan_enrichment") as info:
+            # The CLI runs on a collector host, not in the API process this run measures:
+            # its CPU and peak RSS are the child's own (``scan_process``).
+            child = await asyncio.to_thread(
+                scan_in_child, inventory_path, report_path, vulnerable_versions(report), fail_first_batches=fail_first_batches
+            )
+            guard.blocked.extend(child["blocked_connections"])
+            guard.callers.extend(child["blocked_callers"])
             scan_report = json.loads(report_path.read_text(encoding="utf-8"))
             scanned = _finding_keys(scan_report.get("blast_radius") or [])
-            info.update(exit_code=exit_code, report_bytes=report_path.stat().st_size, findings=len(scanned), upstream=upstream.snapshot())
+            info.update(
+                exit_code=child["exit_code"],
+                report_bytes=report_path.stat().st_size,
+                findings=len(scanned),
+                upstream=child["upstream"],
+                scan_process=child["process"],
+                cpu_seconds=child["process"]["cpu_seconds"],
+            )
 
         body = cli_push_body(report_path.read_bytes(), source_id=source_id)
         storage_before = footprint()
