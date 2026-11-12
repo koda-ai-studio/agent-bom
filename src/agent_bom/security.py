@@ -10,7 +10,7 @@ import logging
 import os
 import re
 from typing import Any
-from urllib.parse import unquote, urlsplit, urlunsplit
+from urllib.parse import ParseResult, unquote, urlparse, urlsplit, urlunsplit
 
 from agent_bom.constants import is_blank_env_value
 from agent_bom.core.security_validation import (
@@ -794,6 +794,18 @@ def url_port(netloc: str) -> int | None:
     return int(port)
 
 
+def _parse_outbound_url(url: str) -> ParseResult:
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        raise SecurityError(f"Invalid URL '{url}': {e}")
+    try:
+        url_port(parsed.netloc)
+    except ValueError as exc:
+        raise SecurityError(str(exc)) from None
+    return parsed
+
+
 def validate_url(url: str, *, allowed_schemes: tuple[str, ...] = ("https",), allow_private: bool = False) -> None:
     """
     Validate a URL for safety, including DNS rebinding protection.
@@ -809,16 +821,7 @@ def validate_url(url: str, *, allowed_schemes: tuple[str, ...] = ("https",), all
     Raises:
         SecurityError: If URL is invalid or uses insecure protocol
     """
-    from urllib.parse import urlparse
-
-    try:
-        parsed = urlparse(url)
-    except Exception as e:
-        raise SecurityError(f"Invalid URL '{url}': {e}")
-    try:
-        url_port(parsed.netloc)
-    except ValueError as exc:
-        raise SecurityError(str(exc)) from None
+    parsed = _parse_outbound_url(url)
 
     allow_private = allow_private or os.environ.get("AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS", "").strip().lower() in {
         "1",
