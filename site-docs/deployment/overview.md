@@ -233,6 +233,35 @@ background jobs, upgrade and rollback, recovery, removal and resource
 consumption still need to be tested in each authorized environment before a
 profile above is described as qualified there.
 
+### Replica rollout on kind
+
+On 2026-11-12 the chart from this checkout ran on kind (Kubernetes from kind
+v0.32.0, Helm v4.1.4) with three API replicas behind a `NodePort` Service, one
+PostgreSQL 16 with TLS (`max_connections=200`), the chart's migration Job and
+its post-install verification Job enabled. The trusted-proxy attestation came
+from the auth Secret (`controlPlane.api.listenerAttestation.fromSecret=true`)
+and the NetworkPolicy admitted the node and pod ranges through
+`controlPlane.networkPolicy.ingressCIDRs`. Checks ran with the replica lane
+(`scripts/qualification/replicas.py`): a fresh connection per read, one read
+every 100 ms with a 10 s timeout, through `kubectl rollout restart` of the API
+Deployment.
+
+| Check | Result |
+|---|---|
+| Install with `--wait`, migration and verification hooks | Passed in 79 s; verification `status: ready`, `tls: true` |
+| Role connection limits after migration | `agent_bom_app` 133 (4 processes with the surge × 32 + 5), `agent_bom_maintenance` 32 (kept, above the 20 needed) |
+| Spread, concurrent and idempotent pushes, per-replica consistency, a replica killed mid-ingest | All passed |
+| Rolling restart under reads, run 1 | 530 reads, 0 failed; rollout 119 s; p95 272 ms, max 1.8 s |
+| Rolling restart under reads, run 2 | 485 reads, 0 failed; rollout 129 s; p95 330 ms, max 2.0 s |
+| Rolling restart under reads, run 3 | 514 reads, 0 failed; rollout 155 s; p95 454 ms, max 3.1 s |
+
+| Control: `controlPlane.api.shutdown.preStopSleepSeconds=0` | 576 reads, 2 failed (`RemoteProtocolError`) |
+| Control: `agent_bom_app` set back to `CONNECTION LIMIT 20` | Surge pod in `CrashLoopBackOff` with `too many connections for role "agent_bom_app"`; rollout recovered once the limit was 133 again |
+
+Before these fixes the same lane could not finish a rolling restart, and 2 to
+5 of 300 to 500 reads failed with connection resets or 10 s timeouts. One host ran everything, so latencies include contention. This is
+not a qualification of any managed Kubernetes service.
+
 ## Enterprise Deployment Promise
 
 This self-hosted shape is designed around a few explicit operating principles:

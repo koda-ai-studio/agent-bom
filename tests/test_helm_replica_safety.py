@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests._helm_render import ATTESTED_API
+
 CHART = Path(__file__).resolve().parents[1] / "deploy/helm/agent-bom"
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm not installed")
 
@@ -26,7 +28,8 @@ def _render(workload: dict, *, component: str = "api") -> subprocess.CompletedPr
                         "maintenanceSecretRef": {"name": "test-maintenance"},
                         "adminSecretRef": {"name": "test-admin"},
                     },
-                    component: workload,
+                    "api": ATTESTED_API,
+                    component: {**ATTESTED_API, **workload} if component == "api" else workload,
                 },
                 "pdb": {"enabled": True},
             }

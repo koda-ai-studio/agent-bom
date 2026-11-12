@@ -42,6 +42,10 @@ controlPlane:
   enabled: true
   postgres:
     provider: auto
+    # Pool sizes also set the role connection limits the migration applies.
+    pool:
+      minSize: 2
+      maxSize: 20
     verification:
       enabled: true
   postgresSecrets:
@@ -60,10 +64,6 @@ controlPlane:
         value: "1"
       - name: AGENT_BOM_REQUIRE_AUDIT_HMAC
         value: "1"
-      - name: AGENT_BOM_POSTGRES_POOL_MIN_SIZE
-        value: "5"
-      - name: AGENT_BOM_POSTGRES_POOL_MAX_SIZE
-        value: "20"
       - name: AGENT_BOM_POSTGRES_CONNECT_TIMEOUT_SECONDS
         value: "5"
       - name: AGENT_BOM_POSTGRES_STATEMENT_TIMEOUT_MS

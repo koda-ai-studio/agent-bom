@@ -498,6 +498,12 @@ controlPlane:
     enabled: true
     ingressNamespaces:
       - ingress-nginx
+    # Sources outside the cluster admitted to the API and UI ports, for a
+    # NodePort or LoadBalancer Service: the client or load balancer ranges, or
+    # the node CIDRs when externalTrafficPolicy is Cluster (traffic arrives
+    # from the node). A NodePort or LoadBalancer Service with neither these nor
+    # additionalIngress fails rendering, since the policy would drop its traffic.
+    ingressCIDRs: []
     additionalIngress: []
     # Worker pods (controlPlane.worker) admit no peer ingress by default; their
     # port answers kubelet probes only. Add rules here, e.g. for metrics scraping.
@@ -506,6 +512,20 @@ controlPlane:
   # PostgreSQL protocol contract or upgrades compatibility into certification.
   postgres:
     provider: auto
+    # Per API or worker process: the main agent_bom_app pool keeps minSize
+    # connections open and grows to maxSize; small fixed pools (admission 4,
+    # idempotency 4, maintenance 4) and up to 4 graph builds come on top.
+    pool:
+      minSize: 2
+      maxSize: 20
+    # Role CONNECTION LIMITs the migration Job applies after every upgrade
+    # (raised, never lowered). 0 derives each from pool.maxSize and the largest
+    # API plus worker replica count, including the 25% rolling-update surge;
+    # a value below that demand fails rendering. Postgres max_connections must
+    # cover both limits plus its reserved connections.
+    connectionLimits:
+      app: 0
+      maintenance: 0
     verification:
       enabled: true
       hooks: post-install,post-upgrade
@@ -636,6 +656,16 @@ controlPlane:
       fromSecret: false
       secretName: ""
       sharedSourceAccepted: false
+    # A clustered or production API (more than one replica, HPA or KEDA, or
+    # AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT / AGENT_BOM_DEPLOYMENT_ENV=production)
+    # listening beyond loopback refuses to start unless requests are attested:
+    # trusted-proxy auth (AGENT_BOM_TRUST_PROXY_AUTH=1 with
+    # AGENT_BOM_TRUST_PROXY_AUTH_SECRET and AGENT_BOM_TRUST_PROXY_AUTH_ISSUER)
+    # or app-native mTLS (AGENT_BOM_TLS_CERT_FILE, _KEY_FILE, _CLIENT_CA_FILE,
+    # _REQUIRE_CLIENT_CERT). Rendering fails when api.env shows neither, unless
+    # fromSecret records that a Secret in api.envFrom supplies them.
+    listenerAttestation:
+      fromSecret: false
     # Shared-state guards use the largest initial/scaler/fallback count, not
     # merely the number of pods present at installation time.
     replicas: 2
@@ -748,10 +778,7 @@ controlPlane:
       periodSeconds: 30
       timeoutSeconds: 5
       failureThreshold: 3
-    # /readyz goes 503 as soon as graceful shutdown begins so the service
-    # endpoint drains before Kubernetes sends SIGTERM. The drain window is
-    # AGENT_BOM_SHUTDOWN_DRAIN_SECONDS (default 25s); keep that under
-    # terminationGracePeriodSeconds so the pod exits cleanly.
+    # /readyz returns 503 from the moment SIGTERM arrives.
     readinessProbe:
       httpGet:
         path: /readyz
@@ -767,9 +794,16 @@ controlPlane:
       failureThreshold: 18
       periodSeconds: 5
       timeoutSeconds: 5
-    # Leaves a 5s margin over the default 25s drain window for in-flight
-    # requests to finish before Kubernetes force-kills the pod.
-    terminationGracePeriodSeconds: 30
+    # Termination: the pod keeps serving for preStopSleepSeconds while
+    # Kubernetes removes it from Service endpoints, then SIGTERM stops the
+    # listener, in-flight requests get up to gracefulShutdownSeconds, and
+    # background work (scans, report jobs) up to drainSeconds. Their sum plus
+    # 5 s must fit terminationGracePeriodSeconds, or rendering fails.
+    shutdown:
+      preStopSleepSeconds: 10
+      gracefulShutdownSeconds: 10
+      drainSeconds: 25
+    terminationGracePeriodSeconds: 60
   # Optional scan/ingest worker split. When enabled, a second Deployment runs
   # the API image with AGENT_BOM_API_ROLE=worker: it drains the shared Postgres
   # scan_dispatch_queue (scan jobs and queued pushed-result ingest) and binds
@@ -826,7 +860,9 @@ controlPlane:
     affinity: {}
     # Worker-only env appended after controlPlane.api.env.
     extraEnv: []
-    terminationGracePeriodSeconds: 30
+    # Covers controlPlane.api.shutdown graceful and drain seconds plus 5 s;
+    # workers serve no Service, so they skip the pre-stop sleep.
+    terminationGracePeriodSeconds: 45
   ui:
     enabled: true
     replicas: 2
