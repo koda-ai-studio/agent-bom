@@ -29,8 +29,8 @@ from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
 from agent_bom.api.current_graph_builds import ROTATING_CODE as ROTATING_CODE
+from agent_bom.api.current_graph_builds import await_current_build, current_view_coverage, resolve_request_current
 from agent_bom.api.current_graph_builds import build_wait_seconds as _build_wait_seconds
-from agent_bom.api.current_graph_builds import current_view_coverage, resolve_request_current
 from agent_bom.api.current_graph_builds import generation_rotating as _generation_rotating
 from agent_bom.api.current_graph_counts import count_current_nodes
 from agent_bom.api.current_graph_lock import ProjectionLock as _ProjectionLock
@@ -396,6 +396,21 @@ class CurrentGraphStore:
         with open(staging, "w", encoding="utf-8") as handle:
             handle.write(f"{os.getpid()}:{time.time_ns()}:{os.urandom(8).hex()}")
         os.replace(staging, target)
+
+    def prepare_current(self, tenant: str, *, seconds: float) -> bool:
+        """Build the tenant's current generation on the shared queue; True once one is live.
+
+        Start-up warm-up only: a read arriving meanwhile coalesces onto the
+        same queued build and keeps its own bounded wait.
+        """
+        epoch = self._promotion_epoch(tenant)
+        evidence = self._evidence_state(tenant, request_scoped=False)
+        if not evidence[0]:
+            return True
+        with self._lock.shared():
+            if self._cached_live_id(tenant, evidence[3]):
+                return True
+        return bool(await_current_build(self, tenant, seconds=seconds, prepared=(epoch, *evidence)))
 
     def _resolve_current_id(self, tenant: str) -> str:
         # Read the promotion stamp before the evidence: a promotion after this

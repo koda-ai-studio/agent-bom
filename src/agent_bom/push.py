@@ -18,6 +18,7 @@ from typing import Any, Literal, overload
 
 import httpx
 
+from agent_bom import config
 from agent_bom.core.settings import env_float, env_list, env_str
 from agent_bom.security import (
     sanitize_command_args,
@@ -36,6 +37,9 @@ _LOCAL_CONTROL_PLANE_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 _IDENTITY_KEYS = frozenset({"finding_group_key"})
 
 SCAN_PUSH_PATH = "/v1/results/push"
+#: One push is stored as one job result, which must fit PostgreSQL's 255 MiB jsonb value limit even with
+#: the result codec off; no configuration accepts a larger decoded push, so the CLI refuses one before uploading.
+RESULT_PUSH_JSONB_CEILING_BYTES = 240 * 1024 * 1024
 
 
 def normalize_scan_push_url(push_url: str) -> str:
@@ -186,14 +190,58 @@ def _redact_nested_secrets(value):
     return value
 
 
-def _encode_push_payload(sanitized: Any) -> tuple[bytes, dict[str, str]]:
-    """Serialize a push body once; gzip it (default) and return the matching headers."""
-    from agent_bom.config import PUSH_GZIP
+def _serialize_push_payload(sanitized: Any) -> bytes:
+    return json.dumps(sanitized, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
 
-    payload = json.dumps(sanitized, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
-    if not PUSH_GZIP:
+
+def _compress_push_payload(payload: bytes) -> tuple[bytes, dict[str, str]]:
+    if not config.PUSH_GZIP:
         return payload, {}
     return gzip.compress(payload, compresslevel=1, mtime=0), {"Content-Encoding": "gzip"}
+
+
+def _encode_push_payload(sanitized: Any) -> tuple[bytes, dict[str, str]]:
+    """Serialize a push body once; gzip it (default) and return the matching headers."""
+    return _compress_push_payload(_serialize_push_payload(sanitized))
+
+
+class PushTooLargeError(Exception):
+    """A scan push the control plane cannot store; carries the numbers to split it by."""
+
+    def __init__(self, *, decoded_bytes: int, max_bytes: int | None, agents: int, server_refused: bool) -> None:
+        self.decoded_bytes = decoded_bytes
+        self.max_bytes = max_bytes
+        self.agents = agents
+        per_agent = decoded_bytes / agents if agents else 0
+        # 10% margin: agents differ in size, and a split by count is only an estimate.
+        self.agents_per_push = int(max_bytes * 0.9 // per_agent) if max_bytes and per_agent else 0
+        super().__init__(self._message(server_refused))
+
+    def _message(self, server_refused: bool) -> str:
+        size = f"The report is {_size(self.decoded_bytes)} decoded ({self.agents:,} agents)"
+        if self.max_bytes is None:
+            refused = "the control plane or a proxy in front of it refused it as too large (413)"
+            return f"{size}; {refused}. Split the inventory into smaller scans."
+        limit = "this control plane accepts at most" if server_refused else "no control plane accepts more than"
+        advice = (
+            f"Push at most {self.agents_per_push:,} agents per push: split the inventory into files of that many agents "
+            "and run one scan per file (agent-bom agents --inventory FILE --push-url ...). Each file is its own target, "
+            "so its next push replaces only its own earlier evidence."
+            if self.agents_per_push
+            else "Split the scan into smaller targets."
+        )
+        return f"{size}; {limit} {_size(self.max_bytes)} per push, because one push is stored as one scan result. {advice}"
+
+
+def _size(value: int) -> str:
+    return f"{value / (1024 * 1024):,.1f} MiB" if value >= 1024 * 1024 else f"{value / 1024:,.1f} KiB"
+
+
+def _oversize_before_upload(push_url: str, decoded_bytes: int, agents: int) -> PushTooLargeError | None:
+    ceiling = RESULT_PUSH_JSONB_CEILING_BYTES
+    if push_url.rstrip("/").endswith(SCAN_PUSH_PATH) and decoded_bytes > ceiling:
+        return PushTooLargeError(decoded_bytes=decoded_bytes, max_bytes=ceiling, agents=agents, server_refused=False)
+    return None
 
 
 def _push_tls_cert() -> str | tuple[str, str] | None:
@@ -301,7 +349,13 @@ async def _push_async(
     # Serialize once and reuse exactly the same bytes and idempotency identity
     # for every retry. Compression is on by default; AGENT_BOM_PUSH_GZIP=0 keeps
     # a receiver that predates gzip push support working.
-    payload, encoding_headers = await asyncio.to_thread(_encode_push_payload, sanitized)
+    decoded = await asyncio.to_thread(_serialize_push_payload, sanitized)
+    agents = len(sanitized.get("agents") or []) if isinstance(sanitized, dict) else 0
+    if too_large := _oversize_before_upload(push_url, len(decoded), agents):
+        return _too_large(too_large, return_body=return_body)
+    payload, encoding_headers = await asyncio.to_thread(_compress_push_payload, decoded)
+    decoded_bytes = len(decoded)
+    del decoded
     headers.update(encoding_headers)
     timeout = _push_timeout_seconds(len(payload), compressed=bool(encoding_headers))
 
@@ -318,15 +372,28 @@ async def _push_async(
 
     if outcome.ok:
         return (True, outcome.body or {}) if return_body else True
+    if outcome.too_large:
+        refused = PushTooLargeError(decoded_bytes=decoded_bytes, max_bytes=outcome.max_bytes, agents=agents, server_refused=True)
+        return _too_large(refused, return_body=return_body)
     if not outcome.done:
         logger.error("Push failed after %d attempts (last_status=%s, last_error=%s)", max_attempts, outcome.last_status, outcome.last_error)
     return (False, None) if return_body else False
+
+
+def _too_large(error: PushTooLargeError, *, return_body: bool) -> tuple[bool, None]:
+    """Scan pushes raise so the CLI can print the split advice; body-returning callers log it and fail."""
+    if not return_body:
+        raise error
+    logger.error("%s", error)
+    return False, None
 
 
 class _PushOutcome:
     def __init__(self) -> None:
         self.ok = False
         self.done = False
+        self.too_large = False
+        self.max_bytes: int | None = None
         self.body: dict[str, Any] | None = None
         self.last_status: int | None = None
         self.last_error: str | None = None
@@ -374,6 +441,11 @@ async def _push_attempt(
         outcome.ok, outcome.done = True, True
         outcome.body = _response_json(resp) if resp.status_code != 204 else {}
         logger.info("Results pushed to configured endpoint (status=%d, attempt=%d)", resp.status_code, attempt)
+        return 0.0
+    if resp.status_code == 413 and push_url.rstrip("/").endswith(SCAN_PUSH_PATH):
+        budget = _response_json(resp).get("max_bytes")
+        outcome.too_large, outcome.done = True, True
+        outcome.max_bytes = budget if isinstance(budget, int) and not isinstance(budget, bool) and budget > 0 else None
         return 0.0
     if resp.status_code in _RETRYABLE_PUSH_STATUS or (resp.status_code == 409 and retry_after > 0):
         outcome.last_error = sanitize_text(resp.text[:200])

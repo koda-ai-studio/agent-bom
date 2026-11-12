@@ -35,7 +35,9 @@ STAGE_CPU_SECONDS = {
     "update_delete": 40.0,
 }
 WORKFLOW_CPU_SECONDS = 120.0
-PEAK_RSS_MIB = 1536  # measured 410-645; the profile's 2 GiB limit less runner headroom
+# The API process only: since 2026-11-11 the CLI scan runs in its own process (stage `scan_process`).
+# Measured 514 MiB (410-645 with the scan in process); 2x for runner variance, half the 2 GiB limit.
+PEAK_RSS_MIB = 1024
 # Eight samples, so p95 is the slowest read: 2.0 s was observed at load ~18.
 # This ceiling only catches order-of-magnitude stalls; latency is not a PR SLO.
 READ_P95_MS = 8000.0
@@ -88,7 +90,7 @@ def workflow_control_plane(tmp_path, monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.asyncio
-async def test_ci_profile_workflow_stays_accurate_and_inside_its_resource_budget(workflow_control_plane, tmp_path) -> None:
+async def test_ci_profile_workflow_stays_accurate_and_inside_its_resource_budget(workflow_control_plane, tmp_path, monkeypatch) -> None:
     result = await run_workflow(PROFILE, tmp_path / "work", footprint=sqlite_footprint(workflow_control_plane))
     stages = result["stages"]
 
@@ -150,3 +152,23 @@ async def test_ci_profile_workflow_stays_accurate_and_inside_its_resource_budget
         assert stages[name]["cpu_seconds"] <= ceiling, (name, stages[name])
     assert result["process"]["cpu_seconds"] <= WORKFLOW_CPU_SECONDS, result["process"]
     assert result["process"]["rss_peak_mib"] <= PEAK_RSS_MIB, result["process"]
+    assert stages["scan_enrichment"]["scan_process"]["max_rss_mib"] <= PEAK_RSS_MIB, stages["scan_enrichment"]
+
+    await _restart_serves_its_first_graph_read(monkeypatch)
+
+
+async def _restart_serves_its_first_graph_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A new process over the same stores: after the start-up prewarm, a read that cannot wait is served."""
+    import httpx
+
+    from agent_bom.api import current_graph, current_graph_prewarm, stores
+    from agent_bom.api.server import app
+
+    current_graph._current_graph_store.cache_clear()
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS", "0")
+    summary = current_graph_prewarm.prewarm_current_graphs(stores._get_graph_store(), stores._get_store(), per_tenant_seconds=120)
+    assert summary == {"status": "complete", "tenants_prepared": 1, "tenants_skipped": 0, "tenants_failed": 0}, summary
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://restart") as client:
+        first = await client.get("/v1/graph?limit=100")
+    assert first.status_code == 200, first.text
+    assert first.json()["nodes"]

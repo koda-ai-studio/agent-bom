@@ -74,3 +74,54 @@ def test_large_report_normalization_has_bounded_additional_heap():
     finally:
         tracemalloc.stop()
     assert peak < 512 * 1024, f"normalization copied the report: {peak} bytes"
+
+
+def _push_payload(agents: int):
+    from agent_bom.api.models import PushPayload
+    from scripts.generate_graph_benchmark_estate import generate_estate
+
+    report, _ = generate_estate(agents=agents, seed=2145, vulnerable_package_rate=0.08)
+    report.update(
+        source_id="fingerprint-source",
+        idempotency_key="excluded",
+        scan_run={"outcome": "complete"},
+        custom_extra={"idempotency_key": "nested", "values": [1, 2.5, None]},
+    )
+    return PushPayload.model_validate_json(json.dumps(report))
+
+
+def test_push_model_hash_is_unchanged_when_dumped_one_field_at_a_time():
+    from agent_bom.api.models import PushPayload
+
+    payload = _push_payload(4)
+    assert payload.model_extra and payload.scan_run is not None
+    assert idempotency_request_fingerprint(payload) == legacy_fingerprint(payload)
+    # Fields left at their defaults are part of the canonical bytes too.
+    assert idempotency_request_fingerprint(PushPayload()) == legacy_fingerprint(PushPayload())
+
+
+def test_push_model_fingerprint_never_dumps_the_whole_report_at_once():
+    payload = _push_payload(40)
+    expected = legacy_fingerprint(payload)
+    gc.collect()
+    tracemalloc.start()
+
+    def traced_peak(work):
+        gc.collect()
+        tracemalloc.reset_peak()
+        base = tracemalloc.get_traced_memory()[0]
+        result = work()
+        peak = tracemalloc.get_traced_memory()[1] - base
+        del result
+        return peak
+
+    try:
+        whole = traced_peak(lambda: payload.model_dump(mode="json"))
+        largest_section = traced_peak(lambda: payload.model_dump(mode="json", include={"agents"}))
+        fingerprint = traced_peak(lambda: idempotency_request_fingerprint(payload))
+    finally:
+        tracemalloc.stop()
+    assert idempotency_request_fingerprint(payload) == expected
+    # Bounded by the largest top-level section (agents, 82% of this fixture), never the whole report.
+    assert largest_section < whole
+    assert fingerprint <= largest_section * 1.05 + 64 * 1024, (fingerprint, largest_section, whole)

@@ -28,6 +28,7 @@ from urllib.parse import urlencode
 
 from starlette.requests import Request
 
+from agent_bom.api.graph_warmup_slot import warmup_slot
 from agent_bom.api.routes.brief import get_executive_brief
 from agent_bom.api.routes.compliance import get_compliance_summary, get_posture_counts
 from agent_bom.api.routes.graph_routes.views import get_fix_first_graph_view
@@ -98,7 +99,8 @@ def _drain() -> None:
                 return
             tenant_id = _PENDING.pop()
         try:
-            asyncio.run(warm_exec_reads(tenant_id))
+            with warmup_slot():
+                asyncio.run(warm_exec_reads(tenant_id))
         except Exception as exc:  # broad-except: the worker must survive one tenant's failure to serve the next queued tenant
             logger.debug("exec prewarm failed for a tenant: %s", sanitize_text(exc))
 

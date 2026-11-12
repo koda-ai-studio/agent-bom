@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from agent_bom import __version__
 from agent_bom import config as _config
+from agent_bom.api import current_graph_prewarm
 from agent_bom.api import host_guard as _host_guard
 from agent_bom.api import scan_queue as _scan_queue_module
 from agent_bom.api import stores as _stores
@@ -301,6 +302,9 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
         from agent_bom.config import demo_story_prewarm_enabled
 
         demo_seed_task = _demo_boot_seed.start_demo_estate_boot_seed(_prewarm_demo_story if demo_story_prewarm_enabled() else None)
+
+    if demo_seed_task is None:
+        current_graph_prewarm.start_current_graph_prewarm()
 
     from agent_bom.api.report_queue import start_report_worker
 
