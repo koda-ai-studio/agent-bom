@@ -1141,6 +1141,7 @@ def test_helm_postgres_jobs_fail_render_without_distinct_credentials() -> None:
         "controlPlane.postgresSecrets.maintenanceSecretRef.name=maintenance-db",
         "--set",
         "controlPlane.postgresSecrets.adminSecretRef.name=admin-db",
+        *ATTESTED_API_SET_ARGS,
     ]
     for values_path, variable, expected in (
         ("controlPlane.api.env", "AGENT_BOM_POSTGRES_URL", "controlPlane.api.env cannot override"),

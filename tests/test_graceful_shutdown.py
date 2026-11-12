@@ -42,6 +42,8 @@ def test_installing_twice_does_not_chain_the_handler_twice() -> None:
 def test_readiness_reports_draining_as_soon_as_sigterm_arrives(monkeypatch: pytest.MonkeyPatch) -> None:
     from agent_bom.api import readiness, server
 
+    # An earlier lifespan shutdown in this process leaves the server's own drain flag set.
+    monkeypatch.setattr(server, "_shutting_down", False)
     monkeypatch.setattr(readiness, "evaluate_control_plane_readiness", lambda: readiness.ReadinessStatus(ready=True))
     client = TestClient(server.app)
     assert client.get("/readyz").status_code == 200
