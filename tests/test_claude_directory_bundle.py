@@ -56,6 +56,8 @@ def test_directory_bom_uses_only_declared_mcp_and_stops_on_incomplete_output():
     assert "Never save or present a partial response as a complete BOM" in text
     assert "Do not fall back to shell commands" in text
     assert "config_path" in text and "cyclonedx" in text and "spdx" in text
+    assert "@graph" in text and "SpdxDocument" in text and "@context" in text
+    assert "MCP configuration directory" in text
     assert "uvx --from" not in text
     # Repository and Codex editions retain their explicitly supported CLI workflow.
     assert "Bash(uvx" in (ROOT / "integrations/claude-code/skills/bom/SKILL.md").read_text()
