@@ -6,7 +6,6 @@
         "${CLAUDE_PLUGIN_ROOT}/mcp_launcher.py"
       ],
       "env": {
-        "AGENT_BOM_MCP_WORKSPACE_ROOTS": "${CLAUDE_PROJECT_DIR}",
         "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0",
         "GITHUB_TOKEN": "",
         "GH_TOKEN": "",
@@ -21,7 +20,6 @@
         "audit"
       ],
       "env": {
-        "AGENT_BOM_MCP_WORKSPACE_ROOTS": "${CLAUDE_PROJECT_DIR}",
         "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0",
         "GITHUB_TOKEN": "",
         "GH_TOKEN": "",

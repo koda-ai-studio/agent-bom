@@ -210,9 +210,12 @@ Prompts, responses, file contents and credential values are never sent.
 ### Which paths the tools accept
 
 The MCP tools take paths under your home directory and under the directories
-named in `AGENT_BOM_MCP_WORKSPACE_ROOTS`. In Claude Code, `.mcp.json` sets that
-variable to `${CLAUDE_PROJECT_DIR}`, so a project in `/tmp`, `/workspaces`
-(devcontainers), `/srv` or `/Volumes` scans without setup. Codex expands no
+named in `AGENT_BOM_MCP_WORKSPACE_ROOTS`. In Claude Code, the bundled launcher reads `CLAUDE_PROJECT_DIR` from the
+[stdio server environment](https://code.claude.com/docs/en/mcp#option-3-add-a-local-stdio-server)
+and sets the workspace-root variable to that value. If it is absent, no extra
+roots are granted. A project in `/tmp`, `/workspaces`
+(devcontainers), `/srv` or `/Volumes` therefore scans without setup when
+Claude supplies its project root. Codex expands no
 variables in a plugin's MCP config. The `agent-bom-local` Codex plugin passes
 an operator-set `AGENT_BOM_MCP_WORKSPACE_ROOTS` from the launch environment;
 without it, only home-directory paths are accepted. Alternatively, declare
