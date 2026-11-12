@@ -44,11 +44,10 @@ export interface ExposurePathCommandAction {
 
 export type { ExposurePathView } from "@/components/path-view-toolbar";
 
-/** One rail width; every evidence card stretches to it (never shrink-to-fit pills). */
+/** Evidence follows the full-width path; cards share columns on wide screens. */
 const PATH_EVIDENCE_RAIL_CLASS = [
   "flex min-w-0 flex-col gap-2",
   "@min-[50rem]:grid @min-[50rem]:grid-cols-2 @min-[50rem]:items-start",
-  "@min-[70rem]:sticky @min-[70rem]:top-[5.5rem] @min-[70rem]:flex @min-[70rem]:items-stretch @min-[70rem]:max-h-[min(72svh,54rem)] @min-[70rem]:overflow-y-auto @min-[70rem]:overscroll-contain",
 ].join(" ");
 
 const ROLE_META: Record<ExposureEntityRole, { label: string; tint: string }> = {
@@ -197,7 +196,7 @@ export function ExposurePathCommandCenter({
           )}
         </div>
 
-        <div className="grid gap-3 @min-[70rem]:grid-cols-[minmax(0,1fr)_20rem] @min-[70rem]:items-start">
+        <div className="grid min-w-0 gap-3">
         <div className="min-w-0 space-y-2">
         {!graphHostsToggle && <div className="flex items-center">{toggle}</div>}
 
