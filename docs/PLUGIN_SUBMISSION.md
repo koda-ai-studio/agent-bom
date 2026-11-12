@@ -67,6 +67,9 @@ from a paid account on the organization that should own the listing, with GitHub
 
 1. **Submit new**, then **Plugin bundle**. Repository `koda-ai-studio/agent-bom`, plugin
    path `integrations/claude-directory`, tracked branch or tag: the tested release source.
+   The directory BOM skill uses only `generate_sbom`; it returns a document in the
+   conversation and has no cloud/image BOM or shell fallback. Repository and Codex
+   editions retain their separate CLI workflows.
 2. Select **Validate**. Fix anything marked **Blocks**, then **Re-validate**.
 3. Review the reported holds separately from blockers. The readable Python launcher
    may be held for a reviewer; a hold is not a rejection or a validation pass.

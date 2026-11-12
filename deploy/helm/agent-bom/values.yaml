@@ -751,7 +751,11 @@ controlPlane:
     # /readyz goes 503 as soon as graceful shutdown begins so the service
     # endpoint drains before Kubernetes sends SIGTERM. The drain window is
     # AGENT_BOM_SHUTDOWN_DRAIN_SECONDS (default 25s); keep that under
-    # terminationGracePeriodSeconds so the pod exits cleanly.
+    # terminationGracePeriodSeconds so the pod exits cleanly. At start-up it
+    # also stays 503 (current_graph_prewarming) while recent tenants' current
+    # graphs are built, for at most AGENT_BOM_CURRENT_GRAPH_PREWARM_READY_SECONDS
+    # (default 120s), so no read is routed to a cold replica. Liveness and the
+    # startupProbe use /health and never wait on that warm-up.
     readinessProbe:
       httpGet:
         path: /readyz

@@ -29,7 +29,10 @@ from scripts.perf.workflow_equivalence import (
 from scripts.perf.workflow_profiles import cli_push_body, expected_findings, vulnerable_versions
 
 _OPEN = {"open", "reopened"}
-GRAPH_REFRESH_DEADLINE_SECONDS = 60.0
+# How long the current graph may keep a removed package after the update push is stored.
+# Measured 3-5 s at the chart's 1 and 2 CPU limits (2026-11-12); 60 s was missed before the
+# rebuild was queued at commit and the warm-ups stopped running beside it.
+GRAPH_REFRESH_DEADLINE_SECONDS = 30.0
 # Identity a resolved row must keep so a reader can still tell which package was fixed.
 RESOLVED_IDENTITY_FIELDS = ("package", "package_version", "ecosystem", "scan_id", "resolved_by_scan_id")
 
@@ -186,7 +189,10 @@ def update_delete_failures(result: dict[str, Any]) -> list[str]:
     if missing := result.get("resolved_row_missing_identity"):
         failures.append(f"resolved row lost identity fields: {', '.join(missing)}")
     if result.get("graph_package_nodes_before", 0) < 1 or result.get("graph_package_nodes_after") != 0:
-        failures.append(f"graph package nodes {result.get('graph_package_nodes_before')} -> {result.get('graph_package_nodes_after')}")
+        failures.append(
+            f"graph package nodes {result.get('graph_package_nodes_before')} -> {result.get('graph_package_nodes_after')}"
+            f" after {result.get('graph_refresh_seconds')} s (current graph refresh budget {GRAPH_REFRESH_DEADLINE_SECONDS:g} s)"
+        )
     return failures
 
 
