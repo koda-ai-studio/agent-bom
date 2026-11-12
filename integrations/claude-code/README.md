@@ -45,17 +45,20 @@ The plugin starts two local servers from the same pinned release, each with a
 bounded tool profile: `agent-bom` (the default `scan` profile: scan, check,
 remediate and five more) and `agent-bom-audit` (`--profile audit`: inventory,
 skill and descriptor audits, prompt checks, compliance, policy). See
-[MCP profiles](../../docs/MCP_SERVER.md). Both start with
-`uv run --frozen --isolated --project <plugin folder> agent-bom mcp server`, so
-they need [uv](https://docs.astral.sh/uv/). `pyproject.toml` in this folder pins the
-published release and `uv.lock` records every dependency's exact version, PyPI URL
+[MCP profiles](../../docs/MCP_SERVER.md). Claude Code starts the bundled
+`mcp_launcher.py` with `python3`; Python 3 and [uv](https://docs.astral.sh/uv/)
+must be on PATH. The readable launcher replaces itself with
+`uv run --frozen --isolated --project <plugin folder> agent-bom mcp server`.
+It resolves the plugin folder from its own file, independently of the user’s
+working directory, and forwards the declared profile arguments.
+`pyproject.toml` in this folder pins the published release and `uv.lock` records every dependency's exact version, PyPI URL
 and sha256 hash; uv installs exactly that, never resolves at launch, and writes
 nothing into the plugin folder (the environment lives in uv's cache). The lock
-covers Python 3.11 to 3.14 (uv downloads one if none is installed) on macOS,
+covers Python 3.11 to 3.14 (uv downloads a compatible version if needed) on macOS,
 Linux x86_64 and aarch64, and Windows x64 and ARM64. No API key or account is
 needed. Directory builds exclude activity/history skills.
-Before submission, pin a published release that excludes `agent_activity` from
-the audit profile; the existing release pin is not submission-ready.
+The pinned audit profile excludes `agent_activity`; no chat-history tool is
+exposed by either server.
 
 ## Two ways to install in Codex
 
