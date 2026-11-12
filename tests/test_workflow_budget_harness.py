@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
@@ -176,10 +177,34 @@ def test_evidence_failures_flag_a_restart_that_cannot_serve_its_first_graph_read
     }
     entry = {"profile": {"name": "p", "memory_limit_mib": 2048}, "restart": restart}
     assert evidence_failures({"profiles": [entry]}) == [
-        "p/restart: first graph read returned 503 (current_estate_building) after the start-up prewarm"
+        "p/restart: first graph read after readiness returned 503 (current_estate_building)"
     ]
     restart["result"]["first_graph_read_status"] = 200
     assert evidence_failures({"profiles": [entry]}) == []
+    restart["result"].update(ready_status=503, not_ready_reasons=["current_graph_prewarming"])
+    assert evidence_failures({"profiles": [entry]}) == ["p/restart: /readyz never answered 200 (['current_graph_prewarming'])"]
+
+
+def test_restart_phase_routes_its_first_read_only_after_readiness() -> None:
+    from scripts.perf.workflow_phases import _await_ready
+
+    answers = iter(
+        [(503, {"status": "not_ready", "reason": "current_graph_prewarming"}), (503, {"status": "draining"}), (200, {"status": "ready"})]
+    )
+
+    class Http:
+        calls: list[str] = []
+
+        async def call(self, method, url):
+            self.calls.append(url)
+            status, body = next(answers)
+            return httpx.Response(status, json=body), 0.0
+
+    http = Http()
+    ready = asyncio.run(_await_ready(http, period_seconds=0))
+    assert ready["ready_status"] == 200
+    assert ready["not_ready_reasons"] == ["current_graph_prewarming", "draining"]
+    assert http.calls == ["/readyz"] * 3
 
 
 def test_evidence_failures_hold_every_process_to_the_profile_memory_budget() -> None:
@@ -257,3 +282,22 @@ def test_nightly_postgres_workflow_job_migrates_like_postgres_scale_evidence_and
     upload = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/upload-artifact@"))
     assert upload["if"] == "always()"
     assert "workflow-resource-budget-postgres.json" in upload["with"]["path"]
+
+
+def test_update_delete_fails_when_the_current_graph_refresh_misses_its_budget() -> None:
+    from scripts.perf.workflow_lifecycle import GRAPH_REFRESH_DEADLINE_SECONDS, update_delete_failures
+
+    # Measured 4-5 s at the chart's 1 CPU limit (2026-11-12); the budget leaves 6x for a loaded runner.
+    assert GRAPH_REFRESH_DEADLINE_SECONDS <= 30
+    passing = {
+        "scanned_matches_expected": True,
+        "open_matches_expected": True,
+        "widened_scope_has_added_agent": True,
+        "deleted_resolved": True,
+        "graph_package_nodes_before": 1,
+        "graph_package_nodes_after": 0,
+        "graph_refresh_seconds": 4.1,
+    }
+    assert update_delete_failures(passing) == []
+    stale = {**passing, "graph_package_nodes_after": 1, "graph_refresh_seconds": 30.2}
+    assert update_delete_failures(stale) == ["graph package nodes 1 -> 1 after 30.2 s (current graph refresh budget 30 s)"]

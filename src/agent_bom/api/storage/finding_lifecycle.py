@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from agent_bom.api.finding_collection import collect_scan_findings
-from agent_bom.api.finding_lifecycle_fold import FindingState, ScanEvidence, apply_evidence, scan_evidence
+from agent_bom.api.finding_lifecycle_fold import FindingState, ScanEvidence, apply_evidence, attach_resolving_scans, scan_evidence
 from agent_bom.api.hub_payload_codec import decode_hub_payload, encode_hub_payload
 from agent_bom.api.storage.hub_filters import _redact_finding
 from agent_bom.api.storage.sql import Dialect, SqlSession
@@ -306,3 +306,24 @@ def attach_payloads(session: SqlSession, tenant_id: str, states: list[FindingSta
             ).fetchall()
             for key, payload in rows:
                 keyed[key].payload = decode_hub_payload(payload)
+
+
+def attach_resolving_job_ids(session: SqlSession, tenant_id: str, states: list[FindingState]) -> None:
+    """Name each resolution's scan from the scan ledger, which outlives job retention."""
+    wanted: dict[str, set[str]] = {}
+    for state in states:
+        if not state.live and state.resolved_at:
+            wanted.setdefault(state.scope_hash, set()).add(str(state.resolved_at))
+    scans: list[tuple[str, str, str, bool]] = []
+    for scope_hash, instants in wanted.items():
+        ordered = sorted(instants)
+        for start in range(0, len(ordered), _KEY_BATCH):
+            batch = ordered[start : start + _KEY_BATCH]
+            marks = ",".join("?" for _ in batch)
+            rows = session.execute(
+                "SELECT evidence_at,job_id,complete FROM finding_lifecycle_scans "  # nosec B608 - fixed columns, bound values
+                f"WHERE tenant_id=? AND scope_hash=? AND evidence_at IN ({marks})",
+                (tenant_id, scope_hash, *batch),
+            ).fetchall()
+            scans.extend((scope_hash, str(at), str(job_id), bool(complete)) for at, job_id, complete in rows)
+    attach_resolving_scans(states, scans)

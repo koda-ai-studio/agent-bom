@@ -256,7 +256,7 @@ def _stamp_showcase_graph_reachability(blast_radii: list[Any], agents: list[Any]
 
 
 def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
-    from agent_bom.demo import DEMO_INVENTORY
+    from agent_bom.demo import demo_inventory_document
     from agent_bom.demo_estate.enterprise_composition import build_demo_estate
     from agent_bom.demo_estate.showcase_owners import assign_showcase_owners
     from agent_bom.finding import blast_radius_to_finding
@@ -267,7 +267,7 @@ def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
     from agent_bom.output import to_json
     from agent_bom.scanners import scan_agents_sync
 
-    agents = build_agents_from_inventory(DEMO_INVENTORY, "agent-bom --demo")
+    agents = build_agents_from_inventory(demo_inventory_document(), "agent-bom --demo")
     blast_radii = scan_agents_sync(
         agents,
         compliance_enabled=True,

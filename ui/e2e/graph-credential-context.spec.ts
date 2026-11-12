@@ -34,7 +34,9 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
   }
   await expect(page.getByRole("region",{name:"Reported path exposure"})).toContainText("References only");
   await expect(page.getByText("Reached from this path",{exact:true})).toHaveCount(0);
+  await page.getByLabel("Graph options",{exact:true}).click();
   await page.getByLabel("Relationship labels",{exact:true}).selectOption("show");
+  await page.getByLabel("Graph options",{exact:true}).click();
   await expect.poll(() => canvas.evaluate(root => {
     const boxes=[...root.querySelectorAll(".graph-entity-glyph")].map(n=>n.getBoundingClientRect());
     return [...root.querySelectorAll(".graph-relationship-label")].filter(label=>{
@@ -55,7 +57,15 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
     return Math.abs((box.top + box.bottom - glyph.top - glyph.bottom) / 2);
   })).toBeLessThan(20);
   await page.screenshot({path:info.outputPath(`credential-labels-shown-${recorded}.png`),fullPage:true});
+  await page.getByLabel("Graph options",{exact:true}).click();
   await page.getByLabel("Relationship labels",{exact:true}).selectOption("auto");
-  if(recorded) await expect(canvas.locator('.graph-relationship-label').filter({hasText:"Exposes Credential"})).toBeHidden();
+  await page.getByLabel("Graph options",{exact:true}).click();
+  // Exact selected paths keep their relationship captions visible in Auto.
+  if(recorded) await expect(canvas.locator('.graph-relationship-label').filter({hasText:"Exposes Credential"})).toBeVisible();
+  await page.getByLabel("Graph options",{exact:true}).click();
+  await page.getByLabel("Relationship labels",{exact:true}).selectOption("hide");
+  await expect(canvas.locator('.graph-relationship-label')).toHaveCount(0);
+  await page.getByLabel("Relationship labels",{exact:true}).selectOption("auto");
+  await page.getByLabel("Graph options",{exact:true}).click();
   await page.screenshot({path:info.outputPath(`credential-context-${recorded}.png`),fullPage:true});
 });

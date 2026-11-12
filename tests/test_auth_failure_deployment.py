@@ -15,6 +15,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests._helm_render import ATTESTED_API_SET_ARGS
+
 _REPO = Path(__file__).resolve().parents[1]
 _CHART = _REPO / "deploy/helm/agent-bom"
 
@@ -41,7 +43,15 @@ def _api_env(rendered: str) -> dict[str, str]:
     raise AssertionError("no API deployment rendered")
 
 
-_PLANE = ("--set", "controlPlane.enabled=true", "--set", "controlPlane.api.enabled=true", "--set", "controlPlane.migrations.enabled=false")
+_PLANE = (
+    "--set",
+    "controlPlane.enabled=true",
+    "--set",
+    "controlPlane.api.enabled=true",
+    "--set",
+    "controlPlane.migrations.enabled=false",
+    *ATTESTED_API_SET_ARGS,
+)
 _INGRESS = (*_PLANE, "--set", "controlPlane.ingress.enabled=true")
 
 

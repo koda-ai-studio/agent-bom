@@ -348,6 +348,8 @@ helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom --version 0
   --set controlPlane.postgresSecrets.adminSecretRef.name=agent-bom-control-plane-admin \
   --set controlPlane.api.trustedProxy.hops=1 \
   --set 'controlPlane.api.trustedProxy.cidrs={REPLACE_ME_INGRESS_CIDR}' \
+  --set 'controlPlane.api.envFrom[0].secretRef.name=agent-bom-control-plane-auth' \
+  --set controlPlane.api.listenerAttestation.fromSecret=true \
   --set controlPlane.ingress.enabled=true \
   --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=arn:aws:iam::REPLACE_ME_ACCOUNT_ID:role/REPLACE_ME_AGENT_BOM_DISCOVERY_ROLE \
   --set scanner.allNamespaces=true \

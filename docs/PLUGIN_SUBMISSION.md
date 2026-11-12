@@ -40,7 +40,11 @@ three with a baseline has not been done.
 2. Check that `site-docs/privacy.md` and `site-docs/terms.md` still match what the plugins
    do. They cover local and self-hosted use. A public hosted service needs a named operator,
    contact, law and retention added first.
-3. Run `make plugin-submission-check`, and fix what it reports.
+3. Run `python scripts/build_claude_directory.py` to refresh the Claude-only
+   directory distribution, then `make plugin-submission-check`. The generated
+   bundle retains the source launcher, lockfile and nine skills, without the
+   local Codex manifest or evaluation fixtures. Edit `integrations/claude-code`
+   and regenerate; do not hand-edit the bundle.
 4. Rerun the [review cases](PLUGIN_REVIEW_CASES.md) and the evals against the release:
 
    ```bash
@@ -62,11 +66,14 @@ Submit each plugin separately at [claude.ai/directory/manage](https://claude.ai/
 from a paid account on the organization that should own the listing, with GitHub connected.
 
 1. **Submit new**, then **Plugin bundle**. Repository `koda-ai-studio/agent-bom`, plugin
-   path `integrations/claude-code`, tracked branch or tag: the release.
+   path `integrations/claude-directory`, tracked branch or tag: the tested release source.
+   The directory BOM skill uses only `generate_sbom`; it returns a document in the
+   conversation and has no cloud/image BOM or shell fallback. Repository and Codex
+   editions retain their separate CLI workflows.
 2. Select **Validate**. Fix anything marked **Blocks**, then **Re-validate**.
-3. Expect two holds, which are not rejections: **Runs a pinned npx or uvx package** on the
-   `uv run --frozen` launcher, and **Scripts the validator couldn't follow** on the guard's
-   Python hook. The guard README has a section for the reviewer.
+3. Review the reported holds separately from blockers. The readable Python launcher
+   may be held for a reviewer; a hold is not a rejection or a validation pass.
+   The guard is a separate submission, with reviewer notes in its own README.
 4. Data handling answers, as the code behaves: reads local configuration and any files
    named; sends package names and versions to the public services in
    [PERMISSIONS](PERMISSIONS.md); keeps a local cache only; not aimed at people under 18.

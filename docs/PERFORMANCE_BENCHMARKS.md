@@ -257,14 +257,21 @@ Latency budget for a bundle export at 50k findings on Postgres:
 
 ## CPU / memory sizing
 
-Pilot-default Helm values ([`eks-mcp-pilot-values.yaml`](../deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)):
+What the chart renders for the pilot profile
+([`eks-mcp-pilot-values.yaml`](../deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)).
+The profile sets no resources, so these are the chart defaults in
+`deploy/helm/agent-bom/values.yaml` (checked with `helm template` on 2026-11-11):
 
 | Component | Request / Limit | Notes |
 |---|---|---|
-| `agent-bom-api` | 500 m / 2 CPU, 512 Mi / 2 Gi | 2–6 replicas via HPA |
-| `agent-bom-ui` | 100 m / 500 m CPU, 256 Mi / 1 Gi | Next.js SSR |
-| `scan` CronJob | 1 CPU / 4 CPU, 1 Gi / 4 Gi | Runs every 6 h |
-| `agent-bom-proxy` sidecar | 100 m / 500 m CPU, 128 Mi / 512 Mi | Per-MCP |
+| `agent-bom-api` | 100 m / 1 CPU, 512 Mi / 2 Gi | 2 replicas; the HPA (2–6) is off unless `controlPlane.api.autoscaling.enabled` |
+| `agent-bom-ui` | 100 m / 500 m CPU, 128 Mi / 512 Mi | Next.js SSR, 2 replicas |
+| `scan` CronJob | 50 m / 500 m CPU, 64 Mi / 256 Mi | Every 6 h (`0 */6 * * *`) |
+| `agent-bom-proxy` sidecar (injected) | 50 m / 500 m CPU, 64 Mi / 256 Mi | Per MCP workload, set by `sidecar_injector.py` |
+
+The workflow profiles below use a 2 CPU / 2 GiB envelope. The memory limit
+matches the API default; the CPU limit is twice it. "Enforced cgroup limits"
+below measures both 2 CPU and the 1 CPU default.
 
 Scale-out signal: `agent_bom_rate_limit_hits_total` hitting a tenant
 bucket for > 10 minutes, OR `p95` on `/v1/compliance/*` above 800 ms.
@@ -325,8 +332,10 @@ dropped because an inventory cannot carry them.
 | `small-self-hosted-postgres` | 200 | Postgres 16 | 1 | 1 | 30 | 2 CPU / 2 GiB |
 | `multi-replica-local` | 200 each | Postgres 16 | 2 | 2 | 30 | 2 CPU / 2 GiB each |
 
-The envelope matches the pilot Helm API limit. It is checked against the
-measured numbers, not enforced: macOS has no cgroups.
+The memory envelope matches the chart's API limit (2 Gi); its CPU limit is
+1 CPU, not 2. On macOS the runs below check the envelope against measured
+numbers only, because macOS has no cgroups. "Enforced cgroup limits" further
+down runs the same harness with the kernel enforcing the limits.
 
 **How it runs.** The real `agent-bom agents --inventory` command scans the
 estate. Every advisory, registry and KEV client is routed to a counting mock
@@ -435,12 +444,12 @@ re-checked" below for the evidence behind each verdict):
   `GET /v1/graph?limit=100` returned 2.6 MB, then 4.1 MB, then 6.7 MB as more
   jobs were stored, at the same limit. The harness then pushed raw reports with
   no `source_id` or `target_scope`, which the API keeps as independent evidence.
-- **An identical re-push after retention is refused (confirmed).** Once
-  retention expires a pushed job, an identical async push returns `409 ... no
-  longer retained; push again` on every attempt. The content idempotency key
-  stays live for `AGENT_BOM_IDEMPOTENCY_TTL_HOURS` (default 24), so "push again"
-  cannot succeed with the same content. A fresh `Idempotency-Key` works, and the
-  rebuild above uses one.
+- **An identical re-push after retention was refused** (fixed). Once retention
+  expired a pushed job, an identical push returned `409 ... no longer retained;
+  push again` for as long as its idempotency key lived
+  (`AGENT_BOM_IDEMPOTENCY_TTL_HOURS`, default 24). A replayed key whose job is
+  gone now re-admits the same deterministic job, and the rebuild above uses the
+  identical push.
 
 **PR regression budget** (`tests/test_workflow_resource_budget.py`, runs in the
 isolated `graph_performance` CI step, about 35 s locally): `ci-budget` profile,
@@ -469,7 +478,68 @@ Postgres 16 service migrated and role-provisioned exactly as in
 `postgres-scale-evidence.yml`, the API connected as the non-superuser
 `agent_bom_app`, `small-self-hosted-postgres` and `multi-replica-local`, then
 the hot-read plans below. Both jobs fail on any crash, finding mismatch,
-equivalence failure or outbound connection; neither has a timing gate.
+equivalence failure, outbound connection, any process above 80% of the
+profile's memory limit, a restart whose `/readyz` never answers 200 or whose
+first graph read after readiness is not 200, or a removed package still in the
+current graph 30 s after the update push is stored. The 30 s refresh bound is
+their only timing gate.
+
+### Push admission, start-up readiness and refresh under cgroup limits
+
+Measured 2026-11-12 with `scripts/qualification/cgroup_limits.py` (#6249): the
+same harness inside the API image (Python 3.14.8, Alpine) under
+`docker run --cpus N --memory 2g --memory-swap 2g`, 200 agents, cold, warm and
+restart phases without the cancellation phase, on an Apple M4 shared with
+other workloads (load 8-20). "Before" is `main` at `cf833b61f` as recorded in
+#6249; "after" is this change. Peak RSS is the measured process (API plus the
+harness's in-process HTTP client); peak anonymous memory is the container's.
+
+| Limit | Phase | Peak RSS before | Peak RSS after | Removed package left the current graph after |
+|---|---|---:|---:|---|
+| 1 CPU / 2 GiB | cold | 1,804 MiB | 1,362 MiB | 30-45 s before; 5.1 s after |
+| 1 CPU / 2 GiB | warm | 1,797 MiB | 1,441 MiB | 4.1 s after |
+| 1 CPU / 2 GiB | restart | 503 on the first read after 3.2 s, ready at 19 s | `/readyz` 503 `current_graph_prewarming` for 3.4 s, then the first read 200 (2.9 s, no retry) | |
+| 2 CPU / 2 GiB | cold | 1,808 MiB | 1,340 MiB | still present at 60 s before; 3.6 s after |
+| 2 CPU / 2 GiB | warm | 1,971 MiB | 1,439 MiB | 3.3 s after |
+| 2 CPU / 2 GiB | restart | 503 on the first read after 5.8 s, ready at 23 s | `/readyz` 503 for 4.3 s, then the first read 200 (2.7 s, no retry) | |
+
+Peak anonymous memory fell from 1,784 to 1,437 MiB at 1 CPU and from 1,952 to
+1,391 MiB at 2 CPU. Every phase now stays under the 1,638 MiB budget (80% of
+2 GiB) with about 200 MiB to spare; the largest remaining peak is the warm
+phase's graph reads (1,439-1,442 MiB). No OOM kill, findings exact (207) and
+every equivalence check passed in both runs. Container CPU-seconds for the
+1 CPU run fell from 2,702 to 1,194, partly because the host was less loaded.
+An intermediate 1 CPU run with only the admission and readiness changes peaked
+at 1,615 (cold) and 1,662 MiB (warm), over budget, and its cold refresh missed
+60 s; the warm-up yield and the harness correction below (about 120 MiB of the
+remaining drop) account for the rest.
+
+What changed:
+
+- **One parsed copy per push.** For a 50 MiB, 200-agent push the API built a
+  JSON-validated model (203 MiB), dumped it for the queued payload (153 MiB)
+  and kept the raw body cached on the route's and the body-size middleware's
+  request objects until the response. It now parses with the validator's own
+  JSON parser (`pydantic_core.from_json`, 78 MiB), validates that data (the
+  model shares it, +0.1 MiB), queues the parsed report as the admitted payload
+  and drops both cached bodies once parsed. Measured in process: admission
+  peak 656 → 452 MiB, push-path peak 1,067 → 784 MiB.
+  `tests/test_push_admission_memory.py` holds admission to one parsed copy.
+- **The current-graph rebuild runs first and alone.** Graph commit hooks start
+  the roll-up and reachability warm-ups from inside the graph write, while the
+  ingest still holds its graph and before the job commit; each loaded a second
+  full graph beside the ingest and beside the read-triggered rebuild. A push
+  commit now queues the rebuild itself, and a warm-up holding its slot waits
+  for foreground graph work (persist through commit) and then for current-graph
+  builds, within 120 s.
+- **Readiness waits for the start-up prewarm** (see
+  [RUNTIME_FAIL_MODES.md](RUNTIME_FAIL_MODES.md), "Current graph refresh"). The
+  restart phase now polls `/readyz` as the readiness probe does before its
+  first read.
+- **The harness keeps only the rows it compares.** It held the whole parsed
+  scan report (120 MiB) for the run to compare `blast_radius`; as the
+  in-process client that was charged to the API. This is a measurement
+  correction, not a product change.
 
 ### How pushes are modelled
 
@@ -507,25 +577,23 @@ asynchronously; the removed finding left the open set at once.
 
 Two behaviours the checks surfaced:
 
-- **A resolved finding loses its package identity.** Right after a push resolves
-  it, `/v1/findings?status=resolved` serves the row with `package`,
-  `package_version`, `ecosystem` and `scan_id` null; the advisory, asset,
-  `finding_id`, dates and resolution are intact. Reproduced on SQLite and
-  Postgres; the harness reports it under `known_gaps` and
-  `tests/test_workflow_push_lifecycle_gaps.py` holds a strict xfail for it.
+- **A resolved finding lost its package identity** (fixed). `/v1/findings?status=resolved`
+  served the row with `package`, `package_version`, `ecosystem` and `scan_id`
+  null. They are now served, with `resolved_by_scan_id`, and the harness fails
+  the update stage if any is missing.
 - **An older report delivered after a newer one.** Pushing the original report
   again after the update push (new key, older `generated_at`) left the finding
   `resolved`, as the lifecycle rules say: evidence time wins over arrival. The
   current graph, which follows the latest stored job, showed the removed package
   again. Findings and graph disagree until the next current push. Measured on a
-  12-agent SQLite store; not a harness failure, because the harness now rebuilds
-  before the update.
+  12-agent SQLite store. Not reproduced on 2026-11-11 at 4 agents on SQLite: the
+  current graph selects each scope's newest report by its own time, and
+  `tests/test_workflow_push_lifecycle_gaps.py` guards it nightly.
 
-A third behaviour explains the raw-push graph growth: **agent ids embed a hash
-of the inventory file path.** Two scans of the same estate from different paths
-give every finding different `affected_agent_ids` and the graph different agent
-node ids. A CLI-scoped push replaces the earlier report, so the change is
-invisible; two unscoped pushes keep both copies.
+A third behaviour explained the raw-push graph growth: **agent ids embedded a
+hash of the inventory file path** (fixed). An inventory agent without its own
+`config_path` is now identified without the inventory path, and reports carry
+the earlier id in `previous_canonical_ids` and `previous_graph_ids`.
 
 ### A larger push: 1,000 agents
 
@@ -638,8 +706,8 @@ rebuilds all six indexes concurrently, 18.1 s and 42 MB of WAL; re-upgrade
 | Finding from the first runs | Verdict | Evidence |
 |---|---|---|
 | Peak RSS 1.66-1.97 GiB against the 2 GiB limit | **Confirmed, and exceeded** | 200 agents on Postgres: cold child 1,804 MiB and warm 1,772 MiB in the raw-push runs; with the update/delete push added (a second scan and push in the same process), the cold process peaked at 2,044.5 MiB. A 1,000-agent scan alone peaked at 2,431 MiB |
-| Identical push after retention returns 409 for up to 24 h | **Confirmed** | Every run records `identical_repush_status: 409`, raw and CLI-shaped bodies; strict xfail `test_identical_push_after_retention_is_admitted_again` |
-| `GET /v1/graph?limit=100` grows 2.6 → 6.7 MB with stored jobs | **Confirmed only for pushes without `source_id` and `target_scope`** | Three separate scans of one 12-agent estate: unscoped 1.98 → 3.45 MB and 1,630 → 1,849 nodes (agent ids embed a config-path hash, so the union holds both copies); CLI-scoped 1.97 MB and 1,630 nodes each time. At 200 agents on Postgres with CLI-scoped pushes the page stayed 2.55 MB across cold, warm and restart. Guarded by `test_rescans_pushed_by_one_cli_source_replace_rather_than_grow_the_graph`. Four identical bodies did not grow it in either mode |
+| Identical push after retention returns 409 for up to 24 h | **Confirmed, then fixed** | Runs before the fix recorded `409` for raw and CLI-shaped bodies; the push is now stored again (`test_identical_push_after_retention_is_admitted_again`, `tests/api/test_push_replay_after_retention.py`) |
+| `GET /v1/graph?limit=100` grows 2.6 → 6.7 MB with stored jobs | **Confirmed only for pushes without `source_id` and `target_scope`** | Three separate scans of one 12-agent estate: unscoped 1.98 → 3.45 MB and 1,630 → 1,849 nodes (agent ids embedded the inventory path hash, so the union held both copies; fixed, see above); CLI-scoped 1.97 MB and 1,630 nodes each time. At 200 agents on Postgres with CLI-scoped pushes the page stayed 2.55 MB across cold, warm and restart. Guarded by `test_rescans_pushed_by_one_cli_source_replace_rather_than_grow_the_graph`. Four identical bodies did not grow it in either mode |
 | First `/v1/graph` read after a restart returns 503 | **Confirmed as a timing condition, not on every restart** | A new process builds the current graph on its first read and waits `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default 2,000 ms); past that it answers `503 current_estate_building` with `Retry-After: 1` while the build finishes. 200 agents on Postgres: raw pushes (two independent reports to merge) 503 after 2.39 s; CLI-scoped pushes (one report) 200 after 1.27 s. At 12 agents both modes returned 200 in under 1.0 s. Larger estates will cross the budget whatever the push shape; nothing prewarms the current graph at start-up |
 
 **Re-measured 2026-11-11 after the fixes** (200 agents, cold / warm / restart
@@ -668,11 +736,69 @@ still only 24 MiB under the nightly budget: the next cut is push admission,
 which keeps the raw body, the validated model and the admission copy alive
 together (about 400 MiB at 200 agents).
 
-**Not measured here:** a real multi-node Kubernetes deployment, or replicas
-behind a load balancer (the replicas above are two local processes on one
-host); the two-replica profile with CLI-shaped pushes (it runs nightly; locally
-it was measured only with raw pushes); SQLite query plans; enforced cgroup CPU
-and memory limits; and any monetary cost, because no provider prices were used.
+### Enforced cgroup limits
+
+`scripts/qualification/cgroup_limits.py` runs the same harness inside the API
+image with `docker run --cpus N --memory 2g --memory-swap 2g`, so the kernel
+enforces the limits (cgroup v2, Docker Engine 29.8.0 in Docker Desktop on Apple silicon,
+Python 3.14.8 in the image). It samples `memory.stat` every second and reads
+`memory.events` and `cpu.stat` at the end. The limit covers the whole
+container: the harness process, the API it hosts and, after #6244, the
+separate scan process. Measured 2026-11-11, 200 agents, cold, warm and restart
+phases, plus the SIGKILL cancellation where shown. The first two rows are the
+image built from `main` at `179801f`, before #6244 moved the scan out of the
+measured process and cut push memory; the rows marked "after #6244" are
+`main` at `cf833b61f` with this change:
+
+| Profile, limit | OOM kills | Peak anonymous / page cache | Reclaim at the limit (`memory.events max`) | Peak process RSS | CPU throttled | Accuracy and equivalence |
+|---|---:|---|---:|---|---|---|
+| `small-self-hosted` (SQLite), 2 CPU / 2 GiB, with cancel, before #6244 | 0 | 1,972 / 735 MiB | 8,794 | cold 1,886, warm 1,992 MiB | 36 periods, 3.2 s | all passed; cancel retry converged to 207 findings |
+| `small-self-hosted-postgres`, 2 CPU / 2 GiB, with cancel, before #6244 | 0 | 1,797 / 549 MiB | 0 | cold 1,784, warm 1,800 MiB | 26 periods, 0.4 s | all passed; cancel retry converged |
+| `small-self-hosted` (SQLite), 2 CPU / 2 GiB, no cancel, after #6244 | 0 | 1,952 / 630 MiB | 6,488 | cold 1,808, warm 1,971 MiB | 255 periods, 4.6 s | findings exact (207); **3 harness failures**, below |
+| `small-self-hosted` (SQLite), 1 CPU / 2 GiB (the chart's API limit), no cancel, after #6244 | 0 | 1,784 / 688 MiB | 5,377 | cold 1,804, warm 1,797 MiB | 16,207 periods, 398.6 s | findings exact (207), equivalence passed; RSS budget and restart 503 failed |
+
+What this shows:
+
+- **After #6244 the run is still OOM-free, and the harness's own budget
+  fails under the limit.** Peak anonymous memory was 1,952 MiB. The harness
+  now fails a process over 80% of the limit (1,638 MiB): cold peaked at
+  1,808 MiB and warm at 1,971 MiB, against 1,403 and 1,614 MiB in the
+  unconstrained re-measure above. Finding sets stayed exact (207) in both
+  processes. Two more failures appear only under the CPU limit: after the
+  update/delete push the current graph still held the removed package node
+  60 s later (`graph package nodes 1 -> 1`; the rebuild is asynchronous and
+  took 13.1 s unconstrained), and after a restart the first graph read
+  returned `503 current_estate_building` after 5.8 s despite the start-up
+  prewarm, with the graph ready at 23 s. Cold took 1,012 s and warm 1,075 s,
+  about twice the pre-#6244 run on the same limit, with this host's other
+  benchmark running beside it.
+- **At the chart's 1 CPU limit** the workflow also completed without an OOM
+  kill (peak anonymous 1,784 MiB) and with exact findings and equivalence;
+  the graph refreshed 30-45 s after the update push. It failed the same RSS
+  budget (cold 1,804, warm 1,797 MiB) and the restart check (503 after 3.2 s,
+  ready at 19 s). The container was throttled for 399 s, warm graph pages
+  took 1.7 s p50 and 4.7 s p95 while the process also ingested, and cold and
+  warm took 1,128 s and 1,311 s.
+
+- **Before #6244, the 200-agent workflow fit 2 GiB, barely.** Nothing was OOM-killed, but
+  the SQLite run's anonymous memory peaked 76 MiB under the limit; the warm
+  process's own RSS peaked at 1,992 MiB during its graph reads. The kernel reclaimed page
+  cache 8,794 times to stay under it. A slightly larger estate, or a second
+  push in flight, will be killed at 2 GiB.
+- **Latency under the limit, before #6244.** Warm-process graph page reads were 264 ms p50
+  and 3.9 s p95 on SQLite, and 226 ms p50 and 2.9 s p95 on Postgres, while the
+  same process ingested and rebuilt; after a restart the p95 fell to 0.8 s and
+  0.3 s. The first graph read after a restart returned 503 after 2.7-3.0 s and
+  the graph was ready after 4.3-5.5 s.
+- **Wall time grows under the CPU limit.** The SQLite cold phase took 562 s and
+  the warm phase 839 s at 2 CPU.
+
+**Not measured here:** a multi-node Kubernetes deployment on a cloud provider
+(the chart was installed on a one-node kind cluster, see the
+[deployment overview](../site-docs/deployment/overview.md#local-live-qualification));
+the two-replica profile with CLI-shaped pushes (it runs nightly; locally it was
+measured only with raw pushes); SQLite query plans; and any monetary cost,
+because no provider prices were used.
 
 ---
 

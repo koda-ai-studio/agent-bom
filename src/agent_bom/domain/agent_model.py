@@ -75,6 +75,11 @@ class Agent:
     # only collector/provider provenance (for example ``aws-bedrock``).
     source_id: Optional[str] = None
     device_fingerprint: Optional[str] = None
+    # Location that identifies the agent when it differs from the displayed
+    # ``config_path``: an inventory agent with no location of its own shows the
+    # inventory file it was read from but sets this to "", so moving or copying
+    # that file does not change its id. ``None`` means ``config_path``.
+    identity_config_path: Optional[str] = None
 
     def __post_init__(self) -> None:
         """Backfill lifecycle fields for legacy Agent construction paths."""
@@ -101,7 +106,7 @@ class Agent:
             self.name,
             source_id=self.source_id or "",
             device_fingerprint=self.device_fingerprint or "",
-            config_path=self.config_path,
+            config_path=self.config_path if self.identity_config_path is None else self.identity_config_path,
         )
 
     @property

@@ -439,10 +439,11 @@ jobs:
         # image is Debian (node:bookworm-slim) based; native OS-layer (dpkg) +
         # app-dependency scanning at MEDIUM+ severity (agent-bom has no separate
         # UNKNOWN tier), unfixable findings excluded (= ignore-unfixed), and the
-        # .image-scan-ignore CVE allowlist. The image's Node.js runtime has no
-        # advisory source, so the scan is partial; a partial exit passes only
-        # when every gap is a reviewed, unexpired coverage exception for this
-        # image in docs/security/image-exceptions.yaml and nothing else blocks.
+        # .image-scan-ignore CVE allowlist. The image's Node.js runtime is
+        # assessed against the Node.js security working group index. A partial
+        # exit (a runtime no source assessed) passes only when every gap is a
+        # reviewed, unexpired coverage exception for this image in
+        # docs/security/image-exceptions.yaml and nothing else blocks.
         run: |
           set -euo pipefail
           docker save agent-bom-ui:latest-refresh-test -o "${RUNNER_TEMP}/refresh-candidate.tar"

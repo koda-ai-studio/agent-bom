@@ -71,7 +71,7 @@ describe("finding lifecycle controls", () => {
   });
 
   it("carries the API lifecycle fields through the adapter", () => {
-    const [row] = collectUnifiedFindings([
+    const [row, resolvedRow] = collectUnifiedFindings([
       {
         id: "finding-1",
         cve_id: "CVE-2021-33503",
@@ -88,6 +88,19 @@ describe("finding lifecycle controls", () => {
         resolved_occurrence_count: 1,
         stale: true,
         resolution_reason: null,
+        resolved_by_scan_id: null,
+      },
+      {
+        id: "finding-2",
+        cve_id: "CVE-2023-43804",
+        severity: "medium",
+        package: "urllib3",
+        package_version: "1.26.4",
+        status: "resolved",
+        resolved_at: "2026-10-03T10:00:00+00:00",
+        resolution_reason: "no_longer_detected",
+        scan_id: "scan-saw-it",
+        resolved_by_scan_id: "scan-cleared-it",
       },
     ] as never);
     expect(row).toMatchObject({
@@ -97,6 +110,8 @@ describe("finding lifecycle controls", () => {
       status_updated_at: "2026-10-05T10:00:00+00:00",
       open_occurrence_count: 1,
       resolved_occurrence_count: 1,
+      resolved_by_scan_id: null,
     });
+    expect(resolvedRow).toMatchObject({ lifecycle_status: "resolved", scan_id: "scan-saw-it", resolved_by_scan_id: "scan-cleared-it" });
   });
 });

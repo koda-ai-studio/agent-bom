@@ -519,6 +519,7 @@ AGENT_BOM_SERVICENOW_TOKEN
 AGENT_BOM_SESSION_COOKIE_MAX_AGE_SECONDS
 AGENT_BOM_SESSION_COOKIE_SECURE
 AGENT_BOM_SHUTDOWN_DRAIN_SECONDS
+AGENT_BOM_GRACEFUL_SHUTDOWN_SECONDS  # read when the API server starts (core/graceful_shutdown.py); the Helm chart sets it from controlPlane.api.shutdown
 AGENT_BOM_SIDECAR_PROXY_IMAGE
 AGENT_BOM_SIDECAR_TOKEN_SECRET_KEY
 AGENT_BOM_SIDECAR_TOKEN_SECRET_NAME
@@ -653,6 +654,7 @@ AGENT_BOM_ROUTE_WARMUP  # Opt out of compiling the API route table on a boot thr
 AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS  # How long a current-estate read waits for an in-flight rebuild before serving the previous generation; read per request
 AGENT_BOM_CURRENT_GRAPH_PREWARM  # Opt out of preparing recent tenants' current graphs on a start-up thread; read once at startup
 AGENT_BOM_CURRENT_GRAPH_PREWARM_TENANT_SECONDS  # How long the start-up warm-up waits on one tenant's build before moving on; read once at startup
+AGENT_BOM_CURRENT_GRAPH_PREWARM_READY_SECONDS  # How long /readyz waits on the start-up warm-up before reporting ready anyway; read per probe
 # click envvars for the injection-protection mode flags (alert|enforce) on proxy and gateway serve.
 AGENT_BOM_GATEWAY_INJECTION_MODE
 AGENT_BOM_PROXY_INJECTION_MODE

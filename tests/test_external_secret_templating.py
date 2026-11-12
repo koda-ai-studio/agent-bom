@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests._helm_render import ATTESTED_API
+
 HELM_DIR = Path(__file__).parent.parent / "deploy" / "helm" / "agent-bom"
 
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="helm is not installed")
@@ -23,7 +25,7 @@ _TEMPLATED_SECRET = {
         "migrations": {"enabled": False},
         # The API reference keeps this fixture representative of a consumer of
         # the rendered runtime secret.
-        "api": {"envFrom": [{"secretRef": {"name": "abom-control-plane-db"}}]},
+        "api": {"envFrom": [{"secretRef": {"name": "abom-control-plane-db"}}], "listenerAttestation": {"fromSecret": True}},
         "externalSecrets": {
             "enabled": True,
             "secretStoreRef": {"kind": "ClusterSecretStore", "name": "aws-secrets-manager"},
@@ -90,7 +92,7 @@ def test_preinstall_migration_rejects_same_release_external_secret_sync() -> Non
     values = {
         "controlPlane": {
             "enabled": True,
-            "api": {"envFrom": [{"secretRef": {"name": "abom-control-plane-db"}}]},
+            "api": {"envFrom": [{"secretRef": {"name": "abom-control-plane-db"}}], "listenerAttestation": {"fromSecret": True}},
             "externalSecrets": {
                 "enabled": True,
                 "secretStoreRef": {"kind": "ClusterSecretStore", "name": "aws-secrets-manager"},
@@ -124,7 +126,7 @@ def test_preupgrade_only_migration_also_rejects_same_release_external_secret_syn
     values = {
         "controlPlane": {
             "enabled": True,
-            "api": {"envFrom": [{"secretRef": {"name": "abom-control-plane-db"}}]},
+            "api": {"envFrom": [{"secretRef": {"name": "abom-control-plane-db"}}], "listenerAttestation": {"fromSecret": True}},
             "externalSecrets": {
                 "enabled": True,
                 "secretStoreRef": {"kind": "ClusterSecretStore", "name": "aws-secrets-manager"},
@@ -219,7 +221,7 @@ def test_workload_teardown_cannot_select_sibling_secret_sync_resources() -> None
     }
     sync_docs = _render(sync_values, release_name="abom-secret-sync")
     workload_docs = _render(
-        {"scanner": {"enabled": False}, "controlPlane": {"enabled": True, "migrations": {"enabled": False}}},
+        {"scanner": {"enabled": False}, "controlPlane": {"enabled": True, "migrations": {"enabled": False}, "api": ATTESTED_API}},
         release_name="abom",
     )
 
@@ -299,7 +301,7 @@ def test_untemplated_secret_keeps_working() -> None:
         "controlPlane": {
             "enabled": True,
             "migrations": {"enabled": False},
-            "api": {"envFrom": [{"secretRef": {"name": "abom-control-plane-db"}}]},
+            "api": {"envFrom": [{"secretRef": {"name": "abom-control-plane-db"}}], "listenerAttestation": {"fromSecret": True}},
             "externalSecrets": {
                 "enabled": True,
                 "secretStoreRef": {"kind": "ClusterSecretStore", "name": "aws-secrets-manager"},

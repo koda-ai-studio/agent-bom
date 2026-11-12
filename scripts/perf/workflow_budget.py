@@ -418,8 +418,10 @@ async def run_workflow(
             )
             guard.blocked.extend(child["blocked_connections"])
             guard.callers.extend(child["blocked_callers"])
-            scan_report = json.loads(report_path.read_text(encoding="utf-8"))
-            scanned = _finding_keys(scan_report.get("blast_radius") or [])
+            # The harness is the client in this process: keep only the rows it compares, not
+            # the whole parsed report (120 MiB at 200 agents), so RSS stays the API's.
+            scanned_rows = json.loads(report_path.read_text(encoding="utf-8")).get("blast_radius") or []
+            scanned = _finding_keys(scanned_rows)
             info.update(
                 exit_code=child["exit_code"],
                 report_bytes=report_path.stat().st_size,
@@ -457,7 +459,7 @@ async def run_workflow(
             equivalence: dict[str, Any] = {}
             view_ingest = await findings_view(http) if check_equivalence else {}
             if check_equivalence:
-                equivalence["ingest"] = ingest_equivalence(scan_report.get("blast_radius") or [], stored_ingest, view_ingest)
+                equivalence["ingest"] = ingest_equivalence(scanned_rows, stored_ingest, view_ingest)
 
             rebuilt: set[tuple[str, str, str]] | None = None
             storage_retained = storage_rebuilt = None
@@ -466,12 +468,10 @@ async def run_workflow(
                     info.update(await _expire_retained_jobs(http))
                 storage_retained = footprint()
                 with recorder.stage("rebuild") as info:
-                    # An identical push after retention is answered from the still-live content
-                    # idempotency key (24 h TTL); a rebuild needs a fresh key.
-                    identical, _ = await http.call("POST", "/v1/results/push", content=body, headers=PUSH_HEADERS)
-                    again = await _push(http, body, ingest_deadline_seconds, idempotency_key=f"rebuild-{pushed['job_id']}")
+                    # Retention removed the job, so the identical push is admitted again under
+                    # its content key rather than answered from the key's old receipt.
+                    again = await _push(http, body, ingest_deadline_seconds)
                     info.update(
-                        identical_repush_status=identical.status_code,
                         status=again["status"],
                         graph_nodes=again["graph_nodes"],
                         new_job=again["job_id"] != pushed["job_id"],

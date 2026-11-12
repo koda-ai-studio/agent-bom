@@ -11,11 +11,13 @@ from __future__ import annotations
 import asyncio
 from typing import Any, cast
 
+import pydantic_core
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from starlette.responses import JSONResponse
 
+from agent_bom.api.middleware_body import BODY_OWNER_SCOPE_KEY
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob
 from agent_bom.api.observability_push_receipts import _pushed_job_has_persisted_graph, _pushed_job_receipt
 from agent_bom.api.push_ingest import (
@@ -46,12 +48,42 @@ PUSH_ACCEPTED_RESPONSES: dict[int | str, dict[str, Any]] = {
 _ACTIVE_STATUSES = {JobStatus.PENDING.value, JobStatus.RUNNING.value}
 
 
+def _validate_push_body(raw: bytes) -> PushPayload:
+    """Parse once with the validator's own JSON parser, then validate the parsed report.
+
+    A model validated from parsed Python data shares its strings and nested
+    containers, so a 200-agent report costs one parsed copy (78 MiB) instead of
+    a JSON-validated model (203 MiB) plus the admission dump (153 MiB). The
+    parser is the one ``model_validate_json`` uses: the same NaN, duplicate-key
+    and surrogate handling. Rejected input is validated again as JSON so a 422
+    keeps the JSON validator's wording ("valid array", "an object").
+    """
+    try:
+        parsed = pydantic_core.from_json(raw)
+        body = PushPayload.model_validate(parsed)
+    except ValueError:  # ValidationError included
+        return PushPayload.model_validate_json(raw)
+    if isinstance(parsed, dict):
+        body._parsed_body = parsed
+    return body
+
+
+def _release_buffered_body(request: Request) -> None:
+    """Drop every cached copy of a body the route has consumed; both live until the response otherwise."""
+    request.__dict__.pop("_body", None)
+    owner_ref = request.scope.get(BODY_OWNER_SCOPE_KEY)
+    owner = owner_ref() if callable(owner_ref) else None
+    if owner is not None:
+        owner.__dict__.pop("_body", None)
+
+
 async def parse_push_payload(request: Request) -> PushPayload:
     """Validate the buffered body in a worker thread; 422s keep FastAPI's error shape."""
 
     raw = await request.body()
+    _release_buffered_body(request)
     try:
-        return await asyncio.to_thread(PushPayload.model_validate_json, raw or b"{}")
+        return await asyncio.to_thread(_validate_push_body, raw or b"{}")
     except ValidationError as exc:
         errors = [{**error, "loc": ("body", *error.get("loc", ()))} for error in exc.errors(include_url=False)]
         raise RequestValidationError(errors) from None
@@ -92,16 +124,18 @@ async def committed_push_response(job_id: str, *, tenant_id: str, source_id: str
 
     ``done`` replays the original stored receipt; ``pending``/``running`` returns
     the accepted receipt (and re-offers the job, which is idempotent); ``failed``
-    returns ``None`` so the caller re-admits the same deterministic job.
+    returns ``None`` so the caller re-admits the same deterministic job. So does
+    a job retention or deletion removed: the key outlives the data it answered
+    for, and the same content pushed again is new evidence to store.
     """
 
     status = await asyncio.to_thread(durable_job_status, job_id, tenant_id)
     if status is None:
-        raise HTTPException(status_code=409, detail="The pushed result for this idempotency key is no longer retained; push again.")
+        return None
     if status == JobStatus.DONE.value:
         job = await asyncio.to_thread(_load_job, job_id, tenant_id)
         if job is None:  # pragma: no cover - deleted between the two reads
-            raise HTTPException(status_code=409, detail="The pushed result for this idempotency key is no longer retained; push again.")
+            return None
         # Older writers published DONE before graph commit. Missing completion
         # evidence must remain retryable, never become a successful replay.
         if not _pushed_job_has_persisted_graph(job):

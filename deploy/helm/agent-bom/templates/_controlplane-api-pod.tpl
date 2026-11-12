@@ -65,6 +65,21 @@ Call with (dict "root" $ "component" "api"|"worker").
 {{- end -}}
 {{- end -}}
 {{- end -}}
+{{- include "agent-bom.controlPlaneShutdownValidate" . -}}
+{{- $pool := $cp.postgres.pool -}}
+{{- if or (lt (int $pool.minSize) 1) (lt (int $pool.maxSize) (int $pool.minSize)) -}}
+{{- fail "controlPlane.postgres.pool.minSize must be at least 1 and no larger than controlPlane.postgres.pool.maxSize" -}}
+{{- end -}}
+{{- $_ := include "agent-bom.postgresConnectionLimits" . -}}
+{{- range $entry := concat $cp.api.env ($worker.extraEnv | default list) -}}
+{{- if has (get $entry "name") (list "AGENT_BOM_POSTGRES_POOL_MIN_SIZE" "AGENT_BOM_POSTGRES_POOL_MAX_SIZE") -}}
+{{- fail (printf "%s is chart-managed: set controlPlane.postgres.pool.minSize and .maxSize, which also size the Postgres role connection limits" (get $entry "name")) -}}
+{{- end -}}
+{{- if has (get $entry "name") (list "AGENT_BOM_SHUTDOWN_DRAIN_SECONDS" "AGENT_BOM_GRACEFUL_SHUTDOWN_SECONDS") -}}
+{{- fail (printf "%s is chart-managed: set controlPlane.api.shutdown, which is checked against terminationGracePeriodSeconds" (get $entry "name")) -}}
+{{- end -}}
+{{- end -}}
+{{- include "agent-bom.controlPlaneListenerAttestationValidate" . -}}
 {{- end }}
 
 {{/*
@@ -78,6 +93,94 @@ worker capacity when the worker split is on. Feeds the shared-state guards.
 {{- $capacity = add $capacity (int (include "agent-bom.controlPlaneReplicaCapacity" $worker)) -}}
 {{- end -}}
 {{- $capacity -}}
+{{- end -}}
+
+{{/*
+Termination budget: pre-stop sleep (API only), in-flight request wait and
+background drain, plus a 5 s margin, must fit each pod's grace period.
+*/}}
+{{- define "agent-bom.controlPlaneShutdownValidate" -}}
+{{- $cp := .Values.controlPlane -}}
+{{- $shutdown := $cp.api.shutdown -}}
+{{- $work := add (int $shutdown.gracefulShutdownSeconds) (int $shutdown.drainSeconds) 5 -}}
+{{- $apiBudget := add $work (int $shutdown.preStopSleepSeconds) -}}
+{{- $apiGrace := int $cp.api.terminationGracePeriodSeconds -}}
+{{- if and $cp.api.enabled (lt $apiGrace $apiBudget) -}}
+{{- fail (printf "controlPlane.api.terminationGracePeriodSeconds=%d is shorter than controlPlane.api.shutdown needs (preStopSleepSeconds + gracefulShutdownSeconds + drainSeconds + 5 = %d); Kubernetes would kill the pod mid-drain" $apiGrace $apiBudget) -}}
+{{- end -}}
+{{- $worker := $cp.worker | default dict -}}
+{{- $workerGrace := int ($worker.terminationGracePeriodSeconds | default $apiGrace) -}}
+{{- if and $worker.enabled (lt $workerGrace $work) -}}
+{{- fail (printf "controlPlane.worker.terminationGracePeriodSeconds=%d is shorter than controlPlane.api.shutdown needs (gracefulShutdownSeconds + drainSeconds + 5 = %d)" $workerGrace $work) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+A clustered or production API listening beyond loopback refuses to start
+without trusted-proxy attestation or app-native mTLS
+(agent_bom.api.auth_posture.require_safe_control_plane_listener). Refuse to
+render the crash loop instead.
+*/}}
+{{- define "agent-bom.controlPlaneListenerAttestationValidate" -}}
+{{- $api := .Values.controlPlane.api -}}
+{{- $attestation := $api.listenerAttestation | default dict -}}
+{{- $env := dict -}}
+{{- range $entry := $api.env -}}
+{{- $_ := set $env (get $entry "name") (toString (get $entry "value" | default "<from>")) -}}
+{{- end -}}
+{{- $truthy := list "1" "true" "yes" "on" -}}
+{{- $deployment := lower (coalesce (get $env "AGENT_BOM_DEPLOYMENT_ENV") (get $env "AGENT_BOM_ENV") (get $env "ENVIRONMENT") | default "") -}}
+{{- $clustered := or (gt (int (include "agent-bom.controlPlaneProcessCapacity" .)) 1) (has (lower (get $env "AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT" | default "")) $truthy) (has $deployment (list "prod" "production")) -}}
+{{- $host := "127.0.0.1" -}}
+{{- range $index, $arg := $api.args -}}
+{{- if and (eq (toString $arg) "--host") (lt (add1 $index) (len $api.args)) -}}
+{{- $host = toString (index $api.args (add1 $index)) -}}
+{{- end -}}
+{{- end -}}
+{{- $loopback := has (lower $host) (list "127.0.0.1" "localhost" "::1") -}}
+{{- $trustedProxy := and (has (lower (get $env "AGENT_BOM_TRUST_PROXY_AUTH" | default "")) $truthy) (or (hasKey $env "AGENT_BOM_TRUST_PROXY_AUTH_SECRET") (hasKey $env "AGENT_BOM_TRUST_PROXY_AUTH_SECRET_FILE")) (hasKey $env "AGENT_BOM_TRUST_PROXY_AUTH_ISSUER") -}}
+{{- $mtls := and (hasKey $env "AGENT_BOM_TLS_CERT_FILE") (hasKey $env "AGENT_BOM_TLS_KEY_FILE") (hasKey $env "AGENT_BOM_TLS_CLIENT_CA_FILE") (has (lower (get $env "AGENT_BOM_TLS_REQUIRE_CLIENT_CERT" | default "")) $truthy) -}}
+{{- if and $attestation.fromSecret (not $api.envFrom) -}}
+{{- fail "controlPlane.api.listenerAttestation.fromSecret requires a Secret in controlPlane.api.envFrom that supplies the attestation variables" -}}
+{{- end -}}
+{{- if and $clustered (not $loopback) (not $trustedProxy) (not $mtls) (not $attestation.fromSecret) -}}
+{{- fail (printf "a clustered or production API listening on %s refuses to start without request attestation. Set AGENT_BOM_TRUST_PROXY_AUTH=1 with AGENT_BOM_TRUST_PROXY_AUTH_SECRET (at least 32 bytes) and AGENT_BOM_TRUST_PROXY_AUTH_ISSUER, or app-native mTLS (AGENT_BOM_TLS_CERT_FILE, AGENT_BOM_TLS_KEY_FILE, AGENT_BOM_TLS_CLIENT_CA_FILE, AGENT_BOM_TLS_REQUIRE_CLIENT_CERT=1), in controlPlane.api.env; or set controlPlane.api.listenerAttestation.fromSecret=true when a Secret in controlPlane.api.envFrom supplies them" $host) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Postgres role connection demand: every API and worker process at its
+configured capacity plus the 25% rolling-update surge, each holding full pools.
+Per process, agent_bom_app: the main pool, the admission and idempotency pools
+(4 each) and up to 4 graph-build connections; agent_bom_maintenance: a pool of
+4. Headroom covers the post-install verification Job and operator sessions.
+tests/test_helm_postgres_connection_budget.py keeps this in step with the code.
+*/}}
+{{- define "agent-bom.postgresConnectionLimits" -}}
+{{- $cp := .Values.controlPlane -}}
+{{- $poolMax := int $cp.postgres.pool.maxSize -}}
+{{- $small := min 4 $poolMax -}}
+{{- $processes := 0 -}}
+{{- $workloads := list $cp.api -}}
+{{- if ($cp.worker | default dict).enabled -}}
+{{- $workloads = append $workloads $cp.worker -}}
+{{- end -}}
+{{- range $workload := $workloads -}}
+{{- $capacity := int (include "agent-bom.controlPlaneReplicaCapacity" $workload) -}}
+{{- $processes = add $processes $capacity (div (add $capacity 3) 4) -}}
+{{- end -}}
+{{- $demand := dict "app" (add (mul $processes (add $poolMax $small $small 4)) 5) "maintenance" (add (mul $processes $small) 4) -}}
+{{- $configured := $cp.postgres.connectionLimits | default dict -}}
+{{- $limits := dict -}}
+{{- range $role := list "app" "maintenance" -}}
+{{- $need := int (get $demand $role) -}}
+{{- $set := int (get $configured $role | default 0) -}}
+{{- if and (gt $set 0) (lt $set $need) -}}
+{{- fail (printf "controlPlane.postgres.connectionLimits.%s=%d is below the %d connections %d API and worker processes can open during a rolling update (controlPlane.postgres.pool.maxSize=%d); raise it, or set 0 to derive it" $role $set $need $processes $poolMax) -}}
+{{- end -}}
+{{- $_ := set $limits $role (ternary $set $need (gt $set 0)) -}}
+{{- end -}}
+{{- toJson $limits -}}
 {{- end -}}
 
 {{- define "agent-bom.controlPlaneApiDeployment" -}}
@@ -176,6 +279,14 @@ spec:
               value: {{ . | quote }}
             {{- end }}
             {{- end }}
+            - name: AGENT_BOM_POSTGRES_POOL_MIN_SIZE
+              value: {{ $cp.postgres.pool.minSize | quote }}
+            - name: AGENT_BOM_POSTGRES_POOL_MAX_SIZE
+              value: {{ $cp.postgres.pool.maxSize | quote }}
+            - name: AGENT_BOM_GRACEFUL_SHUTDOWN_SECONDS
+              value: {{ $api.shutdown.gracefulShutdownSeconds | quote }}
+            - name: AGENT_BOM_SHUTDOWN_DRAIN_SECONDS
+              value: {{ $api.shutdown.drainSeconds | quote }}
             - name: AGENT_BOM_GRAPH_AUTO_CORRELATE
               value: {{ $cp.autoCorrelation.enabled | quote }}
             - name: AGENT_BOM_GRAPH_AUTO_CORRELATE_MAX_AGE_HOURS
@@ -234,6 +345,12 @@ spec:
             {{- with $api.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          {{- if and (not $isWorker) (gt (int $api.shutdown.preStopSleepSeconds) 0) }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", {{ $api.shutdown.preStopSleepSeconds | quote }}]
+          {{- end }}
           resources:
             {{- toYaml ($workload.resources | default $api.resources) | nindent 12 }}
           livenessProbe:

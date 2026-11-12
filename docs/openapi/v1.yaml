@@ -11158,6 +11158,12 @@ components:
           - type: string
           - type: 'null'
           title: Resolved At
+        resolved_by_scan_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: The scan that proved the finding gone; set only while resolved.
+          title: Resolved By Scan Id
         resolved_occurrence_count:
           anyOf:
           - type: integer

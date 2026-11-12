@@ -92,6 +92,7 @@ from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hook
 from agent_bom.api.tracing import configure_otel_tracing, get_tracing_health
 from agent_bom.config import API_JOB_TTL_SECONDS as _JOB_TTL_SECONDS
 from agent_bom.config import resolved_cors_origins_raw
+from agent_bom.core import graceful_shutdown as _graceful_shutdown
 from agent_bom.core.experimental import feature_status
 from agent_bom.core.settings import env_flag as _env_truthy
 from agent_bom.demo_estate import boot_seed as _demo_boot_seed
@@ -309,6 +310,7 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     from agent_bom.api.report_queue import start_report_worker
 
     _report_worker = await start_report_worker()
+    _graceful_shutdown.install_sigterm_drain()
     yield
 
     # ── Graceful shutdown ──
@@ -322,7 +324,7 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     # Stop claiming new distributed work before draining in-flight scans.
     if _scan_worker is not None:
         try:
-            await _scan_worker.stop()
+            await _scan_worker.stop(keep_leases=True)
         except Exception:  # noqa: BLE001
             _logger.debug("scan worker stop skipped", exc_info=False)
     for task in (_scheduler_task, _connection_scheduler_task, _export_scheduler_task, _side_scan_scheduler_task):
@@ -346,6 +348,8 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
             _drain_seconds,
         )
         shutdown_scan_executor(wait=False, cancel_futures=True)
+    if _scan_worker is not None:
+        _scan_worker.stop_heartbeat()
     # Close Postgres connection pool if active
     try:
         if postgres_deployment_configured():
@@ -937,7 +941,7 @@ async def readiness() -> JSONResponse:
     """
     from agent_bom.api.readiness import control_plane_readiness_response
 
-    return await control_plane_readiness_response(lambda: _shutting_down)
+    return await control_plane_readiness_response(lambda: _shutting_down or _graceful_shutdown.termination_requested())
 
 
 @app.get("/livez", response_model=PublicHealthResponse, tags=["meta"])

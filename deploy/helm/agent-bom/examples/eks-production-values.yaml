@@ -1,5 +1,11 @@
 controlPlane:
   enabled: true
+  # Pool sizes also set the Postgres role connection limits the migration
+  # applies; see controlPlane.postgres in values.yaml.
+  postgres:
+    pool:
+      minSize: 2
+      maxSize: 20
   postgresSecrets:
     enabled: true
     appSecretRef:
@@ -19,6 +25,10 @@ controlPlane:
     create: true
     name: agent-bom-control-plane
   api:
+    # The auth Secret in envFrom supplies request attestation
+    # (AGENT_BOM_TRUST_PROXY_AUTH*, see control-plane-auth-secret.example.yaml).
+    listenerAttestation:
+      fromSecret: true
     # Replace with the subnets the ingress connects to the API from. Without
     # this, every client behind the ingress shares one authentication failure budget.
     trustedProxy:
@@ -29,14 +39,13 @@ controlPlane:
     env:
       - name: AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT
         value: "1"
+      # The synced auth Secret supplies AGENT_BOM_TRUST_PROXY_AUTH_SECRET and _ISSUER.
+      - name: AGENT_BOM_TRUST_PROXY_AUTH
+        value: "1"
       - name: AGENT_BOM_DISABLE_DOCS
         value: "1"
       - name: AGENT_BOM_API_LOCAL_PATH_SCANS
         value: "disabled"
-      - name: AGENT_BOM_POSTGRES_POOL_MIN_SIZE
-        value: "5"
-      - name: AGENT_BOM_POSTGRES_POOL_MAX_SIZE
-        value: "20"
       - name: AGENT_BOM_POSTGRES_CONNECT_TIMEOUT_SECONDS
         value: "5"
       - name: AGENT_BOM_POSTGRES_STATEMENT_TIMEOUT_MS

@@ -36,11 +36,13 @@ state is stored. `GET /v1/findings` defaults to `status=open`, which includes
 | `last_seen` | Latest observation. An older observation cannot move it back. |
 | `resolved_at` | When a resolution in force happened; `null` unless `status` is `resolved`. |
 | `resolution_reason` | `no_longer_detected` or `asset_deleted`; `null` unless `status` is `resolved`. |
+| `resolved_by_scan_id` | The scan that proved the finding gone; `null` unless `status` is `resolved`. Read from the scan ledger, so it stays after retention removes the scan. |
 | `last_resolved_at` | The latest resolution, kept after a reopen. |
 | `reopened_at` | The latest reopen. |
 | `status_updated_at` | When the current status began. |
 | `stale` | Open, but not observed within `AGENT_BOM_FINDING_STALE_DAYS` (default 30). Computed when read. |
 | `package_version` | The version from the latest observation. |
+| `package`, `ecosystem`, `scan_id` | Kept on a resolved finding as on an open one; `scan_id` is the latest scan that reported it. |
 
 A stale finding stays open and counts as open everywhere. It never resolves on
 its own: only a scan can do that, and the label clears on the next observation.

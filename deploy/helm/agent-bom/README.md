@@ -186,6 +186,11 @@ blank `collectorImage.tag` falls back to `image.tag`.
 | `controlPlane.worker.replicas` / `.resources` / `.nodeSelector` / `.tolerations` / `.affinity` / `.extraEnv` | `2` / API envelope / chart-wide / chart-wide / chart-wide / `[]` | Worker-only overrides; image, env, Secrets, service account and probes come from `controlPlane.api` |
 | `controlPlane.worker.autoscaling.keda.enabled` | `false` | KEDA `postgresql` trigger on claimable `scan_dispatch_queue` depth; needs `keda.authenticationRef.name` (maintenance role, `app.bypass_rls=1`) |
 | `controlPlane.networkPolicy.workerAdditionalIngress` | `[]` | Worker pods admit no peer ingress by default |
+| `controlPlane.networkPolicy.ingressCIDRs` | `[]` | Sources outside the cluster admitted to the API and UI ports; required (or an `additionalIngress` rule) for a `NodePort` or `LoadBalancer` Service |
+| `controlPlane.api.listenerAttestation.fromSecret` | `false` | Records that a Secret in `controlPlane.api.envFrom` supplies trusted-proxy attestation; a clustered API without attestation fails rendering |
+| `controlPlane.api.shutdown.preStopSleepSeconds` / `.gracefulShutdownSeconds` / `.drainSeconds` | `10` / `10` / `25` | Termination budget; plus 5 s must fit `terminationGracePeriodSeconds` (`60` API, `45` worker) |
+| `controlPlane.postgres.pool.minSize` / `.maxSize` | `2` / `20` | Postgres pool per API or worker process; also sizes the role connection limits |
+| `controlPlane.postgres.connectionLimits.app` / `.maintenance` | `0` (derived) | Role `CONNECTION LIMIT`s the migration Job raises to after every upgrade; derived from pool size and replica counts with the rolling-update surge |
 | `controlPlane.postgres.provider` | `auto` | Diagnostic provider hint; does not change the PostgreSQL contract or certification state |
 | `controlPlane.postgres.verification.enabled` | `true` | Run a post-install/post-upgrade portability probe for canonical Postgres deployments |
 | `controlPlane.ingress.enabled` | `false` | Same-origin ingress for UI + API |

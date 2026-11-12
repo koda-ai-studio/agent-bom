@@ -45,17 +45,20 @@ The plugin starts two local servers from the same pinned release, each with a
 bounded tool profile: `agent-bom` (the default `scan` profile: scan, check,
 remediate and five more) and `agent-bom-audit` (`--profile audit`: inventory,
 skill and descriptor audits, prompt checks, compliance, policy). See
-[MCP profiles](../../docs/MCP_SERVER.md). Both start with
-`uv run --frozen --isolated --project <plugin folder> agent-bom mcp server`, so
-they need [uv](https://docs.astral.sh/uv/). `pyproject.toml` in this folder pins the
-published release and `uv.lock` records every dependency's exact version, PyPI URL
+[MCP profiles](../../docs/MCP_SERVER.md). Claude Code starts the bundled
+`mcp_launcher.py` with `python3`; Python 3 and [uv](https://docs.astral.sh/uv/)
+must be on PATH. The readable launcher replaces itself with
+`uv run --frozen --isolated --project <plugin folder> agent-bom mcp server`.
+It resolves the plugin folder from its own file, independently of the user’s
+working directory, and forwards the declared profile arguments.
+`pyproject.toml` in this folder pins the published release and `uv.lock` records every dependency's exact version, PyPI URL
 and sha256 hash; uv installs exactly that, never resolves at launch, and writes
 nothing into the plugin folder (the environment lives in uv's cache). The lock
-covers Python 3.11 to 3.14 (uv downloads one if none is installed) on macOS,
+covers Python 3.11 to 3.14 (uv downloads a compatible version if needed) on macOS,
 Linux x86_64 and aarch64, and Windows x64 and ARM64. No API key or account is
 needed. Directory builds exclude activity/history skills.
-Before submission, pin a published release that excludes `agent_activity` from
-the audit profile; the existing release pin is not submission-ready.
+The pinned audit profile excludes `agent_activity`; no chat-history tool is
+exposed by either server.
 
 ## Two ways to install in Codex
 
@@ -178,6 +181,10 @@ Prompts, responses, file contents and credential values are never sent.
   - `api.deps.dev`: license and project metadata a package registry does not
     provide
   - `proxy.golang.org` and `sum.golang.org`: Go module versions and checksums
+  - `raw.githubusercontent.com`: the Node.js security working group's core
+    advisory index and CPython release headers, when a scanned image or host
+    ships those runtimes (the Node.js index is also fetched by a local database
+    update); nothing about your project is sent
   - `osv-vulnerabilities.storage.googleapis.com`, `secdb.alpinelinux.org`,
     `security-tracker.debian.org`, `deb.freexian.com` and `epss.cyentia.com`
     (a redirect): only when the local advisory database is refreshed, which no
@@ -207,9 +214,12 @@ Prompts, responses, file contents and credential values are never sent.
 ### Which paths the tools accept
 
 The MCP tools take paths under your home directory and under the directories
-named in `AGENT_BOM_MCP_WORKSPACE_ROOTS`. In Claude Code, `.mcp.json` sets that
-variable to `${CLAUDE_PROJECT_DIR}`, so a project in `/tmp`, `/workspaces`
-(devcontainers), `/srv` or `/Volumes` scans without setup. Codex expands no
+named in `AGENT_BOM_MCP_WORKSPACE_ROOTS`. In Claude Code, the bundled launcher reads `CLAUDE_PROJECT_DIR` from the
+[stdio server environment](https://code.claude.com/docs/en/mcp#option-3-add-a-local-stdio-server)
+and sets the workspace-root variable to that value. If it is absent, no extra
+roots are granted. A project in `/tmp`, `/workspaces`
+(devcontainers), `/srv` or `/Volumes` therefore scans without setup when
+Claude supplies its project root. Codex expands no
 variables in a plugin's MCP config. The `agent-bom-local` Codex plugin passes
 an operator-set `AGENT_BOM_MCP_WORKSPACE_ROOTS` from the launch environment;
 without it, only home-directory paths are accepted. Alternatively, declare

@@ -177,6 +177,27 @@ CANONICAL_INTEL_SOURCES: tuple[IntelSource, ...] = (
         description="Structured CSAF advisory matching for known AI infrastructure package mappings.",
     ),
     IntelSource(
+        source_id="nodejs_security_wg",
+        display_name="Node.js security working group",
+        source_tier=2,
+        kind="vendor_psirt",
+        source_url="https://raw.githubusercontent.com/nodejs/security-wg/main/vuln/core/index.json",
+        homepage_url="https://github.com/nodejs/security-wg",
+        license_or_terms_url="https://github.com/nodejs/security-wg/blob/main/LICENSE.md",
+        license="MIT",
+        robots_policy="structured_repository_file",
+        crawl_delay_seconds=None,
+        connector_type="bulk_json",
+        enabled=True,
+        owner="agent-bom",
+        parser_version="nodejs-security-wg-core.v1",
+        validation_status="structured_feed",
+        support_status="supported",
+        redistribution="source_links_and_structured_findings",
+        sync_meta_source="nodejs",
+        description="Node.js core runtime advisories with vulnerable and patched release ranges, matched by exact release.",
+    ),
+    IntelSource(
         source_id="amd_psirt",
         display_name="AMD PSIRT",
         source_tier=3,
@@ -232,6 +253,7 @@ SYNC_META_SOURCE_LABELS: dict[str, str] = {
     "nvd": "NVD",
     "epss": "EPSS",
     "kev": "KEV",
+    "nodejs": "Node.js security WG",
 }
 
 
