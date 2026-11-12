@@ -1,6 +1,6 @@
 # agent-bom
 
-**AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.**
+**AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach.**
 
 For AppSec and platform engineers. Self-host free; local scans need no account.
 

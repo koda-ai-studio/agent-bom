@@ -220,12 +220,12 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
     # One lead message: the tagline, one audience line, one command.
     # The headline is bounded to what discovery supports; it never claims every agent.
     headline = (
-        '<b>AI supply-chain BOM: agents, MCP servers and AI packages from <a href="#what-it-covers">supported sources</a>, '
+        '<b>AI supply-chain BOM: <a href="#what-it-covers">supported</a> agents, MCP servers and AI packages, '
         "and what each one can reach.</b>"
     )
     assert headline in hero
     assert "## What it covers" in readme
-    assert "<b>AI supply-chain BOM: every agent" not in hero
+    assert "every agent" not in hero
     assert "For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP" in hero
     assert "local scans need no account" in " ".join(hero.split()).lower()
     assert "https://koda-ai-studio.github.io/agent-bom/demo/" in hero.split("<!-- mcp-name:", 1)[0], "the hero opens the browser demo"

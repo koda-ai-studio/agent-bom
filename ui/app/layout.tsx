@@ -31,7 +31,7 @@ const mono = localFont({
 
 export const metadata: Metadata = {
   title: "agent-bom",
-  description: "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach",
+  description: "AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach",
   icons: { icon: `${BASE_PATH}/favicon.ico` },
 };
 

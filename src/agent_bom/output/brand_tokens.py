@@ -12,7 +12,7 @@ PRODUCT_NAME = "agent-bom"
 # Canonical tagline (pyproject ``description`` without the trailing period). One
 # constant feeds ``--version``, ``--help``, the CLI banner and OpenAPI / HTML chrome;
 # ``scripts/check_release_consistency.py`` asserts the non-Python surfaces match.
-POSITIONING_META = "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach"
+POSITIONING_META = "AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach"
 POSITIONING_SHORT = POSITIONING_META
 TAGLINE_CHAIN = "agent → MCP server → packages → CVEs → blast radius"
 DOCS_URL = "https://github.com/koda-ai-studio/agent-bom"

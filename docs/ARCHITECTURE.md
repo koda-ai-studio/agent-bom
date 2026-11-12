@@ -1,6 +1,6 @@
 # Architecture
 
-AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.
+AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach.
 
 agent-bom is one Python package (`src/agent_bom/`) with four entry points that
 share the same scanners, graph and stores, plus a separate Next.js UI (`ui/`)

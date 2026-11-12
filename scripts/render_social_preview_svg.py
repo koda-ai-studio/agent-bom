@@ -63,7 +63,7 @@ def _describe(root: ET.Element, manifest: integrations_manifest.Manifest) -> Non
     if desc is None:
         raise ValueError("social preview must contain a desc element")
     names = ", ".join(item.name for item in manifest.integrations())
-    desc.text = f"AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach. Integrations: {names}."
+    desc.text = f"AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach. Integrations: {names}."
 
 
 def _scope_symbol_ids(symbol: ET.Element) -> None:
