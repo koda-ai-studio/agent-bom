@@ -347,7 +347,9 @@ prove an Agent-Bom deployment exists. Use the
 [direct MCP setup](../site-docs/integrations/smithery.md) instead.
 
 The protected Railway endpoint remains a required gate: exact published version,
-default tool schemas, authenticated calls, and anonymous rejection.
+default tool schemas, authenticated calls, and anonymous rejection. Because the
+endpoint uses OAuth, it serves the read-only subset of the default profile (7
+tools, without `scan`), not the 8 in the `MCP default tools` metric.
 
 ---
 
@@ -686,11 +688,19 @@ and the `MCP default tools` metric. Older releases without that metadata retain
 their full-catalog contract. A smaller next-release default must not make the
 currently published full catalog appear stale. Custom full-profile deployments
 and the default marketplace endpoint have distinct expected catalogs.
-The Railway release gate uses the same default-profile count. During a rolling
-deployment, it retries old-version responses and incomplete contracts within the
-same bounded attempt budget as transport failures. An HTTP 200 alone does not
-pass the gate: the exact version, tool count, and schemas must match before the
-budget is exhausted.
+The Railway release gate checks exact tool names for the deployment's
+authentication mode. A server using OAuth registers only read-only tools, so it
+must list exactly the default profile's read-only subset, each tool marked
+`readOnlyHint: true`. A server using a static bearer token must list the full
+default profile. The probe takes the scheme from the credential it used, and the
+server card must declare the same scheme. The release deploy reads both name sets
+from the tagged checkout's registration filter and checks the full set against
+the `MCP default tools` metric. Deployment Freshness exports both schema sets from
+the published package in an isolated install, running that release's own
+read-only filter. During a rolling deployment, the gate retries old-version
+responses and incomplete contracts within the same bounded attempt budget as
+transport failures. An HTTP 200 alone does not pass the gate: the exact version,
+tool names, and schemas must match before the budget is exhausted.
 Legacy Smithery catalog parsing remains available for explicitly requested
 historical diagnostics; scheduled checks use `--retired-smithery` and perform no
 Smithery request. No retired surface is reported as freshly verified.

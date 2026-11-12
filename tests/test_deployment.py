@@ -567,7 +567,12 @@ def test_deployment_freshness_targets_exact_published_server_card_contract():
     assert 'select(.name == "MCP tools")' in workflow
     assert "--server-card" in workflow
     assert '--expected-version "${{ steps.expected.outputs.version }}"' in workflow
-    assert '--expected-tool-count "${{ steps.expected.outputs.tool_count }}"' in workflow
+    railway = workflow.split("- name: Check Railway deployment", 1)[1].split("- name: Record Smithery", 1)[0]
+    # An OAuth deployment registers only read-only tools; the probe selects the exact
+    # name set for the card's auth scheme instead of trusting one release count.
+    assert "--expected-tool-count" not in railway
+    assert "--expected-tool-names-file /tmp/deployment-expected-tool-names.json" in railway
+    assert "--expected-read-only-tool-names-file /tmp/deployment-expected-read-only-tool-names.json" in railway
     assert 'fresh ? "closed" : "open"' in workflow
 
 
@@ -909,7 +914,12 @@ def test_deploy_mcp_sse_fails_closed_on_exact_release_server_card_drift():
     assert "repo_tool_count=$TOOL_COUNT" in workflow
     assert "--server-card" in workflow
     assert '--expected-version "$repo_version"' in workflow
-    assert '--expected-tool-count "$repo_tool_count"' in workflow
+    assert "PYTHONPATH=src python3 scripts/deploy/write_hosted_tool_names.py" in workflow
+    assert '--expected-tool-names-file "$RUNNER_TEMP/hosted-tool-names.json"' in workflow
+    assert '--expected-read-only-tool-names-file "$RUNNER_TEMP/hosted-read-only-tool-names.json"' in workflow
+    assert "--expected-tool-count" not in workflow
+    # The release metric still has to agree with the registered default profile.
+    assert 'jq -er length "$RUNNER_TEMP/hosted-tool-names.json"' in workflow
     assert "Could not verify deployed version" not in workflow
 
 

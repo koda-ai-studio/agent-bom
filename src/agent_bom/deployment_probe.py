@@ -14,6 +14,8 @@ from functools import partial
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from agent_bom.mcp_tools.server_card_contract import load_tool_names, validate_server_card_release
+
 DEFAULT_BASE_URL = "https://agent-bom-mcp.up.railway.app"
 _USER_AGENT = "agent-bom-deployment-probe"
 
@@ -342,6 +344,9 @@ def fetch_server_card(
     timeout: float = 15.0,
     expected_version: str | None = None,
     expected_tool_count: int | None = None,
+    expected_tool_names: list[str] | None = None,
+    expected_read_only_tool_names: list[str] | None = None,
+    expected_auth_scheme: str | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Fetch the card, retrying until the optional exact release contract matches.
 
@@ -350,14 +355,18 @@ def fetch_server_card(
     attempt budget; exhaustion still fails closed.
     """
 
-    if (expected_version is None) != (expected_tool_count is None):
-        raise ValueError("expected_version and expected_tool_count must be supplied together")
+    has_inventory = expected_tool_count is not None or expected_tool_names is not None
+    if (expected_version is None) == has_inventory:
+        raise ValueError("expected_version and an expected tool inventory must be supplied together")
     validate_payload = None
-    if expected_version is not None and expected_tool_count is not None:
+    if expected_version is not None:
         validate_payload = partial(
             validate_server_card_release,
             expected_version=expected_version,
             expected_tool_count=expected_tool_count,
+            expected_tool_names=expected_tool_names,
+            expected_read_only_tool_names=expected_read_only_tool_names,
+            expected_auth_scheme=expected_auth_scheme,
         )
 
     server_card_url = resolve_server_card_url(base_url)
@@ -383,36 +392,6 @@ def validate_health_payload(
         raise ValueError("health response must be a JSON object")
     if forbid_auth_required and bool(payload.get("auth_required")):
         raise ValueError("deployment surface requires auth and is not suitable for public registry publishing")
-    return payload
-
-
-def validate_server_card_release(
-    payload: dict[str, Any],
-    *,
-    expected_version: str,
-    expected_tool_count: int,
-) -> dict[str, Any]:
-    """Require exact version, inventory, and usable schemas for a release."""
-
-    server_info = payload.get("serverInfo")
-    if not isinstance(server_info, dict) or server_info.get("version") != expected_version:
-        deployed = server_info.get("version") if isinstance(server_info, dict) else None
-        raise ValueError(f"server-card version mismatch: deployed={deployed!r} expected={expected_version!r}")
-
-    tools = payload.get("tools")
-    if not isinstance(tools, list) or len(tools) != expected_tool_count:
-        actual = len(tools) if isinstance(tools, list) else None
-        raise ValueError(f"server-card tool count mismatch: deployed={actual!r} expected={expected_tool_count}")
-
-    names: list[str] = []
-    for tool in tools:
-        if not isinstance(tool, dict) or not isinstance(tool.get("name"), str) or not tool["name"].strip():
-            raise ValueError("server-card tool schema is missing a non-empty name")
-        if not isinstance(tool.get("inputSchema"), dict):
-            raise ValueError(f"server-card tool schema is missing inputSchema for {tool['name']!r}")
-        names.append(tool["name"])
-    if len(set(names)) != len(names):
-        raise ValueError("server-card tool schema contains duplicate tool names")
     return payload
 
 
@@ -456,7 +435,24 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Require the anonymous read-only tier: lookups answer without a credential, other tools are HTTP 401.",
     )
     parser.add_argument("--expected-version", default=None, help="Exact release version required from the server card.")
-    parser.add_argument("--expected-tool-count", type=int, default=None, help="Exact released MCP tool count required.")
+    inventory = parser.add_mutually_exclusive_group()
+    inventory.add_argument("--expected-tool-count", type=int, default=None, help="Exact released MCP tool count required.")
+    inventory.add_argument(
+        "--expected-tool-names-file",
+        default=None,
+        help="JSON list of the exact default-profile tool names a non-OAuth deployment registers.",
+    )
+    parser.add_argument(
+        "--expected-read-only-tool-names-file",
+        default=None,
+        help="JSON list of the exact read-only tool names an OAuth deployment registers.",
+    )
+    parser.add_argument(
+        "--expected-auth-scheme",
+        choices=("oauth2", "bearer"),
+        default=None,
+        help="Authentication scheme the server card must declare (set from the probe credential's origin).",
+    )
     return parser
 
 
@@ -507,8 +503,11 @@ def main(argv: list[str] | None = None) -> int:
                         time.sleep(delay)
 
         if args.server_card:
-            if not args.expected_version or args.expected_tool_count is None:
-                raise ValueError("--server-card requires --expected-version and --expected-tool-count")
+            if not args.expected_version or (args.expected_tool_count is None and args.expected_tool_names_file is None):
+                raise ValueError("--server-card requires --expected-version and --expected-tool-names-file or --expected-tool-count")
+            if args.expected_read_only_tool_names_file and not args.expected_tool_names_file:
+                raise ValueError("--expected-read-only-tool-names-file requires --expected-tool-names-file")
+            read_only_file = args.expected_read_only_tool_names_file
             _, payload = fetch_server_card(
                 args.base_url,
                 bearer_token=args.bearer_token,
@@ -517,6 +516,9 @@ def main(argv: list[str] | None = None) -> int:
                 timeout=args.timeout,
                 expected_version=args.expected_version,
                 expected_tool_count=args.expected_tool_count,
+                expected_tool_names=load_tool_names(args.expected_tool_names_file) if args.expected_tool_names_file else None,
+                expected_read_only_tool_names=load_tool_names(read_only_file) if read_only_file else None,
+                expected_auth_scheme=args.expected_auth_scheme,
             )
             if anonymous_tools is not None:
                 validate_public_readonly_card(payload, anonymous_tools)

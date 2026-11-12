@@ -114,6 +114,10 @@ def main() -> int:
     arguments = sys.argv[1:]
     if arguments[:1] == ["--"]:
         arguments = arguments[1:]
+    if "--server-card" in arguments and "--expected-auth-scheme" not in arguments:
+        # An OAuth server registers only its read-only tools; the card must declare
+        # the scheme this credential came from so the probe holds it to that set.
+        arguments += ["--expected-auth-scheme", "oauth2" if oauth_configured else "bearer"]
     status = subprocess.run([sys.executable, "-m", "agent_bom.deployment_probe", *arguments], env=env, check=False).returncode
     if status != 0:
         report_outcome(OUTCOME_PROBE_FAILED, f"MCP probe exited {status}; see the initialize status above")
