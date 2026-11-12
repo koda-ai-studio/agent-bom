@@ -396,7 +396,8 @@ def _submit_and_wait(job, on_complete, submit=None):
         done.set()
 
     (submit or pipeline_mod.submit_claimed_scan_job)(job, _finish)
-    assert done.wait(10)
+    signalled = done.wait(10)
+    assert signalled
 
 
 def test_crashed_claimed_run_keeps_the_dispatch_row_for_redelivery(monkeypatch):
@@ -495,8 +496,10 @@ def test_claims_are_heartbeated_while_the_claim_loop_is_blocked():
     worker.start_heartbeat()
     try:
         tick.start()
-        assert tick_blocked.wait(10)
-        assert renewed.wait(10), "no lease renewal while the claim loop was blocked"
+        signalled = tick_blocked.wait(10)
+        assert signalled
+        signalled = renewed.wait(10)
+        assert signalled, "no lease renewal while the claim loop was blocked"
     finally:
         release_tick.set()
         worker.stop_heartbeat()

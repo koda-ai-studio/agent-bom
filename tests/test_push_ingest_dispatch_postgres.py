@@ -450,7 +450,8 @@ def _run_claimed(job: ScanJob, on_complete) -> None:  # noqa: ANN001
         done.set()
 
     pipeline.submit_claimed_scan_job(job, _finish)
-    assert done.wait(30)
+    signalled = done.wait(30)
+    assert signalled
 
 
 def test_transient_store_read_leaves_the_claim_to_expire_and_redeliver(pg_store, monkeypatch: pytest.MonkeyPatch) -> None:

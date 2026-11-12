@@ -72,7 +72,8 @@ class _Gate:
             return
         self._first = False
         self.entered.set()
-        assert self.release.wait(HOLD_SECONDS), "test never released the held worker"
+        signalled = self.release.wait(HOLD_SECONDS)
+        assert signalled, "test never released the held worker"
 
 
 def _wait_for(predicate: Callable[[], bool], timeout: float = 15.0) -> None:
@@ -100,10 +101,12 @@ def test_a_push_re_admitted_while_the_previous_worker_finishes_is_stored(graph_c
     push_ingest_worker.register_push_commit_listener(lambda _tenant: gate.hold_once())
     client = TestClient(app, raise_server_exceptions=False)
     first = client.post("/v1/results/push", json=_payload("retained"), headers=ASYNC).json()
-    assert gate.entered.wait(HOLD_SECONDS)
+    signalled = gate.entered.wait(HOLD_SECONDS)
+    assert signalled
     assert _status(client, first["status_url"]) == "stored"
 
-    assert stores._get_store().delete(first["job_id"], tenant_id="default")
+    deleted = stores._get_store().delete(first["job_id"], tenant_id="default")
+    assert deleted
     again = client.post("/v1/results/push", json=_payload("retained"), headers=ASYNC)
     assert again.status_code == 202, again.text
     assert again.json()["job_id"] == first["job_id"]
@@ -136,7 +139,8 @@ def test_a_retry_of_a_failed_push_while_its_worker_finishes_is_stored(monkeypatc
     monkeypatch.setattr(push_ingest_worker, "_record_ingest_failure", _record_then_hold)
     client = TestClient(app, raise_server_exceptions=False)
     first = client.post("/v1/results/push", json=_payload("flaky"), headers=ASYNC).json()
-    assert gate.entered.wait(HOLD_SECONDS)
+    signalled = gate.entered.wait(HOLD_SECONDS)
+    assert signalled
     assert _status(client, first["status_url"]) == "failed"
 
     retry = client.post("/v1/results/push", json=_payload("flaky"), headers=ASYNC)
@@ -162,7 +166,8 @@ def test_a_replay_of_an_in_flight_admission_is_not_processed_twice(monkeypatch: 
     monkeypatch.setattr(push_ingest_worker, "_persist_push_graph", _held)
     client = TestClient(app, raise_server_exceptions=False)
     first = client.post("/v1/results/push", json=_payload("replayed"), headers=ASYNC).json()
-    assert gate.entered.wait(HOLD_SECONDS)
+    signalled = gate.entered.wait(HOLD_SECONDS)
+    assert signalled
 
     replay = client.post("/v1/results/push", json=_payload("replayed"), headers=ASYNC)
     assert replay.status_code == 202, replay.text
