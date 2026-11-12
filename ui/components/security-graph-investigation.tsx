@@ -221,8 +221,8 @@ function InvestigationFlow({
       preserveLabelState: true,
       nodeLabels: graphNodeDisplayLabels(nodes),
     });
-    return embedded ? pathCardEdges(readable, viewport.zoom) : readable;
-  }, [edges, embedded, nodes, viewport.zoom]);
+    return embedded ? pathCardEdges(readable, viewport.zoom, Boolean(linearWidth)) : readable;
+  }, [edges, embedded, linearWidth, nodes, viewport.zoom]);
   const focusNode = useCallback((id: string) => {
     setNavigationId(id);
     setOverview(false);
