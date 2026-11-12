@@ -69,8 +69,8 @@ def _check_arguments(arguments: dict[str, Any]) -> str | None:
     ecosystem = str(arguments.get("ecosystem") or "").strip().lower()
     if ecosystem in _HOST_CONTEXT_ECOSYSTEMS:
         return (
-            f"OS-package checks ({ecosystem}) read the server host's distro and package database "
-            "and require authentication on the public tier"
+            f"OS-package checks ({ecosystem}) read the server host's distro and package database, "
+            "so anonymous callers on the public tier cannot run them"
         )
     return None
 
@@ -115,6 +115,19 @@ def anonymous_call_allowed(tool_name: Any) -> bool:
 
 def anonymous_tools_for(profile_tools: frozenset[str] | None) -> list[str]:
     return sorted(PUBLIC_TOOL_ALLOWLIST if profile_tools is None else PUBLIC_TOOL_ALLOWLIST & profile_tools)
+
+
+def credential_required(profile_tools: frozenset[str] | None, bearer_token: bool, oauth_enabled: bool, public_readonly: bool) -> bool:
+    """Whether any registered tool needs a credential, as advertised in server metadata.
+
+    A public-tier server whose profile registers only allowlisted tools has
+    nothing a credential could unlock, so it advertises no auth scheme.
+    """
+    if bearer_token or oauth_enabled:
+        return True
+    if not public_readonly:
+        return False
+    return profile_tools is None or not profile_tools <= PUBLIC_TOOL_ALLOWLIST
 
 
 def is_public_token(token: Any) -> bool:

@@ -168,7 +168,7 @@ from agent_bom.mcp_tools.graph_registration import register_graph_agent_tools
 from agent_bom.mcp_tools.intel_registration import register_intel_tools
 from agent_bom.mcp_tools.inventory_registration import register_inventory_asset_tool
 from agent_bom.mcp_tools.profiles import _GUIDED_TOOL_NAMES as _GUIDED_TOOL_NAMES
-from agent_bom.mcp_tools.public_tier import anonymous_tools_for, check_public_rate_limit, public_readonly_enabled
+from agent_bom.mcp_tools.public_tier import anonymous_tools_for, check_public_rate_limit, credential_required, public_readonly_enabled
 from agent_bom.mcp_tools.request_identity import request_context as _mcp_request_ctx
 from agent_bom.mcp_tools.result_store import scan_result_owner as _scan_result_owner
 from agent_bom.mcp_tools.scanning_registration import register_scanning_tools
@@ -786,7 +786,7 @@ def create_mcp_server(
 
     attach_metadata_routes(
         mcp,
-        auth_required=bool(bearer_token or oauth_enabled or public_readonly),
+        auth_required=credential_required(get_profile(profile).tools, bool(bearer_token), oauth_enabled, public_readonly),
         tool_metrics_snapshot=_tool_metrics_snapshot,
         profile=profile,
         oauth=oauth_enabled,

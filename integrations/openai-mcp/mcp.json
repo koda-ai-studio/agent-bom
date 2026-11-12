@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "agent-bom-lookup": {
+      "type": "streamable-http",
+      "url": "https://agent-bom-lookup.up.railway.app/mcp"
+    }
+  }
+}

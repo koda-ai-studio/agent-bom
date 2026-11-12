@@ -186,8 +186,8 @@ pure-lookup tools that read no server-host state and fetch no caller-chosen URL:
 
 | Tool | Reads | Anonymous restrictions |
 |---|---|---|
-| `check` | bundled advisory DB, OSV, fixed package-registry origins | `deb`/`apk`/`rpm` refused (they read the host's distro and package DB) |
-| `intel_lookup` | bundled intel DB | operator advisories, plugin sources and saved scans are skipped |
+| `check` | local advisory DB, OSV, GitHub advisories, fixed package-registry origins | `deb`/`apk`/`rpm` refused (they read the host's distro and package DB) |
+| `intel_lookup` | the server's synced advisory DB (`agent-bom db update`) | operator advisories, plugin sources and saved scans are skipped; a miss reports the DB's sync state |
 | `registry_lookup` | bundled MCP server registry (full profile only) | none |
 
 The served set is this allowlist intersected with the active profile, so the
@@ -214,9 +214,18 @@ caller behind one proxy shares a budget (safe, but coarse). Budgets are per
 process: N replicas allow N times the anonymous rate.
 
 `/health`, `/` and the server card report `public_readonly` and
-`anonymous_tools`; `authentication.required` stays `true` because every other
+`anonymous_tools`; `authentication.required` stays `true` while any registered
 tool needs the bearer token. The tier pairs with static bearer auth or with no
 full-access credential; startup refuses it together with MCP OAuth.
+
+For a dedicated no-login deployment, add `--profile public`: it registers only
+`check` and `intel_lookup`, with no prompts or resources, so nothing else exists
+to refuse and the card reports `authentication.required: false` with no scheme.
+`deploy/docker/Dockerfile.public-mcp` runs exactly that, after syncing a scoped
+advisory database so `intel_lookup` does not answer from an empty one. Any remote
+server also answers `GET /.well-known/openai-apps-challenge` with
+`AGENT_BOM_OPENAI_APPS_CHALLENGE` as plain text when it is set, and 404 when not.
+Data flow and retention: [PERMISSIONS](PERMISSIONS.md#public-lookup-server).
 
 ```bash
 agent-bom mcp server --transport streamable-http --host 0.0.0.0 --public-readonly
@@ -700,6 +709,7 @@ expose different profiles; connect only the entries needed for the task.
 | `graph` | 17 | Inventory rollup, asset drill-down, scoped correlation and which assets an advisory affects (`affected_assets`) | Use inventory_summary → inventory_list → inventory_asset, then inspect paths |
 | `cloud` | 6 | Inventory, connection scope and CIS posture | cloud-connection-review |
 | `runtime` | 7 | Gateway policy, alerts and incident evidence | incident-triage, gateway-fleet-live-demo |
+| `public` | 2 | Anonymous `check` and `intel_lookup` for a no-login `--public-readonly` deployment | none |
 | `audit` | 9 | Scan, agent inventory, descriptor and permission checks, skill/instruction and prompt inspection, framework mapping, policy and audit integrity | compliance-report |
 
 For component inspection, call `inventory_asset` with the asset's exact graph

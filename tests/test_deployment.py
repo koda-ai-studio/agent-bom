@@ -1221,3 +1221,16 @@ def test_source_built_images_copy_the_declared_package_readme():
         assert copy_line in path.read_text(), path
     dockerignore = (ROOT / ".dockerignore").read_text().splitlines()
     assert f"!{readme}" in dockerignore
+
+
+def test_hosted_mcp_images_sync_the_advisory_database_before_serving():
+    """An empty advisory DB makes every intel_lookup a miss, so both hosted images sync first."""
+    for name in ("Dockerfile.sse", "Dockerfile.public-mcp"):
+        content = (ROOT / "deploy" / "docker" / name).read_text()
+        cmd = next(line for line in content.splitlines() if line.startswith("CMD "))
+        assert cmd.index("agent-bom db update") < cmd.index("agent-bom mcp server"), name
+        for source in ("--source osv", "--source kev", "--source epss"):
+            assert source in cmd, (name, source)
+        assert "ENV HOME=/home/abom" in content and "chown -R abom:abom /home/abom" in content, name
+        start = next(line for line in content.splitlines() if "--start-period=" in line)
+        assert int(start.split("--start-period=")[1].split("s")[0]) >= 240, name

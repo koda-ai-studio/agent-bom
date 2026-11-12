@@ -457,11 +457,19 @@ class IntelAdvisory(ReadModel):
     evidence_links: list[dict[str, str]]
 
 
+class IntelAdvisoryCoverage(ReadModel):
+    synced: bool
+    sources: list[str]
+    last_synced: str | None = None
+    note: str | None = None
+
+
 class IntelAdvisoryResponse(ReadResponse):
     schema_version: str
     found: bool
     query: str
     advisory: IntelAdvisory | None
+    database: IntelAdvisoryCoverage | None = None
 
 
 # ── MITRE coverage, exec score config, plugins, self-posture ─────────────────

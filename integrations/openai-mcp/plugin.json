@@ -1,0 +1,99 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "agent-bom-lookup",
+  "version": "0.114.0",
+  "description": "Read-only package and advisory lookups from agent-bom on a public server with no sign-in: check one package version for known vulnerabilities and malicious-package advisories, or look up one CVE, GHSA or OSV advisory. Sends only the package name, ecosystem and version, or the advisory id.",
+  "author": {
+    "name": "koda-ai-studio",
+    "url": "https://github.com/koda-ai-studio"
+  },
+  "homepage": "https://github.com/koda-ai-studio/agent-bom",
+  "repository": "https://github.com/koda-ai-studio/agent-bom",
+  "license": "Apache-2.0",
+  "keywords": [
+    "security",
+    "vulnerabilities",
+    "cve",
+    "supply-chain",
+    "osv"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "agent-bom lookup",
+        "shortDescription": "Package and CVE lookups",
+        "longDescription": "Look up known vulnerabilities and malicious-package advisories without leaving the chat. Ask whether a package version is safe to install, or what a CVE or GHSA advisory is and which version fixes it.\n\nTwo read-only tools:\n- check: one package name and version in an application ecosystem such as npm, PyPI, Go, Maven or crates.io, checked against OSV.dev, GitHub security advisories and agent-bom's advisory data, including known-malicious packages.\n- intel_lookup: one CVE, GHSA or OSV id from the server's advisory database (OSV for PyPI and npm, CISA KEV and FIRST EPSS), loaded when the server starts. A miss reports what the database covers instead of claiming the advisory does not exist.\n\nWhat is sent: only the package name, ecosystem and version, or the advisory id, that the assistant passes to a tool. The server sends package coordinates to OSV.dev, to the GitHub public security-advisory API and, for npm and PyPI, to that public registry to resolve a latest version and confirm the version exists. It never asks for files, code, credentials or chat history, and there is no account or sign-in.\n\nLimits: lookups only. It does not scan your computer, repositories, MCP configuration or cloud accounts; the open-source agent-bom CLI does that on your own machine. OS packages (deb, apk, rpm) are not supported here. Rate limits are shared by all anonymous users.",
+        "developerName": "koda-ai-studio",
+        "category": "Developer Tools",
+        "capabilities": [
+          "Interactive"
+        ],
+        "websiteURL": "https://github.com/koda-ai-studio/agent-bom",
+        "supportURL": "https://github.com/koda-ai-studio/agent-bom/blob/main/SUPPORT.md",
+        "privacyPolicyURL": "https://koda-ai-studio.github.io/agent-bom/privacy/",
+        "termsOfServiceURL": "https://koda-ai-studio.github.io/agent-bom/terms/",
+        "defaultPrompt": [
+          "Is event-stream 3.3.6 from npm safe to install?",
+          "Does requests 2.19.0 on PyPI have known vulnerabilities?",
+          "What is CVE-2024-3651 and which version fixes it?"
+        ],
+        "brandColor": "#059669",
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/icon.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Flags a known-malicious npm release before install",
+              "prompt": "Is event-stream 3.3.6 from npm safe to install?",
+              "tools_triggered": "check",
+              "expected_behavior": "Calls check for event-stream version 3.3.6 in the npm ecosystem. Says not to install it because it is a known-malicious release, cites advisory GHSA-mh6f-8j2x-4483, and suggests removing or replacing it."
+            },
+            {
+              "description": "Lists known vulnerabilities for an old PyPI version with fixed versions",
+              "prompt": "Does requests 2.19.0 on PyPI have known vulnerabilities?",
+              "tools_triggered": "check",
+              "expected_behavior": "Calls check with package requests@2.19.0 and ecosystem pypi. Reports that it is vulnerable, names CVE-2018-18074 (high, fixed in 2.20.0) among the advisories, and recommends upgrading to the newest fixed version the tool reports."
+            },
+            {
+              "description": "Accepts the version as a separate argument for an npm package",
+              "prompt": "Check the npm package lodash version 4.17.20 for vulnerabilities.",
+              "tools_triggered": "check",
+              "expected_behavior": "Calls check with package lodash, version 4.17.20 and ecosystem npm. Reports that it is vulnerable, including CVE-2021-23337 (high, fixed in 4.17.21), and gives the fixed versions the tool returns."
+            },
+            {
+              "description": "Explains a CVE and its fix from the advisory database",
+              "prompt": "What is CVE-2024-3651 and which version fixes it?",
+              "tools_triggered": "intel_lookup",
+              "expected_behavior": "Calls intel_lookup with advisory_id CVE-2024-3651. Explains it is a medium-severity denial-of-service issue in the Python idna package, recorded as GHSA-jjg7-2v4v-x38h, fixed in idna 3.7."
+            },
+            {
+              "description": "Looks up a GHSA id and lists the affected packages",
+              "prompt": "Look up advisory GHSA-35jh-r3h4-6jhm. Which packages does it affect?",
+              "tools_triggered": "intel_lookup",
+              "expected_behavior": "Calls intel_lookup with advisory_id GHSA-35jh-r3h4-6jhm. Reports a high-severity command injection in lodash (CVE-2021-23337) and lists the affected packages the tool returns, including lodash and lodash-es, with their fixed versions."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Unrelated request; no tool should be called",
+              "prompt": "What will the weather be like in Paris this weekend?"
+            },
+            {
+              "description": "Asks for a local scan, which this plugin cannot do; it should not call a tool or claim to have scanned anything",
+              "prompt": "Scan all the MCP servers configured on my computer for security problems."
+            },
+            {
+              "description": "General coding help that is not a package or advisory lookup",
+              "prompt": "Write a Python function that sorts a list of dictionaries by one key."
+            }
+          ]
+        }
+      },
+      "publication": {
+        "release_notes": "First release: two read-only lookups, check and intel_lookup, on a public server with no sign-in."
+      }
+    }
+  }
+}

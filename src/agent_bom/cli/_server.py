@@ -790,10 +790,10 @@ def api_cmd(
 @click.option("--host", default="127.0.0.1", show_default=True, help="Host for HTTP/SSE transport.")
 @click.option(
     "--profile",
-    type=click.Choice(["scan", "graph", "cloud", "runtime", "audit", "guided", "full"]),
+    type=click.Choice(["scan", "graph", "cloud", "runtime", "audit", "public", "guided", "full"]),
     default="scan",
     show_default=True,
-    help="Task profile. Scan exposes 8 tools; full explicitly enables the complete compatibility catalog.",
+    help="Task profile. Scan exposes 8 tools; public, 2 anonymous lookups; full, the complete catalog.",
 )
 @click.option(
     "--bearer-token",
@@ -918,7 +918,7 @@ def mcp_server_cmd(
             ("Transport", transport),
             ("Profile", profile),
             ("Bind", f"http://{host}:{port}"),
-            ("Workflows", f"{len(_MCP_WORKFLOW_NAMES)} prompts; see docs/MCP_SERVER.md"),
+            ("Workflows", "none" if profile == "public" else f"{len(_MCP_WORKFLOW_NAMES)} prompts; see docs/MCP_SERVER.md"),
             (
                 "Auth",
                 _auth_summary(

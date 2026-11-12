@@ -151,6 +151,23 @@ Prompt injection: advisory summaries returned anonymously are third-party text
 and carry the server's untrusted-data instructions, the same as authenticated
 results; the tier adds no agent instruction surface.
 
+### Dedicated public lookup deployment
+
+`deploy/docker/Dockerfile.public-mcp` runs the tier with `--profile public` on its own
+hostname, for the OpenAI MCP listing. Changes to the table above, for that deployment:
+
+| STRIDE | Change | Regression test |
+|---|---|---|
+| Spoofing | No full-access credential exists, so there is nothing to forge; OAuth is refused at startup; the domain-verification route proves only control of the host and grants nothing. | `test_edition_refuses_oauth`, `test_challenge_route_needs_no_credential_on_a_bearer_server` |
+| Tampering | The challenge token comes only from `AGENT_BOM_OPENAI_APPS_CHALLENGE`; the response never varies with the request and is not cached. | `test_challenge_serves_exact_token_as_plain_text` |
+| Repudiation | Unchanged. On Railway the edge sets `X-Forwarded-For`; the owner checklist verifies the hop count with spoofed headers before listing. | `test_spoofed_forwarded_prefix_does_not_reset_the_bucket` |
+| Information disclosure | Only `check` and `intel_lookup` are registered, so no other tool, prompt or resource exists to reach; the card, `/` and `/health` list only those. A malformed token is logged by variable name, never value. | `test_edition_registers_only_lookup_tools`, `test_server_card_advertises_no_credential_and_only_lookups`, `test_malformed_challenge_is_logged_without_its_value` |
+| Denial of service | Unchanged limits; one replica keeps the budgets exact. Start-up downloads about 250 MB of public advisory archives before serving; a failed sync still starts the server, and `intel_lookup` then reports an unsynced database. | `test_miss_on_empty_database_is_flagged_unsynced` |
+| Elevation of privilege | The image fixes the flags in `CMD`, so a mistyped variable cannot widen the catalog; the root `railway.json` cannot apply to a new Railway service. | `test_public_edition_dockerfile_runs_only_the_public_command` |
+
+Residual risk: the hosting platform's request logs hold client addresses under its own
+retention; the published privacy notice must say so before listing.
+
 ## Remote MCP with an external OAuth issuer
 
 Off unless issuer, audience, JWKS, subjects and introspection settings are all set,

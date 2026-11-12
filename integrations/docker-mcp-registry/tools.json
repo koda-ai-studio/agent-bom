@@ -127,7 +127,7 @@
   },
   {
     "name": "check",
-    "description": "Check a specific package for known CVEs before installing.\n\nQueries OSV.dev for vulnerabilities in the given package. Use this\nbefore installing an MCP server or dependency to verify it is safe.\n\nArgs:\n    package: Package name with optional version, e.g. \"express@4.18.2\",\n             \"@modelcontextprotocol/server-filesystem@2025.1.14\",\n             or just \"requests\" (resolves @latest).\n    ecosystem: Package ecosystem \u2014 \"npm\", \"pypi\", \"go\", \"cargo\",\n               \"maven\", \"nuget\", \"rubygems\", \"composer\", \"swift\",\n               \"pub\", \"hex\", \"conda\", \"deb\", \"apk\", or \"rpm\".\n               Defaults to \"npm\".\n\nReturns:\n    JSON with package, version, ecosystem, vulnerability count,\n    and vulnerability details (id, severity, cvss, fix version, summary).",
+    "description": "Check a specific package for known CVEs before installing.\n\nQueries OSV.dev for vulnerabilities in the given package. Use this\nbefore installing an MCP server or dependency to verify it is safe.\n\nArgs:\n    package: Package name with optional version, e.g. \"express@4.18.2\",\n             \"@modelcontextprotocol/server-filesystem@2025.1.14\",\n             or just \"requests\" (resolves @latest).\n    ecosystem: Package ecosystem \u2014 \"npm\", \"pypi\", \"go\", \"cargo\",\n               \"maven\", \"nuget\", \"rubygems\", \"composer\", \"swift\",\n               \"pub\", \"hex\", \"conda\", \"deb\", \"apk\", or \"rpm\".\n               Defaults to \"npm\". deb, apk and rpm read the server's\n               own OS package data and are refused on a public server.\n\nReturns:\n    JSON with package, version, ecosystem, vulnerability count,\n    and vulnerability details (id, severity, cvss, fix version, summary).",
     "arguments": [
       {
         "name": "package",
@@ -137,7 +137,7 @@
       {
         "name": "ecosystem",
         "type": "string",
-        "desc": "Package ecosystem: 'npm', 'pypi', 'go', 'cargo', 'maven', 'nuget', 'rubygems', 'composer', 'swift', 'pub', 'hex', 'conda', 'deb', 'apk', or 'rpm'."
+        "desc": "Package ecosystem: 'npm', 'pypi', 'go', 'cargo', 'maven', 'nuget', 'rubygems', 'composer', 'swift', 'pub', 'hex', 'conda', 'deb', 'apk', or 'rpm'. deb, apk and rpm read the server's own OS package data, so a public lookup server refuses them."
       },
       {
         "name": "version",
@@ -153,7 +153,7 @@
   },
   {
     "name": "intel_lookup",
-    "description": "Look up one advisory from the local threat-intel database.",
+    "description": "Look up one advisory from the local threat-intel database.\n\nReturns the summary, severity, CVSS, affected package ranges, fixed\nversions, EPSS and CISA KEV status for one CVE, GHSA or OSV id, read\nfrom the server's synced advisory database (the bundled sources, not a\nlive web search). Use it when the user names an advisory id. A miss\nreturns found false with the database's sync state; when the database\nwas never synced, not found does not mean the advisory does not exist.",
     "arguments": [
       {
         "name": "advisory_id",

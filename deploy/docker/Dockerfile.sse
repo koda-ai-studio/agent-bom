@@ -80,9 +80,12 @@ RUN python -m pip uninstall --yes setuptools wheel pip \
 
 # Create non-root user for least-privilege execution
 RUN addgroup --system abom && adduser --system --ingroup abom abom
+# The advisory database must live under HOME or /tmp (db/schema.py).
+RUN mkdir -p /home/abom/.agent-bom/db && chown -R abom:abom /home/abom
 USER abom
 
 # Streamable HTTP transport defaults
+ENV HOME=/home/abom
 ENV PYTHONUNBUFFERED=1
 ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"
@@ -97,9 +100,11 @@ ENV PIP_CERT=${PIP_CERT}
 
 EXPOSE ${PORT}
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+# The server answers /health only after the advisory sync, so allow for it.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=240s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-8423}/health')" || exit 1
 
 # Use shell form so $PORT is expanded at runtime (Railway/Render inject PORT)
 # The CLI validates static credentials or explicit external OAuth configuration.
-CMD agent-bom mcp server --transport streamable-http --host 0.0.0.0 --port ${PORT}
+# Sync the advisory database first: an empty one makes every intel_lookup a miss.
+CMD agent-bom db update --source osv --osv-ecosystem pypi --osv-ecosystem npm --source kev --source epss || echo "advisory sync failed; intel_lookup will report an unsynced database" >&2; exec agent-bom mcp server --transport streamable-http --host 0.0.0.0 --port ${PORT}

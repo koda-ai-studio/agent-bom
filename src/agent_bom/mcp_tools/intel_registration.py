@@ -13,7 +13,15 @@ def _register_intel_lookup(mcp: Any, *, impl: Any, read_only: Any, _execute_tool
     async def intel_lookup(
         advisory_id: Annotated[str, Field(description="CVE, GHSA, or OSV advisory ID, e.g. CVE-2024-1234 or GHSA-abcd-1234-wxyz.")],
     ) -> str:
-        """Look up one advisory from the local threat-intel database."""
+        """Look up one advisory from the local threat-intel database.
+
+        Returns the summary, severity, CVSS, affected package ranges, fixed
+        versions, EPSS and CISA KEV status for one CVE, GHSA or OSV id, read
+        from the server's synced advisory database (the bundled sources, not a
+        live web search). Use it when the user names an advisory id. A miss
+        returns found false with the database's sync state; when the database
+        was never synced, not found does not mean the advisory does not exist.
+        """
 
         return await _execute_tool_async(
             "intel_lookup",

@@ -19189,12 +19189,42 @@ components:
       - cwes
       title: IntelAdvisoryCanonicalIds
       type: object
+    IntelAdvisoryCoverage:
+      additionalProperties: true
+      properties:
+        last_synced:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Synced
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+        sources:
+          items:
+            type: string
+          title: Sources
+          type: array
+        synced:
+          title: Synced
+          type: boolean
+      required:
+      - synced
+      - sources
+      title: IntelAdvisoryCoverage
+      type: object
     IntelAdvisoryResponse:
       additionalProperties: true
       properties:
         advisory:
           anyOf:
           - $ref: '#/components/schemas/IntelAdvisory'
+          - type: 'null'
+        database:
+          anyOf:
+          - $ref: '#/components/schemas/IntelAdvisoryCoverage'
           - type: 'null'
         found:
           title: Found

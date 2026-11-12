@@ -552,3 +552,46 @@ See [MCP OAuth setup](MCP_OAUTH.md) and the
 [OAuth failure modes and STRIDE assessment](RUNTIME_FAIL_MODES.md#hosted-mcp-oauth).
 The draft [privacy](../site-docs/privacy.md) and [terms](../site-docs/terms.md)
 pages require owner review before publication; they make no certification claim.
+
+## Public lookup server
+
+A separate deployment, `deploy/docker/Dockerfile.public-mcp`, runs
+`agent-bom mcp server --transport streamable-http --public-readonly --profile public`
+on its own hostname for the [OpenAI MCP package](../integrations/openai-mcp/README.md).
+It has no login. The image fixes those flags, and startup refuses OAuth with them.
+
+- **Tools.** Only `check` and `intel_lookup` are registered: no other tool, prompt or
+  resource exists on this server. The [public tier](MCP_SERVER.md) also refuses every
+  other method and argument, `deb`/`apk`/`rpm` checks (they would read the server's own
+  OS), string arguments over 256 characters and request bodies over 16 KiB.
+- **What a caller sends.** The tool arguments: a package name, ecosystem and optional
+  version, or one advisory id. The server reads no file or setting chosen by the caller.
+- **Where it goes.** `check` sends the package coordinate to `api.osv.dev`, to
+  `api.github.com` (public security advisories, without a token unless the operator sets
+  `GITHUB_TOKEN`) and, for npm and PyPI, to `registry.npmjs.org` or `pypi.org`.
+  `intel_lookup` reads the server's advisory database and contacts nothing. At start the
+  container downloads the OSV PyPI and npm archives from
+  `osv-vulnerabilities.storage.googleapis.com`, plus CISA KEV and FIRST EPSS, sending no
+  caller data.
+- **What it keeps.** In memory: the last 256 tool calls (tool name, a rate bucket made
+  from the client address, status, duration; not the arguments) and the per-address rate
+  windows. On disk inside the container: the OSV answer cache keyed by package
+  coordinate, with no caller identity, read for 24 hours, and the advisory database. All
+  of it is lost when the container is replaced unless the operator adds a volume. The
+  hosting platform's request logs (client address, method, path, status) follow its own
+  retention.
+- **Rate limits.** 30 anonymous calls per client address and 300 in total per 60-second
+  window by default (`AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT`,
+  `AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT`), on top of the server-wide per-caller and
+  global limits. The client address comes from the socket, or from the
+  `X-Forwarded-For` entry written by the outermost of
+  `AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS` trusted proxies, so entries a client adds to
+  the left are ignored. Windows are per process.
+- **Domain verification.** With `AGENT_BOM_OPENAI_APPS_CHALLENGE` set to one printable
+  ASCII word of at most 512 characters, `GET /.well-known/openai-apps-challenge` returns
+  exactly that text as `text/plain` with `cache-control: no-store`. Unset or malformed, it
+  returns 404 and logs the variable name, never its value. The route is the same on every
+  remote MCP server and reveals nothing else.
+- **Metadata.** `/.well-known/mcp/server-card.json`, `/` and `/health` report
+  `public_readonly: true`, the two anonymous tools and no authentication scheme. No OAuth
+  metadata is served.

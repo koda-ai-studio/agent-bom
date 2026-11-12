@@ -25,6 +25,7 @@ def test_every_published_python_image_removes_runtime_packaging_tools() -> None:
         ROOT / "deploy/docker/Dockerfile.mcp",
         ROOT / "deploy/docker/Dockerfile.runtime",
         ROOT / "deploy/docker/Dockerfile.snowpark",
+        ROOT / "deploy/docker/Dockerfile.public-mcp",
         ROOT / "deploy/docker/Dockerfile.sse",
         ROOT / "integrations/glama/Dockerfile",
     ]

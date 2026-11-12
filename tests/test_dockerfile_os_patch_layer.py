@@ -22,6 +22,7 @@ SHIPPED_DOCKERFILES = (
     "deploy/docker/Dockerfile.native-app",
     "deploy/docker/Dockerfile.runtime",
     "deploy/docker/Dockerfile.snowpark",
+    "deploy/docker/Dockerfile.public-mcp",
     "deploy/docker/Dockerfile.sse",
 )
 _UPGRADE = {
