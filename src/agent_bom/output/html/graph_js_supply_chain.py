@@ -29,7 +29,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'label': 'data(label)',
             'color': '#c7d2fe',
             'font-size': '13px',
-            'font-weight': '700',
+            'font-weight': 700,
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 140,
@@ -48,7 +48,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'label': 'data(label)',
             'color': '#bfdbfe',
             'font-size': '12px',
-            'font-weight': '700',
+            'font-weight': 700,
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 120,
@@ -121,7 +121,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'label': 'data(label)',
             'color': '#fca5a5',
             'font-size': '11px',
-            'font-weight': '700',
+            'font-weight': 700,
             'text-valign': 'center',
             'text-halign': 'center',
             'width': 130,
@@ -201,8 +201,10 @@ SUPPLY_CHAIN_GRAPH_JS = """\
         {
           selector: 'edge[type="hosts"]',
           style: {
-            'line-color': '#818cf850',
-            'target-arrow-color': '#818cf880',
+            'line-color': '#818cf8',
+            'target-arrow-color': '#818cf8',
+            'opacity': 0.5,
+            'line-opacity': 0.63,
             'line-style': 'dashed',
             'line-dash-pattern': [6, 3],
           },
@@ -210,8 +212,10 @@ SUPPLY_CHAIN_GRAPH_JS = """\
         {
           selector: 'edge[type="affects"]',
           style: {
-            'line-color': '#dc262650',
-            'target-arrow-color': '#dc262680',
+            'line-color': '#dc2626',
+            'target-arrow-color': '#dc2626',
+            'opacity': 0.5,
+            'line-opacity': 0.63,
           },
         },
         {
