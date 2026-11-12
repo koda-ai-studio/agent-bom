@@ -991,7 +991,7 @@ test("priority enrichment cannot replace or inflate the authoritative path queue
   await page.goto("/security-graph?lens=attack-path");
   await page.waitForLoadState("networkidle");
   await openPathQueue(page);
-  await page.getByText("Queue coverage", { exact: true }).click();
+  await page.getByText("About these paths", { exact: true }).click();
   await expect(page.getByText("2 shown · 2 loaded paths", { exact: true })).toBeVisible();
   await openPathQueue(page);
   const queue = page.getByLabel("Attack path queue");
@@ -1429,7 +1429,7 @@ for (const theme of ["light", "dark"] as const) {
     });
     await page.goto("/security-graph?lens=attack-path");
     await openPathQueue(page);
-    await page.getByText("Queue coverage", { exact: true }).click();
+    await page.getByText("About these paths", { exact: true }).click();
     await expect(page.getByText("3 shown · 3 loaded paths", { exact: true })).toBeVisible();
     await expect(page.getByText(/3 from the path queue/)).toBeVisible();
     await openPathQueue(page);
@@ -1573,9 +1573,10 @@ for (const theme of ["light", "dark"] as const) {
       const workspace = page.getByRole("region", { name: "Investigation workspace" });
       const detail = workspace.getByRole("region", { name: "Selected path detail" });
       if (width < 1024) {
-        await expect(page.getByLabel("Attack path queue")).toBeVisible();
+        // Phones land on the selected path; the queue stays one tap away.
+        await expect(page.getByRole("button", { name: "Selected path", exact: true })).toHaveAttribute("aria-pressed", "true");
+        await expect(page.getByRole("button", { name: /^Paths & filters/ })).toBeInViewport();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-        await page.getByRole("button", { name: "Selected path", exact: true }).click();
       }
       await expect(detail).toBeVisible();
       await inspectPathAssessment(detail, /unknown/i);
@@ -1593,7 +1594,8 @@ for (const theme of ["light", "dark"] as const) {
         await expect(detail).toBeVisible();
         await expect(detail.getByRole("heading", { level: 2 })).toContainText("GITHUB PERSONAL ACCESS TOKEN");
         const graph = detail.getByTestId("security-graph-investigation");
-        await expect(graph.locator(".react-flow__node")).toHaveCount(3);
+        // The selected path's three hops; other recorded paths that share a node draw as branches.
+        await expect(graph.locator('.react-flow__node [data-role="entry"], .react-flow__node [data-role="path"], .react-flow__node [data-role="target"]')).toHaveCount(3);
         await expect(graph.getByRole("button", { name: "Next graph node" })).toHaveCount(0);
       } else {
         await openPathQueue(page);
@@ -1624,6 +1626,7 @@ test("mobile queue keeps a long identity and supply-chain role sequence inside t
   await routeCockpit(page, undefined, { longPathNodeCount: 7, variedPathRoles: true });
   await page.goto(`/security-graph?lens=attack-path&scan=${scanId}`);
   const queue = page.getByLabel("Attack path queue");
+  await page.getByRole("button", { name: /^Paths & filters/ }).click();
   await expect(queue).toBeVisible();
   await expect(queue).toContainText("service account");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

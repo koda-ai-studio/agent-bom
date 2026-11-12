@@ -30,11 +30,16 @@ for (const theme of ["light", "dark"]) {
       return r.fulfill({ status: 404, json: { detail: "Outside fixture" } });
     });
     await page.goto("/security-graph?lens=attack-path&scan=snapshot");
-    await expect(page.locator("#investigation-queue")).toHaveAttribute("open", "");
+    const queueDisclosure = page.locator("#investigation-queue");
+    // The selected path takes the canvas first; the queue opens from its summary.
+    await expect(queueDisclosure).not.toHaveAttribute("open");
+    await queueDisclosure.locator(":scope > summary").click();
+    await expect(queueDisclosure).toHaveAttribute("open", "");
+    await expect(page.getByLabel("Representative path preview")).toContainText("10 of 14 loaded paths");
     const queue = page.getByLabel("Attack path queue", { exact: true });
     await expect(queue.getByRole("button")).toHaveCount(10);
     // The action must be exposed without scrolling a nested queue footer.
-    await expect(page.getByRole("button", { name: "Show all loaded paths in ranked order" })).toBeInViewport();
+    await expect(page.getByRole("button", { name: "Show all 14 paths", exact: true })).toBeInViewport();
     await expect(queue.getByTestId("ranked-path-advisory").nth(1)).toHaveText(advisories[1]!);
     await expect(queue.getByTestId("ranked-path-advisory").nth(2)).toHaveText(advisories[2]!);
     await expect(queue.getByRole("button").nth(1)).toContainText("#13");
@@ -42,7 +47,7 @@ for (const theme of ["light", "dark"]) {
     await expect(queue.getByRole("button")).toHaveCount(10);
     await expect(queue.getByRole("button").nth(1)).toHaveAttribute("aria-pressed", "true");
     await page.screenshot({ path: info.outputPath(`representative-${theme}.png`), fullPage: true });
-    await page.getByRole("button", { name: "Show all loaded paths in ranked order" }).click();
+    await page.getByRole("button", { name: "Show all 14 paths", exact: true }).click();
     await expect(queue.getByRole("button")).toHaveCount(14);
     await expect(queue.getByTestId("ranked-path-advisory").nth(11)).toHaveText(advisories[0]!);
     await expect(queue.getByTestId("ranked-path-advisory").nth(12)).toHaveText(advisories[1]!);

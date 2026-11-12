@@ -138,6 +138,10 @@ def _open_estate(name: str, workdir: Path, with_jobs: bool) -> Iterator[_Estate]
         )
     api_stores.set_job_store(job_store)
     try:
+        # The server's start-up prewarm prepares the current graph before reads;
+        # a bare TestClient runs no lifespan, so a cold first read would race
+        # the bounded build wait and answer 503 on a loaded runner.
+        assert api_stores._get_graph_store().prepare_current("default", seconds=300)
         yield _Estate(name, TestClient(app), store)
     finally:
         api_stores.set_graph_store(previous_graph)  # type: ignore[arg-type]
