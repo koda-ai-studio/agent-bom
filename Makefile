@@ -73,6 +73,7 @@ preflight:  ## Run the drift gates that CI's "Version Alignment" job runs — do
 	@echo "→ banner + integration tables";          python scripts/render_social_preview_svg.py --check
 	@echo "→ CVE matching accuracy";                python scripts/cve_matching_accuracy.py --check
 	@echo "→ skill audit accuracy";                 python scripts/skill_audit_accuracy.py --check
+	python scripts/build_claude_directory.py --check
 	@echo "→ env-var reference";                    python scripts/generate_env_var_reference.py --check
 	@echo "→ experimental-feature reference";       python scripts/generate_experimental_docs.py --check
 	@echo "→ SDK patterns.json";                    python sdks/shared/generate-patterns.py --check
@@ -222,3 +223,4 @@ analytics:  ## Show adoption metrics (PyPI downloads, GitHub traffic, stars)
 
 plugin-submission-check:  ## Stop a plugin directory submission that would ship stale pins or draft legal pages
 	python scripts/check_plugin_submission_ready.py
+	python scripts/build_claude_directory.py --check

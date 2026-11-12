@@ -13,7 +13,7 @@ export function InvestigationFilterDrawer({ children }: { children: React.ReactN
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-medium text-foreground [&::-webkit-details-marker]:hidden">
         <span className="inline-flex items-center gap-2">
           <SlidersHorizontal className="h-3.5 w-3.5 text-ink-tertiary" aria-hidden="true" />
-          Filters &amp; presets
+          Filters
         </span>
         <span className="text-xs uppercase tracking-[0.14em] text-ink-tertiary group-open:hidden">
           Show
@@ -115,10 +115,10 @@ export function InvestigationPathWorkspace({
         <button type="button" aria-pressed={mobilePanel === "queue"} aria-controls="investigation-queue" onClick={() => { setMobilePanel("queue"); setQueueOpen(true); }}>Paths &amp; filters ({rows.length})</button>
       </div>
       <details id="investigation-queue" open={queueOpen} onToggle={(event) => setQueueOpen(event.currentTarget.open)} className="investigation-queue rounded-xl border border-outline bg-surface p-3">
-        <summary className="cursor-pointer text-sm font-medium text-foreground">{`Browse ${rows.length} ${rows.length === 1 ? "path" : "paths"} & filters`}</summary>
+        <summary className="cursor-pointer text-sm font-medium text-foreground">{`${rows.length} ${rows.length === 1 ? "path" : "paths"}`}</summary>
         <div className="investigation-queue-body mt-3">
           <details className="text-xs text-ink-secondary">
-            <summary className="cursor-pointer py-1">Queue coverage</summary>
+            <summary className="cursor-pointer py-1">About these paths</summary>
             <p className="mt-2 font-medium">{title}</p>
             <p className="mt-1">{subtitle}</p>
           </details>
