@@ -21,9 +21,9 @@ export type AttackPathNodeData = {
 export type AttackPathFlowNode = Node<AttackPathNodeData, "attackPathNode">;
 
 const GLYPH_INSET_X = glyphInsetX(ATTACK_PATH_NODE.width);
-const BOX: CSSProperties = { width: ATTACK_PATH_NODE.width };
+const BOX: CSSProperties = { width: ATTACK_PATH_NODE.width, height: ATTACK_PATH_NODE.height };
 /** Names wrap to two lines under the glyph before truncating; the full name is on hover. */
-const NAME = "pointer-events-auto mt-2 block w-full rounded-t bg-surface px-1 pt-0.5 text-[15px] font-semibold leading-tight line-clamp-2 [overflow-wrap:anywhere]";
+const NAME = "pointer-events-auto block w-full rounded-t bg-surface px-1 pt-0.5 text-[15px] font-semibold leading-tight line-clamp-2 [overflow-wrap:anywhere]";
 const SUBTITLE = "pointer-events-auto block w-full truncate rounded-b bg-surface px-1 pb-0.5 pt-0.5 text-[13px] leading-tight";
 const RATED = new Set(["critical", "high", "medium", "low"]);
 const MARKER_ICONS = { internet: Globe, sensitive: Database, privileged: Crown } as const;
@@ -98,10 +98,13 @@ export function AttackPathGraphNode({ data }: NodeProps<AttackPathFlowNode>) {
         <Markers markers={node.markers} />
         {node.findings.length > 0 && <FindingBadge node={node} onOpen={data.onOpenFindings} />}
       </div>
+      {/* Below the glyph no line ever runs, so the whole name block takes clicks. */}
+      <div data-node-label className="pointer-events-auto w-full flex-1 pt-2">
       <span data-node-label className={`${NAME} ${spine ? "text-foreground" : "text-ink-secondary"}`}>{node.label}</span>
       <span data-node-label className={`${SUBTITLE} ${spine ? "text-ink-secondary" : "text-ink-tertiary"}`}>
         {node.typeLabel}{caption ? <span className="font-medium text-foreground"> · {caption}</span> : null}
       </span>
+      </div>
     </div>
   );
 }
@@ -116,7 +119,7 @@ function GroupNode({ data }: { data: AttackPathNodeData }) {
         <Layers className="h-5 w-5" aria-hidden="true" />
         {node.findings.length > 0 && <FindingBadge node={node} onOpen={data.onOpenFindings} />}
       </div>
-      <span data-node-label className={`${NAME} text-ink-secondary`}>{node.label}</span>
+      <span data-node-label className={`mt-2 ${NAME} text-ink-secondary`}>{node.label}</span>
       <button type="button" aria-label={`Expand ${node.label}`}
         onClick={event => { event.stopPropagation(); data.onExpandGroup(node.id); }}
         className="pointer-events-auto nodrag nopan rounded-b bg-surface px-1 text-xs font-medium text-[color:var(--accent)] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[color:var(--focus-ring)]">

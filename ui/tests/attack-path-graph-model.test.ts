@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { attackPathEvidenceGraph, buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
-import { branchingFixture, edge, fanOutFixture, node, path } from "./fixtures/attack-path-graph-fixture";
+import { formatInventoryAgentLabel } from "@/lib/agent-topology-graph";
+import { branchingFixture, demoFixture, edge, fanOutFixture, node, path } from "./fixtures/attack-path-graph-fixture";
 
 describe("attack path graph model", () => {
   it("ends the path at the asset at risk and folds its findings into a badge", () => {
@@ -55,6 +56,13 @@ describe("attack path graph model", () => {
     for (const item of model.nodes.filter(node => node.role === "branch")) {
       expect(model.edges.some(link => (link.source === item.id && drawn.has(link.target)) || (link.target === item.id && drawn.has(link.source)))).toBe(true);
     }
+  });
+
+  it("shows agents by the same display name as the rest of the product", () => {
+    const { graph, selected } = demoFixture("headline");
+    const model = buildAttackPathGraphModel(graph, selected);
+    expect(model.nodes.find(item => item.id === "agent:copilot")!.label).toBe(formatInventoryAgentLabel("developer-copilot"));
+    expect(model.nodes.find(item => item.id === "server:github")!.label).toBe("github-enterprise MCP");
   });
 
   it("names each asset by its recorded subtype", () => {

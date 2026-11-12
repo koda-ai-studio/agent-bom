@@ -4,6 +4,7 @@ import { GRAPH_NODE_KIND_META } from "@/lib/graph-schema.generated";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { nodeContextMarkers, type NodeContextMarker } from "@/lib/attack-path-graph-markers";
 import { assetKindLabel } from "@/lib/asset-icon-registry";
+import { formatInventoryAgentLabel } from "@/lib/agent-topology-graph";
 
 /** Findings attach to the asset they affect; they are badges, not hops. */
 export const FINDING_ENTITY_TYPES = new Set(["vulnerability", "misconfiguration", "drift_incident", "finding"]);
@@ -237,7 +238,7 @@ export function buildAttackPathGraphModel(
     const node = nodes.get(id)!;
     const index = pathNodeIds.indexOf(id);
     return {
-      id, kind: "entity", label: node.label || id, entityType: node.entity_type, typeLabel: assetTypeLabel(node),
+      id, kind: "entity", label: node.entity_type === "agent" ? formatInventoryAgentLabel(node.label || id) : node.label || id, entityType: node.entity_type, typeLabel: assetTypeLabel(node),
       role: index < 0 ? "branch" : index === 0 && lastIndex > 0 ? "entry" : index === lastIndex ? "target" : "path",
       findings: findingsFor(id, graph, nodes, drawnFindings),
       markers: nodeContextMarkers(node.attributes ?? {}),
