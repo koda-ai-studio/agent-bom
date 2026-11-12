@@ -219,7 +219,7 @@ credentials. "Not tested" means no install in that environment is recorded.
 | Profile | Static validation | Live installation | Prerequisites the operator supplies |
 |---|---|---|---|
 | Docker Compose pilot, platform, `product` and `hosted-poc` overlays | `docker compose config` passes for each file and overlay (Compose v5.5.1); contract tests in `tests/test_compose_*.py` | Not tested in this qualification; the pilot installs with `scripts/deploy/install.sh pilot` | Docker host; for platform: TLS, authentication, PostgreSQL 16 and operational secrets |
-| Helm chart (22 example profiles) | `helm lint` and `helm template` for the default and every profile in `scripts/validate_helm_profiles.py` (Helm v4.1.4), with the ingress-path structural check; chart tests in `tests/test_helm_*.py` and `tests/test_deploy_profiles.py` | Not tested | An existing Kubernetes cluster, storage class, ingress controller and the Secrets each profile references |
+| Helm chart (22 example profiles) | `helm lint` and `helm template` for the default and every profile in `scripts/validate_helm_profiles.py` (Helm v4.1.4), with the ingress-path structural check; chart tests in `tests/test_helm_*.py` and `tests/test_deploy_profiles.py` | Local kind only (see "Local live qualification" below): three API replicas on one Postgres 16 behind a NodePort. No cloud cluster is tested | An existing Kubernetes cluster, storage class, ingress controller and the Secrets each profile references |
 | EKS (`deploy/terraform/platform-eks`) | `terraform init -backend=false` and `terraform validate` pass (Terraform 1.15.4) | Not tested | AWS account and provisioner role, three pre-created Secrets Manager entries, External Secrets Operator. The module can create a minimal VPC and EKS cluster, or target an existing cluster, and provisions RDS, IRSA roles, S3 and the Helm releases |
 | AKS / GKE | Same chart; `aks-collector-workload-identity` and `gke-collector-workload-identity` profiles render | Not tested | A pre-existing cluster with workload identity enabled. `install.sh aks` / `gke` install Helm onto that cluster; nothing in `deploy/` provisions an AKS or GKE cluster |
 | Read-only cloud connect (`connect-*`, sidescan, `aws/baseline`, `azure/ingestion`) | `terraform validate` passes for all ten Terraform modules; `terraform fmt -check` passes | Not tested | Customer cloud account with rights to create the read-only roles |
@@ -232,6 +232,41 @@ Platform identity, tenant isolation, network egress, secrets, persistence,
 background jobs, upgrade and rollback, recovery, removal and resource
 consumption still need to be tested in each authorized environment before a
 profile above is described as qualified there.
+
+#### Local live qualification
+
+Run on 2026-11-11 on one Apple silicon host (Docker Desktop 29.8.0, 10 CPUs,
+7.7 GiB for containers) with the API image built from `main` at `179801f`
+(version 0.114.0) and Postgres 16. These are local installations, not cloud
+ones. Each lane in `scripts/qualification/` writes its checks to
+`qualification-results/` and can be rerun.
+
+| Check | Command | Result |
+|---|---|---|
+| Helm chart, 3 API replicas on one Postgres, NodePort load balancer (kind v0.32.0, Helm v4.1.4) | `kind_replicas.py up`, then `replicas.py` | Installs once the documented trusted-proxy attestation is set. Requests spread over all three replicas (8-13 of 30 each). Three estates pushed concurrently were each stored with exactly their findings (35, 42, 30). Six concurrent pushes with one `Idempotency-Key` became one job. Read directly, every replica served the same jobs, findings and current graph on the first read after the pushes and after a rolling restart; in an earlier run one first read disagreed and its detail was not kept. Each job was stored once (one row, one ingest commit) |
+| Replica killed mid-ingest | `replicas.py` (`kill`) | A 100-agent push's replica was force-deleted after admission. In two of three runs the job stayed `pending` until an identical retry re-offered it, then stored exactly the 115 expected findings (361 s after the retry); in one run it was stored 140 s after the kill without a retry. Without `AGENT_BOM_DISTRIBUTED_SCANS`, recovery depends on a client retry |
+| Rolling restart under steady reads | `replicas.py` (`restart`) | With the default role connection limit the rollout never finished: the surge pod failed with `too many connections for role "agent_bom_app"`. After `ALTER ROLE agent_bom_app CONNECTION LIMIT 60` it finished in 73-121 s, and 2-5 of 293-527 reads (about 1%) failed with a reset connection or a 10 s timeout |
+| Upgrade 0.114.0 → this build, rollback, backup and restore, removal | `upgrade.py --from-image agentbom/agent-bom:0.114.0` | Migration `20261106_01` → `20261111_01` took 15 s; the new API served the same jobs, findings and graph and stored a new push. Downgrade back to `20261106_01` took 24 s, and the 0.114.0 API served both pushes. A `pg_dump` (1.7 MB) restored into a new Postgres served the backed-up push. Removing the containers, volumes and network left nothing |
+| Enforced CPU and memory limits | `cgroup_limits.py` | See [performance benchmarks](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERFORMANCE_BENCHMARKS.md#enforced-cgroup-limits): no OOM kill at 2 CPU / 2 GiB, with peak anonymous memory 1,972 MiB on SQLite |
+
+What a multi-replica install needs beyond the values a single replica uses:
+
+- **Postgres connections.** Migrations cap `agent_bom_app` at 20 connections
+  for every replica, worker and hook together. An idle API replica held 5-6
+  (`AGENT_BOM_POSTGRES_POOL_MAX_SIZE=8`), so three replicas plus one rolling
+  surge exceed the cap. Raise the role's limit to cover
+  (replicas + surge + workers) × per-replica connections before scaling out.
+- **Listener posture.** More than one replica (the chart default is 2) makes
+  the API refuse a non-loopback listener without trusted-proxy attestation
+  (`AGENT_BOM_TRUST_PROXY_AUTH`, `_SECRET`, `_ISSUER`) or delegated mTLS
+  evidence. The chart renders without them and the pods then fail to start.
+- **NetworkPolicy.** The chart's policy admits only the `ingress-nginx`
+  namespace. A `NodePort` or `LoadBalancer` Service needs
+  `controlPlane.networkPolicy.additionalIngress` for the node or load-balancer
+  range.
+- **Verification hook.** `postgres-verify` fails the release when Postgres
+  TLS is not active (`tls_not_active`), as intended. The kind run used a
+  Postgres without TLS and turned the hook off.
 
 ## Enterprise Deployment Promise
 

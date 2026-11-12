@@ -55,6 +55,12 @@ _NON_OSV_ECOSYSTEMS: frozenset[str] = frozenset(
         "github-action",  # Remote GitHub Action repository references
         "github-action-workflow",  # Remote reusable-workflow references
         "ollama",  # Ollama model names — no OSV advisory DB
+        # Models listed by --serving-endpoint runtimes (cloud/serving_runtimes.py)
+        "vllm",
+        "tgi",
+        "triton",
+        "llamacpp",
+        "lmstudio",
         "smithery",  # Smithery MCP marketplace stubs
         "mcp-registry",  # MCP Registry stubs
         "azure-runtime",  # Azure Functions / ACA runtime images
