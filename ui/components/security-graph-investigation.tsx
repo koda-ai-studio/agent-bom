@@ -62,7 +62,7 @@ import { PathToolbarLead } from "@/components/path-view-toolbar";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
 import { COLUMN_FIT_OPTIONS, applyColumnPath, columnCanvasHeight, columnFlowEdges, usesColumnPath } from "@/lib/path-card-column";
 import { PATH_CARD_CANVAS_CLASS, pathCardCanvasHeight, pathCardEdges, pathCardNodeStyle } from "@/lib/path-card-canvas";
-import { linearPathLayout } from "@/lib/path-linear-layout";
+import { LINEAR_PATH_MIN_ZOOM, linearPathLayout } from "@/lib/path-linear-layout";
 import { mergeGraphNeighborExpansions, boundedInvestigationGraph } from "@/lib/graph-neighbor-expansion";
 import { withRiskContext } from "@/lib/exploit-story-canvas";
 
@@ -191,7 +191,7 @@ function InvestigationFlow({
   const controlsOverlay = CONTROLS_OVERLAY[embedded ? "horizontal" : "vertical"];
   const fitOptions = useMemo(() => {
     if (columnLayout) return COLUMN_FIT_OPTIONS;
-    if (linearWidth) return { padding: { x: "48px", y: "40px" }, minZoom: 0.7, maxZoom: 0.9 } as const;
+    if (linearWidth) return { padding: { x: "48px", y: "40px" }, minZoom: LINEAR_PATH_MIN_ZOOM, maxZoom: 0.9 } as const;
     const options = graphFitViewOptions(viewportInput);
     // Text and badges grow as the viewport fits; reserve room for that final
     // measured size so the last finding is not clipped below the canvas, and

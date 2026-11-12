@@ -18,6 +18,9 @@ describe("readable linear investigation paths", () => {
     const xs = result.nodes.map(node => node.position.x);
     expect((Math.max(...xs) - Math.min(...xs) + 220) * 0.7 + 96).toBeLessThanOrEqual(1280);
   });
+  it("fits seven nodes beside the expanded desktop navigation", () => {
+    expect(linearPathLayout(nodes, hops, 1100)!.width).toBe(1100);
+  });
   it("fits short paths without forcing extra horizontal scrolling", () => {
     expect(linearPathLayout(nodes.slice(0, 2), ["g", "b"], 1200)!.width).toBe(1200);
   });

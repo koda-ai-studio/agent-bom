@@ -3590,13 +3590,16 @@ async function main() {
         .getByTestId("selected-exposure-path")
         .waitFor({ state: "visible", timeout: 30_000 });
       const pathViewport = securityGraphPage.getByRole("region", { name: "Scrollable exposure path", exact: true });
-      await expect.poll(() => pathViewport.evaluate(element => {
-        const frame = element.getBoundingClientRect();
-        return [...element.querySelectorAll(".react-flow__node")].filter(node => {
-          const box = node.getBoundingClientRect();
-          return box.left < frame.left - 2 || box.right > frame.right + 2;
-        }).map(node => node.getAttribute("data-id"));
-      }), { message: "The complete selected desktop path is visible before any scrolling" }).toEqual([]);
+      for (const width of [1280, 1440]) {
+        await securityGraphPage.setViewportSize({ width, height: 980 });
+        await expect.poll(() => pathViewport.evaluate(element => {
+          const frame = element.getBoundingClientRect();
+          return [...element.querySelectorAll(".react-flow__node")].filter(node => {
+            const box = node.getBoundingClientRect();
+            return box.left < frame.left - 2 || box.right > frame.right + 2;
+          }).map(node => node.getAttribute("data-id"));
+        }), { message: "The complete selected desktop path is visible before any scrolling" }).toEqual([]);
+      }
       const findingEdge = securityGraphPage.locator('.react-flow__edge[data-id*="vulnerable_to"]');
       await expect(findingEdge).toHaveCount(1);
       const findingEdgeId = await findingEdge.getAttribute("data-id");
