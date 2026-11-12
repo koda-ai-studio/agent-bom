@@ -189,6 +189,26 @@ def _apply_worker_thread_limit() -> None:
     anyio.to_thread.current_default_thread_limiter().total_tokens = _config.WORKER_THREAD_LIMIT
 
 
+_startup_heap_frozen = False
+
+
+def _freeze_startup_heap() -> None:
+    """Keep start-up objects out of every later full garbage collection, once per process.
+
+    A full collection walks every tracked object while every thread, the event
+    loop included, waits. Imports, routes and schemas live for the whole
+    process, so walking them again on each collection only lengthens the stall.
+    """
+    global _startup_heap_frozen
+    if _startup_heap_frozen:
+        return
+    import gc
+
+    gc.collect()
+    gc.freeze()
+    _startup_heap_frozen = True
+
+
 def _validate_configured_registries() -> None:
     if not env_raw("SNOWFLAKE_ACCOUNT") and postgres_deployment_configured():
         from agent_bom.api.storage.registry_stores import validate_postgres_registries
