@@ -188,7 +188,7 @@ each runtime's documented responses. The tests also cover the token path
 ### Live runtime checks
 
 On 2026-11-11, `scripts/qualification/serving.py` ran each runtime that has an
-arm64 image from its vendor in Docker Desktop 29.8.0 (Apple silicon, CPU only)
+arm64 image from its vendor in Docker Engine 29.8.0 in Docker Desktop (Apple silicon, CPU only)
 with a tiny model, then ran `agent-bom agents --no-discover --offline` against
 it. "Auth" is the status the runtime returned for no token / a wrong token /
 the right token.

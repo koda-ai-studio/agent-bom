@@ -678,26 +678,53 @@ together (about 400 MiB at 200 agents).
 ### Enforced cgroup limits
 
 `scripts/qualification/cgroup_limits.py` runs the same harness inside the API
-image built from `main` at `179801f` with `docker run --cpus N --memory 2g
---memory-swap 2g`, so the kernel enforces the limits (cgroup v2, Docker
-Desktop 29.8.0 on Apple silicon, Python 3.14.8 in the image). It samples
-`memory.stat` every second and reads `memory.events` and `cpu.stat` at the
-end. Measured 2026-11-11, 200 agents, cold, warm and restart phases, plus the
-SIGKILL cancellation where shown:
+image with `docker run --cpus N --memory 2g --memory-swap 2g`, so the kernel
+enforces the limits (cgroup v2, Docker Engine 29.8.0 in Docker Desktop on Apple silicon,
+Python 3.14.8 in the image). It samples `memory.stat` every second and reads
+`memory.events` and `cpu.stat` at the end. The limit covers the whole
+container: the harness process, the API it hosts and, after #6244, the
+separate scan process. Measured 2026-11-11, 200 agents, cold, warm and restart
+phases, plus the SIGKILL cancellation where shown. The first two rows are the
+image built from `main` at `179801f`, before #6244 moved the scan out of the
+measured process and cut push memory; the rows marked "after #6244" are
+`main` at `cf833b61f` with this change:
 
 | Profile, limit | OOM kills | Peak anonymous / page cache | Reclaim at the limit (`memory.events max`) | Peak process RSS | CPU throttled | Accuracy and equivalence |
 |---|---:|---|---:|---|---|---|
-| `small-self-hosted` (SQLite), 2 CPU / 2 GiB, with cancel | 0 | 1,972 / 735 MiB | 8,794 | cold 1,886, warm 1,992 MiB | 36 periods, 3.2 s | all passed; cancel retry converged to 207 findings |
-| `small-self-hosted-postgres`, 2 CPU / 2 GiB, with cancel | 0 | 1,797 / 549 MiB | 0 | cold 1,784, warm 1,800 MiB | 26 periods, 0.4 s | all passed; cancel retry converged |
+| `small-self-hosted` (SQLite), 2 CPU / 2 GiB, with cancel, before #6244 | 0 | 1,972 / 735 MiB | 8,794 | cold 1,886, warm 1,992 MiB | 36 periods, 3.2 s | all passed; cancel retry converged to 207 findings |
+| `small-self-hosted-postgres`, 2 CPU / 2 GiB, with cancel, before #6244 | 0 | 1,797 / 549 MiB | 0 | cold 1,784, warm 1,800 MiB | 26 periods, 0.4 s | all passed; cancel retry converged |
+| `small-self-hosted` (SQLite), 2 CPU / 2 GiB, no cancel, after #6244 | 0 | 1,952 / 630 MiB | 6,488 | cold 1,808, warm 1,971 MiB | 255 periods, 4.6 s | findings exact (207); **3 harness failures**, below |
+| `small-self-hosted` (SQLite), 1 CPU / 2 GiB (the chart's API limit), no cancel, after #6244 | 0 | 1,784 / 688 MiB | 5,377 | cold 1,804, warm 1,797 MiB | 16,207 periods, 398.6 s | findings exact (207), equivalence passed; RSS budget and restart 503 failed |
 
 What this shows:
 
-- **The 200-agent workflow fits 2 GiB, barely.** Nothing was OOM-killed, but
+- **After #6244 the run is still OOM-free, and the harness's own budget
+  fails under the limit.** Peak anonymous memory was 1,952 MiB. The harness
+  now fails a process over 80% of the limit (1,638 MiB): cold peaked at
+  1,808 MiB and warm at 1,971 MiB, against 1,403 and 1,614 MiB in the
+  unconstrained re-measure above. Finding sets stayed exact (207) in both
+  processes. Two more failures appear only under the CPU limit: after the
+  update/delete push the current graph still held the removed package node
+  60 s later (`graph package nodes 1 -> 1`; the rebuild is asynchronous and
+  took 13.1 s unconstrained), and after a restart the first graph read
+  returned `503 current_estate_building` after 5.8 s despite the start-up
+  prewarm, with the graph ready at 23 s. Cold took 1,012 s and warm 1,075 s,
+  about twice the pre-#6244 run on the same limit, with this host's other
+  benchmark running beside it.
+- **At the chart's 1 CPU limit** the workflow also completed without an OOM
+  kill (peak anonymous 1,784 MiB) and with exact findings and equivalence;
+  the graph refreshed 30-45 s after the update push. It failed the same RSS
+  budget (cold 1,804, warm 1,797 MiB) and the restart check (503 after 3.2 s,
+  ready at 19 s). The container was throttled for 399 s, warm graph pages
+  took 1.7 s p50 and 4.7 s p95 while the process also ingested, and cold and
+  warm took 1,128 s and 1,311 s.
+
+- **Before #6244, the 200-agent workflow fit 2 GiB, barely.** Nothing was OOM-killed, but
   the SQLite run's anonymous memory peaked 76 MiB under the limit; the warm
   process's own RSS peaked at 1,992 MiB during its graph reads. The kernel reclaimed page
   cache 8,794 times to stay under it. A slightly larger estate, or a second
   push in flight, will be killed at 2 GiB.
-- **Latency under the limit.** Warm-process graph page reads were 264 ms p50
+- **Latency under the limit, before #6244.** Warm-process graph page reads were 264 ms p50
   and 3.9 s p95 on SQLite, and 226 ms p50 and 2.9 s p95 on Postgres, while the
   same process ingested and rebuilt; after a restart the p95 fell to 0.8 s and
   0.3 s. The first graph read after a restart returned 503 after 2.7-3.0 s and

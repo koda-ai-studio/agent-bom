@@ -235,7 +235,7 @@ profile above is described as qualified there.
 
 #### Local live qualification
 
-Run on 2026-11-11 on one Apple silicon host (Docker Desktop 29.8.0, 10 CPUs,
+Run on 2026-11-11 on one Apple silicon host (Docker Engine 29.8.0 in Docker Desktop, 10 CPUs,
 7.7 GiB for containers) with the API image built from `main` at `179801f`
 (version 0.114.0) and Postgres 16. These are local installations, not cloud
 ones. Each lane in `scripts/qualification/` writes its checks to
@@ -247,7 +247,7 @@ ones. Each lane in `scripts/qualification/` writes its checks to
 | Replica killed mid-ingest | `replicas.py` (`kill`) | A 100-agent push's replica was force-deleted after admission. In two of three runs the job stayed `pending` until an identical retry re-offered it, then stored exactly the 115 expected findings (361 s after the retry); in one run it was stored 140 s after the kill without a retry. Without `AGENT_BOM_DISTRIBUTED_SCANS`, recovery depends on a client retry |
 | Rolling restart under steady reads | `replicas.py` (`restart`) | With the default role connection limit the rollout never finished: the surge pod failed with `too many connections for role "agent_bom_app"`. After `ALTER ROLE agent_bom_app CONNECTION LIMIT 60` it finished in 73-121 s, and 2-5 of 293-527 reads (about 1%) failed with a reset connection or a 10 s timeout |
 | Upgrade 0.114.0 → this build, rollback, backup and restore, removal | `upgrade.py --from-image agentbom/agent-bom:0.114.0` | Migration `20261106_01` → `20261111_01` took 15 s; the new API served the same jobs, findings and graph and stored a new push. Downgrade back to `20261106_01` took 24 s, and the 0.114.0 API served both pushes. A `pg_dump` (1.7 MB) restored into a new Postgres served the backed-up push. Removing the containers, volumes and network left nothing |
-| Enforced CPU and memory limits | `cgroup_limits.py` | See [performance benchmarks](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERFORMANCE_BENCHMARKS.md#enforced-cgroup-limits): no OOM kill at 2 CPU / 2 GiB, with peak anonymous memory 1,972 MiB on SQLite |
+| Enforced CPU and memory limits | `cgroup_limits.py` | See [performance benchmarks](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/PERFORMANCE_BENCHMARKS.md#enforced-cgroup-limits): no OOM kill at 2 CPU or 1 CPU with 2 GiB, before or after #6244 (peak anonymous memory 1,784-1,972 MiB on SQLite). After #6244 the harness's 80% memory budget and its restart check fail under both limits |
 
 What a multi-replica install needs beyond the values a single replica uses:
 
