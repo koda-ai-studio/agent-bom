@@ -13,6 +13,7 @@ from collections.abc import Callable
 from typing import Any
 
 from agent_bom.api.graph_persistence import persist_graph_snapshot
+from agent_bom.api.graph_warmup_slot import foreground_graph_work
 from agent_bom.api.hub_ingest import ingest_runtime_findings
 from agent_bom.api.job_read_retry import read_job_riding_out_blips
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob
@@ -156,18 +157,21 @@ def run_push_ingest(job: ScanJob) -> None:
     graph_scan_id = str(result.get("scan_id") or current.job_id)
     preexisted = _graph_snapshot_exists(current.tenant_id, graph_scan_id)
     generation = uuid.uuid4().hex
-    try:
-        _persist_push_graph(current, result, write_generation=generation)
-        current.status = JobStatus.DONE
-        current.completed_at = _now()
-        current.progress.append("Ingest committed")
-        _store_pushed_job(store, current)
-    except Exception as exc:  # noqa: BLE001  # broad-except: the job row records the failure and the client retries by key
-        _logger.error("Asynchronous push ingest failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
-        _record_ingest_failure(store, current, result, graph_scan_id=graph_scan_id, generation=generation, preexisted=preexisted)
-        return
-    _record_push_trend(current, result, source_id=current.source_id, target_scope=result.get("target_scope"))
-    notify_push_committed(current.tenant_id)
+    # Commit hooks start the warm-ups during the graph write; they wait until the
+    # job is committed and its current-graph rebuild queued (notify), not beside it.
+    with foreground_graph_work():
+        try:
+            _persist_push_graph(current, result, write_generation=generation)
+            current.status = JobStatus.DONE
+            current.completed_at = _now()
+            current.progress.append("Ingest committed")
+            _store_pushed_job(store, current)
+        except Exception as exc:  # noqa: BLE001  # broad-except: the job row records the failure and the client retries by key
+            _logger.error("Asynchronous push ingest failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+            _record_ingest_failure(store, current, result, graph_scan_id=graph_scan_id, generation=generation, preexisted=preexisted)
+            return
+        _record_push_trend(current, result, source_id=current.source_id, target_scope=result.get("target_scope"))
+        notify_push_committed(current.tenant_id)
 
 
 register_push_ingest_handler(run_push_ingest)

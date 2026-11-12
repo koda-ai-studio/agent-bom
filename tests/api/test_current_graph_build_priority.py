@@ -116,3 +116,54 @@ def test_the_rebuild_is_scheduled_before_the_exec_warm_up_on_every_push_commit()
     listeners = push_ingest_worker._COMMIT_LISTENERS
     rebuild = listeners.index(observability.schedule_current_graph_rebuild)
     assert rebuild < listeners.index(schedule_exec_prewarm)
+
+
+def test_a_warm_up_waits_while_an_ingest_still_holds_its_graph(queue):
+    work = graph_warmup_slot.foreground_graph_work()
+    work.__enter__()
+    thread, entered = _enter_slot_in_thread()
+    try:
+        assert not entered.wait(0.3), "a warm-up loaded a graph while an ingest still held its own"
+    finally:
+        work.__exit__(None, None, None)
+    assert entered.wait(5)
+    thread.join(5)
+
+
+def test_the_yield_bound_covers_foreground_work_too(queue, monkeypatch):
+    monkeypatch.setattr(graph_warmup_slot, "BUILD_YIELD_SECONDS", 0.05)
+    with graph_warmup_slot.foreground_graph_work():
+        thread, entered = _enter_slot_in_thread()
+        assert entered.wait(5)
+    thread.join(5)
+
+
+def test_push_ingest_is_foreground_from_graph_persist_until_the_rebuild_is_queued(monkeypatch):
+    """Commit hooks start warm-ups during persist; they must not run before the job commit hands off the rebuild."""
+    from agent_bom.api import push_ingest_worker
+    from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
+
+    job = ScanJob(job_id="job-1", tenant_id="tenant-a", created_at="", request=ScanRequest(), status=JobStatus.PENDING)
+    job.result = {"pushed": True, "scan_id": "job-1"}
+    seen: dict[str, bool] = {}
+
+    class Store:
+        def put(self, stored):
+            seen["store"] = graph_warmup_slot.foreground_active()
+
+    monkeypatch.setattr(push_ingest_worker, "_get_store", Store)
+    monkeypatch.setattr(push_ingest_worker, "read_job_riding_out_blips", lambda store, current: current)
+    monkeypatch.setattr(push_ingest_worker, "_graph_snapshot_exists", lambda tenant, scan: False)
+    monkeypatch.setattr(
+        push_ingest_worker, "_persist_push_graph", lambda *a, **k: seen.__setitem__("persist", graph_warmup_slot.foreground_active())
+    )
+    monkeypatch.setattr(push_ingest_worker, "_record_push_trend", lambda *a, **k: None)
+    monkeypatch.setattr(
+        push_ingest_worker, "notify_push_committed", lambda tenant: seen.__setitem__("notify", graph_warmup_slot.foreground_active())
+    )
+
+    push_ingest_worker.run_push_ingest(job)
+
+    assert seen == {"persist": True, "store": True, "notify": True}
+    assert job.status == JobStatus.DONE
+    assert graph_warmup_slot.foreground_active() is False
