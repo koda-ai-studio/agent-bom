@@ -257,14 +257,21 @@ Latency budget for a bundle export at 50k findings on Postgres:
 
 ## CPU / memory sizing
 
-Pilot-default Helm values ([`eks-mcp-pilot-values.yaml`](../deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)):
+What the chart renders for the pilot profile
+([`eks-mcp-pilot-values.yaml`](../deploy/helm/agent-bom/examples/eks-mcp-pilot-values.yaml)).
+The profile sets no resources, so these are the chart defaults in
+`deploy/helm/agent-bom/values.yaml` (checked with `helm template` on 2026-11-11):
 
 | Component | Request / Limit | Notes |
 |---|---|---|
-| `agent-bom-api` | 500 m / 2 CPU, 512 Mi / 2 Gi | 2–6 replicas via HPA |
-| `agent-bom-ui` | 100 m / 500 m CPU, 256 Mi / 1 Gi | Next.js SSR |
-| `scan` CronJob | 1 CPU / 4 CPU, 1 Gi / 4 Gi | Runs every 6 h |
-| `agent-bom-proxy` sidecar | 100 m / 500 m CPU, 128 Mi / 512 Mi | Per-MCP |
+| `agent-bom-api` | 100 m / 1 CPU, 512 Mi / 2 Gi | 2 replicas; the HPA (2–6) is off unless `controlPlane.api.autoscaling.enabled` |
+| `agent-bom-ui` | 100 m / 500 m CPU, 128 Mi / 512 Mi | Next.js SSR, 2 replicas |
+| `scan` CronJob | 50 m / 500 m CPU, 64 Mi / 256 Mi | Every 6 h (`0 */6 * * *`) |
+| `agent-bom-proxy` sidecar (injected) | 50 m / 500 m CPU, 64 Mi / 256 Mi | Per MCP workload, set by `sidecar_injector.py` |
+
+The workflow profiles below use a 2 CPU / 2 GiB envelope. The memory limit
+matches the API default; the CPU limit is twice it. "Enforced cgroup limits"
+below measures both 2 CPU and the 1 CPU default.
 
 Scale-out signal: `agent_bom_rate_limit_hits_total` hitting a tenant
 bucket for > 10 minutes, OR `p95` on `/v1/compliance/*` above 800 ms.
@@ -325,8 +332,10 @@ dropped because an inventory cannot carry them.
 | `small-self-hosted-postgres` | 200 | Postgres 16 | 1 | 1 | 30 | 2 CPU / 2 GiB |
 | `multi-replica-local` | 200 each | Postgres 16 | 2 | 2 | 30 | 2 CPU / 2 GiB each |
 
-The envelope matches the pilot Helm API limit. It is checked against the
-measured numbers, not enforced: macOS has no cgroups.
+The memory envelope matches the chart's API limit (2 Gi); its CPU limit is
+1 CPU, not 2. On macOS the runs below check the envelope against measured
+numbers only, because macOS has no cgroups. "Enforced cgroup limits" further
+down runs the same harness with the kernel enforcing the limits.
 
 **How it runs.** The real `agent-bom agents --inventory` command scans the
 estate. Every advisory, registry and KEV client is routed to a counting mock
@@ -727,11 +736,69 @@ still only 24 MiB under the nightly budget: the next cut is push admission,
 which keeps the raw body, the validated model and the admission copy alive
 together (about 400 MiB at 200 agents).
 
-**Not measured here:** a real multi-node Kubernetes deployment, or replicas
-behind a load balancer (the replicas above are two local processes on one
-host); the two-replica profile with CLI-shaped pushes (it runs nightly; locally
-it was measured only with raw pushes); SQLite query plans; enforced cgroup CPU
-and memory limits; and any monetary cost, because no provider prices were used.
+### Enforced cgroup limits
+
+`scripts/qualification/cgroup_limits.py` runs the same harness inside the API
+image with `docker run --cpus N --memory 2g --memory-swap 2g`, so the kernel
+enforces the limits (cgroup v2, Docker Engine 29.8.0 in Docker Desktop on Apple silicon,
+Python 3.14.8 in the image). It samples `memory.stat` every second and reads
+`memory.events` and `cpu.stat` at the end. The limit covers the whole
+container: the harness process, the API it hosts and, after #6244, the
+separate scan process. Measured 2026-11-11, 200 agents, cold, warm and restart
+phases, plus the SIGKILL cancellation where shown. The first two rows are the
+image built from `main` at `179801f`, before #6244 moved the scan out of the
+measured process and cut push memory; the rows marked "after #6244" are
+`main` at `cf833b61f` with this change:
+
+| Profile, limit | OOM kills | Peak anonymous / page cache | Reclaim at the limit (`memory.events max`) | Peak process RSS | CPU throttled | Accuracy and equivalence |
+|---|---:|---|---:|---|---|---|
+| `small-self-hosted` (SQLite), 2 CPU / 2 GiB, with cancel, before #6244 | 0 | 1,972 / 735 MiB | 8,794 | cold 1,886, warm 1,992 MiB | 36 periods, 3.2 s | all passed; cancel retry converged to 207 findings |
+| `small-self-hosted-postgres`, 2 CPU / 2 GiB, with cancel, before #6244 | 0 | 1,797 / 549 MiB | 0 | cold 1,784, warm 1,800 MiB | 26 periods, 0.4 s | all passed; cancel retry converged |
+| `small-self-hosted` (SQLite), 2 CPU / 2 GiB, no cancel, after #6244 | 0 | 1,952 / 630 MiB | 6,488 | cold 1,808, warm 1,971 MiB | 255 periods, 4.6 s | findings exact (207); **3 harness failures**, below |
+| `small-self-hosted` (SQLite), 1 CPU / 2 GiB (the chart's API limit), no cancel, after #6244 | 0 | 1,784 / 688 MiB | 5,377 | cold 1,804, warm 1,797 MiB | 16,207 periods, 398.6 s | findings exact (207), equivalence passed; RSS budget and restart 503 failed |
+
+What this shows:
+
+- **After #6244 the run is still OOM-free, and the harness's own budget
+  fails under the limit.** Peak anonymous memory was 1,952 MiB. The harness
+  now fails a process over 80% of the limit (1,638 MiB): cold peaked at
+  1,808 MiB and warm at 1,971 MiB, against 1,403 and 1,614 MiB in the
+  unconstrained re-measure above. Finding sets stayed exact (207) in both
+  processes. Two more failures appear only under the CPU limit: after the
+  update/delete push the current graph still held the removed package node
+  60 s later (`graph package nodes 1 -> 1`; the rebuild is asynchronous and
+  took 13.1 s unconstrained), and after a restart the first graph read
+  returned `503 current_estate_building` after 5.8 s despite the start-up
+  prewarm, with the graph ready at 23 s. Cold took 1,012 s and warm 1,075 s,
+  about twice the pre-#6244 run on the same limit, with this host's other
+  benchmark running beside it.
+- **At the chart's 1 CPU limit** the workflow also completed without an OOM
+  kill (peak anonymous 1,784 MiB) and with exact findings and equivalence;
+  the graph refreshed 30-45 s after the update push. It failed the same RSS
+  budget (cold 1,804, warm 1,797 MiB) and the restart check (503 after 3.2 s,
+  ready at 19 s). The container was throttled for 399 s, warm graph pages
+  took 1.7 s p50 and 4.7 s p95 while the process also ingested, and cold and
+  warm took 1,128 s and 1,311 s.
+
+- **Before #6244, the 200-agent workflow fit 2 GiB, barely.** Nothing was OOM-killed, but
+  the SQLite run's anonymous memory peaked 76 MiB under the limit; the warm
+  process's own RSS peaked at 1,992 MiB during its graph reads. The kernel reclaimed page
+  cache 8,794 times to stay under it. A slightly larger estate, or a second
+  push in flight, will be killed at 2 GiB.
+- **Latency under the limit, before #6244.** Warm-process graph page reads were 264 ms p50
+  and 3.9 s p95 on SQLite, and 226 ms p50 and 2.9 s p95 on Postgres, while the
+  same process ingested and rebuilt; after a restart the p95 fell to 0.8 s and
+  0.3 s. The first graph read after a restart returned 503 after 2.7-3.0 s and
+  the graph was ready after 4.3-5.5 s.
+- **Wall time grows under the CPU limit.** The SQLite cold phase took 562 s and
+  the warm phase 839 s at 2 CPU.
+
+**Not measured here:** a multi-node Kubernetes deployment on a cloud provider
+(the chart was installed on a one-node kind cluster, see the
+[deployment overview](../site-docs/deployment/overview.md#local-live-qualification));
+the two-replica profile with CLI-shaped pushes (it runs nightly; locally it was
+measured only with raw pushes); SQLite query plans; and any monetary cost,
+because no provider prices were used.
 
 ---
 
