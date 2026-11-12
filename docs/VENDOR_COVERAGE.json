@@ -3321,6 +3321,7 @@
         "nvidia_csaf (primary)",
         "amd_psirt (primary)",
         "intel_psirt (primary)",
+        "nodejs_security_wg (primary)",
         "nvd (enrichment)",
         "epss (enrichment)",
         "cisa_kev (enrichment)"

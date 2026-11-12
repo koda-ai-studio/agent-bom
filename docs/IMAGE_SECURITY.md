@@ -195,6 +195,22 @@ selection, or suppression. The per-release matching is correct; the data is
 absent. Re-scan against a source that tracks end-of-life releases for a complete
 result.
 
+## Language runtimes in images
+
+A runtime built into an image (`NODE_VERSION`, `PYTHON_VERSION` and the other
+official-image conventions) has no OSV ecosystem. CPython and Node.js are
+assessed by their own upstream sources: CPython through its verified release tag
+and OSV, Node.js through the Node.js security working group's core advisory
+index (see [scanning](../site-docs/features/scanning.md#nodejs-runtimes)). Any
+other runtime is assessed only when the local DB carries NVD CPE ranges for it.
+
+When no source assessed a runtime, the scan records a
+`runtime_advisory_coverage_unknown` coverage warning and the scan is `partial`,
+never clean. A release image gate may accept such a gap only through a reviewed,
+version-exact, expiring entry under `coverage_exceptions` in
+[`docs/security/image-exceptions.yaml`](security/image-exceptions.yaml), checked by
+`scripts/check_image_coverage_exceptions.py`.
+
 ## Multi-arch requirements
 
 Every supported architecture must be validated independently:

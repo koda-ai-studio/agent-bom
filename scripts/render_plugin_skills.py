@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
 import tomllib
 from collections.abc import Callable
@@ -166,12 +167,12 @@ def main(argv: list[str] | None = None) -> int:
             print("render_plugin_skills: stale outputs; run `python scripts/render_plugin_skills.py`:", file=sys.stderr)
             print("\n".join(f"  - {path.relative_to(ROOT)}" for path in stale), file=sys.stderr)
             return 1
-        return 0
+        return subprocess.run([sys.executable, str(ROOT / "scripts/build_claude_directory.py"), "--check"], check=False).returncode
     for path in stale:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(outputs[path], encoding="utf-8")
         print(f"wrote {path.relative_to(ROOT)}")
-    return 0
+    return subprocess.run([sys.executable, str(ROOT / "scripts/build_claude_directory.py")], check=False).returncode
 
 
 if __name__ == "__main__":
