@@ -45,6 +45,31 @@ _IGNORED_LINE = re.compile(
 )
 _IGNORED_STATEMENT = re.compile(r"^\s*(CREATE|DROP)\s+DATABASE\b|^\s*ALTER\s+DATABASE\b", re.I)
 
+# PostgreSQL 16.16 and the same-day minor releases of the other supported
+# branches (CVE-2026-6460) keep a per-column version in
+# pg_attribute.attoptions under the internal key `pg_attver`. Its value is the
+# WAL LSN at the time of the DDL, so it differs on every database, and DDL cannot
+# set it (the server drops it on restore). A pg_dump of the same release strips
+# it; a client built before it, of any major version (the CI runner's
+# pg_dump 18.6 is one), prints it as
+# `ALTER COLUMN c SET (pg_attver=<lsn>)`. Remove exactly that key, as upstream
+# pg_dump does, and keep every real attribute option such as n_distinct.
+_ATTRIBUTE_OPTIONS = re.compile(r"^(?P<head>ALTER TABLE .+ ALTER COLUMN .+ SET )\((?P<options>[^()]*)\)$", re.I)
+_ATTRIBUTE_VERSION_OPTION = "pg_attver="
+
+
+def _strip_attribute_version(statement: str) -> str:
+    match = _ATTRIBUTE_OPTIONS.match(statement)
+    if not match:
+        return statement
+    options = [option.strip() for option in match.group("options").split(",")]
+    kept = [option for option in options if not option.startswith(_ATTRIBUTE_VERSION_OPTION)]
+    if len(kept) == len(options):
+        return statement
+    if not kept:
+        return ""
+    return f"{match.group('head')}({', '.join(kept)})"
+
 
 def _pg_dump(url: str) -> str:
     result = subprocess.run(
@@ -90,7 +115,7 @@ def _statements(dump: str) -> set[str]:
         # Splitting on ";\n" leaves the final statement of a dump carrying its
         # terminator while every other one lost it, which would make a
         # statement's identity depend on where it happened to appear.
-        statement = " ".join(raw.split()).rstrip(";").strip()
+        statement = _strip_attribute_version(" ".join(raw.split()).rstrip(";").strip())
         if not statement or _IGNORED_STATEMENT.match(statement):
             continue
         statements.add(statement)
