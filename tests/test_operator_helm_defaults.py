@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests._helm_render import ATTESTED_API_SET_ARGS
+
 CHART = Path(__file__).resolve().parents[1] / "deploy/helm/agent-bom"
 
 
@@ -28,6 +30,7 @@ def test_prometheus_rules_are_explicitly_opt_in(enabled):
         "controlPlane.postgresSecrets.maintenanceSecretRef.name=test-maintenance",
         "--set",
         "controlPlane.postgresSecrets.adminSecretRef.name=test-admin",
+        *ATTESTED_API_SET_ARGS,
     ]
     if enabled:
         command.extend(["--set", "controlPlane.observability.prometheusRule.enabled=true"])

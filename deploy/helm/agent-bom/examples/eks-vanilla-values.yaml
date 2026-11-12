@@ -8,6 +8,12 @@
 
 controlPlane:
   enabled: true
+  # Pool sizes also set the Postgres role connection limits the migration
+  # applies; see controlPlane.postgres in values.yaml.
+  postgres:
+    pool:
+      minSize: 2
+      maxSize: 20
   postgresSecrets:
     enabled: true
     appSecretRef:
@@ -31,6 +37,10 @@ controlPlane:
     create: true
     name: agent-bom-control-plane
   api:
+    # The auth Secret in envFrom supplies request attestation
+    # (AGENT_BOM_TRUST_PROXY_AUTH*, see control-plane-auth-secret.example.yaml).
+    listenerAttestation:
+      fromSecret: true
     # The quickstart Secret supplies AGENT_BOM_TRUSTED_PROXY_HOPS and _CIDRS. Without
     # them, every client behind the ingress shares one authentication failure budget.
     trustedProxy:
@@ -46,10 +56,6 @@ controlPlane:
         value: "kubernetes_secret"
       - name: AGENT_BOM_REQUIRE_AUDIT_HMAC
         value: "1"
-      - name: AGENT_BOM_POSTGRES_POOL_MIN_SIZE
-        value: "5"
-      - name: AGENT_BOM_POSTGRES_POOL_MAX_SIZE
-        value: "20"
       - name: AGENT_BOM_POSTGRES_CONNECT_TIMEOUT_SECONDS
         value: "5"
       - name: AGENT_BOM_POSTGRES_STATEMENT_TIMEOUT_MS

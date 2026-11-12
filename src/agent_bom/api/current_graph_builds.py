@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from typing import Any, cast
 
@@ -98,8 +99,39 @@ class CurrentBuildQueue:
         future.add_done_callback(finished)
         return future
 
+    def wait_idle(self, timeout: float) -> bool:
+        """Wait until no build is queued or running, at most ``timeout`` seconds; True when idle."""
+        deadline = time.monotonic() + timeout
+        while True:
+            with self.lock:
+                running = [future for future in self.pending.values() if not future.done()]
+            remaining = deadline - time.monotonic()
+            if not running:
+                return True
+            if remaining <= 0:
+                return False
+            wait(running, timeout=remaining)
+
 
 _QUEUE = CurrentBuildQueue()
+
+
+def wait_for_current_builds(timeout: float) -> bool:
+    """Block until this process's queued and running current-graph builds finish (bounded)."""
+    return _QUEUE.wait_idle(timeout)
+
+
+def schedule_current_rebuild(store: Any, tenant_id: str) -> bool:
+    """Queue the tenant's current-graph rebuild now instead of on its next read (push-commit hook).
+
+    Never waits; a read arriving meanwhile coalesces onto this build. False when
+    ``store`` keeps no current-estate projection.
+    """
+    if not tenant_id:
+        return False
+    if not callable(getattr(store, "prepare_current", None)):
+        return False
+    return _QUEUE.submit(store, tenant_id) is not None
 
 
 def await_current_build(store: Any, tenant: str, *, seconds: float, prepared: tuple[Any, ...] | None = None) -> str | None:

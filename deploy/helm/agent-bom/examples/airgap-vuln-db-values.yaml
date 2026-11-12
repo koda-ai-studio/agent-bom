@@ -18,6 +18,8 @@ controlPlane:
     postgres:
       enabled: false
   api:
+    # SQLite is process-local: one replica. Scale out only with Postgres.
+    replicas: 1
     env:
       - name: AGENT_BOM_DB_PATH
         value: /var/lib/agent-bom/vulns.db
