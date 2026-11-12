@@ -62,7 +62,7 @@ import { PathToolbarLead } from "@/components/path-view-toolbar";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
 import { COLUMN_FIT_OPTIONS, applyColumnPath, columnCanvasHeight, columnFlowEdges, usesColumnPath } from "@/lib/path-card-column";
 import { PATH_CARD_CANVAS_CLASS, pathCardCanvasHeight, pathCardEdges, pathCardNodeStyle } from "@/lib/path-card-canvas";
-import { applySerpentinePath, planSerpentinePath } from "@/lib/path-serpentine-layout";
+import { linearPathLayout } from "@/lib/path-linear-layout";
 import { mergeGraphNeighborExpansions, boundedInvestigationGraph } from "@/lib/graph-neighbor-expansion";
 import { withRiskContext } from "@/lib/exploit-story-canvas";
 
@@ -135,6 +135,7 @@ function InvestigationFlow({
   pathNodeIds,
   roundedBottom = false,
   columnLayout = false,
+  linearWidth,
 }: {
   nodes: Node<LineageNodeData>[];
   edges: Edge[];
@@ -158,6 +159,7 @@ function InvestigationFlow({
   roundedBottom?: boolean;
   /** Narrow viewports stack a short path in one column instead of stepping node by node. */
   columnLayout?: boolean;
+  linearWidth?: number | undefined;
 }) {
   const reactFlow = useReactFlow<Node<LineageNodeData>, Edge>();
   const { fitView } = reactFlow;
@@ -182,19 +184,21 @@ function InvestigationFlow({
   }, [nodes, pathNodeIds]);
   const navigationIndex = Math.max(0, navigationNodes.findIndex(node => node.id === navigationId));
   const navigationNode = navigationNodes[navigationIndex];
-  const responsiveScope = useMemo(() => compact
+  const responsiveScope = useMemo(() => linearWidth
+    ? { ...presentationScope, scope: `${presentationScope.scope}:linear-path` } : compact
     ? { ...presentationScope, scope: `${presentationScope.scope}:${columnLayout ? "column-mobile" : "readable-mobile"}` }
-    : presentationScope, [columnLayout, compact, presentationScope]);
+    : presentationScope, [columnLayout, compact, linearWidth, presentationScope]);
   const controlsOverlay = CONTROLS_OVERLAY[embedded ? "horizontal" : "vertical"];
   const fitOptions = useMemo(() => {
     if (columnLayout) return COLUMN_FIT_OPTIONS;
+    if (linearWidth) return { padding: { x: "48px", y: "40px" }, minZoom: 0.7, maxZoom: 0.9 } as const;
     const options = graphFitViewOptions(viewportInput);
     // Text and badges grow as the viewport fits; reserve room for that final
     // measured size so the last finding is not clipped below the canvas, and
     // keep the bottom-left clear of the zoom controls so no label sits under them.
     const padding = embedded ? 0.12 : Math.max(0.2, options.padding);
     return { ...options, padding: fitPaddingAroundOverlay(padding, { width: canvasWidth, height: canvasHeight }, controlsOverlay) };
-  }, [canvasHeight, canvasWidth, columnLayout, controlsOverlay, embedded, viewportInput]);
+  }, [canvasHeight, canvasWidth, columnLayout, controlsOverlay, embedded, linearWidth, viewportInput]);
   const fitOptionsRef = useRef(fitOptions);
   fitOptionsRef.current = fitOptions;
 
@@ -296,7 +300,9 @@ function InvestigationFlow({
         controls={controls}
         layoutControls={presentation.enabled ? layoutControls : null}
       />}
-      <div ref={surfaceRef} className={`relative min-h-0 flex-1 ${roundedBottom ? "overflow-hidden rounded-b-2xl" : ""}`} {...wheelGate.handlers}>
+      {linearWidth && <p className="border-b border-outline px-3 py-1.5 text-xs text-ink-secondary">Follow the path left to right · scroll horizontally to inspect every hop.</p>}
+      <div className="min-h-0 flex-1 overflow-x-auto" role={linearWidth ? "region" : undefined} tabIndex={linearWidth ? 0 : undefined} aria-label={linearWidth ? "Scrollable exposure path" : undefined}>
+      <div style={{ height: "100%", width: linearWidth ?? "100%" }} ref={surfaceRef} className={`relative min-h-0 flex-1 ${roundedBottom ? "overflow-hidden rounded-b-2xl" : ""}`} {...wheelGate.handlers}>
         <WheelZoomHint visible={wheelGate.hintVisible} />
         <ReactFlow
           style={embedded ? pathCardNodeStyle(viewport.zoom) : readableGraphNodeStyle(viewport.zoom)}
@@ -357,11 +363,10 @@ function InvestigationFlow({
           )}
         </ReactFlow>
       </div>
+      </div>
     </div>
   );
 }
-
-const SERPENTINE_MIN_HOP_NODES = 6;
 
 export function SecurityGraphInvestigation({
   graph,
@@ -449,28 +454,18 @@ export function SecurityGraphInvestigation({
   });
   const canvasRef = useRef<HTMLDivElement>(null);
   const canvasWidth = useElementWidth(canvasRef);
-  // Long focused paths wrap into alternating rows sized to the canvas, so
-  // labels stay readable instead of shrinking a single row to fit.
-  const pathLayout = useMemo(() => {
-    const hops = attackPath?.hops ?? [];
-    if (!focusMode || hops.length < SERPENTINE_MIN_HOP_NODES || canvasWidth <= 0) return null;
-    const plan = planSerpentinePath(layout.nodes.length, {
-      containerWidth: canvasWidth,
-      maxCanvasHeight: embedded ? 600 : 680,
-    });
-    // Narrow canvases keep the step-through focused view on the default layout.
-    if (plan.columns < 2) return null;
-    const nodes = applySerpentinePath(layout.nodes, hops, plan.columns);
-    return nodes === layout.nodes ? null : { plan, nodes };
-  }, [attackPath, canvasWidth, embedded, focusMode, layout.nodes]);
-  // A phone shows a short path whole, one hop per row, instead of stepping through it.
   const narrow = useNarrowViewport(embedded);
+  const pathLayout = useMemo(() => {
+    if (narrow || !focusMode || canvasWidth <= 0) return null;
+    return linearPathLayout(layout.nodes, attackPath?.hops ?? [], canvasWidth);
+  }, [attackPath, canvasWidth, focusMode, layout.nodes, narrow]);
+  // A phone shows a short path whole, one hop per row, instead of stepping through it.
   const columnNodes = useMemo(() => usesColumnPath({ narrow, focusMode, nodeCount: layout.nodes.length })
     ? applyColumnPath(layout.nodes, attackPath?.hops ?? []) : layout.nodes, [attackPath, focusMode, layout.nodes, narrow]);
   const columnLayout = columnNodes !== layout.nodes;
-  const canvasNodes = columnLayout ? columnNodes : pathLayout?.nodes ?? layout.nodes;
+  const canvasNodes = columnLayout ? columnNodes : !narrow && pathLayout ? pathLayout.nodes : layout.nodes;
   // A short focused path gets a short canvas; the bounded clamp stays for context views.
-  const canvasHeight = columnLayout ? columnCanvasHeight(columnNodes.length) : pathLayout?.plan.canvasHeight
+  const canvasHeight = columnLayout ? columnCanvasHeight(columnNodes.length) : (pathLayout ? 360 : undefined)
     ?? (embedded && focusMode && !loading && layout.nodes.length > 0 ? pathCardCanvasHeight(layout.nodes) : undefined);
   const pathEdges = useMemo(() => focusMode && attackPath ? pathRelationshipIds(layout.edges, attackPath) : new Set<string>(), [focusMode, attackPath, layout.edges]);
   const displayEdges = useMemo(() => {
@@ -751,7 +746,7 @@ export function SecurityGraphInvestigation({
         className={`relative bg-surface-muted ${embedded ? `h-[clamp(24rem,42vh,34rem)] ${PATH_CARD_CANVAS_CLASS} ${canvasLast ? "rounded-b-2xl" : ""}` : "h-[clamp(32rem,56vh,42rem)]"}`}
         style={canvasHeight ? { height: canvasHeight } : undefined}
         data-testid="security-graph-investigation"
-        data-path-layout={pathLayout ? `serpentine-${pathLayout.plan.columns}x${pathLayout.plan.rows}` : undefined}
+        data-path-layout={columnLayout ? "column" : pathLayout ? "linear" : undefined}
       >
         {loading ? (
           <div className="flex h-full items-center justify-center gap-2 text-sm text-ink-secondary">
@@ -789,6 +784,7 @@ export function SecurityGraphInvestigation({
               pathNodeIds={attackPath?.hops ?? []}
               controls={embedded ? graphControls : undefined}
               columnLayout={columnLayout}
+              linearWidth={!narrow && !columnLayout ? pathLayout?.width : undefined}
               roundedBottom={embedded && canvasLast}
             />
           </ReactFlowProvider>
