@@ -198,3 +198,17 @@ def test_mcp_tool_is_tenant_scoped_and_validates(api, monkeypatch):  # noqa: F81
     assert "error" in _mcp("tenant-a", monkeypatch, cursor="not-a-cursor")
     stale = _mcp("tenant-a", monkeypatch, snapshot_generation="stale")
     assert "error" in stale
+
+
+def test_bounded_reads_say_the_answer_is_incomplete(api, monkeypatch):  # noqa: F811
+    from agent_bom.api import graph_agent_architecture as reads
+
+    client, store, headers = api
+    store.save_graph(_graph("tenant-a", "langgraph_tool_team"))
+    assert _get(client, headers["tenant-a"]).json()["coverage"]["complete"] is True
+    monkeypatch.setattr(reads, "MAX_OVERLAY_EDGES", 1)
+    assert _get(client, headers["tenant-a"]).json()["coverage"]["complete"] is False
+    monkeypatch.setattr(reads, "MAX_OVERLAY_EDGES", 20_000)
+    monkeypatch.setattr(reads, "FRAMEWORK_AGENT_CAP", 2)
+    capped = _get(client, headers["tenant-a"]).json()
+    assert capped["coverage"]["complete"] is False and capped["summary"]["framework_agents"] == 2

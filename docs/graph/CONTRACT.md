@@ -159,7 +159,8 @@ its other outgoing edges, and the project agent that `contains` the harness).
 Pages use the generation-pinned cursor: a stale generation is a 409, a malformed
 or foreign cursor a 422, `limit` is 1 to 50. Reads are scoped to the caller's
 tenant. `coverage.complete` is false when more than 5,000 framework agents or
-50,000 structural edges exist; `coverage.gaps` lists what is not modelled yet:
+50,000 structural edges exist, or the overlay's bounded edge or finding read was
+cut short; `coverage.gaps` lists what is not modelled yet:
 CrewAI manager and task order, AutoGen speaker selection, OpenAI Agents SDK
 handoffs, and declared-versus-observed path comparison.
 

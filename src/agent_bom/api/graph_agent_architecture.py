@@ -54,7 +54,8 @@ def _structural_edges(store: Any, *, tenant_id: str, scan_id: str, agent_ids: se
     return list(edges[:MAX_STRUCTURAL_EDGES]), len(edges) <= MAX_STRUCTURAL_EDGES
 
 
-def _overlay(store: Any, *, tenant_id: str, scan_id: str, harnesses: list[dict[str, Any]], nodes_by_id: dict[str, Any]) -> None:
+def _overlay(store: Any, *, tenant_id: str, scan_id: str, harnesses: list[dict[str, Any]], nodes_by_id: dict[str, Any]) -> bool:
+    """Attach the security overlay; ``False`` when a bounded read may have left records out."""
     agent_ids = {row["id"] for harness in harnesses for layer in harness["layers"] for row in layer["agents"]}
     roots = {harness["harness_id"] for harness in harnesses}
     outgoing = (
@@ -70,7 +71,8 @@ def _overlay(store: Any, *, tenant_id: str, scan_id: str, harnesses: list[dict[s
         else []
     )
     reach, findings, declared_in = view.overlay_inputs([*outgoing, *incoming])
-    finding_ids = sorted({fid for ids in findings.values() for fid in ids})[:MAX_FINDING_NODES]
+    all_findings = sorted({fid for ids in findings.values() for fid in ids})
+    finding_ids = all_findings[:MAX_FINDING_NODES]
     lookup_ids = set(finding_ids) | {pid for pid in declared_in.values() if pid not in nodes_by_id}
     looked_up = (
         {node.id: node for node in store.nodes_by_ids(tenant_id=tenant_id, scan_id=scan_id, node_ids=lookup_ids)} if lookup_ids else {}
@@ -78,6 +80,7 @@ def _overlay(store: Any, *, tenant_id: str, scan_id: str, harnesses: list[dict[s
     everything = {**looked_up, **nodes_by_id}
     for harness in harnesses:
         view.apply_overlay(harness, everything, reach, findings, declared_in, looked_up)
+    return len(outgoing) < MAX_OVERLAY_EDGES and len(all_findings) <= MAX_FINDING_NODES
 
 
 def read_agent_architecture(store: Any, *, tenant_id: str, scan_id: str, offset: int, limit: int) -> dict[str, Any]:
@@ -95,14 +98,14 @@ def read_agent_architecture(store: Any, *, tenant_id: str, scan_id: str, offset:
     order = view.harness_order(placements, nodes_by_id)
     window = order[offset : offset + limit]
     harnesses = [view.build_harness(root, placements, nodes_by_id, edges, raw_evidence) for root in window]
-    _overlay(store, tenant_id=tenant_id, scan_id=scan_id, harnesses=harnesses, nodes_by_id=nodes_by_id)
+    overlay_complete = _overlay(store, tenant_id=tenant_id, scan_id=scan_id, harnesses=harnesses, nodes_by_id=nodes_by_id)
     return {
         "schema_version": "v1",
         "scan_id": scan_id,
         "tenant_id": tenant_id,
         "harnesses": harnesses,
         "summary": view.summary(agents, placements, len(order)),
-        "coverage": view.coverage(complete=agents_complete and edges_complete, agent_cap=FRAMEWORK_AGENT_CAP),
+        "coverage": view.coverage(complete=agents_complete and edges_complete and overlay_complete, agent_cap=FRAMEWORK_AGENT_CAP),
         "pagination": {"offset": offset, "limit": limit, "total": len(order), "returned": len(harnesses)},
     }
 
