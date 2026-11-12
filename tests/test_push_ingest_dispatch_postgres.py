@@ -523,3 +523,42 @@ def test_exhausted_child_settles_its_batch_parent(pg_store) -> None:
     assert fail_unrecoverable_dispatch_jobs(pg_store, max_attempts=5) >= 1
     assert _job_in(pg_store, tenant, child_id).status is JobStatus.FAILED
     assert _job_in(pg_store, tenant, parent_id).status is JobStatus.FAILED
+
+
+def test_a_push_claimed_by_a_dead_replica_is_ingested_once_by_a_survivor(pg_store, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The claiming replica died mid-ingest: with no client retry, a live replica finishes it within the lease bound."""
+    graph_calls: list[str] = []
+
+    def _persist(job, report, **_kwargs) -> None:  # noqa: ANN001
+        graph_calls.append(job.job_id)
+        report["graph_persistence"] = {"status": "persisted", "scan_id": job.job_id}
+
+    monkeypatch.setattr(push_ingest_worker, "_persist_push_graph", _persist)
+    monkeypatch.setattr(push_ingest_worker, "_graph_snapshot_exists", lambda _tenant, _scan: False)
+    monkeypatch.setattr(push_ingest_worker, "_record_push_trend", lambda *_args, **_kwargs: None)
+    tenant, job_id = _tenant(), uuid4().hex
+    _admit(tenant, job_id)
+
+    dead = DistributedScanWorker(pg_store, worker_id="replica-dead:1:x", max_concurrent=1)
+    claimed = pg_store.claim_next(dead.worker_id, dead._lease)
+    while claimed is not None and claimed.job_id != job_id:
+        claimed = pg_store.claim_next(dead.worker_id, dead._lease)
+    assert claimed is not None
+    with pg_store._scope_connection(all_tenants=True) as conn:
+        row = conn.execute(
+            "SELECT EXTRACT(EPOCH FROM (lease_expires_at::timestamptz - now())) FROM scan_dispatch_queue WHERE tenant_id=%s AND job_id=%s",
+            (tenant, job_id),
+        ).fetchone()
+    assert float(row[0]) + dead._poll <= 125, f"a dead replica's push waits {row[0]}s before any replica may reclaim it"
+
+    # The replica is gone: nothing renews its claim, so the lease runs out.
+    _expire_lease(pg_store, tenant, job_id)
+    survivor = DistributedScanWorker(pg_store, worker_id="replica-live:2:y", max_concurrent=4)
+    survivor._tick()
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline and _queue_status(pg_store, tenant, job_id) is not None:
+        time.sleep(0.05)
+    assert _queue_status(pg_store, tenant, job_id) is None
+    assert _job_in(pg_store, tenant, job_id).status is JobStatus.DONE
+    survivor._tick()
+    assert graph_calls == [job_id]

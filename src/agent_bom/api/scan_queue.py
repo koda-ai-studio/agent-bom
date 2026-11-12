@@ -31,6 +31,7 @@ from agent_bom.config import (
     API_SCAN_WORKERS,
 )
 from agent_bom.core.settings import env_str
+from agent_bom.security import sanitize_error, sanitize_text
 
 if TYPE_CHECKING:
     from agent_bom.api.models import ScanJob
@@ -173,6 +174,11 @@ class DistributedScanWorker:
         self._inflight_lock = threading.Lock()
         self._stop = asyncio.Event()
         self._task: asyncio.Task | None = None
+        # Leases are renewed on their own thread so a slow claim loop or a busy
+        # event loop never lets a live claim lapse into a peer's reclaim.
+        self._beat_seconds = max(1.0, min(float(self._poll), self._lease / 6))
+        self._beat_stop = threading.Event()
+        self._beat_thread: threading.Thread | None = None
 
     @property
     def worker_id(self) -> str:
@@ -181,10 +187,12 @@ class DistributedScanWorker:
     async def start(self) -> None:
         if self._task is None:
             self._stop.clear()
+            self.start_heartbeat()
             self._task = asyncio.create_task(self._run(), name="distributed-scan-worker")
             _logger.info("Distributed scan worker started id=%s lease=%ss poll=%ss", self._worker_id, self._lease, self._poll)
 
-    async def stop(self) -> None:
+    async def stop(self, *, keep_leases: bool = False) -> None:
+        """Stop claiming; ``keep_leases`` renews in-flight claims until :meth:`stop_heartbeat` (shutdown drain)."""
         self._stop.set()
         if self._task is not None:
             try:
@@ -192,6 +200,38 @@ class DistributedScanWorker:
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 self._task.cancel()
             self._task = None
+        if not keep_leases:
+            self.stop_heartbeat()
+
+    def start_heartbeat(self) -> None:
+        if self.heartbeat_alive():
+            return
+        self._beat_stop.clear()
+        self._beat_thread = threading.Thread(target=self._heartbeat, name="distributed-scan-lease", daemon=True)
+        self._beat_thread.start()
+
+    def stop_heartbeat(self) -> None:
+        self._beat_stop.set()
+        if self._beat_thread is not None:
+            self._beat_thread.join(timeout=self._beat_seconds + 5)
+            self._beat_thread = None
+
+    def heartbeat_alive(self) -> bool:
+        return self._beat_thread is not None and self._beat_thread.is_alive()
+
+    def _heartbeat(self) -> None:
+        while not self._beat_stop.wait(self._beat_seconds):
+            try:
+                self._renew_inflight()
+            except Exception as exc:  # broad-except: a missed beat is retried; only a long outage lets a lease lapse
+                detail = sanitize_text(sanitize_error(exc, generic=True))
+                _logger.warning("Dispatch lease renewal failed id=%s: %s", self._worker_id, detail)
+
+    def _renew_inflight(self) -> None:
+        with self._inflight_lock:
+            claims = dict(self._inflight)
+        if claims:
+            self._store.renew_leases(claims, self._lease)
 
     async def _run(self) -> None:
         while not self._stop.is_set():
@@ -205,12 +245,8 @@ class DistributedScanWorker:
                 pass  # the timeout only paces this loop
 
     def _tick(self) -> None:
-        # Heartbeat in-flight leases first so a slow scan is never reclaimed by a
-        # peer while this node is still actively running it.
-        with self._inflight_lock:
-            claims = dict(self._inflight)
-        if claims:
-            self._store.renew_leases(claims, self._lease)
+        # Renew before reclaiming too, so this node never reclaims its own live work.
+        self._renew_inflight()
         # End what cannot be redelivered, then reclaim jobs orphaned by dead
         # replicas (lease expired, status running, attempts left).
         from agent_bom.api.scan_job_reconciliation import fail_unrecoverable_dispatch_jobs

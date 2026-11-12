@@ -509,9 +509,9 @@ CLOUD_CIS_TIMEOUT_SECONDS = min(max(_float("AGENT_BOM_CLOUD_CIS_TIMEOUT_SECONDS"
 # jobs are enqueued to a shared Postgres dispatch queue and any control-plane
 # replica claims them via FOR UPDATE SKIP LOCKED, so scan throughput scales with
 # replicas instead of pinning each job to the node that received the request.
-# Lease seconds bound how long a claimed job may run before another node may
-# reclaim it (the owning node renews the lease each poll while the job runs).
-API_SCAN_LEASE_SECONDS = _int("AGENT_BOM_API_SCAN_LEASE_SECONDS", 600)
+# Lease seconds bound how long a job claimed by a replica that died waits before
+# another replica reclaims it (live owners renew every poll on their own thread).
+API_SCAN_LEASE_SECONDS = _int("AGENT_BOM_API_SCAN_LEASE_SECONDS", 120)
 API_SCAN_CLAIM_POLL_SECONDS = _int("AGENT_BOM_API_SCAN_CLAIM_POLL_SECONDS", 3)
 API_SCAN_MAX_ATTEMPTS = _int("AGENT_BOM_API_SCAN_MAX_ATTEMPTS", 5)  # Claims before a job that keeps losing workers fails; below 1 means 1
 # Cloud-connection scan scheduler: re-scans connections that carry an interval.
