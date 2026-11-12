@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict
 from starlette.responses import Response
 
+from agent_bom.api.current_graph_builds import schedule_current_rebuild
 from agent_bom.api.demo_refresh import demo_daily_evidence_dependency
 from agent_bom.api.exec_read_prewarm import schedule_exec_prewarm
 from agent_bom.api.experimental_gate import require_experimental
@@ -88,6 +89,14 @@ _MAX_RUNTIME_OFFSET = 1_000_000_000
 
 
 # Every committed push (synchronous or worker-run) warms the exec reads.
+
+
+def schedule_current_graph_rebuild(tenant_id: str) -> bool:
+    """Start the tenant's current-graph rebuild at commit, ahead of the exec warm-up."""
+    return schedule_current_rebuild(_get_graph_store(), tenant_id)
+
+
+register_push_commit_listener(schedule_current_graph_rebuild)
 register_push_commit_listener(schedule_exec_prewarm)
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])

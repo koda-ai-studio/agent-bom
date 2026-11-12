@@ -589,6 +589,19 @@ tenants without naming them or carrying source errors. The warm-up never blocks
 start-up or the event loop and does not run while the demo estate is seeding.
 `AGENT_BOM_CURRENT_GRAPH_PREWARM=0` turns it off.
 
+While the warm-up runs, `/readyz` answers 503
+`{"status": "not_ready", "reason": "current_graph_prewarming"}`, so the chart's
+readiness probe keeps a restarted replica out of the Service until its graphs
+are built and no routed read lands on a cold replica. The hold is bounded by
+`AGENT_BOM_CURRENT_GRAPH_PREWARM_READY_SECONDS` (default 120): past it the
+replica reports ready even if the warm-up is still running, and reads that
+reach an unbuilt tenant get the bounded 503 above. Liveness (`/health`,
+`/healthz`, `/livez`) and the chart's `startupProbe` never wait on the warm-up,
+so a slow warm-up cannot get the pod restarted. A disabled warm-up holds
+nothing. Measured under the chart's 1 CPU / 2 GiB limit with a 200-agent
+tenant, the hold lasts about 20 seconds; see "Enforced cgroup limits" in
+[PERFORMANCE_BENCHMARKS.md](PERFORMANCE_BENCHMARKS.md).
+
 ## Oversized result pushes
 
 One push is stored as one job result, so a decoded push can never exceed 240 MiB

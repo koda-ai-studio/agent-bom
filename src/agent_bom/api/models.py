@@ -604,6 +604,9 @@ class PushPayload(_PushEvidencePayload):
     scan_run: ScanRunPayload | None = None
     correlation_cohort_id: str | None = Field(default=None, min_length=36, max_length=36)
     correlation_child_receipt: CorrelationCohortChildReceipt | None = None
+    # The parsed request body this model was validated from and shares, set by
+    # ``parse_push_payload``; asynchronous admission stores it instead of a dump.
+    _parsed_body: dict[str, Any] | None = PrivateAttr(default=None)
 
 
 class ScheduleCreate(BaseModel):

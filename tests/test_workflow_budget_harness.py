@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
@@ -176,10 +177,34 @@ def test_evidence_failures_flag_a_restart_that_cannot_serve_its_first_graph_read
     }
     entry = {"profile": {"name": "p", "memory_limit_mib": 2048}, "restart": restart}
     assert evidence_failures({"profiles": [entry]}) == [
-        "p/restart: first graph read returned 503 (current_estate_building) after the start-up prewarm"
+        "p/restart: first graph read after readiness returned 503 (current_estate_building)"
     ]
     restart["result"]["first_graph_read_status"] = 200
     assert evidence_failures({"profiles": [entry]}) == []
+    restart["result"].update(ready_status=503, not_ready_reasons=["current_graph_prewarming"])
+    assert evidence_failures({"profiles": [entry]}) == ["p/restart: /readyz never answered 200 (['current_graph_prewarming'])"]
+
+
+def test_restart_phase_routes_its_first_read_only_after_readiness() -> None:
+    from scripts.perf.workflow_phases import _await_ready
+
+    answers = iter(
+        [(503, {"status": "not_ready", "reason": "current_graph_prewarming"}), (503, {"status": "draining"}), (200, {"status": "ready"})]
+    )
+
+    class Http:
+        calls: list[str] = []
+
+        async def call(self, method, url):
+            self.calls.append(url)
+            status, body = next(answers)
+            return httpx.Response(status, json=body), 0.0
+
+    http = Http()
+    ready = asyncio.run(_await_ready(http, period_seconds=0))
+    assert ready["ready_status"] == 200
+    assert ready["not_ready_reasons"] == ["current_graph_prewarming", "draining"]
+    assert http.calls == ["/readyz"] * 3
 
 
 def test_evidence_failures_hold_every_process_to_the_profile_memory_budget() -> None:

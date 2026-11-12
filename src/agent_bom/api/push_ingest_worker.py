@@ -116,8 +116,12 @@ def admitted_push_result(body: PushPayload) -> dict[str, Any]:
 
     Normalization (finding collection, summaries, the posture scorecard) is the
     CPU-heavy part of ingest, so it runs here, off the API process's request path.
+    The worker validates the stored payload again, so the parsed request body the
+    model was validated from (and shares) is stored as is, never dumped beside it.
     """
-    return {"pushed": True, "ingest_state": ADMITTED_STATE, "payload": body.model_dump(mode="json", exclude_unset=True)}
+    parsed = body._parsed_body
+    payload = parsed if parsed is not None else body.model_dump(mode="json", exclude_unset=True)
+    return {"pushed": True, "ingest_state": ADMITTED_STATE, "payload": payload}
 
 
 def _normalized_result(job: ScanJob) -> dict:
