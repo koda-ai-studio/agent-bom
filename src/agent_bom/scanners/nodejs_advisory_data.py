@@ -36,9 +36,12 @@ from typing import Any
 import httpx
 
 from agent_bom import http_client
+from agent_bom.core.settings import env_opt
+from agent_bom.db import schema
 from agent_bom.http_client import fetch_bytes
 from agent_bom.scanners.nodejs_semver import parse_range
 from agent_bom.security import SecurityError
+from agent_bom.vuln_freshness import db_stale_days_threshold
 
 INDEX_URL = "https://raw.githubusercontent.com/nodejs/security-wg/main/vuln/core/index.json"
 REPOSITORY = "https://github.com/nodejs/security-wg"
@@ -76,12 +79,8 @@ def _now() -> datetime:
 
 def sidecar_dir() -> Path:
     """Where air-gap sidecar feeds live: ``AGENT_BOM_VULN_DB_BUNDLE_DIR``, else beside the DB file."""
-    explicit = os.environ.get("AGENT_BOM_VULN_DB_BUNDLE_DIR", "").strip()
-    if explicit:
-        return Path(explicit).expanduser()
-    from agent_bom.db.schema import DB_PATH
-
-    return DB_PATH.parent
+    explicit = env_opt("AGENT_BOM_VULN_DB_BUNDLE_DIR")
+    return Path(explicit).expanduser() if explicit else schema.DB_PATH.parent
 
 
 def synced_snapshot_path() -> Path:
@@ -222,15 +221,12 @@ def sync_snapshot(path: Path | None = None) -> int:
             json.dump(payload, stream, indent=1, sort_keys=True)
             stream.write("\n")
         os.replace(temp, target)
-    except BaseException:
-        Path(temp).unlink(missing_ok=True)
-        raise
+    finally:
+        Path(temp).unlink(missing_ok=True)  # no-op once replaced
     return int(payload["entry_count"])
 
 
 def max_snapshot_age() -> timedelta:
-    from agent_bom.vuln_freshness import db_stale_days_threshold
-
     return timedelta(days=db_stale_days_threshold())
 
 

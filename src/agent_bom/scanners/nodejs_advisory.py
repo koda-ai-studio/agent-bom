@@ -25,6 +25,7 @@ from typing import Any
 from agent_bom.core.severity import severity_from_label
 from agent_bom.models import Package, Vulnerability
 from agent_bom.scanners import nodejs_advisory_data as data
+from agent_bom.scanners.local_advisories import merge_scanner_vulnerabilities
 from agent_bom.scanners.nodejs_semver import Version, parse_version, range_bounds, satisfies
 from agent_bom.scanners.state import record_coverage_warning
 from agent_bom.security import sanitize_error
@@ -163,8 +164,6 @@ def _receipt(index: data.CoreIndex, count: int) -> dict[str, Any]:
 
 async def scan_nodejs_runtimes(packages: list[Package], *, offline: bool) -> int:
     """Attach index findings to each Node.js runtime; any failure is an explicit coverage gap."""
-    from agent_bom.scanners.local_advisories import merge_scanner_vulnerabilities
-
     if not packages:
         return 0
     try:

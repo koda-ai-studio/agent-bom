@@ -63,6 +63,7 @@ from agent_bom.db.sync_parsing import _parse_debian_tracker_release_entry as _pa
 from agent_bom.db.sync_parsing import _parse_ghsa_version_range as _parse_ghsa_version_range
 from agent_bom.db.sync_parsing import _parse_osv_entry as _parse_osv_entry
 from agent_bom.db.sync_parsing import _window_coverage as _window_coverage
+from agent_bom.scanners import nodejs_advisory_data
 
 
 def sync_osv(
@@ -630,10 +631,8 @@ DEFAULT_SYNC_SOURCES: tuple[str, ...] = ("osv", "alpine", "debian", "epss", "kev
 
 def _sync_nodejs_core(conn: sqlite3.Connection, db_path: Path) -> int:
     """Write the Node.js core index snapshot next to the DB so a copied DB directory carries it."""
-    from agent_bom.scanners.nodejs_advisory_data import SNAPSHOT_FILENAME, sync_snapshot
-
-    count = sync_snapshot(db_path.parent / SNAPSHOT_FILENAME)
-    _update_sync_meta(conn, "nodejs", count, {"snapshot": SNAPSHOT_FILENAME})
+    count = nodejs_advisory_data.sync_snapshot(db_path.parent / nodejs_advisory_data.SNAPSHOT_FILENAME)
+    _update_sync_meta(conn, "nodejs", count, {"snapshot": nodejs_advisory_data.SNAPSHOT_FILENAME})
     return count
 
 

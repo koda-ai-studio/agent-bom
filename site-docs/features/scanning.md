@@ -328,6 +328,13 @@ the same major line as its fixed version. A line the index lists no fix for,
 typically an end-of-life line, has no fixed version rather than a cross-major
 upgrade. Advisories scoped only to Windows are not applied.
 
+The index stops listing a release line once it reaches end-of-life, so the data
+also carries each line's end date from the Node.js Release working group's
+`schedule.json`. A runtime on a line that had reached end-of-life when the data
+was fetched (for example Node.js 18 after 2025-04-30) keeps its listed findings
+and adds a `runtime_end_of_life` coverage warning, so the scan is `partial`:
+advisories published after that date are missing.
+
 ```bash
 agent-bom image node:24-bookworm-slim -f json -o node-findings.json
 ```
