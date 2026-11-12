@@ -57,6 +57,31 @@ describe("attack path graph model", () => {
     }
   });
 
+  it("names each asset by its recorded subtype", () => {
+    const graph = {
+      scan_id: "s", tenant_id: "t", created_at: "", interaction_risks: [], stats: {},
+      nodes: [node("a", "agent", "a"), node("st", "data_store", "audit-evidence", { cloud_provider: "snowflake", resource_type: "stage" })],
+      edges: [edge("a", "st", "accessed")], attack_paths: [],
+    } as never;
+    const model = buildAttackPathGraphModel(graph, path(["a", "st"], ["accessed"]));
+    expect(model.nodes.find(item => item.id === "st")!.typeLabel).toBe("Stage");
+  });
+
+  it("draws recorded at-risk hops past the path, but only where a recorded edge reaches them", () => {
+    const { graph, selected } = branchingFixture();
+    const isolated = { ...graph, attack_paths: [selected] };
+    const context = {
+      nodes: [node("cred:openai", "credential", "OPENAI_API_KEY"), node("cred:floating", "credential", "UNLINKED")],
+      edges: [edge("server:github", "cred:openai", "exposes_cred")],
+    };
+    const model = buildAttackPathGraphModel(isolated, selected, { context });
+    const ids = model.nodes.map(item => item.id);
+    expect(ids).toContain("cred:openai");
+    expect(ids).not.toContain("cred:floating");
+    expect(model.nodes.find(item => item.id === "cred:openai")!.role).toBe("branch");
+    expect(model.edges.some(link => link.id === "server:github->cred:openai:exposes_cred")).toBe(true);
+  });
+
   it("draws no branches when no other path touches the selected one", () => {
     const { graph, selected } = branchingFixture();
     const isolated = { ...graph, attack_paths: [selected] };

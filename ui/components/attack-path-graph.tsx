@@ -13,7 +13,7 @@ import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
 import { DESKTOP_FIT_PADDING, DESKTOP_MIN_ZOOM, attackPathCanvasHeight, attackPathFitBounds, layoutAttackPathGraph, narrowFitZoom, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
 import { buildAttackPathGraphModel, type AttackPathGraphModel } from "@/lib/attack-path-graph-model";
-import type { AttackPath, UnifiedGraphData } from "@/lib/graph-schema";
+import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
 import { BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
 
 export type AttackPathGraphProps = {
@@ -24,6 +24,8 @@ export type AttackPathGraphProps = {
   onNodeSelect: (nodeId: string) => void;
   onEdgeSelect: (edge: { id: string; source: string; target: string; relationship: string }) => void;
   onOpenFindings: (nodeId: string, findingIds: string[]) => void;
+  /** Recorded at-risk hops past the path (exploit story), drawn where a recorded edge reaches them. */
+  context?: { nodes: UnifiedNode[]; edges: UnifiedEdge[] } | null | undefined;
   /** Toolbar row rendered above the canvas (focus toggle, lineage, fullscreen). */
   toolbar?: React.ReactNode;
 };
@@ -96,12 +98,12 @@ function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdg
   return { layout, nodes, edges };
 }
 
-function AttackPathCanvas({ graph, attackPath, narrow, onNodeSelect, onEdgeSelect, onOpenFindings }: AttackPathGraphProps) {
+function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, onEdgeSelect, onOpenFindings }: AttackPathGraphProps) {
   const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(new Set());
   const [activeEdge, setActiveEdge] = useState<string | null>(null);
   const markerPrefix = `apg${useId().replaceAll(":", "")}`;
   const wheelGate = useWheelZoomGate();
-  const model = useMemo(() => buildAttackPathGraphModel(graph, attackPath, { expandedGroups }), [attackPath, expandedGroups, graph]);
+  const model = useMemo(() => buildAttackPathGraphModel(graph, attackPath, { expandedGroups, context }), [attackPath, context, expandedGroups, graph]);
   const onExpandGroup = useCallback((id: string) => setExpandedGroups(current => new Set([...current, id])), []);
   const handlers = useMemo(() => ({ onOpenFindings, onExpandGroup }), [onExpandGroup, onOpenFindings]);
   const { layout, nodes, edges } = useFlowElements(model, narrow, activeEdge, markerPrefix, handlers);
@@ -114,7 +116,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, onNodeSelect, onEdgeSelec
   const manualCamera = useRef<string | null>(null);
   // Collapsed-group links stand in for several records; only a recorded edge has a receipt.
   const openEdge = (edge: AttackPathFlowEdge) => {
-    if (graph.edges.some(item => item.id === edge.id)) onEdgeSelect({ id: edge.id, source: edge.source, target: edge.target, relationship: edge.data!.edge.relationship });
+    if (graph.edges.some(item => item.id === edge.id) || context?.edges.some(item => item.id === edge.id)) onEdgeSelect({ id: edge.id, source: edge.source, target: edge.target, relationship: edge.data!.edge.relationship });
   };
   return <>
     <div ref={frameRef} className={`relative bg-surface ${HIT_AREAS}`} style={{ height }} data-testid="attack-path-graph-canvas" data-graph-annotations="on-demand"

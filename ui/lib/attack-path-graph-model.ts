@@ -3,6 +3,7 @@ import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/l
 import { GRAPH_NODE_KIND_META } from "@/lib/graph-schema.generated";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { nodeContextMarkers, type NodeContextMarker } from "@/lib/attack-path-graph-markers";
+import { assetKindLabel } from "@/lib/asset-icon-registry";
 
 /** Findings attach to the asset they affect; they are badges, not hops. */
 export const FINDING_ENTITY_TYPES = new Set(["vulnerability", "misconfiguration", "drift_incident", "finding"]);
@@ -46,6 +47,12 @@ export type AttackPathGraphModel = {
 
 export function typeLabel(entityType: string): string {
   return (GRAPH_NODE_KIND_META as Record<string, { label?: string }>)[entityType]?.label ?? entityType.replaceAll("_", " ");
+}
+
+/** The product's asset label, refined by a recorded subtype (a stage, a pod, an endpoint). */
+function assetTypeLabel(node: UnifiedNode): string {
+  const provider = node.dimensions?.cloud_provider ?? (typeof node.attributes?.cloud_provider === "string" ? node.attributes.cloud_provider : undefined);
+  return assetKindLabel({ entityType: node.entity_type, attributes: node.attributes ?? {}, provider }) || typeLabel(node.entity_type);
 }
 
 function pluralType(entityType: string, count: number): string {
@@ -156,11 +163,27 @@ function descendants(root: string, parents: Map<string, string>): Set<string> {
   return out;
 }
 
+function withContext(graph: UnifiedGraphData, context: { nodes: UnifiedNode[]; edges: UnifiedEdge[] }): UnifiedGraphData {
+  const nodeIds = new Set(graph.nodes.map(node => node.id));
+  const edgeIds = new Set(graph.edges.map(edge => edge.id));
+  return {
+    ...graph,
+    nodes: [...graph.nodes, ...context.nodes.filter(node => !nodeIds.has(node.id))],
+    edges: [...graph.edges, ...context.edges.filter(edge => !edgeIds.has(edge.id))],
+  };
+}
+
 export function buildAttackPathGraphModel(
   graph: UnifiedGraphData,
   path: AttackPath,
-  options: { expandedGroups?: ReadonlySet<string>; collapseThreshold?: number } = {},
+  options: {
+    expandedGroups?: ReadonlySet<string>;
+    collapseThreshold?: number;
+    /** Recorded at-risk hops past the path (exploit story); drawn where a recorded edge reaches them. */
+    context?: { nodes: UnifiedNode[]; edges: UnifiedEdge[] } | null | undefined;
+  } = {},
 ): AttackPathGraphModel {
+  if (options.context) graph = withContext(graph, options.context);
   const nodes = new Map(graph.nodes.map(node => [node.id, node]));
   const pathNodeIds = assetHops(path, nodes);
   const selectedHops = new Set(pathNodeIds);
@@ -173,6 +196,8 @@ export function buildAttackPathGraphModel(
     hops.forEach(id => draft.nodes.add(id));
     addPathEdges(draft, hops, other, graph.edges, false);
   }
+  for (const node of options.context?.nodes ?? []) if (!FINDING_ENTITY_TYPES.has(node.entity_type)) draft.nodes.add(node.id);
+  for (const edge of options.context?.edges ?? []) if (draft.nodes.has(edge.source) && draft.nodes.has(edge.target) && !draft.edges.has(edge.id)) draft.edges.set(edge.id, edge);
   // Recorded links between the selected path and the branches it touches.
   const pathPairs = new Set([...draft.onPath].map(id => { const edge = draft.edges.get(id)!; return pairKey(edge.source, edge.target); }));
   for (const edge of graph.edges) {
@@ -212,7 +237,7 @@ export function buildAttackPathGraphModel(
     const node = nodes.get(id)!;
     const index = pathNodeIds.indexOf(id);
     return {
-      id, kind: "entity", label: node.label || id, entityType: node.entity_type, typeLabel: typeLabel(node.entity_type),
+      id, kind: "entity", label: node.label || id, entityType: node.entity_type, typeLabel: assetTypeLabel(node),
       role: index < 0 ? "branch" : index === 0 && lastIndex > 0 ? "entry" : index === lastIndex ? "target" : "path",
       findings: findingsFor(id, graph, nodes, drawnFindings),
       markers: nodeContextMarkers(node.attributes ?? {}),
@@ -265,8 +290,11 @@ export function buildAttackPathGraphModel(
  * Every node the graph can show (collapsed siblings included) plus the
  * findings on them, so node and finding details resolve to recorded data.
  */
-export function attackPathEvidenceGraph(graph: UnifiedGraphData, path: AttackPath): UnifiedGraphData {
-  const model = buildAttackPathGraphModel(graph, path, { collapseThreshold: Number.POSITIVE_INFINITY });
+export function attackPathEvidenceGraph(
+  graph: UnifiedGraphData, path: AttackPath, context?: { nodes: UnifiedNode[]; edges: UnifiedEdge[] } | null,
+): UnifiedGraphData {
+  if (context) graph = withContext(graph, context);
+  const model = buildAttackPathGraphModel(graph, path, { collapseThreshold: Number.POSITIVE_INFINITY, context });
   const ids = new Set(model.nodes.flatMap(node => [node.id, ...node.findings.map(finding => finding.id)]));
   const nodes = graph.nodes.filter(node => ids.has(node.id));
   const edges = graph.edges.filter(edge => ids.has(edge.source) && ids.has(edge.target));

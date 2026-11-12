@@ -426,7 +426,7 @@ export function SecurityGraphInvestigation({
 
   const activeGraph = useMemo(() => {
     if (!graph) return null;
-    if (layered && attackPath) return mergeGraphNeighborExpansions(attackPathEvidenceGraph(graph, attackPath), Object.values(neighborExpansions));
+    if (layered && attackPath) return mergeGraphNeighborExpansions(attackPathEvidenceGraph(graph, attackPath, riskContext), Object.values(neighborExpansions));
     const base = focusMode && attackPath
       ? buildFocusedGraphData(graph, attackPath)
       : graph;
@@ -753,6 +753,7 @@ export function SecurityGraphInvestigation({
               graph={graph}
               attackPath={attackPath}
               narrow={narrow}
+              context={riskContext}
               toolbar={<InvestigationToolbar embedded compact={narrow} stepper={null} controls={pathControls} layoutControls={null} />}
               onNodeSelect={id => { setSelectedEdge(null); setFindingsList(null); setSelectedNodeId(id); }}
               onEdgeSelect={edge => { setSelectedNodeId(null); setSelectedEdge({ id: edge.id, source: edge.source, target: edge.target, data: { relationship: edge.relationship } }); }}
