@@ -29,9 +29,9 @@ export function pathCardEdges(edges: Edge[], zoom: number, showPathLabels = fals
     const dashed = Boolean(edge.style?.strokeDasharray);
     return {
       ...edge,
-      data: showPathLabels && edge.label != null && edge.data?.labelVisibility !== "hide"
+      ...(showPathLabels && edge.label != null && edge.data?.labelVisibility !== "hide"
         && edge.data?.relationship !== "vulnerable_to"
-        ? { ...edge.data, labelVisibility: "show" } : edge.data,
+        ? { data: { ...edge.data, labelVisibility: "show" } } : {}),
       style: {
         ...edge.style,
         strokeWidth: 2 * scale,
