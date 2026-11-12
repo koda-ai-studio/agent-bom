@@ -3609,6 +3609,15 @@ async function main() {
       await expect(tooltip).toHaveCount(0);
       const firstEdge = pathCanvas.locator('.react-flow__edge[data-id="user:contractor->sa:jit-review:acted_as"]');
       await expect(firstEdge.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+      // The camera refits after the last resize; hover only once it has settled.
+      let settledTransform = "";
+      await expect.poll(async () => {
+        const transform = await pathCanvas.locator(".react-flow__viewport").getAttribute("style");
+        const settled = transform === settledTransform;
+        settledTransform = transform ?? "";
+        return settled;
+      }, { intervals: [300] }).toBe(true);
+      await firstEdge.locator(".react-flow__edge-path").scrollIntoViewIfNeeded();
       const point = await firstEdge.locator(".react-flow__edge-path").evaluate((path) => {
         const at = path.getPointAtLength(path.getTotalLength() / 2);
         const screen = new DOMPoint(at.x, at.y).matrixTransform(path.getScreenCTM());
