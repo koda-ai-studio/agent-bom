@@ -262,3 +262,42 @@ def test_audit_profile_covers_estate_inventory_and_skill_review_read_only():
     # Live introspection can launch stdio commands, so it is never advertised as read-only.
     assert tools["tool_risk_assessment"].annotations.read_only_hint is False
     assert tools["tool_risk_assessment"].annotations.destructive_hint is True
+
+
+def test_registered_tool_names_match_oauth_read_only_registration():
+    from agent_bom.mcp_tools.profiles import registered_tool_names
+
+    assert registered_tool_names("scan", read_only=False) == SCAN_TOOLS
+    assert registered_tool_names("scan", read_only=True) == SCAN_TOOLS - {"scan"}
+    assert len(registered_tool_names("scan", read_only=True) or ()) == 7
+    assert registered_tool_names("full", read_only=False) is None
+    full_read_only = registered_tool_names("full", read_only=True)
+    assert full_read_only is not None and "scan" not in full_read_only and "agent_activity" not in full_read_only
+
+
+def test_registered_tool_names_drive_the_server_registration(monkeypatch):
+    """The expected hosted set is exactly the set an OAuth server registers."""
+    from agent_bom.mcp_server import create_mcp_server
+    from agent_bom.mcp_tools import profiles
+
+    original = profiles.configure_registration
+    monkeypatch.setattr(profiles, "configure_registration", lambda mcp, name, *, read_only=False: original(mcp, name, read_only=True))
+    tools = asyncio.run(create_mcp_server(profile="scan").list_tools())
+    assert {tool.name for tool in tools} == profiles.registered_tool_names("scan", read_only=True)
+    assert all(tool.annotations is not None and tool.annotations.read_only_hint is True for tool in tools)
+
+
+def test_write_hosted_tool_names_script_uses_the_registration_helper(tmp_path):
+    from agent_bom.mcp_tools.profiles import registered_tool_names
+
+    root = Path(__file__).resolve().parents[1]
+    full, read_only = tmp_path / "full.json", tmp_path / "read-only.json"
+    subprocess.run(
+        [sys.executable, "scripts/deploy/write_hosted_tool_names.py", "--full", str(full), "--read-only", str(read_only)],
+        cwd=root,
+        env={"PATH": os.environ["PATH"], "PYTHONPATH": str(root / "src")},
+        check=True,
+        capture_output=True,
+    )
+    assert json.loads(full.read_text()) == sorted(registered_tool_names("scan", read_only=False) or ())
+    assert json.loads(read_only.read_text()) == sorted(registered_tool_names("scan", read_only=True) or ())

@@ -221,6 +221,35 @@ def test_server_card_advertises_oauth_when_the_issuer_protects_the_transport(oau
         assert client.post("/mcp", json={}).status_code == 401
 
 
+def test_oauth_server_card_passes_the_release_probe_with_the_read_only_set(oauth_env, monkeypatch, tmp_path, verifier):
+    """The hosted OAuth card must satisfy the exact post-deploy contract, and only the read-only one."""
+    from agent_bom import __version__
+    from agent_bom.deployment_probe import validate_server_card_release
+    from agent_bom.mcp_server import create_mcp_server
+    from agent_bom.mcp_tools.profiles import registered_tool_names
+
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
+    monkeypatch.setattr("agent_bom.mcp_tools.oauth.OAuthTokenVerifier", lambda config: verifier)
+    server = create_mcp_server(host="0.0.0.0", port=8000, bearer_token=None, oauth_enabled=True)
+    with TestClient(server.streamable_http_app(host="0.0.0.0"), base_url="https://mcp.example") as client:
+        card = client.get("/.well-known/mcp/server-card.json").json()
+    full = sorted(registered_tool_names("scan", read_only=False) or ())
+    read_only = sorted(registered_tool_names("scan", read_only=True) or ())
+    assert sorted(tool["name"] for tool in card["tools"]) == read_only
+    assert card["capabilities"]["read_only"] is True
+    validate_server_card_release(
+        card,
+        expected_version=__version__,
+        expected_tool_names=full,
+        expected_read_only_tool_names=read_only,
+        expected_auth_scheme="oauth2",
+    )
+    with pytest.raises(ValueError, match="tool set mismatch"):
+        validate_server_card_release(
+            card, expected_version=__version__, expected_tool_names=full, expected_read_only_tool_names=full, expected_auth_scheme="oauth2"
+        )
+
+
 @pytest.mark.parametrize("deployment", ["railway", "procfile"])
 def test_hosted_startup_preserves_configured_oauth(deployment, oauth_env, monkeypatch, tmp_path, verifier, signing_key):
     """The shipped startup command must work with an existing OAuth deployment."""

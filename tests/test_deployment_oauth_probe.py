@@ -140,6 +140,25 @@ def test_main_classifies_a_failed_mcp_probe_after_a_token_was_issued(monkeypatch
     assert "MCP probe exited 1" in capsys.readouterr().err
 
 
+@pytest.mark.parametrize("mode", ["oauth2", "bearer"])
+def test_server_card_probe_expects_the_auth_scheme_the_credential_came_from(monkeypatch, environment, mode):
+    """The expected hosted tool set follows the configured auth mode, not a guess."""
+    opener = MagicMock()
+    opener.open.return_value.__enter__.return_value.read.return_value = json.dumps(
+        dict(access_token="fresh-token", token_type="Bearer", expires_in=300)
+    ).encode()
+    monkeypatch.setattr(probe.urllib.request, "build_opener", lambda *handlers: opener)
+    env = environment if mode == "oauth2" else {"RAILWAY_MCP_BEARER_TOKEN": "static"}
+    monkeypatch.setattr(probe.os, "environ", env)
+    monkeypatch.setattr(probe.sys, "argv", ["probe_with_oauth.py", "--", "--server-card", "--require-mcp-auth"])
+    calls = []
+    monkeypatch.setattr(probe.subprocess, "run", lambda command, **_k: calls.append(command) or MagicMock(returncode=0))
+
+    assert probe.main() == 0
+
+    assert calls[0][-2:] == ["--expected-auth-scheme", mode]
+
+
 def test_main_flags_a_missing_probe_credential_as_configuration(monkeypatch, tmp_path, capsys):
     output = tmp_path / "github_output"
     monkeypatch.setattr(probe.os, "environ", {"GITHUB_OUTPUT": str(output)})

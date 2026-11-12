@@ -70,6 +70,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Expected published contract: v${VERSION}, ${TOOL_COUNT} MCP tools"
 
+      # An OAuth deployment registers only the read-only subset of the default
+      # profile. The published release's own registration filter derives that
+      # subset inside the isolated install, so the expectation cannot drift.
       - name: Export exact published release schemas
         run: |
           set -euo pipefail
@@ -79,7 +82,9 @@ jobs:
           python3 scripts/export_release_mcp_contract.py \
             --expected "${{ steps.expected.outputs.version }}" \
             --expected-tool-names-file /tmp/deployment-expected-tool-names.json \
-            --out /tmp/deployment-expected-tool-contract.json
+            --out /tmp/deployment-expected-tool-contract.json \
+            --read-only-out /tmp/deployment-expected-read-only-tool-contract.json \
+            --read-only-names-out /tmp/deployment-expected-read-only-tool-names.json
 
       - name: Check Railway deployment
         shell: bash
@@ -101,15 +106,20 @@ jobs:
             --base-url "$DEPLOY_URL" \
             --server-card --require-mcp-auth \
             --expected-version "${{ steps.expected.outputs.version }}" \
-            --expected-tool-count "${{ steps.expected.outputs.tool_count }}" \
+            --expected-tool-names-file /tmp/deployment-expected-tool-names.json \
+            --expected-read-only-tool-names-file /tmp/deployment-expected-read-only-tool-names.json \
             --attempts 3 \
             --backoff-seconds 5 \
             --timeout 15); then
             DEPLOYED=$(echo "$RESPONSE" | jq -er '.serverInfo.version')
             TOOL_COUNT=$(echo "$RESPONSE" | jq -er '.tools | length')
+            EXPECTED_CONTRACT=/tmp/deployment-expected-tool-contract.json
+            if echo "$RESPONSE" | jq -e '(.authentication.schemes // []) | index("oauth2") != null' >/dev/null; then
+              EXPECTED_CONTRACT=/tmp/deployment-expected-read-only-tool-contract.json
+            fi
             echo "$RESPONSE" | jq -S '[.tools[] | {name, inputSchema}] | sort_by(.name)' > /tmp/railway-actual-tool-contract.json
             if ! python3 scripts/check_surface_freshness.py \
-              --compare-tool-contract-files /tmp/deployment-expected-tool-contract.json /tmp/railway-actual-tool-contract.json; then
+              --compare-tool-contract-files "$EXPECTED_CONTRACT" /tmp/railway-actual-tool-contract.json; then
               {
                 echo "railway_version=$DEPLOYED (schema drift)"
                 echo "tool_count=$TOOL_COUNT"

@@ -80,6 +80,16 @@ jobs:
             echo "::error::Release metrics do not declare a positive MCP tool count"
             exit 1
           fi
+          # Exact tool names per auth mode, from the release's own registration
+          # filter: an OAuth server registers only the read-only subset.
+          PYTHONPATH=src python3 scripts/deploy/write_hosted_tool_names.py \
+            --full "$RUNNER_TEMP/hosted-tool-names.json" \
+            --read-only "$RUNNER_TEMP/hosted-read-only-tool-names.json"
+          HOSTED_TOOL_COUNT=$(jq -er length "$RUNNER_TEMP/hosted-tool-names.json")
+          if [ "$HOSTED_TOOL_COUNT" != "$TOOL_COUNT" ]; then
+            echo "::error::Release metrics declare $TOOL_COUNT default MCP tools but the default profile registers $HOSTED_TOOL_COUNT"
+            exit 1
+          fi
           echo "Checked-out version: $REPO_VERSION"
           echo "repo_version=$REPO_VERSION" >> "$GITHUB_ENV"
           echo "repo_tool_count=$TOOL_COUNT" >> "$GITHUB_ENV"
@@ -127,15 +137,18 @@ jobs:
             --base-url "$DEPLOY_URL" \
             --server-card --require-mcp-auth \
             --expected-version "$repo_version" \
-            --expected-tool-count "$repo_tool_count" \
+            --expected-tool-names-file "$RUNNER_TEMP/hosted-tool-names.json" \
+            --expected-read-only-tool-names-file "$RUNNER_TEMP/hosted-read-only-tool-names.json" \
             --attempts 5 \
             --backoff-seconds 30 \
-            --timeout 15 >/dev/null
+            --timeout 15 > "$RUNNER_TEMP/hosted-server-card.json"
           status=$?
           set -e
           if [ "$status" -eq 0 ]; then
             echo "outcome=verified" >> "$GITHUB_OUTPUT"
-            echo "Exact release contract confirmed: v${repo_version}, ${repo_tool_count} MCP tool schemas, authentication enforced"
+            DEPLOYED_TOOLS=$(jq -r '.tools | length' "$RUNNER_TEMP/hosted-server-card.json" || echo unknown)
+            DEPLOYED_AUTH=$(jq -r '(.authentication.schemes // []) | join(",")' "$RUNNER_TEMP/hosted-server-card.json" || echo unknown)
+            echo "Exact release contract confirmed: v${repo_version}, ${DEPLOYED_TOOLS} MCP tool schemas for ${DEPLOYED_AUTH} (default profile ${repo_tool_count}), authentication enforced"
           fi
           exit 0
 

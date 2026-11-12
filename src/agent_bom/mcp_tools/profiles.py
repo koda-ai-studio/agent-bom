@@ -179,6 +179,23 @@ def _selected_decorator(original: Any, allowed: frozenset[str], kind: str) -> An
 _OAUTH_EXCLUDED_TOOLS = frozenset({"agent_activity", "scan"})
 
 
+def registered_tool_names(name: str, *, read_only: bool = False) -> frozenset[str] | None:
+    """Tool names ``configure_registration`` admits; None means the complete catalog.
+
+    Deployment probes derive the hosted contract from this, so an OAuth server's
+    read-only subset can never drift from what it actually registers.
+    """
+    allowed = get_profile(name).tools
+    if not read_only:
+        return allowed
+    safe = frozenset(
+        tool
+        for tool, capabilities in _TOOL_CAPABILITY_CLASSES.items()
+        if "READ" in capabilities and not {"WRITE", "PROCESS_EXECUTION"}.intersection(capabilities) and tool not in _OAUTH_EXCLUDED_TOOLS
+    )
+    return safe if allowed is None else allowed & safe
+
+
 def configure_registration(mcp: Any, name: str, *, read_only: bool = False) -> None:
     """Skip excluded decorators before FastMCP constructs expensive schemas.
 
@@ -186,16 +203,8 @@ def configure_registration(mcp: Any, name: str, *, read_only: bool = False) -> N
     Keeping the filter installed also bounds later plugin registration.
     """
     spec = get_profile(name)
-    for kind, allowed in (("tool", spec.tools), ("prompt", spec.prompts), ("resource", spec.resources)):
-        if kind == "tool" and read_only:
-            safe = frozenset(
-                tool
-                for tool, capabilities in _TOOL_CAPABILITY_CLASSES.items()
-                if "READ" in capabilities
-                and not {"WRITE", "PROCESS_EXECUTION"}.intersection(capabilities)
-                and tool not in _OAUTH_EXCLUDED_TOOLS
-            )
-            allowed = safe if allowed is None else allowed & safe
+    tools = registered_tool_names(name, read_only=read_only)
+    for kind, allowed in (("tool", tools), ("prompt", spec.prompts), ("resource", spec.resources)):
         if allowed is None:
             continue
         setattr(mcp, kind, _selected_decorator(getattr(mcp, kind), allowed, kind))
