@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from agent_bom import __version__
 from agent_bom.api.graph_commit_hooks import run_commit_hooks
 from agent_bom.api.graph_input_overlays import registered_overlays
+from agent_bom.api.graph_warmup_slot import foreground_graph_work
 from agent_bom.api.trace_collection.trace_evidence import emit_shadow_findings, with_trace_events
 from agent_bom.api.trace_collection.trace_findings import FindingSink
 from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
@@ -367,7 +368,7 @@ def persist_graph_snapshot(
     from agent_bom.graph.builder import build_unified_graph_from_report
 
     tenant_id = require_explicit_tenant_id(job.tenant_id)
-    with tenant_bound_context(tenant_id):
+    with tenant_bound_context(tenant_id), foreground_graph_work():
         scan_id = report_json.get("scan_id") or job.job_id
         graph_input = with_trace_events(_with_cost_records(_overlaid(report_json, tenant_id), tenant_id), tenant_id)
         store_backed = _graph_store_backed_build_enabled(report_json)

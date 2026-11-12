@@ -88,22 +88,20 @@ def chart_values(repository: str, tag: str, replicas: int) -> dict[str, Any]:
         name: {"name": f"agent-bom-control-plane-{suffix}"}
         for name, suffix in (("appSecretRef", "db"), ("maintenanceSecretRef", "maintenance"), ("adminSecretRef", "admin"))
     }
-    lb_rule = {
-        "from": [{"ipBlock": {"cidr": "172.16.0.0/12"}}, {"ipBlock": {"cidr": "10.244.0.0/16"}}],
-        "ports": [{"port": 8422, "protocol": "TCP"}],
-    }
     return {
         "image": {"repository": repository, "tag": tag, "pullPolicy": "Never"},
         "scanner": {"enabled": False},
         "controlPlane": {
             "enabled": True,
             "postgres": {"verification": {"enabled": False}},
-            "networkPolicy": {"additionalIngress": [lb_rule]},
+            # The kind node and pod ranges reach the NodePort; admitted to the API port only.
+            "networkPolicy": {"ingressCIDRs": ["172.16.0.0/12", "10.244.0.0/16"]},
             "postgresSecrets": {"enabled": True, **references},
             "api": {
                 "replicas": replicas,
                 "service": {"type": "NodePort"},
                 "envFrom": [{"secretRef": {"name": "agent-bom-control-plane-auth"}}],
+                "listenerAttestation": {"fromSecret": True},
                 "env": env,
             },
             "ui": {"enabled": False},

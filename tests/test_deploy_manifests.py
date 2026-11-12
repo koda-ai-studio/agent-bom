@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests._helm_render import ATTESTED_API_SET_ARGS
+
 DEPLOY_DIR = Path(__file__).parent.parent / "deploy"
 K8S_DIR = DEPLOY_DIR / "k8s"
 HELM_DIR = DEPLOY_DIR / "helm" / "agent-bom"
@@ -842,8 +844,9 @@ def test_production_values_enable_operator_defaults():
     }
     env = {entry["name"]: entry["value"] for entry in production["controlPlane"]["api"]["env"]}
     assert env["AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT"] == "1"
-    assert env["AGENT_BOM_POSTGRES_POOL_MIN_SIZE"] == "5"
-    assert env["AGENT_BOM_POSTGRES_POOL_MAX_SIZE"] == "20"
+    assert env["AGENT_BOM_TRUST_PROXY_AUTH"] == "1"
+    assert production["controlPlane"]["api"]["listenerAttestation"] == {"fromSecret": True}
+    assert production["controlPlane"]["postgres"]["pool"] == {"minSize": 2, "maxSize": 20}
     assert env["AGENT_BOM_POSTGRES_CONNECT_TIMEOUT_SECONDS"] == "5"
     assert env["AGENT_BOM_POSTGRES_STATEMENT_TIMEOUT_MS"] == "15000"
     assert production["controlPlane"]["podAntiAffinity"]["enabled"] is True
@@ -1061,6 +1064,8 @@ def test_helm_postgres_jobs_fail_render_without_distinct_credentials() -> None:
         "controlPlane.enabled=true",
         "--set",
         "controlPlane.api.envFrom[0].secretRef.name=runtime-db",
+        "--set",
+        "controlPlane.api.listenerAttestation.fromSecret=true",
     ]
 
     missing_admin = subprocess.run(common, capture_output=True, text=True, check=False)
@@ -1136,6 +1141,7 @@ def test_helm_postgres_jobs_fail_render_without_distinct_credentials() -> None:
         "controlPlane.postgresSecrets.maintenanceSecretRef.name=maintenance-db",
         "--set",
         "controlPlane.postgresSecrets.adminSecretRef.name=admin-db",
+        *ATTESTED_API_SET_ARGS,
     ]
     for values_path, variable, expected in (
         ("controlPlane.api.env", "AGENT_BOM_POSTGRES_URL", "controlPlane.api.env cannot override"),
@@ -1368,7 +1374,7 @@ def test_helm_connections_scheduler_env_gated_by_values():
         pytest.skip("helm not installed")
 
     def _render(*sets: str) -> str:
-        args = ["helm", "template", "abom", str(HELM_DIR), "--set", "controlPlane.enabled=true"]
+        args = ["helm", "template", "abom", str(HELM_DIR), "--set", "controlPlane.enabled=true", *ATTESTED_API_SET_ARGS]
         for item in sets:
             args += ["--set", item]
         proc = subprocess.run(args, capture_output=True, text=True, timeout=120, check=False)
@@ -1412,6 +1418,7 @@ def test_helm_auto_correlation_defaults_on_with_strict_freshness_and_can_be_disa
             "controlPlane.enabled=true",
             "--set",
             "controlPlane.migrations.enabled=false",
+            *ATTESTED_API_SET_ARGS,
         ]
         for item in sets:
             args += ["--set", item]
@@ -1439,6 +1446,7 @@ def test_helm_auto_correlation_defaults_on_with_strict_freshness_and_can_be_disa
             "controlPlane.enabled=true",
             "--set",
             "controlPlane.migrations.enabled=false",
+            *ATTESTED_API_SET_ARGS,
             "--set",
             "controlPlane.api.env[0].name=AGENT_BOM_GRAPH_AUTO_CORRELATE",
             "--set",
@@ -1462,6 +1470,7 @@ def test_helm_auto_correlation_defaults_on_with_strict_freshness_and_can_be_disa
             "controlPlane.enabled=true",
             "--set",
             "controlPlane.migrations.enabled=false",
+            *ATTESTED_API_SET_ARGS,
             "--set",
             "controlPlane.autoCorrelation.maxAgeHours=0",
         ],

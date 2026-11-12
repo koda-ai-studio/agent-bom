@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from fastapi.responses import JSONResponse
 
 from agent_bom import config
+from agent_bom.api.current_graph_prewarm import startup_prewarm_holding_readiness
 from agent_bom.api.durable_store import default_state_db_path, postgres_configured
 from agent_bom.api.storage.deployment import clustered_control_plane_required
 
@@ -63,6 +64,8 @@ def evaluate_control_plane_readiness() -> ReadinessStatus:
 
     if demo_estate_seeding():
         return ReadinessStatus(ready=False, reason="demo_estate_seeding")
+    if startup_prewarm_holding_readiness():
+        return ReadinessStatus(ready=False, reason="current_graph_prewarming")
     if clustered_control_plane_required() and not postgres_configured():
         return ReadinessStatus(
             ready=False,

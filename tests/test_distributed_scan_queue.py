@@ -396,7 +396,8 @@ def _submit_and_wait(job, on_complete, submit=None):
         done.set()
 
     (submit or pipeline_mod.submit_claimed_scan_job)(job, _finish)
-    assert done.wait(10)
+    signalled = done.wait(10)
+    assert signalled
 
 
 def test_crashed_claimed_run_keeps_the_dispatch_row_for_redelivery(monkeypatch):
@@ -457,3 +458,74 @@ def test_worker_tick_sweeps_unrecoverable_rows_before_requeueing(monkeypatch):
     monkeypatch.setattr(store, "requeue_expired_leases", requeue)
     DistributedScanWorker(store, worker_id="w", max_concurrent=1)._tick()
     assert calls == ["sweep", "requeue"]
+
+
+#: Documented in docs/RUNTIME_FAIL_MODES.md: a job claimed by a replica that dies is
+#: reclaimed by a live replica within the claim lease plus one poll.
+ORPHAN_RECOVERY_BOUND_SECONDS = 125
+
+
+def test_default_claim_lease_bounds_recovery_of_a_dead_replicas_job():
+    worker = DistributedScanWorker(_FakeDispatchStore([]))
+    assert worker._lease + worker._poll <= ORPHAN_RECOVERY_BOUND_SECONDS
+
+
+def test_claims_are_heartbeated_while_the_claim_loop_is_blocked():
+    """Lease liveness must not depend on the claim loop: a slow tick never lets a live claim lapse."""
+    import threading
+
+    renewed = threading.Event()
+    tick_blocked = threading.Event()
+    release_tick = threading.Event()
+
+    class _SlowStore(_FakeDispatchStore):
+        def claim_next(self, worker_id, lease_seconds):
+            tick_blocked.set()
+            release_tick.wait(30)
+            return None
+
+        def renew_leases(self, claims, lease_seconds):
+            super().renew_leases(claims, lease_seconds)
+            if tick_blocked.is_set():
+                renewed.set()
+
+    store = _SlowStore([])
+    worker = DistributedScanWorker(store, worker_id="w", lease_seconds=30, poll_seconds=1, max_concurrent=2)
+    worker._inflight[("acme", "j1")] = "w:owner"
+    tick = threading.Thread(target=worker._tick, daemon=True)
+    worker.start_heartbeat()
+    try:
+        tick.start()
+        signalled = tick_blocked.wait(10)
+        assert signalled
+        signalled = renewed.wait(10)
+        assert signalled, "no lease renewal while the claim loop was blocked"
+    finally:
+        release_tick.set()
+        worker.stop_heartbeat()
+        tick.join(10)
+    assert any(("acme", "j1") in batch for batch in store.renewed)
+    assert not worker.heartbeat_alive()
+
+
+def test_shutdown_keeps_renewing_leases_until_the_drain_ends():
+    import asyncio
+
+    worker = DistributedScanWorker(_FakeDispatchStore([]), worker_id="w", poll_seconds=1, max_concurrent=1)
+
+    async def _start_then_stop_claiming():
+        await worker.start()
+        await worker.stop(keep_leases=True)
+
+    asyncio.run(_start_then_stop_claiming())
+    assert worker.heartbeat_alive(), "draining work would be reclaimed by a peer"
+    worker.stop_heartbeat()
+    assert not worker.heartbeat_alive()
+
+    asyncio.run(_start_then_stop_claiming_fully(worker))
+    assert not worker.heartbeat_alive()
+
+
+async def _start_then_stop_claiming_fully(worker):
+    await worker.start()
+    await worker.stop()

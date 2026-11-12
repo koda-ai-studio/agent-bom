@@ -418,8 +418,10 @@ async def run_workflow(
             )
             guard.blocked.extend(child["blocked_connections"])
             guard.callers.extend(child["blocked_callers"])
-            scan_report = json.loads(report_path.read_text(encoding="utf-8"))
-            scanned = _finding_keys(scan_report.get("blast_radius") or [])
+            # The harness is the client in this process: keep only the rows it compares, not
+            # the whole parsed report (120 MiB at 200 agents), so RSS stays the API's.
+            scanned_rows = json.loads(report_path.read_text(encoding="utf-8")).get("blast_radius") or []
+            scanned = _finding_keys(scanned_rows)
             info.update(
                 exit_code=child["exit_code"],
                 report_bytes=report_path.stat().st_size,
@@ -457,7 +459,7 @@ async def run_workflow(
             equivalence: dict[str, Any] = {}
             view_ingest = await findings_view(http) if check_equivalence else {}
             if check_equivalence:
-                equivalence["ingest"] = ingest_equivalence(scan_report.get("blast_radius") or [], stored_ingest, view_ingest)
+                equivalence["ingest"] = ingest_equivalence(scanned_rows, stored_ingest, view_ingest)
 
             rebuilt: set[tuple[str, str, str]] | None = None
             storage_retained = storage_rebuilt = None

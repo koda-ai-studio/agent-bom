@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests._helm_render import ATTESTED_API
+
 ROOT = Path(__file__).resolve().parents[1]
 CHART = ROOT / "deploy/helm/agent-bom"
 SIZING_DOC = ROOT / "site-docs/deployment/performance-and-sizing.md"
@@ -31,6 +33,7 @@ def _rendered_api_container() -> dict:
                         "maintenanceSecretRef": {"name": "test-maintenance"},
                         "adminSecretRef": {"name": "test-admin"},
                     },
+                    "api": ATTESTED_API,
                 }
             }
         ),

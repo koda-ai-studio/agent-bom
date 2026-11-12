@@ -1,7 +1,12 @@
 {{- $np := .Values.controlPlane.networkPolicy | default dict }}
 {{- if and .Values.controlPlane.enabled (ne $np.enabled false) }}
 {{- range $component := list "api" "ui" }}
-{{- if (index $.Values.controlPlane $component).enabled }}
+{{- $workload := index $.Values.controlPlane $component }}
+{{- if $workload.enabled }}
+{{- $serviceType := ($workload.service | default dict).type | default "ClusterIP" }}
+{{- if and (has $serviceType (list "NodePort" "LoadBalancer")) (not $np.ingressCIDRs) (not $np.additionalIngress) }}
+{{- fail (printf "controlPlane.%s.service.type=%s receives traffic from outside the cluster, which the control-plane NetworkPolicy drops. Set controlPlane.networkPolicy.ingressCIDRs to the client, load balancer or node ranges (node CIDRs when externalTrafficPolicy is Cluster), add a rule to controlPlane.networkPolicy.additionalIngress, or set controlPlane.networkPolicy.enabled=false" $component $serviceType) }}
+{{- end }}
 ---
 # Ingress-only: the API and UI accept traffic from their own namespace and the
 # ingress controller, never from every namespace. Egress stays open so
@@ -29,6 +34,16 @@ spec:
             matchLabels:
               kubernetes.io/metadata.name: {{ . }}
         {{- end }}
+    {{- with $np.ingressCIDRs }}
+    - from:
+        {{- range . }}
+        - ipBlock:
+            cidr: {{ . | quote }}
+        {{- end }}
+      ports:
+        - port: {{ $workload.port }}
+          protocol: TCP
+    {{- end }}
     {{- with $np.additionalIngress }}
     {{- toYaml . | nindent 4 }}
     {{- end }}

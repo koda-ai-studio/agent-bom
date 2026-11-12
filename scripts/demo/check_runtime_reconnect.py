@@ -16,8 +16,56 @@ import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def helm_values(image: str, *, shared_delivery: bool) -> dict[str, Any]:
+    """Chart values for the runtime proof: two API replicas on BYO Postgres and the gateway."""
+    repository, tag = image.rsplit(":", 1)
+    return {
+        "image": {"repository": repository, "tag": tag, "pullPolicy": "IfNotPresent"},
+        "scanner": {"enabled": False},
+        "rbac": {"create": False},
+        "tests": {"enabled": False},
+        "teardownHooks": {"enabled": False},
+        "controlPlane": {
+            "enabled": True,
+            "observability": {"prometheusRule": {"enabled": False}},
+            "ui": {"enabled": False},
+            "postgres": {"pool": {"minSize": 1, "maxSize": 2}},
+            "postgresSecrets": {
+                "enabled": True,
+                "appSecretRef": {"name": "db-app"},
+                "maintenanceSecretRef": {"name": "db-maintenance"},
+                "adminSecretRef": {"name": "db-admin"},
+            },
+            "api": {
+                "replicas": 2,
+                "envFrom": [{"secretRef": {"name": "api-auth"}}],
+                "listenerAttestation": {"fromSecret": True},
+                "env": [
+                    {"name": "AGENT_BOM_STATE_DIR", "value": "/tmp/agent-bom"},
+                ],
+            },
+        },
+        "gateway": {
+            "enabled": True,
+            "image": {"repository": repository, "tag": tag},
+            "replicas": 2 if shared_delivery else 1,
+            "auditBackend": "postgres" if shared_delivery else "local",
+            "persistence": {"enabled": not shared_delivery, "existingClaim": "gateway-state"},
+            "profileEnforcement": "enforce",
+            "profileEnvironment": "prod",
+            "envFrom": [{"secretRef": {"name": "gateway-auth"}}],
+            "controlPlaneDiscovery": {"url": "http://agent-bom-api:8422"},
+            "upstreamsYaml": "upstreams:\n  - name: filesystem\n    url: http://upstream:8100\n",
+            "networkPolicy": {
+                "additionalEgress": [{"to": [{"podSelector": {}}], "ports": [{"port": 5432}, {"port": 8422}, {"port": 8100}]}]
+            },
+        },
+    }
 
 
 def main() -> None:
@@ -219,49 +267,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE O
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO agent_bom_app;
 """,
         )
-        repository, tag = args.image.rsplit(":", 1)
-        values = {
-            "image": {"repository": repository, "tag": tag, "pullPolicy": "IfNotPresent"},
-            "scanner": {"enabled": False},
-            "rbac": {"create": False},
-            "tests": {"enabled": False},
-            "teardownHooks": {"enabled": False},
-            "controlPlane": {
-                "enabled": True,
-                "observability": {"prometheusRule": {"enabled": False}},
-                "ui": {"enabled": False},
-                "postgresSecrets": {
-                    "enabled": True,
-                    "appSecretRef": {"name": "db-app"},
-                    "maintenanceSecretRef": {"name": "db-maintenance"},
-                    "adminSecretRef": {"name": "db-admin"},
-                },
-                "api": {
-                    "replicas": 2,
-                    "envFrom": [{"secretRef": {"name": "api-auth"}}],
-                    "env": [
-                        {"name": "AGENT_BOM_STATE_DIR", "value": "/tmp/agent-bom"},
-                        {"name": "AGENT_BOM_POSTGRES_POOL_MIN_SIZE", "value": "1"},
-                        {"name": "AGENT_BOM_POSTGRES_POOL_MAX_SIZE", "value": "2"},
-                    ],
-                },
-            },
-            "gateway": {
-                "enabled": True,
-                "image": {"repository": repository, "tag": tag},
-                "replicas": 2 if args.shared_delivery else 1,
-                "auditBackend": "postgres" if args.shared_delivery else "local",
-                "persistence": {"enabled": not args.shared_delivery, "existingClaim": "gateway-state"},
-                "profileEnforcement": "enforce",
-                "profileEnvironment": "prod",
-                "envFrom": [{"secretRef": {"name": "gateway-auth"}}],
-                "controlPlaneDiscovery": {"url": "http://agent-bom-api:8422"},
-                "upstreamsYaml": "upstreams:\n  - name: filesystem\n    url: http://upstream:8100\n",
-                "networkPolicy": {
-                    "additionalEgress": [{"to": [{"podSelector": {}}], "ports": [{"port": 5432}, {"port": 8422}, {"port": 8100}]}]
-                },
-            },
-        }
+        values = helm_values(args.image, shared_delivery=args.shared_delivery)
         with tempfile.TemporaryDirectory(prefix="runtime-helm-") as tmp:
             path = Path(tmp) / "values.json"
             path.write_text(json.dumps(values))

@@ -37,6 +37,10 @@ controlPlane:
     name: agent-bom-control-plane
 
   api:
+    # The auth Secret in envFrom supplies request attestation
+    # (AGENT_BOM_TRUST_PROXY_AUTH*, see control-plane-auth-secret.example.yaml).
+    listenerAttestation:
+      fromSecret: true
     replicas: 2
     env:
       # Backend selection — Snowflake stores scan jobs, fleet, policies, audit

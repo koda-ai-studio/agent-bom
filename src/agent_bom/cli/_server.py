@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import click
 
@@ -32,6 +32,7 @@ from agent_bom.cli._server_posture import _saml_enabled as _saml_enabled
 from agent_bom.cli._server_posture import _scim_bearer_enabled as _scim_bearer_enabled
 from agent_bom.cli._server_posture import _should_auto_generate_dev_key as _should_auto_generate_dev_key
 from agent_bom.cli._server_posture import _uvicorn_tls_kwargs as _uvicorn_tls_kwargs
+from agent_bom.cli._uvicorn_config import uvicorn_server_kwargs
 from agent_bom.core.settings import env_list, env_raw, env_str
 from agent_bom.logging_config import json_logging_active
 from agent_bom.storage import state_home
@@ -238,11 +239,6 @@ def _analytics_summary_rows(
         ),
         ("Analytics URL", resolved_url or "(unset)"),
     ]
-
-
-# "auto" lifespan logs a failed startup as "unsupported" and serves 500s; "on"
-# exits. Idle keep-alive and an in-flight cap bound a slow-connection flood.
-_UVICORN_SERVER_KWARGS: dict[str, Any] = {"lifespan": "on", "timeout_keep_alive": 5, "limit_concurrency": 500, "proxy_headers": False}
 
 
 @click.command("serve")
@@ -506,7 +502,7 @@ def serve_cmd(
         host=host,
         port=port,
         reload=reload,
-        **_UVICORN_SERVER_KWARGS,
+        **uvicorn_server_kwargs(),
         **tls_kwargs,
     )
 
@@ -777,7 +773,7 @@ def api_cmd(
         reload=reload,
         workers=1 if reload else workers,
         log_level=log_level.lower(),
-        **_UVICORN_SERVER_KWARGS,
+        **uvicorn_server_kwargs(),
         **tls_kwargs,
     )
 

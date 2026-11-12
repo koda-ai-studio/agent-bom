@@ -70,10 +70,15 @@ spec:
             - deploy/supabase/postgres/compose_migrate.py
             - --config
             - {{ $migrations.alembicConfig | quote }}
+          {{- $connectionLimits := include "agent-bom.postgresConnectionLimits" . | fromJson }}
           env:
             {{- with $migrations.env }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+            - name: AGENT_BOM_POSTGRES_APP_CONNECTION_LIMIT
+              value: {{ int $connectionLimits.app | quote }}
+            - name: AGENT_BOM_POSTGRES_MAINTENANCE_CONNECTION_LIMIT
+              value: {{ int $connectionLimits.maintenance | quote }}
             {{- if $postgresSecrets.enabled }}
             - name: ALEMBIC_DATABASE_URL
               valueFrom:
