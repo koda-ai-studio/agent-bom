@@ -4,21 +4,21 @@ import type { FixFirstGraphViewResponse } from "@/lib/api-contracts/graph-views"
 
 /** Server-ranked coverage of recorded guidance, never a simulated or verified fix. */
 export function GraphRemediationPriorities({ view, scanId }: { view: FixFirstGraphViewResponse | null; scanId: string }) {
-  const priorities = view?.scan_id === scanId ? view.remediation_priorities : undefined;
+  const priorities = scanId && view?.scan_id === scanId ? view.remediation_priorities : undefined;
+  // No recorded priorities for this snapshot: show nothing rather than a dead bar.
+  if (!priorities) return null;
   return <details className="group rounded-xl border border-outline bg-surface">
     <summary className="flex min-h-11 cursor-pointer flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
       <span className="font-semibold text-foreground">Prioritize fixes</span>
-      <span className="text-xs text-ink-secondary">{priorities
-        ? `${priorities.candidate_count} candidate${priorities.candidate_count === 1 ? "" : "s"} · ${priorities.assessed_paths} paths assessed`
-        : scanId ? "Priorities unavailable for this snapshot" : "Select a snapshot to review priorities"}</span>
+      <span className="text-xs text-ink-secondary">{`${priorities.candidate_count} candidate${priorities.candidate_count === 1 ? "" : "s"} · ${priorities.assessed_paths} paths assessed`}</span>
     </summary>
-    <div className="border-t border-outline p-4"><PriorityDetails view={view} scanId={scanId} /></div>
+    <div className="border-t border-outline p-4"><PriorityDetails priorities={priorities} scanId={scanId} /></div>
   </details>;
 }
 
-function PriorityDetails({ view, scanId }: { view: FixFirstGraphViewResponse | null; scanId: string }) {
-  const priorities = view?.scan_id === scanId ? view.remediation_priorities : undefined;
-  if (!priorities) return <p className="text-sm text-ink-secondary">{scanId ? "Remediation priorities are unavailable for this snapshot." : "Select a snapshot to review remediation priorities."}</p>;
+type Priorities = NonNullable<FixFirstGraphViewResponse["remediation_priorities"]>;
+
+function PriorityDetails({ priorities, scanId }: { priorities: Priorities; scanId: string }) {
   return (
     <section aria-label="Shared remediation priorities" className="space-y-4">
       <div>

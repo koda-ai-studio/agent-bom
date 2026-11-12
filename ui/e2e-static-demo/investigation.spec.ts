@@ -42,6 +42,9 @@ test("a plain wheel over the path canvas scrolls the page; Ctrl + wheel zooms th
   expect(await viewportTransform(page)).toBe(before);
   await expect(page.getByTestId("wheel-zoom-hint")).toContainText("scroll to zoom");
 
+  // The page scrolled under the pointer; aim at the canvas again.
+  const scrolled = (await canvas.boundingBox())!;
+  await page.mouse.move(scrolled.x + scrolled.width / 2, scrolled.y + scrolled.height / 2);
   await page.keyboard.down("Control");
   await page.mouse.wheel(0, -240);
   await page.keyboard.up("Control");
@@ -49,25 +52,14 @@ test("a plain wheel over the path canvas scrolls the page; Ctrl + wheel zooms th
   expect(await viewportTransform(page)).not.toBe(before);
 });
 
-test("the selected path fits the canvas even when a stale viewport was saved for it", async ({ page }) => {
+test("the selected path and its branches fit the canvas, refitted on resize", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openInvestigation(page);
   expect(await nodesOutsideCanvas(page)).toEqual([]);
-  const rewritten = await page.evaluate(() => {
-    let count = 0;
-    for (const key of Object.keys(localStorage)) {
-      if (!key.startsWith("agent-bom:graph-presentation:v1:") || key.includes(":owner:")) continue;
-      const saved = JSON.parse(localStorage.getItem(key) ?? "{}");
-      if (!saved.viewport) continue;
-      saved.viewport = { x: 40, y: 620, zoom: 0.7 };
-      localStorage.setItem(key, JSON.stringify(saved));
-      count += 1;
-    }
-    return count;
-  });
-  expect(rewritten).toBeGreaterThan(0);
-  await page.reload({ waitUntil: "networkidle" });
-  await expect(page.locator(".react-flow__node").first()).toBeVisible();
+  // The finding is a badge on the package, not the last hop.
+  await expect(page.locator('.react-flow__node[data-id="cve:next"]')).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^1 finding on next@15\.2\.2, worst critical/ })).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.waitForTimeout(800);
   expect(await nodesOutsideCanvas(page)).toEqual([]);
 });
@@ -127,17 +119,24 @@ test("unrecorded severity and scan filters resolve from the bundled findings", a
   await expect(page.getByRole("tab", { name: /^Cloud config/ })).toContainText("0");
 });
 
-test("relationship labels can be hidden without losing the path", async ({ page }) => {
+test("relationship names appear on hover, never as pills on the lines", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await openInvestigation(page);
-  const labels = page.getByRole("combobox", { name: "Relationship labels" });
-  await expect(labels).toBeVisible();
-  const edges = await page.locator(".react-flow__edge").count();
-  await labels.selectOption("show");
-  await expect(page.locator(".graph-relationship-label").first()).toBeVisible();
-  await labels.selectOption("hide");
+  const canvas = page.getByTestId("attack-path-graph-canvas");
+  await expect(canvas.getByRole("tooltip")).toHaveCount(0);
   await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
-  await expect(page.locator(".react-flow__edge")).toHaveCount(edges);
+  const edges = await canvas.locator(".react-flow__edge").count();
+  const line = canvas.locator('.react-flow__edge[data-id="user:contractor->sa:jit-review:acted_as"] .react-flow__edge-path');
+  const point = await line.evaluate((path: SVGPathElement) => {
+    const at = path.getPointAtLength(path.getTotalLength() / 2);
+    const screen = new DOMPoint(at.x, at.y).matrixTransform(path.getScreenCTM()!);
+    return { x: screen.x, y: screen.y };
+  });
+  await page.mouse.move(point.x, point.y);
+  await expect(canvas.getByRole("tooltip")).toHaveText(/Acted As/);
+  await page.mouse.move(0, 0);
+  await expect(canvas.getByRole("tooltip")).toHaveCount(0);
+  await expect(canvas.locator(".react-flow__edge")).toHaveCount(edges);
 });
 
 for (const theme of ["dark", "light"]) {

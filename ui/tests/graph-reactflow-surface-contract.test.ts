@@ -8,6 +8,7 @@ describe("interactive React Flow surface contract", () => {
   it.each([
     "components/graph-flow-canvas.tsx",
     "components/security-graph-investigation.tsx",
+    "components/attack-path-graph.tsx",
   ])("keeps evidence topology immutable in %s", (path) => {
     expect(source(path)).toContain("deleteKeyCode={null}");
   });
