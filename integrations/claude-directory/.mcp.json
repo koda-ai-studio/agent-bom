@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "agent-bom": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp_launcher.py"
+      ],
+      "env": {
+        "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0",
+        "GITHUB_TOKEN": "",
+        "GH_TOKEN": "",
+        "NVD_API_KEY": ""
+      }
+    },
+    "agent-bom-audit": {
+      "command": "python3",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp_launcher.py",
+        "--profile",
+        "audit"
+      ],
+      "env": {
+        "AGENT_BOM_MCP_LIVE_INTROSPECTION": "0",
+        "GITHUB_TOKEN": "",
+        "GH_TOKEN": "",
+        "NVD_API_KEY": ""
+      }
+    }
+  }
+}
