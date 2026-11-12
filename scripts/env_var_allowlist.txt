@@ -653,6 +653,7 @@ AGENT_BOM_ROUTE_WARMUP  # Opt out of compiling the API route table on a boot thr
 AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS  # How long a current-estate read waits for an in-flight rebuild before serving the previous generation; read per request
 AGENT_BOM_CURRENT_GRAPH_PREWARM  # Opt out of preparing recent tenants' current graphs on a start-up thread; read once at startup
 AGENT_BOM_CURRENT_GRAPH_PREWARM_TENANT_SECONDS  # How long the start-up warm-up waits on one tenant's build before moving on; read once at startup
+AGENT_BOM_CURRENT_GRAPH_PREWARM_READY_SECONDS  # How long /readyz waits on the start-up warm-up before reporting ready anyway; read per probe
 # click envvars for the injection-protection mode flags (alert|enforce) on proxy and gateway serve.
 AGENT_BOM_GATEWAY_INJECTION_MODE
 AGENT_BOM_PROXY_INJECTION_MODE

@@ -119,15 +119,31 @@ async def _first_graph_read(http: _Http, deadline_seconds: float = 300.0) -> dic
     }
 
 
+async def _await_ready(http: _Http, deadline_seconds: float = 300.0, period_seconds: float = 0.5) -> dict[str, Any]:
+    """Poll ``/readyz`` as the chart's readiness probe does; a Service routes no read before it answers 200."""
+    began = time.perf_counter()
+    reasons: list[str] = []
+    while True:
+        response, _ = await http.call("GET", "/readyz")
+        if response.status_code == 200 or time.perf_counter() - began > deadline_seconds:
+            break
+        reason = str(response.json().get("reason") or response.json().get("status") or "")
+        if reason and reason not in reasons:
+            reasons.append(reason)
+        await asyncio.sleep(period_seconds)
+    return {"ready_status": response.status_code, "ready_seconds": round(time.perf_counter() - began, 2), "not_ready_reasons": reasons}
+
+
 async def _restart(profile: WorkflowProfile, workdir: Path) -> dict[str, Any]:
     from agent_bom.api.server import app
 
     began = time.perf_counter()
-    # A restarted deployment runs the lifespan (and its start-up graph prewarm)
-    # before traffic; the first read is sent as soon as start-up returns.
+    # A restarted deployment runs the lifespan (and its start-up graph prewarm);
+    # the first read is routed once readiness answers 200.
     async with app.router.lifespan_context(app), _client() as client:
         http = _Http(client)
-        first = await _first_graph_read(http)
+        ready = await _await_ready(http)
+        first = {**ready, **await _first_graph_read(http)}
         state = await _latest_findings(http)
         reads = await _graph_reads(http, profile.query_repeats)
     warm = json.loads((workdir / "warm.json").read_text(encoding="utf-8"))

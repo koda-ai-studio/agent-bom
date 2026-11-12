@@ -11,11 +11,13 @@ from __future__ import annotations
 import asyncio
 from typing import Any, cast
 
+import pydantic_core
 from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
 from starlette.responses import JSONResponse
 
+from agent_bom.api.middleware_body import BODY_OWNER_SCOPE_KEY
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob
 from agent_bom.api.observability_push_receipts import _pushed_job_has_persisted_graph, _pushed_job_receipt
 from agent_bom.api.push_ingest import (
@@ -46,12 +48,42 @@ PUSH_ACCEPTED_RESPONSES: dict[int | str, dict[str, Any]] = {
 _ACTIVE_STATUSES = {JobStatus.PENDING.value, JobStatus.RUNNING.value}
 
 
+def _validate_push_body(raw: bytes) -> PushPayload:
+    """Parse once with the validator's own JSON parser, then validate the parsed report.
+
+    A model validated from parsed Python data shares its strings and nested
+    containers, so a 200-agent report costs one parsed copy (78 MiB) instead of
+    a JSON-validated model (203 MiB) plus the admission dump (153 MiB). The
+    parser is the one ``model_validate_json`` uses: the same NaN, duplicate-key
+    and surrogate handling. Rejected input is validated again as JSON so a 422
+    keeps the JSON validator's wording ("valid array", "an object").
+    """
+    try:
+        parsed = pydantic_core.from_json(raw)
+        body = PushPayload.model_validate(parsed)
+    except ValueError:  # ValidationError included
+        return PushPayload.model_validate_json(raw)
+    if isinstance(parsed, dict):
+        body._parsed_body = parsed
+    return body
+
+
+def _release_buffered_body(request: Request) -> None:
+    """Drop every cached copy of a body the route has consumed; both live until the response otherwise."""
+    request.__dict__.pop("_body", None)
+    owner_ref = request.scope.get(BODY_OWNER_SCOPE_KEY)
+    owner = owner_ref() if callable(owner_ref) else None
+    if owner is not None:
+        owner.__dict__.pop("_body", None)
+
+
 async def parse_push_payload(request: Request) -> PushPayload:
     """Validate the buffered body in a worker thread; 422s keep FastAPI's error shape."""
 
     raw = await request.body()
+    _release_buffered_body(request)
     try:
-        return await asyncio.to_thread(PushPayload.model_validate_json, raw or b"{}")
+        return await asyncio.to_thread(_validate_push_body, raw or b"{}")
     except ValidationError as exc:
         errors = [{**error, "loc": ("body", *error.get("loc", ()))} for error in exc.errors(include_url=False)]
         raise RequestValidationError(errors) from None

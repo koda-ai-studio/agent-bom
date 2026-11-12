@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import threading
+import time
+
 import pytest
 from starlette.exceptions import HTTPException
 
@@ -118,3 +121,88 @@ def test_api_lifespan_starts_the_prewarm(monkeypatch):
     with TestClient(server.app):
         pass
     assert started == [True]
+
+
+@pytest.fixture
+def gated_prewarm(monkeypatch, tmp_path):
+    """A running API whose start-up prewarm blocks until the test releases it."""
+    from agent_bom.api import server
+    from agent_bom.api import stores as api_stores
+
+    monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "control-plane.db"))
+    monkeypatch.setenv("AGENT_BOM_GRAPH_DB", str(tmp_path / "graph.db"))
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_PREWARM", "1")
+    monkeypatch.delenv("AGENT_BOM_DEMO_ESTATE", raising=False)
+    started, release = threading.Event(), threading.Event()
+
+    def blocking_prewarm(*_args, **_kwargs):
+        started.set()
+        release.wait(30)
+        return {"status": "complete", "tenants_prepared": 1, "tenants_skipped": 0, "tenants_failed": 0}
+
+    monkeypatch.setattr(current_graph_prewarm, "prewarm_current_graphs", blocking_prewarm)
+    server._shutting_down = False
+    original = (api_stores._store, api_stores._graph_store, api_stores._trend_store)
+    api_stores._store = api_stores._graph_store = api_stores._trend_store = None
+    try:
+        yield server, started, release
+    finally:
+        release.set()
+        api_stores._store, api_stores._graph_store, api_stores._trend_store = original
+
+
+def _wait_for_prewarm_end(seconds: float = 10) -> None:
+    deadline = time.monotonic() + seconds
+    while current_graph_prewarm.last_run()["status"] == "running" and time.monotonic() < deadline:
+        time.sleep(0.02)
+
+
+def test_readiness_waits_for_the_startup_prewarm_while_liveness_answers(gated_prewarm):
+    from fastapi.testclient import TestClient
+
+    server, started, release = gated_prewarm
+    with TestClient(server.app) as client:
+        assert started.wait(10)
+        warming = client.get("/readyz")
+        assert warming.status_code == 503
+        assert warming.json() == {"status": "not_ready", "reason": "current_graph_prewarming"}
+        for path in ("/health", "/healthz", "/livez"):
+            assert client.get(path).status_code == 200, path
+
+        release.set()
+        _wait_for_prewarm_end()
+        ready = client.get("/readyz")
+        assert ready.status_code == 200, ready.json()
+        assert ready.json() == {"status": "ready"}
+
+
+def test_readiness_stops_waiting_for_a_prewarm_past_its_bound(gated_prewarm, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    server, started, _release = gated_prewarm
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_PREWARM_READY_SECONDS", "0")
+    with TestClient(server.app) as client:
+        assert started.wait(10)
+        assert current_graph_prewarm.last_run()["status"] == "running"
+        # Past the bound the replica takes traffic; reads build on demand with Retry-After.
+        assert client.get("/readyz").status_code == 200
+
+
+def test_readiness_is_not_held_when_the_prewarm_is_disabled(monkeypatch):
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_PREWARM", "0")
+    assert current_graph_prewarm.start_current_graph_prewarm() is None
+    assert current_graph_prewarm.startup_prewarm_holding_readiness() is False
+
+
+def test_readiness_is_held_from_the_moment_the_prewarm_is_started(monkeypatch):
+    """No window between lifespan start-up and the thread's first line reports ready."""
+    gate = threading.Event()
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_PREWARM", "1")
+    monkeypatch.setattr(current_graph_prewarm, "_run", lambda: gate.wait(10))
+    thread = current_graph_prewarm.start_current_graph_prewarm()
+    try:
+        assert current_graph_prewarm.startup_prewarm_holding_readiness() is True
+    finally:
+        gate.set()
+        assert thread is not None
+        thread.join(10)
