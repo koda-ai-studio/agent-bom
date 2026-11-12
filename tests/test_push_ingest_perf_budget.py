@@ -63,7 +63,7 @@ def sqlite_control_plane(tmp_path, monkeypatch: pytest.MonkeyPatch):
     reset_local_dispatches_for_tests()
     monkeypatch.delenv("AGENT_BOM_PUSH_INGEST_MODE", raising=False)
     # Measure the heap API start-up leaves: start-up objects frozen out of full collections.
-    monkeypatch.setattr(server_storage, "_startup_heap_frozen", False)
+    server_storage._freeze_startup_heap.cache_clear()
     server_storage._freeze_startup_heap()
     yield stores
     gc.unfreeze()

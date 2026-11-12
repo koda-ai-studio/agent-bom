@@ -20,7 +20,7 @@ from agent_bom.api import server_storage
 @pytest.fixture
 def unfrozen_heap(monkeypatch):
     gc.unfreeze()
-    monkeypatch.setattr(server_storage, "_startup_heap_frozen", False)
+    server_storage._freeze_startup_heap.cache_clear()
     yield
     gc.unfreeze()
 

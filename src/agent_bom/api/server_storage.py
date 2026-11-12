@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 
 from agent_bom import config as _config
@@ -189,9 +190,7 @@ def _apply_worker_thread_limit() -> None:
     anyio.to_thread.current_default_thread_limiter().total_tokens = _config.WORKER_THREAD_LIMIT
 
 
-_startup_heap_frozen = False
-
-
+@functools.cache
 def _freeze_startup_heap() -> None:
     """Keep start-up objects out of every later full garbage collection, once per process.
 
@@ -199,14 +198,10 @@ def _freeze_startup_heap() -> None:
     loop included, waits. Imports, routes and schemas live for the whole
     process, so walking them again on each collection only lengthens the stall.
     """
-    global _startup_heap_frozen
-    if _startup_heap_frozen:
-        return
     import gc
 
     gc.collect()
     gc.freeze()
-    _startup_heap_frozen = True
 
 
 def _validate_configured_registries() -> None:
