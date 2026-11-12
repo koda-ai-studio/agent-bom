@@ -17,10 +17,15 @@ vi.mock("@/lib/unified-graph-flow", () => ({ buildUnifiedFlowGraph: () => ({ nod
 vi.mock("@/lib/use-graph-layout", () => ({ useGraphLayout: () => ({ nodes: mocks.nodes, edges: [], pending: false }) }));
 vi.mock("@/components/sigma-graph-overview", () => ({ SigmaGraphOverview: () => <div>canvas</div> }));
 
+import { edge, node } from "./fixtures/attack-path-graph-fixture";
 import { ExposurePathCommandCenter } from "@/components/exposure-path-command-center";
 import { SecurityGraphInvestigation } from "@/components/security-graph-investigation";
 
-beforeEach(() => { HTMLElement.prototype.scrollIntoView = vi.fn(); });
+beforeEach(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+  vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
+  vi.stubGlobal("DOMMatrixReadOnly", class { m22 = 1; constructor() {} });
+});
 
 const path: ExposurePath = {
   id: "path-1",
@@ -43,11 +48,16 @@ const path: ExposurePath = {
   reachableTools: [],
   exposedCredentials: [],
 };
-const graph = { scan_id: "scan-1", nodes: [], edges: [], attack_paths: [] } as unknown as UnifiedGraphData;
-const attackPath = { source: "agent:a", target: "pkg:p", hops: ["agent:a", "pkg:p"], edges: ["uses"] } as unknown as AttackPath;
+const attackPath = { source: "agent:a", target: "pkg:p", hops: ["agent:a", "pkg:p"], edges: ["depends_on"] } as unknown as AttackPath;
+const graph = {
+  scan_id: "scan-1", tenant_id: "t", created_at: "", interaction_risks: [], stats: {},
+  nodes: [node("agent:a", "agent", "agent"), node("pkg:p", "package", "form-data@4.0.0")],
+  edges: [edge("agent:a", "pkg:p", "depends_on")],
+  attack_paths: [attackPath],
+} as unknown as UnifiedGraphData;
 
-function investigation() {
-  return <SecurityGraphInvestigation embedded graph={graph} attackPath={attackPath} focusMode
+function investigation(data: UnifiedGraphData = graph) {
+  return <SecurityGraphInvestigation embedded graph={data} attackPath={attackPath} focusMode
     onFocusModeChange={vi.fn()} fullGraphHref="/graph" scanId="scan-1" />;
 }
 
@@ -59,8 +69,8 @@ describe("path card toolbar", () => {
     const toolbar = screen.getByRole("toolbar", { name: "Graph controls" });
     expect(toolbar).toContainElement(toggles[0]!);
     expect(within(toolbar).getByText("Open lineage")).toBeInTheDocument();
-    expect(within(toolbar).getByLabelText("Visible relationship evidence")).toBeInTheDocument();
-    expect(screen.getAllByLabelText("Visible relationship evidence")).toHaveLength(1);
+    // Line styles are explained once, in the legend under the canvas.
+    expect(screen.getAllByRole("list", { name: "Graph legend" })).toHaveLength(1);
     expect(screen.queryByText("Interactive graph")).not.toBeInTheDocument();
   });
 
@@ -72,7 +82,13 @@ describe("path card toolbar", () => {
 
   it("gives a short path a content-sized canvas", () => {
     render(<ExposurePathCommandCenter path={path} graphSlot={investigation()} />);
-    const canvas = screen.getByTestId("security-graph-investigation");
+    const canvas = screen.getByTestId("attack-path-graph-canvas");
     expect(Number.parseInt(canvas.style.height, 10)).toBeLessThan(340);
+  });
+
+  it("says so when the path's nodes are not in the loaded graph", () => {
+    render(<ExposurePathCommandCenter path={path} graphSlot={investigation({ ...graph, nodes: [], edges: [] })} />);
+    expect(screen.getByText(/Selected path nodes are not available in this graph page/)).toBeInTheDocument();
+    expect(screen.queryByTestId("attack-path-graph-canvas")).toBeNull();
   });
 });

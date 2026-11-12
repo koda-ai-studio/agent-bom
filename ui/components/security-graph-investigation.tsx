@@ -65,6 +65,9 @@ import { PATH_CARD_CANVAS_CLASS, pathCardCanvasHeight, pathCardEdges, pathCardNo
 import { LINEAR_PATH_MIN_ZOOM, linearPathLayout } from "@/lib/path-linear-layout";
 import { mergeGraphNeighborExpansions, boundedInvestigationGraph } from "@/lib/graph-neighbor-expansion";
 import { withRiskContext } from "@/lib/exploit-story-canvas";
+import { AttackPathGraph } from "@/components/attack-path-graph";
+import { AttackPathFindingsList } from "@/components/attack-path-findings-list";
+import { attackPathEvidenceGraph } from "@/lib/attack-path-graph-model";
 
 const INVESTIGATION_LAYERS = {
   provider: false,
@@ -110,6 +113,7 @@ const INVESTIGATION_LAYERS = {
   apiGateway: true,
   toolCall: true,
 } as const;
+const ALL_LAYERS = Object.fromEntries(Object.keys(INVESTIGATION_LAYERS).map(layer => [layer, true])) as Record<keyof typeof INVESTIGATION_LAYERS, boolean>;
 
 /**
  * ReactFlow subtree with an imperative re-fit. ReactFlow's `fitView` prop only
@@ -406,6 +410,9 @@ export function SecurityGraphInvestigation({
     Record<string, GraphNodeNeighborsResponse>
   >({});
   const [contextPage, setContextPage] = useState(0);
+  const [findingsList, setFindingsList] = useState<{ nodeId: string; ids: string[] } | null>(null);
+  // The embedded, focused path reads as a layered graph with findings on their assets.
+  const layered = embedded && focusMode && Boolean(attackPath);
   const lastPinnedRef = useRef<string | null>(null);
   const investigationRequest = useRef(0);
   useEffect(() => {
@@ -419,16 +426,18 @@ export function SecurityGraphInvestigation({
 
   const activeGraph = useMemo(() => {
     if (!graph) return null;
+    if (layered && attackPath) return mergeGraphNeighborExpansions(attackPathEvidenceGraph(graph, attackPath), Object.values(neighborExpansions));
     const base = focusMode && attackPath
       ? buildFocusedGraphData(graph, attackPath)
       : graph;
     if (!base) return null;
     return mergeGraphNeighborExpansions(withRiskContext(base, riskContext), Object.values(neighborExpansions));
-  }, [attackPath, focusMode, graph, neighborExpansions, riskContext]);
+  }, [attackPath, focusMode, graph, layered, neighborExpansions, riskContext]);
 
   useEffect(() => {
     setNeighborExpansions({});
     setContextPage(0);
+    setFindingsList(null);
   }, [attackPath, focusMode, graph?.scan_id, graph?.snapshot_generation, scanId, session?.tenant_id]);
 
   const bounded = useMemo(() => activeGraph ? boundedInvestigationGraph(
@@ -440,13 +449,13 @@ export function SecurityGraphInvestigation({
       return { nodes: [] as Node<LineageNodeData>[], edges: [] as Edge[], legend: [] };
     }
     return buildUnifiedFlowGraph(bounded!.graph, {
-      layers: layersForFocusedPath(activeGraph, focusMode ? attackPath : null, INVESTIGATION_LAYERS),
+      layers: layered ? ALL_LAYERS : layersForFocusedPath(activeGraph, focusMode ? attackPath : null, INVESTIGATION_LAYERS),
       severity: null,
       agentName: null,
       vulnOnly: false,
       maxDepth: 12,
     });
-  }, [activeGraph, attackPath, bounded, focusMode]);
+  }, [activeGraph, attackPath, bounded, focusMode, layered]);
 
   const layout = useGraphLayout(focusMode ? "dagre-lr" : "asset-hierarchy", flow.nodes, flow.edges, {
     dagreLr: readableLineageDagreLr({ rankSep: 96, nodeSep: 40 }),
@@ -541,13 +550,14 @@ export function SecurityGraphInvestigation({
   );
 
   const selectedRelationship = useMemo(() => {
-    if (!selectedEdge || !displayEdges.some(edge => edge.id === selectedEdge.id)) return null;
+    // The layered path graph draws its own recorded edges; the bounded flow is not its source.
+    if (!selectedEdge || (!layered && !displayEdges.some(edge => edge.id === selectedEdge.id))) return null;
     // Bind to the exact displayed edge, including endpoints. A parallel edge
     // between the same nodes must never donate a different relationship receipt.
     return activeGraph?.edges.find(edge => edge.id === selectedEdge.id
       && edge.source === selectedEdge.source && edge.target === selectedEdge.target
       && edge.relationship === selectedEdge.data?.relationship) ?? null;
-  }, [activeGraph, displayEdges, selectedEdge]);
+  }, [activeGraph, displayEdges, layered, selectedEdge]);
 
   const canvasLast = !selectedRelationship && !drawerData;
 
@@ -656,9 +666,7 @@ export function SecurityGraphInvestigation({
     }
   }
 
-  const graphControls = <>
-          {rendererDecision.kind === "react-flow" && relationshipLabels.control}
-
+  const pathControls = <>
           <button
             type="button"
             onClick={() => onFocusModeChange(!focusMode)}
@@ -679,7 +687,10 @@ export function SecurityGraphInvestigation({
             <GitBranch className="h-3.5 w-3.5" />
           </Link>
           <FullscreenButton />
-
+  </>;
+  const graphControls = <>
+    {rendererDecision.kind === "react-flow" && relationshipLabels.control}
+    {pathControls}
     {embedded && rendererDecision.kind === "react-flow" && layout.nodes.length > 0 ? (
       <div data-testid="security-graph-legend-band"><GraphLegend items={legendItems} footer={<GraphScopeEvidence edges={relationshipLabels.edges} inline />} /></div>
     ) : null}
@@ -726,6 +737,39 @@ export function SecurityGraphInvestigation({
         </div>
       ) : null}
 
+      {layered && attackPath && graph ? (
+        <div id="security-graph-investigation-canvas" data-testid="security-graph-investigation" data-path-layout="layered">
+          {loading ? (
+            <div className="flex h-60 items-center justify-center gap-2 text-sm text-ink-secondary">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading graph evidence…
+            </div>
+          ) : !graph.nodes.some(node => attackPath.hops.includes(node.id)) ? (
+            <div className="flex h-60 items-center justify-center px-6 text-center text-sm text-ink-secondary">
+              Selected path nodes are not available in this graph page. Use Path or List to inspect the supplied path evidence, or open lineage for broader context.
+            </div>
+          ) : (
+            <AttackPathGraph
+              graph={graph}
+              attackPath={attackPath}
+              narrow={narrow}
+              toolbar={<InvestigationToolbar embedded compact={narrow} stepper={null} controls={pathControls} layoutControls={null} />}
+              onNodeSelect={id => { setSelectedEdge(null); setFindingsList(null); setSelectedNodeId(id); }}
+              onEdgeSelect={edge => { setSelectedNodeId(null); setSelectedEdge({ id: edge.id, source: edge.source, target: edge.target, data: { relationship: edge.relationship } }); }}
+              onOpenFindings={(nodeId, ids) => {
+                setSelectedEdge(null);
+                if (ids.length === 1) { setFindingsList(null); setSelectedNodeId(ids[0]!); }
+                else { setSelectedNodeId(null); setFindingsList({ nodeId, ids }); }
+              }}
+            />
+          )}
+          {findingsList && <AttackPathFindingsList
+            asset={graph.nodes.find(node => node.id === findingsList.nodeId)?.label ?? findingsList.nodeId}
+            findings={findingsList.ids.flatMap(id => graph.nodes.filter(node => node.id === id))}
+            onSelect={id => { setFindingsList(null); setSelectedNodeId(id); }}
+            onClose={() => setFindingsList(null)} />}
+        </div>
+      ) : <>
       {embedded && rendererDecision.kind === "webgl" && <div role="toolbar" aria-label="Graph controls" className="flex flex-wrap items-center justify-end gap-2 border-b border-outline px-3 py-2">
         <PathToolbarLead />
         <GraphScopeEvidence edges={relationshipLabels.edges} inline />
@@ -789,6 +833,7 @@ export function SecurityGraphInvestigation({
           </ReactFlowProvider>
         )}
       </div>
+      </>}
 
       {selectedRelationship && <GraphRelationshipDetail edge={selectedRelationship} scanId={scanId ?? ""}
         sourceType={activeGraph?.nodes.find(node => node.id === selectedRelationship.source)?.entity_type}
