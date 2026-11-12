@@ -11,7 +11,7 @@ import { GLYPH_CENTER_Y, GLYPH_INSET_X, attackPathNodeTypes, type AttackPathFlow
 import { useElementWidth } from "@/hooks/use-element-width";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
-import { DESKTOP_FIT_PADDING, DESKTOP_MIN_ZOOM, attackPathCanvasHeight, layoutAttackPathGraph, narrowFitZoom } from "@/lib/attack-path-graph-layout";
+import { DESKTOP_FIT_PADDING, DESKTOP_MIN_ZOOM, attackPathCanvasHeight, attackPathFitBounds, layoutAttackPathGraph, narrowFitZoom, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
 import { buildAttackPathGraphModel, type AttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import type { AttackPath, UnifiedGraphData } from "@/lib/graph-schema";
 import { BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
@@ -38,20 +38,24 @@ const DESKTOP_FIT: FitOptions = { padding: DESKTOP_FIT_PADDING, minZoom: DESKTOP
  * `fitView()` until the next node update, so a canvas resize alone would keep
  * the previous camera; the viewport is computed from the layout bounds instead.
  */
-function useFitToLayout(bounds: Rect, fit: FitOptions) {
+function useFitToLayout(layout: AttackPathLayout, spineIds: readonly string[], fit: FitOptions) {
   const { setViewport } = useReactFlow();
   const paneWidth = useStore(state => state.width);
   const paneHeight = useStore(state => state.height);
   const fitNow = useCallback(() => {
     if (!paneWidth || !paneHeight) return;
+    const usable = typeof fit.padding === "number" ? 1 - 2 * fit.padding : 1;
+    const bounds: Rect = attackPathFitBounds(layout, spineIds, paneWidth * usable, paneHeight * usable, fit.minZoom);
     void setViewport(getViewportForBounds(bounds, paneWidth, paneHeight, fit.minZoom, fit.maxZoom, fit.padding));
-  }, [bounds, fit, paneHeight, paneWidth, setViewport]);
+  }, [fit, layout, paneHeight, paneWidth, setViewport, spineIds]);
   return fitNow;
 }
 
 /** Auto-fit on layout or canvas changes, unless the operator has moved this node set's camera. */
-function FitOnLayout({ bounds, nodesKey, fit, manual }: { bounds: Rect; nodesKey: string; fit: FitOptions; manual: React.RefObject<string | null> }) {
-  const fitNow = useFitToLayout(bounds, fit);
+function FitOnLayout({ layout, spineIds, nodesKey, fit, manual }: {
+  layout: AttackPathLayout; spineIds: readonly string[]; nodesKey: string; fit: FitOptions; manual: React.RefObject<string | null>;
+}) {
+  const fitNow = useFitToLayout(layout, spineIds, fit);
   useEffect(() => {
     if (manual.current !== nodesKey) fitNow();
   }, [fitNow, manual, nodesKey]);
@@ -107,7 +111,6 @@ function AttackPathCanvas({ graph, attackPath, narrow, onNodeSelect, onEdgeSelec
   const zoom = narrow ? narrowFitZoom(layout, frameWidth) : 1;
   const fit = useMemo<FitOptions>(() => narrow ? { padding: { x: "8px", y: "16px" }, minZoom: zoom, maxZoom: 1 } : DESKTOP_FIT, [narrow, zoom]);
   const nodesKey = nodes.map(node => node.id).join("|");
-  const bounds = useMemo<Rect>(() => ({ x: 0, y: 0, width: layout.width, height: layout.height }), [layout.height, layout.width]);
   const manualCamera = useRef<string | null>(null);
   // Collapsed-group links stand in for several records; only a recorded edge has a receipt.
   const openEdge = (edge: AttackPathFlowEdge) => {
@@ -140,7 +143,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, onNodeSelect, onEdgeSelec
         onMoveStart={event => { if (event) manualCamera.current = nodesKey; }}
         proOptions={{ hideAttribution: true }}>
         <Background gap={BACKGROUND_GAP} color="var(--border-subtle)" />
-        <FitOnLayout bounds={bounds} nodesKey={nodesKey} fit={fit} manual={manualCamera} />
+        <FitOnLayout layout={layout} spineIds={model.pathNodeIds} nodesKey={nodesKey} fit={fit} manual={manualCamera} />
       </ReactFlow>
     </div>
     {model.connectedPathCount > 0 && <p className="border-t border-outline bg-surface px-3 pt-2 text-xs text-ink-secondary">

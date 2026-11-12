@@ -42,6 +42,9 @@ test("a plain wheel over the path canvas scrolls the page; Ctrl + wheel zooms th
   expect(await viewportTransform(page)).toBe(before);
   await expect(page.getByTestId("wheel-zoom-hint")).toContainText("scroll to zoom");
 
+  // The page scrolled under the pointer; aim at the canvas again.
+  const scrolled = (await canvas.boundingBox())!;
+  await page.mouse.move(scrolled.x + scrolled.width / 2, scrolled.y + scrolled.height / 2);
   await page.keyboard.down("Control");
   await page.mouse.wheel(0, -240);
   await page.keyboard.up("Control");

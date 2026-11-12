@@ -97,5 +97,25 @@ export function attackPathCanvasHeight(layout: Pick<AttackPathLayout, "height" |
   return Math.round(Math.min(ATTACK_PATH_CANVAS_BOUNDS.max, Math.max(ATTACK_PATH_CANVAS_BOUNDS.min, height)));
 }
 
+/**
+ * What the camera frames: the whole graph when it fits at `minZoom`, else the
+ * selected path's own extent so the spine stays readable and branches pan in.
+ */
+export function attackPathFitBounds(
+  layout: Pick<AttackPathLayout, "positions" | "width" | "height" | "nodeWidth" | "nodeHeight">,
+  spineIds: readonly string[], paneWidth: number, paneHeight: number, minZoom: number,
+): { x: number; y: number; width: number; height: number } {
+  const whole = { x: 0, y: 0, width: layout.width, height: layout.height };
+  const fits = layout.width * minZoom <= paneWidth && layout.height * minZoom <= paneHeight;
+  const spine = spineIds.map(id => layout.positions.get(id)).filter((point): point is { x: number; y: number } => Boolean(point));
+  if (fits || spine.length === 0) return whole;
+  const x = Math.min(...spine.map(point => point.x)), y = Math.min(...spine.map(point => point.y));
+  return {
+    x, y,
+    width: Math.max(...spine.map(point => point.x)) + layout.nodeWidth - x,
+    height: Math.max(...spine.map(point => point.y)) + layout.nodeHeight - y,
+  };
+}
+
 export const DESKTOP_MIN_ZOOM = 0.6;
 export const DESKTOP_FIT_PADDING = 0.04;

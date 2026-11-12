@@ -45,6 +45,18 @@ describe("attack path graph model", () => {
     expect(model.connectedPathCount).toBe(2);
   });
 
+  it("never draws a connected path's hop that no recorded edge reaches", () => {
+    const { graph, selected } = branchingFixture();
+    // A stored hop list can name a node whose relationship was never recorded.
+    const orphaned = { ...graph, edges: graph.edges.filter(link => link.id !== "server:filesystem->dataset:finance:accessed") };
+    const model = buildAttackPathGraphModel(orphaned, selected);
+    expect(model.nodes.map(item => item.id)).not.toContain("dataset:finance");
+    const drawn = new Set(model.nodes.map(item => item.id));
+    for (const item of model.nodes.filter(node => node.role === "branch")) {
+      expect(model.edges.some(link => (link.source === item.id && drawn.has(link.target)) || (link.target === item.id && drawn.has(link.source)))).toBe(true);
+    }
+  });
+
   it("draws no branches when no other path touches the selected one", () => {
     const { graph, selected } = branchingFixture();
     const isolated = { ...graph, attack_paths: [selected] };

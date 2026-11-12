@@ -184,6 +184,9 @@ export function buildAttackPathGraphModel(
 
   const threshold = options.collapseThreshold ?? 3;
   const parents = branchParents(draft, pathNodeIds);
+  // A branch is drawn only when recorded edges connect it back to the selected path.
+  for (const id of [...draft.nodes]) if (!selectedHops.has(id) && !parents.has(id)) draft.nodes.delete(id);
+  for (const [id, edge] of draft.edges) if (!draft.nodes.has(edge.source) || !draft.nodes.has(edge.target)) draft.edges.delete(id);
   const groups = new Map<string, string[]>();
   for (const [child, parent] of parents) {
     const key = `group:${parent}:${nodes.get(child)!.entity_type}`;
