@@ -19133,9 +19133,23 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** IntelAdvisoryCoverage */
+        IntelAdvisoryCoverage: {
+            /** Last Synced */
+            last_synced?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Sources */
+            sources: string[];
+            /** Synced */
+            synced: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** IntelAdvisoryResponse */
         IntelAdvisoryResponse: {
             advisory: components["schemas"]["IntelAdvisory"] | null;
+            database?: components["schemas"]["IntelAdvisoryCoverage"] | null;
             /** Found */
             found: boolean;
             /** Query */
