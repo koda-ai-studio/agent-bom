@@ -115,6 +115,14 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await expect(navigation).toContainText("Canvas target · 2 of 9");
       await navigation.getByRole("button", { name: "Previous graph node" }).click();
       await expect(navigation).toContainText("Canvas target · 1 of 9");
+      // Stepping pans the camera; click a node only once the viewport stops moving.
+      let settled = 0, last = "";
+      await expect.poll(async () => {
+        const now = (await page.locator(".react-flow__viewport").getAttribute("style")) ?? "";
+        settled = now === last ? settled + 1 : 0;
+        last = now;
+        return settled;
+      }, { intervals: [100], timeout: 8000 }).toBeGreaterThanOrEqual(5);
     }
     await page.screenshot({ path: info.outputPath(`mcp-flow-${theme}-${width}.png`), fullPage: width === 390 });
     await page.locator('.react-flow__node[data-id="finding"]').click();
