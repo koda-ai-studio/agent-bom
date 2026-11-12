@@ -3589,50 +3589,56 @@ async function main() {
       await securityGraphPage
         .getByTestId("selected-exposure-path")
         .waitFor({ state: "visible", timeout: 30_000 });
-      const pathViewport = securityGraphPage.getByRole("region", { name: "Scrollable exposure path", exact: true });
+      const pathCanvas = securityGraphPage.getByTestId("attack-path-graph-canvas");
       for (const width of [1280, 1440]) {
         await securityGraphPage.setViewportSize({ width, height: 980 });
-        await expect.poll(() => pathViewport.evaluate(element => {
+        await expect.poll(() => pathCanvas.evaluate(element => {
           const frame = element.getBoundingClientRect();
           return [...element.querySelectorAll(".react-flow__node")].filter(node => {
             const box = node.getBoundingClientRect();
-            return box.left < frame.left - 2 || box.right > frame.right + 2;
+            return box.left < frame.left - 2 || box.right > frame.right + 2 || box.top < frame.top - 2 || box.bottom > frame.bottom + 2;
           }).map(node => node.getAttribute("data-id"));
-        }), { message: "The complete selected desktop path is visible before any scrolling" }).toEqual([]);
+        }), { message: "The whole selected path and its branches fit the canvas" }).toEqual([]);
       }
-      const findingEdge = securityGraphPage.locator('.react-flow__edge[data-id*="vulnerable_to"]');
-      await expect(findingEdge).toHaveCount(1);
-      const findingEdgeId = await findingEdge.getAttribute("data-id");
-      const findingLabel = securityGraphPage.locator(`.graph-relationship-label[data-edge-id="${findingEdgeId}"]`);
-      await expect(findingLabel).toHaveCount(0);
-      await expect(findingEdge.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
-      await findingEdge.locator(".react-flow__edge-path").scrollIntoViewIfNeeded();
-      const point = await findingEdge.locator(".react-flow__edge-path").evaluate((path) => {
+      // The finding is a badge on the asset at risk, not the last hop of the chain.
+      await expect(pathCanvas.locator('.react-flow__node[data-id="cve:next"]')).toHaveCount(0);
+      await expect(pathCanvas.getByTestId("attack-path-node-pkg:next")).toHaveAttribute("data-role", "target");
+      await expect(pathCanvas.getByRole("button", { name: "1 finding on next@15.2.2, worst critical. Open findings" })).toHaveText("1");
+      // Relationship names appear on hover or focus only.
+      const tooltip = pathCanvas.getByRole("tooltip");
+      await expect(tooltip).toHaveCount(0);
+      const firstEdge = pathCanvas.locator('.react-flow__edge[data-id="user:contractor->sa:jit-review:acted_as"]');
+      await expect(firstEdge.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /.+/);
+      // The camera refits after the last resize; hover only once it has settled.
+      let settledTransform = "";
+      await expect.poll(async () => {
+        const transform = await pathCanvas.locator(".react-flow__viewport").getAttribute("style");
+        const settled = transform === settledTransform;
+        settledTransform = transform ?? "";
+        return settled;
+      }, { intervals: [300] }).toBe(true);
+      await firstEdge.locator(".react-flow__edge-path").scrollIntoViewIfNeeded();
+      const point = await firstEdge.locator(".react-flow__edge-path").evaluate((path) => {
         const at = path.getPointAtLength(path.getTotalLength() / 2);
         const screen = new DOMPoint(at.x, at.y).matrixTransform(path.getScreenCTM());
         return { x: screen.x, y: screen.y };
       });
       await securityGraphPage.mouse.move(point.x, point.y);
-      await expect(findingLabel).toHaveText(/Has finding/);
+      await expect(tooltip).toHaveText(/Acted As/);
       await securityGraphPage.mouse.move(0, 0);
-      await expect(findingLabel).toHaveCount(0);
-      await findingEdge.focus();
-      await expect(findingLabel).toHaveText(/Has finding/);
-      await securityGraphPage.getByLabel("Graph options", { exact: true }).focus();
-      await expect(findingLabel).toHaveCount(0);
-      for (const verb of [/Assumes/i, /Can Access/i, /Depends On/i]) {
-        await expect(securityGraphPage.locator(".graph-relationship-label").filter({ hasText: verb })).toBeVisible();
-      }
-      await securityGraphPage.getByRole("region", { name: "Scrollable exposure path", exact: true }).evaluate(element => { element.scrollLeft = 0; });
+      await expect(tooltip).toHaveCount(0);
+      await firstEdge.focus();
+      await expect(tooltip).toHaveText(/Acted As/);
+      await firstEdge.blur();
+      await expect(securityGraphPage.getByRole("list", { name: "Graph legend" })).toContainText("Selected path");
       await scrollTo(securityGraphPage, 0);
     }, {
       expectedText: ["Investigation", "contractor-reviewer", "Developer Copilot", "CVE-2025-29927"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],
       readySelector: '[data-testid="selected-exposure-path"]',
       minGraphNodes: 7, minGraphEdges: 6,
-      minGraphBadgeFontPx: 11, minGraphEdgeLabelFontPx: 12,
-      maxGraphLabelOffsetPx: 32,
-      assertGraphNodesWithinCanvas: true,
+      minGraphNodeFontPx: 11, minGraphBadgeFontPx: 11, minGraphEdgeLabelFontPx: 12,
+      assertGraphNodesWithinCanvas: true, assertGraphNodesSeparated: true,
     });
     const correlationPage = await newCapturePage("dark", { width: 1120, height: 900 });
     await capture(

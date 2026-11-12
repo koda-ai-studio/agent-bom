@@ -17,13 +17,17 @@ async def test_timed_out_provider_call_stays_capacity_accounted_until_worker_fin
 
     def _blocked() -> str:
         started.set()
-        assert release.wait(timeout=2)
+        released = release.wait(timeout=5)
+        assert released
         return "done"
 
     with pytest.raises(provider_execution.ProviderExecutionTimeoutError):
         await provider_execution.run_provider_call(_blocked, timeout_seconds=0.01)
 
-    assert started.is_set()
+    # The 10 ms timeout can fire before a loaded runner schedules the worker;
+    # wait for it so the capacity check below sees the call actually running.
+    began = started.wait(timeout=5)
+    assert began
     assert provider_execution.provider_execution_status()["active"] == 1
     with pytest.raises(provider_execution.ProviderExecutionCapacityError):
         await provider_execution.run_provider_call(lambda: "must-not-run", timeout_seconds=0.1)

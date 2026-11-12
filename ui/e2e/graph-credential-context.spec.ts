@@ -21,51 +21,35 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
   });
   await page.goto("/security-graph?lens=attack-path&scan=snapshot");
   const canvas=page.locator('.react-flow');
-  await expect(canvas.locator('.react-flow__node')).toHaveCount(nodes.length);
-  await expect(canvas.locator('.react-flow__edge')).toHaveCount(edges.length);
+  // A finding is a badge on the asset it affects, never a hop of its own.
+  const drawn=recorded ? nodes : nodes.filter(n=>n.entity_type!=="vulnerability");
+  await expect(canvas.locator('.react-flow__node')).toHaveCount(drawn.length);
+  await expect(canvas.locator('.react-flow__edge')).toHaveCount(drawn.length-1);
   if(recorded) {
     await expect(canvas.locator('.react-flow__node[data-id="WAREHOUSE_TOKEN_REFERENCE"]')).toBeVisible();
     await expect(canvas.locator('.react-flow__node[data-id="Customer records"]')).toBeVisible();
   } else {
     await expect(canvas.getByText("WAREHOUSE_TOKEN_REFERENCE")).toHaveCount(0);
+    await expect(canvas.getByRole("button",{name:"1 finding on warehouse-mcp, worst high. Open findings"})).toBeVisible();
     await page.getByText("Evidence & relationships",{exact:true}).click();
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("WAREHOUSE_TOKEN_REFERENCE");
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("do not add path hops or establish access");
   }
   await expect(page.getByRole("region",{name:"Reported path exposure"})).toContainText("References only");
   await expect(page.getByText("Reached from this path",{exact:true})).toHaveCount(0);
-  await page.getByLabel("Graph options",{exact:true}).click();
-  await page.getByLabel("Relationship labels",{exact:true}).selectOption("show");
-  await page.getByLabel("Graph options",{exact:true}).click();
+  // Relationship names sit off the lines until a line is hovered or focused.
+  await expect(canvas.getByRole("tooltip")).toHaveCount(0);
+  const line=canvas.locator(`.react-flow__edge[data-id="${recorded ? "e1" : "e0"}"]`);
+  await line.focus();
+  await expect(canvas.getByRole("tooltip")).toHaveText(recorded ? /Exposes Credential/ : /Uses/);
   await expect.poll(() => canvas.evaluate(root => {
-    const boxes=[...root.querySelectorAll(".graph-entity-glyph")].map(n=>n.getBoundingClientRect());
-    return [...root.querySelectorAll(".graph-relationship-label")].filter(label=>{
-      const b=label.getBoundingClientRect();
-      return b.width>0 && b.height>0 && boxes.some(n=> b.left<n.right && b.right>n.left && b.top<n.bottom && b.bottom>n.top);
-    }).length;
-  })).toBe(0).catch(async error => {
-    await info.attach("label-geometry", { contentType:"application/json",body:JSON.stringify(await canvas.evaluate(root => ({
-      glyphs:[...root.querySelectorAll(".graph-entity-glyph")].map(n=>({box:n.getBoundingClientRect().toJSON(),html:n.outerHTML.slice(0,220)})),
-      labels:[...root.querySelectorAll<HTMLElement>(".graph-relationship-label")].map(n=>({box:n.getBoundingClientRect().toJSON(),text:n.textContent,style:n.style.cssText}))
-    }))) });
-    throw error;
-  });
-  if (recorded) await expect.poll(() => canvas.evaluate(root => {
-    const label = [...root.querySelectorAll(".graph-relationship-label")].find(n => n.textContent?.includes("Exposes Credential"))!;
-    const glyph = root.querySelector('.react-flow__node[data-id="warehouse-mcp"] .graph-entity-glyph')!.getBoundingClientRect();
-    const box = label.getBoundingClientRect();
-    return Math.abs((box.top + box.bottom - glyph.top - glyph.bottom) / 2);
-  })).toBeLessThan(20);
-  await page.screenshot({path:info.outputPath(`credential-labels-shown-${recorded}.png`),fullPage:true});
-  await page.getByLabel("Graph options",{exact:true}).click();
-  await page.getByLabel("Relationship labels",{exact:true}).selectOption("auto");
-  await page.getByLabel("Graph options",{exact:true}).click();
-  // Exact selected paths keep their relationship captions visible in Auto.
-  if(recorded) await expect(canvas.locator('.graph-relationship-label').filter({hasText:"Exposes Credential"})).toBeVisible();
-  await page.getByLabel("Graph options",{exact:true}).click();
-  await page.getByLabel("Relationship labels",{exact:true}).selectOption("hide");
-  await expect(canvas.locator('.graph-relationship-label')).toHaveCount(0);
-  await page.getByLabel("Relationship labels",{exact:true}).selectOption("auto");
-  await page.getByLabel("Graph options",{exact:true}).click();
+    const tip=root.querySelector('[role="tooltip"]')!.getBoundingClientRect();
+    return [...root.querySelectorAll('[data-node-glyph]')].some(glyph=>{
+      const n=glyph.getBoundingClientRect();
+      return tip.left<n.right && tip.right>n.left && tip.top<n.bottom && tip.bottom>n.top;
+    });
+  })).toBe(false);
+  await line.blur();
+  await expect(canvas.getByRole("tooltip")).toHaveCount(0);
   await page.screenshot({path:info.outputPath(`credential-context-${recorded}.png`),fullPage:true});
 });

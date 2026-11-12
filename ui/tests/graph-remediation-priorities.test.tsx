@@ -37,9 +37,8 @@ describe("graph remediation priorities", () => {
   });
 
   it("does not show recommendations from another snapshot", () => {
-    render(<GraphRemediationPriorities view={view} scanId="different" />);
-    fireEvent.click(screen.getByText("Prioritize fixes"));
-    expect(screen.getByText("Remediation priorities are unavailable for this snapshot.", { exact: true })).toBeVisible();
+    const { container } = render(<GraphRemediationPriorities view={view} scanId="different" />);
+    expect(container).toBeEmptyDOMElement();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
@@ -52,10 +51,14 @@ describe("graph remediation priorities", () => {
   it("does not infer recommendations when an older server omits the field", () => {
     const legacy = { ...view };
     delete legacy.remediation_priorities;
-    render(<GraphRemediationPriorities view={legacy} scanId={view.scan_id} />);
-    expect(screen.getByText("Priorities unavailable for this snapshot", { exact: true })).toBeVisible();
-    expect(screen.queryByText(/Select a retained scan/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText("Prioritize fixes"));
-    expect(screen.getByText("Remediation priorities are unavailable for this snapshot.", { exact: true })).toBeVisible();
+    const { container } = render(<GraphRemediationPriorities view={legacy} scanId={view.scan_id} />);
+    // Nothing to prioritise: no dead "unavailable" bar competes with the path.
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText("Prioritize fixes")).not.toBeInTheDocument();
+  });
+
+  it("renders nothing before a snapshot is selected", () => {
+    const { container } = render(<GraphRemediationPriorities view={null} scanId="" />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
