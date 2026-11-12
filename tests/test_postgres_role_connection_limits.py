@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -109,7 +111,9 @@ def test_main_reconciles_limits_after_passwords(monkeypatch: pytest.MonkeyPatch,
     assert calls[-2:] == [("passwords", "postgresql+psycopg://admin@db/app"), ("limits", "postgresql+psycopg://admin@db/app")]
 
 
-def _migration() -> Any:
+def _migration(monkeypatch: pytest.MonkeyPatch) -> Any:
+    # The correctness lane does not install alembic; the revision only needs ``op.execute``.
+    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(op=SimpleNamespace(execute=lambda _statement: None)))
     spec = importlib.util.spec_from_file_location("connection_limits_migration", MIGRATION)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)
@@ -117,15 +121,15 @@ def _migration() -> Any:
     return module
 
 
-def test_revision_follows_the_previous_head() -> None:
-    module = _migration()
+def test_revision_follows_the_previous_head(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _migration(monkeypatch)
     assert (module.revision, module.down_revision) == ("20261112_01", "20261111_01")
 
 
 def test_upgrade_raises_bounded_limits_and_downgrade_restores_only_its_own(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    module = _migration()
+    module = _migration(monkeypatch)
     executed: list[str] = []
     monkeypatch.setattr(module.op, "execute", lambda statement: executed.append(str(statement)), raising=False)
     module.upgrade()
