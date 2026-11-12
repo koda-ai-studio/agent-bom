@@ -9,6 +9,8 @@ import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import type { PathGraphNode } from "@/lib/attack-path-graph-model";
 import type { NodeContextMarker } from "@/lib/attack-path-graph-markers";
+import { ATTACK_PATH_NODE } from "@/lib/attack-path-graph-layout";
+import { GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
 
 export type AttackPathNodeData = {
   node: PathGraphNode;
@@ -18,10 +20,11 @@ export type AttackPathNodeData = {
 };
 export type AttackPathFlowNode = Node<AttackPathNodeData, "attackPathNode">;
 
-/** Glyph centre from the node's top edge; edges attach here in a row layout. */
-export const GLYPH_CENTER_Y = 34;
-/** Row layouts attach lines at the glyph rim, so connectors run circle to circle above the labels. */
-export const GLYPH_INSET_X = 45;
+const GLYPH_INSET_X = glyphInsetX(ATTACK_PATH_NODE.width);
+const BOX: CSSProperties = { width: ATTACK_PATH_NODE.width };
+/** Names wrap to two lines under the glyph before truncating; the full name is on hover. */
+const NAME = "pointer-events-auto mt-2 block w-full rounded-t bg-surface px-1 pt-0.5 text-[15px] font-semibold leading-tight line-clamp-2 [overflow-wrap:anywhere]";
+const SUBTITLE = "pointer-events-auto block w-full truncate rounded-b bg-surface px-1 pb-0.5 pt-0.5 text-[13px] leading-tight";
 const RATED = new Set(["critical", "high", "medium", "low"]);
 const MARKER_ICONS = { internet: Globe, sensitive: Database, privileged: Crown } as const;
 const ROLE_CAPTION: Record<PathGraphNode["role"], string> = { entry: "Entry", path: "", target: "At risk", branch: "" };
@@ -87,16 +90,16 @@ export function AttackPathGraphNode({ data }: NodeProps<AttackPathFlowNode>) {
   const caption = ROLE_CAPTION[node.role];
   return (
     <div data-testid={`attack-path-node-${node.id}`} data-role={node.role} title={`${node.label} · ${node.typeLabel}`}
-      className={`pointer-events-none flex w-[150px] flex-col items-center text-center ${spine ? "" : "opacity-90"}`}>
+      style={BOX} className="pointer-events-none flex flex-col items-center text-center">
       <Handles vertical={vertical} />
-      <div data-node-glyph className={`pointer-events-auto relative mt-1.5 flex h-14 w-14 items-center justify-center rounded-full bg-surface-elevated text-foreground ${spine ? "border-2 border-[color:var(--accent)]" : "border border-outline-strong"}`}
-        style={tint ? { backgroundImage: `linear-gradient(color-mix(in srgb, ${tint} 22%, transparent), color-mix(in srgb, ${tint} 22%, transparent))` } : undefined}>
+      <div data-node-glyph className={`pointer-events-auto relative mt-1.5 flex h-14 w-14 items-center justify-center rounded-full bg-surface-elevated text-foreground ${spine ? "border-[2.5px] border-[color:var(--accent)]" : "border border-outline"}`}
+        style={tint ? { backgroundImage: `linear-gradient(color-mix(in srgb, ${tint} ${spine ? 24 : 12}%, transparent), color-mix(in srgb, ${tint} ${spine ? 24 : 12}%, transparent))` } : undefined}>
         <Icon className="h-7 w-7" aria-hidden="true" />
         <Markers markers={node.markers} />
         {node.findings.length > 0 && <FindingBadge node={node} onOpen={data.onOpenFindings} />}
       </div>
-      <span data-node-label className="pointer-events-auto mt-2 block w-full truncate rounded-t bg-surface px-1 pt-0.5 text-base font-semibold leading-tight text-foreground">{node.label}</span>
-      <span data-node-label className="pointer-events-auto block w-full truncate rounded-b bg-surface px-1 pb-0.5 pt-0.5 text-[13px] leading-tight text-ink-secondary">
+      <span data-node-label className={`${NAME} ${spine ? "text-foreground" : "text-ink-secondary"}`}>{node.label}</span>
+      <span data-node-label className={`${SUBTITLE} ${spine ? "text-ink-secondary" : "text-ink-tertiary"}`}>
         {node.typeLabel}{caption ? <span className="font-medium text-foreground"> · {caption}</span> : null}
       </span>
     </div>
@@ -107,13 +110,13 @@ function GroupNode({ data }: { data: AttackPathNodeData }) {
   const { node, vertical } = data;
   return (
     <div data-testid={`attack-path-node-${node.id}`} data-role="group" title={`${node.label} share this connection`}
-      className="pointer-events-none flex w-[150px] flex-col items-center text-center">
+      style={BOX} className="pointer-events-none flex flex-col items-center text-center">
       <Handles vertical={vertical} />
       <div data-node-glyph className="pointer-events-auto relative mt-1.5 flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-outline-strong bg-surface-elevated text-foreground">
         <Layers className="h-5 w-5" aria-hidden="true" />
         {node.findings.length > 0 && <FindingBadge node={node} onOpen={data.onOpenFindings} />}
       </div>
-      <span data-node-label className="pointer-events-auto mt-2 block w-full truncate rounded-t bg-surface px-1 pt-0.5 text-base font-semibold leading-tight text-foreground">{node.label}</span>
+      <span data-node-label className={`${NAME} text-ink-secondary`}>{node.label}</span>
       <button type="button" aria-label={`Expand ${node.label}`}
         onClick={event => { event.stopPropagation(); data.onExpandGroup(node.id); }}
         className="pointer-events-auto nodrag nopan rounded-b bg-surface px-1 text-xs font-medium text-[color:var(--accent)] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[color:var(--focus-ring)]">

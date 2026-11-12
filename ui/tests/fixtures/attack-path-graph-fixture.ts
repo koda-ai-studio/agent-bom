@@ -66,6 +66,39 @@ export function branchingFixture(): { graph: UnifiedGraphData; selected: AttackP
   };
 }
 
+/** The product demo's topology: the headline path, a runbook path one edge away and a finance path two hops out. */
+export function demoFixture(select: "headline" | "runbook" = "headline"): { graph: UnifiedGraphData; selected: AttackPath } {
+  const nodes = [
+    node("user:contractor", "user", "contractor-reviewer"), node("sa:jit", "service_account", "jit-prod-reviewer"),
+    node("role:admin", "role", "prod-ai-admin"), node("agent:copilot", "agent", "developer-copilot"),
+    node("agent:sre", "agent", "sre-runbook-agent"), node("agent:finance", "agent", "finance-rag-agent"),
+    node("server:github", "server", "github-enterprise MCP"), node("server:filesystem", "server", "filesystem MCP"),
+    node("server:snowflake", "server", "snowflake-rag MCP"), node("cred:snowflake", "credential", "SNOWFLAKE_PROD_KEY"),
+    node("pkg:next", "package", "next@15.2.2"), node("pkg:urllib3", "package", "urllib3@2.2.1"),
+    node("cve:next", "vulnerability", "CVE-2025-29927", {}, "critical"), node("cve:urllib3", "vulnerability", "CVE-2024-37891", {}, "high"),
+    node("dataset:finance", "dataset", "finance-board-rag-index"),
+  ];
+  const shares = (source: string, target: string, relationship: string) => ({ ...edge(source, target, relationship, "modeled_infrastructure"), direction: "bidirectional" });
+  const edges = [
+    edge("user:contractor", "sa:jit", "acted_as", "modeled_infrastructure"), edge("sa:jit", "role:admin", "assumes", "modeled_infrastructure"),
+    edge("role:admin", "agent:copilot", "can_access", "modeled_infrastructure"), edge("agent:copilot", "server:github", "uses", "modeled_infrastructure"),
+    edge("agent:copilot", "server:filesystem", "uses", "modeled_infrastructure"), edge("agent:sre", "server:filesystem", "uses", "modeled_infrastructure"),
+    edge("agent:finance", "server:snowflake", "uses", "modeled_infrastructure"),
+    shares("agent:copilot", "agent:sre", "shares_server"), shares("agent:sre", "agent:finance", "shares_cred"),
+    edge("server:github", "pkg:next", "depends_on", "modeled_infrastructure"), edge("server:filesystem", "pkg:urllib3", "depends_on", "modeled_infrastructure"),
+    edge("server:snowflake", "cred:snowflake", "exposes_cred", "modeled_infrastructure"), edge("server:snowflake", "dataset:finance", "accessed", "modeled_infrastructure"),
+    edge("pkg:next", "cve:next", "vulnerable_to"), edge("pkg:urllib3", "cve:urllib3", "vulnerable_to"),
+  ] as unknown as UnifiedEdge[];
+  const headline = path(["user:contractor", "sa:jit", "role:admin", "agent:copilot", "server:github", "pkg:next", "cve:next"],
+    ["acted_as", "assumes", "can_access", "uses", "depends_on", "vulnerable_to"], 9.8);
+  const runbook = path(["agent:sre", "server:filesystem", "pkg:urllib3", "cve:urllib3"], ["uses", "depends_on", "vulnerable_to"], 8.9);
+  const finance = path(["agent:finance", "server:snowflake", "cred:snowflake", "dataset:finance"], ["uses", "exposes_cred", "related"], 8.4);
+  return {
+    selected: select === "headline" ? headline : runbook,
+    graph: { scan_id: "scan-1", tenant_id: "t", created_at: "", nodes, edges, attack_paths: [headline, runbook, finance], interaction_risks: [], stats: {} } as unknown as UnifiedGraphData,
+  };
+}
+
 /** One shared server with `count` sibling endpoints, each on its own recorded path. */
 export function fanOutFixture(count: number): { graph: UnifiedGraphData; selected: AttackPath } {
   const nodes = [

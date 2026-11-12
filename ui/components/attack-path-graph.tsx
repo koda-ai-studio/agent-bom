@@ -1,17 +1,19 @@
 "use client";
 
-import { Background, ControlButton, Controls, ReactFlow, ReactFlowProvider, getViewportForBounds, useReactFlow, useStore, Position, type Rect } from "@xyflow/react";
+import { Background, ControlButton, Controls, Panel, ReactFlow, ReactFlowProvider, useReactFlow, useStore, Position } from "@xyflow/react";
 import { Maximize } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { AttackPathArrowDefs, attackPathEdgeTypes, type AttackPathFlowEdge } from "@/components/attack-path-graph-edge";
 import { AttackPathGraphLegend } from "@/components/attack-path-graph-legend";
-import { GLYPH_CENTER_Y, GLYPH_INSET_X, attackPathNodeTypes, type AttackPathFlowNode } from "@/components/attack-path-graph-node";
+import { attackPathNodeTypes, type AttackPathFlowNode } from "@/components/attack-path-graph-node";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
-import { DESKTOP_FIT_PADDING, DESKTOP_MIN_ZOOM, attackPathCanvasHeight, attackPathFitBounds, layoutAttackPathGraph, narrowFitZoom, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
+import { DESKTOP_MIN_ZOOM, NARROW_MIN_ZOOM, attackPathCanvasHeight, layoutAttackPathGraph, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
+import { GLYPH_CENTER_Y, glyphInsetX, routeAttackPathEdges } from "@/lib/attack-path-graph-routes";
+import { attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { buildAttackPathGraphModel, type AttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
 import { BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
@@ -30,43 +32,47 @@ export type AttackPathGraphProps = {
   toolbar?: React.ReactNode;
 };
 
-type FitOptions = { padding: number | { x: `${number}px`; y: `${number}px` }; minZoom: number; maxZoom: number };
 /** Only a node's glyph, label and buttons take pointer input; its empty box never swallows a click meant for a line. */
 const HIT_AREAS = "[&_[aria-roledescription=node]]:pointer-events-none! [&_[data-node-glyph]]:pointer-events-auto! [&_[data-node-label]]:pointer-events-auto! [&_[aria-roledescription=node]_button]:pointer-events-auto!";
-const DESKTOP_FIT: FitOptions = { padding: DESKTOP_FIT_PADDING, minZoom: DESKTOP_MIN_ZOOM, maxZoom: 1 };
+/** "Fit all" may go below the readable floor because the operator asked for the overview. */
+const OVERVIEW_MIN_ZOOM = 0.25;
 
 /**
- * Frame the laid-out graph in the measured pane. React Flow 12 queues
- * `fitView()` until the next node update, so a canvas resize alone would keep
- * the previous camera; the viewport is computed from the layout bounds instead.
+ * The camera, computed from the layout rather than React Flow's `fitView()`
+ * (which version 12 queues until the next node update, so a resize alone kept
+ * a stale camera). Auto-framing never overrides a camera the operator moved.
  */
-function useFitToLayout(layout: AttackPathLayout, spineIds: readonly string[], fit: FitOptions) {
-  const { setViewport } = useReactFlow();
-  const paneWidth = useStore(state => state.width);
-  const paneHeight = useStore(state => state.height);
-  const fitNow = useCallback(() => {
-    if (!paneWidth || !paneHeight) return;
-    const usable = typeof fit.padding === "number" ? 1 - 2 * fit.padding : 1;
-    const bounds: Rect = attackPathFitBounds(layout, spineIds, paneWidth * usable, paneHeight * usable, fit.minZoom);
-    void setViewport(getViewportForBounds(bounds, paneWidth, paneHeight, fit.minZoom, fit.maxZoom, fit.padding));
-  }, [fit, layout, paneHeight, paneWidth, setViewport, spineIds]);
-  return fitNow;
-}
-
-/** Auto-fit on layout or canvas changes, unless the operator has moved this node set's camera. */
-function FitOnLayout({ layout, spineIds, nodesKey, fit, manual }: {
-  layout: AttackPathLayout; spineIds: readonly string[]; nodesKey: string; fit: FitOptions; manual: React.RefObject<string | null>;
+function Camera({ layout, spineIds, nodesKey, floor, manual }: {
+  layout: AttackPathLayout; spineIds: readonly string[]; nodesKey: string; floor: number; manual: React.RefObject<string | null>;
 }) {
-  const fitNow = useFitToLayout(layout, spineIds, fit);
+  const { setViewport } = useReactFlow();
+  const width = useStore(state => state.width);
+  const height = useStore(state => state.height);
+  const [overviewFor, setOverviewFor] = useState<string | null>(null);
+  const framed = useMemo(() => width && height ? attackPathViewport(layout, spineIds, { width, height }, floor) : null, [floor, height, layout, spineIds, width]);
+  const frame = useCallback((overview: boolean) => {
+    if (!width || !height) return;
+    const view = overview ? attackPathViewport(layout, spineIds, { width, height }, floor, { minZoom: OVERVIEW_MIN_ZOOM }) : framed!;
+    void setViewport({ x: view.x, y: view.y, zoom: view.zoom });
+  }, [floor, framed, height, layout, setViewport, spineIds, width]);
   useEffect(() => {
-    if (manual.current !== nodesKey) fitNow();
-  }, [fitNow, manual, nodesKey]);
-  return <Controls className={CONTROLS_CLASS} showInteractive={false} showFitView={false} orientation="horizontal" position="top-right">
-    <ControlButton className="react-flow__controls-fitview" title="fit view" aria-label="fit view"
-      onClick={() => { manual.current = null; fitNow(); }}>
-      <Maximize aria-hidden="true" />
-    </ControlButton>
-  </Controls>;
+    if (manual.current !== nodesKey) frame(false);
+  }, [frame, manual, nodesKey]);
+  const fitAll = () => { manual.current = null; setOverviewFor(nodesKey); frame(true); };
+  const offscreen = framed?.fallback && overviewFor !== nodesKey ? framed.hiddenNodeIds.length : 0;
+  return <>
+    <Controls className={CONTROLS_CLASS} showInteractive={false} showFitView={false} orientation="horizontal" position="bottom-left">
+      <ControlButton className="react-flow__controls-fitview" title="fit view" aria-label="fit view" onClick={fitAll}>
+        <Maximize aria-hidden="true" />
+      </ControlButton>
+    </Controls>
+    {offscreen > 0 && <Panel position="bottom-right">
+      <p role="status" className="flex items-center gap-2 rounded-lg border border-outline bg-surface px-2.5 py-1 text-xs text-ink-secondary shadow-sm">
+        {offscreen} more {offscreen === 1 ? "node" : "nodes"} off screen · drag to pan or
+        <button type="button" onClick={fitAll} className="font-semibold text-[color:var(--accent)] underline-offset-2 hover:underline">Fit all</button>
+      </p>
+    </Panel>}
+  </>;
 }
 
 function edgeFromTarget(target: EventTarget | null): string | null {
@@ -76,25 +82,27 @@ function edgeFromTarget(target: EventTarget | null): string | null {
 function useFlowElements(model: AttackPathGraphModel, narrow: boolean, activeEdge: string | null, markerPrefix: string,
   handlers: { onOpenFindings: AttackPathGraphProps["onOpenFindings"]; onExpandGroup: (id: string) => void }) {
   const layout = useMemo(() => layoutAttackPathGraph(model, narrow ? "TB" : "LR"), [model, narrow]);
+  const routes = useMemo(() => routeAttackPathEdges(model, layout), [layout, model]);
+  const inset = glyphInsetX(layout.nodeWidth);
   const nodes = useMemo<AttackPathFlowNode[]>(() => model.nodes.map(node => {
     const handles = narrow
       ? [{ type: "target" as const, position: Position.Top, x: layout.nodeWidth / 2, y: 0, width: 1, height: 1, id: null },
         { type: "source" as const, position: Position.Bottom, x: layout.nodeWidth / 2, y: layout.nodeHeight, width: 1, height: 1, id: null }]
-      : [{ type: "target" as const, position: Position.Left, x: GLYPH_INSET_X, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
-        { type: "source" as const, position: Position.Right, x: layout.nodeWidth - GLYPH_INSET_X, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null }];
+      : [{ type: "target" as const, position: Position.Left, x: inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null },
+        { type: "source" as const, position: Position.Right, x: layout.nodeWidth - inset, y: GLYPH_CENTER_Y, width: 1, height: 1, id: null }];
     return {
       id: node.id, type: "attackPathNode", position: layout.positions.get(node.id)!,
       width: layout.nodeWidth, height: layout.nodeHeight, handles,
       ariaLabel: `${node.label}, ${node.typeLabel}${node.findings.length ? `, ${node.findings.length} findings` : ""}`,
       data: { node, vertical: narrow, ...handlers },
     };
-  }), [handlers, layout, model.nodes, narrow]);
+  }), [handlers, inset, layout, model.nodes, narrow]);
   const labels = useMemo(() => new Map(model.nodes.map(node => [node.id, node.label])), [model.nodes]);
   const edges = useMemo<AttackPathFlowEdge[]>(() => model.edges.map(edge => ({
     id: edge.id, source: edge.source, target: edge.target, type: "attackPathEdge",
     ariaLabel: `${labels.get(edge.source)} ${edge.relationshipLabel.toLowerCase()} ${labels.get(edge.target)}`,
-    data: { edge, active: edge.id === activeEdge, markerPrefix, vertical: narrow },
-  })), [activeEdge, labels, markerPrefix, model.edges, narrow]);
+    data: { edge, active: edge.id === activeEdge, markerPrefix, direction: layout.direction, route: routes.get(edge.id)! },
+  })), [activeEdge, labels, layout.direction, markerPrefix, model.edges, routes]);
   return { layout, nodes, edges };
 }
 
@@ -110,8 +118,6 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
   const frameRef = useRef<HTMLDivElement>(null);
   const frameWidth = useElementWidth(frameRef);
   const height = attackPathCanvasHeight(layout, narrow, frameWidth);
-  const zoom = narrow ? narrowFitZoom(layout, frameWidth) : 1;
-  const fit = useMemo<FitOptions>(() => narrow ? { padding: { x: "8px", y: "16px" }, minZoom: zoom, maxZoom: 1 } : DESKTOP_FIT, [narrow, zoom]);
   const nodesKey = nodes.map(node => node.id).join("|");
   const manualCamera = useRef<string | null>(null);
   // Collapsed-group links stand in for several records; only a recorded edge has a receipt.
@@ -134,7 +140,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
       <WheelZoomHint visible={wheelGate.hintVisible} />
       <ReactFlow<AttackPathFlowNode, AttackPathFlowEdge>
         nodes={nodes} edges={edges} nodeTypes={attackPathNodeTypes} edgeTypes={attackPathEdgeTypes}
-        minZoom={0.35} maxZoom={2}
+        minZoom={OVERVIEW_MIN_ZOOM} maxZoom={2}
         zoomOnScroll={wheelGate.armed} preventScrolling={wheelGate.armed} zoomOnPinch panOnDrag={!narrow}
         nodesDraggable={false} nodesConnectable={false} nodesFocusable edgesFocusable elementsSelectable deleteKeyCode={null}
         onNodeClick={(_, node) => onNodeSelect(node.id)}
@@ -145,7 +151,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
         onMoveStart={event => { if (event) manualCamera.current = nodesKey; }}
         proOptions={{ hideAttribution: true }}>
         <Background gap={BACKGROUND_GAP} color="var(--border-subtle)" />
-        <FitOnLayout layout={layout} spineIds={model.pathNodeIds} nodesKey={nodesKey} fit={fit} manual={manualCamera} />
+        <Camera layout={layout} spineIds={model.pathNodeIds} nodesKey={nodesKey} floor={narrow ? NARROW_MIN_ZOOM : DESKTOP_MIN_ZOOM} manual={manualCamera} />
       </ReactFlow>
     </div>
     {model.connectedPathCount > 0 && <p className="border-t border-outline bg-surface px-3 pt-2 text-xs text-ink-secondary">

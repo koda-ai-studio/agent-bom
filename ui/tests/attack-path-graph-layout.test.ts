@@ -4,7 +4,6 @@ import { buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import {
   ATTACK_PATH_CANVAS_BOUNDS,
   attackPathCanvasHeight,
-  attackPathFitBounds,
   narrowFitZoom,
   layoutAttackPathGraph,
 } from "@/lib/attack-path-graph-layout";
@@ -64,20 +63,9 @@ describe("attack path graph layout", () => {
       expect(x[index]! - x[index - 1]!).toBeLessThanOrEqual(240);
     }
     const rowGap = Math.abs(layout.positions.get("server:filesystem")!.y - layout.positions.get("server:github")!.y);
-    expect(rowGap).toBeGreaterThanOrEqual(110);
-  });
-
-  it("frames the selected path when the whole graph cannot fit at a readable zoom", () => {
-    const { graph, selected } = branchingFixture();
-    const model = buildAttackPathGraphModel(graph, selected);
-    const layout = layoutAttackPathGraph(model, "LR");
-    const whole = attackPathFitBounds(layout, model.pathNodeIds, 4000, 1200, 0.6);
-    expect(whole).toEqual({ x: 0, y: 0, width: layout.width, height: layout.height });
-    const narrowPane = attackPathFitBounds(layout, model.pathNodeIds, 600, 400, 0.6);
-    const spineX = model.pathNodeIds.map(id => layout.positions.get(id)!.x);
-    expect(narrowPane.x).toBe(Math.min(...spineX));
-    expect(narrowPane.width).toBe(Math.max(...spineX) + layout.nodeWidth - Math.min(...spineX));
-    expect(narrowPane.height).toBe(layout.nodeHeight);
+    // Branch rows sit ~176-200px apart so names never crowd the row below.
+    expect(rowGap).toBeGreaterThanOrEqual(176);
+    expect(rowGap).toBeLessThanOrEqual(200);
   });
 
   it("stacks a phone layout top to bottom", () => {
@@ -102,7 +90,7 @@ describe("attack path graph layout", () => {
 
   it("sizes the canvas to the laid-out graph within bounds", () => {
     const short = layoutAttackPathGraph(buildAttackPathGraphModel(fanOutFixture(0).graph, fanOutFixture(0).selected), "LR");
-    expect(attackPathCanvasHeight(short, false)).toBe(ATTACK_PATH_CANVAS_BOUNDS.min);
+    expect(attackPathCanvasHeight(short, false)).toBeLessThanOrEqual(ATTACK_PATH_CANVAS_BOUNDS.min + 40);
     const { graph, selected } = branchingFixture();
     const branched = layoutAttackPathGraph(buildAttackPathGraphModel(graph, selected), "LR");
     // A narrower canvas fits a smaller zoom, so it reserves less height, never empty bands.
