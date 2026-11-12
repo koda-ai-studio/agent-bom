@@ -561,6 +561,7 @@
             "owner": null,
             "sla_due_at": "2026-01-09T03:04:05+00:00",
             "sla_due_at_source": "severity-kev/v1",
+            "workflow_status": null,
             "blast_score": 10.0,
             "match_confidence_tier": "",
             "cve_ids": [
@@ -875,6 +876,7 @@
             "owner": null,
             "sla_due_at": "2026-02-01T03:04:05+00:00",
             "sla_due_at_source": "severity-kev/v1",
+            "workflow_status": null,
             "blast_score": 6.5,
             "match_confidence_tier": "",
             "cve_ids": [
@@ -1136,6 +1138,7 @@
             "owner": null,
             "sla_due_at": "2026-04-02T03:04:05+00:00",
             "sla_due_at_source": "severity-kev/v1",
+            "workflow_status": null,
             "blast_score": 4.5,
             "match_confidence_tier": "",
             "cve_ids": [],
@@ -1321,7 +1324,11 @@
             "ai_risk_context": null,
             "ai_summary": null,
             "attack_vector_summary": null,
-            "suppressed": false
+            "suppressed": false,
+            "owner": null,
+            "sla_due_at": "2026-02-01T03:04:05+00:00",
+            "sla_due_at_source": "severity-kev/v1",
+            "workflow_status": null
           },
           "locations": [
             {
@@ -1386,7 +1393,11 @@
             ],
             "detector_categories": [
               "taint"
-            ]
+            ],
+            "owner": null,
+            "sla_due_at": "2026-04-02T03:04:05+00:00",
+            "sla_due_at_source": "severity-kev/v1",
+            "workflow_status": null
           },
           "locations": [
             {
@@ -1446,6 +1457,10 @@
             "ai_summary": null,
             "attack_vector_summary": null,
             "suppressed": true,
+            "owner": null,
+            "sla_due_at": "2026-01-09T03:04:05+00:00",
+            "sla_due_at_source": "severity-kev/v1",
+            "workflow_status": null,
             "no_source_file": true
           },
           "locations": [
@@ -1506,6 +1521,10 @@
             "ai_summary": null,
             "attack_vector_summary": null,
             "suppressed": false,
+            "owner": null,
+            "sla_due_at": "2026-02-01T03:04:05+00:00",
+            "sla_due_at_source": "severity-kev/v1",
+            "workflow_status": null,
             "no_source_file": true
           },
           "locations": [
@@ -1558,6 +1577,10 @@
             "ai_summary": null,
             "attack_vector_summary": null,
             "suppressed": false,
+            "owner": null,
+            "sla_due_at": "2026-07-01T03:04:05+00:00",
+            "sla_due_at_source": "severity-kev/v1",
+            "workflow_status": null,
             "no_source_file": true
           },
           "locations": [

@@ -18,10 +18,10 @@ from agent_bom.output.dependency_hierarchy import spdx3_package_relationships
 from agent_bom.output.finding_views import (
     atlas_receipts_by_vulnerability,
     cve_findings,
+    export_workflow_metadata,
     package_ecosystem,
     package_name,
     package_version,
-    workflow_status,
 )
 from agent_bom.output.json_writer import write_json_file
 from agent_bom.package_utils import synthesize_purl
@@ -499,16 +499,7 @@ def _finding_workflow_metadata(report: AIBOMReport) -> dict[tuple[str, str, str 
     """Return persisted owner/SLA/state keyed by package vulnerability."""
     by_vuln: dict[tuple[str, str, str | None, str], dict[str, str]] = {}
     for finding in cve_findings(report):
-        metadata: dict[str, str] = {}
-        if finding.owner:
-            metadata["owner"] = finding.owner
-        sla_due = finding.to_dict().get("sla_due_at")
-        if sla_due:
-            metadata["sla_due_at"] = str(sla_due)
-            metadata["sla_due_at_source"] = str(finding.to_dict()["sla_due_at_source"])
-        status = workflow_status(finding)
-        if status:
-            metadata["workflow_status"] = status
+        metadata = export_workflow_metadata(finding, report.generated_at)
         if metadata:
             by_vuln[(package_ecosystem(finding), package_name(finding), package_version(finding), finding.cve_id or finding.id)] = metadata
     return by_vuln

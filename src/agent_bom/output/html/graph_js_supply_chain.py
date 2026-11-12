@@ -148,7 +148,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'underlay-color': '#ef4444',
             'underlay-padding': '6px',
             'underlay-opacity': 0.15,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {
@@ -168,7 +168,7 @@ SUPPLY_CHAIN_GRAPH_JS = """\
             'underlay-color': '#fb923c',
             'underlay-padding': '4px',
             'underlay-opacity': 0.1,
-            'underlay-shape': 'ellipse',
+            'underlay-shape': 'round-rectangle',
           },
         },
         {
@@ -242,24 +242,19 @@ SUPPLY_CHAIN_GRAPH_JS = """\
           },
         },
       ],
-      layout: {
-        name: 'dagre',
-        rankDir: window.innerWidth < 700 ? 'TB' : 'LR',
-        nodeSep: 50,
-        rankSep: 80,
-        edgeSep: 15,
-        padding: 30,
-        animate: false,
-        fit: true,
-      },
+      layout: {name: 'null'},
       minZoom: 0.15,
       maxZoom: 4,
       wheelSensitivity: 0.3,
       autoungrabify: false,
     });
+    var GRAPH_LAYOUT = {rankDir: window.innerWidth < 700 ? 'TB' : 'LR', nodeSep: 50, rankSep: 80, edgeSep: 15, padding: 30};
+    layoutGraph(cy, GRAPH_LAYOUT);
     cy.ready(function() { fitGraphWhenVisible(cy, cyContainer); });
     addGraphViews(cy, cyContainer, GRAPH_RECORDED);
-    noteGraphBound(cyContainer, GRAPH_BOUND);
+    mountGraphView({graph: cy, container: cyContainer, recorded: GRAPH_RECORDED, view: GRAPH_BOUND, state: GRAPH_STATE,
+      layout: GRAPH_LAYOUT, bar: cyContainer.parentNode.querySelector('.graph-filter-bar'),
+      onRedraw: function(view) { renderSupplyStats(view); }});
 
     // Tooltip
     var tip = document.getElementById('tip');
@@ -295,7 +290,8 @@ SUPPLY_CHAIN_SIDEBAR_JS = """\
     function showSidebar(node) {
       var d = node.data();
       var t = d.type || '';
-      var isCveNode = t === 'cve' || t.indexOf('cve_')===0;
+      // A group node lists its members in its tip; it has no single advisory to link to.
+      var isCveNode = (t === 'cve' || t.indexOf('cve_')===0) && !(d.count > 1);
       var typeLabels = {'provider':'Provider','agent':'Agent','server_clean':'MCP Server','server_cred':'MCP Server','server_vuln':'MCP Server','pkg_vuln':'Package','cve':'Vulnerability'};
       var typeLabel = typeLabels[t] || (isCveNode ? 'Vulnerability' : t);
       var typeColors = {'provider':'#818cf8','agent':'#3b82f6','server_clean':'#10b981','server_cred':'#f59e0b','server_vuln':'#ef4444','pkg_vuln':'#dc2626'};

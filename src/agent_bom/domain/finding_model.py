@@ -426,17 +426,15 @@ class Finding:
 
         return security_domain_for(self.source, self.finding_type, self.evidence)
 
+    def sla_fields(self, *, anchor: str | None = None) -> dict:
+        """Deadline, its source and the KEV due date; ``anchor`` stands in for a missing ``first_seen``."""
+        source = self.sla_due_at_source or ("explicit" if self.sla_due_at is not None else None)
+        payload = {"severity": self.effective_severity(), "first_seen": self.first_seen or anchor, "evidence": self.evidence}
+        return finding_sla_fields({**payload, "sla_due_at": self.sla_due_at, "sla_due_at_source": source})
+
     def to_dict(self) -> dict:
         """Return a JSON-serializable finding payload."""
-        sla = finding_sla_fields(
-            {
-                "severity": self.effective_severity(),
-                "first_seen": self.first_seen,
-                "evidence": self.evidence,
-                "sla_due_at": self.sla_due_at,
-                "sla_due_at_source": self.sla_due_at_source or ("explicit" if self.sla_due_at is not None else None),
-            }
-        )
+        sla = self.sla_fields()
         return {
             **self._identity_payload(),
             **self._advisory_payload(),

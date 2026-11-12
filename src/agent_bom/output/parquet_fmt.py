@@ -13,6 +13,7 @@ from agent_bom.compliance_utils import framework_qualified_finding_tags
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.finding_views import (
     evidence,
+    export_workflow_fields,
     is_package_malicious,
     package_ecosystem,
     package_malicious_basis,
@@ -44,7 +45,7 @@ def _require_pyarrow():
 
 
 def _row_dict(finding, report: AIBOMReport) -> dict[str, Any]:
-    workflow = finding.to_dict()
+    workflow = export_workflow_fields(finding, report.generated_at)
     row = {
         "cve_id": finding.cve_id or finding.id,
         "package": package_name(finding),
@@ -82,10 +83,10 @@ def _row_dict(finding, report: AIBOMReport) -> dict[str, Any]:
         "generated_at": report.generated_at.isoformat(),
         "source": finding.source.value,
         "asset_identifier": finding.asset.identifier or None,
-        "owner": workflow.get("owner"),
-        "sla_due_at": workflow.get("sla_due_at"),
-        "sla_due_at_source": workflow.get("sla_due_at_source"),
-        "lifecycle_status": workflow.get("lifecycle_status"),
+        "owner": workflow["owner"],
+        "sla_due_at": workflow["sla_due_at"],
+        "sla_due_at_source": workflow["sla_due_at_source"],
+        "lifecycle_status": finding.lifecycle_status,
         "symbol_reachability_reason": evidence(finding, "symbol_reachability_reason", "") or None,
         "runtime_dependency_chain": ";".join(evidence(finding, "runtime_dependency_chain", []) or []) or None,
     }

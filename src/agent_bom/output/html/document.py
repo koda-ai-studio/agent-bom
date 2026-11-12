@@ -37,6 +37,7 @@ from agent_bom.output.html.sections import (
     _trust_assessment_section,
     _vuln_table,
     _warn_gate_banner,
+    graph_filter_bar,
 )
 from agent_bom.output.html.sections_iac_exceptions import iac_exceptions_banner
 from agent_bom.output.html.sections_possibly_affected import possibly_affected_section
@@ -358,14 +359,7 @@ def _charts_and_graph_panel(graph_note: str) -> str:
     </div>
     <div class="graph-container">
       <div id="cy"></div>
-      <div class="graph-filter-bar" style="position:absolute;top:12px;left:12px;display:flex;gap:8px;align-items:center;z-index:10;background:rgba(15,23,42,.92);padding:8px 12px;border-radius:8px;border:1px solid #334155;backdrop-filter:blur(8px)">
-        <label style="display:flex;align-items:center;gap:3px;font-size:.72rem;color:#fca5a5;cursor:pointer"><input type="checkbox" class="graph-sev-filter" value="critical" checked> Crit</label>
-        <label style="display:flex;align-items:center;gap:3px;font-size:.72rem;color:#fb923c;cursor:pointer"><input type="checkbox" class="graph-sev-filter" value="high" checked> High</label>
-        <label style="display:flex;align-items:center;gap:3px;font-size:.72rem;color:#fbbf24;cursor:pointer"><input type="checkbox" class="graph-sev-filter" value="medium" checked> Med</label>
-        <label style="display:flex;align-items:center;gap:3px;font-size:.72rem;color:#94a3b8;cursor:pointer"><input type="checkbox" class="graph-sev-filter" value="low" checked> Low</label>
-        <span style="width:1px;height:16px;background:#334155"></span>
-        <input type="text" id="graphSearch" placeholder="Search nodes&hellip;" style="padding:4px 8px;background:#0f172a;border:1px solid #334155;border-radius:4px;color:#e2e8f0;font-size:.72rem;width:120px;outline:none">
-      </div>
+      {graph_filter_bar("graphSearch")}
       <div class="graph-controls">
         <button class="graph-btn" id="zoomIn" title="Zoom in">+</button>
         <button class="graph-btn" id="zoomOut" title="Zoom out">&minus;</button>

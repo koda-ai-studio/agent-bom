@@ -69,12 +69,16 @@ def test_prewarm_is_tenant_scoped_newest_first_and_reports_what_it_skipped(estat
 
 
 def test_prewarm_with_no_completed_scans_touches_no_graph_store(estate):  # noqa: F811
+    touched: list[str] = []
+
     class Untouchable:
         def __getattr__(self, name):
-            raise AssertionError(f"graph store used: {name}")
+            touched.append(name)
+            raise AttributeError(name)
 
     summary = current_graph_prewarm.prewarm_current_graphs(Untouchable(), estate[0], per_tenant_seconds=1)
     assert summary == {"status": "complete", "tenants_prepared": 0, "tenants_skipped": 0, "tenants_failed": 0}
+    assert touched == []
 
 
 def test_a_failing_tenant_is_counted_and_never_raises(estate, monkeypatch):  # noqa: F811

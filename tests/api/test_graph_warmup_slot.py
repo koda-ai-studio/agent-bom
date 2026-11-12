@@ -39,8 +39,8 @@ def test_rollup_reachability_and_exec_warm_ups_never_overlap(monkeypatch):
     monkeypatch.setenv("AGENT_BOM_GRAPH_ROLLUP_PREWARM", "1")
     monkeypatch.setenv("AGENT_BOM_FINDING_REACHABILITY_PREWARM", "1")
 
-    graph_rollup_prewarm.schedule_rollup_prewarm(lambda: object(), tenant_id="slot-tenant")
-    finding_reachability_prewarm.schedule_reachability_prewarm(lambda: object(), tenant_id="slot-tenant")
+    graph_rollup_prewarm.schedule_rollup_prewarm(object, tenant_id="slot-tenant")
+    finding_reachability_prewarm.schedule_reachability_prewarm(object, tenant_id="slot-tenant")
     exec_read_prewarm.schedule_exec_prewarm("slot-tenant")
 
     assert finished.wait(10), done
