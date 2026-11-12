@@ -21,6 +21,7 @@ from typing import Any, Callable
 
 from agent_bom.api.finding_reachability import project_persisted_graph_reachability
 from agent_bom.api.graph_commit_hooks import register_commit_hook
+from agent_bom.api.graph_warmup_slot import warmup_slot
 from agent_bom.api.tenant_worker import tenant_bound_context
 from agent_bom.core.settings import SettingError, env_bool
 
@@ -64,7 +65,7 @@ def _drain() -> None:
     while (item := _next()) is not None:
         tenant_id, store_factory = item
         try:
-            with tenant_bound_context(tenant_id):
+            with warmup_slot(), tenant_bound_context(tenant_id):
                 prewarm_reachability_index(store_factory(), tenant_id=tenant_id)
         except Exception:  # broad-except: background worker loop; a failed warm-up leaves the first reader to build the index.
             logger.debug("finding reachability warm-up skipped", exc_info=False)

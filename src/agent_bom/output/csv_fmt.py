@@ -14,6 +14,7 @@ from agent_bom.finding import Finding
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.finding_views import (
     evidence,
+    export_workflow_fields,
     is_package_malicious,
     package_ecosystem,
     package_malicious_basis,
@@ -22,7 +23,6 @@ from agent_bom.output.finding_views import (
     severity_value,
     unified_export_findings,
     with_output_sanitizer_cache,
-    workflow_status,
 )
 from agent_bom.output.possibly_affected import possibly_affected_rows
 
@@ -106,6 +106,7 @@ def to_csv(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) ->
 
     for finding in findings:
         assessment = advice.get(finding.id)
+        workflow = export_workflow_fields(finding, report.generated_at)
         row = {
             "ai_advice_verdict": assessment.verdict if assessment else "",
             "ai_advice_confidence": assessment.confidence if assessment else "",
@@ -147,10 +148,10 @@ def to_csv(report: AIBOMReport, blast_radii: list[BlastRadius] | None = None) ->
             "provenance_attested": _verdict_cell(finding, "package_provenance_attested"),
             "provenance_source": _verdict_cell(finding, "package_provenance_source"),
             "provenance_status": _verdict_cell(finding, "package_provenance_status"),
-            "owner": finding.owner or "",
-            "sla_due_at": finding.to_dict().get("sla_due_at") or "",
-            "sla_due_at_source": finding.to_dict()["sla_due_at_source"],
-            "workflow_status": workflow_status(finding),
+            "owner": workflow["owner"] or "",
+            "sla_due_at": workflow["sla_due_at"] or "",
+            "sla_due_at_source": workflow["sla_due_at_source"],
+            "workflow_status": workflow["workflow_status"] or "",
             "symbol_reachability_reason": evidence(finding, "symbol_reachability_reason", ""),
             "runtime_dependency_chain": ";".join(evidence(finding, "runtime_dependency_chain", []) or []),
         }

@@ -25,6 +25,7 @@ from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.api.graph_commit_hooks import register_commit_hook
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint
 from agent_bom.api.graph_store import containment_drilldown_graph
+from agent_bom.api.graph_warmup_slot import warmup_slot
 from agent_bom.api.scan_finding_read import suppressed_finding_ids
 from agent_bom.api.tenant_worker import tenant_bound_context
 from agent_bom.core.settings import SettingError, env_bool
@@ -169,7 +170,7 @@ def _drain_pending() -> None:
                 return
             tenant_id, store_factory = _PENDING.popitem(last=False)
         try:
-            with tenant_bound_context(tenant_id):
+            with warmup_slot(), tenant_bound_context(tenant_id):
                 prewarm_rollup(store_factory(), tenant_id=tenant_id)
         except Exception:  # noqa: BLE001 - a warm-up is an optimisation; the next reader computes cold
             logger.debug("graph rollup warm-up skipped", exc_info=False)

@@ -575,6 +575,35 @@ A cold request with no complete generation still returns a bounded, retryable
 503 while building. Explicit stale generation continuations still fail with 409,
 and generation retention does not cross tenant boundaries.
 
+At start-up the API prepares current generations before the first read asks.
+One daemon thread takes the tenants of the newest 1,000 completed jobs, at most
+16, newest first, and builds each through the same coalescing queue that reads
+use, under that tenant's binding. A read that arrives mid warm-up joins the
+build in progress rather than starting another, waits its usual
+`AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS`, and past that answers 503
+`current_estate_building` with `Retry-After: 1` as before. A tenant past the cap,
+or one whose build fails or exceeds
+`AGENT_BOM_CURRENT_GRAPH_PREWARM_TENANT_SECONDS` (default 300), is built by its
+first read instead; the start-up log line counts prepared, skipped and failed
+tenants without naming them or carrying source errors. The warm-up never blocks
+start-up or the event loop and does not run while the demo estate is seeding.
+`AGENT_BOM_CURRENT_GRAPH_PREWARM=0` turns it off.
+
+## Oversized result pushes
+
+One push is stored as one job result, so a decoded push can never exceed 240 MiB
+(the PostgreSQL jsonb value limit, less margin), whatever
+`AGENT_BOM_API_RESULT_PUSH_MAX_BYTES` says. The CLI measures the serialized
+report before uploading: past 240 MiB it sends nothing and fails the run with
+the report size, its agent count and how many agents fit in one push. When the
+control plane answers 413 for a smaller configured budget, the CLI reads
+`max_bytes` from the response and prints the same advice once, without
+retrying. The advice is to split the inventory into several files and scan each
+with its own `--inventory` path: each path is its own target scope, so its next
+push replaces only its own earlier evidence and the current estate is the union.
+Nothing is truncated and no agent is dropped. Connector and lake pushes log the
+same message and report the push as failed.
+
 ## Push completion and scan recovery
 
 A synchronous push remains `running` until graph persistence succeeds and the
