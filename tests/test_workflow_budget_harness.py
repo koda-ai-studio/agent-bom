@@ -282,3 +282,22 @@ def test_nightly_postgres_workflow_job_migrates_like_postgres_scale_evidence_and
     upload = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/upload-artifact@"))
     assert upload["if"] == "always()"
     assert "workflow-resource-budget-postgres.json" in upload["with"]["path"]
+
+
+def test_update_delete_fails_when_the_current_graph_refresh_misses_its_budget() -> None:
+    from scripts.perf.workflow_lifecycle import GRAPH_REFRESH_DEADLINE_SECONDS, update_delete_failures
+
+    # Measured 4-5 s at the chart's 1 CPU limit (2026-11-12); the budget leaves 6x for a loaded runner.
+    assert GRAPH_REFRESH_DEADLINE_SECONDS <= 30
+    passing = {
+        "scanned_matches_expected": True,
+        "open_matches_expected": True,
+        "widened_scope_has_added_agent": True,
+        "deleted_resolved": True,
+        "graph_package_nodes_before": 1,
+        "graph_package_nodes_after": 0,
+        "graph_refresh_seconds": 4.1,
+    }
+    assert update_delete_failures(passing) == []
+    stale = {**passing, "graph_package_nodes_after": 1, "graph_refresh_seconds": 30.2}
+    assert update_delete_failures(stale) == ["graph package nodes 1 -> 1 after 30.2 s (current graph refresh budget 30 s)"]

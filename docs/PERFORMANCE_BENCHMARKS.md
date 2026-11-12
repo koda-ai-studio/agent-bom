@@ -469,7 +469,68 @@ Postgres 16 service migrated and role-provisioned exactly as in
 `postgres-scale-evidence.yml`, the API connected as the non-superuser
 `agent_bom_app`, `small-self-hosted-postgres` and `multi-replica-local`, then
 the hot-read plans below. Both jobs fail on any crash, finding mismatch,
-equivalence failure or outbound connection; neither has a timing gate.
+equivalence failure, outbound connection, any process above 80% of the
+profile's memory limit, a restart whose `/readyz` never answers 200 or whose
+first graph read after readiness is not 200, or a removed package still in the
+current graph 30 s after the update push is stored. The 30 s refresh bound is
+their only timing gate.
+
+### Push admission, start-up readiness and refresh under cgroup limits
+
+Measured 2026-11-12 with `scripts/qualification/cgroup_limits.py` (#6249): the
+same harness inside the API image (Python 3.14.8, Alpine) under
+`docker run --cpus N --memory 2g --memory-swap 2g`, 200 agents, cold, warm and
+restart phases without the cancellation phase, on an Apple M4 shared with
+other workloads (load 8-20). "Before" is `main` at `cf833b61f` as recorded in
+#6249; "after" is this change. Peak RSS is the measured process (API plus the
+harness's in-process HTTP client); peak anonymous memory is the container's.
+
+| Limit | Phase | Peak RSS before | Peak RSS after | Removed package left the current graph after |
+|---|---|---:|---:|---|
+| 1 CPU / 2 GiB | cold | 1,804 MiB | 1,362 MiB | 30-45 s before; 5.1 s after |
+| 1 CPU / 2 GiB | warm | 1,797 MiB | 1,441 MiB | 4.1 s after |
+| 1 CPU / 2 GiB | restart | 503 on the first read after 3.2 s, ready at 19 s | `/readyz` 503 `current_graph_prewarming` for 3.4 s, then the first read 200 (2.9 s, no retry) | |
+| 2 CPU / 2 GiB | cold | 1,808 MiB | 1,340 MiB | still present at 60 s before; 3.6 s after |
+| 2 CPU / 2 GiB | warm | 1,971 MiB | 1,439 MiB | 3.3 s after |
+| 2 CPU / 2 GiB | restart | 503 on the first read after 5.8 s, ready at 23 s | `/readyz` 503 for 4.3 s, then the first read 200 (2.7 s, no retry) | |
+
+Peak anonymous memory fell from 1,784 to 1,437 MiB at 1 CPU and from 1,952 to
+1,391 MiB at 2 CPU. Every phase now stays under the 1,638 MiB budget (80% of
+2 GiB) with about 200 MiB to spare; the largest remaining peak is the warm
+phase's graph reads (1,439-1,442 MiB). No OOM kill, findings exact (207) and
+every equivalence check passed in both runs. Container CPU-seconds for the
+1 CPU run fell from 2,702 to 1,194, partly because the host was less loaded.
+An intermediate 1 CPU run with only the admission and readiness changes peaked
+at 1,615 (cold) and 1,662 MiB (warm), over budget, and its cold refresh missed
+60 s; the warm-up yield and the harness correction below (about 120 MiB of the
+remaining drop) account for the rest.
+
+What changed:
+
+- **One parsed copy per push.** For a 50 MiB, 200-agent push the API built a
+  JSON-validated model (203 MiB), dumped it for the queued payload (153 MiB)
+  and kept the raw body cached on the route's and the body-size middleware's
+  request objects until the response. It now parses with the validator's own
+  JSON parser (`pydantic_core.from_json`, 78 MiB), validates that data (the
+  model shares it, +0.1 MiB), queues the parsed report as the admitted payload
+  and drops both cached bodies once parsed. Measured in process: admission
+  peak 656 → 452 MiB, push-path peak 1,067 → 784 MiB.
+  `tests/test_push_admission_memory.py` holds admission to one parsed copy.
+- **The current-graph rebuild runs first and alone.** Graph commit hooks start
+  the roll-up and reachability warm-ups from inside the graph write, while the
+  ingest still holds its graph and before the job commit; each loaded a second
+  full graph beside the ingest and beside the read-triggered rebuild. A push
+  commit now queues the rebuild itself, and a warm-up holding its slot waits
+  for foreground graph work (persist through commit) and then for current-graph
+  builds, within 120 s.
+- **Readiness waits for the start-up prewarm** (see
+  [RUNTIME_FAIL_MODES.md](RUNTIME_FAIL_MODES.md), "Current graph refresh"). The
+  restart phase now polls `/readyz` as the readiness probe does before its
+  first read.
+- **The harness keeps only the rows it compares.** It held the whole parsed
+  scan report (120 MiB) for the run to compare `blast_radius`; as the
+  in-process client that was charged to the API. This is a measurement
+  correction, not a product change.
 
 ### How pushes are modelled
 

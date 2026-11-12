@@ -599,7 +599,8 @@ reach an unbuilt tenant get the bounded 503 above. Liveness (`/health`,
 `/healthz`, `/livez`) and the chart's `startupProbe` never wait on the warm-up,
 so a slow warm-up cannot get the pod restarted. A disabled warm-up holds
 nothing. Measured under the chart's 1 CPU / 2 GiB limit with a 200-agent
-tenant, the hold lasts about 20 seconds; see "Enforced cgroup limits" in
+tenant, the hold lasted 3.4 seconds and the first read after it returned 200;
+see "Push admission, start-up readiness and refresh under cgroup limits" in
 [PERFORMANCE_BENCHMARKS.md](PERFORMANCE_BENCHMARKS.md).
 
 ## Oversized result pushes
