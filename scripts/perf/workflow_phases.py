@@ -25,12 +25,10 @@ from scripts.perf.workflow_budget import (
     _graph_reads,
     _Http,
     _push,
-    _run_cli_scan,
     findings_digest,
-    mocked_upstream,
-    network_guard,
     postgres_footprint,
     run_workflow,
+    scan_in_child,
     sqlite_footprint,
     stored_rows,
 )
@@ -38,7 +36,6 @@ from scripts.perf.workflow_equivalence import projection_digest
 from scripts.perf.workflow_profiles import (
     PROFILES,
     WORKFLOW_PUSH_SOURCE_ID,
-    MockUpstream,
     WorkflowProfile,
     cli_push_body,
     expected_findings,
@@ -123,8 +120,12 @@ async def _first_graph_read(http: _Http, deadline_seconds: float = 300.0) -> dic
 
 
 async def _restart(profile: WorkflowProfile, workdir: Path) -> dict[str, Any]:
+    from agent_bom.api.server import app
+
     began = time.perf_counter()
-    async with _client() as client:
+    # A restarted deployment runs the lifespan (and its start-up graph prewarm)
+    # before traffic; the first read is sent as soon as start-up returns.
+    async with app.router.lifespan_context(app), _client() as client:
         http = _Http(client)
         first = await _first_graph_read(http)
         state = await _latest_findings(http)
@@ -145,12 +146,10 @@ def _scan_estate(profile: WorkflowProfile, workdir: Path) -> tuple[bytes, set[tu
     inventory_path = workdir / "cancel-inventory.json"
     inventory_path.write_text(json.dumps(inventory), encoding="utf-8")
     report_path = workdir / "cancel-report.json"
-    upstream = MockUpstream(vulnerable=vulnerable_versions(report))
-    with network_guard() as guard, mocked_upstream(upstream):
-        _run_cli_scan(inventory_path, report_path)
-    if guard.blocked:
-        raise RuntimeError(f"scan attempted live network: {guard.blocked}")
-    return cli_push_body(report_path.read_bytes()), expected_findings(report, inventory), upstream.snapshot()
+    receipt = scan_in_child(inventory_path, report_path, vulnerable_versions(report))
+    if receipt["blocked_connections"]:
+        raise RuntimeError(f"scan attempted live network: {receipt['blocked_connections']}")
+    return cli_push_body(report_path.read_bytes()), expected_findings(report, inventory), receipt["upstream"]
 
 
 async def _cancel_victim(profile: WorkflowProfile, workdir: Path) -> dict[str, Any]:

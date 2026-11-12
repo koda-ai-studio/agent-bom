@@ -26,7 +26,7 @@ from scripts.perf.workflow_equivalence import (
     projection_digest,
     projection_mismatches,
 )
-from scripts.perf.workflow_profiles import MockUpstream, cli_push_body, expected_findings, vulnerable_versions
+from scripts.perf.workflow_profiles import cli_push_body, expected_findings, vulnerable_versions
 
 _OPEN = {"open", "reopened"}
 GRAPH_REFRESH_DEADLINE_SECONDS = 60.0
@@ -120,15 +120,14 @@ async def graph_refresh(http: Any, name: str, version: str, deadline: float = GR
         await asyncio.sleep(0.25)
 
 
-def _scan_mutated(report: dict[str, Any], inventory: dict[str, Any], path: Path, scan: Any, mocked: Any, guard: Any) -> tuple[Any, ...]:
-    """Rewrite the inventory file in place, as an operator updating it would, and rescan it."""
+def _scan_mutated(report: dict[str, Any], inventory: dict[str, Any], path: Path, scan: Any) -> tuple[Any, ...]:
+    """Rewrite the inventory file in place, as an operator updating it would, and rescan it in its own process."""
     mutated, change = mutate_inventory(report, inventory)
     path.write_text(json.dumps(mutated), encoding="utf-8")
     output = path.with_name("report-mutated.json")
-    with guard() as network, mocked(MockUpstream(vulnerable=vulnerable_versions(report))):
-        scan(path, output)
-    if network.blocked:
-        raise RuntimeError(f"mutated scan attempted live network: {network.blocked}")
+    receipt = scan(path, output, vulnerable_versions(report))
+    if receipt["blocked_connections"]:
+        raise RuntimeError(f"mutated scan attempted live network: {receipt['blocked_connections']}")
     body = output.read_bytes()
     return body, json.loads(body).get("blast_radius") or [], expected_findings(report, mutated), change
 
@@ -143,11 +142,9 @@ async def update_delete(
     before: dict[FindingKey, Any],
 ) -> dict[str, Any]:
     """Push the mutated estate and return every equivalence check on the stored and served state."""
-    from scripts.perf.workflow_budget import _push, _run_cli_scan, mocked_upstream, network_guard
+    from scripts.perf.workflow_budget import _push, scan_in_child
 
-    body, scanned, expected, change = await asyncio.to_thread(
-        _scan_mutated, report, inventory, inventory_path, _run_cli_scan, mocked_upstream, network_guard
-    )
+    body, scanned, expected, change = await asyncio.to_thread(_scan_mutated, report, inventory, inventory_path, scan_in_child)
     deleted, widened = change["deleted"], change["widened"]
     graph_before = await package_nodes(http, deleted[1], deleted[2])
     pushed = await _push(http, cli_push_body(body, source_id=source_id), 600)
