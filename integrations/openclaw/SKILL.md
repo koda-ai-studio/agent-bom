@@ -1,7 +1,7 @@
 ---
 name: agent-bom
 description: >-
-  AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.
+  AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach.
   Covers MCP discovery, CVEs, blast radius, SBOMs,
   CIS benchmarks (AWS, Azure, GCP, Snowflake), OWASP/NIST/MITRE
   compliance, AISVS v1.0, MAESTRO layer tagging, and vector database

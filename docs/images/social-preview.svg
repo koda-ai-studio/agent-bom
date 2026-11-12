@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
-  <title id="title">agent-bom: AI supply-chain BOM — every agent, MCP server and AI package, and what each one can reach.</title>
-  <desc id="desc">AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach. Integrations: Claude, Codex, Cursor, GitHub Copilot, Windsurf, Cortex Code, Gemini CLI, JetBrains AI, Junie, Amazon Q, Cline, Roo Code, Continue, Zed, Goose, Snowflake CLI, Docker MCP Toolkit, Tabnine, Sourcegraph Cody, Aider, Void, Aide, Trae, Pieces, OpenClaw, mcp-cli, OpenAI, Hugging Face, Ollama, MLflow, W&amp;B, Langfuse, LangSmith, CoreWeave, Nebius, Lambda, RunPod, Vast.ai, Crusoe, GPU containers + K8s GPU nodes, AWS, Azure, GCP, Kubernetes, Snowflake, Databricks, Supabase, Pinecone, Qdrant, Weaviate, Chroma, Milvus, Okta, GitHub Actions, Vercel, Microsoft Entra ID, Jira, ServiceNow, Slack, Jamf, ClickHouse, BigQuery, S3, GCS, Azure Blob, Jira tickets, Slack alerts, Vanta, Drata, OCSF syslog.</desc>
+  <title id="title">agent-bom: AI supply-chain BOM — supported agents, MCP servers and AI packages, and what each one can reach.</title>
+  <desc id="desc">AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach. Integrations: Claude, Codex, Cursor, GitHub Copilot, Windsurf, Cortex Code, Gemini CLI, JetBrains AI, Junie, Amazon Q, Cline, Roo Code, Continue, Zed, Goose, Snowflake CLI, Docker MCP Toolkit, Tabnine, Sourcegraph Cody, Aider, Void, Aide, Trae, Pieces, OpenClaw, mcp-cli, OpenAI, Hugging Face, Ollama, MLflow, W&amp;B, Langfuse, LangSmith, CoreWeave, Nebius, Lambda, RunPod, Vast.ai, Crusoe, GPU containers + K8s GPU nodes, AWS, Azure, GCP, Kubernetes, Snowflake, Databricks, Supabase, Pinecone, Qdrant, Weaviate, Chroma, Milvus, Okta, GitHub Actions, Vercel, Microsoft Entra ID, Jira, ServiceNow, Slack, Jamf, ClickHouse, BigQuery, S3, GCS, Azure Blob, Jira tickets, Slack alerts, Vanta, Drata, OCSF syslog.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#060b17" />
@@ -281,7 +281,7 @@
     </g>
     <text x="40" y="134" font-size="52" font-weight="820" letter-spacing="-2.1" fill="#f8fafc">AI supply-chain </text>
     <text x="440" y="134" font-size="52" font-weight="820" letter-spacing="-2.1" fill="url(#brand)">BOM</text>
-    <text x="40" y="172" fill="#94a3b8" font-size="18" font-weight="500">Every agent, MCP server and AI package, and what each one can reach.</text>
+    <text x="40" y="172" fill="#94a3b8" font-size="18" font-weight="500">Supported agents, MCP servers and AI packages, and what each one can reach.</text>
     <text x="40" y="210" fill="#94a3b8" font-size="14" font-weight="500">Agents → MCP servers → tools → packages → credentials → data, with evidence for every edge.</text>
     <g id="coverage">
       <g transform="translate(63 234)" data-integration="Claude" fill="#f8fafc" color="#f8fafc">

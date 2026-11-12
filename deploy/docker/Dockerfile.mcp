@@ -39,7 +39,7 @@ ARG CURL_CA_BUNDLE
 ARG PIP_CERT
 
 LABEL maintainer="W S <34316639+msaad00@users.noreply.github.com>"
-LABEL description="Security scanner for AI infrastructure — MCP server mode"
+LABEL description="AI supply-chain BOM: agents, MCP servers, AI packages and recorded reach. MCP server (stdio)."
 LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.source="https://github.com/koda-ai-studio/agent-bom"
 LABEL org.opencontainers.image.licenses="Apache-2.0"

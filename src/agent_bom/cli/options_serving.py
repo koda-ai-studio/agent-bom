@@ -5,7 +5,7 @@ from __future__ import annotations
 import click
 
 from agent_bom.cloud.serving_auth import TOKEN_ENV_PREFIX, validate_token_env_name
-from agent_bom.cloud.serving_runtimes import SERVING_RUNTIMES
+from agent_bom.cloud.serving_runtimes import SERVING_RUNTIMES, endpoint_syntax_error
 
 
 def _validate_serving_endpoints(ctx: click.Context, param: click.Parameter, values: tuple[str, ...]) -> tuple[tuple[str, str], ...]:
@@ -19,6 +19,9 @@ def _validate_serving_endpoints(ctx: click.Context, param: click.Parameter, valu
             raise click.BadParameter(
                 f"unknown runtime {runtime!r}; choose from {', '.join(sorted(SERVING_RUNTIMES))}", ctx=ctx, param=param
             )
+        problem = endpoint_syntax_error(url)
+        if problem:
+            raise click.BadParameter(f"{runtime} endpoint refused: {problem}", ctx=ctx, param=param)
         parsed.append((runtime, url.strip()))
     return tuple(parsed)
 

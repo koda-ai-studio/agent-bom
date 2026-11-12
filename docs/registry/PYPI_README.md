@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.koda-ai-studio/agent-bom -->
 
-**AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach.**
+**AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach.**
 
 For AppSec teams and developers who run Claude Code, Cursor, Codex or any MCP
 client: see which agents, MCP servers, tools and packages are installed, which

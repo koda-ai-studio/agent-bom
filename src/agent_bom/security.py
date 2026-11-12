@@ -10,7 +10,7 @@ import logging
 import os
 import re
 from typing import Any
-from urllib.parse import unquote, urlsplit, urlunsplit
+from urllib.parse import ParseResult, unquote, urlparse, urlsplit, urlunsplit
 
 from agent_bom.constants import is_blank_env_value
 from agent_bom.core.security_validation import (
@@ -778,6 +778,34 @@ def sanitize_sensitive_payload(
     return redact_payload(value, key, max_str_len, depth, string_cache, {} if _key_cache is None else _key_cache)
 
 
+def url_port(netloc: str) -> int | None:
+    """Port named in *netloc*, or ``None`` when it names none.
+
+    Raises ``ValueError`` unless the port is ASCII digits within 1-65535, the
+    only form every HTTP client accepts.
+    """
+    hostinfo = netloc.rpartition("@")[2]
+    _, bracket, after_ipv6 = hostinfo.partition("]")
+    _, colon, port = (after_ipv6 if bracket else hostinfo).rpartition(":")
+    if not colon or not port:
+        return None
+    if not (port.isascii() and port.isdigit() and 1 <= int(port) <= 65535):
+        raise ValueError("URL port must be a number from 1 to 65535")
+    return int(port)
+
+
+def _parse_outbound_url(url: str) -> ParseResult:
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        raise SecurityError(f"Invalid URL '{url}': {e}")
+    try:
+        url_port(parsed.netloc)
+    except ValueError as exc:
+        raise SecurityError(str(exc)) from None
+    return parsed
+
+
 def validate_url(url: str, *, allowed_schemes: tuple[str, ...] = ("https",), allow_private: bool = False) -> None:
     """
     Validate a URL for safety, including DNS rebinding protection.
@@ -793,12 +821,7 @@ def validate_url(url: str, *, allowed_schemes: tuple[str, ...] = ("https",), all
     Raises:
         SecurityError: If URL is invalid or uses insecure protocol
     """
-    from urllib.parse import urlparse
-
-    try:
-        parsed = urlparse(url)
-    except Exception as e:
-        raise SecurityError(f"Invalid URL '{url}': {e}")
+    parsed = _parse_outbound_url(url)
 
     allow_private = allow_private or os.environ.get("AGENT_BOM_ALLOW_PRIVATE_EGRESS_URLS", "").strip().lower() in {
         "1",

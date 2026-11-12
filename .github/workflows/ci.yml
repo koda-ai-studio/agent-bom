@@ -64,6 +64,7 @@ jobs:
       endpoint: ${{ steps.classify.outputs.endpoint }}
       graph_performance: ${{ steps.classify.outputs.graph_performance }}
       helm: ${{ steps.classify.outputs.helm }}
+      html_report: ${{ steps.classify.outputs.html_report }}
       postgres: ${{ steps.classify.outputs.postgres }}
       python: ${{ steps.classify.outputs.python }}
       ui: ${{ steps.classify.outputs.ui }}
@@ -184,6 +185,12 @@ jobs:
           if printf '%s\n' "$changed" | grep -E '^(deploy/helm/agent-bom/|scripts/validate_helm_profiles\.py$|\.github/workflows/ci\.yml$)' > /dev/null; then
             helm=true
           fi
+          # Report browser check: the HTML report's scripts, its browser test,
+          # the Playwright lockfile it runs from, and this workflow.
+          html_report=false
+          if printf '%s\n' "$changed" | grep -E '^(src/agent_bom/output/html/|tests/test_html_report_cytoscape_styles\.py$|tests/html_report_scale_fixtures\.py$|ui/package-lock\.json$|\.github/actions/setup-ui/|\.github/workflows/ci\.yml$)' > /dev/null; then
+            html_report=true
+          fi
           if printf '%s\n' "$changed" | grep -E '^(ui/|\.github/workflows/ci\.yml$|\.github/actions/setup-ui/|docs/openapi/|action\.yml|contracts/|src/agent_bom/(api/(routes/|read_models/|error_envelope\.py|versioning\.py|models\.py|server\.py)|graph/|context_graph\.py|graph_schema\.py)|src/agent_bom/models\.py)' > /dev/null; then
             ui=true
           fi
@@ -219,6 +226,7 @@ jobs:
             echo "endpoint=${endpoint}"
             echo "graph_performance=${graph_performance}"
             echo "helm=${helm}"
+            echo "html_report=${html_report}"
             echo "postgres=${postgres}"
             echo "python=${python}"
             echo "ui=${ui}"
@@ -239,6 +247,7 @@ jobs:
             echo "- Endpoint packaging required: \`${endpoint}\`"
             echo "- Measured graph performance required: \`${graph_performance}\`"
             echo "- Helm profile validation required: \`${helm}\`"
+            echo "- HTML report browser check required: \`${html_report}\`"
             echo "- Real Postgres integration required: \`${postgres}\`"
             echo "- Python test suite required: \`${python}\`"
             echo "- UI Validate (lint + test + build) required: \`${ui}\`"
@@ -964,6 +973,62 @@ jobs:
             ui/test-results/**/error-context.md
           retention-days: 3
           if-no-files-found: warn
+
+  # Loads a generated HTML report in Chromium and fails on any Cytoscape style
+  # warning or page error. The report's pinned CDN scripts are served from the
+  # npm registry tarballs of the same versions, so no CDN is contacted.
+  html-report-browser:
+    name: HTML report browser check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: >-
+      !cancelled() && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name != 'pull_request' && github.event_name != 'push') ||
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.html_report == 'true'
+      )
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: "3.13"
+
+      - name: Install Python test dependencies
+        run: uv sync --frozen --extra dev
+
+      - name: Set up UI toolchain
+        uses: ./.github/actions/setup-ui
+
+      - name: Install Playwright from the UI lockfile
+        run: |
+          cd ui
+          npm ci
+          npx playwright install chromium
+
+      - name: Fetch the report's pinned scripts from the npm registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          vendor="$RUNNER_TEMP/report-js"
+          mkdir -p "$vendor"
+          cd "$vendor"
+          for spec in cytoscape@3.30.2 dagre@0.8.5 cytoscape-dagre@2.5.0 chart.js@4.4.2; do
+            tarball="$(npm pack --silent "$spec")"
+            mkdir -p "$spec"
+            tar -xzf "$tarball" -C "$spec" --strip-components=1
+          done
+          echo "AGENT_BOM_REPORT_JS_DIR=$vendor" >> "$GITHUB_ENV"
+
+      - name: Load the report in Chromium
+        env:
+          AGENT_BOM_PLAYWRIGHT_NODE_MODULES: ${{ github.workspace }}/ui/node_modules
+          AGENT_BOM_REQUIRE_REPORT_BROWSER: "1"
+        run: uv run pytest tests/test_html_report_cytoscape_styles.py -q -rs
 
   # Release-image smoke for the UI container, once per run, beside the shards.
   ui-container-smoke:

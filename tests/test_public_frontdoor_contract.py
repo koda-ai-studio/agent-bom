@@ -27,7 +27,7 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
     for claim in (
         "AI supply-chain ",
         ">BOM<",
-        "Every agent, MCP server and AI package, and what each one can reach.",
+        "Supported agents, MCP servers and AI packages, and what each one can reach.",
         "Agents → MCP servers → tools → packages → credentials → data, with evidence for every edge.",
         "Open the integration directory for all vendors and coverage",
         "agent → MCP server → packages → CVEs → blast radius",
@@ -96,7 +96,7 @@ def test_readme_leads_with_canonical_tagline_brand_header() -> None:
     header = readme.split("<!-- mcp-name:", 1)[0]
 
     assert "docs/images/social-preview.svg" in header
-    assert "AI supply-chain BOM: every agent, MCP server and AI package, and what each one can reach." in header
+    assert "AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach." in header
     assert "Discover. Scan. Correlate. Act." not in header
     assert "logo-dark.svg" not in header
     assert header.index("social-preview.svg") < header.index("img.shields.io")
