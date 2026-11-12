@@ -8,11 +8,14 @@ promise: ``success`` with exit 0 and the runtime identity confirmed when the
 listing is readable, ``denied`` with exit 1 and no inventory when it is not.
 
     python scripts/qualification/serving.py --runtime llamacpp --runtime vllm --runtime ollama
+    python scripts/qualification/serving.py --runtime tgi --runtime triton
 
 Models (downloaded on first use, removed with ``--clean``):
 llama.cpp serves Qwen/Qwen2.5-0.5B-Instruct-GGUF ``q4_k_m`` (~470 MiB); vLLM's
 CPU image serves ``facebook/opt-125m`` (~250 MiB); Ollama pulls
-``qwen2.5:0.5b`` (~380 MiB). API keys are generated per run and reach the
+``qwen2.5:0.5b`` (~380 MiB); TGI's Intel CPU image (linux/amd64 only)
+serves ``HuggingFaceTB/SmolLM2-135M-Instruct`` (~270 MiB); Triton serves a
+generated two-version Python-backend identity model on CPU. API keys are generated per run and reach the
 runtime and agent-bom only through files and ``--serving-token-env``.
 """
 
@@ -41,11 +44,27 @@ IMAGES = {
     "llamacpp": "ghcr.io/ggml-org/llama.cpp:server",
     "vllm": "vllm/vllm-openai-cpu:latest",
     "ollama": "ollama/ollama:latest",
+    # TGI publishes its CPU build (Intel IPEX) for linux/amd64 only; it runs emulated on Apple silicon.
+    "tgi": "ghcr.io/huggingface/text-generation-inference:3.3.7-intel-cpu"
+    "@sha256:89b4cc8d6e4f7c184c63485a63094760ac9454be658a90f68bc8ecc3cde228bc",
+    "triton": "nvcr.io/nvidia/tritonserver:26.10-py3@sha256:b404f7de5dbeeefe0b17d7d149745a50d0989a25d0d831433b5ba63c716c2fcd",
 }
+PLATFORMS = {"tgi": "linux/amd64"}
+TGI_MODEL = "HuggingFaceTB/SmolLM2-135M-Instruct"
+TRITON_MODEL = "abq_identity"
 GGUF_URL = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf"
 TOKEN_ENV = "AGENT_BOM_SERVING_TOKEN_QUALIFICATION"
 # The inventory and metadata reads agent-bom sends, plus /health, per runtime.
-READS = {"llamacpp": ["/v1/models", "/props", "/health"], "vllm": ["/v1/models", "/version", "/health", "/metrics"]}
+READS = {
+    "llamacpp": ["/v1/models", "/props", "/health"],
+    "vllm": ["/v1/models", "/version", "/health", "/metrics"],
+    "tgi": ["/info", "/health", "/v1/models", "/metrics"],
+    "triton": ["POST /v2/repository/index", "/v2", "/v2/health/ready", f"/v2/models/{TRITON_MODEL}"],
+}
+READY = {"llamacpp": "/health", "vllm": "/health", "tgi": "/health", "triton": "/v2/health/ready"}
+# TGI's --api-key guards only the generation routes (router/src/server.rs, v3.3.7); /info stays public.
+LISTING_OPEN_WITH_KEY = {"tgi"}
+LISTING = {"llamacpp": "/v1/models", "vllm": "/v1/models", "tgi": "/info", "triton": "POST /v2/repository/index"}
 
 
 def docker(*args: str, timeout: float = 900, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -57,11 +76,12 @@ def published_port(container: str, port: int) -> str:
     return f"http://{mapping[0]}" if mapping else ""
 
 
-def wait_ready(url: str, timeout: float = 600) -> bool:
+def wait_ready(url: str, timeout: float = 600, key: str | None = None) -> bool:
     deadline = time.monotonic() + timeout
+    headers = {"Authorization": f"Bearer {key}"} if key else {}
     while time.monotonic() < deadline:
         try:
-            if httpx.get(url, timeout=3).status_code == 200:
+            if httpx.get(url, headers=headers, timeout=3).status_code == 200:
                 return True
         except httpx.HTTPError:
             pass  # not listening yet; retried until the deadline
@@ -69,15 +89,23 @@ def wait_ready(url: str, timeout: float = 600) -> bool:
     return False
 
 
-def auth_matrix(base: str, paths: list[str], key: str) -> dict[str, dict[str, int]]:
-    """Status per path with no token, a wrong token and the right token."""
+def split_read(read: str) -> tuple[str, str]:
+    """``"POST /path"`` -> ``("POST", "/path")``; a bare path is a GET."""
+    method, _, path = read.rpartition(" ")
+    return method or "GET", path
+
+
+def auth_matrix(base: str, reads: list[str], key: str) -> dict[str, dict[str, int]]:
+    """Status per read with no token, a wrong token and the right token."""
     tokens = {"none": None, "wrong": "wrong-" + secrets.token_hex(8), "right": key}
     matrix: dict[str, dict[str, int]] = {}
-    for path in paths:
-        matrix[path] = {}
+    for read in reads:
+        method, path = split_read(read)
+        matrix[read] = {}
         for label, token in tokens.items():
             headers = {"Authorization": f"Bearer {token}"} if token else {}
-            matrix[path][label] = httpx.get(base + path, headers=headers, timeout=10).status_code
+            body = {"json": {}} if method == "POST" else {}
+            matrix[read][label] = httpx.request(method, base + path, headers=headers, timeout=10, **body).status_code
     return matrix
 
 
@@ -101,10 +129,46 @@ def probe(args: list[str], workdir: Path, token_file: Path | None = None) -> dic
         "request_identity": sorted({item["collection"]["request_identity"] for item in evidence}),
         "runtime": sorted({f"{item['runtime']['name']} {item['runtime']['version']} {item['runtime']['identity']}" for item in evidence}),
         "models": sorted(item["model"]["served_name"] for item in evidence),
+        "records": sorted(model_record(item["model"]) for item in evidence),
+        "agent_names": sorted(
+            {str(agent.get("name")) for agent in report.get("agents", []) if (agent.get("metadata") or {}).get("serving_evidence")}
+        ),
         "findings": sorted(finding.get("title") for finding in report.get("findings", [])),
         "warnings": [str(warning)[:200] for warning in report.get("warnings", [])],
         "stderr": tail(run.stderr, 5) if run.returncode not in (0, 1) else "",
     }
+
+
+def model_record(model: dict[str, Any]) -> str:
+    """One comparable line per model: name, version, digest and state as reported."""
+    return " ".join(f"{key}={model.get(key)}" for key in ("served_name", "version", "digest", "state"))
+
+
+def tgi_truth(info: dict[str, Any]) -> dict[str, Any]:
+    """What a TGI ``/info`` response says the server serves."""
+    model = {"served_name": info.get("model_id"), "version": None, "digest": info.get("model_sha"), "state": None}
+    return {"records": [model_record(model)], "runtime_version": info.get("version")}
+
+
+def triton_truth(index: list[dict[str, Any]], metadata: dict[str, Any]) -> dict[str, Any]:
+    """What Triton's repository index and server metadata say the server serves."""
+    records = [model_record({"served_name": e.get("name"), "version": e.get("version"), "state": e.get("state")}) for e in index]
+    return {"records": sorted(records), "runtime_version": metadata.get("version")}
+
+
+def server_truth(runtime: str, base: str) -> dict[str, Any]:
+    if runtime == "tgi":
+        return tgi_truth(httpx.get(base + "/info", timeout=10).json())
+    index = httpx.post(base + "/v2/repository/index", json={}, timeout=10).json()
+    return triton_truth(index, httpx.get(base + "/v2", timeout=10).json())
+
+
+def expect_truth(result: LaneResult, runtime: str, outcome: dict[str, Any], truth: dict[str, Any]) -> None:
+    """agent-bom must report exactly the models and runtime version the server reports, each under its own name."""
+    versions = {line.split(" ")[1] for line in outcome["runtime"]}
+    ok = outcome["records"] == truth["records"] and versions == {str(truth["runtime_version"])}
+    ok = ok and len(outcome["agent_names"]) == len(truth["records"])
+    result.check(f"{runtime}_matches_server", ok, {"agent_bom": outcome, "server": truth})
 
 
 def expect_success(result: LaneResult, name: str, outcome: dict[str, Any], identity: str) -> None:
@@ -125,23 +189,120 @@ def secret_file(directory: Path, name: str) -> Path:
     return path
 
 
-def openai_compatible(result: LaneResult, runtime: str, workdir: Path, start: Callable[[str, Path | None], str]) -> None:
+def keyed_runtime(result: LaneResult, runtime: str, workdir: Path, start: Callable[[str, Path | None], str]) -> None:
     """Start the runtime with an API key, record the auth matrix, then probe with none, a wrong and the right token."""
     key_file = secret_file(workdir, f"{runtime}-key")
     wrong_file = secret_file(workdir, f"{runtime}-wrong")
+    key = key_file.read_text(encoding="utf-8")
     base = start(f"{runtime}-key", key_file)
-    if not result.check(f"{runtime}_ready", wait_ready(base + "/health"), base):
+    if not result.check(f"{runtime}_ready", wait_ready(base + READY[runtime], key=key), base):
         return
-    matrix = auth_matrix(base, READS[runtime], key_file.read_text(encoding="utf-8"))
+    matrix = auth_matrix(base, READS[runtime], key)
     result.measurements[f"{runtime}_auth_status"] = matrix
-    result.check(f"{runtime}_listing_requires_key", matrix["/v1/models"] == {"none": 401, "wrong": 401, "right": 200}, matrix)
+    listing = matrix[LISTING[runtime]]
     endpoint = ["--serving-endpoint", f"{runtime}={base}"]
-    expect_denied(result, f"{runtime}_no_token_denied", probe(endpoint, workdir))
     paired = [*endpoint, "--serving-token-env", f"{base}={TOKEN_ENV}"]
-    expect_denied(result, f"{runtime}_wrong_token_denied", probe(paired, workdir, wrong_file))
+    if runtime in LISTING_OPEN_WITH_KEY:
+        result.check(f"{runtime}_listing_open_with_key", listing == {"none": 200, "wrong": 200, "right": 200}, matrix)
+        expect_success(result, f"{runtime}_keyed_no_token_success", probe(endpoint, workdir), "anonymous")
+        expect_success(result, f"{runtime}_keyed_wrong_token_success", probe(paired, workdir, wrong_file), "bearer")
+    else:
+        result.check(f"{runtime}_listing_requires_key", listing["none"] in (401, 403) and listing["right"] == 200, matrix)
+        expect_denied(result, f"{runtime}_no_token_denied", probe(endpoint, workdir))
+        expect_denied(result, f"{runtime}_wrong_token_denied", probe(paired, workdir, wrong_file))
     right = probe(paired, workdir, key_file)
     result.measurements[f"{runtime}_success"] = right
     expect_success(result, f"{runtime}_token_success", right, "bearer")
+
+
+def anonymous_runtime(result: LaneResult, runtime: str, workdir: Path, start: Callable[[str, Path | None], str]) -> None:
+    """Start the runtime without a key, expect an anonymous ``success`` and compare it with the server's own answer."""
+    base = start(f"{runtime}-open", None)
+    if not result.check(f"{runtime}_open_ready", wait_ready(base + READY[runtime], timeout=1800), base):
+        return
+    outcome = probe(["--serving-endpoint", f"{runtime}={base}"], workdir)
+    result.measurements[f"{runtime}_anonymous"] = outcome
+    expect_success(result, f"{runtime}_anonymous_success", outcome, "anonymous")
+    if runtime in ("tgi", "triton"):
+        expect_truth(result, runtime, outcome, server_truth(runtime, base))
+
+
+TRITON_CONFIG = f"""name: "{TRITON_MODEL}"
+backend: "python"
+max_batch_size: 0
+input [{{ name: "INPUT0", data_type: TYPE_FP32, dims: [ 4 ] }}]
+output [{{ name: "OUTPUT0", data_type: TYPE_FP32, dims: [ 4 ] }}]
+instance_group [{{ kind: KIND_CPU, count: 1 }}]
+version_policy: {{ all: {{}} }}
+"""
+TRITON_PYTHON = """import triton_python_backend_utils as pb_utils
+
+
+class TritonPythonModel:
+    def execute(self, requests):
+        return [
+            pb_utils.InferenceResponse([pb_utils.Tensor("OUTPUT0", pb_utils.get_input_tensor_by_name(r, "INPUT0").as_numpy())])
+            for r in requests
+        ]
+"""
+
+
+def write_triton_repository(root: Path) -> Path:
+    """A CPU-only Python-backend identity model with two versions, both served under ``version_policy: all``."""
+    model = root / TRITON_MODEL
+    for version in ("1", "2"):
+        (model / version).mkdir(parents=True, exist_ok=True)
+        (model / version / "model.py").write_text(TRITON_PYTHON, encoding="utf-8")
+    (model / "config.pbtxt").write_text(TRITON_CONFIG, encoding="utf-8")
+    return root
+
+
+def triton_command(keyed: bool) -> list[str]:
+    """Shell command for the Triton container; the key arrives only through ``$TRITON_QUALIFICATION_KEY``."""
+    command = "exec tritonserver --model-repository=/models --allow-grpc=false --allow-metrics=false"
+    if keyed:
+        command += ' "--http-restricted-api=model-repository,metadata:Authorization=Bearer ${TRITON_QUALIFICATION_KEY}"'
+    return ["sh", "-c", command]
+
+
+def tgi_command() -> list[str]:
+    return ["--model-id", TGI_MODEL, "--port", "8080", "--max-input-tokens", "256", "--max-total-tokens", "512"]
+
+
+def runtime_starter(runtime: str, prefix: str, started: list[str], volume: str) -> Callable[[str, Path | None], str]:
+    """``start(name, key_file)`` for TGI or Triton, publishing only on loopback."""
+    image, port = IMAGES[runtime], 8080 if runtime == "tgi" else 8000
+    key_name = "API_KEY" if runtime == "tgi" else "TRITON_QUALIFICATION_KEY"
+
+    def start(name: str, key: Path | None) -> str:
+        container = f"{prefix}-{name}"
+        started.append(container)
+        env = ["-e", "USAGE_STATS=off"] if runtime == "tgi" else []
+        key_env: dict[str, str] | None = None
+        if key:
+            key_args, key_env = secret_env({key_name: key.read_text(encoding="utf-8")})
+            env += key_args
+        platform = ["--platform", PLATFORMS[runtime]] if runtime in PLATFORMS else []
+        command = tgi_command() if runtime == "tgi" else triton_command(key is not None)
+        docker(
+            "run",
+            "-d",
+            "--name",
+            container,
+            *platform,
+            "-p",
+            f"127.0.0.1::{port}",
+            "--shm-size=1g",
+            "-v",
+            volume,
+            *env,
+            image,
+            *command,
+            env=key_env,
+        )
+        return published_port(container, port)
+
+    return start
 
 
 def run_lane(result: LaneResult, runtimes: list[str], models: Path, prefix: str) -> None:
@@ -151,7 +312,8 @@ def run_lane(result: LaneResult, runtimes: list[str], models: Path, prefix: str)
         try:
             for runtime in runtimes:
                 image = IMAGES[runtime]
-                pulled = docker("pull", "-q", image, timeout=3600)
+                platform = ["--platform", PLATFORMS[runtime]] if runtime in PLATFORMS else []
+                pulled = docker("pull", "-q", *platform, image, timeout=3600)
                 digest = docker("image", "inspect", image, "--format", "{{index .RepoDigests 0}}").stdout.strip()
                 result.measurements[f"{runtime}_image"] = digest or tail(pulled.stderr, 3)
                 if runtime == "llamacpp":
@@ -170,15 +332,8 @@ def run_lane(result: LaneResult, runtimes: list[str], models: Path, prefix: str)
                         )
                         return published_port(container, 8080)
 
-                    open_base = start_llama("llamacpp-open", None)
-                    if result.check("llamacpp_open_ready", wait_ready(open_base + "/health"), open_base):
-                        expect_success(
-                            result,
-                            "llamacpp_anonymous_success",
-                            probe(["--serving-endpoint", f"llamacpp={open_base}"], workdir),
-                            "anonymous",
-                        )
-                    openai_compatible(result, "llamacpp", workdir, start_llama)
+                    anonymous_runtime(result, "llamacpp", workdir, start_llama)
+                    keyed_runtime(result, "llamacpp", workdir, start_llama)
                 elif runtime == "vllm":
                     cache = models / "huggingface"
                     cache.mkdir(exist_ok=True)
@@ -209,7 +364,18 @@ def run_lane(result: LaneResult, runtimes: list[str], models: Path, prefix: str)
                         )
                         return published_port(container, 8000)
 
-                    openai_compatible(result, "vllm", workdir, start_vllm)
+                    keyed_runtime(result, "vllm", workdir, start_vllm)
+                elif runtime in ("tgi", "triton"):
+                    if runtime == "tgi":
+                        (models / "huggingface").mkdir(exist_ok=True)
+                        volume = f"{models / 'huggingface'}:/data"
+                    else:
+                        volume = f"{write_triton_repository(workdir / 'triton-models')}:/models:ro"
+                    start = runtime_starter(runtime, prefix, started, volume)
+                    anonymous_runtime(result, runtime, workdir, start)
+                    remove(started)
+                    keyed_runtime(result, runtime, workdir, start)
+                    remove(started)
                 elif runtime == "ollama":
                     container = f"{prefix}-ollama"
                     started.append(container)
@@ -225,8 +391,12 @@ def run_lane(result: LaneResult, runtimes: list[str], models: Path, prefix: str)
                             outcome,
                         )
         finally:
-            for container in started:
-                docker("rm", "-f", container)
+            remove(started)
+
+
+def remove(started: list[str]) -> None:
+    while started:
+        docker("rm", "-f", started.pop())
 
 
 def main() -> int:
