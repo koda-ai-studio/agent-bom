@@ -286,21 +286,29 @@ def test_tornado_refresh_manifest_is_hashed_and_reaches_released_build(job: str,
     assert "tornado" not in {Requirement(item).name.lower() for item in project["dependencies"]}
 
 
-@pytest.mark.parametrize("job", ["refresh-latest", "refresh-ui-latest", "refresh-collector-latest"])
-def test_refresh_gate_retains_sarif_even_when_the_verdict_fails(job: str) -> None:
+@pytest.mark.parametrize(
+    ("job", "fmt", "evidence"),
+    [
+        ("refresh-latest", "sarif", "image-refresh.sarif"),
+        # The UI gate reads scan_run from the JSON report to apply reviewed coverage exceptions.
+        ("refresh-ui-latest", "json", "image-refresh.json"),
+        ("refresh-collector-latest", "sarif", "image-refresh.sarif"),
+    ],
+)
+def test_refresh_gate_retains_evidence_even_when_the_verdict_fails(job: str, fmt: str, evidence: str) -> None:
     import yaml
 
     workflow = yaml.safe_load((ROOT / ".github/workflows/refresh-latest-container.yml").read_text())
     steps = workflow["jobs"][job]["steps"]
     gate_index = next(i for i, step in enumerate(steps) if "vulnerability refresh gate" in step.get("name", ""))
     gate = steps[gate_index]
-    assert "--format sarif" in gate["run"]
-    assert "--output image-refresh.sarif" in gate["run"]
+    assert f"--format {fmt}" in gate["run"]
+    assert f"--output {evidence}" in gate["run"]
     assert "--fail-on-severity medium" in gate["run"]
     assert "continue-on-error" not in gate
     assert "|| true" not in gate["run"]
     receipt = steps[gate_index + 1]
     assert receipt["if"] == "always()"
     assert receipt["uses"].startswith("actions/upload-artifact@")
-    assert receipt["with"]["path"] == "image-refresh.sarif"
+    assert receipt["with"]["path"] == evidence
     assert receipt["with"]["name"] == f"{job}-scan-evidence"
