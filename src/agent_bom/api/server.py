@@ -324,7 +324,7 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     # Stop claiming new distributed work before draining in-flight scans.
     if _scan_worker is not None:
         try:
-            await _scan_worker.stop()
+            await _scan_worker.stop(keep_leases=True)
         except Exception:  # noqa: BLE001
             _logger.debug("scan worker stop skipped", exc_info=False)
     for task in (_scheduler_task, _connection_scheduler_task, _export_scheduler_task, _side_scan_scheduler_task):
@@ -348,6 +348,8 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
             _drain_seconds,
         )
         shutdown_scan_executor(wait=False, cancel_futures=True)
+    if _scan_worker is not None:
+        _scan_worker.stop_heartbeat()
     # Close Postgres connection pool if active
     try:
         if postgres_deployment_configured():

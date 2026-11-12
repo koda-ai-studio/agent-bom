@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 from typing import cast
 
 from agent_bom.api.models import JobStatus, ScanJob
 from agent_bom.api.pipeline import submit_scan_job
 from agent_bom.api.scan_batches import child_request_for_target, scan_request_targets
 from agent_bom.api.stores import _get_store, _jobs_put
+from agent_bom.api.tenant_worker import run_tenant_bound
+from agent_bom.core.tenancy import require_explicit_tenant_id
+from agent_bom.security import sanitize_error, sanitize_text
+
+_logger = logging.getLogger(__name__)
 
 
 def _repair_scan_batch(parent: ScanJob, *, dispatch: bool = True) -> ScanJob:
@@ -79,20 +85,52 @@ def dispatch_scan_job(job: ScanJob) -> None:
     """Dispatch an already-persisted scan through the configured durable queue."""
 
     store = _get_store()
-    from agent_bom.api.scan_queue import (
-        claim_local_dispatch,
-        distributed_scans_enabled,
-        release_local_dispatch,
-        store_supports_dispatch,
-    )
+    from agent_bom.api.scan_queue import claim_local_dispatch, distributed_scans_enabled, store_supports_dispatch
 
     if distributed_scans_enabled() and store_supports_dispatch(store):
         store.enqueue_for_dispatch(job)
-    else:
-        if not claim_local_dispatch(job.job_id):
-            return
+    elif claim_local_dispatch(job):
+        _submit_claimed(job)
+
+
+def _submit_claimed(job: ScanJob) -> None:
+    from agent_bom.api.scan_queue import release_local_dispatch
+
+    try:
+        submit_scan_job(job)
+    except Exception:
+        release_local_dispatch(job)
+        raise
+
+
+def _durably_pending(job: ScanJob) -> bool:
+    store = _get_store()
+    view = getattr(store, "get_status_view", None)
+    if callable(view):
+        row = view(job.job_id, job.tenant_id)
+        return isinstance(row, dict) and row.get("status") == JobStatus.PENDING.value
+    current = store.get(job.job_id, tenant_id=job.tenant_id)
+    return current is not None and current.status is JobStatus.PENDING
+
+
+def finish_local_scan_dispatch(job: ScanJob) -> None:
+    """Release a finished worker's claim, re-running the job if it was dispatched meanwhile and is pending again.
+
+    The durable row decides: a replay of the admission this worker just finished
+    finds it terminal and is not run twice; a re-admission finds it pending.
+    """
+
+    from agent_bom.api.scan_queue import finish_local_dispatch, release_local_dispatch
+
+    rerun = finish_local_dispatch(job)
+    while rerun is not None:
         try:
-            submit_scan_job(job)
-        except Exception:
-            release_local_dispatch(job.job_id)
-            raise
+            pending = run_tenant_bound(require_explicit_tenant_id(rerun.tenant_id), _durably_pending, rerun)
+            if pending:
+                _submit_claimed(rerun)
+                return
+        except Exception as exc:  # broad-except: the job stays durably pending for the next dispatch or reconciliation
+            release_local_dispatch(rerun)
+            _logger.warning("Re-dispatch of job=%s failed: %s", rerun.job_id, sanitize_text(sanitize_error(exc, generic=True)))
+            return
+        rerun = finish_local_dispatch(rerun)
