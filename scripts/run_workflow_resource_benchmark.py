@@ -215,10 +215,12 @@ def _restart_failures(label: str, restart: dict[str, Any]) -> list[str]:
         return [f"{label}: child exited {restart['process']['exit_code']}"]
     result = restart["result"]
     failures = [] if result.get("findings_match_before_restart") else [f"{label}: findings changed across restart"]
+    if result.get("ready_status") not in (None, 200):
+        failures.append(f"{label}: /readyz never answered 200 ({result.get('not_ready_reasons')})")
     status = result.get("first_graph_read_status")
     if status not in (None, 200):
         code = result.get("first_graph_read_code") or "no code"
-        failures.append(f"{label}: first graph read returned {status} ({code}) after the start-up prewarm")
+        failures.append(f"{label}: first graph read after readiness returned {status} ({code})")
     return failures
 
 

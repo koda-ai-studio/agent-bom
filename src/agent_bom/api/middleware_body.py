@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import io
 import time
+import weakref
 import zlib
 from collections import deque
 from collections.abc import Callable
@@ -29,6 +30,9 @@ from agent_bom.push import RESULT_PUSH_JSONB_CEILING_BYTES
 #: highly repetitive but honest report is never refused.
 MAX_GZIP_EXPANSION_RATIO = 100
 GZIP_RATIO_WARMUP_BYTES = 1024 * 1024
+#: Scope key for a weak reference to the request that buffered the body here, so
+#: a route that has consumed and parsed the body can drop this copy as well.
+BODY_OWNER_SCOPE_KEY = "agent_bom.body_owner"
 
 
 def effective_result_push_max_bytes(configured: int) -> int:
@@ -202,6 +206,9 @@ async def _read_limited_body(
 
     body = buffer.getvalue()
     request._body = body
+    scope = getattr(request, "scope", None)
+    if isinstance(scope, dict):
+        scope[BODY_OWNER_SCOPE_KEY] = weakref.ref(request)
     if compressed:
         # Downstream parsers see the decoded representation.
         request.scope["headers"] = [

@@ -778,7 +778,13 @@ controlPlane:
       periodSeconds: 30
       timeoutSeconds: 5
       failureThreshold: 3
-    # /readyz returns 503 from the moment SIGTERM arrives.
+    # /readyz returns 503 from the moment SIGTERM arrives; the API pod's
+    # pre-stop sleep (controlPlane.api.shutdown) lets the Service endpoint
+    # drain before that. At start-up it also stays 503 (current_graph_prewarming)
+    # while recent tenants' current graphs are built, for at most
+    # AGENT_BOM_CURRENT_GRAPH_PREWARM_READY_SECONDS (default 120s), so no read is
+    # routed to a cold replica. Liveness and the startupProbe use /health and
+    # never wait on that warm-up.
     readinessProbe:
       httpGet:
         path: /readyz

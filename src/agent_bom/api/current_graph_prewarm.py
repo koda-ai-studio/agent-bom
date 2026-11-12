@@ -11,12 +11,18 @@ Bounded and best-effort: tenants come from the newest ``MAX_JOBS_SCANNED``
 completed jobs, at most ``MAX_TENANTS``, newest first; each waits at most
 ``per_tenant_seconds``; the run never raises and reports what it skipped.
 Disable with ``AGENT_BOM_CURRENT_GRAPH_PREWARM=0``.
+
+While it runs, ``/readyz`` reports ``current_graph_prewarming`` so an
+orchestrator routes no traffic to a cold replica, for at most
+``AGENT_BOM_CURRENT_GRAPH_PREWARM_READY_SECONDS`` (default 120). Liveness never
+waits on it.
 """
 
 from __future__ import annotations
 
 import logging
 import threading
+import time
 from collections.abc import Callable
 from typing import Any, cast
 
@@ -30,8 +36,10 @@ logger = logging.getLogger(__name__)
 MAX_JOBS_SCANNED = 1000
 MAX_TENANTS = 16
 DEFAULT_PER_TENANT_SECONDS = 300.0
+DEFAULT_READY_SECONDS = 120.0
 
 _LAST_RUN: dict[str, Any] = {"status": "not_started"}
+_STARTED_AT: list[float] = []
 
 
 def _enabled() -> bool:
@@ -46,6 +54,20 @@ def _per_tenant_seconds() -> float:
         return max(1.0, float(env_raw("AGENT_BOM_CURRENT_GRAPH_PREWARM_TENANT_SECONDS") or DEFAULT_PER_TENANT_SECONDS))
     except ValueError:
         return DEFAULT_PER_TENANT_SECONDS
+
+
+def _ready_seconds() -> float:
+    try:
+        return max(0.0, float(env_raw("AGENT_BOM_CURRENT_GRAPH_PREWARM_READY_SECONDS") or DEFAULT_READY_SECONDS))
+    except ValueError:
+        return DEFAULT_READY_SECONDS
+
+
+def startup_prewarm_holding_readiness() -> bool:
+    """Whether readiness should wait: the start-up warm-up runs and is inside its readiness bound."""
+    if _LAST_RUN.get("status") != "running" or not _STARTED_AT:
+        return False
+    return time.monotonic() - _STARTED_AT[-1] < _ready_seconds()
 
 
 def _recent_tenants(job_store: Any) -> tuple[list[str], int]:
@@ -91,8 +113,6 @@ def last_run() -> dict[str, Any]:
 
 
 def _run() -> None:
-    _LAST_RUN.clear()
-    _LAST_RUN.update(status="running")
     job_store = stores._get_store()
 
     class _LazyGraphStore:
@@ -120,11 +140,17 @@ def start_current_graph_prewarm() -> threading.Thread | None:
         _LAST_RUN.update(status="disabled")
         return None
     thread = threading.Thread(target=_run, name="current-graph-prewarm", daemon=True)
+    # Marked running before the thread starts so no probe sees a ready gap.
+    _STARTED_AT[:] = [time.monotonic()]
+    _LAST_RUN.clear()
+    _LAST_RUN.update(status="running")
     try:
         thread.start()
     except RuntimeError:
+        _LAST_RUN.clear()
+        _LAST_RUN.update(status="incomplete", reason="thread_unavailable")
         return None
     return thread
 
 
-__all__ = ["last_run", "prewarm_current_graphs", "start_current_graph_prewarm"]
+__all__ = ["last_run", "prewarm_current_graphs", "start_current_graph_prewarm", "startup_prewarm_holding_readiness"]
