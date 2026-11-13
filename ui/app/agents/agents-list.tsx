@@ -10,7 +10,7 @@ import { Agent, agentClassCounts, api } from "@/lib/api";
 import { isDeploymentSurfaceAvailable } from "@/lib/deployment-context";
 import { agentRecordDisplayName, entityIdHint } from "@/lib/display-name";
 import { FIRST_SCAN_ACTIONS } from "@/lib/empty-state-actions";
-import { AlertCircle, GitBranch, Network, Search, Shield, X } from "lucide-react";
+import { AlertCircle, GitBranch, Network, Search, Shield, Workflow, X } from "lucide-react";
 import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 import { CONFIGURED_COUNT_SCOPE, scopedHint } from "@/lib/count-scope";
 import Link from "next/link";
@@ -175,6 +175,13 @@ export function AgentsList() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/agents/architecture"
+            className="agents-secondary-action"
+          >
+            <Workflow className="h-4 w-4" />
+            Architecture
+          </Link>
           <Link
             href="/agents/topology"
             className="agents-secondary-action"
