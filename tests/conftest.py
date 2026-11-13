@@ -119,6 +119,15 @@ def _reset_current_graph_prewarm():
 
 
 @pytest.fixture(autouse=True)
+def _clear_egress_resolution_cache():
+    """A resolver stub in one test must not answer for the same host in the next."""
+    resolution = sys.modules.get("agent_bom.core.egress_resolution")
+    if resolution is not None:
+        resolution.clear_resolution_cache()
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _drain_auth_failure_receipts():
     """Receipts are written after the response; none may land in the next test's audit store."""
     yield
