@@ -10,6 +10,26 @@ For each tagged GitHub Release, expect:
 - SLSA provenance bundles for each distribution: `*.intoto.jsonl`
 - CycloneDX SBOM: `agent-bom-sbom.cdx.json`
 
+## Release-time artifacts
+
+Feature PRs do not touch two files that every PR used to conflict on. The
+release-preparation branch (the one that runs `scripts/bump-version.py`)
+produces them:
+
+1. `python scripts/assemble_changelog.py --version <version>` folds the
+   `changelog.d/*.md` fragments into `## [<version>] - <date>` in
+   `CHANGELOG.md`, advances the compare links and deletes the fragments. Edit
+   the result (Highlights, Upgrade notes) before committing.
+2. `python scripts/product_metrics_snapshot.py --write` (also run by
+   `make preflight-fix`) regenerates `docs/PRODUCT_METRICS.md` and `.json`;
+   then `python scripts/generate_agent_capability_manifest.py --write`.
+
+`scripts/preflight_release.sh` and `release.yml` fail closed if either step was
+skipped: `assemble_changelog.py --check --expect-empty` rejects leftover
+fragments and `product_metrics_snapshot.py --check --release` rejects any
+drifted count. On PRs the metrics check only fails on a version or metric-set
+change and reports drifted counts without failing.
+
 ## Release matrix
 
 Before creating a tag, run `scripts/preflight_release.sh <version>` from the
