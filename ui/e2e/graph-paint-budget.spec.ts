@@ -136,3 +136,20 @@ test("loads scenario and operator code only after view controls open", async ({ 
   await page.getByText("How to read this graph", { exact: true }).click();
   await expect(page.getByText("Arrows show recorded direction, not proven access or exploitation.", { exact: true })).toBeVisible();
 });
+
+// App-shell links prefetch on intent: other routes' code must not compete with
+// the graph's first paint, and hovering a link must still warm its route.
+test("shell navigation does not prefetch other routes during first graph paint", async ({ page }) => {
+  const prefetched: string[] = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (url.searchParams.has("_rsc")) prefetched.push(url.pathname);
+  });
+  await fixture(page, 12);
+  await page.goto("/graph?scan=paint&rollup=0&layers=agent,server");
+  await expect(page.locator("[data-graph-adaptive-frame]")).toHaveAttribute("data-graph-camera-settled", "true");
+  await page.waitForLoadState("networkidle");
+  expect(prefetched, "No route may be prefetched before the operator shows intent").toEqual([]);
+  await page.getByRole("link", { name: "Feedback & Bug Report" }).hover();
+  await expect.poll(() => prefetched.includes("/help")).toBe(true);
+});
