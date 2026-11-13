@@ -16,6 +16,7 @@ from agent_bom.api.exception_store import (
     exception_record_for_tenant,
     exception_write_tenant,
 )
+from agent_bom.api.postgres_tenant_upsert import write_tenant_row
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
@@ -452,53 +453,52 @@ class PostgresExceptionStore:
     def put(self, exc: VulnException, *, tenant_id: str) -> None:
         tenant = exception_write_tenant(exc, tenant_id)
         with _tenant_connection(self._pool) as conn:
-            cursor = conn.execute(
-                """INSERT INTO exceptions
-                   (exception_id, vuln_id, package_name, server_name, reason, requested_by, approved_by, status,
-                    created_at, expires_at, approved_at, revoked_at, team_id, approval_version, decided_by,
-                    iac_rule_id, iac_path, iac_resource)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                   ON CONFLICT (exception_id) DO UPDATE SET
-                     vuln_id = EXCLUDED.vuln_id,
-                     package_name = EXCLUDED.package_name,
-                     server_name = EXCLUDED.server_name,
-                     reason = EXCLUDED.reason,
-                     requested_by = EXCLUDED.requested_by,
-                     approved_by = EXCLUDED.approved_by,
-                     status = EXCLUDED.status,
-                     created_at = EXCLUDED.created_at,
-                     expires_at = EXCLUDED.expires_at,
-                     approved_at = EXCLUDED.approved_at,
-                     revoked_at = EXCLUDED.revoked_at,
-                     approval_version = EXCLUDED.approval_version,
-                     decided_by = EXCLUDED.decided_by,
-                     iac_rule_id = EXCLUDED.iac_rule_id,
-                     iac_path = EXCLUDED.iac_path,
-                     iac_resource = EXCLUDED.iac_resource
-                   WHERE exceptions.team_id = EXCLUDED.team_id""",
-                (
-                    exc.exception_id,
-                    exc.vuln_id,
-                    exc.package_name,
-                    exc.server_name,
-                    exc.reason,
-                    exc.requested_by,
-                    exc.approved_by,
-                    exc.status.value,
-                    exc.created_at,
-                    exc.expires_at,
-                    exc.approved_at,
-                    exc.revoked_at,
-                    tenant,
-                    exc.approval_version,
-                    exc.decided_by,
-                    exc.iac_rule_id,
-                    exc.iac_path,
-                    encode_iac_resource(exc.iac_resource),
+            written = write_tenant_row(
+                conn,
+                table="exceptions",
+                key="exception_id",
+                tenant="team_id",
+                row={
+                    "exception_id": exc.exception_id,
+                    "vuln_id": exc.vuln_id,
+                    "package_name": exc.package_name,
+                    "server_name": exc.server_name,
+                    "reason": exc.reason,
+                    "requested_by": exc.requested_by,
+                    "approved_by": exc.approved_by,
+                    "status": exc.status.value,
+                    "created_at": exc.created_at,
+                    "expires_at": exc.expires_at,
+                    "approved_at": exc.approved_at,
+                    "revoked_at": exc.revoked_at,
+                    "team_id": tenant,
+                    "approval_version": exc.approval_version,
+                    "decided_by": exc.decided_by,
+                    "iac_rule_id": exc.iac_rule_id,
+                    "iac_path": exc.iac_path,
+                    "iac_resource": encode_iac_resource(exc.iac_resource),
+                },
+                update=(
+                    "vuln_id",
+                    "package_name",
+                    "server_name",
+                    "reason",
+                    "requested_by",
+                    "approved_by",
+                    "status",
+                    "created_at",
+                    "expires_at",
+                    "approved_at",
+                    "revoked_at",
+                    "approval_version",
+                    "decided_by",
+                    "iac_rule_id",
+                    "iac_path",
+                    "iac_resource",
                 ),
             )
             conn.commit()
-            if int(cursor.rowcount) == 0:
+            if not written:
                 raise ValueError("Exception identity belongs to a different tenant")
 
     def get(self, exception_id: str, *, tenant_id: str) -> VulnException | None:

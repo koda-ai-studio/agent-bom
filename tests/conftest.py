@@ -110,6 +110,15 @@ def _pin_isolated_env() -> None:
 
 
 @pytest.fixture(autouse=True)
+def _reset_current_graph_prewarm():
+    """An app started by an earlier test can leave the warm-up `running`, holding readiness for 120 s."""
+    prewarm = sys.modules.get("agent_bom.api.current_graph_prewarm")
+    if prewarm is not None:
+        prewarm.reset_current_graph_prewarm()
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _drain_auth_failure_receipts():
     """Receipts are written after the response; none may land in the next test's audit store."""
     yield
