@@ -41,6 +41,12 @@ describe("graphRollupEligible", () => {
     blastRadiusActive: false,
   };
 
+  it("lets a large estate land on the grouped map, while an explicit roll-up request still wins", () => {
+    expect(graphRollupEligible({ ...base, estateNodeCount: 5_000, groupedMapLanding: true })).toBe(false);
+    expect(graphRollupEligible({ ...base, estateNodeCount: 5_000, groupedMapLanding: true, rollupPreference: "force" })).toBe(true);
+    expect(graphRollupEligible({ ...base, estateNodeCount: 5_000, groupedMapLanding: false })).toBe(true);
+  });
+
   it("defaults to real topology below 200 nodes and roll-up at 200 or more", () => {
     expect(graphRollupEligible(base)).toBe(false);
     expect(graphRollupEligible({ ...base, estateNodeCount: 199 })).toBe(false);

@@ -60,4 +60,9 @@ export function ClusterMoreCard({ data }: NodeProps<ClusterCardNode>) {
   </div>;
 }
 
-export const clusterNodeTypes = { cluster: ClusterGroupCard, member: ClusterMemberCard, more: ClusterMoreCard };
+/** The outline around an expanded group: its bundles meet this frame rather than each member. */
+export function ClusterFrameCard() {
+  return <div className="cluster-frame" data-testid="cluster-frame"><Handles /></div>;
+}
+
+export const clusterNodeTypes = { cluster: ClusterGroupCard, member: ClusterMemberCard, more: ClusterMoreCard, frame: ClusterFrameCard };

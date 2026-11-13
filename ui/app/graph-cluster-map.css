@@ -46,11 +46,20 @@
 }
 .cluster-more button { font-size: 12px; color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
 .cluster-map .react-flow__edge-path { stroke: var(--border-strong); }
-.cluster-map .react-flow__edge.cluster-edge-active .react-flow__edge-path { stroke: var(--accent); }
+.cluster-map .react-flow__edge.cluster-edge-active .react-flow__edge-path,
+.cluster-map .react-flow__edge.cluster-edge-member .react-flow__edge-path { stroke: var(--accent); }
 .cluster-map .react-flow__edge.cluster-edge-quiet { opacity: 0.25; }
 .cluster-map .react-flow__edge.selected .react-flow__edge-path { stroke: var(--accent); }
-.cluster-map .react-flow__edge-textbg { fill: var(--surface-elevated); }
-.cluster-map .react-flow__edge-text { fill: var(--text-secondary); font-size: 11px; }
+.cluster-frame { height: 100%; width: 100%; border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); background: var(--surface-muted); pointer-events: none; }
+.cluster-map .react-flow__node-frame { pointer-events: none; cursor: default; }
+.cluster-edge-label rect { fill: var(--surface-elevated); stroke: var(--border-subtle); }
+.cluster-edge-label text { fill: var(--text-secondary); font-size: 11px; }
+.cluster-edge-label[data-placed="false"] { display: none; }
+.cluster-map .react-flow__edge:hover .cluster-edge-label,
+.cluster-map .react-flow__edge:focus .cluster-edge-label,
+.cluster-map .react-flow__edge.selected .cluster-edge-label,
+.cluster-map .react-flow__edge.cluster-edge-active .cluster-edge-label,
+.cluster-map .react-flow__edge.cluster-edge-member .cluster-edge-label { display: inline; }
 .cluster-map .react-flow__handle { opacity: 0; pointer-events: none; }
 @media (prefers-reduced-motion: no-preference) {
   .cluster-card { transition: box-shadow var(--motion-fast) var(--ease-out), background-color var(--motion-fast) var(--ease-out); }

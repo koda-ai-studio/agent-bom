@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Background, Controls, MarkerType, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from "@xyflow/react";
 
 import { clusterNodeTypes, type ClusterCardNode } from "@/components/graph-cluster-node";
 import { useAnimatedLayout } from "@/hooks/use-animated-layout";
 import { useGraphClusterMap } from "@/hooks/use-graph-cluster-map";
 import { api } from "@/lib/api";
-import { NARROW_LABELLED_BUNDLES, bundleHandles, bundleLabel, bundleTitle, clusterMapLayout, relationshipLabel, type ClusterMapEdge, type ClusterMapResponse } from "@/lib/graph-cluster-map";
+import { clusterEdgeTypes, type BundleEdge } from "@/components/graph-cluster-edge";
+import { clusterMapLayout, displayBundles, frameId, routeCards } from "@/lib/graph-cluster-layout";
+import { bundleLabel, bundleTitle, relationshipLabel, type ClusterMapEdge, type ClusterMapResponse } from "@/lib/graph-cluster-map";
+import { routeBundles, type Box } from "@/lib/graph-cluster-routes";
 import { BACKGROUND_COLOR, BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
 
 export interface GraphClusterMapProps {
@@ -21,27 +24,44 @@ export interface GraphClusterMapProps {
   onUnavailable?: () => void;
 }
 
-function toElements(view: ClusterMapResponse, narrow: boolean, onPage: (id: string, offset: number) => void) {
-  const placed = clusterMapLayout(view, { narrow });
-  const at = new Map(placed.map(item => [item.node.id, item]));
-  const nodes: ClusterCardNode[] = placed.map(({ node, x, y, width, height }) => ({
+export interface ClusterElements { nodes: ClusterCardNode[]; edges: BundleEdge[]; bounds: Box }
+
+/** Cards, frames and routed bundles for one response; `activeMember` shows one member's own bundles. */
+export function toElements(view: ClusterMapResponse, narrow: boolean, onPage: (id: string, offset: number) => void, activeMember: string | null = null): ClusterElements {
+  const layout = clusterMapLayout(view, { narrow });
+  const frames: ClusterCardNode[] = layout.frames.map(frame => ({
+    id: frame.id, type: "frame", position: { x: frame.x, y: frame.y }, width: frame.width, height: frame.height, style: { width: frame.width, height: frame.height },
+    data: { node: { id: frame.id, kind: "cluster", label: "", tier: 0 }, narrow, onPage }, draggable: false, connectable: false, selectable: false, focusable: false, zIndex: -1,
+  }));
+  const nodes: ClusterCardNode[] = [...frames, ...layout.cards.map(({ node, x, y, width, height }) => ({
     id: node.id, type: node.kind, position: { x, y }, width, height, style: { width, height },
     data: { node, narrow, onPage }, draggable: false, connectable: false,
-  }));
-  const labelled = new Set(narrow ? [...view.edges].sort((a, b) => b.count - a.count).slice(0, NARROW_LABELLED_BUNDLES).map(edge => edge.id) : view.edges.map(edge => edge.id));
-  const edges: Edge[] = view.edges.map(edge => ({
-    id: edge.id, source: edge.source, target: edge.target, type: "default",
-    ...(labelled.has(edge.id) ? { label: bundleLabel(edge) } : {}),
-    ...bundleHandles(at.get(edge.source), at.get(edge.target), narrow),
-    style: { strokeWidth: Math.min(1 + Math.log2(edge.count + 1) * 0.4, 4) },
-    markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 },
-    labelBgPadding: [4, 2] as [number, number], labelBgBorderRadius: 4, ariaLabel: bundleTitle(edge), data: { bundle: edge },
-  }));
-  return { nodes, edges };
+  }))];
+  const bundles = displayBundles(view, activeMember);
+  const routes = routeBundles(routeCards(layout, activeMember),
+    bundles.map(bundle => ({ id: bundle.id, source: bundle.source, target: bundle.target, label: bundle.count > 1 ? bundleLabel(bundle) : null })),
+    [...layout.cards, ...layout.frames]);
+  const byId = new Map(bundles.map(bundle => [bundle.id, bundle]));
+  const marker = { type: MarkerType.ArrowClosed, width: 14, height: 14 };
+  const edges: BundleEdge[] = routes.map(route => {
+    const bundle = byId.get(route.id)!;
+    return {
+      id: route.id, source: bundle.source, target: bundle.target, type: "bundle" as const,
+      ...(route.reversed ? { markerStart: marker } : { markerEnd: marker }),
+      style: { strokeWidth: Math.min(1 + Math.log2(bundle.count + 1) * 0.35, 3.5) },
+      ariaLabel: bundleTitle(bundle), data: { route, text: bundleLabel(bundle), title: bundleTitle(bundle), bundle },
+      ...(bundle.member ? { className: "cluster-edge-member" } : {}),
+    };
+  });
+  const boxes = [...layout.cards, ...layout.frames];
+  const xs = boxes.flatMap(box => [box.x, box.x + box.width]).concat(routes.flatMap(route => route.points.map(point => point.x)));
+  const ys = boxes.flatMap(box => [box.y, box.y + box.height]).concat(routes.flatMap(route => route.points.map(point => point.y)));
+  const minX = Math.min(...xs, 0), minY = Math.min(...ys, 0);
+  return { nodes, edges, bounds: { x: minX, y: minY, width: Math.max(...xs, 0) - minX, height: Math.max(...ys, 0) - minY } };
 }
 
 /** Bundles stay quiet until a group is pointed at or found; then its own bundles carry the colour. */
-export function emphasiseBundles(edges: Edge[], activeId: string | null): Edge[] {
+export function emphasiseBundles<E extends Pick<Edge, "source" | "target">>(edges: E[], activeId: string | null): Array<E & { className?: string }> {
   if (!activeId) return edges;
   return edges.map(edge => ({ ...edge, className: edge.source === activeId || edge.target === activeId ? "cluster-edge-active" : "cluster-edge-quiet" }));
 }
@@ -50,14 +70,16 @@ export function emphasiseBundles(edges: Edge[], activeId: string | null): Edge[]
 const MIN_READABLE_ZOOM = 0.8;
 
 /** Frames the map after every layout change: whole when it stays readable, otherwise from the top (or the found node) at a readable size. */
-function Camera({ layoutKey, narrow, settled, focusId }: { layoutKey: string; narrow: boolean; settled: boolean; focusId: string | null }) {
+function Camera({ layoutKey, narrow, settled, focusId, bounds }: { layoutKey: string; narrow: boolean; settled: boolean; focusId: string | null; bounds: Box }) {
   const flow = useReactFlow();
+  const boundsRef = useRef(bounds);
+  boundsRef.current = bounds;
   useEffect(() => {
     if (!settled) return;
     const frame = requestAnimationFrame(() => {
       const nodes = flow.getNodes();
-      const width = nodes.reduce((right, node) => Math.max(right, node.position.x + (node.width ?? 0)), 0);
-      const height = nodes.reduce((bottom, node) => Math.max(bottom, node.position.y + (node.height ?? 0)), 0);
+      const box = boundsRef.current;
+      const { width, height } = box;
       const pane = document.querySelector<HTMLElement>("[data-testid='cluster-map-canvas']");
       const paneW = (pane?.clientWidth ?? 360) - 16, paneH = (pane?.clientHeight ?? 480) - 24;
       const fitWidth = Math.min(1, paneW / Math.max(width, 1));
@@ -65,8 +87,8 @@ function Camera({ layoutKey, narrow, settled, focusId }: { layoutKey: string; na
       const readable = narrow ? zoom : Math.max(zoom, Math.min(1, Math.max(MIN_READABLE_ZOOM, fitWidth)));
       const focus = focusId ? nodes.find(node => node.id === focusId) : undefined;
       if (focus) { void flow.setCenter(focus.position.x + (focus.width ?? 0) / 2, focus.position.y + (focus.height ?? 0) / 2, { zoom: Math.max(readable, MIN_READABLE_ZOOM) }); return; }
-      const x = width * readable < paneW ? (paneW - width * readable) / 2 + 8 : 8;
-      const y = height * readable < paneH ? (paneH - height * readable) / 2 + 12 : 12;
+      const x = (width * readable < paneW ? (paneW - width * readable) / 2 + 8 : 8) - box.x * readable;
+      const y = (height * readable < paneH ? (paneH - height * readable) / 2 + 12 : 12) - box.y * readable;
       void flow.setViewport({ x, y, zoom: readable });
     });
     return () => cancelAnimationFrame(frame);
@@ -98,7 +120,7 @@ function FindInMap({ scanId, onFocus }: { scanId: string | undefined; onFocus: (
   </form>;
 }
 
-function BundleReceipt({ bundle, labels, onClose }: { bundle: ClusterMapEdge; labels: Map<string, string>; onClose: () => void }) {
+function BundleReceipt({ bundle, labels, onClose }: { bundle: Pick<ClusterMapEdge, "source" | "target" | "count" | "relationships">; labels: Map<string, string>; onClose: () => void }) {
   return <div role="dialog" aria-label="Bundled relationship" className="absolute right-2 top-2 z-20 w-72 max-w-[calc(100%-1rem)] rounded-lg border border-outline bg-surface p-3 text-sm shadow-lg">
     <div className="flex items-start justify-between gap-2">
       <p className="font-medium text-foreground">{labels.get(bundle.source) ?? bundle.source} → {labels.get(bundle.target) ?? bundle.target}</p>
@@ -122,14 +144,17 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
   const [bundleId, setBundleId] = useState<string | null>(null);
   const { view, status } = map;
   useEffect(() => { if (status === "failed" && !view) onUnavailable?.(); }, [status, view, onUnavailable]);
-  const elements = useMemo(() => (view ? toElements(view, narrow, map.page) : { nodes: [], edges: [] }), [view, narrow, map.page]);
-  const motion = useAnimatedLayout(elements.nodes);
-  const labels = useMemo(() => new Map((view?.nodes ?? []).map(node => [node.id, node.label])), [view]);
-  const bundle = view?.edges.find(edge => edge.id === bundleId) ?? null;
-  const layoutKey = useMemo(() => elements.nodes.map(node => `${node.id}@${node.position.x},${node.position.y}`).join("|"), [elements.nodes]);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const focusId = view?.focus?.found ? view.focus.node_id : null;
-  const shownEdges = useMemo(() => emphasiseBundles(elements.edges, hoverId ?? focusId), [elements.edges, hoverId, focusId]);
+  const members = useMemo(() => new Set((view?.nodes ?? []).filter(node => node.kind === "member").map(node => node.id)), [view]);
+  // Per-member links appear only for the member pointed at (or found); otherwise a group's bundles meet its frame.
+  const activeMember = hoverId && members.has(hoverId) ? hoverId : focusId && members.has(focusId) ? focusId : null;
+  const elements = useMemo(() => (view ? toElements(view, narrow, map.page, activeMember) : { nodes: [], edges: [], bounds: { x: 0, y: 0, width: 0, height: 0 } }), [view, narrow, map.page, activeMember]);
+  const motion = useAnimatedLayout(elements.nodes);
+  const labels = useMemo(() => new Map((view?.nodes ?? []).flatMap(node => [[node.id, node.label], [frameId(node.id), node.label]] as const)), [view]);
+  const bundle = elements.edges.find(edge => edge.id === bundleId)?.data?.bundle ?? null;
+  const layoutKey = useMemo(() => elements.nodes.map(node => `${node.id}@${node.position.x},${node.position.y}`).join("|"), [elements.nodes]);
+  const shownEdges = useMemo(() => emphasiseBundles(elements.edges, activeMember ?? hoverId ?? focusId), [elements.edges, activeMember, hoverId, focusId]);
   return <section aria-label="Grouped map" data-testid="graph-cluster-map" className="cluster-map flex min-h-0 flex-1 flex-col">
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-outline px-3 py-1.5 max-sm:px-1">
       <span className="text-sm font-medium text-foreground">Grouped map</span>
@@ -146,7 +171,7 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
       {status === "failed" && <p role="alert" className="p-3 text-sm text-ink-secondary">The grouped map did not load. <button type="button" className="underline" onClick={onShowEveryEdge}>Show every edge</button></p>}
       {view && view.nodes.length === 0 && <p role="status" className="p-6 text-sm text-ink-secondary">{map.state.riskyOnly ? "No group is on an attack path or holds a critical or high finding." : "This snapshot has no nodes."}</p>}
       {view && view.nodes.length > 0 && <ReactFlow
-        nodes={motion.nodes} edges={shownEdges} nodeTypes={clusterNodeTypes}
+        nodes={motion.nodes} edges={shownEdges} nodeTypes={clusterNodeTypes} edgeTypes={clusterEdgeTypes}
         onNodeMouseEnter={(_event, node) => setHoverId(node.id)} onNodeMouseLeave={() => setHoverId(null)}
         nodesDraggable={false} nodesConnectable={false} nodesFocusable edgesFocusable elementsSelectable deleteKeyCode={null}
         minZoom={0.1} maxZoom={1.6} proOptions={{ hideAttribution: true }}
@@ -160,7 +185,7 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
         onEdgeClick={(_event, edge) => setBundleId(edge.id)}
         onPaneClick={() => setBundleId(null)}
       >
-        <Camera layoutKey={layoutKey} narrow={narrow} settled={!motion.animating} focusId={focusId} />
+        <Camera layoutKey={layoutKey} narrow={narrow} settled={!motion.animating} focusId={focusId} bounds={elements.bounds} />
         <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
         <Controls showInteractive={false} position="bottom-left" className={CONTROLS_CLASS} />
       </ReactFlow>}

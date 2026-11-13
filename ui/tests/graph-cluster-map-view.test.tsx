@@ -64,7 +64,7 @@ describe("grouped map", () => {
     await waitFor(() => expect(screen.getAllByTestId("cluster-group")).toHaveLength(4));
     const npm = screen.getAllByTestId("cluster-group").find(card => card.textContent?.includes("package:npm"))!;
     expect(npm.textContent).toContain("10 members");
-    expect(npm.textContent).toContain("Worst critical");
+    expect(npm.textContent).toContain("Worst: critical");
     expect(npm.getAttribute("data-risky")).toBe("true");
     expect(screen.getByText("1 on an attack path")).toBeTruthy();
     expect(screen.getByTestId("cluster-map-summary").textContent).toContain("4 groups of 16 nodes");
@@ -79,6 +79,7 @@ describe("grouped map", () => {
     await waitFor(() => expect(screen.getAllByTestId("cluster-member")).toHaveLength(2));
     expect(lastParams().getAll("expand")).toEqual(["@group:package:npm"]);
     expect(screen.getByTestId("cluster-more").textContent).toContain("+8 more");
+    expect(screen.getAllByTestId("cluster-frame")).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Next 2" }));
     await waitFor(() => expect(screen.getByText("pkg:3")).toBeTruthy());
     expect(lastParams().getAll("page")).toEqual(["2:@group:package:npm"]);
