@@ -325,9 +325,10 @@ Check a dependency before installing it with
 <details>
 <summary>Show your scan status in your own README</summary>
 
-The GitHub Action writes a job summary with finding counts and the top findings
-on every run. To link your README to your own workflow, add a standard GitHub
-workflow badge (replace `OWNER/REPO` and the workflow file name):
+The GitHub Action writes a job summary with severity counts, the top findings
+and their fixes, and says when a scan was partial. To link your README to your
+own workflow, add a standard GitHub workflow badge (replace `OWNER/REPO` and the
+workflow file name); the Action's `badge:` input also writes shields.io badge JSON:
 
 ```markdown
 [![agent-bom](https://github.com/OWNER/REPO/actions/workflows/agent-bom.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/agent-bom.yml)
