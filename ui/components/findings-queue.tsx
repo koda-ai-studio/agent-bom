@@ -29,6 +29,7 @@ import { getOsvVulnerabilityUrl } from "@/lib/vulnerabilities";
 import { controlLabels, triageForFinding } from "@/lib/findings-workspace";
 import { humanizeEnum } from "@/lib/enum-labels";
 import { reachabilitySource, reachabilitySourceLabel } from "@/lib/reachability-source";
+import { formatProbabilityPercent } from "@/lib/probability-format";
 
 function ReachabilityBadge({
   reachable,
@@ -319,7 +320,7 @@ function MobileFindingCard({
   const exploit = vuln.is_kev ?? vuln.cisa_kev
     ? "CISA KEV"
     : typeof vuln.epss_score === "number"
-      ? `EPSS ${(vuln.epss_score * 100).toFixed(1)}%`
+      ? `EPSS ${formatProbabilityPercent(vuln.epss_score)}`
       : typeof vuln.cvss_score === "number"
         ? `CVSS ${vuln.cvss_score.toFixed(1)}`
         : "Unavailable";

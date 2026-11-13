@@ -19394,8 +19394,16 @@ export interface components {
             matched_by: string;
             /** Modified At */
             modified_at: string | null;
+            /** Not Found In */
+            not_found_in?: string[] | null;
             /** Published At */
             published_at: string | null;
+            /** Record Completeness */
+            record_completeness?: string | null;
+            /** Record Sources */
+            record_sources?: {
+                [key: string]: unknown;
+            }[] | null;
             /** Severity */
             severity: string | null;
             /** Source */
@@ -19418,6 +19426,10 @@ export interface components {
             last_affected: string | null;
             /** Package Name */
             package_name: string;
+            /** Patched */
+            patched?: string | null;
+            /** Vulnerable */
+            vulnerable?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -19440,6 +19452,8 @@ export interface components {
             last_synced?: string | null;
             /** Note */
             note?: string | null;
+            /** Searched */
+            searched?: string[] | null;
             /** Sources */
             sources: string[];
             /** Synced */

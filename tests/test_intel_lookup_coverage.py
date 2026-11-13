@@ -32,4 +32,10 @@ def test_miss_on_synced_database_reports_sources_and_time(tmp_path):
     conn.close()
     result = lookup_advisory("CVE-0000-0000", db_path=db)
     assert result["found"] is False
-    assert result["database"] == {"synced": True, "sources": ["osv"], "last_synced": "2026-11-12T00:00:00+00:00"}
+    assert result["database"] == {
+        "synced": True,
+        "sources": ["osv"],
+        "last_synced": "2026-11-12T00:00:00+00:00",
+        "searched": ["osv"],
+        "note": "No record of CVE-0000-0000 in OSV.",
+    }
