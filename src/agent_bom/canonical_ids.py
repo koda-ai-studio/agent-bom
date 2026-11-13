@@ -299,14 +299,49 @@ def _relocated_config_graph_ids(record: Any) -> list[str]:
     return out
 
 
-def _inventory_document_graph_ids(record: Any) -> list[str]:
-    """The id an inventory agent had while its inventory file path was part of its identity."""
-    location = str(_field(record, "config_path") or "").strip()
-    if _field(record, "identity_config_path") != "" or not location:
-        return []
+INVENTORY_SOURCE_SCOPE_PREFIX = "inventory-source:"
+
+
+def inventory_identity_scope(document: Mapping[str, Any]) -> str:
+    """Identity location for an inventory agent that declares no location of its own.
+
+    The inventory's declared ``source_id`` (else ``source``) scopes the agent's
+    name, so the same name means the same agent only within one inventory
+    source. The file path never enters identity: a moved inventory keeps its
+    ids. Without a declared source the id stays location-free (``""``).
+    """
+    declared = str(document.get("source_id") or document.get("source") or "").strip()
+    return f"{INVENTORY_SOURCE_SCOPE_PREFIX}{declared}" if declared else ""
+
+
+def _inventory_identity(record: Any) -> bool:
+    value = _field(record, "identity_config_path")
+    return value == "" or (isinstance(value, str) and value.startswith(INVENTORY_SOURCE_SCOPE_PREFIX))
+
+
+def _agent_kind(record: Any) -> str:
     kind = _field(record, "agent_type") or _field(record, "type") or ""
-    identity = canonical_agent_id(str(getattr(kind, "value", kind)), str(_field(record, "name") or ""), config_path=location)
-    return [agent_graph_id(_field(record, "name"), f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}")]
+    return str(getattr(kind, "value", kind))
+
+
+def inventory_prior_canonical_ids(record: Any) -> list[str]:
+    """Ids an inventory agent had before: by its inventory file path, then location-free (before a source scope)."""
+    location = str(_field(record, "config_path") or "").strip()
+    if not _inventory_identity(record) or not location:
+        return []
+    name = str(_field(record, "name") or "")
+    prior = [canonical_agent_id(_agent_kind(record), name, config_path=location)]
+    if _field(record, "identity_config_path"):
+        prior.append(canonical_agent_id(_agent_kind(record), name, config_path=""))
+    return prior
+
+
+def _inventory_document_graph_ids(record: Any) -> list[str]:
+    """The graph ids an inventory agent had under its earlier identities."""
+    return [
+        agent_graph_id(_field(record, "name"), f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}")
+        for identity in inventory_prior_canonical_ids(record)
+    ]
 
 
 def previous_agent_graph_ids(record: Any) -> list[str]:
@@ -569,9 +604,8 @@ def previous_agent_canonical_ids(agent: Any) -> list[str]:
     ]
     if not (agent.source_id or agent.device_fingerprint):
         prior.append(legacy_agent_id_v1(kind, agent.name, source=agent.source or "", config_path=agent.config_path))
-        if getattr(agent, "identity_config_path", None) == "" and agent.config_path:
-            # Inventory agents were identified by their inventory file path before it left identity.
-            prior.append(canonical_agent_id(kind, agent.name, config_path=agent.config_path))
+        # Inventory agents were identified by their inventory file path, then location-free, before a source scope.
+        prior.extend(inventory_prior_canonical_ids(agent))
     return list(dict.fromkeys(identity for identity in prior if identity != agent.stable_id))
 
 
