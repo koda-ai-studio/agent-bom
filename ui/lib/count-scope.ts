@@ -21,6 +21,28 @@ export const SNAPSHOT_COUNT_SCOPE = {
     "The Agents page sums configured entries per agent, so the same server or package can count there more than once.",
 } as const;
 
+/**
+ * The three agent populations the UI shows. They differ by design and are never
+ * reconciled to one number, so every surface names the one it carries.
+ */
+export const AGENT_COUNT_SCOPE = {
+  snapshot: {
+    caption: "agent records in snapshot",
+    title:
+      "Agent records in the latest graph snapshot, each counted once: AI clients, background agents and cloud-managed agents " +
+      "(for example Bedrock or Vertex AI). Overview and the posture counts use this number. The Agents page lists the agents " +
+      "found by scans or on this host; the Asset inventory AI entities card also counts models, frameworks and datasets.",
+  },
+  scanned: {
+    label: "Scanned agents",
+    title: "Distinct agent identities in this workspace's completed scans, one per canonical agent, latest scan wins.",
+  },
+  host: {
+    label: "Agents on this host",
+    title: "AI-client and background agent configs discovered live on this API host.",
+  },
+} as const;
+
 /** Joins the scope caption with an optional detail hint, e.g. "configured · 2 remote". */
 export function scopedHint(caption: string, detail?: string | null): string {
   return detail ? `${caption} · ${detail}` : caption;

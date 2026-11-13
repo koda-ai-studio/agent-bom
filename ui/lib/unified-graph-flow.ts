@@ -205,7 +205,7 @@ export function buildUnifiedFlowGraph(
   );
 
   assignOccurrenceRoles(prunedNodes);
-  assignCollisionScopes(prunedNodes);
+  assignCollisionScopes(prunedNodes, graph.edges, new Map(graph.nodes.map((node) => [node.id, node.label])));
   assignScopeContext(prunedNodes, graph.edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)));
   const summary = buildSummary(prunedNodes, graph);
   const legend = legendItemsForVisibleNodes(prunedNodes);

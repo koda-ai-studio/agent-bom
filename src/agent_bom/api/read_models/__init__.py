@@ -15,6 +15,7 @@ from agent_bom.api.read_models._base import (
     SeverityCounts,
     documented,
 )
+from agent_bom.api.read_models.agents_list import AgentsResponse, AgentsSummary
 from agent_bom.api.read_models.brief import ExecutiveBriefResponse
 from agent_bom.api.read_models.estate import (
     ActivitySource,
@@ -48,10 +49,6 @@ from agent_bom.api.read_models.estate import (
     ProxyLatency,
     ProxyStatusResponse,
     RecentProxyAlert,
-    RegistryMeta,
-    RegistryPackage,
-    RegistryResponse,
-    RegistryServerRow,
     SiemConnectorsResponse,
     SiemFormatsResponse,
     SkillsScanResponse,
@@ -61,7 +58,6 @@ from agent_bom.api.read_models.estate import (
 )
 from agent_bom.api.read_models.posture import (
     AgentCount,
-    AgentsResponse,
     AuthMeResponse,
     ComplianceControl,
     ComplianceNarrativeResponse,
@@ -104,6 +100,7 @@ from agent_bom.api.read_models.posture import (
     TrendPoint,
     TrendsResponse,
 )
+from agent_bom.api.read_models.registry import RegistryMeta, RegistryPackage, RegistryResponse, RegistryServerRow
 
 __all__ = [
     "ActivitySource",
@@ -111,6 +108,7 @@ __all__ = [
     "AgentCount",
     "AgentIdentityRow",
     "AgentsResponse",
+    "AgentsSummary",
     "AuthMeResponse",
     "CloudConnectionRow",
     "CloudConnectionsResponse",

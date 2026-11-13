@@ -30,6 +30,15 @@ describe("declutterRelationshipLabels", () => {
     expect(result.filter(e => typeof e.label === "string").map(e => e.label).sort()).toEqual(["Depends On", "Uses ×2"]);
   });
 
+  it("anchors a counted caption at the port where its lines split or join, not mid-canvas", () => {
+    const fanOut = declutterRelationshipLabels(Array.from({ length: 3 }, (_, i) => edge("server", `pkg-${i}`, "depends_on", "Depends On")));
+    expect(fanOut.find(e => typeof e.label === "string")!.data?.labelAnchor).toBe("source");
+    const fanIn = declutterRelationshipLabels([edge("a", "server", "uses", "Uses"), edge("b", "server", "uses", "Uses")]);
+    expect(fanIn.find(e => typeof e.label === "string")!.data?.labelAnchor).toBe("target");
+    const single = declutterRelationshipLabels([edge("a", "b", "uses", "Uses"), edge("c", "d", "depends_on", "Depends On")]);
+    expect(single.every(e => e.data?.labelAnchor === undefined)).toBe(true);
+  });
+
   it("leaves unlabelled and single edges untouched", () => {
     const edges = [edge("a", "b", "uses"), edge("b", "c", "uses", "Uses")];
     expect(declutterRelationshipLabels(edges)).toEqual(edges);

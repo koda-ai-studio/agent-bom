@@ -227,7 +227,8 @@ async def test_slow_agent_discovery_keeps_event_loop_responsive(monkeypatch):
     monkeypatch.setattr(discovery, "_tenant_id", lambda _request: "tenant-agents")
     monkeypatch.setattr(discovery, "_build_agents_response", _slow_agents)
     task = asyncio.create_task(discovery.list_agents(SimpleNamespace(), refresh=True))
-    assert await assert_runs_off_loop(task, call, "agent discovery") == {"agents": [], "count": 0}
+    body = await assert_runs_off_loop(task, call, "agent discovery")
+    assert (body["agents"], body["count"], body["total"]) == ([], 0, 0)
 
 
 def _own_nodes(fn: ast.AST):

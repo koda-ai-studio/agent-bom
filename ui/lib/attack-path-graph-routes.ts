@@ -1,4 +1,4 @@
-import type { AttackPathDirection, AttackPathLayout } from "@/lib/attack-path-graph-layout";
+import type { AttackPathLayout } from "@/lib/attack-path-graph-layout";
 import type { PathGraphEdge } from "@/lib/attack-path-graph-model";
 
 export type Point = { x: number; y: number };
@@ -39,17 +39,85 @@ function handles(layout: Geometry, id: string): { out: Point; in: Point } {
   return { out: { x: x + layout.nodeWidth - inset, y: y + GLYPH_CENTER_Y }, in: { x: x + inset, y: y + GLYPH_CENTER_Y } };
 }
 
+type Leg = { gap: number; from: number; to: number; id: string; x?: number };
+
+/** Spacing between the vertical legs of different lines that turn in one gap. */
+const LEG_SPACING = 12;
+
+/**
+ * Lines changing row turn in the gap between layers. In one gap, a line that
+ * goes down turns before one that goes less far down (and a line that comes up
+ * after one that comes up less far), so lines fanning out of or into a node
+ * leave and arrive side by side instead of crossing or sharing a trunk.
+ */
+function placeLegs(legs: Leg[], centreOf: (gap: number) => number, rankGap: number) {
+  const byGap = new Map<number, Leg[]>();
+  for (const leg of legs) byGap.set(leg.gap, [...(byGap.get(leg.gap) ?? []), leg]);
+  for (const [gap, group] of byGap) {
+    const down = group.filter(leg => leg.to > leg.from).sort((a, b) => b.to - a.to || b.from - a.from || a.id.localeCompare(b.id));
+    const up = group.filter(leg => leg.to < leg.from).sort((a, b) => a.to - b.to || a.from - b.from || a.id.localeCompare(b.id));
+    const ordered = [...down, ...up];
+    const spacing = ordered.length > 1 ? Math.min(LEG_SPACING, (rankGap - 16) / (ordered.length - 1)) : 0;
+    ordered.forEach((leg, index) => { leg.x = centreOf(gap) + (index - (ordered.length - 1) / 2) * spacing; });
+  }
+}
+
+type Plan = { id: string; start: Point; end: Point; legs: Leg[]; alternatives: Leg[][] };
+
+/**
+ * Where two provisional routes meet or run along one row, other than a handle
+ * they share. Turns in one gap are spread apart afterwards, so they never count.
+ */
+function conflicts(a: Point[], b: Point[], row: boolean): number {
+  const shared = (x: number, y: number) => [a[0]!, a.at(-1)!].some(p => p.x === x && p.y === y && [b[0]!, b.at(-1)!].some(q => q.x === x && q.y === y));
+  const lo = (p: number, q: number) => Math.min(p, q), hi = (p: number, q: number) => Math.max(p, q);
+  let count = 0;
+  for (let i = 1; i < a.length; i += 1) for (let j = 1; j < b.length; j += 1) {
+    const [p, q, r, t] = [a[i - 1]!, a[i]!, b[j - 1]!, b[j]!];
+    const vertical = p.x === q.x;
+    if (vertical === (r.x === t.x)) {
+      const along = vertical ? [p.x === r.x, hi(lo(p.y, q.y), lo(r.y, t.y)), lo(hi(p.y, q.y), hi(r.y, t.y))] as const
+        : [p.y === r.y, hi(lo(p.x, q.x), lo(r.x, t.x)), lo(hi(p.x, q.x), hi(r.x, t.x))] as const;
+      if (vertical !== row && along[0] && along[2] - along[1] > 2) count += 2;
+      continue;
+    }
+    const [v, w, h, k] = vertical ? [p, q, r, t] : [r, t, p, q];
+    if (v.x >= lo(h.x, k.x) && v.x <= hi(h.x, k.x) && h.y >= lo(v.y, w.y) && h.y <= hi(v.y, w.y) && !shared(v.x, h.y)) count += 1;
+  }
+  return count;
+}
+
+/**
+ * A long edge between rows may change row next to its target, next to its
+ * source, or run outside every row. Take the corridor that crosses the fewest
+ * other lines; the nearest channel wins a tie.
+ */
+function chooseCorridors(plans: Plan[], centreOf: (gap: number) => number, point: (main: number, cross: number) => Point, row: boolean) {
+  const draw = (plan: Plan, legs: Leg[]) => [plan.start, ...legs.flatMap(leg => [point(centreOf(leg.gap), leg.from), point(centreOf(leg.gap), leg.to)]), plan.end];
+  for (const plan of plans) {
+    const others = plans.filter(other => other !== plan).map(other => draw(other, other.legs));
+    const score = (legs: Leg[]) => others.reduce((total, other) => total + conflicts(draw(plan, legs), other, row), 0);
+    for (const candidate of plan.alternatives) {
+      const legs = candidate.filter(leg => leg.from !== leg.to);
+      if (score(legs) < score(plan.legs)) plan.legs = legs;
+    }
+  }
+}
+
 /**
  * One route per edge, leaving the source's trailing handle and entering the
- * target's leading handle. Adjacent layers connect directly; a longer forward
- * edge runs in the free channel between lanes next to its target; an edge
- * against the layer order runs outside the outermost lanes. Channels never
- * contain node boxes, so no line passes through a glyph or a name.
+ * target's leading handle. Every route is horizontal and vertical runs only:
+ * it changes row only in the free gap between layers, and runs along a row
+ * only at a glyph's centre line or in the free channel between rows. Nothing
+ * bends inside a node's column, so no line passes through a glyph or a name.
+ * An edge against the layer order runs outside the outermost rows.
  */
 export function routeAttackPathEdges(model: { edges: readonly Pick<PathGraphEdge, "id" | "source" | "target" | "bidirectional">[] }, layout: Geometry): Map<string, Point[]> {
   const f = frame(layout);
+  const row = layout.direction === "LR";
+  const crossOf = (point: Point) => row ? point.y : point.x;
   const occupied = new Set([...layout.columns].map(([id, column]) => `${column}:${layout.lanes.get(id)}`));
-  const routes = new Map<string, Point[]>();
+  const plans: Plan[] = [];
   for (const edge of model.edges) {
     let source = edge.source, target = edge.target;
     // A two-way relationship carries no arrowheads; draw it in reading order.
@@ -57,70 +125,56 @@ export function routeAttackPathEdges(model: { edges: readonly Pick<PathGraphEdge
     const cs = layout.columns.get(source)!, ct = layout.columns.get(target)!;
     const ls = layout.lanes.get(source)!, lt = layout.lanes.get(target)!;
     const start = handles(layout, source).out, end = handles(layout, target).in;
-    const via = (cross: number) => [start, f.point(f.gapAfter(cs), cross), f.point(f.gapBefore(ct), cross), end];
-    if (ct <= cs) {
-      routes.set(edge.id, via(ls + lt <= 0 ? f.outsideAbove() : f.outsideBelow()));
-    } else if (ct === cs + 1 && lt === ls) {
-      routes.set(edge.id, [start, end]);
-    } else if (ct === cs + 1) {
-      // Each edge to the next layer turns in the gap and runs straight in at its own lane, so siblings fan out
-      // from the handle instead of sharing a trunk and splitting (which reads as a crossing). Only when a node of
-      // the source layer sits in the lanes it would sweep past does it fall back to the channel beside the source.
-      const swept = [...layout.lanes].some(([id, lane]) => id !== source && layout.columns.get(id) === cs
-        && (lt < ls ? lane >= lt && lane < ls : lane <= lt && lane > ls));
-      const endCross = layout.direction === "LR" ? end.y : end.x;
-      routes.set(edge.id, swept
-        ? [start, f.point(f.gapAfter(cs), lt < ls ? f.channelBelow(ls - 1) : f.channelBelow(ls)), end]
-        : [start, f.point(f.gapAfter(cs), endCross), end]);
-    } else if (lt !== ls) {
-      routes.set(edge.id, via(lt < ls ? f.channelBelow(lt) : f.channelBelow(lt - 1)));
+    const sCross = crossOf(start), eCross = crossOf(end);
+    const through = (cross: number): Leg[] => [
+      { gap: cs, from: sCross, to: cross, id: edge.id },
+      { gap: ct - 1, from: cross, to: eCross, id: edge.id },
+    ];
+    let legs: Leg[];
+    let alternatives: number[] = [];
+    if (ct <= cs) legs = through(ls + lt < 0 ? f.outsideAbove() : f.outsideBelow());
+    else if (ct === cs + 1) legs = lt === ls ? [] : [{ gap: cs, from: sCross, to: eCross, id: edge.id }];
+    else if (lt !== ls) {
+      legs = through(lt < ls ? f.channelBelow(lt) : f.channelBelow(lt - 1));
+      alternatives = [lt < ls ? f.channelBelow(ls - 1) : f.channelBelow(ls), f.outsideAbove(), f.outsideBelow()];
     } else {
       const blocked = Array.from({ length: ct - cs - 1 }, (_, index) => cs + index + 1).some(column => occupied.has(`${column}:${ls}`));
-      routes.set(edge.id, !blocked ? [start, end] : via(ls <= 0 ? f.channelBelow(ls - 1) : f.channelBelow(ls)));
+      legs = blocked ? through(ls <= 0 ? f.channelBelow(ls - 1) : f.channelBelow(ls)) : [];
+      if (blocked) alternatives = [f.channelBelow(ls - 1), f.outsideAbove(), f.outsideBelow()];
     }
+    plans.push({ id: edge.id, start, end, legs: legs.filter(leg => leg.from !== leg.to), alternatives: alternatives.map(through) });
+  }
+  chooseCorridors(plans, gap => f.gapAfter(gap), f.point, row);
+  placeLegs(plans.flatMap(plan => plan.legs), gap => f.gapAfter(gap), layout.rankGap);
+  const routes = new Map<string, Point[]>();
+  for (const { id, start, end, legs } of plans) {
+    const points: Point[] = [start];
+    for (const leg of legs) points.push(f.point(leg.x!, leg.from), f.point(leg.x!, leg.to));
+    points.push(end);
+    routes.set(id, points);
   }
   return routes;
 }
 
-function along(direction: AttackPathDirection, point: Point) {
-  return direction === "LR" ? { main: point.x, cross: point.y } : { main: point.y, cross: point.x };
-}
+const CORNER = 10;
 
-function controls(direction: AttackPathDirection, from: Point, to: Point): [Point, Point] {
-  const a = along(direction, from), b = along(direction, to);
-  const half = (b.main - a.main) / 2;
-  const at = (main: number, cross: number): Point => direction === "LR" ? { x: main, y: cross } : { x: cross, y: main };
-  return [at(a.main + half, a.cross), at(b.main - half, b.cross)];
-}
-
-/** Smooth S-curves where a route changes lane, straight runs along a channel. */
-export function routePath(points: Point[], direction: AttackPathDirection): string {
+/** Straight runs with rounded corners; every route is horizontal and vertical runs. */
+export function routePath(points: Point[]): string {
   let d = `M ${points[0]!.x} ${points[0]!.y}`;
   for (let index = 1; index < points.length; index += 1) {
-    const from = points[index - 1]!, to = points[index]!;
-    if (along(direction, from).cross === along(direction, to).cross) { d += ` L ${to.x} ${to.y}`; continue; }
-    const [c1, c2] = controls(direction, from, to);
-    d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${to.x} ${to.y}`;
+    const from = points[index - 1]!, to = points[index]!, next = points[index + 1];
+    const incoming = Math.hypot(to.x - from.x, to.y - from.y), outgoing = next ? Math.hypot(next.x - to.x, next.y - to.y) : 0;
+    const radius = Math.min(CORNER, incoming / 2, outgoing / 2);
+    if (!next || radius <= 0) { d += ` L ${to.x} ${to.y}`; continue; }
+    const at = (p: Point, length: number, r: number) => `${to.x + (p.x - to.x) * r / length} ${to.y + (p.y - to.y) * r / length}`;
+    d += ` L ${at(from, incoming, radius)} Q ${to.x} ${to.y} ${at(next, outgoing, radius)}`;
   }
   return d;
 }
 
-/** Points along the drawn route, for geometry checks and label placement. */
-export function sampleRoute(points: Point[], direction: AttackPathDirection, steps = 16): Point[] {
-  const out: Point[] = [points[0]!];
-  for (let index = 1; index < points.length; index += 1) {
-    const from = points[index - 1]!, to = points[index]!;
-    if (along(direction, from).cross === along(direction, to).cross) { out.push(to); continue; }
-    const [c1, c2] = controls(direction, from, to);
-    for (let step = 1; step <= steps; step += 1) {
-      const t = step / steps, u = 1 - t;
-      out.push({
-        x: u * u * u * from.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * to.x,
-        y: u * u * u * from.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * to.y,
-      });
-    }
-  }
-  return out;
+/** The corners of the drawn route, for geometry checks. */
+export function sampleRoute(points: Point[]): Point[] {
+  return [...points];
 }
 
 /** Where a relationship name appears: the middle of the route's run. */

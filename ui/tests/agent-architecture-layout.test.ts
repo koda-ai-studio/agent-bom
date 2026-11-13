@@ -60,7 +60,7 @@ describe("agent architecture layout", () => {
       const layout = layoutArchitecture(model);
       const routes = routeArchitecture(model, layout);
       expect(routes.size).toBe(model.edges.length);
-      expect(countRouteCrossings(model, routes, layout.direction)).toBe(0);
+      expect(countRouteCrossings(model, routes)).toBe(0);
     }
   });
 
@@ -70,7 +70,7 @@ describe("agent architecture layout", () => {
     const [a, b] = model.edges;
     const routes = new Map([[a!.id, [{ x: 0, y: 0 }, { x: 100, y: 100 }]], [b!.id, [{ x: 0, y: 100 }, { x: 100, y: 0 }]]]);
     const crossed = { ...model, edges: [{ ...a!, source: "p", target: "q" }, { ...b!, source: "r", target: "s" }] };
-    expect(countRouteCrossings(crossed, routes, "LR")).toBe(1);
+    expect(countRouteCrossings(crossed, routes)).toBe(1);
   });
 
   it("sizes the canvas to its content within readable bounds", () => {

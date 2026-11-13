@@ -7,6 +7,7 @@ from pathlib import Path
 import yaml
 
 from agent_bom.db import schema
+from agent_bom.storage import state_home
 
 ROOT = Path(__file__).resolve().parents[1]
 STEPS = yaml.safe_load((ROOT / "action.yml").read_text(encoding="utf-8"))["runs"]["steps"]
@@ -16,13 +17,16 @@ def _step(prefix: str) -> dict:
     return next(step for step in STEPS if str(step.get("uses", "")).startswith(prefix))
 
 
-def test_vuln_db_cache_targets_the_directory_the_cli_reads() -> None:
+def test_vuln_db_cache_targets_the_directory_the_cli_reads(monkeypatch) -> None:
     cache = _step("actions/cache@")
-    # _DEFAULT_DB_DIR is <home at import>/.agent-bom/db; per-test homes differ, so
-    # take the path relative to the home it was built from, not today's HOME.
-    import_home = schema._DEFAULT_DB_DIR.parent.parent
-    expected = "~/" + str((schema._DEFAULT_DB_DIR / "vulns.db").relative_to(import_home))
+    # The action runs without AGENT_BOM_STATE_DIR, so the CLI reads the DB from
+    # the default state dir; the test suite pins its own state dir, so resolve
+    # the default with that variable unset.
+    monkeypatch.delenv(state_home.STATE_DIR_ENV, raising=False)
+    default_db = state_home.state_dir() / "db" / "vulns.db"
+    expected = "~/" + str(default_db.relative_to(Path.home()))
     assert cache["with"]["path"].strip() == expected
+    assert schema._DEFAULT_DB_DIR.name == default_db.parent.name
 
 
 def test_vuln_db_cache_key_rolls_daily_and_restores_the_last_copy() -> None:

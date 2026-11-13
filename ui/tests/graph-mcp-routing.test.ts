@@ -5,9 +5,10 @@ const source = { x: 0, y: 96, width: 260, height: 188 };
 const target = { x: 368, y: 320, width: 260, height: 188 };
 const edge = { sourceX: 166, sourceY: 132, targetX: 462, targetY: 356 };
 
-it("keeps branch endpoints and puts the relationship label on the smooth curve", () => {
+it("keeps branch endpoints and puts the relationship label on its right-angle run", () => {
   const [path, x, y] = mcpBranchPath(edge, source, target)!;
-  expect(path.startsWith("M166,132 C")).toBe(true);
+  expect(path.startsWith("M166,132 L")).toBe(true);
+  expect(path).not.toMatch(/C/);
   expect(path.endsWith("462,356")).toBe(true);
   expect(x).toBeGreaterThan(edge.sourceX);
   expect(x).toBeLessThan(edge.targetX);

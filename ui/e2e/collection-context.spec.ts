@@ -17,7 +17,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       return route.fulfill({ status: 503, json: { detail: "Outside collection context fixture" } });
     });
     await page.goto("/agents");
-    await page.getByTestId("agents-configured-table").getByText("Imported agent", { exact: true }).click();
+    await page.getByTestId("agents-table").getByText("Imported agent", { exact: true }).click();
     const detail = page.getByRole("dialog");
     await expect(detail.getByText("Collection context", { exact: true })).toBeVisible();
     await expect(detail.getByText("redaction: unknown", { exact: true })).toBeVisible();

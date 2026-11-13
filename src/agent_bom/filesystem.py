@@ -33,6 +33,7 @@ from pathlib import Path
 
 from agent_bom.models import Package
 from agent_bom.package_utils import parse_debian_source_name
+from agent_bom.resolvers.python_site_packages import parse_site_packages, python_site_dirs
 from agent_bom.sbom import parse_cyclonedx
 from agent_bom.security import validate_path
 
@@ -450,62 +451,6 @@ def parse_rpm_packages(root: Path) -> list[Package]:
     return packages
 
 
-def parse_site_packages(site_packages_dir: Path) -> list[Package]:
-    """Parse installed Python packages from a ``site-packages`` or
-    ``dist-packages`` directory by reading ``.dist-info/METADATA`` files.
-
-    Works on live systems and mounted disk snapshots.
-
-    Args:
-        site_packages_dir: Path to a ``site-packages`` or ``dist-packages``
-            directory.
-
-    Returns:
-        List of :class:`~agent_bom.models.Package` objects with
-        ``ecosystem="pypi"``.
-    """
-    if not site_packages_dir.exists():
-        return []
-
-    packages: list[Package] = []
-    seen: set[tuple[str, str]] = set()
-
-    for dist_info in site_packages_dir.glob("*.dist-info"):
-        metadata_file = dist_info / "METADATA"
-        if not metadata_file.exists():
-            continue
-
-        name = ""
-        version = ""
-        try:
-            for line in metadata_file.read_text(errors="replace", encoding="utf-8").splitlines():
-                if line.startswith("Name:"):
-                    name = line.split(":", 1)[1].strip()
-                elif line.startswith("Version:"):
-                    version = line.split(":", 1)[1].strip()
-                elif line.startswith("") and name and version:
-                    # Empty line signals end of headers
-                    break
-        except OSError:
-            continue
-
-        if name and version:
-            key = (name.lower(), version)
-            if key not in seen:
-                seen.add(key)
-                packages.append(
-                    Package(
-                        name=name,
-                        version=version,
-                        ecosystem="pypi",
-                        purl=f"pkg:pypi/{name.lower()}@{version}",
-                        is_direct=True,
-                    )
-                )
-
-    return packages
-
-
 def scan_disk_path_native(root: Path) -> list[Package]:
     """Scan a directory (VM disk snapshot or live root) natively — no Syft.
 
@@ -551,19 +496,11 @@ def scan_disk_path_native(root: Path) -> list[Package]:
 
     packages.extend(global_node_packages(root))
 
-    # Python site-packages / dist-packages
-    for pattern in (
-        "usr/lib/python*/site-packages",
-        "usr/lib/python*/dist-packages",
-        "usr/local/lib/python*/site-packages",
-        "usr/local/lib/python*/dist-packages",
-        "opt/conda/lib/python*/site-packages",
-    ):
-        for sp_dir in root.glob(pattern):
-            sp_pkgs = parse_site_packages(sp_dir)
-            if sp_pkgs:
-                logger.debug("native-dir: found %d Python packages in %s", len(sp_pkgs), sp_dir)
-            packages.extend(sp_pkgs)
+    for sp_dir in python_site_dirs(root):
+        sp_pkgs = parse_site_packages(sp_dir)
+        if sp_pkgs:
+            logger.debug("native-dir: found %d Python packages in %s", len(sp_pkgs), sp_dir)
+        packages.extend(sp_pkgs)
 
     # Lock files (requirements.txt, package.json, go.mod, Cargo.toml, etc.)
     for dir_pkgs in scan_project_directory(root, max_depth=5).values():

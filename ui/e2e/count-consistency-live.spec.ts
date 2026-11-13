@@ -59,7 +59,7 @@ test("occurrence and scope totals carry their unit", async ({ page, request }) =
   const kpis = page.getByTestId("agents-kpis");
   if (host.scope === "local_discovery") {
     await expect(kpis.getByText("Agents on this host")).toBeVisible();
-    await expect(kpis.getByText(`${counts.agents.total.toLocaleString()} in the estate`)).toBeVisible();
+    await expect(kpis.getByText(`${counts.agents.total.toLocaleString()} agent records in snapshot`)).toBeVisible();
   }
 });
 

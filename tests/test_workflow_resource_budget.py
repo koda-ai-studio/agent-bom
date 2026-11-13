@@ -37,6 +37,8 @@ STAGE_CPU_SECONDS = {
 WORKFLOW_CPU_SECONDS = 120.0
 # The API process only: since 2026-11-11 the CLI scan runs in its own process (stage `scan_process`).
 # Measured 514 MiB (410-645 with the scan in process); 2x for runner variance, half the 2 GiB limit.
+# 2026-11-13, CPython 3.14.3 amd64 in a fresh process: musl (Alpine 3.23) 448-462 MiB, glibc 548-552.
+# RSS is the whole process's, so this test must not run inside a worker that ran other tests first.
 PEAK_RSS_MIB = 1024
 # Eight samples, so p95 is the slowest read: 2.0 s was observed at load ~18.
 # This ceiling only catches order-of-magnitude stalls; latency is not a PR SLO.

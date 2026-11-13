@@ -2551,13 +2551,70 @@
             ],
             "title": "Count Definition"
           },
+          "facets": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "title": "Facets",
+            "type": "object"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
           "scope": {
             "title": "Scope",
             "type": "string"
           },
+          "sort": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AppliedSort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "source": {
             "title": "Source",
             "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/AgentsSummary"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
           },
           "warnings": {
             "items": {
@@ -2570,12 +2627,83 @@
         "required": [
           "agents",
           "count",
+          "total",
+          "limit",
+          "offset",
+          "has_more",
+          "next_cursor",
+          "sort",
+          "facets",
+          "summary",
           "count_by_class",
           "scope",
           "source",
           "warnings"
         ],
         "title": "AgentsResponse",
+        "type": "object"
+      },
+      "AgentsSummary": {
+        "additionalProperties": true,
+        "description": "Population totals over every agent in scope, independent of the page and filters.",
+        "properties": {
+          "agents": {
+            "title": "Agents",
+            "type": "integer"
+          },
+          "blocked_servers": {
+            "title": "Blocked Servers",
+            "type": "integer"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "integer"
+          },
+          "ecosystems": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Ecosystems",
+            "type": "object"
+          },
+          "mcp_servers": {
+            "title": "Mcp Servers",
+            "type": "integer"
+          },
+          "not_configured": {
+            "title": "Not Configured",
+            "type": "integer"
+          },
+          "packages": {
+            "title": "Packages",
+            "type": "integer"
+          },
+          "remote_servers": {
+            "title": "Remote Servers",
+            "type": "integer"
+          },
+          "servers_with_credentials": {
+            "title": "Servers With Credentials",
+            "type": "integer"
+          },
+          "unique_credentials": {
+            "title": "Unique Credentials",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agents",
+          "configured",
+          "not_configured",
+          "mcp_servers",
+          "remote_servers",
+          "packages",
+          "ecosystems",
+          "unique_credentials",
+          "servers_with_credentials",
+          "blocked_servers"
+        ],
+        "title": "AgentsSummary",
         "type": "object"
       },
       "AisvsComplianceResponse": {
@@ -2771,6 +2899,25 @@
           "keys"
         ],
         "title": "ApiKeysResponse",
+        "type": "object"
+      },
+      "AppliedSort": {
+        "additionalProperties": true,
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "order": {
+            "title": "Order",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "order"
+        ],
+        "title": "AppliedSort",
         "type": "object"
       },
       "AuditChain": {
@@ -38685,8 +38832,55 @@
             "title": "Count",
             "type": "integer"
           },
+          "facets": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "title": "Facets",
+            "type": "object"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
           "meta": {
             "$ref": "#/components/schemas/RegistryMeta"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "risk_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Risk Counts",
+            "type": "object"
           },
           "servers": {
             "items": {
@@ -38694,12 +38888,23 @@
             },
             "title": "Servers",
             "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
           }
         },
         "required": [
           "count",
           "meta",
-          "servers"
+          "servers",
+          "total",
+          "limit",
+          "offset",
+          "has_more",
+          "next_cursor",
+          "facets",
+          "risk_counts"
         ],
         "title": "RegistryResponse",
         "type": "object"
@@ -51224,7 +51429,7 @@
     },
     "/v1/agents": {
       "get": {
-        "description": "Quick auto-discovery of local AI agent configs (Claude Desktop, Cursor, Windsurf...).\nNo CVE scan \u2014 instant results for the UI sidebar.",
+        "description": "One bounded, filtered, sorted page of this tenant's agents (host discovery when bound, else scanned estate).\n\n``count`` and ``summary`` cover every agent in scope, ``total`` the matching rows, ``facets`` the per-chip counts.",
         "operationId": "list_agents_v1_agents_get",
         "parameters": [
           {
@@ -51237,6 +51442,188 @@
               "description": "Bypass the sidebar cache and perform live local discovery",
               "title": "Refresh",
               "type": "boolean"
+            }
+          },
+          {
+            "description": "Page size (1-500). Defaults to 50 when any search, filter, sort or offset is given; omitted entirely, the full list is returned for older clients.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size (1-500). Defaults to 50 when any search, filter, sort or offset is given; omitted entirely, the full list is returned for older clients.",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Row offset of the page",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Row offset of the page",
+              "maximum": 100000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque next_cursor from the previous page; overrides offset",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque next_cursor from the previous page; overrides offset",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Case-insensitive match on name, display name, type, source or id",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive match on name, display name, type, source or id",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "Agent type; repeat for any-of",
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Agent type; repeat for any-of",
+              "title": "Type"
+            }
+          },
+          {
+            "description": "configured or installed-not-configured; repeatable",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "configured or installed-not-configured; repeatable",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Discovery source; repeatable",
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Discovery source; repeatable",
+              "title": "Source"
+            }
+          },
+          {
+            "description": "Sort column",
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "name",
+                    "servers",
+                    "packages",
+                    "credentials",
+                    "findings"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sort column",
+              "title": "Sort"
+            }
+          },
+          {
+            "description": "asc or desc; name defaults to asc, counts to desc",
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "asc or desc; name defaults to asc, counts to desc",
+              "title": "Order"
             }
           }
         ],
@@ -83055,8 +83442,130 @@
     },
     "/v1/registry": {
       "get": {
-        "description": "List all known MCP servers from the agent-bom registry.",
+        "description": "List known MCP servers from the agent-bom registry, one bounded page at a time.\n\n``count`` and ``risk_counts`` cover the whole catalog, ``total`` the rows\nmatching the search and filters, ``facets`` the per-filter counts.",
         "operationId": "list_registry_v1_registry_get",
+        "parameters": [
+          {
+            "description": "Page size; omitted, the whole catalog is returned for older clients",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 500,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Page size; omitted, the whole catalog is returned for older clients",
+              "title": "Limit"
+            }
+          },
+          {
+            "description": "Row offset of the page",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Row offset of the page",
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Opaque next_cursor from the previous page",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Opaque next_cursor from the previous page",
+              "title": "Cursor"
+            }
+          },
+          {
+            "description": "Case-insensitive match on id, name, description, publisher, category",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive match on id, name, description, publisher, category",
+              "title": "Q"
+            }
+          },
+          {
+            "description": "Capability risk level; repeatable",
+            "in": "query",
+            "name": "risk",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low",
+                      "unknown"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Capability risk level; repeatable",
+              "title": "Risk"
+            }
+          },
+          {
+            "description": "Catalog category; repeatable",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Catalog category; repeatable",
+              "title": "Category"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
