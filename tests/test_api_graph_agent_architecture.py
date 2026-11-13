@@ -207,8 +207,121 @@ def test_bounded_reads_say_the_answer_is_incomplete(api, monkeypatch):  # noqa: 
     store.save_graph(_graph("tenant-a", "langgraph_tool_team"))
     assert _get(client, headers["tenant-a"]).json()["coverage"]["complete"] is True
     monkeypatch.setattr(reads, "MAX_OVERLAY_EDGES", 1)
-    assert _get(client, headers["tenant-a"]).json()["coverage"]["complete"] is False
+    bounded = _get(client, headers["tenant-a"]).json()["coverage"]
+    assert bounded["complete"] is False and any("security overlay" in reason for reason in bounded["incomplete_reasons"])
     monkeypatch.setattr(reads, "MAX_OVERLAY_EDGES", 20_000)
     monkeypatch.setattr(reads, "FRAMEWORK_AGENT_CAP", 2)
     capped = _get(client, headers["tenant-a"]).json()
     assert capped["coverage"]["complete"] is False and capped["summary"]["framework_agents"] == 2
+    assert any("framework agents" in reason for reason in capped["coverage"]["incomplete_reasons"])
+
+
+def _wide_harness(tenant: str, workers: int) -> UnifiedGraph:
+    """One harness root delegating to ``workers`` framework agents; the last worker carries a critical finding."""
+    graph = UnifiedGraph(scan_id=_SCAN, tenant_id=tenant)
+    attrs = {"agent_type": "framework-agent", "framework": "langgraph"}
+    root = UnifiedNode(id="agent:wide-root", entity_type=EntityType.AGENT, label="wide-root", attributes=dict(attrs))
+    graph.add_node(root)
+    for index in range(workers):
+        worker = UnifiedNode(
+            id=f"agent:worker-{index:04d}",
+            entity_type=EntityType.AGENT,
+            label=f"worker-{index:04d}",
+            attributes={**attrs, "parent_id": root.id},
+        )
+        graph.add_node(worker)
+        graph.add_edge(UnifiedEdge(source=root.id, target=worker.id, relationship=RelationshipType.DELEGATED_TO))
+    finding = UnifiedNode(id="vuln:CVE-2026-9999", entity_type=EntityType.VULNERABILITY, label="CVE-2026-9999", severity="critical")
+    graph.add_node(finding)
+    last = f"agent:worker-{workers - 1:04d}"
+    graph.add_edge(UnifiedEdge(source=last, target=finding.id, relationship=RelationshipType.VULNERABLE_TO))
+    return graph
+
+
+def test_truncated_harness_keeps_full_security_totals_and_says_incomplete(api, monkeypatch):  # noqa: F811
+    from agent_bom.graph.harness_view import MAX_AGENTS_PER_HARNESS
+
+    client, store, headers = api
+    store.save_graph(_wide_harness("tenant-a", MAX_AGENTS_PER_HARNESS))
+    body = _get(client, headers["tenant-a"]).json()
+    GraphAgentArchitectureResponse.model_validate(body, context={STRICT_CONTRACT: True})
+    [harness] = body["harnesses"]
+    listed = {row["id"] for layer in harness["layers"] for row in layer["agents"]}
+    assert harness["agent_count"] == MAX_AGENTS_PER_HARNESS + 1 and len(listed) == MAX_AGENTS_PER_HARNESS
+    omitted = f"agent:worker-{MAX_AGENTS_PER_HARNESS - 1:04d}"
+    assert omitted not in listed and harness["truncated"]["agents"] is True
+    # The omitted agent's critical finding still drives the harness rollup.
+    assert harness["security"]["max_severity"] == "critical"
+    assert harness["security"]["findings"] == 1 and harness["security"]["agents_with_findings"] == 1
+    coverage = body["coverage"]
+    assert coverage["complete"] is False
+    expected = f"{MAX_AGENTS_PER_HARNESS} of {MAX_AGENTS_PER_HARNESS + 1}"
+    assert any("wide-root" in reason and expected in reason for reason in coverage["incomplete_reasons"])
+
+    mcp = _mcp("tenant-a", monkeypatch)
+    assert {key: value for key, value in mcp.items() if key not in {"tool", "source"}} == body
+
+
+def test_complete_answer_has_no_incomplete_reasons(api):  # noqa: F811
+    client, store, headers = api
+    store.save_graph(_wide_harness("tenant-a", 3))
+    body = _get(client, headers["tenant-a"]).json()
+    GraphAgentArchitectureResponse.model_validate(body, context={STRICT_CONTRACT: True})
+    assert body["coverage"]["complete"] is True and body["coverage"]["incomplete_reasons"] == []
+    assert body["harnesses"][0]["security"]["max_severity"] == "critical"
+
+
+def test_builder_without_start_edge_is_one_harness_with_its_declared_edge(api):  # noqa: F811
+    client, store, headers = api
+    store.save_graph(_graph("tenant-a", "langgraph_two_nodes"))
+    body = _get(client, headers["tenant-a"]).json()
+    GraphAgentArchitectureResponse.model_validate(body, context={STRICT_CONTRACT: True})
+    [harness] = body["harnesses"]
+    labels = {row["id"]: row["label"] for layer in harness["layers"] for row in layer["agents"]}
+    assert harness["label"] == "builder" and harness["agent_count"] == 3
+    assert sorted(labels.values()) == ["builder", "planner", "writer"]
+    assert [(labels[e["source"]], labels[e["target"]], e["kind"]) for e in harness["flow_edges"]] == [("planner", "writer", "sequential")]
+    assert body["coverage"]["complete"] is True
+
+
+def _agent(graph: UnifiedGraph, agent_id: str, parent: str = "") -> None:
+    attrs = {"agent_type": "framework-agent", "framework": "langgraph", **({"parent_id": parent} if parent else {})}
+    graph.add_node(UnifiedNode(id=agent_id, entity_type=EntityType.AGENT, label=agent_id.split(":")[1], attributes=attrs))
+
+
+def _delegates(graph: UnifiedGraph, source: str, target: str) -> None:
+    graph.add_edge(UnifiedEdge(source=source, target=target, relationship=RelationshipType.DELEGATED_TO))
+
+
+def test_edge_between_two_harnesses_says_the_answer_is_incomplete(api):  # noqa: F811
+    client, store, headers = api
+    graph = UnifiedGraph(scan_id=_SCAN, tenant_id="tenant-a")
+    for root, child in (("agent:alpha", "agent:alpha-worker"), ("agent:beta", "agent:beta-worker")):
+        _agent(graph, root)
+        _agent(graph, child, root)
+        _delegates(graph, root, child)
+    _delegates(graph, "agent:alpha-worker", "agent:beta-worker")
+    store.save_graph(graph)
+    body = _get(client, headers["tenant-a"]).json()
+    assert body["summary"]["harnesses"] == 2
+    coverage = body["coverage"]
+    assert coverage["complete"] is False
+    assert any("different harnesses" in reason for reason in coverage["incomplete_reasons"])
+
+
+def test_nesting_past_the_layer_cap_keeps_the_true_root_and_says_incomplete(api):  # noqa: F811
+    from agent_bom.graph.harness_model import MAX_LAYER_DEPTH
+
+    client, store, headers = api
+    graph = UnifiedGraph(scan_id=_SCAN, tenant_id="tenant-a")
+    ids = [f"agent:a{index:02d}" for index in range(41)]
+    for index, agent_id in enumerate(ids):
+        _agent(graph, agent_id, ids[index - 1] if index else "")
+        if index:
+            _delegates(graph, ids[index - 1], agent_id)
+    store.save_graph(graph)
+    body = _get(client, headers["tenant-a"]).json()
+    [harness] = body["harnesses"]
+    assert harness["harness_id"] == ids[0] and harness["agent_count"] == 41
+    assert any(f"deeper than {MAX_LAYER_DEPTH} layers" in reason for reason in body["coverage"]["incomplete_reasons"])
+    assert body["coverage"]["complete"] is False
