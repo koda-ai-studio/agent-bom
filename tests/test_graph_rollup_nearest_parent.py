@@ -97,6 +97,22 @@ def test_provider_hosts_account_and_account_owns_identity_roll_up() -> None:
     assert RelationshipType.STORES in ROLLUP_SUBTREE_RELATIONSHIP_TYPES
 
 
+def test_provider_parents_an_account_only_when_nothing_else_does() -> None:
+    """An account already under an organization stays there; the provider must not become an overlapping root."""
+    graph = UnifiedGraph(scan_id="overlap", tenant_id="t1")
+    _node(graph, "org:corp", EntityType.ORG)
+    _node(graph, "provider:aws", EntityType.PROVIDER)
+    _node(graph, "account:aws:1", EntityType.ACCOUNT)
+    _node(graph, "bucket", EntityType.CLOUD_RESOURCE, "high")
+    _edge(graph, "org:corp", "account:aws:1")
+    _edge(graph, "provider:aws", "account:aws:1", RelationshipType.HOSTS)
+    _edge(graph, "account:aws:1", "bucket")
+    view = rollup_view(graph)
+    assert [row["id"] for row in view["top_level"] if row["aggregate"]["descendant_count"]] == ["org:corp"]
+    assert view["aggregate_count_metadata"]["additive"] is True
+    assert drill_down(graph, "provider:aws")["children"] == []
+
+
 def test_untyped_hosts_and_stores_do_not_parent() -> None:
     """HOSTS from an environment to an agent and STORES from a server are not ownership; they stay out of the tree."""
     graph = UnifiedGraph(scan_id="typed", tenant_id="t1")

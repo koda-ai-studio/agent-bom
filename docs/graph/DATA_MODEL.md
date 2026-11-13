@@ -56,7 +56,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `org` | Organization | Identity and access | `identity` | 3 / 3001 |  | 6 (+2 demo) |
 | `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 6 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |
-| `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 (+1 demo) |
+| `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 4 (+1 demo) |
 | `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 5 |
 | `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 9 (+2 demo) |
 | `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 4 (+2 demo) |

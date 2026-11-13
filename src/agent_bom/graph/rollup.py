@@ -343,8 +343,26 @@ def _contains_children(graph: UnifiedGraph, flags: Optional[Sequence[bool]] = No
         if edge.source not in graph.nodes or edge.target not in graph.nodes:
             continue
         children[edge.source].add(edge.target)
+    _drop_fallback_provider_parents(graph, children)
     drop_redundant_parents(children)
     return {parent: sorted(kids) for parent, kids in children.items() if kids}
+
+
+def _drop_fallback_provider_parents(graph: UnifiedGraph, children: dict[str, set[str]]) -> None:
+    """A provider parents an org/account only when nothing else does.
+
+    Inventory records ``provider HOSTS account`` for every collected account,
+    including one an organization already contains. Kept as a second parent it
+    makes the provider an overlapping top-level root that counts the same
+    findings twice; the organization is the nearer, recorded owner.
+    """
+    provider_value = EntityType.PROVIDER.value
+    providers = [pid for pid in children if (node := graph.nodes.get(pid)) is not None and _node_type_value(node) == provider_value]
+    if not providers:
+        return
+    owned_elsewhere = {kid for parent, kids in children.items() if parent not in providers for kid in kids}
+    for provider_id in providers:
+        children[provider_id] -= owned_elsewhere
 
 
 def _contains_parents(children: dict[str, list[str]]) -> dict[str, set[str]]:
