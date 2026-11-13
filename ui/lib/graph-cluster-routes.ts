@@ -23,10 +23,10 @@ const GUTTER = 48;
 const LANE_MARGIN = 20;
 const BUS_GAP = 26;
 const BUS_STEP = 10;
-const LABEL_H = 16;
+const LABEL_H = 18;
 const LABEL_PAD = 8;
-/** Average glyph advance of the 11px label font; a slight over-estimate keeps placement conservative. */
-const LABEL_CHAR_W = 6.4;
+/** Average glyph advance of the 12px label font; a slight over-estimate keeps placement conservative. */
+const LABEL_CHAR_W = 7;
 
 export const labelWidth = (text: string) => Math.ceil(text.length * LABEL_CHAR_W) + LABEL_PAD;
 

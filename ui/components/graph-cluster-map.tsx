@@ -67,7 +67,7 @@ export function emphasiseBundles<E extends Pick<Edge, "source" | "target">>(edge
 }
 
 /** Below this zoom a card's text drops under ~10px; the camera pans instead of shrinking further. */
-const MIN_READABLE_ZOOM = 0.8;
+const MIN_READABLE_ZOOM = 0.9;
 
 /** Frames the map after every layout change: whole when it stays readable, otherwise from the top (or the found node) at a readable size. */
 function Camera({ layoutKey, narrow, settled, focusId, bounds }: { layoutKey: string; narrow: boolean; settled: boolean; focusId: string | null; bounds: Box }) {
@@ -85,8 +85,14 @@ function Camera({ layoutKey, narrow, settled, focusId, bounds }: { layoutKey: st
       const fitWidth = Math.min(1, paneW / Math.max(width, 1));
       const zoom = narrow ? fitWidth : Math.min(1, paneW / Math.max(width, 1), paneH / Math.max(height, 1));
       const readable = narrow ? zoom : Math.max(zoom, Math.min(1, Math.max(MIN_READABLE_ZOOM, fitWidth)));
-      const focus = focusId ? nodes.find(node => node.id === focusId) : undefined;
-      if (focus) { void flow.setCenter(focus.position.x + (focus.width ?? 0) / 2, focus.position.y + (focus.height ?? 0) / 2, { zoom: Math.max(readable, MIN_READABLE_ZOOM) }); return; }
+      // A found node, or the group just opened, is brought into view; a tall frame shows from its top.
+      const anchor = focusId ? nodes.find(node => node.id === focusId) : undefined;
+      if (anchor) {
+        const z = narrow ? readable : Math.max(readable, MIN_READABLE_ZOOM);
+        const ax = anchor.position.x + (anchor.width ?? 0) / 2, ah = (anchor.height ?? 0) * z;
+        void flow.setViewport({ x: paneW / 2 + 8 - ax * z, y: ah > paneH ? 24 - anchor.position.y * z : paneH / 2 + 12 - (anchor.position.y + (anchor.height ?? 0) / 2) * z, zoom: z });
+        return;
+      }
       const x = (width * readable < paneW ? (paneW - width * readable) / 2 + 8 : 8) - box.x * readable;
       const y = (height * readable < paneH ? (paneH - height * readable) / 2 + 12 : 12) - box.y * readable;
       void flow.setViewport({ x, y, zoom: readable });
@@ -154,7 +160,13 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
   const labels = useMemo(() => new Map((view?.nodes ?? []).flatMap(node => [[node.id, node.label], [frameId(node.id), node.label]] as const)), [view]);
   const bundle = elements.edges.find(edge => edge.id === bundleId)?.data?.bundle ?? null;
   const layoutKey = useMemo(() => elements.nodes.map(node => `${node.id}@${node.position.x},${node.position.y}`).join("|"), [elements.nodes]);
-  const shownEdges = useMemo(() => emphasiseBundles(elements.edges, activeMember ?? hoverId ?? focusId), [elements.edges, activeMember, hoverId, focusId]);
+  const lastOpened = map.state.expanded.at(-1);
+  const cameraAnchor = focusId ?? (lastOpened ? frameId(lastOpened) : null);
+  const [hoverEdge, setHoverEdge] = useState<string | null>(null);
+  const shownEdges = useMemo(
+    () => emphasiseBundles(elements.edges, activeMember ?? hoverId ?? focusId).map(edge => (edge.id === hoverEdge && edge.data ? { ...edge, data: { ...edge.data, hovered: true } } : edge)),
+    [elements.edges, activeMember, hoverId, focusId, hoverEdge],
+  );
   return <section aria-label="Grouped map" data-testid="graph-cluster-map" className="cluster-map flex min-h-0 flex-1 flex-col">
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-outline px-3 py-1.5 max-sm:px-1">
       <span className="text-sm font-medium text-foreground">Grouped map</span>
@@ -173,6 +185,7 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
       {view && view.nodes.length > 0 && <ReactFlow
         nodes={motion.nodes} edges={shownEdges} nodeTypes={clusterNodeTypes} edgeTypes={clusterEdgeTypes}
         onNodeMouseEnter={(_event, node) => setHoverId(node.id)} onNodeMouseLeave={() => setHoverId(null)}
+        onEdgeMouseEnter={(_event, edge) => setHoverEdge(edge.id)} onEdgeMouseLeave={() => setHoverEdge(null)}
         nodesDraggable={false} nodesConnectable={false} nodesFocusable edgesFocusable elementsSelectable deleteKeyCode={null}
         minZoom={0.1} maxZoom={1.6} proOptions={{ hideAttribution: true }}
         onNodeClick={(_event, node) => {
@@ -185,7 +198,7 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
         onEdgeClick={(_event, edge) => setBundleId(edge.id)}
         onPaneClick={() => setBundleId(null)}
       >
-        <Camera layoutKey={layoutKey} narrow={narrow} settled={!motion.animating} focusId={focusId} bounds={elements.bounds} />
+        <Camera layoutKey={layoutKey} narrow={narrow} settled={!motion.animating} focusId={cameraAnchor} bounds={elements.bounds} />
         <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
         <Controls showInteractive={false} position="bottom-left" className={CONTROLS_CLASS} />
       </ReactFlow>}
