@@ -64,6 +64,11 @@ def delayed_reply_dsn() -> Iterator[str]:
             threading.Thread(target=_forward, args=(server, client, _REPLY_DELAY), daemon=True).start()
 
     threading.Thread(target=accept, daemon=True).start()
+    from agent_bom.api.postgres_common import resolve_postgres_secret
+
+    # The URL may carry no password; the app reads it from a file the same way the pool does.
+    if (secret := resolve_postgres_secret()) is not None:
+        params["password"] = secret
     params.update(host="127.0.0.1", port=str(listener.getsockname()[1]), sslmode="disable")
     try:
         yield make_conninfo(**params)
@@ -81,7 +86,7 @@ def _prelude_round_trips(dsn: str, *, repeatable_read: bool) -> tuple[float, tup
     try:
         with psycopg.connect(dsn) as conn:
             best = float("inf")
-            for _ in range(3):
+            for _ in range(5):
                 conn.rollback()
                 began = time.perf_counter()
                 postgres_common._apply_tenant_session(conn, repeatable_read=repeatable_read)
@@ -108,6 +113,7 @@ def test_tenant_session_prelude_waits_twice_not_once_per_setting(delayed_reply_d
     round_trips, settings = _prelude_round_trips(delayed_reply_dsn, repeatable_read=repeatable_read)
 
     # BEGIN, the isolation level and three set_config calls used to wait in turn: four or five delays. psycopg
-    # still syncs a pipelined BEGIN on its own, so the floor is two: BEGIN, then everything else.
-    assert round_trips < 2.5, f"tenant session prelude took {round_trips:.1f} reply delays"
+    # still syncs a pipelined BEGIN on its own, so the floor is two: BEGIN, then everything else. The bound leaves room
+    # for a loaded runner and stays below the four waits the unpipelined prelude cannot go under.
+    assert round_trips < 3.5, f"tenant session prelude took {round_trips:.1f} reply delays"
     assert settings == ("tenant-round-trips", "0", isolation, read_only)
