@@ -1,14 +1,14 @@
 "use client";
 
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { Bug, Crown, Database, Globe, Layers } from "lucide-react";
+import { Bug, Layers } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { entityIcon } from "@/lib/entity-icons";
 import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import type { PathGraphNode } from "@/lib/attack-path-graph-model";
-import type { NodeContextMarker } from "@/lib/attack-path-graph-markers";
+import { MARKER_META, type NodeContextMarker } from "@/lib/attack-path-graph-markers";
 import { ATTACK_PATH_NODE } from "@/lib/attack-path-graph-layout";
 import { GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
 
@@ -26,10 +26,9 @@ const BOX: CSSProperties = { width: ATTACK_PATH_NODE.width, height: ATTACK_PATH_
 const NAME = "pointer-events-auto block w-full rounded-t bg-surface px-1 pt-0.5 text-[15px] font-semibold leading-tight line-clamp-2 [overflow-wrap:anywhere]";
 const SUBTITLE = "pointer-events-auto block w-full truncate rounded-b bg-surface px-1 pb-0.5 pt-0.5 text-[13px] leading-tight";
 const RATED = new Set(["critical", "high", "medium", "low"]);
-const MARKER_ICONS = { internet: Globe, sensitive: Database, privileged: Crown } as const;
 const ROLE_CAPTION: Record<PathGraphNode["role"], string> = { entry: "Entry", path: "", target: "At risk", branch: "" };
 
-function severityStyle(severity: string): CSSProperties {
+export function severityStyle(severity: string): CSSProperties {
   if (!RATED.has(severity)) return { background: "var(--surface-elevated)", borderColor: "var(--border-strong)", color: "var(--foreground)" };
   return {
     background: `linear-gradient(var(--severity-${severity}-bg), var(--severity-${severity}-bg)), var(--surface)`,
@@ -55,9 +54,10 @@ function FindingBadge({ node, onOpen }: { node: PathGraphNode; onOpen: AttackPat
 function Markers({ markers }: { markers: NodeContextMarker[] }) {
   if (markers.length === 0) return null;
   return (
-    <span className="absolute -left-5 -top-2.5 z-10 flex flex-col gap-0.5">
+    // A row above the glyph, growing left, so no marker sits where an edge enters.
+    <span className="absolute -top-3 right-[calc(100%-14px)] z-10 flex flex-row-reverse gap-0.5">
       {markers.map(marker => {
-        const Icon = MARKER_ICONS[marker.kind];
+        const Icon = MARKER_META[marker.kind].Icon;
         return (
           <span key={marker.kind} role="img" aria-label={marker.label} title={marker.label} data-marker={marker.kind}
             className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-outline-strong bg-surface text-foreground shadow-sm">

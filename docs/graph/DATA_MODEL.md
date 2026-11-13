@@ -271,6 +271,30 @@ Stable ids come from `agent_bom.canonical_ids` (UUIDv5 over normalized parts).
 | `canonical_mcp_server_id` | `(name: 'str', command: 'str' = '', *, registry_id: 'str | None' = None, url: 'str | None' = None, args: 'Sequence[str] | None' = None, working_dir: 'str | None' = None, environment: 'Mapping[str, Any] | None' = None) -> 'str'` |
 | `canonical_mcp_tool_id` | `(name: 'str', input_schema: 'Mapping[str, Any] | bool | None' = None, *, server_id: 'str | None' = None) -> 'str'` |
 | `canonical_package_id` | `(name: 'str', version: 'str', ecosystem: 'str', purl: 'str | None' = None) -> 'str'` |
+
+## Node risk context
+
+`agent_bom.graph.risk_context_overlay.apply_node_risk_context` stores `attributes.risk_context` on every asset with at least one recorded fact: `internet_exposed` (true / false / null), `privilege_level`, `is_admin`, `data_sensitivity`, `crown_jewel`, the `scan_id` and `sources`, and one reason per fact. A name never sets a field. Rules are in [NODE_RISK_CONTEXT.md](NODE_RISK_CONTEXT.md).
+
+| Field | Rule | Recorded fact |
+|---|---|---|
+| `internet_exposed` | `recorded_internet_exposed` | `internet_exposed` true, set by a collector or a structured internet-scoped network rule |
+| `internet_exposed` | `recorded_public_flag` | a provider flag true: `publicly_accessible`, `is_public`, `public_access`, `public`, `internet_facing`, `endpoint_public` |
+| `internet_exposed` | `recorded_public_ip` | a globally routable address in `public_ip` / `public_ip_address` |
+| `internet_exposed` | `recorded_not_public` | the same flags recorded false and none true (verdict false) |
+| `privilege_level` | `admin_equivalence` | the effective-permissions verdict `admin_equivalence_status` / `admin_equivalent` |
+| `privilege_level` | `recorded_admin_flag` | `is_admin` true |
+| `privilege_level` | `recorded_privilege_level` | the collector's highest policy level `privilege_level` (admin / write / read) |
+| `privilege_level` | `kubernetes_cluster_admin_binding` | an `inherits` edge to the built-in `ClusterRole/cluster-admin` |
+| `privilege_level` | `escalates_to_admin` | an assume chain to an admin role (`escalates_to_admin`); not standing admin |
+| `privilege_level` | `escalates_to_conditional_admin` | an assume chain to a conditional admin role |
+| `data_sensitivity` | `recorded_data_sensitivity` | `data_sensitivity` from a classifier; `data_sensitivity_basis` says name or metadata |
+| `data_sensitivity` | `recorded_classification_tier` | `data_classification_tier` |
+| `data_sensitivity` | `recorded_regulatory_framework` | `data_regulatory_frameworks` (PCI-DSS, HIPAA, GDPR, SOC2) |
+| `data_sensitivity` | `content_sampling` | `content_data_sensitivity` from sampled contents |
+| `crown_jewel` | `sensitive_data_store` | a `data_store` node whose data sensitivity is established |
+| `crown_jewel` | `declared_critical_asset` | `asset_criticality` / `criticality` of critical, crown_jewel, tier0 |
+| `crown_jewel` | `production_secret_store` | a secrets store `resource_type` with a production `environment` |
 <!-- trace-event-schema:start -->
 ## Normalized trace event
 

@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING
 
 from agent_bom.core.severity import SEVERITY_RISK_SCORE, normalize_severity
 from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
+from agent_bom.demo_estate.estate_classification import record_data_classification
 from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_edge, oriented_topology_edge
 from agent_bom.demo_estate.estate_external_stages import project_external_stages, recorded_identifier_attributes
 from agent_bom.demo_estate.estate_finding_nodes import project_estate_finding
@@ -252,13 +253,10 @@ def _compliance_tags(asset: EstateAsset) -> list[str]:
 def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
     """An inventory node, deliberately unrated.
 
-    Severity belongs to the finding, not to the thing it was raised against —
-    which is also what the live graph builder does for cloud resources. Copying
-    the worst finding's severity onto the asset would make the roll-up histogram
-    count the same risk twice and stop it reconciling with
-    ``summarize_estate_findings``.
+    Severity belongs to the finding, not to the thing it was raised against — which is also what the live
+    graph builder does for cloud resources. Copying the worst finding's severity onto the asset would make
+    the roll-up histogram count the same risk twice and stop it reconciling with ``summarize_estate_findings``.
     """
-    exposed = asset.tags.get("internet_facing") == "true"
     node = UnifiedNode(
         id=asset.asset_id,
         entity_type=entity_type_for_resource_type(asset.resource_type),
@@ -268,7 +266,7 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
             # The CNAPP overlay's own spelling for exposure, not a demo-only
             # one, so the estate's exposed resources take part in the same
             # toxic-combination and exposure-path logic a live scan does.
-            "internet_exposed": exposed,
+            "internet_exposed": asset.tags.get("internet_facing") == "true",
             "publicly_accessible": asset.tags.get("public_access") == "true",
             "over_permissive": asset.tags.get("over_permissive") == "true",
             "ai_lane": asset.tags.get("ai_lane", ""),
@@ -301,6 +299,7 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
     )
     if asset.resource_type == "package":
         _as_package_node(node, asset)
+    record_data_classification(node, asset)
     record_node_aliases(node, retired_estate_asset_ids(asset.asset_id, asset.resource_type, asset.native_id, asset.tags))
     return node
 

@@ -37,6 +37,7 @@ import type {
   ContextGraphResponse,
 } from "./api-types";
 import { ApiError } from "./api-errors";
+import type { AgentArchitectureResponse } from "./agent-architecture-types";
 import type { GraphExposurePathsResponse, GraphDeployDecisionResponse } from "./api-contracts";
 import { get, post, put, del, mutationIdempotencyKey } from "./api-transport";
 
@@ -453,6 +454,17 @@ export const graphApi = {
     const qs = params.toString();
     const route = queryAddressed ? "/v1/graph/node-context" : `/v1/graph/node/${encodeURIComponent(nodeId)}`;
     return get<GraphNodeDetailResponse>(`${route}${qs ? `?${qs}` : ""}`);
+  },
+
+
+  /** Multi-agent harnesses of a snapshot, paged by harness with the generation-pinned cursor. */
+  getAgentArchitecture: (options: { scanId?: string | undefined; cursor?: string | undefined; limit?: number | undefined; fresh?: boolean | undefined } = {}) => {
+    const params = new URLSearchParams();
+    if (options.scanId) params.set("scan_id", options.scanId);
+    if (options.cursor) params.set("cursor", options.cursor);
+    if (options.limit != null) params.set("limit", String(options.limit));
+    const qs = params.toString();
+    return get<AgentArchitectureResponse>(`/v1/graph/agent-architecture${qs ? `?${qs}` : ""}`, options.fresh ? { noStore: true } : {});
   },
 
 

@@ -277,8 +277,10 @@ def test_sigterm_reaps_running_upstream(tmp_path):
     child_pid = None
     try:
         for _ in range(100):
-            if pid_file.exists():
-                child_pid = int(pid_file.read_text())
+            # write_text creates the file before writing it, so wait for the digits.
+            text = pid_file.read_text().strip() if pid_file.exists() else ""
+            if text.isdigit():
+                child_pid = int(text)
                 break
             time.sleep(0.05)
         stderr.flush()

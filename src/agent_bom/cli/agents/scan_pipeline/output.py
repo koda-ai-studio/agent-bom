@@ -6,14 +6,18 @@ import time as _time
 from pathlib import Path
 from typing import Any
 
+from rich.rule import Rule
+
 from agent_bom.autodiscover import package_not_on_registry_message, packages_not_on_registry
 from agent_bom.cli._common import logger
-from agent_bom.cli.agents._output import render_output
+from agent_bom.cli.agents._output import _is_null_device, _resolve_output_path, render_output
 from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.scan_memory import remember_and_report
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
+from agent_bom.cli.agents.scan_pipeline.top_fixes import print_top_fixes
 from agent_bom.core.verbose_hint import verbose_hint
+from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.output import print_diff
 
 
@@ -274,10 +278,6 @@ def _print_completion(opts: ScanOptions, st: ScanState) -> None:
     # Scan completion divider
     _elapsed = _time.monotonic() - st.scan_start
     if opts.output_format == "console" and not opts.output and not opts.quiet:
-        from rich.rule import Rule
-
-        from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
-
         _execution_outcome = effective_scan_run(st.report).outcome
         _completion_label = {
             ScanOutcome.COMPLETE: "Scan Complete",
@@ -325,6 +325,24 @@ def _print_completion(opts: ScanOptions, st: ScanState) -> None:
                 st.con.print("\n  [green]→[/green] no vulnerabilities found — supply chain looks clean")
 
 
+_REPORT_FILE_FORMATS = frozenset({"html", "json", "sarif", "cyclonedx", "spdx", "markdown", "pdf", "graph-html"})
+
+
+def _print_file_report_next_steps(opts: ScanOptions, st: ScanState) -> None:
+    """End a file-output scan with its top fixes; the console report already lists them."""
+    if opts.quiet or opts.agent_mode or opts.output_format not in _REPORT_FILE_FORMATS:
+        return
+    # Without an explicit file, machine formats stream to stdout and must stay parseable.
+    if not opts.output or opts.output == "-" or _is_null_device(opts.output):
+        return
+    print_top_fixes(
+        st.con,
+        st.report,
+        report_path=_resolve_output_path(opts.output, opts.output_format),
+        scan_target=_next_steps_target(opts),
+    )
+
+
 def run_output(opts: ScanOptions, st: ScanState) -> None:
     """Finalize the canonical projection, render, persist and summarize."""
     _finalize_report(opts, st)
@@ -336,3 +354,4 @@ def run_output(opts: ScanOptions, st: ScanState) -> None:
     _save_history(opts, st)
     _diff_baseline(opts, st)
     _print_completion(opts, st)
+    _print_file_report_next_steps(opts, st)
