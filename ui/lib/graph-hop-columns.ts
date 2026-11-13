@@ -6,8 +6,10 @@ import type { Edge, Node } from "@xyflow/react";
  * two hops the next, and so on. A column stacks at an even row rhythm centred
  * on the start's row, ordered by the rows of its parents so lines into it do
  * not cross. Anything the start does not reach goes in a column after the rest.
+ * On a phone (`vertical`) the same reading turns a quarter: each hop is a row,
+ * so a preview stacks down the narrow frame instead of running off its side.
  */
-export function hopColumnLayout<N extends Node>(nodes: N[], edges: readonly Edge[], rootId: string, { columnGap, rowGap }: { columnGap: number; rowGap: number }): N[] {
+export function hopColumnLayout<N extends Node>(nodes: N[], edges: readonly Edge[], rootId: string, { columnGap, rowGap, vertical = false }: { columnGap: number; rowGap: number; vertical?: boolean }): N[] {
   const ids = new Set(nodes.map(node => node.id));
   const neighbours = new Map<string, string[]>();
   for (const edge of edges) {
@@ -32,9 +34,9 @@ export function hopColumnLayout<N extends Node>(nodes: N[], edges: readonly Edge
     };
     const members = columns.get(column)!.sort((a, b) => parentRow(a) - parentRow(b) || a.position.y - b.position.y || a.id.localeCompare(b.id));
     members.forEach((node, index) => {
-      const y = (index - (members.length - 1) / 2) * rowGap;
-      row.set(node.id, y);
-      placed.set(node.id, { x: column * columnGap, y });
+      const across = (index - (members.length - 1) / 2) * (vertical ? columnGap : rowGap);
+      row.set(node.id, across);
+      placed.set(node.id, vertical ? { x: across, y: column * rowGap } : { x: column * columnGap, y: across });
     });
   }
   return nodes.map(node => ({ ...node, position: placed.get(node.id)! }));

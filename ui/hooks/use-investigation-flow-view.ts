@@ -64,9 +64,9 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   const flow: FlowResult = useMemo(() => {
     if (!active) return { nodes: presentation.nodes, edges, scenario: "inventory", applied: false, primaryPath: [] };
     if (previewActive) {
-      // Nodes at the same hop distance from the chosen start share one column.
+      // Nodes at the same hop distance from the chosen start share one column (one row on a phone).
       const shown = presentation.nodes.filter(node => !node.hidden);
-      const placed = new Map(hopColumnLayout(shown, edges, previewRootId ?? "", PREVIEW_LAYOUT).map(node => [node.id, node.position]));
+      const placed = new Map(hopColumnLayout(shown, edges, previewRootId ?? "", { ...PREVIEW_LAYOUT, vertical: narrowViewport }).map(node => [node.id, node.position]));
       return { nodes: presentation.nodes.map(node => placed.has(node.id) ? { ...node, position: placed.get(node.id)! } : node), edges, scenario: "inventory", applied: false, primaryPath: [] };
     }
     return investigationFlow(presentation.nodes, edges, kind, narrowViewport);
