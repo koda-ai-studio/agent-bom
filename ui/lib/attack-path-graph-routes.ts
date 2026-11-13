@@ -1,5 +1,5 @@
 import type { AttackPathDirection, AttackPathLayout } from "@/lib/attack-path-graph-layout";
-import type { AttackPathGraphModel } from "@/lib/attack-path-graph-model";
+import type { PathGraphEdge } from "@/lib/attack-path-graph-model";
 
 export type Point = { x: number; y: number };
 
@@ -46,7 +46,7 @@ function handles(layout: Geometry, id: string): { out: Point; in: Point } {
  * against the layer order runs outside the outermost lanes. Channels never
  * contain node boxes, so no line passes through a glyph or a name.
  */
-export function routeAttackPathEdges(model: AttackPathGraphModel, layout: Geometry): Map<string, Point[]> {
+export function routeAttackPathEdges(model: { edges: readonly Pick<PathGraphEdge, "id" | "source" | "target" | "bidirectional">[] }, layout: Geometry): Map<string, Point[]> {
   const f = frame(layout);
   const occupied = new Set([...layout.columns].map(([id, column]) => `${column}:${layout.lanes.get(id)}`));
   const routes = new Map<string, Point[]>();

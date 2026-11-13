@@ -8,6 +8,7 @@ export const PRODUCT_ROUTES = [
   "/activity",
   "/advisories",
   "/agents",
+  "/agents/architecture",
   "/agents/topology",
   "/audit",
   "/blueprints",

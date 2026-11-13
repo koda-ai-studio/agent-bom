@@ -13,6 +13,7 @@ import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./produ
 import { waitForOwnedServer } from "./product-proof-server.mjs";
 import { CREATED_AT, intelSourcesFixture, loadOverviewProof } from "./product-proof-fixtures.mjs";
 import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
+import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
 import {
   SCOPE_SHOWCASE_PRESETS,
@@ -1589,6 +1590,7 @@ export async function installRoutes(page, fixtureGraph = graph) {
     warnings: ["Path context not recorded in this fixture"],
   }));
   await page.route("**/v1/intel/sources", (route) => fulfill(route, intelSourcesFixture()));
+  await installAgentArchitectureRoutes(page);
   // Canonical persisted neighborhood fixture. IDs and edges come from the same
   // demo snapshot used by the other graph surfaces; no label-based joins.
   const generation = "0123456789abcdef0123456789abcdef";
@@ -2908,6 +2910,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
 
 async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
   const screenshotEntries = [
+    ...AGENT_ARCHITECTURE_SCREENSHOTS,
     ...["cloud", "repository", "environment"].flatMap(scope => ["dark", "light"].map(theme => ({
       path: `graph-${scope}-${theme}-live.png`,
       page: `/graph?lens=estate&rollup=0&scan=${SCAN_ID}&capture=1`,
@@ -4038,6 +4041,7 @@ async function main() {
       expectedApiPaths: ["/v1/findings/remediation"],
       assertNoHorizontalOverflow: true,
     });
+    await captureAgentArchitecture({ capture, newCapturePage });
     await writeScreenshotManifest(stageDir);
     for (const artifact of await fs.readdir(stageDir)) {
       await fs.copyFile(path.join(stageDir, artifact), path.join(IMAGE_DIR, artifact));
