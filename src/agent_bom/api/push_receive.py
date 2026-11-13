@@ -9,6 +9,8 @@ instead of parking the caller behind that commit.
 from __future__ import annotations
 
 import asyncio
+import math
+import re
 from typing import Any, cast
 
 import pydantic_core
@@ -46,6 +48,46 @@ PUSH_ACCEPTED_RESPONSES: dict[int | str, dict[str, Any]] = {
     }
 }
 _ACTIVE_STATUSES = {JobStatus.PENDING.value, JobStatus.RUNNING.value}
+# A parse that refuses NaN/Infinity literals still overflows a huge number to
+# infinity: a 3+ figure positive exponent or a 309+ figure run. Only a body
+# with such a token is walked.
+_OVERFLOW_CANDIDATE = re.compile(rb"(?<![0-9A-Za-z.])-?\d+(?:\.\d*)?[eE]\+?\d{3,}(?![0-9A-Za-z])|\d{309,}")
+
+
+def _non_finite_path(value: Any) -> tuple[int | str, ...] | None:
+    """Location of the first NaN or infinity in a parsed JSON tree, depth first."""
+    stack: list[tuple[Any, tuple[int | str, ...]]] = [(value, ())]
+    while stack:
+        node, path = stack.pop()
+        if isinstance(node, float):
+            if not math.isfinite(node):
+                return path
+        elif isinstance(node, dict):
+            stack.extend((child, (*path, key)) for key, child in reversed(list(node.items())))
+        elif isinstance(node, list):
+            stack.extend((child, (*path, index)) for index, child in reversed(list(enumerate(node))))
+    return None
+
+
+def _reject_non_finite(parsed: Any) -> None:
+    path = _non_finite_path(parsed)
+    if path is None:
+        return
+    raise ValidationError.from_exception_data(
+        PushPayload.__name__, [{"type": "finite_number", "loc": path, "input": None}], input_type="json"
+    )
+
+
+def _parse_finite_json(raw: bytes) -> Any:
+    """Parse JSON, rejecting NaN and infinity: JSON has no such numbers and storage cannot encode them."""
+    try:
+        parsed = pydantic_core.from_json(raw, allow_inf_nan=False)
+    except ValueError:
+        _reject_non_finite(pydantic_core.from_json(raw))
+        raise
+    if _OVERFLOW_CANDIDATE.search(raw):
+        _reject_non_finite(parsed)
+    return parsed
 
 
 def _validate_push_body(raw: bytes) -> PushPayload:
@@ -56,12 +98,17 @@ def _validate_push_body(raw: bytes) -> PushPayload:
     a JSON-validated model (203 MiB) plus the admission dump (153 MiB). The
     parser is the one ``model_validate_json`` uses: the same NaN, duplicate-key
     and surrogate handling. Rejected input is validated again as JSON so a 422
-    keeps the JSON validator's wording ("valid array", "an object").
+    keeps the JSON validator's wording ("valid array", "an object"). NaN and
+    infinity are rejected as ``finite_number`` at their location.
     """
     try:
-        parsed = pydantic_core.from_json(raw)
+        parsed = _parse_finite_json(raw)
         body = PushPayload.model_validate(parsed)
-    except ValueError:  # ValidationError included
+    except ValidationError as exc:
+        if any(error.get("type") == "finite_number" for error in exc.errors()):
+            raise
+        return PushPayload.model_validate_json(raw)
+    except ValueError:
         return PushPayload.model_validate_json(raw)
     if isinstance(parsed, dict):
         body._parsed_body = parsed

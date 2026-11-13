@@ -83,9 +83,9 @@ def _text_of(node: UnifiedNode) -> str:
     return " ".join(parts).lower()
 
 
-def _sensitive_text(node: UnifiedNode) -> str:
+def _sensitive_text(node: UnifiedNode, *, include_label: bool = True) -> str:
     """Gather the text that may signal the node holds sensitive data."""
-    parts = [node.label]
+    parts = [node.label] if include_label else []
     desc = node.attributes.get("description")
     if isinstance(desc, str):
         parts.append(desc)
@@ -159,6 +159,16 @@ def _matches(text: str, keywords: tuple[str, ...]) -> bool:
 
 def _is_sensitive(node: UnifiedNode) -> bool:
     return _matches(_sensitive_text(node), _SENSITIVE_KEYWORDS)
+
+
+def _sensitivity_basis(node: UnifiedNode, prefix: str = "") -> list[str]:
+    """Which carriers matched: ``name`` (the label alone) and/or ``metadata`` (tags, descriptions, classification)."""
+    basis = []
+    if _matches(node.label.lower(), _SENSITIVE_KEYWORDS):
+        basis.append(f"{prefix}name")
+    if _matches(_sensitive_text(node, include_label=False), _SENSITIVE_KEYWORDS):
+        basis.append(f"{prefix}metadata")
+    return basis
 
 
 # Regulatory frameworks inferred from METADATA only (labels, compliance tags,
@@ -237,6 +247,32 @@ _DATA_ACCESS_RELATIONSHIPS = frozenset(
         RelationshipType.EXPOSED_TO,
     }
 )
+
+
+def _classify_sensitive_data(graph: UnifiedGraph) -> set[str]:
+    """Label datasets and data stores whose metadata names sensitive data; return their ids."""
+    sensitive_ids: set[str] = set()
+    for node in graph.nodes_of_types((EntityType.DATASET, EntityType.DATA_STORE)):
+        backing = graph.nodes.get(node.attributes.get("backed_by", "")) if node.entity_type == EntityType.DATA_STORE else None
+        if _is_sensitive(node) or (backing is not None and _is_sensitive(backing)):
+            node.attributes["data_sensitivity"] = "sensitive"
+            # Record which carrier established the label so a name-only match
+            # stays distinguishable from a recorded classification.
+            basis = _sensitivity_basis(node)
+            if backing is not None and _is_sensitive(backing):
+                basis += [item for item in _sensitivity_basis(backing, "backing_resource_") if item not in basis]
+            node.attributes["data_sensitivity_basis"] = basis
+            # Which regulatory regimes govern this store (PCI/HIPAA/GDPR/SOC2),
+            # merged from the store and the resource it backs — metadata only.
+            frameworks = _classify_regulatory_frameworks(node)
+            if backing is not None:
+                for code in _classify_regulatory_frameworks(backing):
+                    if code not in frameworks:
+                        frameworks.append(code)
+            if frameworks:
+                node.attributes["data_regulatory_frameworks"] = frameworks
+            sensitive_ids.add(node.id)
+    return sensitive_ids
 
 
 def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
@@ -424,21 +460,7 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
         toxic += 1
 
     # ── Data sensitivity (PII/PHI/secrets) on datasets and data stores ──
-    sensitive_ids: set[str] = set()
-    for node in graph.nodes_of_types((EntityType.DATASET, EntityType.DATA_STORE)):
-        backing = graph.nodes.get(node.attributes.get("backed_by", "")) if node.entity_type == EntityType.DATA_STORE else None
-        if _is_sensitive(node) or (backing is not None and _is_sensitive(backing)):
-            node.attributes["data_sensitivity"] = "sensitive"
-            # Which regulatory regimes govern this store (PCI/HIPAA/GDPR/SOC2),
-            # merged from the store and the resource it backs — metadata only.
-            frameworks = _classify_regulatory_frameworks(node)
-            if backing is not None:
-                for code in _classify_regulatory_frameworks(backing):
-                    if code not in frameworks:
-                        frameworks.append(code)
-            if frameworks:
-                node.attributes["data_regulatory_frameworks"] = frameworks
-            sensitive_ids.add(node.id)
+    sensitive_ids = _classify_sensitive_data(graph)
 
     # Who/what can reach sensitive data stores, from the same permission/runtime
     # edges as the rest of ContextGraph.

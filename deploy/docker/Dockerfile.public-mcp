@@ -19,6 +19,7 @@
 #   PORT                                     Injected by the platform.
 #   AGENT_BOM_MCP_PUBLIC_URL                 https://<public host>, no path.
 #   AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS  Proxies that append X-Forwarded-For (1 behind one edge).
+#   AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS Proxy networks allowed to send X-Forwarded-For.
 #   AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT   Calls per client per 60 s window (default 30).
 #   AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT    Anonymous calls per 60 s window, all clients (default 300).
 #   AGENT_BOM_OPENAI_APPS_CHALLENGE          Domain-verification token; unset serves 404.

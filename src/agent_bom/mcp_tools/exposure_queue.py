@@ -141,7 +141,8 @@ def validate_request(limit: int, max_limit: int, query: PathQuery, view: str) ->
 
 
 def _endpoint(ref: dict[str, Any]) -> dict[str, Any]:
-    endpoint = {key: ref[key] for key in _ENDPOINT_KEYS if key in ref}
+    # ``risk`` holds positive verdicts only; the node read and view="full" nodes carry the reasons.
+    endpoint = {key: ref[key] for key in (*_ENDPOINT_KEYS, "risk") if key in ref}
     if endpoint.get("label") == endpoint.get("id"):
         endpoint.pop("label", None)
     return endpoint
@@ -160,6 +161,10 @@ def summary_path(path: dict[str, Any]) -> dict[str, Any]:
     # Source and target are listed once, as endpoints; ``via`` holds the hops between them.
     summary["via"] = node_ids[1:-1]
     summary["hopCount"] = len(node_ids)
+    # Positions in source + via + target where internet exposure enters; omitted when none.
+    exposed = [index for index, hop in enumerate(path.get("hops") or []) if (hop.get("risk") or {}).get("internetExposed")]
+    if exposed:
+        summary["exposedHops"] = exposed
     for key, count_key in _SUMMARY_LISTS:
         values = list(path.get(key) or [])
         summary[key] = values[:SUMMARY_LIST_LIMIT]
@@ -203,6 +208,8 @@ def project_paths(
                 "evidenceConfidence": factors["evidence_confidence"],
                 "compositeRisk": factors["composite_risk"],
                 "credentialCount": factors["credential_count"],
+                "internetExposed": factors["internet_exposed"],
+                "exposedHopIds": factors["exposed_hop_ids"],
                 "reasons": factors["reasons"],
             },
         )

@@ -133,3 +133,39 @@ def test_trace_family_follows_hop_receipts_when_annotated() -> None:
     assert path_ranking_factors(mixed, nodes)["path_family"] == "access"
     mixed.hop_evidence[1]["reason_codes"] = ["trace_order_not_access", "stale_evidence"]
     assert path_ranking_factors(mixed, nodes)["path_family"] == "trace_correlation"
+
+
+def test_an_exposed_middle_hop_makes_the_path_exposed_and_says_where() -> None:
+    # An exposed MCP server mid-chain is an attacker entry point too.
+    nodes = {
+        n.id: n
+        for n in [
+            _node("a:agent"),
+            _node("b:mcp-server", internet_exposed=True),
+            _node("c:pkg"),
+            _node("d:exposed", publicly_accessible=True),
+        ]
+    }
+    middle = path_ranking_factors(_path("a:agent", "b:mcp-server", "c:pkg"), nodes)
+    assert middle["internet_exposed"] is True
+    assert middle["exposed_hop_ids"] == ["b:mcp-server"]
+    assert "Internet-exposed at b:mcp-server (b:mcp-server), hop 2 of 3: recorded internet_exposed." in middle["reasons"]
+    entry = path_ranking_factors(_path("d:exposed", "a:agent"), nodes)
+    assert entry["exposed_hop_ids"] == ["d:exposed"]
+    assert "Internet-exposed at d:exposed (d:exposed), the entry: recorded publicly_accessible." in entry["reasons"]
+    internal = path_ranking_factors(_path("a:agent", "c:pkg"), nodes)
+    assert (internal["internet_exposed"], internal["exposed_hop_ids"]) == (False, [])
+    assert not any(reason.startswith("Internet-exposed at") for reason in internal["reasons"])
+
+
+def test_exposure_reason_names_the_network_rule_receipt() -> None:
+    receipt = {"source": "cnapp-overlay", "network_rules": [{"finding_id": "mc:sg-open", "rules": []}]}
+    nodes = {n.id: n for n in [_node("vm", internet_exposed=True, internet_exposure_evidence=receipt), _node("t:1")]}
+    reasons = path_ranking_factors(_path("vm", "t:1"), nodes)["reasons"]
+    assert "Internet-exposed at vm (vm), the entry: recorded network rule mc:sg-open." in reasons
+
+
+def test_path_exposure_reads_the_stored_node_risk_context() -> None:
+    entry = _node("a:entry", risk_context={"internet_exposed": True, "reasons": []})
+    nodes = {n.id: n for n in [entry, _node("t:1")]}
+    assert path_ranking_factors(_path("a:entry", "t:1"), nodes)["internet_exposed"] is True

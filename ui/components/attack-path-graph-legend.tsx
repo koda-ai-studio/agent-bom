@@ -1,9 +1,10 @@
 "use client";
 
-import { Bug, Crown, Database, Globe } from "lucide-react";
+import { Bug } from "lucide-react";
 
 import { LINE_STYLE, PATH_STROKE } from "@/components/attack-path-graph-edge";
 import type { AttackPathGraphModel, EdgeEvidenceStyle } from "@/lib/attack-path-graph-model";
+import { MARKER_KINDS, MARKER_META } from "@/lib/attack-path-graph-markers";
 
 /** Line style rule: a hop with a complete receipt on this path is solid; any other line follows its edge's own evidence. */
 const EVIDENCE_LABELS: Record<EdgeEvidenceStyle, string> = {
@@ -12,11 +13,7 @@ const EVIDENCE_LABELS: Record<EdgeEvidenceStyle, string> = {
   inferred: "Modeled or inferred",
   unrecorded: "No per-edge receipt",
 };
-const MARKERS = [
-  { kind: "internet", label: "Internet-exposed", Icon: Globe },
-  { kind: "sensitive", label: "Sensitive data", Icon: Database },
-  { kind: "privileged", label: "Privileged", Icon: Crown },
-] as const;
+const MARKERS = MARKER_KINDS.map(kind => ({ kind, ...MARKER_META[kind] }));
 
 function LineSwatch({ dash, stroke, width = 2, round, dots }: { dash?: string | undefined; stroke: string; width?: number; round?: boolean; dots?: boolean }) {
   return (

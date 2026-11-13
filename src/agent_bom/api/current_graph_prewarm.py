@@ -113,17 +113,18 @@ def last_run() -> dict[str, Any]:
     return dict(_LAST_RUN)
 
 
+class _LazyGraphStore:
+    """Resolve the configured graph store only when a tenant needs it."""
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(stores._get_graph_store(), name)
+
+
 def _run() -> None:
-    job_store = stores._get_store()
-
-    class _LazyGraphStore:
-        """Resolve the configured graph store only when a tenant needs it."""
-
-        def __getattr__(self, name: str) -> Any:
-            return getattr(stores._get_graph_store(), name)
-
+    # Everything, store resolution included, runs inside the boundary: an
+    # escape would hold readiness for the full bound and print a raw traceback.
     try:
-        summary = prewarm_current_graphs(_LazyGraphStore(), job_store, per_tenant_seconds=_per_tenant_seconds())
+        summary = prewarm_current_graphs(_LazyGraphStore(), stores._get_store(), per_tenant_seconds=_per_tenant_seconds())
     except Exception as exc:  # broad-except: a failed warm-up must release readiness, not hold it for the full bound
         _LAST_RUN.clear()
         _LAST_RUN.update(status="incomplete", reason="prewarm_failed")

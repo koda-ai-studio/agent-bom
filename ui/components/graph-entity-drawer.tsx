@@ -9,6 +9,7 @@ import { ArrowRight, Loader2, Network, Radar } from "lucide-react";
 
 import { GraphRecordedRelationships, GraphRecordedRelationshipScope } from "@/components/graph-recorded-relationships";
 import { AdminAssessment } from "@/components/graph-admin-assessment";
+import { GraphRiskContext } from "@/components/graph-risk-context";
 import { GraphConsequencePanel } from "@/components/graph-consequence-panel";
 import { LineageDetailPanel } from "@/components/lineage-detail";
 import { BlastRadiusButton } from "@/components/lineage-detail/overview";
@@ -137,6 +138,7 @@ export function GraphEntityDrawer({
     <div className="space-y-3 text-xs text-ink-secondary">
       <GraphFindingContext data={enriched} />
       <AdminAssessment attributes={enriched.attributes ?? {}} />
+      <GraphRiskContext attributes={enriched.attributes ?? {}} />
       {enrich && scanId && nodeId && detail && ["agent", "vulnerability", "user", "role", "group", "service_account", "service_principal", "federated_identity", "managed_identity"].includes(String(detail.node.entity_type)) && <GraphConsequencePanel nodeId={nodeId} scanId={scanId} snapshotGeneration={detail?.snapshot_generation}
         findingRoot={enriched.nodeType === "vulnerability"}
         affectedNodeIds={detail ? [...new Set([

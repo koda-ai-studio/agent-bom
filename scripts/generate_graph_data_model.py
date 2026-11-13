@@ -62,6 +62,7 @@ from agent_bom.graph.emitter_scan import ScanResult, scan_source  # noqa: E402
 from agent_bom.graph.emitter_scan import is_demo_module as _is_demo  # noqa: E402
 from agent_bom.graph.ocsf import ENTITY_OCSF_MAP, FINDING_ENTITY_TYPES  # noqa: E402
 from agent_bom.graph.relationship_specs import RELATIONSHIP_SPECS, RelationshipSpec, TraversalClass  # noqa: E402
+from agent_bom.graph.risk_context import RISK_CONTEXT_RULES  # noqa: E402
 from agent_bom.graph.types import GraphSemanticLayer, RelationshipType  # noqa: E402
 
 MAIN_DOC = "docs/graph/DATA_MODEL.md"
@@ -312,6 +313,7 @@ def _render_main(scan: ScanResult) -> list[str]:
     out += _render_evidence(scan)
     out += _render_findings(scan)
     out += _render_normalization()
+    out += _render_risk_context()
     out += _trace_event_lines(_find_trace_event_type())
     out += _render_coverage_notes(scan)
     return out
@@ -391,6 +393,23 @@ def _render_normalization() -> list[str]:
     for name, func in sorted(inspect.getmembers(canonical_ids, inspect.isfunction)):
         if name.startswith("canonical_") and func.__module__ == canonical_ids.__name__:
             out.append(f"| {_code(name)} | {_code(str(inspect.signature(func)))} |")
+    return out
+
+
+def _render_risk_context() -> list[str]:
+    out = [
+        "",
+        "## Node risk context",
+        "",
+        "`agent_bom.graph.risk_context_overlay.apply_node_risk_context` stores `attributes.risk_context` on every asset with "
+        + "at least one recorded fact: `internet_exposed` (true / false / null), `privilege_level`, `is_admin`, "
+        + "`data_sensitivity`, `crown_jewel`, the `scan_id` and `sources`, and one reason per fact. A name never sets a "
+        + "field. Rules are in [NODE_RISK_CONTEXT.md](NODE_RISK_CONTEXT.md).",
+        "",
+        "| Field | Rule | Recorded fact |",
+        "|---|---|---|",
+    ]
+    out += [f"| {_code(field)} | {_code(rule)} | {fact} |" for field, rule, fact in RISK_CONTEXT_RULES]
     return out
 
 

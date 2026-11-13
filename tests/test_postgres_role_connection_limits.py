@@ -98,6 +98,13 @@ def test_a_limit_the_migration_role_cannot_raise_fails_with_the_fix() -> None:
     assert connection.statements == []
 
 
+def test_a_locked_role_is_kept_with_a_warning(capsys: pytest.CaptureFixture[str]) -> None:
+    connection = _Connection({"agent_bom_app": (0, True)})
+    cm.reconcile_connection_limits(connection, {"agent_bom_app": 133})
+    assert connection.statements == []
+    assert "CONNECTION LIMIT is 0 (locked)" in capsys.readouterr().out
+
+
 def test_a_role_provisioned_out_of_band_later_is_skipped(capsys: pytest.CaptureFixture[str]) -> None:
     connection = _Connection({})
     cm.reconcile_connection_limits(connection, {"agent_bom_app": 133})
@@ -148,7 +155,8 @@ def test_upgrade_raises_bounded_limits_and_downgrade_restores_only_its_own(
     monkeypatch.setattr(module.op, "execute", lambda statement: executed.append(str(statement)), raising=False)
     module.upgrade()
     upgrade_sql = "\n".join(executed)
-    assert "rolconnlimit BETWEEN 0 AND 99" in upgrade_sql
+    assert "rolconnlimit BETWEEN 1 AND 99" in upgrade_sql
+    assert "CONNECTION LIMIT 0 kept" in upgrade_sql
     assert "CONNECTION LIMIT 100" in upgrade_sql
     assert "agent_bom_app" in upgrade_sql
     assert "RAISE WARNING" in upgrade_sql
