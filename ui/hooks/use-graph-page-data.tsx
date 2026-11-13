@@ -731,6 +731,7 @@ export function useGraphPageData() {
     reachabilityActive: Boolean(reachabilitySummary),
     blastRadiusActive: Boolean(blastRadius),
     attackPathCount: attackPaths.length,
+    groupedMapLanding: searchParams.get("grouping") !== "off",
   });
 
   const rollupCanvasMode = graphRollupCanvasMode({

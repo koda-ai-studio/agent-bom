@@ -15,6 +15,7 @@ from agent_bom.api.graph_store_support import (
 from agent_bom.api.graph_store_traversal import SQLiteGraphTraversalMixin
 from agent_bom.api.storage.sqlite_graph_search import ensure_search_index
 from agent_bom.db import graph_store as sqlite_graph_store
+from agent_bom.db.graph_cluster_rows import load_cluster_rows
 from agent_bom.db.graph_node_counts import count_snapshot_nodes
 from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.db.graph_store_write import checkpoint_wal
@@ -200,6 +201,21 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
             # a concurrent refresh must not splice together two revisions.
             conn.execute("BEGIN")
             return sqlite_graph_store.load_rollup_graph(conn, tenant_id=tenant_id, scan_id=scan_id)
+        finally:
+            conn.close()
+
+    def load_cluster_rows(self, *, tenant_id: str = "", scan_id: str = "") -> tuple[list[Any], list[Any], set[str], set[Any]]:
+        """Lean grouped-map projection of one snapshot, read in one transaction."""
+        tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
+        conn = self._open_ro_conn()
+        if conn is None:
+            return [], [], set(), set()
+        try:
+            conn.execute("BEGIN")
+            effective_scan_id, _created_at = sqlite_graph_store._resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
+            if not effective_scan_id:
+                return [], [], set(), set()
+            return load_cluster_rows(conn, tenant_id=tenant_id, scan_id=effective_scan_id)
         finally:
             conn.close()
 

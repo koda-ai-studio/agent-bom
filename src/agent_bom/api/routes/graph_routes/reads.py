@@ -29,6 +29,7 @@ from agent_bom.api.read_models.graph import (
 )
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
+from agent_bom.api.routes.graph_routes.cluster_map import router as cluster_map_router
 from agent_bom.api.routes.graph_routes.exploit_story import router as exploit_story_router
 from agent_bom.api.routes.graph_routes.params import _parse_entity_type_filter
 from agent_bom.api.time_window import MAX_WINDOW_DAYS
@@ -44,6 +45,7 @@ node_router = APIRouter(route_class=_GraphAdmissionRoute)
 history_router = APIRouter(route_class=_GraphAdmissionRoute)
 preset_router = APIRouter(route_class=_GraphAdmissionRoute)
 search_router.include_router(exploit_story_router)
+search_router.include_router(cluster_map_router)
 
 
 @search_router.get("/graph/impact", **documented(GraphImpactResponse), tags=["graph"])

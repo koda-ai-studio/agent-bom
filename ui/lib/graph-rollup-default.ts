@@ -68,6 +68,8 @@ export interface GraphRollupEligibilityInput {
   blastRadiusActive: boolean;
   /** Retained for call-site compatibility; availability alone does not select a path. */
   attackPathCount?: number;
+  /** A large estate lands on the grouped map; scope navigation stays one explicit `?rollup=1` away. */
+  groupedMapLanding?: boolean;
 }
 
 export const DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD = 200;
@@ -85,6 +87,7 @@ export function graphRollupEligible(input: GraphRollupEligibilityInput): boolean
   // An explicit `?rollup=1` is an operator decision, but detail overlays above
   // still require their focused node set.
   if (input.rollupPreference === "force") return true;
+  if (input.groupedMapLanding) return false;
   return input.estateNodeCount >= DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD;
 }
 

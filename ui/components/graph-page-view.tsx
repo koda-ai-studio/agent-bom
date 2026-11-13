@@ -6,6 +6,7 @@ import { GraphAdvancedControls } from "@/components/graph-advanced-controls";
 import { GraphAnalysisStatusBanner } from "@/components/graph-analysis-status";
 import { BlastRadiusPanel } from "@/components/graph-blast-radius-panel";
 import { GraphConnectionsList } from "@/components/graph-connections-list";
+import { GraphClusterMap } from "@/components/graph-cluster-map";
 import { GraphFlowCanvas } from "@/components/graph-flow-canvas";
 import { GraphFlowEdgeLegend } from "@/components/graph-flow-edge-legend";
 import { GraphInViewHint } from "@/components/graph-in-view-hint";
@@ -53,6 +54,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
     graphLayoutKind, rollupDecisionActive, scenarioElements, scenarioConnectionNotes, retryGraph, graphPanelError, loadingGraph, firstFramePending, rollupCanvasFailed, estateNodeCount, rollupCanvasPending,
     rollupItems, drillIntoRollup, investigateRollup, estateIssueSummary, layoutPending, graphRenderer, graphOnlyFindings, findingNodes, selectFindingCard, onLargeGraphNodeSelect, presentationScope,
     connectionPreview, previewExpanded, setPreviewExpanded, searchParams, contextElements, legendItems,
+    groupedMapActive, groupedMapUnavailable, setGroupingOff, loadRootInvestigation,
   } = page;
   const relationshipLabels = useRelationshipLabelControl(displayEdges);
   const clearSelection = () => {
@@ -206,6 +208,10 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
             : "flex relative min-h-0"}
       >
         <div className={`flex-1 relative min-w-0 flex flex-col ${selectedScenario ? "min-h-[26rem] lg:min-h-0" : "min-h-0"}`} data-testid="investigation-graph-workspace">
+          {groupedMapActive ? <GraphClusterMap scanId={selectedScanId || undefined} narrow={narrowViewport} onUnavailable={groupedMapUnavailable}
+            onInvestigate={(rootId, rootLabel) => void loadRootInvestigation({ rootId, rootLabel })} onShowEveryEdge={() => setGroupingOff(true)} /> : <>
+          {searchParams.get("grouping") === "off" && !selectedAttackPath && !investigationMode && !selectedScenarioId && <button type="button" data-testid="regroup-map"
+            className="graph-page-action graph-action-compact mb-1 w-fit" onClick={() => setGroupingOff(false)}>Group the map</button>}
           {selectedAttackPath && selectedPathDecision && <GraphFocusedPathDecision path={selectedAttackPath} decision={selectedPathDecision} nodeById={graphNodeById}
             evidenceHopCount={selectedEvidenceHopCount} snapshotCreatedAt={activeSnapshot?.created_at ?? null} captureMode={captureMode}
             onReturn={() => { requestedAttackPathKeyRef.current = null; setSelectedAttackPathKey(null); }} />}
@@ -339,6 +345,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
           {graphRenderer.kind === "react-flow" && !mobileListActive && displayNodes.length > 0 && <GraphFlowEdgeLegend edges={flowView.quieted.edges} />}
           <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : "mt-1"} />
           <GraphPhoneFooter page={page} flowView={flowView} />
+          </>}
         </div>
         {selectedScenario && (
           <aside aria-label="Scenario decision" className="min-w-0 lg:min-h-0 lg:overflow-y-auto">
