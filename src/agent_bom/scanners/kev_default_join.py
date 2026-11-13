@@ -41,7 +41,7 @@ async def _fetch_catalog() -> dict:
 def _run_prefetch(prefetch: KevPrefetch) -> None:
     try:
         prefetch.catalog = asyncio.run(_fetch_catalog())
-    except Exception as exc:  # noqa: BLE001 - the join falls back to its own fetch and marks KEV unknown
+    except Exception as exc:  # noqa: BLE001  # broad-except: a failed prefetch falls back to the join's own fetch
         _logger.debug("CISA KEV prefetch failed: %s", type(exc).__name__)
     finally:
         prefetch.done.set()

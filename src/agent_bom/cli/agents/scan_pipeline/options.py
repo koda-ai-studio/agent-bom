@@ -244,6 +244,7 @@ class ScanOptions:
     _iac_only: bool = False
     allow_stale_db: bool = False
     include_code_graph: bool = False
+    full_analysis: bool = False
     _image_only: bool = False
     image_pull_mode: str = "auto"
     image_cosign_key: Optional[str] = None

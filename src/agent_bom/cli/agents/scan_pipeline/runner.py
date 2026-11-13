@@ -24,6 +24,7 @@ from agent_bom.cli.agents.scan_pipeline import (
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
 from agent_bom.redaction.text_memo import sanitize_text_memo
+from agent_bom.scan_budget import DEFAULT_SOURCE_BUDGET, source_budget_scope
 
 Stage = Callable[[ScanOptions, ScanState], None]
 
@@ -59,11 +60,12 @@ def run_scan(opts: ScanOptions, stages: tuple[tuple[str, Stage], ...] = STAGES) 
     """Execute ``stages`` for one invocation; a stage may end the run early with :class:`StopScan`."""
     st = ScanState()
     try:
-        for name, stage in stages:
-            started = time.monotonic()
-            try:
-                stage(opts, st)
-            finally:
-                _record_stage_time(st, name, time.monotonic() - started)
+        with source_budget_scope(None if getattr(opts, "full_analysis", False) else DEFAULT_SOURCE_BUDGET):
+            for name, stage in stages:
+                started = time.monotonic()
+                try:
+                    stage(opts, st)
+                finally:
+                    _record_stage_time(st, name, time.monotonic() - started)
     except StopScan:
         return

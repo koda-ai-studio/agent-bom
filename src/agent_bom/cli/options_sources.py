@@ -161,14 +161,6 @@ def output_options(fn):
         [
             click.option("--output", "-o", type=str, help="Output file path (use '-' for stdout)"),
             click.option(
-                "--include-code-graph",
-                "include_code_graph",
-                is_flag=True,
-                default=False,
-                help="List every call-graph, control-flow and dependency-reach row from code analysis in the report. "
-                "By default the report carries their counts only (large repositories produce hundreds of thousands of rows).",
-            ),
-            click.option(
                 "--open",
                 "open_report",
                 is_flag=True,

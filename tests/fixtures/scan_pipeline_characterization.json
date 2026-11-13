@@ -326,6 +326,7 @@
      "frameworks": [],
      "guardrails": [],
      "prompts": [],
+     "relationships_included": true,
      "stats": {
       "prompts_with_risks": 0,
       "total_application_entrypoints": 0,

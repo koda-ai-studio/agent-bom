@@ -85,6 +85,7 @@ from agent_bom.ast_rust import _rust_function_key, build_rust_dependency_symbol_
 from agent_bom.ast_rust import scan_rust_file as _scan_rust_file
 from agent_bom.ast_swift import _swift_function_key, build_swift_dependency_symbol_reach, load_swift_package_map
 from agent_bom.ast_swift import scan_swift_file as _scan_swift_file
+from agent_bom.scan_budget import budget_stop_detail, current_source_budget
 from agent_bom.scanners.repo_ignore import RepositoryIgnore
 from agent_bom.traversal import iter_discovery_files
 
@@ -242,9 +243,11 @@ def _collect_sources(project: Path) -> list[list[Path]]:
     return groups
 
 
-def _record_file_budget(result: ASTAnalysisResult, selected_count: int, eligible_count: int) -> None:
+def _record_file_budget(result: ASTAnalysisResult, selected_count: int, eligible_count: int, *, scan_budget: bool) -> None:
     result.analysis_coverage.status = "partial"
     warning = f"AST analysis stopped at {selected_count} of {eligible_count} eligible source files"
+    if scan_budget:
+        warning = budget_stop_detail("Code analysis", selected_count, eligible_count).removesuffix(".")
     result.warnings.append(warning)
     from agent_bom.scanners.state import record_coverage_warning
 
@@ -264,12 +267,12 @@ def _select_source_files(project: Path, result: ASTAnalysisResult) -> list[list[
     """Collect every language's sources, then keep the highest-priority budget."""
     file_groups = _collect_sources(project)
     eligible_count = sum(len(group) for group in file_groups)
-    selected = set(
-        sorted((path for group in file_groups for path in group), key=lambda path: _analysis_priority(project, path))[:_MAX_FILES]
-    )
+    budget = current_source_budget()
+    limit = min(_MAX_FILES, budget.code_analysis_files) if budget is not None else _MAX_FILES
+    selected = set(sorted((path for group in file_groups for path in group), key=lambda path: _analysis_priority(project, path))[:limit])
     groups = [[path for path in group if path in selected] for group in file_groups]
     if eligible_count > len(selected):
-        _record_file_budget(result, len(selected), eligible_count)
+        _record_file_budget(result, len(selected), eligible_count, scan_budget=limit < _MAX_FILES)
     result.files_analyzed = sum(len(group) for group in groups)
     result.analysis_coverage.eligible_files = eligible_count
     result.analysis_coverage.analyzed_files = result.files_analyzed
