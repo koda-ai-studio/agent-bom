@@ -222,3 +222,27 @@ def test_a_failed_prewarm_releases_readiness_instead_of_staying_running(monkeypa
     assert status["status"] == "incomplete"
     assert status["reason"] == "prewarm_failed"
     assert "secret" not in str(status)
+
+
+def test_a_job_store_that_cannot_open_releases_readiness_without_a_raw_traceback(monkeypatch, caplog):
+    from agent_bom.api import stores
+
+    def _no_store():
+        raise RuntimeError("store init failed: password=hunter2 postgresql://user:hunter2@db/x")
+
+    hooked: list[object] = []
+    monkeypatch.setattr(threading, "excepthook", hooked.append)
+    monkeypatch.setattr(stores, "_get_store", _no_store)
+    monkeypatch.setenv("AGENT_BOM_CURRENT_GRAPH_PREWARM", "1")
+    current_graph_prewarm.reset_current_graph_prewarm()
+    with caplog.at_level("WARNING", logger="agent_bom.api.current_graph_prewarm"):
+        thread = current_graph_prewarm.start_current_graph_prewarm()
+        assert thread is not None
+        thread.join(10)
+
+    assert not thread.is_alive()
+    assert hooked == []
+    assert current_graph_prewarm.last_run() == {"status": "incomplete", "reason": "prewarm_failed"}
+    assert current_graph_prewarm.startup_prewarm_holding_readiness() is False
+    assert "Current graph prewarm failed" in caplog.text
+    assert "hunter2" not in caplog.text

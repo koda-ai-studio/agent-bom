@@ -63,7 +63,9 @@ def _session(client):
     }
     response = client.post("/mcp", headers=headers, json=init)
     assert response.status_code == 200, response.text
-    headers.update({"mcp-session-id": response.headers["mcp-session-id"], "mcp-protocol-version": "2025-11-25"})
+    # The edition serves streamable HTTP without sessions: no session id to carry.
+    assert "mcp-session-id" not in response.headers
+    headers["mcp-protocol-version"] = "2025-11-25"
     client.post("/mcp", headers=headers, json={"jsonrpc": "2.0", "method": "notifications/initialized"})
     return headers, _event(response)["result"]
 

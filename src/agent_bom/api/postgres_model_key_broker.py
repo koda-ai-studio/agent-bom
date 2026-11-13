@@ -32,6 +32,7 @@ from agent_bom.api.postgres_common import (
     _get_pool,
     _tenant_connection,
 )
+from agent_bom.api.postgres_tenant_upsert import write_tenant_row
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 
 
@@ -81,24 +82,24 @@ class PostgresModelKeyBrokerStore:
 
     def put_provider_key(self, record: ModelProviderKey) -> None:
         with _tenant_connection(self._pool) as conn:
-            conn.execute(
-                """
-                INSERT INTO model_provider_keys (provider_key_id, tenant_id, provider, status, created_at, data)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (provider_key_id) DO UPDATE SET
-                    status = EXCLUDED.status,
-                    data = EXCLUDED.data
-                """,
-                (
-                    record.provider_key_id,
-                    record.tenant_id,
-                    record.provider,
-                    record.status,
-                    record.created_at,
-                    json.dumps(asdict(record), sort_keys=True),
-                ),
+            written = write_tenant_row(
+                conn,
+                table="model_provider_keys",
+                key="provider_key_id",
+                tenant="tenant_id",
+                row={
+                    "provider_key_id": record.provider_key_id,
+                    "tenant_id": record.tenant_id,
+                    "provider": record.provider,
+                    "status": record.status,
+                    "created_at": record.created_at,
+                    "data": json.dumps(asdict(record), sort_keys=True),
+                },
+                update=("status", "data"),
             )
             conn.commit()
+            if not written:
+                raise ValueError("Provider key identity belongs to a different tenant")
 
     def get_provider_key(self, provider_key_id: str, *, tenant_id: str) -> ModelProviderKey | None:
         with _tenant_connection(self._pool) as conn:
@@ -129,26 +130,25 @@ class PostgresModelKeyBrokerStore:
 
     def put_virtual_key(self, record: VirtualModelKey) -> None:
         with _tenant_connection(self._pool) as conn:
-            conn.execute(
-                """
-                INSERT INTO model_virtual_keys
-                    (virtual_key_id, tenant_id, provider_key_id, token_hash, status, issued_at, data)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (virtual_key_id) DO UPDATE SET
-                    status = EXCLUDED.status,
-                    data = EXCLUDED.data
-                """,
-                (
-                    record.virtual_key_id,
-                    record.tenant_id,
-                    record.provider_key_id,
-                    record.token_hash,
-                    record.status,
-                    record.issued_at,
-                    json.dumps(asdict(record), sort_keys=True),
-                ),
+            written = write_tenant_row(
+                conn,
+                table="model_virtual_keys",
+                key="virtual_key_id",
+                tenant="tenant_id",
+                row={
+                    "virtual_key_id": record.virtual_key_id,
+                    "tenant_id": record.tenant_id,
+                    "provider_key_id": record.provider_key_id,
+                    "token_hash": record.token_hash,
+                    "status": record.status,
+                    "issued_at": record.issued_at,
+                    "data": json.dumps(asdict(record), sort_keys=True),
+                },
+                update=("status", "data"),
             )
             conn.commit()
+            if not written:
+                raise ValueError("Virtual key identity belongs to a different tenant")
 
     def get_virtual_key(self, virtual_key_id: str, *, tenant_id: str) -> VirtualModelKey | None:
         with _tenant_connection(self._pool) as conn:
