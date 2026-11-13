@@ -133,3 +133,24 @@ def test_trace_family_follows_hop_receipts_when_annotated() -> None:
     assert path_ranking_factors(mixed, nodes)["path_family"] == "access"
     mixed.hop_evidence[1]["reason_codes"] = ["trace_order_not_access", "stale_evidence"]
     assert path_ranking_factors(mixed, nodes)["path_family"] == "trace_correlation"
+
+
+def test_path_exposure_is_the_entry_node_exposure() -> None:
+    # An exposed node deeper in the chain is not the attacker's way in.
+    nodes = {
+        n.id: n for n in [_node("a:entry"), _node("b:public-store", internet_exposed=True), _node("c:exposed", publicly_accessible=True)]
+    }
+    deeper = path_ranking_factors(_path("a:entry", "b:public-store"), nodes)
+    assert deeper["internet_exposed"] is False
+    # Still reported, never hidden: it just does not count as the way in.
+    assert deeper["exposed_hop_ids"] == ["b:public-store"]
+    assert any("b:public-store" in reason for reason in deeper["reasons"])
+    entry = path_ranking_factors(_path("c:exposed", "a:entry"), nodes)
+    assert entry["internet_exposed"] is True
+    assert entry["exposed_hop_ids"] == []
+
+
+def test_path_exposure_reads_the_stored_node_risk_context() -> None:
+    entry = _node("a:entry", risk_context={"internet_exposed": True, "reasons": []})
+    nodes = {n.id: n for n in [entry, _node("t:1")]}
+    assert path_ranking_factors(_path("a:entry", "t:1"), nodes)["internet_exposed"] is True

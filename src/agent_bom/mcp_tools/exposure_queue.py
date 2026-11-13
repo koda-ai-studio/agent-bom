@@ -140,8 +140,15 @@ def validate_request(limit: int, max_limit: int, query: PathQuery, view: str) ->
     return None
 
 
+_RISK_SUMMARY_KEYS = ("internet_exposed", "privilege_level", "is_admin", "data_sensitivity", "crown_jewel")
+
+
 def _endpoint(ref: dict[str, Any]) -> dict[str, Any]:
     endpoint = {key: ref[key] for key in _ENDPOINT_KEYS if key in ref}
+    context = ref.get("riskContext")
+    if isinstance(context, dict):
+        # The verdicts only; view="full" carries the reasons behind them.
+        endpoint["risk"] = {key: context.get(key) for key in _RISK_SUMMARY_KEYS}
     if endpoint.get("label") == endpoint.get("id"):
         endpoint.pop("label", None)
     return endpoint
