@@ -236,11 +236,19 @@ def classify_tool(tool_name: str, description: str = "") -> list[ToolCapability]
 
 # Estates repeat the same tools across many agents and every current-graph
 # build reclassifies all of them; the result depends only on the two strings.
+# Unique names ("server-4821-tool-03") still reuse a few words, and a capability
+# matches when any token starts with one of its prefixes, so tokens cache too.
 @lru_cache(maxsize=16384)
 def _classify_cached(tool_name: str, description: str) -> tuple[ToolCapability, ...]:
-    tokens = _tokenize(tool_name + " " + description)
-    caps = {capability for capability, prefixes in _PATTERN_PREFIXES if any(token.startswith(prefixes) for token in tokens)}
+    caps: set[ToolCapability] = set()
+    for token in _tokenize(tool_name + " " + description):
+        caps.update(_token_capabilities(token))
     return tuple(sorted(caps, key=lambda c: c.value))
+
+
+@lru_cache(maxsize=65536)
+def _token_capabilities(token: str) -> frozenset[ToolCapability]:
+    return frozenset(capability for capability, prefixes in _PATTERN_PREFIXES if token.startswith(prefixes))
 
 
 _DECLARED_CAPABILITY_ALIASES: dict[str, ToolCapability] = {

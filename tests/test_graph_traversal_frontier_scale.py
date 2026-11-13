@@ -4,7 +4,7 @@
 issues one frontier query per node it dequeues. That query asked for
 ``source_id IN (...) OR target_id IN (...)`` in a single disjunction, which
 SQLite cannot drive from either single-column index: the plan collapses to
-``SEARCH graph_edges USING INDEX idx_ge_tenant_scan (tenant_id=? AND scan_id=?)``
+``SEARCH graph_edges USING INDEX idx_ge_tenant_scan (tenant_id=? AND scan_id=?)`` (an index since dropped)
 — a scan of every edge in the snapshot, repeated once per visited node. The
 work is therefore O(visited x snapshot_edges): the *unreachable* remainder of
 the estate is re-read for every hop of a path that never touches it.
@@ -242,12 +242,13 @@ def _legacy_frontier_rows(
     to the optimised query is compared against the historical contract and not
     against itself.
 
-    ``INDEXED BY idx_ge_tenant_scan`` pins the plan the pre-fix query actually
-    ran under. It is not decoration: the disjunction never named an index, so
-    its row order was whatever the planner chose, and merely *adding* the
-    endpoint indexes moves the pre-fix query onto ``idx_ge_tenant_scan_target``
-    and reorders its rows. Forcing the historical index reproduces the
-    historical answer, which is what this reference exists to be. That the
+    The pre-fix query ran on the (tenant_id, scan_id) index, which returns one
+    snapshot's rows in rowid order; ``NOT INDEXED ... ORDER BY rowid`` pins that
+    order now that no index carries only that prefix. It is not decoration: the
+    disjunction never named an index, so its row order was whatever the planner
+    chose, and merely *adding* the endpoint indexes moves the pre-fix query onto
+    one of them and reorders its rows. Forcing the historical order reproduces
+    the historical answer, which is what this reference exists to be. That the
     reference needs pinning at all is the point: order used to be an accident of
     the planner, and ``ORDER BY rowid`` in the shipped query now makes it a
     contract. ``test_reference_matches_pre_fix_release`` cross-checks this
@@ -278,7 +279,7 @@ def _legacy_frontier_rows(
         where.append(f"relationship IN ({','.join('?' for _ in _DYNAMIC_RELATIONSHIP_VALUES)})")
         params.extend(sorted(_DYNAMIC_RELATIONSHIP_VALUES))
     return conn.execute(
-        f"SELECT * FROM graph_edges INDEXED BY idx_ge_tenant_scan WHERE {' AND '.join(where)}",  # nosec B608 - test-local reference query
+        f"SELECT * FROM graph_edges NOT INDEXED WHERE {' AND '.join(where)} ORDER BY rowid",  # nosec B608 - test-local reference query
         params,
     ).fetchall()
 

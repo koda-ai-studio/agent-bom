@@ -222,11 +222,11 @@ def _init_db(conn: sqlite3.Connection, *, backfill_legacy_tenants: bool = True) 
             conn.execute(statement)
     backfill_edge_metadata(conn)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_tenant_valid ON graph_edges(tenant_id, valid_from, valid_to)")
-    # Backfill the per-hop traversal indexes onto stores created before them.
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_tenant_scan_source ON graph_edges(tenant_id, scan_id, source_id)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_tenant_scan_target ON graph_edges(tenant_id, scan_id, target_id)")
+    # Backfill the per-hop traversal indexes onto stores created before them, then drop the prefix copies they make redundant.
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_adjacency_out ON graph_edges(tenant_id, scan_id, source_id, target_id, relationship)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_adjacency_in ON graph_edges(tenant_id, scan_id, target_id, source_id, relationship)")
+    for redundant in ("idx_ge_tenant_scan", "idx_ge_tenant_scan_source", "idx_ge_tenant_scan_target"):
+        conn.execute(f"DROP INDEX IF EXISTS {redundant}")  # nosec B608 - fixed internal index names
     # Materialise the per-snapshot entity-type breakdown so inventory/summary reads a cached count instead of a per-request GROUP BY over
     # every node. NULL marks pre-migration snapshots, which fall back to the live GROUP BY.
     snapshot_columns = {row["name"] for row in conn.execute("PRAGMA table_info(graph_snapshots)").fetchall()}
@@ -679,7 +679,7 @@ def load_graph(
             )
             SELECT edge.*
             FROM selected_node_ids AS source_node
-            CROSS JOIN graph_edges AS edge INDEXED BY idx_ge_tenant_scan_source
+            CROSS JOIN graph_edges AS edge INDEXED BY idx_ge_adjacency_out
             JOIN selected_node_ids AS target_node
               ON target_node.id = edge.target_id
             WHERE edge.tenant_id = ?

@@ -152,12 +152,12 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
 
         Written as a UNION of two endpoint-anchored branches rather than the
         obvious ``source_id IN (...) OR target_id IN (...)`` disjunction. SQLite
-        cannot drive a single index from that disjunction: it settles on
-        ``idx_ge_tenant_scan`` and reads every edge in the snapshot, once per
-        node the walk visits, making traversal cost visited x snapshot_edges.
+        cannot drive a single index from that disjunction: it settles on a
+        (tenant_id, scan_id) prefix and reads every edge in the snapshot, once
+        per node the walk visits, making traversal cost visited x snapshot_edges.
         Split into two branches, each is an index seek against
-        ``idx_ge_tenant_scan_source`` / ``idx_ge_tenant_scan_target``, so a hop
-        costs its own degree.
+        ``idx_ge_adjacency_out`` / ``idx_ge_adjacency_in``, so a hop costs its
+        own degree.
 
         Both halves are load-bearing: the disjunction ignores those indexes even
         when they exist, and the UNION falls back to a full snapshot scan when

@@ -60,3 +60,14 @@ def test_distinct_tools_classify_within_budget() -> None:
     for name, description in corpus:
         classify_tool(name, description)
     assert time.perf_counter() - started < 0.5
+
+
+def test_unique_names_from_repeated_words_classify_within_budget() -> None:
+    # Estate tool names are unique per server ("server-4821-tool-03") but built
+    # from a few repeated words; at 5,000 agents that is about 130,000
+    # classifications of distinct names, about 5 s before.
+    started = time.perf_counter()
+    for server in range(13_000):
+        for tool in range(10):
+            classify_tool(f"mcp-server-{server}-tool-{tool:02d}", "")
+    assert time.perf_counter() - started < 1.5
