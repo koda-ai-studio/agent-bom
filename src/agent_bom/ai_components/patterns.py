@@ -32,6 +32,9 @@ class APIKeyPattern:
 
 # Helpers to build word-boundary-safe import patterns
 _WB = r"\b"
+# A model ID never ends before ``-<digit>``/``.<digit>`` ; suffix tokens are variants/snapshots.
+_MODEL_END = r"(?![\w]|[.-]\d)"
+_MODEL_SUFFIX = r"(?:-[a-z0-9]+(?:\.\d+)?){0,6}"
 
 
 def _java_import(package: str) -> str:
@@ -569,45 +572,48 @@ EXTENSION_TO_LANGUAGE: dict[str, str] = {ext: lang for lang, exts in LANGUAGE_EX
 # Match model name strings in source code (string literals, config values)
 
 MODEL_PATTERNS: list[ModelPattern] = [
-    # OpenAI current models
-    ModelPattern(re.compile(rf"{_WB}gpt-4o(?:-mini)?(?:-\d{{4}}-\d{{2}}-\d{{2}})?{_WB}"), "openai"),
-    ModelPattern(re.compile(rf"{_WB}gpt-4-turbo(?:-preview)?(?:-\d{{4}}-\d{{2}}-\d{{2}})?{_WB}"), "openai"),
-    ModelPattern(re.compile(rf"{_WB}gpt-4(?:-\d{{4}}-\d{{2}}-\d{{2}})?{_WB}"), "openai"),
-    ModelPattern(re.compile(rf"{_WB}o[134]-(?:mini|preview)(?:-\d{{4}}-\d{{2}}-\d{{2}})?{_WB}"), "openai"),
-    ModelPattern(re.compile(rf"{_WB}text-embedding-3-(?:small|large){_WB}"), "openai"),
-    ModelPattern(re.compile(rf"{_WB}dall-e-[23]{_WB}"), "openai"),
-    ModelPattern(re.compile(rf"{_WB}whisper-1{_WB}"), "openai"),
-    ModelPattern(re.compile(rf"{_WB}tts-1(?:-hd)?{_WB}"), "openai"),
-    # Anthropic models
-    ModelPattern(re.compile(rf"{_WB}claude-(?:opus|sonnet|haiku)-4-\d+-\d+{_WB}"), "anthropic"),
-    ModelPattern(re.compile(rf"{_WB}claude-3(?:\.5)?-(?:opus|sonnet|haiku)(?:-\d+)?{_WB}"), "anthropic"),
-    ModelPattern(re.compile(rf"{_WB}claude-(?:opus|sonnet|haiku)-4(?:\.\d+)?{_WB}"), "anthropic"),
-    # Google models
-    ModelPattern(re.compile(rf"{_WB}gemini-(?:2\.5|2\.0|1\.5|1\.0)-(?:pro|flash|ultra)(?:-\d+)?{_WB}"), "google"),
-    ModelPattern(re.compile(rf"{_WB}gemma-[23](?:-\d+b)?(?:-it)?{_WB}"), "google"),
+    # OpenAI (gpt-4.1, gpt-4o-mini-2024-07-18, gpt-6.1-sol, gpt-oss-120b); gpt-3.5 is in the deprecated list.
+    ModelPattern(re.compile(rf"{_WB}gpt-(?:[4-9]|\d{{2,}})(?:\.\d+)?o?{_MODEL_SUFFIX}{_MODEL_END}"), "openai"),
+    ModelPattern(re.compile(rf"{_WB}gpt-(?:oss|image|realtime|audio|live|transcribe){_MODEL_SUFFIX}{_MODEL_END}"), "openai"),
+    # o-series: suffixed or dated IDs anywhere, a bare ``o3`` only as a quoted or routed literal.
+    ModelPattern(
+        re.compile(rf"(?<![\w.-])o[1-9](?:-(?:mini|pro|preview|deep-research))+(?:-\d{{4}}-\d{{2}}-\d{{2}})?{_MODEL_END}"), "openai"
+    ),
+    ModelPattern(re.compile(r"(?<=[\"'/])o[1-9](?:-\d{4}-\d{2}-\d{2})?(?=[\"'])"), "openai"),
+    ModelPattern(re.compile(rf"{_WB}text-embedding-3-(?:small|large){_MODEL_END}"), "openai"),
+    ModelPattern(re.compile(rf"{_WB}dall-e-[23]{_MODEL_END}"), "openai"),
+    ModelPattern(re.compile(rf"{_WB}whisper-1{_MODEL_END}"), "openai"),
+    ModelPattern(re.compile(rf"{_WB}tts-1(?:-hd)?{_MODEL_END}"), "openai"),
+    # Anthropic: claude-sonnet-4-5-20250929, claude-opus-5-5, claude-fable-5-2, claude-opus-4.1.
+    ModelPattern(re.compile(rf"{_WB}claude-(?:opus|sonnet|haiku|fable|mythos)-\d+(?:[.-]\d+){{0,2}}(?:-latest)?{_MODEL_END}"), "anthropic"),
+    # Claude 3 generation: claude-3-7-sonnet-20250219, claude-3.5-sonnet, claude-3-5-haiku-latest.
+    ModelPattern(re.compile(rf"{_WB}claude-3(?:[.-]\d)?-(?:opus|sonnet|haiku)(?:-\d{{8}}|-latest)?{_MODEL_END}"), "anthropic"),
+    # Google: gemini-3.1-pro-preview, gemini-2.5-flash-native-audio-preview-12-2025.
+    ModelPattern(re.compile(rf"{_WB}gemini-\d+(?:\.\d+)?{_MODEL_SUFFIX}{_MODEL_END}"), "google"),
+    ModelPattern(re.compile(rf"{_WB}gemini-(?:embedding|nano-banana|omni|robotics-er){_MODEL_SUFFIX}{_MODEL_END}"), "google"),
+    ModelPattern(re.compile(rf"{_WB}gemma-[23](?:-\d+b)?(?:-it)?{_MODEL_END}"), "google"),
     # Meta models
-    ModelPattern(re.compile(rf"{_WB}llama-?[234](?:\.\d)?(?:-\d+b)?(?:-instruct|-chat)?{_WB}", re.I), "meta"),
+    ModelPattern(re.compile(rf"{_WB}llama-?[234](?:\.\d)?(?:-\d+b)?(?:-instruct|-chat)?{_MODEL_END}", re.I), "meta"),
     # Mistral models
-    ModelPattern(re.compile(rf"{_WB}mistral-(?:large|medium|small|tiny)(?:-latest|-\d+)?{_WB}"), "mistral"),
-    ModelPattern(re.compile(rf"{_WB}mixtral-\d+x\d+b(?:-instruct)?{_WB}", re.I), "mistral"),
-    ModelPattern(re.compile(rf"{_WB}codestral(?:-latest|-\d+)?{_WB}"), "mistral"),
+    ModelPattern(re.compile(rf"{_WB}mistral-(?:large|medium|small|tiny)(?:-latest|-\d+)?{_MODEL_END}"), "mistral"),
+    ModelPattern(re.compile(rf"{_WB}mixtral-\d+x\d+b(?:-instruct)?{_MODEL_END}", re.I), "mistral"),
+    ModelPattern(re.compile(rf"{_WB}codestral(?:-latest|-\d+)?{_MODEL_END}"), "mistral"),
     # Cohere models
-    ModelPattern(re.compile(rf"{_WB}command-r(?:-plus)?(?:-\d+)?{_WB}"), "cohere"),
+    ModelPattern(re.compile(rf"{_WB}command-r(?:-plus)?(?:-\d+)?{_MODEL_END}"), "cohere"),
     # DeepSeek models
-    ModelPattern(re.compile(rf"{_WB}deepseek-(?:chat|coder|reasoner)(?:-v\d+(?:\.\d+)?)?{_WB}"), "deepseek"),
-    ModelPattern(re.compile(rf"{_WB}deepseek-r1(?:-\d+b)?(?:-distill)?{_WB}", re.I), "deepseek"),
-    ModelPattern(re.compile(rf"{_WB}deepseek-v[23](?:\.\d+)?(?:-\d+b)?{_WB}", re.I), "deepseek"),
+    ModelPattern(re.compile(rf"{_WB}deepseek-(?:chat|coder|reasoner)(?:-v\d+(?:\.\d+)?)?{_MODEL_END}"), "deepseek"),
+    ModelPattern(re.compile(rf"{_WB}deepseek-r1(?:-\d+b)?(?:-distill)?{_MODEL_END}", re.I), "deepseek"),
+    ModelPattern(re.compile(rf"{_WB}deepseek-v[23](?:\.\d+)?(?:-\d+b)?{_MODEL_END}", re.I), "deepseek"),
     # Zhipu GLM models
     ModelPattern(
-        re.compile(rf"{_WB}glm-4(?:-(?:plus|air|flash|long|x|v(?:-plus)?))?(?:-\d+b)?{_WB}", re.I),
+        re.compile(rf"{_WB}glm-4(?:\.\d+)?(?:-(?:plus|air|flash|long|x|v(?:-plus)?))?(?:-\d+b)?{_MODEL_END}", re.I),
         "zhipu",
     ),
-    ModelPattern(re.compile(rf"{_WB}glm-4\.6(?:-(?:plus|flash|air))?{_WB}", re.I), "zhipu"),
-    ModelPattern(re.compile(rf"{_WB}chatglm[23](?:-6b|-turbo)?{_WB}", re.I), "zhipu"),
+    ModelPattern(re.compile(rf"{_WB}chatglm[23](?:-6b|-turbo)?{_MODEL_END}", re.I), "zhipu"),
     # Qwen models
-    ModelPattern(re.compile(rf"{_WB}qwen-?[23](?:\.\d+)?(?:-\d+b)?(?:-instruct)?{_WB}", re.I), "alibaba"),
+    ModelPattern(re.compile(rf"{_WB}qwen-?[23](?:\.\d+)?(?:-\d+b)?(?:-instruct)?{_MODEL_END}", re.I), "alibaba"),
     # Embedding models
-    ModelPattern(re.compile(rf"{_WB}text-embedding-ada-002{_WB}"), "openai"),
+    ModelPattern(re.compile(rf"{_WB}text-embedding-ada-002{_MODEL_END}"), "openai"),
 ]
 
 # ── Deprecated model patterns ────────────────────────────────────────────────
@@ -615,42 +621,42 @@ MODEL_PATTERNS: list[ModelPattern] = [
 DEPRECATED_MODEL_PATTERNS: list[ModelPattern] = [
     # OpenAI deprecated
     ModelPattern(
-        re.compile(rf"{_WB}gpt-3\.5-turbo(?:-\d+)?{_WB}"),
+        re.compile(rf"{_WB}gpt-3\.5-turbo{_MODEL_SUFFIX}{_MODEL_END}"),
         "openai",
         deprecated=True,
         replacement="gpt-4o-mini",
         severity=AIComponentSeverity.MEDIUM,
     ),
     ModelPattern(
-        re.compile(rf"{_WB}text-davinci-00[1234]{_WB}"),
+        re.compile(rf"{_WB}text-davinci-00[1234]{_MODEL_END}"),
         "openai",
         deprecated=True,
         replacement="gpt-4o",
         severity=AIComponentSeverity.HIGH,
     ),
     ModelPattern(
-        re.compile(rf"{_WB}code-davinci-002{_WB}"),
+        re.compile(rf"{_WB}code-davinci-002{_MODEL_END}"),
         "openai",
         deprecated=True,
         replacement="gpt-4o",
         severity=AIComponentSeverity.HIGH,
     ),
     ModelPattern(
-        re.compile(rf"{_WB}text-embedding-ada-002{_WB}"),
+        re.compile(rf"{_WB}text-embedding-ada-002{_MODEL_END}"),
         "openai",
         deprecated=True,
         replacement="text-embedding-3-small",
         severity=AIComponentSeverity.LOW,
     ),
     ModelPattern(
-        re.compile(rf"{_WB}text-curie-001{_WB}"),
+        re.compile(rf"{_WB}text-curie-001{_MODEL_END}"),
         "openai",
         deprecated=True,
         replacement="gpt-4o-mini",
         severity=AIComponentSeverity.HIGH,
     ),
     ModelPattern(
-        re.compile(rf"{_WB}text-babbage-001{_WB}"),
+        re.compile(rf"{_WB}text-babbage-001{_MODEL_END}"),
         "openai",
         deprecated=True,
         replacement="gpt-4o-mini",
@@ -658,14 +664,14 @@ DEPRECATED_MODEL_PATTERNS: list[ModelPattern] = [
     ),
     # Anthropic deprecated
     ModelPattern(
-        re.compile(rf"{_WB}claude-2(?:\.\d)?{_WB}"),
+        re.compile(rf"{_WB}claude-2(?:\.\d)?{_MODEL_END}"),
         "anthropic",
         deprecated=True,
         replacement="claude-sonnet-4-20250514",
         severity=AIComponentSeverity.MEDIUM,
     ),
     ModelPattern(
-        re.compile(rf"{_WB}claude-instant-1(?:\.\d)?{_WB}"),
+        re.compile(rf"{_WB}claude-instant-1(?:\.\d)?{_MODEL_END}"),
         "anthropic",
         deprecated=True,
         replacement="claude-haiku-4-5-20251001",
@@ -673,14 +679,14 @@ DEPRECATED_MODEL_PATTERNS: list[ModelPattern] = [
     ),
     # Google deprecated
     ModelPattern(
-        re.compile(rf"{_WB}palm-2{_WB}", re.I),
+        re.compile(rf"{_WB}palm-2{_MODEL_END}", re.I),
         "google",
         deprecated=True,
         replacement="gemini-2.0-flash",
         severity=AIComponentSeverity.MEDIUM,
     ),
     ModelPattern(
-        re.compile(rf"{_WB}bard{_WB}", re.I),
+        re.compile(rf"{_WB}bard{_MODEL_END}", re.I),
         "google",
         deprecated=True,
         replacement="gemini-2.0-flash",

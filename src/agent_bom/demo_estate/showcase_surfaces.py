@@ -43,7 +43,7 @@ def _seed_skills_scan(*, tenant_id: str) -> int:
             path="synthetic-demo/skills/repository-review/SKILL.md",
             status="clean",
             content="benign",
-            review="clean",
+            review="trusted",
             provenance="verified",
             signer="synthetic-demo@example.invalid",
         ),

@@ -264,6 +264,7 @@ def scan_image_tarballs(run: DiscoveryRun) -> None:
 
     con = run.con
     con.print(f"\n[bold blue]Scanning {len(run.image_tars)} OCI image tarball(s)...[/bold blue]\n")
+    tar_successes = 0
     for tar_path in run.image_tars:
         try:
             tar_label = Path(tar_path).name
@@ -277,8 +278,12 @@ def scan_image_tarballs(run: DiscoveryRun) -> None:
             _report_image_evidence(run, evidence)
             metadata = {**image_agent_metadata(evidence), **model_artifact_metadata(model_artifacts)}
             run.ctx.agents.append(build_image_tar_carrier(tar_path, tar_packages, metadata=metadata))
+            tar_successes += 1
         except ImageScanError as e:
             con.print(f"  [yellow]⚠[/yellow] {tar_path}: {e}")
+    if run.extra.get("_image_only") and tar_successes == 0:
+        con.print("\n  [red]Image scan failed: native package extraction produced no usable inventory[/red]")
+        sys.exit(1)
 
 
 def _discover_filesystem_mcps(run: DiscoveryRun, fs_path: str) -> None:

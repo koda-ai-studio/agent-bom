@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from agent_bom.skill_bundles import build_skill_bundle
 from agent_bom.skill_intel import ThreatIntelStatus
 from agent_bom.skills_service import (
@@ -176,11 +178,43 @@ def test_scan_skill_targets_records_catalog_and_intel(tmp_path):
     assert payload["generated_at"].endswith("Z")
 
 
-def test_high_risk_local_skill_review_counts_as_malicious_status():
-    """Local high-risk verdicts should not drift from malicious summary counts."""
-    report = SimpleNamespace(threat_intel=None, trust=SimpleNamespace(review_verdict=SimpleNamespace(value="high_risk")))
+@pytest.mark.parametrize(
+    "review, content, expected",
+    [
+        # High risk is a handling call (shell access, delegation), not evidence of malice.
+        ("high_risk", "suspicious", ThreatIntelStatus.SUSPICIOUS),
+        ("high_risk", "benign", ThreatIntelStatus.SUSPICIOUS),
+        ("high_risk", "malicious", ThreatIntelStatus.MALICIOUS),
+        ("blocked", "malicious", ThreatIntelStatus.MALICIOUS),
+        ("blocked", "benign", ThreatIntelStatus.MALICIOUS),
+        ("trusted", "benign", ThreatIntelStatus.CLEAN),
+        ("review", "benign", ThreatIntelStatus.PENDING),
+        ("review", "suspicious", ThreatIntelStatus.SUSPICIOUS),
+    ],
+)
+def test_local_review_maps_to_status_keeping_malicious_for_malicious_indicators(review, content, expected):
+    from agent_bom.parsers.trust_assessment import ReviewVerdict, Verdict
 
-    assert _review_to_status(report) == ThreatIntelStatus.MALICIOUS
+    report = SimpleNamespace(
+        threat_intel=None, trust=SimpleNamespace(review_verdict=ReviewVerdict(review), content_verdict=Verdict(content))
+    )
+
+    assert _review_to_status(report) == expected
+
+
+def test_shell_access_skill_without_malicious_content_is_suspicious_not_malicious(tmp_path):
+    skill = tmp_path / "SKILL.md"
+    skill.write_text(
+        "---\nname: runner\ndescription: Runs a local helper server.\n---\n\n"
+        '```json\n{"mcpServers": {"helper": {"command": "bash", "args": ["serve.sh"]}}}\n```\n'
+    )
+    data = scan_skill_targets([skill]).to_dict()
+    entry = data["files"][0]
+
+    assert entry["trust"]["review_verdict"] == "high_risk"
+    assert entry["trust"]["content_verdict"] != "malicious"
+    assert entry["status"] == "suspicious"
+    assert data["summary"]["malicious_status_files"] == 0
 
 
 def test_clean_unsigned_skill_requires_review_without_malicious_status(tmp_path):

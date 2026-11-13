@@ -88,3 +88,25 @@ def test_image_ref_scan_does_not_run_host_discovery(tmp_path: Path, monkeypatch:
 
     assert calls == []
     assert "laptop-agent" not in [a.name for a in agents]
+
+
+def _empty_image_tar() -> Path:
+    from tests.test_oci_parser import _make_docker_save_tar
+
+    # A Go binary whose build info cannot be read: the scan yields nothing it can vouch for.
+    binary = b"\x7fELF" + b"\x00" * 252 + b"\xff Go buildinf:\x08\x00" + b"\xee" * 16 + b"\x00" * 256
+    return _make_docker_save_tar([{"bin/mystery": binary}])
+
+
+def test_scan_image_tar_rejects_zero_packages_like_an_image_reference() -> None:
+    from agent_bom.image import ImageScanError, scan_image_tar
+
+    with pytest.raises(ImageScanError, match="0 packages"):
+        scan_image_tar(str(_empty_image_tar()))
+
+
+def test_image_tar_only_scan_with_no_inventory_exits_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as exc:
+        _discover((str(_empty_image_tar()),))
+    assert exc.value.code == 1
