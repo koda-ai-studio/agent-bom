@@ -11,6 +11,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - The CLI imports a command only when it runs: `agent-bom --help` starts in about 0.4 s instead of 0.75 s and no longer loads any scanner, and each command loads only its own modules. Top-level help keeps the five front-door commands first and lists every other command under one workflow group (setup, graph, MCP and runtime, governance, platform), with no catch-all section. Command names, options and help text are unchanged.
+- A scan inside a Git checkout lists tracked files from the scan root instead of the whole repository, so building ignore rules for the secret and code scans takes about 0.04 s instead of 0.4 s on an 8,700-file checkout, and no longer grows with the size of the surrounding monorepo.
 
 ## [0.115.0] - 2026-11-12
 
