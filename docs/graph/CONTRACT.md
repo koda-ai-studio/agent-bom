@@ -171,6 +171,19 @@ cut short; `coverage.gaps` lists what is not modelled yet:
 CrewAI manager and task order, AutoGen speaker selection, OpenAI Agents SDK
 handoffs, and declared-versus-observed path comparison.
 
+The dashboard's **Agent architecture** page (`/agents/architecture`, linked
+from Agents) draws this read one harness at a time. *Layered* shows the
+declared hierarchy, one line per parent, styled by the flow kind declared
+between them (else "declared inside"). *Flow* runs left to right from the
+harness to its finish points; an edge back to an earlier step is a "returns
+to" marker on its source and a `peer` edge is a "shares a server" marker on
+both agents, so no line runs against the reading direction and every declared
+edge is still shown. Unresolved routes are labelled stubs, findings are
+severity badges whose count is the agent's `security.findings`, and sibling
+groups above six agents collapse (agents with findings stay visible). It pages
+harnesses with `next_cursor`, restarts from the first page on a 409 and shows
+the error on a 422. Observed paths are not drawn because the read has none.
+
 ## 1. Coverage
 
 ### Entity types

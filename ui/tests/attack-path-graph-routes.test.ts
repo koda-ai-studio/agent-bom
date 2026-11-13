@@ -13,7 +13,11 @@ function properlyIntersect([a, b]: Segment, [c, d]: Segment): boolean {
   return o1 * o2 < 0 && o3 * o4 < 0;
 }
 
-/** Crossings between different edges, ignoring the fan-out right at a node they share. */
+/**
+ * Crossings between different edges. Two lines that share a node may only
+ * meet at the handle they share (within 2px); a crossing anywhere else, even
+ * right beside the shared node, counts.
+ */
 function crossings(model: AttackPathGraphModel, direction: AttackPathDirection): string[] {
   const layout = layoutAttackPathGraph(model, direction);
   const routes = routeAttackPathEdges(model, layout);
@@ -22,18 +26,41 @@ function crossings(model: AttackPathGraphModel, direction: AttackPathDirection):
   for (let i = 0; i < sampled.length; i += 1) {
     for (let j = i + 1; j < sampled.length; j += 1) {
       const a = sampled[i]!, b = sampled[j]!;
-      const shared = [a.edge.source, a.edge.target].filter(id => id === b.edge.source || id === b.edge.target);
-      const anchors = [...a.points.slice(0, 1), ...a.points.slice(-1), ...b.points.slice(0, 1), ...b.points.slice(-1)];
-      const nearShared = (p: Point) => shared.length > 0 && anchors.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 64);
+      const ends = (points: Point[]) => [points[0]!, points.at(-1)!];
+      const common = ends(a.points).filter(p => ends(b.points).some(q => Math.hypot(p.x - q.x, p.y - q.y) < 2));
+      const nearShared = (p: Point) => common.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 2);
       for (let s = 0; s < a.points.length - 1; s += 1) {
         for (let t = 0; t < b.points.length - 1; t += 1) {
           const sa: Segment = [a.points[s]!, a.points[s + 1]!], sb: Segment = [b.points[t]!, b.points[t + 1]!];
           if (properlyIntersect(sa, sb) && !(nearShared(sa[0]) || nearShared(sa[1]))) out.push(`${a.edge.id} x ${b.edge.id} @${Math.round(sa[0].x)},${Math.round(sa[0].y)}`);
         }
       }
+      // Two lines running on top of each other and then splitting read as a crossing too. Lines fanning out of
+      // (or into) one handle may only touch on the leg at that handle; past their first turn they must be apart.
+      const isCommon = (p: Point) => common.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 2);
+      const tail = (item: typeof a) => {
+        let route = routes.get(item.edge.id)!;
+        if (isCommon(route[0]!)) route = route.slice(1);
+        if (isCommon(route.at(-1)!)) route = route.slice(0, -1);
+        return route.length >= 2 ? sampleRoute(route, direction) : [];
+      };
+      const bDense = densify(tail(b));
+      const merged = densify(tail(a)).find(p => !common.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 2)
+        && bDense.some(q => Math.hypot(p.x - q.x, p.y - q.y) < 1.5));
+      if (merged) out.push(`${a.edge.id} merges ${b.edge.id} @${Math.round(merged.x)},${Math.round(merged.y)}`);
     }
   }
   return [...new Set(out)];
+}
+
+function densify(points: Point[], step = 2): Point[] {
+  const out: Point[] = [];
+  for (let index = 1; index < points.length; index += 1) {
+    const a = points[index - 1]!, b = points[index]!;
+    const count = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / step));
+    for (let k = 0; k <= count; k += 1) out.push({ x: a.x + ((b.x - a.x) * k) / count, y: a.y + ((b.y - a.y) * k) / count });
+  }
+  return out;
 }
 
 const CASES = {
