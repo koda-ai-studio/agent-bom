@@ -198,14 +198,14 @@ def warn_on_unbounded_proxy_trust() -> None:
     networks = _trusted_proxy_networks()
     if networks is None:
         logger.warning(
-            "%s is set without %s: X-Forwarded-For is trusted from any connecting peer, so a client that reaches the "
-            "server directly can choose its rate-limit bucket. Set %s to the proxy networks.",
-            FORWARDED_HOP_COUNT_ENV,
-            TRUSTED_PROXY_CIDRS_ENV,
-            TRUSTED_PROXY_CIDRS_ENV,
+            "AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS is set without AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS: "
+            "X-Forwarded-For is trusted from any connecting peer, so a client that reaches the server directly can "
+            "choose its rate-limit bucket. Set AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS to the proxy networks."
         )
     elif not networks:
-        logger.warning("%s could not be parsed: X-Forwarded-For is ignored and callers are bucketed by peer", TRUSTED_PROXY_CIDRS_ENV)
+        logger.warning(
+            "AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS could not be parsed: X-Forwarded-For is ignored and callers are bucketed by peer"
+        )
 
 
 def _bucket(address: str) -> str:
