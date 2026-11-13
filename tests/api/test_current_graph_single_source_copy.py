@@ -181,6 +181,8 @@ def test_two_sources_are_never_copied(tmp_path, monkeypatch) -> None:
     calls: list[bool] = []
     monkeypatch.setattr(current_graph_copy, "copy_single_source", lambda *args, **kwargs: calls.append(True) or True)
     store = CurrentGraphStore(SQLiteGraphStore(source), jobs)
-    assert not store._copy_single_source(TENANT, "identity", "", (("scan-a", "rev-a"), ("scan-b", "rev-b")))
+    assert not current_graph_copy.copy_current_projection(
+        store, TENANT, "identity", "", (("scan-a", "rev-a"), ("scan-b", "rev-b")), "digest"
+    )
     assert calls == []
     shutil.rmtree(tmp_path / "state", ignore_errors=True)

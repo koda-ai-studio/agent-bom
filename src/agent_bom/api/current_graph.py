@@ -14,7 +14,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import sqlite3
 import threading
 import time
 import weakref
@@ -521,43 +520,12 @@ class CurrentGraphStore:
                 self._projection_store.delete_snapshot(tenant_id=tenant, scan_id=scan_id)
                 self._coverage.pop(scan_id, None)
 
-    def _copy_single_source(self, tenant: str, identity: str, created_at: str, revisions: tuple[tuple[str, str], ...]) -> bool:
-        present = [(scan, generation) for scan, generation in revisions if generation]
-        source_path = getattr(self._graph_store, "_db_path", None)
-        if len(present) != 1 or not isinstance(self._graph_store, SQLiteGraphStore) or not source_path:
-            return False
-        scan, generation = present[0]
-        return current_graph_copy.copy_single_source(
-            self._cache_path,
-            source_path,
-            tenant=tenant,
-            source_scan=scan,
-            expected_revision=generation,
-            identity=identity,
-            created_at=created_at,
-            write_generation=identity.removeprefix(CURRENT_PREFIX),
-            evidence_manifest_sha256="sha256:" + _digest(revisions),
-        )
-
     def _stamp_read_revision(self, tenant: str, identity: str) -> None:
-        # Identical source generations resolve to the same paging revision
-        # across workers and restarts, even though each owns its own cache.
-        with sqlite3.connect(self._cache_path) as conn:
-            conn.execute(
-                "UPDATE graph_snapshots SET read_revision = ? WHERE tenant_id = ? AND scan_id = ?",
-                (identity.removeprefix(CURRENT_PREFIX), tenant, identity),
-            )
+        current_graph_copy.stamp_read_revision(self._cache_path, tenant, identity)
 
     def _materialize(self, tenant: str, identity: str, selected: Any, revisions: tuple[tuple[str, str], ...]) -> None:
         created_at = max((scan_evidence_authority_key(job)[0] for job in selected), default="")
-        try:
-            if self._copy_single_source(tenant, identity, created_at, revisions):
-                self._stamp_read_revision(tenant, identity)
-                return
-        except ValueError:
-            # Concurrent workers may commit this identical immutable projection.
-            if not self._projection_store.snapshot_identity(tenant_id=tenant, scan_id=identity)[1]:
-                raise
+        if current_graph_copy.materialized_by_copy(self, tenant, identity, created_at, revisions, _digest(revisions)):
             return
         graph = UnifiedGraph(scan_id=identity, tenant_id=tenant, created_at=created_at)
         source_statuses: list[dict[str, GraphAnalysisStatus]] = []

@@ -24,12 +24,14 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.graph_store_support import _CREATE_PRESET_TABLE_SQLITE
 from agent_bom.db import graph_store as sqlite_graph_store
 from agent_bom.db.graph_node_search import ensure_search_index
 from agent_bom.db.graph_revision import revision_tokens
 from agent_bom.db.graph_store_write import _check_snapshot_writable, _clear_snapshot_rows, checkpoint_wal
 from agent_bom.db.sqlite_bulk_cache import snapshot_bulk_cache
+from agent_bom.graph.adjacency_page import CURRENT_ESTATE_SCAN_PREFIX
 from agent_bom.graph.agent_context import AGENT_CONTEXT_SCHEMA_VERSION
 from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_status_map_to_dict, merge_analysis_statuses
 from agent_bom.graph.snapshot_paths import PATHS_ANALYSIS_KEY, stored_paths_current
@@ -160,6 +162,7 @@ def copy_single_source(
         try:
             with snapshot_bulk_cache(conn):
                 conn.execute("BEGIN IMMEDIATE")
+                copied = False
                 try:
                     conn.execute(_CREATE_PRESET_TABLE_SQLITE)
                     ensure_search_index(conn)
@@ -173,17 +176,69 @@ def copy_single_source(
                         write_generation=write_generation,
                         evidence_manifest_sha256=evidence_manifest_sha256,
                     )
-                except BaseException:
-                    conn.rollback()
-                    raise
+                finally:
+                    # Nothing is written unless the whole copy succeeded and applied.
+                    if copied:
+                        conn.commit()
+                    else:
+                        conn.rollback()
                 if not copied:
-                    conn.rollback()
                     return False
-                conn.commit()
         finally:
             conn.execute("DETACH DATABASE src")
         checkpoint_wal(conn)
     return True
 
 
-__all__ = ["copy_single_source"]
+def copy_current_projection(
+    store: Any, tenant: str, identity: str, created_at: str, revisions: tuple[tuple[str, str], ...], digest: str
+) -> bool:
+    """Copy the current view's only source snapshot when the backing store is SQLite; False otherwise."""
+    present = [(scan, generation) for scan, generation in revisions if generation]
+    source_path = getattr(store._graph_store, "_db_path", None)
+    if len(present) != 1 or not isinstance(store._graph_store, SQLiteGraphStore) or not source_path:
+        return False
+    scan, generation = present[0]
+    return copy_single_source(
+        store._cache_path,
+        source_path,
+        tenant=tenant,
+        source_scan=scan,
+        expected_revision=generation,
+        identity=identity,
+        created_at=created_at,
+        write_generation=identity.removeprefix(CURRENT_ESTATE_SCAN_PREFIX),
+        evidence_manifest_sha256="sha256:" + digest,
+    )
+
+
+def stamp_read_revision(cache_path: str, tenant: str, identity: str) -> None:
+    """Give a projection the paging revision its identity names.
+
+    Identical source generations resolve to the same paging revision across
+    workers and restarts, even though each owns its own cache.
+    """
+    with sqlite3.connect(cache_path) as conn:
+        conn.execute(
+            "UPDATE graph_snapshots SET read_revision = ? WHERE tenant_id = ? AND scan_id = ?",
+            (identity.removeprefix(CURRENT_ESTATE_SCAN_PREFIX), tenant, identity),
+        )
+
+
+def materialized_by_copy(
+    store: Any, tenant: str, identity: str, created_at: str, revisions: tuple[tuple[str, str], ...], digest: str
+) -> bool:
+    """Materialize the projection by copy when that applies; True once the projection exists."""
+    try:
+        if not copy_current_projection(store, tenant, identity, created_at, revisions, digest):
+            return False
+    except ValueError:
+        # Concurrent workers may commit this identical immutable projection.
+        if not store._projection_store.snapshot_identity(tenant_id=tenant, scan_id=identity)[1]:
+            raise
+        return True
+    stamp_read_revision(store._cache_path, tenant, identity)
+    return True
+
+
+__all__ = ["copy_current_projection", "copy_single_source", "materialized_by_copy", "stamp_read_revision"]

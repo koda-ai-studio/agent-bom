@@ -239,9 +239,12 @@ CREATE INDEX IF NOT EXISTS idx_ge_scan ON graph_edges(scan_id);
 -- rather than in a migration block because _init_db replays this script on
 -- every open, so existing stores pick them up too. Their leading columns also
 -- serve every (tenant_id, scan_id) and (tenant_id, scan_id, endpoint) lookup,
--- so no separate index carries only those prefixes (_init_db drops the old ones).
+-- so the copies older stores carry are dropped below.
 CREATE INDEX IF NOT EXISTS idx_ge_adjacency_out ON graph_edges(tenant_id, scan_id, source_id, target_id, relationship);
 CREATE INDEX IF NOT EXISTS idx_ge_adjacency_in ON graph_edges(tenant_id, scan_id, target_id, source_id, relationship);
+DROP INDEX IF EXISTS idx_ge_tenant_scan;
+DROP INDEX IF EXISTS idx_ge_tenant_scan_source;
+DROP INDEX IF EXISTS idx_ge_tenant_scan_target;
 
 -- ── Snapshots ──
 CREATE TABLE IF NOT EXISTS graph_snapshots (
