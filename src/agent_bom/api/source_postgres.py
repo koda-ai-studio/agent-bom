@@ -68,9 +68,20 @@ class PostgresSourceStore:
             written = write_tenant_row(
                 conn,
                 table="control_plane_sources",
-                key=("source_id", source.source_id),
-                tenant=("tenant_id", source.tenant_id),
-                values={"enabled": int(source.enabled), "updated_at": source.updated_at, "data": data},
+                key="source_id",
+                tenant="tenant_id",
+                row={
+                    "source_id": source.source_id,
+                    "enabled": int(source.enabled),
+                    "tenant_id": source.tenant_id,
+                    "updated_at": source.updated_at,
+                    "data": data,
+                },
+                update=(
+                    "enabled",
+                    "updated_at",
+                    "data",
+                ),
             )
             conn.commit()
             if not written:

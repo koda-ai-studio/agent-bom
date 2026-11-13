@@ -5,14 +5,15 @@ against the UPDATE policies before user quals, so `ON CONFLICT ... DO UPDATE ...
 WHERE t.tenant_id = EXCLUDED.tenant_id` now raises instead of updating zero rows
 when the key belongs to another tenant. The helper never asks the server to
 update a row it cannot see. The live behaviour is covered in
-tests/test_postgres_integration.py; this pins the statement sequence.
+tests/test_postgres_integration.py; this pins the statement sequence, and runs
+without the optional psycopg dependency.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from psycopg import sql
+import pytest
 
 from agent_bom.api.postgres_tenant_upsert import write_tenant_row
 
@@ -26,20 +27,26 @@ class _Cursor:
 class _Conn:
     rowcounts: list[int]
     statements: list[str] = field(default_factory=list)
+    params: list[tuple] = field(default_factory=list)
 
     def execute(self, query, params=None):
-        text = query.as_string(None) if isinstance(query, sql.Composable) else str(query)
-        self.statements.append(" ".join(text.split()))
+        assert isinstance(query, str)
+        self.statements.append(" ".join(query.split()))
+        self.params.append(tuple(params))
         return _Cursor(self.rowcounts.pop(0))
+
+
+_ROW = {"credential_ref_id": "id-1", "enabled": 1, "tenant_id": "tenant-a", "created_at": "t0", "data": "{}"}
 
 
 def _write(conn: _Conn) -> bool:
     return write_tenant_row(
         conn,
         table="credential_refs",
-        key=("credential_ref_id", "id-1"),
-        tenant=("tenant_id", "tenant-a"),
-        values={"enabled": 1, "data": "{}"},
+        key="credential_ref_id",
+        tenant="tenant_id",
+        row=_ROW,
+        update=("enabled", "data"),
     )
 
 
@@ -47,43 +54,52 @@ def _kinds(conn: _Conn) -> list[str]:
     return [statement.split()[0] for statement in conn.statements]
 
 
-def test_an_existing_row_of_the_same_tenant_is_updated_in_place():
+def test_a_new_key_is_inserted_without_touching_a_conflicting_row():
     conn = _Conn([1])
     assert _write(conn) is True
-    assert _kinds(conn) == ["UPDATE"]
-    assert 'WHERE "credential_ref_id" = %s AND "tenant_id" = %s' in conn.statements[0]
+    assert _kinds(conn) == ["INSERT"]
+    assert conn.statements[0] == (
+        "INSERT INTO credential_refs (credential_ref_id, enabled, tenant_id, created_at, data) "
+        "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (credential_ref_id) DO NOTHING"
+    )
+    assert conn.params[0] == ("id-1", 1, "tenant-a", "t0", "{}")
 
 
-def test_a_new_key_is_inserted_without_touching_a_conflicting_row():
+def test_an_existing_row_of_the_same_tenant_is_updated_in_place():
     conn = _Conn([0, 1])
     assert _write(conn) is True
-    assert _kinds(conn) == ["UPDATE", "INSERT"]
-    assert conn.statements[1].endswith('ON CONFLICT ("credential_ref_id") DO NOTHING')
-    assert "DO UPDATE" not in conn.statements[1]
+    assert _kinds(conn) == ["INSERT", "UPDATE"]
+    assert conn.statements[1] == "UPDATE credential_refs SET enabled = %s, data = %s WHERE credential_ref_id = %s AND tenant_id = %s"
+    assert conn.params[1] == (1, "{}", "id-1", "tenant-a")
 
 
-def test_a_same_tenant_insert_race_is_retried_as_an_update():
+def test_a_row_deleted_between_the_two_statements_is_inserted_again():
     conn = _Conn([0, 0, 1])
     assert _write(conn) is True
-    assert _kinds(conn) == ["UPDATE", "INSERT", "UPDATE"]
+    assert _kinds(conn) == ["INSERT", "UPDATE", "INSERT"]
 
 
 def test_a_key_owned_by_another_tenant_is_reported_not_written():
     conn = _Conn([0, 0, 0, 0])
     assert _write(conn) is False
-    assert _kinds(conn) == ["UPDATE", "INSERT", "UPDATE", "INSERT"]
+    assert _kinds(conn) == ["INSERT", "UPDATE", "INSERT", "UPDATE"]
 
 
-def test_identifiers_are_quoted_not_interpolated():
+@pytest.mark.parametrize("field_name", ["table", "key", "tenant", "row", "update"])
+def test_anything_but_a_plain_identifier_is_refused(field_name):
+    hostile = 't"; DROP TABLE x; --'
+    kwargs = {"table": "t", "key": "id", "tenant": "tenant_id", "row": {"id": "v", "tenant_id": "a", "data": "{}"}, "update": ("data",)}
+    kwargs[field_name] = {
+        "table": hostile,
+        "key": hostile,
+        "tenant": hostile,
+        "row": {"id": "v", "tenant_id": "a", hostile: "{}"},
+        "update": (hostile,),
+    }[field_name]
     conn = _Conn([1])
-    write_tenant_row(
-        conn,
-        table='t"; DROP TABLE x; --',
-        key=("id", "v"),
-        tenant=("tenant_id", "a"),
-        values={"data": "{}"},
-    )
-    assert 'UPDATE "t""; DROP TABLE x; --"' in conn.statements[0]
+    with pytest.raises(ValueError, match="identifier"):
+        write_tenant_row(conn, **kwargs)
+    assert conn.statements == []
 
 
 def test_no_store_relies_on_a_tenant_qual_to_skip_a_foreign_conflict():

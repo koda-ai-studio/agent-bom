@@ -153,4 +153,17 @@ def start_current_graph_prewarm() -> threading.Thread | None:
     return thread
 
 
-__all__ = ["last_run", "prewarm_current_graphs", "start_current_graph_prewarm", "startup_prewarm_holding_readiness"]
+def reset_current_graph_prewarm() -> None:
+    """Forget this process's warm-up state, as at import; for test isolation."""
+    _LAST_RUN.clear()
+    _LAST_RUN.update(status="not_started")
+    _STARTED_AT.clear()
+
+
+__all__ = [
+    "last_run",
+    "prewarm_current_graphs",
+    "reset_current_graph_prewarm",
+    "start_current_graph_prewarm",
+    "startup_prewarm_holding_readiness",
+]

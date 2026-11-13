@@ -385,9 +385,20 @@ class PostgresScheduleStore:
             written = write_tenant_row(
                 conn,
                 table="scan_schedules",
-                key=("schedule_id", schedule.schedule_id),
-                tenant=("tenant_id", tenant),
-                values={"enabled": int(schedule.enabled), "next_run": schedule.next_run, "data": data},
+                key="schedule_id",
+                tenant="tenant_id",
+                row={
+                    "schedule_id": schedule.schedule_id,
+                    "enabled": int(schedule.enabled),
+                    "next_run": schedule.next_run,
+                    "tenant_id": tenant,
+                    "data": data,
+                },
+                update=(
+                    "enabled",
+                    "next_run",
+                    "data",
+                ),
             )
             conn.commit()
             if not written:
@@ -491,9 +502,20 @@ class PostgresCredentialRefStore:
             written = write_tenant_row(
                 conn,
                 table="credential_refs",
-                key=("credential_ref_id", credential.credential_ref_id),
-                tenant=("tenant_id", credential.tenant_id),
-                values={"enabled": int(credential.enabled), "updated_at": credential.updated_at, "data": data},
+                key="credential_ref_id",
+                tenant="tenant_id",
+                row={
+                    "credential_ref_id": credential.credential_ref_id,
+                    "enabled": int(credential.enabled),
+                    "tenant_id": credential.tenant_id,
+                    "updated_at": credential.updated_at,
+                    "data": data,
+                },
+                update=(
+                    "enabled",
+                    "updated_at",
+                    "data",
+                ),
             )
             conn.commit()
             if not written:

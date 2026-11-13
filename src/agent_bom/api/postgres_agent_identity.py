@@ -199,18 +199,23 @@ class PostgresAgentIdentityStore:
             written = write_tenant_row(
                 conn,
                 table="agent_identity_jit_grants",
-                key=("grant_id", grant.grant_id),
-                tenant=("tenant_id", tenant),
-                values={
+                key="grant_id",
+                tenant="tenant_id",
+                row={
+                    "grant_id": grant.grant_id,
+                    "tenant_id": tenant,
+                    "identity_id": grant.identity_id,
+                    "tool_name": grant.tool_name,
                     "status": grant.status,
+                    "requested_at": grant.requested_at,
                     "expires_at": grant.expires_at,
                     "data": json.dumps(asdict(grant), sort_keys=True),
                 },
-                insert_only={
-                    "identity_id": grant.identity_id,
-                    "tool_name": grant.tool_name,
-                    "requested_at": grant.requested_at,
-                },
+                update=(
+                    "status",
+                    "expires_at",
+                    "data",
+                ),
             )
             if not written:
                 raise ValueError("JIT grant identity belongs to another tenant")
@@ -300,14 +305,21 @@ class PostgresAgentIdentityStore:
             written = write_tenant_row(
                 conn,
                 table="agent_conditional_access_policies",
-                key=("policy_id", policy.policy_id),
-                tenant=("tenant_id", tenant),
-                values={
+                key="policy_id",
+                tenant="tenant_id",
+                row={
+                    "policy_id": policy.policy_id,
+                    "tenant_id": tenant,
                     "status": policy.status,
                     "priority": int(policy.priority),
+                    "created_at": policy.created_at,
                     "data": json.dumps(asdict(policy), sort_keys=True),
                 },
-                insert_only={"created_at": policy.created_at},
+                update=(
+                    "status",
+                    "priority",
+                    "data",
+                ),
             )
             if not written:
                 raise ValueError("Conditional policy identity belongs to another tenant")

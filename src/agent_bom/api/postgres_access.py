@@ -456,9 +456,10 @@ class PostgresExceptionStore:
             written = write_tenant_row(
                 conn,
                 table="exceptions",
-                key=("exception_id", exc.exception_id),
-                tenant=("team_id", tenant),
-                values={
+                key="exception_id",
+                tenant="team_id",
+                row={
+                    "exception_id": exc.exception_id,
                     "vuln_id": exc.vuln_id,
                     "package_name": exc.package_name,
                     "server_name": exc.server_name,
@@ -470,12 +471,31 @@ class PostgresExceptionStore:
                     "expires_at": exc.expires_at,
                     "approved_at": exc.approved_at,
                     "revoked_at": exc.revoked_at,
+                    "team_id": tenant,
                     "approval_version": exc.approval_version,
                     "decided_by": exc.decided_by,
                     "iac_rule_id": exc.iac_rule_id,
                     "iac_path": exc.iac_path,
                     "iac_resource": encode_iac_resource(exc.iac_resource),
                 },
+                update=(
+                    "vuln_id",
+                    "package_name",
+                    "server_name",
+                    "reason",
+                    "requested_by",
+                    "approved_by",
+                    "status",
+                    "created_at",
+                    "expires_at",
+                    "approved_at",
+                    "revoked_at",
+                    "approval_version",
+                    "decided_by",
+                    "iac_rule_id",
+                    "iac_path",
+                    "iac_resource",
+                ),
             )
             conn.commit()
             if not written:
