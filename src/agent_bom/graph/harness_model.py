@@ -19,7 +19,8 @@ declares:
 
 Every edge keeps the ``declared`` provenance discovery gave it; its flow kind
 (:func:`flow_kind`) is read from the recorded evidence only. Agents that take
-part in no delegation are not placed: no harness or role is invented for them.
+part in no delegation are not placed, unless a placed agent declares them as
+its parent: no harness or role is invented for them.
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ _ROUTING_KINDS = frozenset({"conditional", "handoff", "fan_out"})
 _STRUCTURAL_KINDS = frozenset({"entry", "finish", "subgraph", "fan_out"})
 _MEMBERSHIP_PREFIXES = ("Crew(", "GroupChat(")
 _HANDOFF_PREFIXES = ("Command(", "create_handoff_tool", "create_supervisor(")
-# Nesting deeper than this is not a real harness; the chain stops and the agent is its own root.
+# Nesting deeper than this is not modelled as a real harness layer; placements past it are flagged.
 MAX_LAYER_DEPTH = 32
 
 
@@ -66,6 +67,8 @@ class HarnessPlacement:
     layer: int
     entry: bool
     parent_id: str
+    # True when the agent sits deeper than ``MAX_LAYER_DEPTH`` below its root.
+    depth_exceeded: bool = False
 
     def attributes(self) -> dict[str, Any]:
         return {
@@ -114,7 +117,9 @@ def derive_placements(declared_parents: dict[str, str], edges: Iterable[HarnessE
         else:
             role = "sub_agent"
         parent = parents.get(agent_id, "") if layer else ""
-        placements[agent_id] = HarnessPlacement(roots[agent_id], role, layer, agent_id in entries, parent)
+        placements[agent_id] = HarnessPlacement(
+            roots[agent_id], role, layer, agent_id in entries, parent, depth_exceeded=layer > MAX_LAYER_DEPTH
+        )
     return placements
 
 
@@ -137,7 +142,27 @@ def placements_from_framework_agents(framework_agents: Any) -> dict[str, Harness
     participants = {edge.source for edge in edges} | {edge.target for edge in edges}
     participants.discard("")
     declared = {str(item.get("stable_id") or ""): str(item.get("parent_id") or "") for item in items}
-    return derive_placements({agent_id: declared.get(agent_id, "") for agent_id in participants}, edges)
+    declared.pop("", None)
+    return derive_placements(with_declared_ancestors(participants, declared), edges)
+
+
+def with_declared_ancestors(participants: Iterable[str], declared_parents: dict[str, str]) -> dict[str, str]:
+    """Participants plus every declared ancestor that is itself a known agent, each mapped to its declared parent.
+
+    A LangGraph builder with no ``START``/``END`` edge takes part in no edge,
+    yet its nodes declare it as their parent; it still roots their harness.
+    """
+    out: dict[str, str] = {}
+    pending = [agent_id for agent_id in participants if agent_id]
+    while pending:
+        agent_id = pending.pop()
+        if agent_id in out:
+            continue
+        parent = declared_parents.get(agent_id, "")
+        out[agent_id] = parent
+        if parent and parent in declared_parents and parent not in out:
+            pending.append(parent)
+    return out
 
 
 def _effective_parents(declared_parents: dict[str, str], edges: list[HarnessEdge]) -> dict[str, str]:
@@ -149,21 +174,32 @@ def _effective_parents(declared_parents: dict[str, str], edges: list[HarnessEdge
 
 
 def _roots_and_layers(participants: set[str], parents: dict[str, str]) -> tuple[dict[str, str], dict[str, int]]:
-    roots: dict[str, str] = {}
-    layers: dict[str, int] = {}
-    for agent_id in participants:
-        chain = [agent_id]
-        seen = {agent_id}
-        current = agent_id
-        while current in parents and len(chain) <= MAX_LAYER_DEPTH:
-            current = parents[current]
-            if current in seen:  # a malformed parent cycle: the agent stands alone
-                chain = [agent_id]
+    """Each agent's true root and depth; an agent whose parent chain loops stands alone at layer 0."""
+    resolved: dict[str, tuple[str, int, bool]] = {}  # agent -> (root, depth, in or below a cycle)
+    for start in participants:
+        path: list[str] = []
+        on_path: set[str] = set()
+        current = start
+        cyclic = False
+        while current not in resolved:
+            if current in on_path:
+                cyclic = True
                 break
-            seen.add(current)
-            chain.append(current)
-        roots[agent_id] = chain[-1]
-        layers[agent_id] = len(chain) - 1
+            path.append(current)
+            on_path.add(current)
+            if current not in parents:
+                resolved[current] = (current, 0, False)
+                path.pop()
+                break
+            current = parents[current]
+        for agent_id in reversed(path):
+            above = resolved.get(parents.get(agent_id, ""))
+            if cyclic or above is None or above[2]:
+                resolved[agent_id] = (agent_id, 0, True)
+            else:
+                resolved[agent_id] = (above[0], above[1] + 1, False)
+    roots = {agent_id: resolved[agent_id][0] for agent_id in participants}
+    layers = {agent_id: resolved[agent_id][1] for agent_id in participants}
     return roots, layers
 
 
@@ -188,4 +224,5 @@ __all__ = [
     "derive_placements",
     "flow_kind",
     "placements_from_framework_agents",
+    "with_declared_ancestors",
 ]
