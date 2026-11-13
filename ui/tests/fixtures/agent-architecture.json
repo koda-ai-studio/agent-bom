@@ -1,0 +1,943 @@
+{
+  "first_page": {
+    "coverage": {
+      "complete": true,
+      "framework_agent_cap": 5000,
+      "frameworks_modelled": [
+        "langgraph",
+        "crewai"
+      ],
+      "gaps": [
+        "CrewAI manager_agent, tasks and process order are not modelled as delegation; crews show their declared members only.",
+        "AutoGen speaker selection and OpenAI Agents SDK handoffs are not modelled yet.",
+        "Model references are listed only where the source passes a literal model name or a module-level binding to one.",
+        "Edges are declared from source code; observed runtime paths are not compared here."
+      ],
+      "model": "agent-harness.v1",
+      "provenance": "declared"
+    },
+    "harnesses": [
+      {
+        "agent_count": 8,
+        "declared_in": null,
+        "entry_agent_ids": [
+          "6f609963-0ef5-54dc-b589-380e92f22dfa",
+          "26fad33b-2da8-56f6-ab2c-ddf1dfa93122"
+        ],
+        "file_path": "app.py",
+        "flow_edges": [
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_edge",
+            "file_path": "app.py",
+            "kind": "sequential",
+            "line_number": 33,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "26fad33b-2da8-56f6-ab2c-ddf1dfa93122",
+            "target": "e6247241-d68e-5100-ac4c-1e0f57d81714"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_edge(START)",
+            "file_path": "app.py",
+            "kind": "entry",
+            "line_number": 32,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "53605ff2-0c60-542e-8ee7-e1fb6c6014ea",
+            "target": "26fad33b-2da8-56f6-ab2c-ddf1dfa93122"
+          },
+          {
+            "branches": [
+              "__end__"
+            ],
+            "conditional": true,
+            "confidence": "medium",
+            "evidence": "StateGraph.add_conditional_edges",
+            "file_path": "app.py",
+            "kind": "finish",
+            "line_number": 55,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "6f609963-0ef5-54dc-b589-380e92f22dfa",
+            "target": "71eb6165-3288-5bba-97d3-8c384f9a9d8b"
+          },
+          {
+            "branches": [
+              "writer"
+            ],
+            "conditional": true,
+            "confidence": "medium",
+            "evidence": "StateGraph.add_conditional_edges",
+            "file_path": "app.py",
+            "kind": "conditional",
+            "line_number": 55,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "6f609963-0ef5-54dc-b589-380e92f22dfa",
+            "target": "c99d9dbc-bf07-5a50-8090-82d5796af9dd"
+          },
+          {
+            "branches": [
+              "research"
+            ],
+            "conditional": true,
+            "confidence": "medium",
+            "evidence": "StateGraph.add_conditional_edges",
+            "file_path": "app.py",
+            "kind": "conditional",
+            "line_number": 55,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "6f609963-0ef5-54dc-b589-380e92f22dfa",
+            "target": "eae9ebe2-c1be-59f1-b5a3-e24b22220413"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_edge(START)",
+            "file_path": "app.py",
+            "kind": "entry",
+            "line_number": 54,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "71eb6165-3288-5bba-97d3-8c384f9a9d8b",
+            "target": "6f609963-0ef5-54dc-b589-380e92f22dfa"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "medium",
+            "evidence": "Command(goto)",
+            "file_path": "app.py",
+            "kind": "handoff",
+            "line_number": 42,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "b6664cd8-9f8b-5cec-a07e-b444a7c0ebd9",
+            "target": "c99d9dbc-bf07-5a50-8090-82d5796af9dd"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.set_finish_point",
+            "file_path": "app.py",
+            "kind": "finish",
+            "line_number": 58,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "c99d9dbc-bf07-5a50-8090-82d5796af9dd",
+            "target": "71eb6165-3288-5bba-97d3-8c384f9a9d8b"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_edge(END)",
+            "file_path": "app.py",
+            "kind": "finish",
+            "line_number": 34,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "e6247241-d68e-5100-ac4c-1e0f57d81714",
+            "target": "53605ff2-0c60-542e-8ee7-e1fb6c6014ea"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_node(subgraph)",
+            "file_path": "app.py",
+            "kind": "subgraph",
+            "line_number": 51,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "eae9ebe2-c1be-59f1-b5a3-e24b22220413",
+            "target": "53605ff2-0c60-542e-8ee7-e1fb6c6014ea"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_edge",
+            "file_path": "app.py",
+            "kind": "sequential",
+            "line_number": 56,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "eae9ebe2-c1be-59f1-b5a3-e24b22220413",
+            "target": "6f609963-0ef5-54dc-b589-380e92f22dfa"
+          }
+        ],
+        "framework": "langgraph",
+        "harness_id": "71eb6165-3288-5bba-97d3-8c384f9a9d8b",
+        "harness_kind": "StateGraph",
+        "label": "builder",
+        "layer_count": 4,
+        "layers": [
+          {
+            "agents": [
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "71eb6165-3288-5bba-97d3-8c384f9a9d8b",
+                "label": "builder",
+                "layer": 0,
+                "line_number": 49,
+                "model_refs": [],
+                "parent_id": "",
+                "role": "harness",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              }
+            ],
+            "layer": 0
+          },
+          {
+            "agents": [
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "eae9ebe2-c1be-59f1-b5a3-e24b22220413",
+                "label": "research",
+                "layer": 1,
+                "line_number": 51,
+                "model_refs": [],
+                "parent_id": "71eb6165-3288-5bba-97d3-8c384f9a9d8b",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              },
+              {
+                "credential_refs": [],
+                "dynamic_edges": true,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "b6664cd8-9f8b-5cec-a07e-b444a7c0ebd9",
+                "label": "review",
+                "layer": 1,
+                "line_number": 53,
+                "model_refs": [],
+                "parent_id": "71eb6165-3288-5bba-97d3-8c384f9a9d8b",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              },
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": true,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "6f609963-0ef5-54dc-b589-380e92f22dfa",
+                "label": "supervisor",
+                "layer": 1,
+                "line_number": 50,
+                "model_refs": [],
+                "parent_id": "71eb6165-3288-5bba-97d3-8c384f9a9d8b",
+                "role": "orchestrator",
+                "security": {
+                  "findings": 1,
+                  "max_finding_severity": "critical",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              },
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "c99d9dbc-bf07-5a50-8090-82d5796af9dd",
+                "label": "writer",
+                "layer": 1,
+                "line_number": 52,
+                "model_refs": [],
+                "parent_id": "71eb6165-3288-5bba-97d3-8c384f9a9d8b",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              }
+            ],
+            "layer": 1
+          },
+          {
+            "agents": [
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "53605ff2-0c60-542e-8ee7-e1fb6c6014ea",
+                "label": "research_builder",
+                "layer": 2,
+                "line_number": 29,
+                "model_refs": [],
+                "parent_id": "eae9ebe2-c1be-59f1-b5a3-e24b22220413",
+                "role": "subgraph",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              }
+            ],
+            "layer": 2
+          },
+          {
+            "agents": [
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": true,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "26fad33b-2da8-56f6-ab2c-ddf1dfa93122",
+                "label": "search",
+                "layer": 3,
+                "line_number": 30,
+                "model_refs": [],
+                "parent_id": "53605ff2-0c60-542e-8ee7-e1fb6c6014ea",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              },
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "e6247241-d68e-5100-ac4c-1e0f57d81714",
+                "label": "summarize",
+                "layer": 3,
+                "line_number": 31,
+                "model_refs": [],
+                "parent_id": "53605ff2-0c60-542e-8ee7-e1fb6c6014ea",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              }
+            ],
+            "layer": 3
+          }
+        ],
+        "line_number": 49,
+        "models": [],
+        "orchestrator_ids": [
+          "6f609963-0ef5-54dc-b589-380e92f22dfa"
+        ],
+        "security": {
+          "agents_with_findings": 1,
+          "credential_refs": [],
+          "findings": 1,
+          "max_risk_score": 0.0,
+          "max_severity": "critical"
+        },
+        "truncated": {
+          "agents": false,
+          "flow_edges": false
+        },
+        "unresolved_route_count": 1,
+        "unresolved_routes": [
+          {
+            "agent_id": "b6664cd8-9f8b-5cec-a07e-b444a7c0ebd9",
+            "evidence": "StateGraph.add_conditional_edges(decide)",
+            "line_number": 57,
+            "reason": "no path map; targets decided at runtime",
+            "status": "unresolved"
+          }
+        ]
+      },
+      {
+        "agent_count": 6,
+        "declared_in": null,
+        "entry_agent_ids": [
+          "3fe4e3b0-fad1-5d8b-974c-7787159e57e4"
+        ],
+        "file_path": "app.py",
+        "flow_edges": [
+          {
+            "branches": [
+              "triage_agent"
+            ],
+            "conditional": true,
+            "confidence": "medium",
+            "evidence": "StateGraph.add_conditional_edges",
+            "file_path": "app.py",
+            "kind": "conditional",
+            "line_number": 43,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "3fe4e3b0-fad1-5d8b-974c-7787159e57e4",
+            "target": "b571cbb5-e4b5-5c2c-bc97-0fc731f329a7"
+          },
+          {
+            "branches": [
+              "reply_agent"
+            ],
+            "conditional": true,
+            "confidence": "medium",
+            "evidence": "StateGraph.add_conditional_edges",
+            "file_path": "app.py",
+            "kind": "conditional",
+            "line_number": 43,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "3fe4e3b0-fad1-5d8b-974c-7787159e57e4",
+            "target": "cc692bde-d041-5adb-bec1-0e1a132b953d"
+          },
+          {
+            "branches": [
+              "__end__"
+            ],
+            "conditional": true,
+            "confidence": "medium",
+            "evidence": "StateGraph.add_conditional_edges",
+            "file_path": "app.py",
+            "kind": "finish",
+            "line_number": 43,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "3fe4e3b0-fad1-5d8b-974c-7787159e57e4",
+            "target": "e5d8bceb-6c89-562e-b971-96029701bd33"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_node(subgraph)",
+            "file_path": "app.py",
+            "kind": "subgraph",
+            "line_number": 40,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "b571cbb5-e4b5-5c2c-bc97-0fc731f329a7",
+            "target": "22c84fa0-6317-5869-be42-63943b25b83d"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_edge",
+            "file_path": "app.py",
+            "kind": "sequential",
+            "line_number": 44,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "b571cbb5-e4b5-5c2c-bc97-0fc731f329a7",
+            "target": "3fe4e3b0-fad1-5d8b-974c-7787159e57e4"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_node(subgraph)",
+            "file_path": "app.py",
+            "kind": "subgraph",
+            "line_number": 41,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "cc692bde-d041-5adb-bec1-0e1a132b953d",
+            "target": "3ba2183a-b8a2-55fe-8d79-70101f886a3f"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_edge",
+            "file_path": "app.py",
+            "kind": "sequential",
+            "line_number": 45,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "cc692bde-d041-5adb-bec1-0e1a132b953d",
+            "target": "3fe4e3b0-fad1-5d8b-974c-7787159e57e4"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "StateGraph.add_edge(START)",
+            "file_path": "app.py",
+            "kind": "entry",
+            "line_number": 42,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "e5d8bceb-6c89-562e-b971-96029701bd33",
+            "target": "3fe4e3b0-fad1-5d8b-974c-7787159e57e4"
+          }
+        ],
+        "framework": "langgraph",
+        "harness_id": "e5d8bceb-6c89-562e-b971-96029701bd33",
+        "harness_kind": "StateGraph",
+        "label": "builder",
+        "layer_count": 3,
+        "layers": [
+          {
+            "agents": [
+              {
+                "credential_refs": [
+                  "OPENAI_API_KEY"
+                ],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "e5d8bceb-6c89-562e-b971-96029701bd33",
+                "label": "builder",
+                "layer": 0,
+                "line_number": 38,
+                "model_refs": [],
+                "parent_id": "",
+                "role": "harness",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              }
+            ],
+            "layer": 0
+          },
+          {
+            "agents": [
+              {
+                "credential_refs": [
+                  "OPENAI_API_KEY"
+                ],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "cc692bde-d041-5adb-bec1-0e1a132b953d",
+                "label": "reply_agent",
+                "layer": 1,
+                "line_number": 41,
+                "model_refs": [],
+                "parent_id": "e5d8bceb-6c89-562e-b971-96029701bd33",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              },
+              {
+                "credential_refs": [
+                  "OPENAI_API_KEY"
+                ],
+                "dynamic_edges": false,
+                "entry": true,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "3fe4e3b0-fad1-5d8b-974c-7787159e57e4",
+                "label": "supervisor",
+                "layer": 1,
+                "line_number": 39,
+                "model_refs": [],
+                "parent_id": "e5d8bceb-6c89-562e-b971-96029701bd33",
+                "role": "orchestrator",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              },
+              {
+                "credential_refs": [
+                  "OPENAI_API_KEY"
+                ],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "b571cbb5-e4b5-5c2c-bc97-0fc731f329a7",
+                "label": "triage_agent",
+                "layer": 1,
+                "line_number": 40,
+                "model_refs": [],
+                "parent_id": "e5d8bceb-6c89-562e-b971-96029701bd33",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              }
+            ],
+            "layer": 1
+          },
+          {
+            "agents": [
+              {
+                "credential_refs": [
+                  "OPENAI_API_KEY"
+                ],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "3ba2183a-b8a2-55fe-8d79-70101f886a3f",
+                "label": "reply_agent",
+                "layer": 2,
+                "line_number": 27,
+                "model_refs": [
+                  "openai:gpt-4o-mini"
+                ],
+                "parent_id": "cc692bde-d041-5adb-bec1-0e1a132b953d",
+                "role": "subgraph",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": [
+                  "draft_reply"
+                ]
+              },
+              {
+                "credential_refs": [
+                  "OPENAI_API_KEY"
+                ],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "langgraph",
+                "id": "22c84fa0-6317-5869-be42-63943b25b83d",
+                "label": "triage_agent",
+                "layer": 2,
+                "line_number": 26,
+                "model_refs": [
+                  "openai:gpt-4o-mini"
+                ],
+                "parent_id": "b571cbb5-e4b5-5c2c-bc97-0fc731f329a7",
+                "role": "subgraph",
+                "security": {
+                  "findings": 2,
+                  "max_finding_severity": "high",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": [
+                  "lookup_ticket"
+                ]
+              }
+            ],
+            "layer": 2
+          }
+        ],
+        "line_number": 38,
+        "models": [
+          "openai:gpt-4o-mini"
+        ],
+        "orchestrator_ids": [
+          "3fe4e3b0-fad1-5d8b-974c-7787159e57e4"
+        ],
+        "security": {
+          "agents_with_findings": 1,
+          "credential_refs": [
+            "OPENAI_API_KEY"
+          ],
+          "findings": 2,
+          "max_risk_score": 0.0,
+          "max_severity": "high"
+        },
+        "truncated": {
+          "agents": false,
+          "flow_edges": false
+        },
+        "unresolved_route_count": 0,
+        "unresolved_routes": []
+      }
+    ],
+    "pagination": {
+      "cursor": "",
+      "has_more": true,
+      "limit": 2,
+      "next_cursor": "eyJ2IjoxLCJzY29wZSI6IjlmYTU4NDI1MjhkZjE5NWQ4ODgwYWNiYjNhZTAwN2RjOGNmNWY0NjkzYjdiZWNkNTM2MjZkMTUzMWNiYTI4OGQiLCJyZXZpc2lvbiI6Imdlbi1wcm9vZi0xIiwib2Zmc2V0IjoyfQ==",
+      "offset": 0,
+      "returned": 2,
+      "total": 3
+    },
+    "scan_id": "scan-proof-agent-harness",
+    "schema_version": "v1",
+    "snapshot_generation": "gen-proof-1",
+    "summary": {
+      "framework_agents": 18,
+      "frameworks": {
+        "crewai": 3,
+        "langgraph": 14
+      },
+      "harnesses": 3,
+      "placed_agents": 17,
+      "unplaced_framework_agents": 1
+    },
+    "tenant_id": "default"
+  },
+  "second_page": {
+    "coverage": {
+      "complete": true,
+      "framework_agent_cap": 5000,
+      "frameworks_modelled": [
+        "langgraph",
+        "crewai"
+      ],
+      "gaps": [
+        "CrewAI manager_agent, tasks and process order are not modelled as delegation; crews show their declared members only.",
+        "AutoGen speaker selection and OpenAI Agents SDK handoffs are not modelled yet.",
+        "Model references are listed only where the source passes a literal model name or a module-level binding to one.",
+        "Edges are declared from source code; observed runtime paths are not compared here."
+      ],
+      "model": "agent-harness.v1",
+      "provenance": "declared"
+    },
+    "harnesses": [
+      {
+        "agent_count": 3,
+        "declared_in": null,
+        "entry_agent_ids": [],
+        "file_path": "app.py",
+        "flow_edges": [
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "medium",
+            "evidence": "shared Crew membership",
+            "file_path": "app.py",
+            "kind": "peer",
+            "line_number": 19,
+            "provenance": "declared",
+            "relationship": "shares_server",
+            "source": "41af73f3-a5ef-55e0-898b-5144d3dbe5eb",
+            "target": "3c12dd54-b349-53a8-a8bf-0a76d220a4e3"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "Crew(agents=[...])",
+            "file_path": "app.py",
+            "kind": "member",
+            "line_number": 19,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "d9c60f60-bf46-5944-9d42-dd358f4c55e3",
+            "target": "3c12dd54-b349-53a8-a8bf-0a76d220a4e3"
+          },
+          {
+            "branches": [],
+            "conditional": false,
+            "confidence": "high",
+            "evidence": "Crew(agents=[...])",
+            "file_path": "app.py",
+            "kind": "member",
+            "line_number": 19,
+            "provenance": "declared",
+            "relationship": "delegated_to",
+            "source": "d9c60f60-bf46-5944-9d42-dd358f4c55e3",
+            "target": "41af73f3-a5ef-55e0-898b-5144d3dbe5eb"
+          }
+        ],
+        "framework": "crewai",
+        "harness_id": "d9c60f60-bf46-5944-9d42-dd358f4c55e3",
+        "harness_kind": "Crew",
+        "label": "crew",
+        "layer_count": 2,
+        "layers": [
+          {
+            "agents": [
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "crewai",
+                "id": "d9c60f60-bf46-5944-9d42-dd358f4c55e3",
+                "label": "crew",
+                "layer": 0,
+                "line_number": 19,
+                "model_refs": [],
+                "parent_id": "",
+                "role": "harness",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": []
+              }
+            ],
+            "layer": 0
+          },
+          {
+            "agents": [
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "crewai",
+                "id": "41af73f3-a5ef-55e0-898b-5144d3dbe5eb",
+                "label": "Evidence Reader",
+                "layer": 1,
+                "line_number": 15,
+                "model_refs": [],
+                "parent_id": "d9c60f60-bf46-5944-9d42-dd358f4c55e3",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": [
+                  "read_evidence"
+                ]
+              },
+              {
+                "credential_refs": [],
+                "dynamic_edges": false,
+                "entry": false,
+                "file_path": "app.py",
+                "framework": "crewai",
+                "id": "3c12dd54-b349-53a8-a8bf-0a76d220a4e3",
+                "label": "Report Writer",
+                "layer": 1,
+                "line_number": 16,
+                "model_refs": [],
+                "parent_id": "d9c60f60-bf46-5944-9d42-dd358f4c55e3",
+                "role": "sub_agent",
+                "security": {
+                  "findings": 0,
+                  "max_finding_severity": "",
+                  "reach": {},
+                  "risk_score": 0.0,
+                  "severity": ""
+                },
+                "tools": [
+                  "format_report"
+                ]
+              }
+            ],
+            "layer": 1
+          }
+        ],
+        "line_number": 19,
+        "models": [],
+        "orchestrator_ids": [],
+        "security": {
+          "agents_with_findings": 0,
+          "credential_refs": [],
+          "findings": 0,
+          "max_risk_score": 0.0,
+          "max_severity": ""
+        },
+        "truncated": {
+          "agents": false,
+          "flow_edges": false
+        },
+        "unresolved_route_count": 0,
+        "unresolved_routes": []
+      }
+    ],
+    "pagination": {
+      "cursor": "",
+      "has_more": false,
+      "limit": 2,
+      "next_cursor": "",
+      "offset": 2,
+      "returned": 1,
+      "total": 3
+    },
+    "scan_id": "scan-proof-agent-harness",
+    "schema_version": "v1",
+    "snapshot_generation": "gen-proof-1",
+    "summary": {
+      "framework_agents": 18,
+      "frameworks": {
+        "crewai": 3,
+        "langgraph": 14
+      },
+      "harnesses": 3,
+      "placed_agents": 17,
+      "unplaced_framework_agents": 1
+    },
+    "tenant_id": "default"
+  }
+}
