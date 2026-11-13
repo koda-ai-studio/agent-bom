@@ -17125,6 +17125,11 @@ export interface components {
             count: number;
             /** Id */
             id: string;
+            /**
+             * On Attack Path
+             * @description Carries a hop of one of the snapshot's 10 highest-risk attack paths
+             */
+            on_attack_path: boolean;
             /** Relationships */
             relationships: components["schemas"]["GraphClusterRelationshipCount"][];
             /** Risky */

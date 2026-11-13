@@ -28,10 +28,14 @@ export function ClusterGroupCard({ data }: NodeProps<ClusterCardNode>) {
   return <div className="cluster-card" data-testid="cluster-group" data-tone={tone(node.worst_severity)} data-risky={Boolean(node.risky)} data-expanded={Boolean(node.expanded)}
     aria-label={`${node.label}: ${count.toLocaleString()} ${count === 1 ? "member" : "members"}, ${severityWords(node).toLowerCase()}. ${node.expanded ? "Collapse" : "Expand"}.`}>
     <Handles />
-    <span className="cluster-card-title" title={node.label}>{node.label}</span>
-    <span className="cluster-card-meta">{count.toLocaleString()} {count === 1 ? "member" : "members"}{folded}{shown}</span>
-    <span className="cluster-card-meta">{severityWords(node)}</span>
-    {(node.on_attack_path_count ?? 0) > 0 && <span className="cluster-card-path">{node.on_attack_path_count} on an attack path</span>}
+    <span className="cluster-card-row" title={`${node.label} · ${count.toLocaleString()} ${count === 1 ? "member" : "members"}${folded}${shown}`}>
+      <span className="cluster-card-title">{node.label}</span>
+      <span className="cluster-card-count">{count.toLocaleString()}</span>
+    </span>
+    <span className="cluster-card-row">
+      <span className="cluster-chip" data-tone={tone(node.worst_severity)} title={severityWords(node)}>{tone(node.worst_severity) === "none" ? "no critical/high" : `Worst: ${node.worst_severity}`}</span>
+      {(node.on_attack_path_count ?? 0) > 0 && <span className="cluster-card-path">{node.on_attack_path_count!.toLocaleString()} on path</span>}
+    </span>
   </div>;
 }
 

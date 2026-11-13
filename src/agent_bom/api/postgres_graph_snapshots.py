@@ -42,12 +42,12 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
         with _tenant_connection(self._pool) as conn:
             return count_snapshot_nodes(conn, tenant_id, scan_ids, entity_type, postgres=True)
 
-    def load_cluster_rows(self, *, tenant_id: str = "", scan_id: str = "") -> tuple[list[Any], list[Any], set[str]]:
+    def load_cluster_rows(self, *, tenant_id: str = "", scan_id: str = "") -> tuple[list[Any], list[Any], set[str], set[Any]]:
         """Lean grouped-map projection of one snapshot, read in one repeatable-read transaction under the tenant's RLS."""
         tenant_id = normalize_graph_tenant_id(tenant_id)
         scan_id = scan_id or self.latest_snapshot_id(tenant_id=tenant_id)
         if not scan_id:
-            return [], [], set()
+            return [], [], set(), set()
         with _tenant_connection(self._pool, repeatable_read=True) as conn:
             return load_cluster_rows(conn, tenant_id=tenant_id, scan_id=scan_id, postgres=True)
 

@@ -100,11 +100,17 @@ class _Frame:
         return self.vis(self.index.cluster_of[idx])
 
 
-def _bundle_totals(frame: _Frame) -> tuple[Counter[tuple[Optional[str], Optional[str], int]], dict[str, int]]:
+def _bundle_totals(
+    frame: _Frame,
+) -> tuple[Counter[tuple[Optional[str], Optional[str], int]], Counter[tuple[Optional[str], Optional[str]]], dict[str, int]]:
     index = frame.index
     totals: Counter[tuple[Optional[str], Optional[str], int]] = Counter()
     for (cs, ct, rel), count in index.level0.items():
         totals[(frame.vis(cs), frame.vis(ct), rel)] += count
+    # Path hops per drawn pair, moved with their edges exactly like the counts above.
+    path: Counter[tuple[Optional[str], Optional[str]]] = Counter()
+    for (cs, ct, _rel), count in index.path_level0.items():
+        path[(frame.vis(cs), frame.vis(ct))] += count
     seen: set[int] = set()
     for idx in frame.shown_set:
         for edge in index.incident_edges(idx):
@@ -114,7 +120,10 @@ def _bundle_totals(frame: _Frame) -> tuple[Counter[tuple[Optional[str], Optional
             s, t, rel = index.edge_source[edge], index.edge_target[edge], index.edge_rel[edge]
             totals[(frame.vis(index.cluster_of[s]), frame.vis(index.cluster_of[t]), rel)] -= 1
             totals[(frame.rep(s), frame.rep(t), rel)] += 1
-    return totals, {"edges_scanned": len(seen), "bundles_considered": len(index.level0)}
+            if index.edge_on_path[edge]:
+                path[(frame.vis(index.cluster_of[s]), frame.vis(index.cluster_of[t]))] -= 1
+                path[(frame.rep(s), frame.rep(t))] += 1
+    return totals, path, {"edges_scanned": len(seen), "bundles_considered": len(index.level0)}
 
 
 def _cluster_node(cluster: LeafCluster, *, expanded: bool, shown: int) -> dict[str, Any]:
@@ -220,7 +229,7 @@ def _select_edges(bundles: list[dict[str, Any]], node_order: list[str], cap: int
 
 def _bundles(frame: _Frame, risky_ids: set[str], shown_ids: set[str]) -> tuple[list[dict[str, Any]], int, int, dict[str, int]]:
     """Group-pair bundles with their per-relationship counts, plus the edges filtered out and the edges inside one node."""
-    totals, cost = _bundle_totals(frame)
+    totals, path, cost = _bundle_totals(frame)
     pairs: dict[tuple[str, str], Counter[str]] = defaultdict(Counter)
     filtered = internal = 0
     for (a, b, rel), count in totals.items():
@@ -242,7 +251,8 @@ def _bundles(frame: _Frame, risky_ids: set[str], shown_ids: set[str]) -> tuple[l
             "count": sum(rels.values()),
             "relationships": [{"relationship": rel, "count": n} for rel, n in sorted(rels.items(), key=lambda item: (-item[1], item[0]))],
             "risky": a in risky_ids and b in risky_ids,
-            "priority": 2 * (a in shown_ids or b in shown_ids) + (a in risky_ids) + (b in risky_ids),
+            "on_attack_path": path[(a, b)] > 0,
+            "priority": 4 * (path[(a, b)] > 0) + 2 * (a in shown_ids or b in shown_ids) + (a in risky_ids) + (b in risky_ids),
         }
         for (a, b), rels in pairs.items()
     ]

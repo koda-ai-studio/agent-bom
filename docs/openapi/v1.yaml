@@ -15408,6 +15408,11 @@ components:
         id:
           title: Id
           type: string
+        on_attack_path:
+          description: Carries a hop of one of the snapshot's 10 highest-risk attack
+            paths
+          title: On Attack Path
+          type: boolean
         relationships:
           items:
             $ref: '#/components/schemas/GraphClusterRelationshipCount'
@@ -15429,6 +15434,7 @@ components:
       - count
       - relationships
       - risky
+      - on_attack_path
       title: GraphClusterMapEdge
       type: object
     GraphClusterMapFilters:

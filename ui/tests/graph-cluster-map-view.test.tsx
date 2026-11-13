@@ -38,8 +38,8 @@ function frame(params: URLSearchParams): ClusterMapResponse {
   return {
     scan_id: "s1", tenant_id: "default", mode: "cluster_map", tiers: [], nodes, clusters: [], filters: { risky_only: params.get("risky_only") === "true", member_limit: 2 },
     edges: [
-      { id: "a->s", source: "@group:type:agent", target: "@group:type:server", count: 3, risky: false, relationships: [{ relationship: "uses", count: 3 }] },
-      { id: "s->n", source: "@group:type:server", target: npmOpen ? "@more:package:npm" : "@group:package:npm", count: npmOpen ? 8 : 10, risky: false, relationships: [{ relationship: "depends_on", count: npmOpen ? 8 : 10 }] },
+      { id: "a->s", source: "@group:type:agent", target: "@group:type:server", count: 3, risky: false, on_attack_path: false, relationships: [{ relationship: "uses", count: 3 }] },
+      { id: "s->n", source: "@group:type:server", target: npmOpen ? "@more:package:npm" : "@group:package:npm", count: npmOpen ? 8 : 10, risky: false, on_attack_path: false, relationships: [{ relationship: "depends_on", count: npmOpen ? 8 : 10 }] },
     ],
     focus: focus ? { node_id: focus, cluster_id: "@group:package:npm", found: true } : null,
     summary: { total_nodes: 16, total_edges: 13, cluster_count: 4, listed_cluster_count: 4, visible_cluster_count: 4, folded_cluster_count: 0, filtered_node_count: 0, filtered_edge_count: 0, internal_edge_count: 0,
@@ -63,10 +63,11 @@ describe("grouped map", () => {
     renderMap();
     await waitFor(() => expect(screen.getAllByTestId("cluster-group")).toHaveLength(4));
     const npm = screen.getAllByTestId("cluster-group").find(card => card.textContent?.includes("package:npm"))!;
-    expect(npm.textContent).toContain("10 members");
+    expect(npm.getAttribute("aria-label")).toContain("10 members");
+    expect(npm.querySelector(".cluster-card-count")?.textContent).toBe("10");
     expect(npm.textContent).toContain("Worst: critical");
     expect(npm.getAttribute("data-risky")).toBe("true");
-    expect(screen.getByText("1 on an attack path")).toBeTruthy();
+    expect(screen.getByText("1 on path")).toBeTruthy();
     expect(screen.getByTestId("cluster-map-summary").textContent).toContain("4 groups of 16 nodes");
     expect(lastParams().get("scan_id")).toBe("s1");
   });

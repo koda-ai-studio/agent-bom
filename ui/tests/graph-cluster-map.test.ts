@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clusterMapLayout, displayBundles, frameId, routeCards } from "@/lib/graph-cluster-layout";
+import { clusterMapLayout, columnsPerBand, displayBundles, frameId, overviewBundles, routeCards } from "@/lib/graph-cluster-layout";
 import {
   CLUSTER_MAP_ELEMENT_BUDGET,
   INITIAL_CLUSTER_MAP_STATE,
@@ -14,7 +14,7 @@ import {
   type ClusterMapEdge,
   type ClusterMapNode,
 } from "@/lib/graph-cluster-map";
-import { boxesIntersect, pathCrossesBox, roundedPath, routeBundles, type Box } from "@/lib/graph-cluster-routes";
+import { boxesIntersect, labelDistance, orderLanes, pathCrossesBox, roundedPath, routeBundles, type Box } from "@/lib/graph-cluster-routes";
 
 const cluster = (key: string, tier: number, extra: Partial<ClusterMapNode> = {}): ClusterMapNode => ({
   id: `@group:${key}`, kind: "cluster", cluster_key: key, label: key, tier, member_count: 3, worst_severity: "none", risky: false, expanded: false, ...extra,
@@ -22,7 +22,7 @@ const cluster = (key: string, tier: number, extra: Partial<ClusterMapNode> = {})
 const member = (id: string, clusterKey: string, tier: number): ClusterMapNode => ({ id, kind: "member", cluster_id: `@group:${clusterKey}`, label: id, tier, severity: "none" });
 const more = (clusterKey: string, tier: number, count: number): ClusterMapNode => ({ id: `@more:${clusterKey}`, kind: "more", cluster_id: `@group:${clusterKey}`, label: `+${count} more`, tier, count });
 const edge = (source: string, target: string, count: number, rels: Array<[string, number]> = [["depends_on", count]]): ClusterMapEdge => ({
-  id: `${source}->${target}`, source, target, count, risky: false, relationships: rels.map(([relationship, n]) => ({ relationship, count: n })),
+  id: `${source}->${target}`, source, target, count, risky: false, on_attack_path: false, relationships: rels.map(([relationship, n]) => ({ relationship, count: n })),
 });
 
 describe("bundled edge labels and card copy", () => {
@@ -77,21 +77,23 @@ function denseView() {
   const ids = nodes.map(node => node.id);
   const edges: ClusterMapEdge[] = [];
   ids.forEach((source, i) => ids.forEach((target, j) => {
-    if (i !== j && (i * 7 + j * 3) % 5 === 0) edges.push(edge(source, target, 1 + ((i + j) % 9) * 37, [["affects", 1 + ((i + j) % 9) * 37]]));
+    if (i !== j && (i * 7 + j * 3) % 5 === 0) edges.push({ ...edge(source, target, 1 + ((i + j) % 9) * 37, [["affects", 1 + ((i + j) % 9) * 37]]), on_attack_path: (i + j) % 7 === 0 });
   }));
   return { nodes, edges };
 }
 
-function routed(view: { nodes: ClusterMapNode[]; edges: ClusterMapEdge[] }, narrow: boolean, active: string | null = null) {
-  const layout = clusterMapLayout(view, { narrow });
-  const bundles = displayBundles(view, active);
-  const routes = routeBundles(routeCards(layout, active), bundles.map(b => ({ id: b.id, source: b.source, target: b.target, label: b.count > 1 ? bundleLabel(b) : null })), [...layout.cards, ...layout.frames]);
-  return { layout, bundles, routes };
+function routed(view: { nodes: ClusterMapNode[]; edges: ClusterMapEdge[] }, narrow: boolean, active: string | null = null, overview = false, width?: number) {
+  const layout = clusterMapLayout(view, { narrow, ...(width ? { width } : {}) });
+  const cards = routeCards(layout, active);
+  const all = displayBundles(view, active);
+  const bundles = overview ? overviewBundles(all, cards, { showAll: false, focusIds: [] }).shown : all;
+  const routes = routeBundles(cards, bundles.map(b => ({ id: b.id, source: b.source, target: b.target, label: b.count > 1 ? bundleLabel(b) : null })), [...layout.cards, ...layout.frames], layout.bands);
+  return { layout, bundles, routes, all };
 }
 
 describe("one reading direction", () => {
   it("draws one column per tier in the order of reach, left to right", () => {
-    const { layout } = routed(denseView(), false);
+    const { layout } = routed(denseView(), false, null, false, 5000);
     const xByTier = new Map<number, number>();
     for (const card of layout.cards) xByTier.set(card.node.tier, card.x);
     const tiers = [...xByTier.keys()].sort((a, b) => a - b);
@@ -100,7 +102,7 @@ describe("one reading direction", () => {
   });
 
   it("routes every bundle left to right; a backward relationship keeps the route and moves the arrow", () => {
-    const { routes, layout } = routed(denseView(), false);
+    const { routes, layout } = routed(denseView(), false, null, false, 5000);
     const cards = new Map(layout.cards.map(card => [card.node.id, card]));
     for (const route of routes) {
       const first = route.points[0]!, last = route.points.at(-1)!;
@@ -180,7 +182,7 @@ describe("expanded groups", () => {
 
   it("draws one bundle to the group's frame carrying the whole count", () => {
     const { bundles, layout, routes } = routed(view, false);
-    expect(bundles).toEqual([{ id: `@group:type:server->${frameId("@group:package:npm")}`, source: "@group:type:server", target: frameId("@group:package:npm"), count: 7, relationships: [{ relationship: "depends_on", count: 7 }], member: false }]);
+    expect(bundles).toEqual([{ id: `@group:type:server->${frameId("@group:package:npm")}`, source: "@group:type:server", target: frameId("@group:package:npm"), count: 7, relationships: [{ relationship: "depends_on", count: 7 }], member: false, path: false }]);
     expect(layout.frames).toHaveLength(1);
     const frame = layout.frames[0]!;
     for (const card of layout.cards.filter(item => item.node.cluster_id === "@group:package:npm" || item.node.id === "@group:package:npm")) {
@@ -195,5 +197,71 @@ describe("expanded groups", () => {
     expect(total).toBe(7);
     expect(bundles.find(bundle => bundle.target === "pkg:2")).toMatchObject({ count: 1, member: true });
     expect(bundles.find(bundle => bundle.target === frameId("@group:package:npm"))!.count).toBe(6);
+  });
+});
+
+describe("the overview", () => {
+  it("draws only bundles between adjacent columns or on an attack path, and counts the rest", () => {
+    for (const narrow of [false, true]) {
+      const { routes, all, layout } = routed(denseView(), narrow, null, true);
+      const column = new Map(layout.cards.map(card => [card.node.id, card.column]));
+      const byId = new Map(all.map(bundle => [bundle.id, bundle]));
+      expect(routes.length).toBeGreaterThan(0);
+      for (const route of routes) {
+        const bundle = byId.get(route.id)!;
+        expect(Math.abs(column.get(bundle.source)! - column.get(bundle.target)!) === 1 || bundle.path, route.id).toBe(true);
+      }
+      expect(routes.length).toBeLessThan(all.length);
+    }
+  });
+
+  it("reveals a pointed-at group's hidden links, and every link with 'Show all links'", () => {
+    const { layout, all } = routed(denseView(), false);
+    const cards = routeCards(layout, null);
+    const hidden = overviewBundles(all, cards, { showAll: false, focusIds: [] }).hidden;
+    expect(hidden.length).toBeGreaterThan(0);
+    const focus = hidden[0]!.source;
+    const revealed = overviewBundles(all, cards, { showAll: false, focusIds: [focus] });
+    expect(revealed.shown.some(bundle => bundle.id === hidden[0]!.id)).toBe(true);
+    expect(overviewBundles(all, cards, { showAll: true, focusIds: [] }).hidden).toEqual([]);
+  });
+
+  it("wraps columns into bands that fit the canvas width, keeping tier order", () => {
+    const view = denseView();
+    for (const width of [700, 1200, 2400]) {
+      const { layout } = routed(view, false, null, true, width);
+      const right = Math.max(...layout.cards.map(card => card.x + card.width));
+      const columns = new Set(layout.cards.map(card => card.column)).size;
+      expect(right).toBeLessThanOrEqual(Math.max(width, 204));
+      expect(new Set(layout.cards.map(card => card.band)).size).toBe(Math.ceil(columns / columnsPerBand(columns, width)));
+      const sorted = [...layout.cards].sort((a, b) => a.band - b.band || a.slot - b.slot);
+      for (let i = 1; i < sorted.length; i++) expect(sorted[i]!.column).toBeGreaterThanOrEqual(sorted[i - 1]!.column);
+      for (let i = 0; i + 1 < layout.bands.length; i++) expect(layout.bands[i]!.bottom).toBeLessThan(layout.bands[i + 1]!.top);
+    }
+  });
+
+  it("keeps every visible label on a straight run of its own route", () => {
+    for (const narrow of [false, true]) for (const overview of [false, true]) {
+      const { routes } = routed(denseView(), narrow, null, overview, 900);
+      for (const route of routes) if (route.label?.placed) expect(labelDistance(route.label, route.points), route.id).toBeLessThanOrEqual(8);
+    }
+  });
+
+  it("never routes through a card when columns wrap into bands", () => {
+    const { routes, layout } = routed(denseView(), false, null, false, 700);
+    expect(layout.bands.length).toBeGreaterThan(1);
+    for (const route of routes) {
+      const [source, target] = route.id.split("->");
+      for (const card of layout.cards) if (card.node.id !== source && card.node.id !== target) expect(pathCrossesBox(route.points, card), `${route.id} through ${card.node.id}`).toBe(false);
+    }
+  });
+});
+
+describe("lane order", () => {
+  it("places lanes so that stubs cross as few runs as possible", () => {
+    // Both run downwards: the lane that starts higher goes outside (right), so neither stub crosses the other's run.
+    expect(orderLanes([{ key: "high", fromLeft: [0], toRight: [200] }, { key: "low", fromLeft: [100], toRight: [300] }])).toEqual(["low", "high"]);
+    // Both run upwards: the lane that starts lower goes outside.
+    expect(orderLanes([{ key: "a", fromLeft: [300], toRight: [100] }, { key: "b", fromLeft: [200], toRight: [0] }])).toEqual(["b", "a"]);
   });
 });

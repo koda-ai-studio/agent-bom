@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agent_bom.graph.cluster_index import EdgeRow, NodeRow
+from agent_bom.graph.cluster_index import TOP_PATHS_FOR_BUNDLES, EdgeRow, NodeRow, hop_pairs
 
 #: Hops of at most this many of the snapshot's highest-risk paths mark nodes as "on an attack path".
 MAX_PATHS_FOR_MEMBERSHIP = 5000
@@ -89,12 +89,15 @@ def _postgres_rows(conn: Any, params: tuple[str, str]) -> tuple[list[NodeRow], l
     return nodes, edges
 
 
-def load_cluster_rows(conn: Any, *, tenant_id: str, scan_id: str, postgres: bool = False) -> tuple[list[NodeRow], list[EdgeRow], set[str]]:
+def load_cluster_rows(
+    conn: Any, *, tenant_id: str, scan_id: str, postgres: bool = False
+) -> tuple[list[NodeRow], list[EdgeRow], set[str], set[tuple[str, str]]]:
     """Nodes, edges and attack-path hops of one resolved snapshot, scoped to one tenant."""
     m = "%s" if postgres else "?"
     params = (tenant_id, scan_id)
     nodes, edges = _postgres_rows(conn, params) if postgres else _sqlite_rows(conn, params)
     hops: set[str] = set()
+    paths: list[list[str]] = []
     for (path_nodes,) in conn.execute(
         f"""SELECT path_nodes FROM attack_paths WHERE tenant_id = {m} AND scan_id = {m}
             ORDER BY composite_risk DESC LIMIT {m}""",  # nosec B608
@@ -105,8 +108,10 @@ def load_cluster_rows(conn: Any, *, tenant_id: str, scan_id: str, postgres: bool
         except (TypeError, ValueError):
             continue
         if isinstance(decoded, list):
-            hops.update(str(hop) for hop in decoded if isinstance(hop, str))
-    return nodes, edges, hops
+            path = [str(hop) for hop in decoded if isinstance(hop, str)]
+            hops.update(path)
+            paths.append(path)
+    return nodes, edges, hops, hop_pairs(paths[:TOP_PATHS_FOR_BUNDLES])
 
 
 __all__ = ["MAX_PATHS_FOR_MEMBERSHIP", "load_cluster_rows"]

@@ -274,3 +274,40 @@ def test_a_view_costs_what_it_draws_not_the_size_of_the_estate() -> None:
         assert view["cost"]["edges_scanned"] == 8 * 2
         assert view["cost"]["bundles_considered"] <= 16
     assert len(small.edge_source) * 10 < len(large.edge_source)
+
+
+def test_bundles_that_carry_an_attack_path_hop_are_marked() -> None:
+    view = cluster_map_view(ClusterIndex.from_graph(estate()))
+    ids = {node["cluster_key"]: node["id"] for node in view["nodes"] if node["kind"] == "cluster"}
+    flags = {(edge["source"], edge["target"]): edge["on_attack_path"] for edge in view["edges"]}
+    assert flags[(ids["type:agent"], ids["type:server"])] is True
+    assert flags[(ids["type:server"], ids["package:npm"])] is True
+    assert flags[(ids["package:npm"], ids["finding:critical"])] is True
+    assert flags[(ids["type:server"], ids["type:credential"])] is False
+    assert flags[(ids["type:provider"], ids["type:account"])] is False
+    # Expanding keeps the flag exact: the hop moves to the member that carries it.
+    opened = cluster_map_view(ClusterIndex.from_graph(estate()), expanded=[ids["package:npm"]], member_limit=3)
+    on_path = {(edge["source"], edge["target"]) for edge in opened["edges"] if edge["on_attack_path"]}
+    assert (ids["type:server"], "pkg:n1") in on_path
+    assert (ids["type:server"], "@more:package:npm") not in on_path
+
+
+def test_only_the_highest_risk_paths_mark_bundles() -> None:
+    from agent_bom.graph.cluster_index import TOP_PATHS_FOR_BUNDLES
+
+    graph = estate()
+    graph.attack_paths[0].composite_risk = 90.0
+    for i in range(TOP_PATHS_FOR_BUNDLES):
+        graph.attack_paths.append(
+            AttackPath(source="agent:a", target="pkg:n1", hops=["agent:a", "server:s1", "pkg:n1"], edges=[], composite_risk=80.0 - i)
+        )
+    graph.attack_paths.append(
+        AttackPath(source="server:s1", target="cred:key", hops=["server:s1", "cred:key"], edges=[], composite_risk=1.0)
+    )
+    view = cluster_map_view(ClusterIndex.from_graph(graph))
+    ids = {node["cluster_key"]: node["id"] for node in view["nodes"] if node["kind"] == "cluster"}
+    flags = {(edge["source"], edge["target"]): edge["on_attack_path"] for edge in view["edges"]}
+    assert flags[(ids["type:server"], ids["type:credential"])] is False
+    assert flags[(ids["type:agent"], ids["type:server"])] is True
+    # Membership of nodes still counts every stored path.
+    assert next(node for node in view["nodes"] if node.get("cluster_key") == "type:credential")["on_attack_path_count"] == 1

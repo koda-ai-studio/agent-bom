@@ -1,28 +1,30 @@
 /**
  * Orthogonal bundle routing and label placement for the grouped map.
  *
- * Cards sit in columns; every bundle leaves its left card's right side and
- * enters its right card's left side, so the map reads in one direction (a
- * bundle whose relationship points backwards keeps the same route and draws
- * its arrow at the start). Vertical runs only use the gaps between columns:
- * all bundles leaving one card share one lane in the gap after it, and every
- * long bundle entering one card shares one lane in the gap before it.
- * Bundles that skip columns cross over the top or bottom of the map, never
- * through a card. Labels go where they touch no card and no other label;
- * a label that fits nowhere is hidden and shown on hover or focus instead.
+ * Cards sit in column slots, and slots may wrap into bands stacked top to
+ * bottom. Every bundle leaves its left card's right side and enters its right
+ * card's left side, so the map reads in one direction (a bundle whose
+ * relationship points backwards keeps the route and draws its arrow at the
+ * start). Vertical runs only use the gaps between slots, which line up across
+ * bands: all bundles leaving one card share one lane in the gap after it, and
+ * every corridor bundle entering a card shares one lane in the gap before it.
+ * Bundles that skip slots or change band cross in the corridor between bands,
+ * never through a card. Each label sits centred on a straight run of its own
+ * route where it touches no card and no other label; a label that fits
+ * nowhere is hidden and shown on hover instead.
  */
 
 export interface Point { x: number; y: number }
 export interface Box { x: number; y: number; width: number; height: number }
-export interface RouteCard extends Box { id: string; column: number }
+export interface RouteCard extends Box { id: string; column: number; band: number; slot: number }
+export interface RouteBand { top: number; bottom: number }
 export interface RouteBundle { id: string; source: string; target: string; label: string | null }
 export interface RouteLabel extends Box { text: string; placed: boolean }
 export interface BundleRoute { id: string; points: Point[]; reversed: boolean; label: RouteLabel | null }
 
-const GUTTER = 48;
-const LANE_MARGIN = 20;
-const BUS_GAP = 26;
-const BUS_STEP = 10;
+const GUTTER = 44;
+const LANE_MARGIN = 16;
+const CORRIDOR = 56;
 const LABEL_H = 18;
 const LABEL_PAD = 8;
 /** Average glyph advance of the 12px label font; a slight over-estimate keeps placement conservative. */
@@ -37,113 +39,155 @@ export function boxesIntersect(a: Box, b: Box, inflate = 0): boolean {
 const right = (card: Box): Point => ({ x: card.x + card.width, y: card.y + card.height / 2 });
 const left = (card: Box): Point => ({ x: card.x, y: card.y + card.height / 2 });
 
-interface Plan { bundle: RouteBundle; a: RouteCard; b: RouteCard; reversed: boolean; kind: "same-down" | "same-up" | "adjacent" | "long"; bus?: "top" | "bottom" }
+type Kind = "same-down" | "adjacent" | "corridor";
+interface Plan { bundle: RouteBundle; a: RouteCard; b: RouteCard; reversed: boolean; kind: Kind; corridor: number }
 
-function columnExtents(cards: RouteCard[]) {
-  const columns = new Map<number, { left: number; right: number }>();
+/** Free horizontal band of each slot gap: gap k lies after slot k (k = -1 is the left gutter). */
+function slotGaps(cards: RouteCard[]) {
+  const slots = new Map<number, { left: number; right: number }>();
   for (const card of cards) {
-    const current = columns.get(card.column);
-    columns.set(card.column, current ? { left: Math.min(current.left, card.x), right: Math.max(current.right, card.x + card.width) } : { left: card.x, right: card.x + card.width });
+    const current = slots.get(card.slot);
+    slots.set(card.slot, current ? { left: Math.min(current.left, card.x), right: Math.max(current.right, card.x + card.width) } : { left: card.x, right: card.x + card.width });
   }
-  return columns;
-}
-
-/** The free band after column `k` (k = -1 is the left gutter). */
-function gapBand(columns: Map<number, { left: number; right: number }>, k: number) {
-  const keys = [...columns.keys()].sort((p, q) => p - q);
-  const first = columns.get(keys[0]!)!, last = columns.get(keys.at(-1)!)!;
-  const after = keys.filter(key => key <= k).at(-1);
-  const before = keys.find(key => key > k);
-  return {
-    left: after === undefined ? first.left - GUTTER : columns.get(after)!.right,
-    right: before === undefined ? last.right + GUTTER : columns.get(before)!.left,
+  const keys = [...slots.keys()].sort((p, q) => p - q);
+  return (k: number) => {
+    const after = keys.filter(key => key <= k).at(-1), before = keys.find(key => key > k);
+    return {
+      left: after === undefined ? slots.get(keys[0]!)!.left - GUTTER : slots.get(after)!.right,
+      right: before === undefined ? slots.get(keys.at(-1)!)!.right + GUTTER : slots.get(before)!.left,
+    };
   };
 }
 
-function plan(bundles: RouteBundle[], byId: Map<string, RouteCard>, midY: number): Plan[] {
+/** Corridor c runs above band c (c = bands.length is below the last band). */
+function corridorSpan(bands: RouteBand[], c: number) {
+  if (c <= 0) return { top: bands[0]!.top - CORRIDOR, bottom: bands[0]!.top };
+  if (c >= bands.length) return { top: bands.at(-1)!.bottom, bottom: bands.at(-1)!.bottom + CORRIDOR };
+  return { top: bands[c - 1]!.bottom, bottom: bands[c]!.top };
+}
+
+function plan(bundles: RouteBundle[], byId: Map<string, RouteCard>, bands: RouteBand[]): Plan[] {
   const plans: Plan[] = [];
   for (const bundle of bundles) {
     const s = byId.get(bundle.source), t = byId.get(bundle.target);
     if (!s || !t || s.id === t.id) continue;
     const reversed = s.column > t.column;
     const [a, b] = reversed ? [t, s] : [s, t];
-    if (a.column === b.column) plans.push({ bundle, a, b, reversed: false, kind: b.y >= a.y ? "same-down" : "same-up" });
-    else if (b.column === a.column + 1) plans.push({ bundle, a, b, reversed, kind: "adjacent" });
-    else plans.push({ bundle, a, b, reversed, kind: "long", bus: (a.y + b.y + a.height / 2 + b.height / 2) / 2 < midY ? "top" : "bottom" });
+    // Stacked in one slot (one tier, or anything on a phone): the lane beside the stack.
+    if (a.slot === b.slot && a.band === b.band) {
+      const down = b.y >= a.y;
+      plans.push({ bundle, a: down ? a : b, b: down ? b : a, reversed: down ? reversed : !reversed, kind: "same-down", corridor: 0 });
+      continue;
+    }
+    if (a.band === b.band && b.slot === a.slot + 1) { plans.push({ bundle, a, b, reversed, kind: "adjacent", corridor: 0 }); continue; }
+    // Into a later band: the corridor just above it. Within one band: the corridor between it and its neighbour.
+    const corridor = b.band > a.band ? b.band : bands.length > 1 ? (a.band < bands.length - 1 ? a.band + 1 : a.band) : 0;
+    plans.push({ bundle, a, b, reversed, kind: "corridor", corridor });
   }
   return plans;
 }
 
-/** One lane per key inside a gap, spread across it and ordered by the anchor card's height so lanes cross less. */
-function assignLanes(requests: Array<{ gap: number; key: string; y: number }>, columns: Map<number, { left: number; right: number }>) {
-  const byGap = new Map<number, Map<string, number>>();
-  for (const { gap, key, y } of requests) {
-    const keys = byGap.get(gap) ?? new Map<string, number>();
-    keys.set(key, Math.min(keys.get(key) ?? Number.POSITIVE_INFINITY, y));
-    byGap.set(gap, keys);
+/** Spread keys, in the given order, evenly across a span. */
+function spread(ordered: string[], from: number, to: number) {
+  const usable = Math.max(to - from - 2 * LANE_MARGIN, 4);
+  return new Map(ordered.map((key, index) => [key, from + LANE_MARGIN + (usable * (index + 0.5)) / ordered.length]));
+}
+
+/** A vertical lane: where stubs join it from the left and where they leave it to the right. */
+interface Lane { key: string; fromLeft: number[]; toRight: number[] }
+
+const span = (lane: Lane) => { const ys = [...lane.fromLeft, ...lane.toRight]; return [Math.min(...ys), Math.max(...ys)] as const; };
+const within = (y: number, [lo, hi]: readonly [number, number]) => y > lo + 0.5 && y < hi - 0.5;
+
+/** Crossings when lane `l` sits left of lane `r`: r's left stubs pass l's run, l's right stubs pass r's run. */
+function pairCost(l: Lane, r: Lane): number {
+  const sl = span(l), sr = span(r);
+  return r.fromLeft.filter(y => within(y, sl)).length + l.toRight.filter(y => within(y, sr)).length;
+}
+
+/** Lane order with the fewest crossings: start from height order, then swap neighbours while it helps. */
+export function orderLanes(lanes: Lane[]): string[] {
+  const order = [...lanes].sort((a, b) => span(a)[0] - span(b)[0] || a.key.localeCompare(b.key));
+  for (let pass = 0, improved = true; improved && pass < order.length * order.length; pass++) {
+    improved = false;
+    for (let i = 0; i + 1 < order.length; i++) {
+      if (pairCost(order[i + 1]!, order[i]!) < pairCost(order[i]!, order[i + 1]!)) { [order[i], order[i + 1]] = [order[i + 1]!, order[i]!]; improved = true; }
+    }
   }
-  const lanes = new Map<string, number>();
-  for (const [gap, keys] of byGap) {
-    const band = gapBand(columns, gap);
-    const ordered = [...keys.entries()].sort((p, q) => p[1] - q[1] || p[0].localeCompare(q[0]));
-    const usable = Math.max(band.right - band.left - 2 * LANE_MARGIN, 4);
-    ordered.forEach(([key], index) => lanes.set(`${gap}|${key}`, band.left + LANE_MARGIN + (usable * (index + 0.5)) / ordered.length));
-  }
-  return lanes;
+  return order.map(lane => lane.key);
 }
 
 function labelCandidates(points: Point[]): Point[] {
   const out: Point[] = [];
   for (let i = 0; i + 1 < points.length; i++) {
     const p = points[i]!, q = points[i + 1]!;
-    const length = Math.abs(q.x - p.x) + Math.abs(q.y - p.y);
-    if (length < 24) continue;
+    if (Math.abs(q.x - p.x) + Math.abs(q.y - p.y) < 24) continue;
     for (const f of [0.5, 0.3, 0.7, 0.15, 0.85]) out.push({ x: p.x + (q.x - p.x) * f, y: p.y + (q.y - p.y) * f });
   }
   return out;
 }
 
 /** Routes for every bundle whose ends are drawn, with collision-free labels for as many as fit. */
-export function routeBundles(cards: RouteCard[], bundles: RouteBundle[], obstacles: Box[] = cards): BundleRoute[] {
+export function routeBundles(cards: RouteCard[], bundles: RouteBundle[], obstacles: Box[] = cards, bandsIn?: RouteBand[]): BundleRoute[] {
   if (!cards.length) return [];
   const byId = new Map(cards.map(card => [card.id, card]));
-  const columns = columnExtents(cards);
-  const top = Math.min(...cards.map(card => card.y)), bottom = Math.max(...cards.map(card => card.y + card.height));
-  const plans = plan(bundles, byId, (top + bottom) / 2);
+  const bands = bandsIn?.length ? bandsIn : [{ top: Math.min(...cards.map(c => c.y)), bottom: Math.max(...cards.map(c => c.y + c.height)) }];
+  const gap = slotGaps(cards);
+  const plans = plan(bundles, byId, bands);
 
-  const requests: Array<{ gap: number; key: string; y: number }> = [];
-  const busKeys = { top: new Map<string, number>(), bottom: new Map<string, number>() };
+  // Corridor heights first (ordered left to right by where they start), then lanes ordered to cross least.
+  // A corridor is a lane turned on its side: drops arrive from the band above and leave for the band below.
+  const corridorKeys = new Map<number, Map<string, Lane>>();
+  const mid = (k: number) => { const band = gap(k); return (band.left + band.right) / 2; };
+  for (const p of plans) if (p.kind === "corridor") {
+    const keys = corridorKeys.get(p.corridor) ?? new Map<string, Lane>();
+    const lane = keys.get(p.a.id) ?? { key: p.a.id, fromLeft: [], toRight: [] };
+    const above = (card: RouteCard) => card.y < corridorSpan(bands, p.corridor).top + 1;
+    for (const [card, x] of [[p.a, mid(p.a.slot)], [p.b, mid(p.b.slot - 1)]] as const) (above(card) ? lane.fromLeft : lane.toRight).push(x);
+    keys.set(p.a.id, lane);
+    corridorKeys.set(p.corridor, keys);
+  }
+  const corridors = new Map<string, number>();
+  for (const [c, keys] of corridorKeys) {
+    const range = corridorSpan(bands, c);
+    for (const [key, y] of spread(orderLanes([...keys.values()]), range.top, range.bottom)) corridors.set(`${c}|${key}`, y);
+  }
+  const laneSets = new Map<number, Map<string, Lane>>();
+  const want = (k: number, key: string, fromLeft: number[], toRight: number[]) => {
+    const keys = laneSets.get(k) ?? new Map<string, Lane>();
+    const lane = keys.get(key) ?? { key, fromLeft: [], toRight: [] };
+    lane.fromLeft.push(...fromLeft);
+    lane.toRight.push(...toRight);
+    keys.set(key, lane);
+    laneSets.set(k, keys);
+  };
   for (const p of plans) {
-    if (p.kind === "same-down") requests.push({ gap: p.a.column, key: `sd:${p.a.id}`, y: p.a.y });
-    else if (p.kind === "same-up") requests.push({ gap: p.a.column - 1, key: `su:${p.a.id}`, y: p.a.y });
-    else if (p.kind === "adjacent") requests.push({ gap: p.a.column, key: `out:${p.a.id}`, y: p.a.y });
+    const ay = right(p.a).y, by = left(p.b).y;
+    if (p.kind === "same-down") want(p.a.slot, `sd:${p.a.id}`, [ay, by], []);
+    else if (p.kind === "adjacent") want(p.a.slot, `out:${p.a.id}`, [ay], [by]);
     else {
-      requests.push({ gap: p.a.column, key: `out:${p.a.id}`, y: p.a.y }, { gap: p.b.column - 1, key: `in:${p.b.id}`, y: p.b.y });
-      const bus = busKeys[p.bus!];
-      if (!bus.has(p.a.id)) bus.set(p.a.id, bus.size);
+      const cy = corridors.get(`${p.corridor}|${p.a.id}`)!;
+      want(p.a.slot, `out:${p.a.id}`, [ay], [cy]);
+      want(p.b.slot - 1, `in:${p.b.id}`, [cy], [by]);
     }
   }
-  const lanes = assignLanes(requests, columns);
-  const lane = (gap: number, key: string) => lanes.get(`${gap}|${key}`)!;
+  const lanes = new Map<string, number>();
+  for (const [k, keys] of laneSets) { const band = gap(k); for (const [key, x] of spread(orderLanes([...keys.values()]), band.left, band.right)) lanes.set(`${k}|${key}`, x); }
+  const lane = (k: number, key: string) => lanes.get(`${k}|${key}`)!;
 
   const placed: Box[] = [];
-  const order = [...plans].sort((p, q) => Number(Boolean(q.bundle.label)) - Number(Boolean(p.bundle.label)));
   const routes = new Map<string, BundleRoute>();
-  for (const p of order) {
+  for (const p of [...plans].sort((x, y) => Number(Boolean(y.bundle.label)) - Number(Boolean(x.bundle.label)))) {
     let points: Point[];
     if (p.kind === "same-down") {
-      const x = lane(p.a.column, `sd:${p.a.id}`);
+      const x = lane(p.a.slot, `sd:${p.a.id}`);
       points = [right(p.a), { x, y: right(p.a).y }, { x, y: right(p.b).y }, right(p.b)];
-    } else if (p.kind === "same-up") {
-      const x = lane(p.a.column - 1, `su:${p.a.id}`);
-      points = [left(p.a), { x, y: left(p.a).y }, { x, y: left(p.b).y }, left(p.b)];
     } else if (p.kind === "adjacent") {
-      const x = lane(p.a.column, `out:${p.a.id}`);
+      const x = lane(p.a.slot, `out:${p.a.id}`);
       points = [right(p.a), { x, y: right(p.a).y }, { x, y: left(p.b).y }, left(p.b)];
     } else {
-      const x1 = lane(p.a.column, `out:${p.a.id}`), x2 = lane(p.b.column - 1, `in:${p.b.id}`);
-      const step = busKeys[p.bus!].get(p.a.id)! * BUS_STEP;
-      const y = p.bus === "top" ? top - BUS_GAP - step : bottom + BUS_GAP + step;
+      const x1 = lane(p.a.slot, `out:${p.a.id}`), x2 = lane(p.b.slot - 1, `in:${p.b.id}`);
+      const y = corridors.get(`${p.corridor}|${p.a.id}`)!;
       points = [right(p.a), { x: x1, y: right(p.a).y }, { x: x1, y }, { x: x2, y }, { x: x2, y: left(p.b).y }, left(p.b)];
     }
     let label: RouteLabel | null = null;
@@ -180,8 +224,19 @@ export function pathCrossesBox(points: Point[], box: Box, inset = 1): boolean {
   const x0 = box.x + inset, x1 = box.x + box.width - inset, y0 = box.y + inset, y1 = box.y + box.height - inset;
   for (let i = 0; i + 1 < points.length; i++) {
     const p = points[i]!, q = points[i + 1]!;
-    const minX = Math.min(p.x, q.x), maxX = Math.max(p.x, q.x), minY = Math.min(p.y, q.y), maxY = Math.max(p.y, q.y);
-    if (maxX > x0 && minX < x1 && maxY > y0 && minY < y1) return true;
+    if (Math.max(p.x, q.x) > x0 && Math.min(p.x, q.x) < x1 && Math.max(p.y, q.y) > y0 && Math.min(p.y, q.y) < y1) return true;
   }
   return false;
+}
+
+/** Distance from a label's centre to the nearest straight run of its route. */
+export function labelDistance(label: Box, points: Point[]): number {
+  const cx = label.x + label.width / 2, cy = label.y + label.height / 2;
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 0; i + 1 < points.length; i++) {
+    const p = points[i]!, q = points[i + 1]!;
+    const x = Math.max(Math.min(p.x, q.x), Math.min(cx, Math.max(p.x, q.x))), y = Math.max(Math.min(p.y, q.y), Math.min(cy, Math.max(p.y, q.y)));
+    best = Math.min(best, Math.hypot(cx - x, cy - y));
+  }
+  return best;
 }

@@ -204,17 +204,17 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
         finally:
             conn.close()
 
-    def load_cluster_rows(self, *, tenant_id: str = "", scan_id: str = "") -> tuple[list[Any], list[Any], set[str]]:
+    def load_cluster_rows(self, *, tenant_id: str = "", scan_id: str = "") -> tuple[list[Any], list[Any], set[str], set[Any]]:
         """Lean grouped-map projection of one snapshot, read in one transaction."""
         tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
         conn = self._open_ro_conn()
         if conn is None:
-            return [], [], set()
+            return [], [], set(), set()
         try:
             conn.execute("BEGIN")
             effective_scan_id, _created_at = sqlite_graph_store._resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
             if not effective_scan_id:
-                return [], [], set()
+                return [], [], set(), set()
             return load_cluster_rows(conn, tenant_id=tenant_id, scan_id=effective_scan_id)
         finally:
             conn.close()

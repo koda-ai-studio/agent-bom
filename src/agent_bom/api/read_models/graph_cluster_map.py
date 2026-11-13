@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import Field
+
 from agent_bom.api.read_models._base import ReadModel, ReadResponse
 
 
@@ -74,6 +76,7 @@ class GraphClusterMapEdge(ReadModel):
     count: int
     relationships: list[GraphClusterRelationshipCount]
     risky: bool
+    on_attack_path: bool = Field(description="Carries a hop of one of the snapshot's 10 highest-risk attack paths")
 
 
 class GraphClusterMapSummary(ReadModel):

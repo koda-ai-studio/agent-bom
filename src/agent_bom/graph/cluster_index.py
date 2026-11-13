@@ -25,6 +25,10 @@ from typing import Any
 
 from agent_bom.graph.cluster_classes import FINDING_TYPES, RISKY_RANK, SEVERITY_WORDS, TIERS, classify, severity_rank
 
+#: A bundle is marked as on an attack path when it carries a hop of one of this many highest-risk paths;
+#: with every path counted, an estate whose paths cover every group would mark every bundle and single out none.
+TOP_PATHS_FOR_BUNDLES = 10
+
 #: (id, entity_type, label, severity, risk_score, ecosystem, resource_type)
 NodeRow = tuple[str, str, str, str, float, str, str]
 #: (source_id, target_id, relationship)
@@ -77,7 +81,13 @@ class LeafCluster:
 class ClusterIndex:
     """Groups, ranked members, group-to-group edge counts and adjacency for one snapshot."""
 
-    def __init__(self, nodes: Sequence[NodeRow], edges: Iterable[EdgeRow], path_node_ids: Iterable[str] = ()) -> None:
+    def __init__(
+        self,
+        nodes: Sequence[NodeRow],
+        edges: Iterable[EdgeRow],
+        path_node_ids: Iterable[str] = (),
+        path_pairs: Iterable[tuple[str, str]] = (),
+    ) -> None:
         self.ids: list[str] = [row[0] for row in nodes]
         self.id_to_idx: dict[str, int] = {node_id: idx for idx, node_id in enumerate(self.ids)}
         self.labels: list[str] = [str(row[2] or row[0]) for row in nodes]
@@ -99,6 +109,12 @@ class ClusterIndex:
                 self.clusters.append(LeafCluster(len(self.clusters), group.key, group.label, group.tier))
             self.cluster_of[idx] = keys[group.key]
         self.cluster_by_key = keys
+        # Consecutive hops of the stored attack paths, either direction: an edge between them carries a path hop.
+        self.path_pairs: set[tuple[int, int]] = set()
+        for source, target in path_pairs:
+            s, t = self.id_to_idx.get(source), self.id_to_idx.get(target)
+            if s is not None and t is not None:
+                self.path_pairs.update({(s, t), (t, s)})
         self._index_edges(edges, own_rank)
         self._summarise()
 
@@ -114,6 +130,8 @@ class ClusterIndex:
         self.eff_rank = list(own_rank)
         finding = [kind in FINDING_TYPES for kind in self.types]
         level0: Counter[tuple[int, int, int]] = Counter()
+        path_level0: Counter[tuple[int, int, int]] = Counter()
+        self.edge_on_path = bytearray()
         for source, target, relationship in edges:
             s, t = self.id_to_idx.get(source), self.id_to_idx.get(target)
             if s is None or t is None:
@@ -127,12 +145,17 @@ class ClusterIndex:
             self.edge_target.append(t)
             self.edge_rel.append(rel)
             level0[(self.cluster_of[s], self.cluster_of[t], rel)] += 1
+            on_path = (s, t) in self.path_pairs
+            self.edge_on_path.append(on_path)
+            if on_path:
+                path_level0[(self.cluster_of[s], self.cluster_of[t], rel)] += 1
             # A node directly linked to a finding carries that finding's severity.
             if finding[t] and not finding[s] and own_rank[t] > self.eff_rank[s]:
                 self.eff_rank[s] = own_rank[t]
             elif finding[s] and not finding[t] and own_rank[s] > self.eff_rank[t]:
                 self.eff_rank[t] = own_rank[s]
         self.level0 = dict(level0)
+        self.path_level0 = dict(path_level0)
         self.out_start, self.out_edges = _csr(len(self.ids), self.edge_source)
         self.in_start, self.in_edges = _csr(len(self.ids), self.edge_target)
 
@@ -165,11 +188,17 @@ class ClusterIndex:
     # ── builders ────────────────────────────────────────────────────────
 
     @classmethod
-    def from_rows(cls, nodes: Sequence[NodeRow], edges: Iterable[EdgeRow], path_node_ids: Iterable[str] = ()) -> ClusterIndex:
-        return cls(nodes, edges, path_node_ids)
+    def from_rows(
+        cls,
+        nodes: Sequence[NodeRow],
+        edges: Iterable[EdgeRow],
+        path_node_ids: Iterable[str] = (),
+        path_pairs: Iterable[tuple[str, str]] = (),
+    ) -> ClusterIndex:
+        return cls(nodes, edges, path_node_ids, path_pairs)
 
     @staticmethod
-    def rows_from_graph(graph: Any) -> tuple[list[NodeRow], list[EdgeRow], set[str]]:
+    def rows_from_graph(graph: Any) -> tuple[list[NodeRow], list[EdgeRow], set[str], set[tuple[str, str]]]:
         """The lean projection a store returns, derived from a loaded graph (stores without a lean read)."""
         nodes: list[NodeRow] = []
         for node in graph.nodes.values():
@@ -190,12 +219,18 @@ class ClusterIndex:
             (edge.source, edge.target, edge.relationship.value if hasattr(edge.relationship, "value") else str(edge.relationship))
             for edge in graph.edges
         ]
-        hops = {hop for path in getattr(graph, "attack_paths", []) or [] for hop in getattr(path, "hops", []) or []}
-        return nodes, edges, hops
+        ranked = sorted(getattr(graph, "attack_paths", []) or [], key=lambda path: -float(getattr(path, "composite_risk", 0.0) or 0.0))
+        paths = [list(getattr(path, "hops", []) or []) for path in ranked]
+        return nodes, edges, {hop for hops in paths for hop in hops}, hop_pairs(paths[:TOP_PATHS_FOR_BUNDLES])
 
     @classmethod
     def from_graph(cls, graph: Any) -> ClusterIndex:
         return cls(*cls.rows_from_graph(graph))
+
+
+def hop_pairs(paths: Iterable[Sequence[str]]) -> set[tuple[str, str]]:
+    """Consecutive hops of each path."""
+    return {(str(a), str(b)) for hops in paths for a, b in zip(hops, list(hops)[1:])}
 
 
 def _csr(size: int, endpoint: array) -> tuple[array, array]:
@@ -213,4 +248,4 @@ def _csr(size: int, endpoint: array) -> tuple[array, array]:
     return start, edges
 
 
-__all__ = ["ClusterIndex", "EdgeRow", "LeafCluster", "NodeRow"]
+__all__ = ["TOP_PATHS_FOR_BUNDLES", "ClusterIndex", "EdgeRow", "LeafCluster", "NodeRow", "hop_pairs"]

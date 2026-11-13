@@ -8,7 +8,7 @@ import { useAnimatedLayout } from "@/hooks/use-animated-layout";
 import { useGraphClusterMap } from "@/hooks/use-graph-cluster-map";
 import { api } from "@/lib/api";
 import { clusterEdgeTypes, type BundleEdge } from "@/components/graph-cluster-edge";
-import { clusterMapLayout, displayBundles, frameId, routeCards } from "@/lib/graph-cluster-layout";
+import { clusterMapLayout, displayBundles, frameId, overviewBundles, routeCards } from "@/lib/graph-cluster-layout";
 import { bundleLabel, bundleTitle, relationshipLabel, type ClusterMapEdge, type ClusterMapResponse } from "@/lib/graph-cluster-map";
 import { routeBundles, type Box } from "@/lib/graph-cluster-routes";
 import { BACKGROUND_COLOR, BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
@@ -24,50 +24,73 @@ export interface GraphClusterMapProps {
   onUnavailable?: () => void;
 }
 
-export interface ClusterElements { nodes: ClusterCardNode[]; edges: BundleEdge[]; bounds: Box }
+export interface ClusterElements { nodes: ClusterCardNode[]; edges: BundleEdge[]; bounds: Box; hidden: { bundles: number; relationships: number } }
+export interface ElementOptions { activeMember?: string | null; width?: number; showAll?: boolean; reveal?: readonly string[] }
 
-/** Cards, frames and routed bundles for one response; `activeMember` shows one member's own bundles. */
-export function toElements(view: ClusterMapResponse, narrow: boolean, onPage: (id: string, offset: number) => void, activeMember: string | null = null): ClusterElements {
-  const layout = clusterMapLayout(view, { narrow });
+/** Cards, frames and routed bundles for one response; the overview hides bundles that skip columns unless revealed. */
+export function toElements(view: ClusterMapResponse, narrow: boolean, onPage: (id: string, offset: number) => void, options: ElementOptions = {}): ClusterElements {
+  const { activeMember = null, width, showAll = false, reveal = [] } = options;
+  const layout = clusterMapLayout(view, { narrow, ...(width ? { width } : {}) });
   const frames: ClusterCardNode[] = layout.frames.map(frame => ({
     id: frame.id, type: "frame", position: { x: frame.x, y: frame.y }, width: frame.width, height: frame.height, style: { width: frame.width, height: frame.height },
     data: { node: { id: frame.id, kind: "cluster", label: "", tier: 0 }, narrow, onPage }, draggable: false, connectable: false, selectable: false, focusable: false, zIndex: -1,
   }));
-  const nodes: ClusterCardNode[] = [...frames, ...layout.cards.map(({ node, x, y, width, height }) => ({
-    id: node.id, type: node.kind, position: { x, y }, width, height, style: { width, height },
+  const nodes: ClusterCardNode[] = [...frames, ...layout.cards.map(({ node, x, y, width: w, height }) => ({
+    id: node.id, type: node.kind, position: { x, y }, width: w, height, style: { width: w, height },
     data: { node, narrow, onPage }, draggable: false, connectable: false,
   }))];
-  const bundles = displayBundles(view, activeMember);
-  const routes = routeBundles(routeCards(layout, activeMember),
-    bundles.map(bundle => ({ id: bundle.id, source: bundle.source, target: bundle.target, label: bundle.count > 1 ? bundleLabel(bundle) : null })),
-    [...layout.cards, ...layout.frames]);
-  const byId = new Map(bundles.map(bundle => [bundle.id, bundle]));
+  const cards = routeCards(layout, activeMember);
+  const revealIds = [...reveal, ...reveal.map(frameId), ...(activeMember ? [activeMember] : [])];
+  const { shown, hidden } = overviewBundles(displayBundles(view, activeMember), cards, { showAll, focusIds: revealIds });
+  const routes = routeBundles(cards, shown.map(bundle => ({ id: bundle.id, source: bundle.source, target: bundle.target, label: bundle.count > 1 ? bundleLabel(bundle) : null })),
+    [...layout.cards, ...layout.frames], layout.bands);
+  const byId = new Map(shown.map(bundle => [bundle.id, bundle]));
   const marker = { type: MarkerType.ArrowClosed, width: 14, height: 14 };
   const edges: BundleEdge[] = routes.map(route => {
     const bundle = byId.get(route.id)!;
+    const className = [bundle.member && "cluster-edge-member", bundle.path && "cluster-edge-path"].filter(Boolean).join(" ");
     return {
       id: route.id, source: bundle.source, target: bundle.target, type: "bundle" as const,
       ...(route.reversed ? { markerStart: marker } : { markerEnd: marker }),
-      style: { strokeWidth: Math.min(1 + Math.log2(bundle.count + 1) * 0.35, 3.5) },
+      style: { strokeWidth: Math.min(1 + Math.log2(bundle.count + 1) * 0.3, 3) },
       ariaLabel: bundleTitle(bundle), data: { route, text: bundleLabel(bundle), title: bundleTitle(bundle), bundle },
-      ...(bundle.member ? { className: "cluster-edge-member" } : {}),
+      ...(className ? { className } : {}),
     };
   });
   const boxes = [...layout.cards, ...layout.frames];
   const xs = boxes.flatMap(box => [box.x, box.x + box.width]).concat(routes.flatMap(route => route.points.map(point => point.x)));
   const ys = boxes.flatMap(box => [box.y, box.y + box.height]).concat(routes.flatMap(route => route.points.map(point => point.y)));
   const minX = Math.min(...xs, 0), minY = Math.min(...ys, 0);
-  return { nodes, edges, bounds: { x: minX, y: minY, width: Math.max(...xs, 0) - minX, height: Math.max(...ys, 0) - minY } };
+  return {
+    nodes, edges, bounds: { x: minX, y: minY, width: Math.max(...xs, 0) - minX, height: Math.max(...ys, 0) - minY },
+    hidden: { bundles: hidden.length, relationships: hidden.reduce((sum, bundle) => sum + bundle.count, 0) },
+  };
+}
+
+/** The canvas's width, in 40px steps so a scrollbar or a resize of a few pixels never re-lays the map. */
+function useCanvasWidth(ref: React.RefObject<HTMLDivElement | null>): number {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const measure = () => setWidth(Math.floor(element.clientWidth / 40) * 40);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref]);
+  return width;
 }
 
 /** Bundles stay quiet until a group is pointed at or found; then its own bundles carry the colour. */
-export function emphasiseBundles<E extends Pick<Edge, "source" | "target">>(edges: E[], activeId: string | null): Array<E & { className?: string }> {
+export function emphasiseBundles<E extends Pick<Edge, "source" | "target"> & { className?: string }>(edges: E[], activeId: string | null): Array<E & { className?: string }> {
   if (!activeId) return edges;
-  return edges.map(edge => ({ ...edge, className: edge.source === activeId || edge.target === activeId ? "cluster-edge-active" : "cluster-edge-quiet" }));
+  const ids = new Set([activeId, frameId(activeId)]);
+  return edges.map(edge => ({ ...edge, className: `${edge.className ?? ""} ${ids.has(edge.source) || ids.has(edge.target) ? "cluster-edge-active" : "cluster-edge-quiet"}`.trim() }));
 }
 
-/** Below this zoom a card's text drops under ~10px; the camera pans instead of shrinking further. */
-const MIN_READABLE_ZOOM = 0.9;
+/** Below this zoom the 12px card and label text drops under 11px; the camera pans instead of shrinking further. */
+const MIN_READABLE_ZOOM = 11 / 12;
 
 /** Frames the map after every layout change: whole when it stays readable, otherwise from the top (or the found node) at a readable size. */
 function Camera({ layoutKey, narrow, settled, focusId, bounds }: { layoutKey: string; narrow: boolean; settled: boolean; focusId: string | null; bounds: Box }) {
@@ -84,7 +107,7 @@ function Camera({ layoutKey, narrow, settled, focusId, bounds }: { layoutKey: st
       const paneW = (pane?.clientWidth ?? 360) - 16, paneH = (pane?.clientHeight ?? 480) - 24;
       const fitWidth = Math.min(1, paneW / Math.max(width, 1));
       const zoom = narrow ? fitWidth : Math.min(1, paneW / Math.max(width, 1), paneH / Math.max(height, 1));
-      const readable = narrow ? zoom : Math.max(zoom, Math.min(1, Math.max(MIN_READABLE_ZOOM, fitWidth)));
+      const readable = narrow ? fitWidth : Math.max(zoom, MIN_READABLE_ZOOM);
       // A found node, or the group just opened, is brought into view; a tall frame shows from its top.
       const anchor = focusId ? nodes.find(node => node.id === focusId) : undefined;
       if (anchor) {
@@ -137,9 +160,10 @@ function BundleReceipt({ bundle, labels, onClose }: { bundle: Pick<ClusterMapEdg
   </div>;
 }
 
-function Summary({ view }: { view: ClusterMapResponse }) {
+function Summary({ view, hidden }: { view: ClusterMapResponse; hidden: ClusterElements["hidden"] }) {
   const s = view.summary;
   const parts = [`${s.visible_cluster_count} groups of ${s.total_nodes.toLocaleString()} nodes`, `${s.drawn_bundle_count} bundled links for ${s.total_edges.toLocaleString()} relationships`];
+  if (hidden.bundles) parts.push(`${hidden.bundles} links between non-adjacent groups (${hidden.relationships.toLocaleString()}) shown on selection`);
   if (s.hidden_bundle_count) parts.push(`${s.hidden_bundle_count} smaller links (${s.hidden_bundle_edge_count.toLocaleString()}) not drawn`);
   if (s.filtered_node_count) parts.push(`${s.filtered_node_count.toLocaleString()} nodes in lower-risk groups hidden`);
   return <p data-testid="cluster-map-summary" className="min-w-0 text-xs text-ink-secondary">{parts.join(" · ")}</p>;
@@ -155,7 +179,17 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
   const members = useMemo(() => new Set((view?.nodes ?? []).filter(node => node.kind === "member").map(node => node.id)), [view]);
   // Per-member links appear only for the member pointed at (or found); otherwise a group's bundles meet its frame.
   const activeMember = hoverId && members.has(hoverId) ? hoverId : focusId && members.has(focusId) ? focusId : null;
-  const elements = useMemo(() => (view ? toElements(view, narrow, map.page, activeMember) : { nodes: [], edges: [], bounds: { x: 0, y: 0, width: 0, height: 0 } }), [view, narrow, map.page, activeMember]);
+  const [showAll, setShowAll] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasWidth = useCanvasWidth(canvasRef);
+  // The overview wraps its columns to what fits the canvas at a readable zoom.
+  const layoutWidth = canvasWidth ? Math.round((canvasWidth - 24) / 0.95) : undefined;
+  const reveal = useMemo(() => [hoverId, focusId].filter((id): id is string => Boolean(id)), [hoverId, focusId]);
+  const elements = useMemo(
+    () => (view ? toElements(view, narrow, map.page, { activeMember, showAll, reveal, ...(layoutWidth ? { width: layoutWidth } : {}) })
+      : { nodes: [], edges: [], bounds: { x: 0, y: 0, width: 0, height: 0 }, hidden: { bundles: 0, relationships: 0 } }),
+    [view, narrow, map.page, activeMember, showAll, reveal, layoutWidth],
+  );
   const motion = useAnimatedLayout(elements.nodes);
   const labels = useMemo(() => new Map((view?.nodes ?? []).flatMap(node => [[node.id, node.label], [frameId(node.id), node.label]] as const)), [view]);
   const bundle = elements.edges.find(edge => edge.id === bundleId)?.data?.bundle ?? null;
@@ -172,13 +206,15 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
       <span className="text-sm font-medium text-foreground">Grouped map</span>
       <button type="button" aria-pressed={map.state.riskyOnly} onClick={() => map.setRiskyOnly(!map.state.riskyOnly)}
         className="graph-page-action graph-action-compact min-h-9 aria-pressed:bg-surface-elevated aria-pressed:text-foreground">Risky groups only</button>
+      <button type="button" aria-pressed={showAll} onClick={() => setShowAll(value => !value)}
+        className="graph-page-action graph-action-compact min-h-9 aria-pressed:bg-surface-elevated aria-pressed:text-foreground">Show all links</button>
       <FindInMap scanId={scanId} onFocus={id => { setBundleId(null); map.focus(id); }} />
       {(map.state.expanded.length > 0 || map.state.focus) && <button type="button" className="graph-page-action graph-action-compact min-h-9" onClick={map.reset}>Collapse all</button>}
       <button type="button" className="graph-page-action graph-action-compact ml-auto min-h-9" onClick={onShowEveryEdge}>Show every edge</button>
-      {view && <div className="basis-full"><Summary view={view} /></div>}
+      {view && <div className="basis-full"><Summary view={view} hidden={elements.hidden} /></div>}
       {view?.focus && !view.focus.found && <p role="status" className="basis-full text-xs text-amber-700 dark:text-amber-200">That node is not in this snapshot.</p>}
     </div>
-    <div data-testid="cluster-map-canvas" className={`relative ${narrow ? "h-[max(32rem,calc(100dvh-16rem))]" : "h-[max(30rem,calc(100dvh-17rem))]"} min-h-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
+    <div ref={canvasRef} data-testid="cluster-map-canvas" className={`relative ${narrow ? "h-[max(32rem,calc(100dvh-16rem))]" : "h-[max(30rem,calc(100dvh-17rem))]"} min-h-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
       {status === "loading" && !view && <p role="status" className="p-6 text-sm text-ink-secondary">Grouping the snapshot…</p>}
       {status === "failed" && <p role="alert" className="p-3 text-sm text-ink-secondary">The grouped map did not load. <button type="button" className="underline" onClick={onShowEveryEdge}>Show every edge</button></p>}
       {view && view.nodes.length === 0 && <p role="status" className="p-6 text-sm text-ink-secondary">{map.state.riskyOnly ? "No group is on an attack path or holds a critical or high finding." : "This snapshot has no nodes."}</p>}
