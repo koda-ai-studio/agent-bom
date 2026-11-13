@@ -237,6 +237,7 @@ def _server_json(server: Any, agent: Any, states: SuppressionStates | None = Non
         "url": sanitize_url(server.url),
         "auth_mode": server.auth_mode,
         **({"connection_metadata": sanitize_sensitive_payload(server.connection_metadata)} if server.connection_metadata else {}),
+        **({"package_binding_of": server.package_binding_of} if server.package_binding_of else {}),
         "mcp_version": server.mcp_version,
         "has_credentials": server.has_credentials,
         "credential_env_vars": server.env_credential_names,

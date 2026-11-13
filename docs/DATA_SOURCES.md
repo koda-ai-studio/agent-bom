@@ -60,6 +60,8 @@ agent-bom agents --snowflake
 | `POST /v1/sources` + `POST /v1/sources/{id}/run` | Registered connector/source registry | Dashboard **Scan → Sources** |
 | `POST /v1/sources/run-cohort` | Exact registered-source cohort → child scans → strict-freshness automatic correlation | API; poll the returned parent job and open `auto_correlation.output_scan_id` when complete |
 
+A report from `agent-bom scan --demo` lists `demo` in `scan_sources`, and the control plane adds that label to any pushed report built from the bundled demo advisory database. The dashboard then shows its "Demo data" banner for the tenant until that scan is deleted, so push sample data into a separate tenant or a throwaway control plane rather than one that holds real inventory.
+
 Hosted source kinds (`scan.*`, `connector.*`, `ingest.*`, `runtime.*`) are defined in `src/agent_bom/api/models.py` (`SourceKind`).
 
 ## Optional deploy-in-target collectors

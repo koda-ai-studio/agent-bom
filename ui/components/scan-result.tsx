@@ -18,6 +18,7 @@ import {
   ArrowUpCircle, AlertTriangle, ChevronDown, ChevronRight, Download, GitBranch, Server,
   Cloud, Database, ShieldCheck,
 } from "lucide-react";
+import { formatProbabilityPercent } from "@/lib/probability-format";
 
 const BLAST_RADIUS_PAGE_SIZE = 8;
 
@@ -715,7 +716,7 @@ function BlastRadiusCard({ blast }: { blast: BlastRadius }) {
             </>
           )}
           {blast.cvss_score && <div className="text-xs text-ink-tertiary mt-1">CVSS {blast.cvss_score.toFixed(1)}</div>}
-          {blast.epss_score && <div className="text-xs text-ink-tertiary">EPSS {(blast.epss_score * 100).toFixed(1)}%</div>}
+          {blast.epss_score && <div className="text-xs text-ink-tertiary">EPSS {formatProbabilityPercent(blast.epss_score)}</div>}
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

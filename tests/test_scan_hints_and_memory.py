@@ -158,6 +158,15 @@ def test_rescan_prints_delta_header_in_console_only(project: Path, _local_state:
     assert "Since last scan" not in as_json and "blast_radius" in payload
 
 
+def test_rescan_to_an_html_file_prints_the_delta_header(project: Path, _local_state: Path, tmp_path: Path) -> None:
+    report = tmp_path / "agent-bom-report.html"
+    first = _scan(project, "-f", "html", "-o", str(report))
+    assert "Since last scan" not in first
+    second = _scan(project, "-f", "html", "-o", str(report))
+    assert "Since last scan" in second
+    assert "Since last scan" not in _scan(project, "-f", "html", "-o", str(report), "-q")
+
+
 def test_scan_memory_opt_out_and_ci_store_nothing(project: Path, _local_state: Path) -> None:
     _scan(project, "-f", "console", env={memory.OPT_OUT_ENV: "1"})
     _scan(project, "-f", "console", env={"CI": "true"})
