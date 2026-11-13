@@ -301,7 +301,7 @@ def _execution_outcome(report: Any) -> Any:
 
 def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str | None, *, quiet: bool) -> bool:
     """Send the report to the control plane; automation must see an undelivered push."""
-    from agent_bom.push import PushTooLargeError, normalize_scan_push_url, push_results
+    from agent_bom.push import PushAuthError, PushTooLargeError, normalize_scan_push_url, push_results
     from agent_bom.security import sanitize_error, sanitize_url
 
     con = ctx.con
@@ -315,7 +315,7 @@ def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str
             if not quiet:
                 con.print(f"\n  [green]Results pushed to {endpoint}[/green]")
             return True
-    except PushTooLargeError as exc:
+    except (PushTooLargeError, PushAuthError) as exc:
         # Authored numbers and advice only; the generic 200-character error cap would cut the split advice.
         reason = f": {exc}"
     except Exception as exc:  # noqa: BLE001

@@ -1,0 +1,7 @@
+### Fixed
+- `scan --log-json` now writes only JSON lines to stderr: progress becomes `INFO` records on the `agent_bom.progress` logger and failure notices become `ERROR` records, so the output can go straight to a SIEM. `-q` no longer prints the discovery banner or other progress.
+- `POST /v1/scan` answers a disallowed `repo_url` (for example `file:///etc`, scp-style, or one with embedded credentials) with `422` and the rule it broke, instead of queueing a job that failed with "An internal error occurred". A clone that fails says why, and the server logs a sanitized warning.
+- The local vulnerability database defaults to `$AGENT_BOM_STATE_DIR/db/vulns.db` (still `~/.agent-bom/db/vulns.db` without it); `AGENT_BOM_DB_PATH` still overrides it, and `doctor`, `db status` and `db path` show the path in use. The interactive shell history also follows the state directory.
+- `db advisory affected` checks the last scan persisted in the local control plane (as `quickstart --run` leaves it) when there is no saved history report, and says to persist with `--save` or pass `--report` when nothing is found.
+- A scan push refused with 401 or 403 says whether the key was missing, rejected or not allowed to push, and points at `--push-api-key`, `AGENT_BOM_PUSH_API_KEY` and the "Dev API key" a local `agent-bom up` prints. The key is never printed.
+- The cached update check prints a notice only for a plain release version newer than the running one; a foreign or stale cache file no longer prints stray text after `--help`.

@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import io
 import logging
+from typing import IO, cast
 
 from rich.console import Console
 
 PROGRESS_LOGGER = "agent_bom.progress"
+# Whitespace plus the box-drawing strokes rich uses for rules, so a rule keeps only its title.
+_RULE_CHARS = " \t\r─━═"
 
 
 class ProgressLogStream(io.TextIOBase):
@@ -42,7 +45,7 @@ class ProgressLogStream(io.TextIOBase):
             self._emit(line)
 
     def _emit(self, line: str) -> None:
-        message = line.strip()
+        message = line.strip(_RULE_CHARS)
         if message:
             self._logger.info(message)
 
@@ -50,7 +53,7 @@ class ProgressLogStream(io.TextIOBase):
 def progress_log_console() -> Console:
     """A plain-text console whose output becomes ``agent_bom.progress`` records."""
     return Console(
-        file=ProgressLogStream(),
+        file=cast(IO[str], ProgressLogStream()),
         force_terminal=False,
         no_color=True,
         highlight=False,

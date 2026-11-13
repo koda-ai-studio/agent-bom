@@ -315,9 +315,7 @@ def osv_archive_scope(db_path: Path) -> list[str]:
 
 def local_osv_is_scoped() -> bool:
     """Whether the configured local OSV archive holds only selected ecosystems."""
-    from agent_bom.db.schema import DB_PATH
-
-    return bool(osv_archive_scope(DB_PATH))
+    return bool(osv_archive_scope(vuln_db_path()))
 
 
 def osv_archive_is_full(db_path: Path) -> bool:
@@ -350,6 +348,13 @@ def _without_cache(rows: list | None, *, offline: bool, threshold: int) -> VulnD
     return VulnDataFreshness(mode="live", sources=list(_LIVE_SOURCES), stale=False, danger=False, max_age_hours=threshold)
 
 
+def vuln_db_path() -> Path:
+    """The local vulnerability DB this process reads (``AGENT_BOM_DB_PATH``, else the state dir default)."""
+    from agent_bom.db import schema
+
+    return schema.DB_PATH
+
+
 def compute_freshness(
     *,
     db_path: Path | None = None,
@@ -368,9 +373,7 @@ def compute_freshness(
         threshold_hours: Staleness threshold override; defaults to the env-
             resolved :func:`max_age_hours`.
     """
-    from agent_bom.db.schema import DB_PATH
-
-    resolved_path = db_path or DB_PATH
+    resolved_path = db_path or vuln_db_path()
     reference = now or datetime.now(timezone.utc)
     if reference.tzinfo is None:
         reference = reference.replace(tzinfo=timezone.utc)

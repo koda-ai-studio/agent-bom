@@ -318,7 +318,7 @@ def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, sta
     and aborts onboarding; completion is only reported after both readbacks.
     """
     from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
-    from agent_bom.api.store import SQLiteJobStore
+    from agent_bom.cli._persisted_scan import open_local_job_store
 
     try:
         payload = json.loads(report_path.read_text(encoding="utf-8"))
@@ -327,7 +327,7 @@ def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, sta
             raise ValueError("Completed report identity does not match graph")
         tenant = resolve_cli_tenant_id()
         database.parent.mkdir(parents=True, exist_ok=True)
-        store = SQLiteJobStore(str(database))
+        store = open_local_job_store(database)
         job = ScanJob(
             job_id=scan_id,
             tenant_id=tenant,

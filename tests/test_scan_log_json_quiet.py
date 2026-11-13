@@ -79,3 +79,18 @@ def test_quiet_scan_prints_no_discovery_banner(tmp_path: Path) -> None:
     assert "Discovering" not in proc.stderr
     assert "MCP configurations" not in proc.stderr
     assert report.exists()
+
+
+def test_progress_stream_keeps_rule_titles_and_drops_bare_rules(caplog) -> None:
+    import logging
+
+    from agent_bom.core.progress_log import PROGRESS_LOGGER, progress_log_console
+
+    con = progress_log_console()
+    with caplog.at_level(logging.INFO, logger=PROGRESS_LOGGER):
+        con.rule("Discovery")
+        con.rule()
+        con.print("  [green]done[/green] partial", end="")
+        con.file.flush()
+
+    assert [record.getMessage() for record in caplog.records] == ["Discovery", "done partial"]
