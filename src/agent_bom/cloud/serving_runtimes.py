@@ -393,15 +393,17 @@ def outcome_warning(observation: EndpointObservation) -> str | None:
 def observation_to_agents(observation: EndpointObservation) -> list[Agent]:
     agents: list[Agent] = []
     for model in observation.models:
+        # Triton serves several versions of one model side by side; each is its own served artifact.
+        served = f"{model.served_name}@{model.version}" if model.version else model.served_name
         server = MCPServer(
-            name=f"{observation.runtime}/{model.served_name}",
+            name=f"{observation.runtime}/{served}",
             url=observation.endpoint,
             surface=ServerSurface.AI_INVENTORY,
             packages=[Package(name=model.served_name, version=model.version or "unknown", ecosystem=observation.runtime)],
         )
         agents.append(
             Agent(
-                name=f"{observation.runtime}-model-{model.served_name}",
+                name=f"{observation.runtime}-model-{served}",
                 agent_type=AgentType.CUSTOM,
                 config_path=observation.endpoint,
                 source=f"{observation.runtime}-api",
