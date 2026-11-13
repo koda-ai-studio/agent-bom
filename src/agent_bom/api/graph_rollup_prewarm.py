@@ -22,6 +22,7 @@ from typing import Any, Callable, Literal
 
 from agent_bom.api import graph_rollup_cache
 from agent_bom.api.finding_suppression import suppression_revision
+from agent_bom.api.graph_cluster_index_cache import cluster_index
 from agent_bom.api.graph_commit_hooks import register_commit_hook
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint
 from agent_bom.api.graph_store import containment_drilldown_graph
@@ -112,6 +113,11 @@ def prewarm_rollup(store: Any, *, tenant_id: str) -> int:
         return 0
     scan_id = key_identity[0]
     warmed = 0
+    try:
+        # The grouped map is the graph page's first frame; its per-snapshot aggregation warms first.
+        cluster_index(store, tenant_id=tenant_id, scan_id=scan_id, identity=key_identity)
+    except Exception:  # noqa: BLE001 - a warm-up is an optimisation; the first reader builds it
+        logger.debug("graph cluster index warm-up skipped", exc_info=False)
     suppressions = suppression_revision(tenant_id)
     suppressed = suppressed_finding_ids(tenant_id)
 

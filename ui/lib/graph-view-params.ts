@@ -5,6 +5,7 @@ const ALLOWED: Record<string, ReadonlySet<string>> = {
   // "expand" is a retired step name that older links still carry; it opens Impact.
   step: new Set(["path", "impact", "owner", "fix", "verify", "expand"]),
   map_view: new Set(["full"]),
+  grouping: new Set(["off"]),
 };
 
 /** The first view parameter whose value no graph view exists for, or null when every one is known. */

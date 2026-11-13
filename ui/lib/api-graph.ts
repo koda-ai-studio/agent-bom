@@ -1,3 +1,4 @@
+import type { ClusterMapResponse } from "@/lib/graph-cluster-map";
 import type {
   GraphSnapshot,
   GraphCorrelationCreate,
@@ -520,6 +521,10 @@ export const graphApi = {
   /** Delete a saved graph filter preset — DELETE /v1/graph/presets/{name} */
   deleteGraphPreset: (name: string) =>
     del(`/v1/graph/presets/${encodeURIComponent(name)}`),
+
+
+  /** Grouped full map: groups, expanded members and bundled edges with exact counts — GET /v1/graph/cluster-map */
+  getGraphClusterMap: (params: URLSearchParams) => get<ClusterMapResponse>(`/v1/graph/cluster-map?${params.toString()}`),
 
 
   /** Estate-scale CONTAINS roll-up with optional one-level drill-down */

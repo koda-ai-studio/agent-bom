@@ -15326,6 +15326,429 @@ components:
       - citations
       title: GraphClaim
       type: object
+    GraphClusterListing:
+      additionalProperties: true
+      properties:
+        cluster_key:
+          title: Cluster Key
+          type: string
+        entity_types:
+          additionalProperties:
+            type: integer
+          title: Entity Types
+          type: object
+        folded:
+          title: Folded
+          type: boolean
+        id:
+          title: Id
+          type: string
+        label:
+          title: Label
+          type: string
+        member_count:
+          title: Member Count
+          type: integer
+        on_attack_path_count:
+          title: On Attack Path Count
+          type: integer
+        risky:
+          title: Risky
+          type: boolean
+        severity_counts:
+          additionalProperties:
+            type: integer
+          title: Severity Counts
+          type: object
+        tier:
+          title: Tier
+          type: integer
+        tier_label:
+          title: Tier Label
+          type: string
+        worst_severity:
+          title: Worst Severity
+          type: string
+      required:
+      - cluster_key
+      - label
+      - tier
+      - tier_label
+      - member_count
+      - worst_severity
+      - severity_counts
+      - on_attack_path_count
+      - risky
+      - entity_types
+      - id
+      - folded
+      title: GraphClusterListing
+      type: object
+    GraphClusterMapCost:
+      additionalProperties: true
+      properties:
+        bundles_considered:
+          title: Bundles Considered
+          type: integer
+        edges_scanned:
+          title: Edges Scanned
+          type: integer
+      required:
+      - edges_scanned
+      - bundles_considered
+      title: GraphClusterMapCost
+      type: object
+    GraphClusterMapEdge:
+      additionalProperties: true
+      description: 'One bundled edge: the exact number of underlying edges per relationship.'
+      properties:
+        count:
+          title: Count
+          type: integer
+        id:
+          title: Id
+          type: string
+        relationships:
+          items:
+            $ref: '#/components/schemas/GraphClusterRelationshipCount'
+          title: Relationships
+          type: array
+        risky:
+          title: Risky
+          type: boolean
+        source:
+          title: Source
+          type: string
+        target:
+          title: Target
+          type: string
+      required:
+      - id
+      - source
+      - target
+      - count
+      - relationships
+      - risky
+      title: GraphClusterMapEdge
+      type: object
+    GraphClusterMapFilters:
+      additionalProperties: true
+      properties:
+        member_limit:
+          title: Member Limit
+          type: integer
+        risky_only:
+          title: Risky Only
+          type: boolean
+      required:
+      - risky_only
+      - member_limit
+      title: GraphClusterMapFilters
+      type: object
+    GraphClusterMapFocus:
+      additionalProperties: true
+      properties:
+        cluster_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cluster Id
+        found:
+          title: Found
+          type: boolean
+        node_id:
+          title: Node Id
+          type: string
+      required:
+      - node_id
+      - found
+      title: GraphClusterMapFocus
+      type: object
+    GraphClusterMapNode:
+      additionalProperties: true
+      description: 'A drawn element: a group, one of an expanded group''s members,
+        or its "+K more" pager.'
+      properties:
+        cluster_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cluster Id
+        cluster_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Cluster Key
+        count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Count
+        entity_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Entity Type
+        entity_types:
+          anyOf:
+          - additionalProperties:
+              type: integer
+            type: object
+          - type: 'null'
+          title: Entity Types
+        expanded:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Expanded
+        focused:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Focused
+        folded_cluster_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Folded Cluster Count
+        id:
+          title: Id
+          type: string
+        kind:
+          enum:
+          - cluster
+          - member
+          - more
+          title: Kind
+          type: string
+        label:
+          title: Label
+          type: string
+        limit:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Limit
+        member_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Member Count
+        next_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Next Offset
+        offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Offset
+        on_attack_path:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: On Attack Path
+        on_attack_path_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: On Attack Path Count
+        prev_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Prev Offset
+        risk_score:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Risk Score
+        risky:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Risky
+        severity:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity
+        severity_counts:
+          anyOf:
+          - additionalProperties:
+              type: integer
+            type: object
+          - type: 'null'
+          title: Severity Counts
+        shown_member_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Shown Member Count
+        tier:
+          title: Tier
+          type: integer
+        tier_label:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tier Label
+        worst_severity:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Worst Severity
+      required:
+      - id
+      - kind
+      - label
+      - tier
+      title: GraphClusterMapNode
+      type: object
+    GraphClusterMapResponse:
+      additionalProperties: true
+      description: 'Grouped full map of one snapshot: bounded groups, members and
+        bundled edges with exact counts.'
+      properties:
+        clusters:
+          items:
+            $ref: '#/components/schemas/GraphClusterListing'
+          title: Clusters
+          type: array
+        cost:
+          $ref: '#/components/schemas/GraphClusterMapCost'
+        edges:
+          items:
+            $ref: '#/components/schemas/GraphClusterMapEdge'
+          title: Edges
+          type: array
+        filters:
+          $ref: '#/components/schemas/GraphClusterMapFilters'
+        focus:
+          anyOf:
+          - $ref: '#/components/schemas/GraphClusterMapFocus'
+          - type: 'null'
+        mode:
+          const: cluster_map
+          title: Mode
+          type: string
+        nodes:
+          items:
+            $ref: '#/components/schemas/GraphClusterMapNode'
+          title: Nodes
+          type: array
+        scan_id:
+          title: Scan Id
+          type: string
+        snapshot_generation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Snapshot Generation
+        summary:
+          $ref: '#/components/schemas/GraphClusterMapSummary'
+        tenant_id:
+          title: Tenant Id
+          type: string
+        tiers:
+          items:
+            type: string
+          title: Tiers
+          type: array
+      required:
+      - scan_id
+      - tenant_id
+      - mode
+      - tiers
+      - nodes
+      - edges
+      - clusters
+      - filters
+      - summary
+      - cost
+      title: GraphClusterMapResponse
+      type: object
+    GraphClusterMapSummary:
+      additionalProperties: true
+      properties:
+        cluster_count:
+          title: Cluster Count
+          type: integer
+        dangling_edge_count:
+          title: Dangling Edge Count
+          type: integer
+        drawn_bundle_count:
+          title: Drawn Bundle Count
+          type: integer
+        element_budget:
+          title: Element Budget
+          type: integer
+        element_count:
+          title: Element Count
+          type: integer
+        filtered_edge_count:
+          title: Filtered Edge Count
+          type: integer
+        filtered_node_count:
+          title: Filtered Node Count
+          type: integer
+        folded_cluster_count:
+          title: Folded Cluster Count
+          type: integer
+        hidden_bundle_count:
+          title: Hidden Bundle Count
+          type: integer
+        hidden_bundle_edge_count:
+          title: Hidden Bundle Edge Count
+          type: integer
+        internal_edge_count:
+          title: Internal Edge Count
+          type: integer
+        listed_cluster_count:
+          title: Listed Cluster Count
+          type: integer
+        total_edges:
+          title: Total Edges
+          type: integer
+        total_nodes:
+          title: Total Nodes
+          type: integer
+        visible_cluster_count:
+          title: Visible Cluster Count
+          type: integer
+      required:
+      - total_nodes
+      - total_edges
+      - cluster_count
+      - listed_cluster_count
+      - visible_cluster_count
+      - folded_cluster_count
+      - filtered_node_count
+      - filtered_edge_count
+      - internal_edge_count
+      - drawn_bundle_count
+      - hidden_bundle_count
+      - hidden_bundle_edge_count
+      - element_count
+      - element_budget
+      - dangling_edge_count
+      title: GraphClusterMapSummary
+      type: object
+    GraphClusterRelationshipCount:
+      additionalProperties: true
+      properties:
+        count:
+          title: Count
+          type: integer
+        relationship:
+          title: Relationship
+          type: string
+      required:
+      - relationship
+      - count
+      title: GraphClusterRelationshipCount
+      type: object
     GraphClustersResponse:
       additionalProperties: true
       properties:
@@ -47158,6 +47581,138 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
       summary: Get Graph Estate Changes
+      tags:
+      - graph
+  /v1/graph/cluster-map:
+    get:
+      description: 'Collapse the snapshot into groups along the estate''s tiers and
+        types, with bundled edges.
+
+
+        Groups follow scope, agents, MCP servers and tools, packages by ecosystem,
+
+        findings by severity, identities and credentials, then cloud and data
+
+        resources by type. Each drawn edge carries the exact count of underlying
+
+        edges per relationship; what is not drawn is counted in ``summary``. The
+
+        first frame draws at most ``summary.element_budget`` nodes plus edges.
+
+        Risky groups (on an attack path, or holding a critical or high finding)
+
+        are ranked first. Read-only and bounded; answered from a per-snapshot
+
+        aggregation built once per generation.'
+      operationId: get_graph_cluster_map_v1_graph_cluster_map_get
+      parameters:
+      - description: Scan snapshot ID; latest if omitted
+        in: query
+        name: scan_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            pattern: ^[^\x00]*$
+            type: string
+          - type: 'null'
+          description: Scan snapshot ID; latest if omitted
+          title: Scan Id
+      - description: Generation from an earlier frame; a replaced snapshot answers
+          409
+        in: query
+        name: snapshot_generation
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 128
+            type: string
+          - type: 'null'
+          description: Generation from an earlier frame; a replaced snapshot answers
+            409
+          title: Snapshot Generation
+      - description: 'Group ids (from `nodes[].id`) to show expanded: top members
+          by risk plus a ''+K more'' pager'
+        in: query
+        name: expand
+        required: false
+        schema:
+          description: 'Group ids (from `nodes[].id`) to show expanded: top members
+            by risk plus a ''+K more'' pager'
+          items:
+            type: string
+          maxItems: 24
+          title: Expand
+          type: array
+      - description: Member page of an expanded group as `offset:group-id`, from a
+          '+K more' node's next/prev offset
+        in: query
+        name: page
+        required: false
+        schema:
+          description: Member page of an expanded group as `offset:group-id`, from
+            a '+K more' node's next/prev offset
+          items:
+            type: string
+          maxItems: 24
+          title: Page
+          type: array
+      - description: Only groups on an attack path or holding a critical or high finding
+        in: query
+        name: risky_only
+        required: false
+        schema:
+          default: false
+          description: Only groups on an attack path or holding a critical or high
+            finding
+          title: Risky Only
+          type: boolean
+      - description: 'Node id to show: its group opens and the node is drawn'
+        in: query
+        name: focus
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            pattern: ^[^\x00]*$
+            type: string
+          - type: 'null'
+          description: 'Node id to show: its group opens and the node is drawn'
+          title: Focus
+      - description: Members shown per expanded group
+        in: query
+        name: member_limit
+        required: false
+        schema:
+          default: 8
+          description: Members shown per expanded group
+          maximum: 50
+          minimum: 1
+          title: Member Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphClusterMapResponse'
+          description: Successful Response
+        4XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: 'Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED,
+            403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413
+            PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429
+            RATE_LIMITED'
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
+      summary: Get Graph Cluster Map
       tags:
       - graph
   /v1/graph/clusters:

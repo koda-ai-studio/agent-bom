@@ -1,0 +1,6 @@
+### Added
+- The investigation graph's full map opens as a grouped map: nodes collapse into groups along the estate (scope, agents, MCP servers and tools, packages by ecosystem, findings by severity, identities and credentials, cloud and data resources by type), with one bundled edge per group pair labelled with its relationship and exact count ("Depends On ×38"). Groups on an attack path or holding critical or high findings lead; a toggle shows only those. Clicking a group expands it in place to its top members by risk plus a "+K more" pager; finding a node opens its group and focuses it; "Show every edge" returns the ungrouped map. The first frame draws at most 60 nodes plus edges.
+- `GET /v1/graph/cluster-map` serves the grouped map: bounded, tenant-scoped, with drawn, hidden, inside-group and filtered edge counts that always add up to the snapshot's total.
+
+### Performance
+- The grouped map is answered from a per-snapshot aggregation built once per generation from a lean, index-backed read on SQLite and Postgres and warmed when a snapshot commits. At the 5,000-agent qualification estate (170k nodes, 229k edges) a frame takes under 3 ms once warm; the one-time build is about 2 s on SQLite and about 8 s on Postgres.

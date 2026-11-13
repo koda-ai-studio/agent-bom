@@ -2,6 +2,7 @@
 
 import { decodeGraphInvestigationParams } from "@/lib/attack-paths";
 import { graphConnectionPreview } from "@/lib/graph-connection-preview";
+import { clusterMapEligible } from "@/lib/graph-cluster-map";
 import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
 import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
@@ -803,6 +804,20 @@ export function useGraphCanvasModel(page: GraphPageData) {
     rollupActive: rollupNavigationActive,
     graphOnlyFindings,
   });
+  // The ungrouped full map draws every edge; past one frame's budget the grouped map leads instead.
+  const [groupedUnavailableScan, setGroupedUnavailableScan] = useState<string | null>(null);
+  const groupedMapActive = clusterMapEligible({
+    hasScan: Boolean(selectedScanId), groupingOff: searchParams.get("grouping") === "off", unavailable: groupedUnavailableScan === selectedScanId,
+    focusedSurface: Boolean(investigationMode || selectedAttackPath || selectedScenarioId || reachabilitySummary || blastRadius),
+    scopeNavigation: rollupCanvasOwnsPresentation, previewing: Boolean(connectionPreview) && !previewExpanded,
+    elements: displayNodes.length + displayEdges.length, webgl: graphRenderer.kind === "webgl",
+  });
+  const groupedMapUnavailable = useCallback(() => setGroupedUnavailableScan(selectedScanId ?? null), [selectedScanId]);
+  const setGroupingOff = (off: boolean) => {
+    const url = new URL(window.location.href);
+    if (off) url.searchParams.set("grouping", "off"); else url.searchParams.delete("grouping");
+    history.replaceState(null, "", url);
+  };
   const showViewportScope = !rollupDecisionActive && Boolean(rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow";
   const showScopeEvidence = !rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0;
   const showContextControls = Boolean(investigationContext) && graphRenderer.kind === "react-flow";
@@ -864,6 +879,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     resetLayout, relationshipEvidenceCount, hasContextualGraph, graphOnlyFindings, graphRenderer, showViewportScope,
     showScopeEvidence, showContextControls, mobileListAvailable, mobileListActive, showChangesEntry, showLegend,
     graphPanelError, findingNodes, connectionPreview, previewExpanded, setPreviewRoot, setPreviewExpanded,
+    groupedMapActive, groupedMapUnavailable, setGroupingOff,
   };
 }
 
