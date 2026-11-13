@@ -166,6 +166,8 @@ const BUDGETS = {
   // shared camera and severity style into their own modules was tried and
   // measured 4480.3 KiB (more chunk overhead), so it was not kept. Keep
   // 15.1 KiB of bounded headroom at 4464 KiB; chunk ceilings stay fixed.
+  // Node risk context (crown-jewel marker, node panel reasons) adds a measured
+  // 3.7 KiB on top, inside the same headroom; no dependency.
   totalClientJsBytes: 4_571_136,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.

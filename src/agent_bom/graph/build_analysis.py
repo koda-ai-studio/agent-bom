@@ -20,6 +20,7 @@ from agent_bom.graph.finding_row_projection import apply_finding_row_times, proj
 from agent_bom.graph.interaction_risk_ids import bind_interaction_risk_agent_ids
 from agent_bom.graph.provider_inheritance import inherit_cloud_provider
 from agent_bom.graph.relationship_contract import audit_graph_contract
+from agent_bom.graph.risk_context_overlay import apply_node_risk_context
 from agent_bom.graph.storage_integration_correlation import correlate_storage_integrations
 
 _logger = logging.getLogger("agent_bom.graph.builder")
@@ -53,6 +54,9 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     canonicalize_assets(graph)
     # Merged assets inherit the provider their recorded host or scope proves.
     inherit_cloud_provider(graph)
+    # Per-node exposure, privilege, sensitivity and crown-jewel context reads
+    # every recorded fact above, so it runs once the assets are final.
+    apply_node_risk_context(graph)
     # Edges the assessment projections added after fusion.
     _stamp_freshness(graph)
     audit_graph_contract(graph)

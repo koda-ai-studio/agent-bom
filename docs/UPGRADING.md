@@ -85,7 +85,8 @@ profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
 - **Persistence.** Apply Postgres migrations through `20261112_01`.
   `20261111_01` drops six unused indexes `CONCURRENTLY` (its downgrade
   recreates them); `20261112_01` raises a bounded `agent_bom_app` connection
-  limit to 100.
+  limit (1 to 99) to 100. A limit of 0, a role you locked on purpose, is kept
+  and the migration logs a warning.
 
 ## Earlier changes from 0.113.2
 
