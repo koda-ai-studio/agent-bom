@@ -134,6 +134,11 @@ def containment_drilldown_graph(
     return graph
 
 
+# Without sqlite_stat1 some SQLite versions rank the single-column idx_ge_scan
+# above the 5-column adjacency indexes and read the whole snapshot per hop.
+_FRONTIER_SEEK_INDEX = {"source_id": "idx_ge_adjacency_out", "target_id": "idx_ge_adjacency_in"}
+
+
 class SQLiteGraphStore(SQLiteGraphPagesMixin):
     """SQLite-backed graph store wrapper around the low-level graph DB helpers."""
 
@@ -190,16 +195,10 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
         shared_sql = ("".join(f" AND {clause}" for clause in shared)) if shared else ""
 
         def branch(column: str) -> str:
-            # nosec B608 - every interpolated fragment is built in this function
-            # and none is caller-supplied: ``column`` is one of two string literals at the call sites below, and ``placeholders``/
-            # ``shared_sql`` contribute only ``?`` markers. Values travel in ``params``.
-            # Without sqlite_stat1 some SQLite versions rank the single-column idx_ge_scan
-            # above the 5-column adjacency index and read the whole snapshot; pin the seek.
-            index = "idx_ge_adjacency_out" if column == "source_id" else "idx_ge_adjacency_in"
-            return (
-                f"SELECT rowid FROM graph_edges INDEXED BY {index} "  # nosec B608
-                f"WHERE tenant_id = ? AND scan_id = ? AND {column} IN ({placeholders}){shared_sql}"
-            )
+            # nosec B608 - no fragment is caller-supplied: ``column`` and its index come from two string literals below, and
+            # ``placeholders``/``shared_sql`` contribute only ``?`` markers. Values travel in ``params``.
+            where = f"tenant_id = ? AND scan_id = ? AND {column} IN ({placeholders}){shared_sql}"
+            return f"SELECT rowid FROM graph_edges INDEXED BY {_FRONTIER_SEEK_INDEX[column]} WHERE {where}"  # nosec B608
 
         params: list[Any] = [
             tenant_id,
