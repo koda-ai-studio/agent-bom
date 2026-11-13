@@ -9,6 +9,7 @@ drift away from the canonical pyproject version.
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import subprocess
 import sys
@@ -525,6 +526,31 @@ def test_scan_text_flags_a_stale_local_codex_plugin_version() -> None:
     drift = cva.scan_text(rel, manifest, "0.97.1", published="0.97.1")
     assert len(drift) == 1 and "plugin version" in drift[0]
     assert cva.scan_text(rel, manifest.replace("0.90.0", "0.97.1"), "0.97.1", published="0.97.1") == []
+
+
+def test_scan_text_flags_a_stale_lookup_plugin_version() -> None:
+    cva = _load_script("check_version_alignment.py")
+    manifest = '{\n  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",\n'
+    manifest += '  "name": "agent-bom-lookup",\n  "version": "0.90.0",\n'
+    rel = "integrations/openai-mcp/plugin.json"
+    drift = cva.scan_text(rel, manifest, "0.97.1", published="0.97.1")
+    assert len(drift) == 1 and "plugin version" in drift[0], drift
+    assert cva.scan_text(rel, manifest.replace("0.90.0", "0.97.1"), "0.97.1", published="0.97.1") == []
+
+
+def test_published_bump_rewrites_every_directory_manifest_version() -> None:
+    cva = _load_script("check_version_alignment.py")
+    manifests = sorted((ROOT / "integrations").glob("*/**/plugin.json")) + sorted((ROOT / "integrations").glob("*/plugin.json"))
+    unmanaged = []
+    for path in sorted(set(manifests)):
+        text = path.read_text(encoding="utf-8")
+        if '"version"' not in text:
+            continue
+        rel = path.relative_to(ROOT).as_posix()
+        stale = text.replace(json.loads(text)["version"], "0.0.1", 1)
+        if not cva.scan_text(rel, stale, "9.9.9", published="9.9.9"):
+            unmanaged.append(rel)
+    assert unmanaged == [], f"plugin manifests the published-version sweep never rewrites: {unmanaged}"
 
 
 def _launcher(tmp_path: Path, pin: str, locked: str) -> Path:

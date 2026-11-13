@@ -568,18 +568,21 @@ It has no login. The image fixes those flags, and startup refuses OAuth with the
   version, or one advisory id. The server reads no file or setting chosen by the caller.
 - **Where it goes.** `check` sends the package coordinate to `api.osv.dev`, to
   `api.github.com` (public security advisories, without a token unless the operator sets
-  `GITHUB_TOKEN`) and, for npm and PyPI, to `registry.npmjs.org` or `pypi.org`.
-  `intel_lookup` reads the server's advisory database and contacts nothing. At start the
+  `GITHUB_TOKEN`). Without a version it resolves the latest release from
+  `registry.npmjs.org`, `pypi.org`, `proxy.golang.org`, `crates.io` or
+  `search.maven.org`; for npm and PyPI it can also confirm a version is published with
+  `registry.npmjs.org` or `pypi.org`. `intel_lookup` reads the server's advisory database and contacts nothing. At start the
   container downloads the OSV PyPI and npm archives from
   `osv-vulnerabilities.storage.googleapis.com`, plus CISA KEV and FIRST EPSS, sending no
   caller data.
-- **What it keeps.** In memory: the last 256 tool calls (tool name, a rate bucket made
-  from the client address, status, duration; not the arguments) and the per-address rate
-  windows. On disk inside the container: the OSV answer cache keyed by package
+- **What it keeps.** In memory: the last 256 tool calls (tool name, the client address
+  as the rate key, status, duration, and a failed call's error message, which can repeat
+  the package name; not the arguments themselves) and the per-address rate windows. On disk inside the container: the OSV answer cache keyed by package
   coordinate, with no caller identity, read for 24 hours, and the advisory database. All
   of it is lost when the container is replaced unless the operator adds a volume. The
-  hosting platform's request logs (client address, method, path, status) follow its own
-  retention.
+  hosting platform's request logs (client address, method, path, status) and the
+  server's own log on stdout (each call's tool name, client address and duration, and a
+  failed call's error message) follow the platform's retention.
 - **Rate limits.** 30 anonymous calls per client address and 300 in total per 60-second
   window by default (`AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT`,
   `AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT`), on top of the server-wide per-caller and
