@@ -536,6 +536,24 @@ an invalid, expired or unrecognised bearer token is 401 rather than a fallback
 to anonymous access. An unparseable `AGENT_BOM_MCP_PUBLIC_READONLY` value
 refuses startup, as does combining the tier with MCP OAuth or SSE. Rate-limit
 state is in process memory, so it cannot be unavailable; a restart resets it.
+Anonymous callers are bucketed by IPv4 address or IPv6 /64, so one host cannot
+mint new buckets by rotating addresses inside its own prefix. A fifth of the
+aggregate budget is reserved: once the shared four fifths are used, a bucket
+that has made fewer than 3 calls in the window may still make up to 3 more,
+counted per IPv6 /48 or IPv4 /24, so one heavy network cannot lock out
+newcomers or spend the reserve by rotating buckets. Each bucket runs at most
+`AGENT_BOM_MCP_PUBLIC_CALLER_CONCURRENCY` (default 4) tool calls at once; the
+next returns a `rate_limited` tool error with `retry_after_seconds`. Anonymous
+`initialize` draws on a separate session budget with the same per-bucket and
+aggregate limits and answers JSON-RPC error `-32000` past it. The
+no-login edition (`--profile public`) serves streamable HTTP statelessly, so
+anonymous callers hold no entries in the session table; a public tier on
+another profile keeps sessions for bearer callers, and anonymous session
+creation is bounded only by that budget. With
+`AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS` above 0, `X-Forwarded-For` is read only
+from peers inside `AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS` when that is set; an
+unparseable list trusts no peer, and hops without a list logs a start-up
+warning because any peer can then pick its bucket.
 Railway and the Procfile preserve the authenticated image default; neither forces
 this optional tier on a deployment that already uses OAuth. Release verification
 uses the configured managed credential and rejects anonymous access. An upload is
@@ -597,7 +615,10 @@ are built and no routed read lands on a cold replica. The hold is bounded by
 replica reports ready even if the warm-up is still running, and reads that
 reach an unbuilt tenant get the bounded 503 above. Liveness (`/health`,
 `/healthz`, `/livez`) and the chart's `startupProbe` never wait on the warm-up,
-so a slow warm-up cannot get the pod restarted. A disabled warm-up holds
+so a slow warm-up cannot get the pod restarted. A warm-up that fails at any
+step, including opening the job store, reports `incomplete` with reason
+`prewarm_failed`, logs a sanitized one-line warning (no traceback, no
+connection string) and releases readiness at once. A disabled warm-up holds
 nothing. Measured under the chart's 1 CPU / 2 GiB limit with a 200-agent
 tenant, the hold lasted 3.4 seconds and the first read after it returned 200;
 see "Push admission, start-up readiness and refresh under cgroup limits" in
@@ -617,6 +638,16 @@ with its own `--inventory` path: each path is its own target scope, so its next
 push replaces only its own earlier evidence and the current estate is the union.
 Nothing is truncated and no agent is dropped. Connector and lake pushes log the
 same message and report the push as failed.
+
+## Non-finite numbers in a push
+
+JSON has no NaN or infinity, and the job store cannot encode them. A pushed
+report containing `NaN`, `Infinity`, `-Infinity`, or a number too large for a
+double (`1e999`) is rejected at parse time, before admission, with `422` and a
+`finite_number` error at the value's location (`["body", "agents", 0, "score"]`)
+on both the synchronous and the `Prefer: respond-async` path. Nothing is stored
+and no idempotency key is claimed. Earlier builds stored the value on SQLite
+and answered `503` on PostgreSQL.
 
 ## Push completion and scan recovery
 

@@ -99,6 +99,42 @@ def tool_result_error(result: object) -> str | None:
     return found
 
 
+def _single_text(content: Any) -> str | None:
+    if not isinstance(content, list) or len(content) != 1:
+        return None
+    item = content[0]
+    kind = item.get("type") if isinstance(item, dict) else getattr(item, "type", None)
+    text = item.get("text") if isinstance(item, dict) else getattr(item, "text", None)
+    return text if kind == "text" and isinstance(text, str) else None
+
+
+def flag_error_result(result: Any) -> Any:
+    """Mark a ``tools/call`` result ``isError`` when its payload reports an error.
+
+    Tools return their JSON text as ``str``; the SDK wraps it with
+    ``isError: false`` and the ``ToolErrorPayload`` type is gone by then. The
+    same envelope check :func:`tool_result_error` uses for metrics decides here,
+    so a rate limit, refusal or caught failure is an error on the wire too.
+    """
+    if isinstance(result, dict):
+        if result.get("isError") is True:
+            return result
+        text = _single_text(result.get("content"))
+        return {**result, "isError": True} if text is not None and _payload_error(text) is not None else result
+    if getattr(result, "is_error", None) is not False:
+        return result
+    text = _single_text(getattr(result, "content", None))
+    if text is None or _payload_error(text) is None:
+        return result
+    return result.model_copy(update={"is_error": True})
+
+
+async def flag_tool_error_results(ctx: Any, call_next: Any) -> Any:
+    """MCP middleware applying :func:`flag_error_result` to every ``tools/call``, in every transport."""
+    result = await call_next(ctx)
+    return flag_error_result(result) if getattr(ctx, "method", None) == "tools/call" else result
+
+
 def record_completion(
     tool_name: str,
     result: object,
