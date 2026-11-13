@@ -9,6 +9,8 @@ type Point = [number, number];
 export const ROUTED_NODE_LIMIT = 130;
 /** A corridor beyond this multiple of the direct distance reads as a stray line across the map, not a route. */
 const MAX_DETOUR = 2;
+/** How far below a glyph's centre row a caption-avoiding route runs. */
+const EXIT_OFFSET = 18;
 
 function roundedRoute(points: Point[]): string {
   const distinct = points.filter((point, index) => !index || point[0] !== points[index - 1]![0] || point[1] !== points[index - 1]![1]);
@@ -51,7 +53,15 @@ function endpointCaptionRoute(edge: Endpoints, obstacles: Obstacle[], path: stri
   const upperX = upper.position === Position.Left ? upperNode.x - 24 : upperNode.x + upperNode.width + 24;
   const lowerX = lower.position === Position.Top ? lower.x : lower.position === Position.Left ? lowerNode.x - 24 : lowerNode.x + lowerNode.width + 24;
   const laneY = (bottom + lowerNode.y) / 2;
-  const points: Point[] = [[upper.x, upper.y], [upperX, upper.y], [upperX, laneY], [lowerX, laneY], [lowerX, lower.y], [lower.x, lower.y]];
+  // Run beside the glyph a little below its centre row: a sibling edge to a same-row neighbour
+  // leaves the same handle along that row, and sharing it would read as one line splitting.
+  const exitY = upper.y + Math.min(EXIT_OFFSET, Math.max(0, (captionTop - upper.y) / 2));
+  const exit = (x: number): Point[] => exitY === upper.y ? [[x, upper.y]] : [[upper.x + Math.sign(x - upper.x) * 12, exitY], [x, exitY]];
+  // The lower card's side handle gets the same treatment, a little above its row.
+  const sideEntry = lower.position === Position.Left || lower.position === Position.Right;
+  const enterY = sideEntry ? lower.y - Math.min(EXIT_OFFSET, Math.max(0, (lower.y - lowerNode.y) / 2)) : lower.y;
+  const enter = (x: number): Point[] => enterY === lower.y ? [[x, lower.y]] : [[x, enterY], [lower.x + Math.sign(x - lower.x) * 12, enterY]];
+  const points: Point[] = [[upper.x, upper.y], ...exit(upperX), [upperX, laneY], [lowerX, laneY], ...enter(lowerX), [lower.x, lower.y]];
   const intervening = obstacles.filter(node => node.id !== upper.id && node.id !== lower.id
     && node.y < lower.y && node.y + node.height > upper.y);
   // A skipped rank can contain another entity. Test every segment, reserving
@@ -69,8 +79,8 @@ function endpointCaptionRoute(edge: Endpoints, obstacles: Obstacle[], path: stri
   const outerLanes = [Math.min(upperNode.x, lowerNode.x, ...intervening.map(node => node.x)) - 24,
     Math.max(upperNode.x + upperNode.width, lowerNode.x + lowerNode.width, ...intervening.map(node => node.x + node.width)) + 24];
   const candidates = outerLanes.map(x => ({ x, route: [
-    [upper.x, upper.y], [upperX, upper.y], [upperX, firstLane], [x, firstLane],
-    [x, lastLane], [lowerX, lastLane], [lowerX, lower.y], [lower.x, lower.y],
+    [upper.x, upper.y], ...exit(upperX), [upperX, firstLane], [x, firstLane],
+    [x, lastLane], [lowerX, lastLane], ...enter(lowerX), [lower.x, lower.y],
   ] as Point[] })).filter(candidate => clear(candidate.route));
   const length = (route: Point[]) => route.slice(1).reduce((total, point, index) => total + Math.abs(point[0] - route[index]![0]) + Math.abs(point[1] - route[index]![1]), 0);
   const direct = Math.abs(edge.targetX - edge.sourceX) + Math.abs(edge.targetY - edge.sourceY);
@@ -133,17 +143,20 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
     const bottom = previous.y + previous.height;
     return node.y - bottom > 32 ? [(bottom + node.y) / 2] : [];
   });
-  const candidates = [...gaps, ...between.flatMap(node => [node.y - 40, node.y + node.height + 40])];
-  const lanes = candidates.filter(y => between.every(node => y < node.y - 16 || y > node.y + node.height + 16));
+  // A card that only partly overlaps the corridor still sits under the lane's straight run.
+  const corridor = obstacles.filter(node => node.id !== edge.source && node.id !== edge.target
+    && node.x < edge.targetX - 24 && node.x + node.width > edge.sourceX + 24);
+  const clearOf = (y: number) => corridor.every(node => y < node.y - 16 || y > node.y + node.height + 16);
+  const candidates = [...gaps, ...corridor.flatMap(node => [node.y - 40, node.y + node.height + 40])];
+  const lanes = candidates.filter(clearOf);
   const top = Math.min(...obstacles.map(node => node.y));
   const bottom = Math.max(...obstacles.map(node => node.y + node.height));
   const outside = (y: number) => Number(y < top || y > bottom);
   lanes.sort((a, b) => outside(a) - outside(b) || (Math.abs(edge.sourceY - a) + Math.abs(edge.targetY - a))
     - (Math.abs(edge.sourceY - b) + Math.abs(edge.targetY - b)) || a - b);
-  const baseLane = lanes[0] ?? Math.min(edge.sourceY, edge.targetY, ...between.map(node => node.y)) - 40;
+  const baseLane = lanes[0] ?? Math.min(edge.sourceY, edge.targetY, ...corridor.map(node => node.y)) - 40;
   const branchLane = baseLane + Math.sign(edge.targetY - edge.sourceY) * 16;
-  const lane = between.every(node => branchLane < node.y - 16 || branchLane > node.y + node.height + 16)
-    ? branchLane : baseLane;
+  const lane = clearOf(branchLane) ? branchLane : baseLane;
   const sourceNode = obstacles.find(node => node.id === edge.source);
   const targetNode = obstacles.find(node => node.id === edge.target);
   const start = Math.max(edge.sourceX + 32, sourceNode ? sourceNode.x + sourceNode.width + 24 : edge.sourceX + 32);

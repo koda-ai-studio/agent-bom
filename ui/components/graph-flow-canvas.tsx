@@ -5,7 +5,7 @@ import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { lineageNodeTypesAdaptive } from "@/components/lineage-nodes";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
-import { readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
+import { disclosedGlyphSize, readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
 import { shouldVirtualizeReactFlowNodes } from "@/lib/graph-renderer-switch";
 import { BACKGROUND_COLOR, BACKGROUND_GAP, CONTROLS_CLASS, MINIMAP_BG, MINIMAP_CLASS, MINIMAP_MASK, minimapNodeColor } from "@/lib/graph-utils";
 import type { GraphPageModel } from "@/components/graph-page-view";
@@ -26,7 +26,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
             <ReactFlow
               style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport),
                 ...flowView.cardStyle,
-                ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": `${Math.min(156, 64 / Math.max(graphViewport.zoom, 0.1))}px` } : {}) }}
+                ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": disclosedGlyphSize(graphViewport.zoom) } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${flowView.kind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={measuredDisplay.nodes}

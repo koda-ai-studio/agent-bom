@@ -10,10 +10,10 @@ import { flowAvailability, flowFromParam, flowUnavailableReason, investigationFl
 import type { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { GRAPH_CARD_ZOOM } from "@/lib/graph-adaptive-frame";
 import { wrappedRankLayout } from "@/lib/graph-wrapped-ranks";
+import { PREVIEW_LAYOUT } from "@/lib/graph-preview-layout";
+import { separateCards } from "@/lib/graph-card-separation";
 import { quietContextEdges, withHeldConnections } from "@/lib/graph-edge-quieting";
 
-/** A preview shows few cards, so it can give them room; the same 220px columns wrap to two rows. */
-const PREVIEW_LAYOUT = { maxRows: 2, columnGap: 320, rowGap: 380, respace: true };
 const WIDE_CARD = { "--graph-node-card-width": "300px" } as React.CSSProperties;
 
 /** Finding nodes are hidden when their group collapses, so a selection on one must close first. */
@@ -69,7 +69,11 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
     active || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
   const [allEdgesShown, setAllEdgesShown] = useState(false);
   const annotated = useMemo(() => withHeldConnections(disclosed.nodes, disclosed.edges, allEdgesShown || presentation.editing), [disclosed.nodes, disclosed.edges, allEdgesShown, presentation.editing]);
-  const measured = useDisplayNodeMeasurements(annotated, presentation.onNodesChange);
+  const measuredRaw = useDisplayNodeMeasurements(annotated, presentation.onNodesChange);
+  // Saved and in-progress hand layouts are the operator's; only computed layouts are respaced.
+  const respace = !presentation.editing && !presentation.hasPositionOverrides;
+  const separated = useMemo(() => respace ? separateCards(measuredRaw.nodes) : measuredRaw.nodes, [respace, measuredRaw.nodes]);
+  const measured = useMemo(() => ({ ...measuredRaw, nodes: separated }), [measuredRaw, separated]);
   const focusKey = JSON.stringify([selectedNodeId, ...focusNodeIds]);
   const quieted = useMemo(
     () => quietContextEdges(disclosed.edges, { showAll: allEdgesShown || presentation.editing, focusNodes: JSON.parse(focusKey) as (string | null)[], focusEdge: selectedRelationshipId }),

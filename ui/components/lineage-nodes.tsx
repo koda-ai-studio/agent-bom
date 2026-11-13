@@ -1,5 +1,6 @@
 "use client";
 
+import { canvasCaption } from "@/lib/graph-canvas-caption";
 import { GraphFindingGroupNode } from "@/components/graph-finding-group-node";
 import { agentExecutionCaption, type AgentContext } from "@/lib/graph-agent-context";
 import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
@@ -222,6 +223,7 @@ function NodeCard({
   const severity = findingSeverity(data);
   const displayTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   const caption = data.evidenceFlow ? mcpNodeCaption(data, displayTitle) : null;
+  const shortTitle = canvasCaption(displayTitle, data.entityType === "vulnerability" || data.entityType === "misconfiguration" ? data.entityType : data.nodeType);
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   const { badges: allBadges, ring } = nodeBadges(data);
   const badges = allBadges.filter((badge) => badge.kind !== "provider" && (badge.kind !== "environment" || showsEnvironmentChip(data)));
@@ -258,7 +260,8 @@ function NodeCard({
         {data.heldConnections ? <span data-testid="graph-held-connections" title={`${data.heldConnections} more ${data.heldConnections === 1 ? "connection" : "connections"} not drawn`} style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}
           className="absolute -bottom-1 -right-2 rounded-full border border-outline bg-surface px-1.5 font-medium leading-snug text-ink-secondary">+{data.heldConnections}<span className="sr-only"> more connections not drawn</span></span> : null}
       </div>
-      <SegmentedLabel caption text={caption?.title ?? (repository?.slug || displayTitle)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
+      <SegmentedLabel caption text={caption?.title ?? (repository?.slug || shortTitle.text)} className="mb-1 line-clamp-3 w-full min-w-0 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
+      {shortTitle.shortened && !caption && !repository && <span className="sr-only">{displayTitle}</span>}
       {/* The vendor mark names the provider; a second text chip would repeat it. */}
       <NodeBadgeRow badges={badges}>
         <span data-graph-caption data-entity-role style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
