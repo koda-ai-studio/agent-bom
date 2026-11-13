@@ -9,6 +9,14 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.115.0] - 2026-11-12
+
+### Highlights
+- Multi-replica control planes on Postgres finish rolling updates and restarts without dropped requests, a push claimed by a dead replica is ingested by another within about two minutes, and `helm template` fails on installs that could never run.
+- The selected attack path reads as a layered graph that ends at the asset at risk, with findings as severity badges and edge evidence shown by line style.
+- Served models are inventoried from vLLM, Text Generation Inference, Triton, llama.cpp and LM Studio endpoints, and Node.js runtimes are assessed against the Node.js security working group index.
+- Large HTML reports open: a 50,000-finding report loads in about 1.5 s, with paged findings and readable diagrams.
+
 ### Upgrade notes
 - Helm: a clustered or production control-plane API (more than one replica, an autoscaler, `AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT=1` or `AGENT_BOM_DEPLOYMENT_ENV=production`) needs request attestation in its values, or rendering fails. Set `AGENT_BOM_TRUST_PROXY_AUTH=1` with `AGENT_BOM_TRUST_PROXY_AUTH_SECRET` and `AGENT_BOM_TRUST_PROXY_AUTH_ISSUER` (or app-native mTLS) in `controlPlane.api.env`, or put them in the auth Secret and set `controlPlane.api.listenerAttestation.fromSecret=true`. Such an install already refused to start without them.
 - Helm: Postgres pool sizes move from `AGENT_BOM_POSTGRES_POOL_MIN_SIZE` / `_MAX_SIZE` in `controlPlane.api.env` (now rejected) to `controlPlane.postgres.pool.minSize` / `.maxSize` (defaults 2 and 20), which also set the role connection limits the migration Job applies. Set `controlPlane.postgres.connectionLimits` to pin larger limits; with migrations disabled, apply them yourself (see the connection budget docs). Postgres `max_connections` must cover them.
@@ -19,8 +27,15 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Postgres migration `20261111_01` drops seven indexes that no query uses: a trigram index on `LOWER(search_text)` (search text is stored lowercased), an `entity_type`-only index on `graph_nodes`, and four `scan_jobs` indexes that duplicate `idx_pg_jobs_*`. Drops run `CONCURRENTLY`, so no table is locked. At 200 agents, each push writes about 38% less WAL. The downgrade recreates them.
 - Parquet and Iceberg exports move to schema version 6, which appends `malicious_basis` after `sla_due_at_source`. 0.114.0 wrote that column at position 11 under version-5 metadata, which moved every later column; consumers that read 0.114.0 files by position should re-read them by name. Iceberg tables keep their field IDs and gain the column at the end.
 - Ollama model agents are named with the full `name:tag` (`ollama-model-llama3:8b` instead of `ollama-model-llama3`), so two tags of one model on one host are two assets. Their asset identities change once.
+- An MCP server with OAuth registers only read-only tools, so the default profile serves 7 tools instead of 8: `scan` is not offered. A static bearer token keeps the full profile. Post-deploy checks compare exact tool names for the deployment's authentication mode.
+- The hosted MCP images (`Dockerfile.sse` and the new `Dockerfile.public-mcp`) sync OSV (PyPI, npm), CISA KEV and FIRST EPSS before serving, so start-up takes longer (about 50 s in a local run) and the image health check's start period is 240 s. A platform health check with a shorter timeout should allow for it. A failed sync still starts the server.
+- Railway stops reading config as code (`railway.json`) on 2026-12-01. Before then, migrate the OAuth MCP service (`railway config migrate`) or set its Dockerfile path to `deploy/docker/Dockerfile.sse` in the dashboard; otherwise it may build the root `Dockerfile`. See [plugin submission](docs/PLUGIN_SUBMISSION.md).
+- Apply Postgres migrations through `20261112_01`. `20261111_01` drops redundant indexes `CONCURRENTLY`; `20261112_01` raises a bounded `agent_bom_app` connection limit to 100. See [0.115.0 upgrade guidance](docs/UPGRADING.md).
 
 ### Added
+- `agent-bom mcp server --profile public` registers only the read-only `check` and `intel_lookup` tools, with no prompts or resources, for a no-sign-in lookup deployment built from `deploy/docker/Dockerfile.public-mcp`. OAuth with this mode refuses to start. `/.well-known/openai-apps-challenge` serves `AGENT_BOM_OPENAI_APPS_CHALLENGE` as plain text, or 404 when unset. `integrations/openai-mcp` and `scripts/build_openai_mcp_plugin_zip.py` package it for a plugin directory. See [permissions](docs/PERMISSIONS.md) and [plugin submission](docs/PLUGIN_SUBMISSION.md) (#6259).
+- An `intel_lookup` miss reports the advisory database's sync state (`database: {synced, sources, last_synced | note}`) instead of reading as "does not exist" (#6259).
+- The [privacy notice](site-docs/privacy.md) and [terms](site-docs/terms.md) cover the public lookup service: its operator and contact, what a call sends and where, what the service and its host keep, and the governing law. The public lookup section of [permissions](docs/PERMISSIONS.md) now lists every registry `check` can contact and the server log the host keeps.
 - Agent harness architecture: framework agents in a declared multi-agent harness (a LangGraph graph or CrewAI crew) carry `harness_id`, `harness_role` (harness, orchestrator, subgraph, sub_agent), `harness_layer` and `harness_entry`, and keep their unresolved routes verbatim. `GET /v1/graph/agent-architecture` and the read-only `agent_architecture` MCP tool return the same tenant-scoped, cursor-paged harnesses: agents by layer, declared flow edges (entry, sequential, conditional, handoff, fan-out, subgraph, finish, member, peer), unresolved routes, literal model references and each agent's recorded findings and reach. See [graph contract](docs/graph/CONTRACT.md#agent-harness-architecture) (#5977, #5986).
 - Resolved findings name the scan that proved them gone in `resolved_by_scan_id`, in `/v1/findings`, the `findings` MCP tool and the finding drawer. It stays after retention removes the scan (#6129).
 - `--serving-endpoint RUNTIME=URL` (repeatable) reads one vLLM, Text Generation Inference, Triton, llama.cpp or LM Studio endpoint with that runtime's documented read-only request. Each endpoint reports success, partial, denied, timeout or unavailable; only success and partial produce records, and a failed endpoint never falls back to local files. Each model records runtime, endpoint, artifact and collection evidence separately in `metadata.serving_evidence`. A model reported with a version, such as each Triton model version, is its own record (`triton-model-<name>@<version>`). See [AI infrastructure scanning](docs/AI_INFRASTRUCTURE_SCANNING.md).
@@ -49,6 +64,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - SARIF results carry `workflow_status`, and non-CVE SARIF results carry `owner`, `sla_due_at` and `sla_due_at_source` like CVE results. `finding_to_ocsf()` and `findings_to_ocsf()` take an optional `observed_at` scan time that anchors the SLA of a finding with no history.
 
 ### Fixed
+- A start-up graph warm-up that raised left readiness reporting `current_graph_prewarming` until its 120 s bound; it now reports the warm-up as incomplete (`prewarm_failed`), logs a sanitized error and releases readiness at once.
 - The hosted MCP server image never loaded the advisory database, so `intel_lookup` answered not found for every advisory id. `Dockerfile.sse` now syncs OSV (PyPI, npm), CISA KEV and FIRST EPSS before serving, as the non-root user with a writable home, and allows four minutes for start-up; a failed sync still starts the server, and a miss reports the database's sync state.
 - `/health` answered in about 340 ms p99 while a 500-agent push was admitted, over the 250 ms budget. Full garbage collections, which stop every thread including the event loop, walked every object the API created at start-up each time. Start-up now collects once and freezes those objects out of later collections; on a shared 10-core machine p99 measured 147-231 ms over six runs, and 500-agent ingest throughput did not change beyond run-to-run noise. Shortening the interpreter's thread switch interval was measured too and did not lower it.
 - A `--serving-endpoint` URL, Ollama host or other outbound URL with a port that is not a number from 1 to 65535 (`http://127.0.0.1:bad`) raised an uncaught `InvalidURL` error. The probe now reports the endpoint as unavailable with the reason, and the CLI rejects the value as a usage error.
@@ -4850,7 +4866,8 @@ Two new product surfaces (inter-agent firewall + per-run discovery envelope) plu
 
 ---
 
-[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.114.0...HEAD
+[Unreleased]: https://github.com/koda-ai-studio/agent-bom/compare/v0.115.0...HEAD
+[0.115.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.114.0...v0.115.0
 [0.114.0]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.2...v0.114.0
 [0.113.2]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.1...v0.113.2
 [0.113.1]: https://github.com/koda-ai-studio/agent-bom/compare/v0.113.0...v0.113.1
