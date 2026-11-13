@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import type { Node } from "@xyflow/react";
+import type { LineageNodeData } from "@/components/lineage-nodes";
 
 import { canvasNodeLabel, containerOccurrenceRole } from "@/lib/graph-occurrence-role";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
@@ -99,4 +101,29 @@ it("prefers recorded readable workspace context over canonical identifiers", () 
   const result = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
   expect(result.nodes.map(n => n.data.identityContext)).toEqual(["Workspace: Billing", "Workspace: Analytics"]);
   expect(result.nodes.map(n => n.id)).toEqual([one.id, two.id]);
+});
+
+describe("same-name server occurrences", () => {
+  const server = (id: string): Node<LineageNodeData> => ({ id, position: { x: 0, y: 0 }, data: { label: "research-filesystem", nodeType: "server" } });
+  const labels = new Map([["agent:cursor", "Cursor First-Run Workspace"], ["agent:bot", "Claude Review Bot"]]);
+
+  it("names the client each configuration belongs to instead of an ordinal", async () => {
+    const { assignCollisionScopes } = await import("@/lib/graph-occurrence-role");
+    const nodes = [server("server:a"), server("server:b")];
+    assignCollisionScopes(nodes, [
+      { source: "agent:cursor", target: "server:a", relationship: "uses" },
+      { source: "agent:bot", target: "server:b", relationship: "uses" },
+    ], labels);
+    expect(nodes.map(node => node.data.identityContext)).toEqual(["Used by Cursor First-Run Workspace", "Used by Claude Review Bot"]);
+  });
+
+  it("falls back to an ordinal only when the clients do not tell them apart", async () => {
+    const { assignCollisionScopes } = await import("@/lib/graph-occurrence-role");
+    const nodes = [server("server:a"), server("server:b")];
+    assignCollisionScopes(nodes, [
+      { source: "agent:bot", target: "server:a", relationship: "uses" },
+      { source: "agent:bot", target: "server:b", relationship: "uses" },
+    ], labels);
+    expect(nodes.map(node => node.data.identityContext)).toEqual(["Instance 1", "Instance 2"]);
+  });
 });

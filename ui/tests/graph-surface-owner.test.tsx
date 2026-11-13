@@ -6,6 +6,7 @@ const auth = vi.hoisted(() => ({ loading: false, session: { tenant_id: "a", subj
 vi.mock("@/components/auth-provider", () => ({ useAuthState: () => auth }));
 vi.mock("@/components/finding-investigation-context", () => ({ FindingInvestigationContext: () => null }));
 vi.mock("@/components/graph-snapshot-updates", () => ({ GraphSnapshotUpdates: () => null }));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams() }));
 vi.mock("@/app/graph/graph-page-client", () => ({ default: function Canvas() {
   const [owner] = useState(() => auth.session?.tenant_id);
   return <div>Evidence for {owner}</div>;

@@ -9,11 +9,11 @@ import { useDisplayNodeMeasurements } from "@/hooks/use-display-node-measurement
 import { flowAvailability, flowFromParam, flowUnavailableReason, investigationFlow, type FlowResult, type InvestigationFlow, type SpecificFlow } from "@/lib/graph-investigation-flow";
 import type { graphConnectionPreview } from "@/lib/graph-connection-preview";
 import { GRAPH_CARD_ZOOM } from "@/lib/graph-adaptive-frame";
-import { wrappedRankLayout } from "@/lib/graph-wrapped-ranks";
+import { hopColumnLayout } from "@/lib/graph-hop-columns";
+import { PREVIEW_LAYOUT } from "@/lib/graph-preview-layout";
+import { separateCards } from "@/lib/graph-card-separation";
 import { quietContextEdges, withHeldConnections } from "@/lib/graph-edge-quieting";
 
-/** A preview shows few cards, so it can give them room; the same 220px columns wrap to two rows. */
-const PREVIEW_LAYOUT = { maxRows: 2, columnGap: 320, rowGap: 380, respace: true };
 const WIDE_CARD = { "--graph-node-card-width": "300px" } as React.CSSProperties;
 
 /** Finding nodes are hidden when their group collapses, so a selection on one must close first. */
@@ -60,16 +60,26 @@ export function useInvestigationFlowView({ presentation, edges, loaded, narrowVi
   const active = !otherSurface && !pausedReason;
   const [receiptId, setReceiptId] = useState<string | null>(null);
 
+  const previewRootId = connectionPreview?.root.id;
   const flow: FlowResult = useMemo(() => {
     if (!active) return { nodes: presentation.nodes, edges, scenario: "inventory", applied: false, primaryPath: [] };
-    if (previewActive) return { nodes: wrappedRankLayout(presentation.nodes, PREVIEW_LAYOUT), edges, scenario: "inventory", applied: false, primaryPath: [] };
+    if (previewActive) {
+      // Nodes at the same hop distance from the chosen start share one column (one row on a phone).
+      const shown = presentation.nodes.filter(node => !node.hidden);
+      const placed = new Map(hopColumnLayout(shown, edges, previewRootId ?? "", { ...PREVIEW_LAYOUT, vertical: narrowViewport }).map(node => [node.id, node.position]));
+      return { nodes: presentation.nodes.map(node => placed.has(node.id) ? { ...node, position: placed.get(node.id)! } : node), edges, scenario: "inventory", applied: false, primaryPath: [] };
+    }
     return investigationFlow(presentation.nodes, edges, kind, narrowViewport);
-  }, [active, previewActive, presentation.nodes, edges, kind, narrowViewport]);
+  }, [active, previewActive, previewRootId, presentation.nodes, edges, kind, narrowViewport]);
   const disclosed = useCloudFindingDisclosure(flow.nodes, flow.edges, selectedNodeId, `${presentation.storageKey}:${kind}`,
     active || presentation.editing || presentation.hasSavedState || presentation.restoredSavedState);
   const [allEdgesShown, setAllEdgesShown] = useState(false);
   const annotated = useMemo(() => withHeldConnections(disclosed.nodes, disclosed.edges, allEdgesShown || presentation.editing), [disclosed.nodes, disclosed.edges, allEdgesShown, presentation.editing]);
-  const measured = useDisplayNodeMeasurements(annotated, presentation.onNodesChange);
+  const measuredRaw = useDisplayNodeMeasurements(annotated, presentation.onNodesChange);
+  // Saved and in-progress hand layouts are the operator's; only computed layouts are respaced.
+  const respace = !presentation.editing && !presentation.hasPositionOverrides;
+  const separated = useMemo(() => respace ? separateCards(measuredRaw.nodes) : measuredRaw.nodes, [respace, measuredRaw.nodes]);
+  const measured = useMemo(() => ({ ...measuredRaw, nodes: separated }), [measuredRaw, separated]);
   const focusKey = JSON.stringify([selectedNodeId, ...focusNodeIds]);
   const quieted = useMemo(
     () => quietContextEdges(disclosed.edges, { showAll: allEdgesShown || presentation.editing, focusNodes: JSON.parse(focusKey) as (string | null)[], focusEdge: selectedRelationshipId }),

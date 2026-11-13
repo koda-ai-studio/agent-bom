@@ -18,5 +18,5 @@ export function formatGraphFindingCounts(summary: HeadlineSummary, scope: "view"
 }
 
 export function formatGraphHeadline(summary: HeadlineSummary, snapshotPaths: number, scope: "view" | "loaded scope" = "view"): string {
-  return `${formatGraphFindingCounts(summary, scope)} · ${snapshotPaths.toLocaleString()} ${snapshotPaths === 1 ? "attack path" : "attack paths"} in snapshot (deduplicated)`;
+  return `${formatGraphFindingCounts(summary, scope)} · ${snapshotPaths.toLocaleString()} ${snapshotPaths === 1 ? "attack path" : "attack paths"} across the whole snapshot (deduplicated)`;
 }

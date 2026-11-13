@@ -25,13 +25,13 @@ function renderLayered() {
 }
 
 describe("embedded focused path", () => {
-  it("renders the layered graph without the CVE as a hop or always-on relationship labels", () => {
+  it("renders the layered graph without the CVE as a hop, naming each selected-path hop on its line", () => {
     renderLayered();
     const canvas = screen.getByTestId("security-graph-investigation");
     expect(canvas).toHaveAttribute("data-path-layout", "layered");
     expect(within(canvas).queryByTestId("attack-path-node-cve:next")).toBeNull();
     expect(within(canvas).getByTestId("attack-path-node-pkg:next")).toHaveAttribute("data-role", "target");
-    expect(within(canvas).queryByText("Depends On")).toBeNull();
+    expect(within(canvas).getByText("Depends On")).toBeInTheDocument();
     expect(screen.getByRole("toolbar", { name: "Graph controls" })).toBeInTheDocument();
   });
 

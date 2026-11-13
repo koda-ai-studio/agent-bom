@@ -72,7 +72,7 @@ export function declutterRelationshipLabels(edges: Edge[]): Edge[] {
     groups.set(key, [...(groups.get(key) ?? []), edge]);
   }
   const replacements = new Map<string, Edge>();
-  for (const members of groups.values()) {
+  for (const [key, members] of groups) {
     const ordered = [...members].sort((a, b) => a.id.localeCompare(b.id));
     const representative = ordered[Math.floor((ordered.length - 1) / 2)]!;
     for (const edge of ordered) {
@@ -81,7 +81,8 @@ export function declutterRelationshipLabels(edges: Edge[]): Edge[] {
       // The evidence qualifier stays on every caption: a bare verb reads as observed fact.
       const text = `${base}${count}${qualifier ? `${QUALIFIER_SEPARATOR}${qualifier}` : ""}`;
       if (edge === representative) {
-        replacements.set(edge.id, { ...edge, label: text });
+        // A counted caption names where its lines split or join, so it sits at that port.
+        replacements.set(edge.id, { ...edge, label: text, ...(count ? { data: { ...edge.data, labelAnchor: key.startsWith("source|") ? "source" : "target" } } : {}) });
       } else {
         const quiet: Edge = { ...edge, data: { ...edge.data, quietLabel: true } };
         delete quiet.label;

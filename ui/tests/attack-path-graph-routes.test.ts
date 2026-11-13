@@ -21,7 +21,7 @@ function properlyIntersect([a, b]: Segment, [c, d]: Segment): boolean {
 function crossings(model: AttackPathGraphModel, direction: AttackPathDirection): string[] {
   const layout = layoutAttackPathGraph(model, direction);
   const routes = routeAttackPathEdges(model, layout);
-  const sampled = model.edges.map(edge => ({ edge, points: sampleRoute(routes.get(edge.id)!, direction) }));
+  const sampled = model.edges.map(edge => ({ edge, points: sampleRoute(routes.get(edge.id)!) }));
   const out: string[] = [];
   for (let i = 0; i < sampled.length; i += 1) {
     for (let j = i + 1; j < sampled.length; j += 1) {
@@ -42,7 +42,7 @@ function crossings(model: AttackPathGraphModel, direction: AttackPathDirection):
         let route = routes.get(item.edge.id)!;
         if (isCommon(route[0]!)) route = route.slice(1);
         if (isCommon(route.at(-1)!)) route = route.slice(0, -1);
-        return route.length >= 2 ? sampleRoute(route, direction) : [];
+        return route.length >= 2 ? sampleRoute(route) : [];
       };
       const bDense = densify(tail(b));
       const merged = densify(tail(a)).find(p => !common.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 2)
@@ -88,7 +88,7 @@ describe("attack path edge routing", () => {
       const layout = layoutAttackPathGraph(model, "LR");
       const routes = routeAttackPathEdges(model, layout);
       for (const edge of model.edges) {
-        const points = sampleRoute(routes.get(edge.id)!, "LR");
+        const points = sampleRoute(routes.get(edge.id)!);
         const [before, end] = points.slice(-2) as [Point, Point];
         const [start, after] = points.slice(0, 2) as [Point, Point];
         // Arrives moving right into the target's left side; leaves moving right from the source's right side.
@@ -108,8 +108,53 @@ describe("attack path edge routing", () => {
     const route = routeAttackPathEdges(model, layout).get("back")!;
     const lanesTop = Math.min(...[...layout.positions.values()].map(position => position.y));
     const lanesBottom = Math.max(...[...layout.positions.values()].map(position => position.y + layout.nodeHeight));
-    const runs = route.slice(1, -1);
+    // Past the turns out of the source's row and into the target's row, the line runs outside every row.
+    const runs = route.slice(1, -1).filter(point => point.y !== route[0]!.y && point.y !== route.at(-1)!.y);
     expect(runs.length).toBeGreaterThan(0);
     for (const point of runs) expect(point.y < lanesTop || point.y > lanesBottom).toBe(true);
+  });
+
+  /** Where the glyph ends and the name begins inside a node box (6px top inset + 56px glyph). */
+  const NAME_TOP = 62;
+
+  for (const [name, fixture] of Object.entries(CASES)) {
+    for (const direction of ["LR", "TB"] as const) {
+      it(`keeps every line clear of node names and of nodes it does not connect: ${name} ${direction}`, () => {
+        const { graph, selected } = fixture();
+        const model = buildAttackPathGraphModel(graph, selected, { expandedGroups: new Set(["group:server:s:cloud_resource"]) });
+        const layout = layoutAttackPathGraph(model, direction);
+        const routes = routeAttackPathEdges(model, layout);
+        const problems: string[] = [];
+        for (const edge of model.edges) {
+          const points = densify(sampleRoute(routes.get(edge.id)!));
+          for (const [id, position] of layout.positions) {
+            const inside = (p: Point, top: number) => p.x > position.x + 1 && p.x < position.x + layout.nodeWidth - 1 && p.y > top + 1 && p.y < position.y + layout.nodeHeight - 1;
+            const own = id === edge.source || id === edge.target;
+            const hit = points.find(p => inside(p, own ? position.y + NAME_TOP : position.y));
+            if (hit) problems.push(`${edge.id} ${own ? "runs through the name of" : "crosses"} ${id} @${Math.round(hit.x)},${Math.round(hit.y)}`);
+          }
+        }
+        expect(problems).toEqual([]);
+      });
+    }
+  }
+
+  it("gives each line fanning out of one node its own turn instead of a shared trunk", () => {
+    const { graph, selected } = fanOutFixture(5);
+    const model = buildAttackPathGraphModel(graph, selected, { collapseThreshold: 100 });
+    const layout = layoutAttackPathGraph(model, "LR");
+    const routes = routeAttackPathEdges(model, layout);
+    const bySource = new Map<string, number[]>();
+    for (const edge of model.edges) {
+      const route = routes.get(edge.id)!;
+      if (route.length < 3) continue;
+      bySource.set(edge.source, [...(bySource.get(edge.source) ?? []), route[1]!.x]);
+    }
+    const fanned = [...bySource.values()].filter(turns => turns.length > 1);
+    expect(fanned.length).toBeGreaterThan(0);
+    for (const turns of fanned) {
+      const sorted = [...turns].sort((a, b) => a - b);
+      for (let index = 1; index < sorted.length; index += 1) expect(sorted[index]! - sorted[index - 1]!).toBeGreaterThanOrEqual(6);
+    }
   });
 });

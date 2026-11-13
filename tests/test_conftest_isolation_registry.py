@@ -167,9 +167,9 @@ async def test_api_reset_discards_previous_agents_response(monkeypatch) -> None:
     monkeypatch.setattr(discovery, "_tenant_id", lambda request: tenant)
     monkeypatch.setattr(discovery, "_build_agents_response", lambda tenant_id: current)
 
-    assert await discovery.list_agents(None, refresh=False) == old
+    assert (await discovery.list_agents(None, refresh=False))["agents"] == old["agents"]
     conftest._reset_api_runtime_state()
-    assert await discovery.list_agents(None, refresh=False) == current
+    assert (await discovery.list_agents(None, refresh=False))["agents"] == current["agents"]
 
 
 def test_graph_drain_waits_for_current_projection_workers(monkeypatch):

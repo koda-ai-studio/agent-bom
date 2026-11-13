@@ -48,14 +48,15 @@ describe("relationship routing", () => {
   });
 });
 
-it("gives detour bends room to turn before reaching a clear horizontal lane", () => {
-  const [path] = relationshipPath(edge, [{ id: "middle", x: 260, y: 0, width: 220, height: 180 }]);
-  const points = path.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
-  // The first cubic arrives horizontally with a substantial easing interval,
-  // instead of forcing the entire turn into the old 32-unit elbow.
-  expect(points[6]! - points[2]!).toBeGreaterThanOrEqual(64);
-  expect(points[6]!).toBeLessThan(260);
-  expect(points[7]).toBeLessThan(0);
+it("turns into a clear lane in the space before the card in the way, with right-angle runs", () => {
+  const [path, , laneY] = relationshipPath(edge, [{ id: "middle", x: 260, y: 0, width: 220, height: 180 }]);
+  expect(path).not.toMatch(/C/);
+  expect(laneY).toBeLessThan(0);
+  const points = [...path.matchAll(/(-?\d+(?:\.\d+)?)[ ,](-?\d+(?:\.\d+)?)/g)].map(match => ({ x: Number(match[1]), y: Number(match[2]) }));
+  // The first point on the lane is reached after leaving the source and before the card begins.
+  const onLane = points.find(point => point.y === laneY)!;
+  expect(onLane.x).toBeGreaterThan(edge.sourceX);
+  expect(onLane.x).toBeLessThan(260);
 });
 
 it("uses a clear sibling gap before routing outside the node envelope", () => {

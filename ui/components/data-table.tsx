@@ -149,7 +149,7 @@ export function DataTable<T>({
                     <button
                       type="button"
                       onClick={() => onSortChange(column.key)}
-                      className={`inline-flex rounded transition-colors hover:text-[color:var(--foreground)] ${
+                      className={`inline-flex rounded uppercase transition-colors hover:text-[color:var(--foreground)] ${
                         active ? "text-[color:var(--foreground)]" : ""
                       }`}
                     >

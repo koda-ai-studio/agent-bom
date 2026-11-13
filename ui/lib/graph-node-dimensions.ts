@@ -1,20 +1,40 @@
 /** Shared layout footprint for circular entity glyphs and readable labels. */
 
+import { PREVIEW_CARD_MAX_WIDTH } from "@/lib/graph-preview-layout";
 import type { DagreLrOptions } from "@/lib/use-dagre-lr";
 import type { MinSeparationOptions } from "@/lib/dagre-layout";
 import type { CSSProperties } from "react";
 
+/** On-screen card sizes. Each token is divided by zoom, so cards read the same at any fit. */
+const DRAWN = { glyph: 52, icon: 28, label: 14, meta: 12 } as const;
+/**
+ * A graph this small has room for a glyph at the readability floor (66px on screen, icon 32px);
+ * larger graphs draw the compact 52px glyph so many nodes fit. Both stay far below the
+ * 115px circles a nine-node graph used to draw.
+ */
+export const SMALL_GRAPH_NODES = 12;
+const SMALL_DRAWN = { glyph: 66, icon: 32 } as const;
+/** Layout-unit ceilings; past these a fully fitted overview keeps its cards inside their layout boxes. */
+const CEILING = { glyph: 128, icon: 56, label: 30, roomyLabel: 36, meta: 30, roomyMeta: 32 } as const;
+
 /** Bounded investigations reserve more metadata space when Fit all lowers zoom. */
-export function readableGraphNodeStyle(zoom: number, boundedContext = false, roomyCaptions = boundedContext): CSSProperties {
+export function readableGraphNodeStyle(zoom: number, boundedContext = false, roomyCaptions = boundedContext, nodeCount = Number.POSITIVE_INFINITY): CSSProperties {
   const scale = Math.max(Number.isFinite(zoom) ? zoom : 1, 0.16);
+  const units = (drawn: number, ceiling: number) => `${Math.min(ceiling, drawn / scale)}px`;
+  const shape = nodeCount <= SMALL_GRAPH_NODES ? SMALL_DRAWN : DRAWN;
   return {
-    "--graph-node-card-width": roomyCaptions ? "clamp(220px, 30vw, 340px)" : "220px",
-    "--graph-node-label-size": `${Math.min(roomyCaptions ? 36 : 30, Math.max(18, 15 / scale))}px`,
-    "--graph-node-glyph-size": `${Math.min(128, Math.max(72, 64 / scale))}px`,
-    "--graph-node-icon-size": `${Math.min(56, Math.max(36, 34 / scale))}px`,
-    "--graph-node-meta-size": `${Math.min(roomyCaptions ? 32 : 30, Math.max(12, 12 / scale))}px`,
+    "--graph-node-card-width": roomyCaptions ? `clamp(220px, 30vw, ${PREVIEW_CARD_MAX_WIDTH}px)` : "220px",
+    "--graph-node-label-size": units(DRAWN.label, roomyCaptions ? CEILING.roomyLabel : CEILING.label),
+    "--graph-node-glyph-size": units(shape.glyph, CEILING.glyph),
+    "--graph-node-icon-size": units(shape.icon, CEILING.icon),
+    "--graph-node-meta-size": units(DRAWN.meta, roomyCaptions ? CEILING.roomyMeta : CEILING.meta),
     "--graph-group-label-size": `${Math.min(75, Math.max(18, 12 / scale))}px`,
   } as CSSProperties;
+}
+
+/** The glyph a flow draws when finding groups are disclosed, on the same on-screen scale as every card. */
+export function disclosedGlyphSize(zoom: number, nodeCount = Number.POSITIVE_INFINITY): string {
+  return `${Math.min(156, (nodeCount <= SMALL_GRAPH_NODES ? SMALL_DRAWN : DRAWN).glyph / Math.max(zoom, 0.1))}px`;
 }
 
 /** Reserve label width as well as the circular glyph. */

@@ -52,6 +52,12 @@ describe("DataTable", () => {
     expect(onSortChange).toHaveBeenCalledWith("cvss");
   });
 
+  it("keeps sortable headers in the shared uppercase header style", () => {
+    render(<DataTable rows={rows} columns={columns} rowKey={(r) => r.id} onSortChange={vi.fn()} />);
+    // Preflight resets text-transform on buttons, so the control must restate the header case.
+    expect(screen.getByRole("button", { name: /CVSS/ })).toHaveClass("uppercase");
+  });
+
   it("marks the selected row via data-selected", () => {
     render(
       <DataTable
