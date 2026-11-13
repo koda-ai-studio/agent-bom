@@ -6,8 +6,9 @@ and up to 4 graph-build connections) and keeps about 7 open while idle, so a
 second replica, a rolling-update surge pod or the post-install verification
 Job was refused with ``too many connections for role "agent_bom_app"``.
 
-Raise a bounded limit below 100 to 100. Unlimited (-1) and higher limits are
-kept. Helm installs then raise both runtime roles further from their replica
+Raise a bounded limit from 1 to 99 to 100. Unlimited (-1) and higher limits are
+kept, and so is 0: an operator who set it locked the role on purpose, so the
+upgrade leaves it with a warning instead of re-enabling logins. Helm installs then raise both runtime roles further from their replica
 counts after every upgrade (``compose_migrate.py``). A migration role that
 cannot administer ``agent_bom_app`` leaves the limit alone with a warning
 rather than failing the upgrade.
@@ -54,8 +55,21 @@ $$;
 """
 
 
+_LOCKED_WARNING = """
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agent_bom_app' AND rolconnlimit = 0) THEN
+        RAISE WARNING 'agent_bom_app CONNECTION LIMIT 0 kept: the role is locked; '
+            'raise it with ALTER ROLE agent_bom_app CONNECTION LIMIT 100 to let the application connect';
+    END IF;
+END
+$$;
+"""
+
+
 def upgrade() -> None:
-    op.execute(_set_limit("rolconnlimit BETWEEN 0 AND 99", 100))
+    op.execute(_LOCKED_WARNING)
+    op.execute(_set_limit("rolconnlimit BETWEEN 1 AND 99", 100))
 
 
 def downgrade() -> None:

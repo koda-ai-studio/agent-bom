@@ -209,9 +209,18 @@ per argument, string or boolean arguments only, and a per-client budget
 per-caller and global limits. Behind a reverse proxy set
 `AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS` to the number of trusted proxies that
 append to `X-Forwarded-For`; the client is the entry that many places from the
-right, which the client cannot forge. Unset, the socket peer is used, so every
-caller behind one proxy shares a budget (safe, but coarse). Budgets are per
-process: N replicas allow N times the anonymous rate.
+right, which the client cannot forge. Set
+`AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS` (comma-separated networks) so the
+header is read only when the connecting peer is one of those proxies; hops
+without it logs a start-up warning. Unset, the socket peer is used, so every
+caller behind one proxy shares a budget (safe, but coarse). A client is one IPv4
+address or one IPv6 /64; a fifth of the aggregate budget is reserved for
+clients' first calls; each client runs at most
+`AGENT_BOM_MCP_PUBLIC_CALLER_CONCURRENCY` (default 4) calls at once; and
+anonymous `initialize` has its own budget with the same limits. With
+`--profile public` streamable HTTP is stateless. Budgets are per
+process: N replicas allow N times the anonymous rate. See
+[runtime fail modes](RUNTIME_FAIL_MODES.md#mcp-public-read-only-tier).
 
 `/health`, `/` and the server card report `public_readonly` and
 `anonymous_tools`; `authentication.required` stays `true` while any registered
