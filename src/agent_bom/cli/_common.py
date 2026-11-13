@@ -20,10 +20,7 @@ from rich.console import Console
 
 from agent_bom import __version__
 from agent_bom.core.severity import SEVERITY_POLICY_ORDER
-from agent_bom.inventory import build_agents_from_inventory as _build_agents_from_inventory  # noqa: F401 — compatibility re-export
-from agent_bom.inventory import coerce_agent_type_for_inventory as _coerce_agent_type_for_inventory  # noqa: F401
 from agent_bom.output.brand_tokens import cli_banner_plain
-from agent_bom.security import sanitize_env_vars  # noqa: F401 — re-exported by agent_bom.cli
 
 __all__ = [
     "BANNER",
@@ -31,15 +28,28 @@ __all__ = [
     "OPTIONAL_PORT_RANGE",
     "PORT_RANGE",
     "SEVERITY_ORDER",
-    "_build_agents_from_inventory",
-    "_coerce_agent_type_for_inventory",
     "logger",
     "read_json_file_for_cli",
     "rich_log_handler_during_progress",
-    "sanitize_env_vars",
 ]
 
 logger = logging.getLogger(__name__)
+
+# Compatibility re-exports, resolved on first access so every CLI start does not
+# import the inventory and security stacks.
+_LAZY_REEXPORTS: dict[str, tuple[str, str]] = {
+    "_build_agents_from_inventory": ("agent_bom.inventory", "build_agents_from_inventory"),
+    "_coerce_agent_type_for_inventory": ("agent_bom.inventory", "coerce_agent_type_for_inventory"),
+    "sanitize_env_vars": ("agent_bom.security", "sanitize_env_vars"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    target = _LAZY_REEXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return getattr(importlib.import_module(target[0]), target[1])
+
 
 # Canonical CLI lockup — product name agent-bom, mark is BOM-with-agent-O.
 BANNER = cli_banner_plain(version=__version__)
