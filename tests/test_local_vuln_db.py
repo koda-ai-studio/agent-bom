@@ -508,7 +508,7 @@ def test_validated_db_path_accepts_home_subpath(tmp_path, monkeypatch):
 
 
 def test_validated_db_path_rejects_arbitrary_system_path():
-    with pytest.raises(ValueError, match="home directory or /tmp"):
+    with pytest.raises(ValueError, match="inside the home directory, AGENT_BOM_STATE_DIR or /tmp"):
         _validated_db_path("/etc/passwd")
 
 
