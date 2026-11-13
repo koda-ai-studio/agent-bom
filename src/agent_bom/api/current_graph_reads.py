@@ -4,6 +4,7 @@ GRAPH_READS = frozenset(
     {
         "load_graph",
         "load_rollup_graph",
+        "load_cluster_rows",
         "iter_nodes",
         "iter_edges",
         "snapshot_identity",

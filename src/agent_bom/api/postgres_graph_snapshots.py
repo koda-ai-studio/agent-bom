@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from agent_bom.graph.delta_digest import PriorSnapshotDigest
 
+from agent_bom.db.graph_cluster_rows import load_cluster_rows
 from agent_bom.db.graph_node_counts import count_snapshot_nodes
 from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.db.graph_store import (
@@ -40,6 +41,15 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
         tenant_id = normalize_graph_tenant_id(tenant_id)
         with _tenant_connection(self._pool) as conn:
             return count_snapshot_nodes(conn, tenant_id, scan_ids, entity_type, postgres=True)
+
+    def load_cluster_rows(self, *, tenant_id: str = "", scan_id: str = "") -> tuple[list[Any], list[Any], set[str], set[Any]]:
+        """Lean grouped-map projection of one snapshot, read in one repeatable-read transaction under the tenant's RLS."""
+        tenant_id = normalize_graph_tenant_id(tenant_id)
+        scan_id = scan_id or self.latest_snapshot_id(tenant_id=tenant_id)
+        if not scan_id:
+            return [], [], set(), set()
+        with _tenant_connection(self._pool, repeatable_read=True) as conn:
+            return load_cluster_rows(conn, tenant_id=tenant_id, scan_id=scan_id, postgres=True)
 
     def snapshot_identity(self, *, tenant_id: str = "", scan_id: str = "", for_paging: bool = False) -> tuple[str, str]:
         """Resolve a generation within the authenticated tenant's connection."""

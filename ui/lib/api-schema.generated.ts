@@ -4408,6 +4408,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/cluster-map": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Graph Cluster Map
+         * @description Collapse the snapshot into groups along the estate's tiers and types, with bundled edges.
+         *
+         *     Groups follow scope, agents, MCP servers and tools, packages by ecosystem,
+         *     findings by severity, identities and credentials, then cloud and data
+         *     resources by type. Each drawn edge carries the exact count of underlying
+         *     edges per relationship; what is not drawn is counted in ``summary``. The
+         *     first frame draws at most ``summary.element_budget`` nodes plus edges.
+         *     Risky groups (on an attack path, or holding a critical or high finding)
+         *     are ranked first. Read-only and bounded; answered from a per-snapshot
+         *     aggregation built once per generation.
+         */
+        get: operations["get_graph_cluster_map_v1_graph_cluster_map_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/graph/clusters": {
         parameters: {
             query?: never;
@@ -17042,6 +17071,235 @@ export interface components {
             note?: string | null;
             /** Text */
             text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphClusterListing */
+        GraphClusterListing: {
+            /** Cluster Key */
+            cluster_key: string;
+            /** Entity Types */
+            entity_types: {
+                [key: string]: number;
+            };
+            /** Folded */
+            folded: boolean;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Member Count */
+            member_count: number;
+            /** On Attack Path Count */
+            on_attack_path_count: number;
+            /** Risky */
+            risky: boolean;
+            /** Severity Counts */
+            severity_counts: {
+                [key: string]: number;
+            };
+            /** Tier */
+            tier: number;
+            /** Tier Label */
+            tier_label: string;
+            /** Worst Severity */
+            worst_severity: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphClusterMapCost */
+        GraphClusterMapCost: {
+            /** Bundles Considered */
+            bundles_considered: number;
+            /** Edges Scanned */
+            edges_scanned: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphClusterMapEdge
+         * @description One bundled edge: the exact number of underlying edges per relationship.
+         */
+        GraphClusterMapEdge: {
+            /** Count */
+            count: number;
+            /** Id */
+            id: string;
+            /**
+             * On Attack Path
+             * @description Carries a hop of one of the snapshot's 10 highest-risk attack paths
+             */
+            on_attack_path: boolean;
+            /** Relationships */
+            relationships: components["schemas"]["GraphClusterRelationshipCount"][];
+            /** Risky */
+            risky: boolean;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphClusterMapFilters */
+        GraphClusterMapFilters: {
+            /** Member Limit */
+            member_limit: number;
+            /** Risky Only */
+            risky_only: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphClusterMapFocus */
+        GraphClusterMapFocus: {
+            /** Cluster Id */
+            cluster_id?: string | null;
+            /** Found */
+            found: boolean;
+            /** Node Id */
+            node_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphClusterMapNode
+         * @description A drawn element: a group, one of an expanded group's members, or its "+K more" pager.
+         */
+        GraphClusterMapNode: {
+            /** Cluster Id */
+            cluster_id?: string | null;
+            /** Cluster Key */
+            cluster_key?: string | null;
+            /** Count */
+            count?: number | null;
+            /** Entity Type */
+            entity_type?: string | null;
+            /** Entity Types */
+            entity_types?: {
+                [key: string]: number;
+            } | null;
+            /** Expanded */
+            expanded?: boolean | null;
+            /** Focused */
+            focused?: boolean | null;
+            /** Folded Cluster Count */
+            folded_cluster_count?: number | null;
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "cluster" | "member" | "more";
+            /** Label */
+            label: string;
+            /** Limit */
+            limit?: number | null;
+            /** Member Count */
+            member_count?: number | null;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Offset */
+            offset?: number | null;
+            /** On Attack Path */
+            on_attack_path?: boolean | null;
+            /** On Attack Path Count */
+            on_attack_path_count?: number | null;
+            /** Prev Offset */
+            prev_offset?: number | null;
+            /** Risk Score */
+            risk_score?: number | null;
+            /** Risky */
+            risky?: boolean | null;
+            /** Severity */
+            severity?: string | null;
+            /** Severity Counts */
+            severity_counts?: {
+                [key: string]: number;
+            } | null;
+            /** Shown Member Count */
+            shown_member_count?: number | null;
+            /** Tier */
+            tier: number;
+            /** Tier Label */
+            tier_label?: string | null;
+            /** Worst Severity */
+            worst_severity?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphClusterMapResponse
+         * @description Grouped full map of one snapshot: bounded groups, members and bundled edges with exact counts.
+         */
+        GraphClusterMapResponse: {
+            /** Clusters */
+            clusters: components["schemas"]["GraphClusterListing"][];
+            cost: components["schemas"]["GraphClusterMapCost"];
+            /** Edges */
+            edges: components["schemas"]["GraphClusterMapEdge"][];
+            filters: components["schemas"]["GraphClusterMapFilters"];
+            focus?: components["schemas"]["GraphClusterMapFocus"] | null;
+            /**
+             * Mode
+             * @constant
+             */
+            mode: "cluster_map";
+            /** Nodes */
+            nodes: components["schemas"]["GraphClusterMapNode"][];
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            summary: components["schemas"]["GraphClusterMapSummary"];
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tiers */
+            tiers: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphClusterMapSummary */
+        GraphClusterMapSummary: {
+            /** Cluster Count */
+            cluster_count: number;
+            /** Dangling Edge Count */
+            dangling_edge_count: number;
+            /** Drawn Bundle Count */
+            drawn_bundle_count: number;
+            /** Element Budget */
+            element_budget: number;
+            /** Element Count */
+            element_count: number;
+            /** Filtered Edge Count */
+            filtered_edge_count: number;
+            /** Filtered Node Count */
+            filtered_node_count: number;
+            /** Folded Cluster Count */
+            folded_cluster_count: number;
+            /** Hidden Bundle Count */
+            hidden_bundle_count: number;
+            /** Hidden Bundle Edge Count */
+            hidden_bundle_edge_count: number;
+            /** Internal Edge Count */
+            internal_edge_count: number;
+            /** Listed Cluster Count */
+            listed_cluster_count: number;
+            /** Total Edges */
+            total_edges: number;
+            /** Total Nodes */
+            total_nodes: number;
+            /** Visible Cluster Count */
+            visible_cluster_count: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphClusterRelationshipCount */
+        GraphClusterRelationshipCount: {
+            /** Count */
+            count: number;
+            /** Relationship */
+            relationship: string;
         } & {
             [key: string]: unknown;
         };
@@ -36863,6 +37121,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphEstateChangesResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_graph_cluster_map_v1_graph_cluster_map_get: {
+        parameters: {
+            query?: {
+                /** @description Scan snapshot ID; latest if omitted */
+                scan_id?: string | null;
+                /** @description Generation from an earlier frame; a replaced snapshot answers 409 */
+                snapshot_generation?: string | null;
+                /** @description Group ids (from `nodes[].id`) to show expanded: top members by risk plus a '+K more' pager */
+                expand?: string[];
+                /** @description Member page of an expanded group as `offset:group-id`, from a '+K more' node's next/prev offset */
+                page?: string[];
+                /** @description Only groups on an attack path or holding a critical or high finding */
+                risky_only?: boolean;
+                /** @description Node id to show: its group opens and the node is drawn */
+                focus?: string | null;
+                /** @description Members shown per expanded group */
+                member_limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphClusterMapResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

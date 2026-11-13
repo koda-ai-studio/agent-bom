@@ -2,6 +2,8 @@
 
 import { decodeGraphInvestigationParams } from "@/lib/attack-paths";
 import { graphConnectionPreview } from "@/lib/graph-connection-preview";
+import { clusterMapEligible } from "@/lib/graph-cluster-map";
+import { DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD } from "@/lib/graph-rollup-default";
 import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
 import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
@@ -52,7 +54,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     rollupPreferenceRef, canvasLens, canvasAgent, attackPathLens, lastSyncedUrlRef, initialContextViewRef, captureMode,
     mergedGraphData, projectedGraphData, activeSnapshot, diffPair, highlight, graphNodeById, activeScopePreset,
     selectedAttackPath, rollupNavigationActive, rollupCanvasPending, rollupCanvasFailed, rollupCanvasOwnsPresentation,
-    rollupDecisionActive, rollupDisplayEdges,
+    rollupDecisionActive, rollupDisplayEdges, estateNodeCount,
   } = page;
   const flow = useMemo(() => {
     if (rollupNavigationActive && rollupView) {
@@ -803,6 +805,24 @@ export function useGraphCanvasModel(page: GraphPageData) {
     rollupActive: rollupNavigationActive,
     graphOnlyFindings,
   });
+  // The ungrouped full map draws every edge; past one frame's budget the grouped map leads instead.
+  const [groupedUnavailableScan, setGroupedUnavailableScan] = useState<string | null>(null);
+  const groupedMapActive = clusterMapEligible({
+    hasScan: Boolean(selectedScanId), groupingOff: searchParams.get("grouping") === "off", unavailable: groupedUnavailableScan === selectedScanId,
+    focusedSurface: Boolean(investigationMode || selectedAttackPath || selectedScenarioId || reachabilitySummary || blastRadius),
+    scopeNavigation: rollupCanvasOwnsPresentation,
+    // Past the scope threshold a six-node preview says little about the estate; the grouped map leads instead.
+    previewing: Boolean(connectionPreview) && !previewExpanded && estateNodeCount < DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD,
+    elements: estateNodeCount >= DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD ? Number.POSITIVE_INFINITY : displayNodes.length + displayEdges.length,
+    webgl: graphRenderer.kind === "webgl",
+  });
+  const setGroupingOff = useCallback((off: boolean) => {
+    const url = new URL(window.location.href);
+    if (off) url.searchParams.set("grouping", "off"); else url.searchParams.delete("grouping");
+    history.replaceState(null, "", url);
+  }, []);
+  // A failed grouped read falls back to what the page showed before: scope navigation or the ungrouped map.
+  const groupedMapUnavailable = useCallback(() => { setGroupedUnavailableScan(selectedScanId ?? null); setGroupingOff(true); }, [selectedScanId, setGroupingOff]);
   const showViewportScope = !rollupDecisionActive && Boolean(rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow";
   const showScopeEvidence = !rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0;
   const showContextControls = Boolean(investigationContext) && graphRenderer.kind === "react-flow";
@@ -864,6 +884,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     resetLayout, relationshipEvidenceCount, hasContextualGraph, graphOnlyFindings, graphRenderer, showViewportScope,
     showScopeEvidence, showContextControls, mobileListAvailable, mobileListActive, showChangesEntry, showLegend,
     graphPanelError, findingNodes, connectionPreview, previewExpanded, setPreviewRoot, setPreviewExpanded,
+    groupedMapActive, groupedMapUnavailable, setGroupingOff,
   };
 }
 
