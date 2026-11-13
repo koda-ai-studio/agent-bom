@@ -282,18 +282,25 @@ def _check_for_update_bg() -> None:
         cache_file = _update_check_cache_file()
         cache_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # Only hit PyPI once per 24 hours
-
+        # The stamp holds PyPI's latest version, never the rendered notice: the
+        # notice names the installed version, which changes on upgrade.
+        latest = ""
         if cache_file.exists() and (time.time() - cache_file.stat().st_mtime) < 86400:
-            _update_check_result = _update_notice_for(cache_file.read_text(encoding="utf-8").strip())
-            _update_check_done.set()
-            return
+            cached = cache_file.read_text(encoding="utf-8").strip()
+            if _RELEASE_VERSION_RE.fullmatch(cached):
+                latest = cached
 
-        from agent_bom.http_client import fetch_json
+        fetched = not latest
+        if fetched:
+            from agent_bom.http_client import fetch_json
 
-        data = fetch_json("https://pypi.org/pypi/agent-bom/json", timeout=5)
-        latest = str(data["info"]["version"]).strip()
+            data = fetch_json("https://pypi.org/pypi/agent-bom/json", timeout=5)
+            latest = str(data["info"]["version"]).strip()
+
         msg = _update_notice_for(latest)
+        if not fetched:
+            _update_check_result = msg
+            return
         try:
             cache_file.write_text(latest if _RELEASE_VERSION_RE.fullmatch(latest) else "", encoding="utf-8")
         except OSError as exc:
