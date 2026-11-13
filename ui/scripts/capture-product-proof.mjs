@@ -3885,7 +3885,7 @@ async function main() {
       });
       await scrollTo(inventoryPage, 0);
     }, {
-      expectedText: ["Asset inventory", "Packages", "Servers & tools", "AI entities", "Cloud resources", "Recorded assets are separate from collection and assessment coverage"],
+      expectedText: ["Asset inventory", "Packages", "MCP servers", "AI agents", "Cloud resources", "Recorded assets are separate from collection and assessment coverage"],
       expectedApiPaths: ["/v1/inventory/summary", "/v1/inventory/assets"],
     });
     await capture(page, "/fleet?capture=1", "fleet-state-live.png", async (fleetPage) => {

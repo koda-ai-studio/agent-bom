@@ -33,18 +33,22 @@ export interface AssetKindConfig {
   id: AssetKindId;
   /** Plural display label, e.g. "Packages". */
   label: string;
-  /** Singular, e.g. "package". */
+  /** Singular of the headline unit, e.g. "MCP server". */
   singular: string;
-  /** Count-specific plural when the plural display label includes qualifiers. */
-  countPlural?: string;
   /** One-line description of what this page lists. */
   description: string;
   /** Canonical graph entity_type values that roll up into this kind. */
   entityTypes: string[];
   /** Page lane used for the header chrome / accent. */
   lane: PageLane;
-  /** Header for the primary (name) column. */
-  primaryColumn: string;
+  /**
+   * Entity types that make up the kind's headline unit. Other entity types in
+   * the kind are different units (scopes, capabilities, observations) and are
+   * counted separately, never added into the headline.
+   */
+  primaryTypes: string[];
+  /** Plural label for the headline unit, e.g. "MCP servers". */
+  unitLabel: string;
   /**
    * Honest, per-kind coverage note. Surfaced verbatim so users understand what
    * the platform can and cannot see for this asset type.
@@ -67,7 +71,8 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
       "Open-source dependencies discovered across your agents, images, and repositories (SBOM / SCA).",
     entityTypes: ["package"],
     lane: "command",
-    primaryColumn: "Package",
+    primaryTypes: ["package"],
+    unitLabel: "Packages",
     coverageNote:
       "Sourced from SBOM/SCA discovery. Versions and ecosystems come from lockfiles, manifests, and image layers.",
     icon: ICON_KINDS.package.icon,
@@ -75,12 +80,13 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
   {
     id: "servers",
     label: "Servers & tools",
-    singular: "server or tool",
+    singular: "MCP server",
     description:
       "Recorded servers, tool capabilities and tool-call observations, with their correlated findings.",
     entityTypes: ["server", "tool", "tool_call"],
     lane: "ai-estate",
-    primaryColumn: "Server",
+    primaryTypes: ["server"],
+    unitLabel: "MCP servers",
     coverageNote:
       "Sourced from local discovery, runtime observation, and gateway registration. Reference-only catalog servers live under MCP Catalog.",
     icon: ICON_KINDS.mcp_server.icon,
@@ -88,12 +94,13 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
   {
     id: "agents",
     label: "AI entities",
-    singular: "AI entity",
+    singular: "AI agent",
     description:
       "AI agents and clients discovered in the estate, correlated to the servers, credentials, and findings they touch.",
     entityTypes: ["agent", "model", "framework", "dataset"],
     lane: "ai-estate",
-    primaryColumn: "Agent",
+    primaryTypes: ["agent"],
+    unitLabel: "AI agents",
     coverageNote:
       "Sourced from local agent configs, the fleet control plane, and runtime traces. See Agent BOM for the full manifest view.",
     icon: ICON_KINDS.agent.icon,
@@ -117,7 +124,8 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
       "fleet",
     ],
     lane: "cloud-data",
-    primaryColumn: "Resource",
+    primaryTypes: ["cloud_resource", "resource", "data_store", "api_gateway"],
+    unitLabel: "Cloud resources",
     coverageNote:
       "Read-only cloud inventory. Coverage depends on which accounts are connected and which inventory scopes are enabled per provider.",
     icon: ICON_KINDS.cloud_resource.icon,
@@ -126,7 +134,6 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     id: "identities",
     label: "Identity & access",
     singular: "identity",
-    countPlural: "identity and access records",
     description:
       "Human and non-human identities, credentials, roles, and access policies (NHI) linked to your estate.",
     entityTypes: [
@@ -144,7 +151,8 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
       "access_policy",
     ],
     lane: "cloud-data",
-    primaryColumn: "Identity",
+    primaryTypes: ["user", "service_account", "service_principal", "managed_identity", "federated_identity"],
+    unitLabel: "Identities",
     coverageNote:
       "Credential references never include secret values. NHI coverage depends on connected identity providers (Okta, Entra) and cloud accounts.",
     icon: ICON_KINDS.credential.icon,
@@ -157,7 +165,8 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
       "Container images scanned for vulnerable layers and packages, correlated to the agents that run them.",
     entityTypes: ["container"],
     lane: "command",
-    primaryColumn: "Image",
+    primaryTypes: ["container"],
+    unitLabel: "Container images",
     coverageNote:
       "Sourced from image scans. Coverage is limited to images that have been scanned or observed running.",
     icon: ICON_KINDS.image.icon,
@@ -165,7 +174,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
   {
     id: "code",
     label: "Code & repositories",
-    singular: "code asset",
+    singular: "application",
     description:
       "Applications, source modules, config files, and CI jobs from scanned repositories (SAST / IaC surface).",
     entityTypes: [
@@ -179,7 +188,8 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
       "ci_job",
     ],
     lane: "command",
-    primaryColumn: "Asset",
+    primaryTypes: ["application"],
+    unitLabel: "Applications",
     coverageNote:
       "Sourced from repository and project scans. Depth depends on which repos were scanned and whether SAST/IaC analysis ran.",
     icon: ICON_KINDS.source_file.icon,

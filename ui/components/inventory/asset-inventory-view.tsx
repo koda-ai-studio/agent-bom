@@ -12,6 +12,8 @@ import { Drawer } from "@/components/drawer";
 import { StatStrip } from "@/components/stat-strip";
 import { PageEmptyState, PageLoadingState } from "@/components/states/page-state";
 import { AssetDetail } from "@/components/inventory/asset-detail";
+import { InventoryTypeChips } from "@/components/inventory/inventory-type-chips";
+import { capitalize, entityTypeLabel } from "@/lib/inventory-units";
 import { useInventorySelection } from "@/lib/inventory-selection";
 import { useInventory } from "@/lib/inventory-context";
 import { assetIcon, assetKindLabel } from "@/lib/asset-icon-registry";
@@ -33,6 +35,7 @@ export function AssetInventoryView({
   onSeverityFilterChange?: ((severity: string) => void) | undefined;
 }) {
   const config = ASSET_KIND_BY_ID[kind];
+  const multiType = config.entityTypes.length > 1;
   const {
     model,
     filters,
@@ -126,11 +129,13 @@ export function AssetInventoryView({
       <InventoryFacetBar
         severityFilter={severityFilter === "all" ? "" : severityFilter}
         onSeverityFilterChange={onSeverityFilterChange}
+        showTypeFilter={!multiType}
       />
+      <InventoryTypeChips kind={config} />
 
       <StatStrip
         items={[
-          { label: "Matching kind assets", value: total.toLocaleString() },
+          { label: multiType ? "Matching, all types" : `Matching ${config.unitLabel.toLowerCase()}`, value: total.toLocaleString() },
           { label: "Matching filters", value: model.matchingTotal.toLocaleString() },
           { label: "Loaded rows", value: loadedCount.toLocaleString() },
           { label: "Loaded with findings", value: summary.withFindings.toLocaleString(), accent: summary.withFindings > 0 ? "warn" : "neutral" },
@@ -230,13 +235,24 @@ function buildColumns(kind: AssetKindId): DataTableColumn<AssetRow>[] {
   const config = ASSET_KIND_BY_ID[kind];
   const secondaryFor = (row: AssetRow, kindLabel: string): string | undefined => {
     if (kind === "packages") return [row.ecosystem, row.version].filter(Boolean).join(" · ") || undefined;
-    return [kindLabel, row.provider, row.environment].filter(Boolean).join(" · ") || undefined;
+    // The Type column already names the base type; repeat only a more specific kind.
+    const detail = multiType && entityTypeLabel(row.entityType, 1).toLowerCase().endsWith(kindLabel.toLowerCase()) ? "" : kindLabel;
+    return [detail, row.provider, row.environment].filter(Boolean).join(" · ") || undefined;
   };
+
+  const multiType = config.entityTypes.length > 1;
+  const typeColumn: DataTableColumn<AssetRow>[] = multiType ? [{
+    key: "type",
+    header: "Type",
+    sortable: false,
+    width: "8rem",
+    cell: (row) => <span className="text-[color:var(--text-secondary)]">{capitalize(entityTypeLabel(row.entityType, 1))}</span>,
+  }] : [];
 
   return [
     {
       key: "label",
-      header: config.primaryColumn,
+      header: multiType ? "Name" : capitalize(config.singular),
       sortable: false,
       cell: (row) => {
         const asset = { entityType: row.entityType, attributes: row.attributes };
@@ -255,6 +271,7 @@ function buildColumns(kind: AssetKindId): DataTableColumn<AssetRow>[] {
         );
       },
     },
+    ...typeColumn,
     {
       key: "severity",
       header: "Finding severity",

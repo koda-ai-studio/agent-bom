@@ -13,9 +13,12 @@ function label(value: string): string {
 export function InventoryFacetBar({
   severityFilter,
   onSeverityFilterChange,
+  showTypeFilter = true,
 }: {
   severityFilter?: string | undefined;
   onSeverityFilterChange?: ((severity: string) => void) | undefined;
+  /** Pages with their own type chips hide the duplicate type select. */
+  showTypeFilter?: boolean | undefined;
 } = {}) {
   const { model, summary, filters, fixedEntityTypes, setFilter, clearFilters } = useInventory();
   const facets = model?.facets ?? summary?.facets;
@@ -88,7 +91,7 @@ export function InventoryFacetBar({
             />
           </span>
         </label>
-        {select("type", "Type", typeBuckets)}
+        {showTypeFilter ? select("type", "Type", typeBuckets) : null}
         {select("environment", "Environment", facets?.environment?.buckets ?? [])}
         {select("source", "Source", facets?.source?.buckets ?? [])}
         {hasActive ? <button type="button" onClick={() => { clearFilters(); onSeverityFilterChange?.("all"); }}
