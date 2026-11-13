@@ -70,7 +70,7 @@ export function GraphPathList({ nodes, edges, onSelect }: {
                       <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-secondary" />
                       <span className="min-w-0 flex-1">
                         {/* Digest-style names stop at two lines; the full name stays in the text and the tooltip. */}
-                        <span title={node.data.label} className="block line-clamp-2 break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">{node.data.label}</span>
+                        <span title={node.data.label} className="line-clamp-2 break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">{node.data.label}</span>
                         <span className="block text-xs text-ink-secondary">{kindLabel(node.data)}</span>
                         {node.data.identityContext && <span className="block text-xs text-ink-secondary">{node.data.identityContext}</span>}
                         {node.data.evidenceFlowContext && <span className="block text-xs text-ink-secondary">{node.data.evidenceFlowContext}</span>}

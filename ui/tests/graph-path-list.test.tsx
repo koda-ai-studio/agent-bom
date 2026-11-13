@@ -60,6 +60,8 @@ describe("GraphPathList", () => {
     render(<GraphPathList nodes={[node(digest, "container")]} edges={[]} onSelect={vi.fn()} />);
     const name = screen.getByText(digest);
     expect(name.className).toContain("line-clamp-2");
+    // `block` would override the clamp's box display and show every line.
+    expect(name.className.split(/\s+/)).not.toContain("block");
     expect(name).toHaveAttribute("title", digest);
     expect(screen.getByRole("button", { name: new RegExp(digest.replace(/[.@]/g, "\\$&")) })).toHaveAttribute("title", digest);
   });
