@@ -1986,6 +1986,7 @@ jobs:
           uv run pytest -n 0 -q --tb=short --durations=15 -k "${{ matrix.selection }}" \
             tests/test_postgres_integration.py \
             tests/test_postgres_ai_assessments.py \
+            tests/test_postgres_tenant_session_round_trips.py \
             tests/api/test_finding_lifecycle_sequences.py \
             tests/api/test_finding_durable_lifecycle.py \
             tests/api/test_resolved_finding_identity.py \

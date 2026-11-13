@@ -577,7 +577,24 @@ atexit.register(reset_pool)
 
 
 def _apply_tenant_session(conn: Connection, *, repeatable_read: bool = False) -> None:
-    """Attach tenant session settings used by Postgres RLS policies."""
+    """Attach tenant session settings used by Postgres RLS policies.
+
+    On a real connection the statements go out as one pipeline, so the prelude
+    waits on the server twice (psycopg syncs its BEGIN on its own) instead of
+    once per statement. Every wait gives up the GIL, and while an ingest keeps another
+    thread busy, getting it back costs up to the interpreter's switch
+    interval, so a read's latency under ingest grows with its waits.
+    """
+    import psycopg
+
+    if isinstance(conn, psycopg.Connection):
+        with conn.pipeline():
+            _send_tenant_session(conn, repeatable_read=repeatable_read)
+    else:
+        _send_tenant_session(conn, repeatable_read=repeatable_read)
+
+
+def _send_tenant_session(conn: Connection, *, repeatable_read: bool) -> None:
     if repeatable_read:
         # Isolation must be set before the set_config SELECTs establish the
         # read snapshot. The option is transaction-local and read-only.

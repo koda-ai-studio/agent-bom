@@ -18,6 +18,11 @@ Correctness bounds:
 * Entries expire after :data:`WALK_TTL_SECONDS` and at most
   :data:`MAX_WALKS` are kept per process. Per-row projections that read other
   stores (suppressions, reachability, redaction) still run on every page.
+* Readers that miss the same key at once build it once: an ingest commit
+  bumps the revision under every reader in flight, and each rebuilding the
+  same fold beside the others made all of them wait for all of them. Only
+  keys the cache may serve are shared, so a first page without ``inputs``
+  still builds its own rows.
 
 Opt out with ``AGENT_BOM_FINDING_WALK_CACHE=0``.
 """
@@ -38,11 +43,24 @@ logger = logging.getLogger(__name__)
 WALK_TTL_SECONDS = 120.0
 MAX_WALKS = 16
 MAX_CACHED_ROWS = 200_000
+# A reader waits this long for another reader's build of the same key, then builds its own.
+FLIGHT_WAIT_SECONDS = 30.0
 
 _LOCK = threading.Lock()
 # key -> (monotonic expiry, wall-clock horizon or None, rows)
 _CACHE: OrderedDict[tuple[Any, ...], tuple[float, float | None, list[dict[str, Any]]]] = OrderedDict()
 RowInputs = Callable[[], tuple[tuple[Any, ...], float | None] | None]
+
+
+class _Flight:
+    __slots__ = ("done", "rows")
+
+    def __init__(self) -> None:
+        self.done = threading.Event()
+        self.rows: list[dict[str, Any]] | None = None
+
+
+_FLIGHTS: dict[tuple[Any, ...], _Flight] = {}
 
 
 def _wall_clock() -> float:
@@ -98,6 +116,30 @@ def _store(full_key: tuple[Any, ...], rows: list[dict[str, Any]], horizon: float
             _CACHE.popitem(last=False)
 
 
+def _build_once(
+    key: tuple[Any, ...], load: Callable[[], list[dict[str, Any]]], publish: Callable[[list[dict[str, Any]]], None]
+) -> list[dict[str, Any]]:
+    """Run ``load`` once for concurrent callers of ``key``; the builder publishes before followers wake."""
+    with _LOCK:
+        flight = _FLIGHTS.get(key)
+        building = flight is None
+        if flight is None:
+            flight = _FLIGHTS[key] = _Flight()
+    if not building:
+        if flight.done.wait(FLIGHT_WAIT_SECONDS) and flight.rows is not None:
+            return flight.rows
+        return load()
+    try:
+        rows = load()
+        publish(rows)
+        flight.rows = rows
+        return rows
+    finally:
+        with _LOCK:
+            _FLIGHTS.pop(key, None)
+        flight.done.set()
+
+
 def walk_rows(
     key: tuple[Any, ...],
     *,
@@ -127,11 +169,18 @@ def walk_rows(
     first_key = (*full_key, fingerprint[0]) if fingerprint is not None else None
     if first_key is not None and (rows := _cached(first_key)) is not None:
         return rows
-    rows = load()
-    _store(full_key, rows)
-    if first_key is not None and fingerprint is not None:
-        _store(first_key, rows, fingerprint[1])
-    return rows
+
+    def publish(rows: list[dict[str, Any]]) -> None:
+        _store(full_key, rows)
+        if first_key is not None and fingerprint is not None:
+            _store(first_key, rows, fingerprint[1])
+
+    shared_key = first_key if first_key is not None else full_key if continuation else None
+    if shared_key is None:
+        rows = load()
+        publish(rows)
+        return rows
+    return _build_once(shared_key, load, publish)
 
 
 def reuse_rows(
@@ -160,9 +209,8 @@ def reuse_rows(
     full_key = (tenant_id, *key, revision, fingerprint[0])
     if (rows := _cached(full_key)) is not None:
         return rows
-    rows = load()
-    _store(full_key, rows, fingerprint[1])
-    return rows
+    horizon = fingerprint[1]
+    return _build_once(full_key, load, lambda rows: _store(full_key, rows, horizon))
 
 
 __all__ = ["MAX_CACHED_ROWS", "MAX_WALKS", "WALK_TTL_SECONDS", "RowInputs", "cached_row_count", "clear", "reuse_rows", "walk_rows"]
