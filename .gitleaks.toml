@@ -22,6 +22,8 @@ regexes = [
   # Synthetic AKS hostname in characterization history; survives rebased commits.
   '''^\s*"api_server_fqdn":\s*"private\.azmk8s\.io",?\s*$''',
   '''["']?framework_key["']?\s*[:=]''',
+  # tests/fixtures/cli_command_tree.json: CLI command path -> 16-hex digest of its help/options.
+  '''^\s*"agent-bom(?: [a-z0-9-]+)*":\s*"[0-9a-f]{16}",?\s*$''',
   # Synthetic values in tests/fixtures/accuracy_corpus/secret_assignments, which measure the scanner.
   '''DB_PASSWORD=plainfixture7''',
   '''Set `api_key=abc123def456ghi789jkl012` to use the shared account''',

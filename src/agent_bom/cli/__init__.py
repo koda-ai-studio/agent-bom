@@ -3,41 +3,59 @@
 This package splits the CLI into focused modules while preserving the
 public API: ``main`` (click group), ``cli_main`` (entry point), and
 backward-compatible imports used by tests.
+
+Subcommands load lazily: ``main.commands`` imports a command's module the
+first time it is looked up (see ``_lazy_commands``), so ``--help`` and any
+single command skip the rest of the CLI. Re-exported helpers resolve on
+first attribute access for the same reason.
 """
 
 from __future__ import annotations
 
-import sys
+import importlib
+from typing import Any
 
 import click
 
 from agent_bom import __version__
 from agent_bom.__main__ import version_message
 from agent_bom.cli._agent_mode import AGENT_MODE_ENV_VAR
-from agent_bom.cli._common import (
-    BANNER,  # noqa: F401 — re-export for backward compatibility
-    SEVERITY_ORDER,
-    _build_agents_from_inventory,
-    _check_for_update_bg,
-    _check_optional_dep,
-    _make_console,
-    _print_update_notice,
-    _update_check_done,
-    _update_check_result,
-    logger,
-    sanitize_env_vars,
-)
+from agent_bom.cli._command_index import COMMAND_INDEX
+from agent_bom.cli._entry import make_entry_point
+from agent_bom.cli._grouped_help import GroupedGroup
+from agent_bom.cli._lazy_commands import LazyCommands
+from agent_bom.output.brand_tokens import CLI_MAIN_HELP
 
-# ---------------------------------------------------------------------------
-# Click group
-# ---------------------------------------------------------------------------
-from agent_bom.cli._grouped_help import GroupedGroup  # noqa: E402 — needed before group def
+# Names other modules and tests import from ``agent_bom.cli``; each resolves on
+# first access. ``discover_all`` stays here so patch("agent_bom.cli.discover_all")
+# keeps working, although new code should import it from agent_bom.discovery.
+_LAZY_REEXPORTS: dict[str, tuple[str, str]] = {
+    "BANNER": ("agent_bom.cli._common", "BANNER"),
+    "SEVERITY_ORDER": ("agent_bom.cli._common", "SEVERITY_ORDER"),
+    "_build_agents_from_inventory": ("agent_bom.inventory", "build_agents_from_inventory"),
+    "_check_for_update_bg": ("agent_bom.cli._common", "_check_for_update_bg"),
+    "_check_optional_dep": ("agent_bom.cli._common", "_check_optional_dep"),
+    "_make_console": ("agent_bom.cli._common", "_make_console"),
+    "_print_update_notice": ("agent_bom.cli._common", "_print_update_notice"),
+    "_update_check_done": ("agent_bom.cli._common", "_update_check_done"),
+    "_update_check_result": ("agent_bom.cli._common", "_update_check_result"),
+    "logger": ("agent_bom.cli._common", "logger"),
+    "sanitize_env_vars": ("agent_bom.security", "sanitize_env_vars"),
+    "discover_all": ("agent_bom.discovery", "discover_all"),
+    "_parse_package_spec": ("agent_bom.cli._check", "_parse_package_spec"),
+    "_NoOpDetector": ("agent_bom.cli._runtime", "_NoOpDetector"),
+    "scan": ("agent_bom.cli.agents.scan_cmd", "scan"),
+    "upgrade_cmd": ("agent_bom.cli._upgrade", "upgrade_cmd"),
+    "update_cmd": ("agent_bom.cli._upgrade", "update_cmd"),
+}
 
-# Re-export discover_all so that patch("agent_bom.cli.discover_all") keeps
-# working in existing tests — although the canonical import path for new
-# code is ``agent_bom.discovery.discover_all``.
-from agent_bom.discovery import discover_all  # noqa: F401
-from agent_bom.output.brand_tokens import CLI_MAIN_HELP  # noqa: E402
+
+def __getattr__(name: str) -> Any:
+    target = _LAZY_REEXPORTS.get(name)
+    if target is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attr = target
+    return getattr(importlib.import_module(module_name), attr)
 
 
 def _print_startup_banner() -> None:
@@ -106,483 +124,10 @@ def main(ctx: click.Context, profile: str | None, agent_mode: bool):
         _print_startup_banner()
 
 
-# ---------------------------------------------------------------------------
-# Register subcommands from each module
-# ---------------------------------------------------------------------------
-
-from agent_bom.cli._agent_manifest import manifest_cmd  # noqa: E402
-from agent_bom.cli.agents import scan as _agents_cmd  # noqa: E402
-
-# 'scan' is the canonical visible verb — it matches the front-door tagline
-# (connect → scan → graph → report) and reads correctly for a first-time user.
-main.add_command(_agents_cmd, "scan")
-main.add_command(manifest_cmd, "manifest")
-
-# 'agents' kept as a hidden backward-compat CLI alias (existing invocations +
-# CI use it). Clone the command object so hiding doesn't affect 'scan'.
-import copy as _copy  # noqa: E402
-
-_agents_hidden = _copy.copy(_agents_cmd)
-_agents_hidden.hidden = True
-_agents_hidden.name = "agents"
-main.commands["agents"] = _agents_hidden
-
-from agent_bom.cli._inventory import completions_cmd, inventory, validate, where  # noqa: E402
-
-# inventory remains under `mcp`; `where` is also exposed top-level for discovery.
-_validate_hidden = _copy.copy(validate)
-_validate_hidden.hidden = True  # Use `mcp validate` or `iac validate`
-_validate_hidden.name = "validate"
-main.commands["validate"] = _validate_hidden
-main.add_command(completions_cmd, "completions")
-main.add_command(where)
-
-from agent_bom.cli._check import check, guard_cmd, verify  # noqa: E402
-
-main.add_command(check)
-main.add_command(verify)
-# guard moved to policy check — keep hidden alias for backward compat
-main.add_command(guard_cmd, "guard")
-main.commands["guard"].hidden = True
-
-from agent_bom.cli._history import compliance_narrative_cmd, diff_cmd, history_cmd, rescan_command  # noqa: E402
-
-# history, diff, rescan moved to `report` group (Batch 3)
-from agent_bom.cli._policy import apply_command, policy_template  # noqa: E402
-
-_policy_templates_hidden = _copy.copy(policy_template)
-_policy_templates_hidden.hidden = True
-_policy_templates_hidden.name = "policy-templates"
-main.commands["policy-templates"] = _policy_templates_hidden
-
-# ---------------------------------------------------------------------------
-# Policy command group — `agent-bom policy [template|apply]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli._policy_group import policy_group  # noqa: E402
-
-policy_group.add_command(policy_template, "template")
-_policy_templates_group_hidden = _copy.copy(policy_template)
-setattr(_policy_templates_group_hidden, "deprecated", "Use `agent-bom policy template`.")
-_policy_templates_group_hidden.name = "templates"
-_policy_templates_group_hidden.hidden = True
-policy_group.add_command(_policy_templates_group_hidden, "templates")
-policy_group.add_command(apply_command, "apply")
-policy_group.add_command(guard_cmd, "check")  # guard → policy check
-main.add_command(policy_group)
-
-from agent_bom.cli._firewall import firewall_group  # noqa: E402
-
-main.add_command(firewall_group)
-
-from agent_bom.cli._findings_group import findings_cmd  # noqa: E402
-
-main.add_command(findings_cmd, "findings")
-
-from agent_bom.cli._server import api_cmd, mcp_server_cmd, serve_cmd  # noqa: E402
-
-main.add_command(serve_cmd, "serve")
-# 'api' (REST-only) is folded into `serve --no-ui`; kept as a hidden back-compat
-# alias so existing `agent-bom api ...` invocations keep working.
-main.add_command(api_cmd, "api")
-main.commands["api"].hidden = True
-# mcp-server is under `mcp server` — no top-level duplicate
-
-# ---------------------------------------------------------------------------
-# Canonical front-door verbs — the narrow human entry point.
-# connect → scan → graph → report (and `up` to run the platform locally).
-# `scan`/`graph`/`report` already exist; `connect` + `up` are additive.
-# ---------------------------------------------------------------------------
-from agent_bom.cli._frontdoor import register_frontdoor  # noqa: E402
-
-register_frontdoor(main, serve_cmd)
-
-from agent_bom.cli._gateway import gateway_group  # noqa: E402
-
-main.add_command(gateway_group, "gateway")
-
-from agent_bom.cli._trust import trust_cmd  # noqa: E402
-
-main.add_command(trust_cmd, "trust")
-
-from agent_bom.cli._registry import registry, schedule  # noqa: E402
-
-main.add_command(schedule)
-main.add_command(registry)
-main.commands["registry"].hidden = True  # Available under `mcp registry`
-
-
-from agent_bom.cli._runtime import (  # noqa: E402
-    _NoOpDetector,
-    audit_drain_dlq_cmd,
-    audit_replay_cmd,
-    protect_cmd,
-    proxy_bootstrap_cmd,
-    proxy_cmd,
-    proxy_configure_cmd,
-    watch_cmd,
-)
-
-# ---------------------------------------------------------------------------
-# Runtime group owns managed profiles and durable activity.
-# Proxy/watch/audit also retain their top-level shortcuts.
-# ---------------------------------------------------------------------------
-from agent_bom.cli._runtime_group import runtime_group  # noqa: E402
-
-runtime_group.add_command(proxy_cmd, "proxy")
-runtime_group.add_command(audit_replay_cmd, "audit")
-runtime_group.add_command(audit_drain_dlq_cmd, "drain-dlq")
-runtime_group.add_command(proxy_bootstrap_cmd, "bootstrap")
-# Deprecated — hidden but still work for backward compat
-runtime_group.add_command(proxy_configure_cmd, "configure")
-runtime_group.add_command(protect_cmd, "protect")
-_runtime_watch_hidden = _copy.copy(watch_cmd)
-_runtime_watch_hidden.hidden = True
-_runtime_watch_hidden.name = "watch"
-runtime_group.add_command(_runtime_watch_hidden, "watch")
-runtime_group.commands["configure"].hidden = True
-runtime_group.commands["protect"].hidden = True
-main.add_command(runtime_group)
-
-# Top-level shortcuts for primary runtime commands
-main.add_command(proxy_cmd, "proxy")
-main.add_command(proxy_bootstrap_cmd, "proxy-bootstrap")
-main.add_command(watch_cmd, "watch")
-main.add_command(audit_replay_cmd, "audit")
-main.add_command(audit_drain_dlq_cmd, "audit-drain-dlq")
-main.add_command(runtime_group.commands["activity"], "activity")
-
-from agent_bom.cli._analysis import (  # noqa: E402
-    analytics_cmd,
-    graph_cmd,
-    graph_evidence_cmd,
-    introspect_cmd,
-    mesh_cmd,
-)
-
-main.add_command(graph_cmd, "graph")
-main.add_command(graph_evidence_cmd, "graph-evidence")
-main.add_command(mesh_cmd, "mesh")
-# introspect is under `mcp introspect` — no top-level duplicate
-
-# `graph` is a leaf command (positional SCAN_FILE), so ranked-path queries live
-# in a sibling group `graph-paths` (mirrors the existing `graph-evidence`/`mesh`
-# siblings) rather than as subcommands that would shadow `agent-bom graph <file>`.
-from agent_bom.cli._graph_correlate_group import graph_correlate_cmd  # noqa: E402
-from agent_bom.cli._graph_paths_group import graph_paths_cmd  # noqa: E402
-
-main.add_command(graph_paths_cmd, "graph-paths")
-main.add_command(graph_correlate_cmd, "graph-correlate")
-
-# ---------------------------------------------------------------------------
-# Report command group — `agent-bom report [history|diff|rescan|query|analytics|...]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli._report_group import (  # noqa: E402
-    local_prune_cmd,
-    local_query_cmd,
-    local_storage_cmd,
-    pipeline_events_cmd,
-    report_group,
-)
-
-report_group.add_command(history_cmd, "history")
-report_group.add_command(diff_cmd, "diff")
-report_group.add_command(rescan_command, "rescan")
-report_group.add_command(compliance_narrative_cmd, "compliance-narrative")
-report_group.add_command(pipeline_events_cmd, "pipeline-events")
-report_group.add_command(local_query_cmd, "query")
-report_group.add_command(local_storage_cmd, "storage")
-report_group.add_command(local_prune_cmd, "prune")
-report_group.add_command(analytics_cmd, "analytics")
-main.add_command(report_group)
-
-# ---------------------------------------------------------------------------
-# Campaigns + compliance groups — headless parity for the campaign workflow
-# API and the framework evaluator (the CI-gate wedge).
-# ---------------------------------------------------------------------------
-from agent_bom.cli._campaigns_group import campaigns_cmd  # noqa: E402
-from agent_bom.cli._compliance_group import compliance_cmd  # noqa: E402
-
-main.add_command(campaigns_cmd, "campaigns")
-main.add_command(compliance_cmd, "compliance")
-
-# ---------------------------------------------------------------------------
-# Ticketing + export groups — headless parity for the connect-once ITSM
-# ticketing plane and the scheduled findings-export plane (API-only until now).
-# ---------------------------------------------------------------------------
-from agent_bom.cli._exports_group import export_cmd  # noqa: E402
-from agent_bom.cli._ticketing_group import ticket_cmd  # noqa: E402
-
-main.add_command(ticket_cmd, "ticket")
-main.add_command(export_cmd, "export")
-
-from agent_bom.cli._db import db_cmd  # noqa: E402
-
-main.add_command(db_cmd, "db")
-
-from agent_bom.cli._samples import samples_group  # noqa: E402
-
-main.add_command(samples_group)
-
-from agent_bom.cli._demo import demo_group  # noqa: E402
-
-main.add_command(demo_group)
-
-from agent_bom.cli._quickstart import quickstart_cmd  # noqa: E402
-
-main.add_command(quickstart_cmd, "quickstart")
-
-from agent_bom.cli._profiles import profiles_group  # noqa: E402
-
-main.add_command(profiles_group)
-
-from agent_bom.cli._plugins import plugins_group  # noqa: E402
-
-main.add_command(plugins_group)
-
-from agent_bom.cli._interactive import interactive_cmd  # noqa: E402
-
-main.add_command(interactive_cmd)
-
-# ---------------------------------------------------------------------------
-# MCP command group — `agent-bom mcp [inventory|introspect|registry|server]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli._mcp_group import mcp_group, mcp_scan_cmd  # noqa: E402
-
-mcp_group.add_command(inventory, "inventory")
-mcp_group.add_command(mcp_scan_cmd, "scan")
-mcp_group.add_command(introspect_cmd, "introspect")
-mcp_group.add_command(registry, "registry")
-mcp_group.add_command(mcp_server_cmd, "server")
-_mcp_where_hidden = _copy.copy(where)
-_mcp_where_hidden.hidden = True
-_mcp_where_hidden.name = "where"
-mcp_group.add_command(_mcp_where_hidden, "where")
-mcp_group.add_command(validate, "validate")
-main.add_command(mcp_group)
-
-_mcp_server_hidden = _copy.copy(mcp_server_cmd)
-_mcp_server_hidden.hidden = True
-_mcp_server_hidden.name = "mcp-server"
-main.commands["mcp-server"] = _mcp_server_hidden
-
-# ---------------------------------------------------------------------------
-# Focused scan commands — `agent-bom image`, `agent-bom fs`, etc.
-# ---------------------------------------------------------------------------
-from agent_bom.cli._focused_commands import code_cmd, fs_cmd, iac_cmd, image_cmd, sbom_cmd, secrets_cmd  # noqa: E402
-from agent_bom.cli._scanner_registry import scanners_cmd  # noqa: E402
-
-main.add_command(image_cmd)
-main.add_command(fs_cmd)
-main.add_command(iac_cmd)
-main.add_command(sbom_cmd)
-main.add_command(secrets_cmd)
-main.add_command(code_cmd)
-main.add_command(scanners_cmd)
-
-from agent_bom.cli._attest_group import attest_group  # noqa: E402
-
-main.add_command(attest_group)
-
-# ---------------------------------------------------------------------------
-# Skills command group — `agent-bom skills [scan|verify]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli._skills_group import skills_group  # noqa: E402
-
-main.add_command(skills_group)
-
-# ---------------------------------------------------------------------------
-# Cloud command group — `agent-bom cloud [aws|azure|gcp]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli.cloud import cloud_group  # noqa: E402
-
-main.add_command(cloud_group)
-
-# ---------------------------------------------------------------------------
-# Cost (FinOps) command group — `agent-bom cost [forecast|allocation]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli._cost_group import cost_group  # noqa: E402
-
-main.add_command(cost_group)
-
-# ---------------------------------------------------------------------------
-# Identity (NHI governance) group — `agent-bom identity [credential-expiry|discover|access-review]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli._identity_group import identity_group  # noqa: E402
-
-main.add_command(identity_group)
-
-# ---------------------------------------------------------------------------
-# Auth (SSO/OIDC onboarding) group — `agent-bom auth setup-oidc`
-# ---------------------------------------------------------------------------
-from agent_bom.cli._auth_group import auth_group  # noqa: E402
-
-main.add_command(auth_group)
-
-# ---------------------------------------------------------------------------
-# Ingest command group — `agent-bom ingest [hardware]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli._ingest_group import ingest_group  # noqa: E402
-
-main.add_command(ingest_group)
-
-# ---------------------------------------------------------------------------
-# Fleet command group — `agent-bom fleet [sync|list|stats]`
-# ---------------------------------------------------------------------------
-from agent_bom.cli.claw import fleet_group  # noqa: E402
-
-main.add_command(fleet_group, "fleet")
-
-# ---------------------------------------------------------------------------
-# Run command — `agent-bom run <server>` (hidden — use proxy instead)
-# ---------------------------------------------------------------------------
-from agent_bom.cli.run import run_cmd  # noqa: E402
-
-main.add_command(run_cmd, "run")
-main.commands["run"].hidden = True  # Use `proxy` instead
-
-# ---------------------------------------------------------------------------
-# Doctor / preflight command
-# ---------------------------------------------------------------------------
-from agent_bom.cli._capabilities import capabilities_cmd  # noqa: E402
-from agent_bom.cli._doctor import doctor_cmd  # noqa: E402
-from agent_bom.cli._self_audit import self_audit_cmd  # noqa: E402
-
-main.add_command(doctor_cmd, "doctor")
-main.add_command(capabilities_cmd, "capabilities")
-main.add_command(self_audit_cmd, "self-audit")
-
-# ---------------------------------------------------------------------------
-# Deployment lifecycle command
-# ---------------------------------------------------------------------------
-from agent_bom.cli._deploy import sidecar_injector_cmd, teardown_cmd  # noqa: E402
-
-main.add_command(teardown_cmd, "teardown")
-main.add_command(sidecar_injector_cmd, "sidecar-injector")
-
-# ---------------------------------------------------------------------------
-# Remediate command
-# ---------------------------------------------------------------------------
-from agent_bom.cli._verify_remediation import register_remediation_commands  # noqa: E402
-
-register_remediation_commands(main)
-
-
-# ---------------------------------------------------------------------------
-# Upgrade command
-# ---------------------------------------------------------------------------
-
-
-@main.command("upgrade")
-@click.option("--check", "check_only", is_flag=True, help="Only check for updates, don't install.")
-def upgrade_cmd(check_only: bool) -> None:
-    """Check for and install the latest version of agent-bom.
-
-    Guidance and the install action are install-method aware: only a pip install
-    is upgraded automatically. pipx / uv tool / Homebrew / Docker / frozen-binary
-    installs print the correct command for their own tool instead of running pip
-    (which would break those installs).
-    """
-    import subprocess as sp
-
-    from rich.console import Console
-
-    from agent_bom.cli._common import _detect_install_method
-
-    def _ver_tuple(v: str) -> tuple[int, ...]:
-        return tuple(int(x) for x in v.split(".") if x.isdigit())
-
-    con = Console(stderr=True)
-    con.print(f"  Current version: [bold]{__version__}[/bold]")
-
-    method, upgrade_command = _detect_install_method()
-
-    try:
-        from agent_bom.http_client import fetch_json
-
-        data = fetch_json("https://pypi.org/pypi/agent-bom/json", timeout=5)
-        latest = data["info"]["version"]
-    except Exception:
-        con.print("  [red]Could not reach PyPI to check for updates.[/red]")
-        con.print(f"  When back online, upgrade with: [cyan]{upgrade_command}[/cyan]")
-        raise SystemExit(1)
-
-    if _ver_tuple(latest) <= _ver_tuple(__version__):
-        con.print(f"  Latest version:  [bold]{latest}[/bold]")
-        con.print("  [green]You are up to date.[/green]")
-        return
-
-    con.print(f"  Latest version:  [bold yellow]{latest}[/bold yellow]")
-
-    # Non-pip installs cannot be driven with `pip install --upgrade` — print the
-    # right command for their tool and stop, whether or not --check was passed.
-    if method != "pip":
-        con.print(f"\n  Detected a [bold]{method}[/bold] install.")
-        con.print(f"  Upgrade with: [cyan]{upgrade_command}[/cyan]")
-        return
-
-    if check_only:
-        con.print(f"\n  Run: [cyan]{upgrade_command}[/cyan]")
-        return
-
-    con.print(f"\n  Upgrading agent-bom {__version__} → {latest}...")
-    result = sp.run(
-        [sys.executable, "-m", "pip", "install", "--upgrade", "agent-bom"],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode == 0:
-        con.print(f"  [green]Upgraded to agent-bom {latest}[/green]")
-    else:
-        con.print(f"  [red]Upgrade failed:[/red] {result.stderr.strip()[:200]}")
-        con.print(f"  Try manually: [cyan]{upgrade_command}[/cyan]")
-        raise SystemExit(1)
-
-
-# ---------------------------------------------------------------------------
-# `update` disambiguation — a hidden command so `agent-bom update` gets a clear
-# steer instead of a bare "Did you mean 'upgrade'?" (the verb is ambiguous:
-# `agent-bom upgrade` upgrades the tool, `agent-bom db update` refreshes the
-# vuln database). Exits 2 (usage), matching the CLI exit-code contract.
-# ---------------------------------------------------------------------------
-
-
-@main.command(
-    "update",
-    hidden=True,
-    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
-)
-@click.argument("args", nargs=-1, type=click.UNPROCESSED)
-@click.pass_context
-def update_cmd(ctx: click.Context, args: tuple[str, ...]) -> None:
-    """Disambiguate the ambiguous `update` verb (hidden)."""
-    click.echo(
-        "`update` is not a command. Did you mean `agent-bom upgrade` "
-        "(install a new version of the tool) or `agent-bom db update` "
-        "(refresh the vulnerability database)?",
-        err=True,
-    )
-    ctx.exit(2)
-
-
-# ---------------------------------------------------------------------------
-# Backward-compatible re-exports used by tests
-# ---------------------------------------------------------------------------
-from agent_bom.cli._check import _parse_package_spec  # noqa: E402, F401
-
-# _NoOpDetector is already imported above
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-from agent_bom.cli._entry import make_entry_point  # noqa: E402
+main.commands = LazyCommands(COMMAND_INDEX)
 
 # The lambda resolves the module global at call time so unittest.mock.patch("agent_bom.cli.main") works
 cli_main = make_entry_point(lambda: main, "agent-bom")
-
-
-# Re-export 'scan' as the Click command for backward-compat imports.
-# MUST be at the end — after all subpackage imports that might shadow
-# the 'scan' name with the scan/ subpackage module.
-scan = _agents_cmd  # noqa: F811
 
 
 __all__ = [

@@ -7,86 +7,87 @@ from difflib import get_close_matches
 
 import click
 
+from agent_bom.cli._lazy_commands import LazyCommands
+
 # Define command categories and which commands belong to each.
 # Order matters — first match wins, unlisted commands go to "Other".
 COMMAND_CATEGORIES: OrderedDict[str, list[str]] = OrderedDict(
     [
-        (
-            "Get started",
-            ["connect", "scan", "graph", "report", "up"],
-        ),
+        ("Get started", ["connect", "scan", "graph", "report", "up"]),
         (
             "Scanning",
-            ["skills", "image", "fs", "iac", "sbom", "ingest", "cloud", "check", "verify", "secrets", "code", "manifest", "scanners"],
+            ["image", "fs", "iac", "sbom", "secrets", "code", "cloud", "skills", "ingest", "check", "verify", "manifest", "scanners"],
         ),
+        ("First run and setup", ["quickstart", "doctor", "demo", "samples", "capabilities", "profiles", "completions", "upgrade"]),
+        ("Graph and attack paths", ["graph-paths", "graph-correlate", "graph-evidence", "mesh"]),
         (
-            "Runtime",
-            ["proxy", "watch", "audit", "activity", "gateway", "firewall", "proxy-bootstrap", "sidecar-injector"],
-        ),
-        (
-            "MCP",
-            ["mcp", "where"],
-        ),
-        (
-            "Reporting",
-            ["graph", "graph-paths", "mesh", "report", "compliance"],
-        ),
-        (
-            "Governance",
+            "MCP and runtime",
             [
-                "policy",
-                "trust",
-                "fleet",
-                "cost",
-                "identity",
-                "auth",
-                "serve",
-                "schedule",
-                "remediate",
-                "verify-remediation",
-                "teardown",
-                "findings",
-                "campaigns",
-                "ticket",
-                "export",
-                "attest",
+                "mcp",
+                "where",
+                "proxy",
+                "watch",
+                "audit",
+                "activity",
+                "runtime",
+                "gateway",
+                "firewall",
+                "proxy-bootstrap",
+                "sidecar-injector",
                 "audit-drain-dlq",
             ],
         ),
         (
-            "Database",
-            ["db"],
-        ),
-        (
-            "Utilities",
+            "Findings and governance",
             [
-                "quickstart",
-                "demo",
-                "samples",
-                "doctor",
-                "capabilities",
-                "upgrade",
-                "completions",
-                "plugins",
-                "profiles",
-                "interactive",
-                "graph-evidence",
+                "findings",
+                "compliance",
+                "policy",
+                "remediate",
+                "verify-remediation",
+                "campaigns",
+                "ticket",
+                "export",
+                "attest",
+                "trust",
+                "identity",
+                "cost",
+                "fleet",
             ],
         ),
+        ("Platform and admin", ["serve", "auth", "schedule", "db", "teardown", "self-audit", "plugins", "interactive"]),
     ]
 )
 
 CATEGORY_DESCRIPTIONS: dict[str, str] = {
     "Get started": "The front door: connect a source (read-only) → scan → graph → report. `up` runs the platform locally.",
-    "Scanning": "Inventory, package, image, IaC, cloud, and skills scanning entry points.",
-    "Runtime": "Live MCP enforcement, replay, and runtime monitoring surfaces.",
-    "MCP": "Discovery, inventory, introspection, and MCP server operations.",
-    "Reporting": "Graph, mesh, dashboard, history, and narrative reporting workflows.",
-    "Governance": "Policy, trust boundaries, fleet, FinOps, identity, API, scheduling, and operational control-plane commands.",
-    "Database": "Local cache, vuln database, and framework catalog maintenance.",
-    "Utilities": "Guided examples, readiness checks, supported capabilities, and shell helpers.",
+    "Scanning": "Images, filesystems, IaC, SBOMs, secrets, code, cloud accounts, AI skills and single packages.",
+    "First run and setup": "Guided first run, readiness checks, labelled sample data, profiles and upgrades.",
+    "Graph and attack paths": "Ranked attack paths, snapshot correlation, graph history and live topology.",
+    "MCP and runtime": "MCP discovery and servers, runtime proxy, gateway, firewall and session activity.",
+    "Findings and governance": "Triage, compliance, policy, remediation, tickets, exports, trust, identity and cost.",
+    "Platform and admin": "API and dashboard server, auth, schedules, vulnerability database and deployment.",
     "Other": "Additional commands that do not fit a primary workflow bucket.",
 }
+
+SHORT_HELP_LIMIT = 48
+
+
+def _help_rows(group: click.Group, ctx: click.Context) -> dict[str, str]:
+    """Visible command names and help lines; lazy groups answer from their static index."""
+    commands = group.commands
+    rows: dict[str, str] = {}
+    for name in group.list_commands(ctx):
+        if isinstance(commands, LazyCommands):
+            help_text, hidden = commands.help_row(name, SHORT_HELP_LIMIT)
+        else:
+            cmd = group.get_command(ctx, name)
+            if cmd is None or not isinstance(cmd, click.Command):
+                continue
+            help_text, hidden = cmd.get_short_help_str(limit=SHORT_HELP_LIMIT), cmd.hidden
+        if not hidden:
+            rows[name] = help_text
+    return rows
 
 
 class SuggestingGroup(click.Group):
@@ -103,12 +104,10 @@ class SuggestingGroup(click.Group):
             raise
 
     def _suggest_command(self, ctx: click.Context, command_name: str) -> str | None:
-        visible_commands = []
-        for name in self.list_commands(ctx):
-            command = self.get_command(ctx, name)
-            if command is None:
-                continue
-            visible_commands.append(name)
+        if isinstance(self.commands, LazyCommands):
+            visible_commands = self.list_commands(ctx)
+        else:
+            visible_commands = [name for name in self.list_commands(ctx) if self.get_command(ctx, name) is not None]
         matches = get_close_matches(command_name, visible_commands, n=1, cutoff=0.62)
         return matches[0] if matches else None
 
@@ -125,57 +124,33 @@ class GroupedGroup(SuggestingGroup):
         self._command_categories = command_categories or COMMAND_CATEGORIES
 
     def format_commands(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
-        # Collect all available commands
-        commands: dict[str, click.Command] = {}
-        for subcommand in self.list_commands(ctx):
-            cmd = self.get_command(ctx, subcommand)
-            if cmd is None or cmd.hidden:
-                continue
-            # get_command returns BaseCommand but we need Command for get_short_help_str
-            if not isinstance(cmd, click.Command):
-                continue
-            commands[subcommand] = cmd
-
+        commands = _help_rows(self, ctx)
         if not commands:
             return
 
-        # Track which commands have been placed in a category
         placed: set[str] = set()
-
         for category, cmd_names in self._command_categories.items():
-            rows: list[tuple[str, str]] = []
-            for name in cmd_names:
-                if name in commands and name not in placed:
-                    cmd = commands[name]
-                    help_text = cmd.get_short_help_str(limit=48)
-                    rows.append((name, help_text))
-                    placed.add(name)
-
+            rows = [(name, commands[name]) for name in cmd_names if name in commands and name not in placed]
+            placed.update(name for name, _ in rows)
             if rows:
-                with formatter.section(category):
-                    description = CATEGORY_DESCRIPTIONS.get(category)
-                    if description:
-                        formatter.write_text(description)
-                    formatter.write_dl(rows)
+                self._write_section(formatter, category, rows)
 
-        # Any commands not in a category go under "Other"
-        other: list[tuple[str, str]] = []
-        for name in sorted(commands):
-            if name not in placed:
-                help_text = commands[name].get_short_help_str(limit=48)
-                other.append((name, help_text))
-
+        other = [(name, commands[name]) for name in sorted(commands) if name not in placed]
         if other:
-            with formatter.section("Other"):
-                description = CATEGORY_DESCRIPTIONS.get("Other")
-                if description:
-                    formatter.write_text(description)
-                formatter.write_dl(other)
+            self._write_section(formatter, "Other", other)
+
+    @staticmethod
+    def _write_section(formatter: click.HelpFormatter, category: str, rows: list[tuple[str, str]]) -> None:
+        with formatter.section(category):
+            description = CATEGORY_DESCRIPTIONS.get(category)
+            if description:
+                formatter.write_text(description)
+            formatter.write_dl(rows)
 
     def format_epilog(self, ctx: click.Context, formatter: click.HelpFormatter) -> None:
         formatter.write_paragraph()
         formatter.write_text(
-            "Navigation tips: get started with connect → scan → graph → report. "
-            "Run `agent-bom doctor` for readiness, `agent-bom scan --demo` for a "
-            "reproducible local run, and `agent-bom COMMAND --help` for command-specific flags."
+            "Navigation tips: get started with connect → scan → graph → report. New here? "
+            "Run `agent-bom scan . -f html -o report.html` in a project, `agent-bom doctor` "
+            "for readiness, or `agent-bom scan --demo --offline` for a labelled sample. `agent-bom COMMAND --help` lists a command's flags."
         )

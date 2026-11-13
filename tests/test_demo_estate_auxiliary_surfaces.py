@@ -39,6 +39,14 @@ def test_demo_auxiliary_surfaces_are_nonempty_and_explicitly_synthetic(isolated_
     assert latest_skill.payload["synthetic"] is True
     assert latest_skill.payload["summary"]["files_scanned"] == len(latest_skill.payload["files"]) > 0
     assert all(row["synthetic"] is True for row in latest_skill.payload["files"])
+    from agent_bom.parsers.trust_assessment import ReviewVerdict, Verdict
+    from agent_bom.skill_intel import ThreatIntelStatus
+
+    # Demo rows use the same verdict vocabulary a real scan emits.
+    for row in latest_skill.payload["files"]:
+        assert row["trust"]["review_verdict"] in {v.value for v in ReviewVerdict}
+        assert row["trust"]["content_verdict"] in {v.value for v in Verdict}
+        assert row["status"] in {s.value for s in ThreatIntelStatus}
 
     side_scans = get_side_scan_state_store().list_recent(tenant_id="default", limit=10)
     assert side_scans

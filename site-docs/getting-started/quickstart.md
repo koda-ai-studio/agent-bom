@@ -22,7 +22,10 @@ configuration elsewhere on the machine. Adding `--no-discover` would also turn
 off the project's secret, personal-data, skill, dataset and training-pipeline scanning. No MCP configuration? Package findings remain useful; agent/tool
 relationships need discovered configuration or an explicit inventory.
 A non-zero exit can be a security verdict or incomplete assessment; inspect the
-saved report and its coverage warnings. After a reviewed fix, rerun the command
+saved report and its coverage warnings. In a terminal, a large repository is
+analysed under a source budget (500 code-analysis files, 1,000 secret-scan and
+AI-component files) and reported incomplete; add `--full-analysis` to read every
+file. CI jobs, piped output and gated scans always read every file. After a reviewed fix, rerun the command
 against the same project and compare the reports.
 
 ## Scan a project plus local agent context
