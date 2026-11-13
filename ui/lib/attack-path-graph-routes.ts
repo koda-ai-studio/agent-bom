@@ -63,8 +63,15 @@ export function routeAttackPathEdges(model: { edges: readonly Pick<PathGraphEdge
     } else if (ct === cs + 1 && lt === ls) {
       routes.set(edge.id, [start, end]);
     } else if (ct === cs + 1) {
-      // Edges leaving toward the same side share one trunk into the channel next to the source, then fan out.
-      routes.set(edge.id, [start, f.point(f.gapAfter(cs), lt < ls ? f.channelBelow(ls - 1) : f.channelBelow(ls)), end]);
+      // Each edge to the next layer turns in the gap and runs straight in at its own lane, so siblings fan out
+      // from the handle instead of sharing a trunk and splitting (which reads as a crossing). Only when a node of
+      // the source layer sits in the lanes it would sweep past does it fall back to the channel beside the source.
+      const swept = [...layout.lanes].some(([id, lane]) => id !== source && layout.columns.get(id) === cs
+        && (lt < ls ? lane >= lt && lane < ls : lane <= lt && lane > ls));
+      const endCross = layout.direction === "LR" ? end.y : end.x;
+      routes.set(edge.id, swept
+        ? [start, f.point(f.gapAfter(cs), lt < ls ? f.channelBelow(ls - 1) : f.channelBelow(ls)), end]
+        : [start, f.point(f.gapAfter(cs), endCross), end]);
     } else if (lt !== ls) {
       routes.set(edge.id, via(lt < ls ? f.channelBelow(lt) : f.channelBelow(lt - 1)));
     } else {

@@ -65,11 +65,12 @@ export function GraphPathList({ nodes, edges, onSelect }: {
                 const relationship = chain.relationships[index];
                 return (
                   <li key={id}>
-                    <button type="button" onClick={() => onSelect(id)}
+                    <button type="button" onClick={() => onSelect(id)} title={node.data.label}
                       className="flex min-h-11 w-full items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-elevated focus-visible:outline focus-visible:outline-2">
                       <Icon aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-secondary" />
                       <span className="min-w-0 flex-1">
-                        <span className="block break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">{node.data.label}</span>
+                        {/* Digest-style names stop at two lines; the full name stays in the text and the tooltip. */}
+                        <span title={node.data.label} className="block line-clamp-2 break-words text-sm font-medium text-foreground [overflow-wrap:anywhere]">{node.data.label}</span>
                         <span className="block text-xs text-ink-secondary">{kindLabel(node.data)}</span>
                         {node.data.identityContext && <span className="block text-xs text-ink-secondary">{node.data.identityContext}</span>}
                         {node.data.evidenceFlowContext && <span className="block text-xs text-ink-secondary">{node.data.evidenceFlowContext}</span>}

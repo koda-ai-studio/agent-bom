@@ -3347,8 +3347,8 @@ async function main() {
       await views.waitFor({ state: "visible" });
       await expect(views.getByRole("button", { name: "Paths", exact: true })).toHaveAttribute("aria-pressed", "true");
       await proofPage.getByTestId("graph-path-list").waitFor({ state: "visible" });
-      const viewsTop = await views.evaluate((element) => element.getBoundingClientRect().top + window.scrollY);
-      await scrollTo(proofPage, Math.max(0, viewsTop - 72));
+      // The first frame is the top of the page, so no control row is cut off above the view switch.
+      await scrollTo(proofPage, 0);
     };
     const correlationPathAssertions = {
       expectedText: ["CVE-2023-4863", "Modeled customer records"],

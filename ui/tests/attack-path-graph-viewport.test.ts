@@ -31,6 +31,24 @@ describe("attack path viewport", () => {
     }
   });
 
+  it("centres the selected path's column on a phone and names the branches it pushes off screen", () => {
+    const { graph, selected } = demoFixture("headline");
+    const model = buildAttackPathGraphModel(graph, selected);
+    const layout = layoutAttackPathGraph(model, "TB");
+    const pane = { width: 342, height: 2200 };
+    const viewport = attackPathViewport(layout, model.pathNodeIds, pane, 0.7);
+    expect(viewport.zoom).toBeGreaterThanOrEqual(0.7);
+    const boxes = screenBoxes(layout, viewport);
+    const middle = ATTACK_PATH_FIT_PADDING.left + (pane.width - ATTACK_PATH_FIT_PADDING.left - ATTACK_PATH_FIT_PADDING.right) / 2;
+    for (const id of model.pathNodeIds) {
+      const box = boxes.find(item => item.id === id)!;
+      expect(Math.abs((box.left + box.right) / 2 - middle)).toBeLessThan(1);
+      expect(box.top).toBeGreaterThanOrEqual(0);
+    }
+    const offscreen = boxes.filter(box => box.left < -0.5 || box.right > pane.width + 0.5 || box.top < -0.5 || box.bottom > pane.height + 0.5).map(box => box.id).sort();
+    expect(viewport.hiddenNodeIds.slice().sort()).toEqual(offscreen);
+  });
+
   it("keeps the selected path whole and names what is off screen when the graph would fall below the floor", () => {
     const { graph, selected } = demoFixture("runbook");
     const model = buildAttackPathGraphModel(graph, selected);

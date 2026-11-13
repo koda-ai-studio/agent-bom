@@ -56,7 +56,8 @@ function Canvas({ model, onOpen, onExpand }: Props) {
   const height = architectureCanvasHeight(layout, useElementWidth(frameRef));
   const nodesKey = `${model.mode}:${nodes.map(node => node.id).join("|")}`;
   const manualCamera = useRef<string | null>(null);
-  const spine = useMemo(() => model.nodes.filter(node => node.id === model.rootId || node.entry).map(node => node.id), [model]);
+  // A layered map has no single spine: the camera keeps the whole tree centred. A flow frames its harness and entries.
+  const spine = useMemo(() => model.nodes.filter(node => model.mode === "layered" || node.id === model.rootId || node.entry).map(node => node.id), [model]);
   return (
     <div ref={frameRef} className={`relative bg-surface ${HIT_AREAS}`} style={{ height }} data-testid="architecture-canvas" data-layout={model.mode}
       onFocusCapture={event => { const id = edgeFromTarget(event.target); if (id) setActiveEdge(id); }}

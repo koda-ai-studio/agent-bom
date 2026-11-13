@@ -5,6 +5,7 @@ import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { nodeContextMarkers, type NodeContextMarker } from "@/lib/attack-path-graph-markers";
 import { assetKindLabel } from "@/lib/asset-icon-registry";
 import { formatInventoryAgentLabel } from "@/lib/agent-topology-graph";
+import { hopKey, receiptedHops } from "@/lib/hop-receipt-coverage";
 
 /** Findings attach to the asset they affect; they are badges, not hops. */
 export const FINDING_ENTITY_TYPES = new Set(["vulnerability", "misconfiguration", "drift_incident", "finding"]);
@@ -12,7 +13,12 @@ const SEVERITY_ORDER = ["critical", "high", "medium", "low"];
 /** Bound the number of other recorded paths drawn as branches. */
 const MAX_CONNECTED_PATHS = 8;
 
-export type EdgeEvidenceStyle = "recorded" | "inferred" | "unrecorded";
+/**
+ * `receipt`: the path's own hop receipt passes every check the coverage summary
+ * counts (directed, traversable, complete, fresh, recorded provenance, current
+ * identity, source scan). Otherwise the edge's evidence envelope decides.
+ */
+export type EdgeEvidenceStyle = "receipt" | "recorded" | "inferred" | "unrecorded";
 export type PathGraphFinding = { id: string; label: string; severity: string };
 export type PathGraphNode = {
   id: string;
@@ -252,12 +258,15 @@ export function buildAttackPathGraphModel(
 
   const edges: PathGraphEdge[] = [];
   const groupEdges = new Map<string, PathGraphEdge>();
+  const receipted = new Set([path, ...drawnPaths.map(item => item.other)].flatMap(item => [...receiptedHops(item)]));
+  const receiptFor = (edge: UnifiedEdge) => receipted.has(hopKey(edge.source, edge.target))
+    || (edge.direction === "bidirectional" && receipted.has(hopKey(edge.target, edge.source)));
   for (const edge of draft.edges.values()) {
     const sourceGroup = hidden.get(edge.source), targetGroup = hidden.get(edge.target);
     const base = {
       relationship: edge.relationship,
       relationshipLabel: relationshipEdgeLabelText(edge.relationship),
-      evidence: evidenceStyle(edge),
+      evidence: receiptFor(edge) ? "receipt" as const : evidenceStyle(edge),
       onPath: draft.onPath.has(edge.id),
       bidirectional: edge.direction === "bidirectional",
     };
@@ -271,7 +280,8 @@ export function buildAttackPathGraphModel(
     if (!(edge.source === parent || edge.target === parent)) continue;
     const existing = groupEdges.get(group);
     const weakest = !existing ? base.evidence : [existing.evidence, base.evidence].includes("unrecorded") ? "unrecorded"
-      : [existing.evidence, base.evidence].includes("inferred") ? "inferred" : "recorded";
+      : [existing.evidence, base.evidence].includes("inferred") ? "inferred"
+      : existing.evidence === "receipt" && base.evidence === "receipt" ? "receipt" : "recorded";
     groupEdges.set(group, {
       id: `${group}:link`, source: edge.source === parent ? parent : group, target: edge.source === parent ? group : parent,
       ...base, evidence: weakest,

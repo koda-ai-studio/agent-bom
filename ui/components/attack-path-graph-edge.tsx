@@ -10,6 +10,7 @@ export type AttackPathEdgeData = { edge: PathGraphEdge; active: boolean; markerP
 export type AttackPathFlowEdge = Edge<AttackPathEdgeData, "attackPathEdge">;
 
 export const LINE_STYLE: Record<EdgeEvidenceStyle, { name: "solid" | "dashed" | "dotted"; dash?: string }> = {
+  receipt: { name: "solid" },
   recorded: { name: "solid" },
   inferred: { name: "dashed", dash: "7 5" },
   unrecorded: { name: "dotted", dash: "1.5 5" },
