@@ -1,12 +1,13 @@
 /** Characters after which a name may wrap: identifiers, package coordinates and paths read as their parts. */
-const SEPARATOR = /[_\-./@:\s]/;
+const SEPARATOR = /[_\-./:\s]/;
 /** About one line of a 168px node name at the canvas type size. */
 export const LABEL_LINE_CHARS = 18;
 
 /**
  * The name in pieces that may each start a new line, so a wrap never lands
  * inside a token ("GCS_SERVICE_" / "ACCOUNT_KEY", never "GCS_SERVICE_ACCO" /
- * "UNT_KEY"). A token longer than a line ends with an ellipsis instead of
+ * "UNT_KEY"). A version keeps its "@" ("cryptography" / "@39.0.0", never a
+ * trailing "@"). A token longer than a line ends with an ellipsis instead of
  * being split; the full name stays in the element's title and aria-label.
  */
 export function labelSegments(label: string, lineChars = LABEL_LINE_CHARS): string[] {
@@ -14,6 +15,8 @@ export function labelSegments(label: string, lineChars = LABEL_LINE_CHARS): stri
   let current = "";
   const chars = [...label];
   chars.forEach((char, index) => {
+    // "@" opens a version or scope, so the break goes before it.
+    if (char === "@" && current) { segments.push(current); current = ""; }
     current += char;
     // A dot between digits belongs to a version number, which reads as one token.
     const versionDot = char === "." && /\d/.test(chars[index - 1] ?? "") && /\d/.test(chars[index + 1] ?? "");

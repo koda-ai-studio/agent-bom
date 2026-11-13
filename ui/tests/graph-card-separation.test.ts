@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { CARD_GAP, cardOverlaps, separateCards } from "@/lib/graph-card-separation";
-import { wrappedRankLayout } from "@/lib/graph-wrapped-ranks";
+import { hopColumnLayout } from "@/lib/graph-hop-columns";
 import { flowRowGap, FLOW_COLUMN_GAP } from "@/lib/graph-flow-layout";
 import { PREVIEW_LAYOUT, PREVIEW_CARD_MAX_WIDTH } from "@/lib/graph-preview-layout";
 
@@ -39,8 +39,10 @@ describe("layout fixtures leave room for a card and its caption", () => {
   const sized = (nodes: FlowNode[]) => nodes.map(node => ({ ...node, measured: { width: WIDTH, height: HEIGHT } }));
 
   it("spaces preview columns and rows wider than any card", () => {
-    const ranks = Array.from({ length: 9 }, (_, index) => card(`n${index}`, (index % 4) * 240, Math.floor(index / 4) * 200));
-    const laid = sized(wrappedRankLayout(ranks, PREVIEW_LAYOUT));
+    // A start with three neighbours, each with a child, and a loose card: the busiest preview columns.
+    const ranks = Array.from({ length: 9 }, (_, index) => card(`n${index}`, 0, 0));
+    const links = [[0, 1], [0, 2], [0, 3], [1, 4], [2, 5], [3, 6], [4, 7]].map(([a, b]) => ({ id: `${a}-${b}`, source: `n${a}`, target: `n${b}` }));
+    const laid = sized(hopColumnLayout(ranks, links, "n0", PREVIEW_LAYOUT));
     expect(cardOverlaps(laid)).toEqual([]);
   });
 

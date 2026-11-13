@@ -6,9 +6,13 @@ describe("graph label line breaks", () => {
   it("offers a break only after a separator, never inside a token", () => {
     expect(labelSegments("GCS_SERVICE_ACCOUNT_KEY")).toEqual(["GCS_", "SERVICE_", "ACCOUNT_", "KEY"]);
     expect(labelSegments("SNOWFLAKE_PASSWORD")).toEqual(["SNOWFLAKE_", "PASSWORD"]);
-    // A version number reads as one token: "cryptography@" / "39.0.0", never "39." / "0.0".
-    expect(labelSegments("pillow@9.0.0")).toEqual(["pillow@", "9.0.0"]);
-    expect(labelSegments("cryptography@39.0.0")).toEqual(["cryptography@", "39.0.0"]);
+    // A version reads as one token that keeps its "@": "cryptography" / "@39.0.0", never a trailing "@" or "39." / "0.0".
+    expect(labelSegments("pillow@9.0.0")).toEqual(["pillow", "@9.0.0"]);
+    expect(labelSegments("cryptography@39.0.0")).toEqual(["cryptography", "@39.0.0"]);
+    expect(labelSegments("@modelcontextprotocol/server-github@2025.4.8", 40)).toEqual(["@modelcontextprotocol/", "server-", "github", "@2025.4.8"]);
+    for (const label of ["cryptography@39.0.0", "a@b@c", "@scope/pkg@1.0.0"]) {
+      expect(labelSegments(label).some(segment => segment.endsWith("@")), label).toBe(false);
+    }
     expect(labelSegments("github-enterprise MCP")).toEqual(["github-", "enterprise ", "MCP"]);
     expect(labelSegments("services/research-mcp")).toEqual(["services/", "research-", "mcp"]);
   });
