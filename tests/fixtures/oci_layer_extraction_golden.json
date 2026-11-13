@@ -1174,6 +1174,11 @@
         },
         {
           "detail": "Container package metadata could not be parsed; image inventory is incomplete.",
+          "path": "usr/local/bin/server",
+          "reason": "package_metadata_parse_error"
+        },
+        {
+          "detail": "Container package metadata could not be parsed; image inventory is incomplete.",
           "path": "usr/lib/ruby/gems/3.2.0/specifications/odd.gemspec",
           "reason": "package_metadata_parse_error"
         },
@@ -1202,6 +1207,7 @@
         "Container package metadata could not be parsed: app/node_modules/nameless/package.json",
         "Container package metadata could not be parsed: opt/app/lib/corrupt.jar",
         "Container package metadata could not be parsed: opt/app/lib/empty.jar",
+        "Container package metadata could not be parsed: usr/local/bin/server",
         "Container package metadata could not be parsed: usr/lib/ruby/gems/3.2.0/specifications/odd.gemspec",
         "Container package metadata could not be parsed: app/bad.deps.json",
         "Container package metadata could not be parsed: ./var/www/composer.lock",

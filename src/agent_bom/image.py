@@ -59,7 +59,7 @@ class ImageScanError(Exception):
     """Raised when an image cannot be scanned."""
 
 
-def _zero_packages(source: str) -> ImageScanError:
+def zero_packages_error(source: str) -> ImageScanError:
     return ImageScanError(
         f"Native image scan extracted 0 packages from {source}. This is likely an extraction or parser failure, not a clean scan."
     )
@@ -572,7 +572,7 @@ def _scan_with_docker(image_ref: str, platform: Optional[str] = None) -> list[Pa
             if packages:
                 return packages
 
-        raise _zero_packages(image_ref)
+        raise zero_packages_error(image_ref)
 
     finally:
         if container_id:
@@ -686,7 +686,7 @@ def _scan_from_registry(
 ) -> list[Package]:
     packages = scan_registry_image(image_ref, platform=platform, registry_user=registry_user, registry_pass=registry_pass, policy=policy)
     if not packages:
-        raise _zero_packages(image_ref)
+        raise zero_packages_error(image_ref)
     return packages
 
 
@@ -800,7 +800,7 @@ def scan_image_tar(tar_path: str) -> tuple[list[Package], str]:
 
     Accepts tarballs created by ``docker save``, ``skopeo copy``, or ``crane pull``.
     Returns ``(packages, strategy)``, strategy ``"oci-tarball"`` or ``"oci-layout-dir"``.
-    Raises ImageScanError when the archive cannot be parsed or yields no packages.
+    Raises ImageScanError when the archive cannot be parsed.
     """
     from agent_bom.oci_parser import OCIParseError, scan_oci
 
@@ -823,8 +823,6 @@ def scan_image_tar(tar_path: str) -> tuple[list[Package], str]:
                 if grype_vulns > 0 or len(grype_packages) > len(packages):
                     return grype_packages, "grype-archive"
 
-    if not packages:
-        raise _zero_packages(path.name)
     return packages, strategy
 
 

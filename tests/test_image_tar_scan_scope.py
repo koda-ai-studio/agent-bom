@@ -98,15 +98,17 @@ def _empty_image_tar() -> Path:
     return _make_docker_save_tar([{"bin/mystery": binary}])
 
 
-def test_scan_image_tar_rejects_zero_packages_like_an_image_reference() -> None:
-    from agent_bom.image import ImageScanError, scan_image_tar
-
-    with pytest.raises(ImageScanError, match="0 packages"):
-        scan_image_tar(str(_empty_image_tar()))
-
-
 def test_image_tar_only_scan_with_no_inventory_exits_nonzero(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
     with pytest.raises(SystemExit) as exc:
         _discover((str(_empty_image_tar()),))
     assert exc.value.code == 1
+
+
+def test_image_tar_with_only_model_files_is_inventory_not_a_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from tests.test_oci_parser import _make_docker_save_tar
+
+    monkeypatch.chdir(tmp_path)
+    image = _make_docker_save_tar([{"opt/models/weights.safetensors": b"{}" * 8}])
+    agents, _calls = _discover((str(image),))
+    assert [a for a in agents if a.metadata.get("model_artifacts")]
