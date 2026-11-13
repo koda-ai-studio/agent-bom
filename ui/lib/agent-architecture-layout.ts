@@ -124,7 +124,7 @@ function flow(model: ArchitectureModel): ArchitectureLayout {
   }
   const score = (candidate: Order) => {
     const layout = geometry(model, "LR", columns, centredLanes(candidate));
-    return { layout, crossings: countRouteCrossings(model, routeArchitecture(model, layout), "LR") };
+    return { layout, crossings: countRouteCrossings(model, routeArchitecture(model, layout)) };
   };
   let best = score(order);
   for (let pass = 0; pass < SWEEPS && best.crossings > 0; pass += 1) {
@@ -175,8 +175,8 @@ function segmentsCross(a: Point, b: Point, c: Point, d: Point): boolean {
 }
 
 /** Pairs of drawn connectors that cross, ignoring pairs that share an end (fan-out trunks meet by design). */
-export function countRouteCrossings(model: Pick<ArchitectureModel, "edges">, routes: Map<string, Point[]>, direction: AttackPathDirection): number {
-  const lines = model.edges.map(edge => ({ edge, points: sampleRoute(routes.get(edge.id) ?? [], direction) }));
+export function countRouteCrossings(model: Pick<ArchitectureModel, "edges">, routes: Map<string, Point[]>): number {
+  const lines = model.edges.map(edge => ({ edge, points: sampleRoute(routes.get(edge.id) ?? []) }));
   let count = 0;
   for (let i = 0; i < lines.length; i += 1) for (let j = i + 1; j < lines.length; j += 1) {
     const a = lines[i]!, b = lines[j]!;

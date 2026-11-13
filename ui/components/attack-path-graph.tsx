@@ -15,7 +15,7 @@ import { NARROW_MIN_ZOOM, PATH_DESKTOP_MIN_ZOOM, attackPathCanvasHeight, attackP
 import { GLYPH_CENTER_Y, glyphInsetX, routeAttackPathEdges } from "@/lib/attack-path-graph-routes";
 import { attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { pathTraceTiming } from "@/lib/attack-path-trace";
-import { useReducedMotion } from "@/hooks/use-reduced-motion";
+import { prefersReducedMotion } from "@/lib/reduced-motion";
 import { buildAttackPathGraphModel, type AttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
 import { BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
@@ -126,7 +126,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
   const onExpandGroup = useCallback((id: string) => setExpandedGroups(current => new Set([...current, id])), []);
   const handlers = useMemo(() => ({ onOpenFindings, onExpandGroup }), [onExpandGroup, onOpenFindings]);
   // Motion carries direction once, when a path is chosen; the arrowheads carry it in the static view.
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = prefersReducedMotion();
   const traceKey = reducedMotion ? null : `${attackPath.source}>${attackPath.hops.join(">")}`;
   const { layout, nodes, edges } = useFlowElements(model, narrow, activeEdge, markerPrefix, handlers, traceKey);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -173,7 +173,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
     </div>
     </div>
     {narrow && frameWidth > 0 && canvasWidth > frameWidth && <p role="note" className="border-t border-outline bg-surface px-3 pt-2 text-xs text-ink-secondary">
-      Every node is drawn; the branches continue to the right. Scroll the graph sideways to see them.
+      Scroll sideways for the rest of the graph.
     </p>}
     {model.connectedPathCount > 0 && <p className="border-t border-outline bg-surface px-3 pt-2 text-xs text-ink-secondary">
       Branches show {model.connectedPathCount - model.omittedConnectedPaths} other recorded {model.connectedPathCount - model.omittedConnectedPaths === 1 ? "path that shares" : "paths that share"} a node or relationship with this path

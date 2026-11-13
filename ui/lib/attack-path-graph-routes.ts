@@ -1,4 +1,4 @@
-import type { AttackPathDirection, AttackPathLayout } from "@/lib/attack-path-graph-layout";
+import type { AttackPathLayout } from "@/lib/attack-path-graph-layout";
 import type { PathGraphEdge } from "@/lib/attack-path-graph-model";
 
 export type Point = { x: number; y: number };
@@ -64,30 +64,25 @@ function placeLegs(legs: Leg[], centreOf: (gap: number) => number, rankGap: numb
 
 type Plan = { id: string; start: Point; end: Point; legs: Leg[]; alternatives: Leg[][] };
 
-function provisional(plan: Pick<Plan, "start" | "end">, legs: Leg[], centreOf: (gap: number) => number, point: (main: number, cross: number) => Point): Point[] {
-  return [plan.start, ...legs.flatMap(leg => [point(centreOf(leg.gap), leg.from), point(centreOf(leg.gap), leg.to)]), plan.end];
-}
-
-/** Places two provisional routes meet or run together, other than a handle they both use. */
-function crossingsBetween(a: Point[], b: Point[], row: boolean): number {
-  const handles = [a[0]!, a.at(-1)!].filter(p => [b[0]!, b.at(-1)!].some(q => q.x === p.x && q.y === p.y));
-  const atHandle = (x: number, y: number) => handles.some(p => Math.abs(p.x - x) < 0.5 && Math.abs(p.y - y) < 0.5);
-  const within = (value: number, p: number, q: number) => value >= Math.min(p, q) && value <= Math.max(p, q);
-  const overlap = (p: number, q: number, r: number, t: number) => Math.min(Math.max(p, q), Math.max(r, t)) - Math.max(Math.min(p, q), Math.min(r, t));
+/**
+ * Where two provisional routes meet or run along one row, other than a handle
+ * they share. Turns in one gap are spread apart afterwards, so they never count.
+ */
+function conflicts(a: Point[], b: Point[], row: boolean): number {
+  const shared = (x: number, y: number) => [a[0]!, a.at(-1)!].some(p => p.x === x && p.y === y && [b[0]!, b.at(-1)!].some(q => q.x === x && q.y === y));
+  const lo = (p: number, q: number) => Math.min(p, q), hi = (p: number, q: number) => Math.max(p, q);
   let count = 0;
   for (let i = 1; i < a.length; i += 1) for (let j = 1; j < b.length; j += 1) {
     const [p, q, r, t] = [a[i - 1]!, a[i]!, b[j - 1]!, b[j]!];
-    const aVertical = p.x === q.x, bVertical = r.x === t.x;
-    if (aVertical === bVertical) {
-      // Turns sharing a gap are spread apart afterwards; only runs along one row really coincide.
-      if (aVertical === row) continue;
-      const sameLine = aVertical ? p.x === r.x : p.y === r.y;
-      const shared = aVertical ? overlap(p.y, q.y, r.y, t.y) : overlap(p.x, q.x, r.x, t.x);
-      if (sameLine && shared > 1 && !(handles.length && shared < 2)) count += 2;
+    const vertical = p.x === q.x;
+    if (vertical === (r.x === t.x)) {
+      const along = vertical ? [p.x === r.x, hi(lo(p.y, q.y), lo(r.y, t.y)), lo(hi(p.y, q.y), hi(r.y, t.y))] as const
+        : [p.y === r.y, hi(lo(p.x, q.x), lo(r.x, t.x)), lo(hi(p.x, q.x), hi(r.x, t.x))] as const;
+      if (vertical !== row && along[0] && along[2] - along[1] > 2) count += 2;
       continue;
     }
-    const [v1, v2, h1, h2] = aVertical ? [p, q, r, t] : [r, t, p, q];
-    if (within(v1.x, h1.x, h2.x) && within(h1.y, v1.y, v2.y) && !atHandle(v1.x, h1.y)) count += 1;
+    const [v, w, h, k] = vertical ? [p, q, r, t] : [r, t, p, q];
+    if (v.x >= lo(h.x, k.x) && v.x <= hi(h.x, k.x) && h.y >= lo(v.y, w.y) && h.y <= hi(v.y, w.y) && !shared(v.x, h.y)) count += 1;
   }
   return count;
 }
@@ -98,18 +93,14 @@ function crossingsBetween(a: Point[], b: Point[], row: boolean): number {
  * other lines; the nearest channel wins a tie.
  */
 function chooseCorridors(plans: Plan[], centreOf: (gap: number) => number, point: (main: number, cross: number) => Point, row: boolean) {
-  const drawn = (plan: Plan) => provisional(plan, plan.legs, centreOf, point);
+  const draw = (plan: Plan, legs: Leg[]) => [plan.start, ...legs.flatMap(leg => [point(centreOf(leg.gap), leg.from), point(centreOf(leg.gap), leg.to)]), plan.end];
   for (const plan of plans) {
-    if (plan.alternatives.length === 0) continue;
-    const others = plans.filter(other => other !== plan).map(drawn);
-    const score = (legs: Leg[]) => others.reduce((total, other) => total + crossingsBetween(provisional(plan, legs, centreOf, point), other, row), 0);
-    let best = plan.legs, bestScore = score(plan.legs);
+    const others = plans.filter(other => other !== plan).map(other => draw(other, other.legs));
+    const score = (legs: Leg[]) => others.reduce((total, other) => total + conflicts(draw(plan, legs), other, row), 0);
     for (const candidate of plan.alternatives) {
       const legs = candidate.filter(leg => leg.from !== leg.to);
-      const value = score(legs);
-      if (value < bestScore) { best = legs; bestScore = value; }
+      if (score(legs) < score(plan.legs)) plan.legs = legs;
     }
-    plan.legs = best;
   }
 }
 
@@ -165,57 +156,25 @@ export function routeAttackPathEdges(model: { edges: readonly Pick<PathGraphEdge
   return routes;
 }
 
-function along(direction: AttackPathDirection, point: Point) {
-  return direction === "LR" ? { main: point.x, cross: point.y } : { main: point.y, cross: point.x };
-}
-
-function controls(direction: AttackPathDirection, from: Point, to: Point): [Point, Point] {
-  const a = along(direction, from), b = along(direction, to);
-  const half = (b.main - a.main) / 2;
-  const at = (main: number, cross: number): Point => direction === "LR" ? { x: main, y: cross } : { x: cross, y: main };
-  return [at(a.main + half, a.cross), at(b.main - half, b.cross)];
-}
-
 const CORNER = 10;
-const axisAligned = (a: Point, b: Point) => a.x === b.x || a.y === b.y;
 
-/** Straight runs with rounded corners for an orthogonal route; smooth S-curves for a diagonal step. */
-export function routePath(points: Point[], direction: AttackPathDirection): string {
+/** Straight runs with rounded corners; every route is horizontal and vertical runs. */
+export function routePath(points: Point[]): string {
   let d = `M ${points[0]!.x} ${points[0]!.y}`;
   for (let index = 1; index < points.length; index += 1) {
     const from = points[index - 1]!, to = points[index]!, next = points[index + 1];
-    if (!axisAligned(from, to)) {
-      const [c1, c2] = controls(direction, from, to);
-      d += ` C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${to.x} ${to.y}`;
-      continue;
-    }
-    if (!next || !axisAligned(to, next)) { d += ` L ${to.x} ${to.y}`; continue; }
-    const incoming = Math.hypot(to.x - from.x, to.y - from.y), outgoing = Math.hypot(next.x - to.x, next.y - to.y);
+    const incoming = Math.hypot(to.x - from.x, to.y - from.y), outgoing = next ? Math.hypot(next.x - to.x, next.y - to.y) : 0;
     const radius = Math.min(CORNER, incoming / 2, outgoing / 2);
-    if (radius <= 0) { d += ` L ${to.x} ${to.y}`; continue; }
-    const before = { x: to.x + (from.x - to.x) * radius / incoming, y: to.y + (from.y - to.y) * radius / incoming };
-    const after = { x: to.x + (next.x - to.x) * radius / outgoing, y: to.y + (next.y - to.y) * radius / outgoing };
-    d += ` L ${before.x} ${before.y} Q ${to.x} ${to.y} ${after.x} ${after.y}`;
+    if (!next || radius <= 0) { d += ` L ${to.x} ${to.y}`; continue; }
+    const at = (p: Point, length: number, r: number) => `${to.x + (p.x - to.x) * r / length} ${to.y + (p.y - to.y) * r / length}`;
+    d += ` L ${at(from, incoming, radius)} Q ${to.x} ${to.y} ${at(next, outgoing, radius)}`;
   }
   return d;
 }
 
-/** Points along the drawn route, for geometry checks and label placement. */
-export function sampleRoute(points: Point[], direction: AttackPathDirection, steps = 16): Point[] {
-  const out: Point[] = [points[0]!];
-  for (let index = 1; index < points.length; index += 1) {
-    const from = points[index - 1]!, to = points[index]!;
-    if (axisAligned(from, to)) { out.push(to); continue; }
-    const [c1, c2] = controls(direction, from, to);
-    for (let step = 1; step <= steps; step += 1) {
-      const t = step / steps, u = 1 - t;
-      out.push({
-        x: u * u * u * from.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * to.x,
-        y: u * u * u * from.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * to.y,
-      });
-    }
-  }
-  return out;
+/** The corners of the drawn route, for geometry checks. */
+export function sampleRoute(points: Point[]): Point[] {
+  return [...points];
 }
 
 /** Where a relationship name appears: the middle of the route's run. */

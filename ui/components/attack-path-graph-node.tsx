@@ -47,33 +47,27 @@ export function NodeName({ label, className }: { label: string; className: strin
   );
 }
 
-const SEVERITY_ORDER = ["critical", "high", "medium", "low"];
-
-/** Counts per severity, worst first, e.g. "1 critical, 1 medium". */
-function severityBreakdown(findings: PathGraphNode["findings"]): { severity: string; count: number }[] {
+/** Counts per severity in the model's worst-first order, e.g. "1 critical, 1 medium". */
+function severityBreakdown(findings: PathGraphNode["findings"]): [string, number][] {
   const counts = new Map<string, number>();
-  for (const finding of findings) {
-    const severity = RATED.has(finding.severity) ? finding.severity : "unrated";
-    counts.set(severity, (counts.get(severity) ?? 0) + 1);
-  }
-  return [...counts].map(([severity, count]) => ({ severity, count }))
-    .sort((a, b) => (SEVERITY_ORDER.indexOf(a.severity) + 5) % 5 - (SEVERITY_ORDER.indexOf(b.severity) + 5) % 5);
+  for (const { severity } of findings) counts.set(RATED.has(severity) ? severity : "unrated", (counts.get(RATED.has(severity) ? severity : "unrated") ?? 0) + 1);
+  return [...counts];
 }
 
 function FindingBadge({ node, onOpen }: { node: PathGraphNode; onOpen: AttackPathNodeData["onOpenFindings"] }) {
   const count = node.findings.length;
   const worst = node.findings[0]!.severity;
   const breakdown = severityBreakdown(node.findings);
-  const top = breakdown[0]!;
-  const rest = count - top.count;
-  const summary = breakdown.map(item => `${item.count} ${item.severity}`).join(", ");
+  const [topSeverity, topCount] = breakdown[0]!;
+  const rest = count - topCount;
+  const summary = breakdown.map(([severity, n]) => `${n} ${severity}`).join(", ");
   const label = `${count} ${count === 1 ? "finding" : "findings"} on ${node.label}, worst ${RATED.has(worst) ? worst : "unrated"} (${summary}). Open findings`;
   return (
     <button type="button" aria-label={label} title={label.replace(". Open findings", "")} data-severity={worst} data-node-badge="findings"
       onClick={event => { event.stopPropagation(); onOpen(node.id, node.findings.map(finding => finding.id)); }}
       className="nodrag nopan absolute left-[calc(100%-12px)] -top-4 z-10 inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 text-[13px] font-semibold tabular-nums shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]"
       style={severityStyle(worst)}>
-      <Bug className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{`${top.count} ${top.severity}`}{rest > 0 ? <span className="font-medium opacity-80">{` +${rest}`}</span> : null}
+      <Bug className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{`${topCount} ${topSeverity}`}{rest > 0 ? <span className="font-medium opacity-80">{` +${rest}`}</span> : null}
     </button>
   );
 }

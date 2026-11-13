@@ -42,7 +42,8 @@ describe("selected path trace", () => {
     expect(traces.map(trace => trace.getAttribute("data-path-trace"))).toEqual(
       selected.hops.slice(0, -2).map((hop, index) => String(index)),
     );
-    for (const trace of traces) expect(trace.style.animationIterationCount).toBe("1");
+    // The keyframes run once (`animation: attack-path-trace linear 1 both` in globals.css); each hop only sets its slot.
+    for (const trace of traces) expect(trace).toHaveClass("attack-path-trace");
     const delays = traces.map(trace => parseFloat(trace.style.animationDelay));
     expect(delays).toEqual([...delays].sort((a, b) => a - b));
   });

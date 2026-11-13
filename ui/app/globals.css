@@ -1005,6 +1005,16 @@ main > div {
   75% { stroke-dashoffset: 0; opacity: 0.9; }
   100% { stroke-dashoffset: 0; opacity: 0; }
 }
+.attack-path-trace {
+  fill: none;
+  pointer-events: none;
+  stroke: var(--accent);
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: attack-path-trace linear 1 both;
+}
 @media (prefers-reduced-motion: reduce) {
   .attack-path-trace { display: none; }
 }

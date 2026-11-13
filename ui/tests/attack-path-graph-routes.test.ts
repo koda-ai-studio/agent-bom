@@ -21,7 +21,7 @@ function properlyIntersect([a, b]: Segment, [c, d]: Segment): boolean {
 function crossings(model: AttackPathGraphModel, direction: AttackPathDirection): string[] {
   const layout = layoutAttackPathGraph(model, direction);
   const routes = routeAttackPathEdges(model, layout);
-  const sampled = model.edges.map(edge => ({ edge, points: sampleRoute(routes.get(edge.id)!, direction) }));
+  const sampled = model.edges.map(edge => ({ edge, points: sampleRoute(routes.get(edge.id)!) }));
   const out: string[] = [];
   for (let i = 0; i < sampled.length; i += 1) {
     for (let j = i + 1; j < sampled.length; j += 1) {
@@ -42,7 +42,7 @@ function crossings(model: AttackPathGraphModel, direction: AttackPathDirection):
         let route = routes.get(item.edge.id)!;
         if (isCommon(route[0]!)) route = route.slice(1);
         if (isCommon(route.at(-1)!)) route = route.slice(0, -1);
-        return route.length >= 2 ? sampleRoute(route, direction) : [];
+        return route.length >= 2 ? sampleRoute(route) : [];
       };
       const bDense = densify(tail(b));
       const merged = densify(tail(a)).find(p => !common.some(anchor => Math.hypot(anchor.x - p.x, anchor.y - p.y) < 2)
@@ -88,7 +88,7 @@ describe("attack path edge routing", () => {
       const layout = layoutAttackPathGraph(model, "LR");
       const routes = routeAttackPathEdges(model, layout);
       for (const edge of model.edges) {
-        const points = sampleRoute(routes.get(edge.id)!, "LR");
+        const points = sampleRoute(routes.get(edge.id)!);
         const [before, end] = points.slice(-2) as [Point, Point];
         const [start, after] = points.slice(0, 2) as [Point, Point];
         // Arrives moving right into the target's left side; leaves moving right from the source's right side.
@@ -126,7 +126,7 @@ describe("attack path edge routing", () => {
         const routes = routeAttackPathEdges(model, layout);
         const problems: string[] = [];
         for (const edge of model.edges) {
-          const points = densify(sampleRoute(routes.get(edge.id)!, direction));
+          const points = densify(sampleRoute(routes.get(edge.id)!));
           for (const [id, position] of layout.positions) {
             const inside = (p: Point, top: number) => p.x > position.x + 1 && p.x < position.x + layout.nodeWidth - 1 && p.y > top + 1 && p.y < position.y + layout.nodeHeight - 1;
             const own = id === edge.source || id === edge.target;

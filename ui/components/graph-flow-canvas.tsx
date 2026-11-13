@@ -3,7 +3,6 @@
 import { Background, Controls, MiniMap, ReactFlow } from "@xyflow/react";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { useAnimatedLayout } from "@/hooks/use-animated-layout";
-import { GraphPathCameraFit } from "@/components/graph-path-camera-fit";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { lineageNodeTypesAdaptive } from "@/components/lineage-nodes";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
@@ -40,7 +39,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
               // Ordinary views have one camera owner: GraphCanvasAutoFit.
               // A concurrent animated initial fit can resize LOD cards after
               // the measured fit has settled, leaving the root offscreen.
-              fitView={Boolean(selectedScenarioId || selectedAttackPath) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
+              fitView={Boolean(selectedScenarioId) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
               fitViewOptions={manualCamera ? viewportOptions : initialViewportOptions}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
               minZoom={0.05}
@@ -102,17 +101,15 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
                 navigationIds={selectedAttackPath?.hops ?? flowView.navigationIds}
-                primaryIds={selectedNodeId ? undefined : flowView.flow.primaryPath}
+                primaryIds={selectedAttackPath?.hops ?? (selectedNodeId ? undefined : flowView.flow.primaryPath)}
                 primaryZoom={flowView.primaryZoom}
-                enabled={!layoutPending && !motion.animating && !selectedScenarioId && !selectedAttackPath}
+                enabled={!layoutPending && !motion.animating && !selectedScenarioId}
                 layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}`}
                 anchorId={selectedNodeId ?? investigationMode?.rootId ?? flowView.anchorId}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
                 preserveViewport={manualCamera || flowView.kind === "auto" && presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
               />
-              <GraphPathCameraFit enabled={Boolean(selectedAttackPath) && !selectedScenarioId && !layoutPending && nodesInitialized && !motion.animating && !manualCamera}
-                fitKey={`${selectedAttackPath?.hops.join(">") ?? ""}:${compactLayoutKey}:${flowView.kind}`} options={initialViewportOptions} />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
               <Controls {...(investigationContext || selectedScenarioId ? { onFitView: fitVisible, fitViewOptions: selectedScenarioId ? initialViewportOptions : { padding: 0.25, minZoom: 0.05, maxZoom: 1.25 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
