@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 import re
 from typing import Optional
 
@@ -15,8 +14,6 @@ from agent_bom.api.read_models.graph_cluster_map import GraphClusterMapResponse
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.graph.cluster_map import DEFAULT_MEMBER_LIMIT, MAX_EXPANDED, MAX_MEMBER_LIMIT, cluster_map_view
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(route_class=_GraphAdmissionRoute)
 
@@ -85,20 +82,15 @@ async def get_graph_cluster_map(
         snapshot_fingerprint, graph_store, tenant=tenant, scan_id=requested_scan_id
     )
     resolved_scan_id = cache_identity[0] if cache_identity else requested_scan_id
-    try:
-        index = await _runtime._graph_compute_call(
-            cluster_index, graph_store, tenant_id=tenant, scan_id=resolved_scan_id, identity=cache_identity
-        )
-        if identity is not None:
-            await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(index.ids))
-        payload = await _runtime._graph_compute_call(
-            cluster_map_view, index, expanded=expand, pages=_pages(page), risky_only=risky_only, focus=focus, member_limit=member_limit
-        )
-    except HTTPException:
-        raise
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("graph cluster map failed", exc_info=False)
-        raise HTTPException(status_code=500, detail="Failed to compute the grouped graph map") from exc
+    # An unexpected failure reaches the app's generic 500 handler, which returns no exception detail.
+    index = await _runtime._graph_compute_call(
+        cluster_index, graph_store, tenant_id=tenant, scan_id=resolved_scan_id, identity=cache_identity
+    )
+    if identity is not None:
+        await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(index.ids))
+    payload = await _runtime._graph_compute_call(
+        cluster_map_view, index, expanded=expand, pages=_pages(page), risky_only=risky_only, focus=focus, member_limit=member_limit
+    )
     if not index.ids and not resolved_scan_id:
         raise HTTPException(status_code=404, detail="Graph snapshot not found")
     return {

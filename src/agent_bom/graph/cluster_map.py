@@ -218,6 +218,37 @@ def _select_edges(bundles: list[dict[str, Any]], node_order: list[str], cap: int
     return [b for b in ranked if b["id"] in chosen]
 
 
+def _bundles(frame: _Frame, risky_ids: set[str], shown_ids: set[str]) -> tuple[list[dict[str, Any]], int, int, dict[str, int]]:
+    """Group-pair bundles with their per-relationship counts, plus the edges filtered out and the edges inside one node."""
+    totals, cost = _bundle_totals(frame)
+    pairs: dict[tuple[str, str], Counter[str]] = defaultdict(Counter)
+    filtered = internal = 0
+    for (a, b, rel), count in totals.items():
+        if count == 0:
+            continue
+        if count < 0:  # pragma: no cover - the arithmetic above cannot go negative
+            raise AssertionError("grouped-map bundle went negative")
+        if a is None or b is None:
+            filtered += count
+        elif a == b:
+            internal += count
+        else:
+            pairs[(a, b)][frame.index.rel_names[rel]] += count
+    bundles = [
+        {
+            "id": f"{a}->{b}",
+            "source": a,
+            "target": b,
+            "count": sum(rels.values()),
+            "relationships": [{"relationship": rel, "count": n} for rel, n in sorted(rels.items(), key=lambda item: (-item[1], item[0]))],
+            "risky": a in risky_ids and b in risky_ids,
+            "priority": 2 * (a in shown_ids or b in shown_ids) + (a in risky_ids) + (b in risky_ids),
+        }
+        for (a, b), rels in pairs.items()
+    ]
+    return bundles, filtered, internal, cost
+
+
 def cluster_map_view(
     index: ClusterIndex,
     *,
@@ -240,32 +271,7 @@ def cluster_map_view(
     }
     shown_ids = {index.ids[idx] for idx in frame.shown_set}
 
-    totals, cost = _bundle_totals(frame)
-    pairs: dict[tuple[str, str], Counter[str]] = defaultdict(Counter)
-    filtered = internal = 0
-    for (a, b, rel), count in totals.items():
-        if count == 0:
-            continue
-        if count < 0:  # pragma: no cover - the arithmetic above cannot go negative
-            raise AssertionError("grouped-map bundle went negative")
-        if a is None or b is None:
-            filtered += count
-        elif a == b:
-            internal += count
-        else:
-            pairs[(a, b)][index.rel_names[rel]] += count
-    bundles = [
-        {
-            "id": f"{a}->{b}",
-            "source": a,
-            "target": b,
-            "count": sum(rels.values()),
-            "relationships": [{"relationship": rel, "count": n} for rel, n in sorted(rels.items(), key=lambda item: (-item[1], item[0]))],
-            "risky": a in risky_ids and b in risky_ids,
-            "priority": 2 * (a in shown_ids or b in shown_ids) + (a in risky_ids) + (b in risky_ids),
-        }
-        for (a, b), rels in pairs.items()
-    ]
+    bundles, filtered, internal, cost = _bundles(frame, risky_ids, shown_ids)
     first_frame = not frame.open and not frame.other_open
     cap = (
         max(FIRST_FRAME_ELEMENT_BUDGET - len(nodes), 0)

@@ -113,11 +113,6 @@ def prewarm_rollup(store: Any, *, tenant_id: str) -> int:
         return 0
     scan_id = key_identity[0]
     warmed = 0
-    try:
-        # The grouped map is the graph page's first frame; its per-snapshot aggregation warms first.
-        cluster_index(store, tenant_id=tenant_id, scan_id=scan_id, identity=key_identity)
-    except Exception:  # noqa: BLE001 - a warm-up is an optimisation; the first reader builds it
-        logger.debug("graph cluster index warm-up skipped", exc_info=False)
     suppressions = suppression_revision(tenant_id)
     suppressed = suppressed_finding_ids(tenant_id)
 
@@ -156,6 +151,9 @@ def prewarm_rollup(store: Any, *, tenant_id: str) -> int:
 
     full = load_rollup_source(store, tenant_id=tenant_id, scan_id=scan_id, node=None, mode="attack_path")
     view(full, mode="attack_path", limit=0)
+    del full
+    # The grouped full map's per-snapshot aggregation; a failure here is contained by the worker like any warm-up.
+    cluster_index(store, tenant_id=tenant_id, scan_id=scan_id, identity=key_identity)
     return warmed
 
 
