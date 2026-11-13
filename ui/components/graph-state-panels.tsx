@@ -10,6 +10,7 @@ import { getOsvVulnerabilityUrl } from "@/lib/vulnerabilities";
 import { PageEmptyState, PageLoadingState } from "@/components/states/page-state";
 import type { PageStateAction } from "@/components/states/page-state";
 import type { LineageNodeData } from "./lineage-nodes";
+import { formatProbabilityPercent } from "@/lib/probability-format";
 
 const FINDINGS_VIRTUALIZE_THRESHOLD = 80;
 const FINDING_ROW_HEIGHT = 92;
@@ -221,7 +222,7 @@ function FindingRow({
 }) {
   const severity = data.severity?.toUpperCase() ?? "UNKNOWN";
   const cvss = typeof data.cvssScore === "number" ? data.cvssScore.toFixed(1) : "N/A";
-  const epss = typeof data.epssScore === "number" ? `${(data.epssScore * 100).toFixed(1)}%` : "N/A";
+  const epss = typeof data.epssScore === "number" ? formatProbabilityPercent(data.epssScore) : "N/A";
   const risk = nodeRiskLabel(data.riskScore, data.riskAssessment);
   const osvUrl = getOsvVulnerabilityUrl(data.label);
   const severityClass =

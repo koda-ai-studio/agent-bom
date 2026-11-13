@@ -482,11 +482,11 @@ class AIBOMReport:
 
     @property
     def total_packages(self) -> int:
-        return sum(a.total_packages for a in self.agents)
+        return sum(len(s.packages) for a in self.agents for s in a.mcp_servers if not s.package_binding_of)
 
     @property
     def total_vulnerabilities(self) -> int:
-        return sum(a.total_vulnerabilities for a in self.agents)
+        return sum(s.total_vulnerabilities for a in self.agents for s in a.mcp_servers if not s.package_binding_of)
 
     @property
     def critical_vulns(self) -> list[BlastRadius]:

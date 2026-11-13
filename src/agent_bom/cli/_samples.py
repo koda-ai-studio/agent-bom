@@ -16,19 +16,22 @@ def samples_group() -> None:
 
 
 @samples_group.command("first-run")
+@click.argument("directory", required=False, type=click.Path(file_okay=False, path_type=Path))
 @click.option(
     "--target",
     "--output",
     "-o",
     "output",
     type=click.Path(file_okay=False, path_type=Path),
-    default=Path("agent-bom-first-run"),
-    show_default=True,
-    help="Directory to write the sample project into.",
+    default=None,
+    help="Directory to write the sample project into (default: agent-bom-first-run). Same as DIRECTORY.",
 )
 @click.option("--force", is_flag=True, help="Overwrite files in an existing sample directory.")
-def first_run_sample(output: Path, force: bool) -> None:
-    """Write an inspectable AI stack sample project."""
+def first_run_sample(directory: Path | None, output: Path | None, force: bool) -> None:
+    """Write an inspectable AI stack sample project into DIRECTORY."""
+    if directory is not None and output is not None and directory != output:
+        raise click.UsageError("Give the sample directory either as DIRECTORY or with -o/--output, not both.")
+    output = directory or output or Path("agent-bom-first-run")
     try:
         written = write_first_run_sample(output, force=force)
     except FileExistsError as exc:

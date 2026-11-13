@@ -308,7 +308,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `fleet` → `account`, `agent`, `cloud_resource`, `org`, `server`
 - `provider` → `account`, `agent`, `cloud_resource`, `org`, `server`
 
-Emitted by: `graph/builder_cloud_lineage.py`, `graph/endpoint_overlay.py`
+Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/endpoint_overlay.py`
 
 ## `imports`
 
@@ -400,7 +400,7 @@ Class `governance` · directed · traversable · required evidence `source`, `ti
 - `service_principal` → `agent`, `cloud_resource`, `environment`
 - `user` → `agent`, `cloud_resource`, `environment`
 
-Emitted by: `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`
+Emitted by: `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`
 
 ## `part_of`
 

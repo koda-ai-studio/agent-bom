@@ -153,7 +153,8 @@ async def test_slow_sender_does_not_delay_non_admission_events_but_admission_sti
     import time
 
     store = FakeOutbox()
-    delay = 1.0
+    # Waiting behind the slow send would take the full delay; half of it leaves room for a loaded runner.
+    delay = 2.0
 
     async def slow_sender(payload: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
         await asyncio.sleep(delay)
@@ -165,7 +166,7 @@ async def test_slow_sender_does_not_delay_non_admission_events_but_admission_sti
     try:
         started = time.monotonic()
         await asyncio.gather(*(sink(_event(f"evt-{i}")) for i in range(20)))
-        assert time.monotonic() - started < 0.5
+        assert time.monotonic() - started < delay / 2
         assert len(store.rows) == 20
         for _ in range(100):
             if not store.rows:

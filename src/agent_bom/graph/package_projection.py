@@ -385,6 +385,8 @@ def _blast_radius_package_evidence(br_dict: dict[str, Any], data_source_tag: str
         "package_stable_id": br_dict.get("package_stable_id", ""),
         "purl": br_dict.get("package_purl") or br_dict.get("purl", ""),
         "reachability": br_dict.get("reachability", ""),
+        # Set only when the row omitted its ecosystem and the inventory resolved it.
+        "ecosystem_basis": br_dict.get("ecosystem_basis", ""),
         # The CVE node is shared across versions; each occurrence keeps its own rating.
         "severity": str(br_dict.get("severity") or "").lower(),
     }

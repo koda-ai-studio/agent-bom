@@ -54,9 +54,21 @@ def _structural_edges(store: Any, *, tenant_id: str, scan_id: str, agent_ids: se
     return list(edges[:MAX_STRUCTURAL_EDGES]), len(edges) <= MAX_STRUCTURAL_EDGES
 
 
-def _overlay(store: Any, *, tenant_id: str, scan_id: str, harnesses: list[dict[str, Any]], nodes_by_id: dict[str, Any]) -> bool:
-    """Attach the security overlay; ``False`` when a bounded read may have left records out."""
-    agent_ids = {row["id"] for harness in harnesses for layer in harness["layers"] for row in layer["agents"]}
+def _overlay(
+    store: Any,
+    *,
+    tenant_id: str,
+    scan_id: str,
+    harnesses: list[dict[str, Any]],
+    members: dict[str, list[str]],
+    nodes_by_id: dict[str, Any],
+) -> bool:
+    """Attach the security overlay; ``False`` when a bounded read may have left records out.
+
+    Reads cover every member of each harness, not only the agents listed, so
+    the harness rollup counts findings on agents past the listing cap.
+    """
+    agent_ids = {agent_id for harness in harnesses for agent_id in members[harness["harness_id"]]}
     roots = {harness["harness_id"] for harness in harnesses}
     outgoing = (
         store.edges_for_node_ids(tenant_id=tenant_id, scan_id=scan_id, node_ids=agent_ids, direction="out", limit=MAX_OVERLAY_EDGES)
@@ -79,8 +91,23 @@ def _overlay(store: Any, *, tenant_id: str, scan_id: str, harnesses: list[dict[s
     )
     everything = {**looked_up, **nodes_by_id}
     for harness in harnesses:
-        view.apply_overlay(harness, everything, reach, findings, declared_in, looked_up)
+        view.apply_overlay(harness, everything, reach, findings, declared_in, looked_up, members[harness["harness_id"]])
     return len(outgoing) < MAX_OVERLAY_EDGES and len(all_findings) <= MAX_FINDING_NODES
+
+
+def _bound_reasons(*, agents: bool, edges: bool, overlay: bool) -> list[str]:
+    """One reason per bounded read that may have left records out of this answer."""
+    reasons = []
+    if not agents:
+        reasons.append(
+            f"The agent read stopped at its bound ({FRAMEWORK_AGENT_CAP} framework agents or "
+            f"{MAX_AGENT_NODES_SCANNED} agent nodes); framework agents past it are not placed."
+        )
+    if not edges:
+        reasons.append(f"Only the first {MAX_STRUCTURAL_EDGES} delegation and shared-server edges were read.")
+    if not overlay:
+        reasons.append("The security overlay read hit its bound; some reach or finding records may be missing.")
+    return reasons
 
 
 def read_agent_architecture(store: Any, *, tenant_id: str, scan_id: str, offset: int, limit: int) -> dict[str, Any]:
@@ -97,15 +124,21 @@ def read_agent_architecture(store: Any, *, tenant_id: str, scan_id: str, offset:
     placements = view.place_agents(agents, edges)
     order = view.harness_order(placements, nodes_by_id)
     window = order[offset : offset + limit]
+    members = {root: view.harness_member_ids(root, placements, nodes_by_id) for root in window}
     harnesses = [view.build_harness(root, placements, nodes_by_id, edges, raw_evidence) for root in window]
-    overlay_complete = _overlay(store, tenant_id=tenant_id, scan_id=scan_id, harnesses=harnesses, nodes_by_id=nodes_by_id)
+    overlay_complete = _overlay(store, tenant_id=tenant_id, scan_id=scan_id, harnesses=harnesses, members=members, nodes_by_id=nodes_by_id)
+    reasons = _bound_reasons(agents=agents_complete, edges=edges_complete, overlay=overlay_complete)
+    crossing = view.cross_harness_edges(edges, placements, set(window))
+    if crossing:
+        reasons.append(f"{crossing} declared edge(s) join agents placed in different harnesses and are not shown in either.")
+    reasons.extend(reason for harness in harnesses for reason in view.truncation_reasons(harness))
     return {
         "schema_version": "v1",
         "scan_id": scan_id,
         "tenant_id": tenant_id,
         "harnesses": harnesses,
         "summary": view.summary(agents, placements, len(order)),
-        "coverage": view.coverage(complete=agents_complete and edges_complete and overlay_complete, agent_cap=FRAMEWORK_AGENT_CAP),
+        "coverage": view.coverage(reasons=reasons, agent_cap=FRAMEWORK_AGENT_CAP),
         "pagination": {"offset": offset, "limit": limit, "total": len(order), "returned": len(harnesses)},
     }
 

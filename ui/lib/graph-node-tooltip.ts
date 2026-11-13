@@ -1,3 +1,5 @@
+import { formatProbabilityPercent } from "@/lib/probability-format";
+
 const FINDING_TYPES = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
 const SEVERITIES = new Set(["critical", "high", "medium", "low"]);
 
@@ -28,7 +30,7 @@ export function graphNodeTooltip(data: TooltipInput): string {
   if (severity) parts.push(`${severity.charAt(0).toUpperCase()}${severity.slice(1)} severity`);
   else if (FINDING_TYPES.has(data.nodeType)) parts.push("Severity not rated");
   if (typeof data.cvssScore === "number" && Number.isFinite(data.cvssScore)) parts.push(`CVSS ${data.cvssScore.toFixed(1)}`);
-  if (typeof data.epssScore === "number" && Number.isFinite(data.epssScore)) parts.push(`EPSS ${(data.epssScore * 100).toFixed(1)}%`);
+  if (typeof data.epssScore === "number" && Number.isFinite(data.epssScore)) parts.push(`EPSS ${formatProbabilityPercent(data.epssScore)}`);
   if (data.isKev) parts.push("CISA KEV");
   return parts.join(" · ");
 }

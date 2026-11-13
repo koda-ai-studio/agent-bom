@@ -5,7 +5,7 @@ from __future__ import annotations
 from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.graph import EntityType, NodeDimensions, RelationshipType, UnifiedGraph, UnifiedNode
 from agent_bom.graph.builder import _resolve_cloud_resource_node_id, build_unified_graph_from_report
-from agent_bom.graph.rollup import rollup_view
+from agent_bom.graph.rollup import drill_down, rollup_view
 
 
 def _minimal_report():
@@ -463,7 +463,10 @@ class TestBuildUnifiedGraphFromReport:
         account_id = "account:aws:123456789012"
         resource_id = "cloud_resource:aws:bedrock:agent:arn:aws:bedrock:us-east-1:123456789012:agent/agent-abc"
         view = rollup_view(g)
-        account = next(item for item in view["top_level"] if item["id"] == account_id)
+        # The provider hosts the account, so the account rolls up under it.
+        assert account_id not in {item["id"] for item in view["top_level"]}
+        provider = drill_down(g, "provider:aws")
+        account = next(item for item in provider["children"] if item["id"] == account_id)
         assert account["has_children"] is True
         assert account["direct_child_count"] == 1
         assert account["aggregate"]["by_type"]["cloud_resource"] == 1

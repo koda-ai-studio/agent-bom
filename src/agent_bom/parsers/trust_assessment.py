@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from agent_bom.parsers.trust_applicability import apply_manifest_applicability
+from agent_bom.parsers.trust_applicability import applicable_categories
 
 if TYPE_CHECKING:
     from agent_bom.parsers.skill_audit import SkillAuditResult
@@ -892,11 +892,11 @@ def assess_trust(
         _assess_credentials(meta, scan, audit),
         _assess_persistence_privilege(meta, scan, audit),
     ]
-    categories = apply_manifest_applicability(categories, meta.raw_frontmatter if meta else "", TrustLevel.PASS)
+    categories, plain_prompt = applicable_categories(categories, meta, list(scan.source_files), TrustLevel.PASS, TrustLevel.INFO)
 
     _legacy_verdict, confidence = _compute_verdict(categories)
     provenance_categories, _content_categories = _split_categories(categories)
-    provenance_verdict = _compute_provenance_verdict(provenance_categories)
+    provenance_verdict = ProvenanceVerdict.UNVERIFIED if plain_prompt else _compute_provenance_verdict(provenance_categories)
     content_verdict = _compute_content_verdict_from_audit(audit)
     verdict = _combine_verdict(provenance_verdict, content_verdict)
     recommendations = _generate_recommendations(categories)
