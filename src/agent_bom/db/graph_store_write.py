@@ -15,6 +15,7 @@ from agent_bom.db.graph_node_search import ensure_search_index, write_node_searc
 from agent_bom.db.graph_revision import revision_tokens
 from agent_bom.db.graph_store_correlation import get_correlation_run
 from agent_bom.db.graph_store_schema import _executemany_batched
+from agent_bom.db.sqlite_bulk_cache import snapshot_bulk_cache
 from agent_bom.graph import (
     AttackPath,
     EntityType,
@@ -123,8 +124,9 @@ def write_nodes_and_aliases(
 ) -> None:
     """Stream node rows, then record the source ids canonicalization replaced."""
     aliases = NodeAliasCollector()
-    _write_nodes(conn, aliases.wrap(nodes), stats, scan=scan, tenant=tenant, batch_size=batch_size)
-    write_node_aliases(conn, aliases.records(tenant=tenant, scan=scan, now=now))
+    with snapshot_bulk_cache(conn):
+        _write_nodes(conn, aliases.wrap(nodes), stats, scan=scan, tenant=tenant, batch_size=batch_size)
+        write_node_aliases(conn, aliases.records(tenant=tenant, scan=scan, now=now))
 
 
 def _write_nodes(
@@ -187,19 +189,20 @@ def _write_edges(
     now: str,
     batch_size: int,
 ) -> None:
-    _executemany_batched(
-        conn,
-        """\
-        INSERT OR REPLACE INTO graph_edges (
-            source_id, target_id, relationship, direction, weight,
-            traversable, first_seen, last_seen, valid_from, valid_to,
-            confidence, provenance, source_scan_id, source_run_id, evidence,
-            activity_id, scan_id, tenant_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        _edge_rows(edges, stats, scan=scan, tenant=tenant, now=now),
-        batch_size=batch_size,
-    )
+    with snapshot_bulk_cache(conn):
+        _executemany_batched(
+            conn,
+            """\
+            INSERT OR REPLACE INTO graph_edges (
+                source_id, target_id, relationship, direction, weight,
+                traversable, first_seen, last_seen, valid_from, valid_to,
+                confidence, provenance, source_scan_id, source_run_id, evidence,
+                activity_id, scan_id, tenant_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            _edge_rows(edges, stats, scan=scan, tenant=tenant, now=now),
+            batch_size=batch_size,
+        )
 
 
 def _carry_forward_edge_continuity(conn: sqlite3.Connection, *, previous_scan: str, scan: str, tenant: str) -> None:

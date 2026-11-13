@@ -68,25 +68,32 @@ def test_failed_snapshot_write_still_restores_the_cache(tmp_path) -> None:
     assert conn.execute("PRAGMA cache_size").fetchone()[0] == before
 
 
-def test_whole_snapshot_load_holds_the_large_cache_and_restores_it(tmp_path, monkeypatch) -> None:
-    conn = _connect(tmp_path)
-    graph_store.save_graph_streaming(
-        conn,
-        scan_id="scan-1",
-        tenant_id="tenant-a",
-        nodes=[UnifiedNode(id="agent:0", entity_type=EntityType.AGENT, label="Agent")],
-        edges=[],
-    )
-    before = conn.execute("PRAGMA cache_size").fetchone()[0]
+def test_whole_snapshot_load_holds_the_large_cache(tmp_path, monkeypatch) -> None:
+    from agent_bom.api.graph_store import SQLiteGraphStore
+    from agent_bom.graph import UnifiedGraph
+
+    store = SQLiteGraphStore(tmp_path / "graphs.db")
+    graph = UnifiedGraph(scan_id="scan-1", tenant_id="tenant-a")
+    graph.add_node(UnifiedNode(id="agent:0", entity_type=EntityType.AGENT, label="Agent"))
+    store.save_graph(graph)
     seen: list[int] = []
-    original = graph_store.UnifiedNode.from_stored
+    original = graph_store.load_graph
 
-    def spy(*args, **kwargs):
+    def spy(conn, **kwargs):
         seen.append(_cache_kib(conn))
-        return original(*args, **kwargs)
+        return original(conn, **kwargs)
 
-    monkeypatch.setattr(graph_store.UnifiedNode, "from_stored", spy)
-    graph = graph_store.load_graph(conn, tenant_id="tenant-a", scan_id="scan-1")
-    assert set(graph.nodes) == {"agent:0"}
+    monkeypatch.setattr(graph_store, "load_graph", spy)
+    loaded = store.load_graph(tenant_id="tenant-a", scan_id="scan-1")
+    assert set(loaded.nodes) == {"agent:0"}
     assert seen and min(seen) >= 64 * 1024
-    assert conn.execute("PRAGMA cache_size").fetchone()[0] == before
+
+
+def test_a_connection_already_at_least_as_large_is_left_alone(tmp_path) -> None:
+    from agent_bom.db.sqlite_bulk_cache import snapshot_bulk_cache
+
+    conn = sqlite3.connect(tmp_path / "plain.db")
+    conn.execute("PRAGMA cache_size = -131072")
+    with snapshot_bulk_cache(conn):
+        assert conn.execute("PRAGMA cache_size").fetchone()[0] == -131072
+    assert conn.execute("PRAGMA cache_size").fetchone()[0] == -131072

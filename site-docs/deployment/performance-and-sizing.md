@@ -113,8 +113,31 @@ by `scripts/qualification/performance.py`:
 | Agents per push | Push body | Package instances | Peak on SQLite | Peak on PostgreSQL |
 | --- | --- | --- | --- | --- |
 | 25 | under 1 MB | — | 335 MB | 333 MB |
-| 1,000 | 3.8 MB | — | 730 MB | 789 MB |
-| 5,000 | 18 MB | 116,907 | 2.4 GB | 4.1 GB |
+| 1,000 | 3.8 MB | — | 560–730 MB | 789 MB |
+| 5,000 | 18 MB | 116,907 | 1.4–2.4 GB | 4.1 GB |
+
+The ranges are separate runs. The upper SQLite values and the PostgreSQL
+column are the Linux kernel high-water mark. The lower SQLite values were
+measured on 2026-11-13 by sampling resident memory every 100 ms on macOS
+(1.41 GB, and 1.63–1.67 GB in repeat runs at 5,000 agents), which can miss a
+short spike. Size for the upper value.
+
+Graph and findings reads from the same lane on SQLite, measured on
+2026-11-13 on a shared, heavily loaded 10-core host, so expect lower numbers
+on a dedicated node. "First read" is the first `GET /v1/graph?limit=100`
+after the push is stored; p50 and p95 cover 20 reads, the first included:
+
+| Agents per push | Graph nodes | Push stored | Graph first read | Graph p50 | Graph p95 | Findings p95 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1,000 | 38,914 | 49–84 s | 2.1–2.3 s | 0.45–1.15 s | 1.4–1.8 s | 0.9–2.1 s |
+| 5,000 | 170,330 | 247 s | 11.6 s | 0.51 s | 3.1 s | 2.4 s |
+
+Neither row meets the graph targets in
+[Target operator latency envelope](#target-operator-latency-envelope) on this
+host, and they have not been re-measured on an unloaded node; validate them on
+your own hardware before relying on them. Before 2026-11-13 the same
+5,000-agent run on the same host measured a 27.8 s first read, a 1.47 s p50
+and an 18.3 s p95.
 
 Which limit to set for the API pod (and worker pods, which parse queued pushes):
 
