@@ -11,7 +11,7 @@ import {
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
 import { minimapNodeColor, relationshipEdgeLabelText } from "@/lib/graph-utils";
-import { relationshipPath, ROUTED_NODE_LIMIT } from "@/lib/relationship-routing";
+import { anchoredLabelPoint, relationshipPath, ROUTED_NODE_LIMIT } from "@/lib/relationship-routing";
 import { mcpBranchPath } from "@/lib/graph-mcp-routing";
 import { columnEdgePath } from "@/lib/path-card-column";
 
@@ -127,12 +127,14 @@ export function RelationshipEdge(props: EdgeProps) {
     nodes.filter(node => !node.hidden && node.id !== props.source && node.id !== props.target).map(node => ({
       ...node.position, width: node.measured?.width ?? 260, height: node.measured?.height ?? 188,
     }))) : null;
-  const [path, x, y] = mcpPath ?? (columnSource
+  const [path, routeX, routeY] = mcpPath ?? (columnSource
     ? columnEdgePath(props, columnSource.position.y + (columnSource.measured?.height ?? 0) + 6)
     : relationshipPath(props, nodes.length <= ROUTED_NODE_LIMIT ? nodes.filter(node => !node.hidden).map(node => ({
       id: node.id, x: node.position.x, y: node.position.y,
       width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
     })) : []));
+  const anchor = props.data?.labelAnchor === "source" || props.data?.labelAnchor === "target" ? anchoredLabelPoint(props, props.data.labelAnchor) : null;
+  const x = anchor?.x ?? routeX, y = anchor?.y ?? routeY;
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y, visibility, inspecting]);
   // Subscribing outside render keeps a pan from re-rendering every edge.
   const store = useStoreApi();

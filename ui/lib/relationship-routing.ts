@@ -1,4 +1,4 @@
-import { getBezierPath, Position, type EdgeProps } from "@xyflow/react";
+import { getBezierPath, getSmoothStepPath, Position, type EdgeProps } from "@xyflow/react";
 
 type Obstacle = { id: string; x: number; y: number; width: number; height: number };
 type Endpoints = Pick<EdgeProps, "source" | "target" | "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition">;
@@ -12,7 +12,8 @@ const MAX_DETOUR = 2;
 /** How far below a glyph's centre row a caption-avoiding route runs. */
 const EXIT_OFFSET = 18;
 
-function roundedRoute(points: Point[]): string {
+/** Straight runs joined by rounded corners: the one line style every relationship uses. */
+export function roundedRoute(points: Point[]): string {
   const distinct = points.filter((point, index) => !index || point[0] !== points[index - 1]![0] || point[1] !== points[index - 1]![1]);
   let path = `M${distinct[0]![0]},${distinct[0]![1]}`;
   for (let index = 1; index < distinct.length - 1; index++) {
@@ -91,7 +92,8 @@ function endpointCaptionRoute(edge: Endpoints, obstacles: Obstacle[], path: stri
 
 /** Route bounded relationships around captions and intervening entities. */
 export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [string, number, number] {
-  const [path, labelX, labelY] = getBezierPath(edge);
+  // The caption check samples the direct curve between the ports; the drawn line is always right-angle runs.
+  const [path] = getBezierPath(edge);
   const captionRoute = endpointCaptionRoute(edge, obstacles, path);
   if (captionRoute) return captionRoute;
   // A serpentine path changes rows on the same side of both circular glyphs.
@@ -105,35 +107,31 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
     const laneX = right
       ? Math.max(edge.sourceX, ...endpoints.map(node => node.x + node.width)) + 48
       : Math.min(edge.sourceX, ...endpoints.map(node => node.x)) - 48;
-    const step = Math.sign(edge.targetY - edge.sourceY) * 24;
     return [
-      `M${edge.sourceX},${edge.sourceY} Q${laneX},${edge.sourceY} ${laneX},${edge.sourceY + step} L${laneX},${edge.targetY - step} Q${laneX},${edge.targetY} ${edge.targetX},${edge.targetY}`,
+      roundedRoute([[edge.sourceX, edge.sourceY], [laneX, edge.sourceY], [laneX, edge.targetY], [edge.targetX, edge.targetY]]),
       laneX, (edge.sourceY + edge.targetY) / 2,
     ];
   }
+  // Every other relationship draws as right-angle runs with rounded corners, matching the attack-path graph.
+  const [stepPath, stepX, stepY] = getSmoothStepPath({ ...edge, borderRadius: 12 });
   // Keep dense/vertical layouts on the standard renderer. This correction is
   // bounded to short investigations and does not change relationship direction.
   if (obstacles.length > ROUTED_NODE_LIMIT || edge.targetX - edge.sourceX < 240
-      || edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left) return [path, labelX, labelY];
+      || edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left) return [stepPath, stepX, stepY];
   const between = obstacles.filter(node => node.id !== edge.source && node.id !== edge.target
     && node.x > edge.sourceX + 24 && node.x + node.width < edge.targetX - 24);
-  // React Flow supplies a single cubic curve. Sample it rather than treating
-  // its entire bounding box as an obstruction (which reroutes clear diagonals).
-  const coordinates = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
+  // The drawn route turns once, midway between the ends; test each of its runs, not its bounding box.
   const intersects = (x: number, y: number, padX: number, padY: number) => between.some(node =>
     x + padX > node.x && x - padX < node.x + node.width
     && y + padY > node.y && y - padY < node.y + node.height);
-  let blocked = intersects(labelX, labelY, 48, 16);
-  if (coordinates.length === 8) {
-    for (let step = 1; step < 24 && !blocked; step++) {
-      const t = step / 24;
-      const u = 1 - t;
-      const x = u ** 3 * coordinates[0]! + 3 * u ** 2 * t * coordinates[2]! + 3 * u * t ** 2 * coordinates[4]! + t ** 3 * coordinates[6]!;
-      const y = u ** 3 * coordinates[1]! + 3 * u ** 2 * t * coordinates[3]! + 3 * u * t ** 2 * coordinates[5]! + t ** 3 * coordinates[7]!;
-      blocked = intersects(x, y, 2, 2);
-    }
+  const turnX = (edge.sourceX + edge.targetX) / 2;
+  const runs: [Point, Point][] = [[[edge.sourceX, edge.sourceY], [turnX, edge.sourceY]], [[turnX, edge.sourceY], [turnX, edge.targetY]], [[turnX, edge.targetY], [edge.targetX, edge.targetY]]];
+  let blocked = intersects(stepX, stepY, 48, 16);
+  for (const [[ax, ay], [bx, by]] of runs) {
+    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 8));
+    for (let step = 0; step <= steps && !blocked; step++) blocked = intersects(ax + (bx - ax) * step / steps, ay + (by - ay) * step / steps, 2, 2);
   }
-  if (!blocked) return [path, labelX, labelY];
+  if (!blocked) return [stepPath, stepX, stepY];
   // A fixed 40-unit offset can skip a clear gap between sibling rows and send
   // the connector outside the fitted node envelope. Include those interior
   // lanes before choosing the shortest clear route.
@@ -161,13 +159,20 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   const targetNode = obstacles.find(node => node.id === edge.target);
   const start = Math.max(edge.sourceX + 32, sourceNode ? sourceNode.x + sourceNode.width + 24 : edge.sourceX + 32);
   const end = Math.min(edge.targetX - 32, targetNode ? targetNode.x - 24 : edge.targetX - 32);
-  // Ease into and out of the horizontal lane over the available clear space.
-  // Keep both transition endpoints outside every intervening node, with
-  // horizontal tangents where each cubic meets the straight segment.
-  const entry = Math.max(start + 32, Math.min(start + 96, ...between.map(node => node.x - 24)));
-  const exit = Math.min(end - 32, Math.max(end - 96, ...between.map(node => node.x + node.width + 24)));
+  // Turn into and out of the lane in the clear space beside each end, with rounded corners.
+  const entry = Math.max(start, Math.min(start + 64, ...between.map(node => node.x - 24)));
+  const exit = Math.min(end, Math.max(end - 64, ...between.map(node => node.x + node.width + 24)));
   return [
-    `M${edge.sourceX},${edge.sourceY} C${start},${edge.sourceY} ${start + (entry - start) / 2},${lane} ${entry},${lane} L${exit},${lane} C${exit + (end - exit) / 2},${lane} ${end},${edge.targetY} ${edge.targetX},${edge.targetY}`,
+    roundedRoute([[edge.sourceX, edge.sourceY], [entry, edge.sourceY], [entry, lane], [exit, lane], [exit, edge.targetY], [edge.targetX, edge.targetY]]),
     entry + (exit - entry) * (edge.targetY < edge.sourceY ? 0.3 : edge.targetY > edge.sourceY ? 0.7 : 0.5), lane,
   ];
+}
+
+/**
+ * Where a counted caption ("Depends On ×3") sits: beside the port its lines
+ * split from (or join at), on that node's row, rather than mid-canvas.
+ */
+export function anchoredLabelPoint(edge: Pick<EdgeProps, "sourceX" | "sourceY" | "targetX" | "targetY">, side: "source" | "target"): { x: number; y: number } {
+  const offset = Math.min(56, Math.max(24, Math.abs(edge.targetX - edge.sourceX) / 4));
+  return side === "source" ? { x: edge.sourceX + offset, y: edge.sourceY } : { x: edge.targetX - offset, y: edge.targetY };
 }
