@@ -146,6 +146,7 @@ def _smoke_http(image: str, wait: float, bearer: bool, env: list[str]) -> tuple[
                     if response.status == 200:
                         break
             except (urllib.error.URLError, ConnectionError, TimeoutError):
+                # The server refuses connections until it has started; keep polling until the deadline.
                 pass
             if time.monotonic() - started > wait:
                 raise SystemExit(f"/health did not answer within {wait:.0f}s")
