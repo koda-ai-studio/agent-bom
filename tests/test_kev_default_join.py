@@ -143,3 +143,52 @@ def test_cli_matching_reports_kev_hits_without_enrich_or_gate(monkeypatch):
     matching._join_kev_catalog(opts, st)
 
     assert "CISA KEV: 1 actively exploited vulnerability" in buffer.getvalue()
+
+
+def test_kev_catalog_fetch_overlaps_the_vulnerability_scan(monkeypatch):
+    import asyncio
+    import threading
+
+    from agent_bom import enrichment
+    from agent_bom.scanners import package_scan
+    from agent_bom.scanners.package_scan import scan_agents_sync
+
+    fetch_started = threading.Event()
+    fetch_calls: list[int] = []
+    overlapped: list[bool] = []
+
+    async def fake_fetch(_client, **_kwargs):
+        fetch_calls.append(1)
+        fetch_started.set()
+        return _KEV
+
+    agents, radii = _estate()
+
+    async def slow_scan(_agents, **_kwargs):
+        overlapped.append(await asyncio.to_thread(fetch_started.wait, 5))
+        return list(radii)
+
+    monkeypatch.setattr(enrichment, "fetch_cisa_kev_catalog", fake_fetch)
+    monkeypatch.setattr(package_scan, "scan_agents", slow_scan)
+
+    result = scan_agents_sync(agents, enable_enrichment=False, offline=False)
+
+    assert overlapped == [True]
+    assert fetch_calls == [1]
+    assert {br.vulnerability.id: br.vulnerability.kev_status for br in result} == {
+        "CVE-2023-4863": "listed",
+        "CVE-2023-50447": "not_listed",
+    }
+
+
+def test_kev_prefetch_is_skipped_offline_and_when_disabled(monkeypatch):
+    from agent_bom.scanners.kev_default_join import start_default_kev_prefetch
+
+    assert start_default_kev_prefetch(offline=True) is None
+    monkeypatch.setenv("AGENT_BOM_KEV_DEFAULT_JOIN", "off")
+    assert start_default_kev_prefetch(offline=False) is None
+    monkeypatch.setenv("AGENT_BOM_KEV_DEFAULT_JOIN", "cache")
+    assert start_default_kev_prefetch(offline=False) is None
+    monkeypatch.delenv("AGENT_BOM_KEV_DEFAULT_JOIN")
+    monkeypatch.setattr("agent_bom.vuln_freshness.offline_env", lambda: True)
+    assert start_default_kev_prefetch(offline=False) is None
