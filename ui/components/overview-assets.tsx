@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ASSET_KINDS } from "@/lib/asset-icon-registry";
+import { AGENT_COUNT_SCOPE } from "@/lib/count-scope";
 import type { InventorySummaryResponse } from "@/lib/api";
 
 const TYPES = [
@@ -52,7 +53,7 @@ export function OverviewAssets({ summary, loading, unavailable, unavailableHref 
         const count = selectedTypes.reduce((total, entityType) => total + (summary.by_type[entityType] ?? 0), 0);
         const known = exact || count > 0;
         const countLabel = exact ? count.toLocaleString() : known ? `At least ${count.toLocaleString()}` : null;
-        return <Link key={type} aria-label={countLabel ? `${countLabel} ${label}` : `${label} count unavailable`} href={`/inventory?${query}`} className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-outline px-3 py-2.5 hover:bg-surface-muted">
+        return <Link key={type} title={type === "agent" ? AGENT_COUNT_SCOPE.snapshot.title : undefined} aria-label={countLabel ? `${countLabel} ${label}` : `${label} count unavailable`} href={`/inventory?${query}`} className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-outline px-3 py-2.5 hover:bg-surface-muted">
           <Icon className="h-4 w-4 shrink-0 text-cyan-700 dark:text-cyan-300" aria-hidden="true" />
           <span className="max-w-full text-sm [overflow-wrap:normal]"><strong className="mr-1.5 tabular-nums">{exact ? count.toLocaleString() : known ? `≥${count.toLocaleString()}` : "—"}</strong>{label}</span>
         </Link>;

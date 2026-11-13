@@ -14,13 +14,14 @@ import time
 from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import asdict
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
 import anyio.to_thread
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from agent_bom.api.agent_evidence import AgentEvidence, agent_evidence, clear_agent_evidence_cache, job_revision
 from agent_bom.api.agent_findings import agent_scoped_blast_rows, estate_reach_names
+from agent_bom.api.agents_listing import LEGACY_AGENT_QUERY, AgentListQuery, agent_list_query, page_agents_response
 from agent_bom.api.mcp_observation_store import MCPObservation, agent_observation_id, merge_observations
 from agent_bom.api.models import JobStatus
 from agent_bom.api.read_models import AgentsResponse, DiscoveryProvidersResponse, documented
@@ -109,14 +110,7 @@ def _named(agent: dict[str, Any]) -> dict[str, Any]:
 
 
 def _merge_strings(*values: list[str]) -> list[str]:
-    merged: list[str] = []
-    seen: set[str] = set()
-    for group in values:
-        for value in group:
-            if value not in seen:
-                seen.add(value)
-                merged.append(value)
-    return merged
+    return list(dict.fromkeys(value for group in values for value in group))
 
 
 def _merge_security_intelligence(*values: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -459,40 +453,42 @@ def _build_agents_response(tenant_id: str) -> dict[str, Any]:
     }
 
 
-def _cached_agents_response(tenant_id: str) -> dict[str, Any] | None:
-    """A cached response while the TTL holds and no scan has landed since its build."""
+def _cached_agents_response(tenant_id: str, query: AgentListQuery | None = None) -> dict[str, Any] | None:
+    """The requested page of the cached response while the TTL holds and no scan has landed since its build."""
     cached = _agents_response_cache.get(tenant_id)
     if cached is None or time.monotonic() - cached[0] > _AGENTS_RESPONSE_CACHE_TTL_SECONDS:
         return None
     if cached[1] != job_revision(_get_store(), tenant_id):
         return None
-    return deepcopy(cached[2])
+    return page_agents_response(cached[2], query or LEGACY_AGENT_QUERY)
 
 
-def _build_and_cache_agents_response(tenant_id: str) -> dict[str, Any]:
+def _build_and_cache_agents_response(tenant_id: str, query: AgentListQuery | None = None) -> dict[str, Any]:
     revision = job_revision(_get_store(), tenant_id)
     response = _build_agents_response(tenant_id)
     # Stamp when the build finishes: a build longer than the TTL is still served.
-    _agents_response_cache[tenant_id] = (time.monotonic(), revision, deepcopy(response))
-    return response
+    _agents_response_cache[tenant_id] = (time.monotonic(), revision, response)
+    return page_agents_response(response, query or LEGACY_AGENT_QUERY)
 
 
 @router.get("/agents", **documented(AgentsResponse), tags=["discovery"])
 async def list_agents(
     request: Request,
     refresh: bool = Query(False, description="Bypass the sidebar cache and perform live local discovery"),
+    query: Annotated[AgentListQuery, Depends(agent_list_query)] = LEGACY_AGENT_QUERY,
 ) -> dict:
-    """Quick auto-discovery of local AI agent configs (Claude Desktop, Cursor, Windsurf...).
-    No CVE scan — instant results for the UI sidebar.
+    """One bounded, filtered, sorted page of this tenant's agents (host discovery when bound, else scanned estate).
+
+    ``count`` and ``summary`` cover every agent in scope, ``total`` the matching rows, ``facets`` the per-chip counts.
     """
     try:
         tenant_id = _tenant_id(request)
         if not refresh:
-            cached = await anyio.to_thread.run_sync(_cached_agents_response, tenant_id)
+            cached = await anyio.to_thread.run_sync(_cached_agents_response, tenant_id, query)
             if cached is not None:
                 return cached
         async with adaptive_backpressure("discovery"):
-            return await anyio.to_thread.run_sync(_build_and_cache_agents_response, tenant_id)
+            return await anyio.to_thread.run_sync(_build_and_cache_agents_response, tenant_id, query)
     except BackpressureRejectedError as exc:
         raise HTTPException(status_code=429, detail=exc.to_dict(), headers={"Retry-After": str(exc.retry_after_seconds)}) from exc
     except Exception as exc:  # noqa: BLE001

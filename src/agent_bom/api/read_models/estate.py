@@ -207,46 +207,6 @@ class ConnectorsResponse(ReadResponse):
     connectors: list[str]
 
 
-class RegistryPackage(ReadModel):
-    ecosystem: str
-    name: str
-
-
-class RegistryServerRow(ReadModel):
-    id: str
-    name: str
-    publisher: str
-    description: str
-    category: str | None
-    transport: str
-    verified: bool
-    risk_level: str
-    risk_justification: str | None
-    license: str | None
-    latest_version: str | None
-    source_url: str | None
-    sigstore_bundle: Any
-    command_patterns: list[str]
-    credential_env_vars: list[str]
-    known_cves: list[str]
-    packages: list[RegistryPackage]
-    tools: list[str]
-
-
-class RegistryMeta(ReadModel):
-    schema_version: str
-    source_url: str
-    sources: list[str]
-    total_servers: int
-    updated: str
-
-
-class RegistryResponse(ReadResponse):
-    count: int
-    meta: RegistryMeta
-    servers: list[RegistryServerRow]
-
-
 class DataSourceRow(ReadModel):
     source_id: str
     tenant_id: str

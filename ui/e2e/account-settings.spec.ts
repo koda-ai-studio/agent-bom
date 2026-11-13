@@ -72,7 +72,7 @@ for (const role of ["viewer", "analyst", "admin"] as const) {
       role_summary: authenticated ? { display_name: role, capabilities } : null, memberships: [],
     } }));
     await page.route("**/v1/auth/session", route => { authenticated = route.request().method() !== "DELETE"; return route.fulfill({ status: 204 }); });
-    await page.route("**/v1/agents", route => route.fulfill({ json: { count: 1, agents: [{
+    await page.route(/\/v1\/agents(\?|$)/, route => route.fulfill({ json: { count: 1, agents: [{
       name: "Synthetic scoped agent", agent_type: "custom", status: "configured", config_path: "synthetic-fixture",
       mcp_servers: [{ name: "synthetic-mcp", transport: "stdio", command: "synthetic", packages: [], tools: [], credential_env_vars: [] }],
     }] } }));
@@ -81,7 +81,7 @@ for (const role of ["viewer", "analyst", "admin"] as const) {
     await page.getByLabel("API key", { exact: true }).fill(`synthetic-${role}-credential`);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL(/\/agents$/);
-    await expect(page.getByTestId("agents-configured-table").getByText("Synthetic scoped agent", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("agents-table").getByText("Synthetic scoped agent", { exact: true })).toBeVisible();
     await page.getByLabel(/^Account menu:/).click();
     await expect(page.getByLabel("Account details")).toContainText("synthetic-tenant");
     await expect(page.getByLabel("Account details").getByRole("link", { name: "Access & keys" })).toHaveCount(role === "admin" ? 1 : 0);

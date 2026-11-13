@@ -14,13 +14,17 @@ from __future__ import annotations
 import functools
 import re as _re
 from pathlib import Path as _Path
+from typing import Annotated
 
 import anyio.to_thread
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
+from agent_bom.api.agents_listing import AgentListQueryError, parse_cursor
 from agent_bom.api.read_models import ConnectorsResponse, RegistryResponse, documented
 from agent_bom.api.read_models import runtime_estate_b as rt
+from agent_bom.api.registry_listing import MAX_REGISTRY_PAGE_SIZE, MAX_REGISTRY_QUERY_LENGTH, RegistryRisk, page_registry
 from agent_bom.api.routes.endpoint_connectors import router as endpoint_router
+from agent_bom.security import sanitize_error
 
 router = APIRouter()
 router.include_router(endpoint_router)
@@ -139,10 +143,33 @@ def _load_registry_meta() -> dict:
 
 
 @router.get("/registry", **documented(RegistryResponse), tags=["registry"])
-def list_registry() -> dict:
-    """List all known MCP servers from the agent-bom registry."""
-    servers = _load_registry()
-    return {"servers": servers, "count": len(servers), "meta": _load_registry_meta()}
+def list_registry(
+    limit: Annotated[
+        int | None,
+        Query(ge=1, le=MAX_REGISTRY_PAGE_SIZE, description="Page size; omitted, the whole catalog is returned for older clients"),
+    ] = None,
+    offset: Annotated[int, Query(ge=0, le=1_000_000, description="Row offset of the page")] = 0,
+    cursor: Annotated[str | None, Query(max_length=16, description="Opaque next_cursor from the previous page")] = None,
+    q: Annotated[
+        str | None,
+        Query(max_length=MAX_REGISTRY_QUERY_LENGTH, description="Case-insensitive match on id, name, description, publisher, category"),
+    ] = None,
+    risk: Annotated[list[RegistryRisk] | None, Query(description="Capability risk level; repeatable")] = None,
+    category: Annotated[list[str] | None, Query(description="Catalog category; repeatable")] = None,
+) -> dict:
+    """List known MCP servers from the agent-bom registry, one bounded page at a time.
+
+    ``count`` and ``risk_counts`` cover the whole catalog, ``total`` the rows
+    matching the search and filters, ``facets`` the per-filter counts.
+    """
+    try:
+        start = parse_cursor(cursor, offset)
+        if category and (len(category) > 20 or any(len(value) > MAX_REGISTRY_QUERY_LENGTH for value in category)):
+            raise AgentListQueryError(f"at most 20 categories of up to {MAX_REGISTRY_QUERY_LENGTH} characters")
+    except AgentListQueryError as exc:
+        raise HTTPException(status_code=422, detail=sanitize_error(exc)) from exc
+    page = page_registry(_load_registry(), limit=limit, offset=start, q=q, risk=list(risk or []), category=category)
+    return {**page, "meta": _load_registry_meta()}
 
 
 @router.get("/registry/{server_id:path}", **documented(rt.RegistryServerDetailResponse), tags=["registry"])

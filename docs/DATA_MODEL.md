@@ -73,7 +73,7 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `config/schemas/inventory.schema.json` | `Package.ecosystem` enum values | 9 |
 | `config/schemas/inventory.schema.json` | `MCPServer.transport` enum values | 3 |
 | `docs/openapi/v1.json` | paths | 384 |
-| `docs/openapi/v1.json` | component schemas | 725 |
+| `docs/openapi/v1.json` | component schemas | 726 |
 
 <!-- DATA_MODEL_ATLAS:END -->
 
@@ -224,7 +224,8 @@ differ, it is because they differ in unit or scope, and the surface names it.
 | Frameworks covered | **control frameworks** (scored pass/fail) + **risk mappings** (applicability), enabled for the scan context | `ui/lib/framework-coverage.ts` over `/v1/compliance` | overview and compliance |
 | NIST SP 800-53 | the framework list row (`summary.nist_800_53_*`) leads; the full-catalog check scoring is a labelled second basis | `/v1/compliance`, `/v1/compliance/nist-800-53` | compliance list and NIST panel |
 | Agents | **this host** (`/v1/agents`, `scope`) vs **estate** (`agents.total` on `/v1/posture/counts`) | — | agents page shows both, each named |
-| Credentials | **unique credential names** | posture `credential_hygiene`; `uniqueCredentialNames` on the agents page | posture, agents page |
+| Agents page tiles | **every agent in scope**, not the visible page: `count` and `summary` on `/v1/agents`; `total` is the rows matching the search and filters, `facets` the per-chip counts | `agents_listing.population_summary` | agents page KPI strip, filter chips, pager |
+| Credentials | **unique credential names** | posture `credential_hygiene`; `summary.unique_credentials` on `/v1/agents` | posture, agents page |
 
 `tests/test_demo_estate_one_count_source.py` asserts these on the demo estate,
 and `ui/e2e/count-consistency-live.spec.ts` reads them off the pages.
