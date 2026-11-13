@@ -54,4 +54,15 @@ describe("GraphPathList", () => {
     expect(onSelect).toHaveBeenCalledWith("cve-1");
     expect(screen.getByTestId("graph-path-list")).toHaveTextContent("7 nodes · 3 paths");
   });
+
+  it("clamps a long digest-style name to two lines and keeps the full name on hover and for assistive tech", () => {
+    const digest = `registry.example/app@sha256:${"0123456789abcdef".repeat(4)}`;
+    render(<GraphPathList nodes={[node(digest, "container")]} edges={[]} onSelect={vi.fn()} />);
+    const name = screen.getByText(digest);
+    expect(name.className).toContain("line-clamp-2");
+    // `block` would override the clamp's box display and show every line.
+    expect(name.className.split(/\s+/)).not.toContain("block");
+    expect(name).toHaveAttribute("title", digest);
+    expect(screen.getByRole("button", { name: new RegExp(digest.replace(/[.@]/g, "\\$&")) })).toHaveAttribute("title", digest);
+  });
 });

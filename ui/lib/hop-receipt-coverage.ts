@@ -31,8 +31,7 @@ function coverageSummary(expected: number, recorded: number, evidenced: number, 
   return `${evidenced} of ${hops} fully evidenced${missing > 0 ? ` · ${missing} with no evidence recorded` : ""}`;
 }
 
-/** Count the evidence actually recorded for each hop and say, in plain words, why it falls short of complete proof. */
-export function hopReceiptCoverage(path: AttackPath) {
+function alignedReceipts(path: AttackPath): Array<{ receipt: Receipt; index: number }> {
   const expected = Math.max(path.hops.length - 1, 0);
   const receipts = Array.isArray(path.hop_evidence) ? path.hop_evidence : [];
   const aligned: Array<{ receipt: Receipt; index: number }> = [];
@@ -40,11 +39,29 @@ export function hopReceiptCoverage(path: AttackPath) {
     const receipt = receipts[index];
     if (receipt && typeof receipt === "object" && receipt.source_node_id === path.hops[index] && receipt.target_node_id === path.hops[index + 1]) aligned.push({ receipt, index });
   }
+  return aligned;
+}
+
+function fullyEvidenced(path: AttackPath, { receipt, index }: { receipt: Receipt; index: number }): boolean {
+  return receipt.relationship === path.edges[index] && !RECEIPT_CHECKS.some(([, failed]) => failed(receipt));
+}
+
+export const hopKey = (source: string, target: string) => `${source}\u0000${target}`;
+
+/** Hops (`hopKey`) whose receipt passes every check the coverage summary counts as fully evidenced. */
+export function receiptedHops(path: AttackPath): Set<string> {
+  return new Set(alignedReceipts(path).filter(item => fullyEvidenced(path, item)).map(({ index }) => hopKey(path.hops[index]!, path.hops[index + 1]!)));
+}
+
+/** Count the evidence actually recorded for each hop and say, in plain words, why it falls short of complete proof. */
+export function hopReceiptCoverage(path: AttackPath) {
+  const expected = Math.max(path.hops.length - 1, 0);
+  const aligned = alignedReceipts(path);
   const gaps = RECEIPT_CHECKS.filter(([, failed]) => aligned.some(({ receipt }) => failed(receipt))).map(([label]) => label);
   if (aligned.some(({ receipt, index }) => receipt.relationship !== path.edges[index])) gaps.push("recorded link type differs from the path");
   const analysis = path.analysis?.status || "not_recorded";
   if (analysis !== "complete") gaps.push(ANALYSIS_GAPS[analysis] ?? `path analysis ${analysis.replaceAll("_", " ")}`);
-  const evidenced = aligned.filter(({ receipt, index }) => receipt.relationship === path.edges[index] && !RECEIPT_CHECKS.some(([, failed]) => failed(receipt))).length;
+  const evidenced = aligned.filter(item => fullyEvidenced(path, item)).length;
   const complete = completeDirectedHopCount(path);
   const summary = coverageSummary(expected, aligned.length, evidenced, complete);
   return { expected, recorded: aligned.length, evidenced, complete, gaps, summary };
