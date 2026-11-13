@@ -30,6 +30,7 @@ from agent_bom.api import stores
 from agent_bom.api.models import JobStatus
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.core.settings import SettingError, env_bool, env_raw
+from agent_bom.security import sanitize_error, sanitize_text
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +122,13 @@ def _run() -> None:
         def __getattr__(self, name: str) -> Any:
             return getattr(stores._get_graph_store(), name)
 
-    summary = prewarm_current_graphs(_LazyGraphStore(), job_store, per_tenant_seconds=_per_tenant_seconds())
+    try:
+        summary = prewarm_current_graphs(_LazyGraphStore(), job_store, per_tenant_seconds=_per_tenant_seconds())
+    except Exception as exc:  # broad-except: a failed warm-up must release readiness, not hold it for the full bound
+        _LAST_RUN.clear()
+        _LAST_RUN.update(status="incomplete", reason="prewarm_failed")
+        logger.warning("Current graph prewarm failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        return
     _LAST_RUN.clear()
     _LAST_RUN.update(summary)
     logger.info(
@@ -153,4 +160,17 @@ def start_current_graph_prewarm() -> threading.Thread | None:
     return thread
 
 
-__all__ = ["last_run", "prewarm_current_graphs", "start_current_graph_prewarm", "startup_prewarm_holding_readiness"]
+def reset_current_graph_prewarm() -> None:
+    """Forget this process's warm-up state, as at import; for test isolation."""
+    _LAST_RUN.clear()
+    _LAST_RUN.update(status="not_started")
+    _STARTED_AT.clear()
+
+
+__all__ = [
+    "last_run",
+    "prewarm_current_graphs",
+    "reset_current_graph_prewarm",
+    "start_current_graph_prewarm",
+    "startup_prewarm_holding_readiness",
+]

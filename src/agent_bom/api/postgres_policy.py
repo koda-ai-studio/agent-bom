@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from agent_bom.api.postgres_tenant_upsert import write_tenant_row
 from agent_bom.api.source_postgres import PostgresSourceStore as PostgresSourceStore
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id
@@ -381,18 +382,26 @@ class PostgresScheduleStore:
         tenant = schedule_write_tenant(schedule, tenant_id)
         data = schedule.model_dump_json()
         with _tenant_connection(self._pool) as conn:
-            cursor = conn.execute(
-                """INSERT INTO scan_schedules (schedule_id, enabled, next_run, tenant_id, data)
-                   VALUES (%s, %s, %s, %s, %s)
-                   ON CONFLICT (schedule_id) DO UPDATE SET
-                     enabled = EXCLUDED.enabled,
-                     next_run = EXCLUDED.next_run,
-                     data = EXCLUDED.data
-                   WHERE scan_schedules.tenant_id = EXCLUDED.tenant_id""",
-                (schedule.schedule_id, int(schedule.enabled), schedule.next_run, tenant, data),
+            written = write_tenant_row(
+                conn,
+                table="scan_schedules",
+                key="schedule_id",
+                tenant="tenant_id",
+                row={
+                    "schedule_id": schedule.schedule_id,
+                    "enabled": int(schedule.enabled),
+                    "next_run": schedule.next_run,
+                    "tenant_id": tenant,
+                    "data": data,
+                },
+                update=(
+                    "enabled",
+                    "next_run",
+                    "data",
+                ),
             )
             conn.commit()
-            if int(cursor.rowcount) == 0:
+            if not written:
                 raise ValueError("Schedule identity belongs to a different tenant")
 
     def get(self, schedule_id: str, tenant_id: str) -> ScanSchedule | None:
@@ -490,22 +499,26 @@ class PostgresCredentialRefStore:
             raise ValueError("Credential tenant does not match the authorized tenant")
         data = credential.model_dump_json()
         with _tenant_connection(self._pool) as conn:
-            cursor = conn.execute(
-                """INSERT INTO credential_refs (credential_ref_id, enabled, tenant_id, updated_at, data)
-                   VALUES (%s, %s, %s, %s, %s)
-                   ON CONFLICT (credential_ref_id) DO UPDATE SET
-                     enabled = EXCLUDED.enabled, updated_at = EXCLUDED.updated_at, data = EXCLUDED.data
-                   WHERE credential_refs.tenant_id = EXCLUDED.tenant_id""",
-                (
-                    credential.credential_ref_id,
-                    int(credential.enabled),
-                    credential.tenant_id,
-                    credential.updated_at,
-                    data,
+            written = write_tenant_row(
+                conn,
+                table="credential_refs",
+                key="credential_ref_id",
+                tenant="tenant_id",
+                row={
+                    "credential_ref_id": credential.credential_ref_id,
+                    "enabled": int(credential.enabled),
+                    "tenant_id": credential.tenant_id,
+                    "updated_at": credential.updated_at,
+                    "data": data,
+                },
+                update=(
+                    "enabled",
+                    "updated_at",
+                    "data",
                 ),
             )
             conn.commit()
-            if cursor.rowcount == 0:
+            if not written:
                 raise ValueError("Credential identity belongs to a different tenant")
 
     def get(self, credential_ref_id: str, *, tenant_id: str) -> CredentialRefRecord | None:
