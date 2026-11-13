@@ -82,8 +82,11 @@ class HarnessSecurity(ReadModel):
 
 
 class HarnessTruncation(ReadModel):
+    """``depth`` is true when an agent sits deeper than the modelled layer cap below the harness root."""
+
     agents: bool
     flow_edges: bool
+    depth: bool
 
 
 class AgentHarness(ReadModel):
@@ -116,11 +119,14 @@ class HarnessSummary(ReadModel):
 
 
 class HarnessCoverage(ReadModel):
+    """What the model covers; ``complete`` is false whenever ``incomplete_reasons`` names anything left out of this answer."""
+
     model: str
     provenance: Literal["declared"]
     frameworks_modelled: list[str]
     gaps: list[str]
     complete: bool
+    incomplete_reasons: list[str]
     framework_agent_cap: int
 
 

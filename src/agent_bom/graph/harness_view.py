@@ -16,7 +16,14 @@ from collections.abc import Iterable
 from typing import Any
 
 from agent_bom.core.severity import SEVERITY_RANK
-from agent_bom.graph.harness_model import HARNESS_MODEL_VERSION, HarnessEdge, HarnessPlacement, derive_placements
+from agent_bom.graph.harness_model import (
+    HARNESS_MODEL_VERSION,
+    MAX_LAYER_DEPTH,
+    HarnessEdge,
+    HarnessPlacement,
+    derive_placements,
+    with_declared_ancestors,
+)
 
 FRAMEWORK_AGENT = "framework-agent"
 STRUCTURAL_RELATIONSHIPS = frozenset({"delegated_to", "shares_server"})
@@ -71,8 +78,18 @@ def harness_edges(edges: Iterable[Any], agent_ids: set[str]) -> list[HarnessEdge
 
 def place_agents(agent_nodes: list[Any], edges: list[HarnessEdge]) -> dict[str, HarnessPlacement]:
     participants = {edge.source for edge in edges} | {edge.target for edge in edges}
-    declared = {node.id: str(node.attributes.get("parent_id") or "") for node in agent_nodes if node.id in participants}
-    return derive_placements(declared, edges)
+    declared = {node.id: str(node.attributes.get("parent_id") or "") for node in agent_nodes}
+    return derive_placements(with_declared_ancestors(participants & set(declared), declared), edges)
+
+
+def cross_harness_edges(edges: list[HarnessEdge], placements: dict[str, HarnessPlacement], roots: set[str]) -> int:
+    """Declared edges touching a harness in ``roots`` whose two agents sit in different harnesses (shown in neither)."""
+    crossing = 0
+    for edge in edges:
+        source, target = placements.get(edge.source), placements.get(edge.target)
+        if source and target and source.harness_id != target.harness_id and {source.harness_id, target.harness_id} & roots:
+            crossing += 1
+    return crossing
 
 
 def harness_order(placements: dict[str, HarnessPlacement], nodes_by_id: dict[str, Any]) -> list[str]:
@@ -153,6 +170,14 @@ def _flow_row(edge: HarnessEdge, raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def harness_member_ids(root_id: str, placements: dict[str, HarnessPlacement], nodes_by_id: dict[str, Any]) -> list[str]:
+    """Every agent placed in the harness rooted at ``root_id``, in display order (layer, label, id)."""
+    return sorted(
+        (agent_id for agent_id, placement in placements.items() if placement.harness_id == root_id),
+        key=lambda agent_id: (placements[agent_id].layer, str(nodes_by_id[agent_id].label).lower(), agent_id),
+    )
+
+
 def build_harness(
     root_id: str,
     placements: dict[str, HarnessPlacement],
@@ -161,10 +186,7 @@ def build_harness(
     raw_evidence: dict[tuple[str, str, str], dict[str, Any]],
 ) -> dict[str, Any]:
     """One harness: its layers, flow edges and unresolved routes (no overlay yet)."""
-    members = sorted(
-        (agent_id for agent_id, placement in placements.items() if placement.harness_id == root_id),
-        key=lambda agent_id: (placements[agent_id].layer, str(nodes_by_id[agent_id].label).lower(), agent_id),
-    )
+    members = harness_member_ids(root_id, placements, nodes_by_id)
     kept = members[:MAX_AGENTS_PER_HARNESS]
     kept_ids = set(kept)
     flow = [edge for edge in edges if edge.source in kept_ids and edge.target in kept_ids]
@@ -193,7 +215,11 @@ def build_harness(
         ],
         "unresolved_route_count": len(unresolved),
         "unresolved_routes": unresolved[:MAX_AGENTS_PER_HARNESS],
-        "truncated": {"agents": len(members) > len(kept), "flow_edges": len(flow) > MAX_FLOW_EDGES_PER_HARNESS},
+        "truncated": {
+            "agents": len(members) > len(kept),
+            "flow_edges": len(flow) > MAX_FLOW_EDGES_PER_HARNESS,
+            "depth": any(placements[agent_id].depth_exceeded for agent_id in members),
+        },
     }
 
 
@@ -225,30 +251,40 @@ def apply_overlay(
     findings: dict[str, set[str]],
     declared_in: dict[str, str],
     finding_nodes: dict[str, Any],
+    member_ids: Iterable[str],
 ) -> dict[str, Any]:
-    """Attach each agent's recorded severity, findings and reach, and the harness rollup."""
+    """Attach each listed agent's recorded severity, findings and reach, and the harness rollup.
+
+    The rollup covers every member in ``member_ids``, including agents the
+    harness listing left out past its cap, so truncation never hides risk.
+    """
+
+    def finding_severity(agent_id: str) -> str:
+        return _max_severity(str(getattr(finding_nodes.get(fid), "severity", "") or "") for fid in findings.get(agent_id, set()))
+
+    for layer in harness["layers"]:
+        for row in layer["agents"]:
+            node = nodes_by_id[row["id"]]
+            row["security"] = {
+                "severity": str(node.severity or ""),
+                "risk_score": float(node.risk_score or 0.0),
+                "findings": len(findings.get(row["id"], set())),
+                "max_finding_severity": finding_severity(row["id"]),
+                "reach": dict(sorted(reach.get(row["id"], Counter()).items())),
+            }
     severities: list[str] = []
     risk = 0.0
     with_findings = 0
     finding_ids: set[str] = set()
     credentials: set[str] = set()
-    for layer in harness["layers"]:
-        for row in layer["agents"]:
-            node = nodes_by_id[row["id"]]
-            own = findings.get(row["id"], set())
-            finding_severity = _max_severity(str(getattr(finding_nodes.get(fid), "severity", "") or "") for fid in own)
-            row["security"] = {
-                "severity": str(node.severity or ""),
-                "risk_score": float(node.risk_score or 0.0),
-                "findings": len(own),
-                "max_finding_severity": finding_severity,
-                "reach": dict(sorted(reach.get(row["id"], Counter()).items())),
-            }
-            severities.extend([str(node.severity or ""), finding_severity])
-            risk = max(risk, float(node.risk_score or 0.0))
-            with_findings += bool(own)
-            finding_ids |= own
-            credentials.update(row["credential_refs"])
+    for agent_id in member_ids:
+        node = nodes_by_id[agent_id]
+        own = findings.get(agent_id, set())
+        severities.extend([str(node.severity or ""), finding_severity(agent_id)])
+        risk = max(risk, float(node.risk_score or 0.0))
+        with_findings += bool(own)
+        finding_ids |= own
+        credentials.update(_names(node.attributes.get("credential_refs")))
     project = nodes_by_id.get(declared_in.get(harness["harness_id"], ""))
     harness["declared_in"] = (
         {"id": project.id, "label": project.label, "severity": str(project.severity or ""), "risk_score": float(project.risk_score or 0.0)}
@@ -280,13 +316,35 @@ def summary(agent_nodes: list[Any], placements: dict[str, HarnessPlacement], har
     }
 
 
-def coverage(*, complete: bool, agent_cap: int) -> dict[str, Any]:
+def truncation_reasons(harness: dict[str, Any]) -> list[str]:
+    """Why one built harness is not shown in full; empty when nothing was left out."""
+    label = harness["label"] or harness["harness_id"]
+    listed = sum(len(layer["agents"]) for layer in harness["layers"])
+    reasons = []
+    if harness["truncated"]["agents"]:
+        reasons.append(
+            f"Harness '{label}' lists {listed} of {harness['agent_count']} agents (cap {MAX_AGENTS_PER_HARNESS} per harness); "
+            "its security totals still cover every agent."
+        )
+    if harness["truncated"]["flow_edges"]:
+        reasons.append(f"Harness '{label}' lists the first {MAX_FLOW_EDGES_PER_HARNESS} flow edges only.")
+    if harness["truncated"]["depth"]:
+        reasons.append(f"Harness '{label}' nests agents deeper than {MAX_LAYER_DEPTH} layers; layers past that are not modelled.")
+    if harness["unresolved_route_count"] > len(harness["unresolved_routes"]):
+        reasons.append(
+            f"Harness '{label}' lists {len(harness['unresolved_routes'])} of {harness['unresolved_route_count']} unresolved routes."
+        )
+    return reasons
+
+
+def coverage(*, reasons: list[str], agent_cap: int) -> dict[str, Any]:
     return {
         "model": HARNESS_MODEL_VERSION,
         "provenance": "declared",
         "frameworks_modelled": list(MODELLED_FRAMEWORKS),
         "gaps": list(COVERAGE_GAPS),
-        "complete": complete,
+        "complete": not reasons,
+        "incomplete_reasons": list(reasons),
         "framework_agent_cap": agent_cap,
     }
 
@@ -298,10 +356,13 @@ __all__ = [
     "apply_overlay",
     "build_harness",
     "coverage",
+    "cross_harness_edges",
     "empty_summary",
     "harness_edges",
+    "harness_member_ids",
     "harness_order",
     "overlay_inputs",
     "place_agents",
     "summary",
+    "truncation_reasons",
 ]
