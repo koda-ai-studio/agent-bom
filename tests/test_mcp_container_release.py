@@ -54,7 +54,7 @@ def test_both_mcp_images_build_the_resolved_release_commit():
     jobs = workflow["jobs"]
     for name in ("publish-stdio", "publish-sse"):
         job = jobs[name]
-        assert job["needs"] == "release"
+        assert job["needs"] == ["release", "gate"]
         assert "needs.release.outputs.publish_current == 'true'" in job["if"]
         build = next(step for step in job["steps"] if str(step.get("uses", "")).startswith("docker/build-push-action@"))
         assert build["with"]["context"] == "https://github.com/${{ github.repository }}.git#${{ needs.release.outputs.release_sha }}"

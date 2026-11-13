@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import errno
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -109,6 +110,10 @@ def test_update_check_stamp_honors_state_dir(monkeypatch, tmp_path):
 def test_update_check_enospc_does_not_crash(monkeypatch, tmp_path):
     """A full disk on the update-check stamp write must not crash the thread."""
     monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path))
+    # The skip decision reads sys.argv; the runner's own flags (pytest -q) must not leak in.
+    monkeypatch.setattr(sys, "argv", ["agent-bom", "scan"])
+    monkeypatch.delenv("AGENT_BOM_SKIP_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("AGENT_BOM_OFFLINE", raising=False)
     monkeypatch.setattr(cli_common, "_update_check_result", None, raising=False)
     cli_common._update_check_done.clear()
 
