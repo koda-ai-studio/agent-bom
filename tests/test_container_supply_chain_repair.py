@@ -271,13 +271,13 @@ def test_release_refresh_patches_tornado_only_when_present(
 def test_tornado_refresh_manifest_is_hashed_and_reaches_released_build(job: str, dockerfile_path: str) -> None:
     manifest = "deploy/docker/tornado-security-requirements.txt"
     path = ROOT / manifest
-    assert path.exists(), "old release locks need reviewed Tornado 6.6 wheels"
+    assert path.exists(), "old release locks need reviewed Tornado 6.6.1 wheels"
     entries = [line for line in path.read_text().replace("\\\n", "").splitlines() if line and not line.startswith("#")]
     assert len(entries) == 1
     requirement = Requirement(entries[0].split("--hash=")[0].strip())
     assert requirement.name == "tornado"
     assert "6.5.10" not in requirement.specifier
-    assert str(requirement.specifier) == "==6.6"
+    assert str(requirement.specifier) == "==6.6.1"
     assert entries[0].count("--hash=sha256:") == 4
     assert f"COPY {manifest} ./{manifest}" in (ROOT / dockerfile_path).read_text()
     _, overlay = _refresh_step(job, "Apply current runtime security overlay")

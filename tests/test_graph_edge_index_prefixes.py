@@ -64,3 +64,37 @@ def test_hot_edge_reads_seek_on_an_adjacency_index(tmp_path) -> None:
     assert "idx_ge_adjacency_in" in incoming and "target_id=?" in incoming, incoming
     loaded = graph_store.load_graph(conn, tenant_id="tenant-a", scan_id="scan-1", node_budget=2)
     assert len(loaded.nodes) == 2
+
+
+def test_frontier_seeks_on_adjacency_indexes_even_when_statistics_favour_scan_id(tmp_path) -> None:
+    """Some SQLite versions rank idx_ge_scan first without statistics; the frontier query pins its seek."""
+    from agent_bom.api.graph_store import SQLiteGraphStore
+    from agent_bom.graph import UnifiedGraph
+
+    path = tmp_path / "graph.db"
+    store = SQLiteGraphStore(path)
+    graph = UnifiedGraph(scan_id="scan-1", tenant_id="tenant-a")
+    for index in range(30):
+        graph.add_node(UnifiedNode(id=f"agent:{index}", entity_type=EntityType.AGENT, label=f"Agent {index}"))
+        graph.add_node(UnifiedNode(id=f"server:{index}", entity_type=EntityType.SERVER, label=f"Server {index}"))
+        graph.add_edge(UnifiedEdge(source=f"agent:{index}", target=f"server:{index}", relationship=RelationshipType.USES))
+    store.save_graph(graph)
+    with sqlite3.connect(path) as conn:
+        conn.execute("ANALYZE")
+        conn.execute("DELETE FROM sqlite_stat1 WHERE tbl = 'graph_edges'")
+        conn.executemany(
+            "INSERT INTO sqlite_stat1 (tbl, idx, stat) VALUES ('graph_edges', ?, ?)",
+            [
+                ("idx_ge_scan", "1000000 1"),
+                ("idx_ge_adjacency_out", "1000000 1000000 1000000 1000000 1000000 1000000"),
+                ("idx_ge_adjacency_in", "1000000 1000000 1000000 1000000 1000000 1000000"),
+            ],
+        )
+    sql, params = store._frontier_edge_query(tenant_id="tenant-a", scan_id="scan-1", frontier={"agent:3", "server:7"})
+    # CI's bundled SQLite chose idx_ge_scan for these branches without statistics; local
+    # builds prefer the covering index. The seek is pinned so no planner can choose otherwise.
+    assert "INDEXED BY idx_ge_adjacency_out" in sql and "INDEXED BY idx_ge_adjacency_in" in sql, sql
+    with sqlite3.connect(path) as conn:
+        plan = " | ".join(str(row[3]) for row in conn.execute(f"EXPLAIN QUERY PLAN {sql}", params))
+    assert "idx_ge_scan" not in plan, plan
+    assert "idx_ge_adjacency_out" in plan and "idx_ge_adjacency_in" in plan, plan

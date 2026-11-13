@@ -3352,7 +3352,7 @@
                   "relationship": "hosted_on",
                   "service": "bedrock",
                   "source": "cloud_origin",
-                  "source_scan_id": ""
+                  "source_scan_id": "cloud-context"
                 }
               ],
               "recorded_count": 1,
@@ -3385,7 +3385,7 @@
                   "relationship": "platform_for",
                   "service": "",
                   "source": "mcp-scan",
-                  "source_scan_id": ""
+                  "source_scan_id": "cloud-context"
                 }
               ],
               "recorded_count": 1,

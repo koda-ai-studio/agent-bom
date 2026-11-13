@@ -193,7 +193,13 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
             # nosec B608 - every interpolated fragment is built in this function
             # and none is caller-supplied: ``column`` is one of two string literals at the call sites below, and ``placeholders``/
             # ``shared_sql`` contribute only ``?`` markers. Values travel in ``params``.
-            return f"SELECT rowid FROM graph_edges WHERE tenant_id = ? AND scan_id = ? AND {column} IN ({placeholders}){shared_sql}"  # nosec B608
+            # Without sqlite_stat1 some SQLite versions rank the single-column idx_ge_scan
+            # above the 5-column adjacency index and read the whole snapshot; pin the seek.
+            index = "idx_ge_adjacency_out" if column == "source_id" else "idx_ge_adjacency_in"
+            return (
+                f"SELECT rowid FROM graph_edges INDEXED BY {index} "  # nosec B608
+                f"WHERE tenant_id = ? AND scan_id = ? AND {column} IN ({placeholders}){shared_sql}"
+            )
 
         params: list[Any] = [
             tenant_id,
