@@ -205,6 +205,23 @@ def _encode_push_payload(sanitized: Any) -> tuple[bytes, dict[str, str]]:
     return _compress_push_payload(_serialize_push_payload(sanitized))
 
 
+class PushAuthError(Exception):
+    """A scan push the control plane refused for authentication; the message names the fix, never the key."""
+
+    def __init__(self, *, status: int, key_sent: bool) -> None:
+        self.status = status
+        self.key_sent = key_sent
+        how = "Pass the key with --push-api-key or the AGENT_BOM_PUSH_API_KEY environment variable"
+        dev = 'a local `agent-bom up` or `agent-bom serve` prints its key at startup as "Dev API key" and mints a new one each start'
+        if not key_sent:
+            message = f"the control plane requires an API key (HTTP {status}). {how}; {dev}"
+        elif status == 403:
+            message = f"the API key is not permitted to push results (HTTP {status}). {how} using a key allowed to push; {dev}"
+        else:
+            message = f"the control plane rejected the API key (HTTP {status}). {how}; {dev}"
+        super().__init__(message)
+
+
 class PushTooLargeError(Exception):
     """A scan push the control plane cannot store; carries the numbers to split it by."""
 
@@ -377,6 +394,8 @@ async def _push_async(
         return _too_large(refused, return_body=return_body)
     if not outcome.done:
         logger.error("Push failed after %d attempts (last_status=%s, last_error=%s)", max_attempts, outcome.last_status, outcome.last_error)
+    if outcome.last_status in (401, 403) and not return_body:
+        raise PushAuthError(status=outcome.last_status, key_sent=bool(api_key))
     return (False, None) if return_body else False
 
 

@@ -100,9 +100,7 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
                 st.current_report_json = _scan_cmd_to_json(st.report)
 
                 if not opts.quiet:
-                    from rich.console import Console as _Console
-
-                    _Console().print(f"\n[bold]Delta:[/bold] {_delta_result.summary_line()} (baseline: {_baseline_path})\n")
+                    st.con.print(f"\n[bold]Delta:[/bold] {_delta_result.summary_line()} (baseline: {_baseline_path})\n")
             except (FileNotFoundError, ValueError) as exc:
                 logger.warning("Delta baseline error: %s — skipping delta filter", exc)
 

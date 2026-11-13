@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 import threading
+from contextlib import nullcontext
 from typing import Callable
 
 import click
@@ -19,6 +20,7 @@ from agent_bom.cli._common import (
     _check_for_update_bg,
     _print_update_notice,
 )
+from agent_bom.cli._json_errors import emit_json_error, json_click_errors, json_errors_requested
 from agent_bom.core.settings import env_str
 from agent_bom.core.verbose_hint import DEBUG_ENV_HINT, argv_command, command_accepts_verbose
 
@@ -47,14 +49,19 @@ def make_entry_point(
         # Resolve the group — supports both direct reference and lazy callable
         _group = group() if callable(group) and not isinstance(group, click.Group) else group
         _normalize_agent_mode_argv()
+        json_errors = not agent_mode_requested() and json_errors_requested(sys.argv[1:])
 
         try:
-            _group(standalone_mode=not agent_mode_requested())
+            with json_click_errors(_command_name()) if json_errors else nullcontext():
+                _group(standalone_mode=not agent_mode_requested())
         except SystemExit as exc:
-            if exc.code == 0:
+            if exc.code == 0 and not json_errors:
                 _print_update_notice(Console(stderr=True))
             raise
         except KeyboardInterrupt:
+            if json_errors:
+                emit_json_error("Interrupted.", exit_code=130, error_type="interrupt", command=_command_name())
+                sys.exit(130)
             if agent_mode_requested():
                 click.echo(
                     dumps_envelope(error_envelope(command=_command_name(), message="Interrupted.", exit_code=130, error_type="interrupt")),
@@ -80,21 +87,33 @@ def make_entry_point(
                     err=False,
                 )
                 sys.exit(1)
-            typed_command = argv_command(_group, sys.argv[1:])
-            has_verbose = command_accepts_verbose(typed_command)
-            verbose = (has_verbose and ("--verbose" in sys.argv or "-v" in sys.argv)) or (env_str("AGENT_BOM_LOG_LEVEL").upper() == "DEBUG")
-            err_console = Console(stderr=True)
-            err_console.print(f"\n[bold red]{product_name} error:[/bold red] {exc}")
-            if verbose:
-                err_console.print_exception(show_locals=False)
-            elif has_verbose:
-                err_console.print("[dim]Run with --verbose for the full traceback.[/dim]")
-            else:
-                err_console.print(f"[dim]Set {DEBUG_ENV_HINT} for the full traceback.[/dim]")
+            _report_unhandled(exc, _group, product_name, json_errors=json_errors)
             sys.exit(1)
 
     entry_main.__doc__ = f"Entry point for {product_name}."
     return entry_main
+
+
+def _report_unhandled(exc: Exception, group: click.Group, product_name: str, *, json_errors: bool) -> None:
+    """Describe an uncaught exception on stderr: one sanitized JSON record, or the human message and traceback hint."""
+    if json_errors:
+        from agent_bom.security import sanitize_error
+
+        emit_json_error(f"{product_name} error: {sanitize_error(exc)}", exit_code=1, error_type=type(exc).__name__, command=_command_name())
+        return
+    from rich.console import Console
+
+    typed_command = argv_command(group, sys.argv[1:])
+    has_verbose = command_accepts_verbose(typed_command)
+    verbose = (has_verbose and ("--verbose" in sys.argv or "-v" in sys.argv)) or (env_str("AGENT_BOM_LOG_LEVEL").upper() == "DEBUG")
+    err_console = Console(stderr=True)
+    err_console.print(f"\n[bold red]{product_name} error:[/bold red] {exc}")
+    if verbose:
+        err_console.print_exception(show_locals=False)
+    elif has_verbose:
+        err_console.print("[dim]Run with --verbose for the full traceback.[/dim]")
+    else:
+        err_console.print(f"[dim]Set {DEBUG_ENV_HINT} for the full traceback.[/dim]")
 
 
 def _command_name() -> str | None:

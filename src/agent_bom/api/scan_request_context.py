@@ -15,6 +15,8 @@ from agent_bom.api.scan_batches import refresh_batch_parent
 from agent_bom.api.scan_path_jail import _api_scan_path_or_400
 from agent_bom.api.stores import _get_store, _jobs_get, _jobs_is_compacted
 from agent_bom.api.tenancy import require_request_tenant_id
+from agent_bom.repo_scan import RepoScanError, validate_repo_url_syntax
+from agent_bom.security import sanitize_text
 
 __all__ = ["_bulk_ingest_store_writes", "_hub_store_call", "_logger"]
 
@@ -40,6 +42,18 @@ _SCAN_LOCAL_PATH_SINGLE_FIELDS = ("inventory", "gha_path", "sbom", "external_sca
 _SCAN_LOCAL_PATH_LIST_FIELDS = ("tf_dirs", "agent_projects", "jupyter_dirs", "filesystem_paths")
 
 
+def _reject_unsafe_repo_url(repo_url: str | None) -> None:
+    """Refuse a malformed or disallowed ``repo_url`` before queueing, with its own reason and no network I/O."""
+    if not (repo_url or "").strip():
+        return
+    try:
+        validate_repo_url_syntax(str(repo_url))
+    except RepoScanError as exc:
+        reason = sanitize_text(str(exc))
+        _logger.warning("Rejected scan repo_url: %s", reason)
+        raise HTTPException(status_code=422, detail=reason) from None
+
+
 def _sanitize_scan_request_paths(body: ScanRequest, *, tenant_id: str = "") -> ScanRequest:
     """Confine every local-path field on a scan request to the API scan jail.
 
@@ -61,6 +75,7 @@ def _sanitize_scan_request_paths(body: ScanRequest, *, tenant_id: str = "") -> S
             require_host_discovery_for_tenant(tenant_id)
         except SecurityError as exc:
             raise HTTPException(status_code=403, detail="Host discovery is not enabled for this tenant") from exc
+    _reject_unsafe_repo_url(body.repo_url)
     updates: dict[str, Any] = {}
     for field in _SCAN_LOCAL_PATH_SINGLE_FIELDS:
         value = getattr(body, field)

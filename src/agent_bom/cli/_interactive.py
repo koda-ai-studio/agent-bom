@@ -8,12 +8,14 @@ from pathlib import Path
 
 import click
 
+from agent_bom.storage.state_home import state_path
+
 PROMPT = "agent-bom> "
 EXIT_COMMANDS = {"exit", "quit", ":q"}
 
 
 def _history_path() -> Path:
-    return Path("~/.agent-bom/history/interactive.history").expanduser()
+    return state_path("history", "interactive.history").expanduser()
 
 
 def _make_prompt_reader(history_enabled: bool) -> Callable[[str], str]:
