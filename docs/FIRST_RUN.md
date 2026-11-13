@@ -33,7 +33,9 @@ uvx agent-bom scan . -f html -o agent-bom-report.html
 ```
 
 Open `agent-bom-report.html` for inventory, prioritized findings, recorded
-exposure paths, fix guidance and coverage warnings. The command scans only the
+exposure paths, fix guidance and coverage warnings. When any finding has a fix,
+the terminal also ends with the top three fixes from the same remediation plan
+and the `--remediate remediation.md` command that writes all of them. The command scans only the
 selected project (packages, MCP configuration, secrets and personal data,
 skills and IaC) and does not read agent configuration elsewhere on the machine.
 Do not add `--no-discover` here: it also turns off the project's secret,
