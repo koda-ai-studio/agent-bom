@@ -665,11 +665,23 @@ URLs and server paths scrubbed, and logs a warning, instead of the generic
 
 ## CLI log output under `--log-json` and `-q`
 
-With `--log-json`, `scan` writes one JSON object per line to stderr: progress
-lines become `INFO` records on the `agent_bom.progress` logger, failure notices
-become `ERROR` records, and the update notice is skipped. With `-q`, progress is
-silenced (including the discovery banner) and only errors print. With both, only
-warning and error records print, as JSON. stdout carries only the report.
+With `--log-json`, `scan`, `image`, `fs` and `code` write one JSON object per
+line to stderr: progress lines become `INFO` records on the `agent_bom.progress`
+logger, failure notices become `ERROR` records, and the update notice is
+skipped. With `-q`, progress is silenced (including the discovery banner) and
+only errors print. With both, only warning and error records print, as JSON.
+stdout carries only the report.
+
+When `--log-json` appears anywhere in argv (before a `--` separator) or
+`AGENT_BOM_LOG_JSON` is on, the entry point decides before Click parses, so a
+usage error that stops parsing early is still JSON. Click usage errors
+(unknown option, bad or missing value), `ClickException` failures and uncaught
+exceptions each come out as one `ERROR` record on the `agent_bom.cli` logger
+with `context.exit_code` and `context.error_type` (`usage`, `error`, or the
+exception class). Messages pass through `sanitize_text`; uncaught exceptions
+also go through `sanitize_error`, which removes paths, URLs and credential
+assignments. Exit codes are unchanged: 2 for usage errors, the exception's own
+code for `ClickException`, 1 for an uncaught exception, 130 on interrupt.
 
 ## Non-finite numbers in a push
 

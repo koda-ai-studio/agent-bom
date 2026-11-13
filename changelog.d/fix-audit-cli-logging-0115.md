@@ -5,3 +5,4 @@
 - `db advisory affected` checks the last scan persisted in the local control plane (as `quickstart --run` leaves it) when there is no saved history report, and says to persist with `--save` or pass `--report` when nothing is found.
 - A scan push refused with 401 or 403 says whether the key was missing, rejected or not allowed to push, and points at `--push-api-key`, `AGENT_BOM_PUSH_API_KEY` and the "Dev API key" a local `agent-bom up` prints. The key is never printed.
 - The cached update check prints a notice only for a plain release version newer than the running one; a foreign or stale cache file no longer prints stray text after `--help`.
+- With `--log-json` (or `AGENT_BOM_LOG_JSON`), usage errors, Click errors and uncaught exceptions are single JSON `ERROR` records on stderr with the exit code and error type, and keep their exit codes (2 for usage errors). `image`, `fs` and `code` accept `--log-json` and emit their progress as JSON records too.
