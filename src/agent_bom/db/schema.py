@@ -33,10 +33,19 @@ def _default_db_file() -> Path:
     """
     current = state_dir() / "db" / "vulns.db"
     legacy = default_product_state_dir() / "db" / "vulns.db"
-    if not current.exists() and legacy.exists():
+    if not _readable_file(current) and _readable_file(legacy):
         _logger.info("Using the vulnerability DB at %s; %s does not exist yet", legacy, current)
         return legacy
     return current
+
+
+def _readable_file(path: Path) -> bool:
+    # An unprivileged container user can inherit HOME=/root; before Python 3.14
+    # Path.exists() raises PermissionError there instead of returning False.
+    try:
+        return path.exists()
+    except OSError:
+        return False
 
 
 # AGENT_BOM_DB_PATH overrides the default.

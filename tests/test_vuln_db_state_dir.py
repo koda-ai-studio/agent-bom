@@ -104,3 +104,23 @@ def test_explicit_db_path_wins_over_the_home_db_fallback(tmp_path: Path) -> None
     _touch_db(tmp_path / "home" / ".agent-bom" / "db" / "vulns.db")
     printed = _python(env, "from agent_bom.db.schema import DB_PATH; print(DB_PATH)")
     assert Path(printed).resolve() == explicit.resolve()
+
+
+def test_an_unreadable_home_db_location_falls_back_to_the_state_dir(monkeypatch, tmp_path: Path) -> None:
+    # A container that drops to an unprivileged user can keep HOME=/root, which
+    # it cannot stat; Path.exists() raises PermissionError there before 3.14.
+    from agent_bom.db import schema
+
+    state = tmp_path / "state"
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(state))
+    legacy_dir = tmp_path / "home" / ".agent-bom" / "db"
+    monkeypatch.setattr(schema, "default_product_state_dir", lambda: legacy_dir.parent)
+    real_exists = Path.exists
+
+    def exists(path: Path, *args, **kwargs) -> bool:
+        if path.is_relative_to(legacy_dir):
+            raise PermissionError(13, "Permission denied", str(path))
+        return real_exists(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "exists", exists)
+    assert schema._default_db_file() == state / "db" / "vulns.db"
