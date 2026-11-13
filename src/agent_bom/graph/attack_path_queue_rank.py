@@ -22,7 +22,7 @@ from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_rank
 from agent_bom.graph.container import AttackPath
 from agent_bom.graph.path_evidence import finding_severity_for_path
 from agent_bom.graph.path_ranking import environment_weight
-from agent_bom.graph.risk_context import node_internet_exposed
+from agent_bom.graph.risk_context import internet_exposure_attributes, node_internet_exposed
 
 _FINDING_TYPES = frozenset({"vulnerability", "misconfiguration"})
 _CREDENTIAL_TYPES = frozenset({"credential", "credential_ref"})
@@ -97,28 +97,33 @@ def path_max_epss(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> float:
     return best
 
 
-def path_internet_exposed(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> bool:
-    """Whether the path's entry node is recorded as reachable from the internet.
-
-    The same verdict the entry node's risk context carries, so a path and the
-    asset it starts from never disagree. An exposed node deeper in the chain is
-    not the way in and does not make the path exposed.
-    """
-    entry_id = path.hops[0] if path.hops else path.source
-    node = nodes_by_id.get(entry_id)
-    if node is None:
-        return False
-    return node_internet_exposed(getattr(node, "attributes", None) or {}) is True
-
-
 def path_exposed_hop_ids(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> list[str]:
-    """Internet-exposed nodes after the entry: reported, not ranked."""
+    """Hops recorded as reachable from the internet, in path order: where exposure enters."""
     exposed: list[str] = []
-    for hop in path.hops[1:]:
+    for hop in path.hops:
         node = nodes_by_id.get(hop)
         if node is not None and node_internet_exposed(getattr(node, "attributes", None) or {}) is True and hop not in exposed:
             exposed.append(hop)
     return exposed
+
+
+def path_internet_exposed(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> bool:
+    """Whether any hop is recorded as internet-exposed: an exposed hop mid-chain is an entry too.
+
+    Reads each node's exposure verdict (its stored risk context, else its
+    recorded flags), so a path never disagrees with the nodes it crosses.
+    """
+    return bool(path_exposed_hop_ids(path, nodes_by_id))
+
+
+def _exposure_entry_reasons(path: AttackPath, nodes_by_id: Mapping[str, Any], exposed_hops: list[str]) -> list[str]:
+    reasons = []
+    for hop in exposed_hops:
+        node = nodes_by_id[hop]
+        position = "the entry" if hop == path.hops[0] else f"hop {path.hops.index(hop) + 1} of {len(path.hops)}"
+        basis = ", ".join(internet_exposure_attributes(getattr(node, "attributes", None) or {})) or "exposure"
+        reasons.append(f"Internet-exposed at {getattr(node, 'label', '') or hop} ({hop}), {position}: recorded {basis}.")
+    return reasons
 
 
 def path_environment_weight(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> float:
@@ -289,7 +294,8 @@ def path_ranking_factors(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> di
     confidence = path_evidence_confidence(path)
     risk = float(path.composite_risk or 0.0)
     epss = path_max_epss(path, nodes_by_id)
-    exposed = path_internet_exposed(path, nodes_by_id)
+    exposed_hops = path_exposed_hop_ids(path, nodes_by_id)
+    exposed = bool(exposed_hops)
     env_weight = path_environment_weight(path, nodes_by_id)
     family = path_family(path)
     reasons = [
@@ -304,9 +310,7 @@ def path_ranking_factors(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> di
     reasons.append(_CONFIDENCE_REASONS[confidence])
     reasons.append(f"Composite risk {risk:g}/100 orders paths that tie on the factors above.")
     reasons.append(_tie_break_reason(epss, exposed, env_weight, path_hop_count(path)))
-    exposed_hops = path_exposed_hop_ids(path, nodes_by_id)
-    if exposed_hops:
-        reasons.append("Internet-exposed beyond the entry (reported, not ranked): " + ", ".join(exposed_hops) + ".")
+    reasons.extend(_exposure_entry_reasons(path, nodes_by_id, exposed_hops))
     return {
         "order": list(RANKING_ORDER),
         "path_family": family,
@@ -328,7 +332,7 @@ def path_ranking_factors(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> di
 
 def _tie_break_reason(epss: float, exposed: bool, env_weight: float, hops: int) -> str:
     parts = [f"EPSS {epss:.2f}" if epss else "no EPSS recorded"]
-    parts.append("entry is internet-exposed" if exposed else "entry not recorded as internet-exposed")
+    parts.append("touches an internet-exposed asset" if exposed else "no internet-exposed asset")
     parts.append(f"environment weight {env_weight:g}")
     parts.append(f"{hops} hops (shorter first)")
     return "Remaining ties break on: " + ", ".join(parts) + "."

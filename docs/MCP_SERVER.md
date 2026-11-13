@@ -365,8 +365,8 @@ severity, evidence confidence, composite risk, then credential count, and every
 path carries `rank`, `evidenceTier`, `isKev`, `severity`, `evidenceConfidence`
 and `rankingFactors` (the same values with plain-language reasons; REST
 attack paths carry them as `ranking_factors`). The `internet_exposed` tie-breaker
-is the entry node's recorded exposure; exposed nodes further along are listed in
-`exposed_hop_ids` and not ranked. Hops carry each node's
+is true when any hop is recorded as internet-exposed; `exposed_hop_ids` and the
+reasons name each hop where exposure enters and the fact behind it. Hops carry each node's
 [risk context](graph/NODE_RISK_CONTEXT.md). `composite_risk` is 0-100 and
 keeps severity, KEV and exposure order; incomplete hop evidence is reported in
 `reachability` / `reachabilityBasis` and `evidenceConfidence` (`verified`,

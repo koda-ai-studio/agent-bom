@@ -260,6 +260,27 @@ def stored_risk_context(attributes: Mapping[str, Any]) -> Mapping[str, Any] | No
     return context if isinstance(context, Mapping) else None
 
 
+def internet_exposure_attributes(attributes: Mapping[str, Any]) -> list[str]:
+    """The recorded facts that make a node internet-exposed, named for a reason line."""
+    context = stored_risk_context(attributes)
+    reasons = context.get("reasons") if context is not None else derive_internet_exposure(attributes)[1]
+    facts: list[str] = []
+    for reason in reasons or []:
+        if not isinstance(reason, Mapping) or reason.get("field") != "internet_exposed" or reason.get("rule") == "recorded_not_public":
+            continue
+        raw_evidence = reason.get("evidence")
+        evidence: Mapping[str, Any] = raw_evidence if isinstance(raw_evidence, Mapping) else {}
+        if evidence.get("finding_ids"):
+            fact = "network rule " + ", ".join(str(item) for item in evidence["finding_ids"])
+        elif isinstance(evidence.get("inputs"), Mapping) and evidence["inputs"]:
+            fact = ", ".join(str(key) for key in evidence["inputs"])
+        else:
+            fact = str(reason.get("attribute"))
+        if fact not in facts:
+            facts.append(fact)
+    return facts
+
+
 def node_internet_exposed(attributes: Mapping[str, Any]) -> bool | None:
     """The node's exposure verdict: the stored context, else derived from its facts."""
     context = stored_risk_context(attributes)
@@ -278,6 +299,7 @@ __all__ = [
     "derive_internet_exposure",
     "derive_node_risk_context",
     "derive_privilege",
+    "internet_exposure_attributes",
     "is_sensitive_label",
     "node_internet_exposed",
     "stored_risk_context",

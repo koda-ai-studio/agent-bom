@@ -26,7 +26,8 @@ def test_demo_has_an_exposed_entry_path_to_a_crown_jewel() -> None:
         path
         for path in graph.attack_paths
         if len(path.hops) >= 3
-        and path_ranking_factors(path, nodes)["internet_exposed"]
+        and _context(graph, path.hops[0]).get("internet_exposed") is True
+        and path_ranking_factors(path, nodes)["exposed_hop_ids"][:1] == [path.hops[0]]
         and _context(graph, path.hops[-1]).get("crown_jewel") is True
     ]
     assert leader_paths, "the demo must show exposure -> asset -> crown jewel"

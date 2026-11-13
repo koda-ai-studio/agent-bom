@@ -77,13 +77,13 @@ reach every resource in its account, so it would mark the whole estate.
 
 ## Paths
 
-A path's `ranking_factors.internet_exposed` is the entry node's exposure
-verdict (the first hop), so a path and the asset it starts from never
-disagree. Exposed nodes later in the chain are listed in
-`ranking_factors.exposed_hop_ids` and named in the reasons, but they do not
-make the path exposed: they are not the way in. The verdict is still only a
-tie-breaker after evidence tier, KEV, severity, confidence, composite risk
-and credentials.
+A path's `ranking_factors.internet_exposed` is true when any hop's exposure
+verdict is true: an exposed MCP server or cluster in the middle of a chain is
+an attacker entry point too. `ranking_factors.exposed_hop_ids` lists those
+hops in path order, and the reasons say where exposure enters and on which
+recorded fact, for example `Internet-exposed at claims-api (…), hop 2 of 4:
+recorded publicly_accessible.` The verdict is still only a tie-breaker after
+evidence tier, KEV, severity, confidence, composite risk and credentials.
 
 ## Where it appears
 
