@@ -79,7 +79,12 @@ python scripts/check_architecture.py     # layer rules and size/complexity ratch
 make preflight                           # only if you touched api/ routes or models
 ```
 
-**5. Open the PR (about 10 minutes).** Use a conventional title
+**5. Open the PR (about 10 minutes).** If users will notice the change, add a
+changelog fragment, `changelog.d/<your-branch>.md`, with a `### Fixed`,
+`### Added` or `### Changed` heading and one bullet per change (see
+[`changelog.d/README.md`](changelog.d/README.md)). Do not edit `CHANGELOG.md`
+or regenerate `docs/PRODUCT_METRICS.*`; both are assembled at release time, so
+PRs no longer conflict on them. Use a conventional title
 (`fix(parsers): ...`), fill in the template, list the commands you ran, and both
 sign off and cryptographically sign your commit (`git commit -s -S`). They are
 different things, and `main` requires both; see
