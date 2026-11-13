@@ -2,10 +2,11 @@
 
 import { Background, Controls, MiniMap, ReactFlow } from "@xyflow/react";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
+import { useAnimatedLayout } from "@/hooks/use-animated-layout";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { lineageNodeTypesAdaptive } from "@/components/lineage-nodes";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
-import { readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
+import { disclosedGlyphSize, readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
 import { shouldVirtualizeReactFlowNodes } from "@/lib/graph-renderer-switch";
 import { BACKGROUND_COLOR, BACKGROUND_GAP, CONTROLS_CLASS, MINIMAP_BG, MINIMAP_CLASS, MINIMAP_MASK, minimapNodeColor } from "@/lib/graph-utils";
 import type { GraphPageModel } from "@/components/graph-page-view";
@@ -22,21 +23,23 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
   } = page;
   const { disclosed, measured: measuredDisplay, quieted } = flowView;
   const roomyOverview = displayEdges.some(edge => edge.data?.roomyOverview === true);
+  // Layout changes glide once (never while dragging or capturing); the camera frames the final positions.
+  const motion = useAnimatedLayout(measuredDisplay.nodes, captureMode || presentation.editing);
   return (
             <ReactFlow
               style={{ ...readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext) || roomyOverview, (roomyOverview || Boolean(investigationContext) && compactInvestigationTopology) && !narrowViewport),
                 ...flowView.cardStyle,
-                ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": `${Math.min(156, 64 / Math.max(graphViewport.zoom, 0.1))}px` } : {}) }}
+                ...(disclosed.available && !narrowViewport ? { "--graph-node-glyph-size": disclosedGlyphSize(graphViewport.zoom) } : {}) }}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${flowView.kind}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
-              nodes={measuredDisplay.nodes}
+              nodes={motion.nodes}
               edges={quieted.edges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
               // Ordinary views have one camera owner: GraphCanvasAutoFit.
               // A concurrent animated initial fit can resize LOD cards after
               // the measured fit has settled, leaving the root offscreen.
-              fitView={Boolean(selectedScenarioId || selectedAttackPath) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
+              fitView={Boolean(selectedScenarioId) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
               fitViewOptions={manualCamera ? viewportOptions : initialViewportOptions}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
               minZoom={0.05}
@@ -98,9 +101,9 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
                 navigationIds={selectedAttackPath?.hops ?? flowView.navigationIds}
-                primaryIds={selectedNodeId ? undefined : flowView.flow.primaryPath}
+                primaryIds={selectedAttackPath?.hops ?? (selectedNodeId ? undefined : flowView.flow.primaryPath)}
                 primaryZoom={flowView.primaryZoom}
-                enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
+                enabled={!layoutPending && !motion.animating && !selectedScenarioId}
                 layoutKey={`${compactLayoutKey}:${flowView.kind}:${disclosed.key}`}
                 anchorId={selectedNodeId ?? investigationMode?.rootId ?? flowView.anchorId}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}

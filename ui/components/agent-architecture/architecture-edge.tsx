@@ -34,7 +34,7 @@ export function ArchitectureGraphEdge({ id, data }: EdgeProps<ArchitectureFlowEd
     ? `translate(14px, -50%) translate(${label.x}px, ${label.y}px)`
     : `translate(-50%, -100%) translate(${label.x}px, ${label.y - 14}px)`;
   return <>
-    <BaseEdge id={id} path={routePath(route, direction)} interactionWidth={18} data-edge-kind={edge.kind}
+    <BaseEdge id={id} path={routePath(route)} interactionWidth={18} data-edge-kind={edge.kind}
       markerEnd={`url(#${markerPrefix}-${style.arrow})`}
       style={{ stroke: style.color, strokeWidth: style.width + (active ? 0.75 : 0), strokeDasharray: style.dash, strokeLinecap: style.round ? "round" : undefined }} />
     {active && <EdgeLabelRenderer>

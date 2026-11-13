@@ -28,9 +28,9 @@ function boundsOf(layout: Pick<AttackPathLayout, "positions" | "nodeWidth" | "no
 
 /**
  * The camera for the path graph. The whole graph is fitted inside the padded
- * pane; only when that would need a zoom below `floor` does the camera keep
- * `floor`, centre the selected path (or start at its entry when even the path
- * is wider) and report what is left off screen.
+ * pane; only when that would need a zoom below `floor` does the camera fit the
+ * width it has (never below `floor`), open on the selected path at the top (or
+ * start at its entry when even the path is wider) and report what is left off screen.
  */
 export function attackPathViewport(
   layout: Pick<AttackPathLayout, "positions" | "width" | "height" | "nodeWidth" | "nodeHeight"> & Partial<Pick<AttackPathLayout, "direction">>,
@@ -61,12 +61,13 @@ export function attackPathViewport(
     x = Math.min(Math.max(lo, hi), Math.max(Math.min(lo, hi), centre(spineBox, zoom).x));
   }
   if (fallback) {
-    zoom = lowest;
+    // Use the width the pane has: as large as the whole row of layers allows, never below the floor.
+    zoom = Math.max(lowest, Math.min(options.maxZoom ?? 1, usableWidth / whole.width));
     const spine = boundsOf(layout, spineIds) ?? whole;
     const spineFits = spine.width * zoom <= usableWidth;
-    x = spineFits ? centre(spine, zoom).x : pad.left - spine.x * zoom;
-    // Rows above and below stay centred on the path when they cannot all fit.
-    y = whole.height * zoom <= usableHeight ? centre(whole, zoom).y : centre(spine, zoom).y;
+    x = whole.width * zoom <= usableWidth ? centre(whole, zoom).x : spineFits ? centre(spine, zoom).x : pad.left - spine.x * zoom;
+    // The selected path is the first row; when the branches below cannot all fit, it opens at the top.
+    y = whole.height * zoom <= usableHeight ? centre(whole, zoom).y : pad.top - spine.y * zoom;
   }
   const hiddenNodeIds = [...layout.positions].filter(([, position]) => {
     const left = x + position.x * zoom, top = y + position.y * zoom;

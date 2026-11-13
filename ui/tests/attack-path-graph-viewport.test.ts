@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import { layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
 import { ATTACK_PATH_FIT_PADDING, attackPathViewport } from "@/lib/attack-path-graph-viewport";
-import { demoFixture } from "./fixtures/attack-path-graph-fixture";
+import { demoFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
 function screenBoxes(layout: ReturnType<typeof layoutAttackPathGraph>, viewport: { x: number; y: number; zoom: number }) {
   return [...layout.positions].map(([id, position]) => ({
@@ -72,5 +72,24 @@ describe("attack path viewport", () => {
     const offscreen = boxes.filter(box => box.left < 0 || box.right > pane.width || box.top < 0 || box.bottom > pane.height).map(box => box.id).sort();
     expect(viewport.hiddenNodeIds.slice().sort()).toEqual(offscreen);
     expect(offscreen.length).toBeGreaterThan(0);
+  });
+
+  it("opens a graph too tall for the pane with the selected path at the top, at a readable zoom", () => {
+    const { graph, selected } = fanOutFixture(6);
+    const model = buildAttackPathGraphModel(graph, selected, { collapseThreshold: 100 });
+    const layout = layoutAttackPathGraph(model, "LR");
+    const pane = { width: 1100, height: 520 };
+    const viewport = attackPathViewport(layout, model.pathNodeIds, pane, 0.6);
+    expect(viewport.zoom).toBeGreaterThanOrEqual(0.6);
+    const boxes = screenBoxes(layout, viewport);
+    for (const id of model.pathNodeIds) {
+      const box = boxes.find(item => item.id === id)!;
+      expect(box.top, id).toBeGreaterThanOrEqual(ATTACK_PATH_FIT_PADDING.top - 0.5);
+      expect(box.top, id).toBeLessThanOrEqual(ATTACK_PATH_FIT_PADDING.top + 0.5);
+      expect(box.left, id).toBeGreaterThanOrEqual(0);
+      expect(box.right, id).toBeLessThanOrEqual(pane.width);
+    }
+    expect(viewport.hiddenNodeIds.length).toBeGreaterThan(0);
+    for (const id of viewport.hiddenNodeIds) expect(model.pathNodeIds).not.toContain(id);
   });
 });

@@ -3,7 +3,7 @@ import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { graphHierarchyLayout } from "@/lib/graph-hierarchy-layout";
 import { mcpNodeCaption } from "@/lib/graph-mcp-caption";
-import { findingEvidenceContext, mcpEvidenceFlow } from "@/lib/graph-mcp-flow";
+import { findingEvidenceContext, MCP_FLOW_FOOTPRINT, mcpEvidenceFlow } from "@/lib/graph-mcp-flow";
 
 const node = (id: string, nodeType: LineageNodeData["nodeType"], label = id): Node<LineageNodeData> => ({
   id, type: `${nodeType}Node`, position: { x: 0, y: 0 }, data: { label, nodeType },
@@ -52,6 +52,20 @@ describe("small MCP evidence flow", () => {
     const backwards = mcpEvidenceFlow(nodes, [{ id: "back", source: "finding", target: "credential", data: { relationship: "affects" } }])!;
     expect(backwards.edges[0]!.sourceHandle).toBe("context");
     expect(backwards.edges[0]!.targetHandle).toBe("context");
+  });
+
+  it("spaces rows for the tallest card it draws, so no two cards in a column overlap", () => {
+    const result = mcpEvidenceFlow(nodes, edges)!;
+    // Cards render 203-272px tall (glyph, a three-line name, metadata and the client line).
+    expect(MCP_FLOW_FOOTPRINT.cardMaxHeight).toBeGreaterThanOrEqual(272);
+    const box = (n: Node<LineageNodeData>) => ({ left: n.position.x, right: n.position.x + Number(n.style?.width ?? 0),
+      top: n.position.y, bottom: n.position.y + MCP_FLOW_FOOTPRINT.cardMaxHeight });
+    const overlaps: string[] = [];
+    for (const [i, a] of result.nodes.entries()) for (const b of result.nodes.slice(i + 1)) {
+      const p = box(a), q = box(b);
+      if (p.left < q.right && q.left < p.right && p.top < q.bottom + 16 && q.top < p.bottom + 16) overlaps.push(`${a.id} / ${b.id}`);
+    }
+    expect(overlaps).toEqual([]);
   });
 
   it("balances connected branches above and below the primary evidence chain", () => {

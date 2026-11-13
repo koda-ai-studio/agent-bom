@@ -39,7 +39,7 @@ describe("graph headline counts", () => {
     expect(flow.summary.findingSeverity).toMatchObject({ critical: 0, high: 1 });
     expect(flow.summary.critical).toBe(0);
     expect(flow.summary.kevListed).toBe(1);
-    expect(formatGraphHeadline(flow.summary, 1)).toBe("1 high finding in view · 1 KEV-listed · 1 attack path in snapshot (deduplicated)");
+    expect(formatGraphHeadline(flow.summary, 1)).toBe("1 high finding in view · 1 KEV-listed · 1 attack path across the whole snapshot (deduplicated)");
   });
 
   it("breaks mixed severities out separately from KEV status", () => {
@@ -50,22 +50,22 @@ describe("graph headline counts", () => {
       node("misconfig", EntityType.MISCONFIGURATION, "medium"),
     ]), createFocusedGraphFilters());
     expect(formatGraphHeadline(flow.summary, 3)).toBe(
-      "3 findings in view: 1 critical, 1 high, 1 medium · 1 KEV-listed · 3 attack paths in snapshot (deduplicated)",
+      "3 findings in view: 1 critical, 1 high, 1 medium · 1 KEV-listed · 3 attack paths across the whole snapshot (deduplicated)",
     );
   });
 
   it("states zero findings without inventing a severity", () => {
     expect(formatGraphHeadline({ findings: 0, findingSeverity: { critical: 0, high: 0, medium: 0, low: 0, unrated: 0 }, kevListed: 0 }, 0))
-      .toBe("0 findings in view · 0 attack paths in snapshot (deduplicated)");
+      .toBe("0 findings in view · 0 attack paths across the whole snapshot (deduplicated)");
   });
 
   it("names unrated findings rather than folding them into a severity", () => {
     expect(formatGraphHeadline({ findings: 2, findingSeverity: { critical: 0, high: 1, medium: 0, low: 0, unrated: 1 }, kevListed: 0 }, 1))
-      .toBe("2 findings in view: 1 high, 1 unrated · 1 attack path in snapshot (deduplicated)");
+      .toBe("2 findings in view: 1 high, 1 unrated · 1 attack path across the whole snapshot (deduplicated)");
   });
 });
 
  it("labels preview finding totals as loaded scope, not visible nodes", () => {
    expect(formatGraphHeadline({ findings: 2, findingSeverity: { critical: 0, high: 2, medium: 0, low: 0, unrated: 0 }, kevListed: 0 }, 1, "loaded scope"))
-     .toBe("2 high findings in loaded scope · 1 attack path in snapshot (deduplicated)");
+     .toBe("2 high findings in loaded scope · 1 attack path across the whole snapshot (deduplicated)");
  });

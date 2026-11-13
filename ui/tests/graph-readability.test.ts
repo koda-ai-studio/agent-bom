@@ -44,10 +44,16 @@ it("keeps evidence metadata legible at the bounded repository overview zoom", as
   expect(Number.parseFloat(style["--graph-node-meta-size"]!) * 0.49).toBeGreaterThanOrEqual(11);
 });
 
-it("keeps glyphs at 64px when fitting a compact evidence graph beside its drawer", async () => {
+it("draws compact cards at one on-screen size whatever zoom a small graph is fitted at", async () => {
   const { readableGraphNodeStyle } = await import("@/lib/graph-node-dimensions");
-  for (const zoom of [0.5, 0.55, 0.6]) {
+  for (const zoom of [0.5, 0.55, 0.6, 0.8, 1, 1.25, 1.6, 2.5]) {
     const style = readableGraphNodeStyle(zoom) as Record<string, string>;
-    expect(Number.parseFloat(style["--graph-node-glyph-size"]!) * zoom).toBeGreaterThanOrEqual(64);
+    const drawn = (key: string) => Number.parseFloat(style[key]!) * zoom;
+    expect(drawn("--graph-node-glyph-size")).toBeGreaterThanOrEqual(48);
+    expect(drawn("--graph-node-glyph-size")).toBeLessThanOrEqual(56);
+    expect(drawn("--graph-node-label-size")).toBeGreaterThanOrEqual(13);
+    expect(drawn("--graph-node-label-size")).toBeLessThanOrEqual(15);
+    expect(drawn("--graph-node-meta-size")).toBeGreaterThanOrEqual(12);
+    expect(drawn("--graph-node-meta-size")).toBeLessThanOrEqual(13);
   }
 });
