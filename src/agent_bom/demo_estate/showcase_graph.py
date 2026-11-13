@@ -59,6 +59,7 @@ from agent_bom.graph.edge_evidence import fixture_edge_evidence
 from agent_bom.graph.effective_permissions import apply_effective_permissions
 from agent_bom.graph.governance_overlay import apply_governance_overlay
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.risk_context_overlay import apply_node_risk_context
 from agent_bom.graph.types import EntityType, RelationshipType
 
 if TYPE_CHECKING:
@@ -389,6 +390,7 @@ def build_showcase_snapshot(
     _annotate_demo_identity_risk(graph)
     project_estate_onto_showcase(graph, tenant_id=tenant_id, profile=profile, scan_report=scan_report)
     annotate_agent_context(graph)
+    apply_node_risk_context(graph)
     if _materialize_showcase_attack_paths(graph):
         _record_showcase_attack_path_analysis(graph)
     return graph

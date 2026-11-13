@@ -9220,6 +9220,10 @@
             "GDPR"
           ],
           "data_sensitivity": "sensitive",
+          "data_sensitivity_basis": [
+            "name",
+            "backing_resource_name"
+          ],
           "internet_exposed": false
         },
         "canonical_id": "06ca8122-ecf6-5def-ac6b-3670971e703d",
@@ -19327,6 +19331,10 @@
             "GDPR"
           ],
           "data_sensitivity": "sensitive",
+          "data_sensitivity_basis": [
+            "name",
+            "backing_resource_name"
+          ],
           "internet_exposed": true,
           "toxic_exposed_sensitive": true
         },

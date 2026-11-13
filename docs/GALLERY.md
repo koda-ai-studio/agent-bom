@@ -264,6 +264,14 @@ These are application captures, not mockups. Overview, Findings and remediation 
 
 [Choose a deployment](../site-docs/deployment/overview.md) · [Enterprise configuration](TRUST.md) · [Connect cloud accounts](CLOUD_CONNECT.md)
 
+## What the README sample shows
+
+The README graphs show a fictional sample estate. Dashed use, credential and
+access links are configured or modeled, not observed at runtime; path analysis
+covers the collected snapshot only. The AWS badge describes environment
+membership; these sample agents have no recorded execution host or model
+endpoint. See [agent, hosting and model context](graph/AGENT_CONTEXT.md).
+
 ## Reproduce the README screenshots
 
 The pictured graphs are the committed UI build serving fictional fixtures
