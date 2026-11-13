@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.harness_model import placements_from_framework_agents
 from agent_bom.graph.node import NodeDimensions, UnifiedNode, stable_node_id
 from agent_bom.graph.training_projection import _model_node_id
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -89,6 +90,7 @@ class _FrameworkTopology:
         self.host = graph.nodes.get(host_agent_id) if host_agent_id else None
         self.folded: list[dict[str, Any]] = []
         self.framework_ids: dict[str, str] = {}
+        self.placements = placements_from_framework_agents(framework_agents)
 
     def _framework_node_id(self, name: str) -> str:
         key = name.strip().lower() or "unknown"
@@ -175,6 +177,7 @@ class _FrameworkTopology:
                         "capabilities": item.get("capabilities", []),
                         "dynamic_edges": item.get("dynamic_edges", False),
                         **_nesting_attributes(item),
+                        **(self.placements[agent_id].attributes() if agent_id in self.placements else {}),
                     },
                     dimensions=NodeDimensions(agent_type="framework-agent", surface=framework_name),
                     data_sources=[self.data_source, "source-ast"],
@@ -266,6 +269,10 @@ class _FrameworkTopology:
             )
 
 
+# Unresolved routes kept verbatim per node; the count always covers every one.
+MAX_UNRESOLVED_ROUTES_PER_NODE = 50
+
+
 def _nesting_attributes(item: dict[str, Any]) -> dict[str, Any]:
     """Parent construct id and the routes the source scan could not resolve, as node attributes."""
     routes = [route for route in item.get("unresolved_routes", []) or [] if isinstance(route, dict)]
@@ -273,6 +280,14 @@ def _nesting_attributes(item: dict[str, Any]) -> dict[str, Any]:
         "parent_id": str(item.get("parent_id") or ""),
         "unresolved_route_count": len(routes),
         "unresolved_route_reasons": sorted({str(route.get("reason") or "") for route in routes} - {""}),
+        "unresolved_routes": [
+            {
+                "evidence": str(route.get("evidence") or ""),
+                "line_number": int(route.get("line_number") or 0),
+                "reason": str(route.get("reason") or ""),
+            }
+            for route in routes[:MAX_UNRESOLVED_ROUTES_PER_NODE]
+        ],
     }
 
 

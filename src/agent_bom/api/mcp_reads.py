@@ -26,6 +26,7 @@ from agent_bom.api.routes.compliance import get_compliance_by_framework, get_com
 from agent_bom.api.routes.compliance_routes.common import estate_agent_count
 from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
 from agent_bom.api.routes.graph_routes._admission import admitted_graph_read, graph_admitted
+from agent_bom.api.routes.graph_routes.agent_architecture import get_agent_architecture as get_agent_architecture
 from agent_bom.api.routes.graph_routes.vendor_paths import get_cross_vendor_attack_paths as get_cross_vendor_attack_paths
 from agent_bom.api.routes.operator_advisories import operator_advisory_matches
 from agent_bom.api.routes.scan import list_findings
@@ -118,6 +119,7 @@ __all__ = [
     "triage_state",
     "blast_holders",
     "estate_context_page",
+    "get_agent_architecture",
     "get_cross_vendor_attack_paths",
     "get_executive_brief",
     "public_holders",
