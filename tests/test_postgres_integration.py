@@ -159,7 +159,8 @@ def test_postgres_export_destination_write_cannot_change_tenant_owner():
         token = set_current_tenant(tenant_b)
         assert store.get(tenant_a, record.id) is None
         assert store.list_for_tenant(tenant_a) == []
-        assert not store.delete(tenant_a, record.id)
+        deleted = store.delete(tenant_a, record.id)
+        assert not deleted
     finally:
         reset_current_tenant(token)
         token = set_current_tenant(tenant_a)
@@ -1557,7 +1558,8 @@ def test_postgres_credential_store_rejects_cross_tenant_id_takeover():
     try:
         stored = store.get(shared_id, tenant_id=tenant_a)
         assert stored is not None and stored.tenant_id == tenant_a
-        assert store.delete(shared_id, tenant_id=tenant_a)
+        deleted = store.delete(shared_id, tenant_id=tenant_a)
+        assert deleted
     finally:
         reset_current_tenant(token)
 
@@ -1871,7 +1873,8 @@ def test_postgres_schedule_store_keeps_schedule_identity_bound_to_tenant():
     token = set_current_tenant(tenant_b)
     try:
         assert store.get(schedule_id, tenant_id=tenant_b) is None
-        assert store.delete(schedule_id, tenant_id=tenant_b) is False
+        deleted = store.delete(schedule_id, tenant_id=tenant_b)
+        assert deleted is False
         takeover = schedule.model_copy(update={"tenant_id": tenant_b, "name": "cross-tenant takeover"})
         with pytest.raises(ValueError, match="different tenant"):
             store.put(takeover, tenant_id=tenant_b)
@@ -1883,7 +1886,8 @@ def test_postgres_schedule_store_keeps_schedule_identity_bound_to_tenant():
         persisted = store.get(schedule_id, tenant_id=tenant_a)
         assert persisted is not None
         assert persisted.name == schedule.name
-        assert store.delete(schedule_id, tenant_id=tenant_a) is True
+        deleted = store.delete(schedule_id, tenant_id=tenant_a)
+        assert deleted is True
     finally:
         reset_current_tenant(token)
 

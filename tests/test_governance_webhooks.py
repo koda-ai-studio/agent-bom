@@ -130,7 +130,8 @@ def test_webhook_api_crud(client):
     assert client.get("/v1/webhooks?include_disabled=true").json()["count"] == 1
     assert client.post(f"/v1/webhooks/{sid}/enable").json()["subscription"]["status"] == "active"
 
-    assert client.delete(f"/v1/webhooks/{sid}").json()["deleted"] is True
+    response = client.delete(f"/v1/webhooks/{sid}")
+    assert response.json()["deleted"] is True
     assert client.get(f"/v1/webhooks/{sid}").status_code == 404
 
 

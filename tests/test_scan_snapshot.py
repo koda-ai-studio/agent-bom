@@ -279,10 +279,12 @@ def test_job_deletion_removes_its_snapshot(active_store, tmp_path: Path, backend
         active_store.put_snapshot(tenant, "job-1", _meta(), [_row()])
 
     monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOTS", "1" if enabled else "0")
-    assert job_store.delete("job-1", tenant_id="tenant-a") is True
+    deleted = job_store.delete("job-1", tenant_id="tenant-a")
+    assert deleted is True
     assert active_store.get_meta("tenant-a") == {}
     assert set(active_store.get_meta("tenant-b")) == {"job-1"}
-    assert job_store.delete("job-1", tenant_id="tenant-a") is False
+    deleted = job_store.delete("job-1", tenant_id="tenant-a")
+    assert deleted is False
 
 
 def test_job_deletion_survives_snapshot_failure(active_store, monkeypatch) -> None:
@@ -290,7 +292,8 @@ def test_job_deletion_survives_snapshot_failure(active_store, monkeypatch) -> No
     job_store = InMemoryJobStore()
     job_store.put(_job())
 
-    assert job_store.delete("job-1", tenant_id="tenant-a") is True
+    deleted = job_store.delete("job-1", tenant_id="tenant-a")
+    assert deleted is True
     assert job_store.get("job-1", tenant_id="tenant-a") is None
 
 
@@ -351,7 +354,8 @@ def test_all_tenant_job_deletion_removes_only_matching_snapshots(active_store, t
             jobs.put(_job(job_id, tenant))
             active_store.put_snapshot(tenant, job_id, _meta(), [_row()])
     monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOTS", "0")
-    assert jobs.delete("shared", all_tenants=True)
+    deleted = jobs.delete("shared", all_tenants=True)
+    assert deleted
     for tenant in ("tenant-a", "tenant-b"):
         assert set(active_store.get_meta(tenant)) == {"retained"}
         assert active_store.get_rows(tenant, "shared") == []

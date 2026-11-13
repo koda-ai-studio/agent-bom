@@ -684,16 +684,16 @@ ENTRYPOINTS: dict[str, Callable[[], Any]] = {
     "discover": lambda: sf.discover(database="DB1", schema="S1"),
     "discover_governance": lambda: sf.discover_governance(days=7),
     "discover_activity": lambda: sf.discover_activity(days=999),
-    "discover_object_dependencies": lambda: sf.discover_object_dependencies(),
-    "discover_identity_live": lambda: sf.discover_identity_live(),
-    "discover_data_exfil": lambda: sf.discover_data_exfil(),
+    "discover_object_dependencies": sf.discover_object_dependencies,
+    "discover_identity_live": sf.discover_identity_live,
+    "discover_data_exfil": sf.discover_data_exfil,
     "discover_login_anomalies": lambda: sf.discover_login_anomalies(days=3),
-    "discover_auth_posture": lambda: sf.discover_auth_posture(),
-    "discover_snowflake_services": lambda: sf.discover_snowflake_services(),
+    "discover_auth_posture": sf.discover_auth_posture,
+    "discover_snowflake_services": sf.discover_snowflake_services,
     "discover_organization": lambda: sf.discover_organization(force=True, now="2026-01-01T00:00:00Z"),
-    "discover_snowflake_pipeline": lambda: sf.discover_snowflake_pipeline(),
-    "discover_snowflake_integrations": lambda: sf.discover_snowflake_integrations(),
-    "discover_snowflake_external_data": lambda: sf.discover_snowflake_external_data(),
+    "discover_snowflake_pipeline": sf.discover_snowflake_pipeline,
+    "discover_snowflake_integrations": sf.discover_snowflake_integrations,
+    "discover_snowflake_external_data": sf.discover_snowflake_external_data,
 }
 MODES = ("rich", "empty", "nodesc", "denied", "missing", "generic")
 
@@ -794,9 +794,9 @@ def _build_cases(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixtu
             mode="empty",
             env={"SNOWFLAKE_ACCOUNT": "test-acct", "SNOWFLAKE_PASSWORD": "test-password"},
         )
-    cases["discover_organization/flag_off"] = _run(monkeypatch, caplog, lambda: sf.discover_organization())
+    cases["discover_organization/flag_off"] = _run(monkeypatch, caplog, sf.discover_organization)
     cases["discover_organization/flag_on"] = _run(
-        monkeypatch, caplog, lambda: sf.discover_organization(), env={"SNOWFLAKE_ACCOUNT": "LOC1", "AGENT_BOM_SNOWFLAKE_ORG": "yes"}
+        monkeypatch, caplog, sf.discover_organization, env={"SNOWFLAKE_ACCOUNT": "LOC1", "AGENT_BOM_SNOWFLAKE_ORG": "yes"}
     )
     cases["discover_identity_live/max_roles_1"] = _run(
         monkeypatch, caplog, sf.discover_identity_live, env={"SNOWFLAKE_ACCOUNT": "a", "AGENT_BOM_SNOWFLAKE_MAX_ROLES": "1"}

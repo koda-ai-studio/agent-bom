@@ -257,7 +257,8 @@ def test_api_auth_tenancy_registration_and_retained_export(client):
     assert (
         api.get(base + "/snapshots/export", headers={"Authorization": "Bearer other"}, params={"snapshot_id": snapshot}).status_code == 404
     )
-    assert api.delete(base + "/snapshots/export", headers=admin, params={"snapshot_id": snapshot}).status_code == 405
+    response = api.delete(base + "/snapshots/export", headers=admin, params={"snapshot_id": snapshot})
+    assert response.status_code == 405
 
 
 def test_api_refuses_unknown_fields_and_returns_generic_storage_error(client, monkeypatch):

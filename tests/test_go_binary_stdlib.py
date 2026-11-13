@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 
 from agent_bom.oci_parser import parse_oci_tarball
-from agent_bom.parsers.oci_extractors import go_toolchain_version
+from agent_bom.parsers.go_buildinfo import go_toolchain_version
 from agent_bom.scanners.package_matching import _osv_ecosystems_for_package
 from tests.test_oci_parser import _make_docker_save_tar
 

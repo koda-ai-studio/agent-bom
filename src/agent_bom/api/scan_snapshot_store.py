@@ -83,12 +83,23 @@ SQLITE_SCAN_SNAPSHOT_DDL = (
 class ScanSnapshotStore(Protocol):
     """Persistence contract for per-job scan finding snapshots."""
 
-    def put_snapshot(self, tenant_id: str, job_id: str, meta: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> None: ...
-    def get_meta(self, tenant_id: str, job_ids: Iterable[str] | None = None) -> dict[str, dict[str, Any]]: ...
-    def get_rows(self, tenant_id: str, job_id: str) -> list[dict[str, Any]]: ...
-    def delete_job(self, tenant_id: str, job_id: str) -> bool: ...
-    def delete_older_than(self, tenant_id: str | None, cutoff_iso: str) -> int: ...
-    def delete_tenant(self, tenant_id: str) -> int: ...
+    def put_snapshot(self, tenant_id: str, job_id: str, meta: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> None:
+        """Store a scan's snapshot metadata and finding rows."""
+
+    def get_meta(self, tenant_id: str, job_ids: Iterable[str] | None = None) -> dict[str, dict[str, Any]]:
+        """Return snapshot metadata keyed by job id."""
+
+    def get_rows(self, tenant_id: str, job_id: str) -> list[dict[str, Any]]:
+        """Return a scan's snapshot finding rows."""
+
+    def delete_job(self, tenant_id: str, job_id: str) -> bool:
+        """Delete one scan's snapshot; return whether it existed."""
+
+    def delete_older_than(self, tenant_id: str | None, cutoff_iso: str) -> int:
+        """Delete a tenant's snapshots older than ``cutoff_iso``; return the count removed."""
+
+    def delete_tenant(self, tenant_id: str) -> int:
+        """Delete every snapshot for a tenant; return the count removed."""
 
 
 def require_tenant(tenant_id: str) -> str:

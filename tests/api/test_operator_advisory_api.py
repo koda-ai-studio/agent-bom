@@ -35,7 +35,8 @@ def test_store_is_tenant_isolated(store) -> None:
     assert [row["id"] for row in store.list("tenant-a")] == ["CVE-2026-109618"]
     assert store.list("tenant-b") == []
     assert store.get("tenant-b", "CVE-2026-109618") is None
-    assert store.delete("tenant-b", "CVE-2026-109618") is False
+    deleted = store.delete("tenant-b", "CVE-2026-109618")
+    assert deleted is False
     assert store.get("tenant-a", "CVE-2026-109618") is not None
     with pytest.raises(ValueError):
         store.put("  ", ADVISORY)
@@ -101,6 +102,8 @@ def test_invalid_advisory_is_rejected(api: TestClient) -> None:
 
 def test_delete_advisory(api: TestClient) -> None:
     api.post(BASE, json=ADVISORY)
-    assert api.delete(f"{BASE}/CVE-2026-109618").status_code == 204
-    assert api.delete(f"{BASE}/CVE-2026-109618").status_code == 404
+    response = api.delete(f"{BASE}/CVE-2026-109618")
+    assert response.status_code == 204
+    response = api.delete(f"{BASE}/CVE-2026-109618")
+    assert response.status_code == 404
     assert api.get(BASE).json()["advisories"] == []

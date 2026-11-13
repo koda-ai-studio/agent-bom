@@ -122,7 +122,8 @@ def test_store_crud_round_trip() -> None:
     assert fetched.last_scan_id is None
     assert [r.id for r in store.list_for_tenant("tenant-a")] == [record.id]
 
-    assert store.delete("tenant-a", record.id) is True
+    deleted = store.delete("tenant-a", record.id)
+    assert deleted is True
     assert store.get("tenant-a", record.id) is None
     assert store.list_for_tenant("tenant-a") == []
 
@@ -138,7 +139,8 @@ def test_store_tenant_isolation() -> None:
     assert store.get("tenant-a", b.id) is None
     assert [r.id for r in store.list_for_tenant("tenant-a")] == [a.id]
     # Cross-tenant delete is a no-op.
-    assert store.delete("tenant-a", b.id) is False
+    deleted = store.delete("tenant-a", b.id)
+    assert deleted is False
     assert store.get("tenant-b", b.id) is not None
 
 
@@ -153,7 +155,8 @@ def test_sqlite_store_crud_and_isolation(tmp_path: Any) -> None:
     assert store.get("tenant-a", a.id) is not None
     assert store.get("tenant-a", b.id) is None
     assert [r.id for r in store.list_for_tenant("tenant-b")] == [b.id]
-    assert store.delete("tenant-b", b.id) is True
+    deleted = store.delete("tenant-b", b.id)
+    assert deleted is True
     assert store.get("tenant-b", b.id) is None
 
 
@@ -687,7 +690,8 @@ def test_api_viewer_can_list_and_get_but_not_mutate() -> None:
         ).status_code
         == 403
     )
-    assert client.delete(f"/v1/cloud/connections/{record.id}", headers=headers).status_code == 403
+    response = client.delete(f"/v1/cloud/connections/{record.id}", headers=headers)
+    assert response.status_code == 403
 
 
 def test_api_create_response_never_contains_secret() -> None:
@@ -742,8 +746,10 @@ def test_api_list_get_delete_tenant_scoped() -> None:
     assert listing["connections"] == []
 
     # Cross-tenant delete is a 404; same-tenant delete works.
-    assert client.delete(f"/v1/cloud/connections/{cid}", headers=_proxy_headers(tenant="tenant-beta")).status_code == 404
-    assert client.delete(f"/v1/cloud/connections/{cid}", headers=_proxy_headers(tenant="tenant-alpha")).status_code == 204
+    response = client.delete(f"/v1/cloud/connections/{cid}", headers=_proxy_headers(tenant="tenant-beta"))
+    assert response.status_code == 404
+    response = client.delete(f"/v1/cloud/connections/{cid}", headers=_proxy_headers(tenant="tenant-alpha"))
+    assert response.status_code == 204
     assert client.get(f"/v1/cloud/connections/{cid}", headers=_proxy_headers(tenant="tenant-alpha")).status_code == 404
 
 

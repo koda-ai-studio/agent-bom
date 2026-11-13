@@ -304,8 +304,10 @@ def test_webhook_no_url_is_noop(monkeypatch):
     monkeypatch.delenv("AGENT_BOM_POLICY_WEBHOOK_URL", raising=False)
     event = {"idempotency_key": "k"}
     posted: list[int] = []
-    assert deliver_policy_webhook(event, url="", poster=lambda *a: posted.append(1) or 200) is False
-    assert deliver_policy_webhook(event, url=None, poster=lambda *a: posted.append(1) or 200) is False
+    delivered_empty = deliver_policy_webhook(event, url="", poster=lambda *a: posted.append(1) or 200)
+    delivered_none = deliver_policy_webhook(event, url=None, poster=lambda *a: posted.append(1) or 200)
+    assert delivered_empty is False
+    assert delivered_none is False
     assert posted == []  # never attempted a POST
 
 

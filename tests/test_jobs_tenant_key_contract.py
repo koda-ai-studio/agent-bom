@@ -66,7 +66,8 @@ def test_job_roundtrip_update_and_insert_once(store):
         store.put(updated)
         assert store.put_many_if_absent_atomic([original]) == []
         assert store.get(original.job_id, tenant_id=owner) == updated
-        assert store.delete(original.job_id, tenant_id=owner)
+        deleted = store.delete(original.job_id, tenant_id=owner)
+        assert deleted
 
 
 def test_same_job_id_is_independent_per_tenant(store):
@@ -78,7 +79,8 @@ def test_same_job_id_is_independent_per_tenant(store):
         with tenant(owner):
             assert store.get(ident, tenant_id=owner).tenant_id == owner
     with tenant(a):
-        assert store.delete(ident, tenant_id=a)
+        deleted = store.delete(ident, tenant_id=a)
+        assert deleted
     with tenant(b):
         assert store.get(ident, tenant_id=b).tenant_id == b
         store.delete(ident, tenant_id=b)
@@ -127,7 +129,8 @@ def test_explicit_maintenance_delete_covers_equal_ids(store):
             store.put(job(owner, ident))
     with pytest.raises(ValueError, match="Ambiguous"):
         store.get(ident, all_tenants=True)
-    assert store.delete(ident, all_tenants=True)
+    deleted = store.delete(ident, all_tenants=True)
+    assert deleted
     for owner in (a, b):
         with tenant(owner):
             assert store.get(ident, tenant_id=owner) is None

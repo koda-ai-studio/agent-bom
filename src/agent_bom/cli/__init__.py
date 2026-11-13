@@ -13,7 +13,7 @@ first attribute access for the same reason.
 from __future__ import annotations
 
 import importlib
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 
@@ -25,6 +25,14 @@ from agent_bom.cli._entry import make_entry_point
 from agent_bom.cli._grouped_help import GroupedGroup
 from agent_bom.cli._lazy_commands import LazyCommands
 from agent_bom.output.brand_tokens import CLI_MAIN_HELP
+
+if TYPE_CHECKING:
+    # Static view of the lazy names in ``__all__``; at runtime ``__getattr__`` imports them on first access.
+    from agent_bom.cli._check import _parse_package_spec as _parse_package_spec
+    from agent_bom.cli._common import _make_console as _make_console
+    from agent_bom.cli._runtime import _NoOpDetector as _NoOpDetector
+    from agent_bom.cli.agents.scan_cmd import scan as scan
+    from agent_bom.discovery import discover_all as discover_all
 
 # Names other modules and tests import from ``agent_bom.cli``; each resolves on
 # first access. ``discover_all`` stays here so patch("agent_bom.cli.discover_all")

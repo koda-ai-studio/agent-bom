@@ -246,14 +246,16 @@ class TestKeyStore:
         store = KeyStore()
         _, key = create_api_key("rm-test", Role.VIEWER)
         store.add(key)
-        assert store.remove(key.key_id)
+        removed = store.remove(key.key_id)
+        assert removed
         listed = store.list_keys()
         assert len(listed) == 1
         assert listed[0].lifecycle_state() == "revoked"
 
     def test_remove_nonexistent(self):
         store = KeyStore()
-        assert not store.remove("nonexistent")
+        removed = store.remove("nonexistent")
+        assert not removed
 
     def test_verify(self):
         store = KeyStore()

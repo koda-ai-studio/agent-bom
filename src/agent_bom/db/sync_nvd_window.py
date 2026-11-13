@@ -102,7 +102,7 @@ class NvdRateLimiter:
     ) -> None:
         self.max_requests = max(1, max_requests)
         self.window_seconds = window_seconds
-        self._clock = clock or (lambda: _clock())
+        self._clock = clock or _clock
         self._sleep = sleep
         self._stamps: deque[float] = deque()
         self._not_before = 0.0

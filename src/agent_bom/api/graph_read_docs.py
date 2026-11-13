@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_bom.api.current_graph import ROTATING_CODE, SEEDING_CODE
-from agent_bom.api.current_graph_builds import BUILDING_CODE
+from agent_bom.api.current_graph_builds import BUILDING_CODE, ROTATING_CODE
 from agent_bom.api.error_models import ErrorEnvelope
+from agent_bom.demo_estate.boot_seed import SEEDING_CODE
 
 ROTATING_RESPONSE: dict[str, Any] = {
     "model": ErrorEnvelope,

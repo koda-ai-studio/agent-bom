@@ -686,7 +686,8 @@ def test_finding_detail_exploit_story_is_the_rest_story(demo: _Estate) -> None:
     # The MCP server resolves the same current-estate store the REST routes read.
     story = demo.mcp(finding_detail_impl, finding_id=row["id"], _get_graph_store=default_graph_store)["exploit_story"]
     rest = demo.rest("/v1/graph/exploit-story", finding_id=row["id"])
-    assert story.pop("status") == "evaluated"
+    story_status = story.pop("status")
+    assert story_status == "evaluated"
     assert story == rest
     assert rest["scope"] == "occurrence"
     assert rest["narrative"]["text"].startswith("CVE-2023-4863")

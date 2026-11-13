@@ -34,7 +34,8 @@ def test_unscoped_operations_are_rejected(store):
 def test_foreign_exact_id_read_delete_and_list_are_denied(store):
     store.put(source(), tenant_id="tenant-a")
     assert store.get("same-id", tenant_id="tenant-b") is None
-    assert store.delete("same-id", tenant_id="tenant-b") is False
+    deleted = store.delete("same-id", tenant_id="tenant-b")
+    assert deleted is False
     assert store.list_all(tenant_id="tenant-b") == []
     assert store.get("same-id", tenant_id="tenant-a").tenant_id == "tenant-a"
 

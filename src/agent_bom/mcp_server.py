@@ -608,6 +608,7 @@ def create_mcp_server(
         _execute_tool_async=_execute_tool_async,
         _json_tool_result=_json_tool_result,
         _mcp_request_ctx=_mcp_request_ctx,
+        # Late-bound so patching agent_bom.mcp_server._run_scan_pipeline reaches the registered tools.
         _run_scan_pipeline=lambda *args, **kwargs: _run_scan_pipeline(*args, **kwargs),
         _scan_result_owner=_scan_result_owner,
         _truncate_response=_truncate_response,
@@ -639,6 +640,7 @@ def create_mcp_server(
         _execute_tool_async=_execute_tool_async,
         _execute_tool_sync_async=_execute_tool_sync_async,
         _get_registry_data=_get_registry_data,
+        # Late-bound for the same reason as the scanning tools above.
         _run_scan_pipeline=lambda *args, **kwargs: _run_scan_pipeline(*args, **kwargs),
         _truncate_response=_truncate_response,
         _validate_ecosystem=_validate_ecosystem,
