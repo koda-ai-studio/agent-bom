@@ -2213,3 +2213,105 @@ def test_postgres_observation_filters_count_before_paging_and_respect_rls():
         assert store.query_observations(tenant)["total"] == 0
     finally:
         reset_current_tenant(token)
+
+
+def _source_case(object_id: str, tenant: str):
+    from agent_bom.api.models import SourceRecord
+    from agent_bom.api.postgres_store import PostgresSourceStore
+
+    store = PostgresSourceStore()
+    record = SourceRecord(source_id=object_id, tenant_id=tenant, display_name=f"Source {tenant}", kind="scan.repo")
+    return (
+        lambda: store.put(record, tenant_id=tenant),
+        lambda: store.get(object_id, tenant_id=tenant),
+        lambda found: found.display_name,
+    )
+
+
+def _exception_case(object_id: str, tenant: str):
+    from agent_bom.api.auth import Role, create_api_key
+    from agent_bom.api.exception_store import VulnException
+    from agent_bom.api.postgres_store import PostgresExceptionStore, PostgresKeyStore
+
+    # exceptions.team_id references teams, so each tenant needs its root row.
+    _, key = create_api_key(f"owner-{tenant}", Role.ADMIN, tenant_id=tenant)
+    PostgresKeyStore().provision_tenant_key(key, team_name=f"Team {tenant}")
+    store = PostgresExceptionStore()
+    record = VulnException(exception_id=object_id, vuln_id="CVE-2026-0001", package_name="pkg", reason=tenant, tenant_id=tenant)
+    return (
+        lambda: store.put(record, tenant_id=tenant),
+        lambda: store.get(object_id, tenant_id=tenant),
+        lambda found: found.reason,
+    )
+
+
+def _jit_grant_case(object_id: str, tenant: str):
+    from agent_bom.api.identity_grants import AgentJITGrant
+    from agent_bom.api.postgres_agent_identity import PostgresAgentIdentityStore
+
+    store = PostgresAgentIdentityStore()
+    grant = AgentJITGrant(object_id, "identity", "agent", tenant, f"tool-{tenant}", "requested", "2026-11-12T00:00:00+00:00")
+    return (
+        lambda: store.put_jit_grant(grant, tenant_id=tenant),
+        lambda: store.get_jit_grant(object_id, tenant_id=tenant),
+        lambda found: found.tool_name,
+    )
+
+
+def _conditional_policy_case(object_id: str, tenant: str):
+    from agent_bom.api.identity_policies import ConditionalAccessPolicy
+    from agent_bom.api.postgres_agent_identity import PostgresAgentIdentityStore
+
+    store = PostgresAgentIdentityStore()
+    policy = ConditionalAccessPolicy(
+        policy_id=object_id,
+        tenant_id=tenant,
+        name=f"Policy {tenant}",
+        effect="require",
+        status="active",
+        created_at="2026-11-12T00:00:00+00:00",
+    )
+    return (
+        lambda: store.put_conditional_policy(policy, tenant_id=tenant),
+        lambda: store.get_conditional_policy(object_id, tenant_id=tenant),
+        lambda found: found.name,
+    )
+
+
+@pytest.mark.parametrize("case", [_source_case, _exception_case, _jit_grant_case, _conditional_policy_case])
+def test_postgres_global_id_upserts_reject_cross_tenant_takeover(case):
+    """A second tenant reusing a global object ID gets a clean refusal, never a write.
+
+    Since PostgreSQL 16.16 (CVE-2026-120154) an ON CONFLICT DO UPDATE whose
+    conflicting row fails the UPDATE row-level policies raises before any
+    `WHERE t.tenant_id = EXCLUDED.tenant_id` qual runs, so a store that relied on
+    that qual to update zero rows surfaced a raw RLS error instead.
+    """
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+
+    suffix = uuid4().hex
+    object_id = f"takeover-{suffix}"
+    tenant_a, tenant_b = f"owner-a-{suffix}", f"owner-b-{suffix}"
+
+    def _as(tenant: str, action):
+        token = set_current_tenant(tenant)
+        try:
+            return action()
+        finally:
+            reset_current_tenant(token)
+
+    put_a, get_a, label = _as(tenant_a, lambda: case(object_id, tenant_a))
+    put_b, get_b, _label = _as(tenant_b, lambda: case(object_id, tenant_b))
+
+    _as(tenant_a, put_a)
+    _as(tenant_a, put_a)  # the owner's own rewrite still lands
+
+    def _attempt_takeover():
+        with pytest.raises(ValueError, match="(different|another) tenant"):
+            put_b()
+        return get_b()
+
+    assert _as(tenant_b, _attempt_takeover) is None
+    stored = _as(tenant_a, get_a)
+    assert stored is not None and stored.tenant_id == tenant_a
+    assert tenant_a in label(stored)
