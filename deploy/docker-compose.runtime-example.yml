@@ -30,7 +30,7 @@ services:
     build:
       context: ..
       dockerfile: deploy/docker/Dockerfile.runtime
-    image: agentbom/agent-bom:0.114.0
+    image: agentbom/agent-bom:0.115.0
     depends_on:
       - mcp-server
     environment:
