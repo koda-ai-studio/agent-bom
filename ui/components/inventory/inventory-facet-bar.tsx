@@ -6,6 +6,14 @@ import { Search } from "lucide-react";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useInventory, type InventoryFilterKey } from "@/lib/inventory-context";
 
+const ALL_LABELS: Partial<Record<InventoryFilterKey, string>> = {
+  type: "types",
+  environment: "environments",
+  source: "sources",
+  provider: "providers",
+  severity: "finding severities",
+};
+
 function label(value: string): string {
   return value.replace(/[_:.-]+/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
@@ -60,7 +68,7 @@ export function InventoryFacetBar({
         }}
         className="h-9 rounded-lg border border-outline bg-surface px-2.5 text-xs font-normal normal-case tracking-normal text-foreground focus:border-outline-strong focus:outline-none"
       >
-        <option value="">All {title.toLowerCase()}</option>
+        <option value="">All {ALL_LABELS[key] ?? title.toLowerCase()}</option>
         {missingSelection ? <option value={selectedValue}>
           {selectedValue.split(",").map((value) => label(value.trim())).join(", ")} (selected · count unavailable)
         </option> : null}

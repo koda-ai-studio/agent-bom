@@ -13,7 +13,7 @@ import { StatStrip } from "@/components/stat-strip";
 import { PageEmptyState, PageLoadingState } from "@/components/states/page-state";
 import { AssetDetail } from "@/components/inventory/asset-detail";
 import { InventoryTypeChips } from "@/components/inventory/inventory-type-chips";
-import { capitalize, entityTypeLabel } from "@/lib/inventory-units";
+import { capitalize, entityTypeLabel, kindTypeCounts } from "@/lib/inventory-units";
 import { useInventorySelection } from "@/lib/inventory-selection";
 import { useInventory } from "@/lib/inventory-context";
 import { assetIcon, assetKindLabel } from "@/lib/asset-icon-registry";
@@ -55,7 +55,12 @@ export function AssetInventoryView({
   } = useInventory();
 
   const allRows = useMemo(() => model?.rowsByKind[kind] ?? [], [model, kind]);
-  const total = model?.totalsByKind[kind] ?? 0;
+  const filtered = Object.values(filters).some(Boolean);
+  const allTypesTotal = useMemo(
+    () => (estateSummary ? kindTypeCounts(config, estateSummary).reduce((sum, part) => sum + part.count, 0) : 0),
+    [config, estateSummary],
+  );
+  const typeNarrowed = multiType && Boolean(filters.type) && allTypesTotal > (model?.matchingTotal ?? 0);
   const loadedCount = model?.loadedByKind[kind] ?? 0;
   const summary = useMemo(() => summarizeRows(allRows), [allRows]);
   const { selected, select } = useInventorySelection(allRows, model?.scanId, loadAssetDetail);
@@ -134,9 +139,15 @@ export function AssetInventoryView({
       <InventoryTypeChips kind={config} />
 
       <StatStrip
+        data-testid="inventory-kind-stats"
         items={[
-          { label: multiType ? "Matching, all types" : `Matching ${config.unitLabel.toLowerCase()}`, value: total.toLocaleString() },
-          { label: "Matching filters", value: model.matchingTotal.toLocaleString() },
+          {
+            label: filtered ? "Matching filters" : multiType ? "All types" : config.unitLabel,
+            value: model.matchingTotal.toLocaleString(),
+          },
+          // A picked type narrows the count; the type facet still knows the
+          // all-types count under the other filters.
+          ...(typeNarrowed ? [{ label: "All types", value: allTypesTotal.toLocaleString() }] : []),
           { label: "Loaded rows", value: loadedCount.toLocaleString() },
           { label: "Loaded with findings", value: summary.withFindings.toLocaleString(), accent: summary.withFindings > 0 ? "warn" : "neutral" },
           { label: "Loaded direct findings", value: summary.totalFindings.toLocaleString() },

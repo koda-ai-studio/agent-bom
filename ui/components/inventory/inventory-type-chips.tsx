@@ -6,10 +6,12 @@ import { useInventory } from "@/lib/inventory-context";
 import type { AssetKindConfig } from "@/lib/inventory";
 import { capitalize, entityTypeLabel, kindTypeCounts } from "@/lib/inventory-units";
 
+// Only the pressed chip gets the accent fill. Hover and focus change the border
+// or outline, never the fill, so an unpressed chip never reads as selected.
 const CHIP =
-  "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2";
-const CHIP_ON = "border-outline-strong bg-surface-muted font-medium text-foreground";
-const CHIP_OFF = "border-outline bg-surface text-ink-secondary hover:bg-surface-muted";
+  "inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]";
+const CHIP_ON = "border-[color:var(--accent-border)] bg-[color:var(--accent-soft)] font-medium text-[color:var(--accent)]";
+const CHIP_OFF = "border-outline bg-surface text-ink-secondary hover:border-outline-strong hover:text-foreground";
 
 /**
  * One chip per entity type in a multi-type kind. Counts come from the same
@@ -31,7 +33,7 @@ export function InventoryTypeChips({ kind }: { kind: AssetKindConfig }) {
     <button key={key} type="button" aria-pressed={pressed} aria-label={`${label} ${count.toLocaleString()}`}
       onClick={onClick} className={`${CHIP} ${pressed ? CHIP_ON : CHIP_OFF}`}>
       <span>{label}</span>
-      <span className="tabular-nums text-ink-tertiary">{count.toLocaleString()}</span>
+      <span className={`tabular-nums ${pressed ? "" : "text-ink-tertiary"}`}>{count.toLocaleString()}</span>
     </button>
   );
 

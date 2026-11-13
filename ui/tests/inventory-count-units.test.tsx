@@ -184,3 +184,59 @@ describe("kind list type chips", () => {
     await waitFor(() => expect(api.getInventorySummary).toHaveBeenLastCalledWith(SNAPSHOT, expect.objectContaining({ type: ASSET_KIND_BY_ID.servers.entityTypes })));
   });
 });
+
+describe("kind page follow-ups", () => {
+  function renderServers() {
+    return render(
+      <InventoryProvider entityTypes={ASSET_KIND_BY_ID.servers.entityTypes} scanId={SNAPSHOT}>
+        <AssetInventoryView kind="servers" />
+      </InventoryProvider>,
+    );
+  }
+
+  function looksActive(chip: HTMLElement): boolean {
+    return chip.className.split(/\s+/).some((token) => token.startsWith("bg-[color:var(--accent-soft"));
+  }
+
+  it("styles exactly one chip as active, and hover or focus never borrows the active look", async () => {
+    renderServers();
+    const chips = await screen.findByRole("group", { name: "Filter by asset type" });
+    const check = (activeName: string) => {
+      const buttons = within(screen.getByRole("group", { name: "Filter by asset type" })).getAllByRole("button");
+      expect(buttons.filter((b) => b.getAttribute("aria-pressed") === "true").map((b) => b.getAttribute("aria-label"))).toEqual([activeName]);
+      expect(buttons.filter(looksActive).map((b) => b.getAttribute("aria-label"))).toEqual([activeName]);
+      for (const button of buttons.filter((b) => !looksActive(b))) {
+        expect(button.className).not.toMatch(/(hover|focus|focus-visible|active):bg-/);
+      }
+    };
+    check("All types 1,528");
+    vi.mocked(api.getInventorySummary).mockResolvedValue(summary({ tool: 312 }, MIXED));
+    fireEvent.click(within(chips).getByRole("button", { name: "Tools 312" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Tools 312" })).toHaveAttribute("aria-pressed", "true"));
+    check("Tools 312");
+  });
+
+  it("pluralizes every All option in the filter selects", async () => {
+    render(<InventoryProvider><InventoryIndex /></InventoryProvider>);
+    await screen.findByLabelText("Filter by environment");
+    const allOptions = () => [...document.querySelectorAll("select option[value='']")].map((option) => option.textContent);
+    await waitFor(() => expect(allOptions()).toHaveLength(5));
+    expect(allOptions().sort()).toEqual(["All environments", "All finding severities", "All providers", "All sources", "All types"]);
+  });
+
+  it("shows one matching count unfiltered and adds the all-types count only when a type narrows it", async () => {
+    renderServers();
+    const stats = await screen.findByTestId("inventory-kind-stats");
+    await waitFor(() => expect(within(stats).getAllByText("1,528")).toHaveLength(1));
+    expect(within(stats).queryByText("Matching filters")).not.toBeInTheDocument();
+
+    vi.mocked(api.getInventorySummary).mockResolvedValue(summary({ tool: 312 }, MIXED));
+    vi.mocked(api.getInventoryAssets).mockResolvedValue(page([row("tool-a", "tool")], 312));
+    fireEvent.click(screen.getByRole("button", { name: "Tools 312" }));
+    await waitFor(() => expect(within(screen.getByTestId("inventory-kind-stats")).getByText("Matching filters")).toBeInTheDocument());
+    const narrowed = screen.getByTestId("inventory-kind-stats");
+    expect(within(narrowed).getByText("312")).toBeInTheDocument();
+    expect(within(narrowed).getByText("All types")).toBeInTheDocument();
+    expect(within(narrowed).getByText("1,528")).toBeInTheDocument();
+  });
+});
