@@ -131,10 +131,13 @@ def test_write_preserves_the_stamp_when_no_metric_changed(tmp_path: Path) -> Non
     no signal, which every branch then had to revert or carry, and which
     collided whenever two branches ran the generator on different days.
 
-    Simulated by ageing the committed stamp rather than by waiting a day, so
-    the assertion is real on the day it is written.
+    Simulated by ageing the stamp rather than by waiting a day, so the
+    assertion is real on the day it is written. The snapshot is regenerated
+    from this tree first: PRs no longer refresh the committed counts, so the
+    committed file may legitimately lag the tree.
     """
-    aged = json.loads(METRICS_JSON.read_text(encoding="utf-8"))
+    current = _run_write_against_copy(tmp_path, json.loads(METRICS_JSON.read_text(encoding="utf-8")))
+    aged = dict(current)
     aged["generated_on"] = "2020-01-01"
 
     rewritten = _run_write_against_copy(tmp_path, aged)
