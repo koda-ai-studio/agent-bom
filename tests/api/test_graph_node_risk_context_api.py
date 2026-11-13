@@ -81,26 +81,39 @@ def test_each_tenant_reads_only_its_own_context(store: SQLiteGraphStore) -> None
     assert served["node"]["attributes"]["risk_context"]["internet_exposed"] is True
 
 
-def test_mcp_exposure_paths_carry_the_same_context(store: SQLiteGraphStore) -> None:
+def test_mcp_exposure_paths_carry_compact_verdicts_and_full_reasons_on_nodes(store: SQLiteGraphStore) -> None:
     from agent_bom.mcp_tools.graph import exposure_paths_impl
 
     def call(view: str) -> dict[str, Any]:
         payload = json.loads(asyncio.run(exposure_paths_impl(scan_id=SCAN, limit=10, view=view, _get_graph_store=lambda: store)))
         assert "error" not in payload, payload
-        return payload["paths"][0]
+        return payload
 
+    client = TestClient(app)
+    api_node = client.get("/v1/graph/node/ds:claims", params={"scan_id": SCAN}).json()["node"]
     full = call("full")
-    refs = {ref["id"]: ref for ref in full["hops"]}
-    api_node = TestClient(app).get("/v1/graph/node/ds:claims", params={"scan_id": SCAN}).json()["node"]
-    assert refs["ds:claims"]["riskContext"] == api_node["attributes"]["risk_context"]
-    assert refs["vm:web"]["riskContext"]["internet_exposed"] is True
+    path = full["paths"][0]
+    refs = {ref["id"]: ref for ref in path["hops"]}
+    # Hop references carry the verdicts; the reasons stay on the node.
+    assert refs["vm:web"]["risk"] == {"internetExposed": True}
+    assert refs["role:app"]["risk"] == {"admin": True}
+    assert refs["ds:claims"]["risk"] == {"crownJewel": True, "dataSensitivity": "phi"}
+    assert all("riskContext" not in ref for ref in path["hops"])
+    nodes = {node["id"]: node for node in full["nodes"]}
+    assert nodes["ds:claims"]["attributes"]["risk_context"] == api_node["attributes"]["risk_context"]
+    assert path["rankingFactors"]["internetExposed"] is True
+    assert path["rankingFactors"]["exposedHopIds"] == ["vm:web"]
+    assert "Internet-exposed at web (vm:web), the entry: recorded internet_exposed." in path["rankingFactors"]["reasons"]
 
-    summary = call("summary")
-    assert summary["source"]["risk"]["internet_exposed"] is True
-    assert summary["target"]["risk"] == {
-        "internet_exposed": None,
-        "privilege_level": None,
-        "is_admin": None,
-        "data_sensitivity": "phi",
-        "crown_jewel": True,
-    }
+    summary = call("summary")["paths"][0]
+    assert summary["source"]["risk"] == {"internetExposed": True}
+    assert summary["target"]["risk"] == {"crownJewel": True, "dataSensitivity": "phi"}
+    assert summary["exposedHops"] == [0]
+
+
+def test_rest_queue_matches_the_mcp_verdicts(store: SQLiteGraphStore) -> None:
+    body = TestClient(app).get("/v1/graph/attack-paths", params={"scan_id": SCAN}).json()
+    path = body["attack_paths"][0]
+    assert path["ranking_factors"]["exposed_hop_ids"] == ["vm:web"]
+    hops = {ref["id"]: ref for ref in path["exposure_path"]["hops"]}
+    assert hops["ds:claims"]["risk"] == {"crownJewel": True, "dataSensitivity": "phi"}

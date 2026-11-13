@@ -768,6 +768,27 @@
           "resource_kind": "s3-bucket",
           "resource_name": "known-private",
           "resource_type": "bucket",
+          "risk_context": {
+            "crown_jewel": false,
+            "data_sensitivity": null,
+            "internet_exposed": false,
+            "is_admin": null,
+            "privilege_level": null,
+            "reasons": [
+              {
+                "attribute": "internet_exposed",
+                "field": "internet_exposed",
+                "rule": "recorded_not_public",
+                "value": false
+              }
+            ],
+            "scan_id": "cloud-context",
+            "sources": [
+              "cloud-inventory:aws",
+              "mcp-scan"
+            ],
+            "version": 1
+          },
           "tags": {}
         },
         "canonical_id": "72d76cda-5358-56b3-9d39-6d665760f7eb",
@@ -894,6 +915,34 @@
           "resource_kind": "s3-bucket",
           "resource_name": "known-public",
           "resource_type": "bucket",
+          "risk_context": {
+            "crown_jewel": false,
+            "data_sensitivity": null,
+            "internet_exposed": true,
+            "is_admin": null,
+            "privilege_level": null,
+            "reasons": [
+              {
+                "attribute": "internet_exposed",
+                "evidence": {
+                  "basis": "recorded_attributes",
+                  "inputs": {
+                    "publicly_accessible": true
+                  },
+                  "source": "cloud-inventory"
+                },
+                "field": "internet_exposed",
+                "rule": "recorded_internet_exposed",
+                "value": true
+              }
+            ],
+            "scan_id": "cloud-context",
+            "sources": [
+              "cloud-inventory:aws",
+              "mcp-scan"
+            ],
+            "version": 1
+          },
           "tags": {}
         },
         "canonical_id": "31f347f4-a4bb-598a-8266-5cd5e55a7ec4",
@@ -1270,7 +1319,27 @@
             "source": "cloud-inventory"
           },
           "location": "us-east-1",
-          "resource_name": "known-private"
+          "resource_name": "known-private",
+          "risk_context": {
+            "crown_jewel": false,
+            "data_sensitivity": null,
+            "internet_exposed": false,
+            "is_admin": null,
+            "privilege_level": null,
+            "reasons": [
+              {
+                "attribute": "internet_exposed",
+                "field": "internet_exposed",
+                "rule": "recorded_not_public",
+                "value": false
+              }
+            ],
+            "scan_id": "cloud-context",
+            "sources": [
+              "cnapp-overlay"
+            ],
+            "version": 1
+          }
         },
         "canonical_id": "dcec7740-893d-5be6-acee-bc4d2a73ca1c",
         "category_uid": 5,
@@ -1382,7 +1451,34 @@
             "source": "cloud-inventory"
           },
           "location": "us-east-1",
-          "resource_name": "known-public"
+          "resource_name": "known-public",
+          "risk_context": {
+            "crown_jewel": false,
+            "data_sensitivity": null,
+            "internet_exposed": true,
+            "is_admin": null,
+            "privilege_level": null,
+            "reasons": [
+              {
+                "attribute": "internet_exposed",
+                "evidence": {
+                  "basis": "recorded_attributes",
+                  "inputs": {
+                    "publicly_accessible": true
+                  },
+                  "source": "cloud-inventory"
+                },
+                "field": "internet_exposed",
+                "rule": "recorded_internet_exposed",
+                "value": true
+              }
+            ],
+            "scan_id": "cloud-context",
+            "sources": [
+              "cnapp-overlay"
+            ],
+            "version": 1
+          }
         },
         "canonical_id": "b02b194e-5dca-5f9d-919a-f16cb50c767a",
         "category_uid": 5,
@@ -3471,6 +3567,28 @@
             "scope": "recorded_identity_governance_signals",
             "scored_value": 0.6,
             "status": "assessed"
+          },
+          "risk_context": {
+            "crown_jewel": false,
+            "data_sensitivity": null,
+            "internet_exposed": null,
+            "is_admin": false,
+            "privilege_level": null,
+            "reasons": [
+              {
+                "attribute": "admin_equivalence_status",
+                "field": "privilege_level",
+                "rule": "admin_equivalence",
+                "value": "not_admin"
+              }
+            ],
+            "scan_id": "cloud-context",
+            "sources": [
+              "aws-bedrock",
+              "cloud:aws",
+              "mcp-scan"
+            ],
+            "version": 1
           },
           "source_field": "",
           "tenant_id": ""

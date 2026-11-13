@@ -14,7 +14,7 @@ from agent_bom.graph.edge_lookup import _build_edge_lookup, _EdgeLookup, _hop_ed
 from agent_bom.graph.integration_contract import EVIDENCE_VERSION, node_evidence_provenance
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _node_type_value
-from agent_bom.graph.risk_context import stored_risk_context
+from agent_bom.graph.risk_context import risk_verdicts
 from agent_bom.graph.types import EntityType
 
 
@@ -102,9 +102,9 @@ def _exposure_ref_for_node(node_id: str, nodes_by_id: dict[str, Any]) -> dict[st
     if getattr(node, "severity", ""):
         ref["severity"] = node.severity
     ref["risk_assessment"] = node.risk_assessment
-    risk_context = stored_risk_context(node.attributes or {})
-    if risk_context is not None:
-        ref["riskContext"] = dict(risk_context)
+    verdicts = risk_verdicts(node.attributes or {})
+    if verdicts is not None:
+        ref["risk"] = verdicts
     if float(getattr(node, "risk_score", 0.0) or 0.0) > 0 or node.risk_assessment["status"] == "assessed":
         ref["riskScore"] = node.risk_score
     return ref

@@ -260,6 +260,29 @@ def stored_risk_context(attributes: Mapping[str, Any]) -> Mapping[str, Any] | No
     return context if isinstance(context, Mapping) else None
 
 
+_ESCALATION_LEVELS = frozenset({"escalates_to_admin", "escalates_to_conditional_admin", "conditional_admin"})
+
+
+def risk_verdicts(attributes: Mapping[str, Any]) -> dict[str, Any] | None:
+    """The established positive verdicts only, for path references; reasons stay on the node."""
+    context = stored_risk_context(attributes)
+    if context is None:
+        return None
+    verdicts: dict[str, Any] = {}
+    if context.get("internet_exposed") is True:
+        verdicts["internetExposed"] = True
+    if context.get("crown_jewel") is True:
+        verdicts["crownJewel"] = True
+    sensitivity = context.get("data_sensitivity")
+    if isinstance(sensitivity, str) and is_sensitive_label(sensitivity):
+        verdicts["dataSensitivity"] = sensitivity
+    if context.get("is_admin") is True:
+        verdicts["admin"] = True
+    elif context.get("privilege_level") in _ESCALATION_LEVELS:
+        verdicts["privilege"] = context["privilege_level"]
+    return verdicts or None
+
+
 def internet_exposure_attributes(attributes: Mapping[str, Any]) -> list[str]:
     """The recorded facts that make a node internet-exposed, named for a reason line."""
     context = stored_risk_context(attributes)
@@ -300,6 +323,7 @@ __all__ = [
     "derive_node_risk_context",
     "derive_privilege",
     "internet_exposure_attributes",
+    "risk_verdicts",
     "is_sensitive_label",
     "node_internet_exposed",
     "stored_risk_context",

@@ -160,7 +160,11 @@ const BUDGETS = {
   // locally before the taxonomy refresh, without adding dependencies. This
   // total includes lazy chunks; retain ~17 KiB of headroom at 4384 KiB.
   // Largest-chunk and shared-runtime ceilings remain unchanged.
-  totalClientJsBytes: 4_489_216,
+  // Main measures 4383.9 KiB locally, 0.1 KiB under that line. Node risk
+  // context (crown-jewel marker, the node panel's reasons) adds a measured
+  // 3.7 KiB, to 4387.6 KiB, after trimming its formatter; no dependency. Keep
+  // 12.4 KiB of bounded headroom at 4400 KiB; per-chunk ceilings stay fixed.
+  totalClientJsBytes: 4_505_600,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.

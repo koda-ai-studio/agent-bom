@@ -22,8 +22,8 @@ describe("GraphRiskContext", () => {
     render(<GraphRiskContext attributes={jewel} />);
     const section = screen.getByRole("region", { name: "Risk context" });
     expect(within(section).getByText("Crown jewel")).toBeInTheDocument();
-    expect(within(section).getByText("Not internet-exposed")).toBeInTheDocument();
-    expect(within(section).getByText("Sensitive: phi")).toBeInTheDocument();
+    expect(within(section).queryByText("Internet-exposed")).toBeNull();
+    expect(within(section).getByText("Sensitive data")).toBeInTheDocument();
     const reasons = within(section).getAllByRole("listitem").map(item => item.textContent);
     expect(reasons).toEqual([
       "Internet-exposed: recorded publicly_accessible = false",

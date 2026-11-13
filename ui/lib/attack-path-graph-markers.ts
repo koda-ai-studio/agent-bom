@@ -6,14 +6,11 @@
  * before: `coerce_truthy` for exposure (unknown is not proof),
  * `has_sensitive_data_label` for sensitivity, and the admin test for privilege.
  */
-import { riskContextOf, type NodeContextMarkerKind, type NodeRiskContext } from "@/lib/node-risk-context";
+import { contextMarkers, NON_SENSITIVE, privilegedLabel, riskContextOf, type NodeContextMarker } from "@/lib/node-risk-context";
 
-export { MARKER_KINDS, MARKER_META, type NodeContextMarkerKind } from "@/lib/node-risk-context";
-
-export type NodeContextMarker = { kind: NodeContextMarkerKind; label: string };
+export { MARKER_KINDS, MARKER_META, type NodeContextMarker, type NodeContextMarkerKind } from "@/lib/node-risk-context";
 
 const TRUE_TEXT = new Set(["true", "t", "yes", "y", "1"]);
-const NON_SENSITIVE = new Set(["", "0", "false", "no", "none", "null", "unevaluable", "unknown", "public"]);
 const SENSITIVITY_KEYS = ["data_sensitivity", "sensitivity", "data_classification_tier", "data_classification"];
 
 export function recordedTrue(value: unknown): boolean {
@@ -31,29 +28,6 @@ function sensitivityLabel(attributes: Record<string, unknown>): string | null {
     if (!NON_SENSITIVE.has(text)) return text.replaceAll("_", " ");
   }
   return null;
-}
-
-function privilegedLabel(admin: boolean, escalates: boolean): string | null {
-  if (admin) return "Privileged: admin (recorded)";
-  return escalates ? "Privileged: can assume an admin role (recorded)" : null;
-}
-
-function crownJewelLabel(context: NodeRiskContext): string {
-  const rules = context.reasons.filter(reason => reason.field === "crown_jewel").map(reason => reason.rule);
-  if (rules.includes("sensitive_data_store")) return `Crown jewel: holds sensitive data (${context.data_sensitivity}) (recorded)`;
-  if (rules.includes("production_secret_store")) return "Crown jewel: production secrets store (recorded)";
-  return "Crown jewel: declared critical (recorded)";
-}
-
-function contextMarkers(context: NodeRiskContext): NodeContextMarker[] {
-  const markers: NodeContextMarker[] = [];
-  if (context.internet_exposed === true) markers.push({ kind: "internet", label: "Internet-exposed (recorded)" });
-  const sensitivity = context.data_sensitivity;
-  if (sensitivity && !NON_SENSITIVE.has(sensitivity)) markers.push({ kind: "sensitive", label: `Sensitive data: ${sensitivity.replaceAll("_", " ")} (recorded)` });
-  const privileged = privilegedLabel(context.is_admin === true, context.privilege_level === "escalates_to_admin");
-  if (privileged) markers.push({ kind: "privileged", label: privileged });
-  if (context.crown_jewel === true) markers.push({ kind: "crown_jewel", label: crownJewelLabel(context) });
-  return markers;
 }
 
 export function nodeContextMarkers(attributes: Record<string, unknown>): NodeContextMarker[] {

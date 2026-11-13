@@ -43,9 +43,9 @@ describe("node context markers from the stored risk context", () => {
   it("explains each reason in words with its source", () => {
     expect(riskReasonText({ field: "internet_exposed", rule: "recorded_internet_exposed", attribute: "internet_exposed", value: true,
       evidence: { source: "cloud-inventory", inputs: { publicly_accessible: true } } }))
-      .toBe("Internet-exposed: recorded by cloud-inventory (publicly_accessible)");
+      .toBe("Internet-exposed: recorded (publicly_accessible)");
     expect(riskReasonText({ field: "internet_exposed", rule: "recorded_internet_exposed", attribute: "internet_exposed", value: true,
-      evidence: { finding_ids: ["mc:sg-open"] } })).toBe("Internet-exposed: network rule in mc:sg-open");
+      evidence: { finding_ids: ["mc:sg-open"] } })).toBe("Internet-exposed: recorded (network rule mc:sg-open)");
     expect(riskReasonText({ field: "crown_jewel", rule: "declared_critical_asset", attribute: "asset_criticality", value: "tier0" }))
       .toBe("Crown jewel: declared criticality tier0");
     expect(riskReasonText({ field: "data_sensitivity", rule: "recorded_data_sensitivity", attribute: "data_sensitivity", value: "sensitive", evidence: { basis: ["name"] } }))

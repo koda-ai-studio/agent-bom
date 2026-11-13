@@ -90,8 +90,11 @@ evidence tier, KEV, severity, confidence, composite risk and credentials.
 - `GET /v1/graph`, `/v1/graph/node/{id}` and every other node read: in the
   node's `attributes`. The canvas view keeps it.
 - Exposure paths over the API and the `exposure_paths` MCP tool: each hop
-  reference carries `riskContext` in the full view; the summary view gives the
-  source and target a `risk` block with the verdicts only.
+  reference carries a compact `risk` block with the positive verdicts only
+  (`internetExposed`, `crownJewel`, `dataSensitivity`, `admin` or an
+  escalation `privilege`). The MCP summary view keeps it on the source and
+  target and adds `exposedHops` positions; the full view's `nodes` carry the
+  whole context with its reasons, as the node read does.
 - Graph exports in JSON and GraphML (`attributes_json`) carry the attribute.
   The SBOM and SARIF formats do not map graph nodes and are unchanged.
 - The attack-path graph draws the internet, privileged, sensitive-data and
