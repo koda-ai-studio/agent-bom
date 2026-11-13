@@ -1,11 +1,13 @@
 # Privacy notice
 
-Last updated: 2026-11-06.
+Last updated: 2026-11-12.
 
-This notice covers the agent-bom software and its directory plugins, which run on
-your machine. The agent-bom project offers no public hosted service, and these tools
-send the project no data. Anyone who runs agent-bom as a service for others is its
-operator, and that operator's own notice applies to what they store.
+This notice covers the agent-bom software, its directory plugins, and the public
+lookup service at `https://agent-bom-lookup.up.railway.app` (the "lookup service"),
+which is operated by Mohamed Wagdy Saad, operating as Koda AI ("we"). Apart from the lookup
+service, the agent-bom project offers no public hosted service, and the software and
+plugins send the project no data. Anyone else who runs agent-bom as a service for
+others is its operator, and that operator's own notice applies to what they store.
 
 ## Scope and information processed
 
@@ -99,6 +101,43 @@ lists the supported destinations and opt-in behavior.
 The operator of a hosted or self-hosted deployment sets its log, backup and
 identity-account retention, and must document those settings and its deletion process.
 
+## Public lookup service
+
+The lookup service answers two read-only questions over MCP, with no account or
+sign-in: whether a package version has known vulnerabilities (`check`), and what an
+advisory id refers to (`intel_lookup`).
+
+- **What you send.** Only the tool arguments: a package name, ecosystem and optional
+  version, or one advisory id. Do not put personal information in them. The service
+  reads no file or setting you choose.
+- **Where it goes.** `check` sends the package coordinate to `api.osv.dev` and
+  `api.github.com` (public security advisories). When you give no version, it asks the
+  package's registry for the latest release: `registry.npmjs.org`, `pypi.org`,
+  `proxy.golang.org`, `crates.io` or `search.maven.org`. For npm and PyPI packages it
+  can also confirm with `registry.npmjs.org` or `pypi.org` that the version is
+  published. `intel_lookup` reads the service's own advisory database and contacts
+  nothing. At start-up the service downloads public advisory data from
+  `osv-vulnerabilities.storage.googleapis.com`, CISA and `epss.empiricalsecurity.com`,
+  sending nothing about you. These providers receive ordinary network request
+  metadata from the service, not your address.
+- **What we keep.** In memory, the last 256 calls (tool name, your network address as
+  the rate-limit key, status and duration, and for a call that fails its error
+  message, which can repeat the package name you sent; not the arguments themselves)
+  and per-address rate-limit counters. On the service's disk, a cache of advisory
+  answers keyed by package coordinate, with no caller identity, reused for up to 24
+  hours. The service has no persistent storage: the cache is lost whenever the service
+  is redeployed, and the in-memory records whenever it restarts.
+- **Hosting.** The service runs on Railway. Railway's request logs record your network
+  address, the request method, path and status. The service's own log, which Railway
+  also keeps, records each call's tool name, your network address and duration, and
+  for a call that fails its error message, which can repeat the package name you
+  sent. Both are kept under Railway's own retention and privacy policy.
+- **No accounts, cookies, tracking, advertising, profiling or sale of data.** The
+  service is not directed at children.
+- **Your requests.** We hold no account or profile for you and cannot link a call to
+  a person. For questions or requests about the lookup service, contact
+  wagdy@koda-studio.dev.
+
 ## Purposes and your controls
 
 The information above is processed only to produce the security result you asked for.
@@ -109,7 +148,8 @@ the guard's `osv_lookup` option, turn off rescan summaries with
 
 ## Access and questions
 
-The project holds no records about you from these tools. For data stored by a hosted
+Apart from the lookup service described above, the project holds no records
+about you from these tools. For data stored by a hosted
 or self-hosted deployment, contact its operator. Use the project's
 [support channel](https://github.com/koda-ai-studio/agent-bom/issues) for general
 questions without including private records. Report security concerns through

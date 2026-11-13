@@ -1,8 +1,8 @@
 apiVersion: v2
 name: agent-bom
 description: "AI supply-chain BOM: supported agents, MCP servers and AI packages, and what each one can reach. Self-hosted control plane, API and runtime gateway for Kubernetes."
-version: 0.114.0
-appVersion: "0.114.0"
+version: 0.115.0
+appVersion: "0.115.0"
 type: application
 keywords:
   - security
