@@ -172,6 +172,11 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         re.compile(r'(dependencies = \["agent-bom==)(\d+\.\d+\.\d+)'),
         "published",
     ),
+    ManagedPattern(
+        "plugin submission pin",
+        re.compile(r"(The plugins pin agent-bom )(\d+\.\d+\.\d+)"),
+        "published",
+    ),
     ManagedPattern("OCI chart pin", _OCI_CHART_PIN, "published"),
     # The platform-eks Terraform module installs the same published chart.
     ManagedPattern(
@@ -180,6 +185,30 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         "published",
     ),
 )
+
+# Records of what was actually run. A managed reference on a line matching the
+# file's pattern names the version that ran, so the sweep neither flags nor
+# rewrites it; the record is updated by hand when the check is rerun.
+# tests/test_version_alignment_evidence.py fails on an entry that matches nothing.
+AS_RUN_EVIDENCE: dict[str, re.Pattern[str]] = {
+    # Local qualification table: the upgrade rehearsal started from this image.
+    "site-docs/deployment/overview.md": re.compile(r"^\| Upgrade \d+\.\d+\.\d+ → "),
+    "docs/PLUGIN_REVIEW_CASES.md": re.compile(r"^How the positive cases were run:"),
+    "integrations/codex/review-cases.json": re.compile(r'^\s*"how":\s*"'),
+}
+
+
+def as_run_lines(rel_path: str, text: str) -> set[int]:
+    """1-based numbers of the lines in *text* that record a version that was run."""
+    pattern = AS_RUN_EVIDENCE.get(rel_path)
+    if pattern is None:
+        return set()
+    return {number for number, line in enumerate(text.splitlines(), start=1) if pattern.search(line)}
+
+
+def _line_of(text: str, offset: int) -> int:
+    return text.count("\n", 0, offset) + 1
+
 
 # A chart installed from the repository path on main references the next,
 # unreleased image tags. Such an install is drift unless the few lines above it
@@ -312,13 +341,14 @@ def scan_text(rel_path: str, text: str, version: str, *, published: str | None =
     published = version if published is None else published
     drift: list[str] = []
     lines = text.splitlines()
+    as_run = as_run_lines(rel_path, text)
     for managed in MANAGED_PATTERNS:
         want = expected_version(rel_path, managed.tracks, version, published)
         for match in managed.regex.finditer(text):
             found = match.group(2)
-            if found == want:
+            lineno = _line_of(text, match.start(2))
+            if found == want or lineno in as_run:
                 continue
-            lineno = text.count("\n", 0, match.start(2)) + 1
             line = lines[lineno - 1].strip() if lineno <= len(lines) else ""
             drift.append(f"{rel_path}:{lineno}: {managed.label} pinned to {found} (expected {want}) -> {line}")
     drift.extend(helm_install_drift(rel_path, text))
@@ -437,8 +467,16 @@ def rewrite(version: str, *, published: str | None = None) -> tuple[int, list[Pa
         file_hits = 0
         for managed in MANAGED_PATTERNS:
             want = expected_version(rel, managed.tracks, version, published)
-            new_text, count = managed.regex.subn(rf"\g<1>{want}", new_text)
-            file_hits += count
+            as_run = as_run_lines(rel, new_text)
+            pieces: list[str] = []
+            last = 0
+            for match in managed.regex.finditer(new_text):
+                if _line_of(new_text, match.start(2)) in as_run:
+                    continue
+                pieces.append(new_text[last : match.start(2)] + want)
+                last = match.end(2)
+                file_hits += 1
+            new_text = "".join(pieces) + new_text[last:]
         if file_hits and new_text != text:
             path.write_text(new_text, encoding="utf-8")
             total += file_hits

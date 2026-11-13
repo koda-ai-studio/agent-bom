@@ -128,6 +128,50 @@ def test_upgrade_notice_uses_detected_command(monkeypatch, tmp_path):
         mod._update_check_result, mod._update_check_done = old_result, old_done
 
 
+def _run_cached_update_check(monkeypatch, tmp_path, cached: str, installed: str, pypi_latest: str | None = None) -> str | None:
+    import threading
+
+    from agent_bom.cli import _common as mod
+
+    monkeypatch.delenv("AGENT_BOM_OFFLINE", raising=False)
+    monkeypatch.delenv("AGENT_BOM_SKIP_UPDATE_CHECK", raising=False)
+    monkeypatch.setattr(sys, "argv", ["agent-bom", "scan"])
+    monkeypatch.setattr(mod, "__version__", installed)
+    cache = tmp_path / "update-check.txt"
+    cache.write_text(cached, encoding="utf-8")
+    monkeypatch.setattr(mod, "_update_check_cache_file", lambda: cache)
+
+    def _pypi(*_a, **_k):
+        if pypi_latest is None:
+            raise AssertionError("a fresh cache must not hit PyPI")
+        return {"info": {"version": pypi_latest}}
+
+    monkeypatch.setattr("agent_bom.http_client.fetch_json", _pypi)
+    old_result, old_done = mod._update_check_result, mod._update_check_done
+    mod._update_check_done = threading.Event()
+    try:
+        mod._check_for_update_bg()
+        return mod._update_check_result
+    finally:
+        mod._update_check_result, mod._update_check_done = old_result, old_done
+
+
+def test_cached_latest_version_is_compared_with_the_installed_version(monkeypatch, tmp_path):
+    """After an upgrade, a stamp from the previous version must not offer a downgrade."""
+    assert _run_cached_update_check(monkeypatch, tmp_path, "0.114.0", installed="0.115.0") is None
+    notice = _run_cached_update_check(monkeypatch, tmp_path, "0.116.0", installed="0.115.0")
+    assert notice is not None
+    assert "0.115.0" in notice and "0.116.0" in notice
+
+
+def test_legacy_rendered_update_stamp_is_not_replayed(monkeypatch, tmp_path):
+    """Stamps used to hold the rendered notice, which named the old installed version."""
+    command = "pip install --upgrade agent-bom"
+    legacy = f"[yellow]Update available:[/yellow] agent-bom 0.113.2 → [bold]0.114.0[/bold]\n  Run: [cyan]{command}[/cyan]"
+    assert _run_cached_update_check(monkeypatch, tmp_path, legacy, installed="0.115.0", pypi_latest="0.115.0") is None
+    assert (tmp_path / "update-check.txt").read_text(encoding="utf-8") == "0.115.0"
+
+
 # ---------------------------------------------------------------------------
 # 2. `update` disambiguation
 # ---------------------------------------------------------------------------

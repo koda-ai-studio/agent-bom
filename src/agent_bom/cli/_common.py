@@ -7,6 +7,7 @@ import importlib
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -221,6 +222,8 @@ def _should_skip_update_check() -> bool:
     return _update_notice_hidden(sys.argv[1:])
 
 
+_VERSION_STAMP = re.compile(r"\d+(?:\.\d+){1,3}")
+
 _QUIET_FLAGS = frozenset({"-q", "--quiet", "--agent-mode", "--json"})
 
 
@@ -253,17 +256,20 @@ def _check_for_update_bg() -> None:
         cache_file = _update_check_cache_file()
         cache_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # Only hit PyPI once per 24 hours
-
+        # The stamp holds PyPI's latest version, never the rendered notice: the
+        # notice names the installed version, which changes on upgrade.
+        latest = ""
         if cache_file.exists() and (time.time() - cache_file.stat().st_mtime) < 86400:
-            _update_check_result = cache_file.read_text(encoding="utf-8").strip() or None
-            _update_check_done.set()
-            return
+            cached = cache_file.read_text(encoding="utf-8").strip()
+            if _VERSION_STAMP.fullmatch(cached):
+                latest = cached
 
-        from agent_bom.http_client import fetch_json
+        fetched = not latest
+        if fetched:
+            from agent_bom.http_client import fetch_json
 
-        data = fetch_json("https://pypi.org/pypi/agent-bom/json", timeout=5)
-        latest = data["info"]["version"]
+            data = fetch_json("https://pypi.org/pypi/agent-bom/json", timeout=5)
+            latest = str(data["info"]["version"])
 
         def _vt(v: str) -> tuple[int, ...]:
             return tuple(int(x) for x in v.split(".") if x.isdigit())
@@ -275,8 +281,11 @@ def _check_for_update_bg() -> None:
             )
         else:
             msg = ""
+        if not fetched:
+            _update_check_result = msg or None
+            return
         try:
-            cache_file.write_text(msg, encoding="utf-8")
+            cache_file.write_text(latest, encoding="utf-8")
         except OSError as exc:
             # A full disk must not lose the update notice or crash the scan —
             # degrade to no-cache (the result is still served this run).

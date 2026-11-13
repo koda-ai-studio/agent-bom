@@ -1435,7 +1435,8 @@ jobs:
     needs: github-release
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # 25 minutes for the bump, UI build and capture, plus the 10-minute PyPI wait.
+    timeout-minutes: 40
     continue-on-error: true
     permissions:
       contents: write
@@ -1447,6 +1448,14 @@ jobs:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup-python
+
+      # bump-version.py relocks the plugin launchers against agent-bom==TAG, and
+      # PyPI's simple index can list a fresh upload minutes after the publish job
+      # returns. Wait (bounded) so the relock never runs ahead of the index.
+      - name: Wait for PyPI to serve the release
+        env:
+          TAG: ${{ github.ref_name }}
+        run: python scripts/wait_for_pypi_release.py "${TAG#v}" --timeout 600
 
       - name: Write the tagged commit and published version into the pins
         id: pin
