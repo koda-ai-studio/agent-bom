@@ -17,7 +17,16 @@ def analysis_scope_options(fn):
                 is_flag=True,
                 default=False,
                 help="Run code analysis, the secret scan and the AI-component scan over every eligible file. "
-                "By default each stops after a fixed number of files (500, 1,000 and 1,000) and the report marks coverage incomplete.",
+                "This is already the default for CI, non-interactive output, gates and machine-readable formats; "
+                "an interactive scan otherwise stops each after 500, 1,000 and 1,000 files and marks coverage incomplete.",
+            ),
+            click.option(
+                "--quick",
+                "quick",
+                is_flag=True,
+                default=False,
+                help="Stop code analysis, the secret scan and the AI-component scan after 500, 1,000 and 1,000 files, "
+                "even in CI or with a gate. The report marks coverage incomplete, so an otherwise clean scan exits non-zero.",
             ),
             click.option(
                 "--include-code-graph",

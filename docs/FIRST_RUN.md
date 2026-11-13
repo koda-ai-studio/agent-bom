@@ -65,6 +65,13 @@ assistant workflows, not extra CLI commands.
   available vulnerability data. Zero findings do not prove a project is secure.
 - Read coverage warnings beside the verdict. An unavailable scanner, unreadable
   input, or missing offline database can leave the assessment incomplete.
+- In a terminal, a large repository is analysed under a budget so the first
+  scan returns quickly: code analysis stops after 500 source files and the
+  secret and AI-component scans after 1,000 files each. The console and report
+  say so, the scan exits non-zero as incomplete, and
+  `agent-bom scan . --full-analysis` reads every file. CI jobs, piped output,
+  gates such as `--fail-on-severity` and machine formats such as SARIF always
+  analyse every file; add `--quick` to opt a CI job into the budget.
 - Recorded agent, tool and credential relationships help prioritize review;
   they do not prove exploitation, successful credential use, or effective access.
 - A dependency upgrade can remove an advisory match. Verify it by rescanning;
@@ -524,6 +531,8 @@ which are reserved, and how the action's outputs map to them — lives in
 ### Filesystem scope and completion
 
 Run `agent-bom secrets . --offline --format json` to inspect supported source and configuration files. The report separates `exclusions` (Git metadata, scanner-policy directories, repository ignores and duplicate worktrees) from incomplete-coverage `warnings`. A complete result describes the configured scope; it does not claim excluded contents were inspected. An explicitly requested excluded directory can be scanned as the root.
+
+A CI scan analyses every eligible file by default: a CI environment variable, non-terminal output, a `--fail-on-*` gate or a machine format such as SARIF turns off the interactive source budget. `--quick` opts a job into the budget (500 code-analysis files, 1,000 secret-scan and AI-component files); its result is marked incomplete, so an otherwise clean scan exits non-zero.
 
 Repository scan reports retain the same scope receipts as non-failing scan issues. Read failures, directory symlinks and exhausted file budgets still produce incomplete coverage. Review those receipts before treating a scan as evidence, then narrow or correct the target and rescan.
 

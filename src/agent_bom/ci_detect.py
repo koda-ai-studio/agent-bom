@@ -25,6 +25,7 @@ def detect_ci_environment() -> dict:
         "travis": "TRAVIS",
         "azure_devops": "TF_BUILD",
         "bitbucket": "BITBUCKET_PIPELINE_UUID",
+        "buildkite": "BUILDKITE",
     }
     for name, env_var in ci_vars.items():
         if os.environ.get(env_var):
