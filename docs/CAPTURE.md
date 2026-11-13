@@ -43,7 +43,7 @@ before replacing any published product image.
    Kubernetes, MCP, and identity source receipt before opening a browser. A
    stale, hand-edited, or source-divergent artifact stops capture.
 
-3. Inspect all 54 PNGs and the manifest at the final README display size. The
+3. Inspect all 57 PNGs and the manifest at the final README display size. The
    harness stages files and publishes them only after every page passes.
    README desktop captures use 1440×900; mobile captures use 390×844.
    Capture the application viewport directly. Do not crop, edit, or enlarge
