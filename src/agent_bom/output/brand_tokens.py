@@ -42,7 +42,7 @@ Quick start:
   agent-bom proxy "npx @mcp/server-fs /workspace"  MCP security proxy
 
 \b
-Tip: `agent-bom -h` groups commands by scanning, runtime, MCP, reporting, and governance.
+Tip: commands below are grouped by workflow — start with Get started.
 
 \b
 Docs:  https://koda-ai-studio.github.io/agent-bom/

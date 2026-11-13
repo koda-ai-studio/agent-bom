@@ -70,10 +70,11 @@ def _git_tracked_paths(root: Path) -> tuple[frozenset[str], frozenset[str], bool
     if top_level.returncode != 0:
         return frozenset(), frozenset(), _inside_git_checkout(root)
 
-    repository_root = Path(top_level.stdout.strip()).resolve()
+    # Run from the scan root: Git then lists only that subtree, already relative
+    # to it, instead of the whole checkout when the root is a subdirectory.
     try:
         listed = subprocess.run(
-            ["git", "-C", str(repository_root), "ls-files", "-z", "--cached"],
+            ["git", "-C", str(root), "ls-files", "-z", "--cached"],
             check=False,
             capture_output=True,
             timeout=_GIT_QUERY_TIMEOUT_SECONDS,
@@ -88,13 +89,12 @@ def _git_tracked_paths(root: Path) -> tuple[frozenset[str], frozenset[str], bool
     for raw_path in listed.stdout.split(b"\0"):
         if not raw_path:
             continue
-        try:
-            repository_relative = raw_path.decode("utf-8", errors="surrogateescape")
-            scan_relative = (repository_root / repository_relative).relative_to(root).as_posix()
-        except ValueError:
-            continue
+        scan_relative = raw_path.decode("utf-8", errors="surrogateescape")
         tracked_files.add(scan_relative)
-        tracked_dirs.update(parent.as_posix() for parent in PurePosixPath(scan_relative).parents if parent.as_posix() != ".")
+        parent, _, _ = scan_relative.rpartition("/")
+        while parent and parent not in tracked_dirs:
+            tracked_dirs.add(parent)
+            parent, _, _ = parent.rpartition("/")
     return frozenset(tracked_files), frozenset(tracked_dirs), False
 
 

@@ -19,13 +19,37 @@ import tempfile
 from pathlib import Path
 
 from agent_bom.db.advisory_aliases import ALIAS_BACKFILL, ALIAS_SCHEMA
-from agent_bom.storage.state_home import state_dir
+from agent_bom.storage.state_home import default_product_state_dir, state_dir
 
 _logger = logging.getLogger(__name__)
 
-# Default DB path: <AGENT_BOM_STATE_DIR or ~/.agent-bom>/db/vulns.db; AGENT_BOM_DB_PATH overrides it.
-_DEFAULT_DB_DIR = state_dir() / "db"
-_RAW_DB_PATH = os.environ.get("AGENT_BOM_DB_PATH", str(_DEFAULT_DB_DIR / "vulns.db"))
+
+def _default_db_file() -> Path:
+    """<AGENT_BOM_STATE_DIR or ~/.agent-bom>/db/vulns.db.
+
+    Releases before 0.115 kept the DB in ~/.agent-bom/db even with
+    AGENT_BOM_STATE_DIR set. While the state dir holds no DB, an existing one
+    there is still used, so upgrading does not drop a synced (or air-gapped) DB.
+    """
+    current = state_dir() / "db" / "vulns.db"
+    legacy = default_product_state_dir() / "db" / "vulns.db"
+    if not _readable_file(current) and _readable_file(legacy):
+        _logger.info("Using the vulnerability DB at %s; %s does not exist yet", legacy, current)
+        return legacy
+    return current
+
+
+def _readable_file(path: Path) -> bool:
+    # An unprivileged container user can inherit HOME=/root; before Python 3.14
+    # Path.exists() raises PermissionError there instead of returning False.
+    try:
+        return path.exists()
+    except OSError:
+        return False
+
+
+# AGENT_BOM_DB_PATH overrides the default.
+_RAW_DB_PATH = os.environ.get("AGENT_BOM_DB_PATH") or str(_default_db_file())
 
 
 def _validated_db_path(raw: str) -> Path:

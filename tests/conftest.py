@@ -18,7 +18,7 @@ import pytest
 
 # Seeded demo-estate clients: per-test ``demo_estate_client`` and per-module
 # ``shared_demo_estate_client`` for read-only suites.
-pytest_plugins = ["tests._demo_estate_fixtures", "tests._registry_isolation", "tests._tenant_env_isolation"]
+pytest_plugins = ["tests._demo_estate_fixtures", "tests._registry_isolation", "tests._tenant_env_isolation", "tests._vuln_db_isolation"]
 
 os.environ.setdefault("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", "1")
 os.environ.setdefault("AGENT_BOM_NO_AUTH_ROLE", "admin")
@@ -114,6 +114,15 @@ def _reset_current_graph_prewarm():
     prewarm = sys.modules.get("agent_bom.api.current_graph_prewarm")
     if prewarm is not None:
         prewarm.reset_current_graph_prewarm()
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _clear_egress_resolution_cache():
+    """A resolver stub in one test must not answer for the same host in the next."""
+    resolution = sys.modules.get("agent_bom.core.egress_resolution")
+    if resolution is not None:
+        resolution.clear_resolution_cache()
     yield
 
 

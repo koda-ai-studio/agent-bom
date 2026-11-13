@@ -30,7 +30,7 @@ for (const recorded of [true,false]) test(`credential context only joins recorde
     await expect(canvas.locator('.react-flow__node[data-id="Customer records"]')).toBeVisible();
   } else {
     await expect(canvas.getByText("WAREHOUSE_TOKEN_REFERENCE")).toHaveCount(0);
-    await expect(canvas.getByRole("button",{name:"1 finding on warehouse-mcp, worst high. Open findings"})).toBeVisible();
+    await expect(canvas.getByRole("button",{name:"1 finding on warehouse-mcp, worst high (1 high). Open findings"})).toBeVisible();
     await page.getByText("Evidence & relationships",{exact:true}).click();
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("WAREHOUSE_TOKEN_REFERENCE");
     await expect(page.getByRole("region",{name:"Reported exposure context"})).toContainText("do not add path hops or establish access");

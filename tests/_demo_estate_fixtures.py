@@ -22,6 +22,8 @@ from pathlib import Path
 import pytest
 from starlette.testclient import TestClient
 
+from tests._vuln_db_isolation import point_default_vuln_db
+
 # The hosted-demo contract is anonymous viewer access.  Supplying an unattested
 # role header is credential spoofing and must be rejected by the auth resolver.
 VIEWER: dict[str, str] = {}
@@ -81,6 +83,13 @@ def seeded_demo_estate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Itera
     monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "1")
     monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "demo-estate.db"))
     monkeypatch.setenv("AGENT_BOM_GRAPH_DB", str(tmp_path / "demo-graph.db"))
+    # The seed writes synthetic advisories to <state dir>/db/vulns.db. Give it a
+    # state dir of its own, as `activate_demo_state_dir` does for a real demo,
+    # so they never land in the worker's shared default vuln DB.
+    demo_state = tmp_path / "demo-state"
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(demo_state))
+    monkeypatch.setenv("AGENT_BOM_DEMO_STATE_DIR", str(demo_state))
+    point_default_vuln_db(monkeypatch, demo_state / "db" / "vulns.db")
 
     from agent_bom.api import compliance_hub_store as hub_store_mod
     from agent_bom.api import server as api_server

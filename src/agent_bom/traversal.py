@@ -160,9 +160,9 @@ def _prune_dirnames(
     on_error: Callable[[OSError], None] | None = None,
     root: Path | None = None,
 ) -> None:
-    """Prune ancestors without enumerating their children; report exclusions."""
+    """Prune ancestors without enumerating their children; report exclusions. Keeps names sorted."""
     kept = []
-    for name in dirnames:
+    for name in sorted(dirnames):
         child = dirpath / name
         try:
             is_link = child.is_symlink()
@@ -251,8 +251,8 @@ def iter_discovery_files(
     per skipped ancestor. ``on_limit`` reports file-budget exhaustion. Neither
     callback descends excluded trees or enumerates their file counts.
 
-    Yields files in ``os.walk`` order; callers that need determinism should sort
-    the (already filtered, typically small) result.
+    Yields files in sorted ``os.walk`` order, so a caller that stops early
+    stops at the same files on every run and every filesystem.
     """
     root = Path(root)
     report_gap = _coverage_recorder(root)
@@ -295,7 +295,7 @@ def iter_discovery_files(
                 else:
                     kept.append(name)
             dirnames[:] = kept
-        for name in filenames:
+        for name in sorted(filenames):
             candidate = dirpath / name
             try:
                 is_link = candidate.is_symlink()

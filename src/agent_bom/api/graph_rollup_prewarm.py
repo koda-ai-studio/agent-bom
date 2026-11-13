@@ -22,6 +22,7 @@ from typing import Any, Callable, Literal
 
 from agent_bom.api import graph_rollup_cache
 from agent_bom.api.finding_suppression import suppression_revision
+from agent_bom.api.graph_cluster_index_cache import cluster_index
 from agent_bom.api.graph_commit_hooks import register_commit_hook
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint
 from agent_bom.api.graph_store import containment_drilldown_graph
@@ -150,6 +151,9 @@ def prewarm_rollup(store: Any, *, tenant_id: str) -> int:
 
     full = load_rollup_source(store, tenant_id=tenant_id, scan_id=scan_id, node=None, mode="attack_path")
     view(full, mode="attack_path", limit=0)
+    del full
+    # The grouped full map's per-snapshot aggregation; a failure here is contained by the worker like any warm-up.
+    cluster_index(store, tenant_id=tenant_id, scan_id=scan_id, identity=key_identity)
     return warmed
 
 
