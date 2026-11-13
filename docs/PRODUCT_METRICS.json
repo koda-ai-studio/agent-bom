@@ -40,13 +40,13 @@
     },
     {
       "name": "UI app pages",
-      "value": 48,
+      "value": 49,
       "source": "ui/app",
       "notes": "Counts page.tsx and page.jsx files recursively."
     },
     {
       "name": "Python modules",
-      "value": 2276,
+      "value": 2277,
       "source": "src/agent_bom",
       "notes": "Counts all Python files recursively."
     },

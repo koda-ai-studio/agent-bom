@@ -5,7 +5,9 @@ import { Bug, Crown, Database, Globe } from "lucide-react";
 import { LINE_STYLE, PATH_STROKE } from "@/components/attack-path-graph-edge";
 import type { AttackPathGraphModel, EdgeEvidenceStyle } from "@/lib/attack-path-graph-model";
 
+/** Line style rule: a hop with a complete receipt on this path is solid; any other line follows its edge's own evidence. */
 const EVIDENCE_LABELS: Record<EdgeEvidenceStyle, string> = {
+  receipt: "Hop receipt: directed, traversable, recorded",
   recorded: "Recorded",
   inferred: "Modeled or inferred",
   unrecorded: "No per-edge receipt",

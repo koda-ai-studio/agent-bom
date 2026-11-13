@@ -31,6 +31,30 @@ describe("attack path viewport", () => {
     }
   });
 
+  it("moves a phone's path column toward the centre as far as keeping every branch visible allows", () => {
+    const { graph, selected } = demoFixture("headline");
+    const model = buildAttackPathGraphModel(graph, selected);
+    const layout = layoutAttackPathGraph(model, "TB");
+    const pad = ATTACK_PATH_FIT_PADDING;
+    const middle = (width: number) => pad.left + (width - pad.left - pad.right) / 2;
+    for (const width of [342, 520]) {
+      const pane = { width, height: 2200 };
+      const viewport = attackPathViewport(layout, model.pathNodeIds, pane, 0.7);
+      expect(viewport.hiddenNodeIds).toEqual([]);
+      const spine = screenBoxes(layout, viewport).find(box => box.id === model.pathNodeIds[0])!;
+      const offset = (spine.left + spine.right) / 2 - middle(width);
+      const left = viewport.x, right = viewport.x + layout.width * viewport.zoom;
+      expect(left).toBeGreaterThanOrEqual(pad.left - 0.5);
+      expect(right).toBeLessThanOrEqual(width - pad.right + 0.5);
+      // Centred, or held off centre only because the branch side already touches its padded edge.
+      if (Math.abs(offset) >= 1) expect(offset > 0 ? Math.abs(left - pad.left) : Math.abs(right - (width - pad.right))).toBeLessThan(1);
+    }
+    // With room to spare the column is exactly centred.
+    const wide = attackPathViewport(layout, model.pathNodeIds, { width: 900, height: 2200 }, 0.7);
+    const spine = screenBoxes(layout, wide).find(box => box.id === model.pathNodeIds[0])!;
+    expect(Math.abs((spine.left + spine.right) / 2 - middle(900))).toBeLessThan(1);
+  });
+
   it("keeps the selected path whole and names what is off screen when the graph would fall below the floor", () => {
     const { graph, selected } = demoFixture("runbook");
     const model = buildAttackPathGraphModel(graph, selected);

@@ -14,7 +14,7 @@ from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
 from agent_bom.core.settings import env_first, env_raw, env_str
 from agent_bom.models import AIBOMReport
-from agent_bom.scanners import IncompleteScanError
+from agent_bom.scanners.scan_options import IncompleteScanError
 
 
 def _agents_patchable(name: str) -> Any:
