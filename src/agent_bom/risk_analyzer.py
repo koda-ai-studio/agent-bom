@@ -11,6 +11,7 @@ from __future__ import annotations
 import re as _re
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import lru_cache
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -196,6 +197,10 @@ DANGEROUS_COMBOS: list[tuple[set[ToolCapability], str]] = [
 
 # ─── Classification ──────────────────────────────────────────────────────────
 
+_PATTERN_PREFIXES: tuple[tuple[ToolCapability, tuple[str, ...]], ...] = tuple(
+    (capability, tuple(patterns)) for capability, patterns in CAPABILITY_PATTERNS.items()
+)
+
 
 def _tokenize(text: str) -> set[str]:
     """Split tool name + description into semantic tokens.
@@ -226,16 +231,16 @@ def classify_tool(tool_name: str, description: str = "") -> list[ToolCapability]
 
     Returns a deduplicated, sorted list of ToolCapability values.
     """
+    return list(_classify_cached(tool_name, description))
+
+
+# Estates repeat the same tools across many agents and every current-graph
+# build reclassifies all of them; the result depends only on the two strings.
+@lru_cache(maxsize=16384)
+def _classify_cached(tool_name: str, description: str) -> tuple[ToolCapability, ...]:
     tokens = _tokenize(tool_name + " " + description)
-    caps: set[ToolCapability] = set()
-
-    for capability, patterns in CAPABILITY_PATTERNS.items():
-        for pattern in patterns:
-            if any(token.startswith(pattern) for token in tokens):
-                caps.add(capability)
-                break  # One match per capability is enough
-
-    return sorted(caps, key=lambda c: c.value)
+    caps = {capability for capability, prefixes in _PATTERN_PREFIXES if any(token.startswith(prefixes) for token in tokens)}
+    return tuple(sorted(caps, key=lambda c: c.value))
 
 
 _DECLARED_CAPABILITY_ALIASES: dict[str, ToolCapability] = {
