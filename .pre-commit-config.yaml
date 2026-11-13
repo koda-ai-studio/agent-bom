@@ -105,14 +105,20 @@ repos:
         # Catches the two release startup_failure classes (undeclared needs.<job>
         # refs; reusable-workflow permission under-grant under a deny-all
         # top-level) before they reach a tag push. actionlint misses the
-        # permission case. Network-free, dependency-free.
-        entry: python3 scripts/lint_release_workflow.py .github/workflows/release.yml
-        language: system
+        # permission case. Network-free; it parses YAML, so the hook carries
+        # PyYAML (pinned to uv.lock) instead of relying on whichever python3 is
+        # on PATH, which failed with ModuleNotFoundError outside the venv.
+        entry: python scripts/lint_release_workflow.py .github/workflows/release.yml
+        language: python
+        additional_dependencies: [pyyaml==6.0.3]
         pass_filenames: false
         files: ^\.github/workflows/(release|docs|deploy-mcp-sse)\.yml$
       - id: release-surface-consistency
         name: release surface and generated atlas consistency
-        entry: python3 scripts/check_release_consistency.py
+        # Same deferral as PR and main CI (ci.yml env): the screenshot
+        # capture-input digest is a release-time artifact that release.yml
+        # enforces, so a feature commit must not be blocked on it.
+        entry: env AGENT_BOM_DEFER_PRODUCT_PROOF=1 python3 scripts/check_release_consistency.py
         language: system
         pass_filenames: false
         files: ^(pyproject\.toml|README\.md|CHANGELOG\.md|docs/(registry/|DATA_MODEL\.md|openapi/v1\.(json|yaml)|PRODUCT_|RELEASE_|PUBLISHING|MCP_SECURITY_MODEL|AI_INFRASTRUCTURE_SCANNING|ENTERPRISE_DEPLOYMENT)|site-docs/|src/agent_bom/(api/|mcp_registry\.json)|integrations/(mcp-registry|glama|openclaw)/|deploy/|Dockerfile|uv\.lock|scripts/(check_release_consistency|regenerate_data_model_atlas)\.py)

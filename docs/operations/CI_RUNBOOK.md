@@ -461,7 +461,7 @@ Operator-side troubleshooting if a strand persists past ~10 minutes:
 No merge queue is enabled. The repository is now owned by the
 `koda-ai-studio` organization and is public, which is the case GitHub
 documents merge queues for; confirm availability in the repository settings
-before relying on it. `ci.yml`, `codeql.yml` and `pr-security-gate.yml`
+before relying on it. `ci.yml`, `codeql.yml`, `pr-security-gate.yml` and `dependency-review.yml`
 declare `merge_group: types: [checks_requested]`. In `ci.yml` a merge group
 skips the path classifier, so every path-gated lane runs, and it runs the
 full 3.13 shards instead of the affected tests plus the post-merge
@@ -469,12 +469,14 @@ performance lanes. `Lint and Type Check`, `Build Package`, `Security Scan`,
 `Test (Python 3.13)`, `Version Alignment`, `UI Validate` and `CodeQL`
 therefore report on a merge group.
 
-`Dependency Review` (`dependency-review.yml`) runs on `pull_request` only. A
-required check that never reports on `merge_group` makes every queued merge
-fail, so before enabling a queue with the proposed list either add a
-`merge_group` trigger that passes without a PR diff or leave it out of the
-required contexts. To enable: Settings, Branches, edit the `main` rule, turn on
-"Require merge queue" and keep the required contexts above.
+`Dependency Review` (`dependency-review.yml`) also declares `merge_group`.
+The review needs one PR's base and head dependency snapshots, which a merge
+group does not have, so on a merge group it reports success without calling the
+action: every queued PR already passed it on its own `pull_request` run. Its
+concurrency group falls back to the ref, so concurrent groups do not cancel each
+other. Every required context therefore reports on a merge group. To enable:
+Settings, Branches, edit the `main` rule, turn on "Require merge queue" and
+keep the required contexts above.
 
 Keep strict up-to-date protection: it is what makes the PR's sharded suite run
 on the commit that lands. Use `scripts/enable_merge_queue.sh --check` for
