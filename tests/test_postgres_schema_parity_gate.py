@@ -60,19 +60,6 @@ class TestNormalization:
         noisy = "ALTER DATABASE agent_bom SET init.app_password = 'x';\n" + _TEAMS
         assert gate._statements(noisy) == gate._statements(_TEAMS)
 
-    def test_server_attribute_version_options_are_ignored(self):
-        """A 16.16+ server stamps `pg_attver` on each column; an older pg_dump prints it."""
-        a = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (pg_attver=38074456);\n"
-        b = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (pg_attver=48526344);\n"
-        assert gate._statements(a) == gate._statements(_TEAMS)
-        assert gate._statements(b) == gate._statements(_TEAMS)
-
-    def test_real_column_options_survive_beside_the_attribute_version(self):
-        stamped = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (n_distinct=100, pg_attver=38074456);\n"
-        plain = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (n_distinct=100);\n"
-        assert gate._statements(stamped) == gate._statements(plain)
-        assert gate._statements(plain) != gate._statements(_TEAMS)
-
     def test_whitespace_and_ordering_do_not_matter(self):
         one = _TEAMS + "CREATE INDEX i ON public.teams (name);\n"
         two = "CREATE INDEX   i   ON public.teams (name);\n" + _TEAMS

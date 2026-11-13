@@ -119,23 +119,6 @@ def _drain_auth_failure_receipts():
 
 
 @pytest.fixture(autouse=True)
-def _reset_current_graph_prewarm_state():
-    """Start every test with no start-up prewarm in flight.
-
-    An app started by an earlier test leaves the module-level prewarm state at
-    ``running`` until its thread ends, and readiness answers
-    ``current_graph_prewarming`` for up to the 120 s readiness bound, so a later
-    readiness test in the same worker saw that instead of what it checks.
-    """
-    prewarm = sys.modules.get("agent_bom.api.current_graph_prewarm")
-    if prewarm is not None:
-        prewarm._LAST_RUN.clear()
-        prewarm._LAST_RUN["status"] = "not_started"
-        prewarm._STARTED_AT.clear()
-    yield
-
-
-@pytest.fixture(autouse=True)
 def _isolate_home_and_state_dir():
     """Guarantee HOME and the data dirs are temporary around every test.
 
