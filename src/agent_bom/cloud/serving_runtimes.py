@@ -173,10 +173,9 @@ def _tgi(payload: Any) -> Parsed:
     name = _text(payload.get("model_id")) if isinstance(payload, dict) else None
     if name is None:
         raise _ProbeError("unavailable", "response did not match the documented /info schema")
-    version = _text(payload.get("version"))
     model = ServedModel(served_name=name, artifact_ref=name, digest=_text(payload.get("model_sha")))
-    # A response without the required ``version`` field is an incomplete record.
-    return [model], 0 if version else 1, version, "router" in payload
+    # A missing ``version`` is reported by the probe as unreported runtime metadata, not as a dropped record.
+    return [model], 0, _text(payload.get("version")), "router" in payload
 
 
 def _triton(payload: Any) -> Parsed:
@@ -210,13 +209,15 @@ class RuntimeSpec:
     parse: Callable[[Any], Parsed]
     metadata_path: str | None = None
     metadata_version: Callable[[Any], str | None] | None = None
+    # Where the runtime documents its version; ``None`` when it documents none.
+    version_source: str | None = None
 
 
 SERVING_RUNTIMES: dict[str, RuntimeSpec] = {
-    "vllm": RuntimeSpec("GET", "/v1/models", _vllm, "/version", _version_field("version")),
-    "tgi": RuntimeSpec("GET", "/info", _tgi),
-    "triton": RuntimeSpec("POST", "/v2/repository/index", _triton, "/v2", _triton_metadata),
-    "llamacpp": RuntimeSpec("GET", "/v1/models", _llamacpp, "/props", _version_field("build_info")),
+    "vllm": RuntimeSpec("GET", "/v1/models", _vllm, "/version", _version_field("version"), "GET /version field 'version'"),
+    "tgi": RuntimeSpec("GET", "/info", _tgi, version_source="GET /info field 'version'"),
+    "triton": RuntimeSpec("POST", "/v2/repository/index", _triton, "/v2", _triton_metadata, "GET /v2 fields 'name' (triton) and 'version'"),
+    "llamacpp": RuntimeSpec("GET", "/v1/models", _llamacpp, "/props", _version_field("build_info"), "GET /props field 'build_info'"),
     "lmstudio": RuntimeSpec("GET", "/api/v0/models", _lmstudio),
 }
 
@@ -320,27 +321,35 @@ def probe_endpoint(runtime: str, endpoint: str, *, timeout: float = _DEFAULT_TIM
             observation.status, observation.detail = failure.status, failure.detail
             observation.permissions_used = tuple(permissions)
             return observation
-        metadata_failed = False
+        metadata_failure = ""
         if spec.metadata_path and spec.metadata_version:
             permissions.append(_declared(runtime, "GET", spec.metadata_path))
             try:
                 version = spec.metadata_version(_request(client, "GET", base + spec.metadata_path))
                 confirmed = confirmed or (runtime == "triton" and version is not None)
             except _ProbeError as failure:
-                metadata_failed = True
-                observation.detail = f"runtime metadata read {failure.status}: {failure.detail}"
+                metadata_failure = f"{failure.status}: {failure.detail}"
     observation.models = models
     observation.runtime_version = version
     observation.runtime_identity = "confirmed" if confirmed else "declared"
     observation.permissions_used = tuple(permissions)
+    gaps = [f"{dropped} record(s) did not match the documented model shape"] if dropped else []
+    if spec.version_source and version is None:
+        gaps.append(_version_gap(spec.version_source, metadata_failure))
     if not models and dropped:
         observation.status, observation.detail = "unavailable", "no record matched the documented model shape"
-    elif dropped or metadata_failed:
-        observation.status = "partial"
-        observation.detail = observation.detail or f"{dropped} record(s) did not match the documented model shape"
+    elif gaps:
+        observation.status, observation.detail = "partial", "; ".join(gaps)
     else:
         observation.status = "success"
     return observation
+
+
+def _version_gap(source: str, read_failure: str) -> str:
+    """Why the runtime version is absent: the metadata read failed, or it answered without a usable version."""
+    if read_failure:
+        return f"runtime version not reported: metadata read {read_failure} ({source})"
+    return f"runtime version not reported: {source} was missing, empty or not a string"
 
 
 def _host_port(endpoint: str) -> tuple[str, int | None]:

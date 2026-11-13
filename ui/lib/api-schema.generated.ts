@@ -18937,7 +18937,10 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** HarnessCoverage */
+        /**
+         * HarnessCoverage
+         * @description What the model covers; ``complete`` is false whenever ``incomplete_reasons`` names anything left out of this answer.
+         */
         HarnessCoverage: {
             /** Complete */
             complete: boolean;
@@ -18947,6 +18950,8 @@ export interface components {
             frameworks_modelled: string[];
             /** Gaps */
             gaps: string[];
+            /** Incomplete Reasons */
+            incomplete_reasons: string[];
             /** Model */
             model: string;
             /**
@@ -19066,10 +19071,15 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
-        /** HarnessTruncation */
+        /**
+         * HarnessTruncation
+         * @description ``depth`` is true when an agent sits deeper than the modelled layer cap below the harness root.
+         */
         HarnessTruncation: {
             /** Agents */
             agents: boolean;
+            /** Depth */
+            depth: boolean;
             /** Flow Edges */
             flow_edges: boolean;
         } & {

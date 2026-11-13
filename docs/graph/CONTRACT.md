@@ -156,7 +156,10 @@ evidence only: `entry`, `sequential`, `conditional`, `handoff`, `fan_out`,
 (`shares_server` between members). Model references are the literal model
 names (or a module-level binding to one) the source passes; none is inferred.
 Agents with no declared delegation are folded into their project agent and
-belong to no harness.
+belong to no harness, except a declared parent (such as a LangGraph builder
+with no `START`/`END` edge), which still roots the harness of its nodes. A
+chain nested deeper than 32 layers keeps its true root and sets
+`truncated.depth`.
 
 `GET /v1/graph/agent-architecture` and the `agent_architecture` MCP tool return
 the same page: harnesses in label order, each with its agents by layer, flow
@@ -166,8 +169,11 @@ its other outgoing edges, and the project agent that `contains` the harness).
 Pages use the generation-pinned cursor: a stale generation is a 409, a malformed
 or foreign cursor a 422, `limit` is 1 to 50. Reads are scoped to the caller's
 tenant. `coverage.complete` is false when more than 5,000 framework agents or
-50,000 structural edges exist, or the overlay's bounded edge or finding read was
-cut short; `coverage.gaps` lists what is not modelled yet:
+50,000 structural edges exist, the overlay's bounded edge or finding read was
+cut short, or a harness on the page lists fewer agents (cap 500), flow edges
+(cap 2,000) or unresolved routes than it has; `coverage.incomplete_reasons`
+names each cut. A harness's `security` totals cover every member, including
+agents past the listing cap. `coverage.gaps` lists what is not modelled yet:
 CrewAI manager and task order, AutoGen speaker selection, OpenAI Agents SDK
 handoffs, and declared-versus-observed path comparison.
 
