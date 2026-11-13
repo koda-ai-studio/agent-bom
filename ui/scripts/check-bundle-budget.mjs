@@ -170,7 +170,14 @@ const BUDGETS = {
   // 3.7 KiB on top, inside the same headroom; no dependency.
   // The shared probability formatter (EPSS display) adds ~0.5 KiB inside the
   // same headroom; no dependency.
-  totalClientJsBytes: 4_571_136,
+  // Server-paged Agents and MCP Catalog pages, inventory type chips, and the
+  // graph readability work (attack-path lanes and label wrapping, flow-view
+  // spacing and routing, graph not-found state, layout transitions and the
+  // path trace) measure 4477.4 KiB locally, with no new dependency; the graph
+  // branch already removed unused routing code and a one-off camera to offset
+  // part of it. Keep ~18.6 KiB of bounded headroom at 4496 KiB; largest-chunk
+  // and shared-runtime ceilings stay fixed.
+  totalClientJsBytes: 4_603_904,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.

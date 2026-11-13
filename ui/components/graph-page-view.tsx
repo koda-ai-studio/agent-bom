@@ -7,6 +7,7 @@ import { GraphAnalysisStatusBanner } from "@/components/graph-analysis-status";
 import { BlastRadiusPanel } from "@/components/graph-blast-radius-panel";
 import { GraphConnectionsList } from "@/components/graph-connections-list";
 import { GraphFlowCanvas } from "@/components/graph-flow-canvas";
+import { GraphFlowEdgeLegend } from "@/components/graph-flow-edge-legend";
 import { GraphInViewHint } from "@/components/graph-in-view-hint";
 import { GraphLensSwitcher } from "@/components/graph-lens-switcher";
 import { graphPageGate } from "@/components/graph-page-gate";
@@ -335,6 +336,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
           <GraphSelectionPanels page={page} flowView={flowView} />
           </div>
           {/* Under the canvas, so a phone's graph can start near the top of the screen. */}
+          {graphRenderer.kind === "react-flow" && !mobileListActive && displayNodes.length > 0 && <GraphFlowEdgeLegend edges={flowView.quieted.edges} />}
           <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : "mt-1"} />
           <GraphPhoneFooter page={page} flowView={flowView} />
         </div>

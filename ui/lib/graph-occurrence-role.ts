@@ -52,8 +52,20 @@ function readableContext(node: Node<LineageNodeData>): string | undefined {
   return undefined;
 }
 
+type Link = { source: string; target: string; relationship?: string | undefined };
+const CLIENT_LINKS = new Set(["uses"]);
+
+/** The one client recorded as using each node, when it names every member of a collision apart. */
+function clientContexts(group: Node<LineageNodeData>[], links: readonly Link[], labels: ReadonlyMap<string, string>): (string | undefined)[] | null {
+  const clients = group.map(node => [...new Set(links.filter(link => link.target === node.id && CLIENT_LINKS.has(link.relationship ?? "")).map(link => link.source))]);
+  if (clients.some(ids => ids.length !== 1)) return null;
+  const names = clients.map(([id]) => labels.get(id!));
+  if (names.some(name => !name) || new Set(names).size !== names.length) return null;
+  return names.map(name => `Used by ${name}`);
+}
+
 /** Distinguish collisions without displaying private config paths or launch arguments. */
-export function assignCollisionScopes(nodes: Node<LineageNodeData>[]): void {
+export function assignCollisionScopes(nodes: Node<LineageNodeData>[], links: readonly Link[] = [], labels: ReadonlyMap<string, string> = new Map()): void {
   const groups = new Map<string, Node<LineageNodeData>[]>();
   for (const node of nodes) {
     node.data.identityContext = undefined;
@@ -64,7 +76,7 @@ export function assignCollisionScopes(nodes: Node<LineageNodeData>[]): void {
   }
   for (const group of groups.values()) {
     if (group.length < 2) continue;
-    const candidates = group.map(readableContext);
+    const candidates = clientContexts(group, links, labels) ?? group.map(readableContext);
     const counts = new Map<string, number>();
     for (const value of candidates) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
     // Ordinals distinguish the visible occurrences. They are display labels,

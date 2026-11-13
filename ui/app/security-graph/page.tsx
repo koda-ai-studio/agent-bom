@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
 import { GraphSurface } from "@/app/graph/graph-surface";
 import { GraphPanelSkeleton } from "@/components/graph-state-panels";
+import { GraphViewNotFound } from "@/components/graph-view-not-found";
 import { resolveSecurityGraphSurface } from "@/lib/security-graph-route";
 
 // Inventory navigation must not download the separate attack-path workspace.
@@ -18,7 +19,9 @@ const AttackPathInvestigationContent = dynamic(() => import("./attack-path-conte
 function SecurityGraphPageContent() {
   const { session } = useAuthState();
   const searchParams = useSearchParams();
-  return resolveSecurityGraphSurface(searchParams) === "attack-path"
+  const surface = resolveSecurityGraphSurface(searchParams);
+  if (surface === "not-found") return <GraphViewNotFound />;
+  return surface === "attack-path"
     ? <AttackPathInvestigationContent key={JSON.stringify(session)} />
     : <GraphSurface />;
 }

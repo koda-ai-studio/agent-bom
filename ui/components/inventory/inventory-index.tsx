@@ -15,6 +15,7 @@ import { useInventorySelection } from "@/lib/inventory-selection";
 import { useInventory } from "@/lib/inventory-context";
 import { SNAPSHOT_COUNT_SCOPE } from "@/lib/count-scope";
 import { ASSET_KINDS, type AssetRow } from "@/lib/inventory";
+import { entityTypeLabel, formatBreakdown, kindCardLabel, kindHeadline, kindUnit } from "@/lib/inventory-units";
 
 export function InventoryIndex() {
   const { model, summary, filters, loading, error, errorKind, reload,
@@ -38,16 +39,7 @@ export function InventoryIndex() {
   const cards = useMemo(() => {
     if (!summary) return [];
     // Self-excluding type facets describe alternative filters, not these links' scope.
-    const typeCounts = new Map(Object.entries(summary.by_type));
-    return ASSET_KINDS.map((kind) => {
-      return {
-        kind,
-        total: kind.entityTypes.reduce(
-          (count, entityType) => count + (typeCounts.get(entityType) ?? 0),
-          0,
-        ),
-      };
-    });
+    return ASSET_KINDS.map((kind) => ({ kind, ...kindHeadline(kind, summary.by_type) }));
   }, [summary]);
 
   const totals = useMemo(() => {
@@ -107,9 +99,10 @@ export function InventoryIndex() {
       </div>
 
       <nav aria-label="Asset types" className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-        {cards.map(({ kind, total }) => {
+        {cards.map(({ kind, primary, breakdown }) => {
           const Icon = kind.icon;
-          return <Link key={kind.id} aria-label={`${kind.label} ${total.toLocaleString()}`} href={(() => {
+          const parts = formatBreakdown(breakdown);
+          return <Link key={kind.id} aria-label={kindCardLabel(kind, primary, breakdown, SNAPSHOT_COUNT_SCOPE.caption)} href={(() => {
             const query = new URLSearchParams();
             if (summary?.scan_id) query.set("scan", summary.scan_id);
             for (const [key, value] of Object.entries(filters)) if (value) query.set(key === "minSeverity" ? "min_severity" : key, value);
@@ -117,8 +110,9 @@ export function InventoryIndex() {
           })()} title={SNAPSHOT_COUNT_SCOPE.title} className="flex min-h-24 items-center gap-3 rounded-xl border border-outline bg-surface p-4 text-ink-secondary transition-colors hover:border-outline-strong hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2">
             <Icon className="h-6 w-6 shrink-0 text-cyan-600 dark:text-cyan-400" aria-hidden="true" />
             <span className="min-w-0">
-              <strong className="block text-2xl font-semibold tabular-nums text-foreground">{total.toLocaleString()}</strong>
-              <span className="text-sm">{kind.label}</span>
+              <strong className="block text-2xl font-semibold tabular-nums text-foreground">{primary.toLocaleString()}</strong>
+              <span className="text-sm">{kindUnit(kind, primary)}</span>
+              {parts ? <span className="block text-xs tabular-nums text-ink-secondary [overflow-wrap:anywhere]">{parts}</span> : null}
               <span className="block text-[11px] text-ink-tertiary">{SNAPSHOT_COUNT_SCOPE.caption}</span>
             </span>
           </Link>;
@@ -170,7 +164,7 @@ export function InventoryIndex() {
 const columns: DataTableColumn<AssetRow>[] = [
   { key: "asset", header: "Asset", cell: row => <div className="min-w-0 [overflow-wrap:anywhere]">
     <p className="font-medium text-foreground">{row.label}</p>
-    <p className="text-xs text-ink-tertiary">{[row.entityType, row.version].filter(Boolean).join(" · ")}</p>
+    <p className="text-xs text-ink-tertiary">{[entityTypeLabel(row.entityType, 1), row.version].filter(Boolean).join(" · ")}</p>
   </div> },
   { key: "environment", header: "Environment", cell: row => row.environment || "Not recorded" },
   { key: "source", header: "Evidence sources", cell: row => row.dataSources.join(", ") || "Not recorded" },

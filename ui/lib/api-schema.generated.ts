@@ -551,8 +551,9 @@ export interface paths {
         };
         /**
          * List Agents
-         * @description Quick auto-discovery of local AI agent configs (Claude Desktop, Cursor, Windsurf...).
-         *     No CVE scan — instant results for the UI sidebar.
+         * @description One bounded, filtered, sorted page of this tenant's agents (host discovery when bound, else scanned estate).
+         *
+         *     ``count`` and ``summary`` cover every agent in scope, ``total`` the matching rows, ``facets`` the per-chip counts.
          */
         get: operations["list_agents_v1_agents_get"];
         put?: never;
@@ -6777,7 +6778,10 @@ export interface paths {
         };
         /**
          * List Registry
-         * @description List all known MCP servers from the agent-bom registry.
+         * @description List known MCP servers from the agent-bom registry, one bounded page at a time.
+         *
+         *     ``count`` and ``risk_counts`` cover the whole catalog, ``total`` the rows
+         *     matching the search and filters, ``facets`` the per-filter counts.
          */
         get: operations["list_registry_v1_registry_get"];
         put?: never;
@@ -9577,12 +9581,60 @@ export interface components {
             };
             /** Count Definition */
             count_definition?: string | null;
+            /** Facets */
+            facets: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number | null;
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Offset */
+            offset: number;
             /** Scope */
             scope: string;
+            sort: components["schemas"]["AppliedSort"] | null;
             /** Source */
             source: string;
+            summary: components["schemas"]["AgentsSummary"];
+            /** Total */
+            total: number;
             /** Warnings */
             warnings: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * AgentsSummary
+         * @description Population totals over every agent in scope, independent of the page and filters.
+         */
+        AgentsSummary: {
+            /** Agents */
+            agents: number;
+            /** Blocked Servers */
+            blocked_servers: number;
+            /** Configured */
+            configured: number;
+            /** Ecosystems */
+            ecosystems: {
+                [key: string]: number;
+            };
+            /** Mcp Servers */
+            mcp_servers: number;
+            /** Not Configured */
+            not_configured: number;
+            /** Packages */
+            packages: number;
+            /** Remote Servers */
+            remote_servers: number;
+            /** Servers With Credentials */
+            servers_with_credentials: number;
+            /** Unique Credentials */
+            unique_credentials: number;
         } & {
             [key: string]: unknown;
         };
@@ -9656,6 +9708,15 @@ export interface components {
             }[];
             /** Schema Version */
             schema_version: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AppliedSort */
+        AppliedSort: {
+            /** Key */
+            key: string;
+            /** Order */
+            order: string;
         } & {
             [key: string]: unknown;
         };
@@ -22751,9 +22812,29 @@ export interface components {
         RegistryResponse: {
             /** Count */
             count: number;
+            /** Facets */
+            facets: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number | null;
             meta: components["schemas"]["RegistryMeta"];
+            /** Next Cursor */
+            next_cursor: string | null;
+            /** Offset */
+            offset: number;
+            /** Risk Counts */
+            risk_counts: {
+                [key: string]: number;
+            };
             /** Servers */
             servers: components["schemas"]["RegistryServerRow"][];
+            /** Total */
+            total: number;
         } & {
             [key: string]: unknown;
         };
@@ -27753,6 +27834,24 @@ export interface operations {
             query?: {
                 /** @description Bypass the sidebar cache and perform live local discovery */
                 refresh?: boolean;
+                /** @description Page size (1-500). Defaults to 50 when any search, filter, sort or offset is given; omitted entirely, the full list is returned for older clients. */
+                limit?: number | null;
+                /** @description Row offset of the page */
+                offset?: number;
+                /** @description Opaque next_cursor from the previous page; overrides offset */
+                cursor?: string | null;
+                /** @description Case-insensitive match on name, display name, type, source or id */
+                q?: string | null;
+                /** @description Agent type; repeat for any-of */
+                type?: string[] | null;
+                /** @description configured or installed-not-configured; repeatable */
+                status?: string[] | null;
+                /** @description Discovery source; repeatable */
+                source?: string[] | null;
+                /** @description Sort column */
+                sort?: ("name" | "servers" | "packages" | "credentials" | "findings") | null;
+                /** @description asc or desc; name defaults to asc, counts to desc */
+                order?: ("asc" | "desc") | null;
             };
             header?: never;
             path?: never;
@@ -42881,7 +42980,20 @@ export interface operations {
     };
     list_registry_v1_registry_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page size; omitted, the whole catalog is returned for older clients */
+                limit?: number | null;
+                /** @description Row offset of the page */
+                offset?: number;
+                /** @description Opaque next_cursor from the previous page */
+                cursor?: string | null;
+                /** @description Case-insensitive match on id, name, description, publisher, category */
+                q?: string | null;
+                /** @description Capability risk level; repeatable */
+                risk?: ("high" | "medium" | "low" | "unknown")[] | null;
+                /** @description Catalog category; repeatable */
+                category?: string[] | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;

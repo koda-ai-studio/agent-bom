@@ -3,7 +3,9 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 
 const LANES: Record<string, number> = { agent: 0, server: 1, sharedServer: 1,
   package: 2, credential: 2, tool: 2, vulnerability: 3, misconfiguration: 3 };
-export const MCP_FLOW_FOOTPRINT = { width: 260, height: 188, column: 368, row: 224 };
+/** Cards render 203-272px tall, so rows are spaced for the tallest one plus a gap; 224px rows let them overlap. */
+const CARD_MAX_HEIGHT = 272;
+export const MCP_FLOW_FOOTPRINT = { width: 260, height: 188, cardMaxHeight: CARD_MAX_HEIGHT, column: 368, row: CARD_MAX_HEIGHT + 28 };
 
 /** Recorded branches organize a small MCP inventory; they never assert a missing link.
  * Mixed infrastructure and larger estates retain the general hierarchy. */

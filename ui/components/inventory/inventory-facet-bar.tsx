@@ -6,6 +6,14 @@ import { Search } from "lucide-react";
 import { ICON_SIZE } from "@/lib/icon-sizes";
 import { useInventory, type InventoryFilterKey } from "@/lib/inventory-context";
 
+const ALL_LABELS: Partial<Record<InventoryFilterKey, string>> = {
+  type: "types",
+  environment: "environments",
+  source: "sources",
+  provider: "providers",
+  severity: "finding severities",
+};
+
 function label(value: string): string {
   return value.replace(/[_:.-]+/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
@@ -13,9 +21,12 @@ function label(value: string): string {
 export function InventoryFacetBar({
   severityFilter,
   onSeverityFilterChange,
+  showTypeFilter = true,
 }: {
   severityFilter?: string | undefined;
   onSeverityFilterChange?: ((severity: string) => void) | undefined;
+  /** Pages with their own type chips hide the duplicate type select. */
+  showTypeFilter?: boolean | undefined;
 } = {}) {
   const { model, summary, filters, fixedEntityTypes, setFilter, clearFilters } = useInventory();
   const facets = model?.facets ?? summary?.facets;
@@ -57,7 +68,7 @@ export function InventoryFacetBar({
         }}
         className="h-9 rounded-lg border border-outline bg-surface px-2.5 text-xs font-normal normal-case tracking-normal text-foreground focus:border-outline-strong focus:outline-none"
       >
-        <option value="">All {title.toLowerCase()}</option>
+        <option value="">All {ALL_LABELS[key] ?? title.toLowerCase()}</option>
         {missingSelection ? <option value={selectedValue}>
           {selectedValue.split(",").map((value) => label(value.trim())).join(", ")} (selected · count unavailable)
         </option> : null}
@@ -88,7 +99,7 @@ export function InventoryFacetBar({
             />
           </span>
         </label>
-        {select("type", "Type", typeBuckets)}
+        {showTypeFilter ? select("type", "Type", typeBuckets) : null}
         {select("environment", "Environment", facets?.environment?.buckets ?? [])}
         {select("source", "Source", facets?.source?.buckets ?? [])}
         {hasActive ? <button type="button" onClick={() => { clearFilters(); onSeverityFilterChange?.("all"); }}
