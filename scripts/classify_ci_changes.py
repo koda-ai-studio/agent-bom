@@ -30,6 +30,7 @@ _ROOT_DOCUMENTS = {
 }
 _DOCUMENTATION_PREFIXES = (
     ".github/ISSUE_TEMPLATE/",
+    "changelog.d/",
     "docs/",
     "site-docs/",
 )

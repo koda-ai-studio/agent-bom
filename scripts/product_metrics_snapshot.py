@@ -1,11 +1,22 @@
 #!/usr/bin/env python3
-"""Generate a verified snapshot of volatile product metrics from the repo."""
+"""Generate a verified snapshot of volatile product metrics from the repo.
+
+docs/PRODUCT_METRICS.{md,json} are a release-time artifact. Pull requests do
+not regenerate them: ``--check`` on a PR proves the generator still runs and
+that the committed file has the same version and metric set, and prints any
+drifted counts without failing. The release step regenerates the snapshot
+(``--write``, also run by ``make preflight-fix``) on the release-preparation
+branch, and ``--check --release`` (or ``AGENT_BOM_RELEASE_CHECK=1``) fails on
+any drifted count. ``release.yml`` and ``scripts/preflight_release.sh`` run the
+strict form; see docs/RELEASE_VERIFICATION.md.
+"""
 
 from __future__ import annotations
 
 import argparse
 import ast
 import json
+import os
 import re
 import subprocess
 from datetime import date
@@ -14,6 +25,7 @@ from typing import Any, cast
 
 ROOT = Path(__file__).resolve().parent.parent
 PROXY_DETECTOR_SOURCE = "src/agent_bom/runtime/proxy_session.py"
+RELEASE_CHECK_ENV = "AGENT_BOM_RELEASE_CHECK"
 
 
 def _tracked_files(*pathspecs: str) -> list[Path]:
@@ -240,6 +252,7 @@ def render_markdown(snapshot: dict[str, object]) -> str:
         "",
         "This appendix is the canonical home for volatile product counts.",
         "Keep counts out of public positioning copy and update this file from the repo instead of hand-editing numbers.",
+        "The counts are regenerated at release time and describe the version below, not later commits on `main`.",
         "",
         f"- Generated on: `{snapshot['generated_on']}`",
         f"- Version: `{snapshot['version']}`",
@@ -287,10 +300,50 @@ def _metric_value(snapshot: dict[str, Any], name: str) -> object:
     return None
 
 
+def _check(committed: object, snapshot: dict[str, object], json_out: str, *, release: bool) -> int:
+    """Compare on version and metrics; ``generated_on`` is churn with no signal."""
+    if not isinstance(committed, dict) or not isinstance(committed.get("metrics"), list):
+        print(f"{json_out} is not a product metrics snapshot")
+        return 1
+    actual = cast(list[dict[str, object]], snapshot["metrics"])
+    committed_names = [metric.get("name") for metric in committed["metrics"] if isinstance(metric, dict)]
+    shape_errors: list[str] = []
+    if committed.get("version") != snapshot["version"]:
+        shape_errors.append(f"  version: committed={committed.get('version')} actual={snapshot['version']}")
+    if committed_names != [metric["name"] for metric in actual]:
+        shape_errors.append(f"  metric set: committed={committed_names} actual={[metric['name'] for metric in actual]}")
+    drifted = [
+        f"  {metric['name']}: committed={_metric_value(committed, str(metric['name']))} actual={metric['value']}"
+        for metric in actual
+        if _metric_value(committed, str(metric["name"])) != metric["value"]
+    ]
+    regenerate = "Regenerate with: python scripts/product_metrics_snapshot.py --write"
+    if shape_errors or (release and drifted):
+        print("PRODUCT_METRICS snapshot is stale:")
+        print("\n".join(shape_errors + drifted))
+        print(regenerate)
+        return 1
+    if drifted:
+        print(f"OK: {json_out} has the current version and metric set. Counts are refreshed at release; drift since then:")
+        print("\n".join(drifted))
+        return 0
+    print(f"OK: {json_out} matches the repository.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--write", action="store_true", help="Write docs/PRODUCT_METRICS.md and docs/PRODUCT_METRICS.json")
-    parser.add_argument("--check", action="store_true", help="Exit non-zero if the committed snapshot is stale")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Exit non-zero if the committed snapshot has a different version or metric set; drifted counts are reported only",
+    )
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help=f"With --check, also fail on any drifted count (release gate; same as {RELEASE_CHECK_ENV}=1)",
+    )
     parser.add_argument("--markdown-out", default="docs/PRODUCT_METRICS.md", help="Markdown output path when writing")
     parser.add_argument("--json-out", default="docs/PRODUCT_METRICS.json", help="JSON output path when writing")
     args = parser.parse_args(argv)
@@ -309,21 +362,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"cannot read {args.json_out}: {exc}")
             return 1
 
-        drifted = [
-            f"  {metric['name']}: committed={_metric_value(committed, str(metric['name']))} actual={metric['value']}"
-            for metric in cast(list[dict[str, object]], snapshot["metrics"])
-            if _metric_value(committed, str(metric["name"])) != metric["value"]
-        ]
-        if drifted or committed.get("version") != snapshot["version"]:
-            print("PRODUCT_METRICS snapshot is stale:")
-            if committed.get("version") != snapshot["version"]:
-                print(f"  version: committed={committed.get('version')} actual={snapshot['version']}")
-            print("\n".join(drifted))
-            print("Regenerate with: python scripts/product_metrics_snapshot.py --write")
-            return 1
-
-        print(f"OK: {args.json_out} matches the repository.")
-        return 0
+        release = args.release or os.environ.get(RELEASE_CHECK_ENV, "").strip().lower() in {"1", "true", "yes"}
+        return _check(committed, snapshot, args.json_out, release=release)
 
     if args.write:
         markdown_path = ROOT / args.markdown_out

@@ -3,13 +3,18 @@ name: Dependency Review
 on:
   pull_request:
     branches: [main]
+  # A required context must report on merge-queue runs or every queued merge
+  # stalls. The review needs one PR's base/head snapshot, which a merge group
+  # does not have; each queued PR already passed it on its own run.
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
 
 concurrency:
-  group: dependency-review-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: dependency-review-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   dependency-review:
@@ -21,13 +26,19 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Pass merge group
+        if: github.event_name == 'merge_group'
+        run: echo "Each pull request in this merge group passed Dependency Review on its own run."
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name != 'merge_group'
         with:
           # The merge commit plus both parents is all the diff below needs; a
           # full-history clone was most of this required check's wall time.
           fetch-depth: 2
 
       - name: Detect dependency-workflow bootstrap PR
+        if: github.event_name != 'merge_group'
         id: bootstrap
         shell: bash
         run: |
@@ -64,14 +75,14 @@ jobs:
           fi
 
       - name: Skip dependency review
-        if: steps.bootstrap.outputs.skip == 'true'
+        if: github.event_name != 'merge_group' && steps.bootstrap.outputs.skip == 'true'
         env:
           REASON: ${{ steps.bootstrap.outputs.reason }}
         run: |
           echo "Skipping dependency review: ${REASON:-dependency graph bootstrap workflow change}."
 
       - name: Review dependency changes
-        if: steps.bootstrap.outputs.skip != 'true'
+        if: github.event_name != 'merge_group' && steps.bootstrap.outputs.skip != 'true'
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
         with:
           fail-on-severity: high
