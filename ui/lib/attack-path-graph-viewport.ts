@@ -54,9 +54,11 @@ export function attackPathViewport(
   const fallback = fitted < lowest;
   const spineBox = boundsOf(layout, spineIds);
   if (!fallback && layout.direction === "TB" && spineBox) {
-    // A vertical path reads down the middle of the phone: centre its column. Branches pushed past the
-    // edge are listed in `hiddenNodeIds`, which the canvas names with a "Fit all" action.
-    x = centre(spineBox, zoom).x;
+    // A vertical path reads down the middle of the phone: move its column toward the centre as far as
+    // keeping every branch inside the padded pane allows (nothing is clipped on the first frame).
+    const lo = pad.left - whole.x * zoom;
+    const hi = pad.left + usableWidth - (whole.x + whole.width) * zoom;
+    x = Math.min(Math.max(lo, hi), Math.max(Math.min(lo, hi), centre(spineBox, zoom).x));
   }
   if (fallback) {
     zoom = lowest;
