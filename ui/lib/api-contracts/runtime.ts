@@ -52,7 +52,7 @@ export type SkillsScanFileStatus =
 export type SkillsContentVerdict = "benign" | "suspicious" | "malicious";
 
 /** Handling recommendation derived from content + provenance together. */
-export type SkillsReviewVerdict = "clean" | "review" | "high_risk" | "blocked";
+export type SkillsReviewVerdict = "trusted" | "review" | "high_risk" | "blocked";
 
 export interface SkillsScanFinding {
   severity: string;

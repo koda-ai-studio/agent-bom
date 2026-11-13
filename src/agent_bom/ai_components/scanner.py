@@ -35,7 +35,9 @@ from agent_bom.ai_components.patterns import (
     SDK_PATTERNS_BY_LANGUAGE,
 )
 from agent_bom.core import regex_prefilter
+from agent_bom.core.scan_budget import budget_stop_detail, current_source_budget
 from agent_bom.scanners.secret_lines import is_placeholder_value
+from agent_bom.scanners.state import record_coverage_warning
 from agent_bom.traversal import is_nested_worktree_root
 
 logger = logging.getLogger(__name__)
@@ -125,6 +127,27 @@ def _scan_framework_relationships(*paths: str | Path) -> list[dict]:
     return [agent.to_dict() for agent in scan_framework_agents(*paths)]
 
 
+def _ai_budget_exhausted(report: AIComponentReport) -> bool:
+    """True once a default ``scan`` has read its AI-component file budget; records the gap once."""
+    budget = current_source_budget()
+    if budget is None or report.files_scanned < budget.ai_component_files:
+        return False
+    detail = budget_stop_detail("AI-component scan", report.files_scanned)
+    if detail not in report.warnings:
+        report.warnings.append(detail)
+        record_coverage_warning(
+            {
+                "ecosystem": "ai-components",
+                "release": "ai-components:file-budget",
+                "reason": "source_file_limit",
+                "detail": detail,
+                "package_count": 0,
+                "advisory_rows": 0,
+            }
+        )
+    return True
+
+
 def _walk_directory(
     root: Path,
     report: AIComponentReport,
@@ -134,17 +157,19 @@ def _walk_directory(
 ) -> None:
     """Walk directory tree, scanning source files."""
     for dirpath, dirnames, filenames in os.walk(root):
-        # Prune skip directories in-place
+        # Prune skip directories in-place; sorted so a budget stop is deterministic.
         dirnames[:] = [
             d
-            for d in dirnames
+            for d in sorted(dirnames)
             if d not in _SKIP_DIRS
             and not d.endswith(".egg-info")
             # A linked worktree is a second copy of the project.
             and not is_nested_worktree_root(Path(dirpath) / d)
         ]
 
-        for filename in filenames:
+        for filename in sorted(filenames):
+            if _ai_budget_exhausted(report):
+                return
             filepath = Path(dirpath) / filename
             _scan_file(filepath, root, report, manifest_pkgs, seen_keys, declared)
 

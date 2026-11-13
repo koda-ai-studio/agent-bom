@@ -176,6 +176,25 @@
         "schema_version": { "type": "string", "pattern": "^1(\\.\\d+)?$" }
       },
       "additionalProperties": true
+    },
+    "ai_inventory": {
+      "type": "object",
+      "description": "AI components, framework agents, secret-scan coverage and code analysis found in scanned sources.",
+      "properties": {
+        "ast_analysis": {
+          "type": "object",
+          "description": "Static code analysis. The call_graph, cfg_edges and dependency_symbol_reach rows are listed only for a scan run with --include-code-graph (relationships_included: true). Otherwise they are omitted, not empty, and stats.total_call_edges, stats.total_cfg_edges and stats.total_dependency_symbol_reach still count them.",
+          "properties": {
+            "relationships_included": { "type": "boolean" },
+            "call_graph": { "type": "array", "items": { "type": "object" } },
+            "cfg_edges": { "type": "array", "items": { "type": "object" } },
+            "dependency_symbol_reach": { "type": "array", "items": { "type": "object" } },
+            "stats": { "type": "object", "additionalProperties": true }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
     }
   },
   "additionalProperties": true

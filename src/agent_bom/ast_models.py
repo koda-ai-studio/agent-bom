@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_severity
 from agent_bom.ast.flow_serialize import flow_finding_rows
+from agent_bom.ast.report_rows import relationship_rows
 
 
 @dataclass
@@ -188,9 +189,14 @@ class ASTAnalysisResult:
     warnings: list[str] = field(default_factory=list)
     analysis_coverage: ASTAnalysisCoverage = field(default_factory=ASTAnalysisCoverage)
 
-    def to_dict(self) -> dict:
-        """Serialize for JSON output / AIBOMReport."""
-        return {
+    def to_dict(self, *, include_relationships: bool = True) -> dict:
+        """Serialize for JSON output / AIBOMReport.
+
+        ``include_relationships=False`` leaves out the call-graph, control-flow
+        and dependency-symbol rows; ``stats`` still counts them and
+        ``relationships_included`` says they were left out, not absent.
+        """
+        return relationship_rows(self, include=include_relationships) | {
             "prompts": [
                 {
                     "text": p.text[:500],
@@ -237,25 +243,6 @@ class ASTAnalysisResult:
                 }
                 for t in self.tools
             ],
-            "call_graph": [
-                {
-                    "caller": edge.caller,
-                    "callee": edge.callee,
-                    "file": edge.file_path,
-                    "line": edge.line_number,
-                }
-                for edge in self.call_edges
-            ],
-            "cfg_edges": [
-                {
-                    "source": edge.source,
-                    "target": edge.target,
-                    "type": edge.edge_type,
-                    "file": edge.file_path,
-                    "function": edge.function_name,
-                }
-                for edge in self.cfg_edges
-            ],
             "flow_findings": flow_finding_rows(self.flow_findings),
             "suppressed_flow_findings": flow_finding_rows(self.suppressed_flow_findings),
             "application_entrypoints": [
@@ -270,30 +257,6 @@ class ASTAnalysisResult:
                     "provenance": entry.provenance,
                 }
                 for entry in self.application_entrypoints
-            ],
-            "dependency_symbol_reach": [
-                {
-                    "entrypoint": reach.entrypoint,
-                    "package": reach.package,
-                    "module": reach.module,
-                    "symbol": reach.symbol,
-                    "file": reach.file_path,
-                    "line": reach.line_number,
-                    "call_path": reach.call_path,
-                    "depth": reach.depth,
-                    "confidence": reach.confidence,
-                    "ecosystem": reach.ecosystem,
-                    **(
-                        {
-                            "entrypoint_kind": reach.entrypoint_kind,
-                            "entrypoint_framework": reach.entrypoint_framework,
-                            "entrypoint_provenance": reach.entrypoint_provenance,
-                        }
-                        if reach.entrypoint_kind != "mcp_tool"
-                        else {}
-                    ),
-                }
-                for reach in self.dependency_symbol_reach
             ],
             "frameworks": self.frameworks_detected,
             "files_analyzed": self.files_analyzed,

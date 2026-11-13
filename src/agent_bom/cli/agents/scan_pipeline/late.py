@@ -5,9 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from rich.markup import escape
+
 from agent_bom.cli._common import logger
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
+from agent_bom.core.scan_budget import budget_stop_summary
 from agent_bom.scanners import consume_coverage_warnings
 
 
@@ -276,9 +279,10 @@ def _analyze_source(opts: ScanOptions, st: ScanState) -> None:
                     or _ast_result.flow_findings
                     or _ast_result.application_entrypoints
                     or _ast_result.dependency_symbol_reach
+                    or _ast_result.analysis_coverage.status == "partial"
                 ):
                     st.report.ai_inventory_data = st.report.ai_inventory_data or {}
-                    st.report.ai_inventory_data["ast_analysis"] = _ast_result.to_dict()
+                    st.report.ai_inventory_data["ast_analysis"] = _ast_result.to_dict(include_relationships=opts.include_code_graph)
                     _n_prompts = len(_ast_result.prompts)
                     _n_guards = len(_ast_result.guardrails)
                     _n_tools = len(_ast_result.tools)
@@ -385,6 +389,12 @@ def _summarize_model_supply_chain(opts: ScanOptions, st: ScanState) -> None:
         st.report.browser_extensions = st.ctx._browser_ext_results
 
 
+def _report_budget_stops(st: ScanState) -> None:
+    summary = budget_stop_summary()
+    if summary:
+        st.con.print(f"\n  [yellow]⚠[/yellow] {escape(summary)}")
+
+
 def run_ai_asset_scanners(opts: ScanOptions, st: ScanState) -> None:
     """Scan model, dataset, training, source and secret assets into the report."""
     _detect_model_dirs(opts, st)
@@ -395,3 +405,4 @@ def run_ai_asset_scanners(opts: ScanOptions, st: ScanState) -> None:
     _analyze_source(opts, st)
     _scan_secrets(opts, st)
     _summarize_model_supply_chain(opts, st)
+    _report_budget_stops(st)

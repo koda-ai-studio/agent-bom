@@ -6,6 +6,7 @@ groups live in smaller helper modules by concern.
 
 from __future__ import annotations
 
+from agent_bom.cli.options_analysis import analysis_scope_options
 from agent_bom.cli.options_image import image_supply_chain_option_group
 from agent_bom.cli.options_serving import serving_options
 from agent_bom.cli.options_sources import (
@@ -38,6 +39,7 @@ from agent_bom.cli.options_surfaces import (
 _ALL_GROUPS = [
     input_options,
     output_options,
+    analysis_scope_options,
     scan_control_options,
     enrichment_options,
     vex_options,

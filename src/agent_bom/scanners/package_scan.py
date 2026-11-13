@@ -38,7 +38,7 @@ from agent_bom.scanners.blast_radius import expand_blast_radius_hops
 from agent_bom.scanners.clean_verdict import record_unfixed_suppression_receipt, unconfirmed_matches_line, vulnerability_summary_line
 from agent_bom.scanners.compat_exports import resolve_legacy_export
 from agent_bom.scanners.distro_cpe_scan import propagate_possibly_affected
-from agent_bom.scanners.kev_default_join import join_default_kev_catalog
+from agent_bom.scanners.kev_default_join import join_default_kev_catalog, start_default_kev_prefetch
 from agent_bom.scanners.local_advisories import _scan_local_advisories, merge_scanner_vulnerabilities
 from agent_bom.scanners.local_data_freshness import _osv_answered
 from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_if_needed_impl
@@ -926,6 +926,7 @@ def scan_agents_sync(
             )
         )
     else:
+        kev_prefetch = start_default_kev_prefetch(offline=bool(scan_options.offline))
         blast_radii = asyncio.run(
             scan_agents(
                 agents,
@@ -935,7 +936,7 @@ def scan_agents_sync(
                 options=scan_options,
             )
         )
-        join_default_kev_catalog(blast_radii, offline=scan_options.offline)
+        join_default_kev_catalog(blast_radii, offline=scan_options.offline, prefetch=kev_prefetch)
     if blast_radius_depth > 1:
         if show_scan_banner:
             console.print(

@@ -31,6 +31,7 @@ from pathlib import Path
 
 from agent_bom import config
 from agent_bom.core.path_context import CONTEXT_SEVERITY
+from agent_bom.core.scan_budget import budget_stop_detail, current_source_budget
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.runtime.patterns import PII_PATTERNS
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator, aws_secret_candidates, nearest_aws_secret
@@ -509,6 +510,17 @@ def _should_scan_pii_line(file_path: Path, line: str) -> bool:
     return suffix in _PII_CODE_EXTENSIONS and bool(_PII_CONTEXT_RE.search(line))
 
 
+def _secret_file_limit() -> int:
+    budget = current_source_budget()
+    return min(_MAX_FILES, budget.secret_files) if budget is not None else _MAX_FILES
+
+
+def _file_limit_warning(file_limit: int) -> str:
+    if file_limit < _MAX_FILES:
+        return budget_stop_detail("Secret scan", file_limit)
+    return f"Stopped at {_MAX_FILES} files"
+
+
 def scan_secrets(
     project_path: str | Path,
     *,
@@ -582,8 +594,8 @@ def scan_secrets(
             continue
         if not _should_scan(f.relative_to(project)):
             continue
-        if file_count >= _MAX_FILES:
-            result.warnings.append(f"Stopped at {_MAX_FILES} files")
+        if file_count >= _secret_file_limit():
+            result.warnings.append(_file_limit_warning(file_count))
             break
 
         rel = str(f.relative_to(project))

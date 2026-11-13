@@ -243,6 +243,9 @@ class ScanOptions:
     posture: bool = False
     _iac_only: bool = False
     allow_stale_db: bool = False
+    include_code_graph: bool = False
+    full_analysis: bool = False
+    quick: bool = False
     _image_only: bool = False
     image_pull_mode: str = "auto"
     image_cosign_key: Optional[str] = None
@@ -273,6 +276,8 @@ class ScanOptions:
             raise click.UsageError(
                 f"--sbom-name was given {name_count} times for {sbom_count} --sbom file(s); give one --sbom-name per --sbom."
             )
+        if self.full_analysis and self.quick:
+            raise click.UsageError("--full-analysis and --quick are mutually exclusive.")
         if "-" in self.extra_inventories:
             raise click.UsageError("--inventory - (stdin) must be the first --inventory value.")
         try:
