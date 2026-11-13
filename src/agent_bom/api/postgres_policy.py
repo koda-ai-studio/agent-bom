@@ -16,8 +16,8 @@ from .postgres_common import (
     _maintenance_connection,
     _tenant_connection,
     bypass_tenant_rls,
-    cross_tenant_conflict_as,
 )
+from .postgres_tenant_conflict import cross_tenant_conflict_as
 from .schedule_store import ScanSchedule, schedule_record_for_tenant, schedule_write_tenant
 
 if TYPE_CHECKING:

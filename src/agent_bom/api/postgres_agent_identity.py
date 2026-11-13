@@ -38,8 +38,8 @@ from agent_bom.api.postgres_common import (
     _maintenance_connection,
     _tenant_connection,
     bypass_tenant_rls,
-    cross_tenant_conflict_as,
 )
+from agent_bom.api.postgres_tenant_conflict import cross_tenant_conflict_as
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id
 

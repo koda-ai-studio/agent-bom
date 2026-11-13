@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from agent_bom.api.postgres_common import _ensure_tenant_rls, _get_pool, _tenant_connection, cross_tenant_conflict_as
+from agent_bom.api.postgres_common import _ensure_tenant_rls, _get_pool, _tenant_connection
+from agent_bom.api.postgres_tenant_conflict import cross_tenant_conflict_as
 from agent_bom.api.source_store import source_write_tenant
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id

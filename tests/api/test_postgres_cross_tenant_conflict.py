@@ -10,13 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from agent_bom.api.postgres_common import cross_tenant_conflict_as
+from agent_bom.api.postgres_tenant_conflict import cross_tenant_conflict_as
 
-
-class _PgError(Exception):
-    def __init__(self, message: str, sqlstate: str) -> None:
-        super().__init__(message)
-        self.sqlstate = sqlstate
+errors = pytest.importorskip("psycopg.errors")
 
 
 _RLS_USING = 'new row violates row-level security policy (USING expression) for table "credential_refs"'
@@ -25,27 +21,27 @@ _RLS_USING = 'new row violates row-level security policy (USING expression) for 
 def test_rls_using_violation_becomes_the_tenant_refusal() -> None:
     with pytest.raises(ValueError, match="different tenant") as raised:
         with cross_tenant_conflict_as("Credential identity belongs to a different tenant"):
-            raise _PgError(_RLS_USING, "42501")
+            raise errors.InsufficientPrivilege(_RLS_USING)
     assert raised.value.__cause__ is None
 
 
 def test_other_privilege_errors_are_not_masked() -> None:
-    with pytest.raises(_PgError, match="permission denied"):
+    with pytest.raises(errors.InsufficientPrivilege, match="permission denied"):
         with cross_tenant_conflict_as("x belongs to a different tenant"):
-            raise _PgError("permission denied for table credential_refs", "42501")
+            raise errors.InsufficientPrivilege("permission denied for table credential_refs")
 
 
 def test_with_check_violations_are_not_masked() -> None:
     message = 'new row violates row-level security policy for table "credential_refs"'
-    with pytest.raises(_PgError):
+    with pytest.raises(errors.InsufficientPrivilege):
         with cross_tenant_conflict_as("x belongs to a different tenant"):
-            raise _PgError(message, "42501")
+            raise errors.InsufficientPrivilege(message)
 
 
 def test_other_errors_pass_through() -> None:
-    with pytest.raises(RuntimeError):
+    with pytest.raises(errors.UniqueViolation):
         with cross_tenant_conflict_as("x belongs to a different tenant"):
-            raise RuntimeError(_RLS_USING)
+            raise errors.UniqueViolation(_RLS_USING)
 
 
 @pytest.mark.parametrize(
