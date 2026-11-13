@@ -457,6 +457,27 @@ def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph, *, apply_retention
     )
 
 
+# graph_edges carries about a dozen indexes, and every snapshot row is a
+# random-key insert into each. On SQLite's default 2 MiB cache a 170,000-node
+# snapshot thrashed it (cold current-graph build ~508 s); 64 MiB brought it to
+# ~60 s. A whole-snapshot load walks an index and fetches rows at random the
+# same way. The cache is held only for the write or load, then shrunk back.
+_SNAPSHOT_BULK_CACHE_KIB = 64 * 1024
+
+
+@contextmanager
+def _snapshot_bulk_cache(conn: sqlite3.Connection) -> Generator[None, None, None]:
+    previous = int(conn.execute("PRAGMA cache_size").fetchone()[0])
+    conn.execute(f"PRAGMA cache_size = -{_SNAPSHOT_BULK_CACHE_KIB}")
+    try:
+        yield
+    finally:
+        try:
+            conn.execute(f"PRAGMA cache_size = {previous}")
+        except sqlite3.Error as exc:  # a closed or broken connection keeps nothing to restore
+            logger.debug("Graph bulk cache restore skipped (%s)", type(exc).__name__)
+
+
 def save_graph_streaming(
     conn: sqlite3.Connection,
     *,
@@ -498,59 +519,60 @@ def save_graph_streaming(
 
     Returns the persisted ``{"nodes": N, "edges": M}`` counts.
     """
-    tenant = normalize_graph_tenant_id(tenant_id)
-    scan = scan_id
-    now = created_at or _now_iso()
-    _check_snapshot_writable(conn, tenant=tenant, scan=scan, snapshot_kind=snapshot_kind, correlation_id=correlation_id)
-    batch_size = _graph_write_batch_size()
-    # Derived correlations combine evidence; they are not a new observation
-    # and must neither inherit scan continuity nor retire source-scan edges.
-    previous_scan = latest_snapshot_id(conn, tenant_id=tenant) if snapshot_kind == "scan" else ""
-    if previous_scan == scan:
-        previous_scan = previous_snapshot_id(conn, tenant_id=tenant, before_scan_id=scan)
-    _clear_snapshot_rows(conn, tenant=tenant, scan=scan)
+    with _snapshot_bulk_cache(conn):
+        tenant = normalize_graph_tenant_id(tenant_id)
+        scan = scan_id
+        now = created_at or _now_iso()
+        _check_snapshot_writable(conn, tenant=tenant, scan=scan, snapshot_kind=snapshot_kind, correlation_id=correlation_id)
+        batch_size = _graph_write_batch_size()
+        # Derived correlations combine evidence; they are not a new observation
+        # and must neither inherit scan continuity nor retire source-scan edges.
+        previous_scan = latest_snapshot_id(conn, tenant_id=tenant) if snapshot_kind == "scan" else ""
+        if previous_scan == scan:
+            previous_scan = previous_snapshot_id(conn, tenant_id=tenant, before_scan_id=scan)
+        _clear_snapshot_rows(conn, tenant=tenant, scan=scan)
 
-    stats = _SnapshotStats()
-    write_nodes_and_aliases(conn, nodes, stats, scan=scan, tenant=tenant, batch_size=batch_size, now=now)
-    _write_edges(conn, edges, stats, scan=scan, tenant=tenant, now=now, batch_size=batch_size)
-    if previous_scan:
-        _carry_forward_edge_continuity(conn, previous_scan=previous_scan, scan=scan, tenant=tenant)
-    # A later snapshot does not prove a removed native relationship. Preserve
-    # source-supplied ends; unknown/partial collection never synthesizes Close.
-    attack_path_count = _write_attack_paths(conn, attack_paths, scan=scan, tenant=tenant, now=now)
-    _write_interaction_risks(conn, interaction_risks, scan=scan, tenant=tenant)
-    _write_snapshot_row(
-        conn,
-        stats,
-        scan=scan,
-        tenant=tenant,
-        now=now,
-        analysis_status=analysis_status,
-        snapshot_kind=snapshot_kind,
-        correlation_id=correlation_id,
-        evidence_manifest_sha256=evidence_manifest_sha256,
-        write_generation=write_generation,
-    )
-    _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now)
-    if correlation_result_manifest is not None:
-        _complete_correlation_run_atomically(
+        stats = _SnapshotStats()
+        write_nodes_and_aliases(conn, nodes, stats, scan=scan, tenant=tenant, batch_size=batch_size, now=now)
+        _write_edges(conn, edges, stats, scan=scan, tenant=tenant, now=now, batch_size=batch_size)
+        if previous_scan:
+            _carry_forward_edge_continuity(conn, previous_scan=previous_scan, scan=scan, tenant=tenant)
+        # A later snapshot does not prove a removed native relationship. Preserve
+        # source-supplied ends; unknown/partial collection never synthesizes Close.
+        attack_path_count = _write_attack_paths(conn, attack_paths, scan=scan, tenant=tenant, now=now)
+        _write_interaction_risks(conn, interaction_risks, scan=scan, tenant=tenant)
+        _write_snapshot_row(
             conn,
-            tenant=tenant,
+            stats,
             scan=scan,
+            tenant=tenant,
+            now=now,
+            analysis_status=analysis_status,
+            snapshot_kind=snapshot_kind,
             correlation_id=correlation_id,
             evidence_manifest_sha256=evidence_manifest_sha256,
-            correlation_result_manifest=correlation_result_manifest,
-            completed_at=correlation_completed_at or now,
-            execution_owner=correlation_execution_owner,
+            write_generation=write_generation,
         )
-    node_count, edge_count = stats.node_count, stats.edge_count
+        _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now)
+        if correlation_result_manifest is not None:
+            _complete_correlation_run_atomically(
+                conn,
+                tenant=tenant,
+                scan=scan,
+                correlation_id=correlation_id,
+                evidence_manifest_sha256=evidence_manifest_sha256,
+                correlation_result_manifest=correlation_result_manifest,
+                completed_at=correlation_completed_at or now,
+                execution_owner=correlation_execution_owner,
+            )
+        node_count, edge_count = stats.node_count, stats.edge_count
 
-    conn.commit()
-    logger.info("Saved graph: %d nodes, %d edges, %d attack paths (scan=%s)", node_count, edge_count, attack_path_count, scan)
+        conn.commit()
+        logger.info("Saved graph: %d nodes, %d edges, %d attack paths (scan=%s)", node_count, edge_count, attack_path_count, scan)
 
-    if apply_retention:
-        _purge_after_save(conn)
-    return {"nodes": node_count, "edges": edge_count}
+        if apply_retention:
+            _purge_after_save(conn)
+        return {"nodes": node_count, "edges": edge_count}
 
 
 def _purge_after_save(conn: sqlite3.Connection) -> None:
@@ -585,161 +607,162 @@ def load_graph(
     compute differences (snapshot diff, compare) are only correct on a whole
     graph — a trimmed one reads as deletions that never happened.
     """
-    tenant_id = normalize_graph_tenant_id(tenant_id)
-    effective_scan_id, created_at = _resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
-    graph = UnifiedGraph(scan_id=effective_scan_id, tenant_id=tenant_id, created_at=created_at)
-    if not effective_scan_id:
-        return graph
+    with _snapshot_bulk_cache(conn):
+        tenant_id = normalize_graph_tenant_id(tenant_id)
+        effective_scan_id, created_at = _resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
+        graph = UnifiedGraph(scan_id=effective_scan_id, tenant_id=tenant_id, created_at=created_at)
+        if not effective_scan_id:
+            return graph
 
-    snapshot_row = conn.execute(
-        "SELECT analysis_status FROM graph_snapshots WHERE tenant_id = ? AND scan_id = ?",
-        (tenant_id, effective_scan_id),
-    ).fetchone()
-    if snapshot_row is not None:
-        raw_status = json.loads(snapshot_row["analysis_status"] or "{}")
-        graph.analysis_status = analysis_status_map_from_dict(raw_status)
-        if not graph.analysis_status:
-            graph.analysis_status["attack_path_fusion"] = not_recorded_analysis_status()
-
-    where = "tenant_id = ? AND scan_id = ?"
-    params: list[Any] = [tenant_id, effective_scan_id]
-    if entity_types:
-        placeholders = ",".join("?" * len(entity_types))
-        where += f" AND entity_type IN ({placeholders})"
-        params.extend(entity_types)
-    sev_sql, sev_params = severity_floor_sql(min_severity_rank)
-    if sev_sql:
-        where += f" AND {sev_sql}"
-        params.extend(sev_params)
-
-    query = f"SELECT * FROM graph_nodes WHERE {where}"  # nosec B608 - where is built from static clause fragments
-    budget = resolve_node_budget(node_budget)
-    total_nodes = 0
-    if budget is not None:
-        # The budget has to bound the *read*, not the result. Trimming after a full materialization declares the same completeness while
-        # still having paid for every row: at 200k nodes that is ~783 MB the cap was introduced to avoid. Risk-ranked so a trimmed view
-        # keeps what matters, id breaking ties so the selection is deterministic — the same order Postgres uses, so the two backends return
-        # the same nodes.
-        count_row = conn.execute(
-            f"SELECT COUNT(*) FROM graph_nodes WHERE {where}",  # nosec B608 - where is built from static clause fragments
-            params,
+        snapshot_row = conn.execute(
+            "SELECT analysis_status FROM graph_snapshots WHERE tenant_id = ? AND scan_id = ?",
+            (tenant_id, effective_scan_id),
         ).fetchone()
-        total_nodes = int(count_row[0]) if count_row else 0
-        query += " ORDER BY risk_score DESC, id LIMIT ?"
-        params.append(budget)
-    else:
-        # One explicit order, shared with Postgres, independent of the planner's
-        # index choice. Correlation receipts hash the ordered snapshot serialization.
-        query += " ORDER BY id"
+        if snapshot_row is not None:
+            raw_status = json.loads(snapshot_row["analysis_status"] or "{}")
+            graph.analysis_status = analysis_status_map_from_dict(raw_status)
+            if not graph.analysis_status:
+                graph.analysis_status["attack_path_fusion"] = not_recorded_analysis_status()
 
-    node_ids: set[str] = set()
-    for row in conn.execute(query, params):
-        sev = row["severity"] or ""
-        graph.add_node(
-            UnifiedNode.from_stored(
-                id=row["id"],
-                entity_type=EntityType(row["entity_type"]),
-                label=row["label"],
-                category_uid=row["category_uid"],
-                class_uid=row["class_uid"],
-                type_uid=row["type_uid"],
-                status=NodeStatus(row["status"]),
-                risk_score=row["risk_score"],
-                severity=sev,
-                severity_id=row["severity_id"],
-                first_seen=row["first_seen"],
-                last_seen=row["last_seen"],
-                attributes=json.loads(row["attributes"]),
-                compliance_tags=json.loads(row["compliance_tags"]),
-                data_sources=json.loads(row["data_sources"]),
-                dimensions=NodeDimensions.from_dict(json.loads(row["dimensions"])),
-            )
-        )
-        node_ids.add(row["id"])
+        where = "tenant_id = ? AND scan_id = ?"
+        params: list[Any] = [tenant_id, effective_scan_id]
+        if entity_types:
+            placeholders = ",".join("?" * len(entity_types))
+            where += f" AND entity_type IN ({placeholders})"
+            params.extend(entity_types)
+        sev_sql, sev_params = severity_floor_sql(min_severity_rank)
+        if sev_sql:
+            where += f" AND {sev_sql}"
+            params.extend(sev_params)
 
-    returned_nodes = len(node_ids)
-    if budget is None:
-        total_nodes = returned_nodes
-    graph.completeness = GraphCompleteness(
-        truncated=budget is not None and total_nodes > returned_nodes,
-        node_budget=budget,
-        total_nodes=total_nodes,
-        returned_nodes=returned_nodes,
-        reason="node_budget" if budget is not None and total_nodes > returned_nodes else "",
-    )
+        query = f"SELECT * FROM graph_nodes WHERE {where}"  # nosec B608 - where is built from static clause fragments
+        budget = resolve_node_budget(node_budget)
+        total_nodes = 0
+        if budget is not None:
+            # The budget has to bound the *read*, not the result. Trimming after a full materialization declares the same completeness
+            # while still having paid for every row: at 200k nodes that is ~783 MB the cap was introduced to avoid. Risk-ranked so a
+            # trimmed view keeps what matters, id breaking ties so the selection is deterministic — the same order Postgres uses, so the
+            # two backends return the same nodes.
+            count_row = conn.execute(
+                f"SELECT COUNT(*) FROM graph_nodes WHERE {where}",  # nosec B608 - where is built from static clause fragments
+                params,
+            ).fetchone()
+            total_nodes = int(count_row[0]) if count_row else 0
+            query += " ORDER BY risk_score DESC, id LIMIT ?"
+            params.append(budget)
+        else:
+            # One explicit order, shared with Postgres, independent of the planner's
+            # index choice. Correlation receipts hash the ordered snapshot serialization.
+            query += " ORDER BY id"
 
-    sql_scoped_edges = budget is not None or bool(entity_types) or bool(sev_sql)
-    if sql_scoped_edges:
-        # Drive the edge read from the exact node ids loaded above. Encoding the bounded set as one JSON parameter avoids SQLite's variable
-        # limit and avoids repeating the ranked node query. The endpoint index makes the work proportional to edges touching those nodes
-        # instead of every edge in the snapshot; the second join preserves the induced-subgraph contract.
-        eq = """
-            WITH selected_node_ids AS MATERIALIZED (
-                SELECT CAST(value AS TEXT) AS id FROM json_each(?)
-            )
-            SELECT edge.*
-            FROM selected_node_ids AS source_node
-            CROSS JOIN graph_edges AS edge INDEXED BY idx_ge_tenant_scan_source
-            JOIN selected_node_ids AS target_node
-              ON target_node.id = edge.target_id
-            WHERE edge.tenant_id = ?
-              AND edge.scan_id = ?
-              AND edge.source_id = source_node.id
-        """
-        eparams: list[Any] = [json.dumps(sorted(node_ids)), tenant_id, effective_scan_id]
-    else:
-        eq = "SELECT * FROM graph_edges WHERE tenant_id = ? AND scan_id = ?"
-        eparams = [tenant_id, effective_scan_id]
-    if relationship_types:
-        placeholders = ",".join("?" * len(relationship_types))
-        eq += f" AND edge.relationship IN ({placeholders})" if sql_scoped_edges else f" AND relationship IN ({placeholders})"
-        eparams.extend(sorted(relationship_types))
-    # A snapshot's evidence must serialize identically across SQLite versions
-    # and query plans. Keep the established source/target/relationship order.
-    edge_prefix = "edge." if sql_scoped_edges else ""
-    eq += f" ORDER BY {edge_prefix}source_id, {edge_prefix}target_id, {edge_prefix}relationship"
-    for row in conn.execute(eq, eparams):
-        if row["source_id"] not in node_ids or row["target_id"] not in node_ids:
-            continue
-        graph.add_stored_edge(
-            UnifiedEdge.from_stored(
-                source=row["source_id"],
-                target=row["target_id"],
-                relationship=RelationshipType(row["relationship"]),
-                direction=row["direction"],
-                weight=row["weight"],
-                traversable=bool(row["traversable"]),
-                first_seen=row["first_seen"],
-                last_seen=row["last_seen"],
-                valid_from=row["valid_from"] or row["first_seen"],
-                valid_to=row["valid_to"],
-                confidence=row["confidence"],
-                provenance=json.loads(row["provenance"] or "{}"),
-                source_scan_id=row["source_scan_id"] or row["scan_id"],
-                source_run_id=row["source_run_id"] or "",
-                evidence=json.loads(row["evidence"]),
-                activity_id=row["activity_id"],
-            )
-        )
-
-    if not relationship_types:
-        apq = f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = ? AND scan_id = ? ORDER BY {ATTACK_PATH_ORDER}"  # nosec B608
-        graph.attack_paths.extend(attack_path_from_row(row) for row in conn.execute(apq, (tenant_id, effective_scan_id)))
-
-        irq = "SELECT * FROM interaction_risks WHERE tenant_id = ? AND scan_id = ? ORDER BY rowid"
-        irparams: list[Any] = [tenant_id, effective_scan_id]
-        for row in conn.execute(irq, irparams):
-            graph.interaction_risks.append(
-                InteractionRisk(
-                    pattern=row["pattern"],
-                    agents=json.loads(row["agents"]),
+        node_ids: set[str] = set()
+        for row in conn.execute(query, params):
+            sev = row["severity"] or ""
+            graph.add_node(
+                UnifiedNode.from_stored(
+                    id=row["id"],
+                    entity_type=EntityType(row["entity_type"]),
+                    label=row["label"],
+                    category_uid=row["category_uid"],
+                    class_uid=row["class_uid"],
+                    type_uid=row["type_uid"],
+                    status=NodeStatus(row["status"]),
                     risk_score=row["risk_score"],
-                    description=row["description"],
-                    owasp_agentic_tag=row["owasp_agentic_tag"],
+                    severity=sev,
+                    severity_id=row["severity_id"],
+                    first_seen=row["first_seen"],
+                    last_seen=row["last_seen"],
+                    attributes=json.loads(row["attributes"]),
+                    compliance_tags=json.loads(row["compliance_tags"]),
+                    data_sources=json.loads(row["data_sources"]),
+                    dimensions=NodeDimensions.from_dict(json.loads(row["dimensions"])),
+                )
+            )
+            node_ids.add(row["id"])
+
+        returned_nodes = len(node_ids)
+        if budget is None:
+            total_nodes = returned_nodes
+        graph.completeness = GraphCompleteness(
+            truncated=budget is not None and total_nodes > returned_nodes,
+            node_budget=budget,
+            total_nodes=total_nodes,
+            returned_nodes=returned_nodes,
+            reason="node_budget" if budget is not None and total_nodes > returned_nodes else "",
+        )
+
+        sql_scoped_edges = budget is not None or bool(entity_types) or bool(sev_sql)
+        if sql_scoped_edges:
+            # Drive the edge read from the exact node ids loaded above. Encoding the bounded set as one JSON parameter avoids SQLite's
+            # variable limit and avoids repeating the ranked node query. The endpoint index makes the work proportional to edges touching
+            # those nodes instead of every edge in the snapshot; the second join preserves the induced-subgraph contract.
+            eq = """
+                WITH selected_node_ids AS MATERIALIZED (
+                    SELECT CAST(value AS TEXT) AS id FROM json_each(?)
+                )
+                SELECT edge.*
+                FROM selected_node_ids AS source_node
+                CROSS JOIN graph_edges AS edge INDEXED BY idx_ge_tenant_scan_source
+                JOIN selected_node_ids AS target_node
+                  ON target_node.id = edge.target_id
+                WHERE edge.tenant_id = ?
+                  AND edge.scan_id = ?
+                  AND edge.source_id = source_node.id
+            """
+            eparams: list[Any] = [json.dumps(sorted(node_ids)), tenant_id, effective_scan_id]
+        else:
+            eq = "SELECT * FROM graph_edges WHERE tenant_id = ? AND scan_id = ?"
+            eparams = [tenant_id, effective_scan_id]
+        if relationship_types:
+            placeholders = ",".join("?" * len(relationship_types))
+            eq += f" AND edge.relationship IN ({placeholders})" if sql_scoped_edges else f" AND relationship IN ({placeholders})"
+            eparams.extend(sorted(relationship_types))
+        # A snapshot's evidence must serialize identically across SQLite versions
+        # and query plans. Keep the established source/target/relationship order.
+        edge_prefix = "edge." if sql_scoped_edges else ""
+        eq += f" ORDER BY {edge_prefix}source_id, {edge_prefix}target_id, {edge_prefix}relationship"
+        for row in conn.execute(eq, eparams):
+            if row["source_id"] not in node_ids or row["target_id"] not in node_ids:
+                continue
+            graph.add_stored_edge(
+                UnifiedEdge.from_stored(
+                    source=row["source_id"],
+                    target=row["target_id"],
+                    relationship=RelationshipType(row["relationship"]),
+                    direction=row["direction"],
+                    weight=row["weight"],
+                    traversable=bool(row["traversable"]),
+                    first_seen=row["first_seen"],
+                    last_seen=row["last_seen"],
+                    valid_from=row["valid_from"] or row["first_seen"],
+                    valid_to=row["valid_to"],
+                    confidence=row["confidence"],
+                    provenance=json.loads(row["provenance"] or "{}"),
+                    source_scan_id=row["source_scan_id"] or row["scan_id"],
+                    source_run_id=row["source_run_id"] or "",
+                    evidence=json.loads(row["evidence"]),
+                    activity_id=row["activity_id"],
                 )
             )
 
-    return graph
+        if not relationship_types:
+            apq = f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = ? AND scan_id = ? ORDER BY {ATTACK_PATH_ORDER}"  # nosec B608
+            graph.attack_paths.extend(attack_path_from_row(row) for row in conn.execute(apq, (tenant_id, effective_scan_id)))
+
+            irq = "SELECT * FROM interaction_risks WHERE tenant_id = ? AND scan_id = ? ORDER BY rowid"
+            irparams: list[Any] = [tenant_id, effective_scan_id]
+            for row in conn.execute(irq, irparams):
+                graph.interaction_risks.append(
+                    InteractionRisk(
+                        pattern=row["pattern"],
+                        agents=json.loads(row["agents"]),
+                        risk_score=row["risk_score"],
+                        description=row["description"],
+                        owasp_agentic_tag=row["owasp_agentic_tag"],
+                    )
+                )
+
+        return graph
 
 
 # ═══════════════════════════════════════════════════════════════════════════

@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import psutil
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -121,6 +123,61 @@ def scale_up(
     }
 
 
+def _proc_peak_kib(pid: int) -> int | None:
+    """The kernel's resident high-water mark (Linux ``VmHWM``), or None where /proc has none."""
+    try:
+        for line in Path(f"/proc/{pid}/status").read_text(encoding="utf-8").splitlines():
+            if line.startswith("VmHWM:"):
+                return int(line.split()[1])
+    except OSError:
+        pass  # The process already exited or /proc is absent.
+    return None
+
+
+class PeakRss:
+    """Peak resident memory of one process.
+
+    Linux reports an exact high-water mark. Elsewhere (macOS) no API reads
+    another process's peak, so a thread samples its resident size; a spike
+    shorter than ``interval`` can be missed, and ``source`` says which applied.
+    """
+
+    def __init__(self, pid: int, *, interval: float = 0.1) -> None:
+        self.pid = pid
+        self.interval = interval
+        self.source = "unknown"
+        self._sampled = 0
+        self._stopped = threading.Event()
+        self._thread = threading.Thread(target=self._sample, name="peak-rss", daemon=True)
+        self._thread.start()
+
+    def _sample(self) -> None:
+        try:
+            process = psutil.Process(self.pid)
+        except psutil.Error:
+            return
+        while not self._stopped.is_set():
+            try:
+                self._sampled = max(self._sampled, process.memory_info().rss)
+            except psutil.Error:
+                return  # The process exited; keep the peak seen so far.
+            self._stopped.wait(self.interval)
+
+    def peak_mb(self) -> float | None:
+        kib = _proc_peak_kib(self.pid)
+        if kib is not None:
+            self.source = "kernel_high_water_mark"
+            return round(kib / 1024, 1)
+        if self._sampled:
+            self.source = "sampled"
+            return round(self._sampled / (1024 * 1024), 1)
+        return None
+
+    def stop(self) -> None:
+        self._stopped.set()
+        self._thread.join(timeout=2)
+
+
 class ApiServer:
     """The API as its own process, as deployed, so client timings cross a real socket."""
 
@@ -135,20 +192,20 @@ class ApiServer:
         self._log = self.log_path.open("wb")
         command = agent_bom_command("api", "--host", "127.0.0.1", "--port", str(self.port), "--api-key", self.key, "--log-level", "warning")
         self.process = subprocess.Popen(command, env=env, stdout=self._log, stderr=subprocess.STDOUT)  # noqa: S603
+        self._peak = PeakRss(self.process.pid)
 
     def wait_ready(self, timeout: float = 180) -> bool:
         return wait_for_http(f"{self.base}/health", timeout=timeout)
 
     def peak_rss_mb(self) -> float | None:
-        try:
-            for line in Path(f"/proc/{self.process.pid}/status").read_text(encoding="utf-8").splitlines():
-                if line.startswith("VmHWM:"):
-                    return round(int(line.split()[1]) / 1024, 1)
-        except OSError:
-            pass  # The process already exited or /proc is absent, so peak memory is unknown.
-        return None
+        return self._peak.peak_mb()
+
+    @property
+    def peak_rss_source(self) -> str:
+        return self._peak.source
 
     def stop(self) -> None:
+        self._peak.stop()
         self.process.terminate()
         try:
             self.process.wait(timeout=30)
@@ -306,6 +363,7 @@ def measure_estate(result: LaneResult, estate: Estate, env: dict[str, str]) -> d
         _assert_reads(result, estate, row, report, graph["body"], findings["body"])
     finally:
         row.setdefault("api_peak_rss_mb", server.peak_rss_mb())
+        row["api_peak_rss_source"] = server.peak_rss_source
         server.stop()
     return row
 
