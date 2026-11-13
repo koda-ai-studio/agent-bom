@@ -719,11 +719,14 @@ establish a managed multi-customer service or its operating capacity.
 Disconnected estates need a **transferred `vulns.db`** plus offline runtime
 flags. The product does not phone home for advisories when
 `AGENT_BOM_VULN_DB_OFFLINE=1` or `--offline` is set; it reads whatever cache
-you mount at `AGENT_BOM_DB_PATH` (default `~/.agent-bom/db/vulns.db`).
+you mount at `AGENT_BOM_DB_PATH` (default `${AGENT_BOM_STATE_DIR:-~/.agent-bom}/db/vulns.db`).
+When `AGENT_BOM_STATE_DIR` is set but holds no `db/vulns.db` yet, an existing
+`~/.agent-bom/db/vulns.db` from an earlier release is still used, so an upgrade
+does not drop a preloaded database; `agent-bom db path` prints the one in use.
 
 | Step | First command → artifact | Next step |
 |---|---|---|
-| Sync (connected bastion) | `agent-bom db update` → `~/.agent-bom/db/vulns.db` | `agent-bom db status` to confirm source freshness |
+| Sync (connected bastion) | `agent-bom db update` → `${AGENT_BOM_STATE_DIR:-~/.agent-bom}/db/vulns.db` | `agent-bom db status` to confirm source freshness |
 | Bundle | `scripts/release/bundle-vuln-db.sh dist/airgap` → `vulns.db` + checksum | Transfer through your approved file path |
 | Docker runtime | `docker run -v /path/to/vulns.db:/var/lib/agent-bom/vulns.db:ro -e AGENT_BOM_DB_PATH=/var/lib/agent-bom/vulns.db -e AGENT_BOM_VULN_DB_OFFLINE=1 …` | `agent-bom agents --offline /workspace` smoke |
 | Helm control plane | `kubectl create secret generic agent-bom-vuln-db --from-file=vulns.db=dist/airgap/vulns.db` then `-f deploy/helm/agent-bom/examples/airgap-vuln-db-values.yaml` | Roll API + scanner pods; rescans use the mounted cache only |
