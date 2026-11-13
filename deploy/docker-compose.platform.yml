@@ -191,7 +191,7 @@ services:
     build:
       context: ../ui
       dockerfile: Dockerfile
-    image: agentbom/agent-bom-ui:0.114.0
+    image: agentbom/agent-bom-ui:0.115.0
     ports:
       - "${AGENT_BOM_UI_BIND_HOST:-127.0.0.1}:${UI_PORT:-3000}:3000"
     environment:

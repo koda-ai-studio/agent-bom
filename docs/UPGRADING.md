@@ -1,6 +1,6 @@
-# Upgrade to 0.114.0
+# Upgrade to 0.115.0
 
-These instructions target 0.114.0 once its artifacts are published.
+These instructions target 0.115.0 once its artifacts are published.
 The source version alone does not establish package or image availability.
 
 ## Preserve configuration and evidence
@@ -26,8 +26,8 @@ agent-bom --version
 ```
 
 These commands select the latest published package. Confirm the reported
-version is 0.114.0 or a later release whose upgrade notes you have reviewed;
-if it remains 0.113.2 or older, this upgrade has not been applied.
+version is 0.115.0 or a later release whose upgrade notes you have reviewed;
+if it remains 0.114.0 or older, this upgrade has not been applied.
 
 For a uv-managed CLI installation, use `uv tool upgrade agent-bom` after
 publication and verify the resulting version. Preserve any additional cloud
@@ -41,7 +41,53 @@ keep the image role aligned with your deployment manifest. Follow the
 [deployment guide](../site-docs/deployment/overview.md) for your selected
 profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
 
-## Changes from 0.113.2
+## Changes from 0.114.0
+
+- **Helm attestation.** A clustered or production control-plane API (more than
+  one replica, an autoscaler, `AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT=1` or
+  `AGENT_BOM_DEPLOYMENT_ENV=production`) fails rendering without request
+  attestation: set `AGENT_BOM_TRUST_PROXY_AUTH=1` with
+  `AGENT_BOM_TRUST_PROXY_AUTH_SECRET` and `AGENT_BOM_TRUST_PROXY_AUTH_ISSUER`
+  (or app-native mTLS) in `controlPlane.api.env`, or put them in the auth Secret
+  and set `controlPlane.api.listenerAttestation.fromSecret=true`. Such an install
+  already refused to start without them.
+- **Helm Postgres pool.** `AGENT_BOM_POSTGRES_POOL_MIN_SIZE` and `_MAX_SIZE` in
+  `controlPlane.api.env` are rejected; use `controlPlane.postgres.pool.minSize`
+  and `.maxSize` (defaults 2 and 20), which also set the role connection limits
+  the migration Job applies. Pin larger limits with
+  `controlPlane.postgres.connectionLimits`; with migrations disabled, apply them
+  yourself. Postgres `max_connections` must cover them.
+- **Helm NetworkPolicy.** A `NodePort` or `LoadBalancer` control-plane Service
+  with the NetworkPolicy enabled needs `controlPlane.networkPolicy.ingressCIDRs`
+  (or an `additionalIngress` rule).
+- **Helm shutdown.** `controlPlane.api.terminationGracePeriodSeconds` defaults to
+  60 and `controlPlane.worker.terminationGracePeriodSeconds` to 45; a shorter
+  grace period than the `controlPlane.api.shutdown` budget fails rendering.
+- **Scan lease.** `AGENT_BOM_API_SCAN_LEASE_SECONDS` defaults to 120 instead of
+  600. Leases renew on their own thread, so long jobs are unaffected; an explicit
+  value is kept.
+- **Identities.** Inventory agents without their own `config_path`, and Ollama
+  model agents (now named `name:tag`), change id once; reports list the earlier
+  ids in `previous_canonical_ids` and `previous_graph_ids`.
+- **Exports.** Parquet and Iceberg exports move to schema version 6
+  (`malicious_basis` after `sla_due_at_source`). Read 0.114.0 files by column
+  name, not position.
+- **MCP OAuth tools.** An MCP server with OAuth registers only read-only tools:
+  the default profile serves 7 tools, without `scan`. A static bearer token keeps
+  all 8.
+- **Hosted MCP images.** `Dockerfile.sse` and `Dockerfile.public-mcp` sync OSV
+  (PyPI, npm), CISA KEV and FIRST EPSS before serving, so start-up is longer and
+  the image health check allows a 240 s start period. Give a platform health
+  check at least as long. A failed sync still starts the server.
+- **Railway.** Railway stops reading `railway.json` on 2026-12-01. Migrate the
+  OAuth MCP service (`railway config migrate`) or set its Dockerfile path to
+  `deploy/docker/Dockerfile.sse` before then.
+- **Persistence.** Apply Postgres migrations through `20261112_01`.
+  `20261111_01` drops seven unused indexes `CONCURRENTLY` (its downgrade
+  recreates them); `20261112_01` raises a bounded `agent_bom_app` connection
+  limit to 100.
+
+## Earlier changes from 0.113.2
 
 - **MCP OAuth.** A server with `AGENT_BOM_MCP_OAUTH_*` settings refuses to
   start ("Incomplete or invalid MCP OAuth configuration") until these are also
