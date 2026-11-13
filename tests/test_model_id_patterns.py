@@ -102,3 +102,39 @@ def test_deprecated_ids_are_reported_whole(tmp_path: Path, model_id: str) -> Non
     (tmp_path / "app.py").write_text(f'm = "{model_id}"\n')
     report = scan_source(str(tmp_path))
     assert [c.name for c in report.components if c.component_type == AIComponentType.DEPRECATED_MODEL] == [model_id]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "# Notes\n\nWe ship a gpt-5-based agent with gpt-4-style prompts.\n",
+        '"""Runs a gemini-3-powered summariser over gpt-4.1-class models."""\n',
+        "# a claude-sonnet-4-5-backed reviewer and an o3-like planner\n",
+        "label = 'gemini-2.5-flash-friendly output'\n",
+    ],
+    ids=["markdown-prose", "docstring", "comment", "unknown-trailing-word"],
+)
+def test_prose_compounds_are_not_model_ids(tmp_path: Path, text: str) -> None:
+    assert _models(tmp_path, text) == []
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "gpt-5-chat-latest",
+        "gpt-4o-realtime-preview-2024-12-17",
+        "gpt-4-32k",
+        "gpt-image-2.6-sunburst",
+        "gpt-realtime-2.1-mini",
+        "gpt-live-transcribe",
+        "gemini-3.8-live-extended-thinking",
+        "gemini-2.5-computer-use-preview-10-2025",
+        "gemini-4-carbon",
+        "gemini-embedding-001",
+        "gemini-robotics-er-2-preview",
+        "gemini-nano-banana-2.1",
+        "gemini-omni-1.2-flash",
+    ],
+)
+def test_vendor_variant_ids_are_reported_whole(tmp_path: Path, model_id: str) -> None:
+    assert _models(tmp_path, f'm = "{model_id}"\n') == [model_id]
