@@ -11,15 +11,22 @@ stdout empty for callers that read it.
 
 from __future__ import annotations
 
+import logging
 import sys
 from typing import Any
 
 import click
 
+from agent_bom.cli.agents._stderr import stderr_notice
+from agent_bom.logging_config import json_logging_active
+
 
 def announce_report_written(con: Any, label: str, path: Any, *, quiet: bool = False) -> None:
     """Print ``✓ <label> written to <path>`` (stdout on a terminal, else stderr) unless quiet."""
     if quiet or bool(getattr(con, "quiet", False)):
+        return
+    if json_logging_active():
+        stderr_notice(f"{label} written to {path}", level=logging.INFO, prefix="")
         return
     interactive = bool(getattr(sys.stdout, "isatty", lambda: False)())
     click.echo(f"\n  ✓ {label} written to {path}", err=not interactive)

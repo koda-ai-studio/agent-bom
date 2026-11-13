@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
-
-import click
 
 from agent_bom.cli._common import SEVERITY_ORDER
 from agent_bom.cli.agents._context import ScanContext
+from agent_bom.cli.agents._stderr import stderr_notice
 from agent_bom.evidence.cloud_posture import cloud_posture
 from agent_bom.evidence.malicious_basis import malicious_label
 from agent_bom.evidence.scan_run import NOTHING_TO_SCAN, ScanOutcome, effective_scan_run
@@ -322,7 +322,7 @@ def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str
         reason = f": {sanitize_error(exc)}"
     message = f"results were not delivered to {endpoint}{reason}; the local report is unaffected"
     if quiet:
-        click.echo(f"agent-bom: {message}", err=True)
+        stderr_notice(message)
     else:
         con.print("\n  [red bold]Exiting with code 1: [/red bold]", end="")
         con.print(message, markup=False, highlight=False)
@@ -506,7 +506,7 @@ def compute_exit_code(
                 )
                 if quiet:
                     # -q silences findings, not the reason a gate failed.
-                    click.echo(f"agent-bom: {message}", err=True)
+                    stderr_notice(message)
                 else:
                     con.print(f"\n  [red bold]Exiting with code 1: {message}[/red bold]")
                 exit_code = 1
@@ -544,7 +544,7 @@ def compute_exit_code(
         nothing_scanned = next((issue for issue in effective_scan_run(report).issues if issue.code == NOTHING_TO_SCAN), None)
         if nothing_scanned is not None:
             # A repository without dependencies is normal in CI. The report withholds the grade instead of failing the job.
-            click.echo(f"agent-bom: {nothing_scanned.message}", err=True)
+            stderr_notice(nothing_scanned.message, level=logging.WARNING)
         elif scan_outcome is not ScanOutcome.COMPLETE:
             if not quiet and not ctx.cloud_provider_failures:
                 con.print(

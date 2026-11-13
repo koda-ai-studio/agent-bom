@@ -72,15 +72,16 @@ class RepoScanError(Exception):
     """Raised when a repository URL is unsafe or a clone cannot complete."""
 
 
-def validate_repo_url(repo_url: str) -> str:
-    """Validate that ``repo_url`` is a well-formed public ``http(s)`` git URL.
+def validate_repo_url_syntax(repo_url: str) -> str:
+    """Check the shape and configured host policy of ``repo_url`` without network access.
 
-    Rejects ssh/scp-style, ``file://``, and bare local paths so the URL can
-    never reference the local filesystem or a non-git transport. Returns the
-    normalized URL on success.
+    Every message names only the rule that failed and parts of the URL the
+    caller supplied (never embedded credentials), so it is safe to return to
+    the caller as-is.
 
     Raises:
-        RepoScanError: if the URL is malformed or uses a disallowed scheme.
+        RepoScanError: if the URL is malformed, uses a disallowed scheme, embeds
+            credentials or names a host outside the configured allowlist.
     """
     if not isinstance(repo_url, str):
         raise RepoScanError("repo_url must be a string")
@@ -121,6 +122,20 @@ def validate_repo_url(repo_url: str) -> str:
         raise RepoScanError(
             f"{_ALLOWED_HOSTS_ENV} must be set to an explicit host allowlist before scanning repositories on a remotely-bound MCP server"
         )
+    return url
+
+
+def validate_repo_url(repo_url: str) -> str:
+    """Validate that ``repo_url`` is a well-formed public ``http(s)`` git URL.
+
+    Rejects ssh/scp-style, ``file://``, and bare local paths so the URL can
+    never reference the local filesystem or a non-git transport, then resolves
+    the host to refuse internal targets. Returns the normalized URL on success.
+
+    Raises:
+        RepoScanError: if the URL is malformed or uses a disallowed scheme.
+    """
+    url = validate_repo_url_syntax(repo_url)
 
     # SSRF defense: reject IP-literal private hosts and hostnames that resolve to
     # internal / cloud-metadata targets. Reuses the shared egress guard applied on
