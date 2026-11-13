@@ -187,10 +187,10 @@ each runtime's documented responses. The tests also cover the token path
 
 ### Live runtime checks
 
-On 2026-11-11, `scripts/qualification/serving.py` ran each runtime that has an
-arm64 image from its vendor in Docker Engine 29.8.0 in Docker Desktop (Apple silicon, CPU only)
-with a tiny model, then ran `agent-bom agents --no-discover --offline` against
-it. "Auth" is the status the runtime returned for no token / a wrong token /
+On 2026-11-11 (llama.cpp, vLLM, Ollama) and 2026-11-12 (Triton, TGI),
+`scripts/qualification/serving.py` ran each runtime from its vendor's image in
+Docker Engine 29.8.0 in Docker Desktop (Apple silicon, CPU only) with a tiny
+model, then ran `agent-bom agents --no-discover --offline` against it. "Auth" is the status the runtime returned for no token / a wrong token /
 the right token.
 
 | Runtime | Image and model | Auth on the inventory read | agent-bom result |
@@ -198,13 +198,20 @@ the right token.
 | llama.cpp | `ghcr.io/ggml-org/llama.cpp:server` (build `b12282-aa75ff323`), Qwen2.5-0.5B-Instruct Q4_K_M GGUF | With `--api-key`: `/v1/models`, `/models`, `/props` and `/slots` return 401 / 401 / 200, body `{"error":{"message":"Invalid API Key","type":"authentication_error","code":401}}`; `/health` stays 200 without a token. Without a key every read is open | `success`, identity confirmed (`owned_by: llamacpp`), version from `/props` `build_info`, served name is the model path; `/v1/models` has no `root`, so `artifact_ref` is empty. No token: `denied (HTTP 401)`; wrong token: `denied (HTTP 401: the bearer token was rejected)` |
 | vLLM | `vllm/vllm-openai-cpu:latest` (vLLM 0.33.0), `facebook/opt-125m` | With `VLLM_API_KEY`: `/v1/models` 401 / 401 / 200 (`{"error":"Unauthorized"}`); `/version`, `/health` and `/metrics` stay 200 without a token | `success`, identity confirmed (`owned_by: vllm`), version `0.33.0` from `/version`, `artifact_ref` from `root`; no / wrong token `denied (HTTP 401)` |
 | Ollama | `ollama/ollama:latest` (0.40.16), `qwen2.5:0.5b` | No authentication in the runtime | `success` with name:tag and digest |
-| Triton | `nvcr.io/nvidia/tritonserver` publishes `linux/arm64` (26.10-py3: 10.4 GB compressed) | Not run: the image needs more free disk than this shared host had | Fixture-qualified only |
-| TGI | `ghcr.io/huggingface/text-generation-inference` `latest` and `latest-intel-cpu` publish `linux/amd64` only | Not run on arm64 | Fixture-qualified only |
+| Triton | `nvcr.io/nvidia/tritonserver:26.10-py3` (index `sha256:b404f7de5dbeeefe0b17d7d149745a50d0989a25d0d831433b5ba63c716c2fcd`, `linux/arm64`), Triton 2.74.0 with no GPU; a generated Python-backend identity model `abq_identity` with versions 1 and 2 on `KIND_CPU` (`version_policy: all`) | Triton has no API key. With `--http-restricted-api=model-repository,metadata:Authorization=Bearer <key>`, `POST /v2/repository/index`, `GET /v2` and `GET /v2/models/abq_identity` return 403 / 403 / 200 (the `r26.10` source sends `{"error":"This API is restricted, expecting header '<name>'"}`); `/v2/health/ready` stays 200. Without the flag every read is open | `success`, identity confirmed (`GET /v2` `name: triton`), version `2.74.0`, both versions as separate records with state `READY`, matching the repository index exactly. No token: `denied (HTTP 403)`; wrong token: `denied (HTTP 403: the bearer token was rejected)`; right token: `success` |
+| TGI | `ghcr.io/huggingface/text-generation-inference:3.3.7-intel-cpu` (index `sha256:89b4cc8d6e4f7c184c63485a63094760ac9454be658a90f68bc8ecc3cde228bc`), the only CPU build, publishes `linux/amd64` only. Its launcher reports `3.3.6-dev0` | Not run: under amd64 emulation on Apple silicon, `import torch` in the image exits 139 (segmentation fault) and the launcher stops right after printing its arguments. The emulated CPU has AVX2 and no AVX-512. From the router source at `v3.3.7` (`router/src/server.rs`), `--api-key` / `API_KEY` guards only the generation routes (`/generate`, `/v1/chat/completions`, `/v1/completions` and similar) and answers 401; `/info`, `/v1/models`, `/health` and `/metrics` stay open with a key set, so agent-bom's `/info` read succeeds without a token | Fixture-qualified only; needs an x86-64 host. `serving.py --runtime tgi` serves `HuggingFaceTB/SmolLM2-135M-Instruct` and expects `success` without a token even when a key is set |
 | LM Studio | Desktop application; no headless image | Not run. Its documentation shows the server at `http://localhost:1234` (`/api/v0/models`), binds `127.0.0.1` by default, and `lms server start` without `--port` reuses the last port, so 1234 is the documented example rather than a guaranteed default. Authentication is off by default; the status for a missing or wrong token is not documented. LM Studio now recommends its `/api/v1/*` REST API, which agent-bom does not read yet | Fixture-qualified only |
 
 Sources for LM Studio: lmstudio.ai/docs/developer/rest/endpoints,
 lmstudio.ai/docs/cli/server-start and
-lmstudio.ai/docs/developer/core/authentication, read 2026-11-11.
+lmstudio.ai/docs/developer/core/authentication, read 2026-11-11. For
+llama.cpp, the server README (`tools/server/README.md`, "API errors") documents
+the same 401 `authentication_error` body the live run returned. For Triton:
+docs.nvidia.com/deeplearning/triton-inference-server/user-guide/docs/customization_guide/inference_protocols.html
+(restricted APIs), the model repository extension (`docs/protocol/extension_model_repository.md`)
+and `src/http_server.cc` at `r26.10`, which answers a restricted API with 403.
+For TGI: huggingface.co/docs/text-generation-inference/installation_intel and
+reference/launcher, and `router/src/server.rs` at `v3.3.7`. All read 2026-11-12.
 
 Two defects the live run found are fixed: a successful probe used to exit 1,
 because each served model counted as a package with an unresolved version and
@@ -213,6 +220,15 @@ findings about authentication, TLS and agent identity, which a model listing
 cannot show). Served models are now AI inventory, not MCP servers or
 advisory-scanned packages; `test_successful_probe_scans_complete_without_counting_models_as_unresolved_packages`
 covers every runtime.
+
+The Triton run found a third: Triton serves every version a model's
+`version_policy` selects, and each version was reported under the same agent
+and server name, so the stored graph kept only the last one (version 2 of
+`abq_identity`; version 1 disappeared). A model the runtime reports with a
+version is now named with it (`triton-model-abq_identity@1`,
+`triton/abq_identity@1`), matching Triton's own `/v2/models/{name}/versions/{version}`
+addressing; runtimes that report no model version keep their names.
+`tests/cloud/test_serving_triton_model_versions.py` replays the live index.
 
 A runtime that protects its listing can still answer `/health`, `/version` or
 `/metrics` without a token, so a 200 on those is not evidence that the
