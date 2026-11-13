@@ -57,7 +57,10 @@ def _clone_and_scan_repository(ctx: ScanContext) -> None:
     try:
         cloned_dir = ctx.repo_stack.enter_context(clone_repository(repo_url, token_env="AGENT_BOM_REPO_SCAN_TOKEN"))
     except RepoScanError as exc:
-        raise RuntimeError(sanitize_error(exc, generic=True)) from exc
+        # RepoScanError messages are authored for the caller; still scrub credentials and server paths.
+        reason = sanitize_error(exc)
+        _logger.warning("Repository scan rejected for job=%s: %s", ctx.job.job_id, sanitize_text(reason))
+        raise RuntimeError(f"Repository scan failed: {reason}") from exc
     cloned_path = str(cloned_dir)
     ctx.cloned_path = cloned_path
     ctx.effective_agent_projects = [cloned_path]

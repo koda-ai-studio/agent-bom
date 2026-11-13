@@ -31,25 +31,38 @@ def _local_feed_advisory(advisory_id: str) -> OperatorAdvisory | None:
         conn.close()
 
 
-def local_affected_answer(advisory_id: str, report_paths: list[Path] | None = None) -> dict[str, Any] | None:
+def local_affected_answer(
+    advisory_id: str,
+    report_paths: list[Path] | None = None,
+    *,
+    fallback_reports: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
     """The affected-assets answer from the local declaration, else the local feed record, else the
-    saved scan's own findings that reference the id; ``None`` when none of them knows it."""
+    saved scan's own findings that reference the id; ``None`` when none of them knows it.
+
+    Reports come from ``report_paths``, else the newest saved history report, else
+    ``fallback_reports`` (the caller's last persisted scan)."""
     declared = local_advisory(advisory_id)
     advisory, source = (declared, "operator_advisory") if declared else (_local_feed_advisory(advisory_id), "feed")
     paths = list(report_paths or [])
     if not paths:
         latest = latest_report()
         paths = [latest] if latest is not None else []
-    reports = [load_report_or_sbom(path) for path in paths]
+    reports = [load_report_or_sbom(path) for path in paths] if paths else list(fallback_reports or [])
     with distro_verdicts() as verdict:
         if advisory is None:
             return stored_findings_answer(advisory_id, reports, distro_verdict=verdict)
         return affected_answer(advisory, reports, source=source, distro_verdict=verdict)
 
 
-def local_affected_body(advisory_id: str, report_paths: list[Path] | None = None) -> dict[str, Any] | None:
+def local_affected_body(
+    advisory_id: str,
+    report_paths: list[Path] | None = None,
+    *,
+    fallback_reports: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
     """The whole local answer as one unpaged response body (what ``db advisory affected`` prints)."""
-    answer = local_affected_answer(advisory_id, report_paths)
+    answer = local_affected_answer(advisory_id, report_paths, fallback_reports=fallback_reports)
     if answer is None:
         return None
     body = page_answer(answer, tenant_id="local", limit=MAX_LIMIT)
