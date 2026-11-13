@@ -38,6 +38,7 @@ from agent_bom.api.postgres_common import (
     _maintenance_connection,
     _tenant_connection,
     bypass_tenant_rls,
+    cross_tenant_conflict_as,
 )
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id
@@ -195,28 +196,29 @@ class PostgresAgentIdentityStore:
     def put_jit_grant(self, grant: AgentJITGrant, *, tenant_id: str) -> None:
         tenant = require_grant_tenant(grant, tenant_id)
         with _tenant_connection(self._pool) as conn:
-            cursor = conn.execute(
-                """
-                INSERT INTO agent_identity_jit_grants
-                    (grant_id, tenant_id, identity_id, tool_name, status, requested_at, expires_at, data)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (grant_id) DO UPDATE SET
-                    status = EXCLUDED.status,
-                    expires_at = EXCLUDED.expires_at,
-                    data = EXCLUDED.data
-                WHERE agent_identity_jit_grants.tenant_id = EXCLUDED.tenant_id
-                """,
-                (
-                    grant.grant_id,
-                    tenant,
-                    grant.identity_id,
-                    grant.tool_name,
-                    grant.status,
-                    grant.requested_at,
-                    grant.expires_at,
-                    json.dumps(asdict(grant), sort_keys=True),
-                ),
-            )
+            with cross_tenant_conflict_as("JIT grant identity belongs to another tenant"):
+                cursor = conn.execute(
+                    """
+                    INSERT INTO agent_identity_jit_grants
+                        (grant_id, tenant_id, identity_id, tool_name, status, requested_at, expires_at, data)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (grant_id) DO UPDATE SET
+                        status = EXCLUDED.status,
+                        expires_at = EXCLUDED.expires_at,
+                        data = EXCLUDED.data
+                    WHERE agent_identity_jit_grants.tenant_id = EXCLUDED.tenant_id
+                    """,
+                    (
+                        grant.grant_id,
+                        tenant,
+                        grant.identity_id,
+                        grant.tool_name,
+                        grant.status,
+                        grant.requested_at,
+                        grant.expires_at,
+                        json.dumps(asdict(grant), sort_keys=True),
+                    ),
+                )
             if cursor.rowcount != 1:
                 raise ValueError("JIT grant identity belongs to another tenant")
             conn.commit()
@@ -302,26 +304,27 @@ class PostgresAgentIdentityStore:
     def put_conditional_policy(self, policy: ConditionalAccessPolicy, *, tenant_id: str) -> None:
         tenant = require_policy_tenant(policy, tenant_id)
         with _tenant_connection(self._pool) as conn:
-            cursor = conn.execute(
-                """
-                INSERT INTO agent_conditional_access_policies
-                    (policy_id, tenant_id, status, priority, created_at, data)
-                VALUES (%s, %s, %s, %s, %s, %s)
-                ON CONFLICT (policy_id) DO UPDATE SET
-                    status = EXCLUDED.status,
-                    priority = EXCLUDED.priority,
-                    data = EXCLUDED.data
-                WHERE agent_conditional_access_policies.tenant_id = EXCLUDED.tenant_id
-                """,
-                (
-                    policy.policy_id,
-                    tenant,
-                    policy.status,
-                    int(policy.priority),
-                    policy.created_at,
-                    json.dumps(asdict(policy), sort_keys=True),
-                ),
-            )
+            with cross_tenant_conflict_as("Conditional policy identity belongs to another tenant"):
+                cursor = conn.execute(
+                    """
+                    INSERT INTO agent_conditional_access_policies
+                        (policy_id, tenant_id, status, priority, created_at, data)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (policy_id) DO UPDATE SET
+                        status = EXCLUDED.status,
+                        priority = EXCLUDED.priority,
+                        data = EXCLUDED.data
+                    WHERE agent_conditional_access_policies.tenant_id = EXCLUDED.tenant_id
+                    """,
+                    (
+                        policy.policy_id,
+                        tenant,
+                        policy.status,
+                        int(policy.priority),
+                        policy.created_at,
+                        json.dumps(asdict(policy), sort_keys=True),
+                    ),
+                )
             if cursor.rowcount != 1:
                 raise ValueError("Conditional policy identity belongs to another tenant")
             conn.commit()

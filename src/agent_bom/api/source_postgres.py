@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from agent_bom.api.postgres_common import _ensure_tenant_rls, _get_pool, _tenant_connection
+from agent_bom.api.postgres_common import _ensure_tenant_rls, _get_pool, _tenant_connection, cross_tenant_conflict_as
 from agent_bom.api.source_store import source_write_tenant
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.core.tenancy import require_explicit_tenant_id
@@ -64,16 +64,17 @@ class PostgresSourceStore:
         source_write_tenant(source, tenant_id)
         data = source.model_dump_json()
         with _tenant_connection(self._pool) as conn:
-            cursor = conn.execute(
-                """INSERT INTO control_plane_sources (source_id, enabled, tenant_id, updated_at, data)
-                   VALUES (%s, %s, %s, %s, %s)
-                   ON CONFLICT (source_id) DO UPDATE SET
-                     enabled = EXCLUDED.enabled,
-                     updated_at = EXCLUDED.updated_at,
-                     data = EXCLUDED.data
-                   WHERE control_plane_sources.tenant_id = EXCLUDED.tenant_id""",
-                (source.source_id, int(source.enabled), source.tenant_id, source.updated_at, data),
-            )
+            with cross_tenant_conflict_as("Source identity belongs to a different tenant"):
+                cursor = conn.execute(
+                    """INSERT INTO control_plane_sources (source_id, enabled, tenant_id, updated_at, data)
+                       VALUES (%s, %s, %s, %s, %s)
+                       ON CONFLICT (source_id) DO UPDATE SET
+                         enabled = EXCLUDED.enabled,
+                         updated_at = EXCLUDED.updated_at,
+                         data = EXCLUDED.data
+                       WHERE control_plane_sources.tenant_id = EXCLUDED.tenant_id""",
+                    (source.source_id, int(source.enabled), source.tenant_id, source.updated_at, data),
+                )
             conn.commit()
             if cursor.rowcount == 0:
                 raise ValueError("Source identity belongs to a different tenant")

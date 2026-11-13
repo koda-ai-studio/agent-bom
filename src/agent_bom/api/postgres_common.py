@@ -129,6 +129,27 @@ def is_tenant_rls_bypassed() -> bool:
     return _bypass_tenant_rls.get()
 
 
+_INSUFFICIENT_PRIVILEGE = "42501"
+_RLS_USING_VIOLATION = "row-level security policy (USING expression)"
+
+
+@contextmanager
+def cross_tenant_conflict_as(message: str) -> Iterator[None]:
+    """Report Postgres refusing an upsert onto another tenant's row as ``ValueError(message)``.
+
+    Tenant-guarded upserts filter a foreign row with ``ON CONFLICT ... WHERE``.
+    Postgres can instead reject the existing row under its RLS ``USING`` check
+    first. Either way the row is not touched; only this one error
+    is translated, so other privilege failures still surface.
+    """
+    try:
+        yield
+    except Exception as exc:
+        if getattr(exc, "sqlstate", None) != _INSUFFICIENT_PRIVILEGE or _RLS_USING_VIOLATION not in str(exc):
+            raise
+        raise ValueError(message) from None
+
+
 def _normalize_postgres_conninfo_url(url: str) -> str:
     """Accept SQLAlchemy dialect URLs and rewrite them for psycopg conninfo.
 

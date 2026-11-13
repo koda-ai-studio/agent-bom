@@ -16,6 +16,7 @@ from .postgres_common import (
     _maintenance_connection,
     _tenant_connection,
     bypass_tenant_rls,
+    cross_tenant_conflict_as,
 )
 from .schedule_store import ScanSchedule, schedule_record_for_tenant, schedule_write_tenant
 
@@ -381,16 +382,17 @@ class PostgresScheduleStore:
         tenant = schedule_write_tenant(schedule, tenant_id)
         data = schedule.model_dump_json()
         with _tenant_connection(self._pool) as conn:
-            cursor = conn.execute(
-                """INSERT INTO scan_schedules (schedule_id, enabled, next_run, tenant_id, data)
-                   VALUES (%s, %s, %s, %s, %s)
-                   ON CONFLICT (schedule_id) DO UPDATE SET
-                     enabled = EXCLUDED.enabled,
-                     next_run = EXCLUDED.next_run,
-                     data = EXCLUDED.data
-                   WHERE scan_schedules.tenant_id = EXCLUDED.tenant_id""",
-                (schedule.schedule_id, int(schedule.enabled), schedule.next_run, tenant, data),
-            )
+            with cross_tenant_conflict_as("Schedule identity belongs to a different tenant"):
+                cursor = conn.execute(
+                    """INSERT INTO scan_schedules (schedule_id, enabled, next_run, tenant_id, data)
+                       VALUES (%s, %s, %s, %s, %s)
+                       ON CONFLICT (schedule_id) DO UPDATE SET
+                         enabled = EXCLUDED.enabled,
+                         next_run = EXCLUDED.next_run,
+                         data = EXCLUDED.data
+                       WHERE scan_schedules.tenant_id = EXCLUDED.tenant_id""",
+                    (schedule.schedule_id, int(schedule.enabled), schedule.next_run, tenant, data),
+                )
             conn.commit()
             if int(cursor.rowcount) == 0:
                 raise ValueError("Schedule identity belongs to a different tenant")
@@ -490,20 +492,21 @@ class PostgresCredentialRefStore:
             raise ValueError("Credential tenant does not match the authorized tenant")
         data = credential.model_dump_json()
         with _tenant_connection(self._pool) as conn:
-            cursor = conn.execute(
-                """INSERT INTO credential_refs (credential_ref_id, enabled, tenant_id, updated_at, data)
-                   VALUES (%s, %s, %s, %s, %s)
-                   ON CONFLICT (credential_ref_id) DO UPDATE SET
-                     enabled = EXCLUDED.enabled, updated_at = EXCLUDED.updated_at, data = EXCLUDED.data
-                   WHERE credential_refs.tenant_id = EXCLUDED.tenant_id""",
-                (
-                    credential.credential_ref_id,
-                    int(credential.enabled),
-                    credential.tenant_id,
-                    credential.updated_at,
-                    data,
-                ),
-            )
+            with cross_tenant_conflict_as("Credential identity belongs to a different tenant"):
+                cursor = conn.execute(
+                    """INSERT INTO credential_refs (credential_ref_id, enabled, tenant_id, updated_at, data)
+                       VALUES (%s, %s, %s, %s, %s)
+                       ON CONFLICT (credential_ref_id) DO UPDATE SET
+                         enabled = EXCLUDED.enabled, updated_at = EXCLUDED.updated_at, data = EXCLUDED.data
+                       WHERE credential_refs.tenant_id = EXCLUDED.tenant_id""",
+                    (
+                        credential.credential_ref_id,
+                        int(credential.enabled),
+                        credential.tenant_id,
+                        credential.updated_at,
+                        data,
+                    ),
+                )
             conn.commit()
             if cursor.rowcount == 0:
                 raise ValueError("Credential identity belongs to a different tenant")
