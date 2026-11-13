@@ -53,3 +53,23 @@ def test_peak_rss_is_unknown_for_a_process_never_seen(monkeypatch) -> None:
         assert tracker.peak_mb() is None
     finally:
         tracker.stop()
+
+
+def test_timed_reads_report_a_warm_summary_without_the_first_read(monkeypatch) -> None:
+    durations = iter([0.2] + [0.0] * 9)
+
+    def fake_http_json(url, *, headers=None, timeout=60, **kwargs):
+        time.sleep(next(durations))
+        return 200, {"nodes": []}, 10
+
+    monkeypatch.setattr(performance, "http_json", fake_http_json)
+
+    class Server:
+        base = "http://127.0.0.1:1"
+        headers: dict[str, str] = {}
+
+    timing = performance.timed_reads(Server(), "/v1/graph?limit=100", repeats=10)["timing"]  # type: ignore[arg-type]
+    assert timing["cold_ms"] >= 150
+    assert timing["warm"]["samples"] == 9
+    assert timing["warm"]["max_ms"] < 150
+    assert len(timing["samples_ms"]) == 10 and timing["samples_ms"][0] >= 150

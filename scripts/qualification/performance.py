@@ -244,6 +244,9 @@ def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> di
             first_error = f"HTTP {status}: {str(body)[:300]}"
     summary: dict[str, Any] = {**latency_summary(latencies), "statuses": statuses, "response_bytes": size}
     summary["cold_ms"] = round(latencies[0], 3) if latencies else None
+    # The first read can wait for the post-push build; the warm summary is the steady state.
+    summary["warm"] = latency_summary(latencies[1:])
+    summary["samples_ms"] = [round(value, 1) for value in latencies]
     if preparing:
         summary["preparing_retries"] = preparing
     if first_error:
