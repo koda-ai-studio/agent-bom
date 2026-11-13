@@ -639,6 +639,50 @@ push replaces only its own earlier evidence and the current estate is the union.
 Nothing is truncated and no agent is dropped. Connector and lake pushes log the
 same message and report the push as failed.
 
+## Unauthenticated result pushes
+
+When the control plane answers a scan push with 401 or 403, the CLI fails the
+run (exit 1, the local report is kept) and says why: no key was sent, the key
+was rejected, or the key may not push. The message names `--push-api-key` and
+`AGENT_BOM_PUSH_API_KEY`, and notes that a local `agent-bom up` / `serve` prints
+its loopback "Dev API key" at startup and mints a new one on every start. The
+key itself is never printed.
+
+## Rejected repository URLs
+
+`POST /v1/scan` (and every endpoint that shares its request guard) checks
+`repo_url` before queueing, without network access. A URL with a disallowed
+scheme (`file://`, `ssh://`), scp-style or local-path syntax, embedded
+credentials, control characters, or a host outside
+`AGENT_BOM_REPO_SCAN_ALLOWED_HOSTS` is answered `422` with the rule that failed
+(naming at most the scheme or host the caller sent; embedded credentials are
+never echoed), and the server logs
+a sanitized warning. A URL that passes these checks but cannot be cloned (DNS
+resolves to an internal address, the repository does not exist, a size cap is
+hit) fails the job with `Repository scan failed: <reason>`, with credentials,
+URLs and server paths scrubbed, and logs a warning, instead of the generic
+"An internal error occurred".
+
+## CLI log output under `--log-json` and `-q`
+
+With `--log-json`, `scan`, `image`, `fs` and `code` write one JSON object per
+line to stderr: progress lines become `INFO` records on the `agent_bom.progress`
+logger, failure notices become `ERROR` records, and the update notice is
+skipped. With `-q`, progress is silenced (including the discovery banner) and
+only errors print. With both, only warning and error records print, as JSON.
+stdout carries only the report.
+
+When `--log-json` appears anywhere in argv (before a `--` separator) or
+`AGENT_BOM_LOG_JSON` is on, the entry point decides before Click parses, so a
+usage error that stops parsing early is still JSON. Click usage errors
+(unknown option, bad or missing value), `ClickException` failures and uncaught
+exceptions each come out as one `ERROR` record on the `agent_bom.cli` logger
+with `context.exit_code` and `context.error_type` (`usage`, `error`, or the
+exception class). Messages pass through `sanitize_text`; uncaught exceptions
+also go through `sanitize_error`, which removes paths, URLs and credential
+assignments. Exit codes are unchanged: 2 for usage errors, the exception's own
+code for `ClickException`, 1 for an uncaught exception, 130 on interrupt.
+
 ## Non-finite numbers in a push
 
 JSON has no NaN or infinity, and the job store cannot encode them. A pushed

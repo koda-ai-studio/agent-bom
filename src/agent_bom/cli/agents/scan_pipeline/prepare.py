@@ -16,6 +16,8 @@ from agent_bom.cli.agents.scan_pipeline.helpers import _is_null_device, _output_
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.core.iac_exceptions import parse_ignore_entries
+from agent_bom.core.progress_log import configure_progress_logging, progress_log_console
+from agent_bom.logging_config import json_logging_active
 from agent_bom.scanners import reset_scan_warnings
 
 # Shared with the GitHub Action default (action.yml severity-threshold).
@@ -101,6 +103,12 @@ def _apply_profile_and_agent_mode(opts: ScanOptions, st: ScanState) -> None:
     else:
         _log_level = opts.log_level or ("DEBUG" if opts.verbose else "WARNING")
     setup_logging(level=_log_level, json_output=opts.log_json, log_file=opts.log_file)
+    configure_progress_logging(enabled=_progress_as_log_records(opts))
+
+
+def _progress_as_log_records(opts: ScanOptions) -> bool:
+    # Under JSON logs progress becomes INFO records; -q and an explicit level still decide what is shown.
+    return bool(json_logging_active() and not opts.quiet and opts.log_level is None)
 
 
 def _apply_project_config(opts: ScanOptions, st: ScanState) -> None:
@@ -254,7 +262,10 @@ def _open_consoles(opts: ScanOptions, st: ScanState) -> None:
     # discovery/scanner progress visible on stderr.
     is_stdout = opts.output == "-"
     is_null_sink = _is_null_device(opts.output)
-    st.con = Console(stderr=True, quiet=opts.quiet or is_stdout, no_color=opts.no_color)
+    if not opts.quiet and json_logging_active():
+        st.con = progress_log_console()
+    else:
+        st.con = Console(stderr=True, quiet=opts.quiet or is_stdout, no_color=opts.no_color)
     st.report_con = Console(
         file=sys.stdout,
         quiet=opts.quiet or is_stdout,

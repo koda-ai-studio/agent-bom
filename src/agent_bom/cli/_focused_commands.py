@@ -66,6 +66,7 @@ def _has_finding_at_or_above(findings, threshold: str = "high") -> bool:
 @click.option("--enrich", is_flag=True, help="Add NVD CVSS + EPSS + KEV enrichment")
 @click.option("--offline", is_flag=True, help="Scan against local DB only (no registry pull; images come from the Docker daemon)")
 @click.option("--quiet", "-q", is_flag=True, help="Minimal output")
+@click.option("--log-json", "log_json", is_flag=True, help="Emit structured JSON logs to stderr (for SIEM ingestion)")
 @verbose_option
 @click.option("--fixable-only", "fixable_only", is_flag=True, default=False, help="Show only vulnerabilities with available fixes.")
 @click.option(
@@ -97,6 +98,7 @@ def image_cmd(
     enrich: bool,
     offline: bool,
     quiet: bool,
+    log_json: bool,
     verbose: bool,
     fixable_only: bool,
     exclude_unfixable: bool,
@@ -146,6 +148,7 @@ def image_cmd(
         enrich=enrich,
         offline=offline,
         quiet=quiet,
+        log_json=log_json,
         verbose=verbose,
         fixable_only=fixable_only,
         exclude_unfixable=exclude_unfixable,
@@ -161,6 +164,7 @@ def image_cmd(
 @click.option("--enrich", is_flag=True, help="Add NVD CVSS + EPSS + KEV enrichment")
 @click.option("--offline", is_flag=True, help="Scan against local DB only")
 @click.option("--quiet", "-q", is_flag=True, help="Minimal output")
+@click.option("--log-json", "log_json", is_flag=True, help="Emit structured JSON logs to stderr (for SIEM ingestion)")
 @verbose_option
 @click.option("--fixable-only", "fixable_only", is_flag=True, default=False, help="Show only vulnerabilities with available fixes.")
 @click.option(
@@ -187,6 +191,7 @@ def fs_cmd(
     enrich: bool,
     offline: bool,
     quiet: bool,
+    log_json: bool,
     verbose: bool,
     fixable_only: bool,
     exclude_unfixable: bool,
@@ -213,6 +218,7 @@ def fs_cmd(
         enrich=enrich,
         offline=offline,
         quiet=quiet,
+        log_json=log_json,
         verbose=verbose,
         fixable_only=fixable_only,
         exclude_unfixable=exclude_unfixable,
@@ -489,7 +495,8 @@ def secrets_cmd(
 @click.option("-f", "--format", "output_format", default="console", help="Output format (console or json)")
 @click.option("-o", "--output", "output_path", help="Output file path")
 @click.option("--quiet", "-q", is_flag=True)
-def code_cmd(path: str, output_format: str, output_path: Optional[str], quiet: bool) -> None:
+@click.option("--log-json", "log_json", is_flag=True, help="Emit structured JSON logs to stderr (for SIEM ingestion)")
+def code_cmd(path: str, output_format: str, output_path: Optional[str], quiet: bool, log_json: bool) -> None:
     """Run native AST and AI-component analysis — prompts, guardrails, tools.
 
     Native AST-based analysis of Python AI framework code. Extracts system
@@ -510,14 +517,13 @@ def code_cmd(path: str, output_format: str, output_path: Optional[str], quiet: b
     """
     import json as _json
 
-    from rich.console import Console
-
     from agent_bom.ai_components import scan_source
     from agent_bom.ast_analyzer import analyze_project
+    from agent_bom.cli.agents._stderr import stderr_console
 
     output_format = _validate_json_or_console_format("code", output_format)
 
-    con = Console(stderr=True, quiet=quiet)
+    con = stderr_console(quiet=quiet, log_json=log_json)
     result = analyze_project(path)
     ai_report = scan_source(path)
 

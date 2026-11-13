@@ -19,18 +19,20 @@ import tempfile
 from pathlib import Path
 
 from agent_bom.db.advisory_aliases import ALIAS_BACKFILL, ALIAS_SCHEMA
+from agent_bom.storage.state_home import state_dir
 
 _logger = logging.getLogger(__name__)
 
-# Default DB path — overridable via env var
-_DEFAULT_DB_DIR = Path.home() / ".agent-bom" / "db"
+# Default DB path: <AGENT_BOM_STATE_DIR or ~/.agent-bom>/db/vulns.db; AGENT_BOM_DB_PATH overrides it.
+_DEFAULT_DB_DIR = state_dir() / "db"
 _RAW_DB_PATH = os.environ.get("AGENT_BOM_DB_PATH", str(_DEFAULT_DB_DIR / "vulns.db"))
 
 
 def _validated_db_path(raw: str) -> Path:
     """Resolve and validate the DB path.
 
-    Accepts paths inside the user's home directory or /tmp (for tests).
+    Accepts paths inside the user's home directory, the configured
+    ``AGENT_BOM_STATE_DIR`` or /tmp (for tests).
     Rejects path traversal, symlink escapes, and arbitrary filesystem locations.
     Raises ``ValueError`` on invalid paths so callers get a clear error at startup.
     """
@@ -52,8 +54,9 @@ def _validated_db_path(raw: str) -> Path:
     except (OSError, RuntimeError) as exc:
         raise ValueError(f"AGENT_BOM_DB_PATH is not a valid path: {raw!r}") from exc
 
-    if not (resolved.is_relative_to(home) or any(resolved.is_relative_to(root) for root in temp_roots)):
-        raise ValueError(f"AGENT_BOM_DB_PATH must be inside the home directory or /tmp, got: {raw!r}")
+    allowed_roots = {home, state_dir().expanduser().resolve(), *temp_roots}
+    if not any(resolved.is_relative_to(root) for root in allowed_roots):
+        raise ValueError(f"AGENT_BOM_DB_PATH must be inside the home directory, AGENT_BOM_STATE_DIR or /tmp, got: {raw!r}")
 
     try:
         validate_path(p)

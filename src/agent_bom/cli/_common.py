@@ -121,20 +121,33 @@ def _make_console(quiet: bool = False, output_format: str = "console", no_color:
 
 def _sync_runtime_consoles(console: Console) -> None:
     """Point shared module-level consoles at the active CLI console."""
-    for module_name in (
-        "agent_bom.scanners",
-        "agent_bom.enrichment",
-        "agent_bom.resolver",
-        "agent_bom.transitive",
-        "agent_bom.parsers",
-    ):
+    for module_name in RUNTIME_CONSOLE_MODULES:
         try:
             module = importlib.import_module(module_name)
         except Exception as exc:  # noqa: BLE001
             logger.debug("Could not sync console for %s: %s", module_name, exc)
             continue
-        if hasattr(module, "console"):
-            setattr(module, "console", console)
+        for attr in ("console", "_console"):
+            if isinstance(getattr(module, attr, None), Console):
+                setattr(module, attr, console)
+
+
+# Every module that binds a module-level progress console, including modules that
+# imported another module's console by name, so -q and --log-json reach all of them.
+RUNTIME_CONSOLE_MODULES: tuple[str, ...] = (
+    "agent_bom.scanners",
+    "agent_bom.scanners.scan_options",
+    "agent_bom.scanners.package_scan",
+    "agent_bom.enrichment",
+    "agent_bom.resolver",
+    "agent_bom.transitive",
+    "agent_bom.parsers",
+    "agent_bom.discovery",
+    "agent_bom.discovery.config_parsers",
+    "agent_bom.discovery.coverage",
+    "agent_bom.ai_components.call_state",
+    "agent_bom.ai_enrich",
+)
 
 
 _update_check_result: str | None = None
@@ -222,9 +235,7 @@ def _should_skip_update_check() -> bool:
     return _update_notice_hidden(sys.argv[1:])
 
 
-_VERSION_STAMP = re.compile(r"\d+(?:\.\d+){1,3}")
-
-_QUIET_FLAGS = frozenset({"-q", "--quiet", "--agent-mode", "--json"})
+_QUIET_FLAGS = frozenset({"-q", "--quiet", "--agent-mode", "--json", "--log-json"})
 
 
 def _update_notice_hidden(args: list[str]) -> bool:
@@ -241,6 +252,21 @@ def _update_notice_hidden(args: list[str]) -> bool:
         if flag in ("-f", "--format") and value != "console":
             return True
     return any(first == "mcp" and second == "server" for first, second in zip(args, args[1:]))
+
+
+_RELEASE_VERSION_RE = re.compile(r"\d{1,4}\.\d{1,4}\.\d{1,4}")
+
+
+def _update_notice_for(latest: str) -> str | None:
+    """The notice for ``latest``, or None unless it is a plain release version newer than this one."""
+    if not _RELEASE_VERSION_RE.fullmatch(latest):
+        return None
+    running = re.match(r"(\d+)\.(\d+)\.(\d+)", __version__)
+    current = tuple(int(x) for x in running.groups()) if running else (0, 0, 0)
+    if tuple(int(x) for x in latest.split(".")) <= current:
+        return None
+    _, upgrade_command = _detect_install_method()
+    return f"[yellow]Update available:[/yellow] agent-bom {__version__} → [bold]{latest}[/bold]\n  Run: [cyan]{upgrade_command}[/cyan]"
 
 
 def _check_for_update_bg() -> None:
@@ -261,7 +287,7 @@ def _check_for_update_bg() -> None:
         latest = ""
         if cache_file.exists() and (time.time() - cache_file.stat().st_mtime) < 86400:
             cached = cache_file.read_text(encoding="utf-8").strip()
-            if _VERSION_STAMP.fullmatch(cached):
+            if _RELEASE_VERSION_RE.fullmatch(cached):
                 latest = cached
 
         fetched = not latest
@@ -269,23 +295,14 @@ def _check_for_update_bg() -> None:
             from agent_bom.http_client import fetch_json
 
             data = fetch_json("https://pypi.org/pypi/agent-bom/json", timeout=5)
-            latest = str(data["info"]["version"])
+            latest = str(data["info"]["version"]).strip()
 
-        def _vt(v: str) -> tuple[int, ...]:
-            return tuple(int(x) for x in v.split(".") if x.isdigit())
-
-        if _vt(latest) > _vt(__version__):
-            _, upgrade_command = _detect_install_method()
-            msg = (
-                f"[yellow]Update available:[/yellow] agent-bom {__version__} → [bold]{latest}[/bold]\n  Run: [cyan]{upgrade_command}[/cyan]"
-            )
-        else:
-            msg = ""
+        msg = _update_notice_for(latest)
         if not fetched:
-            _update_check_result = msg or None
+            _update_check_result = msg
             return
         try:
-            cache_file.write_text(latest, encoding="utf-8")
+            cache_file.write_text(latest if _RELEASE_VERSION_RE.fullmatch(latest) else "", encoding="utf-8")
         except OSError as exc:
             # A full disk must not lose the update notice or crash the scan —
             # degrade to no-cache (the result is still served this run).
@@ -293,7 +310,7 @@ def _check_for_update_bg() -> None:
                 logger.debug("Disk full writing update-check stamp %s — skipping cache", cache_file)
             else:
                 logger.debug("Could not write update-check stamp %s: %s", cache_file, exc)
-        _update_check_result = msg or None
+        _update_check_result = msg
     except Exception:  # noqa: BLE001
         _update_check_result = None
     finally:

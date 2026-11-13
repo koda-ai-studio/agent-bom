@@ -98,6 +98,12 @@ _VERDICT_LABELS = {
 }
 
 
+_PERSIST_HINT = (
+    "Persist a scan first with `agent-bom scan ... --save` (or `agent-bom quickstart --run`), "
+    "or point at a JSON report with --report <file>."
+)
+
+
 @advisory_group.command("affected")
 @click.argument("advisory_id")
 @click.option(
@@ -114,10 +120,11 @@ def advisory_affected(advisory_id: str, reports: tuple[Path, ...], fmt: str) -> 
     # Deferred: the answer carries graph node ids, and the CLI must not import the graph package at startup.
     from agent_bom.db.advisory_affected_local import local_affected_body
 
-    body = local_affected_body(advisory_id, list(reports))
+    body = local_affected_body(advisory_id, list(reports), fallback_reports=_persisted_fallback(reports))
     if body is None:
         raise click.ClickException(
-            f"{advisory_id} is not declared locally, not in the local vulnerability DB and not named by any saved scan finding"
+            f"{advisory_id} is not declared locally, not in the local vulnerability DB and not named by any saved or "
+            f"persisted scan finding. {_PERSIST_HINT}"
         )
     if fmt == "json":
         click.echo(json.dumps(body, indent=2))
@@ -125,6 +132,12 @@ def advisory_affected(advisory_id: str, reports: tuple[Path, ...], fmt: str) -> 
         _print_affected(body)
     if not body["complete"]:
         raise SystemExit(2)
+
+
+def _persisted_fallback(reports: tuple[Path, ...]) -> list[dict] | None:
+    from agent_bom.cli._persisted_scan import fallback_scan_reports
+
+    return fallback_scan_reports(reports)
 
 
 def _print_affected(body: dict) -> None:
@@ -139,7 +152,7 @@ def _print_affected(body: dict) -> None:
     )
     if not body["complete"]:
         reason = body.get("incomplete_reason") or (
-            "no saved scan found" if not summary["reports_examined"] else "some versions could not be ordered"
+            f"no saved scan found. {_PERSIST_HINT}" if not summary["reports_examined"] else "some versions could not be ordered"
         )
         click.echo(f"INCOMPLETE: {reason}; this is not a clean result.", err=True)
 
