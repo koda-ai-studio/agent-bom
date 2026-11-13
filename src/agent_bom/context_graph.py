@@ -24,8 +24,6 @@ from urllib.parse import urlsplit
 
 from agent_bom.constants import is_blank_env_value
 from agent_bom.constants import is_credential_key as _is_credential_key
-from agent_bom.context_graph_hosts import InventoryHosts
-from agent_bom.context_graph_hosts import finding_package_identity as _finding_package_identity
 from agent_bom.graph import (
     EDGE_KIND_TO_RELATIONSHIP as _EDGE_KIND_TO_RELATIONSHIP,
 )
@@ -39,6 +37,8 @@ from agent_bom.graph import (
     EntityType,
     InteractionRisk,
 )
+from agent_bom.graph.context_hosts import InventoryHosts
+from agent_bom.graph.context_hosts import finding_package_identity as _finding_package_identity
 
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
 _UNTRUSTED_PREFIX = "[UNTRUSTED MCP METADATA] "

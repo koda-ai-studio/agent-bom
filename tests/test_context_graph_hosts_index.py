@@ -11,7 +11,7 @@ import random
 import time
 
 from agent_bom.context_graph import _finding_package_identity
-from agent_bom.context_graph_hosts import InventoryHosts
+from agent_bom.graph.context_hosts import InventoryHosts
 from agent_bom.package_utils import canonical_package_identity
 
 
