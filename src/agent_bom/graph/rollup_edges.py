@@ -52,6 +52,61 @@ def descendants(root: str, children: dict[str, list[str]]) -> list[str]:
     return sorted(seen)
 
 
+def drop_redundant_parents(children: dict[str, set[str]]) -> int:
+    """Keep each child under its nearest containment parents only; return edges dropped.
+
+    A parent P of child C is redundant when P is an ancestor of another parent
+    Q of C: C stays reachable from P through Q, so every descendant set (and
+    every aggregate built from one) is unchanged, while P's direct children
+    stop listing C a second time beside the scope that actually holds it.
+    A parent that sits in a cycle through C reaches C only via C itself, so it
+    is never the witness; and when every parent would go (parents that are
+    each other's ancestors) the child keeps them all rather than being orphaned.
+    Mutates ``children`` in place; ancestor sets are cached per parent and the
+    walk is bounded by a visited set, so cycles terminate.
+    """
+    parents: dict[str, set[str]] = defaultdict(set)
+    for parent, kids in children.items():
+        for kid in kids:
+            parents[kid].add(parent)
+    ancestors_cache: dict[str, frozenset[str]] = {}
+
+    def ancestors(node: str) -> frozenset[str]:
+        cached = ancestors_cache.get(node)
+        if cached is None:
+            seen: set[str] = set()
+            queue: deque[str] = deque(parents.get(node, ()))
+            while queue:
+                current = queue.popleft()
+                if current in seen:
+                    continue
+                seen.add(current)
+                queue.extend(parents.get(current, ()))
+            cached = ancestors_cache[node] = frozenset(seen)
+        return cached
+
+    dropped = 0
+    for child, owners in parents.items():
+        if len(owners) < 2:
+            continue
+        # A parent inside a cycle through the child only reaches it via the child itself; it is no witness.
+        # One pass over the witnesses' ancestors, not a pairwise check: a package
+        # shared by a thousand servers would otherwise cost a million lookups.
+        above: Counter[str] = Counter()
+        for other in owners:
+            lineage = ancestors(other)
+            if child in lineage:
+                continue
+            above.update(owner for owner in lineage & owners if owner != other)
+        redundant = set(above)
+        if not redundant or redundant == owners:
+            continue
+        for owner in redundant:
+            children[owner].discard(child)
+            dropped += 1
+    return dropped
+
+
 def _container_of(node_ids: Iterable[str], children: dict[str, list[str]]) -> dict[str, str]:
     """Map every descendant to the visible container it rolls up into."""
     owner: dict[str, str] = {}

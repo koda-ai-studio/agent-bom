@@ -33,7 +33,7 @@ from agent_bom.graph.provider_inheritance import provider_fields as _provider_fi
 from agent_bom.graph.rollup_aggregate import RollupAggregate, ScopeAggregates, _histogram, aggregate_count_metadata
 from agent_bom.graph.rollup_aggregate import orphan_summary as _orphan_summary
 from agent_bom.graph.rollup_edges import combine_reasons as _combine_reasons
-from agent_bom.graph.rollup_edges import cross_container_edge_rows, edge_projection
+from agent_bom.graph.rollup_edges import cross_container_edge_rows, drop_redundant_parents, edge_projection
 from agent_bom.graph.rollup_edges import descendants as _descendants
 from agent_bom.graph.rollup_edges import edge_count_metadata as _edge_count_metadata
 from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, FindingFacts, IssueTally, build_finding_index
@@ -58,6 +58,24 @@ _CONTAINMENT_RELS: frozenset[str] = frozenset({RelationshipType.CONTAINS.value})
 _ACCOUNT_RESOURCE_CONTAINMENT_RELS: frozenset[str] = frozenset({RelationshipType.HOSTS.value, RelationshipType.OWNS.value})
 _ACCOUNT_RESOURCE_CONTAINMENT_SOURCES: frozenset[str] = frozenset({EntityType.ACCOUNT.value})
 _ACCOUNT_RESOURCE_CONTAINMENT_TARGETS: frozenset[str] = frozenset({EntityType.CLOUD_RESOURCE.value})
+
+# Ownership the estate records without a CONTAINS edge, typed by both ends:
+# a provider hosts its organizations and accounts, an organization or account
+# owns what the contract lets it own (identities, guardrail policies, data
+# stores, gateways), and a storage resource holds the data store companion
+# projected for it. Without these the provider, the account's identities and
+# every bucket's data store surfaced as unconnected top-level entries.
+_ESTATE_TYPED_CONTAINMENT_SOURCES: dict[str, frozenset[str]] = {
+    RelationshipType.HOSTS.value: frozenset({EntityType.PROVIDER.value}),
+    RelationshipType.OWNS.value: frozenset({EntityType.ORG.value, EntityType.ACCOUNT.value}),
+    RelationshipType.STORES.value: frozenset({EntityType.CLOUD_RESOURCE.value}),
+}
+_ESTATE_TYPED_CONTAINMENT_TARGETS: dict[str, Optional[frozenset[str]]] = {
+    RelationshipType.HOSTS.value: frozenset({EntityType.ORG.value, EntityType.ACCOUNT.value}),
+    # Any target the relationship contract admits for an org/account owner.
+    RelationshipType.OWNS.value: None,
+    RelationshipType.STORES.value: frozenset({EntityType.DATA_STORE.value}),
+}
 
 # Agent-stack containment (no cloud tree): agent -> servers -> packages, tools, credentials; a package or
 # VM instance owns its vulnerabilities. Typed by endpoint so an unrelated USES / DEPENDS_ON edge never parents.
@@ -94,7 +112,7 @@ ROLLUP_CONTAINMENT_RELATIONSHIP_TYPES: frozenset[RelationshipType] = frozenset(
 # stack. Kept apart from ROLLUP_CONTAINMENT_RELATIONSHIPS, whose untyped
 # consumers (page ancestor context) must not treat every USES edge as a parent.
 ROLLUP_SUBTREE_RELATIONSHIP_TYPES: frozenset[RelationshipType] = ROLLUP_CONTAINMENT_RELATIONSHIP_TYPES | frozenset(
-    RelationshipType(value) for value in _AGENT_STACK_RELS
+    RelationshipType(value) for value in (*_AGENT_STACK_RELS, *_ESTATE_TYPED_CONTAINMENT_SOURCES)
 )
 
 # What a roll-up must *fetch*, which is not what it walks. The containment set
@@ -279,7 +297,7 @@ def _edge_is_containment(graph: UnifiedGraph, edge: Any) -> bool:
     rel = edge.relationship.value if isinstance(edge.relationship, RelationshipType) else str(edge.relationship)
     if rel in _CONTAINMENT_RELS:
         return True
-    if rel not in _ACCOUNT_RESOURCE_CONTAINMENT_RELS and rel not in _AGENT_STACK_RELS:
+    if rel not in _ACCOUNT_RESOURCE_CONTAINMENT_RELS and rel not in _AGENT_STACK_RELS and rel not in _ESTATE_TYPED_CONTAINMENT_SOURCES:
         return False
     source = graph.nodes.get(edge.source)
     target = graph.nodes.get(edge.target)
@@ -287,6 +305,10 @@ def _edge_is_containment(graph: UnifiedGraph, edge: Any) -> bool:
         return False
     if (rel, _node_type_value(source), _node_type_value(target)) in _AGENT_STACK_CONTAINMENT:
         return True
+    if _node_type_value(source) in _ESTATE_TYPED_CONTAINMENT_SOURCES.get(rel, frozenset()):
+        targets = _ESTATE_TYPED_CONTAINMENT_TARGETS[rel]
+        if targets is None or _node_type_value(target) in targets:
+            return True
     if rel not in _ACCOUNT_RESOURCE_CONTAINMENT_RELS:
         return False
     return (
@@ -307,7 +329,9 @@ def _contains_children(graph: UnifiedGraph, flags: Optional[Sequence[bool]] = No
     so cloud resources roll up under their account even when inventory emits
     ``OWNS`` instead of ``CONTAINS``.
     Self-loops are ignored. Children are de-duplicated and sorted by id so the
-    output is stable across runs regardless of edge insertion order.
+    output is stable across runs regardless of edge insertion order. A parent
+    that is also an ancestor of another of the child's parents is dropped, so a
+    child is listed under its nearest scope only; descendant sets are unchanged.
     """
     children: dict[str, set[str]] = defaultdict(set)
     flags = _containment_flags(graph) if flags is None else flags
@@ -319,7 +343,8 @@ def _contains_children(graph: UnifiedGraph, flags: Optional[Sequence[bool]] = No
         if edge.source not in graph.nodes or edge.target not in graph.nodes:
             continue
         children[edge.source].add(edge.target)
-    return {parent: sorted(kids) for parent, kids in children.items()}
+    drop_redundant_parents(children)
+    return {parent: sorted(kids) for parent, kids in children.items() if kids}
 
 
 def _contains_parents(children: dict[str, list[str]]) -> dict[str, set[str]]:

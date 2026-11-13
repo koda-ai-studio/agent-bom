@@ -485,6 +485,32 @@ The graph shows a compact overlap explanation when memberships exceed unique
 descendants. Missing metadata in older responses does not establish disjoint
 scopes.
 
+The roll-up tree is built from `contains` plus typed ownership edges: a
+provider `hosts` its org and account, an org or account `owns` what the
+relationship contract lets it own (identities, guardrail policies, data
+stores, gateways, cloud resources), a storage `cloud_resource` `stores` its
+`data_store` companion, and the agent stack (agent → server → package →
+advisory). Untyped `hosts` / `owns` / `stores` edges never parent. A child is
+listed under its nearest parent only: when a node is recorded under a scope
+and also under one of that scope's descendants (an environment that contains
+every package an image in it already holds), the outer listing is dropped.
+Descendant sets, and every aggregate computed from them, are unchanged; only
+the direct-child rows lose the duplicate. Parents that reach the child only
+through a cycle back through the child itself never count as the nearer one,
+and a child whose every parent would be dropped keeps them all.
+
+Cloud inventory records which provider and account each asset came from, so
+the provider `hosts` the account and every inventoried instance whose own
+account / project / subscription field is absent or matches is `owns` +
+`contains` under that account. A cloud-origin agent's `scope.org_id` is
+emitted as org `contains` account beside the existing `part_of`, and its
+principal as account `owns` principal beside `member_of`. A blast-radius row
+without an ecosystem or purl is attached to the inventoried package it names
+only when exactly one ecosystem matches the name and version among the row's
+affected servers (or the estate, when it names none); the occurrence edge
+records `ecosystem_basis: inventory_package_match`. Ambiguous rows keep the
+reported `pkg::name@version` node.
+
 The graph renderer ships deterministic focused and expanded modes. Operators can override per-tenant; defaults match the table below.
 
 | Mode / size | Default behaviour | Why |
