@@ -593,6 +593,17 @@ A cold request with no complete generation still returns a bounded, retryable
 503 while building. Explicit stale generation continuations still fail with 409,
 and generation retention does not cross tenant boundaries.
 
+After a push the API also warms the roll-up views, the reachability index, the
+executive reads and the posture counts. These warm-ups load the estate into
+Python, and under the GIL a CPU-bound thread makes every concurrent request wait
+for the interpreter each time it returns from I/O (a 95 ms graph read took 9.4 s
+beside a busy loop). Warm-ups therefore run as background work: at bounded
+yield points in their row loops, while any request other than an orchestrator
+probe is in flight, they sleep without holding the GIL for at most 100 ms, then
+continue. Constant traffic slows a warm-up but cannot stop it, a request never
+waits on its own yield point, and the current-graph build itself does not yield
+because a cold read may be waiting for it.
+
 At start-up the API prepares current generations before the first read asks.
 One daemon thread takes the tenants of the newest 1,000 completed jobs, at most
 16, newest first, and builds each through the same coalescing queue that reads

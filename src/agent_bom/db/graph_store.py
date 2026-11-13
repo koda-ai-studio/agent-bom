@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Generator, Iterable, Mapping, Sequence
 
+from agent_bom.core.background_yield import yielding
 from agent_bom.db.graph_bootstrap import backfill_edge_metadata
 from agent_bom.db.graph_node_aliases import upgrade_node_alias_key
 from agent_bom.db.graph_revision import ensure_sqlite_revisions
@@ -631,7 +632,7 @@ def load_graph(
         query += " ORDER BY id"
 
     node_ids: set[str] = set()
-    for row in conn.execute(query, params):
+    for row in yielding(conn.execute(query, params)):
         sev = row["severity"] or ""
         graph.add_node(
             UnifiedNode.from_stored(
@@ -696,7 +697,7 @@ def load_graph(
     # and query plans. Keep the established source/target/relationship order.
     edge_prefix = "edge." if sql_scoped_edges else ""
     eq += f" ORDER BY {edge_prefix}source_id, {edge_prefix}target_id, {edge_prefix}relationship"
-    for row in conn.execute(eq, eparams):
+    for row in yielding(conn.execute(eq, eparams)):
         if row["source_id"] not in node_ids or row["target_id"] not in node_ids:
             continue
         graph.add_stored_edge(

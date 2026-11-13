@@ -13,6 +13,8 @@ import threading
 import time
 from typing import Any
 
+from agent_bom.core.background_yield import register_request_probe
+
 QUIET_SECONDS = 5.0
 MAX_DEFER_SECONDS = 60.0
 _PROBE_PATHS = frozenset({"/health", "/healthz", "/livez", "/readyz", "/ping", "/metrics"})
@@ -20,6 +22,13 @@ _PROBE_PATHS = frozenset({"/health", "/healthz", "/livez", "/readyz", "/ping", "
 _cond = threading.Condition()
 _in_flight = 0
 _last_activity = time.monotonic()
+
+
+def requests_in_flight() -> bool:
+    return _in_flight > 0
+
+
+register_request_probe(requests_in_flight)
 
 
 def _enter() -> None:

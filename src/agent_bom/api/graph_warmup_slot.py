@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from agent_bom.api.current_graph_builds import wait_for_current_builds
+from agent_bom.core.background_yield import background_work
 
 _SLOT = threading.Lock()
 BUILD_YIELD_SECONDS = 120.0
@@ -63,7 +64,9 @@ def warmup_slot() -> Iterator[None]:
         deadline = time.monotonic() + BUILD_YIELD_SECONDS
         _wait_for_foreground(deadline)
         wait_for_current_builds(max(0.0, deadline - time.monotonic()))
-        yield
+        # Warm-ups step aside at their yield points while requests are in flight.
+        with background_work():
+            yield
 
 
 __all__ = ["foreground_active", "foreground_graph_work", "warmup_slot"]

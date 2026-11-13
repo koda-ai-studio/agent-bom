@@ -35,6 +35,7 @@ from starlette.requests import Request
 from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.config import _bool
+from agent_bom.core.background_yield import background_work
 
 _logger = logging.getLogger(__name__)
 
@@ -182,7 +183,8 @@ def _precompute_loop() -> None:
         try:
             from agent_bom.api.exec_posture import precompute_posture_evidence
 
-            run_tenant_bound(tenant_id, precompute_posture_evidence, tenant_id)
+            with background_work():
+                run_tenant_bound(tenant_id, precompute_posture_evidence, tenant_id)
         except Exception:  # noqa: BLE001
             _logger.warning("posture counts precompute failed; reads compute on demand", exc_info=False)
         finally:
