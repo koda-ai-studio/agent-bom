@@ -196,6 +196,7 @@ metadata or environment defaults.
   - For the complete report, add `--agent-mode-full` (sets `data_mode: "full"` and inlines the legacy full payload), or write full JSON to disk with `agent-bom agents -o report.json --format json`. `data.full_report` records this on every summary payload.
   - `--agent-token-budget <TOKENS>` further trims either shape to an approximate JSON token budget.
 - Use `agent-bom agents -f <format> -o <path>` for SARIF, HTML, SBOM, and richer environment exports.
+- `scan` reports code-analysis relationships as counts: `ai_inventory.ast_analysis.stats` holds `total_call_edges`, `total_cfg_edges` and `total_dependency_symbol_reach`, and `relationships_included` is `false`. Add `--include-code-graph` to list every call-graph, control-flow and dependency-reach row (`relationships_included: true`); on a large repository that adds hundreds of thousands of rows to the report. Code findings and reachability use the full analysis either way; only the listed rows change.
 - Use `agent-bom agents -f sarif -o -` when you need SARIF on stdout for piping.
 - `where` is available both as `agent-bom where` and `agent-bom mcp where`.
 - `agent-bom verify` and `agent-bom verify agent-bom` both self-verify the installed package.

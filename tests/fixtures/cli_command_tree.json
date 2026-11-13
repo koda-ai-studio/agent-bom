@@ -1,7 +1,7 @@
 {
  "agent-bom": "37214619214464a2",
  "agent-bom activity": "1096dc6dad8a2710",
- "agent-bom agents": "483386e20ef531b4",
+ "agent-bom agents": "59f9d42e1ef9402a",
  "agent-bom api": "2ff39cf451f56fe5",
  "agent-bom attest": "4b083e877ae36050",
  "agent-bom attest compliance-verify": "865d6b7983c2d2e2",
@@ -217,7 +217,7 @@
  "agent-bom samples": "a40390691599d0aa",
  "agent-bom samples first-run": "d3aabb49a2c75c34",
  "agent-bom sbom": "37999ff209f3efe3",
- "agent-bom scan": "faf2c3094bf2bf02",
+ "agent-bom scan": "862c8dd11187dcac",
  "agent-bom scanners": "5f126ecbcd294fb4",
  "agent-bom schedule": "5bb573ac6b652905",
  "agent-bom schedule add": "5da62543d39406bb",

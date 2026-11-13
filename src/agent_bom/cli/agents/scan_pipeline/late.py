@@ -278,7 +278,7 @@ def _analyze_source(opts: ScanOptions, st: ScanState) -> None:
                     or _ast_result.dependency_symbol_reach
                 ):
                     st.report.ai_inventory_data = st.report.ai_inventory_data or {}
-                    st.report.ai_inventory_data["ast_analysis"] = _ast_result.to_dict()
+                    st.report.ai_inventory_data["ast_analysis"] = _ast_result.to_dict(include_relationships=opts.include_code_graph)
                     _n_prompts = len(_ast_result.prompts)
                     _n_guards = len(_ast_result.guardrails)
                     _n_tools = len(_ast_result.tools)
