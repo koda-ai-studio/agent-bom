@@ -33,7 +33,7 @@ from pathlib import Path
 
 from agent_bom.models import Package
 from agent_bom.package_utils import parse_debian_source_name
-from agent_bom.python_site_packages import parse_site_packages, python_site_dirs
+from agent_bom.parsers.python_site_packages import parse_site_packages, python_site_dirs
 from agent_bom.sbom import parse_cyclonedx
 from agent_bom.security import validate_path
 
