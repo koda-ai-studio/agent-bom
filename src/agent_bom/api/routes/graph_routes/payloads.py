@@ -17,6 +17,7 @@ from agent_bom.api.routes.graph_routes.canvas_view import GraphView, canvas_proj
 from agent_bom.api.routes.graph_routes.params import (
     _FILTERED_GRAPH_ATTACK_PATH_LIMIT,
     _GRAPH_QUERY_ABSOLUTE_LIMITS,
+    _NODE_PAGE_ATTACK_PATH_LIMIT,
     _boundary_edge_count,
     _joined_edges,
 )
@@ -473,6 +474,18 @@ def _scoped_graph_response(
 _NODE_PAGE_EDGE_LIMIT = 1000
 
 
+def _embedded_page_paths(paths: list[AttackPath]) -> tuple[list[AttackPath], dict[str, Any]]:
+    """The highest-risk slice of a page's paths, and the pointer to the complete ranked set."""
+    ranked = sorted(paths, key=lambda path: -float(path.composite_risk or 0.0))
+    pagination = {
+        "total": len(ranked),
+        "limit": _NODE_PAGE_ATTACK_PATH_LIMIT,
+        "has_more": len(ranked) > _NODE_PAGE_ATTACK_PATH_LIMIT,
+        "endpoint": "/v1/graph/attack-paths",
+    }
+    return ranked[:_NODE_PAGE_ATTACK_PATH_LIMIT], pagination
+
+
 def _encode_node_page(
     *,
     snapshot_stats: dict,
@@ -493,16 +506,13 @@ def _encode_node_page(
     cursor: str | None,
     view: GraphView | None = None,
 ) -> Response:
-    # This branch pages a fully-counted snapshot, so the estate total IS the stats
-    # total. Emitting the field anyway keeps one stats shape across both branches.
-    page_stats = {
-        **snapshot_stats,
-        "total_nodes_source": max(int(snapshot_stats.get("total_nodes", 0)), total),
-    }
+    # A fully-counted snapshot: the estate total IS the stats total; emitted to keep one stats shape.
+    page_stats = {**snapshot_stats, "total_nodes_source": max(int(snapshot_stats.get("total_nodes", 0)), total)}
     response_nodes = [*paged_nodes, *context.nodes, *context.endpoints]
     response_node_ids = {node.id for node in response_nodes}
     response_edges = _joined_edges(paged_edges, context.edges)
     page_truncated = _page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(paged_nodes), total=total)
+    embedded_paths, path_pagination = _embedded_page_paths(source_attack_paths)
     payload = {
         "snapshot_generation": identity[1] if identity else None,
         "scan_id": effective_scan_id,
@@ -512,11 +522,12 @@ def _encode_node_page(
         "nodes": [*(n.to_dict() for n in paged_nodes), *({**n.to_dict(), "context": True} for n in response_nodes[len(paged_nodes) :])],
         "edges": [e.to_dict() for e in response_edges],
         "attack_paths": _serialize_attack_path_batch(
-            source_attack_paths,
+            embedded_paths,
             paged_edges,
             nodes_by_id=nodes_by_id,
             scan_id=effective_scan_id,
         ),
+        "attack_path_pagination": path_pagination,
         "interaction_risks": [],
         "stats": page_stats,
         "pagination": _page_meta(total, offset, limit, cursor=cursor, next_cursor=next_cursor),

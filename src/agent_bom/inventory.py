@@ -41,7 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.asset_provenance import sanitize_discovery_provenance
-from agent_bom.canonical_ids import inventory_identity_scope
+from agent_bom.domain.inventory_identity import inventory_identity_scope
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets

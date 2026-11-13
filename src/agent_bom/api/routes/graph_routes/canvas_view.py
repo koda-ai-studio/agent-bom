@@ -32,6 +32,10 @@ CANVAS_DROPPED_NODE_ATTRIBUTES = (
     "fictional",
 )
 CANVAS_DROPPED_EDGE_FIELDS = ("source_id", "target_id", "canonical_id", "valid_from", "valid_to", "activity_id", "source_run_id")
+# An attack path's ``exposure_path`` repeats the path's own ``hop_evidence`` and
+# every hop's provenance block; the page keys and draws paths from the rest.
+CANVAS_DROPPED_EXPOSURE_PATH_FIELDS = ("hopEvidence", "evidenceDimensions")
+CANVAS_DROPPED_EXPOSURE_REF_FIELDS = ("evidenceProvenance",)
 
 
 def _canvas_node(node: dict[str, Any]) -> dict[str, Any]:
@@ -42,6 +46,23 @@ def _canvas_node(node: dict[str, Any]) -> dict[str, Any]:
     return slim
 
 
+def _canvas_ref(ref: Any) -> Any:
+    return {key: value for key, value in ref.items() if key not in CANVAS_DROPPED_EXPOSURE_REF_FIELDS} if isinstance(ref, dict) else ref
+
+
+def _canvas_attack_path(path: Any) -> Any:
+    exposure = path.get("exposure_path") if isinstance(path, dict) else None
+    if not isinstance(exposure, dict):
+        return path
+    slim = {key: value for key, value in exposure.items() if key not in CANVAS_DROPPED_EXPOSURE_PATH_FIELDS}
+    for key in ("source", "target"):
+        if key in slim:
+            slim[key] = _canvas_ref(slim[key])
+    if isinstance(slim.get("hops"), list):
+        slim["hops"] = [_canvas_ref(hop) for hop in slim["hops"]]
+    return {**path, "exposure_path": slim}
+
+
 def canvas_projection(payload: dict[str, Any]) -> dict[str, Any]:
     """The payload with the canvas view's unread fields removed, labelled ``view: "canvas"``."""
     return {
@@ -50,6 +71,7 @@ def canvas_projection(payload: dict[str, Any]) -> dict[str, Any]:
         "edges": [
             {key: value for key, value in edge.items() if key not in CANVAS_DROPPED_EDGE_FIELDS} for edge in payload.get("edges") or []
         ],
+        **({"attack_paths": [_canvas_attack_path(path) for path in payload["attack_paths"]]} if "attack_paths" in payload else {}),
         "view": "canvas",
     }
 
@@ -57,6 +79,8 @@ def canvas_projection(payload: dict[str, Any]) -> dict[str, Any]:
 __all__ = [
     "CANVAS_VIEW_DESCRIPTION",
     "CANVAS_DROPPED_EDGE_FIELDS",
+    "CANVAS_DROPPED_EXPOSURE_PATH_FIELDS",
+    "CANVAS_DROPPED_EXPOSURE_REF_FIELDS",
     "CANVAS_DROPPED_NODE_ATTRIBUTES",
     "CANVAS_DROPPED_NODE_FIELDS",
     "GraphView",

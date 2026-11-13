@@ -33,10 +33,11 @@ from agent_bom.graph.provider_inheritance import provider_fields as _provider_fi
 from agent_bom.graph.rollup_aggregate import RollupAggregate, ScopeAggregates, _histogram, aggregate_count_metadata
 from agent_bom.graph.rollup_aggregate import orphan_summary as _orphan_summary
 from agent_bom.graph.rollup_edges import combine_reasons as _combine_reasons
-from agent_bom.graph.rollup_edges import cross_container_edge_rows, drop_redundant_parents, edge_projection
+from agent_bom.graph.rollup_edges import cross_container_edge_rows, edge_projection
 from agent_bom.graph.rollup_edges import descendants as _descendants
 from agent_bom.graph.rollup_edges import edge_count_metadata as _edge_count_metadata
 from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, FindingFacts, IssueTally, build_finding_index
+from agent_bom.graph.rollup_parents import drop_fallback_provider_parents, drop_redundant_parents
 from agent_bom.graph.types import EntityType, RelationshipType
 
 # Severity buckets reported in every roll-up histogram, worst → least.
@@ -343,26 +344,9 @@ def _contains_children(graph: UnifiedGraph, flags: Optional[Sequence[bool]] = No
         if edge.source not in graph.nodes or edge.target not in graph.nodes:
             continue
         children[edge.source].add(edge.target)
-    _drop_fallback_provider_parents(graph, children)
+    drop_fallback_provider_parents(graph, children)
     drop_redundant_parents(children)
     return {parent: sorted(kids) for parent, kids in children.items() if kids}
-
-
-def _drop_fallback_provider_parents(graph: UnifiedGraph, children: dict[str, set[str]]) -> None:
-    """A provider parents an org/account only when nothing else does.
-
-    Inventory records ``provider HOSTS account`` for every collected account,
-    including one an organization already contains. Kept as a second parent it
-    makes the provider an overlapping top-level root that counts the same
-    findings twice; the organization is the nearer, recorded owner.
-    """
-    provider_value = EntityType.PROVIDER.value
-    providers = [pid for pid in children if (node := graph.nodes.get(pid)) is not None and _node_type_value(node) == provider_value]
-    if not providers:
-        return
-    owned_elsewhere = {kid for parent, kids in children.items() if parent not in providers for kid in kids}
-    for provider_id in providers:
-        children[provider_id] -= owned_elsewhere
 
 
 def _contains_parents(children: dict[str, list[str]]) -> dict[str, set[str]]:

@@ -32,6 +32,13 @@ describe the selected population; never add both tables to compute a total.
 The existing `source`, completeness, snapshot and generation fields retain
 their scope and continuation semantics.
 
+`GET /v1/graph` (the ranked node page) embeds only the 25 highest-risk paths
+whose source is on the page; `attack_path_pagination` reports `total`,
+`limit`, `has_more` and the `endpoint` (`/v1/graph/attack-paths`) that serves
+the complete ranked set. `view=canvas` also drops the copies of the path's hop
+receipts (`exposure_path.hopEvidence`), `exposure_path.evidenceDimensions` and
+each exposure hop's `evidenceProvenance`; the default projection keeps them.
+
 Keep base evidence intact when refreshing derived paths. A shared-payload
 storage design would need to preserve distinct payloads, duplicate path
 occurrences, tenant/scan identity, derivation-version fallback and atomic

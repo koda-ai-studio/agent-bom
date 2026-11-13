@@ -18,6 +18,8 @@ from starlette.testclient import TestClient
 from agent_bom.api import stores as api_stores
 from agent_bom.api.routes.graph_routes.canvas_view import (
     CANVAS_DROPPED_EDGE_FIELDS,
+    CANVAS_DROPPED_EXPOSURE_PATH_FIELDS,
+    CANVAS_DROPPED_EXPOSURE_REF_FIELDS,
     CANVAS_DROPPED_NODE_ATTRIBUTES,
     CANVAS_DROPPED_NODE_FIELDS,
 )
@@ -169,7 +171,13 @@ def test_canvas_guard_distinguishes_type_lookups_from_runtime_reads(line, expect
 def test_no_graph_page_module_reads_a_field_the_canvas_view_drops() -> None:
     modules = _graph_page_modules()
     assert len(modules) > 50, "graph page import closure did not resolve"
-    dropped = {*CANVAS_DROPPED_NODE_FIELDS, *CANVAS_DROPPED_NODE_ATTRIBUTES, *CANVAS_DROPPED_EDGE_FIELDS}
+    dropped = {
+        *CANVAS_DROPPED_NODE_FIELDS,
+        *CANVAS_DROPPED_NODE_ATTRIBUTES,
+        *CANVAS_DROPPED_EDGE_FIELDS,
+        *CANVAS_DROPPED_EXPOSURE_PATH_FIELDS,
+        *CANVAS_DROPPED_EXPOSURE_REF_FIELDS,
+    }
     reads = []
     for key in sorted(dropped):
         pattern = re.compile(r"(?:\?\.|\.)" + re.escape(key) + r"\b|[\"'`]" + re.escape(key) + r"[\"'`]")
@@ -194,3 +202,30 @@ def test_canvas_retains_target_bound_network_assessments() -> None:
     assessment = {"target_id": "api-1", "complete": True, "evidence_refs": ["receipt-1"]}
     payload = {"nodes": [{"id": "api", "attributes": {"network_reachability_assessment": assessment}}], "edges": []}
     assert canvas_projection(payload)["nodes"][0]["attributes"]["network_reachability_assessment"] == assessment
+
+
+def test_canvas_drops_duplicated_exposure_path_evidence_but_keeps_the_path() -> None:
+    """``exposure_path`` repeats the path's hop receipts and every hop's provenance; the page reads neither from it."""
+    from agent_bom.api.routes.graph_routes.canvas_view import canvas_projection
+
+    ref = {"id": "agent:a", "label": "a", "evidenceProvenance": {"tier": "static_scan"}}
+    exposure = {
+        "id": "path-1",
+        "rank": 1,
+        "source": dict(ref),
+        "target": {**ref, "id": "vuln:x"},
+        "hops": [dict(ref), {**ref, "id": "vuln:x"}],
+        "hopEvidence": [{"hop": 0}],
+        "evidenceDimensions": {"reachability": {"verdict": "reachable"}},
+        "relationships": ["uses"],
+    }
+    path = {"source": "agent:a", "target": "vuln:x", "hops": ["agent:a", "vuln:x"], "hop_evidence": [{"hop": 0}], "exposure_path": exposure}
+    projected = canvas_projection({"nodes": [], "edges": [], "attack_paths": [path]})["attack_paths"][0]
+    slim = projected["exposure_path"]
+    assert slim["id"] == "path-1" and slim["rank"] == 1 and slim["relationships"] == ["uses"]
+    assert not set(CANVAS_DROPPED_EXPOSURE_PATH_FIELDS) & set(slim)
+    assert all("evidenceProvenance" not in hop for hop in [slim["source"], slim["target"], *slim["hops"]])
+    assert [hop["id"] for hop in slim["hops"]] == ["agent:a", "vuln:x"]
+    # The receipts the page does read stay on the path itself.
+    assert projected["hop_evidence"] == [{"hop": 0}]
+    assert path["exposure_path"]["hopEvidence"] == [{"hop": 0}], "the default projection must not be mutated"

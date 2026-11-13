@@ -12,6 +12,7 @@ from typing import Any
 from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
 from agent_bom.constants import is_credential_key
+from agent_bom.domain.inventory_identity import is_inventory_identity
 from agent_bom.package_utils import canonical_package_key
 
 AGENT_BOM_ID_NAMESPACE = uuid.UUID("7f3e4b2a-9c1d-5f8e-a0b4-12c3d4e5f6a7")
@@ -299,26 +300,6 @@ def _relocated_config_graph_ids(record: Any) -> list[str]:
     return out
 
 
-INVENTORY_SOURCE_SCOPE_PREFIX = "inventory-source:"
-
-
-def inventory_identity_scope(document: Mapping[str, Any]) -> str:
-    """Identity location for an inventory agent that declares no location of its own.
-
-    The inventory's declared ``source_id`` (else ``source``) scopes the agent's
-    name, so the same name means the same agent only within one inventory
-    source. The file path never enters identity: a moved inventory keeps its
-    ids. Without a declared source the id stays location-free (``""``).
-    """
-    declared = str(document.get("source_id") or document.get("source") or "").strip()
-    return f"{INVENTORY_SOURCE_SCOPE_PREFIX}{declared}" if declared else ""
-
-
-def _inventory_identity(record: Any) -> bool:
-    value = _field(record, "identity_config_path")
-    return value == "" or (isinstance(value, str) and value.startswith(INVENTORY_SOURCE_SCOPE_PREFIX))
-
-
 def _agent_kind(record: Any) -> str:
     kind = _field(record, "agent_type") or _field(record, "type") or ""
     return str(getattr(kind, "value", kind))
@@ -327,7 +308,7 @@ def _agent_kind(record: Any) -> str:
 def inventory_prior_canonical_ids(record: Any) -> list[str]:
     """Ids an inventory agent had before: by its inventory file path, then location-free (before a source scope)."""
     location = str(_field(record, "config_path") or "").strip()
-    if not _inventory_identity(record) or not location:
+    if not is_inventory_identity(_field(record, "identity_config_path")) or not location:
         return []
     name = str(_field(record, "name") or "")
     prior = [canonical_agent_id(_agent_kind(record), name, config_path=location)]
