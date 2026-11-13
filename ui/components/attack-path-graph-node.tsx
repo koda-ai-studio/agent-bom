@@ -28,7 +28,7 @@ const SUBTITLE = "pointer-events-auto block w-full truncate rounded-b bg-surface
 const RATED = new Set(["critical", "high", "medium", "low"]);
 const ROLE_CAPTION: Record<PathGraphNode["role"], string> = { entry: "Entry", path: "", target: "At risk", branch: "" };
 
-function severityStyle(severity: string): CSSProperties {
+export function severityStyle(severity: string): CSSProperties {
   if (!RATED.has(severity)) return { background: "var(--surface-elevated)", borderColor: "var(--border-strong)", color: "var(--foreground)" };
   return {
     background: `linear-gradient(var(--severity-${severity}-bg), var(--severity-${severity}-bg)), var(--surface)`,

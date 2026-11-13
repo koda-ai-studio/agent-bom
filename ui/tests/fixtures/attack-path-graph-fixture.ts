@@ -99,6 +99,23 @@ export function demoFixture(select: "headline" | "runbook" = "headline"): { grap
   };
 }
 
+/** A complete hop receipt, as the path read records it for a directed, traversable, recorded link. */
+export function hopReceipt(source: string, target: string, relationship: string, overrides: Record<string, unknown> = {}) {
+  return {
+    source_node_id: source, target_node_id: target, relationship, direction: "directed", traversable: true,
+    complete: true, truncated: false, freshness: "fresh", relationship_provenance: "recorded",
+    correlation_identity_status: "current", source_snapshot_ids: ["scan-1"], ...overrides,
+  };
+}
+
+/** The demo headline path with a complete receipt on every hop, except where `broken` overrides a hop index. */
+export function receiptedDemoFixture(broken: Record<number, Record<string, unknown>> = {}) {
+  const fixture = demoFixture();
+  const { hops, edges } = fixture.selected;
+  fixture.selected.hop_evidence = hops.slice(0, -1).map((source, index) => hopReceipt(source, hops[index + 1]!, edges[index]!, broken[index])) as never;
+  return fixture;
+}
+
 /** One shared server with `count` sibling endpoints, each on its own recorded path. */
 export function fanOutFixture(count: number): { graph: UnifiedGraphData; selected: AttackPath } {
   const nodes = [

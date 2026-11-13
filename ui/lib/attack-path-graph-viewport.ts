@@ -33,7 +33,7 @@ function boundsOf(layout: Pick<AttackPathLayout, "positions" | "nodeWidth" | "no
  * is wider) and report what is left off screen.
  */
 export function attackPathViewport(
-  layout: Pick<AttackPathLayout, "positions" | "width" | "height" | "nodeWidth" | "nodeHeight">,
+  layout: Pick<AttackPathLayout, "positions" | "width" | "height" | "nodeWidth" | "nodeHeight"> & Partial<Pick<AttackPathLayout, "direction">>,
   spineIds: readonly string[],
   pane: { width: number; height: number },
   floor: number,
@@ -52,6 +52,14 @@ export function attackPathViewport(
   let zoom = Math.max(fitted, lowest);
   let { x, y } = centre(whole, zoom);
   const fallback = fitted < lowest;
+  const spineBox = boundsOf(layout, spineIds);
+  if (!fallback && layout.direction === "TB" && spineBox) {
+    // A vertical path reads down the middle of the phone: move its column toward the centre as far as
+    // keeping every branch inside the padded pane allows (nothing is clipped on the first frame).
+    const lo = pad.left - whole.x * zoom;
+    const hi = pad.left + usableWidth - (whole.x + whole.width) * zoom;
+    x = Math.min(Math.max(lo, hi), Math.max(Math.min(lo, hi), centre(spineBox, zoom).x));
+  }
   if (fallback) {
     zoom = lowest;
     const spine = boundsOf(layout, spineIds) ?? whole;
