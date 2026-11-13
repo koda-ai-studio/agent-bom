@@ -9597,6 +9597,7 @@ export interface components {
             offset: number;
             /** Scope */
             scope: string;
+            sort: components["schemas"]["AppliedSort"] | null;
             /** Source */
             source: string;
             summary: components["schemas"]["AgentsSummary"];
@@ -9707,6 +9708,15 @@ export interface components {
             }[];
             /** Schema Version */
             schema_version: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AppliedSort */
+        AppliedSort: {
+            /** Key */
+            key: string;
+            /** Order */
+            order: string;
         } & {
             [key: string]: unknown;
         };

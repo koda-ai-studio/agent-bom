@@ -21,6 +21,11 @@ class AgentsSummary(ReadModel):
     blocked_servers: int
 
 
+class AppliedSort(ReadModel):
+    key: str
+    order: str
+
+
 class AgentsResponse(ReadResponse):
     # This page of agents; ``count`` and ``summary`` cover every agent in scope.
     agents: list[DiscoveredAgent]
@@ -31,6 +36,8 @@ class AgentsResponse(ReadResponse):
     offset: int
     has_more: bool
     next_cursor: str | None
+    # The sort the server applied to these rows; null is first-seen order.
+    sort: AppliedSort | None
     # Per-filter value counts; each facet ignores its own selection.
     facets: dict[str, dict[str, int]]
     summary: AgentsSummary

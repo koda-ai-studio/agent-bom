@@ -221,6 +221,8 @@ def page_agents_response(response: dict[str, Any], query: AgentListQuery) -> dic
             "offset": query.offset,
             "has_more": has_more,
             "next_cursor": str(end) if has_more else None,
+            # The order the rows are actually in; null means first-seen order, no sort applied.
+            "sort": {"key": query.sort, "order": query.order} if query.sort else None,
             "facets": _facets(searched, query),
             "summary": deepcopy(summary),
         }

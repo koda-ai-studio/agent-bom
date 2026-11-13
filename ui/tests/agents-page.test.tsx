@@ -133,6 +133,7 @@ function pagingServer(rows: Row[], extra: Record<string, unknown> = {}) {
       offset,
       has_more: offset + limit < matched.length,
       next_cursor: offset + limit < matched.length ? String(offset + limit) : null,
+      sort: params?.sort === "name" ? { key: "name", order: params.order ?? "asc" } : null,
       facets,
       ...extra,
     };
@@ -235,6 +236,24 @@ describe("AgentsPage list view", () => {
 
     await waitFor(() =>
       expect(apiMock.listAgents).toHaveBeenLastCalledWith(expect.objectContaining({ sort: "name", order: "asc" }), expect.any(AbortSignal)),
+    );
+  });
+
+  it("draws the sort indicator from the sort the server applied, not the one requested", async () => {
+    navigationMock.query = "sort=findings&order=desc";
+    render(<AgentsPage />);
+
+    const table = await screen.findByTestId("agents-table");
+    await waitFor(() => expect(within(table).getAllByText("Cursor").length).toBeGreaterThan(0));
+    // The fake server only sorts by name and echoes null for anything else.
+    for (const header of within(table).getAllByRole("columnheader")) {
+      expect(String(header.getAttribute("aria-sort"))).not.toMatch(/ascending|descending/);
+    }
+    expect(screen.getByTestId("agents-sort-state")).toHaveTextContent("first-seen order");
+
+    fireEvent.click(within(table).getByRole("button", { name: /^Name/ }));
+    await waitFor(() =>
+      expect(within(table).getByRole("columnheader", { name: /^Name/ })).toHaveAttribute("aria-sort", "ascending"),
     );
   });
 

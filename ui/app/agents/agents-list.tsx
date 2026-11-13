@@ -121,6 +121,8 @@ export function AgentsList() {
   const total = data?.total ?? agents.length;
   const totalPages = Math.max(1, Math.ceil(total / state.pageSize));
   const firstLoad = loading && data === null;
+  // The indicator shows the order the rows are in, which only the response knows.
+  const appliedSort = data?.sort ?? null;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -201,6 +203,7 @@ export function AgentsList() {
             </div>
             <p className="text-xs text-[color:var(--text-tertiary)]" aria-live="polite" data-testid="agents-match-count">
               {total.toLocaleString()} of {population.toLocaleString()} agents{filtersActive ? " match" : ""}
+              <span data-testid="agents-sort-state"> · {appliedSort ? `sorted by ${appliedSort.key === "findings" ? "vulns" : appliedSort.key} ${appliedSort.order}` : "first-seen order"}</span>
             </p>
           </div>
           <AgentsFilterChips
@@ -259,7 +262,7 @@ export function AgentsList() {
             rowKey={agentRowKey}
             onRowClick={(agent) => setSelectedKey(agentRowKey(agent, agents.indexOf(agent)))}
             selectedKey={selectedKey ?? undefined}
-            sort={state.sort ? { key: state.sort, direction: state.order } : undefined}
+            sort={appliedSort ? { key: appliedSort.key, direction: appliedSort.order === "asc" ? "asc" : "desc" } : undefined}
             onSortChange={(key) => {
               if (SORTABLE.has(key)) setState((current) => ({ ...current, ...nextAgentSort(current, key as AgentSortKey), page: 1 }));
             }}

@@ -1771,6 +1771,10 @@ components:
         scope:
           title: Scope
           type: string
+        sort:
+          anyOf:
+          - $ref: '#/components/schemas/AppliedSort'
+          - type: 'null'
         source:
           title: Source
           type: string
@@ -1792,6 +1796,7 @@ components:
       - offset
       - has_more
       - next_cursor
+      - sort
       - facets
       - summary
       - count_by_class
@@ -1968,6 +1973,20 @@ components:
       - schema_version
       - keys
       title: ApiKeysResponse
+      type: object
+    AppliedSort:
+      additionalProperties: true
+      properties:
+        key:
+          title: Key
+          type: string
+        order:
+          title: Order
+          type: string
+      required:
+      - key
+      - order
+      title: AppliedSort
       type: object
     AuditChain:
       additionalProperties: true

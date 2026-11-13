@@ -261,3 +261,33 @@ def test_paged_rows_are_copies_of_the_cache(client: TestClient) -> None:
     json.dumps(first)
     again = _page(client, "?limit=1")
     assert again["agents"][0]["name"] == first["agents"][0]["name"]
+
+
+def _metric(agent: dict, key: str):
+    if key == "name":
+        return str(agent.get("display_name") or agent.get("name")).lower(), str(agent.get("canonical_id"))
+    servers = agent["mcp_servers"]
+    if key == "servers":
+        return len(servers)
+    if key == "packages":
+        return sum(len(s["packages"]) for s in servers)
+    if key == "credentials":
+        return sum(len(s.get("credential_env_vars") or []) for s in servers)
+    return sum(len(p.get("vulnerabilities") or []) for s in servers for p in s["packages"])
+
+
+@pytest.mark.parametrize("key", ["name", "servers", "packages", "credentials", "findings"])
+@pytest.mark.parametrize("order", ["asc", "desc"])
+def test_sorted_pages_are_monotonic_across_the_page_boundary(client: TestClient, key: str, order: str) -> None:
+    first = _page(client, f"?limit=40&sort={key}&order={order}")
+    second = _page(client, f"?limit=40&sort={key}&order={order}&cursor={first['next_cursor']}")
+
+    assert first["sort"] == second["sort"] == {"key": key, "order": order}
+    values = [_metric(agent, key) for agent in first["agents"] + second["agents"]]
+    assert values == sorted(values, reverse=order == "desc")
+
+
+def test_applied_sort_is_echoed_and_absent_when_none_was_applied(client: TestClient) -> None:
+    assert _page(client, "?limit=5")["sort"] is None
+    assert _page(client, "?limit=5&sort=findings")["sort"] == {"key": "findings", "order": "desc"}
+    assert _page(client, "?limit=5&sort=name")["sort"] == {"key": "name", "order": "asc"}
