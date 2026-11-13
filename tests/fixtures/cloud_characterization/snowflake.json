@@ -62,7 +62,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -175,7 +176,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -259,7 +261,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -354,7 +357,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -449,7 +453,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -587,7 +592,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -671,7 +677,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -755,7 +762,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -837,7 +845,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -919,7 +928,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -1072,7 +1082,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -1154,7 +1165,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -1520,7 +1532,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -1608,7 +1621,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -1696,7 +1710,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -1903,7 +1918,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2016,7 +2032,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2100,7 +2117,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2182,7 +2200,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2264,7 +2283,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2346,7 +2366,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2428,7 +2449,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2581,7 +2603,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2663,7 +2686,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2729,7 +2753,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2815,7 +2840,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,
@@ -2901,7 +2927,8 @@
        "discovery_provenance": null,
        "identity_bindings": [],
        "imported_canonical_id": null,
-       "plaintext_env_secrets": {}
+       "plaintext_env_secrets": {},
+       "package_binding_of": null
       }
      ],
      "version": null,

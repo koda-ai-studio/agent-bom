@@ -107,6 +107,8 @@ def _summarize_packages(opts: ScanOptions, st: ScanState) -> None:
     eco_counts: dict[str, int] = {}
     for a in st.ctx.agents:
         for s in a.mcp_servers:
+            if s.package_binding_of:
+                continue
             for p in s.packages:
                 eco_counts[p.ecosystem] = eco_counts.get(p.ecosystem, 0) + 1
     eco_str = ", ".join(f"{c} {e}" for e, c in sorted(eco_counts.items(), key=lambda x: -x[1]))

@@ -160,7 +160,10 @@ const BUDGETS = {
   // locally before the taxonomy refresh, without adding dependencies. This
   // total includes lazy chunks; retain ~17 KiB of headroom at 4384 KiB.
   // Largest-chunk and shared-runtime ceilings remain unchanged.
-  totalClientJsBytes: 4_489_216,
+  // One shared probability formatter, so no EPSS reads as 100% below certainty,
+  // reaches nine views and measures 4384.5 KiB in Linux CI with no dependency.
+  // Allow 7.5 KiB of headroom at 4392 KiB; both chunk ceilings stay fixed.
+  totalClientJsBytes: 4_497_408,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.

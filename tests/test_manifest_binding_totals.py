@@ -53,6 +53,12 @@ def test_sample_scan_counts_each_package_binding_once(sample: Path) -> None:
     assert pushed["summary"]["total_packages"] == 5
 
 
+def test_console_package_line_counts_each_binding_once(sample: Path) -> None:
+    out = sample.parent / "console.json"
+    result = CliRunner().invoke(main, ["scan", ".", "--offline", "--no-scan", "-f", "json", "-o", str(out)])
+    assert "5 packages (3 pypi, 2 npm)" in result.output
+
+
 def test_sample_spdx_summary_uses_the_deduplicated_total(sample: Path) -> None:
     document = json.loads(_scan(sample, "spdx").read_text())
     assert "5 package(s)" in json.dumps(document)

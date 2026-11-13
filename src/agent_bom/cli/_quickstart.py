@@ -415,7 +415,7 @@ def _control_plane_command(*, control_plane_db: Path, graph_db: Path, port: int,
         else shlex.quote(str(control_plane_db))
     )
     command = f"{' '.join(environment)} agent-bom serve --persist {persisted} --host 127.0.0.1 --port {port}".lstrip()
-    return command + (" --allow-insecure-no-auth" if local_analyst else "")
+    return command
 
 
 def _write_gateway_baseline(output_path: Path, *, mode: str) -> None:
