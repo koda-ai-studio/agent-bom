@@ -2,15 +2,16 @@
 
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { Bug, Layers } from "lucide-react";
-import type { CSSProperties } from "react";
+import { Fragment, type CSSProperties } from "react";
 
 import { entityIcon } from "@/lib/entity-icons";
 import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import type { PathGraphNode } from "@/lib/attack-path-graph-model";
 import { MARKER_META, type NodeContextMarker } from "@/lib/attack-path-graph-markers";
-import { ATTACK_PATH_NODE } from "@/lib/attack-path-graph-layout";
+import { PATH_NODE } from "@/lib/attack-path-graph-layout";
 import { GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
+import { labelSegments } from "@/lib/graph-label-breaks";
 
 export type AttackPathNodeData = {
   node: PathGraphNode;
@@ -20,10 +21,10 @@ export type AttackPathNodeData = {
 };
 export type AttackPathFlowNode = Node<AttackPathNodeData, "attackPathNode">;
 
-const GLYPH_INSET_X = glyphInsetX(ATTACK_PATH_NODE.width);
-const BOX: CSSProperties = { width: ATTACK_PATH_NODE.width, height: ATTACK_PATH_NODE.height };
-/** Names wrap to two lines under the glyph before truncating; the full name is on hover. */
-const NAME = "pointer-events-auto block w-full rounded-t bg-surface px-1 pt-0.5 text-[15px] font-semibold leading-tight line-clamp-2 [overflow-wrap:anywhere]";
+const GLYPH_INSET_X = glyphInsetX(PATH_NODE.width);
+const BOX: CSSProperties = { width: PATH_NODE.width, height: PATH_NODE.height };
+/** Names wrap to two lines under the glyph, only at a separator, before truncating; the full name is on hover. */
+const NAME = "pointer-events-auto block w-full rounded-t bg-surface px-1 pt-0.5 text-[15px] font-semibold leading-tight line-clamp-2 [overflow-wrap:normal] [word-break:normal]";
 const SUBTITLE = "pointer-events-auto block w-full truncate rounded-b bg-surface px-1 pb-0.5 pt-0.5 text-[13px] leading-tight";
 const RATED = new Set(["critical", "high", "medium", "low"]);
 const ROLE_CAPTION: Record<PathGraphNode["role"], string> = { entry: "Entry", path: "", target: "At risk", branch: "" };
@@ -37,16 +38,42 @@ export function severityStyle(severity: string): CSSProperties {
   };
 }
 
+/** The visible name with a break opportunity after each separator, so no line ends inside a token. */
+export function NodeName({ label, className }: { label: string; className: string }) {
+  return (
+    <span data-node-label className={className} title={label} aria-label={label}>
+      {labelSegments(label, 16).map((segment, index, all) => <Fragment key={index}>{segment}{index < all.length - 1 ? <wbr /> : null}</Fragment>)}
+    </span>
+  );
+}
+
+const SEVERITY_ORDER = ["critical", "high", "medium", "low"];
+
+/** Counts per severity, worst first, e.g. "1 critical, 1 medium". */
+function severityBreakdown(findings: PathGraphNode["findings"]): { severity: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const finding of findings) {
+    const severity = RATED.has(finding.severity) ? finding.severity : "unrated";
+    counts.set(severity, (counts.get(severity) ?? 0) + 1);
+  }
+  return [...counts].map(([severity, count]) => ({ severity, count }))
+    .sort((a, b) => (SEVERITY_ORDER.indexOf(a.severity) + 5) % 5 - (SEVERITY_ORDER.indexOf(b.severity) + 5) % 5);
+}
+
 function FindingBadge({ node, onOpen }: { node: PathGraphNode; onOpen: AttackPathNodeData["onOpenFindings"] }) {
   const count = node.findings.length;
   const worst = node.findings[0]!.severity;
-  const label = `${count} ${count === 1 ? "finding" : "findings"} on ${node.label}, worst ${RATED.has(worst) ? worst : "unrated"}. Open findings`;
+  const breakdown = severityBreakdown(node.findings);
+  const top = breakdown[0]!;
+  const rest = count - top.count;
+  const summary = breakdown.map(item => `${item.count} ${item.severity}`).join(", ");
+  const label = `${count} ${count === 1 ? "finding" : "findings"} on ${node.label}, worst ${RATED.has(worst) ? worst : "unrated"} (${summary}). Open findings`;
   return (
     <button type="button" aria-label={label} title={label.replace(". Open findings", "")} data-severity={worst} data-node-badge="findings"
       onClick={event => { event.stopPropagation(); onOpen(node.id, node.findings.map(finding => finding.id)); }}
-      className="nodrag nopan absolute -right-5 -top-2.5 z-10 inline-flex h-7 min-w-7 items-center gap-0.5 rounded-full border px-1.5 text-[13px] font-bold tabular-nums shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]"
+      className="nodrag nopan absolute left-[calc(100%-12px)] -top-4 z-10 inline-flex h-6 items-center gap-1 whitespace-nowrap rounded-full border px-1.5 text-[13px] font-semibold tabular-nums shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-ring)]"
       style={severityStyle(worst)}>
-      <Bug className="h-3.5 w-3.5" aria-hidden="true" />{count}
+      <Bug className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{`${top.count} ${top.severity}`}{rest > 0 ? <span className="font-medium opacity-80">{` +${rest}`}</span> : null}
     </button>
   );
 }
@@ -100,7 +127,7 @@ export function AttackPathGraphNode({ data }: NodeProps<AttackPathFlowNode>) {
       </div>
       {/* Below the glyph no line ever runs, so the whole name block takes clicks. */}
       <div data-node-label className="pointer-events-auto w-full flex-1 pt-2">
-      <span data-node-label className={`${NAME} ${spine ? "text-foreground" : "text-ink-secondary"}`}>{node.label}</span>
+      <NodeName label={node.label} className={`${NAME} ${spine ? "text-foreground" : "text-ink-secondary"}`} />
       <span data-node-label className={`${SUBTITLE} ${spine ? "text-ink-secondary" : "text-ink-tertiary"}`}>
         {node.typeLabel}{caption ? <span className="font-medium text-foreground"> · {caption}</span> : null}
       </span>
@@ -119,7 +146,7 @@ function GroupNode({ data }: { data: AttackPathNodeData }) {
         <Layers className="h-5 w-5" aria-hidden="true" />
         {node.findings.length > 0 && <FindingBadge node={node} onOpen={data.onOpenFindings} />}
       </div>
-      <span data-node-label className={`mt-2 ${NAME} text-ink-secondary`}>{node.label}</span>
+      <NodeName label={node.label} className={`mt-2 ${NAME} text-ink-secondary`} />
       <button type="button" aria-label={`Expand ${node.label}`}
         onClick={event => { event.stopPropagation(); data.onExpandGroup(node.id); }}
         className="pointer-events-auto nodrag nopan rounded-b bg-surface px-1 text-xs font-medium text-[color:var(--accent)] underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-[color:var(--focus-ring)]">

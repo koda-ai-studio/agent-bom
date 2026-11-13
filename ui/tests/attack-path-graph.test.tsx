@@ -23,12 +23,13 @@ function renderGraph(fixture = branchingFixture(), props: Partial<React.Componen
 describe("AttackPathGraph", () => {
   it("shows a finding badge whose count equals the findings recorded on the asset", () => {
     const { onOpenFindings } = renderGraph();
-    const badge = screen.getByRole("button", { name: "2 findings on next@15.2.2, worst critical. Open findings" });
-    expect(badge).toHaveTextContent("2");
+    const badge = screen.getByRole("button", { name: "2 findings on next@15.2.2, worst critical (1 critical, 1 medium). Open findings" });
+    // Severity is written out, not carried by colour alone.
+    expect(badge).toHaveTextContent("1 critical +1");
     expect(badge).toHaveAttribute("data-severity", "critical");
     fireEvent.click(badge);
     expect(onOpenFindings).toHaveBeenCalledWith("pkg:next", ["cve:next", "cve:next-2"]);
-    expect(screen.getByRole("button", { name: "1 finding on urllib3@2.2.1, worst high. Open findings" })).toHaveTextContent("1");
+    expect(screen.getByRole("button", { name: "1 finding on urllib3@2.2.1, worst high (1 high). Open findings" })).toHaveTextContent("1 high");
     // The vulnerability is never a node of the chain.
     expect(screen.queryByTestId("attack-path-node-cve:next")).toBeNull();
   });
@@ -42,18 +43,28 @@ describe("AttackPathGraph", () => {
     expect(within(screen.getByTestId("attack-path-node-role:admin")).getByLabelText("Privileged: admin (recorded)")).toBeInTheDocument();
   });
 
-  it("hides relationship labels until an edge is hovered or focused", () => {
+  it("names every hop of the selected path on its line, and a branch's relationship on hover or focus", () => {
     const { container } = renderGraph();
-    expect(screen.queryByText("Acted As")).toBeNull();
-    const edge = container.querySelector('[data-id="user:contractor->sa:jit:acted_as"]')!;
+    for (const hop of ["Acted As", "Assumes", "Can Access", "Depends On"]) expect(screen.getByText(hop)).toBeInTheDocument();
+    expect(screen.queryByText("Accessed")).toBeNull();
+    const edge = container.querySelector('[data-id="server:filesystem->dataset:finance:accessed"]')!;
     expect(edge).not.toBeNull();
-    expect(edge.getAttribute("aria-label")).toMatch(/contractor-reviewer acted as jit-prod-reviewer/i);
+    expect(edge.getAttribute("aria-label")).toMatch(/filesystem MCP accessed finance-board-index/i);
     fireEvent.mouseEnter(edge);
-    expect(screen.getByText("Acted As")).toBeInTheDocument();
+    expect(screen.getByText("Accessed")).toBeInTheDocument();
     fireEvent.mouseLeave(edge);
-    expect(screen.queryByText("Acted As")).toBeNull();
+    expect(screen.queryByText("Accessed")).toBeNull();
     fireEvent.focus(edge);
-    expect(screen.getByText("Acted As")).toBeInTheDocument();
+    expect(screen.getByText("Accessed")).toBeInTheDocument();
+  });
+
+  it("wraps a long name only at its separators and keeps the full name for assistive tech", () => {
+    const fixture = branchingFixture();
+    fixture.graph.nodes = fixture.graph.nodes.map(item => item.id === "pkg:urllib3" ? { ...item, label: "GCS_SERVICE_ACCOUNT_KEY" } : item);
+    renderGraph(fixture);
+    const name = within(screen.getByTestId("attack-path-node-pkg:urllib3")).getByTitle("GCS_SERVICE_ACCOUNT_KEY");
+    expect(name.querySelectorAll("wbr")).toHaveLength(3);
+    expect(name).toHaveTextContent("GCS_SERVICE_ACCOUNT_KEY");
   });
 
   it("draws inferred edges dashed, recorded solid, and explains both in a legend", () => {

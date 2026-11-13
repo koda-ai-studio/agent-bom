@@ -23,7 +23,7 @@ import { type UnifiedNode } from "@/lib/graph-schema";
 import { resolveSnapshotAttackPathCount } from "@/lib/graph-snapshot-metrics";
 import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { buildDriftIndex, diffChangeCounts, driftAttributeSummaries, countVisiblePathHops, graphNodeDisplayLabels, legendItemsForVisibleGraph, readableGraphEdges } from "@/lib/graph-utils";
-import { graphFitViewOptions, graphInitialFitViewOptions, graphReadableFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
+import { attackPathFitViewOptions, graphFitViewOptions, graphInitialFitViewOptions, graphReadableFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
 import { buildRollupFlowGraph } from "@/lib/graph-rollup-view";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
@@ -663,11 +663,16 @@ export function useGraphCanvasModel(page: GraphPageData) {
     return graphInitialFitViewOptions(displayNodes, viewportOptions, selectedNodeId, proposedIds);
   }, [canvasLens, displayNodes, viewportOptions, selectedNodeId, selectedAttackPath, investigationMode, scenarioState, scenarioComparison, scenarioExpanded, scenarioContextIds, narrowViewport, compactInvestigationTopology]);
   const initialAnchorId = initialViewportRequest.nodes?.[0]?.id;
+  // A focused attack path opens on its drawn hops at a legible scale, never on one oversized card.
+  const pathFitKey = selectedAttackPath ? attackPathFitViewOptions(selectedAttackPath.hops, displayNodes, viewportOptions, narrowViewport).nodes?.map(node => node.id).join("\n") ?? "" : "";
   // React Flow shares this prop with its queued imperative fit operation.
   // Hover/LOD node objects must not overwrite a user's pending Fit all request
   // with an equivalent-but-new initial anchor options object.
   const initialViewportOptions = useMemo<FitViewOptions>(
     () => {
+      if (pathFitKey && !selectedScenarioId) {
+        return attackPathFitViewOptions(pathFitKey.split("\n"), pathFitKey.split("\n").map(id => ({ id })), viewportOptions, narrowViewport);
+      }
       const options = initialAnchorId
         ? graphInitialFitViewOptions([{ id: initialAnchorId, data: {} }], viewportOptions, initialAnchorId)
         : viewportOptions;
@@ -678,7 +683,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
       if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: 0.05, maxZoom: displayNodes.length <= 6 ? 1.25 : 1 };
       return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : options;
     },
-    [initialAnchorId, viewportOptions, selectedScenarioId, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive, canvasWidth, canvasHeight],
+    [pathFitKey, initialAnchorId, viewportOptions, selectedScenarioId, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive, canvasWidth, canvasHeight],
   );
   const showMiniMap = useMemo(
     () =>

@@ -134,3 +134,22 @@ export function graphReadableFitViewOptions(
   const fallback = [...nodes].sort((a, b) => a.id.localeCompare(b.id))[0]?.id;
   return graphInitialFitViewOptions(nodes, options, selected ?? fallback);
 }
+
+/** Below these the path's names stop being legible; the first frame never opens smaller. */
+export const ATTACK_PATH_FIT_MIN_ZOOM = { desktop: 0.6, narrow: 0.5 } as const;
+
+/**
+ * A focused attack path opens framed on its drawn hops at no more than natural
+ * size and no less than a legible scale, instead of one oversized anchor card.
+ */
+export function attackPathFitViewOptions(
+  hops: readonly string[],
+  nodes: readonly { id: string }[],
+  options: GraphFitViewOptions,
+  narrow: boolean,
+): GraphFitViewOptions & { nodes?: { id: string }[]; minZoom?: number } {
+  const drawn = new Set(nodes.map(node => node.id));
+  const framed = hops.filter(id => drawn.has(id)).map(id => ({ id }));
+  if (framed.length === 0) return options;
+  return { ...options, nodes: framed, minZoom: ATTACK_PATH_FIT_MIN_ZOOM[narrow ? "narrow" : "desktop"], maxZoom: Math.min(1, options.maxZoom) };
+}

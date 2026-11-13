@@ -1,12 +1,15 @@
 "use client";
 
-import { BaseEdge, EdgeLabelRenderer, type Edge, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, useStore, type Edge, type EdgeProps } from "@xyflow/react";
 
 import type { AttackPathDirection } from "@/lib/attack-path-graph-layout";
 import type { EdgeEvidenceStyle, PathGraphEdge } from "@/lib/attack-path-graph-model";
 import { routeLabelPoint, routePath, type Point } from "@/lib/attack-path-graph-routes";
+import type { HopTrace } from "@/lib/attack-path-trace";
 
-export type AttackPathEdgeData = { edge: PathGraphEdge; active: boolean; markerPrefix: string; direction: AttackPathDirection; route: Point[] };
+/** One hop of the single entry-to-target trace drawn when a path is selected; absent under reduced motion. */
+export type EdgeTrace = HopTrace & { index: number; key: string };
+export type AttackPathEdgeData = { edge: PathGraphEdge; active: boolean; markerPrefix: string; direction: AttackPathDirection; route: Point[]; trace?: EdgeTrace | null };
 export type AttackPathFlowEdge = Edge<AttackPathEdgeData, "attackPathEdge">;
 
 export const LINE_STYLE: Record<EdgeEvidenceStyle, { name: "solid" | "dashed" | "dotted"; dash?: string }> = {
@@ -25,7 +28,7 @@ export function edgeStroke(onPath: boolean): string {
 
 export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>) {
   if (!data) return null;
-  const { edge, active, markerPrefix, direction, route } = data;
+  const { edge, active, markerPrefix, direction, route, trace } = data;
   const style = LINE_STYLE[edge.evidence];
   const stroke = edge.onPath ? PATH_STROKE.selected : PATH_STROKE.connected;
   const kind = edge.onPath ? "path" : "branch";
@@ -37,6 +40,11 @@ export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>)
   const placement = direction === "TB"
     ? `translate(14px, -50%) translate(${label.x}px, ${label.y}px)`
     : `translate(-50%, -100%) translate(${label.x}px, ${label.y - 14}px)`;
+  // A selected-path hop names its relationship on the line at all times: above it on a row (lines that turn
+  // into branch rows leave below it) and beside it on a phone column. Branches name theirs on hover or focus.
+  const standing = direction === "TB"
+    ? `translate(10px, -50%) translate(${label.x}px, ${label.y}px)`
+    : `translate(-50%, -100%) translate(${label.x}px, ${label.y - 4}px)`;
   return <>
     <BaseEdge id={id} path={routePath(route, direction)} interactionWidth={18} data-line-style={style.name} data-two-way={edge.bidirectional || undefined} {...ends}
       style={{
@@ -45,6 +53,14 @@ export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>)
         strokeDasharray: style.dash,
         strokeLinecap: style.name === "dotted" ? "round" : undefined,
       }} />
+    {trace && <path key={trace.key} data-path-trace={trace.index} d={routePath(route, direction)} pathLength={1} aria-hidden="true"
+      className="attack-path-trace pointer-events-none fill-none" style={{
+        stroke: PATH_STROKE.selected.color, strokeWidth: PATH_STROKE.selected.width + 3, strokeLinecap: "round", strokeDasharray: 1, strokeDashoffset: 1,
+        animationName: "attack-path-trace", animationDuration: `${trace.duration}ms`, animationDelay: `${trace.delay}ms`,
+        animationIterationCount: "1", animationFillMode: "both", animationTimingFunction: "linear",
+      }} />}
+    {edge.onPath && !active && <PathHopLabel text={edge.relationshipLabel} transform={standing}
+      room={direction === "TB" ? 140 : Math.abs(route.at(-1)!.x - route[0]!.x) - 12} />}
     {active && <EdgeLabelRenderer>
       <div role="tooltip" className="nodrag nopan pointer-events-none absolute z-20 whitespace-nowrap rounded-md border border-outline-strong bg-surface px-2 py-0.5 text-xs font-medium text-foreground shadow-md"
         style={{ transform: placement }}>
@@ -52,6 +68,17 @@ export function AttackPathGraphEdge({ id, data }: EdgeProps<AttackPathFlowEdge>)
       </div>
     </EdgeLabelRenderer>}
   </>;
+}
+
+/** Keeps the hop name about 11px on screen at any zoom the camera allows. */
+function PathHopLabel({ text, transform, room }: { text: string; transform: string; room: number }) {
+  const zoom = useStore(state => state.transform[2]);
+  return <EdgeLabelRenderer>
+    <div data-path-hop-label title={text} className="nodrag nopan pointer-events-none absolute truncate whitespace-nowrap rounded bg-surface/90 px-1 font-medium leading-tight text-ink-secondary"
+      style={{ transform, fontSize: Math.max(11, 11 / Math.max(zoom, 0.25)), maxWidth: Math.max(48, room) }}>
+      {text}
+    </div>
+  </EdgeLabelRenderer>;
 }
 
 /** Arrowheads and two-way dots coloured by the same tokens as their lines, in both themes. */
