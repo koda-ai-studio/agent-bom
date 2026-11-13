@@ -156,7 +156,7 @@ The same machine-readable mapping is exposed to assistants through
 |-----------|-------------------|-------------------|
 | Choose supported MCP projects | `registry_lookup`, `marketplace_check`, `fleet_scan`, MCP registry freshness gate | Registry metadata, package provenance, source freshness, advisory matches |
 | Design for boundaries | `context_graph`, `exposure_paths`, `runtime_blueprints`, gateway policy | Graph edges, allowed tool categories, drift decisions, gateway metrics |
-| Validate parameters | 99 strict-args MCP tools (full profile), API validation errors, `policy_check` | `tools/list` schemas, `additionalProperties:false`, correlation IDs |
+| Validate parameters | 100 strict-args MCP tools (full profile), API validation errors, `policy_check` | `tools/list` schemas, `additionalProperties:false`, correlation IDs |
 | Constrain and sandbox execution | `tool_risk_assessment`, proxy, gateway, deployment profiles | Capability classes, block decisions, sandbox posture, Helm/Docker settings |
 | Sign and verify sensitive actions | `audit_integrity`, signed posture outbox, Shield admin-gated tools | HMAC chain status, source-agent labels, audit reasons, posture events |
 | Filter chained outputs | prompt-injection sentinels, `runtime_correlate`, proxy response inspection | Runtime alerts, detector findings, redaction mode, policy decisions |
@@ -238,7 +238,7 @@ For cross-agent correlation, use the broader runtime protection engine (`agent-b
 agent-bom mcp server
 ```
 
-Exposes 8 tools by default, or the explicit 99-tool `--profile full` catalog, to AI assistants that negotiate the verified session-era
+Exposes 8 tools by default, or the explicit 100-tool `--profile full` catalog, to AI assistants that negotiate the verified session-era
 `2025-11-25` MCP handshake (or retain that fallback). Your agent can run scans,
 check packages, query ExposurePaths, ask for deploy decisions, query threat
 intel, inspect runtime posture, run admin-gated Shield actions, and generate

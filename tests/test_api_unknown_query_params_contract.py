@@ -31,6 +31,7 @@ def client(monkeypatch: pytest.MonkeyPatch):
         "/v1/findings?group_occurrences=true&unknown_filter=high",
         "/v1/intel/advisories/CVE-2026-0001/affected?verdict_=affected",
         "/v1/graph/attack-paths/cross-vendor?source_vendors=aws",
+        "/v1/graph/agent-architecture?scanid=x",
     ],
 )
 def test_misspelled_filter_is_a_422_not_an_unfiltered_page(client: TestClient, path: str) -> None:

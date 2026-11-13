@@ -14,6 +14,7 @@ CURSOR_AND_OFFSET_ROUTES = [
     ("/v1/graph/search", {"q": "tenant"}),
     ("/v1/graph/attack-paths", {}),
     ("/v1/graph/attack-paths/cross-vendor", {}),
+    ("/v1/graph/agent-architecture", {}),
     ("/v1/inventory/assets", {}),
 ]
 
@@ -51,6 +52,7 @@ MALFORMED_CURSOR_ROUTES = [
     ("/v1/graph/search", {"q": "tenant"}),
     ("/v1/graph/attack-paths", {}),
     ("/v1/graph/attack-paths/cross-vendor", {}),
+    ("/v1/graph/agent-architecture", {}),
     ("/v1/graph/incident-edges", {"node_id": "principal:reader"}),
     ("/v1/graph/exposure-paths", {}),
     ("/v1/inventory/assets", {}),

@@ -126,6 +126,44 @@ configured relationships, not proof of execution, exploitation or effective acce
 This derived view does not invent a persisted scan ID. Existing endpoint
 authorization and tenant selection apply.
 
+## Agent harness architecture
+
+A multi-agent harness maps onto existing graph types; it adds no node or
+relationship type. Its agents are `agent` nodes with `agent_type:
+framework-agent` that take part in a declared `delegated_to` or
+`shares_server` edge. Each such node carries (model `agent-harness.v1`):
+
+| Attribute | Meaning |
+|---|---|
+| `harness_id` | Node id of the harness root: a top-level LangGraph `StateGraph`, a prebuilt supervisor or swarm, or a CrewAI `Crew` / AutoGen `GroupChat`. Stable across rescans of the same source. |
+| `harness_layer` | Depth below the root (root = 0). The parent is the enclosing construct discovery recorded (`parent_id`), else the crew or group chat that lists the agent in `agents=[...]`. |
+| `harness_role` | `harness` (root), `orchestrator` (routes conditionally, by handoff or by fan-out to two or more distinct agents in its own or the next layer), `subgraph` (a compiled graph a node wraps), else `sub_agent`. |
+| `harness_entry` | The harness or a subgraph starts at this agent (`START`, entry point, swarm active agent). |
+| `harness_parent_id` | The parent used for the layer; empty for the root. |
+| `unresolved_routes` | Up to 50 routes the scan could not resolve statically (`evidence`, `line_number`, `reason`); `unresolved_route_count` counts all of them. |
+
+Flow edges keep `provenance: declared` and the `kind` / `branch` evidence
+discovery recorded. The read view names each edge's flow kind from that
+evidence only: `entry`, `sequential`, `conditional`, `handoff`, `fan_out`,
+`subgraph`, `finish`, `member` (crew or group-chat membership) and `peer`
+(`shares_server` between members). Model references are the literal model
+names (or a module-level binding to one) the source passes; none is inferred.
+Agents with no declared delegation are folded into their project agent and
+belong to no harness.
+
+`GET /v1/graph/agent-architecture` and the `agent_architecture` MCP tool return
+the same page: harnesses in label order, each with its agents by layer, flow
+edges, unresolved routes, models, and a security overlay read from the graph
+(each agent's severity, risk score, findings it is `vulnerable_to`, counts of
+its other outgoing edges, and the project agent that `contains` the harness).
+Pages use the generation-pinned cursor: a stale generation is a 409, a malformed
+or foreign cursor a 422, `limit` is 1 to 50. Reads are scoped to the caller's
+tenant. `coverage.complete` is false when more than 5,000 framework agents or
+50,000 structural edges exist, or the overlay's bounded edge or finding read was
+cut short; `coverage.gaps` lists what is not modelled yet:
+CrewAI manager and task order, AutoGen speaker selection, OpenAI Agents SDK
+handoffs, and declared-versus-observed path comparison.
+
 ## 1. Coverage
 
 ### Entity types

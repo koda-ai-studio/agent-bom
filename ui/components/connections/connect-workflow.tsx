@@ -391,7 +391,7 @@ export function CodingAgentDrawer({ open, onClose }: { open: boolean; onClose: (
       }
       headerAside={
         <span className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--status-success-border)] bg-[color:var(--status-success-bg)] text-[color:var(--status-success)] px-2.5 py-0.5 text-[11px] font-medium">
-          <Bot className="h-3 w-3" /> 99 MCP tools
+          <Bot className="h-3 w-3" /> 100 MCP tools
         </span>
       }
     >

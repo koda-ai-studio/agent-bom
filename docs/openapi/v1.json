@@ -2003,6 +2003,126 @@
         "title": "AgentGraphStats",
         "type": "object"
       },
+      "AgentHarness": {
+        "additionalProperties": true,
+        "properties": {
+          "agent_count": {
+            "title": "Agent Count",
+            "type": "integer"
+          },
+          "declared_in": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HarnessProject"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entry_agent_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Entry Agent Ids",
+            "type": "array"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "flow_edges": {
+            "items": {
+              "$ref": "#/components/schemas/HarnessFlowEdge"
+            },
+            "title": "Flow Edges",
+            "type": "array"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "harness_id": {
+            "title": "Harness Id",
+            "type": "string"
+          },
+          "harness_kind": {
+            "title": "Harness Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer_count": {
+            "title": "Layer Count",
+            "type": "integer"
+          },
+          "layers": {
+            "items": {
+              "$ref": "#/components/schemas/HarnessLayer"
+            },
+            "title": "Layers",
+            "type": "array"
+          },
+          "line_number": {
+            "title": "Line Number",
+            "type": "integer"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "orchestrator_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Orchestrator Ids",
+            "type": "array"
+          },
+          "security": {
+            "$ref": "#/components/schemas/HarnessSecurity"
+          },
+          "truncated": {
+            "$ref": "#/components/schemas/HarnessTruncation"
+          },
+          "unresolved_route_count": {
+            "title": "Unresolved Route Count",
+            "type": "integer"
+          },
+          "unresolved_routes": {
+            "items": {
+              "$ref": "#/components/schemas/HarnessUnresolvedRoute"
+            },
+            "title": "Unresolved Routes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "harness_id",
+          "label",
+          "framework",
+          "harness_kind",
+          "file_path",
+          "line_number",
+          "agent_count",
+          "layer_count",
+          "entry_agent_ids",
+          "orchestrator_ids",
+          "models",
+          "layers",
+          "flow_edges",
+          "unresolved_route_count",
+          "unresolved_routes",
+          "truncated",
+          "security"
+        ],
+        "title": "AgentHarness",
+        "type": "object"
+      },
       "AgentIdentityRecord": {
         "additionalProperties": true,
         "properties": {
@@ -21503,6 +21623,57 @@
         "title": "GraphActiveEdgesResponse",
         "type": "array"
       },
+      "GraphAgentArchitectureResponse": {
+        "additionalProperties": true,
+        "description": "Multi-agent harnesses declared in the snapshot: layers, flow edges, unresolved routes and the security overlay.",
+        "properties": {
+          "coverage": {
+            "$ref": "#/components/schemas/HarnessCoverage"
+          },
+          "harnesses": {
+            "items": {
+              "$ref": "#/components/schemas/AgentHarness"
+            },
+            "title": "Harnesses",
+            "type": "array"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/HarnessPagination"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "title": "Snapshot Generation",
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/HarnessSummary"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "scan_id",
+          "tenant_id",
+          "snapshot_generation",
+          "harnesses",
+          "summary",
+          "coverage",
+          "pagination"
+        ],
+        "title": "GraphAgentArchitectureResponse",
+        "type": "object"
+      },
       "GraphAgentRecord": {
         "additionalProperties": true,
         "properties": {
@@ -27300,6 +27471,489 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HarnessAgent": {
+        "additionalProperties": true,
+        "properties": {
+          "credential_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Credential Refs",
+            "type": "array"
+          },
+          "dynamic_edges": {
+            "title": "Dynamic Edges",
+            "type": "boolean"
+          },
+          "entry": {
+            "title": "Entry",
+            "type": "boolean"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          },
+          "line_number": {
+            "title": "Line Number",
+            "type": "integer"
+          },
+          "model_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Model Refs",
+            "type": "array"
+          },
+          "parent_id": {
+            "title": "Parent Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "harness",
+              "orchestrator",
+              "subgraph",
+              "sub_agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "security": {
+            "$ref": "#/components/schemas/HarnessAgentSecurity"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "framework",
+          "role",
+          "layer",
+          "entry",
+          "parent_id",
+          "file_path",
+          "line_number",
+          "model_refs",
+          "tools",
+          "credential_refs",
+          "dynamic_edges",
+          "security"
+        ],
+        "title": "HarnessAgent",
+        "type": "object"
+      },
+      "HarnessAgentSecurity": {
+        "additionalProperties": true,
+        "description": "What the graph records for the agent: its severity and risk, findings it is vulnerable to, outgoing reach.",
+        "properties": {
+          "findings": {
+            "title": "Findings",
+            "type": "integer"
+          },
+          "max_finding_severity": {
+            "title": "Max Finding Severity",
+            "type": "string"
+          },
+          "reach": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Reach",
+            "type": "object"
+          },
+          "risk_score": {
+            "title": "Risk Score",
+            "type": "number"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "risk_score",
+          "findings",
+          "max_finding_severity",
+          "reach"
+        ],
+        "title": "HarnessAgentSecurity",
+        "type": "object"
+      },
+      "HarnessCoverage": {
+        "additionalProperties": true,
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "framework_agent_cap": {
+            "title": "Framework Agent Cap",
+            "type": "integer"
+          },
+          "frameworks_modelled": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Frameworks Modelled",
+            "type": "array"
+          },
+          "gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "provenance": {
+            "const": "declared",
+            "title": "Provenance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "provenance",
+          "frameworks_modelled",
+          "gaps",
+          "complete",
+          "framework_agent_cap"
+        ],
+        "title": "HarnessCoverage",
+        "type": "object"
+      },
+      "HarnessFlowEdge": {
+        "additionalProperties": true,
+        "description": "A declared edge between two agents of the harness; ``kind`` is read from its recorded evidence.",
+        "properties": {
+          "branches": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Branches",
+            "type": "array"
+          },
+          "conditional": {
+            "title": "Conditional",
+            "type": "boolean"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "string"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "entry",
+              "sequential",
+              "conditional",
+              "handoff",
+              "fan_out",
+              "subgraph",
+              "finish",
+              "member",
+              "peer"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "line_number": {
+            "title": "Line Number",
+            "type": "integer"
+          },
+          "provenance": {
+            "title": "Provenance",
+            "type": "string"
+          },
+          "relationship": {
+            "enum": [
+              "delegated_to",
+              "shares_server"
+            ],
+            "title": "Relationship",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "relationship",
+          "kind",
+          "conditional",
+          "branches",
+          "evidence",
+          "provenance",
+          "confidence",
+          "file_path",
+          "line_number"
+        ],
+        "title": "HarnessFlowEdge",
+        "type": "object"
+      },
+      "HarnessLayer": {
+        "additionalProperties": true,
+        "properties": {
+          "agents": {
+            "items": {
+              "$ref": "#/components/schemas/HarnessAgent"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "layer": {
+            "title": "Layer",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "layer",
+          "agents"
+        ],
+        "title": "HarnessLayer",
+        "type": "object"
+      },
+      "HarnessPagination": {
+        "additionalProperties": true,
+        "properties": {
+          "cursor": {
+            "title": "Cursor",
+            "type": "string"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_cursor": {
+            "title": "Next Cursor",
+            "type": "string"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "offset",
+          "limit",
+          "total",
+          "returned",
+          "cursor",
+          "next_cursor",
+          "has_more"
+        ],
+        "title": "HarnessPagination",
+        "type": "object"
+      },
+      "HarnessProject": {
+        "additionalProperties": true,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "risk_score": {
+            "title": "Risk Score",
+            "type": "number"
+          },
+          "severity": {
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "severity",
+          "risk_score"
+        ],
+        "title": "HarnessProject",
+        "type": "object"
+      },
+      "HarnessSecurity": {
+        "additionalProperties": true,
+        "properties": {
+          "agents_with_findings": {
+            "title": "Agents With Findings",
+            "type": "integer"
+          },
+          "credential_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Credential Refs",
+            "type": "array"
+          },
+          "findings": {
+            "title": "Findings",
+            "type": "integer"
+          },
+          "max_risk_score": {
+            "title": "Max Risk Score",
+            "type": "number"
+          },
+          "max_severity": {
+            "title": "Max Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "max_severity",
+          "max_risk_score",
+          "agents_with_findings",
+          "findings",
+          "credential_refs"
+        ],
+        "title": "HarnessSecurity",
+        "type": "object"
+      },
+      "HarnessSummary": {
+        "additionalProperties": true,
+        "properties": {
+          "framework_agents": {
+            "title": "Framework Agents",
+            "type": "integer"
+          },
+          "frameworks": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Frameworks",
+            "type": "object"
+          },
+          "harnesses": {
+            "title": "Harnesses",
+            "type": "integer"
+          },
+          "placed_agents": {
+            "title": "Placed Agents",
+            "type": "integer"
+          },
+          "unplaced_framework_agents": {
+            "title": "Unplaced Framework Agents",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "harnesses",
+          "framework_agents",
+          "placed_agents",
+          "unplaced_framework_agents",
+          "frameworks"
+        ],
+        "title": "HarnessSummary",
+        "type": "object"
+      },
+      "HarnessTruncation": {
+        "additionalProperties": true,
+        "properties": {
+          "agents": {
+            "title": "Agents",
+            "type": "boolean"
+          },
+          "flow_edges": {
+            "title": "Flow Edges",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agents",
+          "flow_edges"
+        ],
+        "title": "HarnessTruncation",
+        "type": "object"
+      },
+      "HarnessUnresolvedRoute": {
+        "additionalProperties": true,
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "evidence": {
+            "title": "Evidence",
+            "type": "string"
+          },
+          "line_number": {
+            "title": "Line Number",
+            "type": "integer"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "const": "unresolved",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "status",
+          "evidence",
+          "line_number",
+          "reason"
+        ],
+        "title": "HarnessUnresolvedRoute",
         "type": "object"
       },
       "HealthResponse": {
@@ -67145,6 +67799,135 @@
           }
         },
         "summary": "Get Graph",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/agent-architecture": {
+      "get": {
+        "description": "Multi-agent harnesses declared in source: layers, flow edges, unresolved routes and the security overlay.\n\nA harness is the tree of framework agents joined by declared delegation or\ncrew membership. Each agent carries its role (harness, orchestrator,\nsubgraph, sub_agent), its layer below the harness root, literal model\nreferences, and what the graph records for it: severity, risk score,\nfindings it is vulnerable to and outgoing reach. Flow edges keep their\n``declared`` provenance; routes the scanner could not resolve are listed,\nnever dropped. ``coverage.gaps`` names what is not modelled yet.",
+        "operationId": "get_agent_architecture_v1_graph_agent_architecture_get",
+        "parameters": [
+          {
+            "description": "Scan ID; omit for the current estate",
+            "in": "query",
+            "name": "scan_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Scan ID; omit for the current estate",
+              "title": "Scan Id"
+            }
+          },
+          {
+            "description": "Generation from the first page; required for continuation",
+            "in": "query",
+            "name": "snapshot_generation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Generation from the first page; required for continuation",
+              "title": "Snapshot Generation"
+            }
+          },
+          {
+            "description": "Harness offset",
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Harness offset",
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Max harnesses per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Max harnesses per page",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "next_cursor from the previous page (replaces offset)",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor from the previous page (replaces offset)",
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphAgentArchitectureResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Get Agent Architecture",
         "tags": [
           "graph"
         ]
