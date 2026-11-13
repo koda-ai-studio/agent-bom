@@ -85,6 +85,15 @@ jobs:
           print(f"CHANGELOG entry present: {tag}")
           PY
 
+      # Pull requests add changelog.d/ fragments and leave the metrics
+      # snapshot alone; the release-preparation commit assembles the one and
+      # regenerates the other. Both must have happened before anything ships.
+      - name: Verify changelog fragments were assembled
+        run: python3 scripts/assemble_changelog.py --check --expect-empty
+
+      - name: Verify product metrics were regenerated for the release
+        run: python3 scripts/product_metrics_snapshot.py --check --release
+
       - name: Verify auxiliary versions track the release tag
         run: |
           python3 - <<'PY'

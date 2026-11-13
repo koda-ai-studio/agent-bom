@@ -8,8 +8,10 @@ import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import cast
+from typing import Any, Callable, cast
 from unittest import mock
+
+import pytest
 
 from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
 
@@ -46,15 +48,12 @@ def test_compliance_metric_uses_the_canonical_framework_count() -> None:
     assert compliance["value"] == tag_mapped_count + 1
     assert compliance["notes"] == f"{tag_mapped_count} tag-mapped frameworks plus the OWASP AISVS benchmark surface."
 
+    # The committed values are a release-time snapshot (the --release tests
+    # below keep that strict); between releases only the shape must agree.
     checked_in = json.loads(METRICS_JSON.read_text(encoding="utf-8"))
     assert checked_in["version"] == snapshot["version"]
-    assert checked_in["metrics"] == snapshot["metrics"]
-    checked_in_compliance = next(metric for metric in checked_in["metrics"] if metric["name"] == "Compliance surfaces")
-    assert checked_in_compliance == compliance
-    assert (
-        f"| Compliance surfaces | {compliance['value']} | `src/agent_bom/compliance_coverage.py` | {compliance['notes']} |"
-        in METRICS_MARKDOWN.read_text(encoding="utf-8")
-    )
+    assert [metric["name"] for metric in checked_in["metrics"]] == [metric["name"] for metric in metrics]
+    assert "| Compliance surfaces |" in METRICS_MARKDOWN.read_text(encoding="utf-8")
 
 
 def test_counts_survive_git_being_unusable():
@@ -159,25 +158,89 @@ def test_write_restamps_when_a_metric_actually_moved(tmp_path: Path) -> None:
     assert metrics[0]["value"] != -1, "the stale metric must be corrected"
 
 
-def test_check_mode_reports_a_stale_snapshot(tmp_path: Path) -> None:
-    """`make preflight` claims CI's drift gate will be green; it must cover this one.
-
-    Adding a single test file moves the test-file count, so any branch that adds
-    a test leaves this snapshot stale. Without a --check mode the drift is only
-    discoverable from a full CI test run, several minutes after the push.
-    """
-    module = _load_metrics_script()
-    stale = json.loads(METRICS_JSON.read_text(encoding="utf-8"))
-    stale_metrics = cast(list[dict[str, object]], stale["metrics"])
-    stale_metrics[0]["value"] = cast(int, stale_metrics[0]["value"]) + 1
-
+def _write_variant(tmp_path: Path, mutate: Callable[[dict[str, Any]], object]) -> Path:
+    """A snapshot that matches the repository exactly, then *mutate*-d."""
+    variant = json.loads(METRICS_JSON.read_text(encoding="utf-8"))
+    variant["metrics"] = _load_metrics_script().build_snapshot()["metrics"]
+    mutate(variant)
     json_out = tmp_path / "PRODUCT_METRICS.json"
-    json_out.write_text(json.dumps(stale, indent=2) + "\n")
+    json_out.write_text(json.dumps(variant, indent=2) + "\n")
+    return json_out
+
+
+def _bump_first_value(variant: dict[str, Any]) -> None:
+    variant["metrics"][0]["value"] = cast(int, variant["metrics"][0]["value"]) + 1
+
+
+def test_release_check_reports_a_stale_snapshot(tmp_path: Path) -> None:
+    """The release gate stays strict: a drifted count blocks the tag."""
+    module = _load_metrics_script()
+    json_out = _write_variant(tmp_path, _bump_first_value)
+
+    assert module.main(["--check", "--release", "--json-out", str(json_out)]) == 1
+
+
+def test_release_env_var_turns_on_the_strict_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_metrics_script()
+    json_out = _write_variant(tmp_path, _bump_first_value)
+    monkeypatch.setenv("AGENT_BOM_RELEASE_CHECK", "1")
 
     assert module.main(["--check", "--json-out", str(json_out)]) == 1
 
 
-def test_check_mode_accepts_the_committed_snapshot() -> None:
+def test_pr_check_tolerates_drifted_counts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    """PRs must not have to regenerate the snapshot.
+
+    Every PR that added a test file moved the test-file count, so every PR
+    regenerated docs/PRODUCT_METRICS.* and every pair of PRs conflicted on them.
+    Counts are refreshed at release time; a PR only proves the generator runs.
+    """
     module = _load_metrics_script()
+    json_out = _write_variant(tmp_path, _bump_first_value)
+    monkeypatch.delenv("AGENT_BOM_RELEASE_CHECK", raising=False)
+
+    assert module.main(["--check", "--json-out", str(json_out)]) == 0
+    out = capsys.readouterr().out
+    assert "refreshed at release" in out
+    assert "committed=" in out, "the drift is still reported, just not fatal"
+
+
+def test_pr_check_still_fails_when_the_metric_set_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Adding or renaming a metric is a generator change and must ship its artifact."""
+    module = _load_metrics_script()
+    json_out = _write_variant(tmp_path, lambda variant: variant["metrics"].pop())
+    monkeypatch.delenv("AGENT_BOM_RELEASE_CHECK", raising=False)
+
+    assert module.main(["--check", "--json-out", str(json_out)]) == 1
+
+
+def test_pr_check_still_fails_on_a_version_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """bump-version.py rewrites the version, so it never drifts legitimately."""
+    module = _load_metrics_script()
+    json_out = _write_variant(tmp_path, lambda variant: variant.update(version="0.0.1"))
+    monkeypatch.delenv("AGENT_BOM_RELEASE_CHECK", raising=False)
+
+    assert module.main(["--check", "--json-out", str(json_out)]) == 1
+
+
+def test_pr_check_fails_on_an_unreadable_snapshot(tmp_path: Path) -> None:
+    module = _load_metrics_script()
+    json_out = tmp_path / "PRODUCT_METRICS.json"
+    json_out.write_text("{not json")
+
+    assert module.main(["--check", "--json-out", str(json_out)]) == 1
+
+
+def test_check_mode_accepts_the_committed_snapshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load_metrics_script()
+    monkeypatch.delenv("AGENT_BOM_RELEASE_CHECK", raising=False)
 
     assert module.main(["--check"]) == 0
+
+
+def test_release_paths_run_the_strict_check() -> None:
+    """The strict comparison moved off PRs; it must still gate every release."""
+    strict = "scripts/product_metrics_snapshot.py --check --release"
+    assert strict in (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    assert strict in (ROOT / "scripts" / "preflight_release.sh").read_text(encoding="utf-8")
+    assert "release" in (_load_metrics_script().__doc__ or "").lower()

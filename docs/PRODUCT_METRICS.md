@@ -4,6 +4,7 @@
 
 This appendix is the canonical home for volatile product counts.
 Keep counts out of public positioning copy and update this file from the repo instead of hand-editing numbers.
+The counts are regenerated at release time and describe the version below, not later commits on `main`.
 
 - Generated on: `2026-11-13`
 - Version: `0.115.0`
@@ -17,7 +18,7 @@ Keep counts out of public positioning copy and update this file from the repo in
 | GitHub workflow files | 45 | `.github/workflows` | Counts .yml and .yaml workflow definitions. |
 | API route modules | 98 | `src/agent_bom/api/routes` | Counts Python files in the routes package, including __init__.py. |
 | UI app pages | 49 | `ui/app` | Counts page.tsx and page.jsx files recursively. |
-| Python modules | 2286 | `src/agent_bom` | Counts all Python files recursively. |
+| Python modules | 2287 | `src/agent_bom` | Counts all Python files recursively. |
 | Supported package ecosystems | 15 | `src/agent_bom/ecosystems.py` | Counted from SUPPORTED_PACKAGE_ECOSYSTEMS. |
 | Compliance surfaces | 16 | `src/agent_bom/compliance_coverage.py` | 15 tag-mapped frameworks plus the OWASP AISVS benchmark surface. |
 | Proxy inline detectors | 7 | `src/agent_bom/runtime/proxy_session.py` | Inline detector chain used by the MCP proxy path. |

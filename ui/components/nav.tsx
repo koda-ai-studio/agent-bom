@@ -33,7 +33,7 @@ RefreshCw,
 Search,
 SunMoon
 } from "lucide-react";
-import Link from "next/link";
+import { IntentLink } from "@/components/navigation/intent-link";
 import { usePathname } from "next/navigation";
 import { useCallback,useEffect,useMemo,useRef,useState } from "react";
 
@@ -421,7 +421,7 @@ export function Nav() {
             >
               {/* Group Header */}
               {isCollapsed && sectionLanding ? (
-                <Link
+                <IntentLink
                   href={sectionLanding.href}
                   onMouseEnter={(event) => openCollapsedFlyout(group.label, event.currentTarget)}
                   onMouseLeave={scheduleCollapsedFlyoutClose}
@@ -433,7 +433,7 @@ export function Nav() {
                   title={`${group.label}: open ${sectionLanding.label}${group.desc ? ` — ${group.desc}` : ""}`}
                 >
                   {groupHeaderContent}
-                </Link>
+                </IntentLink>
               ) : (
                 <button
                   onClick={() => {
@@ -458,7 +458,7 @@ export function Nav() {
                     const needsSetup = !active && !showVulnBadge && navLinkNeedsSetup(hrefPath, counts);
 
                     return (
-                      <Link
+                      <IntentLink
                         key={href}
                         href={href}
                         aria-current={active ? "page" : undefined}
@@ -506,7 +506,7 @@ export function Nav() {
                             )}
                           </span>
                         )}
-                      </Link>
+                      </IntentLink>
                     );
                   })}
                   {group.hiddenLinks.length > 0 && (
@@ -516,7 +516,7 @@ export function Nav() {
                       </summary>
                       <div className="mt-2 space-y-0.5">
                         {group.hiddenLinks.map(({ href, label, icon: Icon }) => (
-                          <Link
+                          <IntentLink
                             key={href}
                             href={href}
                             className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-[12px] text-ink-tertiary transition-colors hover:bg-surface-muted hover:text-ink-secondary"
@@ -524,7 +524,7 @@ export function Nav() {
                           >
                             <Icon className={`h-3.5 w-3.5 shrink-0 opacity-60 ${NAV_LINK_ICON_CLASS[href] ?? ""}`} />
                             <span className="truncate">{label}</span>
-                          </Link>
+                          </IntentLink>
                         ))}
                       </div>
                     </details>
@@ -557,7 +557,7 @@ export function Nav() {
                         const hrefPath = href.split("?")[0] ?? href;
                         const active = isNavLinkActive(href, path);
                         return (
-                          <Link
+                          <IntentLink
                             key={href}
                             href={href}
                             aria-current={active ? "page" : undefined}
@@ -575,7 +575,7 @@ export function Nav() {
                             <span className="min-w-0">
                               <span className="block text-[13px] font-medium">{label}</span>
                             </span>
-                          </Link>
+                          </IntentLink>
                         );
                       })}
                     </div>
@@ -605,21 +605,21 @@ export function Nav() {
     <>
       {/* Product chrome — Snowflake-style top bar with canonical agent-bom lockup */}
       <header className="fixed inset-x-0 top-0 z-[60] flex h-16 items-center gap-2 border-b border-outline bg-surface/95 px-3 backdrop-blur-sm sm:gap-3 sm:px-4">
-        <Link href="/" aria-label="agent-bom" className="group flex min-w-[36px] items-center transition-opacity hover:opacity-90">
+        <IntentLink href="/" aria-label="agent-bom" className="group flex min-w-[36px] items-center transition-opacity hover:opacity-90">
           <BrandLogo
             showWordmark={!collapsed}
             markClassName="h-9 w-9"
             wordmarkClassName="hidden h-[26px] w-auto max-w-[11rem] lg:block"
             className="transition-transform duration-200 group-hover:scale-[1.01]"
           />
-        </Link>
+        </IntentLink>
         {counts?.deployment_mode && (
-          <Link href="/sources"
+          <IntentLink href="/sources"
             className="hidden rounded-full border border-outline bg-surface-elevated px-2.5 py-0.5 text-xs text-ink-secondary sm:inline-flex"
             title={`View evidence sources: ${deploymentModeLabel(counts.deployment_mode)}. This describes collected inventory; hosting and runtime enforcement are configured separately.`}
           >
             Sources: {deploymentModeLabel(counts.deployment_mode)}
-          </Link>
+          </IntentLink>
         )}
         <DemoEstateLabel />
         <div className="ml-auto flex min-w-0 items-center gap-0.5 sm:gap-2">
@@ -711,10 +711,10 @@ export function Nav() {
 function SidebarFooter({ collapsed, path }: { collapsed: boolean; path: string | null }) {
   return <div className="space-y-2 border-t border-outline px-3 py-3">
     <DemoNavSignIn collapsed={collapsed} />
-    <Link href={`/help?from=${encodeURIComponent(path ?? "/")}`} aria-label="Feedback & Bug Report"
+    <IntentLink href={`/help?from=${encodeURIComponent(path ?? "/")}`} aria-label="Feedback & Bug Report"
       className={`flex items-center gap-2 rounded-lg px-2 py-2 text-xs text-ink-secondary hover:bg-surface-muted ${collapsed ? "justify-center" : ""}`}>
       <MessageSquareQuote className="h-4 w-4 shrink-0" />{!collapsed && <span>Feedback &amp; Bug Report</span>}
-    </Link>
+    </IntentLink>
   </div>;
 }
 
