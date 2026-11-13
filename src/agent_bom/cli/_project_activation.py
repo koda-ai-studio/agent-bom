@@ -163,13 +163,14 @@ def _receipt_and_handoff(
         f"Graph: {graph['nodes']} nodes, {graph['edges']} relationships. These counts do not prove exploitability or complete collection."
     )
     click.echo("Review scan_run and coverage_warnings in the report. This local receipt is not independent remediation verification.")
-    click.echo("Start the dashboard in the same Python environment (install agent-bom[ui] if needed):")
+    click.echo("Start the dashboard (one command), then open the links below:")
     click.echo(
         "  "
         + quickstart._control_plane_command(control_plane_db=control_db, graph_db=graph_db, port=port, local_analyst=tenant == "default")
     )
     if tenant == "default":
-        click.echo("  # Loopback analyst mode; use --api-key <key> or OIDC on a shared host.")
+        for line in quickstart.local_auth_note_lines():
+            click.echo(line)
     else:
         click.echo(f"  # Configure an authenticated API-key/OIDC principal for tenant {shlex.quote(tenant)} before opening these links.")
         click.echo("  # Anonymous mode and a static --api-key use the default tenant, so they cannot read this scan.")

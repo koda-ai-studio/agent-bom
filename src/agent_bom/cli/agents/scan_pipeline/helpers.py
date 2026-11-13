@@ -12,6 +12,7 @@ from agent_bom.cli.agents._context import ScanContext
 from agent_bom.cli.agents._output import render_output
 from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.context_evidence import attach_context_evidence
+from agent_bom.cli.agents.scan_pipeline.quiet_summary import print_quiet_incomplete
 from agent_bom.core.settings import env_first, env_raw, env_str
 from agent_bom.models import AIBOMReport
 from agent_bom.scanners.scan_options import IncompleteScanError
@@ -131,7 +132,9 @@ def _exit_incomplete_scan_with_partial_summary(
     attach_context_evidence(ctx.report, ctx)
     explicit_output_target = _scan_output_target_was_explicit()
     machine_stdout = explicit_output_target and output_format != "console" and output in (None, "", "-")
-    if not machine_stdout:
+    if quiet:
+        print_quiet_incomplete(exc, stdout_has_document=machine_stdout or (output_format != "console" and output in (None, "", "-")))
+    elif not machine_stdout:
         ctx.con.print(f"  [yellow]⚠[/yellow] {exc}")
     profile_defaulted_output = not explicit_output_target
     render_kwargs: dict[str, Any] = {

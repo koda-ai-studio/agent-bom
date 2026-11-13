@@ -329,6 +329,25 @@ def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str
     return False
 
 
+def _exit_reason(ctx: ScanContext, quiet: bool, message: str) -> None:
+    """Record why the scan exits non-zero; print it now unless -q, whose summary prints it instead."""
+    ctx.exit_reasons.append(message)
+    if not quiet:
+        ctx.con.print("\n  [red]Exiting with code 1: [/red]", end="")
+        ctx.con.print(message, style="red", markup=False, highlight=False)
+
+
+def _malicious_finding_reason(finding: Any) -> str:
+    asset_kind = "package" if finding.asset.asset_type == "package" else finding.asset.asset_type.replace("_", " ")
+    reason = finding.malicious_reason or f"known malicious {asset_kind}"
+    return f"{malicious_label(finding.malicious_reason)} {asset_kind} {finding.asset.name} ({reason})"
+
+
+def _malicious_package_reason(pkg: Any) -> str:
+    reason = getattr(pkg, "malicious_reason", None) or "known malicious package"
+    return f"{malicious_label(getattr(pkg, 'malicious_reason', None))} package {pkg.name} ({reason})"
+
+
 def compute_exit_code(
     ctx: ScanContext,
     *,
@@ -367,8 +386,7 @@ def compute_exit_code(
         for br in _active_blast_radii:
             sev = br.vulnerability.severity.value.lower()
             if _fail_gate_meets(sev, threshold):
-                if not quiet:
-                    con.print(f"\n  [red]Exiting with code 1: found {sev} vulnerability ({br.vulnerability.id})[/red]")
+                _exit_reason(ctx, quiet, f"found {sev} vulnerability ({br.vulnerability.id})")
                 exit_code = 1
                 break
 
@@ -379,11 +397,7 @@ def compute_exit_code(
         for f in report.iac_findings_data.get("findings", []):
             sev = (f.get("severity") or "medium").lower()
             if _fail_gate_meets(sev, threshold):
-                if not quiet:
-                    con.print(
-                        f"\n  [red]Exiting with code 1: IaC {sev} misconfiguration"
-                        f" ({f.get('rule_id', '?')} in {f.get('file_path', '?')})[/red]"
-                    )
+                _exit_reason(ctx, quiet, f"IaC {sev} misconfiguration ({f.get('rule_id', '?')} in {f.get('file_path', '?')})")
                 exit_code = 1
                 break
 
@@ -398,14 +412,10 @@ def compute_exit_code(
         for finding in unified_findings:
             sev = str(finding.severity or "low").lower()
             if _fail_gate_meets(sev, threshold):
-                if not quiet:
-                    if getattr(finding, "is_malicious", False):
-                        asset_kind = "package" if finding.asset.asset_type == "package" else finding.asset.asset_type.replace("_", " ")
-                        reason = finding.malicious_reason or f"known malicious {asset_kind}"
-                        label = malicious_label(finding.malicious_reason)
-                        con.print(f"\n  [red]Exiting with code 1: {label} {asset_kind} {finding.asset.name} ({reason})[/red]")
-                    else:
-                        con.print(f"\n  [red]Exiting with code 1: found {sev} finding ({finding.finding_type.value})[/red]")
+                if getattr(finding, "is_malicious", False):
+                    _exit_reason(ctx, quiet, _malicious_finding_reason(finding))
+                else:
+                    _exit_reason(ctx, quiet, f"found {sev} finding ({finding.finding_type.value})")
                 exit_code = 1
                 break
 
@@ -414,8 +424,7 @@ def compute_exit_code(
     # deterministic_passed value remains in the artifact for audit/replay.
     skill_audit = ctx.skill_audit_data if isinstance(ctx.skill_audit_data, dict) else {}
     if skill_audit.get("ai_gate_enabled") is True and skill_audit.get("passed") is False:
-        if not quiet:
-            con.print("\n  [red]Exiting with code 1: deterministic-mode AI skill finding gate failed[/red]")
+        _exit_reason(ctx, quiet, "deterministic-mode AI skill finding gate failed")
         exit_code = 1
 
     # Two-tier: warn-on threshold (exit 0 with banner)
@@ -450,20 +459,13 @@ def compute_exit_code(
     if exit_code == 0:
         for br in _active_blast_radii:
             if getattr(br.package, "is_malicious", False):
-                if not quiet:
-                    reason = getattr(br.package, "malicious_reason", None) or "known malicious package"
-                    label = malicious_label(getattr(br.package, "malicious_reason", None))
-                    con.print(f"\n  [red]Exiting with code 1: {label} package {br.package.name} ({reason})[/red]")
+                _exit_reason(ctx, quiet, _malicious_package_reason(br.package))
                 exit_code = 1
                 break
         if exit_code == 0 and report:
             for finding in report.to_findings():
                 if getattr(finding, "is_malicious", False):
-                    if not quiet:
-                        asset_kind = "package" if finding.asset.asset_type == "package" else finding.asset.asset_type.replace("_", " ")
-                        reason = finding.malicious_reason or f"known malicious {asset_kind}"
-                        label = malicious_label(finding.malicious_reason)
-                        con.print(f"\n  [red]Exiting with code 1: {label} {asset_kind} {finding.asset.name} ({reason})[/red]")
+                    _exit_reason(ctx, quiet, _malicious_finding_reason(finding))
                     exit_code = 1
                     break
             if exit_code == 0:
@@ -471,10 +473,7 @@ def compute_exit_code(
                     for server in agent.mcp_servers:
                         for pkg in server.packages:
                             if getattr(pkg, "is_malicious", False):
-                                if not quiet:
-                                    reason = getattr(pkg, "malicious_reason", None) or "known malicious package"
-                                    label = malicious_label(getattr(pkg, "malicious_reason", None))
-                                    con.print(f"\n  [red]Exiting with code 1: {label} package {pkg.name} ({reason})[/red]")
+                                _exit_reason(ctx, quiet, _malicious_package_reason(pkg))
                                 exit_code = 1
                                 break
                         if exit_code:
@@ -485,11 +484,7 @@ def compute_exit_code(
     if fail_on_kev and _active_blast_radii:
         kev_findings = [br for br in _active_blast_radii if br.vulnerability.is_kev]
         if kev_findings:
-            if not quiet:
-                con.print(
-                    f"\n  [red bold]Exiting with code 1: {len(kev_findings)} CISA KEV "
-                    f"finding(s) found (use --enrich if not already)[/red bold]"
-                )
+            _exit_reason(ctx, quiet, f"{len(kev_findings)} CISA KEV finding(s) found (use --enrich if not already)")
             exit_code = 1
         else:
             sources = ctx.enrichment_posture.get("sources", []) if isinstance(ctx.enrichment_posture, dict) else []
@@ -504,24 +499,17 @@ def compute_exit_code(
                     "--fail-on-kev cannot prove a clean result. Run online (the KEV catalog is fetched "
                     "automatically), or refresh local data with `agent-bom db update`, or pass --enrich."
                 )
-                if quiet:
-                    # -q silences findings, not the reason a gate failed.
-                    stderr_notice(message)
-                else:
-                    con.print(f"\n  [red bold]Exiting with code 1: {message}[/red bold]")
+                _exit_reason(ctx, quiet, message)
                 exit_code = 1
 
     if fail_if_ai_risk and _active_blast_radii:
         ai_findings = [br for br in _active_blast_radii if br.ai_risk_context and br.exposed_credentials]
         if ai_findings:
-            if not quiet:
-                con.print(
-                    f"\n  [red bold]Exiting with code 1: {len(ai_findings)} AI framework "
-                    f"package(s) with vulnerabilities and exposed credentials[/red bold]"
-                )
+            _exit_reason(ctx, quiet, f"{len(ai_findings)} AI framework package(s) with vulnerabilities and exposed credentials")
             exit_code = 1
 
     if not ctx.policy_passed:
+        ctx.exit_reasons.append("policy check failed (the policy results list the failing rules)")
         exit_code = 1
 
     # A requested cloud provider that hard-failed discovery or benchmarking
@@ -529,11 +517,8 @@ def compute_exit_code(
     # exit so a silent pass in CI is impossible. A genuinely empty-but-successful
     # scan records no failure and still exits 0.
     if ctx.cloud_provider_failures:
-        if not quiet:
-            providers = ", ".join(sorted({str(f.get("provider", "?")) for f in ctx.cloud_provider_failures}))
-            con.print(
-                f"\n  [red]Exiting with code 1: cloud provider discovery failed for {providers} (collector unavailable or incomplete)[/red]"
-            )
+        providers = ", ".join(sorted({str(f.get("provider", "?")) for f in ctx.cloud_provider_failures}))
+        _exit_reason(ctx, quiet, f"cloud provider discovery failed for {providers} (collector unavailable or incomplete)")
         exit_code = 1
 
     # Evidence quality is an automation boundary, independent of finding gates.
@@ -546,11 +531,8 @@ def compute_exit_code(
             # A repository without dependencies is normal in CI. The report withholds the grade instead of failing the job.
             stderr_notice(nothing_scanned.message, level=logging.WARNING)
         elif scan_outcome is not ScanOutcome.COMPLETE:
-            if not quiet and not ctx.cloud_provider_failures:
-                con.print(
-                    f"\n  [red]Exiting with code 1: scan execution was {scan_outcome.value}; "
-                    "inspect scan_run.scopes and scan_run.issues[/red]"
-                )
+            if not ctx.cloud_provider_failures:
+                _exit_reason(ctx, quiet, f"scan execution was {scan_outcome.value}; inspect scan_run.scopes and scan_run.issues")
             exit_code = 1
 
     # Every branch above prints the specific reason it tripped. What none of

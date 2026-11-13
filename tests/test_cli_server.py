@@ -77,6 +77,8 @@ def test_serve_cmd_loopback_auto_generates_dev_key(monkeypatch):
     """Bare loopback `serve` mints + prints an ephemeral dev key and seeds it into the API."""
     for name in _AUTH_ENV_NAMES:
         monkeypatch.delenv(name, raising=False)
+    # The key is shown only on an interactive terminal.
+    monkeypatch.setattr("agent_bom.cli._ui_handoff.interactive_terminal", lambda: True)
     runner = CliRunner()
     with (
         patch("agent_bom.api.server.configure_api") as mock_configure,
@@ -88,8 +90,8 @@ def test_serve_cmd_loopback_auto_generates_dev_key(monkeypatch):
     assert result.exit_code == 0
     assert mock_run.called
     # Prominent, honest banner line with the actual key.
-    assert "Dev API key (loopback only): abk_" in result.output
-    assert "uses this automatically" in result.output
+    assert "Dev API key (this start only, loopback only): abk_" in result.output
+    assert "The dashboard does not need the key" in result.output
     assert "AGENT_BOM_NO_AUTO_DEV_KEY=1 to disable" in result.output
     # The same key is both seeded into the API and registered for the UI.
     configured_key = mock_configure.call_args.kwargs["api_key"]
@@ -388,6 +390,8 @@ def test_serve_cmd_loopback_no_auth_mints_dev_key(monkeypatch):
         "AGENT_BOM_NO_AUTO_DEV_KEY",
     ):
         monkeypatch.delenv(name, raising=False)
+    # The key is shown only on an interactive terminal.
+    monkeypatch.setattr("agent_bom.cli._ui_handoff.interactive_terminal", lambda: True)
     runner = CliRunner()
 
     with patch("agent_bom.api.server.configure_api") as mock_configure, patch("uvicorn.run") as mock_run:
@@ -397,7 +401,7 @@ def test_serve_cmd_loopback_no_auth_mints_dev_key(monkeypatch):
     mock_configure.assert_called_once()
     mock_run.assert_called_once()
     assert "local unauthenticated mode" not in result.output
-    assert "Dev API key (loopback only): abk_" in result.output
+    assert "Dev API key (this start only, loopback only): abk_" in result.output
     assert "AGENT_BOM_NO_AUTO_DEV_KEY=1 to disable" in result.output
     assert "In-memory (ephemeral)" in result.output
 
