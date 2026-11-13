@@ -57,3 +57,15 @@ it("draws compact cards at one on-screen size whatever zoom a small graph is fit
     expect(drawn("--graph-node-meta-size")).toBeLessThanOrEqual(13);
   }
 });
+
+it("gives a small graph a larger glyph that meets the readability floor, never the oversized circles of before", async () => {
+  const { readableGraphNodeStyle, SMALL_GRAPH_NODES } = await import("@/lib/graph-node-dimensions");
+  for (const count of [2, 5, SMALL_GRAPH_NODES]) for (const zoom of [0.6, 1, 1.25]) {
+    const style = readableGraphNodeStyle(zoom, false, false, count) as Record<string, string>;
+    const glyph = Number.parseFloat(style["--graph-node-glyph-size"]!) * zoom;
+    expect(glyph).toBeGreaterThanOrEqual(65);
+    expect(glyph).toBeLessThanOrEqual(72);
+  }
+  const large = readableGraphNodeStyle(1, false, false, SMALL_GRAPH_NODES + 1) as Record<string, string>;
+  expect(Number.parseFloat(large["--graph-node-glyph-size"]!)).toBeLessThanOrEqual(56);
+});

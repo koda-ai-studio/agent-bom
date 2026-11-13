@@ -37,9 +37,17 @@ const positions = (nodes: readonly Node[]) => new Map(nodes.map(node => [node.id
  * while the reader drags, or on a very large map. `animating` lets the camera
  * wait for the final positions before it frames them.
  */
-export function useAnimatedLayout<N extends Node>(nodes: N[], disabled = false): { nodes: N[]; animating: boolean } {
+/**
+ * `layoutKey` names the layout the reader chose (scope, expansion, filter, view): only a change of
+ * it animates. Positions that change under the same key (cards respaced after measuring) jump, so
+ * nothing moves under the pointer. `frameKey` names the frame (phone or desktop); a change of
+ * frame is not the reader's change either, so it jumps too.
+ */
+export function useAnimatedLayout<N extends Node>(nodes: N[], disabled = false, frameKey = "", layoutKey = ""): { nodes: N[]; animating: boolean } {
   const [frame, setFrame] = useState<N[] | null>(null);
   const shown = useRef<Map<string, Point>>(new Map());
+  const lastFrame = useRef(frameKey);
+  const lastLayout = useRef(layoutKey);
 
   useLayoutEffect(() => {
     const from = shown.current;
@@ -48,7 +56,10 @@ export function useAnimatedLayout<N extends Node>(nodes: N[], disabled = false):
       return !before || Math.abs(before.x - node.position.x) > 1 || Math.abs(before.y - node.position.y) > 1;
     });
     shown.current = positions(nodes);
-    if (prefersReducedMotion() || disabled || !from.size || !moved || nodes.length > MAX_ANIMATED_NODES) { setFrame(null); return; }
+    const reframed = lastFrame.current !== frameKey, relaid = lastLayout.current !== layoutKey;
+    lastFrame.current = frameKey;
+    lastLayout.current = layoutKey;
+    if (reframed || !relaid || prefersReducedMotion() || disabled || !from.size || !moved || nodes.length > MAX_ANIMATED_NODES) { setFrame(null); return; }
     const start = performance.now();
     let id = 0;
     // Each frame records what is on screen, so a change mid-move continues from there.
@@ -61,7 +72,7 @@ export function useAnimatedLayout<N extends Node>(nodes: N[], disabled = false):
     };
     step();
     return () => cancelAnimationFrame(id);
-  }, [nodes, disabled]);
+  }, [nodes, disabled, frameKey, layoutKey]);
 
   return frame ? { nodes: frame, animating: true } : { nodes, animating: false };
 }

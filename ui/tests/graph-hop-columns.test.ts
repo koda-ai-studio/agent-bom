@@ -33,6 +33,16 @@ describe("connection preview columns", () => {
     expect(placed.get("server")!.y).toBeLessThan(placed.get("finding")!.y);
   });
 
+  it("reads top to bottom on a phone: each hop is one row, so the preview stacks inside a narrow frame", () => {
+    const placed = new Map(hopColumnLayout(nodes, edges, "bot", { ...OPTIONS, vertical: true }).map(item => [item.id, item.position]));
+    expect(placed.get("bot")!.y).toBe(0);
+    expect(new Set(["server", "finding"].map(id => placed.get(id)!.y))).toEqual(new Set([OPTIONS.rowGap]));
+    expect(new Set(["werkzeug", "flask", "requests"].map(id => placed.get(id)!.y))).toEqual(new Set([2 * OPTIONS.rowGap]));
+    // A two-node phone preview is one column: start above its neighbour.
+    const pair = hopColumnLayout(nodes.slice(0, 2), edges, "bot", { ...OPTIONS, vertical: true });
+    expect(new Set(pair.map(item => item.position.x)).size).toBe(1);
+  });
+
   it("places a node unreachable from the start in a column after the reachable ones", () => {
     const placed = new Map(hopColumnLayout([...nodes, node("loose")], edges, "bot", OPTIONS).map(item => [item.id, item.position]));
     expect(placed.get("loose")!.x).toBe(3 * OPTIONS.columnGap);
