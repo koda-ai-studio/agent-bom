@@ -25,6 +25,8 @@ export interface GraphExposureEntityRef {
   role: string;
   severity?: string | undefined;
   riskScore?: number | undefined;
+  /** Positive risk verdicts only; the node read carries the reasons (docs/graph/NODE_RISK_CONTEXT.md). */
+  risk?: { internetExposed?: true; crownJewel?: true; dataSensitivity?: string; admin?: true; privilege?: string } | undefined;
 }
 
 export interface GraphExposureRelationshipRef {

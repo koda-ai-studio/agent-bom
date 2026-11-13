@@ -201,12 +201,17 @@ class PostgresPolicyStore:
     def put_policy(self, policy: GatewayPolicy) -> None:
         data = policy.model_dump_json()
         with _tenant_connection(self._pool) as conn:
-            conn.execute(
-                """INSERT INTO gateway_policies (policy_id, team_id, data) VALUES (%s, %s, %s)
-                   ON CONFLICT (policy_id) DO UPDATE SET team_id = EXCLUDED.team_id, data = EXCLUDED.data""",
-                (policy.policy_id, policy.tenant_id, data),
+            written = write_tenant_row(
+                conn,
+                table="gateway_policies",
+                key="policy_id",
+                tenant="team_id",
+                row={"policy_id": policy.policy_id, "team_id": policy.tenant_id, "data": data},
+                update=("data",),
             )
             conn.commit()
+            if not written:
+                raise ValueError("Policy identity belongs to a different tenant")
 
     def get_policy(self, policy_id: str, tenant_id: str | None = None) -> GatewayPolicy | None:
         from .policy_store import GatewayPolicy

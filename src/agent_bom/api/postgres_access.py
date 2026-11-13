@@ -41,31 +41,23 @@ _INSERT_API_KEY_SQL = """INSERT INTO api_keys
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, FALSE)
 """
 
-_UPSERT_API_KEY_SQL = """INSERT INTO api_keys
-    (
-      key_id, key_hash, key_salt, key_prefix, name, role, team_id, scopes,
-      created_at, expires_at, revoked_at, rotation_overlap_until, replacement_key_id,
-      scim_subject_id, owner, principal_id, revoked
-    )
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, FALSE)
-    ON CONFLICT (key_id) DO UPDATE SET
-      key_hash = EXCLUDED.key_hash,
-      key_salt = EXCLUDED.key_salt,
-      key_prefix = EXCLUDED.key_prefix,
-      name = EXCLUDED.name,
-      role = EXCLUDED.role,
-      team_id = EXCLUDED.team_id,
-      scopes = EXCLUDED.scopes,
-      created_at = EXCLUDED.created_at,
-      expires_at = EXCLUDED.expires_at,
-      revoked_at = EXCLUDED.revoked_at,
-      rotation_overlap_until = EXCLUDED.rotation_overlap_until,
-      replacement_key_id = EXCLUDED.replacement_key_id,
-      scim_subject_id = EXCLUDED.scim_subject_id,
-      owner = EXCLUDED.owner,
-      principal_id = EXCLUDED.principal_id,
-      revoked = FALSE
-"""
+_API_KEY_UPDATE_COLUMNS = (
+    "key_hash",
+    "key_salt",
+    "key_prefix",
+    "name",
+    "role",
+    "scopes",
+    "created_at",
+    "expires_at",
+    "revoked_at",
+    "rotation_overlap_until",
+    "replacement_key_id",
+    "scim_subject_id",
+    "owner",
+    "principal_id",
+    "revoked",
+)
 
 
 class PostgresKeyStore:
@@ -197,29 +189,35 @@ class PostgresKeyStore:
         )
 
     @staticmethod
-    def _insert_key(conn: Connection, key: ApiKey, *, update_existing: bool) -> None:
-        statement = _UPSERT_API_KEY_SQL if update_existing else _INSERT_API_KEY_SQL
-        conn.execute(
-            statement,
-            (
-                key.key_id,
-                key.key_hash,
-                key.key_salt,
-                key.key_prefix,
-                key.name,
-                key.role.value,
-                key.tenant_id,
-                json.dumps(key.scopes),
-                key.created_at,
-                key.expires_at,
-                key.revoked_at,
-                key.rotation_overlap_until,
-                key.replacement_key_id,
-                key.scim_subject_id,
-                key.owner,
-                key.principal_id,
-            ),
-        )
+    def _key_row(key: ApiKey) -> dict[str, object]:
+        return {
+            "key_id": key.key_id,
+            "key_hash": key.key_hash,
+            "key_salt": key.key_salt,
+            "key_prefix": key.key_prefix,
+            "name": key.name,
+            "role": key.role.value,
+            "team_id": key.tenant_id,
+            "scopes": json.dumps(key.scopes),
+            "created_at": key.created_at,
+            "expires_at": key.expires_at,
+            "revoked_at": key.revoked_at,
+            "rotation_overlap_until": key.rotation_overlap_until,
+            "replacement_key_id": key.replacement_key_id,
+            "scim_subject_id": key.scim_subject_id,
+            "owner": key.owner,
+            "principal_id": key.principal_id,
+            "revoked": False,
+        }
+
+    @classmethod
+    def _insert_key(cls, conn: Connection, key: ApiKey, *, update_existing: bool) -> None:
+        row = cls._key_row(key)
+        if not update_existing:
+            conn.execute(_INSERT_API_KEY_SQL, tuple(value for column, value in row.items() if column != "revoked"))
+            return
+        if not write_tenant_row(conn, table="api_keys", key="key_id", tenant="team_id", row=row, update=_API_KEY_UPDATE_COLUMNS):
+            raise ValueError("API key identity belongs to a different tenant")
 
     def add(self, key: ApiKey) -> None:
         with _tenant_connection(self._pool) as conn:

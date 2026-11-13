@@ -1990,6 +1990,9 @@ jobs:
             tests/api/test_finding_durable_lifecycle.py \
             tests/api/test_resolved_finding_identity.py \
             tests/api/test_push_replay_after_retention.py \
+            tests/api/test_push_non_finite_numbers.py \
+            tests/test_postgres_tenant_upsert_stores.py \
+            tests/test_postgres_role_connection_limits_live.py \
             tests/test_job_result_codec.py \
             tests/test_graph_snapshot_ownership.py \
             tests/test_current_graph_assembly_postgres.py \

@@ -313,7 +313,10 @@ def required_connection_limits() -> dict[str, int]:
 
 
 def reconcile_connection_limits(connection: Any, required: dict[str, int]) -> None:
-    """Raise each runtime role's CONNECTION LIMIT to cover what its processes can open; never lower one."""
+    """Raise each runtime role's CONNECTION LIMIT to cover what its processes can open; never lower one.
+
+    A limit of 0 is an operator's lock on the role and is kept, with a warning.
+    """
     for role, needed in required.items():
         row = connection.execute(_ROLE_LIMIT_SQL, (role,)).fetchone()
         if row is None:
@@ -321,6 +324,13 @@ def reconcile_connection_limits(connection: Any, required: dict[str, int]) -> No
             continue
         current, can_alter = int(row[0]), bool(row[1])
         if current == -1 or current >= needed:
+            continue
+        if current == 0:
+            print(  # noqa: T201
+                f"compose-migrate: warning: {role} CONNECTION LIMIT is 0 (locked); left unchanged. "
+                f"To let it connect: ALTER ROLE {role} CONNECTION LIMIT {needed}",
+                flush=True,
+            )
             continue
         if not can_alter:
             raise SystemExit(

@@ -181,14 +181,14 @@ every upgrade: every API and worker process at its largest configured count
 5 application and 4 maintenance connections for the post-install verification
 Job and operator sessions. Three API replicas give 4 processes and a limit of
 133; an HPA maximum of 6 gives 8 processes and 261. The Job only raises a
-limit, never lowers it, and fails the upgrade with the `ALTER ROLE` statement
+limit, never lowers it, keeps a limit of 0 (a locked role) with a warning, and fails the upgrade with the `ALTER ROLE` statement
 to run when the migration role cannot administer the runtime role. Set
 `controlPlane.postgres.connectionLimits.app` / `.maintenance` to pin a larger
 value; one below the budget fails rendering. With
 `controlPlane.migrations.enabled=false`, apply the same limits yourself.
 Earlier migrations pinned `agent_bom_app` at 20, below what two idle
 replicas hold during a rolling update; revision `20261112_01` raises a bounded
-limit to at least 100 on every install path.
+limit (1 to 99) to 100 on every install path and leaves a locked role (0) alone.
 
 Postgres `max_connections` must cover both limits plus its reserved
 connections; the migration Job prints a warning when it does not. Add

@@ -11,9 +11,9 @@ from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.core.vex_policy import active_blast_radii
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
-from agent_bom.scanners import IncompleteScanError, consume_scan_warnings
 from agent_bom.scanners.clean_verdict import no_fixable_vulnerabilities_line, suppressed_unfixed_os_findings
-from agent_bom.scanners.state import peek_coverage_warnings
+from agent_bom.scanners.scan_options import IncompleteScanError
+from agent_bom.scanners.state import consume_scan_warnings, peek_coverage_warnings
 from agent_bom.scanners.supplied_findings import build_supplied_findings
 
 
