@@ -66,6 +66,41 @@ class TestNormalization:
         assert gate._statements(one) == gate._statements(two)
 
 
+class TestAttributeVersion:
+    """PostgreSQL 16.16 (CVE-2026-6460, backpatched to every supported branch) stores a per-column WAL LSN as the
+    internal attoption ``pg_attver``. A server-matched pg_dump strips it; an older
+    client prints it as ``ALTER COLUMN ... SET (pg_attver=<lsn>)``. The LSN is
+    where the cluster's WAL happened to be, so it differs on every database."""
+
+    def test_attribute_version_only_statements_are_ignored(self):
+        a = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN team_id SET (pg_attver=38450424);\n"
+        b = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN team_id SET (pg_attver=38466888);\n"
+        assert gate._statements(a) == gate._statements(_TEAMS)
+        assert gate.compare(a, b) == []
+
+    def test_attribute_version_does_not_hide_a_real_attribute_option_difference(self):
+        with_stats = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (pg_attver=38450424, n_distinct=5);\n"
+        plain = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (pg_attver=38466888);\n"
+        problems = gate.compare(with_stats, plain)
+        assert len(problems) == 1
+        assert "SET (n_distinct=5)" in problems[0]
+        assert "pg_attver" not in problems[0]
+
+    def test_a_real_attribute_option_value_difference_is_reported(self):
+        five = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (n_distinct=5, pg_attver=1);\n"
+        ten = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (pg_attver=2, n_distinct=10);\n"
+        assert len(gate.compare(five, ten)) == 2
+
+    def test_same_attribute_options_with_different_versions_match(self):
+        a = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (n_distinct=5, pg_attver=1);\n"
+        b = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (pg_attver=2, n_distinct=5);\n"
+        assert gate.compare(a, b) == []
+
+    def test_a_lookalike_option_name_is_not_stripped(self):
+        a = _TEAMS + "ALTER TABLE ONLY public.teams ALTER COLUMN name SET (x_pg_attver=1);\n"
+        assert gate.compare(a, _TEAMS)
+
+
 class TestComparison:
     def test_identical_schemas_pass(self):
         assert gate.compare(_TEAMS, _TEAMS) == []
