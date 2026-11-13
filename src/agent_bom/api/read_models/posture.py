@@ -130,16 +130,6 @@ class DiscoveredAgent(ReadModel):
     metadata: dict[str, Any]
 
 
-class AgentsResponse(ReadResponse):
-    agents: list[DiscoveredAgent]
-    count: int
-    count_by_class: dict[str, int]
-    scope: str
-    source: str
-    warnings: list[str]
-    count_definition: str | None = None
-
-
 class ProviderCapabilities(ReadModel):
     data_boundary: str
     guarantees: list[str]

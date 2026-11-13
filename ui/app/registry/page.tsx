@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   ShieldCheck,
@@ -20,7 +20,7 @@ import {
   Scale,
   Tag,
 } from "lucide-react";
-import { api, type RegistryServer } from "@/lib/api";
+import { api, type RegistryResponse, type RegistryServer } from "@/lib/api";
 import { CatalogBanner, PageLaneHeader } from "@/components/page-lane";
 import { PaginationBar } from "@/components/pagination-bar";
 
@@ -295,67 +295,107 @@ function RegistryDetail({ serverId }: { serverId: string }) {
 /*  List view (shown when no ?id param)                                */
 /* ------------------------------------------------------------------ */
 
+function readRegistryUrl(params: URLSearchParams) {
+  const risk = params.get("risk");
+  const page = Number(params.get("page"));
+  return {
+    search: (params.get("q") ?? "").slice(0, 200),
+    risk: (["high", "medium", "low"] as const).find((r) => r === risk) ?? ("all" as RiskFilter),
+    category: params.get("category") || "all",
+    page: Number.isInteger(page) && page >= 1 ? page : 1,
+  };
+}
+
 function RegistryList() {
   const router = useRouter();
-  const [servers, setServers] = useState<RegistryServer[]>([]);
-  const [meta, setMeta] = useState<{
-    updated?: string | null;
-    total_servers?: number | null;
-    sources?: string[];
-    source_url?: string | null;
-  } | null>(null);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [initial] = useState(() => readRegistryUrl(new URLSearchParams(searchParams.toString())));
+  const [data, setData] = useState<RegistryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [riskFilter, setRiskFilter] = useState<RiskFilter>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [searchText, setSearchText] = useState(initial.search);
+  const [search, setSearch] = useState(initial.search);
+  const [riskFilter, setRiskFilter] = useState<RiskFilter>(initial.risk);
+  const [categoryFilter, setCategoryFilter] = useState<string>(initial.category);
   const [viewMode, setViewMode] = useState<RegistryView>("table");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initial.page);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      const next = searchText.trim();
+      if (next !== search) {
+        setSearch(next);
+        setPage(1);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText, search]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
     api
-      .listRegistry()
+      .listRegistry(
+        {
+          limit: REGISTRY_PAGE_SIZE,
+          offset: (page - 1) * REGISTRY_PAGE_SIZE,
+          q: search,
+          risk: riskFilter === "all" ? [] : [riskFilter],
+          category: categoryFilter === "all" ? [] : [categoryFilter],
+        },
+        controller.signal,
+      )
       .then((res) => {
-        setServers(res.servers);
-        setMeta(res.meta ?? null);
+        if (controller.signal.aborted) return;
+        setData(res);
+        setError(null);
       })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch((e: unknown) => {
+        if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Failed to load registry");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [search, riskFilter, categoryFilter, page]);
 
+  useEffect(() => {
+    const params = new URLSearchParams();
+    searchParams.forEach((value, key) => {
+      if (!["q", "risk", "category", "page"].includes(key)) params.append(key, value);
+    });
+    if (search) params.set("q", search);
+    if (riskFilter !== "all") params.set("risk", riskFilter);
+    if (categoryFilter !== "all") params.set("category", categoryFilter);
+    if (page > 1) params.set("page", String(page));
+    const qs = params.toString();
+    if (qs !== searchParams.toString()) router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    // URL mirrors list state; reading searchParams here would loop on every replace.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, riskFilter, categoryFilter, page, pathname, router]);
+
+  const meta = data?.meta ?? null;
+  const visible: RegistryServer[] = data?.servers ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / REGISTRY_PAGE_SIZE));
   const categories = useMemo(() => {
-    const cats = new Set<string>();
-    for (const s of servers) {
-      if (s.category) cats.add(s.category);
-    }
+    const cats = new Set(Object.keys(data?.facets?.category ?? {}));
+    if (categoryFilter !== "all") cats.add(categoryFilter);
     return Array.from(cats).sort();
-  }, [servers]);
-
-  const filtered = servers.filter((s) => {
-    const matchesSearch =
-      !search ||
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.description?.toLowerCase().includes(search.toLowerCase()) ||
-      s.publisher?.toLowerCase().includes(search.toLowerCase()) ||
-      s.category?.toLowerCase().includes(search.toLowerCase());
-    const matchesRisk = riskFilter === "all" || s.risk_level === riskFilter;
-    const matchesCat = categoryFilter === "all" || s.category === categoryFilter;
-    return matchesSearch && matchesRisk && matchesCat;
-  });
-
-  useEffect(() => setPage(1), [search, riskFilter, categoryFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / REGISTRY_PAGE_SIZE));
-  const visible = filtered.slice((page - 1) * REGISTRY_PAGE_SIZE, page * REGISTRY_PAGE_SIZE);
-
+  }, [data, categoryFilter]);
+  // Pills count within the current search and category; the subtitle counts the whole catalog.
+  const riskFacet = data?.facets?.risk_level ?? {};
   const riskCounts = {
-    all: servers.length,
-    high: servers.filter((s) => s.risk_level === "high").length,
-    medium: servers.filter((s) => s.risk_level === "medium").length,
-    low: servers.filter((s) => s.risk_level === "low").length,
+    all: Object.values(riskFacet).reduce((sum, n) => sum + n, 0),
+    high: riskFacet.high ?? 0,
+    medium: riskFacet.medium ?? 0,
+    low: riskFacet.low ?? 0,
   };
+  const catalogRisk = data?.risk_counts ?? {};
+  const catalogSize = meta?.total_servers ?? data?.count ?? 0;
 
-  if (loading) {
+  if (loading && data === null) {
     return (
       <div className="flex items-center justify-center h-[80vh] text-[color:var(--text-secondary)]">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
@@ -364,7 +404,7 @@ function RegistryList() {
     );
   }
 
-  if (error) {
+  if (error && data === null) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-[color:var(--text-secondary)] gap-3">
         <AlertTriangle className="w-8 h-8 text-amber-500" />
@@ -379,7 +419,7 @@ function RegistryList() {
       <PageLaneHeader
         lane="reference"
         title="MCP Catalog"
-        subtitle={`${(meta?.total_servers ?? servers.length).toLocaleString()} known servers · capability risk (not CVE status) · ${riskCounts.high} high · ${riskCounts.medium} medium`}
+        subtitle={`${catalogSize.toLocaleString()} known servers · capability risk (not CVE status) · ${(catalogRisk.high ?? 0).toLocaleString()} high · ${(catalogRisk.medium ?? 0).toLocaleString()} medium`}
         banner={<CatalogBanner />}
       />
 
@@ -401,8 +441,9 @@ function RegistryList() {
             <input
               type="text"
               placeholder="Search servers, publishers, categories..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              maxLength={200}
               className="w-full pl-10 pr-4 py-2 bg-[color:var(--surface-muted)] border border-[color:var(--border-subtle)] rounded-lg text-sm text-[color:var(--text-secondary)] placeholder:text-[color:var(--text-tertiary)] focus:outline-none focus:border-emerald-600"
             />
           </div>
@@ -412,7 +453,10 @@ function RegistryList() {
             {(["all", "high", "medium", "low"] as RiskFilter[]).map((r) => (
               <button
                 key={r}
-                onClick={() => setRiskFilter(r)}
+                onClick={() => {
+                  setRiskFilter(r);
+                  setPage(1);
+                }}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                   riskFilter === r
                     ? "bg-[color:var(--surface-elevated)] text-[color:var(--foreground)]"
@@ -420,7 +464,7 @@ function RegistryList() {
                 }`}
               >
                 {r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1)}{" "}
-                <span className="text-[color:var(--text-tertiary)]">({riskCounts[r]})</span>
+                <span className="text-[color:var(--text-tertiary)]">({riskCounts[r].toLocaleString()})</span>
               </button>
             ))}
           </div>
@@ -430,7 +474,10 @@ function RegistryList() {
               Category
               <select
                 value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                onChange={(e) => {
+                  setCategoryFilter(e.target.value);
+                  setPage(1);
+                }}
                 className="rounded-md border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-2 py-1.5 text-xs text-[color:var(--foreground)]"
               >
                 <option value="all">All categories</option>
@@ -576,18 +623,20 @@ function RegistryList() {
         </div>
       )}
 
-      {filtered.length > 0 ? (
+      {total > 0 ? (
         <PaginationBar
           page={page}
           totalPages={totalPages}
-          totalItems={filtered.length}
+          totalItems={total}
           itemLabel="servers"
+          previousDisabled={loading || page <= 1}
+          nextDisabled={loading || !data?.has_more}
           onPrevious={() => setPage((current) => Math.max(1, current - 1))}
           onNext={() => setPage((current) => Math.min(totalPages, current + 1))}
         />
       ) : null}
 
-      {filtered.length === 0 && (
+      {total === 0 && !loading && (
         <div className="text-center py-12 text-[color:var(--text-tertiary)] text-sm">
           No servers match your search
         </div>
