@@ -50,6 +50,10 @@ step "tag is new + changelog documents it"
 # shipped. This script printed "safe to tag" for 0.99.0 five days after
 # v0.99.0 was tagged and published, with 24 commits since.
 python scripts/check_release_tag_is_new.py "$VERSION" || fail=1
+python scripts/assemble_changelog.py --check --expect-empty || fail=1
+
+step "release-time artifacts (pull requests do not regenerate these)"
+python scripts/product_metrics_snapshot.py --check --release || fail=1
 python scripts/check_release_consistency.py || fail=1
 python scripts/check_product_surface_contract.py || fail=1
 python scripts/export_openapi.py --check || fail=1

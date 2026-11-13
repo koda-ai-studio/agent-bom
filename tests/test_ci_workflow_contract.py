@@ -480,9 +480,28 @@ def test_required_contexts_report_on_pull_request_and_merge_group() -> None:
     for name in REQUIRED_CI_JOBS:
         assert workflow["jobs"][name]["if"] == "${{ !cancelled() }}", name
     assert workflow["jobs"]["test"]["name"] == "Test (Python 3.13)"
-    for name in ("codeql.yml", "pr-security-gate.yml"):
+    for name in ("codeql.yml", "pr-security-gate.yml", "dependency-review.yml"):
         other = yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"))
         assert other.get(True, other.get("on", {}))["merge_group"] == {"types": ["checks_requested"]}, name
+
+
+def test_dependency_review_passes_merge_groups_without_a_pr_diff() -> None:
+    """`Dependency Review` is required; a queue stalls on any context that never reports.
+
+    The review diffs one pull request's dependency snapshot against its base,
+    which a merge group does not have. Each queued PR already passed it, so the
+    merge-group run reports success without calling the action, and concurrent
+    groups must not cancel each other (they carry no PR number).
+    """
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "dependency-review.yml").read_text(encoding="utf-8"))
+    assert "github.ref" in workflow["concurrency"]["group"]
+    job = workflow["jobs"]["dependency-review"]
+    assert job["name"] == "Dependency Review"
+    assert "if" not in job, "the required context must report on every event"
+    steps = {step.get("name"): step for step in job["steps"]}
+    assert steps["Pass merge group"]["if"] == "github.event_name == 'merge_group'"
+    for name in ("Detect dependency-workflow bootstrap PR", "Skip dependency review", "Review dependency changes"):
+        assert "github.event_name != 'merge_group'" in steps[name]["if"], name
 
 
 def test_runbook_keeps_strict_protection_and_documents_pr_shards() -> None:
@@ -718,7 +737,7 @@ def test_dependency_review_skips_the_api_diff_when_no_manifest_changed() -> None
     for manifest in ("pyproject\\.toml", "uv\\.lock", "package-lock\\.json", "Dockerfile[^/]*", "Chart\\.yaml", "^\\.github/"):
         assert manifest in bootstrap["run"], manifest
     review = next(step for step in steps if str(step.get("uses", "")).startswith("actions/dependency-review-action@"))
-    assert review["if"] == "steps.bootstrap.outputs.skip != 'true'"
+    assert review["if"] == "github.event_name != 'merge_group' && steps.bootstrap.outputs.skip != 'true'"
 
     alert = yaml.safe_load((ROOT / ".github/workflows/main-failure-alert.yml").read_text())
     watched = alert.get(True, alert.get("on", {}))["workflow_run"]["workflows"]

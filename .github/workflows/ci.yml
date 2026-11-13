@@ -8,8 +8,10 @@ permissions:
 #                  and contract smoke on the merge result, in duration-sized shards; never
 #                  the full suite. Path-gated Postgres, musl subset, one UI E2E
 #                  smoke and other validators.
-#   merge_group    not enabled for this repository; if it fires, it runs the
-#                  full 3.13 shards plus the post-merge lanes.
+#   merge_group    runs when the owner turns on "Require merge queue" for
+#                  main: no path classifier, so every path-gated lane runs,
+#                  and the full 3.13 shards replace the affected tests, plus
+#                  the post-merge lanes. Nothing lands on main unproven.
 #   push to main   everything: full 4-version suite with coverage, performance,
 #                  Postgres, musl, Docker, UI E2E, dogfood. The release gate
 #                  reads this.
@@ -351,6 +353,13 @@ jobs:
         # re-rate tables belong in private notes — not docs/, site-docs/, or
         # CHANGELOG. Pure stdlib, fails fast.
         run: python scripts/check_public_docs_hygiene.py
+
+      - name: Changelog fragments parse
+        # Source: scripts/assemble_changelog.py
+        # PRs add changelog.d/<slug>.md instead of editing CHANGELOG.md's
+        # Unreleased section; a malformed fragment would only surface at
+        # release time. Pure stdlib, fails fast.
+        run: python scripts/assemble_changelog.py --check
 
       - name: Package layout — no new top-level src/agent_bom/*.py modules
         if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'

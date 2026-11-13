@@ -1,0 +1,4 @@
+### CI
+- Pull requests add a `changelog.d/<slug>.md` fragment instead of editing `CHANGELOG.md`, and `scripts/assemble_changelog.py --version X.Y.Z` folds the fragments into the release entry. CI validates fragments on every PR; the release workflow and `scripts/preflight_release.sh` fail while any fragment is left unassembled.
+- `docs/PRODUCT_METRICS.md` and `.json` are regenerated at release time. On a pull request, `scripts/product_metrics_snapshot.py --check` still fails on a version or metric-set change but only reports drifted counts; `--check --release` (or `AGENT_BOM_RELEASE_CHECK=1`), run by the release workflow and preflight, fails on any drift.
+- `Dependency Review` reports on merge-queue runs, so every required check now runs on a merge group and a merge queue can be turned on for `main`.

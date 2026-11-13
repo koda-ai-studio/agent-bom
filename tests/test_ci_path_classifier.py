@@ -230,3 +230,10 @@ def test_version_only_metadata_uses_light_dependency_routing(tmp_path) -> None:
         exemptions = version_only_paths(base, git("rev-parse", "HEAD"), root=tmp_path)
         assert name not in exemptions
         assert classify_paths([name], version_only=exemptions).python_dependencies
+
+
+def test_changelog_fragments_are_docs_only() -> None:
+    """A PR's changelog.d/ fragment replaces its CHANGELOG.md edit; route it the same way."""
+    result = classify_paths(["changelog.d/fix-login-limiter.md", "changelog.d/README.md", "CHANGELOG.md"])
+
+    assert result.docs_only is True
