@@ -206,3 +206,19 @@ def test_readiness_is_held_from_the_moment_the_prewarm_is_started(monkeypatch):
         gate.set()
         assert thread is not None
         thread.join(10)
+
+
+def test_a_failed_prewarm_releases_readiness_instead_of_staying_running(monkeypatch):
+    from agent_bom.api import current_graph_prewarm
+
+    def _boom(*_args, **_kwargs):
+        raise RuntimeError("graph store unavailable: postgresql://user:secret@db/x")
+
+    current_graph_prewarm.reset_current_graph_prewarm()
+    monkeypatch.setattr(current_graph_prewarm, "prewarm_current_graphs", _boom)
+    current_graph_prewarm._LAST_RUN.update(status="running")
+    current_graph_prewarm._run()
+    status = dict(current_graph_prewarm._LAST_RUN)
+    assert status["status"] == "incomplete"
+    assert status["reason"] == "prewarm_failed"
+    assert "secret" not in str(status)
