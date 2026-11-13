@@ -85,7 +85,7 @@ package → credential → data, and keeps the evidence for every edge.
 
 <p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
 
-*Sample data. Dashed links are modeled, not observed.*
+*Sample data.* [What the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)
 
 ## What it covers
 
@@ -345,11 +345,8 @@ control mappings are not audit certification.
 <details>
 <summary>What the graphs and mappings do and do not establish</summary>
 
-- Screenshots use a fictional sample estate. Dashed use, credential and access
-  links are configured or modeled, not observed at runtime; path analysis
-  covers the collected snapshot only. An environment badge such as AWS
-  describes membership, not an execution host or model endpoint
-  ([agent, hosting and model context](docs/graph/AGENT_CONTEXT.md)).
+- Screenshots use sample data; [what the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)
+  covers which links are modeled rather than observed.
 - Retained scans correlate by exact, tenant-scoped identities.
 - A graph path does not prove exploitation. Credential references are names,
   not secret values.
