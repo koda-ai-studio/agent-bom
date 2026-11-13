@@ -63,6 +63,10 @@ def _collect_scan_sources(opts: ScanOptions, st: ScanState) -> None:
     if opts.tf_dirs:
         st.scan_sources.append("terraform")
     _collect_surface_sources(opts, st)
+    # The curated sample must stay labelled wherever the report travels (push,
+    # API, UI banner), so the marker rides in the source list itself.
+    if opts.demo and "demo" not in st.scan_sources:
+        st.scan_sources.append("demo")
 
 
 def _collect_surface_sources(opts: ScanOptions, st: ScanState) -> None:

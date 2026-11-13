@@ -210,5 +210,5 @@ def test_project_default_tenant_handoff_uses_loopback_analyst(project, scan, mon
     result = CliRunner().invoke(main, ["quickstart", "--project", str(project), "--run", "--offline"])
     assert result.exit_code == 0, result.output
     assert "--host 127.0.0.1" in result.output
-    assert "--allow-insecure-no-auth" in result.output
+    assert "--allow-insecure-no-auth" not in result.output
     assert "AGENT_BOM_NO_AUTH_ROLE=analyst" in result.output

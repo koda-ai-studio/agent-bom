@@ -56,6 +56,7 @@ def normalize_pushed_report(body: PushPayload, *, fallback_scan_id: str) -> dict
     report["blast_radius"] = [_normalize_blast_row(row) for row in blast_radius]
     report = compact_report_sections(report)
     report["scan_id"] = str(report.get("scan_id") or fallback_scan_id)
+    label_demo_report(report)
 
     normalized_agents: list[dict] = []
     for raw_agent in report.get("agents", []):
@@ -102,6 +103,23 @@ def normalize_pushed_report(body: PushPayload, *, fallback_scan_id: str) -> dict
     return report
 
 
+def label_demo_report(report: dict) -> None:
+    """Mark a pushed sample report as demo data, including reports from older clients.
+
+    Clients before 0.115.0 sent ``--demo`` scans without a ``demo`` source; the
+    bundled demo advisory DB still identifies them, so the UI banner and the
+    demo-data guards keep sample agents from passing as real inventory.
+    """
+    sources = report.get("scan_sources")
+    sources = [str(source) for source in sources] if isinstance(sources, list) else []
+    freshness = report.get("vuln_data_freshness")
+    bundled_demo = isinstance(freshness, dict) and freshness.get("mode") == "bundled-demo"
+    if bundled_demo and "demo" not in sources:
+        sources.append("demo")
+    if sources or "scan_sources" in report:
+        report["scan_sources"] = sources
+
+
 def derive_push_summary(report: dict) -> None:
     """Count retained evidence using the same deduplication as the findings API.
 
@@ -119,7 +137,9 @@ def derive_push_summary(report: dict) -> None:
     report["summary"] = {
         "total_agents": len(agents),
         "total_mcp_servers": sum(1 for server in servers if isinstance(server, dict) and server_dict_counts_as_mcp_server(server)),
-        "total_packages": len(packages),
+        "total_packages": sum(
+            len(server.get("packages") or []) for server in servers if isinstance(server, dict) and not server.get("package_binding_of")
+        ),
         "unique_packages": len(package_keys),
         "total_vulnerabilities": len(vuln_ids),
         "total_findings": len(findings),

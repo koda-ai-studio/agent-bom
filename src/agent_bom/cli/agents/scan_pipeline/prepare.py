@@ -204,6 +204,15 @@ def _apply_presets_and_modes(opts: ScanOptions, st: ScanState) -> None:
     validate_skill_mode(no_skill=opts.no_skill, skill_only=opts.skill_only)
 
 
+def _refuse_offline_push(opts: ScanOptions) -> None:
+    # Delivery is the last step, so without this the whole scan ran before the push failed.
+    if opts.offline and opts.push_url:
+        raise click.UsageError(
+            "--push-url sends the report over the network, so it cannot be combined with --offline. "
+            "Drop --offline to push, or write the report with -o -f json and POST it to /v1/results/push from a connected host."
+        )
+
+
 def _clone_repo(opts: ScanOptions, st: ScanState) -> None:
     # ── Public-repo clone-and-scan (--repo) ──────────────────────────────────
     # Shallow-clone the URL into a temp dir, point the local-directory scan path
@@ -318,6 +327,7 @@ def run_prepare(opts: ScanOptions, st: ScanState) -> None:
     _apply_profile_and_agent_mode(opts, st)
     _apply_project_config(opts, st)
     _apply_presets_and_modes(opts, st)
+    _refuse_offline_push(opts)
     _clone_repo(opts, st)
     _open_consoles(opts, st)
     _validate_input_files(opts, st)

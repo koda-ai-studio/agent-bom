@@ -18786,6 +18786,8 @@ components:
       type: object
     HarnessCoverage:
       additionalProperties: true
+      description: What the model covers; ``complete`` is false whenever ``incomplete_reasons``
+        names anything left out of this answer.
       properties:
         complete:
           title: Complete
@@ -18803,6 +18805,11 @@ components:
             type: string
           title: Gaps
           type: array
+        incomplete_reasons:
+          items:
+            type: string
+          title: Incomplete Reasons
+          type: array
         model:
           title: Model
           type: string
@@ -18816,6 +18823,7 @@ components:
       - frameworks_modelled
       - gaps
       - complete
+      - incomplete_reasons
       - framework_agent_cap
       title: HarnessCoverage
       type: object
@@ -19016,9 +19024,14 @@ components:
       type: object
     HarnessTruncation:
       additionalProperties: true
+      description: '``depth`` is true when an agent sits deeper than the modelled
+        layer cap below the harness root.'
       properties:
         agents:
           title: Agents
+          type: boolean
+        depth:
+          title: Depth
           type: boolean
         flow_edges:
           title: Flow Edges
@@ -19026,6 +19039,7 @@ components:
       required:
       - agents
       - flow_edges
+      - depth
       title: HarnessTruncation
       type: object
     HarnessUnresolvedRoute:
@@ -19582,11 +19596,31 @@ components:
           - type: string
           - type: 'null'
           title: Modified At
+        not_found_in:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Not Found In
         published_at:
           anyOf:
           - type: string
           - type: 'null'
           title: Published At
+        record_completeness:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Record Completeness
+        record_sources:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
+          title: Record Sources
         severity:
           anyOf:
           - type: string
@@ -19652,6 +19686,16 @@ components:
         package_name:
           title: Package Name
           type: string
+        patched:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Patched
+        vulnerable:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Vulnerable
       required:
       - ecosystem
       - package_name
@@ -19703,6 +19747,13 @@ components:
           - type: string
           - type: 'null'
           title: Note
+        searched:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Searched
         sources:
           items:
             type: string

@@ -1,6 +1,6 @@
 """Print what changed since the last local scan of the same target, then remember this one.
 
-Console-only: machine-readable outputs, exit codes and gates are untouched.
+Console-only (also when a report goes to a file with ``-o``): machine-readable outputs, exit codes and gates are untouched.
 Nothing is stored in CI, in demo mode, for dry runs or when
 ``AGENT_BOM_NO_SCAN_MEMORY`` is set.
 """
@@ -54,7 +54,11 @@ def _eligible(opts: ScanOptions) -> bool:
 
 
 def _console_visible(opts: ScanOptions) -> bool:
-    return opts.output_format == "console" and not opts.output and not opts.quiet and not opts.agent_mode
+    """The console is free for a delta line: a console report, or any report written to a file."""
+    if opts.quiet or opts.agent_mode:
+        return False
+    writes_file = bool(opts.output) and opts.output != "-"
+    return writes_file or (opts.output_format == "console" and not opts.output)
 
 
 def remember_and_report(opts: ScanOptions, st: ScanState) -> bool:

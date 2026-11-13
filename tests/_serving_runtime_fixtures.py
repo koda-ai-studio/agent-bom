@@ -183,7 +183,7 @@ def _handler(routes: dict[tuple[str, str], Route], options: FixtureOptions) -> t
                 status, body, delay = DENIED
             if delay:
                 time.sleep(delay)
-            payload = json.dumps(body).encode()
+            payload = body if isinstance(body, bytes) else json.dumps(body).encode()
             try:
                 self.send_response(status)
                 for name, value in options.response_headers.get((method, self.path), {}).items():
@@ -210,7 +210,7 @@ def _handler(routes: dict[tuple[str, str], Route], options: FixtureOptions) -> t
 
 @contextmanager
 def serving_fixture(routes: dict[tuple[str, str], Route], options: FixtureOptions | None = None) -> Iterator[str]:
-    """Serve *routes* on a random loopback port and yield its base URL."""
+    """Serve *routes* on a random loopback port and yield its base URL; a ``bytes`` body is sent verbatim."""
     server = ThreadingHTTPServer(("127.0.0.1", 0), _handler(routes, options or FixtureOptions()))
     server.daemon_threads = True
     server.block_on_close = False
