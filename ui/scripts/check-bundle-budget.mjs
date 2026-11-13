@@ -160,7 +160,13 @@ const BUDGETS = {
   // locally before the taxonomy refresh, without adding dependencies. This
   // total includes lazy chunks; retain ~17 KiB of headroom at 4384 KiB.
   // Largest-chunk and shared-runtime ceilings remain unchanged.
-  totalClientJsBytes: 4_489_216,
+  // The agent architecture route (layered map, flow, step list and detail
+  // panel on the shared graph renderer) adds ~76 KiB of route chunks and
+  // measures 4448.9 KiB in Linux CI, with no new dependency. Splitting the
+  // shared camera and severity style into their own modules was tried and
+  // measured 4480.3 KiB (more chunk overhead), so it was not kept. Keep
+  // 15.1 KiB of bounded headroom at 4464 KiB; chunk ceilings stay fixed.
+  totalClientJsBytes: 4_571_136,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.

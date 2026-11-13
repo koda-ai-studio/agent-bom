@@ -30,6 +30,7 @@ Shield,
 ShieldAlert,
 ShieldCheck,
 Users,
+Workflow,
 Wrench
 } from "lucide-react";
 
@@ -135,6 +136,9 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       { href: "/manifest", label: "AI BOM", icon: ClipboardList, desc: "Registered agents, MCP inventory, and runtime observations" },
       { href: "/fleet", label: "Fleet", icon: Users, desc: "Enrollment, review, and lifecycle management" },
+    ],
+    secondary: [
+      { href: "/agents/architecture", label: "Agent architecture", icon: Workflow, desc: "Multi-agent harnesses as layered maps and flows, with findings on each agent" },
     ],
   },
   {
