@@ -8,6 +8,7 @@ CLI change with ``python tests/cli_tree_snapshot.py``.
 from __future__ import annotations
 
 import hashlib
+import inspect
 import json
 from pathlib import Path
 from typing import Any
@@ -41,7 +42,7 @@ def _param(param: click.Parameter) -> dict[str, Any]:
     if isinstance(param, click.Option):
         entry.update(
             {
-                "help": param.help,
+                "help": _text(param.help),
                 "hidden": param.hidden,
                 "is_flag": param.is_flag,
                 "count": param.count,
@@ -55,14 +56,20 @@ def _param(param: click.Parameter) -> dict[str, Any]:
 FIXTURE = Path(__file__).parent / "fixtures" / "cli_command_tree.json"
 
 
+def _text(value: str | None) -> str | None:
+    # Python 3.13 dedents docstrings at compile time; earlier and later builds
+    # may not, so compare help text in its cleaned form.
+    return inspect.cleandoc(value) if value else value
+
+
 def _describe(command: click.Command) -> dict[str, Any]:
     return {
         "name": command.name,
         "hidden": command.hidden,
         "deprecated": _jsonable(command.deprecated),
-        "help": command.help,
-        "short_help": command.short_help,
-        "epilog": command.epilog,
+        "help": _text(command.help),
+        "short_help": _text(command.short_help),
+        "epilog": _text(command.epilog),
         "params": [_param(param) for param in command.params],
         "group": isinstance(command, click.Group),
     }
