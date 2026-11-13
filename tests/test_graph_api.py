@@ -1057,7 +1057,7 @@ class TestPersistedGraphQueries:
             tenant_id="default",
             scan_id="identity-hop-scan",
             source=account_id,
-            max_depth=2,
+            max_depth=3,
         )
 
         assert truncated is False
@@ -1080,8 +1080,8 @@ class TestPersistedGraphQueries:
         assert resource_id in bounded_reachable
         assert "agent:cloud-agent" not in bounded_reachable
         assert budget_truncated is False
-        # Nothing lies beyond the resource in the forward direction any more.
-        assert depth_limited is False
+        # The account owns its principal, and the principal manages the agent one hop further on.
+        assert depth_limited is True
 
     def test_sqlite_graph_store_impact_of_uses_reverse_edges(self, tmp_path):
         store = SQLiteGraphStore(tmp_path / "graph.db")

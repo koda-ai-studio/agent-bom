@@ -778,8 +778,12 @@ def test_demo_estate_graph_rolls_up_to_a_readable_estate(shared_demo_estate_clie
         params={"node": "org:enterprise:northstar-health-ai"},
     ).json()
     account_ids = {row.get("id") for row in accounts.get("children") or []}
-    assert "account:aws:123456789012" in account_ids
     assert len(account_ids) >= 40, len(account_ids)
+    # The incident account is also recorded under the corporate sub-organization, its nearest scope.
+    assert "account:aws:123456789012" not in account_ids
+    assert "org:corp" in account_ids
+    corp = shared_demo_estate_client.get("/v1/graph/rollup", headers=VIEWER, params={"node": "org:corp"}).json()
+    assert "account:aws:123456789012" in {row.get("id") for row in corp.get("children") or []}
 
     envs = shared_demo_estate_client.get("/v1/graph/rollup", headers=VIEWER, params={"node": "account:aws:123456789012"}).json()
     env_children = {row.get("id"): row for row in envs.get("children") or []}

@@ -428,6 +428,7 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
                 dimensions=NodeDimensions(cloud_provider=provider, surface="identity"),
             )
         )
+        _link_inventory_account(graph, provider_node_id, account_node_id)
 
     resource_ids: list[str] = []
 
@@ -490,6 +491,7 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
         iid = _clean_graph_part(instance.get("instance_id")) or _clean_graph_part(instance.get("id"))
         if iid:
             instance_node_by_id[iid] = inst_node_id
+        _link_inventory_instance(graph, account_id, account_node_id, inst_node_id, instance)
 
     internet_facing_lbs = project_aws_services(
         graph,
@@ -577,6 +579,37 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
                 data_sources=data_sources,
                 allow_heuristic_authorization=allow_heuristic_authorization,
             )
+
+
+def _link_inventory_account(graph: UnifiedGraph, provider_node_id: str, account_node_id: str) -> None:
+    """The payload names both: this account was collected from this provider."""
+    graph.add_edge(
+        UnifiedEdge(
+            source=provider_node_id,
+            target=account_node_id,
+            relationship=RelationshipType.HOSTS,
+            evidence={"source": "cloud-inventory", "reason": "inventory_account_provider"},
+        )
+    )
+
+
+def _link_inventory_instance(graph: UnifiedGraph, account_id: str, account_node_id: str, node_id: str, instance: dict[str, Any]) -> None:
+    """Place an inventoried instance under the inventory's account unless it names another one."""
+    if _recorded_in_account(instance, account_id):
+        _add_account_resource_hierarchy(
+            graph, account_node_id, node_id, evidence={"source": "cloud-inventory", "reason": "inventory_instance"}
+        )
+
+
+def _recorded_in_account(resource: dict[str, Any], account_id: str) -> bool:
+    """True when nothing on the resource names an account other than the inventory's own."""
+    if not account_id:
+        return False
+    for key in ("account_id", "project_id", "subscription_id"):
+        named = _clean_graph_part(resource.get(key))
+        if named and named != account_id:
+            return False
+    return True
 
 
 def _account_scoped_principal(principal: dict[str, Any], principal_id: str, account_node_id: str) -> str:

@@ -18,6 +18,7 @@ __all__ = [
     "_GOVERNANCE_EDGE_LIMIT",
     "_GRAPH_QUERY_ABSOLUTE_LIMITS",
     "_GRAPH_QUERY_DEFAULT_BUDGET",
+    "_NODE_PAGE_ATTACK_PATH_LIMIT",
     "_SEMANTIC_LAYER_LABELS",
 ]
 
@@ -29,6 +30,10 @@ _GRAPH_QUERY_DEFAULT_BUDGET = GRAPH_QUERY_DEFAULT_BUDGET
 
 
 _FILTERED_GRAPH_ATTACK_PATH_LIMIT = 100
+
+# The default node page embeds its highest-ranked paths only; each carries a
+# full exposure record, so the slice is sized to keep the first page lean.
+_NODE_PAGE_ATTACK_PATH_LIMIT = 25
 
 
 _GOVERNANCE_EDGE_LIMIT = 5_000

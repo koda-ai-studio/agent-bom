@@ -32,6 +32,13 @@ describe the selected population; never add both tables to compute a total.
 The existing `source`, completeness, snapshot and generation fields retain
 their scope and continuation semantics.
 
+`GET /v1/graph` (the ranked node page) embeds only the 25 highest-risk paths
+whose source is on the page; `attack_path_pagination` reports `total`,
+`limit`, `has_more` and the `endpoint` (`/v1/graph/attack-paths`) that serves
+the complete ranked set. `view=canvas` also drops the copies of the path's hop
+receipts (`exposure_path.hopEvidence`), `exposure_path.evidenceDimensions` and
+each exposure hop's `evidenceProvenance`; the default projection keeps them.
+
 Keep base evidence intact when refreshing derived paths. A shared-payload
 storage design would need to preserve distinct payloads, duplicate path
 occurrences, tenant/scan identity, derivation-version fallback and atomic
@@ -503,6 +510,41 @@ and describe the returned level rather than the whole estate.
 The graph shows a compact overlap explanation when memberships exceed unique
 descendants. Missing metadata in older responses does not establish disjoint
 scopes.
+
+The roll-up tree is built from `contains` plus typed ownership edges: a
+provider `hosts` its org and account, an org or account `owns` what the
+relationship contract lets it own (identities, guardrail policies, data
+stores, gateways, cloud resources), a storage `cloud_resource` `stores` its
+`data_store` companion, and the agent stack (agent → server → package →
+advisory). Untyped `hosts` / `owns` / `stores` edges never parent. A provider
+parents an org or account only when nothing else does, so an account an
+organization already contains never makes its provider an overlapping root. A child is
+listed under its nearest parent only: when a node is recorded under a scope
+and also under one of that scope's descendants (an environment that contains
+every package an image in it already holds), the outer listing is dropped.
+Descendant sets, and every aggregate computed from them, are unchanged; only
+the direct-child rows lose the duplicate. Parents that reach the child only
+through a cycle back through the child itself never count as the nearer one,
+and a child whose every parent would be dropped keeps them all.
+
+Cloud inventory records which provider and account each asset came from, so
+the provider `hosts` the account and every inventoried instance whose own
+account / project / subscription field is absent or matches is `owns` +
+`contains` under that account. A cloud-origin agent's `scope.org_id` is
+emitted as org `contains` account beside the existing `part_of`, and its
+principal as account `owns` principal beside `member_of`. A blast-radius row
+without an ecosystem or purl is attached to the inventoried package it names
+only when exactly one ecosystem matches the name and version among the row's
+affected servers (or the estate, when it names none); the occurrence edge
+records `ecosystem_basis: inventory_package_match`. Ambiguous rows keep the
+reported `pkg::name@version` node.
+
+An inventory agent without its own `config_path` is identified by type and
+name within the inventory's declared `source_id` (else `source`); the
+inventory file path never enters identity. Without a declared source the id
+is type and name only, so two undeclared inventories that use the same agent
+name describe one agent. Earlier path-based and location-free ids are listed
+in `previous_canonical_ids` / `previous_graph_ids`.
 
 The graph renderer ships deterministic focused and expanded modes. Operators can override per-tenant; defaults match the table below.
 
