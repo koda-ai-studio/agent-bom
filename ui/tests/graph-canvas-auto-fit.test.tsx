@@ -196,7 +196,29 @@ it("fits every loaded node on load, never a neighbourhood or a lone card, with a
   const options = flow.fitView.mock.calls[0]![0] as { nodes?: unknown; maxZoom: number; minZoom: number };
   expect(options.nodes).toBeUndefined();
   expect(options.maxZoom).toBe(1);
-  expect(options.minZoom).toBeLessThanOrEqual(0.1);
+  // Framing the whole graph was chosen because captions stay legible there; the camera keeps that promise.
+  expect(options.minZoom).toBe(0.4);
+});
+
+it("never frames the whole graph below the legible zoom it was chosen for, even with room kept for the controls", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  flow.width = 1134;
+  flow.zoom = 0.402;
+  flow.getNodes.mockReturnValue(Array.from({ length: 20 }, (_, index) => ({ id: `n${index}`, position: { x: (index % 6) * 370, y: Math.floor(index / 6) * 345 }, data: {} })));
+  render(<GraphCanvasAutoFit enabled layoutKey="twenty" anchorId="n0" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  const fits = flow.fitView.mock.calls.map(([options]) => options as { nodes?: unknown; minZoom: number; padding: { left: unknown } });
+  expect(fits.length).toBeGreaterThan(0);
+  for (const options of fits) {
+    expect(options.nodes).toBeUndefined();
+    expect(options.padding.left).toBe("72px");
+    expect(options.minZoom).toBe(0.4);
+  }
 });
 
 it("opens a graph too dense to read whole on the anchor's neighbourhood, never a lone card", async () => {
