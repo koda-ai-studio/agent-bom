@@ -35,7 +35,7 @@ from agent_bom.ai_components.patterns import (
     SDK_PATTERNS_BY_LANGUAGE,
 )
 from agent_bom.core import regex_prefilter
-from agent_bom.scan_budget import budget_stop_detail, current_source_budget
+from agent_bom.core.scan_budget import budget_stop_detail, current_source_budget
 from agent_bom.scanners.secret_lines import is_placeholder_value
 from agent_bom.scanners.state import record_coverage_warning
 from agent_bom.traversal import is_nested_worktree_root

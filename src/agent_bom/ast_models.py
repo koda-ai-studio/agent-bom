@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from agent_bom.ast.flow_scoring import flow_cwe_ids, flow_severity
 from agent_bom.ast.flow_serialize import flow_finding_rows
-from agent_bom.ast_report_rows import relationship_rows
+from agent_bom.ast.report_rows import relationship_rows
 
 
 @dataclass

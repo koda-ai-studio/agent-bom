@@ -10,7 +10,7 @@ from rich.markup import escape
 from agent_bom.cli._common import logger
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
-from agent_bom.scan_budget import budget_stop_summary
+from agent_bom.core.scan_budget import budget_stop_summary
 from agent_bom.scanners import consume_coverage_warnings
 
 

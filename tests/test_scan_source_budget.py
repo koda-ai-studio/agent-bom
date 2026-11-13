@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from agent_bom.scan_budget import DEFAULT_SOURCE_BUDGET
+from agent_bom.core.scan_budget import DEFAULT_SOURCE_BUDGET
 
 _PY = 1_700
 _JS = 900

@@ -24,8 +24,8 @@ from agent_bom.cli.agents.scan_pipeline import (
 from agent_bom.cli.agents.scan_pipeline.budget_policy import scan_source_budget
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
+from agent_bom.core.scan_budget import source_budget_scope
 from agent_bom.redaction.text_memo import sanitize_text_memo
-from agent_bom.scan_budget import source_budget_scope
 
 Stage = Callable[[ScanOptions, ScanState], None]
 

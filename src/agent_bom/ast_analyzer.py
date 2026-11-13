@@ -85,7 +85,7 @@ from agent_bom.ast_rust import _rust_function_key, build_rust_dependency_symbol_
 from agent_bom.ast_rust import scan_rust_file as _scan_rust_file
 from agent_bom.ast_swift import _swift_function_key, build_swift_dependency_symbol_reach, load_swift_package_map
 from agent_bom.ast_swift import scan_swift_file as _scan_swift_file
-from agent_bom.scan_budget import budget_stop_detail, current_source_budget
+from agent_bom.core.scan_budget import budget_stop_detail, current_source_budget
 from agent_bom.scanners.repo_ignore import RepositoryIgnore
 from agent_bom.traversal import iter_discovery_files
 

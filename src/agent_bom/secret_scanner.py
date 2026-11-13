@@ -31,9 +31,9 @@ from pathlib import Path
 
 from agent_bom import config
 from agent_bom.core.path_context import CONTEXT_SEVERITY
+from agent_bom.core.scan_budget import budget_stop_detail, current_source_budget
 from agent_bom.redaction.entropy import shannon_entropy as _shannon_entropy
 from agent_bom.runtime.patterns import PII_PATTERNS
-from agent_bom.scan_budget import budget_stop_detail, current_source_budget
 from agent_bom.scanners.aws_secret_validation import AwsCredentialValidator, aws_secret_candidates, nearest_aws_secret
 from agent_bom.scanners.build_metadata import mask_build_config_quantities
 from agent_bom.scanners.credential_validation import CredentialValidator, ValidationStatus

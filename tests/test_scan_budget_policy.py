@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 from agent_bom.cli.agents.scan_pipeline import budget_policy
-from agent_bom.scan_budget import DEFAULT_SOURCE_BUDGET
+from agent_bom.core.scan_budget import DEFAULT_SOURCE_BUDGET
 
 _CI_VARS = ("CI", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL", "CIRCLECI", "TRAVIS", "TF_BUILD", "BITBUCKET_PIPELINE_UUID", "BUILDKITE")
 

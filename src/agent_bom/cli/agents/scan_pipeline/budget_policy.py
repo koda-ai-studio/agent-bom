@@ -14,7 +14,7 @@ from typing import Any
 
 from agent_bom.ci_detect import is_ci
 from agent_bom.cli._agent_mode import agent_mode_requested
-from agent_bom.scan_budget import DEFAULT_SOURCE_BUDGET, SourceBudget
+from agent_bom.core.scan_budget import DEFAULT_SOURCE_BUDGET, SourceBudget
 
 #: Output formats written for pipelines and other tools rather than for a person.
 _MACHINE_FORMATS = frozenset({"sarif", "junit", "cyclonedx", "spdx", "spdx2", "csv", "parquet", "prometheus", "badge"})
