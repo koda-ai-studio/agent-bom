@@ -212,8 +212,12 @@ def test_readme_embeds_cli_and_investigation_and_links_workflow_detail() -> None
     for diagram in ("workflow-dark.svg", "architecture-dark.svg", "persona-value-dark.svg"):
         assert diagram not in readme
     assert "docs/GALLERY.md" in readme
-    assert "Fictional sample estate" in readme
-    assert "not observed at runtime" in readme
+    # The README caption stays plain; the sample's caveats live in one place the caption links to.
+    assert "*Sample data.* [What the sample shows](docs/GALLERY.md#what-the-readme-sample-shows)" in readme
+    gallery = (ROOT / "docs" / "GALLERY.md").read_text(encoding="utf-8")
+    sample = gallery.split("## What the README sample shows", 1)[1].split("\n## ", 1)[0]
+    for caveat in ("fictional sample estate", "not observed at runtime", "collected snapshot", "no recorded execution host"):
+        assert caveat in " ".join(sample.split())
 
 
 def test_persona_table_rows_all_carry_a_concrete_first_action() -> None:

@@ -174,7 +174,9 @@ def lookup_package(
     exact_names = package_lookup_names(norm_name, ecosystem)
     exact_slots = ", ".join("?" for _ in exact_names)
     legacy_names = (norm_name, *legacy_package_lookup_names(norm_name, ecosystem))
-    legacy_slots = ", ".join("?" for _ in legacy_names)
+    # Equivalent to "exact OR (no limit AND legacy)"; the name list lets SQLite seek the index.
+    candidate_names = tuple(dict.fromkeys((*exact_names, *legacy_names)))
+    candidate_slots = ", ".join("?" for _ in candidate_names)
 
     span_cm = _LOOKUP_TRACER.start_as_current_span("db.lookup_package") if _LOOKUP_TRACER else nullcontext()
     with span_cm as span:
@@ -193,11 +195,11 @@ def lookup_package(
             JOIN vulns v ON v.id = a.vuln_id
             LEFT JOIN epss_scores e ON e.cve_id = v.id
             LEFT JOIN kev_entries k ON k.cve_id = v.id
-            WHERE a.ecosystem = ? AND (a.package_name IN ({exact_slots})
-                OR ({limit_projection} IS NULL AND a.package_name IN ({legacy_slots})))
+            WHERE a.ecosystem = ? AND a.package_name IN ({candidate_slots})
+                AND (a.package_name IN ({exact_slots}) OR {limit_projection} IS NULL)
             ORDER BY v.cvss_score DESC NULLS LAST
             """,  # nosec B608 - projection is one of two static SQL literals; values are bound
-            (eco_lower, *exact_names, *legacy_names),
+            (eco_lower, *candidate_names, *exact_names),
         ).fetchall()
 
         epss_map, kev_map = _load_cve_enrichment(conn, rows)
