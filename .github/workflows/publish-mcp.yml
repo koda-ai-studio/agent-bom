@@ -38,11 +38,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/resolve_published_mcp_release.py
 
-  # Gate each image before anything is pushed. This job checks out and runs the
-  # release's own scripts, so it holds only a read token; the publish jobs below
-  # still build from the verified Git context and run no release code. As in
-  # release.yml's container gate, the candidate is rebuilt from the same source
-  # for the push, and the image scans a saved tar of itself.
+  # Gate each image before anything is pushed. The candidate builds inside
+  # BuildKit from the verified release commit, as the publish jobs do; the runner
+  # checks out and runs only default-branch code (the smoke script and the scan
+  # allowlist). As in release.yml's container gate, the candidate is rebuilt from
+  # the same source for the push, and the image scans a saved tar of itself.
   gate:
     name: Gate MCP image (${{ matrix.image }})
     needs: release
@@ -64,15 +64,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.release.outputs.release_sha }}
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
 
       - name: Build candidate image
         env:
+          CONTEXT: https://github.com/${{ github.repository }}.git#${{ needs.release.outputs.release_sha }}
           DOCKERFILE: ${{ matrix.dockerfile }}
           IMAGE: agent-bom-${{ matrix.image }}:gate
           VERSION: ${{ needs.release.outputs.version }}
-        run: docker build -f "$DOCKERFILE" --build-arg "VERSION=$VERSION" -t "$IMAGE" .
+        run: docker build -f "$DOCKERFILE" --build-arg "VERSION=$VERSION" -t "$IMAGE" "$CONTEXT"
 
       - name: Start the candidate and list its tools
         env:

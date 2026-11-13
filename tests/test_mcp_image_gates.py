@@ -120,13 +120,19 @@ def test_required_test_context_includes_the_mcp_image_lane() -> None:
 def test_publish_gates_each_image_before_any_push() -> None:
     jobs = _workflow("publish-mcp.yml")["jobs"]
     gate = jobs["gate"]
-    assert gate["permissions"] == {"contents": "read"}, "the gate runs release code, so it holds no write token"
+    assert gate["permissions"] == {"contents": "read"}, "the gate builds release code, so it holds no write token"
     assert gate["needs"] == "release"
     matrix = _matrix(gate)
     assert {name: entry["dockerfile"] for name, entry in matrix.items()} == {k: MCP_DOCKERFILES[k] for k in ("mcp", "sse")}
-    checkout = next(step for step in gate["steps"] if step.get("uses", "").startswith("actions/checkout@"))
-    assert checkout["with"]["ref"] == "${{ needs.release.outputs.release_sha }}"
-    assert checkout["with"]["persist-credentials"] is False
+    # The release source stays inside BuildKit; the runner checks out and runs only
+    # default-branch code, so no release code can write to the default branch's cache.
+    checkouts = [step for step in gate["steps"] if step.get("uses", "").startswith("actions/checkout@")]
+    assert len(checkouts) == 1
+    assert checkouts[0]["with"]["ref"] == "${{ github.event.repository.default_branch }}"
+    assert checkouts[0]["with"]["persist-credentials"] is False
+    build = next(step for step in gate["steps"] if step.get("name") == "Build candidate image")
+    assert build["env"]["CONTEXT"] == "https://github.com/${{ github.repository }}.git#${{ needs.release.outputs.release_sha }}"
+    assert '"$CONTEXT"' in build["run"]
     runs = "\n".join(step.get("run", "") for step in gate["steps"])
     assert "scripts/smoke_mcp_image.py" in runs
     # Same policy as the release container gate: the image scans a saved tar of itself.
