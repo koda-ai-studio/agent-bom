@@ -177,7 +177,11 @@ def test_serving_images_come_from_the_runtime_vendors() -> None:
         "llamacpp": "ghcr.io/ggml-org/llama.cpp:server",
         "vllm": "vllm/vllm-openai-cpu:latest",
         "ollama": "ollama/ollama:latest",
+        "tgi": "ghcr.io/huggingface/text-generation-inference:3.3.7-intel-cpu"
+        "@sha256:89b4cc8d6e4f7c184c63485a63094760ac9454be658a90f68bc8ecc3cde228bc",
+        "triton": "nvcr.io/nvidia/tritonserver:26.10-py3@sha256:b404f7de5dbeeefe0b17d7d149745a50d0989a25d0d831433b5ba63c716c2fcd",
     }
+    assert serving.PLATFORMS == {"tgi": "linux/amd64"}
     assert serving.GGUF_URL.startswith("https://huggingface.co/Qwen/")
 
 
@@ -194,3 +198,69 @@ def test_secret_env_names_variables_and_carries_values_only_in_the_environment(m
 def test_lanes_never_write_secrets_to_env_files() -> None:
     for script in QUALIFICATION.glob("*.py"):
         assert "--env-file" not in script.read_text(encoding="utf-8"), script.name
+
+
+def test_serving_reads_split_method_and_path() -> None:
+    assert serving.split_read("POST /v2/repository/index") == ("POST", "/v2/repository/index")
+    assert serving.split_read("/info") == ("GET", "/info")
+    for runtime, listing in serving.LISTING.items():
+        assert listing in serving.READS[runtime]
+        assert runtime in serving.READY
+
+
+def test_tgi_truth_is_the_info_model_id_sha_and_version() -> None:
+    info = {
+        "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "model_sha": "abc123",
+        "version": "3.3.7",
+        "router": "text-generation-router",
+    }
+    truth = serving.tgi_truth(info)
+    assert truth == {
+        "records": ["served_name=HuggingFaceTB/SmolLM2-135M-Instruct version=None digest=abc123 state=None"],
+        "runtime_version": "3.3.7",
+    }
+
+
+def test_triton_truth_lists_every_index_entry_with_version_and_state() -> None:
+    index = [{"name": "m", "version": "2", "state": "READY"}, {"name": "m", "version": "1", "state": "READY"}]
+    truth = serving.triton_truth(index, {"name": "triton", "version": "2.74.0"})
+    assert truth["records"] == [
+        "served_name=m version=1 digest=None state=READY",
+        "served_name=m version=2 digest=None state=READY",
+    ]
+    assert truth["runtime_version"] == "2.74.0"
+
+
+@pytest.mark.parametrize(
+    ("overrides", "ok"),
+    [
+        ({}, True),
+        ({"records": []}, False),
+        ({"runtime": ["triton 2.73.0 confirmed"]}, False),
+        ({"agent_names": []}, False),
+    ],
+)
+def test_expect_truth_requires_the_same_models_and_runtime_version(overrides, ok) -> None:
+    truth = {"records": ["served_name=m version=1 digest=None state=READY"], "runtime_version": "2.74.0"}
+    outcome = _outcome(runtime=["triton 2.74.0 confirmed"], records=list(truth["records"]), agent_names=["triton-model-m@1"])
+    outcome.update(overrides)
+    result = common.LaneResult("serving", "t")
+    serving.expect_truth(result, "triton", outcome, truth)
+    assert result.passed is ok
+
+
+def test_triton_repository_serves_two_cpu_versions(tmp_path: Path) -> None:
+    root = serving.write_triton_repository(tmp_path)
+    model = root / serving.TRITON_MODEL
+    assert sorted(p.name for p in model.iterdir()) == ["1", "2", "config.pbtxt"]
+    config = (model / "config.pbtxt").read_text(encoding="utf-8")
+    assert "KIND_CPU" in config and "version_policy: { all: {} }" in config and 'backend: "python"' in config
+
+
+def test_triton_key_reaches_the_server_only_through_the_environment() -> None:
+    open_command = serving.triton_command(keyed=False)[-1]
+    keyed_command = serving.triton_command(keyed=True)[-1]
+    assert "restricted" not in open_command
+    assert "${TRITON_QUALIFICATION_KEY}" in keyed_command
+    assert "model-repository,metadata:Authorization=Bearer" in keyed_command
