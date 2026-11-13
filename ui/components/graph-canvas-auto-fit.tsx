@@ -112,7 +112,11 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const phone = width < 640;
     const legiblePath = !phone && primaryPathKey ? legiblePrefix(primaryPathKey.split("\n"), nodes, getNodesBounds, width, height, primaryZoom ?? GRAPH_LEGIBLE_FIT_ZOOM) : null;
     const focus = !frameSize.fitAll && anchor ? (phone ? [{ id: anchor.id }] : legiblePath ?? neighbourhood(anchor.id, nodes.map(node => node.id), getEdges())) : null;
-    let options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: phone ? padding : "72px" }, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM,
+    // The whole graph is framed only because it reads at the legible zoom with symmetric padding.
+    // The controls' left inset narrows the fit slightly, so hold the camera at that zoom; the
+    // symmetric margin still covers the difference, so no card leaves the frame.
+    const whole = { minZoom: legibleFitZoom(width), maxZoom: GRAPH_FIT_MAX_ZOOM };
+    let options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: phone ? padding : "72px" }, duration: 0, ...whole,
       ...(focus ? phone ? { nodes: focus, minZoom: GRAPH_PHONE_FOCUS_MIN_ZOOM, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width), ...(legiblePath ? { maxZoom: PRIMARY_PATH_MAX_ZOOM } : {}), ...(legiblePath && primaryZoom ? { minZoom: primaryZoom, maxZoom: primaryZoom } : {}) } : {}) };
     let fitIds = focus ? new Set(focus.map(node => node.id)) : null;
     // Convergence must measure exactly the nodes passed to fitView.
@@ -126,7 +130,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
       // stale first measurement must not pin a small graph to one neighbour.
       if (pass > 0 && fitIds && getViewportForBounds(getNodesBounds(getNodes().filter(n => !n.hidden)), width, height, 0.05, 2, padding).zoom >= legibleFitZoom(width)) {
         fitIds = null;
-        options = { padding: options.padding ?? padding, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM };
+        options = { padding: options.padding ?? padding, duration: 0, ...whole };
       }
       const before = fittedBounds();
       void fitWithin(fitView(options)).then(fitted => {
