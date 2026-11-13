@@ -243,8 +243,12 @@ def _review_to_status(report: SkillFileReport) -> ThreatIntelStatus:
     verdict = report.trust.review_verdict.value
     if verdict == "trusted":
         return ThreatIntelStatus.CLEAN
-    if verdict in {"blocked", "high_risk"}:
+    # Malicious needs a malicious indicator (a blocked finding or malicious content);
+    # high risk alone is a handling call such as shell access.
+    if verdict == "blocked" or report.trust.content_verdict == Verdict.MALICIOUS:
         return ThreatIntelStatus.MALICIOUS
+    if verdict == "high_risk":
+        return ThreatIntelStatus.SUSPICIOUS
     if report.trust.content_verdict == Verdict.BENIGN:
         return ThreatIntelStatus.PENDING
     return ThreatIntelStatus.SUSPICIOUS

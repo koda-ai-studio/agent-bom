@@ -89,7 +89,7 @@ function report(overrides: Partial<SkillsScanReport> = {}): SkillsScanReport {
           verdict: "benign",
           content_verdict: "benign",
           provenance_verdict: "verified",
-          review_verdict: "clean",
+          review_verdict: "trusted",
           confidence: "high",
           recommendations: [],
           review_reasons: [],

@@ -26,7 +26,7 @@ def test_vuln_db_cache_targets_the_directory_the_cli_reads(monkeypatch) -> None:
     default_db = state_home.state_dir() / "db" / "vulns.db"
     expected = "~/" + str(default_db.relative_to(Path.home()))
     assert cache["with"]["path"].strip() == expected
-    assert schema._DEFAULT_DB_DIR.name == default_db.parent.name
+    assert schema._default_db_file() == default_db
 
 
 def test_vuln_db_cache_key_rolls_daily_and_restores_the_last_copy() -> None:

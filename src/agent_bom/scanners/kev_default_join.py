@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import logging
+import threading
+from dataclasses import dataclass, field
 
 from agent_bom import enrichment
 from agent_bom.compliance_utils import apply_effective_blast_radius_tags
@@ -18,7 +21,53 @@ _logger = logging.getLogger(__name__)
 _DEFAULT_KEV_JOIN_TIMEOUT_SECONDS = 10.0
 
 
-def join_default_kev_catalog(blast_radii: list[BlastRadius], *, offline: bool) -> int:
+@dataclass
+class KevPrefetch:
+    """A KEV catalog fetch started before the vulnerability scan so the two overlap."""
+
+    done: threading.Event = field(default_factory=threading.Event)
+    catalog: dict | None = None
+
+    def wait(self, timeout: float) -> dict | None:
+        """The fetched catalog, or None when it failed or is still running."""
+        return self.catalog if self.done.wait(timeout) else None
+
+
+async def _fetch_catalog() -> dict:
+    async with enrichment.create_client(timeout=_DEFAULT_KEV_JOIN_TIMEOUT_SECONDS) as client:
+        return await enrichment.fetch_cisa_kev_catalog(client)
+
+
+def _run_prefetch(prefetch: KevPrefetch) -> None:
+    try:
+        prefetch.catalog = asyncio.run(_fetch_catalog())
+    except Exception as exc:  # noqa: BLE001  # broad-except: a failed prefetch falls back to the join's own fetch
+        _logger.debug("CISA KEV prefetch failed: %s", type(exc).__name__)
+    finally:
+        prefetch.done.set()
+
+
+def start_default_kev_prefetch(*, offline: bool) -> KevPrefetch | None:
+    """Start fetching the KEV catalog in the background; None when the join needs no network."""
+    if enrichment._offline_enrichment_enabled(offline=offline) or kev_default_join_mode() in {"0", "off", "false", "no", "cache"}:
+        return None
+    prefetch = KevPrefetch()
+    context = contextvars.copy_context()
+    threading.Thread(target=context.run, args=(_run_prefetch, prefetch), name="kev-prefetch", daemon=True).start()
+    return prefetch
+
+
+def _join(vulns: list, *, offline: bool, mode: str, prefetch: KevPrefetch | None) -> None:
+    catalog = prefetch.wait(_DEFAULT_KEV_JOIN_TIMEOUT_SECONDS) if prefetch is not None else None
+    if catalog is not None:
+        join_kev_status(vulns, catalog)
+        return
+    asyncio.run(
+        enrichment.join_kev_catalog(vulns, offline=offline or mode == "cache", timeout=_DEFAULT_KEV_JOIN_TIMEOUT_SECONDS),
+    )
+
+
+def join_default_kev_catalog(blast_radii: list[BlastRadius], *, offline: bool, prefetch: KevPrefetch | None = None) -> int:
     """Join CISA KEV onto a scan that ran without ``--enrich``; return KEV findings.
 
     KEV drives fix-first priority and the KEV counts, so it is not an opt-in.
@@ -26,7 +75,9 @@ def join_default_kev_catalog(blast_radii: list[BlastRadius], *, offline: bool) -
     cache or air-gap bundle). It never fails the scan: when the catalog is
     unavailable each vulnerability is marked ``kev_status="unknown"``.
     ``AGENT_BOM_KEV_DEFAULT_JOIN=cache`` restricts it to local caches,
-    ``off`` disables it.
+    ``off`` disables it. A ``prefetch`` started before the vulnerability scan
+    supplies the catalog; when it failed or did not finish in time, the join
+    fetches as before, so an unavailable catalog still reads ``unknown``.
     """
     if not blast_radii:
         return 0
@@ -36,9 +87,7 @@ def join_default_kev_catalog(blast_radii: list[BlastRadius], *, offline: bool) -
     vulns = list({id(br.vulnerability): br.vulnerability for br in blast_radii}.values())
     already_listed = {id(v) for v in vulns if v.is_kev}
     try:
-        asyncio.run(
-            enrichment.join_kev_catalog(vulns, offline=offline or mode == "cache", timeout=_DEFAULT_KEV_JOIN_TIMEOUT_SECONDS),
-        )
+        _join(vulns, offline=offline, mode=mode, prefetch=prefetch)
     except Exception as exc:  # noqa: BLE001 - KEV is advisory context; the scan result stands
         _logger.warning("CISA KEV catalog join unavailable: %s", type(exc).__name__)
         join_kev_status(vulns, {})
