@@ -19,7 +19,10 @@ Enforcement is layered:
    it filters ``tools/list``, empties resource/prompt listings, refuses every
    other method, and validates allowlisted arguments.
 3. ``check_public_rate_limit`` adds a per-client and an aggregate anonymous
-   budget on top of the server's existing per-caller limit.
+   budget on top of the server's existing per-caller limit. A client is an
+   IPv4 address or an IPv6 /64, part of the aggregate is reserved for clients'
+   first calls, ``initialize`` has its own budget, and the guard caps each
+   client's concurrent tool calls.
 
 Rate windows are in-process; a multi-replica deployment multiplies the
 anonymous budget by the replica count.
@@ -30,6 +33,7 @@ from __future__ import annotations
 import hmac
 import ipaddress
 import json
+import logging
 import time
 from collections import OrderedDict, deque
 from dataclasses import dataclass
@@ -38,13 +42,18 @@ from typing import Any, Callable
 from mcp.server.auth.provider import AccessToken
 from mcp.shared.exceptions import MCPError
 
-from agent_bom.core.settings import env_bool, env_int
+from agent_bom.config import MCP_CALLER_WINDOW_SECONDS
+from agent_bom.core.settings import env_bool, env_int, env_raw
 from agent_bom.mcp_tools.request_identity import request_context, verified_access_token
+
+logger = logging.getLogger(__name__)
 
 PUBLIC_READONLY_ENV = "AGENT_BOM_MCP_PUBLIC_READONLY"
 FORWARDED_HOP_COUNT_ENV = "AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS"
 PUBLIC_CALLER_RATE_LIMIT_ENV = "AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT"
 PUBLIC_TOTAL_RATE_LIMIT_ENV = "AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT"
+PUBLIC_CALLER_CONCURRENCY_ENV = "AGENT_BOM_MCP_PUBLIC_CALLER_CONCURRENCY"
+TRUSTED_PROXY_CIDRS_ENV = "AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS"
 
 PUBLIC_CLIENT_ID = "agent-bom-public-anonymous"
 PUBLIC_SCOPE = "public:read"
@@ -157,72 +166,195 @@ class PublicTierTokenVerifier:
         return await self._inner.verify_token(token)
 
 
+_Network = ipaddress.IPv4Network | ipaddress.IPv6Network
+
+
+def _trusted_proxy_networks() -> tuple[_Network, ...] | None:
+    """Peers allowed to supply ``X-Forwarded-For``: None when unset (any peer), empty when unparseable (none)."""
+    raw = (env_raw(TRUSTED_PROXY_CIDRS_ENV) or "").strip()
+    if not raw:
+        return None
+    try:
+        return tuple(ipaddress.ip_network(part.strip(), strict=False) for part in raw.split(",") if part.strip())
+    except ValueError:
+        return ()
+
+
+def _peer_may_forward(peer: str) -> bool:
+    networks = _trusted_proxy_networks()
+    if networks is None:
+        return True
+    try:
+        address = ipaddress.ip_address(peer)
+    except ValueError:
+        return False
+    return any(address in network for network in networks)
+
+
+def warn_on_unbounded_proxy_trust() -> None:
+    """Start-up warning when forwarded addresses would be read from any peer, or from none by mistake."""
+    if not env_int(FORWARDED_HOP_COUNT_ENV, 0, minimum=0, maximum=10):
+        return
+    networks = _trusted_proxy_networks()
+    if networks is None:
+        logger.warning(
+            "%s is set without %s: X-Forwarded-For is trusted from any connecting peer, so a client that reaches the "
+            "server directly can choose its rate-limit bucket. Set %s to the proxy networks.",
+            FORWARDED_HOP_COUNT_ENV,
+            TRUSTED_PROXY_CIDRS_ENV,
+            TRUSTED_PROXY_CIDRS_ENV,
+        )
+    elif not networks:
+        logger.warning("%s could not be parsed: X-Forwarded-For is ignored and callers are bucketed by peer", TRUSTED_PROXY_CIDRS_ENV)
+
+
+def _bucket(address: str) -> str:
+    """IPv4 callers by address, IPv6 callers by /64: one host can rotate through its whole /64."""
+    try:
+        parsed = ipaddress.ip_address(address)
+    except ValueError:
+        return "unknown" if not address or len(address) > 64 else address
+    if isinstance(parsed, ipaddress.IPv6Address):
+        if parsed.ipv4_mapped is not None:
+            return str(parsed.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{parsed}/64", strict=False))
+    return str(parsed)
+
+
 def anonymous_caller_key(context: Any) -> str:
-    """Bucket anonymous callers by client address.
+    """Bucket anonymous callers by client network.
 
     Behind a proxy the socket peer is the proxy, so the operator declares how
     many trusted hops append to ``X-Forwarded-For``; the entry that many places
     from the right was written by the outermost trusted proxy and cannot be
-    forged by the client, unlike any entry to its left.
+    forged by the client, unlike any entry to its left. With
+    ``AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS`` set, the header is read only
+    when the peer is inside those networks.
     """
     request = getattr(context, "request", None)
     client = getattr(request, "client", None)
     address = str(getattr(client, "host", "") or "")
     hops = env_int(FORWARDED_HOP_COUNT_ENV, 0, minimum=0, maximum=10)
-    if hops and request is not None:
+    if hops and request is not None and _peer_may_forward(address):
         entries = [part.strip() for value in request.headers.getlist("x-forwarded-for") for part in value.split(",") if part.strip()]
         if len(entries) >= hops:
             address = entries[-hops]
-    try:
-        address = str(ipaddress.ip_address(address))
-    except ValueError:
-        address = "unknown" if not address or len(address) > 64 else address
-    return f"{PUBLIC_CALLER_PREFIX}{address}"
+    return f"{PUBLIC_CALLER_PREFIX}{_bucket(address)}"
 
 
 # ── Rate limit ─────────────────────────────────────────────────────────────
 
-_public_windows: OrderedDict[str, deque[float]] = OrderedDict()
-_aggregate_window: deque[float] = deque()
 _MAX_PUBLIC_CALLER_STATES = 4096
+#: A bucket with fewer calls than this in the window counts as first seen and
+#: may draw on the reserved share once the shared share is used up.
+_RESERVE_CALLS_PER_GROUP = 3
+
+
+def _reserve_group(caller: str) -> str:
+    """The coarser network a reserve draw is charged to: /48 for IPv6, /24 for IPv4."""
+    bucket = caller.removeprefix(PUBLIC_CALLER_PREFIX)
+    try:
+        network = ipaddress.ip_network(bucket, strict=False)
+    except ValueError:
+        return bucket
+    return str(network.supernet(new_prefix=48 if network.version == 6 else 24))
+
+
+def _prune(window: deque[float], cutoff: float) -> None:
+    while window and window[0] <= cutoff:
+        window.popleft()
+
+
+def _prune_reserved(window: deque[tuple[float, str]], cutoff: float) -> None:
+    while window and window[0][0] <= cutoff:
+        window.popleft()
+
+
+class _AnonymousBudget:
+    """Per-bucket and aggregate sliding windows, with part of the aggregate reserved for first-seen callers.
+
+    One heavy network can use at most the shared share (80%); the rest admits
+    the first few calls of a bucket that has barely called, charged per /48 or
+    /24 so one network cannot spend the reserve by rotating buckets.
+    """
+
+    def __init__(self) -> None:
+        self.callers: OrderedDict[str, deque[float]] = OrderedDict()
+        self.shared: deque[float] = deque()
+        self.reserved: deque[tuple[float, str]] = deque()
+
+    def reset(self) -> None:
+        self.callers.clear()
+        self.shared.clear()
+        self.reserved.clear()
+
+    def _caller_window(self, caller: str) -> deque[float]:
+        window = self.callers.get(caller)
+        if window is None:
+            if len(self.callers) >= _MAX_PUBLIC_CALLER_STATES:
+                self.callers.popitem(last=False)
+            window = self.callers[caller] = deque()
+        else:
+            self.callers.move_to_end(caller)
+        return window
+
+    def hit(self, caller: str, *, caller_limit: int, total_limit: int, window_seconds: float, now: float) -> float | None:
+        cutoff = now - window_seconds
+        _prune(self.shared, cutoff)
+        _prune_reserved(self.reserved, cutoff)
+        window = self._caller_window(caller)
+        _prune(window, cutoff)
+        if len(window) >= caller_limit:
+            return max(window[0] + window_seconds - now, 0.0)
+        reserve = max(1, total_limit // 5) if total_limit >= 2 else 0
+        if len(self.shared) < total_limit - reserve:
+            self.shared.append(now)
+        elif (
+            len(window) < _RESERVE_CALLS_PER_GROUP and len(self.reserved) < reserve and self._group_draws(caller) < _RESERVE_CALLS_PER_GROUP
+        ):
+            self.reserved.append((now, _reserve_group(caller)))
+        else:
+            oldest = self.shared[0] if self.shared else now
+            return max(oldest + window_seconds - now, 0.0)
+        window.append(now)
+        return None
+
+    def _group_draws(self, caller: str) -> int:
+        group = _reserve_group(caller)
+        return sum(1 for _, drawn in self.reserved if drawn == group)
+
+
+_CALL_BUDGET = _AnonymousBudget()
+_SESSION_BUDGET = _AnonymousBudget()
+_in_flight: dict[str, int] = {}
 
 
 def reset_public_rate_windows() -> None:
-    _public_windows.clear()
-    _aggregate_window.clear()
+    _CALL_BUDGET.reset()
+    _SESSION_BUDGET.reset()
+    _in_flight.clear()
 
 
-def _hit(window: deque[float], *, limit: int, window_seconds: float, now: float) -> float | None:
-    while window and window[0] <= now - window_seconds:
-        window.popleft()
-    if len(window) >= limit:
-        return max(window[0] + window_seconds - now, 0.0)
-    window.append(now)
-    return None
+def _check_budget(budget: _AnonymousBudget, caller: str, window_seconds: float, now: float | None) -> float | None:
+    if not caller.startswith(PUBLIC_CALLER_PREFIX):
+        return None
+    return budget.hit(
+        caller,
+        caller_limit=env_int(PUBLIC_CALLER_RATE_LIMIT_ENV, 30, minimum=1),
+        total_limit=env_int(PUBLIC_TOTAL_RATE_LIMIT_ENV, 300, minimum=1),
+        window_seconds=window_seconds,
+        now=time.monotonic() if now is None else now,
+    )
 
 
 def check_public_rate_limit(caller: str, *, window_seconds: float, now: float | None = None) -> float | None:
-    """Retry-after seconds when an anonymous caller exceeds its budget, else None."""
-    if not caller.startswith(PUBLIC_CALLER_PREFIX):
-        return None
-    current = time.monotonic() if now is None else now
-    total_limit = env_int(PUBLIC_TOTAL_RATE_LIMIT_ENV, 300, minimum=1)
-    caller_limit = env_int(PUBLIC_CALLER_RATE_LIMIT_ENV, 30, minimum=1)
-    while _aggregate_window and _aggregate_window[0] <= current - window_seconds:
-        _aggregate_window.popleft()
-    if len(_aggregate_window) >= total_limit:
-        return max(_aggregate_window[0] + window_seconds - current, 0.0)
-    window = _public_windows.get(caller)
-    if window is None:
-        if len(_public_windows) >= _MAX_PUBLIC_CALLER_STATES:
-            _public_windows.popitem(last=False)
-        window = _public_windows[caller] = deque()
-    else:
-        _public_windows.move_to_end(caller)
-    retry_after = _hit(window, limit=caller_limit, window_seconds=window_seconds, now=current)
-    if retry_after is None:
-        _aggregate_window.append(current)
-    return retry_after
+    """Retry-after seconds when an anonymous caller exceeds its tool-call budget, else None."""
+    return _check_budget(_CALL_BUDGET, caller, window_seconds, now)
+
+
+def check_public_session_limit(caller: str, *, window_seconds: float = MCP_CALLER_WINDOW_SECONDS, now: float | None = None) -> float | None:
+    """Retry-after seconds when an anonymous caller opens sessions faster than its budget, else None."""
+    return _check_budget(_SESSION_BUDGET, caller, window_seconds, now)
 
 
 # ── MCP middleware (default deny for the anonymous identity) ───────────────
@@ -230,6 +362,7 @@ def check_public_rate_limit(caller: str, *, window_seconds: float, now: float | 
 
 _JSONRPC_INVALID_REQUEST = -32600
 _JSONRPC_INVALID_PARAMS = -32602
+_JSONRPC_SERVER_BUSY = -32000
 
 
 def _mcp_error(code: int, message: str) -> Exception:
@@ -272,17 +405,51 @@ def _filtered_tools(result: Any) -> Any:
     return result.model_copy(update={"tools": tools, "next_cursor": None})
 
 
+def _busy_result(name: Any, limit: int) -> dict[str, Any]:
+    payload = {
+        "error": f"Tool '{name}' exceeded the public tier's {limit} concurrent calls per client network",
+        "tool": name,
+        "rate_limited": True,
+        "retry_after_seconds": 1,
+    }
+    return {"isError": True, "content": [{"type": "text", "text": json.dumps(payload)}]}
+
+
+async def _bounded_call(ctx: Any, call_next: Any) -> Any:
+    """Run one anonymous tool call, at most ``AGENT_BOM_MCP_PUBLIC_CALLER_CONCURRENCY`` at once per bucket."""
+    caller = anonymous_caller_key(ctx)
+    limit = env_int(PUBLIC_CALLER_CONCURRENCY_ENV, 4, minimum=1, maximum=64)
+    if _in_flight.get(caller, 0) >= limit:
+        return _busy_result((ctx.params or {}).get("name"), limit)
+    _in_flight[caller] = _in_flight.get(caller, 0) + 1
+    try:
+        return await call_next(ctx)
+    finally:
+        remaining = _in_flight.get(caller, 1) - 1
+        if remaining > 0:
+            _in_flight[caller] = remaining
+        else:
+            _in_flight.pop(caller, None)
+
+
 async def public_tier_guard(ctx: Any, call_next: Any) -> Any:
     if not is_public_token(verified_access_token(ctx)):
         return await call_next(ctx)
     method = ctx.method
-    if method in {"initialize", "ping"} or method.startswith("notifications/"):
+    if method == "initialize":
+        retry_after = check_public_session_limit(anonymous_caller_key(ctx))
+        if retry_after is not None:
+            raise _mcp_error(
+                _JSONRPC_SERVER_BUSY, f"Anonymous session limit reached for this client network; retry after {retry_after:.0f} s"
+            )
+        return await call_next(ctx)
+    if method == "ping" or method.startswith("notifications/"):
         return await call_next(ctx)
     if method == "tools/list":
         return _filtered_tools(await call_next(ctx))
     if method == "tools/call":
         _validate_public_call(dict(ctx.params or {}))
-        return await call_next(ctx)
+        return await _bounded_call(ctx, call_next)
     if method == "resources/list":
         return {"resources": []}
     if method == "prompts/list":

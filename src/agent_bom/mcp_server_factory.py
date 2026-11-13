@@ -6,8 +6,9 @@ from typing import Any, Callable
 
 from pydantic import AnyHttpUrl, TypeAdapter
 
+from agent_bom.mcp_tools.dispatch import flag_tool_error_results
 from agent_bom.mcp_tools.http_server import install_http_runner
-from agent_bom.mcp_tools.public_tier import PublicTierGate, PublicTierTokenVerifier, public_tier_guard
+from agent_bom.mcp_tools.public_tier import PublicTierGate, PublicTierTokenVerifier, public_tier_guard, warn_on_unbounded_proxy_trust
 
 _HTTP_URL_ADAPTER = TypeAdapter(AnyHttpUrl)
 
@@ -88,7 +89,7 @@ def create_fastmcp_server(
 
     auth_settings = None
     token_verifier: Any = None
-    middleware: list[Any] = [request_identity_context]
+    middleware: list[Any] = [flag_tool_error_results, request_identity_context]
     anonymous_credential: str | None = None
     if public_readonly:
         if oauth_enabled:
@@ -141,23 +142,31 @@ def create_fastmcp_server(
     mcp._lowlevel_server.version = version
     install_http_runner(mcp)
     if anonymous_credential is not None:
-        _install_public_gate(mcp, anonymous_credential)
+        _install_public_gate(mcp, anonymous_credential, stateless=profile == "public")
     return mcp
 
 
 def _public_tier_auth(settings_cls: Any, host: str, port: int, bearer_token: str | None, factory: Callable[[str], Any], credential: str):
     """Accept the gate's anonymous credential plus the optional full-access bearer token."""
+    warn_on_unbounded_proxy_trust()
     settings = settings_cls(
         issuer_url=_HTTP_URL_ADAPTER.validate_python(_public_base_url(host, port)), resource_server_url=None, required_scopes=[]
     )
     return settings, PublicTierTokenVerifier(factory(bearer_token) if bearer_token else None, credential)
 
 
-def _install_public_gate(mcp: Any, anonymous_credential: str) -> None:
-    """Wrap every streamable HTTP app this server builds; SSE stays bearer-only."""
+def _install_public_gate(mcp: Any, anonymous_credential: str, *, stateless: bool = False) -> None:
+    """Wrap every streamable HTTP app this server builds; SSE stays bearer-only.
+
+    The no-login edition (``--profile public``) serves streamable HTTP without
+    sessions: every allowlisted tool is a single request, and anonymous
+    callers then cannot hold entries in the SDK's session table.
+    """
     build_app = mcp.streamable_http_app
 
     def streamable_http_app(*args: Any, **kwargs: Any) -> Any:
+        if stateless:
+            kwargs["stateless_http"] = True
         return PublicTierGate(build_app(*args, **kwargs), anonymous_credential)
 
     mcp.streamable_http_app = streamable_http_app

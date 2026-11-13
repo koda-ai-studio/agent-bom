@@ -106,7 +106,7 @@ def test_admission_keeps_one_parsed_copy_of_the_report(report_40):
 
 @pytest.mark.parametrize(
     "raw",
-    [b"{bad json", b"", b"[1, 2]", b'{"source_id": 5}', b'{"agents": "nope"}', b'{"x": NaN, "scan_run": {"warning_count": 1.5}}'],
+    [b"{bad json", b"", b"[1, 2]", b'{"source_id": 5}', b'{"agents": "nope"}'],
 )
 def test_validation_errors_keep_the_json_validator_shape(raw):
     try:
@@ -120,6 +120,13 @@ def test_validation_errors_keep_the_json_validator_shape(raw):
     with pytest.raises(RequestValidationError) as caught:
         _parse(raw)
     assert list(caught.value.errors()) == expected
+
+
+def test_a_non_finite_number_is_reported_at_its_location_before_other_errors():
+    with pytest.raises(RequestValidationError) as caught:
+        _parse(b'{"x": NaN, "scan_run": {"warning_count": 1.5}}')
+    errors = list(caught.value.errors())
+    assert [(error["type"], error["loc"]) for error in errors] == [("finite_number", ("body", "x"))]
 
 
 def test_the_buffered_request_body_is_released_once_validated(report_40):

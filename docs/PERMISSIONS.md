@@ -583,13 +583,20 @@ It has no login. The image fixes those flags, and startup refuses OAuth with the
   hosting platform's request logs (client address, method, path, status) and the
   server's own log on stdout (each call's tool name, client address and duration, and a
   failed call's error message) follow the platform's retention.
-- **Rate limits.** 30 anonymous calls per client address and 300 in total per 60-second
+- **Rate limits.** 30 anonymous calls per client and 300 in total per 60-second
   window by default (`AGENT_BOM_MCP_PUBLIC_CALLER_RATE_LIMIT`,
   `AGENT_BOM_MCP_PUBLIC_TOTAL_RATE_LIMIT`), on top of the server-wide per-caller and
-  global limits. The client address comes from the socket, or from the
-  `X-Forwarded-For` entry written by the outermost of
+  global limits. A client is one IPv4 address or one IPv6 /64. A fifth of the total is
+  held back for clients that have barely called (up to 3 calls each, counted per IPv6
+  /48 or IPv4 /24), so one busy network cannot use up the whole budget. Each client runs
+  at most 4 calls at once (`AGENT_BOM_MCP_PUBLIC_CALLER_CONCURRENCY`), and session
+  opens (`initialize`) have their own budget with the same limits. The server keeps no
+  sessions: each request stands alone. The client address comes from the socket, or
+  from the `X-Forwarded-For` entry written by the outermost of
   `AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS` trusted proxies, so entries a client adds to
-  the left are ignored. Windows are per process.
+  the left are ignored. Set `AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_CIDRS` to the proxy
+  networks so the header is read only from them; without it the server logs a warning
+  at start. Windows are per process.
 - **Domain verification.** With `AGENT_BOM_OPENAI_APPS_CHALLENGE` set to one printable
   ASCII word of at most 512 characters, `GET /.well-known/openai-apps-challenge` returns
   exactly that text as `text/plain` with `cache-control: no-store`. Unset or malformed, it
