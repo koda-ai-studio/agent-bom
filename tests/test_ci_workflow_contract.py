@@ -356,8 +356,28 @@ def test_alpine_full_suite_shards_without_dropping_coverage() -> None:
     assert step["env"]["ALPINE_SHARD"] == "${{ matrix.shard }}"
     assert 'scripts/pytest_ci_plan.py shard --index "$ALPINE_SHARD" --total 4' in step["run"]
     assert 'if [ "${#TESTS[@]}" -eq 0 ]; then' in step["run"]
-    assert '-m "not network and not slow"' in step["run"]
-    assert "not graph_performance" not in step["run"]
+    assert '-m "not network and not slow and not graph_performance"' in step["run"]
+
+
+def test_alpine_runs_measured_budgets_in_their_own_process() -> None:
+    """RSS and wall-clock budgets measure one process: an xdist worker that already ran
+    thousands of tests starts the workflow budget at ~900 MiB instead of ~260 MiB."""
+    from scripts.pytest_ci_affected import ISOLATED_GRAPH_BUDGETS
+
+    job = _ci()["jobs"]["test-alpine"]
+    step = next(step for step in job["steps"] if "-m graph_performance" in step.get("run", ""))
+    # Shard 1 exists only in the full musl suite, which is the run that shards graph_performance away.
+    assert step["if"] == "matrix.shard == 1"
+    assert not step.get("continue-on-error", False)
+    budget_line, rest_line = (line.strip() for line in step["run"].splitlines() if "uv run pytest" in line)
+    assert set(ISOLATED_GRAPH_BUDGETS) == {word for word in budget_line.split() if word.startswith("tests/")}
+    assert "-m graph_performance" in budget_line
+    for line in (budget_line, rest_line):
+        assert "-n " not in line and "--cov" not in line
+    # Every other graph_performance test still runs on musl, in a second process.
+    assert rest_line.split()[3] == "tests"
+    assert '-m "graph_performance and not network and not slow"' in rest_line
+    assert {f"--ignore={path}" for path in ISOLATED_GRAPH_BUDGETS} <= set(rest_line.split())
 
 
 def test_pull_request_pytest_reports_slowest_tests() -> None:
@@ -1091,18 +1111,20 @@ def test_required_context_rejects_missing_or_failed_compatibility_proof() -> Non
     import subprocess
 
     job = _ci()["jobs"]["test"]
-    assert {"test-alpine", "ui-e2e"} <= set(job["needs"])
+    assert {"test-alpine", "ui-e2e", "mcp-images"} <= set(job["needs"])
     step = job["steps"][0]
     base = {**os.environ, "CORE_RESULT": "success", "DOCKER_RESULT": "skipped", "DOCKER_REQUIRED": "false"}
     for required in ("true", "false"):
         for outcome in ("success", "skipped", "failure", "cancelled"):
-            for lane in ("ALPINE", "UI_E2E"):
+            for lane in ("ALPINE", "UI_E2E", "MCP_IMAGES"):
                 env = {
                     **base,
                     "ALPINE_REQUIRED": "false",
                     "ALPINE_RESULT": "skipped",
                     "UI_E2E_REQUIRED": "false",
                     "UI_E2E_RESULT": "skipped",
+                    "MCP_IMAGES_REQUIRED": "false",
+                    "MCP_IMAGES_RESULT": "skipped",
                     f"{lane}_REQUIRED": required,
                     f"{lane}_RESULT": outcome,
                 }

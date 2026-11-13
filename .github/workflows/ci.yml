@@ -56,6 +56,7 @@ jobs:
       alpine_full: ${{ steps.classify.outputs.alpine_full }}
       alpine_pr: ${{ steps.classify.outputs.alpine_pr }}
       native_image: ${{ steps.classify.outputs.native_image }}
+      mcp_images: ${{ steps.classify.outputs.mcp_images }}
       compose: ${{ steps.classify.outputs.compose }}
       docs: ${{ steps.classify.outputs.docs }}
       docs_only: ${{ steps.classify.outputs.docs_only }}
@@ -149,6 +150,13 @@ jobs:
           if printf '%s\n' "$dependency_changed" | grep -E '^(deploy/docker/Dockerfile.(native-app|snowpark)$|deploy/snowflake/native-app/|tests/test_(native_app_persistence|snowpark_image)\.py$|src/agent_bom/(api/snowflake_store\.py|cloud/snowflake)|pyproject\.toml$|uv\.lock$|\.github/workflows/ci\.yml$)' > /dev/null; then
             native_image=true
           fi
+          # MCP server images: their Dockerfiles, the server and CLI code they
+          # start, dependency inputs, the smoke itself and the workflows that
+          # build them.
+          mcp_images=false
+          if printf '%s\n' "$dependency_changed" | grep -E '^(deploy/docker/Dockerfile\.(mcp|sse|public-mcp)$|src/agent_bom/(mcp_|mcp_tools/|cli/_server)|scripts/smoke_mcp_image\.py$|pyproject\.toml$|uv\.lock$|\.github/workflows/(ci|publish-mcp)\.yml$)' > /dev/null; then
+            mcp_images=true
+          fi
           # The measured graph heap/scale assertion takes about six minutes by
           # itself. Keep it out of the general correctness suite, but require it
           # for graph implementation/tests and for changes to its CI contract.
@@ -221,6 +229,7 @@ jobs:
             echo "alpine_full=${alpine_full}"
             echo "alpine_pr=${alpine_pr}"
             echo "native_image=${native_image}"
+            echo "mcp_images=${mcp_images}"
             echo "compose=${compose}"
             echo "docs=${docs}"
             echo "endpoint=${endpoint}"
@@ -2195,7 +2204,9 @@ jobs:
               exit 1
             fi
             echo "Alpine shard $ALPINE_SHARD/4: ${#TESTS[@]} test modules"
-            uv run pytest "${TESTS[@]}" -q --tb=short -m "not network and not slow" -x --durations=50 -n 2 --dist worksteal
+            # graph_performance runs in the next step: an RSS budget measured inside a
+            # worker that already ran thousands of tests measures those tests too.
+            uv run pytest "${TESTS[@]}" -q --tb=short -m "not network and not slow and not graph_performance" -x --durations=50 -n 2 --dist worksteal
           else
             uv run pytest -q --tb=short -m "not network and not slow" --durations=50 \
               tests/api/test_api_auth_me.py \
@@ -2205,6 +2216,17 @@ jobs:
               tests/test_context_graph.py::TestAPIContextGraph::test_api_endpoint_returns_graph \
               tests/test_context_graph.py::TestAPIContextGraph::test_api_agent_filter
           fi
+
+      # Shard 1 exists only in the full musl suite and is its shortest shard. As in the
+      # glibc jobs, the measured budgets run in a fresh process without xdist; standalone
+      # on musl the workflow budget peaks at 448-462 MiB (glibc 548-552 MiB).
+      - name: Run graph performance and resource budgets (musl)
+        if: matrix.shard == 1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          uv run pytest tests/api/test_graph_first_read_budget.py tests/test_push_ingest_perf_budget.py tests/test_workflow_resource_budget.py -q --tb=short -m graph_performance
+          uv run pytest tests -q --tb=short -m "graph_performance and not network and not slow" --ignore=tests/api/test_graph_first_read_budget.py --ignore=tests/test_push_ingest_perf_budget.py --ignore=tests/test_workflow_resource_budget.py
 
   # 3c. Release Surface Consistency Check
   version-check:
@@ -2410,6 +2432,66 @@ jobs:
           AGENT_BOM_TEST_SNOWPARK_IMAGE: agent-bom:snowpark-test
         run: uv run --extra dev pytest tests/test_native_app_persistence.py tests/test_snowpark_image.py -q
 
+  # MCP server images: publish-mcp.yml pushes Dockerfile.mcp and Dockerfile.sse
+  # after each release, and Dockerfile.public-mcp backs the hosted public lookup.
+  # Build each one and check it starts and serves its tools before merge. The
+  # HTTP images run their own start-up command, which syncs the advisory
+  # database first (60-150 s); the smoke calls no tool, so it adds no upstream
+  # request to that sync.
+  mcp-images:
+    name: MCP image smoke (${{ matrix.image }})
+    needs: [changes]
+    if: >-
+      !cancelled() && (
+        github.event_name == 'schedule' ||
+        needs.changes.result != 'success' ||
+        needs.changes.outputs.mcp_images == 'true'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: mcp
+            dockerfile: deploy/docker/Dockerfile.mcp
+            smoke: --transport stdio --min-tools 8
+          - image: sse
+            dockerfile: deploy/docker/Dockerfile.sse
+            smoke: --transport http --bearer --min-tools 8
+          - image: public-mcp
+            dockerfile: deploy/docker/Dockerfile.public-mcp
+            smoke: --transport http --expect-tools check,intel_lookup --env AGENT_BOM_MCP_PUBLIC_TRUSTED_PROXY_HOPS=0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Authenticate Docker Hub pulls
+        if: >-
+          env.DOCKERHUB_PULL_AUTH == 'true' &&
+          github.actor != 'dependabot[bot]' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_READ_TOKEN }}
+      - name: Build the image
+        env:
+          DOCKERFILE: ${{ matrix.dockerfile }}
+          IMAGE: agent-bom-${{ matrix.image }}:ci
+        run: docker build -f "$DOCKERFILE" -t "$IMAGE" .
+      - name: Start the image and list its tools
+        env:
+          IMAGE: agent-bom-${{ matrix.image }}:ci
+          SMOKE_ARGS: ${{ matrix.smoke }}
+        run: |
+          set -euo pipefail
+          read -r -a smoke_args <<< "$SMOKE_ARGS"
+          python3 scripts/smoke_mcp_image.py "$IMAGE" "${smoke_args[@]}" --wait 300
+
   # 5. Docker Build + Scan (multi-arch)
   # Post-merge only: the emulated arm64 build takes ~6 minutes. A Dockerfile or
   # lockfile change still cannot reach a tag-triggered release without it,
@@ -2537,7 +2619,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-    needs: [changes, test-core, docker, test-alpine, ui-e2e]
+    needs: [changes, test-core, docker, test-alpine, ui-e2e, mcp-images]
     if: ${{ !cancelled() }}
     steps:
       - name: Require correctness and applicable release-image proof
@@ -2545,6 +2627,13 @@ jobs:
           CORE_RESULT: ${{ needs.test-core.result }}
           ALPINE_RESULT: ${{ needs.test-alpine.result }}
           UI_E2E_RESULT: ${{ needs.ui-e2e.result }}
+          MCP_IMAGES_RESULT: ${{ needs.mcp-images.result }}
+          MCP_IMAGES_REQUIRED: >-
+            ${{
+              github.event_name == 'schedule' ||
+              needs.changes.result != 'success' ||
+              needs.changes.outputs.mcp_images == 'true'
+            }}
           ALPINE_REQUIRED: >-
             ${{
               (github.event_name != 'pull_request' && github.event_name != 'push') ||
@@ -2578,7 +2667,7 @@ jobs:
             success|skipped) ;;
             *) echo "Release-image lane ended with: $DOCKER_RESULT" >&2; exit 1 ;;
           esac
-          for lane in ALPINE UI_E2E; do
+          for lane in ALPINE UI_E2E MCP_IMAGES; do
             result_var="${lane}_RESULT"
             required_var="${lane}_REQUIRED"
             result="${!result_var}"

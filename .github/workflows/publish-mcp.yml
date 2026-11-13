@@ -38,8 +38,71 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/resolve_published_mcp_release.py
 
-  publish-stdio:
+  # Gate each image before anything is pushed. This job checks out and runs the
+  # release's own scripts, so it holds only a read token; the publish jobs below
+  # still build from the verified Git context and run no release code. As in
+  # release.yml's container gate, the candidate is rebuilt from the same source
+  # for the push, and the image scans a saved tar of itself.
+  gate:
+    name: Gate MCP image (${{ matrix.image }})
     needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    if: ${{ needs.release.outputs.publish_current == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: mcp
+            dockerfile: deploy/docker/Dockerfile.mcp
+            smoke: --transport stdio --min-tools 8
+          - image: sse
+            dockerfile: deploy/docker/Dockerfile.sse
+            smoke: --transport http --bearer --min-tools 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release.outputs.release_sha }}
+          persist-credentials: false
+
+      - name: Build candidate image
+        env:
+          DOCKERFILE: ${{ matrix.dockerfile }}
+          IMAGE: agent-bom-${{ matrix.image }}:gate
+          VERSION: ${{ needs.release.outputs.version }}
+        run: docker build -f "$DOCKERFILE" --build-arg "VERSION=$VERSION" -t "$IMAGE" .
+
+      - name: Start the candidate and list its tools
+        env:
+          IMAGE: agent-bom-${{ matrix.image }}:gate
+          SMOKE_ARGS: ${{ matrix.smoke }}
+        run: |
+          set -euo pipefail
+          read -r -a smoke_args <<< "$SMOKE_ARGS"
+          python3 scripts/smoke_mcp_image.py "$IMAGE" "${smoke_args[@]}" --wait 300
+
+      - name: Image vulnerability scan gate
+        # MEDIUM+ OS-layer and dependency findings, unfixable excluded, with the
+        # .image-scan-ignore allowlist: the release container gate's policy.
+        env:
+          IMAGE: agent-bom-${{ matrix.image }}:gate
+        run: |
+          set -euo pipefail
+          docker save "$IMAGE" -o "$RUNNER_TEMP/mcp-image.tar"
+          chmod 0644 "$RUNNER_TEMP/mcp-image.tar"
+          docker run --rm --entrypoint agent-bom \
+            -v "$RUNNER_TEMP/mcp-image.tar:/scan/image.tar:ro" \
+            -v "$PWD/.image-scan-ignore:/scan/.image-scan-ignore:ro" \
+            "$IMAGE" \
+            image --tar /scan/image.tar \
+            --ignore /scan/.image-scan-ignore \
+            --exclude-unfixable \
+            --fail-on-severity medium
+
+  publish-stdio:
+    needs: [release, gate]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -91,7 +154,7 @@ jobs:
           push-to-registry: true
 
   publish-sse:
-    needs: release
+    needs: [release, gate]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
