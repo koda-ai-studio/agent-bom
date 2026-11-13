@@ -74,3 +74,33 @@ def test_db_status_and_path_and_doctor_name_the_state_dir_db(tmp_path: Path) -> 
     doctor = _cli(env, "doctor")
     assert "Vuln DB" in doctor
     assert expected in doctor.replace("\n", "")
+
+
+def _touch_db(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"")
+
+
+def test_an_existing_home_db_is_still_used_when_the_state_dir_has_none(tmp_path: Path) -> None:
+    legacy = tmp_path / "home" / ".agent-bom" / "db" / "vulns.db"
+    env = _env(tmp_path, AGENT_BOM_STATE_DIR=str(tmp_path / "state"))
+    _touch_db(legacy)
+    printed = _python(env, "from agent_bom.db.schema import DB_PATH; print(DB_PATH)")
+    assert Path(printed).resolve() == legacy.resolve()
+
+
+def test_a_state_dir_db_wins_over_the_home_db(tmp_path: Path) -> None:
+    state = tmp_path / "state"
+    env = _env(tmp_path, AGENT_BOM_STATE_DIR=str(state))
+    _touch_db(tmp_path / "home" / ".agent-bom" / "db" / "vulns.db")
+    _touch_db(state / "db" / "vulns.db")
+    printed = _python(env, "from agent_bom.db.schema import DB_PATH; print(DB_PATH)")
+    assert Path(printed).resolve() == (state / "db" / "vulns.db").resolve()
+
+
+def test_explicit_db_path_wins_over_the_home_db_fallback(tmp_path: Path) -> None:
+    explicit = tmp_path / "elsewhere" / "custom.db"
+    env = _env(tmp_path, AGENT_BOM_STATE_DIR=str(tmp_path / "state"), AGENT_BOM_DB_PATH=str(explicit))
+    _touch_db(tmp_path / "home" / ".agent-bom" / "db" / "vulns.db")
+    printed = _python(env, "from agent_bom.db.schema import DB_PATH; print(DB_PATH)")
+    assert Path(printed).resolve() == explicit.resolve()
