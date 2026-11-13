@@ -25,6 +25,7 @@ import type { Agent, BlastRadius } from "@/lib/api";
 import { buildBlastRadiusSummary } from "@/lib/insights-risk";
 import { severityRank } from "@/lib/severity";
 import { SEVERITY_HEX, getChartTheme } from "@/lib/theme-colors";
+import { formatProbabilityPercent } from "@/lib/probability-format";
 
 // ─── Shared ──────────────────────────────────────────────────────────────────
 
@@ -644,7 +645,7 @@ function ScatterTooltipContent({
       <div className="flex justify-between gap-4">
         <span className="text-ink-tertiary">EPSS</span>
         <span className="font-mono" style={{ color: getChartTheme().tooltip.text }}>
-          {(d.epss * 100).toFixed(1)}%
+          {formatProbabilityPercent(d.epss)}
         </span>
       </div>
       <div className="flex justify-between gap-4">

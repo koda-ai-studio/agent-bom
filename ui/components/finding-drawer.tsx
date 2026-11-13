@@ -43,6 +43,7 @@ import {
   cvssVersion,
   officialAdvisoryLinks,
 } from "@/lib/findings-view";
+import { formatProbabilityPercent } from "@/lib/probability-format";
 
 type TabKey = "overview" | "impact" | "evidence" | "triage";
 
@@ -604,7 +605,7 @@ function IntelligencePanel({ vuln }: { vuln: EnrichedVuln }) {
     <Panel title="Security intelligence">
       <div className="space-y-2 break-words text-xs text-ink-secondary">
         {typeof vuln.cvss_score === "number" ? <div><KeyVal label="CVSS" value={vuln.cvss_score.toFixed(1)} /><span>{[version ? `v${version}` : null, vuln.cvss_severity].filter(Boolean).join(" · ")}</span></div> : null}
-        {typeof vuln.epss_score === "number" ? <KeyVal label="EPSS" value={`${(vuln.epss_score * 100).toFixed(1)}%`} /> : null}
+        {typeof vuln.epss_score === "number" ? <KeyVal label="EPSS" value={formatProbabilityPercent(vuln.epss_score)} /> : null}
         {typeof vuln.epss_percentile === "number" ? <p>{vuln.epss_percentile.toFixed(1)}th percentile</p> : null}
         {typeof vuln.is_kev === "boolean" ? <KeyVal label="CISA KEV" value={vuln.is_kev ? "Known exploited" : "Not listed"} /> : null}
         {vuln.kev_date_added ? <KeyVal label="KEV added" value={formatDateOnly(vuln.kev_date_added)} /> : null}

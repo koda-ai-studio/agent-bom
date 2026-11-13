@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.asset_provenance import sanitize_discovery_provenance
+from agent_bom.domain.inventory_identity import inventory_identity_scope
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
 from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets
@@ -522,8 +523,9 @@ def _inventory_agent(agent_data: dict, inventory_data: dict, inventory_provenanc
             agent_name=agent_data.get("name", "unknown"),
         ),
         config_path=agent_data.get("config_path", source_path),
-        # The inventory file is where the agent was read, not where it runs.
-        identity_config_path=None if agent_data.get("config_path") else "",
+        # The inventory file is where the agent was read, not where it runs; its
+        # declared source scopes the name instead, so two teams' "assistant" stay apart.
+        identity_config_path=None if agent_data.get("config_path") else inventory_identity_scope(inventory_data),
         mcp_servers=mcp_servers,
         version=agent_data.get("version"),
         source=agent_data.get("source", inventory_data.get("source")),

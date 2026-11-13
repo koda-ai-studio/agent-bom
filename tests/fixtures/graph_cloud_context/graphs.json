@@ -56,7 +56,7 @@
       "relationship_contract": {
         "limits": {},
         "observed": {
-          "edges_checked": 19
+          "edges_checked": 22
         },
         "reason_codes": [],
         "status": "complete"
@@ -74,6 +74,33 @@
     },
     "created_at": "2026-09-30T12:00:00+00:00",
     "edges": [
+      {
+        "activity_id": 1,
+        "canonical_id": "dd026a9b-34f4-507a-95c4-e2758065765b",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "reason": "inventory_account_provider",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "hosts:provider:aws:account:aws:123456789012",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosts",
+        "source": "provider:aws",
+        "source_id": "provider:aws",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "account:aws:123456789012",
+        "target_id": "account:aws:123456789012",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
       {
         "activity_id": 1,
         "canonical_id": "ec92bc7c-d869-56de-b309-8359a8af1d07",
@@ -281,6 +308,61 @@
         "source_scan_id": "",
         "target": "cloud_resource:aws:s3:bucket:known-public",
         "target_id": "cloud_resource:aws:s3:bucket:known-public",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "02397d2d-e9d3-5bbf-b48e-3bb1580f3b23",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "reason": "inventory_instance",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "owns:account:aws:123456789012:cloud_resource:aws:ec2:instance:scoped/123456789012/us-east-1//native/i-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "owns",
+        "source": "account:aws:123456789012",
+        "source_id": "account:aws:123456789012",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud_resource:aws:ec2:instance:scoped/123456789012/us-east-1//native/i-1",
+        "target_id": "cloud_resource:aws:ec2:instance:scoped/123456789012/us-east-1//native/i-1",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "f45d2f81-50d6-5e52-a682-0a20a8779cbf",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "hierarchy": "account_contains_resource",
+          "reason": "inventory_instance",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "contains:account:aws:123456789012:cloud_resource:aws:ec2:instance:scoped/123456789012/us-east-1//native/i-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "contains",
+        "source": "account:aws:123456789012",
+        "source_id": "account:aws:123456789012",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud_resource:aws:ec2:instance:scoped/123456789012/us-east-1//native/i-1",
+        "target_id": "cloud_resource:aws:ec2:instance:scoped/123456789012/us-east-1//native/i-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -1579,7 +1661,7 @@
         "relationship_contract": {
           "limits": {},
           "observed": {
-            "edges_checked": 19
+            "edges_checked": 22
           },
           "reason_codes": [],
           "status": "complete"
@@ -1597,13 +1679,14 @@
         "provider": 1
       },
       "relationship_types": {
-        "contains": 7,
+        "contains": 8,
         "exposed_to": 1,
-        "owns": 7,
+        "hosts": 1,
+        "owns": 8,
         "stores": 4
       },
       "severity_counts": {},
-      "total_edges": 19,
+      "total_edges": 22,
       "total_nodes": 14,
       "total_nodes_source": 14
     },
@@ -1666,7 +1749,7 @@
       "relationship_contract": {
         "limits": {},
         "observed": {
-          "edges_checked": 10
+          "edges_checked": 13
         },
         "reason_codes": [],
         "status": "complete"
@@ -1684,6 +1767,33 @@
     },
     "created_at": "2026-09-30T12:00:00+00:00",
     "edges": [
+      {
+        "activity_id": 1,
+        "canonical_id": "1e2cabd2-0e34-5f4d-8513-cd8d291c261a",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "reason": "inventory_account_provider",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "hosts:provider:azure:account:azure:sub-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosts",
+        "source": "provider:azure",
+        "source_id": "provider:azure",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "account:azure:sub-1",
+        "target_id": "account:azure:sub-1",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
       {
         "activity_id": 1,
         "canonical_id": "38753101-9bf7-57d5-b859-1fdabccb8d7b",
@@ -1732,6 +1842,61 @@
         "source_scan_id": "",
         "target": "cloud_resource:azure:storage:bucket:azblob",
         "target_id": "cloud_resource:azure:storage:bucket:azblob",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "4a839591-d8cb-5740-8c68-736f20e7e7d5",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "reason": "inventory_instance",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "owns:account:azure:sub-1:cloud_resource:azure:compute:instance:scoped/sub-1/eastus//native/vm-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "owns",
+        "source": "account:azure:sub-1",
+        "source_id": "account:azure:sub-1",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud_resource:azure:compute:instance:scoped/sub-1/eastus//native/vm-1",
+        "target_id": "cloud_resource:azure:compute:instance:scoped/sub-1/eastus//native/vm-1",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "1371ce26-ab17-5e05-8265-b9ddb30d40cc",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "hierarchy": "account_contains_resource",
+          "reason": "inventory_instance",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "contains:account:azure:sub-1:cloud_resource:azure:compute:instance:scoped/sub-1/eastus//native/vm-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "contains",
+        "source": "account:azure:sub-1",
+        "source_id": "account:azure:sub-1",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud_resource:azure:compute:instance:scoped/sub-1/eastus//native/vm-1",
+        "target_id": "cloud_resource:azure:compute:instance:scoped/sub-1/eastus//native/vm-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -2548,7 +2713,7 @@
         "relationship_contract": {
           "limits": {},
           "observed": {
-            "edges_checked": 10
+            "edges_checked": 13
           },
           "reason_codes": [],
           "status": "complete"
@@ -2566,12 +2731,13 @@
         "provider": 1
       },
       "relationship_types": {
-        "contains": 4,
-        "owns": 4,
+        "contains": 5,
+        "hosts": 1,
+        "owns": 5,
         "stores": 2
       },
       "severity_counts": {},
-      "total_edges": 10,
+      "total_edges": 13,
       "total_nodes": 9,
       "total_nodes_source": 9
     },
@@ -2618,7 +2784,7 @@
       "relationship_contract": {
         "limits": {},
         "observed": {
-          "edges_checked": 15
+          "edges_checked": 17
         },
         "reason_codes": [],
         "status": "complete"
@@ -2741,6 +2907,34 @@
         "source_scan_id": "",
         "target": "org:aws:org-1",
         "target_id": "org:aws:org-1",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "3c05f25f-5c0b-5994-9200-d9813c192472",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "provider": "aws",
+          "scope_key": "org_id",
+          "source": "cloud_origin",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "contains:org:aws:org-1:account:aws:123456789012",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "contains",
+        "source": "org:aws:org-1",
+        "source_id": "org:aws:org-1",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "account:aws:123456789012",
+        "target_id": "account:aws:123456789012",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -2879,6 +3073,33 @@
         "source_scan_id": "",
         "target": "account:aws:123456789012",
         "target_id": "account:aws:123456789012",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "8009e354-5dcc-5d80-8405-b47a1d87c7ed",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "principal_type": "iam-role",
+          "source": "cloud_principal",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "owns:account:aws:123456789012:role:aws:role-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "owns",
+        "source": "account:aws:123456789012",
+        "source_id": "account:aws:123456789012",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "role:aws:role-1",
+        "target_id": "role:aws:role-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -3808,7 +4029,7 @@
         "relationship_contract": {
           "limits": {},
           "observed": {
-            "edges_checked": 15
+            "edges_checked": 17
           },
           "reason_codes": [],
           "status": "complete"
@@ -3831,18 +4052,19 @@
       "relationship_types": {
         "attached": 1,
         "can_access": 1,
-        "contains": 1,
+        "contains": 2,
         "cross_account_trust": 1,
         "has_permission": 1,
         "hosted_on": 1,
         "hosts": 4,
         "manages": 2,
         "member_of": 1,
+        "owns": 1,
         "part_of": 1,
         "platform_for": 1
       },
       "severity_counts": {},
-      "total_edges": 15,
+      "total_edges": 17,
       "total_nodes": 9,
       "total_nodes_source": 9
     },
@@ -3905,7 +4127,7 @@
       "relationship_contract": {
         "limits": {},
         "observed": {
-          "edges_checked": 9
+          "edges_checked": 12
         },
         "reason_codes": [],
         "status": "complete"
@@ -3923,6 +4145,33 @@
     },
     "created_at": "2026-09-30T12:00:00+00:00",
     "edges": [
+      {
+        "activity_id": 1,
+        "canonical_id": "009372d8-17cc-5466-8a0b-05a1f66817a9",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "reason": "inventory_account_provider",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "hosts:provider:gcp:account:gcp:proj-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "hosts",
+        "source": "provider:gcp",
+        "source_id": "provider:gcp",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "account:gcp:proj-1",
+        "target_id": "account:gcp:proj-1",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
       {
         "activity_id": 1,
         "canonical_id": "11faf2f3-19d0-547d-bf6b-651999eaf474",
@@ -3971,6 +4220,61 @@
         "source_scan_id": "",
         "target": "cloud_resource:gcp:gcs:bucket:gcs-bucket",
         "target_id": "cloud_resource:gcp:gcs:bucket:gcs-bucket",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "eba0ba78-dacc-5390-a7ea-5f372a9c40a8",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "reason": "inventory_instance",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "owns:account:gcp:proj-1:cloud_resource:gcp:compute:instance:scoped/proj-1/us-central1//native/gce-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "owns",
+        "source": "account:gcp:proj-1",
+        "source_id": "account:gcp:proj-1",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud_resource:gcp:compute:instance:scoped/proj-1/us-central1//native/gce-1",
+        "target_id": "cloud_resource:gcp:compute:instance:scoped/proj-1/us-central1//native/gce-1",
+        "traversable": true,
+        "valid_from": "2026-09-30T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "d7470709-14fd-5a81-8199-aeb71a6a0ccd",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "freshness": "fresh",
+          "hierarchy": "account_contains_resource",
+          "reason": "inventory_instance",
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-09-30T12:00:00+00:00",
+        "id": "contains:account:gcp:proj-1:cloud_resource:gcp:compute:instance:scoped/proj-1/us-central1//native/gce-1",
+        "last_seen": "2026-09-30T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "contains",
+        "source": "account:gcp:proj-1",
+        "source_id": "account:gcp:proj-1",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "cloud_resource:gcp:compute:instance:scoped/proj-1/us-central1//native/gce-1",
+        "target_id": "cloud_resource:gcp:compute:instance:scoped/proj-1/us-central1//native/gce-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -4700,7 +5004,7 @@
         "relationship_contract": {
           "limits": {},
           "observed": {
-            "edges_checked": 9
+            "edges_checked": 12
           },
           "reason_codes": [],
           "status": "complete"
@@ -4718,12 +5022,13 @@
         "provider": 1
       },
       "relationship_types": {
-        "contains": 4,
-        "owns": 4,
+        "contains": 5,
+        "hosts": 1,
+        "owns": 5,
         "stores": 1
       },
       "severity_counts": {},
-      "total_edges": 9,
+      "total_edges": 12,
       "total_nodes": 8,
       "total_nodes_source": 8
     },

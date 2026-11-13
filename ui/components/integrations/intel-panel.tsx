@@ -24,6 +24,7 @@ import {
   Pill,
   errorMessage,
 } from "@/components/integrations/panel-kit";
+import { formatProbabilityPercent } from "@/lib/probability-format";
 
 function severityTone(sev: string): "danger" | "warn" | "neutral" {
   const s = sev.toLowerCase();
@@ -243,7 +244,7 @@ function AdvisoryLookup() {
             <Pill tone={severityTone(advisory.severity)}>{advisory.severity || "unknown"}</Pill>
             {advisory.cvss_score != null ? <Pill tone="neutral">CVSS {advisory.cvss_score}</Pill> : null}
             {advisory.epss_probability != null ? (
-              <Pill tone="warn">EPSS {(advisory.epss_probability * 100).toFixed(1)}%</Pill>
+              <Pill tone="warn">EPSS {formatProbabilityPercent(advisory.epss_probability)}</Pill>
             ) : null}
             {advisory.is_kev ? <Pill tone="danger">KEV</Pill> : null}
           </div>

@@ -13,6 +13,9 @@ from agent_bom.ai_components.framework_agents import scan_framework_agents
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.harness_model import (
     HARNESS_MODEL_VERSION,
+    MAX_LAYER_DEPTH,
+    HarnessEdge,
+    derive_placements,
     flow_kind,
     placements_from_framework_agents,
 )
@@ -146,3 +149,46 @@ def test_harness_ids_and_placements_are_stable_across_rescans():
 
     first, second = snapshot("scan-1"), snapshot("scan-2")
     assert first and first == second
+
+
+def test_langgraph_two_nodes_join_their_builder_harness():
+    # The builder has no START/END edge, so only its declared parent_id links it to the nodes.
+    agents = _scan("langgraph_two_nodes")
+    placements = placements_from_framework_agents(agents)
+    named = _named(agents)
+    builder, planner, writer = (named[name][0]["stable_id"] for name in ("builder", "planner", "writer"))
+
+    assert {placement.harness_id for placement in placements.values()} == {builder}
+    assert placements[builder].role == "harness" and placements[builder].layer == 0
+    assert (placements[planner].layer, placements[writer].layer) == (1, 1)
+    assert placements[planner].parent_id == builder and placements[writer].parent_id == builder
+    edges = [(edge["source_id"], edge["target_id"]) for agent in agents for edge in agent.get("topology_edges") or []]
+    assert (planner, writer) in edges
+
+    nodes = _by_label(_graph("langgraph_two_nodes"))
+    assert {nodes[name][0].attributes["harness_id"] for name in ("builder", "planner", "writer")} == {builder}
+
+
+def _chain(depth: int) -> tuple[dict[str, str], list[HarnessEdge]]:
+    ids = [f"a{index}" for index in range(depth)]
+    parents = {agent_id: (ids[index - 1] if index else "") for index, agent_id in enumerate(ids)}
+    edges = [HarnessEdge(source=ids[index - 1], target=ids[index], relationship="delegated_to") for index in range(1, depth)]
+    return parents, edges
+
+
+def test_parent_chain_deeper_than_the_layer_cap_keeps_its_true_root_and_is_flagged():
+    parents, edges = _chain(41)
+    placements = derive_placements(parents, edges)
+    # Every agent belongs to the one real harness; no ancestor becomes a phantom root.
+    assert {placement.harness_id for placement in placements.values()} == {"a0"}
+    assert placements["a40"].layer == 40 and placements["a40"].parent_id == "a39"
+    assert placements["a40"].depth_exceeded and placements[f"a{MAX_LAYER_DEPTH + 1}"].depth_exceeded
+    assert not placements[f"a{MAX_LAYER_DEPTH}"].depth_exceeded and not placements["a0"].depth_exceeded
+    assert [agent_id for agent_id, placement in placements.items() if placement.role == "harness"] == ["a0"]
+
+
+def test_parent_cycle_still_stands_alone():
+    parents = {"x": "y", "y": "x", "z": "x"}
+    edges = [HarnessEdge("x", "y", "delegated_to"), HarnessEdge("y", "z", "delegated_to")]
+    placements = derive_placements(parents, edges)
+    assert {agent_id: (p.harness_id, p.layer) for agent_id, p in placements.items()} == {"x": ("x", 0), "y": ("y", 0), "z": ("z", 0)}

@@ -1165,7 +1165,8 @@
         "discovery_provenance",
         "identity_bindings",
         "imported_canonical_id",
-        "plaintext_env_secrets"
+        "plaintext_env_secrets",
+        "package_binding_of"
       ]
     },
     "MCPTool": {

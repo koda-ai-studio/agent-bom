@@ -155,6 +155,44 @@ def _add_reported_package(graph: UnifiedGraph, pkg_id: str, name: str, version: 
     )
 
 
+ECOSYSTEM_FROM_INVENTORY = "inventory_package_match"
+
+
+def _inventoried_ecosystem(graph: UnifiedGraph, br_dict: dict[str, Any], pkg_name: str, pkg_version: str, indexes: BuildIndexes) -> str:
+    """The one ecosystem an ecosystem-less row can only mean, or ``""`` when it is not unique.
+
+    Candidates are inventoried packages whose canonical id the row's name and
+    version produce under their own ecosystem; the row's named servers and
+    agents narrow them first. Two ecosystems (``requests`` on PyPI and npm)
+    leave the row as reported rather than picking one.
+    """
+    if not pkg_name or br_dict.get("ecosystem") or br_dict.get("package_purl") or br_dict.get("purl"):
+        return ""
+    candidates: dict[str, str] = {}
+    for pkg_id in dict.fromkeys([*indexes.package_name_to_ids.get(pkg_name, []), *indexes.package_name_to_ids.get(pkg_name.lower(), [])]):
+        node = graph.nodes.get(pkg_id)
+        ecosystem = str((node.attributes or {}).get("ecosystem") or "") if node is not None else ""
+        if ecosystem and _package_node_id_from_parts(pkg_name, pkg_version, ecosystem) == pkg_id:
+            candidates[pkg_id] = ecosystem
+    named_servers = set(
+        _resolve_affected_server_ids(
+            {key: br_dict.get(key, []) for key in ("affected_servers", "affected_agents")},
+            pkg_name="",
+            pkg_version="",
+            ecosystem="",
+            pkg_key_to_servers=indexes.pkg_key_to_servers,
+            server_name_to_agent_servers=indexes.server_name_to_agent_servers,
+            agent_to_server_ids=indexes.agent_to_server_ids,
+        )
+    )
+    if named_servers:
+        candidates = {
+            pkg_id: eco for pkg_id, eco in candidates.items() if named_servers & set(indexes.package_id_to_servers.get(pkg_id, []))
+        }
+    ecosystems = set(candidates.values())
+    return ecosystems.pop() if len(ecosystems) == 1 else ""
+
+
 def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], indexes: BuildIndexes, data_source_tag: str) -> None:
     for br_dict in blast_data:
         vuln_id_str = br_dict.get("vulnerability_id", "")
@@ -163,6 +201,9 @@ def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], 
         severity = br_dict.get("severity", "").lower()
         pkg_name, pkg_version = _blast_radius_package_identity(br_dict)
         ecosystem = br_dict.get("ecosystem", "")
+        if inferred := _inventoried_ecosystem(graph, br_dict, pkg_name, pkg_version, indexes):
+            ecosystem = inferred
+            br_dict = {**br_dict, "ecosystem": inferred, "ecosystem_basis": ECOSYSTEM_FROM_INVENTORY}
 
         # Add/merge vuln node (add_node unions compliance_tags if node exists)
         vuln_node_id = f"vuln:{vuln_id_str}"

@@ -32,6 +32,7 @@ from agent_bom.output.html._common import (
 )
 from agent_bom.output.html.deferred_rows import _pager_controls as _pager_controls
 from agent_bom.output.html.deferred_rows import _table_frame, bounded_rows
+from agent_bom.output.probability_format import probability_percent
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
@@ -397,7 +398,11 @@ def _vuln_metric_cells(finding: Finding) -> tuple[str, str, str, str, str, str, 
         )
     else:
         cvss_bar = '<span class="evidence-unavailable">No score recorded</span>'
-    epss = f"{finding.epss_score:.1%}" if finding.epss_score is not None else '<span class="evidence-unavailable">No score recorded</span>'
+    epss = (
+        probability_percent(finding.epss_score)
+        if finding.epss_score is not None
+        else '<span class="evidence-unavailable">No score recorded</span>'
+    )
     exploit_level = exploit_likelihood_value(finding)
     kev_due = evidence(finding, "kev_due_date", "") if finding.is_kev else ""
     kev_due_attr = f' data-kev-due="{_esc(kev_due)}"' if kev_due else ""

@@ -229,13 +229,10 @@ def _add_lineage_account(graph: UnifiedGraph, lineage: _CloudLineage) -> None:
     scope_evidence = {"source": "cloud_origin", "provider": provider, "scope_key": scope_key}
     _add_rel_edge(graph, lineage.cloud_provider_id, account_node_id, RelationshipType.HOSTS, dict(scope_evidence))
     if lineage.org_node_id:
-        _add_rel_edge(
-            graph,
-            account_node_id,
-            lineage.org_node_id,
-            RelationshipType.PART_OF,
-            {"source": "cloud_origin", "provider": provider, "scope_key": lineage.org_key},
-        )
+        org_evidence = {"source": "cloud_origin", "provider": provider, "scope_key": lineage.org_key}
+        _add_rel_edge(graph, account_node_id, lineage.org_node_id, RelationshipType.PART_OF, dict(org_evidence))
+        # The same recorded scope, oriented as the estate hierarchy reads it.
+        _add_rel_edge(graph, lineage.org_node_id, account_node_id, RelationshipType.CONTAINS, dict(org_evidence))
     _add_rel_edge(graph, account_node_id, lineage.resource_node_id, RelationshipType.HOSTS, dict(scope_evidence))
     _add_rel_edge(graph, account_node_id, lineage.resource_node_id, RelationshipType.CONTAINS, dict(scope_evidence))
 
@@ -350,6 +347,7 @@ def _add_cloud_principal_lineage(graph: UnifiedGraph, lineage: _CloudLineage, pr
     evidence = {"source": "cloud_principal", "principal_type": principal_type}
     if lineage.account_node_id:
         _add_rel_edge(graph, principal_node_id, lineage.account_node_id, RelationshipType.MEMBER_OF, dict(evidence))
+        _add_rel_edge(graph, lineage.account_node_id, principal_node_id, RelationshipType.OWNS, dict(evidence))
     _add_rel_edge(graph, principal_node_id, lineage.resource_node_id, RelationshipType.MANAGES, dict(evidence))
     _add_rel_edge(graph, principal_node_id, lineage.resource_node_id, RelationshipType.CAN_ACCESS, dict(evidence))
     _add_principal_policies(graph, lineage, principal, principal_node_id)

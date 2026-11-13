@@ -62,6 +62,21 @@ def test_style_colors_are_values_cytoscape_parses(name):
         assert _COLOR.match(value), f"{name}: {prop}: {value} is refused by Cytoscape; use a colour plus an opacity"
 
 
+@pytest.mark.parametrize("name", sorted(_SCRIPTS))
+def test_no_custom_wheel_sensitivity(name):
+    # Cytoscape logs a warning on every graph it builds with a non-default wheelSensitivity.
+    assert "wheelSensitivity" not in _SCRIPTS[name]
+
+
+def test_print_button_uses_no_emoji_glyph():
+    report, blast = scale_report(2)
+    page = to_html(report, blast)
+    button = re.search(r'<button class="print-btn"[^>]*>(.*?)</button>', page, re.S)
+    assert button is not None
+    assert "&#x1f5b6;" not in button.group(1) and "\U0001f5b6" not in button.group(1)
+    assert "<svg" in button.group(1) and "Print / Export PDF" in button.group(1)
+
+
 def test_ci_fetches_exactly_the_script_versions_the_report_loads():
     pinned = set()
     for tag in _EXTERNAL_SCRIPT_TAGS:
@@ -163,5 +178,6 @@ def test_report_graphs_load_in_chromium_without_cytoscape_style_warnings(tmp_pat
     assert outcome["drawn"] == ["cy", "cyAttack"]
     style_warnings = [m["text"] for m in outcome["messages"] if "style property" in m["text"]]
     assert style_warnings == []
+    assert [m["text"] for m in outcome["messages"] if "wheel sensitivity" in m["text"].lower()] == []
     errors = [m["text"] for m in outcome["messages"] if m["type"] in {"error", "pageerror"}]
     assert errors == []

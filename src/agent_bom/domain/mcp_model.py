@@ -311,6 +311,9 @@ class MCPServer:
     identity_bindings: list[CredentialIdentityBinding] = field(default_factory=list)
     imported_canonical_id: Optional[str] = None  # Declared SBOM identity; never authorizes execution or trust.
     plaintext_env_secrets: dict[str, str] = field(default_factory=dict)  # Env name to detected format; never the value.
+    # Canonical id of the MCP server that already binds these packages from the
+    # same directory; set on a project manifest group so totals count them once.
+    package_binding_of: Optional[str] = None
 
     def __post_init__(self) -> None:
         """Scope child tool/resource/prompt identities to this server."""
