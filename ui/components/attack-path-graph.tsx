@@ -33,16 +33,16 @@ export type AttackPathGraphProps = {
 };
 
 /** Only a node's glyph, label and buttons take pointer input; its empty box never swallows a click meant for a line. */
-const HIT_AREAS = "[&_[aria-roledescription=node]]:pointer-events-none! [&_[data-node-glyph]]:pointer-events-auto! [&_[data-node-label]]:pointer-events-auto! [&_[aria-roledescription=node]_button]:pointer-events-auto!";
+export const HIT_AREAS = "[&_[aria-roledescription=node]]:pointer-events-none! [&_[data-node-glyph]]:pointer-events-auto! [&_[data-node-label]]:pointer-events-auto! [&_[aria-roledescription=node]_button]:pointer-events-auto!";
 /** "Fit all" may go below the readable floor because the operator asked for the overview. */
-const OVERVIEW_MIN_ZOOM = 0.25;
+export const OVERVIEW_MIN_ZOOM = 0.25;
 
 /**
  * The camera, computed from the layout rather than React Flow's `fitView()`
  * (which version 12 queues until the next node update, so a resize alone kept
  * a stale camera). Auto-framing never overrides a camera the operator moved.
  */
-function Camera({ layout, spineIds, nodesKey, floor, manual }: {
+export function GraphCamera({ layout, spineIds, nodesKey, floor, manual }: {
   layout: AttackPathLayout; spineIds: readonly string[]; nodesKey: string; floor: number; manual: React.RefObject<string | null>;
 }) {
   const { setViewport } = useReactFlow();
@@ -151,7 +151,7 @@ function AttackPathCanvas({ graph, attackPath, narrow, context, onNodeSelect, on
         onMoveStart={event => { if (event) manualCamera.current = nodesKey; }}
         proOptions={{ hideAttribution: true }}>
         <Background gap={BACKGROUND_GAP} color="var(--border-subtle)" />
-        <Camera layout={layout} spineIds={model.pathNodeIds} nodesKey={nodesKey} floor={narrow ? NARROW_MIN_ZOOM : DESKTOP_MIN_ZOOM} manual={manualCamera} />
+        <GraphCamera layout={layout} spineIds={model.pathNodeIds} nodesKey={nodesKey} floor={narrow ? NARROW_MIN_ZOOM : DESKTOP_MIN_ZOOM} manual={manualCamera} />
       </ReactFlow>
     </div>
     {model.connectedPathCount > 0 && <p className="border-t border-outline bg-surface px-3 pt-2 text-xs text-ink-secondary">
