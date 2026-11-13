@@ -188,7 +188,7 @@ Minimum verification matrix:
   needs. Integration code and supported-upstream docs may name a third-party
   service when the exact name is required for users to configure it.
 - Release with broken imports, red tests, or unreleased `[Unreleased]`
-  CHANGELOG entries left after tagging.
+  CHANGELOG entries or `changelog.d/` fragments left after tagging.
 - Claim a file, feature, or behavior exists without reading the code that
   proves it.
 - Open more than 4 PRs simultaneously in the same queue — open sequentially
@@ -310,9 +310,16 @@ Minimum verification matrix:
   environment, not only with `--all-extras`.
 - **Postgres-only tests** must be listed in the "Run real Postgres storage
   contract" step of `.github/workflows/ci.yml`, or CI never runs them.
+- **Changelog:** add a `changelog.d/<slug>.md` fragment (`### Fixed`,
+  `### Added`, ... with bullets; see `changelog.d/README.md`). Never edit
+  `CHANGELOG.md` in a feature PR; the release step runs
+  `python scripts/assemble_changelog.py --version X.Y.Z`.
+- **Product metrics** (`docs/PRODUCT_METRICS.*`) are a release-time artifact:
+  do not regenerate them in a feature PR. The PR check only fails when the
+  version or metric set changes; the release runs the strict
+  `--check --release` form.
 - **Generated artifacts:** `make preflight` checks most of them (OpenAPI, v1
-  schemas, reference evidence lab, product metrics, vendor coverage, env-var
-  reference). Graph or storage changes also need
+  schemas, reference evidence lab, vendor coverage, env-var reference). Graph or storage changes also need
   `python scripts/generate_graph_data_model.py --check`; plugin skill changes
   need `python scripts/render_plugin_skills.py --check`. Regenerate with the
   owning script and commit the result.

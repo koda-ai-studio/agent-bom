@@ -45,6 +45,7 @@ CONTENT_ROOTS: tuple[str, ...] = (
     "site-docs",
     "ui",
     "CHANGELOG.md",
+    "changelog.d",
     "README.md",
     "AGENTS.md",
 )
