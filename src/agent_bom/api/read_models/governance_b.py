@@ -423,6 +423,8 @@ class IntelAdvisoryAffected(ReadModel):
     introduced: str | None
     fixed: str | None
     last_affected: str | None
+    vulnerable: str | None = None
+    patched: str | None = None
 
 
 class IntelAdvisorySourcePolicy(ReadModel):
@@ -455,12 +457,16 @@ class IntelAdvisory(ReadModel):
     match_reason: str
     source_policy: IntelAdvisorySourcePolicy
     evidence_links: list[dict[str, str]]
+    record_completeness: str | None = None
+    record_sources: list[dict[str, Any]] | None = None
+    not_found_in: list[str] | None = None
 
 
 class IntelAdvisoryCoverage(ReadModel):
     synced: bool
     sources: list[str]
     last_synced: str | None = None
+    searched: list[str] | None = None
     note: str | None = None
 
 

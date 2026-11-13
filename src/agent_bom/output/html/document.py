@@ -230,7 +230,7 @@ def to_html(
 
   <div class="sidebar-footer">
     <div class="scan-time">{_esc(generated)}</div>
-    <button class="print-btn" onclick="window.print()">&#x1f5b6;&#xfe0f; Print / Export PDF</button>
+    <button class="print-btn" onclick="window.print()"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Print / Export PDF</button>
   </div>
 </div>
 

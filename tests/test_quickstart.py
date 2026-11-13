@@ -123,8 +123,9 @@ def test_quickstart_run_scans_with_context_graph_and_seeds_policy(tmp_path, _fak
     # handoff printed
     assert "Onboarding complete" in result.output
     assert "/security-graph" in result.output
-    # cockpit handoff must pass a flag that actually lets /v1/overview load on loopback
-    assert f"{LOCAL_ANALYST_CONTROL_PLANE} --host 127.0.0.1 --port 8422 --allow-insecure-no-auth" in result.output
+    # A loopback serve mints a dev key the dashboard uses with the analyst role; disabling auth is not needed.
+    assert f"{LOCAL_ANALYST_CONTROL_PLANE} --host 127.0.0.1 --port 8422\n" in result.output
+    assert "--allow-insecure-no-auth" not in result.output
     assert "--api-key <key>" in result.output
     assert "--from-control-plane http://127.0.0.1:8422" in result.output
     assert "upstreams.yaml" not in result.output

@@ -28739,6 +28739,20 @@
             ],
             "title": "Modified At"
           },
+          "not_found_in": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Not Found In"
+          },
           "published_at": {
             "anyOf": [
               {
@@ -28749,6 +28763,32 @@
               }
             ],
             "title": "Published At"
+          },
+          "record_completeness": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Completeness"
+          },
+          "record_sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Sources"
           },
           "severity": {
             "anyOf": [
@@ -28856,6 +28896,28 @@
           "package_name": {
             "title": "Package Name",
             "type": "string"
+          },
+          "patched": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patched"
+          },
+          "vulnerable": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vulnerable"
           }
         },
         "required": [
@@ -28933,6 +28995,20 @@
               }
             ],
             "title": "Note"
+          },
+          "searched": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Searched"
           },
           "sources": {
             "items": {

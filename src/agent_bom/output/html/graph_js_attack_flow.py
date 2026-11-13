@@ -256,7 +256,6 @@ ATTACK_FLOW_GRAPH_JS = """\
       layout: {name: 'null'},
       minZoom: 0.15,
       maxZoom: 4,
-      wheelSensitivity: 0.3,
     });
     var ATTACK_FLOW_LAYOUT = {rankDir: window.innerWidth < 700 ? 'TB' : 'LR', nodeSep: 40, rankSep: 100, edgeSep: 12, padding: 30};
     layoutGraph(cyAtk, ATTACK_FLOW_LAYOUT);

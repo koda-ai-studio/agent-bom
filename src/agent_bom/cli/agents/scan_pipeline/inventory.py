@@ -10,6 +10,7 @@ from agent_bom.cli.agents.scan_pipeline.dependency_scope import apply_dependency
 from agent_bom.cli.agents.scan_pipeline.helpers import _agents_patchable, _expand_docker_mcp_packages
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
+from agent_bom.parsers.package_bindings import mark_manifest_bindings
 
 
 def _begin_inventory(opts: ScanOptions, st: ScanState) -> None:
@@ -97,6 +98,8 @@ def _extract_packages(opts: ScanOptions, st: ScanState) -> None:
                     f"  [green]✓[/green] {server.name}: {len(server.packages)} package(s) "
                     f"({server.packages[0].ecosystem}){transitive_str}{pre_str}"
                 )
+    mark_manifest_bindings(st.agents)
+    st.total_packages = sum(len(s.packages) for a in st.agents for s in a.mcp_servers if not s.package_binding_of)
 
 
 def _summarize_packages(opts: ScanOptions, st: ScanState) -> None:
@@ -104,6 +107,8 @@ def _summarize_packages(opts: ScanOptions, st: ScanState) -> None:
     eco_counts: dict[str, int] = {}
     for a in st.ctx.agents:
         for s in a.mcp_servers:
+            if s.package_binding_of:
+                continue
             for p in s.packages:
                 eco_counts[p.ecosystem] = eco_counts.get(p.ecosystem, 0) + 1
     eco_str = ", ".join(f"{c} {e}" for e, c in sorted(eco_counts.items(), key=lambda x: -x[1]))

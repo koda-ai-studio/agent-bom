@@ -29,6 +29,7 @@ from agent_bom.mcp_tools.check_lookup import (
 from agent_bom.mcp_tools.check_lookup import version_published as _version_published
 from agent_bom.mcp_tools.dispatch import raise_scan_tool_failure, resolve_tool_path
 from agent_bom.mcp_tools.result_store import ResultStore
+from agent_bom.mcp_tools.scan_report import build_scan_report
 from agent_bom.mcp_tools.scan_response import (
     MAX_PAGE_LIMIT,
     SCAN_DETAIL_LEVELS,
@@ -38,10 +39,7 @@ from agent_bom.mcp_tools.scan_response import (
     resolve_offline,
     section_page,
 )
-from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.resolvers.latest_stable import check_latest_budget, resolved_version_source
-from agent_bom.scanners import local_data_freshness
-from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.state import consume_coverage_warnings, consume_scan_warnings, reset_scan_warnings
 from agent_bom.security import sanitize_error
 from agent_bom.vuln_freshness import accepted_scan_warnings
@@ -305,7 +303,7 @@ async def _scan_impl_inner(
 
         active_findings = active_blast_radii(blast_radii)
         await _post_scan_enrichment(agents, scan_warnings, verify_integrity=verify_integrity, scorecard=scorecard)
-        report = _scan_report(AIBOMReport, agents, blast_radii, scan_sources, offline=offline)
+        report = build_scan_report(AIBOMReport, agents, blast_radii, scan_sources, offline=offline)
         _attach_pipeline_evidence(report, scanner_warnings, coverage_warnings)
         await _surface_graph_findings(report)
         if package_spec_unresolved:
@@ -349,14 +347,6 @@ def _attach_pipeline_evidence(report, scanner_warnings: list[str], coverage_warn
         report.ai_inventory_data = {**(report.ai_inventory_data or {}), **repo_inventory}
     if (repo_iac := consume_repo_tree_iac()) is not None:
         report.iac_findings_data = repo_iac
-
-
-def _scan_report(report_cls, agents, blast_radii, scan_sources, *, offline: bool):
-    report = report_cls(agents, blast_radii, cloud_inventory_data=imported_cloud_inventory(agents), scan_sources=scan_sources)
-    freshness = local_data_freshness.freshness_snapshot(offline)
-    report.vuln_data_freshness = freshness.to_dict() if freshness is not None else None
-    attach_passive_mcp_audit(report)
-    return report
 
 
 def _empty_envelope(status: str, *, warnings: list[str], **extra: object) -> dict[str, object]:
