@@ -774,7 +774,10 @@ class TestSchedulerLoop:
 
         async def _run():
             task = asyncio.create_task(scheduler_loop(store, mock_scan, interval_seconds=0))
-            await asyncio.sleep(0.05)
+            # Wait for the dispatch rather than a fixed window a loaded runner can miss.
+            deadline = asyncio.get_running_loop().time() + 5
+            while not observed_tenants and asyncio.get_running_loop().time() < deadline:
+                await asyncio.sleep(0.01)
             task.cancel()
             try:
                 await task
