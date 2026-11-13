@@ -88,6 +88,16 @@ def test_fs_cli_reports_the_installed_packages_not_nothing_to_scan(tmp_path, mon
     assert {"requests", "urllib3"} <= names
 
 
+@pytest.mark.parametrize("module", ["agent_bom.filesystem", "agent_bom.resolvers.python_site_packages"])
+def test_module_imports_first_in_a_fresh_interpreter(module):
+    """agent_bom.parsers imports os_parsers, which imports filesystem: no cycle may form."""
+    import subprocess
+    import sys
+
+    result = subprocess.run([sys.executable, "-c", f"import {module}"], capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stderr[-2000:]
+
+
 def test_legacy_egg_info_installs_are_read(tmp_path):
     site = tmp_path / "venv" / "lib" / "python3.11" / "site-packages"
     (site / "legacy_pkg-0.9.egg-info").mkdir(parents=True)
