@@ -40,8 +40,48 @@ def test_eighty_column_tables_name_the_malicious_skill(tmp_path, monkeypatch):
     assert "exfil-helper" in surface, surface
     assert "release-notes-helper" in surface, surface
     # Every column survives; a narrow table must not silently drop one.
-    for header in ("Status", "Verdict", "Review", "Prov.", "Findings", "Refs"):
+    for header in ("Status", "Verdict", "Action", "Prov.", "Find.", "Refs"):
         assert header in surface, surface
+    assert "…" not in surface, surface
+    assert "Action: handling · Prov.: provenance · Find.: findings · Refs: packages, servers" in surface, surface
+
+
+def _file_report(path: str, *, status: str, verdict: str, review: str, provenance: str):
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        path=path,
+        status=status,
+        trust=SimpleNamespace(verdict=SimpleNamespace(value=verdict), review_verdict=SimpleNamespace(value=review)),
+        provenance={"status": provenance},
+        audit=SimpleNamespace(findings=[object()] * 123),
+        scan=SimpleNamespace(packages=[object()] * 10, servers=[]),
+    )
+
+
+def test_widest_values_render_whole_at_eighty_columns():
+    from types import SimpleNamespace
+
+    from rich.console import Console
+
+    from agent_bom.cli._skills_group import _SKILL_LABEL_WIDTH, _instruction_surface_table
+
+    rows = [
+        _file_report("/a", status="unavailable", verdict="suspicious", review="high_risk", provenance="missing"),
+        _file_report("/b", status="malicious", verdict="malicious", review="blocked", provenance="bundle_found_but_invalid"),
+        _file_report("/c", status="suspicious", verdict="benign", review="trusted", provenance="unsigned"),
+    ]
+    labels = {"/a": "a" * _SKILL_LABEL_WIDTH, "/b": "b" * _SKILL_LABEL_WIDTH, "/c": "c" * _SKILL_LABEL_WIDTH}
+    console = Console(width=80, record=True, color_system=None)
+    console.print(_instruction_surface_table(SimpleNamespace(files=rows), labels, _SKILL_LABEL_WIDTH))
+    text = console.export_text()
+
+    assert max(len(line) for line in text.splitlines()) <= 80, text
+    assert "…" not in text, text
+    for value in (*labels.values(), "unavailable", "suspicious", "high_risk", "blocked", "trusted", "malicious", "123", "10"):
+        assert value in text, text
+    for header in ("Skill / file", "Status", "Verdict", "Action", "Prov.", "Find.", "Refs"):
+        assert header in text, text
 
 
 def test_labels_name_the_skill_and_fall_back_to_the_path_on_collision(tmp_path, monkeypatch):
