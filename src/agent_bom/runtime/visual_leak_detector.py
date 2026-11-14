@@ -47,7 +47,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from agent_bom.runtime.detectors import Alert, AlertSeverity
-from agent_bom.runtime.patterns import CREDENTIAL_PATTERNS, PII_PATTERNS
+from agent_bom.runtime.patterns import CREDENTIAL_PATTERNS, PII_PATTERNS, pii_matches
 
 logger = logging.getLogger(__name__)
 
@@ -195,7 +195,7 @@ def _match_patterns(
     # Single-word pass
     for idx, (word, bbox) in enumerate(words):
         for label, pat in patterns:
-            if pat.search(word):
+            if pii_matches(label, pat, word):
                 matches.append(_Match(bbox=bbox, label=label, category=category))
                 matched_word_indices.add(idx)
                 break  # avoid double-counting one word under two patterns
@@ -209,7 +209,7 @@ def _match_patterns(
             continue
         joined = " ".join(w for w, _ in words[i : i + 3])
         for label, pat in patterns:
-            if pat.search(joined):
+            if pii_matches(label, pat, joined):
                 # Union the three word boxes into one redaction rectangle.
                 boxes = [words[i][1], words[i + 1][1], words[i + 2][1]]
                 left = min(b[0] for b in boxes)

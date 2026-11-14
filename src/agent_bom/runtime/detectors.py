@@ -33,6 +33,8 @@ from agent_bom.runtime.patterns import (
     RESPONSE_TOXICITY_PATTERNS,
     SUSPICIOUS_SEQUENCES,
     detect_cortex_models,
+    pii_matches,
+    redact_pii_matches,
     score_semantic_injection,
 )
 from agent_bom.runtime.patterns import (
@@ -338,7 +340,7 @@ class CredentialLeakDetector:
                 )
         # PII detection
         for pii_name, pattern in _PII_PATTERNS:
-            matches = pattern.findall(response_text)
+            matches = pii_matches(pii_name, pattern, response_text)
             if matches:
                 alerts.append(
                     Alert(
@@ -365,7 +367,7 @@ class CredentialLeakDetector:
         for cred_name, pattern in CREDENTIAL_PATTERNS:
             result = pattern.sub(f"[REDACTED:{cred_name}]", result)
         for pii_name, pattern in _PII_PATTERNS:
-            result = pattern.sub(f"[REDACTED:{pii_name}]", result)
+            result = redact_pii_matches(pii_name, pattern, result, f"[REDACTED:{pii_name}]")
         return result
 
 
