@@ -36,8 +36,13 @@ def open_wal_connection(path: str, *, normal_sync: bool = False) -> sqlite3.Conn
         conn = sqlite3.connect(path, timeout=0.05, check_same_thread=False)
         cleanup.callback(conn.close)
         enable_wal(conn, wait_seconds=busy_timeout_ms / 1000)
-        conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
+        set_busy_timeout(conn, busy_timeout_ms)
         if normal_sync:
             conn.execute("PRAGMA synchronous=NORMAL")
         cleanup.pop_all()
         return conn
+
+
+def set_busy_timeout(conn: sqlite3.Connection, milliseconds: int) -> None:
+    """Set SQLite's busy wait; PRAGMA takes no bind parameters, so the value is coerced to an int."""
+    conn.execute(f"PRAGMA busy_timeout={int(milliseconds)}")

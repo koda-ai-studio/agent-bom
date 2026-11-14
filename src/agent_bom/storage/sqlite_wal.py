@@ -27,4 +27,4 @@ def enable_wal(conn: sqlite3.Connection, *, wait_seconds: float = 30.0) -> None:
                     raise
                 time.sleep(min(0.05, remaining))
     finally:
-        conn.execute(f"PRAGMA busy_timeout={busy_timeout}")
+        conn.execute(f"PRAGMA busy_timeout={int(busy_timeout)}")
