@@ -108,7 +108,8 @@ def test_the_cli_prints_the_split_advice_and_fails_the_run(monkeypatch: pytest.M
 
     delivered = _post._push_report(SimpleNamespace(con=None, target_scope=None), object(), PUSH_URL, None, quiet=True)
 
-    assert delivered is False and calls == []
+    # Only the report-schema capability probe (GET /version) may precede the refusal; nothing is uploaded.
+    assert delivered is False and [(call.method, call.url.path) for call in calls] in ([], [("GET", "/version")])
     err = capsys.readouterr().err
     assert "100 agents" in err and "agents per push" in err and "--inventory" in err
 

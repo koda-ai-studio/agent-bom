@@ -9,6 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from agent_bom.cli import main
+from agent_bom.output.report_packing import load_report_document
 
 _BASE = ["scan", "--offline", "--no-scan", "--no-discover", "--exit-zero", "-f", "json", "-q"]
 
@@ -17,7 +18,7 @@ def _scan(tmp_path: Path, *args: str) -> dict:
     out = tmp_path / "report.json"
     result = CliRunner().invoke(main, [*_BASE, *args, "-o", str(out)], catch_exceptions=False)
     assert result.exit_code == 0, result.output
-    return json.loads(out.read_text())
+    return load_report_document(json.loads(out.read_text()))
 
 
 def _package_names(report: dict) -> set[str]:

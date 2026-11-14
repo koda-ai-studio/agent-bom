@@ -326,7 +326,7 @@ def test_identity_attachment_retains_action_without_inheriting_target_authority(
     original = api_stores._graph_store
     try:
         set_graph_store(restored_store)
-        response = TestClient(app).get("/v1/graph", params={"scan": "identity-attachment", "limit": 200})
+        response = TestClient(app).get("/v1/graph", params={"scan": "identity-attachment", "limit": 200, "view": "full"})
     finally:
         set_graph_store(original)
     assert response.status_code == 200
@@ -422,7 +422,7 @@ def test_authorization_decision_and_status_survive_persistence_and_graph_api(tmp
         set_graph_store(store)
         response = TestClient(app).get(
             "/v1/graph",
-            params={"scan": "scan-authorization-api", "limit": 200},
+            params={"scan": "scan-authorization-api", "limit": 200, "view": "full"},
         )
     finally:
         set_graph_store(original)

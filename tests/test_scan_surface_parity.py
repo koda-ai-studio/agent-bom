@@ -29,6 +29,7 @@ from agent_bom.models import (
     TransportType,
     Vulnerability,
 )
+from agent_bom.output.report_packing import load_report_document
 
 
 def _trunc(s: str) -> str:
@@ -117,7 +118,7 @@ async def test_mcp_scan_emits_graph_derived_categories():
         _run_scan_pipeline=_pipeline,
         _truncate_response=_trunc,
     )
-    payload = json.loads(result)
+    payload = load_report_document(json.loads(result))
     cats = _categories_from_json(payload)
     assert "COMBINATION" in cats, f"MCP dropped graph-derived category; got {cats}"
     assert "CVE" in cats
@@ -191,7 +192,7 @@ def test_default_cli_scan_surfaces_combination():
     # critical finding is a failed security verdict.
     assert result.exit_code == 1, result.output
     # The console prints a status banner before the JSON document.
-    payload = json.loads(result.output[result.output.index("{") :])
+    payload = load_report_document(json.loads(result.output[result.output.index("{") :]))
     cats = _categories_from_json(payload)
     assert "COMBINATION" in cats, f"default CLI dropped graph-derived category; got {cats}"
     # Graph-derived findings and dependency reachability share the same graph
@@ -411,7 +412,7 @@ def _cli_json_with_injected_path(edges: list[str]) -> dict:
         patch.object(attack_path_fusion, "apply_attack_path_fusion", fusion_with_injected_path),
     ):
         result = CliRunner().invoke(main, ["scan", "--no-auto-update-db", "--format", "json"], catch_exceptions=False)
-    return json.loads(result.output[result.output.index("{") :])
+    return load_report_document(json.loads(result.output[result.output.index("{") :]))
 
 
 def _cve_rows(payload: dict) -> tuple[dict, dict]:

@@ -18,6 +18,7 @@ from agent_bom.models import Agent, AgentType, AIBOMReport, MCPServer, MCPTool, 
 from agent_bom.output.agent_mesh import build_agent_mesh
 from agent_bom.output.graph_evidence import graph_evidence_sections
 from agent_bom.output.json_fmt import to_json
+from agent_bom.output.report_packing import load_report_document
 
 REACH_TITLE = "AI agent can reach a credential"
 
@@ -259,7 +260,7 @@ def test_scan_cli_on_a_library_checkout_reports_no_false_inventory(tmp_path):
 
     result = CliRunner().invoke(main, ["scan", "-p", str(root), "--no-discover", "--no-scan", "-f", "json", "-o", str(target)])
     assert target.exists(), result.output
-    report = json.loads(target.read_text())
+    report = load_report_document(json.loads(target.read_text()))
     assert (report["summary"]["total_agents"], report["summary"]["total_mcp_servers"]) == (0, 0)
     assert not [row for row in report["findings"] if REACH_TITLE in str(row.get("title"))]
     names = {package["name"] for agent in report["agents"] for server in agent["mcp_servers"] for package in server["packages"]}

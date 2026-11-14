@@ -10,6 +10,7 @@ import click
 
 from agent_bom.output.impact_brief import MAX_BYTES, build_impact_brief
 from agent_bom.output.impact_html import render_impact_brief
+from agent_bom.output.report_packing import load_report_document
 
 
 def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -26,7 +27,7 @@ def _read(path: Path) -> dict[str, Any]:
         raw = stream.read(MAX_BYTES + 1)
     if len(raw) > MAX_BYTES:
         raise ValueError("input exceeds report budget")
-    value = json.loads(raw, object_pairs_hook=_pairs)
+    value = load_report_document(json.loads(raw, object_pairs_hook=_pairs), max_expanded_bytes=MAX_BYTES)
     if not isinstance(value, dict):
         raise ValueError("scan report must be an object")
     return value

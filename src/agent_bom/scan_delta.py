@@ -23,6 +23,7 @@ from collections.abc import Collection, Mapping
 from pathlib import Path
 from typing import Any, Optional
 
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.package_utils import vulnerability_occurrence_key
 from agent_bom.parsers.prompt_scanner import prompt_scan_data_to_findings
 from agent_bom.storage import state_home
@@ -74,7 +75,7 @@ def load_baseline(path: str | Path) -> dict:
     if not p.exists():
         raise FileNotFoundError(f"Baseline file not found: {p}")
     try:
-        data = json.loads(p.read_text(encoding="utf-8"))
+        data = load_report_document(json.loads(p.read_text(encoding="utf-8")))
     except json.JSONDecodeError as exc:
         raise ValueError(f"Baseline file is not valid JSON: {p}") from exc
     if "blast_radius" not in data:

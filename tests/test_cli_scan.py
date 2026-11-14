@@ -17,6 +17,7 @@ from click.testing import CliRunner
 from agent_bom.cli import cli_main, main
 from agent_bom.cli._agent_mode import dumps_envelope, success_envelope, summarize_scan_data
 from agent_bom.models import Agent, AgentType, BlastRadius, MCPServer, Package, Severity, Vulnerability
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.scanners import IncompleteScanError
 
 
@@ -124,7 +125,7 @@ def test_scan_agent_mode_emits_machine_envelope(monkeypatch):
     result = _run(["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"])
 
     assert result.exit_code == 0, result.output
-    payload = json.loads(result.output)
+    payload = load_report_document(json.loads(result.output))
     assert payload["schema_version"] == "1"
     assert payload["mode"] == "agent"
     assert payload["ok"] is True
@@ -153,7 +154,7 @@ output = "profile-report.json"
     result = _run(["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"])
 
     assert result.exit_code == 0, result.output
-    payload = json.loads(result.output)
+    payload = load_report_document(json.loads(result.output))
     assert payload["mode"] == "agent"
 
 
@@ -164,7 +165,7 @@ def test_scan_agent_mode_token_budget_reports_truncation(monkeypatch):
     )
 
     assert result.exit_code == 0, result.output
-    payload = json.loads(result.output)
+    payload = load_report_document(json.loads(result.output))
     assert payload["truncation"]["enabled"] is True
     assert payload["truncation"]["token_budget"] == 200
     assert payload["truncated"] is True
@@ -306,7 +307,7 @@ def test_agent_mode_scan_summary_envelope_omits_provenance_end_to_end(monkeypatc
     result = _run(["agents", "--agent-mode", "--demo", "--exit-zero", "--no-scan", "--offline", "--no-auto-update-db"])
 
     assert result.exit_code == 0, result.output
-    payload = json.loads(result.output)
+    payload = load_report_document(json.loads(result.output))
     assert payload["data_mode"] == "summary"
     data = payload["data"]
     assert "ai_inventory" not in data
@@ -322,7 +323,7 @@ def test_agent_mode_entry_wraps_usage_errors(monkeypatch, capsys):
         cli_main()
 
     assert excinfo.value.code == 2
-    payload = json.loads(capsys.readouterr().out)
+    payload = load_report_document(json.loads(capsys.readouterr().out))
     assert payload["mode"] == "agent"
     assert payload["ok"] is False
     assert payload["exit_code"] == 2
@@ -339,7 +340,7 @@ def test_agent_mode_entry_accepts_late_flag(monkeypatch, capsys):
         cli_main()
 
     assert excinfo.value.code == 2
-    payload = json.loads(capsys.readouterr().out)
+    payload = load_report_document(json.loads(capsys.readouterr().out))
     assert payload["mode"] == "agent"
     assert payload["ok"] is False
 
@@ -432,7 +433,7 @@ def _scan_json(tmp_path, args, name):
     out = tmp_path / f"{name}.json"
     result = _run(["scan", *args, "--no-scan", "--offline", "--no-auto-update-db", "-f", "json", "-o", str(out)])
     assert out.exists(), result.output
-    return result, json.loads(out.read_text(encoding="utf-8"))
+    return result, load_report_document(json.loads(out.read_text(encoding="utf-8")))
 
 
 def _iac_count(payload):
@@ -621,7 +622,7 @@ def test_scan_json_reuses_canonical_report_projection(monkeypatch, tmp_path):
 
     assert result.exit_code == 0, result.output
     assert projection_calls == 1
-    actual = json.loads(output.read_text(encoding="utf-8"))
+    actual = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     expected = json_fmt.redact_json_payload(original_to_json(projected_reports[0]))
     # Full equality pins summaries, finding counts, reachability/verdict fields,
     # and enrichment—not merely the outer document marker.
@@ -828,7 +829,7 @@ def test_scan_reproducible_pins_report_and_inventory_timestamps(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    report = json.loads(out.read_text(encoding="utf-8"))
+    report = load_report_document(json.loads(out.read_text(encoding="utf-8")))
     assert report["generated_at"] == "1970-01-01T00:00:00+00:00"
     assert report["inventory_snapshot"]["generated_at"] == "1970-01-01T00:00:00+00:00"
 
@@ -862,7 +863,7 @@ def test_scan_honors_source_date_epoch_for_reproducible_outputs(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    report = json.loads(out.read_text(encoding="utf-8"))
+    report = load_report_document(json.loads(out.read_text(encoding="utf-8")))
     assert report["generated_at"] == "2023-11-14T22:13:20+00:00"
     assert report["inventory_snapshot"]["generated_at"] == "2023-11-14T22:13:20+00:00"
 
@@ -938,7 +939,7 @@ def test_scan_no_discover_scans_explicit_project_but_not_ambient_skills(tmp_path
     )
 
     assert result.exit_code == 0, result.output
-    report = json.loads(out.read_text(encoding="utf-8"))
+    report = load_report_document(json.loads(out.read_text(encoding="utf-8")))
     agent_names = [agent["name"] for agent in report["agents"]]
     # An explicitly-passed --project/-p is an explicit input artifact: it is
     # scanned even under --no-discover (alongside the declared inventory).
@@ -992,7 +993,7 @@ def test_scan_sbom_does_not_merge_ambient_skill_packages(tmp_path, monkeypatch):
     # No composition completeness was declared by this imported inventory.
     assert result.exit_code == 1, result.output
     assert "scan execution was partial" in result.output
-    report = json.loads(out.read_text(encoding="utf-8"))
+    report = load_report_document(json.loads(out.read_text(encoding="utf-8")))
     packages = {(pkg["name"], pkg.get("version"), pkg.get("ecosystem")) for pkg in report["packages"]}
     assert packages == {("axios", "1.6.0", "npm")}
     assert [agent["name"] for agent in report["agents"]] == ["sbom:bom.cdx"]
@@ -1181,8 +1182,8 @@ def test_scan_inventory_only_round_trips_scan_report_snapshot_without_accretion(
     assert first_result.exit_code == 0, first_result.output
     assert second_result.exit_code == 0, second_result.output
 
-    first_snapshot = json.loads(first.read_text(encoding="utf-8"))["inventory_snapshot"]
-    second_snapshot = json.loads(second.read_text(encoding="utf-8"))["inventory_snapshot"]
+    first_snapshot = load_report_document(json.loads(first.read_text(encoding="utf-8")))["inventory_snapshot"]
+    second_snapshot = load_report_document(json.loads(second.read_text(encoding="utf-8")))["inventory_snapshot"]
     first_snapshot.pop("generated_at", None)
     second_snapshot.pop("generated_at", None)
 
@@ -1219,7 +1220,7 @@ def test_scan_no_discover_scans_explicit_project_packages(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    report = json.loads(out.read_text(encoding="utf-8"))
+    report = load_report_document(json.loads(out.read_text(encoding="utf-8")))
     packages = {(pkg["name"], pkg.get("ecosystem")) for pkg in report["packages"]}
     assert ("requests", "pypi") in packages
     assert [agent["name"] for agent in report["agents"]] == ["project:repo"]
@@ -1258,7 +1259,7 @@ def test_scan_no_discover_analyzes_code_in_the_explicit_project(tmp_path):
     )
 
     assert result.exit_code == 0, result.output
-    report = json.loads(out.read_text(encoding="utf-8"))
+    report = load_report_document(json.loads(out.read_text(encoding="utf-8")))
     code_findings = [finding for finding in report["findings"] if finding.get("evidence", {}).get("entrypoint") == "shell"]
     assert len(code_findings) == 1
     assert code_findings[0]["severity"] == "critical"
@@ -1447,7 +1448,7 @@ def test_scan_delta_filters_json_output_before_render(tmp_path):
         )
 
     assert result.exit_code == 0
-    data = json.loads(output.read_text(encoding="utf-8"))
+    data = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     assert data["delta"]["new_count"] == 1
     assert data["delta"]["pre_existing_count"] == 1
     assert [item["vulnerability_id"] for item in data["blast_radius"]] == ["CVE-2026-0002"]
@@ -1546,7 +1547,7 @@ def test_demo_offline_with_missing_ambient_db_keeps_complete_bundled_evidence(mo
 
     # Findings intentionally fail the demo scan; execution evidence is complete.
     assert result.exit_code == 1, result.output
-    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     assert payload["scan_run"]["outcome"] == "complete"
     assert payload["scan_run"]["issues"] == []
     assert payload["warnings"] == []
@@ -1656,7 +1657,7 @@ def test_scan_finding_count_parity_across_formats(tmp_path):
     _scan("sarif", sf)
     _scan("csv", cf)
 
-    json_count = len(json.loads(jf.read_text())["findings"])
+    json_count = len(load_report_document(json.loads(jf.read_text()))["findings"])
     sarif_count = len(json.loads(sf.read_text())["runs"][0]["results"])
     csv_count = cf.read_text().strip().count("\n")  # minus header
     assert json_count == sarif_count == csv_count == 1
@@ -1696,7 +1697,7 @@ def test_scan_reproducible_pins_agent_timestamps(tmp_path):
     assert _emit(a).exit_code == 0
     assert _emit(b).exit_code == 0
 
-    report = json.loads(a.read_text(encoding="utf-8"))
+    report = load_report_document(json.loads(a.read_text(encoding="utf-8")))
     agent = report["agents"][0]
     assert agent["discovered_at"] == "1970-01-01T00:00:00Z"
     assert agent["last_seen"] == "1970-01-01T00:00:00Z"
@@ -1828,7 +1829,7 @@ def test_scan_incomplete_offline_scan_honors_explicit_output(monkeypatch, tmp_pa
     assert result.exit_code == 1
     assert "populated local vulnerability DB" in result.output
     assert output.exists()
-    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     assert payload["scan_run"]["outcome"] == "partial"
     assert payload["scan_run"]["issues"][0]["code"] == "required_scanner_unavailable"
     assert payload["warnings"] == ["Offline mode requires a populated local vulnerability DB."]
@@ -1851,7 +1852,7 @@ def test_scan_warning_is_preserved_in_json_and_marks_partial(monkeypatch, tmp_pa
     result = _run(["scan", "--demo", "--offline", "--no-auto-update-db", "--format", "json", "--output", str(output)])
 
     assert result.exit_code == 1
-    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     assert payload["scan_run"]["outcome"] == "partial"
     assert payload["warnings"] == ["package lookup coverage degraded"]
 
@@ -1883,7 +1884,7 @@ def test_zero_finding_partial_secret_scan_is_preserved_and_fails_closed(monkeypa
     )
 
     assert result.exit_code == 1, result.output
-    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     assert payload["ai_inventory"]["secrets"]["total"] == 0
     assert payload["ai_inventory"]["secrets"]["warnings"] == ["Stopped at 2 files"]
     assert "secret_scan" in payload["scan_sources"]
@@ -1926,7 +1927,7 @@ def test_partially_parseable_typescript_retains_findings_and_marks_cli_json_part
     )
 
     assert result.exit_code == 1, result.output
-    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     ast_analysis = payload["ai_inventory"]["ast_analysis"]
     assert ast_analysis["flow_findings"]
     assert ast_analysis["analysis_coverage"]["status"] == "partial"
@@ -1954,7 +1955,7 @@ def test_model_scan_refusal_is_preserved_and_fails_closed(tmp_path):
     )
 
     assert result.exit_code != 0, result.output
-    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     assert payload["scan_run"]["outcome"] == "partial"
     # Coverage issues only; --no-scan also records a non-coverage skip receipt.
     issues = [issue for issue in payload["scan_run"]["issues"] if issue["affects_coverage"]]
@@ -2000,7 +2001,7 @@ def test_project_scanner_exception_is_sanitized_and_marks_partial(monkeypatch, t
     )
 
     assert result.exit_code == 1, result.output
-    payload = json.loads(output.read_text(encoding="utf-8"))
+    payload = load_report_document(json.loads(output.read_text(encoding="utf-8")))
     matching = [issue for issue in payload["scan_run"]["issues"] if issue["source"] == source]
     assert matching == [
         {
@@ -2406,7 +2407,7 @@ def test_scan_format_badge_writes_json(tmp_path):
         result = _run(["scan", "--demo", "--exit-zero", "--format", "badge", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists(), "badge output file was not created"
-    data = json.loads(out.read_text())
+    data = load_report_document(json.loads(out.read_text()))
     assert "schemaVersion" in data or "label" in data or "message" in data
 
 
@@ -2434,7 +2435,7 @@ def test_scan_format_graph_writes_json(tmp_path):
         result = _run(["scan", "--demo", "--exit-zero", "--format", "graph", "--output", str(out), "--no-scan"])
     assert result.exit_code == 0
     assert out.exists(), "graph output file was not created"
-    data = json.loads(out.read_text())
+    data = load_report_document(json.loads(out.read_text()))
     assert "elements" in data
     assert data.get("format") == "cytoscape"
 
@@ -2838,7 +2839,7 @@ def _scan_dot_report(tmp_path, monkeypatch) -> dict:
         catch_exceptions=False,
     )
     assert result.exit_code == 0, result.output
-    return json.loads(out.read_text())
+    return load_report_document(json.loads(out.read_text()))
 
 
 def test_scan_dot_names_the_project_agent_after_the_directory(tmp_path, monkeypatch):
@@ -2887,7 +2888,7 @@ def test_no_discover_preserves_explicit_project_iac(tmp_path, monkeypatch, outpu
             args.append("--no-discover")
         result = _run(args)
         assert result.exit_code == 0, result.output
-        reports.append(json.loads(output.read_text()))
+        reports.append(load_report_document(json.loads(output.read_text())))
     if output_format == "json":
         findings = [[finding for finding in report["findings"] if "DOCKER-" in finding["title"]] for report in reports]
         assert findings[0]

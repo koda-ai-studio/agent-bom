@@ -7,6 +7,7 @@ import logging
 
 from agent_bom.mcp_blocklist import blocked_server_remediations
 from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
+from agent_bom.output.report_packing import UNTRUSTED_MAX_EXPANDED_BYTES, load_report_document
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -154,6 +155,7 @@ async def diff_impl(
                     default=str,
                 )
 
+        baseline = load_report_document(baseline, max_expanded_bytes=UNTRUSTED_MAX_EXPANDED_BYTES)
         result = diff_reports(baseline, current)
         save_report(current)
         return _truncate_response(json.dumps(result, indent=2, default=str))

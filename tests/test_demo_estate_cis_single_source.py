@@ -141,7 +141,7 @@ def test_the_curated_cis_table_is_gone() -> None:
 
 
 def _graph_cis_failures(client: TestClient) -> dict[tuple[str, str], set[str]]:
-    page = client.get("/v1/graph", headers=VIEWER, params={"entity_types": "misconfiguration", "limit": 5000}).json()
+    page = client.get("/v1/graph", headers=VIEWER, params={"entity_types": "misconfiguration", "limit": 5000, "view": "full"}).json()
     # Every misconfiguration node is on the page (edge endpoints ride along beside them).
     assert sum(1 for node in page["nodes"] if node["entity_type"] == "misconfiguration") == page["stats"]["total_nodes"]
     failures: dict[tuple[str, str], set[str]] = defaultdict(set)

@@ -162,6 +162,21 @@ QUIET_HELP = (
 )
 
 
+_REPORT_FORMAT_OPTION = click.option(
+    "--report-format",
+    "report_format",
+    type=click.Choice(["v1", "v2", "legacy"], case_sensitive=False),
+    default="v1",
+    envvar="AGENT_BOM_REPORT_FORMAT",
+    show_default=True,
+    help=(
+        "JSON report schema. v1 (default; alias legacy) writes schema 1.0 with every record inline. v2 writes schema 2.0, "
+        "which writes each compliance control, package, asset and provenance record once and references it by ID; "
+        "it becomes the default in 0.116.0. Pushes use 2.0 automatically when the control plane accepts it."
+    ),
+)
+
+
 def output_options(fn):
     """Output path, format, display controls, telemetry endpoints."""
     return _apply(
@@ -185,10 +200,7 @@ def output_options(fn):
                 "--format",
                 "-f",
                 "output_format",
-                type=AliasedChoice(
-                    SCAN_OUTPUT_FORMATS,
-                    aliases=SCAN_OUTPUT_FORMAT_ALIASES,
-                ),
+                type=AliasedChoice(SCAN_OUTPUT_FORMATS, aliases=SCAN_OUTPUT_FORMAT_ALIASES),
                 default="console",
                 help=(
                     "Output format.\n\n"
@@ -202,6 +214,7 @@ def output_options(fn):
                     "Other: graph (Cytoscape.js graph JSON), badge (single-line status)."
                 ),
             ),
+            _REPORT_FORMAT_OPTION,
             click.option(
                 "--iceberg-catalog-url",
                 "iceberg_catalog_url",

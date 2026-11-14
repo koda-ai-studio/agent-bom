@@ -14,6 +14,7 @@ from click import ClickException
 from click.testing import CliRunner
 
 from agent_bom.cli import main
+from agent_bom.output.report_packing import expand_report
 
 ROOT = Path(__file__).resolve().parents[1]
 DURABLE_LOCAL_CONTROL_PLANE = "agent-bom serve --persist ~/.agent-bom/control-plane.db"
@@ -266,7 +267,7 @@ def test_quickstart_run_offline_succeeds_with_empty_vulnerability_db(tmp_path, m
     )
 
     assert result.exit_code == 0, result.output
-    report = json.loads((sample_dir / "agent-bom-report.json").read_text())
+    report = expand_report(json.loads((sample_dir / "agent-bom-report.json").read_text()))
     assert report["scan_run"]["outcome"] == "complete"
     # The only issue is the non-coverage receipt that quickstart skips the vulnerability lane.
     assert [issue["code"] for issue in report["scan_run"]["issues"]] == ["vulnerability_scan_skipped"]

@@ -17,6 +17,7 @@ import click
 
 from agent_bom.cli import _ui_handoff
 from agent_bom.cli._tenant import resolve_cli_tenant_id
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.samples import write_first_run_sample
 from agent_bom.storage import state_home
 
@@ -372,7 +373,7 @@ def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, sta
     from agent_bom.cli._persisted_scan import open_local_job_store
 
     try:
-        payload = json.loads(report_path.read_text(encoding="utf-8"))
+        payload = load_report_document(json.loads(report_path.read_text(encoding="utf-8")))
         allowed = {"complete", "partial"} if allow_partial else {"complete"}
         if payload.get("scan_id") != scan_id or payload.get("scan_run", {}).get("outcome") not in allowed:
             raise ValueError("Completed report identity does not match graph")

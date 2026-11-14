@@ -21,6 +21,8 @@ class ScanContext:
     # and agent-mode renderers consume this instead of rebuilding the complete
     # finding/inventory graph for the same scan.
     report_json: Optional[dict[str, Any]] = None
+    # JSON report schema for file and stdout output: "v2" (2.0); "v1"/"legacy" (1.0).
+    report_format: str = "v1"
     # benchmark reports
     cis_benchmark_report: Any = None
     sf_cis_benchmark_report: Any = None

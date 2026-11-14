@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from agent_bom.mcp_tools.host_local import HostLocalForbiddenError
+from agent_bom.output.report_packing import UNTRUSTED_MAX_EXPANDED_BYTES, load_report_document
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
 logger = logging.getLogger(__name__)
@@ -300,7 +301,7 @@ async def license_compliance_scan_impl(
         from agent_bom.license_policy import evaluate_license_policy, to_serializable
         from agent_bom.models import Agent, AgentType, MCPServer, Package
 
-        data = json.loads(scan_json)
+        data = load_report_document(json.loads(scan_json), max_expanded_bytes=UNTRUSTED_MAX_EXPANDED_BYTES)
         policy = json.loads(policy_json) if policy_json else None
 
         # Accept either a full scan result (with agents) or a flat package list

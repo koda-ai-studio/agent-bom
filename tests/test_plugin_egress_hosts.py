@@ -11,6 +11,7 @@ import pytest
 from click.testing import CliRunner
 
 from agent_bom.core.egress_hosts import CONDITIONAL_HOSTS, DECLARED_HOSTS, LOOKUP_HOSTS, USER_NAMED_TARGETS
+from agent_bom.output.report_packing import load_report_document
 
 ROOT = Path(__file__).resolve().parents[1]
 READMES = (
@@ -92,7 +93,7 @@ def test_mcp_inventory_makes_no_network_call(tmp_path, monkeypatch) -> None:
     result = CliRunner().invoke(main, ["mcp", "inventory", "-q", "-f", "json"])
 
     assert result.exit_code == 0, result.output
-    data = json.loads(result.output)
+    data = load_report_document(json.loads(result.output))
     names = {pkg["name"] for agent in data["agents"] for server in agent["mcp_servers"] for pkg in server["packages"]}
     assert {"mcp-server-fetch", "@modelcontextprotocol/server-github"} <= names
     assert lookups == []

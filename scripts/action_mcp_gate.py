@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -126,7 +127,9 @@ def main(argv: list[str] | None = None) -> int:
         command = [sys.executable, "-m", "agent_bom", "scan", ".", "-f", "json", "-o", str(out), "-q"]
         if args.offline:
             command.append("--offline")
-        subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        # Older pinned releases ignore the variable; newer ones keep the 1.0 shape evaluate() reads.
+        env = {**os.environ, "AGENT_BOM_REPORT_FORMAT": "legacy"}
+        subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
         if not out.is_file():
             print("::error::MCP gate scan produced no report")
             return 1

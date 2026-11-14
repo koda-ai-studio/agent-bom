@@ -171,7 +171,7 @@ def test_recorded_exposure_and_receipts_survive_graph_and_rollup_api(tmp_path, p
     try:
         stores.set_graph_store(store)
         client = TestClient(app)
-        response = client.get("/v1/graph", params={"scan_id": graph.scan_id})
+        response = client.get("/v1/graph", params={"scan_id": graph.scan_id, "view": "full"})
         assert response.status_code == 200
         resource = next(node for node in response.json()["nodes"] if node["entity_type"] == "cloud_resource")
         assert resource["attributes"]["internet_exposed"] is expected

@@ -24,6 +24,7 @@ from agent_bom.mcp_scan_attestation import (
     sign_mcp_scan_attestation,
     verify_mcp_scan_attestation,
 )
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.sbom_attestation import (
     AttestationSigningError,
     AttestationTrustError,
@@ -439,7 +440,7 @@ def mcp_sign_cmd(
 ) -> None:
     """Sign a completed scan JSON into a DSSE MCP scan attestation for one server."""
     try:
-        report = json.loads(Path(scan_path).read_text(encoding="utf-8"))
+        report = load_report_document(json.loads(Path(scan_path).read_text(encoding="utf-8")))
         if not isinstance(report, dict):
             raise AttestationSigningError("scan_report_invalid")
         evidence = evidence_from_scan_report(

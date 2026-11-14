@@ -200,7 +200,7 @@ def test_mapping_receipts_survive_database_api_and_graph_export(monkeypatch, tmp
     assert any(row.get("evidence", {}).get("atlas_mapping_evidence") == expected for row in rows), [
         (row.get("finding_type"), list(row.get("evidence", {}))) for row in rows
     ]
-    for url in ("/v1/graph?scan_id=atlas-receipt", "/v1/scan/atlas-receipt/graph-export?format=json"):
+    for url in ("/v1/graph?scan_id=atlas-receipt&view=full", "/v1/scan/atlas-receipt/graph-export?format=json"):
         response = client.get(url)
         assert response.status_code == 200
         exported = [e for e in response.json()["edges"] if e["evidence"].get("atlas_mapping_receipts")]

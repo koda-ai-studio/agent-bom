@@ -14,6 +14,7 @@ from agent_bom.cli.agents._output import _is_null_device, _resolve_output_path, 
 from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.quiet_summary import SEVERITY_ORDER, severity_counts
+from agent_bom.cli.agents.scan_pipeline.report_format_notice import notice_report_schema_default
 from agent_bom.cli.agents.scan_pipeline.scan_memory import remember_and_report
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
 from agent_bom.cli.agents.scan_pipeline.top_fixes import print_top_fixes
@@ -342,6 +343,7 @@ def run_output(opts: ScanOptions, st: ScanState) -> None:
     _print_totals_and_record(opts, st)
     st.first_scan_of_target = remember_and_report(opts, st)
     _render(opts, st)
+    notice_report_schema_default(opts)
     _record_adoption_and_nudge(opts, st)
     _render_posture(opts, st)
     _save_history(opts, st)

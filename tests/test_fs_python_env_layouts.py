@@ -15,6 +15,7 @@ from click.testing import CliRunner
 
 from agent_bom.cli import main
 from agent_bom.filesystem import scan_disk_path_native, scan_filesystem
+from agent_bom.output.report_packing import load_report_document
 
 
 def _dist(site: Path, name: str, version: str) -> None:
@@ -82,7 +83,7 @@ def test_fs_cli_reports_the_installed_packages_not_nothing_to_scan(tmp_path, mon
     artifact = tmp_path / "r.json"
     result = CliRunner().invoke(main, ["fs", str(tmp_path / target), "-f", "json", "-o", str(artifact)])
     assert result.exit_code == 0, result.output
-    report = json.loads(artifact.read_text())
+    report = load_report_document(json.loads(artifact.read_text()))
     assert not [i for i in report["scan_run"]["issues"] if i["code"] == "nothing_to_scan"]
     names = {pkg["name"] for agent in report["agents"] for server in agent["mcp_servers"] for pkg in server["packages"]}
     assert {"requests", "urllib3"} <= names
