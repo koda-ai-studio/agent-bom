@@ -19,6 +19,7 @@ from agent_bom.api.read_models import STRICT_CONTRACT
 from agent_bom.api.read_models import graph as graph_models
 from agent_bom.api.read_models.exploit_story import GraphExploitStoryResponse
 from agent_bom.api.read_models.graph_agent_architecture import GraphAgentArchitectureResponse
+from agent_bom.api.read_models.graph_cluster_map import GraphClusterMapResponse
 from agent_bom.api.read_models.graph_vendor_paths import GraphCrossVendorPathsResponse
 from agent_bom.api.server import app
 from agent_bom.api.stores import set_graph_store
@@ -30,6 +31,7 @@ GRAPH_TYPED_READS: dict[str, type[BaseModel]] = {
     "/v1/graph/agents": graph_models.GraphAgentsResponse,
     "/v1/graph/attack-paths/cross-vendor": GraphCrossVendorPathsResponse,
     "/v1/graph/changes": graph_models.GraphEstateChangesResponse,
+    "/v1/graph/cluster-map": GraphClusterMapResponse,
     "/v1/graph/clusters": graph_models.GraphClustersResponse,
     "/v1/graph/compliance": graph_models.GraphComplianceResponse,
     "/v1/graph/diff": graph_models.GraphDiffResponse,
@@ -134,6 +136,7 @@ LIVE_REQUESTS: dict[str, str] = {
     "/v1/graph": "/v1/graph",
     "/v1/graph/agents": "/v1/graph/agents",
     "/v1/graph/changes": "/v1/graph/changes",
+    "/v1/graph/cluster-map": "/v1/graph/cluster-map?scan_id=contract-s2",
     "/v1/graph/clusters": "/v1/graph/clusters",
     "/v1/graph/compliance": "/v1/graph/compliance",
     "/v1/graph/diff": "/v1/graph/diff?old=contract-s1&new=contract-s2",
