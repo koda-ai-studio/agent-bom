@@ -100,11 +100,14 @@ export function primaryPath(flow: ReadingFlow, ranks: Map<string, number>, steps
 class SlotGrid {
   private taken = new Set<string>();
   bottom = 0;
+  /** A context parent of column zero opens a column to its left instead of stacking under its child. */
+  left = 0;
   constructor(readonly columns: number, private readonly rowLimit: number) {}
   free(column: number, row: number) { return !this.taken.has(`${column}:${row}`); }
   place(column: number, row: number, cells: Map<string, Cell>, id: string) {
     this.taken.add(`${column}:${row}`);
     this.bottom = Math.max(this.bottom, row);
+    this.left = Math.min(this.left, column);
     cells.set(id, { column, row });
   }
   belowBranches() { return Math.min(this.bottom + 1, Math.max(1, this.rowLimit)); }
@@ -114,11 +117,12 @@ class SlotGrid {
   }
   /** Near the wanted column without running far along a row, so a context edge stays short and clear of captions. */
   nearest(wanted: number, startRow = 1): Cell {
-    const target = Math.min(Math.max(wanted, 0), this.columns - 1);
+    const first = Math.min(this.left, Math.max(wanted, this.left - 1));
+    const target = Math.min(Math.max(wanted, first), this.columns - 1);
     let best: Cell | null = null, bestCost = Infinity;
     // Rows beyond the limit are only for a grid already full; stacking early would push the map past a legible fit.
     const lastRow = Math.max(this.rowLimit, startRow);
-    for (let row = startRow; row <= lastRow; row++) for (let column = 0; column < this.columns; column++) {
+    for (let row = startRow; row <= lastRow; row++) for (let column = first; column < this.columns; column++) {
       const cost = Math.abs(column - target) + (row - startRow) * ROW_COST;
       if (this.free(column, row) && (cost < bestCost || cost === bestCost && column > best!.column)) { best = { column, row }; bestCost = cost; }
     }

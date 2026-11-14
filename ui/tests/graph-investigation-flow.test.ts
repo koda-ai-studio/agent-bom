@@ -121,3 +121,20 @@ it("keeps a workload outside the entry flow when no exposed host reaches it", ()
   const at = (id: string) => result.nodes.find(n => n.id === id)!.position;
   expect(at("server").y).not.toBe(at("target").y);
 });
+
+it("puts a context parent left of everything it contains so its links never wrap around a column", () => {
+  const cloud = [n("account", "account"), n("gateway", "apiGateway", { resource_id: "api-1" }), n("eks", "cluster"),
+    n("checkout", "container", { container_kind: "workload" }), n("ledger", "container", { container_kind: "workload" }),
+    n("role", "role"), n("bucket", "dataStore"), n("waf", "misconfiguration"), n("wildcard", "misconfiguration"),
+    n("cve-next", "vulnerability"), n("cve-urllib3", "vulnerability")];
+  const links = [e("account", "gateway", "contains"), e("account", "eks", "contains"), e("waf", "gateway", "affects"),
+    e("gateway", "checkout", "exposed_to"), e("eks", "checkout", "hosts"), e("eks", "ledger", "hosts"),
+    e("checkout", "cve-next", "vulnerable_to"), e("ledger", "cve-urllib3", "vulnerable_to"),
+    e("checkout", "role", "authenticates_as"), e("wildcard", "role", "affects"), e("role", "bucket", "has_permission")];
+  const result = investigationFlow(cloud, links, "exposure");
+  const at = (id: string) => result.nodes.find(node => node.id === id)!.position;
+  for (const child of ["gateway", "eks"]) expect(at("account").x).toBeLessThan(at(child).x);
+  expect(at("eks").x).toBeLessThan(at("checkout").x);
+  // The reading still opens on the primary path at the origin; the parent sits in a column before it.
+  expect(at(result.primaryPath[0]!)).toEqual({ x: 0, y: 0 });
+});

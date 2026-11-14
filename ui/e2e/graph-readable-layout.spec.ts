@@ -108,6 +108,18 @@ async function cardOverlaps(page: Page) {
   });
 }
 
+/** Connections whose drawn line runs well beyond both of its ends sideways, wrapping around a column. */
+async function edgesAroundColumns(page: Page) {
+  return page.locator(".react-flow__edge").evaluateAll(groups => groups.flatMap(group => {
+    const path = group.querySelector<SVGPathElement>(".react-flow__edge-path");
+    const length = path?.getTotalLength();
+    if (!path || !length) return [];
+    const ends = [path.getPointAtLength(0).x, path.getPointAtLength(length).x];
+    const box = path.getBBox();
+    return box.x < Math.min(...ends) - 24 || box.x + box.width > Math.max(...ends) + 24 ? [group.getAttribute("data-id")] : [];
+  }));
+}
+
 async function visibleLabelTexts(page: Page) {
   return page.locator(".react-flow .graph-relationship-label").evaluateAll(els => els
     .filter(el => { const s = getComputedStyle(el); return s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && el.getBoundingClientRect().width > 0; })
@@ -399,6 +411,8 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(await cardOverlaps(page)).toEqual([]);
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
+    // A containing account sits before what it contains, so no link loops around a column.
+    expect(await edgesAroundColumns(page)).toEqual([]);
     // The provider plate must clear the name even at the expanded graph's fit zoom.
     expect(await page.locator("[data-graph-source-badge]").evaluateAll(badges => badges.flatMap(badge => {
       const a = badge.getBoundingClientRect();
