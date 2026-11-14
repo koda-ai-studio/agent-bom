@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Generator, Iterable, Mapping, Sequence
 
+from agent_bom.core.background_yield import yielding
 from agent_bom.db.graph_bootstrap import backfill_edge_metadata
 from agent_bom.db.graph_node_aliases import upgrade_node_alias_key
 from agent_bom.db.graph_revision import ensure_sqlite_revisions
@@ -223,8 +224,6 @@ def _init_db(conn: sqlite3.Connection, *, backfill_legacy_tenants: bool = True) 
     backfill_edge_metadata(conn)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_tenant_valid ON graph_edges(tenant_id, valid_from, valid_to)")
     # Backfill the per-hop traversal indexes onto stores created before them.
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_tenant_scan_source ON graph_edges(tenant_id, scan_id, source_id)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_tenant_scan_target ON graph_edges(tenant_id, scan_id, target_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_adjacency_out ON graph_edges(tenant_id, scan_id, source_id, target_id, relationship)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_adjacency_in ON graph_edges(tenant_id, scan_id, target_id, source_id, relationship)")
     # Materialise the per-snapshot entity-type breakdown so inventory/summary reads a cached count instead of a per-request GROUP BY over
@@ -633,7 +632,7 @@ def load_graph(
         query += " ORDER BY id"
 
     node_ids: set[str] = set()
-    for row in conn.execute(query, params):
+    for row in yielding(conn.execute(query, params)):
         sev = row["severity"] or ""
         graph.add_node(
             UnifiedNode.from_stored(
@@ -679,7 +678,7 @@ def load_graph(
             )
             SELECT edge.*
             FROM selected_node_ids AS source_node
-            CROSS JOIN graph_edges AS edge INDEXED BY idx_ge_tenant_scan_source
+            CROSS JOIN graph_edges AS edge INDEXED BY idx_ge_adjacency_out
             JOIN selected_node_ids AS target_node
               ON target_node.id = edge.target_id
             WHERE edge.tenant_id = ?
@@ -698,7 +697,7 @@ def load_graph(
     # and query plans. Keep the established source/target/relationship order.
     edge_prefix = "edge." if sql_scoped_edges else ""
     eq += f" ORDER BY {edge_prefix}source_id, {edge_prefix}target_id, {edge_prefix}relationship"
-    for row in conn.execute(eq, eparams):
+    for row in yielding(conn.execute(eq, eparams)):
         if row["source_id"] not in node_ids or row["target_id"] not in node_ids:
             continue
         graph.add_stored_edge(

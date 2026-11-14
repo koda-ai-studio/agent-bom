@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import psutil
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -121,6 +123,74 @@ def scale_up(
     }
 
 
+def _proc_peak_kib(pid: int) -> int | None:
+    """The kernel's resident high-water mark (Linux ``VmHWM``), or None where /proc has none."""
+    try:
+        for line in Path(f"/proc/{pid}/status").read_text(encoding="utf-8").splitlines():
+            if line.startswith("VmHWM:"):
+                return int(line.split()[1])
+    except OSError:
+        pass  # The process already exited or /proc is absent.
+    return None
+
+
+class PeakRss:
+    """Peak resident memory of one process.
+
+    Linux reports an exact high-water mark. Elsewhere (macOS) no API reads
+    another process's peak, so a thread samples its resident size; a spike
+    shorter than ``interval`` can be missed, and ``source`` says which applied.
+    """
+
+    def __init__(self, pid: int, *, interval: float = 0.1) -> None:
+        self.pid = pid
+        self.interval = interval
+        self.source = "unknown"
+        self._sampled = 0
+        self._stopped = threading.Event()
+        self._thread = threading.Thread(target=self._sample, name="peak-rss", daemon=True)
+        self._thread.start()
+
+    def _sample(self) -> None:
+        try:
+            process = psutil.Process(self.pid)
+        except psutil.Error:
+            return
+        while not self._stopped.is_set():
+            try:
+                self._sampled = max(self._sampled, process.memory_info().rss)
+            except psutil.Error:
+                return  # The process exited; keep the peak seen so far.
+            self._stopped.wait(self.interval)
+
+    def peak_mb(self) -> float | None:
+        kib = _proc_peak_kib(self.pid)
+        if kib is not None:
+            self.source = "kernel_high_water_mark"
+            return round(kib / 1024, 1)
+        if self._sampled:
+            self.source = "sampled"
+            return round(self._sampled / (1024 * 1024), 1)
+        return None
+
+    def stop(self) -> None:
+        self._stopped.set()
+        self._thread.join(timeout=2)
+
+
+STACK_SAMPLER_DIR = Path(__file__).resolve().parent / "stack_sampler"
+
+
+def api_environment(env: dict[str, str], name: str) -> dict[str, str]:
+    """The API's environment; with ``QUALIFICATION_STACK_SAMPLES=1`` it also loads the stack sampler."""
+    if env.get("QUALIFICATION_STACK_SAMPLES", os.environ.get("QUALIFICATION_STACK_SAMPLES")) != "1":
+        return env
+    stacks = RESULTS_DIR / "stacks"
+    stacks.mkdir(parents=True, exist_ok=True)
+    path = os.pathsep.join(item for item in (str(STACK_SAMPLER_DIR), env.get("PYTHONPATH", "")) if item)
+    return {**env, "PYTHONPATH": path, "QUALIFICATION_STACK_FILE": str(stacks / f"api-{name}")}
+
+
 class ApiServer:
     """The API as its own process, as deployed, so client timings cross a real socket."""
 
@@ -134,21 +204,21 @@ class ApiServer:
         self.log_path = log_dir / f"api-{name}.log"
         self._log = self.log_path.open("wb")
         command = agent_bom_command("api", "--host", "127.0.0.1", "--port", str(self.port), "--api-key", self.key, "--log-level", "warning")
-        self.process = subprocess.Popen(command, env=env, stdout=self._log, stderr=subprocess.STDOUT)  # noqa: S603
+        self.process = subprocess.Popen(command, env=api_environment(env, name), stdout=self._log, stderr=subprocess.STDOUT)  # noqa: S603
+        self._peak = PeakRss(self.process.pid)
 
     def wait_ready(self, timeout: float = 180) -> bool:
         return wait_for_http(f"{self.base}/health", timeout=timeout)
 
     def peak_rss_mb(self) -> float | None:
-        try:
-            for line in Path(f"/proc/{self.process.pid}/status").read_text(encoding="utf-8").splitlines():
-                if line.startswith("VmHWM:"):
-                    return round(int(line.split()[1]) / 1024, 1)
-        except OSError:
-            pass  # The process already exited or /proc is absent, so peak memory is unknown.
-        return None
+        return self._peak.peak_mb()
+
+    @property
+    def peak_rss_source(self) -> str:
+        return self._peak.source
 
     def stop(self) -> None:
+        self._peak.stop()
         self.process.terminate()
         try:
             self.process.wait(timeout=30)
@@ -164,6 +234,7 @@ class ApiServer:
 def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> dict[str, Any]:
     """Time repeated reads; a read still preparing is retried as its Retry-After asks, within a bound, and counted."""
     latencies: list[float] = []
+    starts: list[float] = []
     statuses: dict[str, int] = {}
     size = 0
     first: Any = None
@@ -173,6 +244,7 @@ def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> di
     for _ in range(repeats):
         while True:
             began = time.perf_counter()
+            started_at = time.time()
             status, body, size = http_json(f"{server.base}{path}", headers=server.headers, timeout=READ_TIMEOUT_SECONDS)
             elapsed = (time.perf_counter() - began) * 1000
             if status != 503 or time.monotonic() > preparing_deadline:
@@ -182,11 +254,17 @@ def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> di
         statuses[str(status)] = statuses.get(str(status), 0) + 1
         if status == 200:
             latencies.append(elapsed)
+            starts.append(round(started_at, 2))
             first = first if first is not None else body
         elif first_error is None:
             first_error = f"HTTP {status}: {str(body)[:300]}"
     summary: dict[str, Any] = {**latency_summary(latencies), "statuses": statuses, "response_bytes": size}
     summary["cold_ms"] = round(latencies[0], 3) if latencies else None
+    # The first read can wait for the post-push build; the warm summary is the steady state.
+    summary["warm"] = latency_summary(latencies[1:])
+    summary["samples_ms"] = [round(value, 1) for value in latencies]
+    # Wall-clock starts line each sample up with the API's stack samples when those are on.
+    summary["started_at"] = starts
     if preparing:
         summary["preparing_retries"] = preparing
     if first_error:
@@ -306,6 +384,7 @@ def measure_estate(result: LaneResult, estate: Estate, env: dict[str, str]) -> d
         _assert_reads(result, estate, row, report, graph["body"], findings["body"])
     finally:
         row.setdefault("api_peak_rss_mb", server.peak_rss_mb())
+        row["api_peak_rss_source"] = server.peak_rss_source
         server.stop()
     return row
 

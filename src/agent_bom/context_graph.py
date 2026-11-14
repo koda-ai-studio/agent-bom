@@ -37,6 +37,8 @@ from agent_bom.graph import (
     EntityType,
     InteractionRisk,
 )
+from agent_bom.graph.context_hosts import InventoryHosts
+from agent_bom.graph.context_hosts import finding_package_identity as _finding_package_identity
 
 _CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f]")
 _UNTRUSTED_PREFIX = "[UNTRUSTED MCP METADATA] "
@@ -170,52 +172,6 @@ def _configured_endpoint_identity(server: dict) -> str | None:
     # Include query/userinfo in equality so distinct tenant endpoints cannot
     # collapse. Only the opaque digest leaves this function, never the URL.
     return hashlib.sha256(endpoint.strip().encode()).hexdigest()
-
-
-def _finding_package_identity(row: dict) -> tuple[str, str, str]:
-    from agent_bom.package_utils import canonical_package_identity
-
-    reference = str(row.get("package") or "")
-    name, version = reference, ""
-    if reference.rfind("@") > 0:
-        name, version = reference.rsplit("@", 1)
-    return canonical_package_identity(
-        str(row.get("package_name") or name),
-        str(row.get("package_version") or version),
-        str(row.get("ecosystem") or ""),
-        row.get("package_purl") or row.get("purl"),
-    )
-
-
-def _context_vulnerability_hosts(row: dict, inventory: dict[str, tuple[str, str, list]]) -> list[str]:
-    """Narrow real owners; never invent ownership from two independent lists."""
-    from agent_bom.package_utils import canonical_package_identity
-
-    agents = set(row.get("affected_agent_graph_ids") or ()) or {f"agent:{name}" for name in row.get("affected_agents") or []}
-    servers = set(row.get("affected_servers") or [])
-    candidates = {
-        server_id: packages
-        for server_id, (agent, server, packages) in inventory.items()
-        if (not agents or agent in agents) and (not servers or server in servers)
-    }
-    ecosystem, name, version = _finding_package_identity(row)
-    matched: dict[str, set[tuple[str, str, str]]] = {}
-    for server_id, packages in candidates.items():
-        for package in packages:
-            identity = canonical_package_identity(
-                package.get("name", ""), package.get("version", ""), package.get("ecosystem", ""), package.get("purl")
-            )
-            if name and identity[1] == name and (not version or identity[2] == version) and (not ecosystem or identity[0] == ecosystem):
-                matched.setdefault(server_id, set()).add(identity)
-    identities = set().union(*matched.values()) if matched else set()
-    if identities:
-        # Missing ecosystem/version is acceptable only if it resolves uniquely.
-        return sorted(matched) if len(identities) == 1 else []
-    if any(candidates.values()):
-        return []  # Inventory contradicts the finding: do not fall back to names.
-    # Legacy payloads without package inventory can identify one dimension
-    # exactly; two multi-valued lists cannot establish individual ownership.
-    return sorted(candidates) if agents and servers and (len(agents) == 1 or len(servers) == 1) else []
 
 
 def build_context_graph(
@@ -385,12 +341,13 @@ def build_context_graph(
     # ── Vulnerability nodes from blast radius ─────────────────────────
     seen_vulns: set[str] = set()
     vulnerability_edges: dict[tuple[str, str], GraphEdge] = {}
+    server_hosts, static_hosts = InventoryHosts(server_inventory), InventoryHosts(static_inventory)
     for br_dict in blast_data:
         affected_agents = set(br_dict.get("affected_agents") or [])
         if affected_agents and affected_agents <= static_names and not affected_agents & runtime_names:
             continue
-        hosts = _context_vulnerability_hosts(br_dict, server_inventory)
-        if not hosts and static_inventory and _context_vulnerability_hosts(br_dict, static_inventory):
+        hosts = server_hosts.hosts(br_dict)
+        if not hosts and static_inventory and static_hosts.hosts(br_dict):
             continue
         vuln_id = br_dict.get("vulnerability_id", "")
         if not vuln_id:

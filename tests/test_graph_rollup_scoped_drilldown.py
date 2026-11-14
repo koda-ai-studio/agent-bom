@@ -490,4 +490,5 @@ class TestTraversalEdgeLookupIsSargable:
             indexes = {row[1] for row in conn.execute("PRAGMA index_list(graph_edges)")}
         finally:
             conn.close()
-        assert {"idx_ge_tenant_scan_source", "idx_ge_tenant_scan_target"} <= indexes, indexes
+        assert {"idx_ge_adjacency_out", "idx_ge_adjacency_in"} <= indexes, indexes
+        assert not {"idx_ge_tenant_scan", "idx_ge_tenant_scan_source", "idx_ge_tenant_scan_target"} & indexes, indexes

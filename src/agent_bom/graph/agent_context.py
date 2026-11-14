@@ -17,6 +17,9 @@ _EXECUTION_HOSTS = {E.CLOUD_RESOURCE, E.CONTAINER, E.CLUSTER}
 _MEMBERSHIP = {R.CONTAINS, R.OWNS, R.PART_OF, R.BELONGS_TO, R.MEMBER_OF}
 
 
+AGENT_CONTEXT_SCHEMA_VERSION = "agent.context.v1"
+
+
 def _text(value: Any, maximum: int = 200) -> str:
     return value.strip()[:maximum] if isinstance(value, str) else ""
 
@@ -44,7 +47,7 @@ def _category(edge: UnifiedEdge, other: UnifiedNode, *, outgoing: bool) -> str |
     return None
 
 
-def _reference(edge: UnifiedEdge, node: UnifiedNode) -> dict[str, Any]:
+def _reference(edge: UnifiedEdge, node: UnifiedNode, scan_id: str) -> dict[str, Any]:
     attrs = node.attributes
     raw_scope = attrs.get("scope")
     scope = raw_scope if isinstance(raw_scope, dict) else {}
@@ -60,7 +63,8 @@ def _reference(edge: UnifiedEdge, node: UnifiedNode) -> dict[str, Any]:
         "account_id": _text(attrs.get("account_id")) or _text(scope.get("account_id")),
         "region": _text(attrs.get("region")) or _text(scope.get("region")) or _text(attrs.get("location")),
         "last_seen": _text(edge.last_seen),
-        "source_scan_id": _text(edge.source_scan_id),
+        # An edge with no source scan is stored under the snapshot it is written in.
+        "source_scan_id": _text(edge.source_scan_id or scan_id),
     }
 
 
@@ -86,11 +90,11 @@ def agent_context(graph: UnifiedGraph, agent: UnifiedNode) -> dict[str, Any]:
         group["status"] = "recorded"
         group["recorded_count"] += 1
         if len(group["items"]) < CONTEXT_ITEM_LIMIT:
-            group["items"].append(_reference(edge, other))
+            group["items"].append(_reference(edge, other, graph.scan_id))
         else:
             group["truncated"] = True
     return {
-        "schema_version": "agent.context.v1",
+        "schema_version": AGENT_CONTEXT_SCHEMA_VERSION,
         "agent_kind": _text(agent.attributes.get("agent_type"), 80) or "unknown",
         **groups,
     }

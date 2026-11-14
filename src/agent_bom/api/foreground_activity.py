@@ -10,8 +10,13 @@ starve the work. State is per process, which matches the GIL it protects.
 from __future__ import annotations
 
 import threading
-import time
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
+from time import monotonic as _monotonic
 from typing import Any
+
+from agent_bom.core.background_yield import register_request_probe
 
 QUIET_SECONDS = 5.0
 MAX_DEFER_SECONDS = 60.0
@@ -19,21 +24,51 @@ _PROBE_PATHS = frozenset({"/health", "/healthz", "/livez", "/readyz", "/ping", "
 
 _cond = threading.Condition()
 _in_flight = 0
-_last_activity = time.monotonic()
+# Requests blocked on background work they need; that work must not pause for them.
+_awaiting = 0
+_last_activity = _monotonic()
+_in_request: ContextVar[bool] = ContextVar("agent_bom_foreground_request", default=False)
+
+
+def requests_in_flight() -> bool:
+    return _in_flight > _awaiting
+
+
+@contextmanager
+def awaiting_background() -> Iterator[None]:
+    """While a request waits on background work, that work does not pause for it.
+
+    Only a counted request stands aside; a background waiter must not mask one.
+    """
+    global _awaiting
+    if not _in_request.get():
+        yield
+        return
+    with _cond:
+        _awaiting += 1
+    try:
+        yield
+    finally:
+        with _cond:
+            _awaiting = max(0, _awaiting - 1)
+
+
+register_request_probe(requests_in_flight)
 
 
 def _enter() -> None:
     global _in_flight, _last_activity
     with _cond:
         _in_flight += 1
-        _last_activity = time.monotonic()
+        _last_activity = _monotonic()
 
 
 def reset() -> None:
-    global _in_flight, _last_activity
+    global _in_flight, _awaiting, _last_activity
     with _cond:
         _in_flight = 0
-        _last_activity = time.monotonic() - QUIET_SECONDS
+        _awaiting = 0
+        _last_activity = _monotonic() - QUIET_SECONDS
         _cond.notify_all()
 
 
@@ -41,17 +76,17 @@ def _leave() -> None:
     global _in_flight, _last_activity
     with _cond:
         _in_flight -= 1
-        _last_activity = time.monotonic()
+        _last_activity = _monotonic()
         _cond.notify_all()
 
 
 def defer_until_idle(*, quiet: float | None = None, max_wait: float | None = None) -> bool:
     """Block until the foreground is quiet; return False if ``max_wait`` ran out first."""
     quiet = QUIET_SECONDS if quiet is None else quiet
-    deadline = time.monotonic() + (MAX_DEFER_SECONDS if max_wait is None else max_wait)
+    deadline = _monotonic() + (MAX_DEFER_SECONDS if max_wait is None else max_wait)
     with _cond:
         while True:
-            now = time.monotonic()
+            now = _monotonic()
             if now >= deadline:
                 return False
             if not _in_flight:
@@ -76,7 +111,9 @@ class ForegroundActivityMiddleware:
         from agent_bom.api.heavy_read_gate import admit
 
         _enter()
+        marker = _in_request.set(True)
         try:
             await admit(self.app, scope, receive, send)
         finally:
+            _in_request.reset(marker)
             _leave()

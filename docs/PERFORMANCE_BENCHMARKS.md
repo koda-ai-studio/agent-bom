@@ -207,12 +207,41 @@ healthy self-hosted rollout to validate with the bundled k6 harness.
 
 | Operation | Baseline path | Target (pilot) | Target (production) |
 |---|---|---:|---:|
-| `GET /v1/graph?limit=100` | store-backed overview page | < 300 ms p95 | < 500 ms p95 |
-| `GET /v1/graph/search?q=agent&limit=25` | store-backed search page | < 250 ms p95 | < 400 ms p95 |
+| `GET /v1/graph?limit=100` | current-estate overview page, steady state | < 2 s p95 | < 2 s p95 |
+| `GET /v1/graph/search?q=agent&limit=25` | store-backed search page | < 1 s p95 | < 1 s p95 |
 | `GET /v1/graph/attack-paths?limit=25` | persisted-path queue with path-edge envelope | < 150 ms p95 | < 300 ms p95 |
 | `GET /v1/fleet?limit=25` | authenticated fleet read | < 200 ms p95 | < 350 ms p95 |
 | `GET /v1/fleet/stats` | fleet summary read | < 150 ms p95 | < 300 ms p95 |
 | `POST /v1/proxy/audit` | proxy audit ingest batch | < 300 ms p95 | < 500 ms p95 |
+
+The graph rows were 300/500 ms (overview) and 250/400 ms (search) p95 until
+2026-11-13, when the qualification lane showed they were not met at 1,000 or
+5,000 agents. The measured values and the first-read target after a push are in
+[Performance and sizing](../site-docs/deployment/performance-and-sizing.md#target-operator-latency-envelope).
+
+#### Qualification lane, 2026-11-13
+
+`python scripts/qualification/performance.py --backend {sqlite,postgres} --estates medium-1000-agents,large-5000-agents --scale-budget-seconds 0`,
+alternating `main` (bebdb0f6a) and this change, PostgreSQL 16 in a private
+local cluster, shared 10-core macOS host (1-minute load 2.9 to 8.8). Median
+(range) of three runs, four for PostgreSQL at 5,000 agents; times in ms,
+memory sampled every 100 ms:
+
+| Backend | Agents | Tree | First read | Graph p50 | Graph p95 | Findings p95 | Push stored (s) | Peak RSS (MB) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| SQLite | 1,000 | main | 2,517 (2,083–3,336) | 523 (492–595) | 1,703 (1,484–2,130) | 1,646 (946–2,061) | 42 (37–51) | 699 (626–704) |
+| SQLite | 1,000 | change | 1,034 (978–1,115) | 449 (420–1,080) | 1,789 (978–2,049) | 76 (45–940) | 40 (40–46) | 663 (630–826) |
+| SQLite | 5,000 | main | 19,899 (15,321–29,274) | 817 (390–861) | 5,652 (1,382–6,249) | 2,107 (2,073–3,045) | 256 (205–323) | 1,687 (1,570–1,925) |
+| SQLite | 5,000 | change | 4,492 (4,193–8,147) | 366 (303–664) | 483 (411–1,177) | 2,053 (2,032–2,079) | 349 (189–482) | 1,313 (1,215–1,549) |
+| PostgreSQL | 1,000 | main | 1,915 (1,831–2,156) | 464 (461–473) | 1,762 (1,700–1,823) | 505 (175–564) | 62 (61–63) | 716 (696–724) |
+| PostgreSQL | 1,000 | change | 1,368 (1,368–1,424) | 513 (371–535) | 1,650 (1,368–1,754) | 543 (84–613) | 60 (59–66) | 802 (762–837) |
+| PostgreSQL | 5,000 | main | 7,459 (6,801–7,886) | 412 (335–1,313) | 6,254 (5,752–8,219) | 2,073 (119–2,168) | 329 (322–376) | 1,973 (1,918–2,070) |
+| PostgreSQL | 5,000 | change | 3,776 (3,641–3,903) | 960 (332–1,578) | 7,797 (5,346–9,573) | 1,158 (146–2,087) | 320 (316–330) | 2,019 (1,976–2,065) |
+
+Push-stored time on SQLite at 5,000 agents tracked host load in both trees
+(the change measured 189 s at load 3.6 against 205 s for `main` at load 2.9).
+On PostgreSQL at 5,000 agents the graph p95 comes from the first 30 to 40
+seconds after the push, on both trees; reads after that measured about 0.3 s.
 
 ### How to measure the operator targets
 
@@ -280,8 +309,8 @@ Both show up on the shipped Grafana dashboard.
 For graph/runtime-heavy rollouts, treat these as the next scale-out
 signals too:
 
-- `/v1/graph` `p95` consistently above `500 ms`
-- `/v1/graph/search` `p95` consistently above `400 ms`
+- `/v1/graph` `p95` consistently above `2 s` outside the first minute after a large push
+- `/v1/graph/search` `p95` consistently above `1 s`
 - `POST /v1/proxy/audit` `p95` consistently above `500 ms`
 - rising queueing or timeout behavior during the bundled k6 graph/control-plane runs
 

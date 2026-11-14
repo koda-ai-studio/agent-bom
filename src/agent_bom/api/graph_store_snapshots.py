@@ -19,6 +19,7 @@ from agent_bom.db.graph_cluster_rows import load_cluster_rows
 from agent_bom.db.graph_node_counts import count_snapshot_nodes
 from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.db.graph_store_write import checkpoint_wal
+from agent_bom.db.sqlite_bulk_cache import snapshot_bulk_cache
 from agent_bom.graph import (
     AttackPath,
     UnifiedEdge,
@@ -237,15 +238,16 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
             # The budget is pushed into the query, as Postgres does: bounding
             # after materialization declared the right completeness while still
             # having read every row.
-            return sqlite_graph_store.load_graph(
-                conn,
-                tenant_id=tenant_id,
-                scan_id=scan_id,
-                entity_types=entity_types,
-                min_severity_rank=min_severity_rank,
-                relationship_types=relationship_types,
-                node_budget=node_budget,
-            )
+            with snapshot_bulk_cache(conn):
+                return sqlite_graph_store.load_graph(
+                    conn,
+                    tenant_id=tenant_id,
+                    scan_id=scan_id,
+                    entity_types=entity_types,
+                    min_severity_rank=min_severity_rank,
+                    relationship_types=relationship_types,
+                    node_budget=node_budget,
+                )
         finally:
             conn.close()
 

@@ -14,7 +14,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import sqlite3
 import threading
 import time
 import weakref
@@ -28,6 +27,7 @@ from typing import Any, cast
 from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
+from agent_bom.api import current_graph_copy
 from agent_bom.api.current_graph_builds import await_current_build, current_view_coverage, resolve_request_current
 from agent_bom.api.current_graph_builds import build_wait_seconds as _build_wait_seconds
 from agent_bom.api.current_graph_builds import generation_rotating as _generation_rotating
@@ -519,8 +519,13 @@ class CurrentGraphStore:
                 self._projection_store.delete_snapshot(tenant_id=tenant, scan_id=scan_id)
                 self._coverage.pop(scan_id, None)
 
+    def _stamp_read_revision(self, tenant: str, identity: str) -> None:
+        current_graph_copy.stamp_read_revision(self._cache_path, tenant, identity)
+
     def _materialize(self, tenant: str, identity: str, selected: Any, revisions: tuple[tuple[str, str], ...]) -> None:
         created_at = max((scan_evidence_authority_key(job)[0] for job in selected), default="")
+        if current_graph_copy.materialized_by_copy(self, tenant, identity, created_at, revisions, _digest(revisions)):
+            return
         graph = UnifiedGraph(scan_id=identity, tenant_id=tenant, created_at=created_at)
         source_statuses: list[dict[str, GraphAnalysisStatus]] = []
         for scan, generation in revisions:
@@ -562,13 +567,7 @@ class CurrentGraphStore:
                 evidence_manifest_sha256="sha256:" + _digest(revisions),
                 write_generation=identity.removeprefix(CURRENT_PREFIX),
             )
-            # Identical source generations resolve to the same paging revision
-            # across workers and restarts, even though each owns its own cache.
-            with sqlite3.connect(self._cache_path) as conn:
-                conn.execute(
-                    "UPDATE graph_snapshots SET read_revision = ? WHERE tenant_id = ? AND scan_id = ?",
-                    (identity.removeprefix(CURRENT_PREFIX), tenant, identity),
-                )
+            self._stamp_read_revision(tenant, identity)
         except ValueError:
             # Concurrent workers may commit this identical immutable projection.
             if not self._projection_store.snapshot_identity(tenant_id=tenant, scan_id=identity)[1]:

@@ -1874,7 +1874,8 @@ def test_graph_store_init_adds_query_indexes(mock_pool, mock_maintenance_pool):
     assert store is not None
     assert any("idx_pg_graph_nodes_scan_order" in sql for sql, _ in mock_pool._conn.executed)
     assert any("idx_pg_graph_nodes_scan_id_cover" in sql for sql, _ in mock_pool._conn.executed)
-    assert any("idx_pg_graph_edges_scan_source" in sql for sql, _ in mock_pool._conn.executed)
+    # Leading-prefix copies of idx_pg_graph_edges_snapshot_key are no longer created (20261113_01 drops them).
+    assert not any("idx_pg_graph_edges_scan ON" in sql or "idx_pg_graph_edges_scan_source ON" in sql for sql, _ in mock_pool._conn.executed)
     assert any("idx_pg_graph_edges_snapshot_key" in sql for sql, _ in mock_pool._conn.executed)
     assert any("idx_pg_graph_edges_scan_target" in sql for sql, _ in mock_pool._conn.executed)
     assert any("idx_pg_graph_edges_scan_source_traversable" in sql for sql, _ in mock_pool._conn.executed)

@@ -19,11 +19,12 @@ work never takes this slot either, so waiting on it cannot deadlock.
 from __future__ import annotations
 
 import threading
-import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from time import monotonic as _monotonic
 
 from agent_bom.api.current_graph_builds import wait_for_current_builds
+from agent_bom.core.background_yield import background_work
 
 _SLOT = threading.Lock()
 BUILD_YIELD_SECONDS = 120.0
@@ -52,7 +53,7 @@ def foreground_active() -> bool:
 
 def _wait_for_foreground(deadline: float) -> None:
     with _FOREGROUND:
-        while _foreground_count and (remaining := deadline - time.monotonic()) > 0:
+        while _foreground_count and (remaining := deadline - _monotonic()) > 0:
             _FOREGROUND.wait(remaining)
 
 
@@ -60,10 +61,12 @@ def _wait_for_foreground(deadline: float) -> None:
 def warmup_slot() -> Iterator[None]:
     """Run one tenant's warm-up while no other post-commit warm-up runs in this process."""
     with _SLOT:
-        deadline = time.monotonic() + BUILD_YIELD_SECONDS
+        deadline = _monotonic() + BUILD_YIELD_SECONDS
         _wait_for_foreground(deadline)
-        wait_for_current_builds(max(0.0, deadline - time.monotonic()))
-        yield
+        wait_for_current_builds(max(0.0, deadline - _monotonic()))
+        # Warm-ups step aside at their yield points while requests are in flight.
+        with background_work():
+            yield
 
 
 __all__ = ["foreground_active", "foreground_graph_work", "warmup_slot"]
