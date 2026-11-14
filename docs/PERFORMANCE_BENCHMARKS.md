@@ -276,6 +276,40 @@ reverted: it stretched the contention across every read, taking the PostgreSQL
 1,258 ms. The remaining fix is to copy a single-source PostgreSQL projection as
 rows rather than through graph objects, as SQLite sources already are.
 
+#### PostgreSQL row copy on GitHub runners, 2026-11-14
+
+Three rounds of the Qualification workflow (`lanes=performance`), each running
+`main` at 2d20563a9 and the row-copy change (a13fad5ce, whose only parent is
+2d20563a9) side by side. Median (range) of three runs; times in ms:
+
+| Backend | Agents | Tree | First read | Graph p50 | Graph p95 | Graph max | Findings p95 | Peak RSS (MB) | Push stored (s) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| PostgreSQL | 1,000 | main | 2,448 (2,087–3,156) | 1,075 (685–1,118) | 2,302 (2,087–3,077) | 3,156 (2,448–3,532) | 75 (56–80) | 795 (773–810) | 109 (87–113) |
+| PostgreSQL | 1,000 | change | 1,264 (750–1,347) | 738 (726–820) | 934 (851–1,264) | 1,347 (907–1,538) | 211 (160–336) | 811 (790–813) | 67 (62–89) |
+| PostgreSQL | 5,000 | main | 6,519 (5,859–6,795) | 1,473 (860–1,898) | 7,014 (5,859–7,102) | 7,661 (6,664–9,135) | 2,087 (1,107–2,121) | 2,207 (2,206–2,214) | 567 (440–579) |
+| PostgreSQL | 5,000 | change | 5,056 (4,475–6,495) | 1,502 (1,453–2,143) | 2,363 (1,776–4,475) | 5,611 (5,056–6,495) | 570 (106–615) | 1,526 (1,487–1,533) | 344 (320–463) |
+| SQLite | 1,000 | main | 1,038 (1,002–1,598) | 334 (326–436) | 1,314 (1,038–1,598) | 2,429 (1,517–2,825) | 35 (27–48) | 731 (712–744) | 28 (28–44) |
+| SQLite | 1,000 | change | 1,389 (1,265–1,897) | 611 (530–623) | 1,389 (1,265–1,897) | 3,099 (3,019–3,444) | 61 (47–66) | 823 (820–837) | 46 (44–50) |
+| SQLite | 5,000 | main | 7,886 (7,082–10,490) | 439 (395–498) | 549 (520–739) | 7,886 (7,082–10,490) | 2,056 (2,054–2,121) | 1,620 (1,612–1,642) | 152 (151–239) |
+| SQLite | 5,000 | change | 10,672 (9,854–13,764) | 594 (560–608) | 702 (678–1,235) | 10,672 (9,854–13,764) | 2,091 (2,087–3,453) | 1,618 (1,617–1,688) | 267 (233–274) |
+
+On PostgreSQL the reads of 4.6 to 9.1 s in the first five reads after a
+5,000-agent push are gone, the findings p95 there falls from 2.1 s to 0.57 s,
+and peak API memory falls by 680 MB, since no graph objects are built. The
+1,000-agent median is 0.74 s against `main`'s 1.08 s. The single-run comparison
+above (751 ms on `main` against 1,060 ms) was not a regression: `main`'s own
+three-run median is 1,075 ms (685–1,118 ms). The graph p95
+at 5,000 agents is 2.4 s, above the 2 s steady-state target: after the first
+read, reads take mostly 1.2 to 2.4 s across all 20 on the change, where `main`'s
+fell to 0.6 to 0.9 s in two of three runs once its build finished. These runs
+did not sample stacks, so what holds those reads is not yet named.
+
+The change does not touch the SQLite path (the copy dispatch for a SQLite store
+is unchanged), yet SQLite was slower on the change's runners in all three
+rounds, including push ingest (152 s against 267 s at 5,000 agents), which no
+part of the change runs. That points to runner variance between the paired jobs
+rather than the change, but it was not verified.
+
 ### How to measure the operator targets
 
 Run against the deployment you actually intend to operate:
