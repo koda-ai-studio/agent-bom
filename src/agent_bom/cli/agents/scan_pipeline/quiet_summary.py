@@ -6,7 +6,7 @@ from typing import Any
 
 import click
 
-from agent_bom.cli.agents._output import _is_null_device, _resolve_output_path
+from agent_bom.cli.agents._output import _FORMAT_OUTPUT_RULES, _is_null_device, _resolve_output_path
 from agent_bom.cli.agents._stderr import stderr_notice
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
@@ -30,6 +30,10 @@ def severity_counts(report: Any) -> dict[str, int]:
 def _report_path(opts: ScanOptions) -> str | None:
     if not opts.output or opts.output == "-" or _is_null_device(opts.output):
         return None
+    # Without an explicit format, the writer infers it from the extension and
+    # writes to the path as given (image -o report.json), so report that path.
+    if opts.output_format not in _FORMAT_OUTPUT_RULES:
+        return str(opts.output)
     return _resolve_output_path(opts.output, opts.output_format)
 
 

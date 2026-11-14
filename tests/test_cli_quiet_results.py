@@ -165,3 +165,27 @@ def test_quiet_help_text_describes_the_summary() -> None:
     assert "Suppress all output except results" not in help_text
     assert "-q, --quiet" in help_text
     assert "verdict" in help_text
+
+
+def test_quiet_summary_names_an_inferred_format_report_path(monkeypatch, tmp_path):
+    """image -o report.json without -f infers JSON from the extension; -q must name that file."""
+    from click.testing import CliRunner
+
+    from agent_bom.cli import main
+    from agent_bom.models import Package
+
+    output = tmp_path / "image-report.json"
+    monkeypatch.setattr(
+        "agent_bom.image.scan_image",
+        lambda image_ref, registry_user=None, registry_pass=None, platform=None, pull_mode=None: (
+            [Package(name="openssl", version="3.0.16", ecosystem="deb")],
+            "native",
+        ),
+    )
+    monkeypatch.setattr("agent_bom.cli.agents.scan_agents_sync", lambda *args, **kwargs: [])
+
+    result = CliRunner().invoke(main, ["image", "nginx:1.20.0", "-o", str(output), "--quiet"])
+
+    assert result.exit_code == 0, result.output
+    assert output.exists()
+    assert f"Report: {output}" in result.output

@@ -2019,6 +2019,8 @@ jobs:
             tests/test_graph_retention_live_postgres.py \
             tests/test_graph_diff_aliases.py \
             tests/test_graph_cluster_rows_stores.py \
+            tests/test_graph_cluster_map_stored_paths.py \
+            tests/test_graph_stored_path_readers.py \
             tests/test_postgres_alembic_ledger.py \
             tests/test_postgres_graph_snapshot_paths.py \
             tests/test_report_jobs_postgres.py \
