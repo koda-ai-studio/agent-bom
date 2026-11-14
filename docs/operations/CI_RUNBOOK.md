@@ -32,28 +32,62 @@ Only direct references count: a transitive or dependency-version regression
 can pass the PR and fail the post-merge run, which then freezes merges (see
 below). The job log prints the 50 slowest tests (`--durations=50`).
 
-Full correctness is split into 8 parallel shards on Python 3.13 only for a
-merge group (see "Merge-queue configuration"); those shards run
-every test module (with the same `otel` extra) plus the graph-fixture and DCM
-guards on shard 0. `tests/test_ci_pr_fast_path.py` fails if any classifier
-outcome lets a `pull_request` event start the full shards, the four-version
-matrix, the full musl suite or every browser shard.
+Full correctness is split into 8 parallel shards on Python 3.13 for a merge
+group (see "Merge-queue configuration"), and for a main push that did not come
+through the queue; those shards run every test module (with the same `otel`
+extra) plus the graph-fixture and DCM guards on shard 0.
+`tests/test_ci_pr_fast_path.py` fails if any classifier outcome lets a
+`pull_request` event start the full shards, the four-version matrix, the full
+musl suite or every browser shard.
 
 Postgres runs for its writer/migration inputs, shared model, API, storage,
 authorization and dependency changes. UI browser checks build the standalone
 app; the additional Docker build runs only for container, dependency or build
-configuration changes on PRs. Main and nightly runs retain the full four-version
-suite, coverage floor, Postgres, container, deployment and performance checks.
-This is selective PR regression coverage, not a claim that every PR runs every
-test. Main runs still exceed twenty minutes; that is the post-merge budget.
+configuration changes on PRs. This is selective PR regression coverage, not a
+claim that every PR runs every test.
+
+### Main pushes reuse the merge-group run
+
+The merge queue pushes to `main` the exact commit its merge-group run tested,
+and that run finishes before the push. The `Change Path Classifier` job's last
+step, `Find merge-queue proof for this commit`, looks for a completed,
+successful `merge_group` run of `ci.yml` with the same SHA and publishes
+`queue_proven`. When it is `true`, every lane that merge-group run passed is
+skipped on the push, and only the post-merge lanes a merge group never runs
+remain: `Docker (multi-arch)` and, on dependency changes, the full musl suite
+in four shards. `Python correctness aggregation` and `Test (Python 3.13)` still
+report. A lookup failure, an unfinished or failed merge-group run, or a push
+that bypassed the queue sets `queue_proven=false`, and the push runs the
+merge-group lanes itself (the 8 full 3.13 shards, performance, Postgres, every
+UI lane) plus the post-merge lanes. `tests/test_ci_workflow_contract.py` checks
+that every merge-group lane carries the guard and that the guard never changes
+pull-request, merge-group or nightly routing.
+
+The four-interpreter suite and its combined 3.11 coverage floor live in the
+reusable `full-correctness.yml`. `ci.yml` calls it (job `Full matrix`) on the
+nightly schedule and on `workflow_dispatch`; `release.yml` calls it on the
+tagged commit before anything publishes. To check the matrix before tagging,
+dispatch CI on `main` (`gh workflow run ci.yml --ref main`) and wait for it.
+
+Runner minutes per merged PR, measured from the job durations of the
+2026-11-14 runs (merge group `43617011491`, main push `43612663225`):
+
+| | Merge group | Main push | Per merged PR |
+|---|---|---|---|
+| Before (main push reran every lane plus the matrix) | 126 | 315-471 (338 typical) | about 464 |
+| After, queue-proven push | 126 | about 11 (classifier, Docker, aggregators) | about 137 |
+| After, queue-proven push with a dependency change | 126 | about 109 (adds the full musl suite) | about 235 |
+
+Nightly cost is unchanged (the schedule already ran the matrix). Each release
+adds about 290 job-minutes for the matrix on the tag.
 
 All lanes live in `ci.yml` unless noted. Python correctness jobs have a
 45-minute safety bound; it is not a target duration. A timeout remains a failed
 gate until a successful replacement run completes; passing sibling jobs does
 not establish a green main commit.
 
-Main, nightly and manual runs assign every test module to one of four shards
-for each supported interpreter, using the same exhaustive plan as PRs.
+Nightly, manual and release runs assign every test module to one of four
+shards for each supported interpreter, using the same exhaustive plan as PRs.
 `scripts/ci_pytest_workers.py` sizes pytest-xdist workers per job: every core
 of the 4-vCPU, 16 GB hosted runner, capped at three when the selection holds
 `tests/test_demo_estate_bootstrap.py` (each demo-estate worker reaches about
@@ -99,31 +133,35 @@ combined `.coverage` file and reports the coverage verdict. Investigate failed
 tests or missing artifacts before rerunning only failed jobs; a partial report
 cannot satisfy the release gate.
 
-| Lane | Pull request | Push to `main` | Nightly / manual |
-|---|---|---|---|
-| Lint and Type Check (ruff, mypy with main-seeded cache) | yes (required) | yes | yes |
-| Security Scan (policy gates, bandit, OSV, npm advisories, release call-graph lint) | yes (required) | yes | yes |
-| Build Package (wheel + clean-venv MCP smoke) | yes (required, starts immediately) | yes | yes |
-| Test (Python 3.13): aggregation of every correctness lane the event runs | yes (required) | yes | yes |
-| Version Alignment (drift, counts, OpenAPI, schemas) | yes | yes | yes |
-| CodeQL (Python excluding `tests/`, Actions) | yes (required) | yes | weekly |
-| PR Security Gate (pip-audit, self-scan), Dependency Review, Gitleaks | yes | yes (except Dependency Review) | - |
-| UI Validate (lint, vitest, schema drift) + UI export build | when UI inputs change | every main push | yes |
-| Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | when their inputs change | yes |
-| Native App image and persistence | when its inputs change | yes | yes |
-| Python affected tests (shard N/total): affected selection + contract smoke | always (required through aggregation) | yes | yes |
-| Full correctness suite, Python 3.13 in 8 shards | never (merge group only) | no | no |
-| Full correctness suite, Python 3.11/3.12/3.13/3.14 in 4 shards each (combined 3.11 coverage floor) | no | yes | yes |
-| Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
-| Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | yes |
-| Test (Alpine/musl, shard N) | subset only, on dependency/build inputs or `ci.yml` changes | subset on Python changes; full in 4 shards on dependency changes | full in 4 shards nightly, subset manual |
-| Docker (multi-arch) + image scans | no | yes | nightly only |
-| UI E2E smoke (every packaged route + accessibility, bundle budget) | `ui/`, UI toolchain or `ci.yml` changes | no | no |
-| UI E2E (Playwright in 4 shards, bundle budget) | no | every main push | yes |
-| UI container smoke | container/build inputs | every main push | yes |
-| Dogfood GitHub Action | no | when action inputs change | yes |
-| ClusterFuzzLite (`cflite-pr.yml`) | no | short batch on parser changes | weekly long batch |
-| Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | every main push | manual |
+"Merge group" is the queue run of the commit that lands; "Push, proven" is the
+main push of that same commit; "Push, unproven" is a main push without a
+successful merge-group run of its SHA (an admin merge, a lookup failure).
+
+| Lane | Pull request | Merge group | Push, proven | Push, unproven | Nightly / manual | Release tag |
+|---|---|---|---|---|---|---|
+| Lint and Type Check (ruff, mypy with main-seeded cache) | yes (required) | yes | no | yes | yes (nightly saves the mypy cache) | - |
+| Security Scan (policy gates, bandit, OSV, npm advisories, release call-graph lint) | yes (required) | yes | no | yes | yes | - |
+| Build Package (wheel + clean-venv MCP smoke) | yes (required, starts immediately) | yes | no | yes | yes | release build |
+| Test (Python 3.13): aggregation of every correctness lane the event runs | yes (required) | yes | yes | yes | yes | - |
+| Version Alignment (drift, counts, OpenAPI, schemas) | yes | yes | no | yes | yes | version guard |
+| CodeQL (Python excluding `tests/`, Actions) | yes (required) | yes | yes | yes | weekly | - |
+| PR Security Gate (pip-audit, self-scan), Dependency Review, Gitleaks | yes | yes | yes (except Dependency Review) | yes (except Dependency Review) | - | self-scan gate |
+| UI Validate (lint, vitest, schema drift) + UI export build | when UI inputs change | yes | no | yes | yes | - |
+| Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | yes | no | when their inputs change | yes | docs build |
+| Native App image and persistence | when its inputs change | yes | no | yes | yes | - |
+| Python affected tests (shard N/total): affected selection + contract smoke | always (required through aggregation) | no | no | no | yes | - |
+| Full correctness suite, Python 3.13 in 8 shards | never | yes | no | yes | no | - |
+| Full matrix: Python 3.11/3.12/3.13/3.14 in 4 shards each + combined 3.11 coverage floor (`full-correctness.yml`) | no | no | no | no | yes | yes, before publishing |
+| Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | no | yes | yes | - |
+| Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | no | yes | yes | - |
+| Test (Alpine/musl, shard N) | subset only, on dependency/build inputs or `ci.yml` changes | subset | full in 4 shards on dependency changes | subset on Python changes; full in 4 shards on dependency changes | full in 4 shards nightly, subset manual | - |
+| Docker (multi-arch) + image scans | no | no | yes | yes | nightly only | container gate |
+| UI E2E smoke (every packaged route + accessibility, bundle budget) | `ui/`, UI toolchain or `ci.yml` changes | no | no | no | no | - |
+| UI E2E (Playwright in 4 shards, bundle budget) | no | yes | no | yes | yes | - |
+| UI container smoke | container/build inputs | yes | no | yes | yes | - |
+| Dogfood GitHub Action | no | yes | no | when action inputs change | yes | - |
+| ClusterFuzzLite (`cflite-pr.yml`) | no | - | short batch on parser changes | short batch on parser changes | weekly long batch | - |
+| Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | - | every main push | every main push | manual | - |
 
 The UI advisory step reads the committed lockfile without installing packages.
 The SDK installation remains because the supply-chain guard builds its output.
@@ -188,7 +226,8 @@ up-to-date protection and these eight contexts; this file does not enforce setti
 `Test (Python 3.13)` is the affected-tests gate: it requires every
 `Python affected tests (shard N/total)` job on a PR (through `Python correctness
 aggregation`), the Postgres contract, musl subset and UI E2E smoke when
-selected, and on main the four-version suite and Docker image. Do not add the
+selected, and on main the full shards (or the merge-group run's proof) and
+the Docker image. Do not add the
 shard jobs themselves: matrix names change with the shard count, and the
 aggregation already fails on a failed, cancelled or missing lane. Path-gated
 contexts (`Version Alignment` on docs-only changes, `UI Validate` without UI
@@ -208,11 +247,17 @@ Why a release is still safe: `release.yml` runs
 `main` HEAD has completed, successful **push** runs for both `ci.yml` and
 `runtime-acceptance.yml`, including the gateway ingest and replica reconnect
 job. Missing or skipped runtime evidence fails closed even when the main
-pipeline passes. On push (and on
-nightly and manual runs), `Python correctness aggregation` requires the
-four-version suite and treats a skipped post-merge lane as a failure, and
-`Test (Python 3.13)` requires the Docker lane, so a green `main` run means the
-full suite, the performance/Postgres lanes, and the release image all passed.
+pipeline passes. For `ci.yml`, a required job (the UI lanes and `Python
+correctness aggregation`) that a queue-proven push skipped must have passed in
+the completed, successful `merge_group` run of the same SHA; a required job
+that ran on the push and did not succeed is never excused. A queue-proven push
+relies on that merge-group run for the full 3.13 suite and the
+performance/Postgres lanes; an unproven push runs them itself, and
+`Python correctness aggregation` treats a skipped lane the event requires as a
+failure. `Test (Python 3.13)` requires the Docker lane on every main push. The
+release then runs the four-interpreter matrix and combined coverage floor
+(`full-correctness.yml`) on the tagged commit itself; every job that publishes
+or signs needs it, so a red matrix stops the release before anything ships.
 Superseded PR and main-push runs are cancelled within their branch/event
 concurrency group. Nightly and manual runs have separate groups. Cancellation
 is not a passing result: the release gate still requires a completed successful
@@ -222,7 +267,12 @@ runs; unavailable history selects all tracked paths. Let the current run finish
 before releasing.
 A post-merge regression opens a
 `ci-regression` issue through `main-failure-alert.yml`, which watches
-`CI/CD Pipeline`, `Runtime Helm Acceptance`, and `ClusterFuzzLite`.
+`CI/CD Pipeline`, `Runtime Helm Acceptance`, and `ClusterFuzzLite`. Main
+pushes and CI's nightly run are separate lanes with separate trackers
+(`ci-regression: CI/CD Pipeline failing on main` after three red pushes,
+`ci-regression: CI/CD Pipeline nightly failing on main` after two red nights),
+because a main push no longer runs the four-interpreter matrix and so cannot
+clear a red nightly.
 
 When required main checks fail, freeze further merges and releases. Repair the
 failure through a reviewed change and verify that exact merged SHA before
@@ -470,8 +520,9 @@ The required contexts are `Lint and Type Check`, `Build Package`,
 hold every entry until the timeout. `ci.yml`, `codeql.yml`, `pr-security-gate.yml` and `dependency-review.yml`
 declare `merge_group: types: [checks_requested]`. In `ci.yml` a merge group
 skips the path classifier, so every path-gated lane runs, and it runs the
-full 3.13 shards instead of the affected tests plus the post-merge
-performance lanes. `Lint and Type Check`, `Build Package`, `Security Scan`,
+full 3.13 shards instead of the affected tests plus the performance,
+Postgres, UI E2E and dogfood lanes; the main push of the same commit then skips
+them (see "Main pushes reuse the merge-group run"). `Lint and Type Check`, `Build Package`, `Security Scan`,
 `Test (Python 3.13)`, `Version Alignment`, `UI Validate` and the CodeQL
 `Analyze` jobs therefore report on a merge group. The eight full shards bound
 the queue at about ten minutes; the demo-estate module fills one three-worker

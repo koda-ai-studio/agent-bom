@@ -10,10 +10,17 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 RELEASE_WORKFLOW = ROOT / ".github" / "workflows" / "release.yml"
+FULL_MATRIX_WORKFLOW = ROOT / ".github" / "workflows" / "full-correctness.yml"
+QUEUE_GUARD = "needs.changes.outputs.queue_proven != 'true'"
 
 
 def _ci() -> dict[str, object]:
     return yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+
+
+def _full() -> dict[str, object]:
+    """The reusable four-interpreter matrix and coverage floor (nightly, manual and release)."""
+    return yaml.safe_load(FULL_MATRIX_WORKFLOW.read_text(encoding="utf-8"))
 
 
 def test_main_docker_pulls_authenticate_before_setup_and_build() -> None:
@@ -288,7 +295,7 @@ def test_postgres_storage_contract_passes_every_listed_suite_to_one_pytest_comma
 
 def test_test_job_timeout_leaves_margin_over_observed_worst_case() -> None:
     """Split the workload while retaining a finite ceiling for every main shard."""
-    assert _ci()["jobs"]["test-main"]["timeout-minutes"] == 45
+    assert _full()["jobs"]["test-main"]["timeout-minutes"] == 45
 
 
 def test_changed_domain_timeout_stays_bounded_with_duration_sized_shards() -> None:
@@ -305,7 +312,7 @@ def test_full_correctness_matrix_covers_every_supported_python_minor() -> None:
         for classifier in project["classifiers"]
         if classifier.startswith("Programming Language :: Python :: 3.")
     }
-    matrix = set(_ci()["jobs"]["test-main"]["strategy"]["matrix"]["python-version"])
+    matrix = set(_full()["jobs"]["test-main"]["strategy"]["matrix"]["python-version"])
 
     assert matrix == supported
 
@@ -384,7 +391,7 @@ def test_pull_request_pytest_reports_slowest_tests() -> None:
     """PR runs surface the slowest tests so timeout regressions have evidence."""
     jobs = _ci()["jobs"]
     smoke_run = next(step["run"] for step in jobs["test-smoke"]["steps"] if step.get("name") == "Run affected tests and contract smoke")
-    main_run = next(step["run"] for step in jobs["test-main"]["steps"] if step.get("name") == "Run full correctness suite")
+    main_run = next(step["run"] for step in _full()["jobs"]["test-main"]["steps"] if step.get("name") == "Run full correctness suite")
 
     assert "--durations=50" in smoke_run
     assert "--durations=50" in main_run
@@ -410,14 +417,20 @@ def _marker_filter(run: str) -> str:
     return run.split(' -m "', 1)[1].split('"', 1)[0]
 
 
-def test_pull_requests_run_affected_tests_while_main_keeps_the_matrix() -> None:
-    """PRs prove the affected selection; full shards are merge-group only; main keeps the matrix."""
+def test_pull_requests_run_affected_tests_while_nightly_keeps_the_matrix() -> None:
+    """PRs prove the affected selection; the queue proves the full shards; nightly, manual and release runs prove the matrix."""
     jobs = _ci()["jobs"]
-    assert jobs["test-main"]["if"] == ("${{ !cancelled() && github.event_name != 'pull_request' && github.event_name != 'merge_group' }}")
-    assert jobs["test-shard"]["if"] == "${{ !cancelled() && github.event_name == 'merge_group' }}"
+    nightly_or_manual = "(github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')"
+    assert jobs["test-main"]["if"] == "${{ !cancelled() && " + nightly_or_manual + " }}"
+    assert jobs["test-main"]["uses"] == "./.github/workflows/full-correctness.yml"
+    assert "steps" not in jobs["test-main"]
+    assert "test-coverage" not in jobs
+    assert jobs["test-shard"]["if"] == (
+        "${{ !cancelled() && (github.event_name == 'merge_group' || (github.event_name == 'push' && " + QUEUE_GUARD + ")) }}"
+    )
     assert "test-queue-shard" not in jobs
     assert "needs.changes.outputs.postgres != 'false'" in jobs["postgres-integration"]["if"]
-    assert jobs["test-smoke"]["if"] == "${{ !cancelled() && github.event_name != 'merge_group' }}"
+    assert jobs["test-smoke"]["if"] == "${{ !cancelled() && github.event_name != 'merge_group' && github.event_name != 'push' }}"
     assert "test-pr-shard" not in jobs
     for name in PR_EXCLUDED_POST_MERGE_JOBS:
         condition = jobs[name]["if"]
@@ -444,7 +457,7 @@ def test_shards_run_the_whole_suite_on_the_merge_result() -> None:
     assert f"--total {len(indexes)}" in run
     assert '--index "${{ matrix.shard }}"' in run
     assert "--durations=" in run
-    main_run = next(step["run"] for step in jobs["test-main"]["steps"] if step.get("name") == "Run full correctness suite")
+    main_run = next(step["run"] for step in _full()["jobs"]["test-main"]["steps"] if step.get("name") == "Run full correctness suite")
     main_filters = {_marker_filter(line) for line in main_run.splitlines() if "uv run pytest " in line}
     assert main_filters == {_marker_filter(run)}
 
@@ -478,7 +491,8 @@ def test_required_contexts_report_on_pull_request_and_merge_group() -> None:
     triggers = workflow.get(True, workflow.get("on", {}))
     assert triggers["merge_group"] == {"types": ["checks_requested"]}
     for name in REQUIRED_CI_JOBS:
-        assert workflow["jobs"][name]["if"] == "${{ !cancelled() }}", name
+        expected = "${{ !cancelled() }}" if name == "test" else "${{ !cancelled() && " + QUEUE_GUARD + " }}"
+        assert workflow["jobs"][name]["if"] == expected, name
     assert workflow["jobs"]["test"]["name"] == "Test (Python 3.13)"
     for name in ("codeql.yml", "pr-security-gate.yml", "dependency-review.yml"):
         other = yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"))
@@ -515,11 +529,11 @@ def test_runbook_keeps_strict_protection_and_documents_pr_shards() -> None:
 
 
 def test_main_push_aggregator_requires_the_full_suite() -> None:
-    """A green main run must mean every post-merge lane actually passed.
+    """A green main run must mean every lane its commit needs actually passed.
 
-    The release gate (scripts/check_release_main_ci.py) accepts the tag only
-    when the exact main SHA has a successful ``ci.yml`` push run, so skipping
-    the full suite on main would silently weaken the release proof.
+    A push the merge queue already proved relies on that merge-group run; any
+    other push proves the full shards and post-merge lanes itself. The release
+    gate (scripts/check_release_main_ci.py) reads both runs for the exact SHA.
     """
     jobs = _ci()["jobs"]
     core = jobs["test-core"]
@@ -539,6 +553,7 @@ def test_main_push_aggregator_requires_the_full_suite() -> None:
     for variable in ("MAIN_RESULT", "SHARD_RESULT", "GRAPH_RESULT", "OUTPUT_SCALE_RESULT", "SDK_SMOKE_RESULT", "POSTGRES_RESULT"):
         assert f'"${variable}"' in run
     assert core["steps"][0]["env"]["EVENT_NAME"] == "${{ github.event_name }}"
+    assert core["steps"][0]["env"]["QUEUE_PROVEN"] == "${{ needs.changes.outputs.queue_proven == 'true' }}"
 
     required = jobs["test"]
     assert required["name"] == "Test (Python 3.13)"
@@ -591,8 +606,9 @@ def test_pr_runs_cancel_superseded_runs_and_every_main_push_completes() -> None:
 
 
 # Lanes each event must prove; every other lane must be skipped or succeed.
-# PRs prove the affected selection; merge groups (if a queue is ever enabled)
-# prove the sharded 3.13 suite; main, nightly and manual runs prove the matrix.
+# PRs prove the affected selection; merge groups prove the sharded 3.13 suite;
+# a main push the queue already proved needs nothing more; any other main push
+# proves what a merge group would; nightly and manual runs prove the matrix.
 _EVENT_PROOF = {
     "pull_request": ("SMOKE_RESULT", "POSTGRES_RESULT"),
     "merge_group": (
@@ -602,11 +618,10 @@ _EVENT_PROOF = {
         "OUTPUT_SCALE_RESULT",
         "SDK_SMOKE_RESULT",
     ),
-    "push": (
-        "SMOKE_RESULT",
+    "push": (),
+    "push_unproven": (
         "POSTGRES_RESULT",
-        "MAIN_RESULT",
-        "COVERAGE_RESULT",
+        "SHARD_RESULT",
         "GRAPH_RESULT",
         "OUTPUT_SCALE_RESULT",
         "SDK_SMOKE_RESULT",
@@ -615,7 +630,6 @@ _EVENT_PROOF = {
         "SMOKE_RESULT",
         "POSTGRES_RESULT",
         "MAIN_RESULT",
-        "COVERAGE_RESULT",
         "GRAPH_RESULT",
         "OUTPUT_SCALE_RESULT",
         "SDK_SMOKE_RESULT",
@@ -624,7 +638,6 @@ _EVENT_PROOF = {
         "SMOKE_RESULT",
         "POSTGRES_RESULT",
         "MAIN_RESULT",
-        "COVERAGE_RESULT",
         "GRAPH_RESULT",
         "OUTPUT_SCALE_RESULT",
         "SDK_SMOKE_RESULT",
@@ -633,6 +646,7 @@ _EVENT_PROOF = {
 
 
 def _run_correctness_gate(event: str, results: dict[str, str]) -> bool:
+    """``push`` is a push the merge queue proved; ``push_unproven`` is any other main push."""
     import os
     import subprocess
 
@@ -640,7 +654,8 @@ def _run_correctness_gate(event: str, results: dict[str, str]) -> bool:
     env = {
         **os.environ,
         **dict.fromkeys(step["env"], "skipped"),
-        "EVENT_NAME": event,
+        "EVENT_NAME": "push" if event.startswith("push") else event,
+        "QUEUE_PROVEN": "true" if event == "push" else "false",
         "POSTGRES_REQUIRED": "true",
         **results,
     }
@@ -694,6 +709,8 @@ def test_mypy_cache_is_restored_on_prs_and_saved_only_from_main() -> None:
     assert "hashFiles('uv.lock')" in restore["with"]["key"]
     assert "github.event_name == 'push'" in save["if"]
     assert "refs/heads/main" in save["if"]
+    # A queue-proven push skips Lint, so the nightly run on main also refreshes the cache.
+    assert "github.event_name == 'schedule'" in save["if"]
 
 
 def test_fuzzing_runs_after_merge_not_on_pull_requests() -> None:
@@ -843,7 +860,7 @@ def test_output_scale_budgets_run_in_a_dedicated_uninstrumented_lane() -> None:
     assert "--cov" not in run
     assert " -n " not in run
 
-    main_run = next(step["run"] for step in jobs["test-main"]["steps"] if step.get("name") == "Run full correctness suite")
+    main_run = next(step["run"] for step in _full()["jobs"]["test-main"]["steps"] if step.get("name") == "Run full correctness suite")
     assert "not slow" in main_run
 
     core = jobs["test-core"]
@@ -1066,11 +1083,13 @@ def test_action_classifier_includes_the_cyclonedx_dogfood_fixture() -> None:
     assert not re.search(pattern[1], "docs/readme.md")
 
 
-def test_every_main_push_runs_all_release_ui_lanes():
+def test_every_main_push_proves_all_release_ui_lanes_once():
+    """A queue-proven push reuses the merge group's UI proof; any other main push runs every UI lane."""
     for name in ("ui", "ui-export", "ui-e2e", "ui-e2e-shard", "ui-container-smoke"):
         condition = _ci()["jobs"][name]["if"]
         assert "github.event_name == 'push'" in condition
         assert "github.ref == 'refs/heads/main'" in condition
+        assert QUEUE_GUARD in condition
 
 
 def test_endpoint_qualification_runs_natively_and_retains_failed_receipts():
@@ -1103,7 +1122,8 @@ def test_compatibility_lanes_follow_paths_on_prs_and_fail_closed() -> None:
         for event in ("pull_request", "push", "schedule", "workflow_dispatch", "merge_group"):
             for result in ("success", "failure", "skipped"):
                 for changed in ("true", "false"):
-                    outputs = {"alpine": "false", "alpine_pr": "false", "ui": "false", flag.get(event, "ui"): changed}
+                    outputs = {"alpine": "false", "alpine_full": "false", "alpine_pr": "false", "ui": "false", "queue_proven": ""}
+                    outputs[flag.get(event, "ui")] = changed
                     context = {
                         "github": SimpleNamespace(event_name=event, ref="refs/heads/main"),
                         "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=SimpleNamespace(**outputs))),
@@ -1174,7 +1194,7 @@ def test_changed_domain_smoke_shards_keep_every_selected_test_required() -> None
     assert "test-core" in jobs["test"]["needs"]
     gate = next(step for step in jobs["test-core"]["steps"] if step.get("name") == "Require every applicable correctness lane")
     assert gate["env"]["SMOKE_RESULT"] == "${{ needs.test-smoke.result }}"
-    assert 'elif [ "$SMOKE_RESULT" != "success" ]; then' in gate["run"]
+    assert 'require "Affected tests and contract smoke" "$SMOKE_RESULT"' in gate["run"]
 
 
 def test_affected_tests_are_required_unless_merge_group_shards_replace_them() -> None:
@@ -1193,13 +1213,19 @@ def test_affected_tests_are_required_unless_merge_group_shards_replace_them() ->
             expected = smoke in ("success", "skipped") and shard == "success"
             outcome = _run_correctness_gate("merge_group", {**full, "SMOKE_RESULT": smoke, "SHARD_RESULT": shard})
             assert outcome == expected, (smoke, shard)
-    for event in ("push", "schedule", "workflow_dispatch"):
+    for event in ("schedule", "workflow_dispatch"):
         proof = dict.fromkeys(_EVENT_PROOF[event], "success")
         assert not _run_correctness_gate(event, {**proof, "SMOKE_RESULT": "skipped"}), event
+    # A main push proves the full shards (or reuses the queue's), never the affected subset.
+    for event in ("push", "push_unproven"):
+        proof = dict.fromkeys(_EVENT_PROOF[event], "success")
+        assert _run_correctness_gate(event, {**proof, "SMOKE_RESULT": "skipped"}), event
+    unproven = dict.fromkeys(_EVENT_PROOF["push_unproven"], "success")
+    assert not _run_correctness_gate("push_unproven", {**unproven, "SHARD_RESULT": "skipped"})
 
 
 def test_smoke_and_full_shards_are_complementary_on_merge_gating_events() -> None:
-    """Exactly one Python lane runs per PR or merge group; post-merge events keep smoke."""
+    """Exactly one Python lane runs per PR, merge group or unproven push; a queue-proven push runs neither."""
     from types import SimpleNamespace
 
     jobs = _ci()["jobs"]
@@ -1213,16 +1239,20 @@ def test_smoke_and_full_shards_are_complementary_on_merge_gating_events() -> Non
     for event in ("pull_request", "merge_group", "push", "schedule", "workflow_dispatch"):
         for result in ("success", "failure", "skipped"):
             for full in ("true", "false", ""):
-                context = {
-                    "github": SimpleNamespace(event_name=event),
-                    "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=SimpleNamespace(full_python=full))),
-                }
-                runs_smoke = eval(smoke, {"__builtins__": {}}, context)
-                runs_shard = eval(shard, {"__builtins__": {}}, context)
-                if event == "merge_group":
-                    assert runs_shard and not runs_smoke, (event, result, full)
-                else:
-                    assert runs_smoke and not runs_shard, (event, result, full)
+                for proven in ("true", "false", ""):
+                    outputs = SimpleNamespace(full_python=full, queue_proven=proven if event == "push" else "")
+                    context = {
+                        "github": SimpleNamespace(event_name=event),
+                        "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=outputs)),
+                    }
+                    runs_smoke = eval(smoke, {"__builtins__": {}}, context)
+                    runs_shard = eval(shard, {"__builtins__": {}}, context)
+                    if event == "push" and proven == "true":
+                        assert not runs_shard and not runs_smoke, (event, result, full)
+                    elif event in ("merge_group", "push"):
+                        assert runs_shard and not runs_smoke, (event, result, full, proven)
+                    else:
+                        assert runs_smoke and not runs_shard, (event, result, full)
 
 
 def test_full_shards_cover_everything_the_skipped_smoke_proved() -> None:
@@ -1251,7 +1281,7 @@ def test_correctness_pytest_lanes_use_every_runner_core() -> None:
     runs = [
         next(step["run"] for step in jobs["test-smoke"]["steps"] if step.get("name") == "Run affected tests and contract smoke"),
         next(step["run"] for step in jobs["test-shard"]["steps"] if step.get("name") == SHARD_STEP),
-        next(step["run"] for step in jobs["test-main"]["steps"] if step.get("name") == "Run full correctness suite"),
+        next(step["run"] for step in _full()["jobs"]["test-main"]["steps"] if step.get("name") == "Run full correctness suite"),
     ]
     for run in runs:
         assert 'WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")' in run
@@ -1282,9 +1312,10 @@ def test_full_and_postgres_conditions_fail_closed_on_missing_flags() -> None:
         condition = condition.replace("!cancelled()", "True").replace("&&", "and").replace("||", "or")
         for result in ("success", "failure", "skipped"):
             for changed in ("true", "false", ""):
+                outputs = SimpleNamespace(**{flag: changed, "queue_proven": ""})
                 context = {
                     "github": SimpleNamespace(event_name="pull_request"),
-                    "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=SimpleNamespace(**{flag: changed}))),
+                    "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=outputs)),
                 }
                 assert eval(condition, {"__builtins__": {}}, context) == (result != "success" or changed != "false")
 
@@ -1340,14 +1371,14 @@ def test_workflow_classifier_combines_writer_and_shared_input_routing(tmp_path) 
 
 def test_merge_group_full_suite_runs_in_eight_balanced_shards() -> None:
     job = _ci()["jobs"]["test-shard"]
-    assert job["if"] == "${{ !cancelled() && github.event_name == 'merge_group' }}"
+    assert "github.event_name == 'merge_group'" in job["if"]
     assert job["strategy"]["matrix"]["shard"] == list(range(8))
     run = next(step["run"] for step in job["steps"] if step.get("name") == "Run full correctness shard")
     assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 8' in run
 
 
 def test_main_matrix_partitions_each_interpreter_and_retains_coverage_artifacts() -> None:
-    job = _ci()["jobs"]["test-main"]
+    job = _full()["jobs"]["test-main"]
     assert job["strategy"]["matrix"]["shard"] == [0, 1, 2, 3]
     run = next(step["run"] for step in job["steps"] if step.get("name") == "Run full correctness suite")
     assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 4' in run
@@ -1364,16 +1395,19 @@ def test_main_matrix_partitions_each_interpreter_and_retains_coverage_artifacts(
 
 
 def test_main_coverage_cannot_be_skipped_or_lower_the_combined_floor() -> None:
-    jobs = _ci()["jobs"]
-    coverage = jobs["test-coverage"]
+    """The coverage floor lives in the reusable matrix, so its caller's result includes it."""
+    coverage = _full()["jobs"]["test-coverage"]
+    assert coverage["name"] == "Combined Python coverage"
     assert coverage["needs"] == "test-main"
-    assert "needs.test-main.result == 'success'" in coverage["if"]
+    assert coverage["if"] == "${{ !cancelled() && needs.test-main.result == 'success' }}"
     run = next(step["run"] for step in coverage["steps"] if step.get("name") == "Require complete combined coverage")
     assert "scripts/combine_ci_coverage.py" in run
     assert "--shards 4" in run
     assert '"${{ github.run_attempt }}"' in run
-    assert "test-coverage" in jobs["test-core"]["needs"]
-    assert jobs["test-core"]["steps"][0]["env"]["COVERAGE_RESULT"] == "${{ needs.test-coverage.result }}"
+    jobs = _ci()["jobs"]
+    assert "test-main" in jobs["test-core"]["needs"]
+    assert jobs["test-core"]["steps"][0]["env"]["MAIN_RESULT"] == "${{ needs.test-main.result }}"
+    assert "COVERAGE_RESULT" not in jobs["test-core"]["steps"][0]["env"]
 
 
 def test_lockfile_only_ui_advisory_has_no_dependency_install() -> None:
@@ -1487,7 +1521,8 @@ def test_release_ui_context_aggregates_every_playwright_shard() -> None:
     assert gate["name"] in REQUIRED_UI_JOBS
     assert {"changes", "ui-e2e-shard", "ui-e2e-smoke", "ui-container-smoke"} <= set(gate["needs"])
     assert "pull_request" not in shard["if"].replace("github.event_name != 'pull_request'", "")
-    assert "needs.changes" not in shard["if"]
+    # Shards are never path-gated; only a queue-proven push (merge group already ran them) skips them.
+    assert "needs.changes" not in shard["if"].replace(QUEUE_GUARD, "")
     assert container["if"].startswith(gate["if"].rstrip())
     assert shard["strategy"]["fail-fast"] is False
     assert shard["strategy"]["matrix"]["shard"] == list(range(1, UI_E2E_SHARDS + 1))
@@ -1540,16 +1575,17 @@ def test_container_smoke_condition_matches_the_gate_requirement() -> None:
         for result in ("success", "failure", "skipped"):
             for ui in ("true", "false"):
                 for container in ("true", "false", ""):
-                    outputs = SimpleNamespace(ui=ui, ui_container=container)
-                    context = {
-                        "github": SimpleNamespace(event_name=event, ref="refs/heads/main"),
-                        "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=outputs)),
-                    }
-                    scope = {"__builtins__": {}}
-                    if eval(gate_runs, scope, context):
-                        assert eval(runs, scope, context) == eval(required, scope, context), (event, result, ui, container)
-                    else:
-                        assert not eval(runs, scope, context)
+                    for proven in ("true", "false", "") if event == "push" else ("",):
+                        outputs = SimpleNamespace(ui=ui, ui_container=container, queue_proven=proven)
+                        context = {
+                            "github": SimpleNamespace(event_name=event, ref="refs/heads/main"),
+                            "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=outputs)),
+                        }
+                        scope = {"__builtins__": {}}
+                        if eval(gate_runs, scope, context):
+                            assert eval(runs, scope, context) == eval(required, scope, context), (event, result, ui, container)
+                        else:
+                            assert not eval(runs, scope, context)
 
 
 def test_playwright_shards_partition_the_browser_suite_evenly() -> None:
@@ -1564,3 +1600,235 @@ def test_lock_refresh_covers_the_python_sdk_lock() -> None:
     runs = "\n".join(step.get("run", "") for step in lock_refresh["jobs"]["upgrade"]["steps"])
     assert "uv lock --upgrade --project sdks/python" in runs
     assert "git add uv.lock sdks/python/uv.lock" in runs
+
+
+# Lanes the merge group runs on the exact commit the queue then pushes to main.
+QUEUE_LANES = (
+    "security",
+    "lint",
+    "build",
+    "docs-strict",
+    "ui",
+    "ui-export",
+    "ui-e2e-shard",
+    "html-report-browser",
+    "ui-container-smoke",
+    "ui-e2e",
+    "compose-contract",
+    "helm-profiles",
+    "endpoint-packaging",
+    "graph-performance",
+    "output-scale-performance",
+    "sdk-import-smoke",
+    "postgres-integration",
+    "version-check",
+    "native-image",
+    "mcp-images",
+    "action-dogfood",
+    "test-shard",
+)
+_CLASSIFIER_OUTPUTS = (
+    "action",
+    "alpine",
+    "alpine_full",
+    "alpine_pr",
+    "compose",
+    "docs",
+    "docs_only",
+    "endpoint",
+    "full_python",
+    "graph_performance",
+    "helm",
+    "html_report",
+    "mcp_images",
+    "native_image",
+    "postgres",
+    "python",
+    "ui",
+    "ui_container",
+    "ui_e2e",
+)
+
+
+def _evaluate(
+    expression: str, event: str, outputs: dict[str, str], *, result: str = "success", needs: dict[str, str] | None = None
+) -> bool:
+    import re
+    from types import SimpleNamespace
+
+    text = " ".join(str(expression).strip().removeprefix("${{").removesuffix("}}").split())
+    text = text.replace("!cancelled()", "True").replace("!(", "not (")
+    text = re.sub(r"needs\.([a-z0-9-]+)\.", lambda match: "needs." + match[1].replace("-", "_") + ".", text)
+    text = text.replace("&&", " and ").replace("||", " or ")
+    jobs = {name.replace("-", "_"): SimpleNamespace(result=value) for name, value in (needs or {}).items()}
+    context = {
+        "github": SimpleNamespace(event_name=event, ref="refs/heads/main"),
+        "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=SimpleNamespace(**outputs)), **jobs),
+    }
+    return bool(eval(text, {"__builtins__": {}}, context))
+
+
+def _outputs(flag: str, *, proven: str) -> dict[str, str]:
+    return {**dict.fromkeys(_CLASSIFIER_OUTPUTS, flag), "queue_proven": proven}
+
+
+def test_queue_proven_main_push_skips_every_lane_the_merge_group_ran() -> None:
+    """The queue pushes the commit its merge-group run tested; the push must not test it again."""
+    jobs = _ci()["jobs"]
+    for name in QUEUE_LANES:
+        assert QUEUE_GUARD in jobs[name]["if"], name
+        for flag in ("true", "false", ""):
+            for result in ("success", "failure", "skipped"):
+                assert not _evaluate(jobs[name]["if"], "push", _outputs(flag, proven="true"), result=result), (name, flag, result)
+    assert not _evaluate(jobs["test-main"]["if"], "push", _outputs("true", proven="false"))
+
+
+def test_queue_guard_never_changes_pull_request_merge_group_or_nightly_routing() -> None:
+    """``queue_proven`` is only ever set on push; an empty output keeps every other event's lanes."""
+    jobs = _ci()["jobs"]
+    for name in QUEUE_LANES:
+        unguarded = jobs[name]["if"].replace(QUEUE_GUARD + " && ", "").replace(" && " + QUEUE_GUARD, "")
+        for event in ("pull_request", "merge_group", "schedule", "workflow_dispatch", "push"):
+            for flag in ("true", "false", ""):
+                for result in ("success", "failure", "skipped"):
+                    outputs = _outputs(flag, proven="")
+                    expected = _evaluate(unguarded, event, outputs, result=result)
+                    assert _evaluate(jobs[name]["if"], event, outputs, result=result) == expected, (name, event, flag, result)
+
+
+def test_queue_proven_main_push_keeps_only_post_merge_lanes() -> None:
+    """Docker (multi-arch) and the full musl suite are the lanes a merge group never runs."""
+    jobs = _ci()["jobs"]
+    proven = _outputs("false", proven="true")
+    docker_needs = {"security": "skipped", "lint": "skipped", "test-core": "success"}
+    assert _evaluate(jobs["docker"]["if"], "push", proven, needs=docker_needs)
+    for failed in ({"security": "failure"}, {"lint": "cancelled"}, {"test-core": "failure"}):
+        assert not _evaluate(jobs["docker"]["if"], "push", proven, needs={**docker_needs, **failed}), failed
+    # Without queue proof the security and lint jobs must have run and passed.
+    assert not _evaluate(jobs["docker"]["if"], "push", _outputs("false", proven="false"), needs=docker_needs)
+    alpine = jobs["test-alpine"]["if"]
+    assert _evaluate(alpine, "push", {**proven, "alpine": "true", "alpine_full": "true"})
+    assert not _evaluate(alpine, "push", {**proven, "alpine": "true", "alpine_full": "false"})
+    assert _evaluate(alpine, "push", {**_outputs("false", proven="false"), "alpine": "true"})
+    for name in ("changes", "test-core", "test"):
+        assert QUEUE_GUARD not in str(jobs[name].get("if", "")), name
+
+
+def test_required_aggregator_expects_exactly_the_lanes_that_run() -> None:
+    """``Test (Python 3.13)`` requires a lane exactly when its job condition selects it."""
+    jobs = _ci()["jobs"]
+    env = jobs["test"]["steps"][0]["env"]
+    for lane, job in (("ALPINE", "test-alpine"), ("UI_E2E", "ui-e2e"), ("MCP_IMAGES", "mcp-images")):
+        for event in ("pull_request", "merge_group", "push", "schedule", "workflow_dispatch"):
+            for flag in ("true", "false", ""):
+                for proven in ("true", "false", ""):
+                    for result in ("success", "failure", "skipped"):
+                        outputs = _outputs(flag, proven=proven if event == "push" else "")
+                        runs = _evaluate(jobs[job]["if"], event, outputs, result=result)
+                        required = _evaluate(env[f"{lane}_REQUIRED"], event, outputs, result=result)
+                        assert runs == required, (lane, event, flag, proven, result)
+
+
+def _queue_proof(tmp_path, listed: str, *, sha: str = "a" * 40, gh_status: int = 0) -> str:
+    import os
+    import subprocess
+
+    step = next(step for step in _ci()["jobs"]["changes"]["steps"] if step.get("id") == "queue")
+    assert step["if"] == "github.event_name == 'push'"
+    assert step["env"]["GH_TOKEN"] == "${{ github.token }}"
+    bins = tmp_path / "bin"
+    bins.mkdir(exist_ok=True)
+    gh = bins / "gh"
+    gh.write_text(f'#!/bin/sh\nprintf "%s\\n" "$*" > "{tmp_path}/gh-args"\nprintf "%s" "$GH_LISTED"\nexit {gh_status}\n')
+    gh.chmod(0o755)
+    output = tmp_path / "outputs"
+    output.write_text("")
+    env = {
+        **os.environ,
+        "PATH": f"{bins}:{os.environ['PATH']}",
+        "GH_LISTED": listed,
+        "GITHUB_SHA": sha,
+        "GITHUB_REPOSITORY": "example/repository",
+        "GITHUB_OUTPUT": str(output),
+        "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"),
+    }
+    subprocess.run(["bash", "-c", step["run"]], env=env, check=True, capture_output=True, text=True)
+    values = dict(line.split("=", 1) for line in output.read_text().splitlines())
+    return values["queue_proven"]
+
+
+def test_queue_proof_requires_a_successful_merge_group_run_of_this_exact_commit(tmp_path) -> None:
+    sha = "a" * 40
+    assert _queue_proof(tmp_path, f"{sha}\n", sha=sha) == "true"
+    args = (tmp_path / "gh-args").read_text()
+    assert "actions/workflows/ci.yml/runs?event=merge_group&head_sha=" + sha in args
+    assert '.event == "merge_group"' in args and '.conclusion == "success"' in args
+    assert '.path == ".github/workflows/ci.yml"' in args
+    # Another commit, nothing listed, a failed lookup or an empty SHA keep the full push lanes.
+    assert _queue_proof(tmp_path, "b" * 40 + "\n", sha=sha) == "false"
+    assert _queue_proof(tmp_path, "", sha=sha) == "false"
+    assert _queue_proof(tmp_path, f"{sha}\n", sha=sha, gh_status=1) == "false"
+    assert _queue_proof(tmp_path, "\n", sha="") == "false"
+    assert _queue_proof(tmp_path, "not-a-sha\n", sha="not-a-sha") == "false"
+
+
+def test_queue_proof_is_published_by_the_classifier() -> None:
+    changes = _ci()["jobs"]["changes"]
+    assert changes["outputs"]["queue_proven"] == "${{ steps.queue.outputs.queue_proven }}"
+    assert changes["permissions"]["actions"] == "read"
+    # Last, so a failed classification never leaves a "proven" output behind.
+    assert changes["steps"][-1]["id"] == "queue"
+
+
+def test_full_matrix_is_one_reusable_workflow_with_ci_parity() -> None:
+    workflow = _full()
+    triggers = workflow.get(True, workflow.get("on"))
+    assert set(triggers) == {"workflow_call"}
+    assert workflow["permissions"] == {"contents": "read"}
+    ci_env = _ci()["env"]
+    for key in ("FORCE_JAVASCRIPT_ACTIONS_TO_NODE24", "AGENT_BOM_DEFER_PRODUCT_PROOF"):
+        assert workflow["env"][key] == ci_env[key], key
+    job = workflow["jobs"]["test-main"]
+    assert job["name"] == "Full correctness (Python ${{ matrix.python-version }}, shard ${{ matrix.shard }})"
+    assert "if" not in job
+    assert job["strategy"]["fail-fast"] is False
+
+
+def _release_needs(jobs: dict, name: str) -> set[str]:
+    seen: set[str] = set()
+    pending = [name]
+    while pending:
+        needs = jobs[pending.pop()].get("needs", [])
+        for parent in [needs] if isinstance(needs, str) else needs:
+            if parent not in seen:
+                seen.add(parent)
+                pending.append(parent)
+    return seen
+
+
+def test_release_runs_the_full_matrix_on_the_tagged_commit_before_publishing() -> None:
+    """The matrix left main pushes; a tag still cannot publish without it passing on that exact SHA."""
+    jobs = yaml.safe_load(RELEASE_WORKFLOW.read_text(encoding="utf-8"))["jobs"]
+    matrix = jobs["full-correctness"]
+    assert matrix["uses"] == "./.github/workflows/full-correctness.yml"
+    assert matrix["needs"] == "version-guard"
+    assert matrix["permissions"] == {"contents": "read"}
+    assert "if" not in matrix
+    publishing = [
+        name
+        for name, job in jobs.items()
+        if any(value == "write" and scope != "security-events" for scope, value in (job.get("permissions") or {}).items())
+    ]
+    assert {"pypi-publish", "docker-publish", "helm-publish", "github-release", "sign", "provenance"} <= set(publishing)
+    for name in publishing:
+        assert "full-correctness" in _release_needs(jobs, name), name
+
+
+def test_nightly_and_manual_runs_call_the_full_matrix() -> None:
+    jobs = _ci()["jobs"]
+    for event in ("schedule", "workflow_dispatch"):
+        assert _evaluate(jobs["test-main"]["if"], event, _outputs("", proven=""), result="skipped"), event
+    for event in ("pull_request", "merge_group", "push"):
+        for proven in ("true", "false", ""):
+            assert not _evaluate(jobs["test-main"]["if"], event, _outputs("true", proven=proven)), (event, proven)
+    assert jobs["test-main"]["permissions"] == {"contents": "read"}
