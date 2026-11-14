@@ -6,7 +6,7 @@ import json
 import sqlite3
 import threading
 from datetime import datetime, timezone
-from typing import Any, Protocol, cast
+from typing import Any, cast
 
 from agent_bom.api.posture_counts_cache import announce_scan_evidence
 from agent_bom.api.scan_snapshot_store import discard_job_snapshot
@@ -82,51 +82,6 @@ def _require_tenant_scope(tenant_id: str | None, all_tenants: bool, method: str)
         require_job_tenant(tenant_id)
     if tenant_id is None and not all_tenants:
         raise ValueError(f"{method} requires a tenant_id; pass all_tenants=True for background reconciliation")
-
-
-class JobStore(Protocol):
-    """Protocol for scan job persistence."""
-
-    def put(self, job: ScanJob) -> None: ...
-    def put_many_atomic(self, jobs: list[ScanJob]) -> None: ...
-    def put_many_if_absent_atomic(self, jobs: list[ScanJob]) -> list[str]: ...
-    def get(self, job_id: str, tenant_id: str | None = None, *, all_tenants: bool = False) -> ScanJob | None: ...
-    def get_status_view(self, job_id: str, tenant_id: str | None = None) -> dict[str, Any] | None:
-        """Read progress without loading the result; concrete stores must implement this projection."""
-        raise NotImplementedError
-
-    def delete(self, job_id: str, tenant_id: str | None = None, *, all_tenants: bool = False) -> bool: ...
-    def list_all(self, tenant_id: str | None = None, *, all_tenants: bool = False) -> list[ScanJob]: ...
-    def list_summary(
-        self,
-        tenant_id: str | None = None,
-        *,
-        all_tenants: bool = False,
-        limit: int | None = None,
-        offset: int = 0,
-        query: str | None = None,
-        status: JobStatus | None = None,
-    ) -> list[dict]: ...
-    def count_summary(
-        self,
-        tenant_id: str | None = None,
-        *,
-        query: str | None = None,
-        status: JobStatus | None = None,
-    ) -> int: ...
-    def count_summary_by_status(
-        self,
-        tenant_id: str | None = None,
-        *,
-        query: str | None = None,
-    ) -> dict[str, int]: ...
-    def count_active(
-        self,
-        tenant_id: str | None = None,
-        *,
-        all_tenants: bool = False,
-    ) -> int: ...
-    def cleanup_expired(self, ttl_seconds: int = _JOB_TTL_SECONDS) -> int: ...
 
 
 class InMemoryJobStore:

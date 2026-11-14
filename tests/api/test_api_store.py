@@ -89,9 +89,11 @@ def test_in_memory_get_missing():
 def test_in_memory_delete():
     store = InMemoryJobStore()
     store.put(_make_job())
-    assert store.delete("test-123", all_tenants=True) is True
+    deleted = store.delete("test-123", all_tenants=True)
+    assert deleted is True
     assert store.get("test-123", all_tenants=True) is None
-    assert store.delete("test-123", all_tenants=True) is False
+    deleted = store.delete("test-123", all_tenants=True)
+    assert deleted is False
 
 
 def test_in_memory_list_all():
@@ -375,9 +377,11 @@ def test_sqlite_delete():
     try:
         store = SQLiteJobStore(db_path=db_path)
         store.put(_make_job())
-        assert store.delete("test-123", all_tenants=True) is True
+        deleted = store.delete("test-123", all_tenants=True)
+        assert deleted is True
         assert store.get("test-123", all_tenants=True) is None
-        assert store.delete("test-123", all_tenants=True) is False
+        deleted = store.delete("test-123", all_tenants=True)
+        assert deleted is False
     finally:
         Path(db_path).unlink(missing_ok=True)
 
@@ -559,8 +563,10 @@ def test_sqlite_retained_evidence_survives_restart_with_tenant_scoped_deletion(t
     reopened = SQLiteJobStore(db_path)
     assert reopened.get("tenant-a", tenant_id="tenant-b") is None
     assert reopened.get("tenant-a", tenant_id="tenant-a") is not None
-    assert not reopened.delete("tenant-a", tenant_id="tenant-b")
-    assert reopened.delete("tenant-a", tenant_id="tenant-a")
+    deleted = reopened.delete("tenant-a", tenant_id="tenant-b")
+    assert not deleted
+    deleted = reopened.delete("tenant-a", tenant_id="tenant-a")
+    assert deleted
     assert reopened.get("tenant-b", tenant_id="tenant-b") is not None
 
 

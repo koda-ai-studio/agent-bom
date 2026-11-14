@@ -317,7 +317,8 @@ def test_scim_per_tenant_bearer_mapping_binds_tokens_to_server_side_tenants(monk
         ).status_code
         == 404
     )
-    assert client.delete(f"/scim/v2/Users/{alpha_user['id']}", headers=_headers("beta-scim-secret")).status_code == 404
+    response = client.delete(f"/scim/v2/Users/{alpha_user['id']}", headers=_headers("beta-scim-secret"))
+    assert response.status_code == 404
     assert (
         client.put(
             f"/scim/v2/Users/{alpha_user['id']}",

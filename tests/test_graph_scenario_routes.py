@@ -114,8 +114,10 @@ def test_crud_revision_conflicts_and_server_owned_identity(scenario_client: tupl
     assert stale.status_code == 409
     wrong_path = client.put(f"/v1/graph/scenarios/not-{scenario_id}", json={**update, "expected_revision": 2})
     assert wrong_path.status_code == 409
-    assert client.delete(f"/v1/graph/scenarios/{scenario_id}", params={"expected_revision": 1}).status_code == 409
-    assert client.delete(f"/v1/graph/scenarios/{scenario_id}", params={"expected_revision": 2}).status_code == 204
+    response = client.delete(f"/v1/graph/scenarios/{scenario_id}", params={"expected_revision": 1})
+    assert response.status_code == 409
+    response = client.delete(f"/v1/graph/scenarios/{scenario_id}", params={"expected_revision": 2})
+    assert response.status_code == 204
     assert client.get(f"/v1/graph/scenarios/{scenario_id}").status_code == 404
 
 
@@ -310,7 +312,8 @@ def test_payload_cap_extra_fields_and_managed_trial_read_only(
         "changes": [],
     }
     assert client.put(f"/v1/graph/scenarios/{scenario_id}", json=update).status_code == 403
-    assert client.delete(f"/v1/graph/scenarios/{scenario_id}", params={"expected_revision": 1}).status_code == 403
+    response = client.delete(f"/v1/graph/scenarios/{scenario_id}", params={"expected_revision": 1})
+    assert response.status_code == 403
 
 
 def test_backend_failures_are_sanitized(

@@ -225,7 +225,7 @@ def _graph(tenant: str = TENANT_A, label: str = "server s"):
 
         def __getattr__(self, name):
             writes.append(name)
-            raise AssertionError(f"unexpected graph store call: {name}")
+            raise AttributeError(f"unexpected graph store call: {name}")
 
     return FakeGraph(), writes, edge
 

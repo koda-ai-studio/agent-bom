@@ -1274,7 +1274,8 @@ def test_overview_is_read_only() -> None:
     _clear_jobs()
     client = TestClient(app)
     assert client.post("/v1/overview", headers=_AUTH_HEADERS).status_code in (403, 405)
-    assert client.delete("/v1/overview", headers=_AUTH_HEADERS).status_code in (403, 405)
+    response = client.delete("/v1/overview", headers=_AUTH_HEADERS)
+    assert response.status_code in (403, 405)
 
 
 def test_top_risk_projects_package_evidence_not_server_asset() -> None:

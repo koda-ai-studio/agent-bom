@@ -445,16 +445,35 @@ class KeyStore:
 class KeyStoreProtocol(Protocol):
     """Interface shared by in-memory and persistent API key stores."""
 
-    def add(self, key: ApiKey) -> None: ...
-    def provision_tenant_key(self, key: ApiKey, *, team_name: str) -> None: ...
-    def remove(self, key_id: str) -> bool: ...
-    def revoke_by_principal_id(self, principal_id: str, tenant_id: str | None = None) -> list[str]: ...
-    def mark_rotating(self, key_id: str, *, replacement_key_id: str, overlap_until: str) -> bool: ...
-    def get(self, key_id: str) -> ApiKey | None: ...
-    def list_keys(self, tenant_id: str | None = None) -> list[ApiKey]: ...
-    def delete_tenant(self, tenant_id: str) -> int: ...
-    def verify(self, raw_key: str) -> ApiKey | None: ...
-    def has_keys(self) -> bool: ...
+    def add(self, key: ApiKey) -> None:
+        """Store a new API key."""
+
+    def provision_tenant_key(self, key: ApiKey, *, team_name: str) -> None:
+        """Store a tenant's first key, creating the tenant root where the store has one."""
+
+    def remove(self, key_id: str) -> bool:
+        """Delete a key; return whether it existed."""
+
+    def revoke_by_principal_id(self, principal_id: str, tenant_id: str | None = None) -> list[str]:
+        """Revoke every key issued to a principal; return the revoked key ids."""
+
+    def mark_rotating(self, key_id: str, *, replacement_key_id: str, overlap_until: str) -> bool:
+        """Mark a key as rotating until ``overlap_until``; return whether it existed."""
+
+    def get(self, key_id: str) -> ApiKey | None:
+        """Return the key with ``key_id``, if any."""
+
+    def list_keys(self, tenant_id: str | None = None) -> list[ApiKey]:
+        """Return keys, optionally scoped to one tenant."""
+
+    def delete_tenant(self, tenant_id: str) -> int:
+        """Delete every key for a tenant; return the count removed."""
+
+    def verify(self, raw_key: str) -> ApiKey | None:
+        """Return the active key matching ``raw_key``, if any."""
+
+    def has_keys(self) -> bool:
+        """Return whether any key is stored."""
 
 
 _key_store: KeyStoreProtocol | None = None

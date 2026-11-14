@@ -14,8 +14,9 @@ from itertools import islice
 from typing import Any
 
 from agent_bom.core.packages import normalize_package_name
+from agent_bom.core.repository_identity import relative_path, repository_id
 from agent_bom.domain.codeowners import CodeOwnerRule, owner_for_path
-from agent_bom.parsers.repository.artifacts import RepositoryReader, relative_path, repository_id
+from agent_bom.parsers.repository.artifacts import RepositoryReader
 
 MAX_PACKAGES = 500
 _MANIFESTS = {"npm": "package.json", "pypi": "pyproject.toml", "cargo": "Cargo.toml", "go": "go.mod"}

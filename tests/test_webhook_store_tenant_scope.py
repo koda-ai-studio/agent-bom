@@ -19,10 +19,12 @@ def test_another_tenant_cannot_read_or_delete_a_subscription(store):
         WebhookSubscription(subscription_id="whsub_1", tenant_id="tenant-a", url="https://hooks.example/a", signing_secret="placeholder")
     )
     assert store.get("whsub_1", tenant_id="tenant-b") is None
-    assert store.delete("whsub_1", tenant_id="tenant-b") is False
+    deleted = store.delete("whsub_1", tenant_id="tenant-b")
+    assert deleted is False
     kept = store.get("whsub_1", tenant_id="tenant-a")
     assert kept is not None and kept.tenant_id == "tenant-a"
-    assert store.delete("whsub_1", tenant_id="tenant-a") is True
+    deleted = store.delete("whsub_1", tenant_id="tenant-a")
+    assert deleted is True
     assert store.get("whsub_1", tenant_id="tenant-a") is None
 
 

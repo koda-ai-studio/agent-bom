@@ -21,7 +21,6 @@ from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_match
 from agent_bom.api.finding_walk_cache import walk_rows as _walk_scan_rows
 from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant as _bulk_ingested_findings_for_tenant
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant as _completed_jobs_for_tenant
-from agent_bom.api.scan_finding_read import _current_scan_rows as _current_scan_rows
 from agent_bom.api.scan_finding_read import current_scan_rows_with_lifecycle, scan_rows_inputs
 from agent_bom.api.stores import _get_store
 

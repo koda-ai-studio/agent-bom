@@ -122,7 +122,8 @@ def test_one_tenants_delete_does_not_remove_anothers_agent(store):
     store.put(_agent("tenant-a"))
     store.put(_agent("tenant-b"))
 
-    assert store.delete(SHARED_ID, tenant_id="tenant-a") is True
+    deleted = store.delete(SHARED_ID, tenant_id="tenant-a")
+    assert deleted is True
 
     survivor = store.get(SHARED_ID, tenant_id="tenant-b")
     assert survivor is not None, "deleting tenant A's agent removed tenant B's"

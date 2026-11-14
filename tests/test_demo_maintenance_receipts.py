@@ -13,8 +13,8 @@ def test_current_estate_skips_composition(monkeypatch):
     monkeypatch.setattr(bootstrap, "demo_estate_force_reseed", lambda: False)
     monkeypatch.setattr(bootstrap, "_demo_seed_block_reason", lambda *a: None)
     monkeypatch.setattr(bootstrap, "_tenant_has_demo_jobs", lambda *a: True)
-    monkeypatch.setattr(stores, "_get_graph_store", lambda: Mock())
-    monkeypatch.setattr(stores, "_get_store", lambda: Mock())
+    monkeypatch.setattr(stores, "_get_graph_store", Mock)
+    monkeypatch.setattr(stores, "_get_store", Mock)
     monkeypatch.setattr(bootstrap, "_existing_snapshots", lambda *a: [])
     monkeypatch.setattr(bootstrap, "_showcase_seed_is_current", lambda *a: True)
     monkeypatch.setattr(

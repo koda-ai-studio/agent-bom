@@ -112,9 +112,12 @@ def test_webhook_encryption_matching_and_delete(tmp_path, monkeypatch):
     store.put(replace(record, status="disabled"))
     assert store.list("alpha") == []
     assert len(store.list("alpha", include_disabled=True)) == 1
-    assert store.delete("subscription", tenant_id="beta") is False
-    assert store.delete("subscription", tenant_id="alpha") is True
-    assert store.delete("subscription", tenant_id="alpha") is False
+    deleted = store.delete("subscription", tenant_id="beta")
+    assert deleted is False
+    deleted = store.delete("subscription", tenant_id="alpha")
+    assert deleted is True
+    deleted = store.delete("subscription", tenant_id="alpha")
+    assert deleted is False
     store._conn.close()
 
 

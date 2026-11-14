@@ -34,7 +34,8 @@ __all__ = ["NeptuneGraphStoreError"]  # fmt: skip
 class GremlinClientProtocol(Protocol):
     """Small gremlin-python-compatible surface used by the adapter."""
 
-    def submit(self, query: str, bindings: dict[str, Any] | None = None) -> Any: ...
+    def submit(self, query: str, bindings: dict[str, Any] | None = None) -> Any:
+        """Submit a Gremlin query with bindings and return the result set."""
 
 
 def neptune_graph_backend_enabled() -> bool:

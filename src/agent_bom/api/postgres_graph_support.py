@@ -258,9 +258,11 @@ class PostgresGraphStoreBase:
 
     if TYPE_CHECKING:
 
-        def _search_timeout_ms(self) -> int: ...
+        def _search_timeout_ms(self) -> int:
+            """Implemented by ``PostgresGraphStore``."""
 
-        def _apply_search_timeout(self, conn: Any) -> None: ...
+        def _apply_search_timeout(self, conn: Any) -> None:
+            """Implemented by ``PostgresGraphStore``."""
 
         def save_graph_streaming(
             self,
@@ -281,7 +283,8 @@ class PostgresGraphStoreBase:
             correlation_completed_at: str = "",
             correlation_execution_owner: str = "",
             snapshot_paths: Sequence[Any] | None = None,
-        ) -> dict[str, int]: ...
+        ) -> dict[str, int]:
+            """Implemented by ``PostgresGraphStore``."""
 
         def _walk_graph(
             self,
@@ -300,6 +303,8 @@ class PostgresGraphStoreBase:
             static_only: bool,
             dynamic_only: bool,
             include_roots: bool,
-        ) -> tuple[str, str, set[str], dict[str, int], dict[tuple[str, str, str], Any], dict[str, str], list[str], bool, bool]: ...
+        ) -> tuple[str, str, set[str], dict[str, int], dict[tuple[str, str, str], Any], dict[str, str], list[str], bool, bool]:
+            """Implemented by ``PostgresGraphStore``."""
 
-        def _snapshot_digests(self, conn: Any, *, tenant_id: str, scan_id: str) -> tuple[str, str, dict[str, int]]: ...
+        def _snapshot_digests(self, conn: Any, *, tenant_id: str, scan_id: str) -> tuple[str, str, dict[str, int]]:
+            """Implemented by ``PostgresGraphStore``."""

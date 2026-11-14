@@ -375,7 +375,8 @@ class DeltaStreamConnector(Protocol):
         *,
         observed_at: str,
         batch_id: str,
-    ) -> list[Any]: ...
+    ) -> list[Any]:
+        """Deliver one batch of finding delta events; return the delivery results."""
 
 
 class DeliveryDeltaStreamConnector:

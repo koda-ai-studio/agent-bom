@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import RESULTS_DIR  # noqa: E402
 
 _KEY_MEASUREMENTS = (
+    "image_mode",
     "packages",
     "unique_advisories",
     "unknown_severity",

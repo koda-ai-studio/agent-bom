@@ -201,7 +201,8 @@ def test_additional_registry_replica_isolation(kind):
             assert read(cls(pool=pools[1]), tenant).tenant_id == tenant
             if kind == "issues":
                 original = read(a, tenant)
-                assert write(b, tenant).mapping_id == original.mapping_id
+                written = write(b, tenant)
+                assert written.mapping_id == original.mapping_id
                 assert a.update_status(original.mapping_id, tenant_id=tenant, status="resolved").status == "resolved"
             if kind == "mcp":
                 assert b.get_by_server_canonical_id(tenant, "server").observation_id == "same"
@@ -452,10 +453,13 @@ def test_postgres_webhook_reads_and_deletes_are_tenant_scoped():
     with tenant_scope(tenant):
         store.put(stores.WebhookSubscription("hook-scoped", tenant, "https://example.com", "whsec_placeholder"))
         assert store.get("hook-scoped", tenant_id=other) is None
-        assert store.delete("hook-scoped", tenant_id=other) is False
+        deleted = store.delete("hook-scoped", tenant_id=other)
+        assert deleted is False
     with tenant_scope(other):
         assert store.get("hook-scoped", tenant_id=tenant) is None
-        assert store.delete("hook-scoped", tenant_id=tenant) is False
+        deleted = store.delete("hook-scoped", tenant_id=tenant)
+        assert deleted is False
     with tenant_scope(tenant):
         assert store.get("hook-scoped", tenant_id=tenant) is not None
-        assert store.delete("hook-scoped", tenant_id=tenant) is True
+        deleted = store.delete("hook-scoped", tenant_id=tenant)
+        assert deleted is True
