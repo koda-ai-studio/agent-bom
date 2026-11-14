@@ -1,5 +1,5 @@
 {
-  "generated_on": "2026-11-13",
+  "generated_on": "2026-11-14",
   "version": "0.115.0",
   "metrics": [
     {
@@ -28,13 +28,13 @@
     },
     {
       "name": "GitHub workflow files",
-      "value": 45,
+      "value": 46,
       "source": ".github/workflows",
       "notes": "Counts .yml and .yaml workflow definitions."
     },
     {
       "name": "API route modules",
-      "value": 98,
+      "value": 100,
       "source": "src/agent_bom/api/routes",
       "notes": "Counts Python files in the routes package, including __init__.py."
     },
@@ -46,7 +46,7 @@
     },
     {
       "name": "Python modules",
-      "value": 2288,
+      "value": 2343,
       "source": "src/agent_bom",
       "notes": "Counts all Python files recursively."
     },
