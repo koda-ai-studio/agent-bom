@@ -178,6 +178,19 @@ class PeakRss:
         self._thread.join(timeout=2)
 
 
+STACK_SAMPLER_DIR = Path(__file__).resolve().parent / "stack_sampler"
+
+
+def api_environment(env: dict[str, str], name: str) -> dict[str, str]:
+    """The API's environment; with ``QUALIFICATION_STACK_SAMPLES=1`` it also loads the stack sampler."""
+    if env.get("QUALIFICATION_STACK_SAMPLES", os.environ.get("QUALIFICATION_STACK_SAMPLES")) != "1":
+        return env
+    stacks = RESULTS_DIR / "stacks"
+    stacks.mkdir(parents=True, exist_ok=True)
+    path = os.pathsep.join(item for item in (str(STACK_SAMPLER_DIR), env.get("PYTHONPATH", "")) if item)
+    return {**env, "PYTHONPATH": path, "QUALIFICATION_STACK_FILE": str(stacks / f"api-{name}")}
+
+
 class ApiServer:
     """The API as its own process, as deployed, so client timings cross a real socket."""
 
@@ -191,7 +204,7 @@ class ApiServer:
         self.log_path = log_dir / f"api-{name}.log"
         self._log = self.log_path.open("wb")
         command = agent_bom_command("api", "--host", "127.0.0.1", "--port", str(self.port), "--api-key", self.key, "--log-level", "warning")
-        self.process = subprocess.Popen(command, env=env, stdout=self._log, stderr=subprocess.STDOUT)  # noqa: S603
+        self.process = subprocess.Popen(command, env=api_environment(env, name), stdout=self._log, stderr=subprocess.STDOUT)  # noqa: S603
         self._peak = PeakRss(self.process.pid)
 
     def wait_ready(self, timeout: float = 180) -> bool:
@@ -221,6 +234,7 @@ class ApiServer:
 def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> dict[str, Any]:
     """Time repeated reads; a read still preparing is retried as its Retry-After asks, within a bound, and counted."""
     latencies: list[float] = []
+    starts: list[float] = []
     statuses: dict[str, int] = {}
     size = 0
     first: Any = None
@@ -230,6 +244,7 @@ def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> di
     for _ in range(repeats):
         while True:
             began = time.perf_counter()
+            started_at = time.time()
             status, body, size = http_json(f"{server.base}{path}", headers=server.headers, timeout=READ_TIMEOUT_SECONDS)
             elapsed = (time.perf_counter() - began) * 1000
             if status != 503 or time.monotonic() > preparing_deadline:
@@ -239,6 +254,7 @@ def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> di
         statuses[str(status)] = statuses.get(str(status), 0) + 1
         if status == 200:
             latencies.append(elapsed)
+            starts.append(round(started_at, 2))
             first = first if first is not None else body
         elif first_error is None:
             first_error = f"HTTP {status}: {str(body)[:300]}"
@@ -247,6 +263,8 @@ def timed_reads(server: ApiServer, path: str, repeats: int = READ_REPEATS) -> di
     # The first read can wait for the post-push build; the warm summary is the steady state.
     summary["warm"] = latency_summary(latencies[1:])
     summary["samples_ms"] = [round(value, 1) for value in latencies]
+    # Wall-clock starts line each sample up with the API's stack samples when those are on.
+    summary["started_at"] = starts
     if preparing:
         summary["preparing_retries"] = preparing
     if first_error:

@@ -11,6 +11,11 @@ on:
         required: false
         default: all
         type: string
+      stack_samples:
+        description: 'Sample the API process stacks every 50 ms in the performance lanes (diagnostics)'
+        required: false
+        default: false
+        type: boolean
   pull_request:
     paths:
       - .github/workflows/qualification.yml
@@ -76,6 +81,8 @@ jobs:
         run: uv sync --frozen --no-dev --extra api
       - name: Measure on SQLite
         shell: bash
+        env:
+          QUALIFICATION_STACK_SAMPLES: ${{ inputs.stack_samples && '1' || '0' }}
         run: uv run --no-sync python scripts/qualification/performance.py --backend sqlite
       - name: Summarize
         if: always()
@@ -118,6 +125,8 @@ jobs:
         run: uv sync --frozen --no-dev --extra api --extra postgres
       - name: Measure on Postgres
         shell: bash
+        env:
+          QUALIFICATION_STACK_SAMPLES: ${{ inputs.stack_samples && '1' || '0' }}
         run: uv run --no-sync python scripts/qualification/performance.py --backend postgres
       - name: Summarize
         if: always()
