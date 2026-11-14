@@ -92,12 +92,12 @@ def _drop_volatile(value):
 
 
 _EXPORTERS = {
-    "json-v1": lambda r, p: json_fmt.export_json(r, p),
+    "json-v1": json_fmt.export_json,
     "json-v2": lambda r, p: json_fmt.export_json(r, p, report_format="v2"),
     "cyclonedx": export_cyclonedx,
     "spdx3": export_spdx,
     "spdx2": export_spdx2,
-    "sarif": lambda r, p: export_sarif(r, p),
+    "sarif": export_sarif,
     "badge": export_badge,
 }
 

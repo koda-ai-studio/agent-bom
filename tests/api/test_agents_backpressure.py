@@ -21,7 +21,6 @@ import agent_bom.backpressure as backpressure
 from agent_bom.api.server import app
 from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.stores import set_job_store
-from agent_bom.backpressure import BackpressureRejectedError, describe_backpressure_posture
 from tests.api.test_agents_list_paging import ESTATE_SIZE, TENANT_A, _agent, _seed
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
@@ -63,7 +62,7 @@ def test_honest_estate_scale_builds_do_not_open_the_discovery_breaker(slow_runne
         assert response.status_code == 200, f"build {attempt}: {response.status_code} {response.text[:200]}"
         assert response.json()["count"] == ESTATE_SIZE
 
-    posture = next(path for path in describe_backpressure_posture()["paths"] if path["path"] == "discovery")
+    posture = next(path for path in backpressure.describe_backpressure_posture()["paths"] if path["path"] == "discovery")
     assert posture["state"] == "closed"
     assert posture["rejected"] == 0
     assert posture["completed"] == 40
@@ -74,7 +73,7 @@ def test_a_pile_up_beyond_concurrency_still_sheds() -> None:
     controller = backpressure._controller_for("discovery")
     for _ in range(controller.max_concurrency):
         controller.try_enter()
-    with pytest.raises(BackpressureRejectedError, match="concurrency_limit"):
+    with pytest.raises(backpressure.BackpressureRejectedError, match="concurrency_limit"):
         controller.try_enter()
     for _ in range(controller.max_concurrency):
         controller.exit(150.0)
@@ -89,5 +88,5 @@ def test_a_sustained_degraded_tail_still_opens_the_breaker() -> None:
         controller.exit(controller.p99_threshold_ms * 2)
 
     assert controller.last_trigger_reason == "p99_latency_threshold"
-    with pytest.raises(BackpressureRejectedError):
+    with pytest.raises(backpressure.BackpressureRejectedError):
         controller.try_enter()
