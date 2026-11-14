@@ -32,8 +32,8 @@ Only direct references count: a transitive or dependency-version regression
 can pass the PR and fail the post-merge run, which then freezes merges (see
 below). The job log prints the 50 slowest tests (`--durations=50`).
 
-Full correctness is split into 4 parallel shards on Python 3.13 only for a
-merge group (not enabled, see "Merge-queue configuration"); those shards run
+Full correctness is split into 8 parallel shards on Python 3.13 only for a
+merge group (see "Merge-queue configuration"); those shards run
 every test module (with the same `otel` extra) plus the graph-fixture and DCM
 guards on shard 0. `tests/test_ci_pr_fast_path.py` fails if any classifier
 outcome lets a `pull_request` event start the full shards, the four-version
@@ -63,9 +63,9 @@ still depends on queue capacity and the slowest shard.
 The planner balances measured per-module seconds from `tests/.ci-durations.json`
 (longest module first, onto the least-loaded shard); modules without a
 measurement are estimated from their size at the measured seconds per byte.
-Refresh the file when shards drift apart, from the four `Full correctness
-(Python 3.13, shard N)` job logs of one main run (their `-v` output carries
-per-line timestamps):
+Refresh the file when shards drift apart, from the `Full correctness
+shard (N, Python 3.13)` job logs of one merge-group run (their `-v` output
+carries per-line timestamps):
 
 ```bash
 for job in JOB_ID_0 JOB_ID_1 JOB_ID_2 JOB_ID_3; do
@@ -112,7 +112,7 @@ cannot satisfy the release gate.
 | Docs Strict, Helm, Compose, Endpoint packaging | when their inputs change | when their inputs change | yes |
 | Native App image and persistence | when its inputs change | yes | yes |
 | Python affected tests (shard N/total): affected selection + contract smoke | always (required through aggregation) | yes | yes |
-| Full correctness suite, Python 3.13 in 4 shards | never (merge group only) | no | no |
+| Full correctness suite, Python 3.13 in 8 shards | never (merge group only) | no | no |
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 in 4 shards each (combined 3.11 coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
 | Postgres Integration Contract (live RLS, migrations, schema parity) | relevant inputs (required when selected) | yes | yes |
@@ -458,25 +458,31 @@ Operator-side troubleshooting if a strand persists past ~10 minutes:
 
 ### Merge-queue configuration
 
-No merge queue is enabled. The repository is now owned by the
-`koda-ai-studio` organization and is public, which is the case GitHub
-documents merge queues for; confirm availability in the repository settings
-before relying on it. `ci.yml`, `codeql.yml`, `pr-security-gate.yml` and `dependency-review.yml`
+A merge queue gates `main` through repository ruleset "main merge queue":
+squash merges, all-green grouping, up to three entries built and merged
+together, a one-minute wait before a lone entry starts, and a 90-minute check
+timeout. A queued PR stays open until its group passes, then merges on its own.
+The required contexts are `Lint and Type Check`, `Build Package`,
+`Security Scan`, `Test (Python 3.13)`, `Version Alignment`,
+`Dependency Review`, `UI Validate`, `UI E2E and container smoke`,
+`Analyze (python)` and `Analyze (actions)`. The code-scanning summary check
+(`CodeQL`) is not required: it never reports on a merge group, so it would
+hold every entry until the timeout. `ci.yml`, `codeql.yml`, `pr-security-gate.yml` and `dependency-review.yml`
 declare `merge_group: types: [checks_requested]`. In `ci.yml` a merge group
 skips the path classifier, so every path-gated lane runs, and it runs the
 full 3.13 shards instead of the affected tests plus the post-merge
 performance lanes. `Lint and Type Check`, `Build Package`, `Security Scan`,
-`Test (Python 3.13)`, `Version Alignment`, `UI Validate` and `CodeQL`
-therefore report on a merge group.
+`Test (Python 3.13)`, `Version Alignment`, `UI Validate` and the CodeQL
+`Analyze` jobs therefore report on a merge group. The eight full shards bound
+the queue at about ten minutes; the demo-estate module fills one three-worker
+shard by itself, so splitting further gains nothing until that module is faster.
 
 `Dependency Review` (`dependency-review.yml`) also declares `merge_group`.
 The review needs one PR's base and head dependency snapshots, which a merge
 group does not have, so on a merge group it reports success without calling the
 action: every queued PR already passed it on its own `pull_request` run. Its
 concurrency group falls back to the ref, so concurrent groups do not cancel each
-other. Every required context therefore reports on a merge group. To enable:
-Settings, Branches, edit the `main` rule, turn on "Require merge queue" and
-keep the required contexts above.
+other. Every required context therefore reports on a merge group.
 
 Keep strict up-to-date protection: it is what makes the PR's sharded suite run
 on the commit that lands. Use `scripts/enable_merge_queue.sh --check` for

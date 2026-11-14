@@ -505,7 +505,7 @@ def test_dependency_review_passes_merge_groups_without_a_pr_diff() -> None:
 
 
 def test_runbook_keeps_strict_protection_and_documents_pr_shards() -> None:
-    """No merge queue is available for this repository, so strict protection stays."""
+    """The runbook states the merge-group shard count and keeps strict protection."""
     runbook = " ".join((ROOT / "docs" / "operations" / "CI_RUNBOOK.md").read_text(encoding="utf-8").split())
     total = len(_ci()["jobs"]["test-shard"]["strategy"]["matrix"]["shard"])
     assert f"split into {total} parallel shards" in runbook
@@ -1336,6 +1336,14 @@ def test_workflow_classifier_combines_writer_and_shared_input_routing(tmp_path) 
         values = dict(line.split("=", 1) for line in output.read_text().splitlines())
         for key, value in expected.items():
             assert values[key] == value, (paths, key, values)
+
+
+def test_merge_group_full_suite_runs_in_eight_balanced_shards() -> None:
+    job = _ci()["jobs"]["test-shard"]
+    assert job["if"] == "${{ !cancelled() && github.event_name == 'merge_group' }}"
+    assert job["strategy"]["matrix"]["shard"] == list(range(8))
+    run = next(step["run"] for step in job["steps"] if step.get("name") == "Run full correctness shard")
+    assert 'scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 8' in run
 
 
 def test_main_matrix_partitions_each_interpreter_and_retains_coverage_artifacts() -> None:
