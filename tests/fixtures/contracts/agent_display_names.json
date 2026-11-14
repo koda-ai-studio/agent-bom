@@ -1,5 +1,5 @@
 {
-  "description": "One agent display-name rule shared by the API (agent_bom.domain.display_names) and the UI (ui/lib/display-name.ts). A recorded name wins; otherwise the identifier is formatted.",
+  "description": "One agent display-name rule shared by the API (agent_bom.domain.display_names) and the UI (ui/lib/display-name.ts). A recorded name wins; otherwise a slug is formatted and an identifier (a scoped, path-like or hash-bearing id) is shown verbatim.",
   "cases": [
     {"id": "langchain-service", "recorded": null, "expected": "LangChain Service"},
     {"id": "claude_desktop", "recorded": null, "expected": "Claude Desktop"},
@@ -8,7 +8,12 @@
     {"id": "cursor", "recorded": null, "expected": "Cursor"},
     {"id": "Support Copilot", "recorded": null, "expected": "Support Copilot"},
     {"id": "  data-pipeline  ", "recorded": null, "expected": "Data Pipeline"},
-    {"id": "project:sampleapp", "recorded": null, "expected": "Project:sampleapp"},
+    {"id": "project:sampleapp", "recorded": null, "expected": "project:sampleapp"},
+    {"id": "project:agent-a1157c3d9e", "recorded": null, "expected": "project:agent-a1157c3d9e"},
+    {"id": "agent-a1157c3d9e", "recorded": null, "expected": "agent-a1157c3d9e"},
+    {"id": "arn:aws:bedrock:us-east-1:111122223333:agent/AGENT1", "recorded": null, "expected": "arn:aws:bedrock:us-east-1:111122223333:agent/AGENT1"},
+    {"id": "spiffe://example.org/ns/prod/sa/agent", "recorded": null, "expected": "spiffe://example.org/ns/prod/sa/agent"},
+    {"id": "project:agent-a1157c3d9e", "recorded": "Billing agent", "expected": "Billing agent"},
     {"id": "data-pipeline", "recorded": "  Nightly ETL  ", "expected": "Nightly ETL"},
     {"id": "data-pipeline", "recorded": "   ", "expected": "Data Pipeline"},
     {"id": "", "recorded": null, "expected": "Unknown agent"},

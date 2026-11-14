@@ -1,4 +1,4 @@
-import { ATTACK_PATH_NODE, DESKTOP_MIN_ZOOM, type AttackPathDirection, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
+import { ATTACK_PATH_NODE, PATH_DESKTOP_MIN_ZOOM, type AttackPathDirection, type AttackPathLayout } from "@/lib/attack-path-graph-layout";
 import { routeAttackPathEdges, sampleRoute, type Point } from "@/lib/attack-path-graph-routes";
 import { ATTACK_PATH_FIT_PADDING } from "@/lib/attack-path-graph-viewport";
 import type { ArchitectureModel, ArchitectureNode } from "@/lib/agent-architecture-model";
@@ -193,7 +193,7 @@ export function countRouteCrossings(model: Pick<ArchitectureModel, "edges">, rou
 /** Canvas height from the laid-out content at the zoom it will be shown at, within readable bounds. */
 export function architectureCanvasHeight(layout: Pick<ArchitectureLayout, "width" | "height">, containerWidth: number): number {
   const usable = containerWidth - ATTACK_PATH_FIT_PADDING.left - ATTACK_PATH_FIT_PADDING.right;
-  const zoom = containerWidth > 0 && layout.width > 0 ? Math.min(1, Math.max(DESKTOP_MIN_ZOOM, usable / layout.width)) : 1;
+  const zoom = containerWidth > 0 && layout.width > 0 ? Math.min(1, Math.max(PATH_DESKTOP_MIN_ZOOM, usable / layout.width)) : 1;
   const height = layout.height * zoom + ATTACK_PATH_FIT_PADDING.top + ATTACK_PATH_FIT_PADDING.bottom;
   return Math.round(Math.min(ARCHITECTURE_CANVAS_BOUNDS.max, Math.max(ARCHITECTURE_CANVAS_BOUNDS.min, height)));
 }

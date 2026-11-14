@@ -777,7 +777,7 @@ function SummaryNode({ data }: { data: LineageNodeData }) {
           {data.label}
         </span>
         {vulnCount > 0 && (
-          <span className="ml-auto rounded bg-white/70 px-1 text-xs font-mono dark:bg-black/40">
+          <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="ml-auto rounded bg-white/70 px-1 text-xs font-mono dark:bg-black/40">
             {vulnCount}
           </span>
         )}

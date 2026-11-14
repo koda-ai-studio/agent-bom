@@ -214,6 +214,9 @@ def _graph(tenant: str = TENANT_A, label: str = "server s"):
         def edges_for_node_ids(self, *, scan_id, tenant_id, node_ids):
             return [edge] if tenant_id == tenant else []
 
+        def snapshot_attack_paths(self, *, scan_id, tenant_id, source_ids=None):
+            return None
+
         def attack_paths_for_sources(self, *, scan_id, tenant_id, source_ids):
             return []
 

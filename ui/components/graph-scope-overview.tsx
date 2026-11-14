@@ -1,6 +1,6 @@
 "use client";
 
-import { Background, Controls, ReactFlow, ReactFlowProvider } from "@xyflow/react";
+import { Background, ReactFlow, ReactFlowProvider } from "@xyflow/react";
 import { useMemo, useState, type ComponentProps, type CSSProperties } from "react";
 import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
 import { lineageNodeTypes } from "@/components/lineage-nodes";
@@ -8,10 +8,15 @@ import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { buildScopePreview } from "@/lib/graph-scope-preview";
 import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
 import { CONTROLS_CLASS } from "@/lib/graph-utils";
+import { legibleZoomForText } from "@/lib/graph-adaptive-frame";
+import { LegibleFitControls } from "@/components/graph-legible-controls";
 
 type Props = ComponentProps<typeof GraphRollupDecisionSurface>;
 
 /** Start with readable recorded connections; keep the complete returned directory one click away. */
+/** Cards here draw 14px metadata at layout size, so a fit stops where it is still 11px on screen. */
+const SCOPE_FIT = { padding: 0.12, minZoom: legibleZoomForText(14), maxZoom: 1 };
+
 export function GraphScopeOverview(props: Props) {
   const [showList, setShowList] = useState(false);
   const [rootId, setRootId] = useState<string>();
@@ -44,12 +49,12 @@ export function GraphScopeOverview(props: Props) {
           <ReactFlow nodes={narrow ? preview.nodes.map((node, index) => ({ ...node, position: { x: 0, y: index * 230 } })) : preview.nodes}
             style={{ "--graph-node-meta-size": "14px" } as CSSProperties}
             edges={narrow ? preview.edges.map(edge => ({ ...edge, sourceHandle: null, targetHandle: "context" })) : preview.edges} nodeTypes={lineageNodeTypes} edgeTypes={relationshipEdgeTypes}
-            fitView fitViewOptions={{ padding: 0.12, maxZoom: 1 }} minZoom={0.35} maxZoom={1.5}
+            fitView fitViewOptions={SCOPE_FIT} minZoom={0.35} maxZoom={1.5}
             nodesDraggable={false} nodesConnectable={false} proOptions={{ hideAttribution: true }}
             onEdgeClick={(_, edge) => { const recorded = props.edges.find(row => row.source === edge.source && row.target === edge.target); if (recorded) setEdgeDetail(`${recorded.count} recorded relationship${recorded.count === 1 ? "" : "s"}: ${recorded.relationships.join(", ").replaceAll("_", " ")} · ${recorded.directions?.join(", ") || "direction not recorded"}.`); }}
             onNodeClick={(_, node) => { const item = props.items.find(item => item.id === node.id); if (item) props.onInvestigate(item); }}>
             <Background color="var(--border-subtle)" gap={20} size={1} />
-            <Controls showInteractive={false} className={CONTROLS_CLASS} />
+            <LegibleFitControls floor={SCOPE_FIT.minZoom} fitOptions={SCOPE_FIT} showInteractive={false} className={CONTROLS_CLASS} />
           </ReactFlow>
         </div>
       </ReactFlowProvider>

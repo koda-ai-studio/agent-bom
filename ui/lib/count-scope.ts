@@ -43,6 +43,27 @@ export const AGENT_COUNT_SCOPE = {
   },
 } as const;
 
+/**
+ * The two package populations. The Agents page sums the packages each agent's servers declare, so a package
+ * several agents use counts once per agent; Overview and Asset inventory count each package record in the
+ * snapshot once. Neither is reconciled to the other, so every surface says which one it shows.
+ */
+export const PACKAGE_COUNT_SCOPE = {
+  references: {
+    label: "Package references",
+    caption: "across agents",
+    title:
+      "Packages declared by each listed agent's servers, summed per agent: a package several agents use counts once per agent. " +
+      "Overview and Asset inventory count unique packages in the latest snapshot.",
+  },
+  unique: {
+    label: "Unique packages",
+    title:
+      "Distinct package records in the latest graph snapshot, each counted once. " +
+      "The Agents page counts package references, one per agent that declares the package.",
+  },
+} as const;
+
 /** Joins the scope caption with an optional detail hint, e.g. "configured · 2 remote". */
 export function scopedHint(caption: string, detail?: string | null): string {
   return detail ? `${caption} · ${detail}` : caption;

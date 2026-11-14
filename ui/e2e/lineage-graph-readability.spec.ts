@@ -821,8 +821,9 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.locator(".react-flow__node")).toHaveCount(graph.nodes.length);
       await expect(page.locator(".react-flow__edge")).toHaveCount(graph.edges.length);
       // Select an anchor and fit it through the shared layout controls without
-      // discarding the offscreen relationships from the loaded graph.
-      await anchor.click();
+      // discarding the offscreen relationships from the loaded graph. Fit all holds a readable
+      // zoom, so the anchor may sit off screen until Fit selection brings it back.
+      await anchor.dispatchEvent("click");
       await page.getByText("Layout", { exact: true }).click();
       await page.getByRole("button", { name: "Fit selection", exact: true }).click();
       await expect(anchor).toBeVisible();

@@ -57,7 +57,7 @@ from agent_bom.api.graph_contracts import ScopedGraphCompleteness as ScopedGraph
 from agent_bom.api.graph_contracts import ScopedGraphResponse as ScopedGraphResponse
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint, verify_generation
 from agent_bom.api.graph_node_cursor import node_page_continuation, wrap_node_cursor
-from agent_bom.api.graph_page_context import node_page_context_limit, page_attack_context, page_context
+from agent_bom.api.graph_page_context import node_page_context_limit, page_attack_context, page_context, paths_for_sources
 from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate, path_order
 from agent_bom.api.graph_presentation import _finding_ids_for_path as _finding_ids_for_path
 from agent_bom.api.graph_presentation import _finding_labels_for_path as _finding_labels_for_path
@@ -409,7 +409,7 @@ async def get_graph_paths(
     )
     paged_paths, pagination = _paginate(sorted(all_paths, key=path_order), offset, limit)
     attack_paths = await _runtime._graph_store_call(
-        graph_store.attack_paths_for_sources, scan_id=requested_scan_id, tenant_id=tenant, source_ids={source_node_id}
+        paths_for_sources, graph_store, scan_id=requested_scan_id or "", tenant_id=tenant, source_ids={source_node_id}
     )
     path_node_ids = {source_node_id, *reachable}
     path_edges = await _runtime._graph_store_call(
@@ -503,7 +503,8 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
     attack_paths = []
     if body.include_attack_paths:
         root_attack_paths = await _runtime._graph_store_call(
-            graph_store.attack_paths_for_sources,
+            paths_for_sources,
+            graph_store,
             scan_id=scan_id,
             tenant_id=tenant_id,
             source_ids=set(body.roots),

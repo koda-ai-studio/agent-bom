@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
-  Controls,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
@@ -44,6 +43,8 @@ import {
 } from "@/lib/graph-utils";
 import { readableGraphNodeStyle, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { graphFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
+import { legibleFit, legibleFitZoom } from "@/lib/graph-adaptive-frame";
+import { LegibleFitControls } from "@/components/graph-legible-controls";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
 import { buildFocusedGraphData, layersForFocusedPath, pathRelationshipIds } from "@/lib/security-graph-focus";
@@ -201,7 +202,7 @@ function InvestigationFlow({
     // measured size so the last finding is not clipped below the canvas, and
     // keep the bottom-left clear of the zoom controls so no label sits under them.
     const padding = embedded ? 0.12 : Math.max(0.2, options.padding);
-    return { ...options, padding: fitPaddingAroundOverlay(padding, { width: canvasWidth, height: canvasHeight }, controlsOverlay) };
+    return legibleFit({ ...options, padding: fitPaddingAroundOverlay(padding, { width: canvasWidth, height: canvasHeight }, controlsOverlay) }, legibleFitZoom(canvasWidth));
   }, [canvasHeight, canvasWidth, columnLayout, controlsOverlay, embedded, linearWidth, viewportInput]);
   const fitOptionsRef = useRef(fitOptions);
   fitOptionsRef.current = fitOptions;
@@ -355,7 +356,7 @@ function InvestigationFlow({
           proOptions={{ hideAttribution: true }}
         >
           <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-          <Controls className={CONTROLS_CLASS} showInteractive={false} onFitView={fitVisible} orientation={embedded ? "horizontal" : "vertical"} />
+          <LegibleFitControls floor={legibleFitZoom(canvasWidth)} onFit={fitVisible} className={CONTROLS_CLASS} showInteractive={false} orientation={embedded ? "horizontal" : "vertical"} />
           {!compact && shouldShowGraphMiniMap(viewportInput) && (
             <MiniMap
               className={MINIMAP_CLASS}

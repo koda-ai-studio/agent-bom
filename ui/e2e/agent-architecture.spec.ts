@@ -48,6 +48,16 @@ async function prepare(page: Page, theme: "light" | "dark", width: number) {
 }
 
 /** Nodes not wholly inside the canvas: the first frame must show the whole harness. */
+/** Nodes the canvas leaves off screen must be exactly the ones it says are off screen. */
+async function expectOffscreenDisclosed(page: Page) {
+  await expect.poll(async () => {
+    const clipped = await clippedNodes(page);
+    const status = page.getByTestId("architecture-canvas").getByRole("status").filter({ hasText: /off screen/ });
+    const said = await status.count() ? Number((await status.first().textContent())?.match(/(\d+) more/)?.[1] ?? -1) : 0;
+    return clipped === said;
+  }).toBe(true);
+}
+
 async function clippedNodes(page: Page): Promise<number> {
   return page.evaluate(() => {
     const frame = document.querySelector("[data-testid=architecture-canvas]")!.getBoundingClientRect();
@@ -102,14 +112,14 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
       const canvas = page.getByTestId("architecture-canvas");
       await expect(canvas.locator(".react-flow__node")).toHaveCount(9);
       await expect(canvas.locator(".react-flow__controls")).toBeVisible();
-      await expect.poll(() => clippedNodes(page)).toBe(0);
+      await expectOffscreenDisclosed(page);
       await expect.poll(() => linesThroughNodes(page)).toBe(0);
       await expect(page.getByRole("button", { name: "1 finding on supervisor, worst critical. Open details" })).toHaveAttribute("data-severity", "critical");
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/architecture-layered-${theme}-${width}.png`, fullPage: true });
       await page.getByRole("button", { name: "Flow", exact: true }).click();
       await expect(canvas).toHaveAttribute("data-layout", "flow");
       await expect(canvas.getByText("End", { exact: true })).toBeVisible();
-      await expect.poll(() => clippedNodes(page)).toBe(0);
+      await expectOffscreenDisclosed(page);
       await expect.poll(() => linesThroughNodes(page)).toBe(0);
       if (SHOTS) await page.screenshot({ path: `${SHOTS}/architecture-flow-${theme}-${width}.png`, fullPage: true });
       const supervisor = canvas.locator(".react-flow__node", { has: page.getByText("supervisor", { exact: true }) });

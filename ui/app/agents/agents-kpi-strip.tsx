@@ -5,7 +5,7 @@ import { AlertCircle, Network } from "lucide-react";
 import { StatStrip } from "@/components/stat-strip";
 import { type Agent, agentClassCounts, type AgentsResponse } from "@/lib/api";
 import { ASSET_KINDS } from "@/lib/asset-icon-registry";
-import { AGENT_COUNT_SCOPE, CONFIGURED_COUNT_SCOPE, scopedHint } from "@/lib/count-scope";
+import { AGENT_COUNT_SCOPE, CONFIGURED_COUNT_SCOPE, PACKAGE_COUNT_SCOPE, scopedHint } from "@/lib/count-scope";
 
 import { useAgentStats } from "./agent-display";
 
@@ -77,11 +77,11 @@ export function AgentsKpiStrip({
           title: CONFIGURED_COUNT_SCOPE.title,
         },
         {
-          label: "Packages",
+          label: PACKAGE_COUNT_SCOPE.references.label,
           value: summary.packages,
           icon: ASSET_KINDS.package.icon,
-          hint: scopedHint(CONFIGURED_COUNT_SCOPE.caption, ecosystemHint),
-          title: CONFIGURED_COUNT_SCOPE.title,
+          hint: scopedHint(PACKAGE_COUNT_SCOPE.references.caption, ecosystemHint),
+          title: PACKAGE_COUNT_SCOPE.references.title,
         },
         {
           label: "Unique credentials",
