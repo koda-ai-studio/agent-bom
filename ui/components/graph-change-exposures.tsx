@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExposureGroup } from "@/components/graph-change-exposure-group";
 import type { GraphEstateHighlightNode, GraphEstateHighlights, GraphEstatePathChange } from "@/lib/api-types";
 import { changedNodeHref, changedPathInvestigationHref } from "@/lib/graph-estate-changes";
+import { readableNodeId } from "@/lib/node-id-tail";
 
 type Handlers = {
   onInvestigateNode?: ((id: string, label: string) => void) | undefined;
@@ -18,21 +19,22 @@ const ROW = "flex items-start justify-between gap-2 text-xs text-ink-secondary";
 const TEXT = "min-w-0 break-words [overflow-wrap:anywhere]";
 const ACTION = "shrink-0 text-foreground underline underline-offset-4";
 
-const endName = (label: string | undefined, id: string | undefined) => label?.trim() || id || "unnamed";
+const endName = (label: string | undefined, id: string | undefined) => label?.trim() || (id ? readableNodeId(id) : "unnamed");
+const endTitle = (id: string | undefined) => (id ? readableNodeId(id) : undefined);
 const pathLabel = (path: Endpoints) => `${endName(path.source_label, path.source)} → ${endName(path.target_label, path.target)}`;
 const pathKey = (path: GraphEstatePathChange) => path.hops.join(">");
 const nodeKey = (node: GraphEstateHighlightNode) => node.id ?? node.label ?? `${node.source}>${node.target}`;
-const nodeLabel = (node: GraphEstateHighlightNode) => (node.kind === "edge" ? pathLabel(node) : node.label || node.id || "unnamed");
+const nodeLabel = (node: GraphEstateHighlightNode) => (node.kind === "edge" ? pathLabel(node) : endName(node.label, node.id));
 /** The entity to focus: the node itself, or a relationship's source endpoint. */
 const nodeFocus = (node: GraphEstateHighlightNode) => (node.kind === "edge" ? node.source : node.id);
 
-/** Both endpoints by display name; the raw id is each name's tooltip. */
+/** Both endpoints by display name; the full decoded id is each name's tooltip. */
 function EndpointNames({ path }: { path: Endpoints }) {
   return (
     <>
-      <span title={path.source}>{endName(path.source_label, path.source)}</span>
+      <span title={endTitle(path.source)}>{endName(path.source_label, path.source)}</span>
       {" → "}
-      <span title={path.target}>{endName(path.target_label, path.target)}</span>
+      <span title={endTitle(path.target)}>{endName(path.target_label, path.target)}</span>
     </>
   );
 }
