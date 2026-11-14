@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import json
 import logging
 from unittest.mock import patch
@@ -384,7 +385,8 @@ class TestToolMetrics:
         _caller_rate_windows.clear()
         monkeypatch.setattr(mod, "_MCP_CALLER_RATE_LIMIT", 2)
         monkeypatch.setattr(mod, "_MCP_CALLER_WINDOW_SECONDS", 60.0)
-        times = iter([100.0, 100.5, 101.0])
+        # Never exhausts: a stray read from another thread must not crash teardown.
+        times = itertools.chain([100.0, 100.5, 101.0], itertools.repeat(101.0))
         monkeypatch.setattr(mod.time, "monotonic", lambda: next(times))
 
         assert _check_caller_rate_limit("caller-a") is None

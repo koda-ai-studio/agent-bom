@@ -9,15 +9,17 @@ while any request is in flight, it sleeps (holding no GIL) for at most
 but cannot stop it. Request threads are never marked, so they never pause.
 
 Whether a request is in flight is registered by the API layer, so this module
-has no dependencies.
+has no dependencies. The clock is bound at import, so a test that patches the
+``time`` module cannot be consumed by a background thread.
 """
 
 from __future__ import annotations
 
 import threading
-import time
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
+from time import monotonic as _monotonic
+from time import sleep as _sleep
 from typing import TypeVar
 
 T = TypeVar("T")
@@ -52,9 +54,9 @@ def pause_for_requests() -> None:
     """On a background thread, wait while requests are in flight, at most ``MAX_PAUSE_SECONDS``."""
     if not in_background():
         return
-    deadline = time.monotonic() + MAX_PAUSE_SECONDS
-    while _requests_in_flight() and time.monotonic() < deadline:
-        time.sleep(_POLL_SECONDS)
+    deadline = _monotonic() + MAX_PAUSE_SECONDS
+    while _requests_in_flight() and _monotonic() < deadline:
+        _sleep(_POLL_SECONDS)
 
 
 def yielding(rows: Iterable[T], *, every: int = 512) -> Iterator[T]:

@@ -71,6 +71,39 @@ def test_each_pause_is_bounded_so_constant_traffic_cannot_starve_a_warm_up(monke
         foreground_activity._leave()
 
 
+def test_background_pauses_never_read_a_patched_time_module(monkeypatch) -> None:
+    """A test that fakes ``time.monotonic`` with a finite iterator must not lose readings to a warm-up thread."""
+    import time
+
+    monkeypatch.setattr(background_yield, "MAX_PAUSE_SECONDS", 0.02)
+    real = time.monotonic
+    readers: list[str] = []
+
+    def recording() -> float:
+        readers.append(threading.current_thread().name)
+        return real()
+
+    foreground_activity.reset()
+    foreground_activity._enter()
+    paused = threading.Event()
+
+    def run() -> None:
+        with background_yield.background_work():
+            list(background_yield.yielding(range(40), every=10))
+        paused.set()
+
+    monkeypatch.setattr(time, "monotonic", recording)
+    try:
+        worker = threading.Thread(target=run, name="background-under-test")
+        worker.start()
+        assert paused.wait(5)
+        worker.join(5)
+    finally:
+        monkeypatch.undo()
+        foreground_activity._leave()
+    assert "background-under-test" not in readers
+
+
 def test_the_warm_up_slot_marks_its_thread_as_background() -> None:
     seen: list[bool] = []
 

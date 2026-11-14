@@ -1,5 +1,6 @@
 """Concurrent WAL startup retries only lock contention and never caches failure."""
 
+import itertools
 import sqlite3
 import threading
 
@@ -82,7 +83,7 @@ def test_wal_contention_budget_expires_and_closes_connection(monkeypatch):
             self.closed = True
 
     connection = Connection()
-    clock = iter([0.0, 29.0, 30.0])
+    clock = itertools.chain([0.0, 29.0, 30.0], itertools.repeat(30.0))
     sleeps = []
     monkeypatch.setattr(sqlite3, "connect", lambda *args, **kwargs: connection)
     monkeypatch.setattr(sqlite_wal.time, "monotonic", lambda: next(clock))

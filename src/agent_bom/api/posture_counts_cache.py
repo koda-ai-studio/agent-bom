@@ -193,6 +193,18 @@ def _precompute_loop() -> None:
                 _PRECOMPUTE_COND.notify_all()
 
 
+def wait_for_running_posture_precompute(timeout: float) -> bool:
+    """Block until no precompute is running (debounced pending ones may follow); ``False`` on timeout."""
+    deadline = time.monotonic() + timeout
+    with _PRECOMPUTE_COND:
+        while _PRECOMPUTE_RUNNING:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            _PRECOMPUTE_COND.wait(remaining)
+    return True
+
+
 def wait_for_posture_precompute(timeout: float) -> bool:
     """Block until scheduled precomputes finish; ``False`` on timeout."""
     deadline = time.monotonic() + timeout
@@ -214,5 +226,6 @@ __all__ = [
     "issue_counts_fingerprint",
     "posture_precompute_enabled",
     "schedule_posture_precompute",
+    "wait_for_running_posture_precompute",
     "wait_for_posture_precompute",
 ]

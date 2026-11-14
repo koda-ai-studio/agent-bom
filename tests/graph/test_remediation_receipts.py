@@ -1,5 +1,6 @@
 """Synthetic collection receipts prove only bounded recorded authorization changes."""
 
+import itertools
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
@@ -433,7 +434,7 @@ def test_proposed_or_cross_snapshot_identity_edge_is_not_authority():
 
 def test_deadline_exhaustion_never_returns_no_alternate(monkeypatch):
     baseline, candidate, request = _pair()
-    readings = iter((0, 2, 2, 2))
+    readings = itertools.chain((0, 2, 2, 2), itertools.repeat(2))
     monkeypatch.setattr("agent_bom.graph.remediation_receipts.time.monotonic", lambda: next(readings))
     assert _compare(baseline, candidate, request).reason_codes == ("comparison_budget_exhausted",)
 

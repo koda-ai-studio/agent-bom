@@ -10,7 +10,7 @@ starve the work. State is per process, which matches the GIL it protects.
 from __future__ import annotations
 
 import threading
-import time
+from time import monotonic as _monotonic
 from typing import Any
 
 from agent_bom.core.background_yield import register_request_probe
@@ -21,7 +21,7 @@ _PROBE_PATHS = frozenset({"/health", "/healthz", "/livez", "/readyz", "/ping", "
 
 _cond = threading.Condition()
 _in_flight = 0
-_last_activity = time.monotonic()
+_last_activity = _monotonic()
 
 
 def requests_in_flight() -> bool:
@@ -35,14 +35,14 @@ def _enter() -> None:
     global _in_flight, _last_activity
     with _cond:
         _in_flight += 1
-        _last_activity = time.monotonic()
+        _last_activity = _monotonic()
 
 
 def reset() -> None:
     global _in_flight, _last_activity
     with _cond:
         _in_flight = 0
-        _last_activity = time.monotonic() - QUIET_SECONDS
+        _last_activity = _monotonic() - QUIET_SECONDS
         _cond.notify_all()
 
 
@@ -50,17 +50,17 @@ def _leave() -> None:
     global _in_flight, _last_activity
     with _cond:
         _in_flight -= 1
-        _last_activity = time.monotonic()
+        _last_activity = _monotonic()
         _cond.notify_all()
 
 
 def defer_until_idle(*, quiet: float | None = None, max_wait: float | None = None) -> bool:
     """Block until the foreground is quiet; return False if ``max_wait`` ran out first."""
     quiet = QUIET_SECONDS if quiet is None else quiet
-    deadline = time.monotonic() + (MAX_DEFER_SECONDS if max_wait is None else max_wait)
+    deadline = _monotonic() + (MAX_DEFER_SECONDS if max_wait is None else max_wait)
     with _cond:
         while True:
-            now = time.monotonic()
+            now = _monotonic()
             if now >= deadline:
                 return False
             if not _in_flight:

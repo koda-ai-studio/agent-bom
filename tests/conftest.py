@@ -600,10 +600,17 @@ def _drain_graph_warmups() -> None:
     # A scan commit queues background readers that resolve the active stores.
     # Finish them before restoring those stores: otherwise an earlier test's
     # warm-up can read the next test's graph and alter its cache/load counts.
-    for name in ("agent_bom.api.graph_rollup_prewarm", "agent_bom.api.finding_reachability_prewarm"):
+    for name in (
+        "agent_bom.api.graph_rollup_prewarm",
+        "agent_bom.api.finding_reachability_prewarm",
+        "agent_bom.api.exec_read_prewarm",
+    ):
         module = sys.modules.get(name)
         if module is not None:
             assert module.wait_idle(10), f"Background graph warm-up did not finish: {name}"
+    posture = sys.modules.get("agent_bom.api.posture_counts_cache")
+    if posture is not None:
+        assert posture.wait_for_running_posture_precompute(10), "Posture precompute did not finish"
     # Current-estate refresh has its own queue. Drain it before fixture cleanup
     # restores store pointers or another performance test starts measuring.
     module = sys.modules.get("agent_bom.api.current_graph_builds")
