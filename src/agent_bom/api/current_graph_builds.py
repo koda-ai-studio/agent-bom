@@ -16,7 +16,9 @@ from typing import Any, cast
 from starlette.exceptions import HTTPException
 
 from agent_bom.api.finding_read_context import cached_read, finding_read_scope, read_once
+from agent_bom.api.foreground_activity import awaiting_background
 from agent_bom.api.tenant_worker import submit_tenant_bound
+from agent_bom.core.background_yield import background_work
 from agent_bom.core.settings import env_raw
 
 logger = logging.getLogger(__name__)
@@ -49,7 +51,8 @@ def build_refusal(*, failed: bool = False) -> HTTPException:
 
 
 def _build(store: Any, tenant: str, prepared: tuple[Any, ...] | None) -> str:
-    with finding_read_scope():
+    # Its load and write loops pause at bounded points while requests are in flight.
+    with background_work(), finding_read_scope():
         if prepared is not None:
             with store._building(tenant, wait=True):
                 return cast(str, store._build_and_promote(tenant, *prepared))
@@ -163,7 +166,11 @@ def schedule_current_rebuild(store: Any, tenant_id: str) -> bool:
 def await_current_build(store: Any, tenant: str, *, seconds: float, prepared: tuple[Any, ...] | None = None) -> str | None:
     """Wait only the request budget; a timeout leaves admitted work running."""
     future = _QUEUE.submit(store, tenant, prepared)
-    if future is None or not wait([future], timeout=seconds).done:
+    if future is None:
+        return None
+    with awaiting_background():
+        finished = wait([future], timeout=seconds).done
+    if not finished:
         return None
     try:
         return future.result()
