@@ -75,6 +75,7 @@ SOURCE_TIERS: dict[str, str] = {
     "source-ast": _STATIC,
     "ast_analysis": _STATIC,
     "framework-agent": _STATIC,
+    "eval-scan": _STATIC,
     "agent_discovery": _STATIC,
     "mcp-scan": _STATIC,
     "skill-audit": _STATIC,

@@ -13,6 +13,7 @@ Entity types in the ai and agents domain and the relationships allowed between t
 erDiagram
   agent }o--o{ agent : "contains"
   agent }o--o{ blueprint : "governs"
+  agent }o--o{ eval_suite : "evaluates"
   agent }o--o{ framework : "observes, uses_framework"
   agent }o--o{ server : "uses"
   application }o--o{ server : "belongs_to"
@@ -60,6 +61,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `la
 | `contains` | `structural` | yes | `agent` | `agent` |
 | `correlates_with` | `correlation` | no | `agent`, `server` | `agent`, `server` |
 | `delegated_to` | `runtime` | yes | `agent` | `agent` |
+| `evaluates` | `governance` | no | `eval_suite` | `agent` |
 | `exposed_to` | `exposure` | yes | `server` | `agent` |
 | `governs` | `governance` | no | `blueprint` | `agent`, `tool` |
 | `invoked` | `runtime` | yes | `agent` | `tool`, `tool_call` |
@@ -92,6 +94,7 @@ Not drawn, because they can connect almost any two types: `correlates_with`, `la
 | `contains` | `structural` | yes | `agent`, `application`, `framework`, `server`, `tool`<br/>Identity and access: `account`<br/>Cloud, infrastructure and data: `cluster`, `container`, `environment`, `fleet`<br/>Code and supply chain: `directory` | `agent`, `application`, `framework`, `server`, `tool`<br/>Code and supply chain: `directory`<br/>Findings: `misconfiguration`, `vulnerability` |
 | `defines` | `structural` | yes | Code and supply chain: `source_file` | `tool` |
 | `depends_on` | `dependency` | yes | `framework`, `server` | Code and supply chain: `package` |
+| `evaluates` | `governance` | no | `eval_suite` | Cloud, infrastructure and data: `model` |
 | `exhibits_drift` | `governance` | yes | `agent` | Findings: `drift_incident` |
 | `exploitable_via` | `finding` | yes | Findings: `misconfiguration`, `vulnerability` | `tool` |
 | `exposed_to` | `exposure` | yes | `agent`, `server` | Cloud, infrastructure and data: `cloud_resource`, `data_store`, `resource` |

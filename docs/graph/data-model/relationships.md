@@ -225,6 +225,14 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 
 Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cross_vendor_paths.py`, `graph/dbt_overlay.py`, `graph/framework_topology_projection.py`, `graph/gpu_paths.py`, `graph/package_dependency_projection.py`, `graph/pipeline_overlay.py`, `graph/repo_structure_overlay.py`, `graph/side_scan_projection.py`, `graph/workspace_overlay.py`; demo fixtures: `demo_estate/estate_external_stages.py`, `demo_estate/showcase_packages.py`
 
+## `evaluates`
+
+Class `governance` · directed · not traversable · required evidence `source`, `tier` · 2 pairs
+
+- `eval_suite` → `agent`, `model`
+
+Emitted by: `graph/eval_projection.py`
+
 ## `exhibits_drift`
 
 Class `governance` · bidirectional · traversable · required evidence `source`, `tier` · 1 pairs

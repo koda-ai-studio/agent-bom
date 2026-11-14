@@ -102,6 +102,7 @@ _MISCONFIGURATION_TYPES = {
     "LICENSE",
     "BROWSER_EXT",
     "SHADOW_AI",
+    "EVAL_COVERAGE_GAP",
 }
 # Cloud best-practice results are cloud posture whichever source carried them
 # (an imported scanner report arrives as EXTERNAL).

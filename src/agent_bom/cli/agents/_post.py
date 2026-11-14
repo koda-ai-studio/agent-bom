@@ -13,6 +13,7 @@ from agent_bom.cli.agents._stderr import log_record, stderr_notice
 from agent_bom.evidence.cloud_posture import cloud_posture
 from agent_bom.evidence.malicious_basis import malicious_label
 from agent_bom.evidence.scan_run import NOTHING_TO_SCAN, ScanOutcome, effective_scan_run
+from agent_bom.finding import FindingType
 from agent_bom.logging_config import json_logging_active
 from agent_bom.output import to_json
 from agent_bom.output.report_packing import pack_report
@@ -290,10 +291,9 @@ def _gate_findings(report: Any) -> list:
 
     An errored control is missing evidence, not a finding: it reaches the exit
     code through the incomplete-scan gate, and real failures lead the reason.
+    A safety-eval coverage gap is a governance signal and never fails the scan.
     """
-    from agent_bom.finding import FindingType
-
-    excluded = {FindingType.CVE, FindingType.CIS_ERROR, FindingType.CLOUD_BEST_PRACTICE_ERROR}
+    excluded = {FindingType.CVE, FindingType.CIS_ERROR, FindingType.CLOUD_BEST_PRACTICE_ERROR, FindingType.EVAL_COVERAGE_GAP}
     return [finding for finding in report.to_findings() if finding.finding_type not in excluded]
 
 
