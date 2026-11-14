@@ -38,6 +38,28 @@ def _structured_coverage(warnings: list[dict | str]) -> list[dict]:
     return [dict(warning) if isinstance(warning, dict) else {"kind": "legacy_scan_warning", "detail": warning} for warning in warnings]
 
 
+def _structured_warning_texts(coverage: list[dict], raw_scan_run: dict[str, Any]) -> set[str]:
+    """Texts a CLI report repeats as legacy string warnings for already-classified coverage."""
+    texts: set[str] = set()
+    for warning in coverage:
+        detail = str(warning.get("detail") or warning.get("reason") or "").strip()
+        if not detail:
+            continue
+        texts.add(detail)
+        release = str(warning.get("release") or "unknown release").strip()
+        texts.add(f"{release}: {detail}")
+    for issue in raw_scan_run.get("issues", []) or []:
+        if isinstance(issue, dict) and str(issue.get("message") or "").strip():
+            texts.add(str(issue["message"]).strip())
+    return texts
+
+
+def _legacy_warning_text(warning: dict | str) -> str:
+    if isinstance(warning, dict):
+        return str(warning.get("message") or warning.get("detail") or "").strip()
+    return str(warning).strip()
+
+
 def _agent_coverage_views(agents: list[dict[str, Any]]) -> list[SimpleNamespace]:
     """Read import completeness without rebuilding producer package identities."""
     return [
@@ -51,13 +73,15 @@ def normalize_push_coverage(report: dict, *, source_id: str, target_scope: str |
     """Normalize producer coverage and disclose an absent replacement scope."""
 
     supplied_coverage = _structured_coverage(report.get("coverage_warnings") or [])
+    raw_scan_run_value = report.get("scan_run")
+    raw_scan_run: dict[str, Any] = raw_scan_run_value if isinstance(raw_scan_run_value, dict) else {}
+    structured_texts = _structured_warning_texts(supplied_coverage, raw_scan_run)
+    legacy_warnings = [warning for warning in report.get("warnings", []) or [] if _legacy_warning_text(warning) not in structured_texts]
     combined_coverage = list(supplied_coverage)
-    for warning in _structured_coverage(report.get("warnings") or []):
+    for warning in _structured_coverage(legacy_warnings):
         if warning not in combined_coverage:
             combined_coverage.append(warning)
     report["coverage_warnings"] = combined_coverage
-    raw_scan_run_value = report.get("scan_run")
-    raw_scan_run: dict[str, Any] = raw_scan_run_value if isinstance(raw_scan_run_value, dict) else {}
     issues: list[ScanIssue] = []
     for raw_issue in raw_scan_run.get("issues", []) or []:
         if not isinstance(raw_issue, dict):
@@ -73,7 +97,7 @@ def normalize_push_coverage(report: dict, *, source_id: str, target_scope: str |
             )
         )
     existing_messages = {issue.message for issue in issues}
-    for warning in report.get("warnings", []) or []:
+    for warning in legacy_warnings:
         if isinstance(warning, dict):
             message = str(warning.get("message") or warning.get("detail") or "Scan warning")
         else:
