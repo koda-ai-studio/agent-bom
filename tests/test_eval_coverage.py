@@ -8,9 +8,9 @@ from typing import Any
 
 import pytest
 
-from agent_bom.ai_components.eval_coverage import RULE_ID, agent_risk_signals, eval_coverage_findings
 from agent_bom.ai_components.eval_suites import scan_eval_suites
 from agent_bom.ai_components.framework_agents import scan_framework_agents
+from agent_bom.domain.eval_coverage import RULE_ID, agent_risk_signals, eval_coverage_findings
 from agent_bom.finding import FindingSource, FindingType
 
 _FIXTURES = Path(__file__).parent / "fixtures" / "eval_suites"

@@ -683,7 +683,7 @@ class AIBOMReport:
         return base
 
     def _eval_coverage_findings(self) -> "list[Finding]":
-        from agent_bom.ai_components.eval_coverage import eval_coverage_findings
+        from agent_bom.domain.eval_coverage import eval_coverage_findings
 
         return eval_coverage_findings(self.ai_inventory_data)
 

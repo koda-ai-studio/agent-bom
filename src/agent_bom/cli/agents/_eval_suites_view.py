@@ -16,7 +16,8 @@ def eval_summary_lines(eval_suites: list[dict[str, Any]], coverage: dict[str, An
         detail = str(coverage.get("detail") or "a limit was reached")
         return [f"Eval suites: search incomplete ({detail}); eval coverage findings are not raised for this scan"]
     if not suites:
-        return [f"Eval suites: none found in the scanned project files ({files} candidate files read)"]
+        # A project with no eval candidates stays quiet; the JSON keeps the full coverage record.
+        return [f"Eval suites: none found in the scanned project files ({files} candidate files read)"] if files else []
     purposes = Counter(str(suite.get("purpose") or "unknown") for suite in suites)
     linked = sum(1 for suite in suites if suite.get("link_status") == "linked")
     harnesses = ", ".join(sorted({str(suite.get("harness") or "") for suite in suites} - {""}))

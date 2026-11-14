@@ -20,6 +20,7 @@ def test_console_summary_states_what_was_searched() -> None:
     assert eval_summary_lines([], {"status": "complete", "files_examined": 4}) == [
         "Eval suites: none found in the scanned project files (4 candidate files read)"
     ]
+    assert eval_summary_lines([], {"status": "complete", "files_examined": 0}) == []
     partial = eval_summary_lines([], {"status": "partial", "detail": "limit reached", "files_examined": 2000})
     assert partial == ["Eval suites: search incomplete (limit reached); eval coverage findings are not raised for this scan"]
     suites = [
