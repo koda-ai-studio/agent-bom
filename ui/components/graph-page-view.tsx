@@ -15,7 +15,6 @@ import { graphPageGate } from "@/components/graph-page-gate";
 import { GraphPartialView } from "@/components/graph-partial-view";
 import { GraphPathList } from "@/components/graph-path-list";
 import { GraphProjectionNotice } from "@/components/graph-projection-notice";
-import { GraphPulseStyles as PulseStyles } from "@/components/graph-pulse-styles";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
 import { GraphScenarioPanel } from "@/components/graph-scenario-panel";
@@ -91,7 +90,6 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
     // viewport, leaving users stuck on the snapshot row with no way
     // to scroll to the React Flow canvas or the findings panel.
     <div className="min-h-[calc(100vh-3.5rem)] flex flex-col">
-      <PulseStyles />
           {snapshotListUnavailable && <p role="status" className="text-sm text-ink-secondary">Snapshot list unavailable. The selected graph can still be explored.</p>}
 
 
