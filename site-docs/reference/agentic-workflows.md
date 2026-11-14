@@ -117,10 +117,9 @@ agent-bom proxy \
   --block-undeclared \
   -- npx @modelcontextprotocol/server-filesystem /workspace
 
+# Reads AGENT_BOM_CONTROL_PLANE_TOKEN and AGENT_BOM_GATEWAY_BEARER_TOKEN from the environment; tokens never go on the command line.
 agent-bom gateway serve \
   --from-control-plane https://agent-bom.example.com \
-  --control-plane-token "$AGENT_BOM_CONTROL_PLANE_TOKEN" \
-  --bearer-token "$AGENT_BOM_GATEWAY_BEARER_TOKEN" \
   --bearer-token-expires-at "$AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT"
 ```
 

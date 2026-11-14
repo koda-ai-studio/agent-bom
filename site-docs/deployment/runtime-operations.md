@@ -70,10 +70,10 @@ For laptop or MDM rollout, regenerate the onboarding bundle and push the updated
 environment/config through the same managed path used for initial install:
 
 ```bash
+# Reads AGENT_BOM_API_TOKEN from the environment; tokens never go on the command line.
 agent-bom proxy-bootstrap \
   --bundle-dir ./bundle \
   --control-plane-url https://agent-bom.internal.example.com \
-  --control-plane-token "$CONTROL_PLANE_TOKEN" \
   --enrollment-name corp-laptop-rollout \
   --mdm-provider jamf
 ```
