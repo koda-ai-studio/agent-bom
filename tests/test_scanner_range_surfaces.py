@@ -91,7 +91,7 @@ def test_candidate_keeps_one_finding_and_uncertainty_after_storage_and_api(tmp_p
     assert rows[0]["effective_reach_score"] is None
     assert rows[0]["effective_reach_band"] is None
     assert rows[0]["effective_reach"] is None
-    response = client.get("/v1/graph", params={"scan_id": report.scan_id})
+    response = client.get("/v1/graph", params={"scan_id": report.scan_id, "view": "full"})
     assert response.status_code == 200
     assert response.json()["nodes"] and response.json()["edges"]
     assert "unverified_advisory_match" in json.dumps(response.json())

@@ -18,6 +18,7 @@ from agent_bom.api.ai_assessment_read import ai_status
 from agent_bom.api.ai_call_sink import ensure_ai_call_sink
 from agent_bom.api.ai_explain_limits import consume_explain_allowance
 from agent_bom.api.graph_node_alias import resolve_snapshot_node_ids
+from agent_bom.api.graph_page_context import paths_for_sources
 from agent_bom.api.graph_scan_ids import resolve_graph_scan_id
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.ai_advice import AIStatusResponse, GraphExplanationResponse
@@ -63,7 +64,7 @@ def _read_selection(tenant_id: str, body: GraphExplainRequest) -> tuple[list[Any
     if not nodes or found != wanted:
         raise HTTPException(status_code=404, detail="One or more nodes are not in this tenant's graph.")
     edges = store.edges_for_node_ids(scan_id=scan_id, tenant_id=tenant_id, node_ids=wanted)
-    paths = store.attack_paths_for_sources(scan_id=scan_id, tenant_id=tenant_id, source_ids=wanted)
+    paths = paths_for_sources(store, scan_id=scan_id, tenant_id=tenant_id, source_ids=wanted)
     covered = [path for path in paths if wanted <= {path.source, path.target, *path.hops}]
     ordered = {node_id: index for index, node_id in enumerate(requested)}
     return sorted(nodes, key=lambda node: ordered[node.id]), edges, covered

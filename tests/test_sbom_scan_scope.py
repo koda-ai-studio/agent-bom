@@ -6,6 +6,7 @@ import pytest
 from click.testing import CliRunner
 
 from agent_bom.models import MCPServer, Package, ServerSurface
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.parsers import extract_packages
 
 
@@ -40,7 +41,7 @@ def test_cli_sbom_preserves_imported_packages_and_versions(sbom_with_sibling, tm
         main, ["scan", "--sbom", str(sbom_with_sibling), "--offline", "--no-scan", "--no-auto-update-db", "-f", "json", "-o", str(output)]
     )
     assert result.exit_code == 1, result.output
-    report = json.loads(output.read_text())
+    report = load_report_document(json.loads(output.read_text()))
     assert report["scan_run"]["outcome"] == "partial"
     packages = [p for a in report["agents"] for s in a["mcp_servers"] for p in s["packages"]]
     assert [(p["name"], p["version"]) for p in packages] == [("express", "4.18.2")]

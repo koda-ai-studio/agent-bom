@@ -27,6 +27,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import LaneResult, agent_bom_command, run_measured, tail  # noqa: E402
 
 
+def _expand_report(report: Any) -> Any:
+    """Read a schema 2.0 report as 1.0; a release without the module only writes 1.0."""
+    try:
+        from agent_bom.output.report_packing import load_report_document
+    except ImportError:
+        return report
+    return load_report_document(report)
+
+
 @dataclass(frozen=True)
 class Target:
     name: str
@@ -240,7 +249,7 @@ def run_target(target: Target, workdir: Path) -> LaneResult:
         "report_written", output.is_file() and not run.timed_out, f"exit {run.returncode}, timed_out={run.timed_out}\n{tail(run.stderr)}"
     ):
         return result
-    report = json.loads(output.read_text(encoding="utf-8"))
+    report = _expand_report(json.loads(output.read_text(encoding="utf-8")))
     result.measurements.update(measurements(report))
     print(tail(run.stdout, 15))
     assert_report(result, target, report, returncode=run.returncode)

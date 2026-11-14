@@ -10,6 +10,14 @@
       "title": "Python Package",
       "type": "string"
     },
+    "report_schema_versions": {
+      "description": "Scan report schema versions POST /v1/results/push accepts; clients send 2.0 only when it is listed.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Report Schema Versions",
+      "type": "array"
+    },
     "version": {
       "title": "Version",
       "type": "string"

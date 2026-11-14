@@ -37,11 +37,21 @@ function formatToken(token: string): string {
   return token.charAt(0).toUpperCase() + token.slice(1);
 }
 
-/** Canonical formatting of a slug identifier; a name with spaces is already a display name. */
+/** Scoped, path-like or address-like ids (`project:…`, ARNs, URIs, `user@host`, dotted names). */
+const ID_SEPARATORS = /[:/@.]/;
+/** A generated hash or hex id token, e.g. `a1157c3d9e`. */
+const HASH_TOKEN = /^(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{6,}$/i;
+
+/** Whether a name is an identifier that must render exactly as recorded, never re-cased. */
+export function isVerbatimIdentifier(id: string): boolean {
+  return ID_SEPARATORS.test(id) || id.split(/[-_]+/).some(token => HASH_TOKEN.test(token));
+}
+
+/** Canonical formatting of a slug; a name with spaces or an identifier is shown as recorded. */
 export function formatEntityId(id: string): string {
   const trimmed = id.trim();
   if (!trimmed) return "";
-  if (/\s/.test(trimmed)) return trimmed;
+  if (/\s/.test(trimmed) || isVerbatimIdentifier(trimmed)) return trimmed;
   return trimmed.split(/[-_]+/).filter(Boolean).map(formatToken).join(" ");
 }
 

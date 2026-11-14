@@ -420,12 +420,12 @@ it("does not call an agent clean when no identity-linked findings are available"
 });
 
 describe("AgentsPage count scope", () => {
-  it("labels server and package tiles as configured entries and points at the inventory basis", async () => {
+  it("labels server tiles as configured entries, packages as references across agents, and points at the inventory basis", async () => {
     render(<AgentsPage />);
     const kpis = within(await screen.findByTestId("agents-kpis"));
-    for (const label of ["MCP servers", "Packages"]) {
+    for (const [label, caption] of [["MCP servers", /configured/], ["Package references", /across agents/]] as const) {
       const cell = kpis.getByText(label).parentElement!.parentElement!;
-      expect(within(cell).getByText(/configured/)).toBeInTheDocument();
+      expect(within(cell).getByText(caption)).toBeInTheDocument();
       expect(cell).toHaveAttribute("title", expect.stringMatching(/Asset inventory/));
     }
     expect(kpis.getByText("Agents on this host").parentElement!.parentElement!).toHaveAttribute(

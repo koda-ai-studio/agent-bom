@@ -1,7 +1,7 @@
 """``GET /v1/graph?view=canvas``: the graph page's projection without fields it never reads.
 
-The default projection is the public contract for API and MCP clients and is
-unchanged. The canvas view drops only fields that no module the graph page
+``view=full`` is the whole-record contract for API clients. The canvas view
+drops only fields from it that no module the graph page
 loads reads before a selection (a selection refetches ``/v1/graph/node/{id}``
 and merges the full node back), plus edge aliases of ``source``/``target``.
 """
@@ -89,7 +89,7 @@ def _strip(payload: dict) -> dict:
 
 
 @pytest.mark.parametrize("extra", [{"limit": 5}, {"relationships": "uses"}], ids=["node-page", "investigation-load"])
-def test_canvas_view_is_the_default_minus_only_the_unread_fields(recording_graph_store, extra, monkeypatch) -> None:
+def test_canvas_view_is_the_full_view_minus_only_the_unread_fields(recording_graph_store, extra, monkeypatch) -> None:
     # Investigation loads merge process-global runtime evidence; another test's records must not leak in.
     from agent_bom.cloud import runtime_workload_evidence_store as runtime_evidence
 
@@ -98,14 +98,14 @@ def test_canvas_view_is_the_default_minus_only_the_unread_fields(recording_graph
     client = TestClient(app)
     params = {"scan": "store-scan", **extra}
 
-    full = client.get("/v1/graph", params=params)
+    full = client.get("/v1/graph", params={**params, "view": "full"})
     canvas = client.get("/v1/graph", params={**params, "view": "canvas"})
 
     assert full.status_code == canvas.status_code == 200, canvas.text
     full_body, canvas_body = full.json(), canvas.json()
     assert "view" not in full_body
     assert canvas_body == _strip(full_body)
-    # The default projection still carries every field the canvas drops.
+    # The full projection still carries every field the canvas drops.
     node = next(n for n in full_body["nodes"] if n["id"] == "agent:a")
     assert set(CANVAS_DROPPED_NODE_ATTRIBUTES) <= set(node["attributes"])
     assert {"source_id", "target_id"} <= set(full_body["edges"][0])

@@ -1,6 +1,6 @@
 import type { ExposureEntityRole } from "@/lib/exposure-path";
 import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
-import { agentDisplayName, serverDisplayName } from "@/lib/display-name";
+import { agentDisplayName, isVerbatimIdentifier, serverDisplayName } from "@/lib/display-name";
 
 export type EntityDisplayParts = {
   title: string;
@@ -8,6 +8,7 @@ export type EntityDisplayParts = {
 };
 
 function titleCaseWords(value: string): string {
+  if (isVerbatimIdentifier(value)) return value;
   return value
     .replace(/[-_]/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
@@ -68,8 +69,9 @@ export function formatExposureEntityDisplay(
         subtitle: "Vulnerability finding",
       };
     case "credential":
+      // A credential reference names an environment variable or secret key: shown exactly as configured.
       return {
-        title: titleCaseWords(trimmed),
+        title: trimmed,
         subtitle: "Credential reference",
       };
     case "tool":

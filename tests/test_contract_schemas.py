@@ -177,9 +177,13 @@ def test_demo_scan_report_matches_contract_schema(tmp_path) -> None:
 
     out = tmp_path / "demo.json"
     runner = CliRunner()
-    result = runner.invoke(main, ["scan", "--demo", "--offline", "-f", "json", "-o", str(out), "--quiet"])
+    result = runner.invoke(main, ["scan", "--demo", "--offline", "-f", "json", "-o", str(out), "--quiet", "--report-format", "v2"])
     assert out.exists(), result.output
-    report = _load(out)
+    from agent_bom.output.report_packing import expand_report
+
+    packed = _load(out)
+    jsonschema.validate(packed, _load(CONTRACTS_V2 / "scan-report.schema.json"))
+    report = expand_report(packed)
     assert report["blast_radius"], "demo report should carry blast-radius rows"
     assert all(row["schema_version"] == "2" for row in report["blast_radius"])
     jsonschema.validate(report, _load(CONTRACTS / "scan-report.schema.json"))
@@ -192,3 +196,37 @@ def test_demo_scan_report_matches_contract_schema(tmp_path) -> None:
         "reasons": ["unavailable"],
     }
     jsonschema.validate({**report, "coverage_warnings": [scan_wide]}, schema)
+
+
+CONTRACTS_V2 = ROOT / "contracts" / "v2"
+
+
+def test_v2_contract_schemas_and_examples_are_valid() -> None:
+    schemas = sorted(CONTRACTS_V2.glob("*.schema.json"))
+    assert [path.name for path in schemas] == ["scan-report.schema.json"]
+    for schema_path in schemas:
+        schema = _load(schema_path)
+        jsonschema.Draft202012Validator.check_schema(schema)
+        assert schema["$id"].endswith(f"/v2/{schema_path.name}")
+        jsonschema.validate(_load(CONTRACTS_V2 / "examples" / schema_path.name.replace(".schema.json", ".minimal.json")), schema)
+
+
+def test_packed_scan_report_matches_v2_contract_and_not_v1() -> None:
+    """A realistic packed report (controls, shared packages, assets, blast radius) validates against v2 only."""
+    from agent_bom.output.report_packing import TRANSFORMS, pack_report
+    from tests.test_report_packing import _report
+
+    legacy = json.loads(json.dumps(to_json(_report())))
+    packed = pack_report(legacy)
+
+    assert set(packed["packing"]["transforms"]) == set(TRANSFORMS)
+    jsonschema.validate(packed, _load(CONTRACTS_V2 / "scan-report.schema.json"))
+    jsonschema.validate(legacy, _load(CONTRACTS / "scan-report.schema.json"))
+    try:
+        jsonschema.validate(packed, _load(CONTRACTS / "scan-report.schema.json"))
+    except jsonschema.ValidationError:
+        pass
+    else:
+        raise AssertionError("a schema 2.0 report must not validate as v1")
+    transforms = _load(CONTRACTS_V2 / "scan-report.schema.json")["properties"]["packing"]["properties"]["transforms"]["items"]["enum"]
+    assert set(transforms) == set(TRANSFORMS)

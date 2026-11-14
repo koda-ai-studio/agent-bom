@@ -12,6 +12,7 @@ from click.testing import CliRunner
 from agent_bom.cli import main
 from agent_bom.core.severity import Severity
 from agent_bom.domain.vulnerability_model import Vulnerability
+from agent_bom.output.report_packing import load_report_document
 
 _SBOM = Path(__file__).parent / "fixtures" / "finding_matrix" / "sbom.cdx.json.fixture"
 # Offline CI has no advisory database, so the lookup is pinned to known advisories.
@@ -53,7 +54,7 @@ def _repo_sbom_outputs(root: str) -> tuple[dict, dict]:
                 catch_exceptions=False,
             )
             assert out.exists(), result.output
-            outputs.append(json.loads(out.read_text()))
+            outputs.append(load_report_document(json.loads(out.read_text())))
     return outputs[0], outputs[1]
 
 

@@ -18,6 +18,9 @@ from agent_bom.api.read_models.graph_records import (
     GraphCanvasEdgeRecord,
     GraphCanvasNodeRecord,
     GraphEdgeRecord,
+    GraphLeanAttackPathRecord,
+    GraphLeanEdgeRecord,
+    GraphLeanNodeRecord,
     GraphNodeRecord,
 )
 from agent_bom.graph.semantic_clusters import SemanticCluster
@@ -75,10 +78,11 @@ class GraphPageResponse(ReadResponse):
     tenant_id: str
     created_at: str
     collection_coverage: Row | None = None
-    view: Literal["canvas"] | None = None
-    nodes: list[GraphNodeRecord | GraphCanvasNodeRecord]
-    edges: list[GraphEdgeRecord | GraphCanvasEdgeRecord]
-    attack_paths: list[GraphAttackPathRecord]
+    view: Literal["summary", "canvas"] | None = Field(default=None, description="The projection served; absent on view=full (the default).")
+    include: list[Literal["attributes", "paths"]] | None = Field(default=None, description="Whole records added to the lean view.")
+    nodes: list[GraphNodeRecord | GraphCanvasNodeRecord | GraphLeanNodeRecord]
+    edges: list[GraphEdgeRecord | GraphCanvasEdgeRecord | GraphLeanEdgeRecord]
+    attack_paths: list[GraphAttackPathRecord | GraphLeanAttackPathRecord]
     attack_campaigns: list[Row] | None = None
     interaction_risks: list[Row]
     stats: Row
@@ -87,19 +91,25 @@ class GraphPageResponse(ReadResponse):
     attack_path_pagination: GraphBoundedPage | None = None
     evidence_scope: str | None = None
 
-    @field_validator("nodes", "edges", mode="before")
+    @field_validator("nodes", "edges", "attack_paths", mode="before")
     @classmethod
     def validate_projection_records(cls, value: Any, info: ValidationInfo) -> Any:
         """Select the projection before union validation can accept partial records."""
         if not isinstance(value, list):
             return value
-        canvas = info.data.get("view") == "canvas"
-        record: type[ReadModel]
-        if info.field_name == "nodes":
-            record = GraphCanvasNodeRecord if canvas else GraphNodeRecord
-        else:
-            record = GraphCanvasEdgeRecord if canvas else GraphEdgeRecord
+        field = str(info.field_name)
+        view = info.data.get("view")
+        include = set(info.data.get("include") or ())
+        whole = view != "summary" or ("paths" if field == "attack_paths" else "attributes") in include
+        record: type[ReadModel] = _PROJECTION_RECORDS[field]["canvas" if view == "canvas" else "full" if whole else "lean"]
         return [record.model_validate(item, context=info.context) for item in value]
+
+
+_PROJECTION_RECORDS: dict[str, dict[str, type[ReadModel]]] = {
+    "nodes": {"full": GraphNodeRecord, "canvas": GraphCanvasNodeRecord, "lean": GraphLeanNodeRecord},
+    "edges": {"full": GraphEdgeRecord, "canvas": GraphCanvasEdgeRecord, "lean": GraphLeanEdgeRecord},
+    "attack_paths": {"full": GraphAttackPathRecord, "canvas": GraphAttackPathRecord, "lean": GraphLeanAttackPathRecord},
+}
 
 
 class GraphAgentsResponse(ReadResponse):

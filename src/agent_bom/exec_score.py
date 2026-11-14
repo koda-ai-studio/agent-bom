@@ -459,10 +459,10 @@ def _build_summary(
 
     Always names a present critical/high (honesty: an exec blurb must never drop
     a present severe band), then fills the remaining slots with the next-highest
-    grade contributors, then the KEV / exposure amplifiers. Within that named
-    set the bands are ordered DOMINANT-first (largest penalty contribution), so a
-    medium-dominant estate still leads with medium while the critical/high is
-    never omitted. The earlier band-ranking blurb named only the top-2
+    grade contributors, then the KEV / exposure amplifiers. The named bands are
+    listed in severity order (critical, high, medium, low, unrated), so a
+    medium-dominant estate still names its mediums and the critical/high is
+    never omitted or listed after them. The earlier band-ranking blurb named only the top-2
     contributing bands, so ``1 critical + 7 medium + 25 low`` read
     ``7 medium · 25 low`` — the critical was DROPPED. Naming critical/high
     unconditionally fixes that.
@@ -487,9 +487,8 @@ def _build_summary(
             if len(named) >= _MAX_SUMMARY_SEVERITY_BITS:
                 break
             named.append(driver)
-        # Order the named bands dominant-first so the blurb reads as the grade
-        # driver while a present critical/high is still guaranteed to appear.
-        named.sort(key=_contribution, reverse=True)
+        # Contribution picks which bands are named; they always read critical first.
+        named.sort(key=_SEVERITY_DRIVERS.index)
         bits: list[str] = [f"{int(by_driver[d]['count']):,} {d}" for d in named]
         if counts["kev"]:
             bits.append(f"{counts['kev']:,} KEV")

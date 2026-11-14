@@ -94,7 +94,7 @@ def test_configuration_qualifiers_survive_api_without_rewriting_snapshot(tmp_pat
     try:
         stores.set_graph_store(store)
         client = TestClient(app)
-        response = client.get("/v1/graph", params={"scan_id": graph.scan_id})
+        response = client.get("/v1/graph", params={"scan_id": graph.scan_id, "view": "full"})
         assert response.status_code == 200
         node = next(node for node in response.json()["nodes"] if node["id"] == "cloud_resource:snowflake:integration:PII_S3_STORE")
         assert node["attributes"]["internet_exposed"] is None

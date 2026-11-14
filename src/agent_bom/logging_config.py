@@ -18,11 +18,15 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Optional, TypeVar
 
 from agent_bom.core.settings import env_flag, env_str
+
+_T = TypeVar("_T")
 
 
 class AccessLogPathFilter(logging.Filter):
@@ -42,6 +46,45 @@ _JSON_FORMATTER = {"()": "agent_bom.logging_config.JSONFormatter"}
 def json_logging_requested(flag: Optional[bool] = None) -> bool:
     """JSON logs when the flag is set, otherwise when ``AGENT_BOM_LOG_JSON`` asks for them."""
     return bool(flag) or env_flag("AGENT_BOM_LOG_JSON")
+
+
+def logging_configured() -> bool:
+    """Whether ``setup_logging`` already gave the agent_bom logger its handlers."""
+    return bool(logging.getLogger("agent_bom").handlers)
+
+
+@contextmanager
+def owned_library_logging(library: str) -> Iterator[None]:
+    """Keep a library's logging setup out of the root logger and send its records through agent-bom's handlers.
+
+    The MCP SDK's server constructor calls ``logging.basicConfig`` with a Rich
+    handler. With agent_bom records propagating to root, every line then
+    printed twice, and the SDK's own records ignored ``--log-json``.
+    """
+    root = logging.getLogger()
+    handlers_before, level_before = list(root.handlers), root.level
+    try:
+        yield
+    finally:
+        for handler in [h for h in root.handlers if h not in handlers_before]:
+            root.removeHandler(handler)
+        root.setLevel(level_before)
+        owner = logging.getLogger("agent_bom")
+        if owner.handlers:
+            library_logger = logging.getLogger(library)
+            library_logger.handlers = list(owner.handlers)
+            library_logger.setLevel(owner.level)
+            library_logger.propagate = False
+
+
+def with_owned_logging(library: str, factory: Callable[..., _T]) -> Callable[..., _T]:
+    """Wrap ``factory`` so ``library``'s logging setup during the call stays under agent-bom's handlers."""
+
+    def call(*args: Any, **kwargs: Any) -> _T:
+        with owned_library_logging(library):
+            return factory(*args, **kwargs)
+
+    return call
 
 
 def json_logging_active() -> bool:
@@ -160,3 +203,9 @@ def setup_logging(
     # Quiet noisy third-party loggers
     for noisy in ("httpx", "httpcore", "urllib3", "asyncio"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
+def ensure_logging(level: Optional[str] = None) -> None:
+    """Configure logging unless a caller already did, keeping their handlers and format."""
+    if not logging_configured():
+        setup_logging(level=level)

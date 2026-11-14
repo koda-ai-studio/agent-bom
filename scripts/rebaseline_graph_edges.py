@@ -39,6 +39,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
+from agent_bom.output.report_packing import load_report_document  # noqa: E402
 from tests._graph_helpers import (  # noqa: E402
     EDGE_COUNTS_FIXTURE,
     GRAPH_SNAPSHOT_DIR,
@@ -60,7 +61,7 @@ def _refresh_self_scan_fixture() -> None:
         ["agent-bom", "scan", "-p", str(ROOT), "--format", "json", "-o", str(out_path)],
         check=True,
     )
-    raw = json.loads(out_path.read_text())
+    raw = load_report_document(json.loads(out_path.read_text()))
 
     def _trim_agent(a: dict) -> dict:
         return {

@@ -28,9 +28,9 @@ agent-ref map — never the full node objects, attributes, edges, or adjacency.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
 from agent_bom.graph.node import normalize_risk_assessment
 from agent_bom.graph.types import EntityType
@@ -208,9 +208,22 @@ def digest_from_graph(graph: UnifiedGraph) -> PriorSnapshotDigest:
     return builder.build()
 
 
+class _WithPaths:
+    """A built graph seen with the attack paths its snapshot materialized."""
+
+    def __init__(self, graph: UnifiedGraph, attack_paths: Sequence[Any]) -> None:
+        self._graph = graph
+        self.attack_paths = list(attack_paths)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._graph, name)
+
+
 def compute_delta_alerts_from_digest(
     prior: PriorSnapshotDigest | None,
     new_graph: UnifiedGraph,
+    *,
+    new_attack_paths: Sequence[Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Delta alerts between a bounded prior digest and a freshly built graph.
 
@@ -218,7 +231,13 @@ def compute_delta_alerts_from_digest(
     is byte-identical to the full prior-graph path. Imported lazily (and invoked
     via the module attribute) both to avoid an import cycle with ``webhooks`` and
     so test monkeypatches of ``webhooks.compute_delta_alerts`` are honoured.
+
+    ``new_attack_paths`` are the paths the new snapshot stored in its path
+    index. A scan graph carries none in memory, so without them a new attack
+    path could never alert; the prior digest reads the same stored index.
     """
     from agent_bom.graph import webhooks
 
-    return webhooks.compute_delta_alerts(prior, new_graph)
+    if new_attack_paths is None:
+        return webhooks.compute_delta_alerts(prior, new_graph)
+    return webhooks.compute_delta_alerts(prior, cast("UnifiedGraph", _WithPaths(new_graph, new_attack_paths)))

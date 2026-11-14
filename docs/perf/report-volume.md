@@ -34,7 +34,9 @@ Excluded:
   handed to the database, not on-disk page usage; PostgreSQL TOAST may
   compress the uncompressed baseline further.
 - `findings[].controls` (about 16% of the demo report) and the top-level
-  `packages` list, which repeats `ai_bom_entities.packages`, are unchanged.
+  `packages` list, which repeats `ai_bom_entities.packages`, were unchanged by
+  this work. Report schema 2.0 (0.115.0, [contracts/v2](../../contracts/v2/README.md))
+  writes both once and references them by ID.
 
 ## Environment
 

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 from agent_bom.api.graph_store_snapshot_paths import SQLiteSnapshotPathsMixin
 from agent_bom.db import graph_store as sqlite_graph_store
 from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT, attack_path_from_row
+from agent_bom.db.graph_stored_path_reads import stored_longest_path_to, stored_paths_for_sources, stored_paths_page
 from agent_bom.graph import (
     AttackPath,
     RelationshipType,
@@ -329,6 +330,9 @@ class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
             effective_scan_id, _created_at = sqlite_graph_store._resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
             if not effective_scan_id:
                 return 0
+            stored = stored_longest_path_to(conn, tenant_id=tenant_id, scan_id=effective_scan_id, node_id=node_id, ph="?")
+            if stored is not None:
+                return stored
             row = conn.execute(
                 "SELECT MAX(json_array_length(path_nodes)) FROM attack_paths WHERE tenant_id = ? AND scan_id = ? AND target_node = ?",
                 (tenant_id, effective_scan_id, node_id),
@@ -354,6 +358,9 @@ class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
             effective_scan_id, _created_at = sqlite_graph_store._resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
             if not effective_scan_id:
                 return []
+            stored = stored_paths_for_sources(conn, tenant_id=tenant_id, scan_id=effective_scan_id, source_ids=source_ids, ph="?")
+            if stored is not None:
+                return stored
             placeholders = ",".join("?" for _ in source_ids)
             rows = conn.execute(
                 f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = ? AND scan_id = ? "  # nosec B608
@@ -380,6 +387,9 @@ class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
             effective_scan_id, created_at = sqlite_graph_store._resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
             if not effective_scan_id:
                 return scan_id, "", [], 0
+            page = stored_paths_page(conn, tenant_id=tenant_id, scan_id=effective_scan_id, offset=offset, limit=limit, ph="?")
+            if page is not None:
+                return effective_scan_id, created_at, page[0], page[1]
             total = conn.execute(
                 "SELECT COUNT(*) FROM attack_paths WHERE tenant_id = ? AND scan_id = ?",
                 (tenant_id, effective_scan_id),

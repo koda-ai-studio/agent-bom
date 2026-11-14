@@ -1,7 +1,7 @@
 """``view=canvas`` for ``GET /v1/graph``: the graph page's projection.
 
-The default projection is the public contract and stays whole. The graph page
-reads a known subset of it before a selection, and a selection refetches
+The graph page reads a known subset of the full projection before a
+selection, and a selection refetches
 ``/v1/graph/node/{id}`` and merges the full node back, so the canvas view drops
 only fields no module the page loads reads (guarded by
 ``tests/api/test_graph_canvas_view.py``) and the ``source_id``/``target_id``
@@ -10,14 +10,7 @@ edge aliases of ``source``/``target``.
 
 from __future__ import annotations
 
-from typing import Any, Literal
-
-GraphView = Literal["canvas"]
-CANVAS_VIEW_DESCRIPTION = (
-    "``canvas`` returns the graph page's projection: the same response without node and edge fields the "
-    "page never reads before a selection (OCSF ids, canonical ids, provenance blocks, bulky attributes) "
-    "and without the source_id/target_id edge aliases. Omit for the full projection."
-)
+from typing import Any
 
 CANVAS_DROPPED_NODE_FIELDS = ("evidence_provenance", "canonical_id", "category_uid", "class_uid", "type_uid", "severity_id")
 CANVAS_DROPPED_NODE_ATTRIBUTES = (
@@ -77,12 +70,10 @@ def canvas_projection(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 __all__ = [
-    "CANVAS_VIEW_DESCRIPTION",
     "CANVAS_DROPPED_EDGE_FIELDS",
     "CANVAS_DROPPED_EXPOSURE_PATH_FIELDS",
     "CANVAS_DROPPED_EXPOSURE_REF_FIELDS",
     "CANVAS_DROPPED_NODE_ATTRIBUTES",
     "CANVAS_DROPPED_NODE_FIELDS",
-    "GraphView",
     "canvas_projection",
 ]

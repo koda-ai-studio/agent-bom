@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from agent_bom.output.report_packing import expand_report
 from agent_bom.scan_delta import compute_finding_delta, finding_delta_key
 
 
@@ -136,7 +137,7 @@ def test_delta_reports_and_gates_only_the_new_finding(tmp_path: Path) -> None:
     (repo / "infra" / "logs.tf").write_text(_TF_NEW, encoding="utf-8")
 
     assert _scan(repo, home, "--baseline", "baseline.json", "--delta") == 1
-    report = json.loads((repo / "out.json").read_text(encoding="utf-8"))
+    report = expand_report(json.loads((repo / "out.json").read_text(encoding="utf-8")))
     new = _non_cve(report)
     assert new and all(finding["asset"]["location"] == "infra/logs.tf" for finding in new), new
     assert report["delta"]["new_finding_count"] == len(new)

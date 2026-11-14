@@ -30,6 +30,13 @@ from agent_bom.api.push_ingest import (
     redispatch_pending_push,
 )
 from agent_bom.api.stores import _get_store
+from agent_bom.output.report_packing import (
+    UNTRUSTED_MAX_EXPANDED_BYTES,
+    ReportExpansionLimitError,
+    ReportPackingError,
+    load_report_document,
+)
+from agent_bom.security import sanitize_error
 
 #: The route reads the raw body itself so validation runs off the event loop;
 #: the published request contract is unchanged.
@@ -90,6 +97,11 @@ def _parse_finite_json(raw: bytes) -> Any:
     return parsed
 
 
+def _expand_packed_report(parsed: Any, raw_bytes: int) -> Any:
+    """Expand a schema 2 report to the stored 1.0 shape; references may add bytes only up to the jsonb ceiling."""
+    return load_report_document(parsed, max_expanded_bytes=max(0, UNTRUSTED_MAX_EXPANDED_BYTES - raw_bytes))
+
+
 def _validate_push_body(raw: bytes) -> PushPayload:
     """Parse once with the validator's own JSON parser, then validate the parsed report.
 
@@ -102,8 +114,16 @@ def _validate_push_body(raw: bytes) -> PushPayload:
     infinity are rejected as ``finite_number`` at their location.
     """
     try:
-        parsed = _parse_finite_json(raw)
+        parsed = _expand_packed_report(_parse_finite_json(raw), len(raw))
         body = PushPayload.model_validate(parsed)
+    except ReportExpansionLimitError as exc:
+        raise HTTPException(
+            status_code=413, detail=f"Pushed schema 2 report {sanitize_error(exc)}; split the push into smaller scans."
+        ) from None
+    except ReportPackingError as exc:
+        raise ValidationError.from_exception_data(
+            PushPayload.__name__, [{"type": "value_error", "loc": ("packing",), "input": None, "ctx": {"error": sanitize_error(exc)}}]
+        ) from None
     except ValidationError as exc:
         if any(error.get("type") == "finite_number" for error in exc.errors()):
             raise

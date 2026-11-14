@@ -112,10 +112,7 @@ def _resolve_output_path(output: Any, output_format: str) -> str:
     short_form = f"{path.suffix.lower()}.json"
     if short_form in allowed_suffixes:
         aliased = f"{raw_path}.json"
-        click.echo(
-            f"--format {output_format}: '{raw_path}' looks like a short form for this format; writing to '{aliased}'.",
-            err=True,
-        )
+        click.echo(f"--format {output_format}: '{raw_path}' looks like a short form for this format; writing to '{aliased}'.", err=True)
         return aliased
 
     suffix_list = ", ".join(allowed_suffixes)
@@ -134,6 +131,7 @@ def _stdout_serialization(
     exclude_unfixable: bool,
     offline_html: bool,
     report_json: dict[str, Any] | None = None,
+    report_format: str = "legacy",
 ) -> str | None:
     """Best-effort serialize the report for stdout fallback when -o write fails.
 
@@ -149,7 +147,7 @@ def _stdout_serialization(
             from agent_bom.output.badge import to_badge
 
             return json.dumps(to_badge(report), indent=2)
-        return json.dumps(to_redacted_json(report, report_json=report_json), indent=2)
+        return json.dumps(to_redacted_json(report, report_json=report_json, report_format=report_format), indent=2)
     if output_format == "cyclonedx":
         return json.dumps(to_cyclonedx(report, spec_version="1.6"), indent=2)
     if output_format == "sarif":
@@ -196,6 +194,7 @@ def _enospc_report_fallback(
     exclude_unfixable: bool,
     offline_html: bool,
     report_json: dict[str, Any] | None = None,
+    report_format: str = "legacy",
 ) -> Iterator[None]:
     """Catch a full-disk (or any) failure writing the ``-o`` report.
 
@@ -218,6 +217,7 @@ def _enospc_report_fallback(
             exclude_unfixable=exclude_unfixable,
             offline_html=offline_html,
             report_json=report_json,
+            report_format=report_format,
         )
         if serialized is not None:
             con.print(f"\n  [yellow]⚠[/yellow] Could not write report to {target} ({reason}) — emitting results to stdout instead.")
@@ -296,6 +296,7 @@ def render_output(
             exclude_unfixable=exclude_unfixable,
             offline_html=offline_html,
             report_json=ctx.report_json,
+            report_format=ctx.report_format,
         ):
             _emit_report(
                 agent_mode,
@@ -384,11 +385,11 @@ def _emit_document_report(
         return True
     elif output_format == "json":
         if output in (None, "", "-"):
-            write_redacted_json(report, sys.stdout, report_json=ctx.report_json)
+            write_redacted_json(report, sys.stdout, report_json=ctx.report_json, report_format=ctx.report_format)
             sys.stdout.flush()
         else:
             out_path = _resolve_output_path(output, output_format)
-            export_json(report, out_path, report_json=ctx.report_json)
+            export_json(report, out_path, report_json=ctx.report_json, report_format=ctx.report_format)
             announce_report_written(con, "JSON report", out_path, quiet=quiet)
         return True
     elif output_format == "cyclonedx":
@@ -525,7 +526,7 @@ def _emit_inferred_report(
         if output.endswith(".cdx.json"):
             export_cyclonedx(report, output, spec_version="1.6")
         elif output.endswith(".json"):
-            export_json(report, output, report_json=ctx.report_json)
+            export_json(report, output, report_json=ctx.report_json, report_format=ctx.report_format)
         elif output.endswith(".sarif"):
             export_sarif(report, output, exclude_unfixable=exclude_unfixable)
         elif output.endswith(".spdx.json"):

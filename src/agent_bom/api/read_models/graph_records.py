@@ -40,6 +40,34 @@ class GraphNodeProvenance(ReadModel):
     execution: str
 
 
+class GraphLeanNodeRecord(ReadModel):
+    """The ``GET /v1/graph`` default node: identity, risk and the attributes that name and badge it."""
+
+    id: str
+    entity_type: str
+    label: str
+    severity: str
+    risk_score: float
+    status: str
+    attributes: dict[str, Any] = Field(description="Only the naming and badge attributes; /v1/graph/node/{node_id} has them all.")
+    context: Literal[True] | None = None
+
+
+class GraphLeanEdgeRecord(ReadModel):
+    """The ``GET /v1/graph`` default edge; ``view=full`` adds its id, evidence, provenance and validity.
+
+    The omitted ``id`` is always ``{relationship}:{source}:{target}``.
+    """
+
+    source: str
+    target: str
+    relationship: str
+    direction: str
+    weight: float
+    traversable: bool
+    confidence: float
+
+
 class GraphAgentRecord(ReadModel):
     id: str
     label: str
@@ -114,6 +142,16 @@ class GraphAttackPathSummary(ReadModel):
     hops: list[str]
     composite_risk: float
     summary: str
+
+
+class GraphLeanAttackPathRecord(GraphAttackPathSummary):
+    """The ``GET /v1/graph`` default path summary; /v1/graph/attack-paths has the whole record."""
+
+    edges: list[str]
+    reachability: str
+    vuln_ids: list[str]
+    finding_ids: list[str]
+    severity: str | None = None
 
 
 class GraphAttackPathRecord(GraphAttackPathSummary):

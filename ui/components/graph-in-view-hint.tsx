@@ -32,7 +32,7 @@ export function GraphInViewHint({ edges }: { edges?: EdgeNote | undefined }) {
   const quieting = Boolean(edges && (edges.held > 0 || edges.allShown));
   if (!partial && !quieting) return null;
   return <div data-testid="graph-in-view-strip" className="flex shrink-0 flex-wrap items-center justify-center gap-x-3 border-b border-outline px-2 py-0.5 text-center text-xs text-ink-secondary">
-    {partial && <p data-testid="graph-in-view">Showing {inView} of {total} nodes · Fit all shows the rest<span className="max-sm:hidden"> · drag to move</span></p>}
+    {partial && <p data-testid="graph-in-view">Showing {inView} of {total} nodes · drag to see the rest<span className="max-sm:hidden"> · Fit all stays readable</span></p>}
     {quieting && edges && <p data-testid="graph-edge-note">
       {edges.drawn.toLocaleString()} of {edges.total.toLocaleString()} connections drawn
       {edges.held > 0 && <> · <span className="max-sm:hidden">hover or select a node for the rest</span><span className="sm:hidden">tap a node</span> · </>}

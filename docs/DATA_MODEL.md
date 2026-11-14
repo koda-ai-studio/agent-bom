@@ -73,7 +73,7 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `config/schemas/inventory.schema.json` | `Package.ecosystem` enum values | 9 |
 | `config/schemas/inventory.schema.json` | `MCPServer.transport` enum values | 3 |
 | `docs/openapi/v1.json` | paths | 385 |
-| `docs/openapi/v1.json` | component schemas | 736 |
+| `docs/openapi/v1.json` | component schemas | 739 |
 
 <!-- DATA_MODEL_ATLAS:END -->
 
@@ -677,14 +677,21 @@ source records from experimental seed matches.
 
 ### `inventory_snapshot.packages`
 
-JSON reports retain both the top-level `packages` array and
-`ai_bom_entities.packages` for compatibility with existing consumers.
+The report 1.0 shape (what readers see after `expand_report`, and what
+`scan -f json` writes by default in 0.115.x) retains both the top-level `packages` array
+and `ai_bom_entities.packages` for compatibility with existing consumers.
 `inventory_snapshot.packages` retains its separate replay schema.
 
 Nested `agents[].mcp_servers[].packages` remains present so consumers can
 reconstruct where a package was found. The flattened
 `inventory_snapshot.packages` list exists so importers can validate and replay
 inventory without walking every nested agent/server relationship.
+
+The 2.0 report (`--report-format v2`; the default from 0.116.0) omits the two lists that are exact copies (root `packages` and
+`inventory_snapshot.packages`) and references package entity rows, assets,
+findings, compliance controls and provenance by ID instead of repeating them;
+see [contracts/v2](../contracts/v2/README.md). `--inventory report.json`
+expands the snapshot before validating it.
 
 ### Graph/cache hot-path indexes
 

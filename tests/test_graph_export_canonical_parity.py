@@ -14,6 +14,7 @@ from agent_bom.cli import main
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.types import EntityType
 from agent_bom.output.graph_export import build_graph_from_scan_data, to_json
+from agent_bom.output.report_packing import load_report_document
 
 _ENTITY_TYPES = {entity.value for entity in EntityType}
 
@@ -31,7 +32,7 @@ def _demo_outputs(root: str) -> tuple[dict, dict]:
                 catch_exceptions=False,
             )
             assert out.exists(), result.output
-            outputs.append(json.loads(out.read_text()))
+            outputs.append(load_report_document(json.loads(out.read_text())))
     return outputs[0], outputs[1]
 
 
@@ -216,7 +217,7 @@ def _sbom_and_repository_report(root: str) -> dict:
             catch_exceptions=False,
         )
     assert out.exists(), result.output
-    return json.loads(out.read_text())
+    return load_report_document(json.loads(out.read_text()))
 
 
 def test_sbom_and_repository_inventory_export_with_the_graph_ids(tmp_path_factory):

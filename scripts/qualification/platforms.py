@@ -17,6 +17,16 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+
+def _expand_report(report: Any) -> Any:
+    """Read a schema 2.0 report as 1.0; a release without the module only writes 1.0."""
+    try:
+        from agent_bom.output.report_packing import load_report_document
+    except ImportError:
+        return report
+    return load_report_document(report)
+
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from common import LaneResult, RunResult, agent_bom_command, run_measured, tail  # noqa: E402
@@ -56,7 +66,7 @@ def write_fixture(root: Path) -> None:
 
 
 def _load(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+    return _expand_report(json.loads(path.read_text(encoding="utf-8"))) if path.is_file() else None
 
 
 def record_quickstart_defect(result: LaneResult, run: RunResult, *, missing_module: str | None) -> None:

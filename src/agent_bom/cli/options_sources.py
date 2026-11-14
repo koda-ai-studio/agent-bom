@@ -18,6 +18,7 @@ from agent_bom.cli.options_inputs import (
     SBOM_NAME_OPTION,
     SBOM_OPTION,
 )
+from agent_bom.cli.options_report_format import REPORT_FORMAT_OPTION
 
 # Canonical `--format` choices accepted by the top-level `scan` command. The
 # focused commands (fs/iac/sbom/image) forward straight to `scan`, so they
@@ -155,6 +156,13 @@ def input_options(fn):
     )(fn)
 
 
+QUIET_HELP = (
+    "Drop progress and banners; print only the result: a one-line verdict with counts by severity, "
+    "the reason for a non-zero exit, and the report path. When stdout carries a machine document (-f json without -o) "
+    "it goes to stderr instead, or under --log-json only the exit reason is logged."
+)
+
+
 def output_options(fn):
     """Output path, format, display controls, telemetry endpoints."""
     return _apply(
@@ -178,10 +186,7 @@ def output_options(fn):
                 "--format",
                 "-f",
                 "output_format",
-                type=AliasedChoice(
-                    SCAN_OUTPUT_FORMATS,
-                    aliases=SCAN_OUTPUT_FORMAT_ALIASES,
-                ),
+                type=AliasedChoice(SCAN_OUTPUT_FORMATS, aliases=SCAN_OUTPUT_FORMAT_ALIASES),
                 default="console",
                 help=(
                     "Output format.\n\n"
@@ -195,6 +200,7 @@ def output_options(fn):
                     "Other: graph (Cytoscape.js graph JSON), badge (single-line status)."
                 ),
             ),
+            REPORT_FORMAT_OPTION,
             click.option(
                 "--iceberg-catalog-url",
                 "iceberg_catalog_url",
@@ -281,7 +287,7 @@ def output_options(fn):
                     "(otherwise every run gets a unique scan_id). SOURCE_DATE_EPOCH overrides the timestamp."
                 ),
             ),
-            click.option("--quiet", "-q", is_flag=True, help="Suppress all output except results (for scripting)"),
+            click.option("--quiet", "-q", is_flag=True, help=QUIET_HELP),
             click.option(
                 "--agent-mode",
                 is_flag=True,

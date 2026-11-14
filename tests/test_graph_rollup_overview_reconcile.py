@@ -19,6 +19,7 @@ from starlette.testclient import TestClient
 
 from agent_bom.cli import main
 from agent_bom.graph.builder import build_unified_graph_from_report
+from agent_bom.output.report_packing import load_report_document
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
 TENANT = "rollup-overview-reconcile"
@@ -30,7 +31,7 @@ def _demo_report(tmp_path: Path) -> dict:
     out = tmp_path / "report.json"
     CliRunner().invoke(main, ["scan", "--offline", "--demo", "-f", "json", "-q", "-o", str(out)])
     assert out.is_file()
-    return json.loads(out.read_text())
+    return load_report_document(json.loads(out.read_text()))
 
 
 @pytest.fixture

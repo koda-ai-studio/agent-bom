@@ -38,6 +38,7 @@ from agent_bom.output.json_inventory import _snapshot_payload as _snapshot_paylo
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
 from agent_bom.output.json_writer import write_json_document, write_json_file
 from agent_bom.output.possibly_affected import json_section as possibly_affected_json
+from agent_bom.output.report_packing import pack_report
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
 from agent_bom.output.vulnerability_counts import report_summary
 from agent_bom.redaction.payload import StreamingRedaction
@@ -896,13 +897,16 @@ def to_redacted_json(
     report: AIBOMReport,
     *,
     report_json: dict[str, Any] | None = None,
+    report_format: str = "legacy",
 ) -> dict[str, Any]:
     """Return a JSON report payload safe for stdout and on-disk export.
 
     ``report_json`` lets finalized scan paths reuse their canonical projection;
     direct callers retain the original build-and-redact behavior.
+    ``report_format="v2"`` returns schema 2.0 (see :mod:`agent_bom.output.report_packing`).
     """
-    return redact_json_payload(report_json if report_json is not None else to_json(report))
+    redacted = redact_json_payload(report_json if report_json is not None else to_json(report))
+    return pack_report(redacted) if report_format == "v2" else redacted
 
 
 def export_json(
@@ -910,19 +914,33 @@ def export_json(
     output_path: str,
     *,
     report_json: dict[str, Any] | None = None,
+    report_format: str = "legacy",
 ) -> None:
     """Export report as redacted JSON, redacting each part as it is written.
 
-    Byte-identical to dumping :func:`to_redacted_json` with ``indent=2``, without
-    holding a redacted copy of the whole report beside the original.
+    Byte-identical to dumping :func:`to_redacted_json` with ``indent=2`` and the
+    same ``report_format``, without holding a redacted copy of the whole report
+    beside the original.
     """
-    write_json_file(_redaction_source(report, report_json), output_path, expand=StreamingRedaction().expand, context=(None, 0))
+    write_json_file(
+        _redaction_source(report, report_json, report_format), output_path, expand=StreamingRedaction().expand, context=(None, 0)
+    )
 
 
-def write_redacted_json(report: AIBOMReport, fh: TextIO, *, report_json: dict[str, Any] | None = None, newline: bool = True) -> None:
+def write_redacted_json(
+    report: AIBOMReport,
+    fh: TextIO,
+    *,
+    report_json: dict[str, Any] | None = None,
+    newline: bool = True,
+    report_format: str = "legacy",
+) -> None:
     """Stream the redacted report to ``fh``; the bytes equal ``json.dumps(to_redacted_json(...), indent=2)``."""
-    write_json_document(_redaction_source(report, report_json), fh, expand=StreamingRedaction().expand, context=(None, 0), newline=newline)
+    write_json_document(
+        _redaction_source(report, report_json, report_format), fh, expand=StreamingRedaction().expand, context=(None, 0), newline=newline
+    )
 
 
-def _redaction_source(report: AIBOMReport, report_json: dict[str, Any] | None) -> dict[str, Any]:
-    return prepare_iac_path_redaction(report_json if report_json is not None else to_json(report))
+def _redaction_source(report: AIBOMReport, report_json: dict[str, Any] | None, report_format: str = "legacy") -> dict[str, Any]:
+    source = prepare_iac_path_redaction(report_json if report_json is not None else to_json(report))
+    return pack_report(source) if report_format == "v2" else source

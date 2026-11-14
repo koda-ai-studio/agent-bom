@@ -257,8 +257,10 @@ Failed scans or unverifiable graph/job writes retain available evidence without
 a receipt. The hash identifies report bytes; it does not authenticate a
 collector or verify remediation.
 
-Start the printed server command before opening either link. For the default
-tenant it uses explicit loopback analyst mode. A non-default
+Start the printed server command before opening either link. On a loopback
+bind the server mints a new dev API key on every start and the browser signs in
+automatically; for the default tenant the printed `AGENT_BOM_NO_AUTH_ROLE=analyst`
+gives that key and browser session the analyst role. A non-default
 `AGENT_BOM_TENANT_ID` requires a matching authenticated API-key/OIDC principal;
 anonymous access and a static `--api-key` read the default tenant. The command
 does not create credentials or change authentication settings. Published
@@ -273,16 +275,19 @@ count or missing graph node alone does not prove a fix.
 For a single-command sample scan with a persisted graph:
 
 ```bash
-pip install 'agent-bom[ui]'
-agent-bom quickstart --run --offline
+agent-bom quickstart --run --offline --open
 ```
 
-Install the UI extra in the same Python environment as the CLI. The base
-`pip install agent-bom` supports scans but does not install the server dependencies.
-Published wheels include the dashboard assets; source checkouts also need
-`make build-ui`. The quickstart prints the server command: start it in another
-terminal, then open the printed graph URL. Keep that process running while
-using the dashboard.
+`--open` starts the local server on the databases the quickstart just verified
+and opens the scan's security graph in your browser once the server listens
+(Ctrl+C stops it). Without `--open`, the quickstart prints the one command that
+starts the server and the graph URL to open.
+
+The server needs the `[ui]` extra. When it is not installed in the CLI's
+environment, the printed command runs through
+`uvx --from 'agent-bom[ui]==<version>' agent-bom serve …` so no separate install
+step is needed; `pip install 'agent-bom[ui]'` remains the alternative. Published
+wheels include the dashboard assets; source checkouts also need `make build-ui`.
 
 The final handoff prints the absolute JSON report path, the database-backed
 control-plane command, and a graph URL pinned to the snapshot just read back.
@@ -370,9 +375,16 @@ fixture dependencies:
 ## 3. Open the Dashboard
 
 ```bash
-pip install 'agent-bom[ui]'
+uvx --from 'agent-bom[ui]' agent-bom serve --persist ~/.agent-bom/control-plane.db
+# or, with the [ui] extra installed:
 agent-bom serve --persist ~/.agent-bom/control-plane.db
 ```
+
+`serve` (and its alias `up`) prints `Open: http://127.0.0.1:8422/`; on a loopback
+bind the browser signs in automatically. The per-start dev API key, needed only
+for CLI/API calls, is printed on an interactive terminal only and never written
+to logs, `--log-json` output or files. Run without the extra and it prints the
+exact `uvx` command that works.
 
 That SQLite path keeps scan history, findings, compliance posture, and graph
 inventory available after the local process restarts. A bare `agent-bom serve`

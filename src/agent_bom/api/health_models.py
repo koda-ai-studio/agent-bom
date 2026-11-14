@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 from agent_bom.core.settings import env_bool
 from agent_bom.demo_estate.boot_seed import demo_seed_state
+from agent_bom.output.report_packing import REPORT_SCHEMA_VERSIONS
 
 SsoProvider = Literal["okta", "entra", "google", "generic"]
 _SSO_PROVIDERS: tuple[SsoProvider, ...] = ("okta", "entra", "google", "generic")
@@ -25,6 +26,10 @@ class VersionInfo(BaseModel):
     version: str
     api_version: str = "v1"
     python_package: str = "agent-bom"
+    report_schema_versions: list[str] = Field(
+        default_factory=lambda: list(REPORT_SCHEMA_VERSIONS),
+        description="Scan report schema versions POST /v1/results/push accepts; clients send 2.0 only when it is listed.",
+    )
 
 
 class TracingHealth(BaseModel):

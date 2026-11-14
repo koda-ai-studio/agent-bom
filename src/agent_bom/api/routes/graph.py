@@ -57,7 +57,7 @@ from agent_bom.api.graph_contracts import ScopedGraphCompleteness as ScopedGraph
 from agent_bom.api.graph_contracts import ScopedGraphResponse as ScopedGraphResponse
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint, verify_generation
 from agent_bom.api.graph_node_cursor import node_page_continuation, wrap_node_cursor
-from agent_bom.api.graph_page_context import node_page_context_limit, page_attack_context, page_context
+from agent_bom.api.graph_page_context import node_page_context_limit, page_attack_context, page_context, paths_for_sources
 from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate, path_order
 from agent_bom.api.graph_presentation import _finding_ids_for_path as _finding_ids_for_path
 from agent_bom.api.graph_presentation import _finding_labels_for_path as _finding_labels_for_path
@@ -86,7 +86,7 @@ from agent_bom.api.routes.graph_routes._runtime import _get_graph_store_or_503 a
 from agent_bom.api.routes.graph_routes._runtime import _graph_compute_call as _graph_compute_call
 from agent_bom.api.routes.graph_routes._runtime import _graph_store_call as _graph_store_call
 from agent_bom.api.routes.graph_routes._runtime import _tenant as _tenant
-from agent_bom.api.routes.graph_routes.canvas_view import CANVAS_VIEW_DESCRIPTION, GraphView
+from agent_bom.api.routes.graph_routes.lean_view import GRAPH_INCLUDE_DESCRIPTION, GRAPH_VIEW_DESCRIPTION, GraphView, resolve_projection
 from agent_bom.api.routes.graph_routes.page_edges import _page_edges
 from agent_bom.api.routes.graph_routes.params import _FILTERED_GRAPH_ATTACK_PATH_LIMIT as _FILTERED_GRAPH_ATTACK_PATH_LIMIT
 from agent_bom.api.routes.graph_routes.params import (
@@ -211,7 +211,8 @@ async def get_graph(
     cursor: Optional[str] = Query(None, description="Opaque keyset cursor; carries the snapshot generation"),
     offset: int = Query(0, ge=0, description="Pagination offset for nodes"),
     limit: int = Query(500, ge=1, le=5000, description="Max nodes to return"),
-    view: GraphView | None = Query(None, description=CANVAS_VIEW_DESCRIPTION),
+    view: GraphView | None = Query(None, description=GRAPH_VIEW_DESCRIPTION),
+    include: Optional[str] = Query(None, max_length=64, description=GRAPH_INCLUDE_DESCRIPTION),
 ) -> Response:
     """Load the unified graph with filters and pagination.
 
@@ -236,6 +237,7 @@ async def get_graph(
     """
     from agent_bom.graph import SEVERITY_RANK
 
+    projection = resolve_projection(view, include)
     _enforce_node_offset_cap(offset, cursor)
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
@@ -297,7 +299,7 @@ async def get_graph(
                 verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(payload.get("nodes"))
             )
             payload["snapshot_generation"] = identity[1]
-        return await _runtime._graph_compute_call(_encoded_graph_response, payload, view)
+        return await _runtime._graph_compute_call(_encoded_graph_response, payload, projection)
 
     try:
         effective_scan_id, created_at, paged_nodes, total, next_cursor = await _runtime._graph_store_call(
@@ -349,7 +351,7 @@ async def get_graph(
         source_attack_paths=source_attack_paths,
         nodes_by_id=nodes_by_id,
         cursor=cursor,
-        view=view,
+        projection=projection,
     )
 
 
@@ -409,7 +411,7 @@ async def get_graph_paths(
     )
     paged_paths, pagination = _paginate(sorted(all_paths, key=path_order), offset, limit)
     attack_paths = await _runtime._graph_store_call(
-        graph_store.attack_paths_for_sources, scan_id=requested_scan_id, tenant_id=tenant, source_ids={source_node_id}
+        paths_for_sources, graph_store, scan_id=requested_scan_id or "", tenant_id=tenant, source_ids={source_node_id}
     )
     path_node_ids = {source_node_id, *reachable}
     path_edges = await _runtime._graph_store_call(
@@ -503,7 +505,8 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
     attack_paths = []
     if body.include_attack_paths:
         root_attack_paths = await _runtime._graph_store_call(
-            graph_store.attack_paths_for_sources,
+            paths_for_sources,
+            graph_store,
             scan_id=scan_id,
             tenant_id=tenant_id,
             source_ids=set(body.roots),

@@ -19,6 +19,7 @@ from agent_bom.ai_components.framework_agents import scan_framework_agents
 from agent_bom.cli import main
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.types import EntityType, RelationshipType
+from agent_bom.output.report_packing import load_report_document
 
 _FIXTURES = Path(__file__).parent / "fixtures" / "agent_frameworks"
 _LANGGRAPH = _FIXTURES / "langgraph_tool_team"
@@ -56,7 +57,7 @@ def _scan(root: Path, out_dir: Path) -> tuple[dict, str]:
     result = CliRunner().invoke(main, args)
     assert out.exists(), result.output
     raw = out.read_text(encoding="utf-8")
-    return json.loads(raw), raw
+    return load_report_document(json.loads(raw)), raw
 
 
 @pytest.fixture(scope="module")
