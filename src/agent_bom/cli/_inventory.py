@@ -26,7 +26,7 @@ from agent_bom.parsers import extract_packages
 @click.option("--project", "-p", type=click.Path(exists=True), help="Project directory to scan")
 @click.option("--transitive", is_flag=True, help="Resolve transitive dependencies for npx/uvx packages")
 @click.option("--max-depth", type=int, default=3, help="Maximum depth for transitive dependency resolution")
-@click.option("--quiet", "-q", is_flag=True, help="Suppress all output except results")
+@click.option("--quiet", "-q", is_flag=True, help="Print one result line (agent, MCP server and package counts) instead of the tree.")
 @click.option("-f", "--format", "output_format", type=click.Choice(["console", "json"]), default="console", show_default=True)
 @click.option("--json", "as_json", is_flag=True, help="Deprecated alias for `--format json`.")
 @click.option("--demo", is_flag=True, help="Show the bundled demo inventory (matches `agent-bom scan --demo`).")
@@ -105,6 +105,7 @@ def inventory(
             _print_inventory_json(agents, inventory_source)
             return
         con.print("\n[yellow]No MCP configurations found.[/yellow]")
+        _print_inventory_result(agents, quiet=quiet)
         sys.exit(0)
 
     if not json_output:
@@ -126,9 +127,19 @@ def inventory(
         _print_inventory_json(agents, inventory_source)
         return
 
-    report = AIBOMReport(agents=agents)
-    print_summary(report)
-    print_agent_tree(report)
+    _print_inventory_result(agents, quiet=quiet)
+
+
+def _print_inventory_result(agents: list, *, quiet: bool) -> None:
+    """The tree, or under -q the one-line counts (the quiet console prints nothing else)."""
+    if quiet:
+        servers = [server for agent in agents for server in agent.mcp_servers]
+        packages = sum(len(server.packages) for server in servers)
+        click.echo(f"agent-bom inventory: {len(agents)} agent(s), {len(servers)} MCP server(s), {packages} package(s)")
+    elif agents:
+        report = AIBOMReport(agents=agents)
+        print_summary(report)
+        print_agent_tree(report)
 
 
 def _project_inventory_path(project: Optional[str]) -> Path | None:

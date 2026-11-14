@@ -20,7 +20,9 @@ agent-bom agents -f sarif -o results.sarif
 agent-bom agents -f sarif -o -
 ```
 
-- `--quiet` suppresses scan chatter and retry noise for scripting.
+- `--quiet` drops progress, banners and retry noise but keeps the result: a one-line
+  verdict with counts by severity, the reason for a non-zero exit, and the report path.
+  When stdout carries a JSON/SARIF document (no `-o`), that summary goes to stderr.
 - `--log-level debug` with `--log-file` is the quickest way to capture a reproducible issue.
 - `-o -` is the stdout form for machine-readable exports.
 - If a finding looks inaccurate, open an

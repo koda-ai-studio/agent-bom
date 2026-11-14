@@ -62,7 +62,9 @@ def test_unavailable_kev_evidence_prints_an_actionable_hint_in_every_mode(quiet:
 
     assert _compute(ctx, quiet=quiet) == 1
 
-    text = buffer.getvalue() + capsys.readouterr().err
+    # Under -q the reason is recorded for the quiet result summary the scan prints; otherwise it prints here.
+    text = buffer.getvalue() + capsys.readouterr().err + "\n".join(ctx.exit_reasons)
+    assert ("KEV evidence is unavailable" in buffer.getvalue()) is not quiet
     assert "KEV evidence is unavailable" in text
     assert "agent-bom db update" in text
     assert "--enrich" in text

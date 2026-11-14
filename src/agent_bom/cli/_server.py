@@ -10,6 +10,7 @@ from typing import Optional
 
 import click
 
+from agent_bom.cli import _ui_handoff
 from agent_bom.cli._common import LISTEN_PORT_RANGE
 from agent_bom.cli._server_posture import _DEV_API_KEY_PREFIX as _DEV_API_KEY_PREFIX
 from agent_bom.cli._server_posture import _api_auth_summary as _api_auth_summary
@@ -93,8 +94,11 @@ def _emit_startup_notice(text: str, *, secret: str | None = None) -> None:
         withheld = " A dev API key was issued; it is not written to JSON logs, run without --log-json to see it." if secret else ""
         logging.getLogger("agent_bom.startup").info(" ".join(text.split()) + withheld)
         return
-    if secret:
+    if secret and _ui_handoff.interactive_terminal():
         click.secho(secret, fg="cyan", bold=True)
+    elif secret:
+        # Redirected stdout lands in files and CI logs; a credential belongs on the interactive terminal only.
+        click.echo("  Dev API key: withheld because stdout is not an interactive terminal (it is never written to files or logs).")
     click.echo(text)
 
 
@@ -371,6 +375,7 @@ def serve_cmd(
 
     \b
     Requires:  pip install 'agent-bom[ui]'
+               (or in one step: uvx --from 'agent-bom[ui]' agent-bom serve)
                make build-ui   (for the bundled dashboard)
 
     \b
@@ -386,11 +391,8 @@ def serve_cmd(
 
     setup_logging(level=log_level, json_output=log_json)
 
-    _require_optional_dependencies(
-        "agent-bom serve",
-        "ui",
-        {"FastAPI": "fastapi", "Uvicorn": "uvicorn"},
-    )
+    click_ctx = click.get_current_context()
+    _ui_handoff.fail_without_ui_extra(_ui_handoff.serve_verb(click_ctx), _ui_handoff.echoed_serve_args(click_ctx))
 
     if demo_estate:
         os.environ["AGENT_BOM_DEMO_ESTATE"] = "1"
@@ -445,15 +447,13 @@ def serve_cmd(
 
         set_job_store(SQLiteJobStore(db_path=persist_path))
 
-    _ui_dist = Path(__file__).resolve().parents[1] / "ui_dist"
+    ui_bundled = not no_ui and _ui_handoff.dashboard_bundled()
     rows = [
         ("API", f"http://{host}:{port}"),
         ("Docs", f"http://{host}:{port}/docs"),
         (
             "Dashboard",
-            "Disabled (--no-ui, REST only)"
-            if no_ui
-            else (f"http://{host}:{port}" if (_ui_dist / "index.html").exists() else "Not bundled (run: make build-ui)"),
+            "Disabled (--no-ui, REST only)" if no_ui else (f"http://{host}:{port}" if ui_bundled else "Not bundled (run: make build-ui)"),
         ),
         (
             "Auth",
@@ -484,12 +484,18 @@ def serve_cmd(
             "  Set AGENT_BOM_CONNECTIONS_KEY / _FILE or a managed provider to bring your own; "
             "AGENT_BOM_NO_AUTO_CONNECTIONS_KEY=1 disables auto-seeding.\n"
         )
+    if ui_bundled:
+        sign_in = (
+            "signs in automatically in a browser on this machine"
+            if dev_api_key
+            else "sign in with the configured API key or identity provider"
+        )
+        _emit_startup_notice(f"\n  Open: {_ui_handoff.dashboard_url(host, port)}  ({sign_in})")
     if dev_api_key:
         _emit_startup_notice(
-            "  The local dashboard uses this automatically. Send it as "
-            "'Authorization: Bearer <key>' for CLI/API calls.\n"
-            "  Ephemeral (per-process, not saved). Set AGENT_BOM_NO_AUTO_DEV_KEY=1 to disable.\n",
-            secret=f"  Dev API key (loopback only): {dev_api_key}",
+            "  The dashboard does not need the key. For CLI/API calls send it as 'Authorization: Bearer <key>'.\n"
+            "  Not saved: a new key is minted on every start. Set AGENT_BOM_NO_AUTO_DEV_KEY=1 to disable.\n",
+            secret=f"  Dev API key (this start only, loopback only): {dev_api_key}",
         )
 
     try:

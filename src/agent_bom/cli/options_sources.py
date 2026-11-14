@@ -155,6 +155,13 @@ def input_options(fn):
     )(fn)
 
 
+QUIET_HELP = (
+    "Drop progress and banners; print only the result: a one-line verdict with counts by severity, "
+    "the reason for a non-zero exit, and the report path. When stdout carries a machine document (-f json without -o) "
+    "it goes to stderr instead, or under --log-json only the exit reason is logged."
+)
+
+
 def output_options(fn):
     """Output path, format, display controls, telemetry endpoints."""
     return _apply(
@@ -281,7 +288,7 @@ def output_options(fn):
                     "(otherwise every run gets a unique scan_id). SOURCE_DATE_EPOCH overrides the timestamp."
                 ),
             ),
-            click.option("--quiet", "-q", is_flag=True, help="Suppress all output except results (for scripting)"),
+            click.option("--quiet", "-q", is_flag=True, help=QUIET_HELP),
             click.option(
                 "--agent-mode",
                 is_flag=True,

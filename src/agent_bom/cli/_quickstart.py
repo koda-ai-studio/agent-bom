@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 
 import click
 
+from agent_bom.cli import _ui_handoff
 from agent_bom.cli._tenant import resolve_cli_tenant_id
 from agent_bom.samples import write_first_run_sample
 from agent_bom.storage import state_home
@@ -31,6 +32,12 @@ class _GraphReceipt(TypedDict):
     scan_id: str
     nodes: int
     edges: int
+
+
+class _Handoff(TypedDict):
+    control_plane_db: Path
+    graph_db: Path
+    graph_url: str
 
 
 @click.command("quickstart")
@@ -75,6 +82,12 @@ class _GraphReceipt(TypedDict):
     help="Enforcement mode for the seeded gateway baseline policy (audit warns before enforcing).",
 )
 @click.option("--port", type=click.IntRange(1, 65535), default=8422, show_default=True, help="Port suggested for the local API/UI handoff.")
+@click.option(
+    "--open",
+    "open_ui",
+    is_flag=True,
+    help="With --run, start the local server when onboarding finishes and open this scan's security graph in the browser.",
+)
 def quickstart_cmd(
     project: Path | None,
     evidence_dir: Path | None,
@@ -87,12 +100,10 @@ def quickstart_cmd(
     gateway_policy: bool,
     gateway_mode: str,
     port: int,
+    open_ui: bool,
 ) -> None:
     """Print — or with --run, execute — a local first-run onboarding path."""
-    if dry_run and write_sample:
-        raise click.UsageError("--dry-run cannot be combined with --write-sample.")
-    if dry_run and execute:
-        raise click.UsageError("--dry-run cannot be combined with --run.")
+    _reject_conflicting_flags(dry_run=dry_run, write_sample=write_sample, execute=execute, open_ui=open_ui, project=project)
 
     if project is not None:
         from agent_bom.cli._project_activation import activate_project
@@ -107,7 +118,7 @@ def quickstart_cmd(
         raise click.UsageError("--evidence-dir requires --project.")
 
     if execute:
-        _run_quickstart(
+        handoff = _run_quickstart(
             sample_dir=sample_dir,
             offline=offline,
             force=force,
@@ -115,6 +126,8 @@ def quickstart_cmd(
             gateway_mode=gateway_mode,
             port=port,
         )
+        if open_ui:
+            _open_dashboard(handoff, port=port)
         return
 
     if write_sample:
@@ -139,12 +152,11 @@ def quickstart_cmd(
         click.echo(f"  agent-bom samples first-run --target {sample_dir}")
     click.echo(f"  {scan_command}")
     click.echo("")
-    click.echo("Local API/UI:")
-    click.echo("  pip install 'agent-bom[ui]'")
+    click.echo("Local API/UI (one command):")
     control_plane_db, graph_db = _resolve_quickstart_databases(dict(os.environ))
     click.echo(f"  {_control_plane_command(control_plane_db=control_plane_db, graph_db=graph_db, port=port)}")
-    click.echo("  # the explicit local analyst role permits scans in this loopback-only workflow;")
-    click.echo("  # on a shared host use --api-key <key> or configure OIDC authentication instead.")
+    for line in local_auth_note_lines():
+        click.echo(line)
     click.echo(f"  API docs: http://127.0.0.1:{port}/docs")
     click.echo(f"  UI:       http://127.0.0.1:{port}/")
     click.echo("")
@@ -152,6 +164,17 @@ def quickstart_cmd(
     click.echo("  agent-bom quickstart --run        # writes sample, scans, seeds gateway policy")
     click.echo("")
     click.echo("Everything in this lane can run locally. Use 'agent-bom[all]' for all first-run extras; MLflow remains separate.")
+
+
+def _reject_conflicting_flags(*, dry_run: bool, write_sample: bool, execute: bool, open_ui: bool, project: Path | None) -> None:
+    if dry_run and write_sample:
+        raise click.UsageError("--dry-run cannot be combined with --write-sample.")
+    if dry_run and execute:
+        raise click.UsageError("--dry-run cannot be combined with --run.")
+    if open_ui and not execute:
+        raise click.UsageError("--open requires --run.")
+    if open_ui and project is not None:
+        raise click.UsageError("--open applies to the sample --run; with --project, start the printed server command.")
 
 
 def _run_quickstart(
@@ -162,7 +185,7 @@ def _run_quickstart(
     gateway_policy: bool,
     gateway_mode: str,
     port: int,
-) -> None:
+) -> _Handoff:
     """Execute the onboarding end to end so the local cockpit is populated on first run."""
     inventory_path = sample_dir / "inventory.json"
 
@@ -245,7 +268,7 @@ def _run_quickstart(
     else:
         click.echo("[3/3] Skipped gateway baseline policy (--no-gateway-policy)")
 
-    _print_quickstart_handoff(
+    return _print_quickstart_handoff(
         report_path=report_path,
         offline=offline,
         graph_receipt=graph_receipt,
@@ -267,8 +290,8 @@ def _print_quickstart_handoff(
     port: int,
     policy_path: Path | None,
     gateway_mode: str,
-) -> None:
-    """Show evidence and next actions only after exact snapshot verification."""
+) -> _Handoff:
+    """Show evidence and next actions only after exact snapshot verification; returns where the graph lives."""
     # Handoff ---------------------------------------------------------------
     click.echo("")
     click.echo("Onboarding complete. The completed scan and security graph were read back from the configured local databases.")
@@ -280,16 +303,15 @@ def _print_quickstart_handoff(
     else:
         click.echo("  Package-CVE lookup: requested; inspect scan_run and coverage_warnings in the JSON report.")
     click.echo("")
-    click.echo("Install dashboard dependencies in the same Python environment (once):")
-    click.echo("  pip install 'agent-bom[ui]'")
-    click.echo("")
-    click.echo("Start the server before opening the graph URL:")
-    click.echo(f"  {_control_plane_command(control_plane_db=control_plane_db, graph_db=graph_db, port=port)}")
-    click.echo("  # the explicit local analyst role permits scans in this loopback-only workflow;")
-    click.echo("  # on a shared host use --api-key <key> or configure OIDC authentication instead.")
     graph_query = urlencode({"lens": "lineage", "scan": graph_receipt["scan_id"]})
-    click.echo(f"  Security graph: http://127.0.0.1:{port}/security-graph?{graph_query}")
+    graph_url = f"http://127.0.0.1:{port}/security-graph?{graph_query}"
+    click.echo("Open the graph for this scan: start the server, then open the graph URL:")
+    click.echo(f"  {_control_plane_command(control_plane_db=control_plane_db, graph_db=graph_db, port=port)}")
+    for line in local_auth_note_lines():
+        click.echo(line)
+    click.echo(f"  Security graph: {graph_url}")
     click.echo(f"  Dashboard:      http://127.0.0.1:{port}/")
+    click.echo("  Or rerun with --open to start the server and open the graph in your browser.")
     click.echo("")
     click.echo("Next, scan your own repository from its root (uses network advisory lookup):")
     click.echo("  agent-bom scan . -f json -o agent-bom-report.json")
@@ -301,6 +323,35 @@ def _print_quickstart_handoff(
             f"  agent-bom gateway serve --policy {shlex.quote(str(policy_path))} "
             f"--from-control-plane http://127.0.0.1:{port} --bind 127.0.0.1:8090"
         )
+    return {"control_plane_db": control_plane_db, "graph_db": graph_db, "graph_url": graph_url}
+
+
+def local_auth_note_lines() -> list[str]:
+    """What actually authenticates the loopback dashboard started by the printed command."""
+    return [
+        "  # On a loopback bind, serve mints a new dev API key on every start and the browser signs in automatically;",
+        "  # AGENT_BOM_NO_AUTH_ROLE=analyst gives that key and browser session the analyst role (scans, no admin).",
+        "  # On a shared host use --api-key <key> or configure OIDC authentication instead.",
+    ]
+
+
+def _open_dashboard(handoff: _Handoff, *, port: int) -> None:
+    """Start the local server on the verified databases and open this scan's graph once it listens."""
+    if not _ui_handoff.ui_extra_available():
+        raise click.ClickException(
+            "--open needs the dashboard extra in this environment. Start it in one step instead:\n  "
+            + _control_plane_command(control_plane_db=handoff["control_plane_db"], graph_db=handoff["graph_db"], port=port)
+            + f"\n  then open {handoff['graph_url']}"
+        )
+    os.environ.setdefault("AGENT_BOM_NO_AUTH_ROLE", "analyst")
+    if handoff["graph_db"] != handoff["control_plane_db"]:
+        os.environ["AGENT_BOM_GRAPH_DB"] = str(handoff["graph_db"])
+    from agent_bom.cli._server import serve_cmd
+
+    click.echo("")
+    click.echo(f"Starting the local server; opening {handoff['graph_url']} when it is ready (Ctrl+C stops it).")
+    _ui_handoff.open_browser_when_ready(handoff["graph_url"], "127.0.0.1", port)
+    click.get_current_context().invoke(serve_cmd, persist=str(handoff["control_plane_db"]), host="127.0.0.1", port=port)
 
 
 def _resolve_quickstart_databases(environment: dict[str, str]) -> tuple[Path, Path]:
@@ -414,7 +465,7 @@ def _control_plane_command(*, control_plane_db: Path, graph_db: Path, port: int,
         if control_plane_db == (state_home.default_product_state_dir() / "control-plane.db").resolve()
         else shlex.quote(str(control_plane_db))
     )
-    command = f"{' '.join(environment)} agent-bom serve --persist {persisted} --host 127.0.0.1 --port {port}".lstrip()
+    command = f"{' '.join(environment)} {_ui_handoff.ui_launcher()} serve --persist {persisted} --host 127.0.0.1 --port {port}".lstrip()
     return command
 
 

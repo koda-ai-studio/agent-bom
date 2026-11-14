@@ -7,6 +7,7 @@ import sys
 from agent_bom.cli.agents._output import render_output
 from agent_bom.cli.agents._post import compute_exit_code, run_integrations
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
+from agent_bom.cli.agents.scan_pipeline.quiet_summary import print_quiet_summary
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 
 
@@ -83,6 +84,8 @@ def _compute_exit(opts: ScanOptions, st: ScanState) -> None:
             agent_mode_full=opts.agent_mode_full,
             page=opts.page,
         )
+
+    print_quiet_summary(opts, st, exit_code)
 
     if exit_code:
         sys.exit(exit_code)

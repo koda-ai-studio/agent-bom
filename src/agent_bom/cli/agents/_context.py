@@ -55,6 +55,8 @@ class ScanContext:
     delta_result: Any = None
     policy_passed: bool = True
     exit_code: int = 0
+    # Plain-text reasons for a non-zero exit, kept under -q so the quiet summary can name them.
+    exit_reasons: list = field(default_factory=list)
     # Cloud providers that were explicitly requested but hard-failed discovery or
     # benchmarking (missing SDK / absent / invalid credentials → CloudDiscoveryError).
     # Recorded per provider+stage; a non-empty list forces a non-zero exit so a

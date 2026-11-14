@@ -133,18 +133,61 @@ def test_quickstart_run_scans_with_context_graph_and_seeds_policy(tmp_path, _fak
 
 
 @pytest.mark.parametrize("offline", [True, False])
-def test_executed_quickstart_includes_dashboard_install_before_server(tmp_path, _fake_scan, offline):
-    """A base PyPI install must not hand off to serve without its required extra."""
+def test_executed_quickstart_without_the_ui_extra_hands_off_one_working_command(tmp_path, _fake_scan, monkeypatch, offline):
+    """A base PyPI install gets a single command that brings the dashboard extra with it."""
+    import importlib.util
+
+    real_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util, "find_spec", lambda name, *a, **k: None if name in {"fastapi", "uvicorn"} else real_find_spec(name, *a, **k)
+    )
     args = ["quickstart", "--run", "--sample-dir", str(tmp_path / "sample")]
     if offline:
         args.append("--offline")
     result = CliRunner().invoke(main, args)
     assert result.exit_code == 0, result.output
-    setup = "pip install 'agent-bom[ui]'"
-    assert setup in result.output
-    assert result.output.index(setup) < result.output.index("agent-bom serve --persist")
-    assert "same Python environment" in result.output
-    assert "Start the server before opening" in result.output
+    command = next(line.strip() for line in result.output.splitlines() if " serve --persist " in line)
+    assert "AGENT_BOM_NO_AUTH_ROLE=analyst uvx --from 'agent-bom[ui" in command
+    assert " agent-bom serve --persist " in command and command.endswith("--host 127.0.0.1 --port 8422")
+    assert "Security graph: http://127.0.0.1:8422/security-graph?" in result.output
+    assert "rerun with --open" in result.output
+
+
+def test_executed_quickstart_with_the_ui_extra_uses_the_installed_command(tmp_path, _fake_scan):
+    result = CliRunner().invoke(main, ["quickstart", "--run", "--offline", "--sample-dir", str(tmp_path / "sample")])
+
+    assert result.exit_code == 0, result.output
+    assert "uvx" not in result.output
+    assert "pip install 'agent-bom[ui]'" not in result.output
+
+
+def test_quickstart_open_starts_the_server_on_the_verified_databases_and_opens_the_graph(tmp_path, _fake_scan, monkeypatch):
+    from unittest.mock import patch
+
+    monkeypatch.delenv("AGENT_BOM_NO_AUTH_ROLE", raising=False)
+    monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "cp.db"))
+    served: dict[str, object] = {}
+    opened: list[tuple[str, str, int]] = []
+
+    def fake_serve_callback(**kwargs):  # noqa: ANN003
+        import os
+
+        served.update(kwargs)
+        served["role"] = os.environ.get("AGENT_BOM_NO_AUTH_ROLE")
+
+    from agent_bom.cli._server import serve_cmd
+
+    with (
+        patch.object(serve_cmd, "callback", fake_serve_callback),
+        patch("agent_bom.cli._ui_handoff.open_browser_when_ready", lambda url, host, port: opened.append((url, host, port))),
+    ):
+        result = CliRunner().invoke(main, ["quickstart", "--run", "--offline", "--open", "--sample-dir", str(tmp_path / "s")])
+
+    assert result.exit_code == 0, result.output
+    assert served["persist"] == str(tmp_path / "cp.db")
+    assert served["host"] == "127.0.0.1" and served["port"] == 8422
+    assert served["role"] == "analyst"
+    assert opened == [("http://127.0.0.1:8422/security-graph?lens=lineage&scan=fake-scan-id", "127.0.0.1", 8422)]
 
 
 @pytest.mark.parametrize("offline", [True, False])
