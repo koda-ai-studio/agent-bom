@@ -28,6 +28,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TypedDict
 
 from agent_bom import config
 from agent_bom.core.path_context import CONTEXT_SEVERITY
@@ -371,6 +372,18 @@ def _aws_pair_status(
     return status
 
 
+class _CredentialSeverity(TypedDict):
+    severity: str
+    downgrade_reason: str | None
+
+
+def _credential_severity(rel_path: str, secret_type: str, match: re.Match) -> _CredentialSeverity:
+    """Critical, except a CI job's throwaway service-container DSN on a loopback host."""
+    if secret_type == "Connection String" and ci_loopback_dsn(rel_path, match.group(0)):
+        return {"severity": CONTEXT_SEVERITY, "downgrade_reason": CI_LOOPBACK_DSN_REASON}
+    return {"severity": "critical", "downgrade_reason": None}
+
+
 def _scan_file(
     file_path: Path,
     rel_path: str,
@@ -415,17 +428,15 @@ def _scan_file(
             if secret_type == "AWS Access Key" and aws_validator is not None:
                 paired_secret = nearest_aws_secret(aws_secrets, line_num)
                 validation_status = _aws_pair_status(aws_validator, secret_match.group(0), paired_secret, rel_path, line_num)
-            ci_service_dsn = secret_type == "Connection String" and ci_loopback_dsn(rel_path, secret_match.group(0))
             findings.append(
                 SecretFinding(
                     file_path=rel_path,
                     line_number=line_num,
                     secret_type=secret_type,
-                    severity=CONTEXT_SEVERITY if ci_service_dsn else "critical",
                     matched_preview="[CREDENTIAL_REDACTED]",
                     category="credential",
                     validation_status=validation_status,
-                    downgrade_reason=CI_LOOPBACK_DSN_REASON if ci_service_dsn else None,
+                    **_credential_severity(rel_path, secret_type, secret_match),
                 )
             )
 
