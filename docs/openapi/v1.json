@@ -13533,6 +13533,7 @@
           "model",
           "dataset",
           "framework",
+          "eval_suite",
           "container",
           "cloud_resource",
           "resource",
@@ -28525,6 +28526,16 @@
             "title": "Entry",
             "type": "boolean"
           },
+          "eval_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HarnessEvalCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "file_path": {
             "title": "File Path",
             "type": "string"
@@ -28691,6 +28702,137 @@
           "framework_agent_cap"
         ],
         "title": "HarnessCoverage",
+        "type": "object"
+      },
+      "HarnessEvalCoverage": {
+        "additionalProperties": true,
+        "description": "Eval suites linked to the agent; ``assessed`` is false when the scan did not search the project for evals.",
+        "properties": {
+          "assessed": {
+            "title": "Assessed",
+            "type": "boolean"
+          },
+          "safety_suites": {
+            "title": "Safety Suites",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "suites": {
+            "items": {
+              "$ref": "#/components/schemas/HarnessEvalSuite"
+            },
+            "title": "Suites",
+            "type": "array"
+          }
+        },
+        "required": [
+          "assessed",
+          "status",
+          "safety_suites",
+          "suites"
+        ],
+        "title": "HarnessEvalCoverage",
+        "type": "object"
+      },
+      "HarnessEvalResult": {
+        "additionalProperties": true,
+        "description": "Results an eval run wrote into the project, with the file they came from and its recorded date.",
+        "properties": {
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "pass_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pass Rate"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "integer"
+          },
+          "recorded_at": {
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_file": {
+            "title": "Source File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "source_file",
+          "recorded_at",
+          "passed",
+          "failed",
+          "errors"
+        ],
+        "title": "HarnessEvalResult",
+        "type": "object"
+      },
+      "HarnessEvalSuite": {
+        "additionalProperties": true,
+        "properties": {
+          "file_path": {
+            "title": "File Path",
+            "type": "string"
+          },
+          "harness": {
+            "title": "Harness",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "safety",
+              "quality",
+              "unknown"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/HarnessEvalResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "harness",
+          "name",
+          "purpose",
+          "file_path",
+          "results"
+        ],
+        "title": "HarnessEvalSuite",
         "type": "object"
       },
       "HarnessFlowEdge": {
@@ -40152,6 +40294,7 @@
           "scoped_to",
           "governs",
           "exhibits_drift",
+          "evaluates",
           "exposed_to",
           "stores",
           "has_permission",

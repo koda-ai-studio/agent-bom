@@ -180,6 +180,7 @@ export const NODE_TYPE_LEGEND_ORDER: LineageNodeType[] = [
   "model",
   "framework",
   "dataset",
+  "evalSuite",
   "container",
   "cloudResource",
   "apiGateway",
@@ -282,6 +283,7 @@ export const RELATIONSHIP_LEGEND_ORDER = [
   "authenticates_as",
   "scoped_to",
   "governs",
+  "evaluates",
   "exhibits_drift",
   // Ownership and governance
   "manages",
@@ -373,6 +375,7 @@ const RELATIONSHIP_DESCRIPTION_OVERRIDES: Record<string, string> = {
     "Access grant is constrained to a resource, tool, or environment scope.",
   governs:
     "Policy or control applies to the connected identity, tool, or environment.",
+  evaluates: "Eval suite tests this agent or model. Static evidence; the suite was not run.",
   exhibits_drift:
     "Observed behavior or posture differs from expected governance state.",
   exposed_to: "Recorded exposure relationship. Inspect configuration, scope and reachability evidence.",

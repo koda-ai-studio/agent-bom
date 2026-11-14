@@ -373,6 +373,8 @@ def _ai_report_summary(ai_report: Any) -> dict[str, Any]:
         "unique_models": sorted(ai_report.unique_models),
         "files_scanned": ai_report.files_scanned,
         "framework_agents": list(ai_report.framework_agents),
+        "eval_suites": list(ai_report.eval_suites),
+        "eval_coverage": ai_report.eval_coverage,
         "components": [
             {
                 "type": c.component_type.value,

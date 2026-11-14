@@ -106,6 +106,32 @@ describe("AgentArchitectureView", () => {
     expect(neighbors).toHaveBeenCalledWith(triage.id);
   });
 
+  it("shows the agent's linked evals with labelled results, and says when evals were not searched", () => {
+    const page = architecturePages().first_page;
+    const harness = page.harnesses.find(item => item.harness_id === toolTeamHarness().harness_id)!;
+    const triage = agentByLabel(harness, "triage_agent", "subgraph");
+    triage.eval_coverage = {
+      assessed: true, status: "complete", safety_suites: 1,
+      suites: [{ id: "eval_suite:1", harness: "promptfoo", name: "Triage red team", purpose: "safety", file_path: "promptfooconfig.yaml",
+        results: [{ source: "promptfoo output file", source_file: "out.json", recorded_at: "2026-10-02T14:30:00Z", passed: 46, failed: 4, errors: 0, pass_rate: 0.92 }] }],
+    };
+    renderView({ state: state({ harnesses: page.harnesses, page }), initialHarnessId: harness.harness_id });
+    const node = screen.getByTestId(`architecture-node-${triage.id}`).closest(".react-flow__node") as HTMLElement;
+    node.focus();
+    fireEvent.keyDown(node, { key: "Enter" });
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("1 linked safety eval")).toBeInTheDocument();
+    expect(within(dialog).getByText("Triage red team")).toBeInTheDocument();
+    expect(within(dialog).getByText(/46 of 50 passed \(92%\)/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/recorded 2026-10-02T14:30:00Z/)).toBeInTheDocument();
+    cleanup();
+    renderView({ initialHarnessId: harness.harness_id });
+    const plain = screen.getByTestId(`architecture-node-${triage.id}`).closest(".react-flow__node") as HTMLElement;
+    plain.focus();
+    fireEvent.keyDown(plain, { key: "Enter" });
+    expect(within(screen.getByRole("dialog")).getByText(/Eval coverage was not assessed in this scan/)).toBeInTheDocument();
+  });
+
   it("shows an empty state when no multi-agent framework was found", () => {
     const page = { ...architecturePages().first_page, harnesses: [], summary: { ...architecturePages().first_page.summary, harnesses: 0, framework_agents: 0, placed_agents: 0, unplaced_framework_agents: 0, frameworks: {} }, pagination: { ...architecturePages().first_page.pagination, total: 0, has_more: false, next_cursor: "" } };
     renderView({ state: state({ harnesses: [], page, total: 0, hasMore: false }) });

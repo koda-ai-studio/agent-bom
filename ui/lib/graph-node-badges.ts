@@ -116,7 +116,7 @@ const ENVIRONMENT_TYPES = new Set<string>([
 ]);
 const PROVIDER_EXCLUDED_TYPES = new Set<string>([
   "vulnerability", "misconfiguration", "driftIncident", "package", "tool", "toolCall",
-  "credential", "sourceFile", "configFile", "codeModule", "directory",
+  "credential", "sourceFile", "configFile", "codeModule", "directory", "evalSuite",
 ]);
 const ECOSYSTEM_TYPES = new Set<string>(["package", "framework", "codeModule"]);
 const FINDING_TYPES = new Set<string>(["vulnerability", "misconfiguration", "driftIncident"]);

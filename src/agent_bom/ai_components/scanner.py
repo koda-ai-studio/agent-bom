@@ -18,6 +18,7 @@ import logging
 import os
 from pathlib import Path
 
+from agent_bom.ai_components.eval_suites import scan_eval_suites
 from agent_bom.ai_components.local_shadow import declared_python_packages, is_sdk_import
 from agent_bom.ai_components.models import (
     AIComponent,
@@ -113,8 +114,16 @@ def scan_source(
     report.deprecated_models = [c for c in report.components if c.component_type == AIComponentType.DEPRECATED_MODEL]
     report.api_keys = [c for c in report.components if c.component_type == AIComponentType.API_KEY]
     report.framework_agents = _scan_framework_relationships(*paths)
+    _scan_eval_suites(report, *paths)
 
     return report
+
+
+def _scan_eval_suites(report: AIComponentReport, *paths: str | Path) -> None:
+    """Read eval suites over the same paths and link them to the agents just found; never runs them."""
+    result = scan_eval_suites(*paths, framework_agents=report.framework_agents)
+    report.eval_suites = [suite.to_dict() for suite in result.suites]
+    report.eval_coverage = result.coverage
 
 
 def _scan_framework_relationships(*paths: str | Path) -> list[dict]:

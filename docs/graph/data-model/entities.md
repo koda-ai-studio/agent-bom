@@ -132,6 +132,10 @@ Id formats:
 
 - `env:{provider}:{account_scope}:{environment}`
 
+## `eval_suite`
+
+Emitted by: `graph/eval_projection.py`
+
 ## `external_import`
 
 Emitted by: `graph/sdk_overlay.py`
@@ -183,7 +187,7 @@ Id formats:
 
 ## `model`
 
-Emitted by: `graph/finding_row_projection.py`, `graph/framework_topology_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/eval_projection.py`, `graph/finding_row_projection.py`, `graph/framework_topology_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `org`
 

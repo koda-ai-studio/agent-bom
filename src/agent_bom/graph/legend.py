@@ -86,6 +86,7 @@ ENTITY_LEGEND: list[LegendEntry] = [
     LegendEntry(key="application", label="Application", color="#7c3aed", shape="circle", layer=GraphSemanticLayer.APP.value),
     LegendEntry(key="api_gateway", label="API Gateway", color="#2563eb", shape="diamond", layer=GraphSemanticLayer.API_GATEWAY.value),
     LegendEntry(key="blueprint", label="Blueprint", color="#818cf8", shape="square", layer=GraphSemanticLayer.ORCHESTRATION.value),
+    LegendEntry(key="eval_suite", label="Eval Suite", color="#65a30d", shape="diamond", layer=GraphSemanticLayer.ORCHESTRATION.value),
 ]
 
 RELATIONSHIP_LEGEND: list[LegendEntry] = [
@@ -143,6 +144,7 @@ RELATIONSHIP_LEGEND: list[LegendEntry] = [
     LegendEntry(key="authenticates_as", label="Authenticates As", color="#0891b2"),
     LegendEntry(key="scoped_to", label="Scoped To", color="#22d3ee"),
     LegendEntry(key="governs", label="Governs", color="#a16207"),
+    LegendEntry(key="evaluates", label="Evaluates", color="#65a30d"),
     LegendEntry(key="exhibits_drift", label="Exhibits Drift", color="#fb923c"),
     # Cloud-CNAPP
     LegendEntry(key="exposed_to", label="Exposed To", color="#e11d48"),

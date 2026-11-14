@@ -83,6 +83,7 @@ class RelationshipType(str, Enum):
     SCOPED_TO = "scoped_to"  # managed_identity/access_grant/drift_incident → tool
     GOVERNS = "governs"  # access_policy → agent/managed_identity/tool
     EXHIBITS_DRIFT = "exhibits_drift"  # agent ↔ drift_incident (bidirectional)
+    EVALUATES = "evaluates"  # eval_suite → agent/model it targets (declared in the eval's files)
 
     # ── Cloud-CNAPP: network exposure, data reachability, effective permissions ──
     EXPOSED_TO = "exposed_to"  # resource/server/agent → network/resource (public/internet reach)

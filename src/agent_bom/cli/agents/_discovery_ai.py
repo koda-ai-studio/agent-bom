@@ -9,6 +9,7 @@ from rich.panel import Panel as AiPanel
 from rich.table import Table as AiTable
 
 from agent_bom.cli.agents._discovery_state import DiscoveryRun
+from agent_bom.cli.agents._eval_suites_view import print_eval_summary
 from agent_bom.cli.agents._framework_topology_view import print_framework_topology
 from agent_bom.domain.mcp_model import FRAMEWORK_AGENTS_METADATA_KEY
 from agent_bom.models import Agent, AgentType, MCPServer, Package, ServerSurface
@@ -158,6 +159,8 @@ def _inventory_data(ai_report: Any) -> dict[str, Any]:
         "unique_models": sorted(ai_report.unique_models),
         "files_scanned": ai_report.files_scanned,
         "framework_agents": list(ai_report.framework_agents),
+        "eval_suites": list(ai_report.eval_suites),
+        "eval_coverage": ai_report.eval_coverage,
         "components": [_component_record(c) for c in ai_report.components],
     }
 
@@ -180,5 +183,6 @@ def scan_ai_inventory(run: DiscoveryRun) -> None:
     else:
         _print_all_safe(run, ai_report)
     print_framework_topology(run.con, ai_report.framework_agents)
+    print_eval_summary(run.con, ai_report.eval_suites, ai_report.eval_coverage)
     _attach_sdk_packages(run, ai_report, ai_inventory_paths[0])
     run.ctx.ai_inventory_data = _inventory_data(ai_report)

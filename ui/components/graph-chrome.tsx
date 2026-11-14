@@ -325,7 +325,7 @@ const LEGEND_KEYWORD_TYPES: ReadonlyArray<readonly [string, LineageNodeType]> = 
   ["agent", "agent"], ["identity", "managedIdentity"], ["grant", "accessGrant"], ["policy", "policy"],
   ["permission", "accessGrant"], ["server", "server"], ["package", "package"], ["cred", "credential"],
   ["tool", "tool"], ["vuln", "vulnerability"], ["cve", "vulnerability"], ["model", "model"],
-  ["dataset", "dataset"], ["cloud", "provider"], ["provider", "provider"], ["fleet", "fleet"], ["cluster", "cluster"],
+  ["dataset", "dataset"], ["eval suite", "evalSuite"], ["cloud", "provider"], ["provider", "provider"], ["fleet", "fleet"], ["cluster", "cluster"],
 ];
 
 function LegendIcon({ item }: { item: LegendItem }) {

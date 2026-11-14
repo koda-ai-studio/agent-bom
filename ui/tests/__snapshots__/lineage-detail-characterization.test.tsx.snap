@@ -60,6 +60,8 @@ exports[`lineage inspector rendering before extraction > preserves the driftInci
 
 exports[`lineage inspector rendering before extraction > preserves the environment overview DOM 1`] = `"e6066a6d1b292fd13ca5d691458c699c7b74081e6e02e8e8d02558b793820769"`;
 
+exports[`lineage inspector rendering before extraction > preserves the evalSuite overview DOM 1`] = `"e74da4b7188eb056f188b1da52ef02e6016a26aae0046771a8d739c925fa4f5d"`;
+
 exports[`lineage inspector rendering before extraction > preserves the federatedIdentity overview DOM 1`] = `"82f2cae6af4cc1d30171fb317f82156a454a0cfd3e99ac656b5f997e2d77c531"`;
 
 exports[`lineage inspector rendering before extraction > preserves the fleet overview DOM 1`] = `"bc57840695b9a5788758836524315458e30f3b63473bbf362e3d96a0183de813"`;

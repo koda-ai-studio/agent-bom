@@ -28,6 +28,7 @@ export const FOCUSED_LAYER_DEFAULTS: Record<LineageNodeType, boolean> = {
   model: false,
   framework: true,
   dataset: false,
+  evalSuite: false,
   container: false,
   cloudResource: false,
   environment: false,
@@ -72,6 +73,7 @@ export const EXPANDED_LAYER_DEFAULTS: Record<LineageNodeType, boolean> = {
   model: true,
   framework: true,
   dataset: true,
+  evalSuite: true,
   container: true,
   cloudResource: true,
   environment: true,
@@ -237,7 +239,7 @@ export function createRepositoryGraphFilters(): FilterState {
 export function createEnvironmentGraphFilters(): FilterState {
   return observedScopeFilters([
     "environment", "fleet", "cluster", "agent", "server", "sharedServer",
-    "tool", "toolCall", "credential", "package", "model", "dataset",
+    "tool", "toolCall", "credential", "package", "model", "dataset", "evalSuite",
     "container", "cloudResource", "dataStore", "apiGateway",
     "managedIdentity", "accessGrant", "vulnerability", "misconfiguration",
   ]);
@@ -495,6 +497,7 @@ export const LAYER_LABELS: {
   { key: "model", label: "Models", color: "bg-violet-500" },
   { key: "framework", label: "Frameworks", color: "bg-cyan-500" },
   { key: "dataset", label: "Datasets", color: "bg-cyan-500" },
+  { key: "evalSuite", label: "Eval suites", color: "bg-lime-600" },
   { key: "container", label: "Containers", color: "bg-indigo-500" },
   { key: "cloudResource", label: "Cloud", color: "bg-sky-500" },
   { key: "apiGateway", label: "API Gateways", color: "bg-blue-600" },

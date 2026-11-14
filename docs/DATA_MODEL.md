@@ -61,8 +61,8 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `TransportType` | 4 | `stdio`, `sse`, `streamable-http`, `unknown` |
 | `ServerSurface` | 13 | `mcp-server`, `container-image`, `oci-tarball`, `filesystem`, `sbom`, `external-scan`, `os-packages`, `sast`, `ai-inventory`, `data-connection`, `notebook`, `ci-workflow`, `other` |
 | `AgentStatus` | 2 | `configured`, `installed-not-configured` |
-| `EntityType` | 42 | `agent`, `server`, `package`, `tool`, `tool_call`, `model`, `dataset`, `framework`, `container`, `cloud_resource`, `resource`, `source_file`, `code_module`, `config_file`, `external_import`, `ci_job`, `directory`, `vulnerability`, `misconfiguration`, `credential`, `credential_ref`, `org`, `account`, `user`, `group`, `role`, `policy`, `service_account`, `service_principal`, `federated_identity`, `managed_identity`, `access_grant`, `access_policy`, `blueprint`, `drift_incident`, `data_store`, `api_gateway`, `application`, `provider`, `environment`, `fleet`, `cluster` |
-| `RelationshipType` | 53 | `platform_for`, `hosts`, `hosted_on`, `uses`, `uses_framework`, `depends_on`, `provides_tool`, `exposes_cred`, `reaches_tool`, `serves_model`, `contains`, `imports`, `defines`, `runs`, `configures`, `observes`, `affects`, `vulnerable_to`, `exploitable_via`, `remediates`, `triggers`, `shares_server`, `shares_cred`, `lateral_path`, `manages`, `owns`, `part_of`, `member_of`, `assumes`, `trusts`, `attached`, `inherits`, `can_access`, `cross_account_trust`, `authenticates_as`, `scoped_to`, `governs`, `exhibits_drift`, `exposed_to`, `stores`, `has_permission`, `protects`, `acted_as`, `invoked`, `called`, `used_credential`, `accessed`, `delegated_to`, `trace_step`, `recorded_activity`, `correlates_with`, `possibly_correlates_with`, `belongs_to` |
+| `EntityType` | 43 | `agent`, `server`, `package`, `tool`, `tool_call`, `model`, `dataset`, `framework`, `eval_suite`, `container`, `cloud_resource`, `resource`, `source_file`, `code_module`, `config_file`, `external_import`, `ci_job`, `directory`, `vulnerability`, `misconfiguration`, `credential`, `credential_ref`, `org`, `account`, `user`, `group`, `role`, `policy`, `service_account`, `service_principal`, `federated_identity`, `managed_identity`, `access_grant`, `access_policy`, `blueprint`, `drift_incident`, `data_store`, `api_gateway`, `application`, `provider`, `environment`, `fleet`, `cluster` |
+| `RelationshipType` | 54 | `platform_for`, `hosts`, `hosted_on`, `uses`, `uses_framework`, `depends_on`, `provides_tool`, `exposes_cred`, `reaches_tool`, `serves_model`, `contains`, `imports`, `defines`, `runs`, `configures`, `observes`, `affects`, `vulnerable_to`, `exploitable_via`, `remediates`, `triggers`, `shares_server`, `shares_cred`, `lateral_path`, `manages`, `owns`, `part_of`, `member_of`, `assumes`, `trusts`, `attached`, `inherits`, `can_access`, `cross_account_trust`, `authenticates_as`, `scoped_to`, `governs`, `exhibits_drift`, `evaluates`, `exposed_to`, `stores`, `has_permission`, `protects`, `acted_as`, `invoked`, `called`, `used_credential`, `accessed`, `delegated_to`, `trace_step`, `recorded_activity`, `correlates_with`, `possibly_correlates_with`, `belongs_to` |
 
 ### Live Schema Cross-Checks
 
@@ -73,7 +73,7 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `config/schemas/inventory.schema.json` | `Package.ecosystem` enum values | 9 |
 | `config/schemas/inventory.schema.json` | `MCPServer.transport` enum values | 3 |
 | `docs/openapi/v1.json` | paths | 385 |
-| `docs/openapi/v1.json` | component schemas | 739 |
+| `docs/openapi/v1.json` | component schemas | 742 |
 
 <!-- DATA_MODEL_ATLAS:END -->
 
@@ -240,7 +240,7 @@ used for blast-radius traversal, dashboards, and OCSF export. The
 and lists every allowed relationship pair, the analyses that walk each edge,
 evidence tiers and emitting modules.
 
-### Entity types (42)
+### Entity types (43)
 
 `AGENT`, `SERVER`, `PACKAGE`, `TOOL`, `TOOL_CALL`, `MODEL`, `DATASET`,
 `FRAMEWORK`, `CONTAINER`, `CLOUD_RESOURCE`, `RESOURCE`, `SOURCE_FILE`, `CODE_MODULE`,
@@ -249,7 +249,7 @@ evidence tiers and emitting modules.
 `USER`, `GROUP`, `ROLE`, `POLICY`, `SERVICE_ACCOUNT`, `SERVICE_PRINCIPAL`,
 `FEDERATED_IDENTITY`, `MANAGED_IDENTITY`, `ACCESS_GRANT`, `ACCESS_POLICY`,
 `DRIFT_INCIDENT`, `DATA_STORE`, `API_GATEWAY`, `APPLICATION`, `PROVIDER`,
-`ENVIRONMENT`, `FLEET`, `CLUSTER`, `BLUEPRINT`.
+`ENVIRONMENT`, `FLEET`, `CLUSTER`, `BLUEPRINT`, `EVAL_SUITE`.
 
 `FRAMEWORK` is a first-class AI-stack BOM entity for orchestration and
 observability libraries (LangChain, LangGraph, CrewAI, Langfuse-class imports).
@@ -257,6 +257,10 @@ Agents link via `USES_FRAMEWORK`; framework nodes `DEPENDS_ON` their packages;
 model string refs become `MODEL` nodes via `SERVES_MODEL` when evidence exists.
 This is inventory metadata projected as nodes — not a claim that every framework
 has full topology depth.
+
+`EVAL_SUITE` is an eval harness suite read from project files (promptfoo,
+deepeval, ragas, Inspect, OpenAI evals, LangSmith); `EVALUATES` links it to the
+agents and models its files target. See [AI eval coverage](AI_EVAL_COVERAGE.md).
 
 `DIRECTORY` is the repository folder/file-structure backbone — materialised by
 the repo-structure overlay from the project inventory, each directory and its
@@ -320,7 +324,7 @@ The effective-permissions overlay inherits a principal's access through the
 access is recorded on `HAS_PERMISSION` as `access="group"` and is not, by itself,
 a privilege escalation (only assume/trust chains are).
 
-### Relationship types (53)
+### Relationship types (54)
 
 | Group | Relationships | Direction |
 |---|---|---|
@@ -329,7 +333,7 @@ a privilege escalation (only assume/trust chains are).
 | Risk | `AFFECTS`, `VULNERABLE_TO`, `EXPLOITABLE_VIA`, `REMEDIATES`, `TRIGGERS` | mostly bidirectional |
 | Lateral movement | `SHARES_SERVER`, `SHARES_CRED`, `LATERAL_PATH` | symmetric |
 | Ownership and identity | `MANAGES`, `OWNS`, `PART_OF`, `MEMBER_OF`, `ASSUMES`, `TRUSTS`, `ATTACHED`, `INHERITS`, `CAN_ACCESS`, `CROSS_ACCOUNT_TRUST` | hierarchical / access path |
-| Agent-identity governance | `AUTHENTICATES_AS`, `SCOPED_TO`, `GOVERNS`, `EXHIBITS_DRIFT` | agent → identity → grant → tool; agent ↔ drift |
+| Agent-identity governance | `AUTHENTICATES_AS`, `SCOPED_TO`, `GOVERNS`, `EXHIBITS_DRIFT`, `EVALUATES` | agent → identity → grant → tool; agent ↔ drift |
 | Cloud-CNAPP | `EXPOSED_TO`, `STORES`, `HAS_PERMISSION`, `PROTECTS` | internet exposure; data-at-rest; effective permission; WAF/gateway fronts a resource |
 | Runtime | `ACTED_AS`, `INVOKED`, `CALLED`, `USED_CREDENTIAL`, `ACCESSED`, `DELEGATED_TO`, `TRACE_STEP` | source → target, time-stamped |
 | Recorded runtime metadata | `RECORDED_ACTIVITY` | source → target; execution and permissions unconfirmed; excluded from attack-path traversal |
