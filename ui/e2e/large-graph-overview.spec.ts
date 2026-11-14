@@ -637,6 +637,13 @@ test("a lone organization opens to its ranked accounts as the first view", async
       completeness: { status: "complete", returned: 30, total: 30, truncated: false, reasons: [] },
     } });
   });
+  // The grouped map's first frame shows organization and account groups, so the roll-up keeps the landing.
+  const scopeGroup = (key: string, count: number) => ({ id: `@group:${key}`, cluster_key: key, label: key, tier: 0, tier_label: "Scope",
+    member_count: count, worst_severity: "high", severity_counts: {}, on_attack_path_count: 0, risky: true, entity_types: {}, folded: false });
+  await page.route("**/v1/graph/cluster-map?**", route => route.fulfill({ json: {
+    scan_id: scanId, tenant_id: "default", mode: "cluster_map", tiers: [], nodes: [], edges: [], focus: null,
+    clusters: [scopeGroup("type:org", 1), scopeGroup("type:account", 30)], filters: { risky_only: false, member_limit: 8 },
+  } }));
   await page.goto(`/graph?scan=${scanId}`);
   const summary = page.getByTestId("graph-rollup-decision-surface");
   await expect(summary).toBeVisible({ timeout: 30_000 });
@@ -648,16 +655,26 @@ test("a lone organization opens to its ranked accounts as the first view", async
   expect(requested.slice(0, 2)).toEqual(["", "org:northstar"]);
 });
 
-test("a large flat estate with no scope to rank lands on the grouped map", async ({ page }) => {
+test("a large flat estate with no scope to rank lands on the grouped map without waiting on the roll-up", async ({ page }) => {
+  // Record whether the scope-navigation loading state ever renders, not only whether it is gone at the end.
+  await page.addInitScript(() => {
+    const seen = () => { if (document.body?.innerText.includes("Loading scope navigation")) (window as unknown as { __scopeLoadingSeen?: boolean }).__scopeLoadingSeen = true; };
+    new MutationObserver(seen).observe(document, { childList: true, subtree: true, characterData: true });
+  });
   await routeLargeGraphPage(page);
   const clusterReads: string[] = [];
-  await page.route("**/v1/graph/rollup?**", route => route.fulfill({ json: {
+  let rollupAnswered = false;
+  await page.route("**/v1/graph/rollup?**", async route => {
+    await new Promise(resolve => setTimeout(resolve, 3_000));
+    rollupAnswered = true;
+    await route.fulfill({ json: {
     scan_id: scanId, tenant_id: "default", created_at: createdAt, mode: "rollup", filters: {},
     top_level: [{ id: "pkg:42", label: "pyyaml@5.3", entity_type: "package", severity: "high",
       is_container: false, has_children: false, direct_child_count: 0, aggregate: rollupAggregate(0) }],
     edges: [], summary: { total_nodes: 1241, total_edges: 1860, top_level_count: 1, container_count: 0 },
     completeness: { status: "complete", returned: 1, total: 1, truncated: false, reasons: [] },
-  } }));
+  } }).catch(() => undefined);
+  });
   await page.route("**/v1/graph/cluster-map?**", route => {
     clusterReads.push(route.request().url());
     const group = (key: string, tier: number, count: number) => ({ id: `@group:${key}`, kind: "cluster", cluster_key: key, label: key, tier,
@@ -676,7 +693,10 @@ test("a large flat estate with no scope to rank lands on the grouped map", async
   });
   await page.goto(`/graph?scan=${scanId}`);
   await expect(page.getByTestId("graph-cluster-map")).toBeVisible({ timeout: 30_000 });
+  // The grouped map is up while the roll-up read is still outstanding.
+  expect(rollupAnswered).toBe(false);
   expect(clusterReads.length).toBeGreaterThan(0);
+  expect(await page.evaluate(() => (window as unknown as { __scopeLoadingSeen?: boolean }).__scopeLoadingSeen ?? false)).toBe(false);
   await expect(page.getByTestId("graph-rollup-decision-surface")).toHaveCount(0);
   await expect(page.getByTestId("cluster-map-canvas").locator(".react-flow__node")).toHaveCount(2);
 });

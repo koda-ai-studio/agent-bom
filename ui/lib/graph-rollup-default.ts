@@ -68,7 +68,12 @@ export interface GraphRollupEligibilityInput {
   blastRadiusActive: boolean;
   /** Retained for call-site compatibility; availability alone does not select a path. */
   attackPathCount?: number;
+  /** The grouped-map probe of a default landing; `flat` (no scope to rank) hands the landing to the grouped map. */
+  landingProbe?: GroupedLandingProbe;
 }
+
+/** `idle`: no probe for this landing; `pending`/`failed`: the roll-up decides; `scoped`/`flat`: what the grouped map showed. */
+export type GroupedLandingProbe = "idle" | "pending" | "scoped" | "flat" | "failed";
 
 export const DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD = 200;
 
@@ -85,6 +90,7 @@ export function graphRollupEligible(input: GraphRollupEligibilityInput): boolean
   // An explicit `?rollup=1` is an operator decision, but detail overlays above
   // still require their focused node set.
   if (input.rollupPreference === "force") return true;
+  if (input.landingProbe === "flat") return false;
   return input.estateNodeCount >= DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD;
 }
 
