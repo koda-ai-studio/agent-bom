@@ -198,6 +198,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - With `AGENT_BOM_STATE_DIR` set, a vulnerability database that earlier releases left at `~/.agent-bom/db/vulns.db` is still used while the state directory has none, so upgrading no longer drops a synced or air-gapped database. A database in the state directory, or `AGENT_BOM_DB_PATH`, still takes precedence, and `agent-bom db path` prints the one in use.
 - Flow-view lines no longer run along a neighbouring line or detour through other cards, and small MCP evidence flows space their rows for the tallest card.
 - A graph link with an unknown view, flow, step or map view, or an unknown address under the graph routes, now shows a not-found state with links back to the graph instead of silently opening another view.
+- Vendor logos on graph nodes (such as a repository's GitHub mark) stay legible on graphs of more than 12 nodes. The compact glyph those graphs draw had shrunk the logo to about 21 px; the badge is now larger and still clear of the entity icon and the edge handle.
 - Agent context records the snapshot an edge is stored under when the edge carries no source scan, as persistence does; a freshly built graph used to record an empty source scan there.
 
 ### Security
