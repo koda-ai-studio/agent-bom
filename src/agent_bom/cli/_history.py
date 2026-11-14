@@ -16,6 +16,7 @@ from agent_bom.cli._history_reload import blast_radius_cwe_ids, finding_cwe_inde
 from agent_bom.compliance_coverage import blast_radius_tag_kwargs
 from agent_bom.output import print_diff
 from agent_bom.output.compliance_narrative import ACCEPTED_FRAMEWORK_SLUGS
+from agent_bom.output.report_packing import load_report_document
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -372,13 +373,7 @@ def diff_cmd(baseline: str, current: Optional[str], output_format: str, output: 
 
 @click.command("rescan")
 @click.argument("baseline", type=click.Path(exists=True))
-@click.option(
-    "--output",
-    "-o",
-    type=str,
-    default=None,
-    help="Write verification report to this JSON file",
-)
+@click.option("--output", "-o", type=str, default=None, help="Write verification report to this JSON file")
 @click.option(
     "--md",
     type=str,
@@ -418,7 +413,7 @@ def rescan_command(baseline: str, output: Optional[str], md: Optional[str], enri
 
     # ── Load baseline ─────────────────────────────────────────────────────────
     try:
-        baseline_data = _json.loads(Path(baseline).read_text(encoding="utf-8"))
+        baseline_data = load_report_document(_json.loads(Path(baseline).read_text(encoding="utf-8")))
     except Exception as exc:
         con.print(f"  [red]Error loading baseline: {exc}[/red]")
         sys.exit(2)
@@ -745,7 +740,7 @@ def compliance_narrative_cmd(scan_file: str, framework: Optional[str], output_fo
     from agent_bom.output.compliance_narrative import generate_compliance_narrative
 
     console = Console()
-    saved = _report_from_json(_json.loads(Path(scan_file).read_text(encoding="utf-8")))
+    saved = _report_from_json(load_report_document(_json.loads(Path(scan_file).read_text(encoding="utf-8"))))
     report: AIBOMReport = cast("AIBOMReport", saved)
     narrative = generate_compliance_narrative(
         report,

@@ -24,6 +24,7 @@ from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.stores import _get_store
 from agent_bom.cli import main
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
+from agent_bom.output.report_packing import load_report_document
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
 TENANT = "posture-tenant-dimensions"
@@ -36,7 +37,7 @@ def demo_report(tmp_path_factory: pytest.TempPathFactory) -> dict:
     out = Path(tmp_path_factory.mktemp("posture-dims")) / "report.json"
     result = CliRunner().invoke(main, ["scan", "--offline", "--demo", "-f", "json", "-q", "-o", str(out)])
     assert out.is_file(), result.output
-    return json.loads(out.read_text())
+    return load_report_document(json.loads(out.read_text()))
 
 
 @pytest.fixture(autouse=True)

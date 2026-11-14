@@ -17,7 +17,10 @@ Published schemas:
 
 - `agent-mode-envelope.schema.json` - machine-readable CLI envelope returned
   by `--agent-mode` for assistant and automation callers.
-- `scan-report.schema.json` - top-level AI-BOM JSON scan output.
+- `scan-report.schema.json` - top-level AI-BOM JSON scan output, schema 1.0.
+  `scan -f json` writes this shape with `--report-format legacy`; by default it
+  writes the [v2 report](../v2/README.md), which expands to exactly this shape.
+  `POST /v1/results/push` stores this shape for either version.
 - `graph-export.schema.json` - graph nodes, edges, and materialized attack
   paths. HTTP dependency exports include authenticated tenant and job scope,
   canonical `entity_type`/`relationship` fields, and retained `kind` aliases.

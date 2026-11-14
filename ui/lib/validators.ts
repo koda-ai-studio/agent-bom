@@ -12,6 +12,8 @@
  *  - NaN / Infinity in numeric fields causing math failures
  */
 
+import { expandReport, ReportPackingError } from "@/lib/report-packing";
+
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024; // 10 MB
 
 type ValidationResult =
@@ -166,6 +168,16 @@ export function validateScanReport(jsonText: string): ValidationResult {
   }
 
   // 3. Top-level shape
+  if (!isPlainObject(parsed)) {
+    return { ok: false, error: "Report must be a JSON object." };
+  }
+
+  // Schema 2.0 reports reference shared records by ID; validate the expanded 1.0 shape.
+  try {
+    parsed = expandReport(parsed);
+  } catch (error) {
+    return { ok: false, error: `Invalid schema 2 report: ${error instanceof ReportPackingError ? error.message : "could not expand references"}.` };
+  }
   if (!isPlainObject(parsed)) {
     return { ok: false, error: "Report must be a JSON object." };
   }

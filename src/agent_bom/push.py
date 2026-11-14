@@ -537,6 +537,52 @@ async def _await_push_receipt(
     return latest
 
 
+def _version_url(push_url: str) -> str | None:
+    from urllib.parse import urlsplit, urlunsplit
+
+    parsed = urlsplit(push_url)
+    if not parsed.scheme or not parsed.path.rstrip("/").endswith(SCAN_PUSH_PATH):
+        return None
+    base = parsed.path.rstrip("/")[: -len(SCAN_PUSH_PATH)]
+    return urlunsplit(parsed._replace(path=f"{base}/version", query="", fragment=""))
+
+
+async def _server_report_schemas(push_url: str, api_key: str | None) -> list[str]:
+    from agent_bom.http_client import create_client
+    from agent_bom.security import SecurityError
+
+    url = _version_url(push_url)
+    if url is None:
+        return []
+    try:
+        _validate_push_destination_url(url)
+    except SecurityError:
+        return []
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    try:
+        async with create_client(timeout=10.0, cert=_push_tls_cert(), verify=_push_tls_verify()) as client:
+            resp = await client.get(url, headers=headers)
+    except (httpx.HTTPError, OSError, ValueError):
+        return []
+    if resp.status_code != 200:
+        return []
+    versions = _response_json(resp).get("report_schema_versions")
+    return [str(item) for item in versions] if isinstance(versions, list) else []
+
+
+def negotiate_push_report_format(push_url: str, api_key: str | None = None, *, requested: str = "v2") -> str:
+    """Report format to push: ``v2`` only when the control plane lists schema 2.0, else ``legacy``.
+
+    A control plane older than 0.115.0 does not advertise the field and would
+    store a 2.0 report without expanding it, so any doubt pushes 1.0.
+    """
+    from agent_bom.output.report_packing import REPORT_SCHEMA_V2
+
+    if requested != "v2":
+        return "legacy"
+    return "v2" if REPORT_SCHEMA_V2 in asyncio.run(_server_report_schemas(push_url, api_key)) else "legacy"
+
+
 def push_results(push_url: str, results: dict, api_key: str | None = None) -> bool:
     """Synchronous wrapper for pushing results to a dashboard."""
     result = asyncio.run(_push_async(push_url, results, api_key))

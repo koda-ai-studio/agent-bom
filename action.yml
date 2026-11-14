@@ -282,6 +282,8 @@ runs:
       id: scan
       shell: bash
       env:
+        # The action's report scripts and downstream steps read the 1.0 report shape.
+        AGENT_BOM_REPORT_FORMAT: ${{ env.AGENT_BOM_REPORT_FORMAT || 'legacy' }}
         HTTP_PROXY: ${{ env.HTTP_PROXY }}
         HTTPS_PROXY: ${{ env.HTTPS_PROXY }}
         NO_PROXY: ${{ env.NO_PROXY }}

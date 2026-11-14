@@ -12,6 +12,7 @@ from agent_bom.evidence.cloud_posture import cloud_posture
 from agent_bom.evidence.malicious_basis import malicious_label
 from agent_bom.evidence.scan_run import NOTHING_TO_SCAN, ScanOutcome, effective_scan_run
 from agent_bom.output import to_json
+from agent_bom.output.report_packing import pack_report
 
 
 def run_integrations(
@@ -301,7 +302,7 @@ def _execution_outcome(report: Any) -> Any:
 
 def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str | None, *, quiet: bool) -> bool:
     """Send the report to the control plane; automation must see an undelivered push."""
-    from agent_bom.push import PushAuthError, PushTooLargeError, normalize_scan_push_url, push_results
+    from agent_bom.push import PushAuthError, PushTooLargeError, negotiate_push_report_format, normalize_scan_push_url, push_results
     from agent_bom.security import sanitize_error, sanitize_url
 
     con = ctx.con
@@ -311,6 +312,8 @@ def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str
         resolved_push_url = normalize_scan_push_url(push_url)
         endpoint = sanitize_url(resolved_push_url)
         report_data = {**to_json(report), **({"target_scope": ctx.target_scope} if ctx.target_scope else {})}
+        if negotiate_push_report_format(resolved_push_url, push_api_key, requested=getattr(ctx, "report_format", "v2")) == "v2":
+            report_data = pack_report(report_data)
         if push_results(resolved_push_url, report_data, api_key=push_api_key):
             if not quiet:
                 con.print(f"\n  [green]Results pushed to {endpoint}[/green]")

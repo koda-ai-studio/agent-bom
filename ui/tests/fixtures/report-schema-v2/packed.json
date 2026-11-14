@@ -1,0 +1,3940 @@
+{
+  "schema_version": "2.0",
+  "canonical_id_schema_version": "3",
+  "document_type": "AI-BOM",
+  "spec_version": "2.0",
+  "scan_id": "scan-packing-test",
+  "ai_bom_version": "0.115.0",
+  "generated_at": "2026-01-01T12:00:00",
+  "scan_run": {
+    "schema_version": "1",
+    "scan_id": "scan-packing-test",
+    "generated_at": "2026-01-01T12:00:00",
+    "source_count": 0,
+    "outcome": "complete",
+    "issues": [],
+    "warning_count": 0,
+    "requested_scope_count": 0,
+    "complete_scope_count": 0,
+    "incomplete_scope_count": 0,
+    "scopes": []
+  },
+  "warnings": [],
+  "scan_sources": [],
+  "codeowners": [],
+  "has_mcp_context": true,
+  "has_agent_context": true,
+  "framework_catalogs": {
+    "mitre_attack": {
+      "schema_version": 1,
+      "catalog_id": "mitre_attack_enterprise_capec",
+      "catalog_type": "mitre_attack",
+      "source": "synced",
+      "attack_version": "snapshot 2026-04-14 (spec 3.3.0)",
+      "attack_release": "snapshot 2026-04-14 (spec 3.3.0)",
+      "updated_at": "2026-07-09T19:26:13.352541+00:00",
+      "fetched_at": 1783625173.331025,
+      "normalized_sha256": "5127556b35816982955f7af448c76d582ab6a55a171cef6dfc9d92c71def7707",
+      "sources": {
+        "enterprise_attack": {
+          "url": "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json",
+          "sha256": "fc783039f17fba646f79448f1322996457c658a9474f6d14c3bc924a2cf1c97d"
+        },
+        "capec": {
+          "url": "https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json",
+          "sha256": "ee6244f48259c1963d0507535e1843d67ba08fe58b4dfe351c1b74f9e376fa69"
+        }
+      },
+      "technique_count": 413,
+      "tactic_count": 0,
+      "cwe_mapping_count": 127,
+      "path": "<path:mitre_attack_catalog.json>"
+    }
+  },
+  "ai_bom_entities": {
+    "schema_version": "1.0",
+    "summary": {
+      "agents": 2,
+      "servers": 2,
+      "tools": 0,
+      "resources": 0,
+      "prompts": 0,
+      "packages": 3,
+      "relationships": 6
+    },
+    "agents": [
+      {
+        "id": "3dd80a98-54e3-5b93-a981-2bab8beafeb0",
+        "canonical_id": "3dd80a98-54e3-5b93-a981-2bab8beafeb0",
+        "previous_canonical_ids": [
+          "c0a95615-16ee-5cc1-9832-951eb7d78241",
+          "bc16f4f0-30fe-55d9-9509-b54f35ccebbe"
+        ],
+        "previous_graph_ids": [
+          "agent:desk"
+        ],
+        "name": "desk",
+        "agent_type": "claude-desktop",
+        "type": "claude-desktop",
+        "status": "configured",
+        "discovered_at": "2026-11-13T23:38:16.304711Z",
+        "last_seen": "2026-11-13T23:38:16.304711Z",
+        "config_path": "<path:a.json>",
+        "discovery_provenance_ref": "prov:403718697aef8552",
+        "server_ids": [
+          "df6a8b49-cb75-5e4f-ac32-a872101ddbbf"
+        ]
+      },
+      {
+        "id": "d052d690-0768-59ae-a736-b413333c4a5d",
+        "canonical_id": "d052d690-0768-59ae-a736-b413333c4a5d",
+        "previous_canonical_ids": [
+          "c4964f6d-1ddf-5379-aa64-f1d67b6cf6c2",
+          "e328a299-4a7e-5ce7-8b4f-de181cfc47f1"
+        ],
+        "previous_graph_ids": [
+          "agent:code"
+        ],
+        "name": "code",
+        "agent_type": "cursor",
+        "type": "cursor",
+        "status": "configured",
+        "discovered_at": "2026-11-13T23:38:16.304977Z",
+        "last_seen": "2026-11-13T23:38:16.304977Z",
+        "config_path": "<path:b.json>",
+        "discovery_provenance_ref": "prov:403718697aef8552",
+        "server_ids": [
+          "11c70450-678b-5258-9a61-bb1ae8618e6a"
+        ]
+      }
+    ],
+    "servers": [
+      {
+        "id": "11c70450-678b-5258-9a61-bb1ae8618e6a",
+        "canonical_id": "a79645f1-0499-55d6-850e-3b4af54133df",
+        "name": "web",
+        "surface": "mcp-server",
+        "fingerprint": "b144a90d-9f7f-5859-b04d-caf4042d40ee",
+        "auth_mode": "local-stdio",
+        "transport": "stdio",
+        "command": "npx",
+        "url": null,
+        "tool_ids": [],
+        "resource_ids": [],
+        "prompt_ids": [],
+        "package_ids": [
+          "e0e865f6-8076-51c5-951b-56ff0150eaa2"
+        ],
+        "discovery_provenance_ref": "prov:403718697aef8552"
+      },
+      {
+        "id": "df6a8b49-cb75-5e4f-ac32-a872101ddbbf",
+        "canonical_id": "f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+        "name": "fs",
+        "surface": "mcp-server",
+        "fingerprint": "f1496372-6255-59a3-8c4b-1aecea1ee4f8",
+        "auth_mode": "local-stdio",
+        "transport": "stdio",
+        "command": "npx",
+        "url": null,
+        "tool_ids": [],
+        "resource_ids": [],
+        "prompt_ids": [],
+        "package_ids": [
+          "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+          "b93c5133-7e5f-5217-ac0a-8ce1dc6a93c1",
+          "af0c27ee-169c-563e-a750-05afd0203234"
+        ],
+        "discovery_provenance_ref": "prov:403718697aef8552"
+      }
+    ],
+    "tools": [],
+    "resources": [],
+    "prompts": [],
+    "packages": [
+      {
+        "id": "af0c27ee-169c-563e-a750-05afd0203234",
+        "canonical_id": "af0c27ee-169c-563e-a750-05afd0203234",
+        "name": "six",
+        "version": "1.16.0",
+        "ecosystem": "pypi",
+        "purl": null,
+        "source_package": null,
+        "distro_name": null,
+        "distro_version": null,
+        "floating_reference": false,
+        "floating_reference_reason": null,
+        "is_malicious": false,
+        "malicious_reason": null,
+        "version_provenance_ref": "prov:82573e85217164a9",
+        "discovery_provenance_ref": "prov:05599c61d2e2d8c0",
+        "occurrence_count": 0,
+        "occurrences": [],
+        "vulnerability_count": 0,
+        "vulnerability_status": "scanned"
+      },
+      {
+        "id": "b93c5133-7e5f-5217-ac0a-8ce1dc6a93c1",
+        "canonical_id": "b93c5133-7e5f-5217-ac0a-8ce1dc6a93c1",
+        "name": "requests",
+        "version": "2.19.0",
+        "ecosystem": "pypi",
+        "purl": null,
+        "source_package": null,
+        "distro_name": null,
+        "distro_version": null,
+        "floating_reference": false,
+        "floating_reference_reason": null,
+        "is_malicious": false,
+        "malicious_reason": null,
+        "version_provenance_ref": "prov:cd42643eb396676a",
+        "discovery_provenance_ref": "prov:94d0e27502e7ce55",
+        "occurrence_count": 0,
+        "occurrences": [],
+        "vulnerability_count": 1,
+        "vulnerability_status": "scanned"
+      },
+      {
+        "id": "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+        "canonical_id": "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+        "name": "lodash",
+        "version": "4.17.20",
+        "ecosystem": "npm",
+        "purl": null,
+        "source_package": null,
+        "distro_name": null,
+        "distro_version": null,
+        "floating_reference": false,
+        "floating_reference_reason": null,
+        "is_malicious": false,
+        "malicious_reason": null,
+        "version_provenance_ref": "prov:3eac0d58c5f34243",
+        "discovery_provenance_ref": "prov:b4df184c24e2fb10",
+        "occurrence_count": 0,
+        "occurrences": [],
+        "vulnerability_count": 1,
+        "vulnerability_status": "scanned"
+      }
+    ],
+    "relationships": [
+      {
+        "from": "3dd80a98-54e3-5b93-a981-2bab8beafeb0",
+        "to": "df6a8b49-cb75-5e4f-ac32-a872101ddbbf",
+        "type": "uses"
+      },
+      {
+        "from": "df6a8b49-cb75-5e4f-ac32-a872101ddbbf",
+        "to": "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+        "type": "depends_on"
+      },
+      {
+        "from": "df6a8b49-cb75-5e4f-ac32-a872101ddbbf",
+        "to": "b93c5133-7e5f-5217-ac0a-8ce1dc6a93c1",
+        "type": "depends_on"
+      },
+      {
+        "from": "df6a8b49-cb75-5e4f-ac32-a872101ddbbf",
+        "to": "af0c27ee-169c-563e-a750-05afd0203234",
+        "type": "depends_on"
+      },
+      {
+        "from": "d052d690-0768-59ae-a736-b413333c4a5d",
+        "to": "11c70450-678b-5258-9a61-bb1ae8618e6a",
+        "type": "uses"
+      },
+      {
+        "from": "11c70450-678b-5258-9a61-bb1ae8618e6a",
+        "to": "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+        "type": "depends_on"
+      }
+    ]
+  },
+  "summary": {
+    "total_agents": 2,
+    "installed_unconfigured_agents": 0,
+    "total_mcp_servers": 2,
+    "total_packages": 4,
+    "unique_packages": 3,
+    "total_vulnerabilities": 2,
+    "suppressed_vulnerabilities": 0,
+    "vulnerability_occurrences": 3,
+    "suppressed_unfixed_os_findings": 0,
+    "critical_findings": 1,
+    "total_findings": 2,
+    "unique_assets": 1,
+    "critical_unified_findings": 1,
+    "high_unified_findings": 1,
+    "coverage_warnings": []
+  },
+  "finding_summary": {
+    "total": 2,
+    "suppressed": 0,
+    "by_severity": {
+      "critical": 1,
+      "high": 1,
+      "medium": 0,
+      "low": 0,
+      "unknown": 0
+    },
+    "by_type": {
+      "CVE": 2
+    },
+    "by_source": {
+      "MCP_SCAN": 2
+    }
+  },
+  "assets": [
+    {
+      "schema_version": "1",
+      "stable_id": "7dbd453e-4de7-531a-96fc-17eddf00e445",
+      "canonical_id": "7dbd453e-4de7-531a-96fc-17eddf00e445",
+      "name": "fs",
+      "asset_type": "mcp_server",
+      "identifier": null,
+      "location": "npx fs",
+      "provider": null,
+      "account_ref": null,
+      "region": null,
+      "environment": null,
+      "finding_ids": [
+        "7adebaa1-80a5-5d01-b6ad-3a14d32abbab",
+        "80466113-00bb-5d85-9c79-d0d79de3e9cc"
+      ]
+    }
+  ],
+  "coverage_warnings": [],
+  "inventory_snapshot": {
+    "schema_version": "1",
+    "generated_at": "2026-01-01T12:00:00",
+    "agents": [
+      {
+        "name": "desk",
+        "agent_type": "claude-desktop",
+        "config_path": "<path:a.json>",
+        "discovered_at": "2026-11-13T23:38:16.304711Z",
+        "last_seen": "2026-11-13T23:38:16.304711Z",
+        "mcp_servers": [
+          {
+            "name": "fs",
+            "command": "npx",
+            "args": [
+              "fs"
+            ],
+            "transport": "stdio",
+            "packages": [
+              {
+                "name": "lodash",
+                "version": "4.17.20",
+                "ecosystem": "npm",
+                "discovery_provenance_ref": "prov:d70d1d4027579cba"
+              },
+              {
+                "name": "requests",
+                "version": "2.19.0",
+                "ecosystem": "pypi",
+                "discovery_provenance_ref": "prov:274f8a204b29eaec"
+              },
+              {
+                "name": "six",
+                "version": "1.16.0",
+                "ecosystem": "pypi",
+                "discovery_provenance_ref": "prov:3e18969f5dfc85c2"
+              }
+            ],
+            "discovery_provenance_ref": "prov:403718697aef8552"
+          }
+        ],
+        "discovery_provenance_ref": "prov:403718697aef8552"
+      },
+      {
+        "name": "code",
+        "agent_type": "cursor",
+        "config_path": "<path:b.json>",
+        "discovered_at": "2026-11-13T23:38:16.304977Z",
+        "last_seen": "2026-11-13T23:38:16.304977Z",
+        "mcp_servers": [
+          {
+            "name": "web",
+            "command": "npx",
+            "args": [
+              "web"
+            ],
+            "transport": "stdio",
+            "packages": [
+              {
+                "name": "lodash",
+                "version": "4.17.20",
+                "ecosystem": "npm",
+                "discovery_provenance_ref": "prov:d70d1d4027579cba"
+              }
+            ],
+            "discovery_provenance_ref": "prov:403718697aef8552"
+          }
+        ],
+        "discovery_provenance_ref": "prov:403718697aef8552"
+      }
+    ]
+  },
+  "agents": [
+    {
+      "name": "desk",
+      "stable_id": "3dd80a98-54e3-5b93-a981-2bab8beafeb0",
+      "canonical_id": "3dd80a98-54e3-5b93-a981-2bab8beafeb0",
+      "previous_canonical_ids": [
+        "c0a95615-16ee-5cc1-9832-951eb7d78241",
+        "bc16f4f0-30fe-55d9-9509-b54f35ccebbe"
+      ],
+      "previous_graph_ids": [
+        "agent:desk"
+      ],
+      "agent_type": "claude-desktop",
+      "type": "claude-desktop",
+      "config_path": "<path:a.json>",
+      "source": null,
+      "status": "configured",
+      "discovered_at": "2026-11-13T23:38:16.304711Z",
+      "last_seen": "2026-11-13T23:38:16.304711Z",
+      "discovery_provenance_ref": "prov:403718697aef8552",
+      "metadata": {},
+      "automation_settings": [],
+      "mcp_servers": [
+        {
+          "name": "fs",
+          "stable_id": "f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+          "canonical_id": "f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+          "surface": "mcp-server",
+          "fingerprint": "f1496372-6255-59a3-8c4b-1aecea1ee4f8",
+          "command": "npx",
+          "args": [
+            "fs"
+          ],
+          "transport": "stdio",
+          "url": null,
+          "auth_mode": "local-stdio",
+          "mcp_version": null,
+          "has_credentials": false,
+          "credential_env_vars": [],
+          "embedded_credential_names": [],
+          "identity_bindings": [],
+          "registry_verified": false,
+          "registry_badge": "unknown",
+          "security_blocked": false,
+          "security_warnings": [],
+          "security_intelligence": [],
+          "discovery_sources": [],
+          "discovery_provenance_ref": "prov:403718697aef8552",
+          "tools": [],
+          "resources": [],
+          "prompts": [],
+          "packages": [
+            {
+              "package_ref": "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+              "introduced_in_layer": null,
+              "is_direct": true,
+              "parent_package": null,
+              "dependency_depth": 0,
+              "dependency_scope": "runtime",
+              "reachability_evidence": "runtime_dependency",
+              "resolved_from_registry": false,
+              "version_source": "detected",
+              "declared_version": null,
+              "resolved_version": null,
+              "version_confidence": null,
+              "version_resolved_at": null,
+              "version_evidence": null,
+              "version_conflicts": null,
+              "registry_version": null,
+              "license": null,
+              "license_expression": null,
+              "supplier": null,
+              "author": null,
+              "description": null,
+              "homepage": null,
+              "repository_url": null,
+              "download_url": null,
+              "copyright_text": null,
+              "deps_dev_resolved": false,
+              "integrity_verified": null,
+              "provenance_attested": null,
+              "provenance_source": null,
+              "provenance_status": null,
+              "scorecard_score": null,
+              "scorecard_checks": null,
+              "scorecard_repo": null,
+              "scorecard_lookup_state": null,
+              "scorecard_lookup_reason": null,
+              "vulnerabilities": [
+                {
+                  "id": "CVE-2024-0001",
+                  "suppressed": false,
+                  "suppression_state": null,
+                  "vex_source": null,
+                  "vex_statement_id": null,
+                  "vex_suppressed": false,
+                  "summary": "CVE-2024-0001 summary",
+                  "severity": "high",
+                  "severity_label": "high",
+                  "severity_state": "scored",
+                  "severity_source": null,
+                  "severity_basis": null,
+                  "severity_linked_cve": null,
+                  "severity_note": null,
+                  "advisory_sources": [],
+                  "primary_advisory_source": null,
+                  "advisory_coverage_state": "unknown",
+                  "match_confidence_tier": null,
+                  "confidence": null,
+                  "cvss_score": 8.1,
+                  "upstream_ids": [],
+                  "epss_cve_id": null,
+                  "kev_cve_id": null,
+                  "epss_score": null,
+                  "epss_percentile": null,
+                  "is_kev": false,
+                  "kev_status": null,
+                  "kev_date_added": null,
+                  "kev_due_date": null,
+                  "exploit_likelihood": "unassessed",
+                  "published_at": null,
+                  "modified_at": null,
+                  "aliases": [],
+                  "exploitability": null,
+                  "cwe_ids": [
+                    "CWE-79"
+                  ],
+                  "fixed_version": "9.9.9",
+                  "fix_is_prerelease": false,
+                  "references": [
+                    "https://example.invalid/CVE-2024-0001",
+                    "https://example.invalid/advisory"
+                  ],
+                  "nvd_published": null,
+                  "nvd_modified": null,
+                  "nvd_status": null,
+                  "vex_status": null,
+                  "vex_justification": null,
+                  "compliance_tags": {}
+                }
+              ]
+            },
+            {
+              "package_ref": "b93c5133-7e5f-5217-ac0a-8ce1dc6a93c1",
+              "introduced_in_layer": null,
+              "is_direct": true,
+              "parent_package": null,
+              "dependency_depth": 0,
+              "dependency_scope": "runtime",
+              "reachability_evidence": "runtime_dependency",
+              "resolved_from_registry": false,
+              "version_source": "detected",
+              "declared_version": null,
+              "resolved_version": null,
+              "version_confidence": null,
+              "version_resolved_at": null,
+              "version_evidence": null,
+              "version_conflicts": null,
+              "registry_version": null,
+              "license": null,
+              "license_expression": null,
+              "supplier": null,
+              "author": null,
+              "description": null,
+              "homepage": null,
+              "repository_url": null,
+              "download_url": null,
+              "copyright_text": null,
+              "deps_dev_resolved": false,
+              "integrity_verified": null,
+              "provenance_attested": null,
+              "provenance_source": null,
+              "provenance_status": null,
+              "scorecard_score": null,
+              "scorecard_checks": null,
+              "scorecard_repo": null,
+              "scorecard_lookup_state": null,
+              "scorecard_lookup_reason": null,
+              "vulnerabilities": [
+                {
+                  "id": "CVE-2023-0001",
+                  "suppressed": false,
+                  "suppression_state": null,
+                  "vex_source": null,
+                  "vex_statement_id": null,
+                  "vex_suppressed": false,
+                  "summary": "CVE-2023-0001 summary",
+                  "severity": "critical",
+                  "severity_label": "critical",
+                  "severity_state": "scored",
+                  "severity_source": null,
+                  "severity_basis": null,
+                  "severity_linked_cve": null,
+                  "severity_note": null,
+                  "advisory_sources": [],
+                  "primary_advisory_source": null,
+                  "advisory_coverage_state": "unknown",
+                  "match_confidence_tier": null,
+                  "confidence": null,
+                  "cvss_score": 8.1,
+                  "upstream_ids": [],
+                  "epss_cve_id": null,
+                  "kev_cve_id": null,
+                  "epss_score": null,
+                  "epss_percentile": null,
+                  "is_kev": false,
+                  "kev_status": null,
+                  "kev_date_added": null,
+                  "kev_due_date": null,
+                  "exploit_likelihood": "unassessed",
+                  "published_at": null,
+                  "modified_at": null,
+                  "aliases": [],
+                  "exploitability": null,
+                  "cwe_ids": [
+                    "CWE-94"
+                  ],
+                  "fixed_version": "9.9.9",
+                  "fix_is_prerelease": false,
+                  "references": [
+                    "https://example.invalid/CVE-2023-0001",
+                    "https://example.invalid/advisory"
+                  ],
+                  "nvd_published": null,
+                  "nvd_modified": null,
+                  "nvd_status": null,
+                  "vex_status": null,
+                  "vex_justification": null,
+                  "compliance_tags": {}
+                }
+              ]
+            },
+            {
+              "package_ref": "af0c27ee-169c-563e-a750-05afd0203234",
+              "introduced_in_layer": null,
+              "is_direct": true,
+              "parent_package": null,
+              "dependency_depth": 0,
+              "dependency_scope": "runtime",
+              "reachability_evidence": "runtime_dependency",
+              "resolved_from_registry": false,
+              "version_source": "detected",
+              "declared_version": null,
+              "resolved_version": null,
+              "version_confidence": null,
+              "version_resolved_at": null,
+              "version_evidence": null,
+              "version_conflicts": null,
+              "registry_version": null,
+              "license": null,
+              "license_expression": null,
+              "supplier": null,
+              "author": null,
+              "description": null,
+              "homepage": null,
+              "repository_url": null,
+              "download_url": null,
+              "copyright_text": null,
+              "deps_dev_resolved": false,
+              "integrity_verified": null,
+              "provenance_attested": null,
+              "provenance_source": null,
+              "provenance_status": null,
+              "scorecard_score": null,
+              "scorecard_checks": null,
+              "scorecard_repo": null,
+              "scorecard_lookup_state": null,
+              "scorecard_lookup_reason": null,
+              "vulnerabilities": []
+            }
+          ],
+          "permission_profile": null
+        }
+      ]
+    },
+    {
+      "name": "code",
+      "stable_id": "d052d690-0768-59ae-a736-b413333c4a5d",
+      "canonical_id": "d052d690-0768-59ae-a736-b413333c4a5d",
+      "previous_canonical_ids": [
+        "c4964f6d-1ddf-5379-aa64-f1d67b6cf6c2",
+        "e328a299-4a7e-5ce7-8b4f-de181cfc47f1"
+      ],
+      "previous_graph_ids": [
+        "agent:code"
+      ],
+      "agent_type": "cursor",
+      "type": "cursor",
+      "config_path": "<path:b.json>",
+      "source": null,
+      "status": "configured",
+      "discovered_at": "2026-11-13T23:38:16.304977Z",
+      "last_seen": "2026-11-13T23:38:16.304977Z",
+      "discovery_provenance_ref": "prov:403718697aef8552",
+      "metadata": {},
+      "automation_settings": [],
+      "mcp_servers": [
+        {
+          "name": "web",
+          "stable_id": "a79645f1-0499-55d6-850e-3b4af54133df",
+          "canonical_id": "a79645f1-0499-55d6-850e-3b4af54133df",
+          "surface": "mcp-server",
+          "fingerprint": "b144a90d-9f7f-5859-b04d-caf4042d40ee",
+          "command": "npx",
+          "args": [
+            "web"
+          ],
+          "transport": "stdio",
+          "url": null,
+          "auth_mode": "local-stdio",
+          "mcp_version": null,
+          "has_credentials": false,
+          "credential_env_vars": [],
+          "embedded_credential_names": [],
+          "identity_bindings": [],
+          "registry_verified": false,
+          "registry_badge": "unknown",
+          "security_blocked": false,
+          "security_warnings": [],
+          "security_intelligence": [],
+          "discovery_sources": [],
+          "discovery_provenance_ref": "prov:403718697aef8552",
+          "tools": [],
+          "resources": [],
+          "prompts": [],
+          "packages": [
+            {
+              "package_ref": "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+              "introduced_in_layer": null,
+              "is_direct": true,
+              "parent_package": null,
+              "dependency_depth": 0,
+              "dependency_scope": "runtime",
+              "reachability_evidence": "runtime_dependency",
+              "resolved_from_registry": false,
+              "version_source": "detected",
+              "declared_version": null,
+              "resolved_version": null,
+              "version_confidence": null,
+              "version_resolved_at": null,
+              "version_evidence": null,
+              "version_conflicts": null,
+              "registry_version": null,
+              "license": null,
+              "license_expression": null,
+              "supplier": null,
+              "author": null,
+              "description": null,
+              "homepage": null,
+              "repository_url": null,
+              "download_url": null,
+              "copyright_text": null,
+              "deps_dev_resolved": false,
+              "integrity_verified": null,
+              "provenance_attested": null,
+              "provenance_source": null,
+              "provenance_status": null,
+              "scorecard_score": null,
+              "scorecard_checks": null,
+              "scorecard_repo": null,
+              "scorecard_lookup_state": null,
+              "scorecard_lookup_reason": null,
+              "vulnerabilities": [
+                {
+                  "id": "CVE-2024-0001",
+                  "suppressed": false,
+                  "suppression_state": null,
+                  "vex_source": null,
+                  "vex_statement_id": null,
+                  "vex_suppressed": false,
+                  "summary": "CVE-2024-0001 summary",
+                  "severity": "high",
+                  "severity_label": "high",
+                  "severity_state": "scored",
+                  "severity_source": null,
+                  "severity_basis": null,
+                  "severity_linked_cve": null,
+                  "severity_note": null,
+                  "advisory_sources": [],
+                  "primary_advisory_source": null,
+                  "advisory_coverage_state": "unknown",
+                  "match_confidence_tier": null,
+                  "confidence": null,
+                  "cvss_score": 8.1,
+                  "upstream_ids": [],
+                  "epss_cve_id": null,
+                  "kev_cve_id": null,
+                  "epss_score": null,
+                  "epss_percentile": null,
+                  "is_kev": false,
+                  "kev_status": null,
+                  "kev_date_added": null,
+                  "kev_due_date": null,
+                  "exploit_likelihood": "unassessed",
+                  "published_at": null,
+                  "modified_at": null,
+                  "aliases": [],
+                  "exploitability": null,
+                  "cwe_ids": [
+                    "CWE-79"
+                  ],
+                  "fixed_version": "9.9.9",
+                  "fix_is_prerelease": false,
+                  "references": [
+                    "https://example.invalid/CVE-2024-0001",
+                    "https://example.invalid/advisory"
+                  ],
+                  "nvd_published": null,
+                  "nvd_modified": null,
+                  "nvd_status": null,
+                  "vex_status": null,
+                  "vex_justification": null,
+                  "compliance_tags": {}
+                }
+              ]
+            }
+          ],
+          "permission_profile": null
+        }
+      ]
+    }
+  ],
+  "blast_radius": [
+    {
+      "finding_ref": "7adebaa1-80a5-5d01-b6ad-3a14d32abbab",
+      "schema_version": "2",
+      "exposure_path_id": "blast:cve-2024-0001:npm:lodash:4.17.20",
+      "exposure_path_rank": 1,
+      "package_name": "lodash",
+      "package_version": "4.17.20",
+      "package_stable_id": "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+      "package_canonical_id": "e0e865f6-8076-51c5-951b-56ff0150eaa2",
+      "reachability_basis": [
+        "direct_agent_dependency"
+      ],
+      "actionable": true,
+      "severity_label": "high",
+      "severity_basis": null,
+      "severity_linked_cve": null,
+      "severity_note": null,
+      "severity_state": "scored",
+      "advisory_sources": [],
+      "primary_advisory_source": null,
+      "advisory_coverage_state": "unknown",
+      "epss_percentile": null,
+      "kev_status": null,
+      "kev_date_added": null,
+      "exploit_likelihood": "unassessed",
+      "published_at": null,
+      "modified_at": null,
+      "nvd_status": null,
+      "vex_statement_id": null,
+      "compliance_tags": {},
+      "package": "lodash@4.17.20",
+      "ecosystem": "npm",
+      "layer_attribution": [],
+      "introduced_in_layer": null,
+      "package_discovery_provenance_ref": "prov:897b2654a4e44af4",
+      "package_version_provenance_ref": "prov:3eac0d58c5f34243",
+      "scorecard_score": null,
+      "scorecard_repo": null,
+      "scorecard_lookup_state": null,
+      "affected_agent_ids": [
+        "3dd80a98-54e3-5b93-a981-2bab8beafeb0",
+        "d052d690-0768-59ae-a736-b413333c4a5d"
+      ],
+      "phantom_tools": [],
+      "framework_tags": [
+        "owasp_llm:LLM03",
+        "owasp_llm:LLM05",
+        "nist_ai_rmf:GOVERN-6.1",
+        "nist_ai_rmf:MANAGE-1.3",
+        "nist_ai_rmf:MAP-4.1",
+        "owasp_mcp:MCP03",
+        "owasp_mcp:MCP04",
+        "owasp_mcp:MCP07",
+        "owasp_mcp:MCP09",
+        "owasp_agentic:ASI04",
+        "owasp_agentic:ASI07",
+        "eu_ai_act:ART-15",
+        "eu_ai_act:ART-17",
+        "eu_ai_act:ART-9",
+        "nist_csf:DE.CM-01",
+        "nist_csf:GV.SC-05",
+        "nist_csf:GV.SC-07",
+        "nist_csf:ID.RA-05",
+        "nist_csf:RS.AN-03",
+        "iso_27001:A.5.19",
+        "iso_27001:A.5.20",
+        "iso_27001:A.5.21",
+        "iso_27001:A.5.23",
+        "iso_27001:A.8.28",
+        "iso_27001:A.8.8",
+        "soc2:CC8.1",
+        "soc2:CC9.1",
+        "soc2:CC9.2",
+        "cis:CIS-02.3",
+        "cis:CIS-07.4",
+        "cis:CIS-07.6",
+        "cmmc:RA.L2-3.11.3",
+        "cmmc:SI.L2-3.14.1",
+        "cmmc:SI.L2-3.14.2",
+        "cmmc:SI.L2-3.14.6",
+        "nist_800_53:CM-6",
+        "nist_800_53:SI-10",
+        "nist_800_53:SI-2",
+        "nist_800_53:SI-4",
+        "nist_800_53:SR-3",
+        "fedramp:FedRAMP-CM-6",
+        "fedramp:FedRAMP-SI-10",
+        "fedramp:FedRAMP-SI-2",
+        "fedramp:FedRAMP-SI-4",
+        "fedramp:FedRAMP-SR-3",
+        "pci_dss:11.3.1",
+        "pci_dss:6.3.1",
+        "pci_dss:6.3.2",
+        "pci_dss:6.3.3"
+      ],
+      "triage_priority": {
+        "score": 30.0,
+        "band": "low",
+        "reasons": [
+          "severity:high",
+          "impact_unknown"
+        ]
+      },
+      "all_server_credentials": [],
+      "hop_depth": 1,
+      "delegation_chain": [],
+      "transitive_agents": [],
+      "transitive_credentials": [],
+      "transitive_risk_score": 0.0,
+      "dependency_reachable": null,
+      "dependency_min_hop_distance": null,
+      "dependency_reachable_from_agents": [],
+      "symbol_reachability": null,
+      "reachable_affected_symbols": [],
+      "symbol_reachability_reason": null,
+      "symbol_reachability_tainted_argument": null,
+      "runtime_dependency_chain": []
+    },
+    {
+      "finding_ref": "80466113-00bb-5d85-9c79-d0d79de3e9cc",
+      "schema_version": "2",
+      "exposure_path_id": "blast:cve-2023-0001:pypi:requests:2.19.0",
+      "exposure_path_rank": 2,
+      "package_name": "requests",
+      "package_version": "2.19.0",
+      "package_stable_id": "b93c5133-7e5f-5217-ac0a-8ce1dc6a93c1",
+      "package_canonical_id": "b93c5133-7e5f-5217-ac0a-8ce1dc6a93c1",
+      "reachability_basis": [
+        "direct_agent_dependency"
+      ],
+      "actionable": true,
+      "severity_label": "critical",
+      "severity_basis": null,
+      "severity_linked_cve": null,
+      "severity_note": null,
+      "severity_state": "scored",
+      "advisory_sources": [],
+      "primary_advisory_source": null,
+      "advisory_coverage_state": "unknown",
+      "epss_percentile": null,
+      "kev_status": null,
+      "kev_date_added": null,
+      "exploit_likelihood": "unassessed",
+      "published_at": null,
+      "modified_at": null,
+      "nvd_status": null,
+      "vex_statement_id": null,
+      "compliance_tags": {},
+      "package": "requests@2.19.0",
+      "ecosystem": "pypi",
+      "layer_attribution": [],
+      "introduced_in_layer": null,
+      "package_discovery_provenance_ref": "prov:0f6993fb41e7639d",
+      "package_version_provenance_ref": "prov:cd42643eb396676a",
+      "scorecard_score": null,
+      "scorecard_repo": null,
+      "scorecard_lookup_state": null,
+      "affected_agent_ids": [
+        "3dd80a98-54e3-5b93-a981-2bab8beafeb0"
+      ],
+      "phantom_tools": [],
+      "framework_tags": [
+        "owasp_llm:LLM03",
+        "owasp_llm:LLM05",
+        "nist_ai_rmf:GOVERN-6.1",
+        "nist_ai_rmf:MANAGE-1.3",
+        "nist_ai_rmf:MAP-4.1",
+        "owasp_mcp:MCP03",
+        "owasp_mcp:MCP04",
+        "owasp_mcp:MCP07",
+        "owasp_mcp:MCP09",
+        "owasp_agentic:ASI04",
+        "eu_ai_act:ART-15",
+        "eu_ai_act:ART-17",
+        "eu_ai_act:ART-9",
+        "nist_csf:GV.SC-05",
+        "nist_csf:GV.SC-07",
+        "nist_csf:ID.RA-05",
+        "nist_csf:PR.DS-01",
+        "nist_csf:RS.AN-03",
+        "iso_27001:A.5.19",
+        "iso_27001:A.5.20",
+        "iso_27001:A.5.21",
+        "iso_27001:A.8.28",
+        "iso_27001:A.8.7",
+        "iso_27001:A.8.8",
+        "soc2:CC8.1",
+        "soc2:CC9.1",
+        "soc2:CC9.2",
+        "cis:CIS-02.3",
+        "cis:CIS-07.4",
+        "cis:CIS-16.1",
+        "cmmc:RA.L2-3.11.3",
+        "cmmc:SI.L2-3.14.1",
+        "cmmc:SI.L2-3.14.2",
+        "nist_800_53:CM-6",
+        "nist_800_53:SI-10",
+        "nist_800_53:SI-2",
+        "nist_800_53:SI-3",
+        "nist_800_53:SI-4",
+        "nist_800_53:SR-3",
+        "fedramp:FedRAMP-CM-6",
+        "fedramp:FedRAMP-SI-10",
+        "fedramp:FedRAMP-SI-2",
+        "fedramp:FedRAMP-SI-3",
+        "fedramp:FedRAMP-SI-4",
+        "fedramp:FedRAMP-SR-3",
+        "pci_dss:11.3.1",
+        "pci_dss:6.3.1",
+        "pci_dss:6.3.2",
+        "pci_dss:6.3.3"
+      ],
+      "triage_priority": {
+        "score": 40.0,
+        "band": "medium",
+        "reasons": [
+          "severity:critical",
+          "impact_unknown"
+        ]
+      },
+      "all_server_credentials": [],
+      "hop_depth": 1,
+      "delegation_chain": [],
+      "transitive_agents": [],
+      "transitive_credentials": [],
+      "transitive_risk_score": 0.0,
+      "dependency_reachable": null,
+      "dependency_min_hop_distance": null,
+      "dependency_reachable_from_agents": [],
+      "symbol_reachability": null,
+      "reachable_affected_symbols": [],
+      "symbol_reachability_reason": null,
+      "symbol_reachability_tainted_argument": null,
+      "runtime_dependency_chain": []
+    }
+  ],
+  "exposure_paths": {
+    "schema_version": "1",
+    "source": "blast_radius_output",
+    "path_count": 2,
+    "suppressed_path_count": 0,
+    "paths": [
+      {
+        "id": "blast:cve-2024-0001:npm:lodash:4.17.20",
+        "rank": 1,
+        "label": "lodash@4.17.20 -> CVE-2024-0001",
+        "summary": "CVE-2024-0001 affects lodash@4.17.20 with likely reachability.",
+        "riskScore": 7.0,
+        "severity": "high",
+        "source": "agent:cfg-cfffa4e6b3c4:desk",
+        "target": "vuln:CVE-2024-0001",
+        "hops": [
+          "agent:cfg-cfffa4e6b3c4:desk",
+          "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+          "pkg:npm:lodash@4.17.20",
+          "vuln:CVE-2024-0001"
+        ],
+        "relationships": [
+          {
+            "id": "agent:cfg-cfffa4e6b3c4:desk->uses->server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+            "type": "uses",
+            "source": "agent:cfg-cfffa4e6b3c4:desk",
+            "target": "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5"
+          },
+          {
+            "id": "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5->depends_on->pkg:npm:lodash@4.17.20",
+            "type": "depends_on",
+            "source": "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+            "target": "pkg:npm:lodash@4.17.20"
+          },
+          {
+            "id": "pkg:npm:lodash@4.17.20->vulnerable_to->vuln:CVE-2024-0001",
+            "type": "vulnerable_to",
+            "source": "pkg:npm:lodash@4.17.20",
+            "target": "vuln:CVE-2024-0001"
+          }
+        ],
+        "nodeIds": [
+          "agent:cfg-cfffa4e6b3c4:desk",
+          "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+          "pkg:npm:lodash@4.17.20",
+          "vuln:CVE-2024-0001"
+        ],
+        "nodeLabels": {
+          "pkg:npm:lodash@4.17.20": "lodash@4.17.20",
+          "agent:cfg-cfffa4e6b3c4:desk": "desk",
+          "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5": "fs",
+          "agent:cfg-e5e76e6bbe6d:code": "code",
+          "server:cfg-e5e76e6bbe6d:code:a79645f1-0499-55d6-850e-3b4af54133df": "web",
+          "vuln:CVE-2024-0001": "CVE-2024-0001"
+        },
+        "edgeIds": [
+          "agent:cfg-cfffa4e6b3c4:desk->uses->server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+          "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5->depends_on->pkg:npm:lodash@4.17.20",
+          "pkg:npm:lodash@4.17.20->vulnerable_to->vuln:CVE-2024-0001"
+        ],
+        "findings": [
+          "CVE-2024-0001"
+        ],
+        "affectedAgents": [
+          "desk",
+          "code"
+        ],
+        "affectedServers": [
+          "fs",
+          "web"
+        ],
+        "reachableTools": [],
+        "exposedCredentials": [],
+        "dependencyContext": {
+          "package": "lodash",
+          "version": "4.17.20",
+          "ecosystem": "npm",
+          "direct": true,
+          "dependencyDepth": 0,
+          "reachabilityEvidence": "runtime_dependency"
+        },
+        "fix": "Upgrade lodash to 9.9.9",
+        "evidence": [
+          "2 affected agent(s)",
+          "2 affected server(s)"
+        ],
+        "suppressed": false,
+        "provenance": {
+          "source": "blast_radius_output",
+          "graphPersistence": false
+        }
+      },
+      {
+        "id": "blast:cve-2023-0001:pypi:requests:2.19.0",
+        "rank": 2,
+        "label": "requests@2.19.0 -> CVE-2023-0001",
+        "summary": "CVE-2023-0001 affects requests@2.19.0 with likely reachability.",
+        "riskScore": 8.5,
+        "severity": "critical",
+        "source": "agent:cfg-cfffa4e6b3c4:desk",
+        "target": "vuln:CVE-2023-0001",
+        "hops": [
+          "agent:cfg-cfffa4e6b3c4:desk",
+          "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+          "pkg:pypi:requests@2.19.0",
+          "vuln:CVE-2023-0001"
+        ],
+        "relationships": [
+          {
+            "id": "agent:cfg-cfffa4e6b3c4:desk->uses->server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+            "type": "uses",
+            "source": "agent:cfg-cfffa4e6b3c4:desk",
+            "target": "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5"
+          },
+          {
+            "id": "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5->depends_on->pkg:pypi:requests@2.19.0",
+            "type": "depends_on",
+            "source": "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+            "target": "pkg:pypi:requests@2.19.0"
+          },
+          {
+            "id": "pkg:pypi:requests@2.19.0->vulnerable_to->vuln:CVE-2023-0001",
+            "type": "vulnerable_to",
+            "source": "pkg:pypi:requests@2.19.0",
+            "target": "vuln:CVE-2023-0001"
+          }
+        ],
+        "nodeIds": [
+          "agent:cfg-cfffa4e6b3c4:desk",
+          "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+          "pkg:pypi:requests@2.19.0",
+          "vuln:CVE-2023-0001"
+        ],
+        "nodeLabels": {
+          "pkg:pypi:requests@2.19.0": "requests@2.19.0",
+          "agent:cfg-cfffa4e6b3c4:desk": "desk",
+          "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5": "fs",
+          "vuln:CVE-2023-0001": "CVE-2023-0001"
+        },
+        "edgeIds": [
+          "agent:cfg-cfffa4e6b3c4:desk->uses->server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5",
+          "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5->depends_on->pkg:pypi:requests@2.19.0",
+          "pkg:pypi:requests@2.19.0->vulnerable_to->vuln:CVE-2023-0001"
+        ],
+        "findings": [
+          "CVE-2023-0001"
+        ],
+        "affectedAgents": [
+          "desk"
+        ],
+        "affectedServers": [
+          "fs"
+        ],
+        "reachableTools": [],
+        "exposedCredentials": [],
+        "dependencyContext": {
+          "package": "requests",
+          "version": "2.19.0",
+          "ecosystem": "pypi",
+          "direct": true,
+          "dependencyDepth": 0,
+          "reachabilityEvidence": "runtime_dependency"
+        },
+        "fix": "Upgrade requests to 9.9.9",
+        "evidence": [
+          "1 affected agent(s)",
+          "1 affected server(s)"
+        ],
+        "suppressed": false,
+        "provenance": {
+          "source": "blast_radius_output",
+          "graphPersistence": false
+        }
+      }
+    ]
+  },
+  "findings": [
+    {
+      "schema_version": "1",
+      "id": "7adebaa1-80a5-5d01-b6ad-3a14d32abbab",
+      "canonical_id": "7adebaa1-80a5-5d01-b6ad-3a14d32abbab",
+      "finding_id": "7adebaa1-80a5-5d01-b6ad-3a14d32abbab",
+      "occurrence_id": "7adebaa1-80a5-5d01-b6ad-3a14d32abbab",
+      "finding_group_id": "a9c248d7-f470-5488-9a47-413d874c8dee",
+      "finding_group_key": "vulnerability:cve-2024-0001:lodash",
+      "finding_type": "CVE",
+      "finding_category": "vulnerability",
+      "source": "MCP_SCAN",
+      "asset": {
+        "asset_ref": "7dbd453e-4de7-531a-96fc-17eddf00e445",
+        "source_ids": {
+          "location": "npx fs"
+        }
+      },
+      "provider": null,
+      "account_ref": null,
+      "region": null,
+      "environment": null,
+      "security_domain": "vuln",
+      "severity": "high",
+      "effective_severity": "high",
+      "severity_source": null,
+      "lane": "vulnerabilities",
+      "vendor_severity": null,
+      "cvss_severity": null,
+      "title": "CVE-2024-0001: lodash@4.17.20",
+      "description": "CVE-2024-0001 summary",
+      "cve_id": "CVE-2024-0001",
+      "vulnerability_id": "CVE-2024-0001",
+      "advisory_ids": [
+        "CVE-2024-0001"
+      ],
+      "cve_ids": [
+        "CVE-2024-0001"
+      ],
+      "match_confidence_tier": null,
+      "cwe_ids": [
+        "CWE-79"
+      ],
+      "cvss_score": 8.1,
+      "cvss_vector": null,
+      "attack_vector": null,
+      "attack_complexity": null,
+      "privileges_required": null,
+      "user_interaction": null,
+      "network_exploitable": false,
+      "advisory_aliases": [],
+      "upstream_ids": [],
+      "epss_cve_id": null,
+      "kev_cve_id": null,
+      "epss_score": null,
+      "is_kev": false,
+      "is_malicious": false,
+      "malicious_reason": null,
+      "fixed_version": "9.9.9",
+      "remediation_guidance": "Upgrade lodash to 9.9.9.",
+      "compliance_tags": [
+        "LLM03",
+        "LLM05",
+        "GOVERN-6.1",
+        "MANAGE-1.3",
+        "MAP-4.1",
+        "MCP03",
+        "MCP04",
+        "MCP07",
+        "MCP09",
+        "ASI04",
+        "ASI07",
+        "ART-15",
+        "ART-17",
+        "ART-9",
+        "DE.CM-01",
+        "GV.SC-05",
+        "GV.SC-07",
+        "ID.RA-05",
+        "RS.AN-03",
+        "A.5.19",
+        "A.5.20",
+        "A.5.21",
+        "A.5.23",
+        "A.8.28",
+        "A.8.8",
+        "CC8.1",
+        "CC9.1",
+        "CC9.2",
+        "CIS-02.3",
+        "CIS-07.4",
+        "CIS-07.6",
+        "RA.L2-3.11.3",
+        "SI.L2-3.14.1",
+        "SI.L2-3.14.2",
+        "SI.L2-3.14.6",
+        "CM-6",
+        "SI-10",
+        "SI-2",
+        "SI-4",
+        "SR-3",
+        "FedRAMP-CM-6",
+        "FedRAMP-SI-10",
+        "FedRAMP-SI-2",
+        "FedRAMP-SI-4",
+        "FedRAMP-SR-3",
+        "11.3.1",
+        "6.3.1",
+        "6.3.2",
+        "6.3.3"
+      ],
+      "applicable_frameworks": [
+        "owasp-llm",
+        "owasp-mcp",
+        "owasp-agentic",
+        "atlas",
+        "attack",
+        "nist",
+        "nist-csf",
+        "nist-800-53",
+        "fedramp",
+        "eu-ai-act",
+        "iso-27001",
+        "soc2",
+        "cis",
+        "cmmc",
+        "pci-dss"
+      ],
+      "control_refs": [
+        "iso_27001:A.5.19:adbf4456",
+        "iso_27001:A.5.20:ebe4eba1",
+        "iso_27001:A.5.21:572cb882",
+        "iso_27001:A.5.23:c4616ff6",
+        "iso_27001:A.8.28:91ef6d5c",
+        "iso_27001:A.8.8:81e169df",
+        "owasp_llm:LLM03:6363864e",
+        "owasp_llm:LLM05:1b3faaf4",
+        "nist_ai_rmf:GOVERN-6.1:233bad2c",
+        "nist_ai_rmf:MANAGE-1.3:55b4701b",
+        "nist_ai_rmf:MAP-4.1:b3d2e496",
+        "owasp_mcp:MCP03:c3ccf193",
+        "owasp_mcp:MCP04:c89c5e0d",
+        "owasp_mcp:MCP07:ae2647e0",
+        "owasp_mcp:MCP09:f95a4597",
+        "owasp_agentic:ASI04:b0884b03",
+        "owasp_agentic:ASI07:ece8382b",
+        "eu_ai_act:ART-15:2eae0a4f",
+        "eu_ai_act:ART-17:b9569179",
+        "eu_ai_act:ART-9:9ee120da",
+        "nist_csf:DE.CM-01:1cd960da",
+        "nist_csf:GV.SC-05:5745b008",
+        "nist_csf:GV.SC-07:dc1d087c",
+        "nist_csf:ID.RA-05:26084b57",
+        "nist_csf:RS.AN-03:b71239ce",
+        "soc2:CC8.1:01952ae5",
+        "soc2:CC9.1:c16f8302",
+        "soc2:CC9.2:346b9b28",
+        "cis:CIS-02.3:1a42f0ba",
+        "cis:CIS-07.4:a032cf34",
+        "cis:CIS-07.6:f837cc07",
+        "cmmc:RA.L2-3.11.3:96b44e21",
+        "cmmc:SI.L2-3.14.1:0957fc16",
+        "cmmc:SI.L2-3.14.2:395ddd17",
+        "cmmc:SI.L2-3.14.6:8614102a",
+        "nist_800_53:CM-6:11ab59f5",
+        "nist_800_53:SI-10:7b4a4c27",
+        "nist_800_53:SI-2:6936d863",
+        "nist_800_53:SI-4:8184abe4",
+        "nist_800_53:SR-3:72a74e3b",
+        "fedramp:FedRAMP-CM-6:5448f657",
+        "fedramp:FedRAMP-SI-10:e815302b",
+        "fedramp:FedRAMP-SI-2:67bff9e4",
+        "fedramp:FedRAMP-SI-4:c618ef45",
+        "fedramp:FedRAMP-SR-3:e8fd1151",
+        "pci_dss:11.3.1:d815c807",
+        "pci_dss:6.3.1:d121c9e3",
+        "pci_dss:6.3.2:99cfd47a",
+        "pci_dss:6.3.3:2bfff601"
+      ],
+      "owasp_tags": [
+        "LLM03",
+        "LLM05"
+      ],
+      "atlas_tags": [],
+      "attack_tags": [],
+      "nist_ai_rmf_tags": [
+        "GOVERN-6.1",
+        "MANAGE-1.3",
+        "MAP-4.1"
+      ],
+      "owasp_mcp_tags": [
+        "MCP03",
+        "MCP04",
+        "MCP07",
+        "MCP09"
+      ],
+      "owasp_agentic_tags": [
+        "ASI04",
+        "ASI07"
+      ],
+      "eu_ai_act_tags": [
+        "ART-15",
+        "ART-17",
+        "ART-9"
+      ],
+      "nist_csf_tags": [
+        "DE.CM-01",
+        "GV.SC-05",
+        "GV.SC-07",
+        "ID.RA-05",
+        "RS.AN-03"
+      ],
+      "iso_27001_tags": [
+        "A.5.19",
+        "A.5.20",
+        "A.5.21",
+        "A.5.23",
+        "A.8.28",
+        "A.8.8"
+      ],
+      "soc2_tags": [
+        "CC8.1",
+        "CC9.1",
+        "CC9.2"
+      ],
+      "cis_tags": [
+        "CIS-02.3",
+        "CIS-07.4",
+        "CIS-07.6"
+      ],
+      "cmmc_tags": [
+        "RA.L2-3.11.3",
+        "SI.L2-3.14.1",
+        "SI.L2-3.14.2",
+        "SI.L2-3.14.6"
+      ],
+      "nist_800_53_tags": [
+        "CM-6",
+        "SI-10",
+        "SI-2",
+        "SI-4",
+        "SR-3"
+      ],
+      "fedramp_tags": [
+        "FedRAMP-CM-6",
+        "FedRAMP-SI-10",
+        "FedRAMP-SI-2",
+        "FedRAMP-SI-4",
+        "FedRAMP-SR-3"
+      ],
+      "pci_dss_tags": [
+        "11.3.1",
+        "6.3.1",
+        "6.3.2",
+        "6.3.3"
+      ],
+      "related_findings": [],
+      "evidence": {
+        "package_name": "lodash",
+        "package_version": "4.17.20",
+        "ecosystem": "npm",
+        "package_is_direct": true,
+        "package_parent": null,
+        "package_dependency_depth": 0,
+        "package_dependency_scope": "runtime",
+        "package_reachability_evidence": "runtime_dependency",
+        "affected_server_count": 2,
+        "affected_server_surfaces": {
+          "fs": "mcp-server",
+          "web": "mcp-server"
+        },
+        "agent_server_links": [
+          {
+            "agent": "desk",
+            "server": "fs",
+            "agent_ref": "agent:cfg-cfffa4e6b3c4:desk",
+            "server_ref": "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5"
+          },
+          {
+            "agent": "code",
+            "server": "web",
+            "agent_ref": "agent:cfg-e5e76e6bbe6d:code",
+            "server_ref": "server:cfg-e5e76e6bbe6d:code:a79645f1-0499-55d6-850e-3b4af54133df"
+          }
+        ],
+        "graph_tool_refs": [],
+        "graph_credential_refs": [],
+        "package_purl": null,
+        "exposed_credential_count": 0,
+        "server_credentials": [],
+        "exposed_tool_count": 0,
+        "hop_depth": 1,
+        "delegation_chain": [],
+        "transitive_agents": [],
+        "transitive_servers": [],
+        "transitive_packages": [],
+        "transitive_credential_count": 0,
+        "transitive_risk_score": 0.0,
+        "dependency_reachable": null,
+        "dependency_min_hop_distance": null,
+        "dependency_reachable_from_agents": [],
+        "graph_reachable": null,
+        "graph_min_hop_distance": null,
+        "graph_reachable_from_agents": [],
+        "symbol_reachability": null,
+        "reachable_affected_symbols": [],
+        "symbol_reachability_reason": null,
+        "runtime_dependency_chain": [],
+        "layer_attribution": [],
+        "published_at": null,
+        "modified_at": null,
+        "severity_source": null,
+        "severity_basis": null,
+        "severity_linked_cve": null,
+        "severity_note": null,
+        "cvss_vector": null,
+        "attack_vector": null,
+        "attack_complexity": null,
+        "privileges_required": null,
+        "user_interaction": null,
+        "network_exploitable": false,
+        "upstream_ids": [],
+        "epss_cve_id": null,
+        "kev_cve_id": null,
+        "epss_score": null,
+        "epss_percentile": null,
+        "is_kev": false,
+        "kev_status": null,
+        "kev_date_added": null,
+        "kev_due_date": null,
+        "vulnerability_compliance_tags": {},
+        "package_discovery_provenance_ref": "prov:897b2654a4e44af4",
+        "package_version_provenance_ref": "prov:3eac0d58c5f34243",
+        "references": [
+          "https://example.invalid/CVE-2024-0001",
+          "https://example.invalid/advisory"
+        ],
+        "cve_ids": [
+          "CVE-2024-0001"
+        ],
+        "triage_priority": {
+          "score": 30.0,
+          "band": "low",
+          "reasons": [
+            "severity:high",
+            "impact_unknown"
+          ]
+        }
+      },
+      "node_id": "pkg:npm:lodash@4.17.20",
+      "finding_node_id": "vuln:CVE-2024-0001",
+      "entity_type": "server",
+      "risk_score": 7.0,
+      "reachability": "likely",
+      "graph_reachable": null,
+      "graph_min_hop_distance": null,
+      "graph_reachable_from_agents": [],
+      "is_actionable": true,
+      "impact_category": "unknown",
+      "is_direct": true,
+      "dependency_depth": 0,
+      "introduced_via": null,
+      "first_seen": "2026-01-01T12:00:00",
+      "owner": null,
+      "sla_due_at": "2026-01-31T12:00:00+00:00",
+      "sla_due_at_source": "severity-kev/v1",
+      "kev_due_date": null,
+      "status": null,
+      "lifecycle_status": null,
+      "suppressed": false,
+      "suppression_id": null,
+      "suppression_state": null,
+      "suppression_reason": null,
+      "unsuppressed_risk_score": null,
+      "vex_status": null,
+      "vex_justification": null,
+      "vex_source": null,
+      "vex_suppressed": false,
+      "ai_risk_context": null,
+      "ai_summary": null,
+      "attack_vector_summary": null,
+      "affected_servers": [
+        "fs",
+        "web"
+      ],
+      "affected_agents": [
+        "desk",
+        "code"
+      ],
+      "exposed_credentials": [],
+      "exposed_tools": []
+    },
+    {
+      "schema_version": "1",
+      "id": "80466113-00bb-5d85-9c79-d0d79de3e9cc",
+      "canonical_id": "80466113-00bb-5d85-9c79-d0d79de3e9cc",
+      "finding_id": "80466113-00bb-5d85-9c79-d0d79de3e9cc",
+      "occurrence_id": "80466113-00bb-5d85-9c79-d0d79de3e9cc",
+      "finding_group_id": "c84a53de-8d65-59f0-94ee-13076e0376bf",
+      "finding_group_key": "vulnerability:cve-2023-0001:requests",
+      "finding_type": "CVE",
+      "finding_category": "vulnerability",
+      "source": "MCP_SCAN",
+      "asset": {
+        "asset_ref": "7dbd453e-4de7-531a-96fc-17eddf00e445",
+        "source_ids": {
+          "location": "npx fs"
+        }
+      },
+      "provider": null,
+      "account_ref": null,
+      "region": null,
+      "environment": null,
+      "security_domain": "vuln",
+      "severity": "critical",
+      "effective_severity": "critical",
+      "severity_source": null,
+      "lane": "vulnerabilities",
+      "vendor_severity": null,
+      "cvss_severity": null,
+      "title": "CVE-2023-0001: requests@2.19.0",
+      "description": "CVE-2023-0001 summary",
+      "cve_id": "CVE-2023-0001",
+      "vulnerability_id": "CVE-2023-0001",
+      "advisory_ids": [
+        "CVE-2023-0001"
+      ],
+      "cve_ids": [
+        "CVE-2023-0001"
+      ],
+      "match_confidence_tier": null,
+      "cwe_ids": [
+        "CWE-94"
+      ],
+      "cvss_score": 8.1,
+      "cvss_vector": null,
+      "attack_vector": null,
+      "attack_complexity": null,
+      "privileges_required": null,
+      "user_interaction": null,
+      "network_exploitable": false,
+      "advisory_aliases": [],
+      "upstream_ids": [],
+      "epss_cve_id": null,
+      "kev_cve_id": null,
+      "epss_score": null,
+      "is_kev": false,
+      "is_malicious": false,
+      "malicious_reason": null,
+      "fixed_version": "9.9.9",
+      "remediation_guidance": "Upgrade requests to 9.9.9.",
+      "compliance_tags": [
+        "LLM03",
+        "LLM05",
+        "GOVERN-6.1",
+        "MANAGE-1.3",
+        "MAP-4.1",
+        "MCP03",
+        "MCP04",
+        "MCP07",
+        "MCP09",
+        "ASI04",
+        "ART-15",
+        "ART-17",
+        "ART-9",
+        "GV.SC-05",
+        "GV.SC-07",
+        "ID.RA-05",
+        "PR.DS-01",
+        "RS.AN-03",
+        "A.5.19",
+        "A.5.20",
+        "A.5.21",
+        "A.8.28",
+        "A.8.7",
+        "A.8.8",
+        "CC8.1",
+        "CC9.1",
+        "CC9.2",
+        "CIS-02.3",
+        "CIS-07.4",
+        "CIS-16.1",
+        "RA.L2-3.11.3",
+        "SI.L2-3.14.1",
+        "SI.L2-3.14.2",
+        "CM-6",
+        "SI-10",
+        "SI-2",
+        "SI-3",
+        "SI-4",
+        "SR-3",
+        "FedRAMP-CM-6",
+        "FedRAMP-SI-10",
+        "FedRAMP-SI-2",
+        "FedRAMP-SI-3",
+        "FedRAMP-SI-4",
+        "FedRAMP-SR-3",
+        "11.3.1",
+        "6.3.1",
+        "6.3.2",
+        "6.3.3"
+      ],
+      "applicable_frameworks": [
+        "owasp-llm",
+        "owasp-mcp",
+        "owasp-agentic",
+        "atlas",
+        "attack",
+        "nist",
+        "nist-csf",
+        "nist-800-53",
+        "fedramp",
+        "eu-ai-act",
+        "iso-27001",
+        "soc2",
+        "cis",
+        "cmmc",
+        "pci-dss"
+      ],
+      "control_refs": [
+        "iso_27001:A.5.19:adbf4456",
+        "iso_27001:A.5.20:ebe4eba1",
+        "iso_27001:A.5.21:572cb882",
+        "iso_27001:A.8.28:91ef6d5c",
+        "iso_27001:A.8.7:01a5b982",
+        "iso_27001:A.8.8:81e169df",
+        "owasp_llm:LLM03:6363864e",
+        "owasp_llm:LLM05:1b3faaf4",
+        "nist_ai_rmf:GOVERN-6.1:233bad2c",
+        "nist_ai_rmf:MANAGE-1.3:55b4701b",
+        "nist_ai_rmf:MAP-4.1:b3d2e496",
+        "owasp_mcp:MCP03:c3ccf193",
+        "owasp_mcp:MCP04:c89c5e0d",
+        "owasp_mcp:MCP07:ae2647e0",
+        "owasp_mcp:MCP09:f95a4597",
+        "owasp_agentic:ASI04:b0884b03",
+        "eu_ai_act:ART-15:2eae0a4f",
+        "eu_ai_act:ART-17:b9569179",
+        "eu_ai_act:ART-9:9ee120da",
+        "nist_csf:GV.SC-05:5745b008",
+        "nist_csf:GV.SC-07:dc1d087c",
+        "nist_csf:ID.RA-05:26084b57",
+        "nist_csf:PR.DS-01:8be3e945",
+        "nist_csf:RS.AN-03:b71239ce",
+        "soc2:CC8.1:01952ae5",
+        "soc2:CC9.1:c16f8302",
+        "soc2:CC9.2:346b9b28",
+        "cis:CIS-02.3:1a42f0ba",
+        "cis:CIS-07.4:a032cf34",
+        "cis:CIS-16.1:ff1bfdbf",
+        "cmmc:RA.L2-3.11.3:96b44e21",
+        "cmmc:SI.L2-3.14.1:0957fc16",
+        "cmmc:SI.L2-3.14.2:395ddd17",
+        "nist_800_53:CM-6:11ab59f5",
+        "nist_800_53:SI-10:7b4a4c27",
+        "nist_800_53:SI-2:6936d863",
+        "nist_800_53:SI-3:7fb6ec23",
+        "nist_800_53:SI-4:8184abe4",
+        "nist_800_53:SR-3:72a74e3b",
+        "fedramp:FedRAMP-CM-6:5448f657",
+        "fedramp:FedRAMP-SI-10:e815302b",
+        "fedramp:FedRAMP-SI-2:67bff9e4",
+        "fedramp:FedRAMP-SI-3:1da03e7d",
+        "fedramp:FedRAMP-SI-4:c618ef45",
+        "fedramp:FedRAMP-SR-3:e8fd1151",
+        "pci_dss:11.3.1:d815c807",
+        "pci_dss:6.3.1:d121c9e3",
+        "pci_dss:6.3.2:99cfd47a",
+        "pci_dss:6.3.3:2bfff601"
+      ],
+      "owasp_tags": [
+        "LLM03",
+        "LLM05"
+      ],
+      "atlas_tags": [],
+      "attack_tags": [],
+      "nist_ai_rmf_tags": [
+        "GOVERN-6.1",
+        "MANAGE-1.3",
+        "MAP-4.1"
+      ],
+      "owasp_mcp_tags": [
+        "MCP03",
+        "MCP04",
+        "MCP07",
+        "MCP09"
+      ],
+      "owasp_agentic_tags": [
+        "ASI04"
+      ],
+      "eu_ai_act_tags": [
+        "ART-15",
+        "ART-17",
+        "ART-9"
+      ],
+      "nist_csf_tags": [
+        "GV.SC-05",
+        "GV.SC-07",
+        "ID.RA-05",
+        "PR.DS-01",
+        "RS.AN-03"
+      ],
+      "iso_27001_tags": [
+        "A.5.19",
+        "A.5.20",
+        "A.5.21",
+        "A.8.28",
+        "A.8.7",
+        "A.8.8"
+      ],
+      "soc2_tags": [
+        "CC8.1",
+        "CC9.1",
+        "CC9.2"
+      ],
+      "cis_tags": [
+        "CIS-02.3",
+        "CIS-07.4",
+        "CIS-16.1"
+      ],
+      "cmmc_tags": [
+        "RA.L2-3.11.3",
+        "SI.L2-3.14.1",
+        "SI.L2-3.14.2"
+      ],
+      "nist_800_53_tags": [
+        "CM-6",
+        "SI-10",
+        "SI-2",
+        "SI-3",
+        "SI-4",
+        "SR-3"
+      ],
+      "fedramp_tags": [
+        "FedRAMP-CM-6",
+        "FedRAMP-SI-10",
+        "FedRAMP-SI-2",
+        "FedRAMP-SI-3",
+        "FedRAMP-SI-4",
+        "FedRAMP-SR-3"
+      ],
+      "pci_dss_tags": [
+        "11.3.1",
+        "6.3.1",
+        "6.3.2",
+        "6.3.3"
+      ],
+      "related_findings": [],
+      "evidence": {
+        "package_name": "requests",
+        "package_version": "2.19.0",
+        "ecosystem": "pypi",
+        "package_is_direct": true,
+        "package_parent": null,
+        "package_dependency_depth": 0,
+        "package_dependency_scope": "runtime",
+        "package_reachability_evidence": "runtime_dependency",
+        "affected_server_count": 1,
+        "affected_server_surfaces": {
+          "fs": "mcp-server"
+        },
+        "agent_server_links": [
+          {
+            "agent": "desk",
+            "server": "fs",
+            "agent_ref": "agent:cfg-cfffa4e6b3c4:desk",
+            "server_ref": "server:cfg-cfffa4e6b3c4:desk:f4b1c8e5-9205-53b2-ba6c-3806a363e2a5"
+          }
+        ],
+        "graph_tool_refs": [],
+        "graph_credential_refs": [],
+        "package_purl": null,
+        "exposed_credential_count": 0,
+        "server_credentials": [],
+        "exposed_tool_count": 0,
+        "hop_depth": 1,
+        "delegation_chain": [],
+        "transitive_agents": [],
+        "transitive_servers": [],
+        "transitive_packages": [],
+        "transitive_credential_count": 0,
+        "transitive_risk_score": 0.0,
+        "dependency_reachable": null,
+        "dependency_min_hop_distance": null,
+        "dependency_reachable_from_agents": [],
+        "graph_reachable": null,
+        "graph_min_hop_distance": null,
+        "graph_reachable_from_agents": [],
+        "symbol_reachability": null,
+        "reachable_affected_symbols": [],
+        "symbol_reachability_reason": null,
+        "runtime_dependency_chain": [],
+        "layer_attribution": [],
+        "published_at": null,
+        "modified_at": null,
+        "severity_source": null,
+        "severity_basis": null,
+        "severity_linked_cve": null,
+        "severity_note": null,
+        "cvss_vector": null,
+        "attack_vector": null,
+        "attack_complexity": null,
+        "privileges_required": null,
+        "user_interaction": null,
+        "network_exploitable": false,
+        "upstream_ids": [],
+        "epss_cve_id": null,
+        "kev_cve_id": null,
+        "epss_score": null,
+        "epss_percentile": null,
+        "is_kev": false,
+        "kev_status": null,
+        "kev_date_added": null,
+        "kev_due_date": null,
+        "vulnerability_compliance_tags": {},
+        "package_discovery_provenance_ref": "prov:0f6993fb41e7639d",
+        "package_version_provenance_ref": "prov:cd42643eb396676a",
+        "references": [
+          "https://example.invalid/CVE-2023-0001",
+          "https://example.invalid/advisory"
+        ],
+        "cve_ids": [
+          "CVE-2023-0001"
+        ],
+        "triage_priority": {
+          "score": 40.0,
+          "band": "medium",
+          "reasons": [
+            "severity:critical",
+            "impact_unknown"
+          ]
+        }
+      },
+      "node_id": "pkg:pypi:requests@2.19.0",
+      "finding_node_id": "vuln:CVE-2023-0001",
+      "entity_type": "server",
+      "risk_score": 8.5,
+      "reachability": "likely",
+      "graph_reachable": null,
+      "graph_min_hop_distance": null,
+      "graph_reachable_from_agents": [],
+      "is_actionable": true,
+      "impact_category": "unknown",
+      "is_direct": true,
+      "dependency_depth": 0,
+      "introduced_via": null,
+      "first_seen": "2026-01-01T12:00:00",
+      "owner": null,
+      "sla_due_at": "2026-01-08T12:00:00+00:00",
+      "sla_due_at_source": "severity-kev/v1",
+      "kev_due_date": null,
+      "status": null,
+      "lifecycle_status": null,
+      "suppressed": false,
+      "suppression_id": null,
+      "suppression_state": null,
+      "suppression_reason": null,
+      "unsuppressed_risk_score": null,
+      "vex_status": null,
+      "vex_justification": null,
+      "vex_source": null,
+      "vex_suppressed": false,
+      "ai_risk_context": null,
+      "ai_summary": null,
+      "attack_vector_summary": null,
+      "affected_servers": [
+        "fs"
+      ],
+      "affected_agents": [
+        "desk"
+      ],
+      "exposed_credentials": [],
+      "exposed_tools": []
+    }
+  ],
+  "threat_framework_summary": {
+    "owasp_llm_top10": [
+      {
+        "code": "LLM01",
+        "name": "Prompt Injection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "LLM02",
+        "name": "Sensitive Information Disclosure",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "LLM03",
+        "name": "Supply Chain",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "LLM04",
+        "name": "Data and Model Poisoning",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "LLM05",
+        "name": "Improper Output Handling",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "LLM06",
+        "name": "Excessive Agency",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "LLM07",
+        "name": "System Prompt Leakage",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "LLM08",
+        "name": "Vector and Embedding Weaknesses",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "LLM09",
+        "name": "Misinformation",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "LLM10",
+        "name": "Unbounded Consumption",
+        "findings": 0,
+        "triggered": false
+      }
+    ],
+    "mitre_atlas": [
+      {
+        "technique_id": "AML.T0000",
+        "name": "Search Open Technical Databases",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0001",
+        "name": "Search Open AI Vulnerability Analysis",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0002",
+        "name": "Acquire Public AI Artifacts",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0004",
+        "name": "Search Application Repositories",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0005",
+        "name": "Create Proxy AI Model",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0006",
+        "name": "Active Scanning",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0007",
+        "name": "Discover AI Artifacts",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0008",
+        "name": "Acquire Infrastructure",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0010",
+        "name": "AI Supply Chain Compromise",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0010.001",
+        "name": "AI Software",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0010.002",
+        "name": "Data",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0010.003",
+        "name": "Model",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0010.004",
+        "name": "Container Registry",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0011",
+        "name": "User Execution",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0011.001",
+        "name": "Malicious Package",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0012",
+        "name": "Valid Accounts",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0013",
+        "name": "Discover AI Model Ontology",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0014",
+        "name": "Discover AI Model Family",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0015",
+        "name": "Evade AI Model",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0016",
+        "name": "Obtain Capabilities",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0017",
+        "name": "Develop Capabilities",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0018",
+        "name": "Manipulate AI Model",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0018.000",
+        "name": "Poison AI Model",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0018.001",
+        "name": "Modify AI Model Architecture",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0018.002",
+        "name": "Embed Malware",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0019",
+        "name": "Publish Poisoned Datasets",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0020",
+        "name": "Poison Training Data",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0024",
+        "name": "Exfiltration via AI Inference API",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0024.001",
+        "name": "Invert AI Model",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0024.002",
+        "name": "Extract AI Model",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0025",
+        "name": "Exfiltration via Cyber Means",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0029",
+        "name": "Denial of AI Service",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0031",
+        "name": "Erode AI Model Integrity",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0034",
+        "name": "Cost Harvesting",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0035",
+        "name": "AI Artifact Collection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0036",
+        "name": "Data from Information Repositories",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0037",
+        "name": "Data from Local System",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0040",
+        "name": "AI Model Inference API Access",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0043",
+        "name": "Craft Adversarial Data",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0043.004",
+        "name": "Insert Backdoor Trigger",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0046",
+        "name": "Spamming AI System with Chaff Data",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0048",
+        "name": "External Harms",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0049",
+        "name": "Exploit Public-Facing Application",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0050",
+        "name": "Command and Scripting Interpreter",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0051",
+        "name": "LLM Prompt Injection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0051.000",
+        "name": "Direct Prompt Injection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0051.001",
+        "name": "Indirect Prompt Injection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0052",
+        "name": "Phishing",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0052.000",
+        "name": "Spearphishing via Social Engineering LLM",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0053",
+        "name": "AI Agent Tool Invocation",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0054",
+        "name": "LLM Jailbreak",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0055",
+        "name": "Unsecured Credentials",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0056",
+        "name": "Extract LLM System Prompt",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0057",
+        "name": "LLM Data Leakage",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0063",
+        "name": "Discover AI Model Outputs",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0064",
+        "name": "Gather RAG-Indexed Targets",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0065",
+        "name": "LLM Prompt Crafting",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0066",
+        "name": "Retrieval Content Crafting",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0067",
+        "name": "LLM Trusted Output Components Manipulation",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0068",
+        "name": "LLM Prompt Obfuscation",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0069",
+        "name": "Discover LLM System Information",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0070",
+        "name": "RAG Poisoning",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0071",
+        "name": "False RAG Entry Injection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0073",
+        "name": "Impersonation",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "technique_id": "AML.T0074",
+        "name": "Masquerading",
+        "findings": 0,
+        "triggered": false
+      }
+    ],
+    "nist_ai_rmf": [
+      {
+        "subcategory_id": "GOVERN-1.5",
+        "name": "Ongoing monitoring and periodic review of AI risk management",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "subcategory_id": "GOVERN-6.1",
+        "name": "Policies address AI risks from third-party entities",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "subcategory_id": "GOVERN-6.2",
+        "name": "Contingency processes for third-party data or AI system failures",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "subcategory_id": "MANAGE-1.3",
+        "name": "Responses to high-priority AI risks developed, planned, and documented",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "subcategory_id": "MANAGE-4.1",
+        "name": "Post-deployment monitoring plans implemented",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "subcategory_id": "MAP-3.5",
+        "name": "Human oversight processes defined and documented",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "subcategory_id": "MAP-4.1",
+        "name": "Technology and legal risks of AI components, including third-party software, mapped",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "subcategory_id": "MAP-5.1",
+        "name": "Likelihood and magnitude of identified impacts documented",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "subcategory_id": "MEASURE-2.6",
+        "name": "AI system evaluated regularly for safety risks",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "subcategory_id": "MEASURE-2.7",
+        "name": "AI system security and resilience evaluated and documented",
+        "findings": 0,
+        "triggered": false
+      }
+    ],
+    "owasp_mcp_top10": [
+      {
+        "code": "MCP01",
+        "name": "Token Mismanagement & Secret Exposure",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "MCP02",
+        "name": "Privilege Escalation via Scope Creep",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "MCP03",
+        "name": "Tool Poisoning",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "MCP04",
+        "name": "Software Supply Chain Attacks",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "MCP05",
+        "name": "Command Injection & Execution",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "MCP06",
+        "name": "Intent Flow Subversion",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "MCP07",
+        "name": "Insufficient Authentication & Authorization",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "MCP08",
+        "name": "Lack of Audit & Telemetry",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "MCP09",
+        "name": "Shadow MCP Servers",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "MCP10",
+        "name": "Context Injection & Over-Sharing",
+        "findings": 0,
+        "triggered": false
+      }
+    ],
+    "owasp_agentic_top10": [
+      {
+        "code": "ASI01",
+        "name": "Agent Goal Hijack",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ASI02",
+        "name": "Tool Misuse & Exploitation",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ASI03",
+        "name": "Identity & Privilege Abuse",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ASI04",
+        "name": "Agentic Supply Chain Vulnerabilities",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "ASI05",
+        "name": "Unexpected Code Execution",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ASI06",
+        "name": "Memory & Context Poisoning",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ASI07",
+        "name": "Insecure Inter-Agent Communication",
+        "findings": 1,
+        "triggered": true
+      },
+      {
+        "code": "ASI08",
+        "name": "Cascading Failures",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ASI09",
+        "name": "Human-Agent Trust Exploitation",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ASI10",
+        "name": "Rogue Agents",
+        "findings": 0,
+        "triggered": false
+      }
+    ],
+    "eu_ai_act": [
+      {
+        "code": "ART-10",
+        "name": "Data and Data Governance",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ART-12",
+        "name": "Record-Keeping",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ART-14",
+        "name": "Human Oversight",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ART-15",
+        "name": "Accuracy, Robustness and Cybersecurity",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "ART-17",
+        "name": "Quality Management System",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "ART-9",
+        "name": "Risk Management System",
+        "findings": 2,
+        "triggered": true
+      }
+    ],
+    "nist_csf": [
+      {
+        "code": "DE.CM-01",
+        "name": "Networks and network services are monitored",
+        "findings": 1,
+        "triggered": true
+      },
+      {
+        "code": "DE.CM-09",
+        "name": "Computing hardware, software, runtime environments, and their data are monitored to find potentially adverse events",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "GV.SC-05",
+        "name": "Cyber supply chain risk management requirements established",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "GV.SC-07",
+        "name": "Supplier risks identified, recorded, and mitigated",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "ID.AM-05",
+        "name": "Assets prioritized based on classification and criticality",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ID.RA-01",
+        "name": "Vulnerabilities in assets are identified",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ID.RA-02",
+        "name": "Cyber threat intelligence received from information sharing forums",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "ID.RA-05",
+        "name": "Threats, vulnerabilities, likelihoods, and impacts used to determine risk",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "PR.AA-01",
+        "name": "Identities and credentials managed for authorized users and services",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "PR.AA-03",
+        "name": "Users, services, and hardware are authenticated",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "PR.DS-01",
+        "name": "Data-at-rest is protected",
+        "findings": 1,
+        "triggered": true
+      },
+      {
+        "code": "PR.DS-02",
+        "name": "Data-in-transit is protected",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "PR.PS-06",
+        "name": "Secure software development practices integrated and monitored throughout the lifecycle",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "RS.AN-03",
+        "name": "Analysis is performed to determine what has taken place",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "RS.MI-01",
+        "name": "Incidents are contained",
+        "findings": 0,
+        "triggered": false
+      }
+    ],
+    "iso_27001": [
+      {
+        "code": "A.5.10",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.5.14",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.5.15",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.5.16",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.5.17",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.5.19",
+        "name": "Supplier-relationship information security",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "A.5.20",
+        "name": "Security terms in supplier agreements",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "A.5.21",
+        "name": "ICT supply-chain security management",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "A.5.23",
+        "name": "Cloud-service information security",
+        "findings": 1,
+        "triggered": true
+      },
+      {
+        "code": "A.5.28",
+        "name": "Incident evidence collection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.5.33",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.6.8",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.15",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.16",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.18",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.19",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.2",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.20",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.24",
+        "name": "Use of cryptographic protection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.26",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.28",
+        "name": "Secure development / coding practices",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "A.8.3",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.32",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.4",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "A.8.7",
+        "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+        "findings": 1,
+        "triggered": true
+      },
+      {
+        "code": "A.8.8",
+        "name": "Technical vulnerability management",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "A.8.9",
+        "name": "System configuration management",
+        "findings": 0,
+        "triggered": false
+      }
+    ],
+    "soc2_tsc": [
+      {
+        "code": "CC6.1",
+        "name": "Logical/physical access restriction",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CC6.6",
+        "name": "External access-boundary protection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CC6.8",
+        "name": "Unauthorized/malicious software prevention and detection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CC7.1",
+        "name": "Vulnerability and configuration-change detection",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CC7.2",
+        "name": "System-component anomaly monitoring",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CC7.4",
+        "name": "Security-incident response",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CC8.1",
+        "name": "Change authorization and control",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "CC9.1",
+        "name": "Risk-mitigation activities",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "CC9.2",
+        "name": "Vendor/third-party risk management",
+        "findings": 2,
+        "triggered": true
+      }
+    ],
+    "cis_controls": [
+      {
+        "code": "CIS-02.1",
+        "name": "Software asset inventory",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CIS-02.3",
+        "name": "Unauthorized-software remediation",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "CIS-02.6",
+        "name": "Approved-library allowlisting",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CIS-07.1",
+        "name": "Vulnerability-management program",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CIS-07.4",
+        "name": "Automated patch remediation",
+        "findings": 2,
+        "triggered": true
+      },
+      {
+        "code": "CIS-07.5",
+        "name": "Internal-asset vulnerability scanning",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CIS-07.6",
+        "name": "External-facing vulnerability scanning",
+        "findings": 1,
+        "triggered": true
+      },
+      {
+        "code": "CIS-16.1",
+        "name": "Secure application-development lifecycle",
+        "findings": 1,
+        "triggered": true
+      },
+      {
+        "code": "CIS-16.12",
+        "name": "Code-level security testing",
+        "findings": 0,
+        "triggered": false
+      },
+      {
+        "code": "CIS-16.7",
+        "name": "Hardened application configuration baselines",
+        "findings": 0,
+        "triggered": false
+      }
+    ],
+    "total_owasp_triggered": 2,
+    "total_atlas_triggered": 0,
+    "total_nist_triggered": 3,
+    "total_owasp_mcp_triggered": 4,
+    "total_owasp_agentic_triggered": 2,
+    "total_eu_ai_act_triggered": 3,
+    "total_nist_csf_triggered": 6,
+    "total_iso_27001_triggered": 7,
+    "total_soc2_triggered": 3,
+    "total_cis_triggered": 4
+  },
+  "scorecard_summary": {
+    "total_packages": 4,
+    "unique_packages": 3,
+    "eligible_packages": 0,
+    "attempted_packages": 0,
+    "enriched_packages": 0,
+    "unresolved_packages": 3,
+    "failed_packages": 0,
+    "transient_failed_packages": 0,
+    "persistent_failed_packages": 0,
+    "failed_reasons": {}
+  },
+  "remediation_plan": [
+    {
+      "package": "requests",
+      "ecosystem": "pypi",
+      "current_version": "2.19.0",
+      "fixed_version": "9.9.9",
+      "severity": "critical",
+      "is_kev": false,
+      "impact_score": 8.5,
+      "priority": "P2",
+      "ranking_score": 8.65,
+      "ranking_reasons": [
+        "1 affected agent",
+        "blast radius risk 8.5/10"
+      ],
+      "ranking_rationale": "Prioritized as P2 because 1 affected agent, and blast radius risk 8.5/10.",
+      "action": "Upgrade requests to 9.9.9",
+      "reason": null,
+      "command": "pip install 'requests>=9.9.9'",
+      "verify_command": "agent-bom check requests@9.9.9 --ecosystem pypi",
+      "vulnerabilities": [
+        "CVE-2023-0001"
+      ],
+      "affected_agents": [
+        "desk"
+      ],
+      "agents_pct": 50,
+      "exposed_credentials": [],
+      "credentials_pct": 0,
+      "server_credentials": [],
+      "server_credential_count": 0,
+      "reachable_tools": [],
+      "tools_pct": 0,
+      "owasp_tags": [
+        "LLM03",
+        "LLM05"
+      ],
+      "atlas_tags": [],
+      "nist_ai_rmf_tags": [
+        "GOVERN-6.1",
+        "MANAGE-1.3",
+        "MAP-4.1"
+      ],
+      "owasp_mcp_tags": [
+        "MCP03",
+        "MCP04",
+        "MCP07",
+        "MCP09"
+      ],
+      "owasp_agentic_tags": [
+        "ASI04"
+      ],
+      "eu_ai_act_tags": [
+        "ART-15",
+        "ART-17",
+        "ART-9"
+      ],
+      "nist_csf_tags": [
+        "GV.SC-05",
+        "GV.SC-07",
+        "ID.RA-05",
+        "PR.DS-01",
+        "RS.AN-03"
+      ],
+      "iso_27001_tags": [
+        "A.5.19",
+        "A.5.20",
+        "A.5.21",
+        "A.8.28",
+        "A.8.7",
+        "A.8.8"
+      ],
+      "soc2_tags": [
+        "CC8.1",
+        "CC9.1",
+        "CC9.2"
+      ],
+      "cis_tags": [
+        "CIS-02.3",
+        "CIS-07.4",
+        "CIS-16.1"
+      ],
+      "references": [
+        "https://example.invalid/CVE-2023-0001",
+        "https://example.invalid/advisory"
+      ],
+      "risk_narrative": "If not remediated, an attacker exploiting CVE-2023-0001 via desk."
+    },
+    {
+      "package": "lodash",
+      "ecosystem": "npm",
+      "current_version": "4.17.20",
+      "fixed_version": "9.9.9",
+      "severity": "high",
+      "is_kev": false,
+      "impact_score": 7.0,
+      "priority": "P3",
+      "ranking_score": 7.3,
+      "ranking_reasons": [
+        "2 affected agents",
+        "blast radius risk 7.0/10"
+      ],
+      "ranking_rationale": "Prioritized as P3 because 2 affected agents, and blast radius risk 7.0/10.",
+      "action": "Upgrade lodash to 9.9.9",
+      "reason": null,
+      "command": "npm install lodash@9.9.9",
+      "verify_command": "agent-bom check lodash@9.9.9 --ecosystem npm",
+      "vulnerabilities": [
+        "CVE-2024-0001"
+      ],
+      "affected_agents": [
+        "code",
+        "desk"
+      ],
+      "agents_pct": 100,
+      "exposed_credentials": [],
+      "credentials_pct": 0,
+      "server_credentials": [],
+      "server_credential_count": 0,
+      "reachable_tools": [],
+      "tools_pct": 0,
+      "owasp_tags": [
+        "LLM03",
+        "LLM05"
+      ],
+      "atlas_tags": [],
+      "nist_ai_rmf_tags": [
+        "GOVERN-6.1",
+        "MANAGE-1.3",
+        "MAP-4.1"
+      ],
+      "owasp_mcp_tags": [
+        "MCP03",
+        "MCP04",
+        "MCP07",
+        "MCP09"
+      ],
+      "owasp_agentic_tags": [
+        "ASI04",
+        "ASI07"
+      ],
+      "eu_ai_act_tags": [
+        "ART-15",
+        "ART-17",
+        "ART-9"
+      ],
+      "nist_csf_tags": [
+        "DE.CM-01",
+        "GV.SC-05",
+        "GV.SC-07",
+        "ID.RA-05",
+        "RS.AN-03"
+      ],
+      "iso_27001_tags": [
+        "A.5.19",
+        "A.5.20",
+        "A.5.21",
+        "A.5.23",
+        "A.8.28",
+        "A.8.8"
+      ],
+      "soc2_tags": [
+        "CC8.1",
+        "CC9.1",
+        "CC9.2"
+      ],
+      "cis_tags": [
+        "CIS-02.3",
+        "CIS-07.4",
+        "CIS-07.6"
+      ],
+      "references": [
+        "https://example.invalid/CVE-2024-0001",
+        "https://example.invalid/advisory"
+      ],
+      "risk_narrative": "If not remediated, an attacker exploiting CVE-2024-0001 via code, desk."
+    }
+  ],
+  "posture_scorecard": {
+    "grade": "C",
+    "grade_label": "C",
+    "partial": false,
+    "grade_basis": "scan",
+    "score": 78.6,
+    "summary": "Moderate best-practice/config posture (C, 78.6%) \u2014 improvements recommended",
+    "policy_source": "default",
+    "no_data": false,
+    "cloud_controls": null,
+    "dimensions": {
+      "vulnerability_posture": {
+        "name": "Vulnerability Posture",
+        "score": 87.0,
+        "weight": 0.3,
+        "weighted_score": 26.1,
+        "details": "2 vulnerability occurrences (1 critical, 1 high), 2 fixable",
+        "assessed": true
+      },
+      "credential_hygiene": {
+        "name": "Credential Hygiene",
+        "score": 100.0,
+        "weight": 0.2,
+        "weighted_score": 20.0,
+        "details": "No credential exposure detected",
+        "assessed": true
+      },
+      "supply_chain_quality": {
+        "name": "Supply Chain Quality",
+        "score": 50.0,
+        "weight": 0.15,
+        "weighted_score": 7.5,
+        "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
+        "assessed": true
+      },
+      "compliance_coverage": {
+        "name": "Compliance Coverage",
+        "score": 100.0,
+        "weight": 0.15,
+        "weighted_score": 15.0,
+        "details": "2/2 findings mapped to threat frameworks",
+        "assessed": true
+      },
+      "active_exploitation": {
+        "name": "Active Exploitation",
+        "score": 100.0,
+        "weight": 0.1,
+        "weighted_score": 10.0,
+        "details": "No actively exploited vulnerabilities",
+        "assessed": true
+      },
+      "configuration_quality": {
+        "name": "Configuration Quality",
+        "score": 0.0,
+        "weight": 0.1,
+        "weighted_score": 0.0,
+        "details": "0/2 verified, 0/2 with tool declarations",
+        "assessed": true
+      }
+    }
+  },
+  "posture_grade": "C",
+  "posture_grade_label": "C",
+  "credential_risk_ranking": [],
+  "incident_correlation": [
+    {
+      "agent_name": "desk",
+      "agent_type": "claude-desktop",
+      "config_path": "<path:a.json>",
+      "priority": "P2",
+      "severity_counts": {
+        "critical": 1,
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "total_vulns": 2,
+      "unique_cves": [
+        "CVE-2023-0001",
+        "CVE-2024-0001"
+      ],
+      "kev_ids": [],
+      "credentials_exposed": [],
+      "packages_affected": [
+        "lodash@4.17.20",
+        "requests@2.19.0"
+      ],
+      "max_risk_score": 8.5,
+      "has_ai_risk": false,
+      "recommended_action": "Urgent remediation \u2014 critical CVEs or credential-exposed high-severity vulns"
+    },
+    {
+      "agent_name": "code",
+      "agent_type": "cursor",
+      "config_path": "<path:b.json>",
+      "priority": "P3",
+      "severity_counts": {
+        "critical": 0,
+        "high": 1,
+        "medium": 0,
+        "low": 0
+      },
+      "total_vulns": 1,
+      "unique_cves": [
+        "CVE-2024-0001"
+      ],
+      "kev_ids": [],
+      "credentials_exposed": [],
+      "packages_affected": [
+        "lodash@4.17.20"
+      ],
+      "max_risk_score": 7.0,
+      "has_ai_risk": false,
+      "recommended_action": "Scheduled remediation \u2014 high-severity vulnerabilities present"
+    }
+  ],
+  "compliance_controls": {
+    "iso_27001:A.5.19:adbf4456": {
+      "framework": "iso_27001",
+      "control": "A.5.19",
+      "version": "2022",
+      "confidence": 0.75,
+      "source": "vendor-asserted:agent-bom",
+      "via": "blast-radius-signal"
+    },
+    "iso_27001:A.5.20:ebe4eba1": {
+      "framework": "iso_27001",
+      "control": "A.5.20",
+      "version": "2022",
+      "confidence": 0.75,
+      "source": "vendor-asserted:agent-bom",
+      "via": "blast-radius-signal"
+    },
+    "iso_27001:A.5.21:572cb882": {
+      "framework": "iso_27001",
+      "control": "A.5.21",
+      "version": "2022",
+      "confidence": 0.75,
+      "source": "vendor-asserted:agent-bom",
+      "via": "blast-radius-signal"
+    },
+    "iso_27001:A.5.23:c4616ff6": {
+      "framework": "iso_27001",
+      "control": "A.5.23",
+      "version": "2022",
+      "confidence": 0.75,
+      "source": "vendor-asserted:agent-bom",
+      "via": "blast-radius-signal"
+    },
+    "iso_27001:A.8.28:91ef6d5c": {
+      "framework": "iso_27001",
+      "control": "A.8.28",
+      "version": "2022",
+      "confidence": 0.75,
+      "source": "vendor-asserted:agent-bom",
+      "via": "blast-radius-signal"
+    },
+    "iso_27001:A.8.8:81e169df": {
+      "framework": "iso_27001",
+      "control": "A.8.8",
+      "version": "2022",
+      "confidence": 0.75,
+      "source": "vendor-asserted:agent-bom",
+      "via": "blast-radius-signal"
+    },
+    "owasp_llm:LLM03:6363864e": {
+      "framework": "owasp_llm",
+      "control": "LLM03",
+      "version": "2025",
+      "confidence": 0.75,
+      "source": "legacy:owasp_tags",
+      "via": "owasp_tags"
+    },
+    "owasp_llm:LLM05:1b3faaf4": {
+      "framework": "owasp_llm",
+      "control": "LLM05",
+      "version": "2025",
+      "confidence": 0.75,
+      "source": "legacy:owasp_tags",
+      "via": "owasp_tags"
+    },
+    "nist_ai_rmf:GOVERN-6.1:233bad2c": {
+      "framework": "nist_ai_rmf",
+      "control": "GOVERN-6.1",
+      "version": "1.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_ai_rmf_tags",
+      "via": "nist_ai_rmf_tags"
+    },
+    "nist_ai_rmf:MANAGE-1.3:55b4701b": {
+      "framework": "nist_ai_rmf",
+      "control": "MANAGE-1.3",
+      "version": "1.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_ai_rmf_tags",
+      "via": "nist_ai_rmf_tags"
+    },
+    "nist_ai_rmf:MAP-4.1:b3d2e496": {
+      "framework": "nist_ai_rmf",
+      "control": "MAP-4.1",
+      "version": "1.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_ai_rmf_tags",
+      "via": "nist_ai_rmf_tags"
+    },
+    "owasp_mcp:MCP03:c3ccf193": {
+      "framework": "owasp_mcp",
+      "control": "MCP03",
+      "version": "2025",
+      "confidence": 0.75,
+      "source": "legacy:owasp_mcp_tags",
+      "via": "owasp_mcp_tags"
+    },
+    "owasp_mcp:MCP04:c89c5e0d": {
+      "framework": "owasp_mcp",
+      "control": "MCP04",
+      "version": "2025",
+      "confidence": 0.75,
+      "source": "legacy:owasp_mcp_tags",
+      "via": "owasp_mcp_tags"
+    },
+    "owasp_mcp:MCP07:ae2647e0": {
+      "framework": "owasp_mcp",
+      "control": "MCP07",
+      "version": "2025",
+      "confidence": 0.75,
+      "source": "legacy:owasp_mcp_tags",
+      "via": "owasp_mcp_tags"
+    },
+    "owasp_mcp:MCP09:f95a4597": {
+      "framework": "owasp_mcp",
+      "control": "MCP09",
+      "version": "2025",
+      "confidence": 0.75,
+      "source": "legacy:owasp_mcp_tags",
+      "via": "owasp_mcp_tags"
+    },
+    "owasp_agentic:ASI04:b0884b03": {
+      "framework": "owasp_agentic",
+      "control": "ASI04",
+      "version": "2026",
+      "confidence": 0.75,
+      "source": "legacy:owasp_agentic_tags",
+      "via": "owasp_agentic_tags"
+    },
+    "owasp_agentic:ASI07:ece8382b": {
+      "framework": "owasp_agentic",
+      "control": "ASI07",
+      "version": "2026",
+      "confidence": 0.75,
+      "source": "legacy:owasp_agentic_tags",
+      "via": "owasp_agentic_tags"
+    },
+    "eu_ai_act:ART-15:2eae0a4f": {
+      "framework": "eu_ai_act",
+      "control": "ART-15",
+      "version": "2024",
+      "confidence": 0.75,
+      "source": "legacy:eu_ai_act_tags",
+      "via": "eu_ai_act_tags"
+    },
+    "eu_ai_act:ART-17:b9569179": {
+      "framework": "eu_ai_act",
+      "control": "ART-17",
+      "version": "2024",
+      "confidence": 0.75,
+      "source": "legacy:eu_ai_act_tags",
+      "via": "eu_ai_act_tags"
+    },
+    "eu_ai_act:ART-9:9ee120da": {
+      "framework": "eu_ai_act",
+      "control": "ART-9",
+      "version": "2024",
+      "confidence": 0.75,
+      "source": "legacy:eu_ai_act_tags",
+      "via": "eu_ai_act_tags"
+    },
+    "nist_csf:DE.CM-01:1cd960da": {
+      "framework": "nist_csf",
+      "control": "DE.CM-01",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_csf_tags",
+      "via": "nist_csf_tags"
+    },
+    "nist_csf:GV.SC-05:5745b008": {
+      "framework": "nist_csf",
+      "control": "GV.SC-05",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_csf_tags",
+      "via": "nist_csf_tags"
+    },
+    "nist_csf:GV.SC-07:dc1d087c": {
+      "framework": "nist_csf",
+      "control": "GV.SC-07",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_csf_tags",
+      "via": "nist_csf_tags"
+    },
+    "nist_csf:ID.RA-05:26084b57": {
+      "framework": "nist_csf",
+      "control": "ID.RA-05",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_csf_tags",
+      "via": "nist_csf_tags"
+    },
+    "nist_csf:RS.AN-03:b71239ce": {
+      "framework": "nist_csf",
+      "control": "RS.AN-03",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_csf_tags",
+      "via": "nist_csf_tags"
+    },
+    "soc2:CC8.1:01952ae5": {
+      "framework": "soc2",
+      "control": "CC8.1",
+      "version": "2017",
+      "confidence": 0.75,
+      "source": "legacy:soc2_tags",
+      "via": "soc2_tags"
+    },
+    "soc2:CC9.1:c16f8302": {
+      "framework": "soc2",
+      "control": "CC9.1",
+      "version": "2017",
+      "confidence": 0.75,
+      "source": "legacy:soc2_tags",
+      "via": "soc2_tags"
+    },
+    "soc2:CC9.2:346b9b28": {
+      "framework": "soc2",
+      "control": "CC9.2",
+      "version": "2017",
+      "confidence": 0.75,
+      "source": "legacy:soc2_tags",
+      "via": "soc2_tags"
+    },
+    "cis:CIS-02.3:1a42f0ba": {
+      "framework": "cis",
+      "control": "CIS-02.3",
+      "version": "v8",
+      "confidence": 0.75,
+      "source": "legacy:cis_tags",
+      "via": "cis_tags"
+    },
+    "cis:CIS-07.4:a032cf34": {
+      "framework": "cis",
+      "control": "CIS-07.4",
+      "version": "v8",
+      "confidence": 0.75,
+      "source": "legacy:cis_tags",
+      "via": "cis_tags"
+    },
+    "cis:CIS-07.6:f837cc07": {
+      "framework": "cis",
+      "control": "CIS-07.6",
+      "version": "v8",
+      "confidence": 0.75,
+      "source": "legacy:cis_tags",
+      "via": "cis_tags"
+    },
+    "cmmc:RA.L2-3.11.3:96b44e21": {
+      "framework": "cmmc",
+      "control": "RA.L2-3.11.3",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:cmmc_tags",
+      "via": "cmmc_tags"
+    },
+    "cmmc:SI.L2-3.14.1:0957fc16": {
+      "framework": "cmmc",
+      "control": "SI.L2-3.14.1",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:cmmc_tags",
+      "via": "cmmc_tags"
+    },
+    "cmmc:SI.L2-3.14.2:395ddd17": {
+      "framework": "cmmc",
+      "control": "SI.L2-3.14.2",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:cmmc_tags",
+      "via": "cmmc_tags"
+    },
+    "cmmc:SI.L2-3.14.6:8614102a": {
+      "framework": "cmmc",
+      "control": "SI.L2-3.14.6",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:cmmc_tags",
+      "via": "cmmc_tags"
+    },
+    "nist_800_53:CM-6:11ab59f5": {
+      "framework": "nist_800_53",
+      "control": "CM-6",
+      "version": "rev5",
+      "confidence": 0.75,
+      "source": "legacy:nist_800_53_tags",
+      "via": "nist_800_53_tags"
+    },
+    "nist_800_53:SI-10:7b4a4c27": {
+      "framework": "nist_800_53",
+      "control": "SI-10",
+      "version": "rev5",
+      "confidence": 0.75,
+      "source": "legacy:nist_800_53_tags",
+      "via": "nist_800_53_tags"
+    },
+    "nist_800_53:SI-2:6936d863": {
+      "framework": "nist_800_53",
+      "control": "SI-2",
+      "version": "rev5",
+      "confidence": 0.75,
+      "source": "legacy:nist_800_53_tags",
+      "via": "nist_800_53_tags"
+    },
+    "nist_800_53:SI-4:8184abe4": {
+      "framework": "nist_800_53",
+      "control": "SI-4",
+      "version": "rev5",
+      "confidence": 0.75,
+      "source": "legacy:nist_800_53_tags",
+      "via": "nist_800_53_tags"
+    },
+    "nist_800_53:SR-3:72a74e3b": {
+      "framework": "nist_800_53",
+      "control": "SR-3",
+      "version": "rev5",
+      "confidence": 0.75,
+      "source": "legacy:nist_800_53_tags",
+      "via": "nist_800_53_tags"
+    },
+    "fedramp:FedRAMP-CM-6:5448f657": {
+      "framework": "fedramp",
+      "control": "FedRAMP-CM-6",
+      "version": "moderate",
+      "confidence": 0.75,
+      "source": "legacy:fedramp_tags",
+      "via": "fedramp_tags"
+    },
+    "fedramp:FedRAMP-SI-10:e815302b": {
+      "framework": "fedramp",
+      "control": "FedRAMP-SI-10",
+      "version": "moderate",
+      "confidence": 0.75,
+      "source": "legacy:fedramp_tags",
+      "via": "fedramp_tags"
+    },
+    "fedramp:FedRAMP-SI-2:67bff9e4": {
+      "framework": "fedramp",
+      "control": "FedRAMP-SI-2",
+      "version": "moderate",
+      "confidence": 0.75,
+      "source": "legacy:fedramp_tags",
+      "via": "fedramp_tags"
+    },
+    "fedramp:FedRAMP-SI-4:c618ef45": {
+      "framework": "fedramp",
+      "control": "FedRAMP-SI-4",
+      "version": "moderate",
+      "confidence": 0.75,
+      "source": "legacy:fedramp_tags",
+      "via": "fedramp_tags"
+    },
+    "fedramp:FedRAMP-SR-3:e8fd1151": {
+      "framework": "fedramp",
+      "control": "FedRAMP-SR-3",
+      "version": "moderate",
+      "confidence": 0.75,
+      "source": "legacy:fedramp_tags",
+      "via": "fedramp_tags"
+    },
+    "pci_dss:11.3.1:d815c807": {
+      "framework": "pci_dss",
+      "control": "11.3.1",
+      "version": "4.0",
+      "confidence": 0.75,
+      "source": "legacy:pci_dss_tags",
+      "via": "pci_dss_tags"
+    },
+    "pci_dss:6.3.1:d121c9e3": {
+      "framework": "pci_dss",
+      "control": "6.3.1",
+      "version": "4.0",
+      "confidence": 0.75,
+      "source": "legacy:pci_dss_tags",
+      "via": "pci_dss_tags"
+    },
+    "pci_dss:6.3.2:99cfd47a": {
+      "framework": "pci_dss",
+      "control": "6.3.2",
+      "version": "4.0",
+      "confidence": 0.75,
+      "source": "legacy:pci_dss_tags",
+      "via": "pci_dss_tags"
+    },
+    "pci_dss:6.3.3:2bfff601": {
+      "framework": "pci_dss",
+      "control": "6.3.3",
+      "version": "4.0",
+      "confidence": 0.75,
+      "source": "legacy:pci_dss_tags",
+      "via": "pci_dss_tags"
+    },
+    "iso_27001:A.8.7:01a5b982": {
+      "framework": "iso_27001",
+      "control": "A.8.7",
+      "version": "2022",
+      "confidence": 1.0,
+      "source": "authority:NIST-OLIR",
+      "via": "vendor-asserted:CWE-to-NIST:SI-3"
+    },
+    "nist_csf:PR.DS-01:8be3e945": {
+      "framework": "nist_csf",
+      "control": "PR.DS-01",
+      "version": "2.0",
+      "confidence": 0.75,
+      "source": "legacy:nist_csf_tags",
+      "via": "nist_csf_tags"
+    },
+    "cis:CIS-16.1:ff1bfdbf": {
+      "framework": "cis",
+      "control": "CIS-16.1",
+      "version": "v8",
+      "confidence": 0.75,
+      "source": "legacy:cis_tags",
+      "via": "cis_tags"
+    },
+    "nist_800_53:SI-3:7fb6ec23": {
+      "framework": "nist_800_53",
+      "control": "SI-3",
+      "version": "rev5",
+      "confidence": 0.75,
+      "source": "legacy:nist_800_53_tags",
+      "via": "nist_800_53_tags"
+    },
+    "fedramp:FedRAMP-SI-3:1da03e7d": {
+      "framework": "fedramp",
+      "control": "FedRAMP-SI-3",
+      "version": "moderate",
+      "confidence": 0.75,
+      "source": "legacy:fedramp_tags",
+      "via": "fedramp_tags"
+    }
+  },
+  "provenance": {
+    "prov:403718697aef8552": {
+      "source_type": "local_discovery",
+      "observed_via": [
+        "local_discovery"
+      ],
+      "confidence": "medium"
+    },
+    "prov:82573e85217164a9": {
+      "declared_name": "six",
+      "resolved_version": "1.16.0",
+      "version_source": "unknown",
+      "confidence": "unknown",
+      "legacy_version_source": "detected",
+      "pinned_version": "1.16.0",
+      "resolved_from_registry": false,
+      "pinned": true,
+      "source_precedence": 0
+    },
+    "prov:05599c61d2e2d8c0": {
+      "source_type": "local_discovery",
+      "observed_via": [
+        "local_discovery"
+      ],
+      "confidence": "medium",
+      "version_source": "detected",
+      "resolved_from_registry": false,
+      "version_provenance_ref": "prov:82573e85217164a9"
+    },
+    "prov:cd42643eb396676a": {
+      "declared_name": "requests",
+      "resolved_version": "2.19.0",
+      "version_source": "unknown",
+      "confidence": "unknown",
+      "legacy_version_source": "detected",
+      "pinned_version": "2.19.0",
+      "resolved_from_registry": false,
+      "pinned": true,
+      "source_precedence": 0
+    },
+    "prov:94d0e27502e7ce55": {
+      "source_type": "local_discovery",
+      "observed_via": [
+        "local_discovery"
+      ],
+      "confidence": "medium",
+      "version_source": "detected",
+      "resolved_from_registry": false,
+      "version_provenance_ref": "prov:cd42643eb396676a"
+    },
+    "prov:3eac0d58c5f34243": {
+      "declared_name": "lodash",
+      "resolved_version": "4.17.20",
+      "version_source": "unknown",
+      "confidence": "unknown",
+      "legacy_version_source": "detected",
+      "pinned_version": "4.17.20",
+      "resolved_from_registry": false,
+      "pinned": true,
+      "source_precedence": 0
+    },
+    "prov:b4df184c24e2fb10": {
+      "source_type": "local_discovery",
+      "observed_via": [
+        "local_discovery"
+      ],
+      "confidence": "medium",
+      "version_source": "detected",
+      "resolved_from_registry": false,
+      "version_provenance_ref": "prov:3eac0d58c5f34243"
+    },
+    "prov:dc603c856c9e79eb": {
+      "declared_name": "lodash",
+      "resolved_version": "4.17.20",
+      "version_source": "unknown",
+      "confidence": "unknown",
+      "resolved_from_registry": false
+    },
+    "prov:d70d1d4027579cba": {
+      "source_type": "local_discovery",
+      "observed_via": [
+        "local_discovery"
+      ],
+      "confidence": "medium",
+      "version_source": "detected",
+      "resolved_from_registry": false,
+      "version_provenance_ref": "prov:dc603c856c9e79eb"
+    },
+    "prov:e6a6b7d861d7546b": {
+      "declared_name": "requests",
+      "resolved_version": "2.19.0",
+      "version_source": "unknown",
+      "confidence": "unknown",
+      "resolved_from_registry": false
+    },
+    "prov:274f8a204b29eaec": {
+      "source_type": "local_discovery",
+      "observed_via": [
+        "local_discovery"
+      ],
+      "confidence": "medium",
+      "version_source": "detected",
+      "resolved_from_registry": false,
+      "version_provenance_ref": "prov:e6a6b7d861d7546b"
+    },
+    "prov:efa543dd3d5921cb": {
+      "declared_name": "six",
+      "resolved_version": "1.16.0",
+      "version_source": "unknown",
+      "confidence": "unknown",
+      "resolved_from_registry": false
+    },
+    "prov:3e18969f5dfc85c2": {
+      "source_type": "local_discovery",
+      "observed_via": [
+        "local_discovery"
+      ],
+      "confidence": "medium",
+      "version_source": "detected",
+      "resolved_from_registry": false,
+      "version_provenance_ref": "prov:efa543dd3d5921cb"
+    },
+    "prov:897b2654a4e44af4": {
+      "source_type": "unknown",
+      "version_source": "detected",
+      "resolved_from_registry": false,
+      "version_provenance_ref": "prov:3eac0d58c5f34243"
+    },
+    "prov:0f6993fb41e7639d": {
+      "source_type": "unknown",
+      "version_source": "detected",
+      "resolved_from_registry": false,
+      "version_provenance_ref": "prov:cd42643eb396676a"
+    }
+  },
+  "packing": {
+    "schema_version": "1",
+    "legacy_schema_version": "1.0",
+    "transforms": [
+      "provenance_refs",
+      "root_packages_alias",
+      "inventory_snapshot_packages",
+      "blast_radius_finding_refs",
+      "asset_refs",
+      "package_refs",
+      "compliance_control_refs"
+    ]
+  }
+}

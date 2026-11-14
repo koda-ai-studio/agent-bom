@@ -26471,6 +26471,11 @@ export interface components {
              * @default agent-bom
              */
             python_package: string;
+            /**
+             * Report Schema Versions
+             * @description Scan report schema versions POST /v1/results/push accepts; clients send 2.0 only when it is listed.
+             */
+            report_schema_versions?: string[];
             /** Version */
             version: string;
         };

@@ -14,6 +14,7 @@ from rich.console import Console
 
 from agent_bom.cli._common import read_json_file_for_cli
 from agent_bom.constants import is_credential_key
+from agent_bom.output.report_packing import load_report_document
 
 if TYPE_CHECKING:
     from agent_bom.mcp_introspect import IntrospectionReport, ServerIntrospection
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 def _load_mesh_source(scan_file: Optional[str], project_dir: Optional[str]) -> tuple[list[dict], list[dict] | None, str]:
     """Load agent topology from either a saved report or live discovery."""
     if scan_file:
-        data = read_json_file_for_cli(scan_file, label="scan file")
+        data = load_report_document(read_json_file_for_cli(scan_file, label="scan file"))
         agents_data = data.get("agents", [])
         blast_radius = data.get("blast_radius")
         if not isinstance(agents_data, list):
@@ -396,12 +397,7 @@ def graph_evidence_cmd(
         if mode == "history":
             payload = graph_history(conn, tenant_id=tenant_id, limit=limit)
         else:
-            payload = graph_evidence_manifest(
-                conn,
-                tenant_id=tenant_id,
-                scan_id=scan_id,
-                baseline_scan_id=baseline_scan_id,
-            )
+            payload = graph_evidence_manifest(conn, tenant_id=tenant_id, scan_id=scan_id, baseline_scan_id=baseline_scan_id)
             if not payload.get("scan_id"):
                 raise click.ClickException("Graph snapshot not found for tenant.")
 

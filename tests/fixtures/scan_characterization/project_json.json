@@ -7,14 +7,7 @@
     "canonical_id": "<UUID>",
     "config_path": "<path:proj>",
     "discovered_at": "<TS>",
-    "discovery_provenance": {
-     "confidence": "medium",
-     "observed_via": [
-      "local_discovery"
-     ],
-     "source": "project",
-     "source_type": "local_discovery"
-    },
+    "discovery_provenance_ref": "prov:<HEX>",
     "last_seen": "<TS>",
     "mcp_servers": [
      {
@@ -29,14 +22,7 @@
       "credential_env_vars": [
        "API_TOKEN"
       ],
-      "discovery_provenance": {
-       "confidence": "medium",
-       "observed_via": [
-        "local_discovery"
-       ],
-       "source": "project",
-       "source_type": "local_discovery"
-      },
+      "discovery_provenance_ref": "prov:<HEX>",
       "discovery_sources": [
        "project-config:<path:.mcp.json>"
       ],
@@ -49,63 +35,24 @@
       "packages": [
        {
         "author": null,
-        "canonical_id": "<UUID>",
         "copyright_text": null,
         "declared_version": "0.6.2",
         "dependency_depth": 0,
         "dependency_scope": "runtime",
         "deps_dev_resolved": false,
         "description": null,
-        "discovery_provenance": {
-         "confidence": "medium",
-         "observed_via": [
-          "local_discovery"
-         ],
-         "resolved_from_registry": false,
-         "source": "project",
-         "source_type": "local_discovery",
-         "version_provenance": {
-          "confidence": "exact",
-          "declared_name": "@modelcontextprotocol/server-filesystem",
-          "declared_version": "0.6.2",
-          "evidence": [
-           {
-            "parser": "npx",
-            "source_file": "<path:.mcp.json>",
-            "type": "command_pin"
-           }
-          ],
-          "pinned": true,
-          "pinned_version": "0.6.2",
-          "resolved_from_registry": false,
-          "resolved_version": "0.6.2",
-          "source_precedence": 30,
-          "version_source": "command_pin"
-         },
-         "version_source": "command_pin"
-        },
-        "distro_name": null,
-        "distro_version": null,
         "download_url": null,
-        "ecosystem": "npm",
-        "floating_reference": false,
-        "floating_reference_reason": null,
         "homepage": null,
         "integrity_verified": null,
         "introduced_in_layer": null,
         "is_direct": true,
-        "is_malicious": false,
         "license": null,
         "license_expression": null,
-        "malicious_reason": null,
-        "name": "@modelcontextprotocol/server-filesystem",
-        "occurrence_count": 0,
-        "occurrences": [],
+        "package_ref": "<UUID>",
         "parent_package": null,
         "provenance_attested": null,
         "provenance_source": null,
         "provenance_status": null,
-        "purl": "pkg:npm/%40modelcontextprotocol/server-filesystem@0.6.2",
         "reachability_evidence": "runtime_dependency",
         "registry_version": null,
         "repository_url": null,
@@ -116,10 +63,7 @@
         "scorecard_lookup_state": null,
         "scorecard_repo": null,
         "scorecard_score": null,
-        "source_package": null,
-        "stable_id": "<UUID>",
         "supplier": null,
-        "version": "0.6.2",
         "version_confidence": "exact",
         "version_conflicts": null,
         "version_evidence": [
@@ -129,28 +73,9 @@
           "type": "command_pin"
          }
         ],
-        "version_provenance": {
-         "confidence": "exact",
-         "declared_name": "@modelcontextprotocol/server-filesystem",
-         "declared_version": "0.6.2",
-         "evidence": [
-          {
-           "parser": "npx",
-           "source_file": "<path:.mcp.json>",
-           "type": "command_pin"
-          }
-         ],
-         "pinned": true,
-         "pinned_version": "0.6.2",
-         "resolved_from_registry": false,
-         "resolved_version": "0.6.2",
-         "source_precedence": 30,
-         "version_source": "command_pin"
-        },
         "version_resolved_at": null,
         "version_source": "command_pin",
-        "vulnerabilities": [],
-        "vulnerability_count": 0
+        "vulnerabilities": []
        }
       ],
       "permission_profile": null,
@@ -175,14 +100,7 @@
       "canonical_id": "<UUID>",
       "command": "project",
       "credential_env_vars": [],
-      "discovery_provenance": {
-       "confidence": "medium",
-       "observed_via": [
-        "local_discovery"
-       ],
-       "source": "project",
-       "source_type": "local_discovery"
-      },
+      "discovery_provenance_ref": "prov:<HEX>",
       "discovery_sources": [],
       "embedded_credential_names": [],
       "fingerprint": "<UUID>",
@@ -193,57 +111,24 @@
       "packages": [
        {
         "author": null,
-        "canonical_id": "<UUID>",
         "copyright_text": null,
         "declared_version": "1.2.0",
         "dependency_depth": 0,
         "dependency_scope": "runtime",
         "deps_dev_resolved": false,
         "description": null,
-        "discovery_provenance": {
-         "confidence": "medium",
-         "observed_via": [
-          "local_discovery"
-         ],
-         "resolved_from_registry": false,
-         "source": "project",
-         "source_type": "local_discovery",
-         "version_provenance": {
-          "confidence": "exact",
-          "declared_name": "minimist",
-          "declared_version": "1.2.0",
-          "legacy_version_source": "manifest",
-          "pinned": true,
-          "pinned_version": "1.2.0",
-          "resolved_from_registry": false,
-          "resolved_version": "1.2.0",
-          "source_precedence": 30,
-          "version_source": "command_pin"
-         },
-         "version_source": "manifest"
-        },
-        "distro_name": null,
-        "distro_version": null,
         "download_url": null,
-        "ecosystem": "npm",
-        "floating_reference": false,
-        "floating_reference_reason": null,
         "homepage": null,
         "integrity_verified": null,
         "introduced_in_layer": null,
         "is_direct": true,
-        "is_malicious": false,
         "license": null,
         "license_expression": null,
-        "malicious_reason": null,
-        "name": "minimist",
-        "occurrence_count": 0,
-        "occurrences": [],
+        "package_ref": "<UUID>",
         "parent_package": null,
         "provenance_attested": null,
         "provenance_source": null,
         "provenance_status": null,
-        "purl": "pkg:npm/minimist@1.2.0",
         "reachability_evidence": "declaration_only",
         "registry_version": null,
         "repository_url": null,
@@ -254,90 +139,34 @@
         "scorecard_lookup_state": null,
         "scorecard_repo": null,
         "scorecard_score": null,
-        "source_package": null,
-        "stable_id": "<UUID>",
         "supplier": null,
-        "version": "1.2.0",
         "version_confidence": null,
         "version_conflicts": null,
         "version_evidence": null,
-        "version_provenance": {
-         "confidence": "exact",
-         "declared_name": "minimist",
-         "declared_version": "1.2.0",
-         "legacy_version_source": "manifest",
-         "pinned": true,
-         "pinned_version": "1.2.0",
-         "resolved_from_registry": false,
-         "resolved_version": "1.2.0",
-         "source_precedence": 30,
-         "version_source": "command_pin"
-        },
         "version_resolved_at": null,
         "version_source": "manifest",
-        "vulnerabilities": [],
-        "vulnerability_count": 0
+        "vulnerabilities": []
        },
        {
         "author": null,
-        "canonical_id": "<UUID>",
         "copyright_text": null,
         "declared_version": "4.17.4",
         "dependency_depth": 0,
         "dependency_scope": "runtime",
         "deps_dev_resolved": false,
         "description": null,
-        "discovery_provenance": {
-         "confidence": "medium",
-         "observed_via": [
-          "local_discovery"
-         ],
-         "resolved_from_registry": false,
-         "source": "project",
-         "source_type": "local_discovery",
-         "version_provenance": {
-          "confidence": "exact",
-          "declared_name": "lodash",
-          "declared_version": "4.17.4",
-          "evidence": [
-           {
-            "line": 1,
-            "source_file": "<path:package.json>",
-            "type": "manifest"
-           }
-          ],
-          "legacy_version_source": "manifest",
-          "pinned": true,
-          "pinned_version": "4.17.4",
-          "resolved_from_registry": false,
-          "resolved_version": "4.17.4",
-          "source_precedence": 30,
-          "version_source": "command_pin"
-         },
-         "version_source": "manifest"
-        },
-        "distro_name": null,
-        "distro_version": null,
         "download_url": null,
-        "ecosystem": "npm",
-        "floating_reference": false,
-        "floating_reference_reason": null,
         "homepage": null,
         "integrity_verified": null,
         "introduced_in_layer": null,
         "is_direct": true,
-        "is_malicious": false,
         "license": null,
         "license_expression": null,
-        "malicious_reason": null,
-        "name": "lodash",
-        "occurrence_count": 0,
-        "occurrences": [],
+        "package_ref": "<UUID>",
         "parent_package": null,
         "provenance_attested": null,
         "provenance_source": null,
         "provenance_status": null,
-        "purl": "pkg:npm/lodash@4.17.4",
         "reachability_evidence": "declaration_only",
         "registry_version": null,
         "repository_url": null,
@@ -348,10 +177,7 @@
         "scorecard_lookup_state": null,
         "scorecard_repo": null,
         "scorecard_score": null,
-        "source_package": null,
-        "stable_id": "<UUID>",
         "supplier": null,
-        "version": "4.17.4",
         "version_confidence": null,
         "version_conflicts": null,
         "version_evidence": [
@@ -361,89 +187,30 @@
           "type": "manifest"
          }
         ],
-        "version_provenance": {
-         "confidence": "exact",
-         "declared_name": "lodash",
-         "declared_version": "4.17.4",
-         "evidence": [
-          {
-           "line": 1,
-           "source_file": "<path:package.json>",
-           "type": "manifest"
-          }
-         ],
-         "legacy_version_source": "manifest",
-         "pinned": true,
-         "pinned_version": "4.17.4",
-         "resolved_from_registry": false,
-         "resolved_version": "4.17.4",
-         "source_precedence": 30,
-         "version_source": "command_pin"
-        },
         "version_resolved_at": null,
         "version_source": "manifest",
-        "vulnerabilities": [],
-        "vulnerability_count": 0
+        "vulnerabilities": []
        },
        {
         "author": null,
-        "canonical_id": "<UUID>",
         "copyright_text": null,
         "declared_version": null,
         "dependency_depth": 0,
         "dependency_scope": "runtime",
         "deps_dev_resolved": false,
         "description": null,
-        "discovery_provenance": {
-         "confidence": "medium",
-         "observed_via": [
-          "local_discovery"
-         ],
-         "resolved_from_registry": false,
-         "source": "project",
-         "source_type": "local_discovery",
-         "version_provenance": {
-          "confidence": "unknown",
-          "declared_name": "jinja2",
-          "evidence": [
-           {
-            "line": 2,
-            "source_file": "<path:requirements.txt>",
-            "type": "manifest"
-           }
-          ],
-          "legacy_version_source": "detected",
-          "pinned": true,
-          "pinned_version": "2.10",
-          "resolved_from_registry": false,
-          "resolved_version": "2.10",
-          "source_precedence": 0,
-          "version_source": "unknown"
-         },
-         "version_source": "detected"
-        },
-        "distro_name": null,
-        "distro_version": null,
         "download_url": null,
-        "ecosystem": "pypi",
-        "floating_reference": false,
-        "floating_reference_reason": null,
         "homepage": null,
         "integrity_verified": null,
         "introduced_in_layer": null,
         "is_direct": true,
-        "is_malicious": false,
         "license": null,
         "license_expression": null,
-        "malicious_reason": null,
-        "name": "jinja2",
-        "occurrence_count": 0,
-        "occurrences": [],
+        "package_ref": "<UUID>",
         "parent_package": null,
         "provenance_attested": null,
         "provenance_source": null,
         "provenance_status": null,
-        "purl": "pkg:pypi/jinja2@2.10",
         "reachability_evidence": "declaration_only",
         "registry_version": null,
         "repository_url": null,
@@ -454,115 +221,7 @@
         "scorecard_lookup_state": null,
         "scorecard_repo": null,
         "scorecard_score": null,
-        "source_package": null,
-        "stable_id": "<UUID>",
         "supplier": null,
-        "version": "2.10",
-        "version_confidence": null,
-        "version_conflicts": null,
-        "version_evidence": [
-         {
-          "line": 2,
-          "source_file": "<path:requirements.txt>",
-          "type": "manifest"
-         }
-        ],
-        "version_provenance": {
-         "confidence": "unknown",
-         "declared_name": "jinja2",
-         "evidence": [
-          {
-           "line": 2,
-           "source_file": "<path:requirements.txt>",
-           "type": "manifest"
-          }
-         ],
-         "legacy_version_source": "detected",
-         "pinned": true,
-         "pinned_version": "2.10",
-         "resolved_from_registry": false,
-         "resolved_version": "2.10",
-         "source_precedence": 0,
-         "version_source": "unknown"
-        },
-        "version_resolved_at": null,
-        "version_source": "detected",
-        "vulnerabilities": [],
-        "vulnerability_count": 0
-       },
-       {
-        "author": null,
-        "canonical_id": "<UUID>",
-        "copyright_text": null,
-        "declared_version": null,
-        "dependency_depth": 0,
-        "dependency_scope": "runtime",
-        "deps_dev_resolved": false,
-        "description": null,
-        "discovery_provenance": {
-         "confidence": "medium",
-         "observed_via": [
-          "local_discovery"
-         ],
-         "resolved_from_registry": false,
-         "source": "project",
-         "source_type": "local_discovery",
-         "version_provenance": {
-          "confidence": "unknown",
-          "declared_name": "requests",
-          "evidence": [
-           {
-            "line": 1,
-            "source_file": "<path:requirements.txt>",
-            "type": "manifest"
-           }
-          ],
-          "legacy_version_source": "detected",
-          "pinned": true,
-          "pinned_version": "2.19.0",
-          "resolved_from_registry": false,
-          "resolved_version": "2.19.0",
-          "source_precedence": 0,
-          "version_source": "unknown"
-         },
-         "version_source": "detected"
-        },
-        "distro_name": null,
-        "distro_version": null,
-        "download_url": null,
-        "ecosystem": "pypi",
-        "floating_reference": false,
-        "floating_reference_reason": null,
-        "homepage": null,
-        "integrity_verified": null,
-        "introduced_in_layer": null,
-        "is_direct": true,
-        "is_malicious": false,
-        "license": null,
-        "license_expression": null,
-        "malicious_reason": null,
-        "name": "requests",
-        "occurrence_count": 0,
-        "occurrences": [],
-        "parent_package": null,
-        "provenance_attested": null,
-        "provenance_source": null,
-        "provenance_status": null,
-        "purl": "pkg:pypi/requests@2.19.0",
-        "reachability_evidence": "declaration_only",
-        "registry_version": null,
-        "repository_url": null,
-        "resolved_from_registry": false,
-        "resolved_version": null,
-        "scorecard_checks": null,
-        "scorecard_lookup_reason": null,
-        "scorecard_lookup_state": null,
-        "scorecard_repo": null,
-        "scorecard_score": null,
-        "source_package": null,
-        "stable_id": "<UUID>",
-        "supplier": null,
-        "version": "2.19.0",
         "version_confidence": null,
         "version_conflicts": null,
         "version_evidence": [
@@ -572,28 +231,53 @@
           "type": "manifest"
          }
         ],
-        "version_provenance": {
-         "confidence": "unknown",
-         "declared_name": "requests",
-         "evidence": [
-          {
-           "line": 1,
-           "source_file": "<path:requirements.txt>",
-           "type": "manifest"
-          }
-         ],
-         "legacy_version_source": "detected",
-         "pinned": true,
-         "pinned_version": "2.19.0",
-         "resolved_from_registry": false,
-         "resolved_version": "2.19.0",
-         "source_precedence": 0,
-         "version_source": "unknown"
-        },
         "version_resolved_at": null,
         "version_source": "detected",
-        "vulnerabilities": [],
-        "vulnerability_count": 0
+        "vulnerabilities": []
+       },
+       {
+        "author": null,
+        "copyright_text": null,
+        "declared_version": null,
+        "dependency_depth": 0,
+        "dependency_scope": "runtime",
+        "deps_dev_resolved": false,
+        "description": null,
+        "download_url": null,
+        "homepage": null,
+        "integrity_verified": null,
+        "introduced_in_layer": null,
+        "is_direct": true,
+        "license": null,
+        "license_expression": null,
+        "package_ref": "<UUID>",
+        "parent_package": null,
+        "provenance_attested": null,
+        "provenance_source": null,
+        "provenance_status": null,
+        "reachability_evidence": "declaration_only",
+        "registry_version": null,
+        "repository_url": null,
+        "resolved_from_registry": false,
+        "resolved_version": null,
+        "scorecard_checks": null,
+        "scorecard_lookup_reason": null,
+        "scorecard_lookup_state": null,
+        "scorecard_repo": null,
+        "scorecard_score": null,
+        "supplier": null,
+        "version_confidence": null,
+        "version_conflicts": null,
+        "version_evidence": [
+         {
+          "line": 2,
+          "source_file": "<path:requirements.txt>",
+          "type": "manifest"
+         }
+        ],
+        "version_resolved_at": null,
+        "version_source": "detected",
+        "vulnerabilities": []
        }
       ],
       "permission_profile": null,
@@ -639,14 +323,7 @@
      "canonical_id": "<UUID>",
      "config_path": "<path:proj>",
      "discovered_at": "<TS>",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "source": "project",
-      "source_type": "local_discovery"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "id": "<UUID>",
      "last_seen": "<TS>",
      "name": "project:proj",
@@ -668,34 +345,7 @@
    "packages": [
     {
      "canonical_id": "<UUID>",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "exact",
-       "declared_name": "@modelcontextprotocol/server-filesystem",
-       "declared_version": "0.6.2",
-       "evidence": [
-        {
-         "parser": "npx",
-         "source_file": "<path:.mcp.json>",
-         "type": "command_pin"
-        }
-       ],
-       "pinned": true,
-       "pinned_version": "0.6.2",
-       "resolved_from_registry": false,
-       "resolved_version": "0.6.2",
-       "source_precedence": 30,
-       "version_source": "command_pin"
-      },
-      "version_source": "command_pin"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "distro_name": null,
      "distro_version": null,
      "ecosystem": "npm",
@@ -710,58 +360,13 @@
      "purl": "pkg:npm/%40modelcontextprotocol/server-filesystem@0.6.2",
      "source_package": null,
      "version": "0.6.2",
-     "version_provenance": {
-      "confidence": "exact",
-      "declared_name": "@modelcontextprotocol/server-filesystem",
-      "declared_version": "0.6.2",
-      "evidence": [
-       {
-        "parser": "npx",
-        "source_file": "<path:.mcp.json>",
-        "type": "command_pin"
-       }
-      ],
-      "pinned": true,
-      "pinned_version": "0.6.2",
-      "resolved_from_registry": false,
-      "resolved_version": "0.6.2",
-      "source_precedence": 30,
-      "version_source": "command_pin"
-     },
+     "version_provenance_ref": "prov:<HEX>",
      "vulnerability_count": 0,
      "vulnerability_status": "scanned"
     },
     {
      "canonical_id": "<UUID>",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "exact",
-       "declared_name": "lodash",
-       "declared_version": "4.17.4",
-       "evidence": [
-        {
-         "line": 1,
-         "source_file": "<path:package.json>",
-         "type": "manifest"
-        }
-       ],
-       "legacy_version_source": "manifest",
-       "pinned": true,
-       "pinned_version": "4.17.4",
-       "resolved_from_registry": false,
-       "resolved_version": "4.17.4",
-       "source_precedence": 30,
-       "version_source": "command_pin"
-      },
-      "version_source": "manifest"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "distro_name": null,
      "distro_version": null,
      "ecosystem": "npm",
@@ -776,52 +381,13 @@
      "purl": "pkg:npm/lodash@4.17.4",
      "source_package": null,
      "version": "4.17.4",
-     "version_provenance": {
-      "confidence": "exact",
-      "declared_name": "lodash",
-      "declared_version": "4.17.4",
-      "evidence": [
-       {
-        "line": 1,
-        "source_file": "<path:package.json>",
-        "type": "manifest"
-       }
-      ],
-      "legacy_version_source": "manifest",
-      "pinned": true,
-      "pinned_version": "4.17.4",
-      "resolved_from_registry": false,
-      "resolved_version": "4.17.4",
-      "source_precedence": 30,
-      "version_source": "command_pin"
-     },
+     "version_provenance_ref": "prov:<HEX>",
      "vulnerability_count": 0,
      "vulnerability_status": "scanned"
     },
     {
      "canonical_id": "<UUID>",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "exact",
-       "declared_name": "minimist",
-       "declared_version": "1.2.0",
-       "legacy_version_source": "manifest",
-       "pinned": true,
-       "pinned_version": "1.2.0",
-       "resolved_from_registry": false,
-       "resolved_version": "1.2.0",
-       "source_precedence": 30,
-       "version_source": "command_pin"
-      },
-      "version_source": "manifest"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "distro_name": null,
      "distro_version": null,
      "ecosystem": "npm",
@@ -836,51 +402,13 @@
      "purl": "pkg:npm/minimist@1.2.0",
      "source_package": null,
      "version": "1.2.0",
-     "version_provenance": {
-      "confidence": "exact",
-      "declared_name": "minimist",
-      "declared_version": "1.2.0",
-      "legacy_version_source": "manifest",
-      "pinned": true,
-      "pinned_version": "1.2.0",
-      "resolved_from_registry": false,
-      "resolved_version": "1.2.0",
-      "source_precedence": 30,
-      "version_source": "command_pin"
-     },
+     "version_provenance_ref": "prov:<HEX>",
      "vulnerability_count": 0,
      "vulnerability_status": "scanned"
     },
     {
      "canonical_id": "<UUID>",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "unknown",
-       "declared_name": "jinja2",
-       "evidence": [
-        {
-         "line": 2,
-         "source_file": "<path:requirements.txt>",
-         "type": "manifest"
-        }
-       ],
-       "legacy_version_source": "detected",
-       "pinned": true,
-       "pinned_version": "2.10",
-       "resolved_from_registry": false,
-       "resolved_version": "2.10",
-       "source_precedence": 0,
-       "version_source": "unknown"
-      },
-      "version_source": "detected"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "distro_name": null,
      "distro_version": null,
      "ecosystem": "pypi",
@@ -895,57 +423,13 @@
      "purl": "pkg:pypi/jinja2@2.10",
      "source_package": null,
      "version": "2.10",
-     "version_provenance": {
-      "confidence": "unknown",
-      "declared_name": "jinja2",
-      "evidence": [
-       {
-        "line": 2,
-        "source_file": "<path:requirements.txt>",
-        "type": "manifest"
-       }
-      ],
-      "legacy_version_source": "detected",
-      "pinned": true,
-      "pinned_version": "2.10",
-      "resolved_from_registry": false,
-      "resolved_version": "2.10",
-      "source_precedence": 0,
-      "version_source": "unknown"
-     },
+     "version_provenance_ref": "prov:<HEX>",
      "vulnerability_count": 0,
      "vulnerability_status": "scanned"
     },
     {
      "canonical_id": "<UUID>",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "unknown",
-       "declared_name": "requests",
-       "evidence": [
-        {
-         "line": 1,
-         "source_file": "<path:requirements.txt>",
-         "type": "manifest"
-        }
-       ],
-       "legacy_version_source": "detected",
-       "pinned": true,
-       "pinned_version": "2.19.0",
-       "resolved_from_registry": false,
-       "resolved_version": "2.19.0",
-       "source_precedence": 0,
-       "version_source": "unknown"
-      },
-      "version_source": "detected"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "distro_name": null,
      "distro_version": null,
      "ecosystem": "pypi",
@@ -960,24 +444,7 @@
      "purl": "pkg:pypi/requests@2.19.0",
      "source_package": null,
      "version": "2.19.0",
-     "version_provenance": {
-      "confidence": "unknown",
-      "declared_name": "requests",
-      "evidence": [
-       {
-        "line": 1,
-        "source_file": "<path:requirements.txt>",
-        "type": "manifest"
-       }
-      ],
-      "legacy_version_source": "detected",
-      "pinned": true,
-      "pinned_version": "2.19.0",
-      "resolved_from_registry": false,
-      "resolved_version": "2.19.0",
-      "source_precedence": 0,
-      "version_source": "unknown"
-     },
+     "version_provenance_ref": "prov:<HEX>",
      "vulnerability_count": 0,
      "vulnerability_status": "scanned"
     }
@@ -1027,14 +494,7 @@
      "auth_mode": "env-credentials",
      "canonical_id": "<UUID>",
      "command": "npx",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "source": "project",
-      "source_type": "local_discovery"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "fingerprint": "<UUID>",
      "id": "<UUID>",
      "name": "filesystem",
@@ -1052,14 +512,7 @@
      "auth_mode": "local-stdio",
      "canonical_id": "<UUID>",
      "command": "project",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "source": "project",
-      "source_type": "local_discovery"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "fingerprint": "<UUID>",
      "id": "<UUID>",
      "name": "proj",
@@ -1235,14 +688,7 @@
      "agent_type": "custom",
      "config_path": "<path:proj>",
      "discovered_at": "<TS>",
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "source": "project",
-      "source_type": "local_discovery"
-     },
+     "discovery_provenance_ref": "prov:<HEX>",
      "last_seen": "<TS>",
      "mcp_servers": [
       {
@@ -1253,42 +699,11 @@
        ],
        "command": "npx",
        "config_path": "<path:.mcp.json>",
-       "discovery_provenance": {
-        "confidence": "medium",
-        "observed_via": [
-         "local_discovery"
-        ],
-        "source": "project",
-        "source_type": "local_discovery"
-       },
+       "discovery_provenance_ref": "prov:<HEX>",
        "name": "filesystem",
        "packages": [
         {
-         "discovery_provenance": {
-          "confidence": "medium",
-          "observed_via": [
-           "local_discovery"
-          ],
-          "resolved_from_registry": false,
-          "source": "project",
-          "source_type": "local_discovery",
-          "version_provenance": {
-           "confidence": "exact",
-           "declared_name": "@modelcontextprotocol/server-filesystem",
-           "declared_version": "0.6.2",
-           "evidence": [
-            {
-             "parser": "npx",
-             "source_file": "<path:.mcp.json>",
-             "type": "command_pin"
-            }
-           ],
-           "resolved_from_registry": false,
-           "resolved_version": "0.6.2",
-           "version_source": "command_pin"
-          },
-          "version_source": "command_pin"
-         },
+         "discovery_provenance_ref": "prov:<HEX>",
          "ecosystem": "npm",
          "name": "@modelcontextprotocol/server-filesystem",
          "purl": "pkg:npm/%40modelcontextprotocol/server-filesystem@0.6.2",
@@ -1302,126 +717,32 @@
         "<path:proj>"
        ],
        "command": "project",
-       "discovery_provenance": {
-        "confidence": "medium",
-        "observed_via": [
-         "local_discovery"
-        ],
-        "source": "project",
-        "source_type": "local_discovery"
-       },
+       "discovery_provenance_ref": "prov:<HEX>",
        "name": "proj",
        "packages": [
         {
-         "discovery_provenance": {
-          "confidence": "medium",
-          "observed_via": [
-           "local_discovery"
-          ],
-          "resolved_from_registry": false,
-          "source": "project",
-          "source_type": "local_discovery",
-          "version_provenance": {
-           "confidence": "exact",
-           "declared_name": "lodash",
-           "declared_version": "4.17.4",
-           "evidence": [
-            {
-             "line": 1,
-             "source_file": "<path:package.json>",
-             "type": "manifest"
-            }
-           ],
-           "resolved_from_registry": false,
-           "resolved_version": "4.17.4",
-           "version_source": "command_pin"
-          },
-          "version_source": "manifest"
-         },
+         "discovery_provenance_ref": "prov:<HEX>",
          "ecosystem": "npm",
          "name": "lodash",
          "purl": "pkg:npm/lodash@4.17.4",
          "version": "4.17.4"
         },
         {
-         "discovery_provenance": {
-          "confidence": "medium",
-          "observed_via": [
-           "local_discovery"
-          ],
-          "resolved_from_registry": false,
-          "source": "project",
-          "source_type": "local_discovery",
-          "version_provenance": {
-           "confidence": "exact",
-           "declared_name": "minimist",
-           "declared_version": "1.2.0",
-           "resolved_from_registry": false,
-           "resolved_version": "1.2.0",
-           "version_source": "command_pin"
-          },
-          "version_source": "manifest"
-         },
+         "discovery_provenance_ref": "prov:<HEX>",
          "ecosystem": "npm",
          "name": "minimist",
          "purl": "pkg:npm/minimist@1.2.0",
          "version": "1.2.0"
         },
         {
-         "discovery_provenance": {
-          "confidence": "medium",
-          "observed_via": [
-           "local_discovery"
-          ],
-          "resolved_from_registry": false,
-          "source": "project",
-          "source_type": "local_discovery",
-          "version_provenance": {
-           "confidence": "unknown",
-           "declared_name": "jinja2",
-           "evidence": [
-            {
-             "line": 2,
-             "source_file": "<path:requirements.txt>",
-             "type": "manifest"
-            }
-           ],
-           "resolved_from_registry": false,
-           "resolved_version": "2.10",
-           "version_source": "unknown"
-          },
-          "version_source": "detected"
-         },
+         "discovery_provenance_ref": "prov:<HEX>",
          "ecosystem": "pypi",
          "name": "jinja2",
          "purl": "pkg:pypi/jinja2@2.10",
          "version": "2.10"
         },
         {
-         "discovery_provenance": {
-          "confidence": "medium",
-          "observed_via": [
-           "local_discovery"
-          ],
-          "resolved_from_registry": false,
-          "source": "project",
-          "source_type": "local_discovery",
-          "version_provenance": {
-           "confidence": "unknown",
-           "declared_name": "requests",
-           "evidence": [
-            {
-             "line": 1,
-             "source_file": "<path:requirements.txt>",
-             "type": "manifest"
-            }
-           ],
-           "resolved_from_registry": false,
-           "resolved_version": "2.19.0",
-           "version_source": "unknown"
-          },
-          "version_source": "detected"
-         },
+         "discovery_provenance_ref": "prov:<HEX>",
          "ecosystem": "pypi",
          "name": "requests",
          "purl": "pkg:pypi/requests@2.19.0",
@@ -1443,473 +764,18 @@
     }
    ],
    "generated_at": "<TS>",
-   "packages": [
-    {
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "exact",
-       "declared_name": "@modelcontextprotocol/server-filesystem",
-       "declared_version": "0.6.2",
-       "evidence": [
-        {
-         "parser": "npx",
-         "source_file": "<path:.mcp.json>",
-         "type": "command_pin"
-        }
-       ],
-       "resolved_from_registry": false,
-       "resolved_version": "0.6.2",
-       "version_source": "command_pin"
-      },
-      "version_source": "command_pin"
-     },
-     "ecosystem": "npm",
-     "name": "@modelcontextprotocol/server-filesystem",
-     "purl": "pkg:npm/%40modelcontextprotocol/server-filesystem@0.6.2",
-     "version": "0.6.2"
-    },
-    {
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "exact",
-       "declared_name": "lodash",
-       "declared_version": "4.17.4",
-       "evidence": [
-        {
-         "line": 1,
-         "source_file": "<path:package.json>",
-         "type": "manifest"
-        }
-       ],
-       "resolved_from_registry": false,
-       "resolved_version": "4.17.4",
-       "version_source": "command_pin"
-      },
-      "version_source": "manifest"
-     },
-     "ecosystem": "npm",
-     "name": "lodash",
-     "purl": "pkg:npm/lodash@4.17.4",
-     "version": "4.17.4"
-    },
-    {
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "exact",
-       "declared_name": "minimist",
-       "declared_version": "1.2.0",
-       "resolved_from_registry": false,
-       "resolved_version": "1.2.0",
-       "version_source": "command_pin"
-      },
-      "version_source": "manifest"
-     },
-     "ecosystem": "npm",
-     "name": "minimist",
-     "purl": "pkg:npm/minimist@1.2.0",
-     "version": "1.2.0"
-    },
-    {
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "unknown",
-       "declared_name": "jinja2",
-       "evidence": [
-        {
-         "line": 2,
-         "source_file": "<path:requirements.txt>",
-         "type": "manifest"
-        }
-       ],
-       "resolved_from_registry": false,
-       "resolved_version": "2.10",
-       "version_source": "unknown"
-      },
-      "version_source": "detected"
-     },
-     "ecosystem": "pypi",
-     "name": "jinja2",
-     "purl": "pkg:pypi/jinja2@2.10",
-     "version": "2.10"
-    },
-    {
-     "discovery_provenance": {
-      "confidence": "medium",
-      "observed_via": [
-       "local_discovery"
-      ],
-      "resolved_from_registry": false,
-      "source": "project",
-      "source_type": "local_discovery",
-      "version_provenance": {
-       "confidence": "unknown",
-       "declared_name": "requests",
-       "evidence": [
-        {
-         "line": 1,
-         "source_file": "<path:requirements.txt>",
-         "type": "manifest"
-        }
-       ],
-       "resolved_from_registry": false,
-       "resolved_version": "2.19.0",
-       "version_source": "unknown"
-      },
-      "version_source": "detected"
-     },
-     "ecosystem": "pypi",
-     "name": "requests",
-     "purl": "pkg:pypi/requests@2.19.0",
-     "version": "2.19.0"
-    }
-   ],
    "schema_version": "1"
   },
-  "packages": [
-   {
-    "canonical_id": "<UUID>",
-    "discovery_provenance": {
-     "confidence": "medium",
-     "observed_via": [
-      "local_discovery"
-     ],
-     "resolved_from_registry": false,
-     "source": "project",
-     "source_type": "local_discovery",
-     "version_provenance": {
-      "confidence": "exact",
-      "declared_name": "@modelcontextprotocol/server-filesystem",
-      "declared_version": "0.6.2",
-      "evidence": [
-       {
-        "parser": "npx",
-        "source_file": "<path:.mcp.json>",
-        "type": "command_pin"
-       }
-      ],
-      "pinned": true,
-      "pinned_version": "0.6.2",
-      "resolved_from_registry": false,
-      "resolved_version": "0.6.2",
-      "source_precedence": 30,
-      "version_source": "command_pin"
-     },
-     "version_source": "command_pin"
-    },
-    "distro_name": null,
-    "distro_version": null,
-    "ecosystem": "npm",
-    "floating_reference": false,
-    "floating_reference_reason": null,
-    "id": "<UUID>",
-    "is_malicious": false,
-    "malicious_reason": null,
-    "name": "@modelcontextprotocol/server-filesystem",
-    "occurrence_count": 0,
-    "occurrences": [],
-    "purl": "pkg:npm/%40modelcontextprotocol/server-filesystem@0.6.2",
-    "source_package": null,
-    "version": "0.6.2",
-    "version_provenance": {
-     "confidence": "exact",
-     "declared_name": "@modelcontextprotocol/server-filesystem",
-     "declared_version": "0.6.2",
-     "evidence": [
-      {
-       "parser": "npx",
-       "source_file": "<path:.mcp.json>",
-       "type": "command_pin"
-      }
-     ],
-     "pinned": true,
-     "pinned_version": "0.6.2",
-     "resolved_from_registry": false,
-     "resolved_version": "0.6.2",
-     "source_precedence": 30,
-     "version_source": "command_pin"
-    },
-    "vulnerability_count": 0,
-    "vulnerability_status": "scanned"
-   },
-   {
-    "canonical_id": "<UUID>",
-    "discovery_provenance": {
-     "confidence": "medium",
-     "observed_via": [
-      "local_discovery"
-     ],
-     "resolved_from_registry": false,
-     "source": "project",
-     "source_type": "local_discovery",
-     "version_provenance": {
-      "confidence": "exact",
-      "declared_name": "lodash",
-      "declared_version": "4.17.4",
-      "evidence": [
-       {
-        "line": 1,
-        "source_file": "<path:package.json>",
-        "type": "manifest"
-       }
-      ],
-      "legacy_version_source": "manifest",
-      "pinned": true,
-      "pinned_version": "4.17.4",
-      "resolved_from_registry": false,
-      "resolved_version": "4.17.4",
-      "source_precedence": 30,
-      "version_source": "command_pin"
-     },
-     "version_source": "manifest"
-    },
-    "distro_name": null,
-    "distro_version": null,
-    "ecosystem": "npm",
-    "floating_reference": false,
-    "floating_reference_reason": null,
-    "id": "<UUID>",
-    "is_malicious": false,
-    "malicious_reason": null,
-    "name": "lodash",
-    "occurrence_count": 0,
-    "occurrences": [],
-    "purl": "pkg:npm/lodash@4.17.4",
-    "source_package": null,
-    "version": "4.17.4",
-    "version_provenance": {
-     "confidence": "exact",
-     "declared_name": "lodash",
-     "declared_version": "4.17.4",
-     "evidence": [
-      {
-       "line": 1,
-       "source_file": "<path:package.json>",
-       "type": "manifest"
-      }
-     ],
-     "legacy_version_source": "manifest",
-     "pinned": true,
-     "pinned_version": "4.17.4",
-     "resolved_from_registry": false,
-     "resolved_version": "4.17.4",
-     "source_precedence": 30,
-     "version_source": "command_pin"
-    },
-    "vulnerability_count": 0,
-    "vulnerability_status": "scanned"
-   },
-   {
-    "canonical_id": "<UUID>",
-    "discovery_provenance": {
-     "confidence": "medium",
-     "observed_via": [
-      "local_discovery"
-     ],
-     "resolved_from_registry": false,
-     "source": "project",
-     "source_type": "local_discovery",
-     "version_provenance": {
-      "confidence": "exact",
-      "declared_name": "minimist",
-      "declared_version": "1.2.0",
-      "legacy_version_source": "manifest",
-      "pinned": true,
-      "pinned_version": "1.2.0",
-      "resolved_from_registry": false,
-      "resolved_version": "1.2.0",
-      "source_precedence": 30,
-      "version_source": "command_pin"
-     },
-     "version_source": "manifest"
-    },
-    "distro_name": null,
-    "distro_version": null,
-    "ecosystem": "npm",
-    "floating_reference": false,
-    "floating_reference_reason": null,
-    "id": "<UUID>",
-    "is_malicious": false,
-    "malicious_reason": null,
-    "name": "minimist",
-    "occurrence_count": 0,
-    "occurrences": [],
-    "purl": "pkg:npm/minimist@1.2.0",
-    "source_package": null,
-    "version": "1.2.0",
-    "version_provenance": {
-     "confidence": "exact",
-     "declared_name": "minimist",
-     "declared_version": "1.2.0",
-     "legacy_version_source": "manifest",
-     "pinned": true,
-     "pinned_version": "1.2.0",
-     "resolved_from_registry": false,
-     "resolved_version": "1.2.0",
-     "source_precedence": 30,
-     "version_source": "command_pin"
-    },
-    "vulnerability_count": 0,
-    "vulnerability_status": "scanned"
-   },
-   {
-    "canonical_id": "<UUID>",
-    "discovery_provenance": {
-     "confidence": "medium",
-     "observed_via": [
-      "local_discovery"
-     ],
-     "resolved_from_registry": false,
-     "source": "project",
-     "source_type": "local_discovery",
-     "version_provenance": {
-      "confidence": "unknown",
-      "declared_name": "jinja2",
-      "evidence": [
-       {
-        "line": 2,
-        "source_file": "<path:requirements.txt>",
-        "type": "manifest"
-       }
-      ],
-      "legacy_version_source": "detected",
-      "pinned": true,
-      "pinned_version": "2.10",
-      "resolved_from_registry": false,
-      "resolved_version": "2.10",
-      "source_precedence": 0,
-      "version_source": "unknown"
-     },
-     "version_source": "detected"
-    },
-    "distro_name": null,
-    "distro_version": null,
-    "ecosystem": "pypi",
-    "floating_reference": false,
-    "floating_reference_reason": null,
-    "id": "<UUID>",
-    "is_malicious": false,
-    "malicious_reason": null,
-    "name": "jinja2",
-    "occurrence_count": 0,
-    "occurrences": [],
-    "purl": "pkg:pypi/jinja2@2.10",
-    "source_package": null,
-    "version": "2.10",
-    "version_provenance": {
-     "confidence": "unknown",
-     "declared_name": "jinja2",
-     "evidence": [
-      {
-       "line": 2,
-       "source_file": "<path:requirements.txt>",
-       "type": "manifest"
-      }
-     ],
-     "legacy_version_source": "detected",
-     "pinned": true,
-     "pinned_version": "2.10",
-     "resolved_from_registry": false,
-     "resolved_version": "2.10",
-     "source_precedence": 0,
-     "version_source": "unknown"
-    },
-    "vulnerability_count": 0,
-    "vulnerability_status": "scanned"
-   },
-   {
-    "canonical_id": "<UUID>",
-    "discovery_provenance": {
-     "confidence": "medium",
-     "observed_via": [
-      "local_discovery"
-     ],
-     "resolved_from_registry": false,
-     "source": "project",
-     "source_type": "local_discovery",
-     "version_provenance": {
-      "confidence": "unknown",
-      "declared_name": "requests",
-      "evidence": [
-       {
-        "line": 1,
-        "source_file": "<path:requirements.txt>",
-        "type": "manifest"
-       }
-      ],
-      "legacy_version_source": "detected",
-      "pinned": true,
-      "pinned_version": "2.19.0",
-      "resolved_from_registry": false,
-      "resolved_version": "2.19.0",
-      "source_precedence": 0,
-      "version_source": "unknown"
-     },
-     "version_source": "detected"
-    },
-    "distro_name": null,
-    "distro_version": null,
-    "ecosystem": "pypi",
-    "floating_reference": false,
-    "floating_reference_reason": null,
-    "id": "<UUID>",
-    "is_malicious": false,
-    "malicious_reason": null,
-    "name": "requests",
-    "occurrence_count": 0,
-    "occurrences": [],
-    "purl": "pkg:pypi/requests@2.19.0",
-    "source_package": null,
-    "version": "2.19.0",
-    "version_provenance": {
-     "confidence": "unknown",
-     "declared_name": "requests",
-     "evidence": [
-      {
-       "line": 1,
-       "source_file": "<path:requirements.txt>",
-       "type": "manifest"
-      }
-     ],
-     "legacy_version_source": "detected",
-     "pinned": true,
-     "pinned_version": "2.19.0",
-     "resolved_from_registry": false,
-     "resolved_version": "2.19.0",
-     "source_precedence": 0,
-     "version_source": "unknown"
-    },
-    "vulnerability_count": 0,
-    "vulnerability_status": "scanned"
-   }
-  ],
+  "packing": {
+   "legacy_schema_version": "1.0",
+   "schema_version": "1",
+   "transforms": [
+    "inventory_snapshot_packages",
+    "package_refs",
+    "provenance_refs",
+    "root_packages_alias"
+   ]
+  },
   "posture_grade": "N/A",
   "posture_grade_label": "N/A",
   "posture_scorecard": {
@@ -2070,6 +936,19 @@
    "root": "<path:proj>",
    "transitive_packages": 0
   },
+  "provenance": {
+   "prov:<HEX>": {
+    "confidence": "medium",
+    "observed_via": [
+     "local_discovery"
+    ],
+    "resolved_from_registry": false,
+    "source": "project",
+    "source_type": "local_discovery",
+    "version_provenance_ref": "prov:<HEX>",
+    "version_source": "detected"
+   }
+  },
   "remediation_plan": [],
   "scan_id": "",
   "scan_performance": {
@@ -2101,7 +980,7 @@
   "scan_sources": [
    "agent_discovery"
   ],
-  "schema_version": "1.0",
+  "schema_version": "2.0",
   "scorecard_summary": {
    "attempted_packages": 0,
    "eligible_packages": 0,
@@ -2114,7 +993,7 @@
    "unique_packages": 5,
    "unresolved_packages": 5
   },
-  "spec_version": "1.0",
+  "spec_version": "2.0",
   "summary": {
    "coverage_warnings": [],
    "critical_findings": 0,

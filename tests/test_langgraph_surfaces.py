@@ -16,6 +16,7 @@ from click.testing import CliRunner
 from agent_bom.cli import main
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.types import EntityType, RelationshipType
+from agent_bom.output.report_packing import load_report_document
 
 _FIXTURE = Path(__file__).parent / "fixtures" / "agent_frameworks" / "langgraph_supervisor"
 
@@ -38,7 +39,7 @@ def report(project: Path, tmp_path_factory: pytest.TempPathFactory) -> dict:
     args = ["scan", "-p", str(project), "--ai-inventory", str(project), "--offline", "-f", "json", "-o", str(out)]
     result = CliRunner().invoke(main, args)
     assert out.exists(), result.output
-    return json.loads(out.read_text(encoding="utf-8"))
+    return load_report_document(json.loads(out.read_text(encoding="utf-8")))
 
 
 def test_framework_links_to_the_manifest_package_not_a_versionless_copy(report: dict) -> None:

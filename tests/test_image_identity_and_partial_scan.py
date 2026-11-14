@@ -8,6 +8,7 @@ from click.testing import CliRunner
 
 from agent_bom.cli import main
 from agent_bom.models import Agent, AgentType, MCPServer, Package
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.security import sanitize_sensitive_payload
 
 IMAGE = "python:3.11.4-alpine3.18@sha256:603975e62d85aa07578034d3d10ffa1983b7618a6abb6371cf51941be6b8842c"
@@ -52,7 +53,7 @@ def test_failed_docker_server_keeps_healthy_inventory_and_partial_report(tmp_pat
     output = tmp_path / "report.json"
     result = CliRunner().invoke(main, ["scan", "--offline", "--no-auto-update-db", "--no-skill", "-f", "json", "-o", str(output)])
     assert result.exit_code == 1, result.output
-    payload = json.loads(output.read_text())
+    payload = load_report_document(json.loads(output.read_text()))
     assert payload["scan_run"]["outcome"] == "partial"
     assert payload["posture_grade"] == "N/A"
     assert any(p["name"] == "six" for a in payload["agents"] for s in a["mcp_servers"] for p in s["packages"])
