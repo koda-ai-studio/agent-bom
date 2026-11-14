@@ -15,12 +15,14 @@ import json
 import logging
 import platform
 from typing import Any, Literal, overload
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
 from agent_bom import config
 from agent_bom.core.settings import env_float, env_list, env_str
 from agent_bom.security import (
+    SecurityError,
     sanitize_command_args,
     sanitize_env_vars,
     sanitize_security_warnings,
@@ -52,7 +54,6 @@ def normalize_scan_push_url(push_url: str) -> str:
     that is not an absolute http(s) URL is returned untouched for the outbound
     URL policy to reject with its own message.
     """
-    from urllib.parse import urlsplit, urlunsplit
 
     candidate = (push_url or "").strip()
     parsed = urlsplit(candidate)
@@ -345,7 +346,6 @@ async def _push_async(
     failed. Non-retryable 4xx responses short-circuit.
     """
     from agent_bom.http_client import create_client
-    from agent_bom.security import SecurityError
 
     sanitized = await asyncio.to_thread(
         sanitize_results, results, source_id=source_id, idempotency_key=idempotency_key, idempotency_target=push_url
@@ -538,7 +538,6 @@ async def _await_push_receipt(
 
 
 def _version_url(push_url: str) -> str | None:
-    from urllib.parse import urlsplit, urlunsplit
 
     parsed = urlsplit(push_url)
     if not parsed.scheme or not parsed.path.rstrip("/").endswith(SCAN_PUSH_PATH):
@@ -549,7 +548,6 @@ def _version_url(push_url: str) -> str | None:
 
 async def _server_report_schemas(push_url: str, api_key: str | None) -> list[str]:
     from agent_bom.http_client import create_client
-    from agent_bom.security import SecurityError
 
     url = _version_url(push_url)
     if url is None:

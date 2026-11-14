@@ -566,15 +566,14 @@ def create_mcp_server(
     When the smithery SDK is installed, the server is automatically enhanced
     with session-config and CORS middleware for Smithery.ai hosted deployment.
     """
-    from agent_bom.logging_config import logging_configured, setup_logging
+    from agent_bom.logging_config import ensure_logging
     from agent_bom.mcp_tools.profiles import configure_registration, get_profile
 
     if public_readonly is None:
         public_readonly = public_readonly_enabled()
     get_profile(profile)  # Reject unknown profiles before constructing the server.
     demo_estate_default_persist(activate_demo_state_dir())  # Before any store opens: demo state dir + the demo job DB serve uses.
-    if not logging_configured():
-        setup_logging(level="INFO")
+    ensure_logging(level="INFO")
     _check_mcp_sdk()
 
     from agent_bom import __version__

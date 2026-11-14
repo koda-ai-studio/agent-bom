@@ -203,3 +203,9 @@ def setup_logging(
     # Quiet noisy third-party loggers
     for noisy in ("httpx", "httpcore", "urllib3", "asyncio"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
+def ensure_logging(level: Optional[str] = None) -> None:
+    """Configure logging unless a caller already did, keeping their handlers and format."""
+    if not logging_configured():
+        setup_logging(level=level)
