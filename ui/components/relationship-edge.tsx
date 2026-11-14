@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, useStore, useStoreApi, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
@@ -11,6 +11,7 @@ import {
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout, scheduleRelationshipLabelLayoutAfterMove } from "@/lib/relationship-label-layout";
 import { minimapNodeColor, relationshipEdgeLabelText } from "@/lib/graph-utils";
+import { relationshipLaneFor } from "@/lib/relationship-lanes";
 import { anchoredLabelPoint, relationshipPath, ROUTED_NODE_LIMIT } from "@/lib/relationship-routing";
 import { mcpBranchPath } from "@/lib/graph-mcp-routing";
 import { columnEdgePath } from "@/lib/path-card-column";
@@ -102,6 +103,12 @@ export function RelationshipEdge(props: EdgeProps) {
   }, []);
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
   const nodes = useStore(state => state.nodes);
+  const edges = useStore(state => state.edges);
+  const portLane = useMemo(() => {
+    if (!edges || nodes.length > ROUTED_NODE_LIMIT) return undefined;
+    const placed = new Map(nodes.filter(node => !node.hidden).map(node => [node.id, node.position]));
+    return relationshipLaneFor(props.id, edges, id => placed.get(id)?.y, id => placed.get(id)?.x);
+  }, [edges, nodes, props.id]);
   const packageFinding = relationship === "vulnerable_to"
     && nodes.some(node => node.id === props.source && node.data.nodeType === "package")
     && nodes.some(node => node.id === props.target
@@ -132,7 +139,7 @@ export function RelationshipEdge(props: EdgeProps) {
     : relationshipPath(props, nodes.length <= ROUTED_NODE_LIMIT ? nodes.filter(node => !node.hidden).map(node => ({
       id: node.id, x: node.position.x, y: node.position.y,
       width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
-    })) : []));
+    })) : [], portLane));
   const anchor = props.data?.labelAnchor === "source" || props.data?.labelAnchor === "target" ? anchoredLabelPoint(props, props.data.labelAnchor) : null;
   const x = anchor?.x ?? routeX, y = anchor?.y ?? routeY;
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y, visibility, inspecting]);
