@@ -23,7 +23,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from agent_bom.parsers.compliance_tags import tag_training_run
-from agent_bom.runtime.patterns import PII_PATTERNS, RESPONSE_INJECTION_PATTERNS, pii_matches
+from agent_bom.runtime.patterns import PII_PATTERNS, RESPONSE_INJECTION_PATTERNS
+from agent_bom.runtime.pii_numbers import pii_matches
 from agent_bom.traversal import iter_discovery_files
 
 logger = logging.getLogger(__name__)

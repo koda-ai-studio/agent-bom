@@ -33,13 +33,12 @@ from agent_bom.runtime.patterns import (
     RESPONSE_TOXICITY_PATTERNS,
     SUSPICIOUS_SEQUENCES,
     detect_cortex_models,
-    pii_matches,
-    redact_pii_matches,
     score_semantic_injection,
 )
 from agent_bom.runtime.patterns import (
     PII_PATTERNS as _PII_PATTERNS,
 )
+from agent_bom.runtime.pii_numbers import pii_matches, redact_pii_matches
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
 

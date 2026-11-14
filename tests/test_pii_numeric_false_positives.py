@@ -12,7 +12,7 @@ import pytest
 
 from agent_bom.proxy_scanner import redact_pii
 from agent_bom.runtime.detectors import CredentialLeakDetector
-from agent_bom.runtime.patterns import luhn_valid
+from agent_bom.runtime.pii_numbers import luhn_valid
 from agent_bom.secret_scanner import scan_content
 
 _VISA_TEST = "4111" + "1111" * 3

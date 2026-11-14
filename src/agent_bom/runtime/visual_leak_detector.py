@@ -47,7 +47,8 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from agent_bom.runtime.detectors import Alert, AlertSeverity
-from agent_bom.runtime.patterns import CREDENTIAL_PATTERNS, PII_PATTERNS, pii_matches
+from agent_bom.runtime.patterns import CREDENTIAL_PATTERNS, PII_PATTERNS
+from agent_bom.runtime.pii_numbers import pii_matches
 
 logger = logging.getLogger(__name__)
 

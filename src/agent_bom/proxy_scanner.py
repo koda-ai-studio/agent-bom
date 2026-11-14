@@ -29,9 +29,9 @@ from agent_bom.parsers.prompt_scanner import (
 # ---------------------------------------------------------------------------
 # Reuse existing pattern libraries
 # ---------------------------------------------------------------------------
-from agent_bom.runtime.patterns import NUMBER_END as _NUM_END
-from agent_bom.runtime.patterns import NUMBER_START as _NUM_START
-from agent_bom.runtime.patterns import luhn_valid, redact_pii_matches
+from agent_bom.runtime.pii_numbers import NUMBER_END as _NUM_END
+from agent_bom.runtime.pii_numbers import NUMBER_START as _NUM_START
+from agent_bom.runtime.pii_numbers import luhn_valid, redact_pii_matches
 
 # ---------------------------------------------------------------------------
 # Data structures
