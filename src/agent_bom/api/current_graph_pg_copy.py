@@ -30,6 +30,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from agent_bom.api import current_graph_pg_copy_child
 from agent_bom.api.graph_store_support import _CREATE_PRESET_TABLE_SQLITE
 from agent_bom.db import graph_store as sqlite_graph_store
 from agent_bom.db.graph_node_search import ensure_search_index
@@ -196,15 +197,45 @@ def copy_postgres_source(
     write_generation: str,
     evidence_manifest_sha256: str,
 ) -> bool:
-    """Copy one PostgreSQL source snapshot into the projection; False (nothing written) when it would not equal a rewrite."""
+    """Copy one PostgreSQL source snapshot into the projection in a child process; False when it did not apply.
+
+    The child holds none of the API's interpreter lock while it streams rows.
+    A decline, a failure, a timeout or a crash all leave nothing promoted, and
+    the caller rebuilds in process.
+    """
+    return current_graph_pg_copy_child.copy_in_child(
+        str(store._cache_path),
+        tenant=tenant,
+        source_scan=source_scan,
+        expected_revision=expected_revision,
+        identity=identity,
+        created_at=created_at,
+        write_generation=write_generation,
+        evidence_manifest_sha256=evidence_manifest_sha256,
+    )
+
+
+def copy_postgres_rows(
+    pool: Any,
+    cache_path: str,
+    *,
+    tenant: str,
+    source_scan: str,
+    expected_revision: str,
+    identity: str,
+    created_at: str,
+    write_generation: str,
+    evidence_manifest_sha256: str,
+) -> bool:
+    """Copy one PostgreSQL source snapshot into the projection file; False (nothing written) when it would not equal a rewrite."""
     import psycopg
 
     from agent_bom.api.postgres_common import _tenant_connection
 
     try:
         # One repeatable-read snapshot: every table is read at the revision checked first.
-        with _tenant_connection(store._graph_store._pool, repeatable_read=True) as pg:
-            with sqlite_graph_store.open_graph_db(Path(store._cache_path)) as conn:
+        with _tenant_connection(pool, repeatable_read=True) as pg:
+            with sqlite_graph_store.open_graph_db(Path(cache_path)) as conn:
                 with snapshot_bulk_cache(conn):
                     conn.execute("BEGIN IMMEDIATE")
                     copied = False
@@ -237,4 +268,4 @@ def copy_postgres_source(
     return copied
 
 
-__all__ = ["BATCH_ROWS", "copy_postgres_source"]
+__all__ = ["BATCH_ROWS", "copy_postgres_rows", "copy_postgres_source"]
