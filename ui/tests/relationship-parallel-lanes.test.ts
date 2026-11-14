@@ -1,6 +1,6 @@
 import { Position } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
-import { relationshipLaneFor } from "@/lib/relationship-lanes";
+import { LANE_GAP, relationshipLaneFor } from "@/lib/relationship-lanes";
 import { relationshipPath } from "@/lib/relationship-routing";
 
 type Point = { x: number; y: number };
@@ -118,7 +118,7 @@ describe("parallel relationship lanes", () => {
     // A line never ends off its target's port row by more than one lane.
     for (const id of ["pin-pillow", "instance1-pillow", "instance2-pillow"]) {
       const end = points(route(id)[0]).at(-1)!;
-      expect(Math.abs(end.y - at.pillow!.y)).toBeLessThanOrEqual(10);
+      expect(Math.abs(end.y - at.pillow!.y)).toBeLessThanOrEqual(LANE_GAP);
     }
   });
 

@@ -1,5 +1,5 @@
 /** Vertical spacing between parallel relationship lanes that leave or enter one port. */
-export const LANE_GAP = 10;
+export const LANE_GAP = 14;
 
 export type LaneEdge = {
   id: string;
