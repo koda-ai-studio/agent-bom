@@ -18,6 +18,7 @@ from agent_bom.cli.options_inputs import (
     SBOM_NAME_OPTION,
     SBOM_OPTION,
 )
+from agent_bom.cli.options_pretty_json import PRETTY_JSON_OPTION
 from agent_bom.cli.options_report_format import REPORT_FORMAT_OPTION
 
 # Canonical `--format` choices accepted by the top-level `scan` command. The
@@ -201,6 +202,7 @@ def output_options(fn):
                 ),
             ),
             REPORT_FORMAT_OPTION,
+            PRETTY_JSON_OPTION,
             click.option(
                 "--iceberg-catalog-url",
                 "iceberg_catalog_url",

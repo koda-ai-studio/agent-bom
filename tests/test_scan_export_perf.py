@@ -394,7 +394,7 @@ def test_sectioned_json_writer_is_byte_identical_to_json_dump(data: dict) -> Non
     assert actual.getvalue() == expected.getvalue()
 
 
-def test_export_json_writes_indented_redacted_payload(tmp_path: Path) -> None:
+def test_export_json_writes_compact_redacted_payload(tmp_path: Path) -> None:
     from agent_bom.models import AIBOMReport
     from agent_bom.output.json_fmt import export_json, to_redacted_json
 
@@ -404,7 +404,7 @@ def test_export_json_writes_indented_redacted_payload(tmp_path: Path) -> None:
 
     export_json(report, str(out), report_json=report_json)
 
-    expected = json.dumps(to_redacted_json(report, report_json=report_json), indent=2) + "\n"
+    expected = json.dumps(to_redacted_json(report, report_json=report_json), separators=(",", ":"))
     assert out.read_text(encoding="utf-8") == expected
     assert "abc123secret" not in out.read_text(encoding="utf-8")
 

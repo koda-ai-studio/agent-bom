@@ -7491,6 +7491,8 @@ export interface paths {
          *     result document. ``view=full`` returns the complete ``ScanJob``: ``result``
          *     is the canonical AI-BOM JSON and, for a non-json ``format``,
          *     ``result_document`` carries that rendering named by ``result_format``.
+         *     A large full view is streamed (chunked, no ``Content-Length``) with the
+         *     same bytes; page sections with ``/v1/scan/{job_id}/result/{section}``.
          */
         get: operations["get_scan_v1_scan__job_id__get"];
         put?: never;

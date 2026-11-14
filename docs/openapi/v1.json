@@ -87356,7 +87356,7 @@
         ]
       },
       "get": {
-        "description": "Fetch scan status, progress and a bounded result summary.\n\nThe default ``view=summary`` returns lifecycle fields, sanitized progress,\nthe result summary objects, the graph persistence receipt and links to the\npaged ``/v1/scan/{job_id}/result/{section}`` reads; it never loads the full\nresult document. ``view=full`` returns the complete ``ScanJob``: ``result``\nis the canonical AI-BOM JSON and, for a non-json ``format``,\n``result_document`` carries that rendering named by ``result_format``.",
+        "description": "Fetch scan status, progress and a bounded result summary.\n\nThe default ``view=summary`` returns lifecycle fields, sanitized progress,\nthe result summary objects, the graph persistence receipt and links to the\npaged ``/v1/scan/{job_id}/result/{section}`` reads; it never loads the full\nresult document. ``view=full`` returns the complete ``ScanJob``: ``result``\nis the canonical AI-BOM JSON and, for a non-json ``format``,\n``result_document`` carries that rendering named by ``result_format``.\nA large full view is streamed (chunked, no ``Content-Length``) with the\nsame bytes; page sections with ``/v1/scan/{job_id}/result/{section}``.",
         "operationId": "get_scan_v1_scan__job_id__get",
         "parameters": [
           {

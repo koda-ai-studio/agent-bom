@@ -76,6 +76,40 @@ The product intent is:
 - `Postgres` remains the transactional control-plane source of truth
 - `ClickHouse` is the scale-out answer for analytics-heavy workloads
 
+## Cost to run
+
+What one self-hosted control plane consumes, from measured runs only. Each
+figure names its source; estates of a different shape will differ.
+
+| Resource | Measured | Planning figure |
+| --- | --- | --- |
+| API memory, 1,000 agents per push | peak 731 MB (SQLite), 811 MB (PostgreSQL) | a 2 GiB node (the chart's `2Gi` API limit) is the minimum |
+| API memory, 5,000 agents per push | sampled peak 1,526–1,620 MB; kernel high-water up to 2.4 GB (SQLite) and 4.1 GB (PostgreSQL) in earlier runs; a `2Gi` container was OOM-killed | 2 GiB is not enough: set the limits under [API](#api) (`3Gi` SQLite, `5Gi` PostgreSQL) or push about 1,000 agents at a time |
+| CPU, scan and enrichment | 21.6–25.9 CPU-seconds for 200 agents (4,058 packages) | about 0.13 CPU-seconds per agent on the collector |
+| CPU, push ingest | 46.8–60.2 CPU-seconds for the same 200 agents | about 0.3 CPU-seconds per agent on the API or worker |
+| Storage, one retained push | +94.4 MB SQLite, +113.4 MB PostgreSQL (plus 291.6 MB of WAL written) for 200 agents | about 0.5–0.6 GB per 1,000 agents per retained push, linear extrapolation |
+
+How each was measured:
+
+- Memory: the qualification lane
+  (`scripts/qualification/performance.py --estates medium-1000-agents,large-5000-agents`)
+  on a GitHub-hosted 4-vCPU runner, 2026-11-14, median of three runs, process
+  RSS sampled every 100 ms; the high-water and OOM rows are the earlier runs
+  in the [API](#api) section.
+- CPU and storage: the end-to-end workflow benchmark
+  (`scripts/run_workflow_resource_benchmark.py --profile small-self-hosted` and
+  `small-self-hosted-postgres`), 2026-11-11, `wait4` rusage of each stage's
+  child process and database file growth; raw results in
+  `docs/perf/results/workflow-resource-budget-2026-11-11.json`. The per-1,000-agent
+  storage figure scales the 200-agent push linearly and was not measured at
+  1,000 agents.
+
+Retention frees pages but does not shrink files without `VACUUM`, so size the
+volume for the peak number of retained jobs. JSON report files written by the
+CLI are compact since 0.115.0 (about a third smaller than the indented form),
+which reduces what a collector keeps on disk. Pushes were already sent compact,
+and neither changes what the API holds in memory after parsing.
+
 ## Control-plane sizing guidance
 
 Start from the packaged production example:
