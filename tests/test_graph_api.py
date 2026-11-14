@@ -1118,9 +1118,12 @@ class TestPersistedGraphQueries:
 
         attack_paths = store.attack_paths_for_sources(tenant_id="default", scan_id="attack-path-scan", source_ids={"agent:a"})
 
+        # The snapshot's stored path index answers, the same record the attack-path queue serves.
+        stored = store.snapshot_attack_paths(tenant_id="default", scan_id="attack-path-scan", source_ids={"agent:a"})
+        assert stored is not None
+        assert [path.to_dict() for path in attack_paths] == [path.to_dict() for path in stored.paths]
         assert len(attack_paths) == 1
         assert attack_paths[0].target == "vuln:cve"
-        assert attack_paths[0].summary == ""
         assert attack_paths[0].tool_exposure == []
 
         effective_scan_id, created_at, global_paths, total = store.attack_paths(

@@ -825,7 +825,8 @@ export function useGraphCanvasModel(page: GraphPageData) {
     history.replaceState(null, "", url);
   }, []);
   // A failed grouped read falls back to what the page showed before: scope navigation or the ungrouped map.
-  const groupedMapUnavailable = useCallback(() => { setGroupedUnavailableScan(selectedScanId ?? null); setGroupingOff(true); }, [selectedScanId, setGroupingOff]);
+  // It is not the reader's choice, so it writes no `grouping=off` preference and offers no "Group the map" undo.
+  const groupedMapUnavailable = useCallback(() => { setGroupedUnavailableScan(selectedScanId ?? null); }, [selectedScanId]);
   const showViewportScope = !rollupDecisionActive && Boolean(rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow";
   const showScopeEvidence = !rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0;
   const showContextControls = Boolean(investigationContext) && graphRenderer.kind === "react-flow";
