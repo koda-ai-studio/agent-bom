@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:3808e49cbb398f017951da10a4cc1e002d1954325a1479878fe4a0fc00232184",
+  "artifact_sha256": "sha256:036744c93ecaacbcf041bd8c4afc4d28b6f636f5fb3b9dda386b66fa0e589e53",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -3215,7 +3215,8 @@
         "remaining_paths": 4,
         "remediation_verified": false,
         "schema_version": "graph-remediation-priorities.v1",
-        "source_coverage": "not_assessed"
+        "source_coverage": "not_assessed",
+        "total_paths": 4
       },
       "scan_id": "reference-evidence-correlation-v1",
       "summary": {
