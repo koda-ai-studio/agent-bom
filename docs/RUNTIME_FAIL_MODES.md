@@ -682,8 +682,18 @@ With `--log-json`, `scan`, `image`, `fs` and `code` write one JSON object per
 line to stderr: progress lines become `INFO` records on the `agent_bom.progress`
 logger, failure notices become `ERROR` records, and the update notice is
 skipped. With `-q`, progress is silenced (including the discovery banner) and
-only errors print. With both, only warning and error records print, as JSON.
-stdout carries only the report.
+only errors print. With both, only warning and error records print, as JSON,
+plus one verdict record. stdout carries only the report.
+
+A scan verdict is not an error. Each reason a scan exits 1 is one `WARNING`
+record, `Exiting with code 1: <reason>`, with `context.exit_code` and
+`context.reason`; an undelivered `--push-url` report stays `ERROR`. Under `-q`
+the result block is one record on the `agent_bom.verdict` logger: `WARNING` for
+FAIL, `INFO` for PASS (that logger stays at `INFO` so a passing `-q` scan still
+reports its result). Its `context` carries `verdict` (`PASS`/`FAIL`),
+`outcome`, `packages`, `findings`, `counts` (by severity), `exit_code`,
+`reasons` and `report` (the written path, or null). Under `--agent-mode` only
+the exit reasons are emitted, as `WARNING` records.
 
 When `--log-json` appears anywhere in argv (before a `--` separator) or
 `AGENT_BOM_LOG_JSON` is on, the entry point decides before Click parses, so a

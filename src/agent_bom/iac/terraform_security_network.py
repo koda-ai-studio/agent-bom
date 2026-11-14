@@ -55,8 +55,11 @@ _DEFAULT_SG_EGRESS_RE = re.compile(r"egress\s*\{", re.IGNORECASE)
 _VPC_CONFIG_RE = re.compile(r"vpc_config\s*\{", re.IGNORECASE)
 
 # TF-SEC-046: Lambda sensitive env vars
+# A Secrets Manager / SSM ARN or a reference to one is the recommended fix, not a plaintext value.
 _ENV_SENSITIVE_RE = re.compile(
-    r'(?:password|secret|api_key|access_key|token|credential)\s*=\s*"[^"]+',
+    r'(?:password|secret|api_key|access_key|token|credential)\s*=\s*"'
+    r"(?!arn:aws[a-z-]*:(?:secretsmanager|ssm):|\$\{(?:data\.)?aws_(?:secretsmanager_secret|ssm_parameter)[a-z_]*\.)"
+    r'[^"]+',
     re.IGNORECASE,
 )
 

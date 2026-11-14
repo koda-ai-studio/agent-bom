@@ -1137,6 +1137,43 @@ resource "aws_lambda_function" "fn" {
         hits = [f for f in findings if f.rule_id == "TF-SEC-046"]
         assert len(hits) == 0
 
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "arn:aws:secretsmanager:us-east-1:111122223333:secret:app-db",
+            "${aws_secretsmanager_secret.db.arn}",
+            "${data.aws_ssm_parameter.token.arn}",
+        ],
+    )
+    def test_secret_reference_is_not_a_plaintext_secret(self, tmp_tf, value):
+        content = f"""\
+resource "aws_lambda_function" "fn" {{
+  function_name = "my-fn"
+  environment {{
+    variables = {{
+      DB_SECRET = "{value}"
+    }}
+  }}
+}}
+"""
+        findings = scan_terraform_security(tmp_tf(content))
+        assert [f for f in findings if f.rule_id == "TF-SEC-046"] == []
+
+    def test_plaintext_secret_beside_a_reference_is_still_flagged(self, tmp_tf):
+        content = """\
+resource "aws_lambda_function" "fn" {
+  function_name = "my-fn"
+  environment {
+    variables = {
+      DB_SECRET = "arn:aws:secretsmanager:us-east-1:111122223333:secret:app-db"
+      PASSWORD  = "Hunter2Hunter2!"
+    }
+  }
+}
+"""
+        findings = scan_terraform_security(tmp_tf(content))
+        assert len([f for f in findings if f.rule_id == "TF-SEC-046"]) == 1
+
 
 class TestRedshiftEncryption:
     """TF-SEC-047: Redshift cluster without encryption."""

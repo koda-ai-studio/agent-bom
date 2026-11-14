@@ -159,7 +159,7 @@ def input_options(fn):
 QUIET_HELP = (
     "Drop progress and banners; print only the result: a one-line verdict with counts by severity, "
     "the reason for a non-zero exit, and the report path. When stdout carries a machine document (-f json without -o) "
-    "it goes to stderr instead, or under --log-json only the exit reason is logged."
+    "it goes to stderr instead; under --log-json it is one structured verdict record."
 )
 
 
