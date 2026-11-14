@@ -310,6 +310,54 @@ rounds, including push ingest (152 s against 267 s at 5,000 agents), which no
 part of the change runs. That points to runner variance between the paired jobs
 rather than the change, but it was not verified.
 
+#### Serving the previous graph during a rebuild, 2026-11-14
+
+Current-estate reads now answer from the last promoted graph at once while a
+rebuild runs, labelled `previous_generation` with `as_of` (behaviour:
+`docs/RUNTIME_FAIL_MODES.md`, Current graph refresh). Three rounds of the
+Qualification workflow (`lanes=performance`) paired the change against
+`release/0.115.0` at a044986d1, dispatch order alternating (runs: release
+43631920825, 43635414350, 43638248055; change 43632639449, 43635403915,
+43638258215, the last with `stack_samples=true`). Median (range); times in ms:
+
+| Backend | Agents | Tree | Graph p50 | Graph p95 | Findings p95 |
+| --- | --- | --- | ---: | ---: | ---: |
+| PostgreSQL | 1,000 | release | 1,077 (625–1,283) | 1,290 (889–1,591) | 291 (77–295) |
+| PostgreSQL | 1,000 | change | 790 (619–798) | 866 (739–1,223) | 48 (47–292) |
+| PostgreSQL | 5,000 | release (2 runs) | 1,272, 2,278 | 2,698, 6,123 | 95, 141 |
+| PostgreSQL | 5,000 | change | 1,805 (674–2,081) | 2,279 (2,168–6,400) | 64 (48–2,245) |
+| SQLite | 1,000 | release | 492 (370–533) | 1,293 (1,238–1,470) | 55 (53–61) |
+| SQLite | 1,000 | change | 434 (392–471) | 1,287 (1,283–1,424) | 58 (30–70) |
+| SQLite | 5,000 | release | 521 (491–538) | 617 (574–713) | 2,073 (2,066–2,175) |
+| SQLite | 5,000 | change | 484 (480–494) | 571 (571–688) | 2,090 (2,085–2,167) |
+
+The third release run's 5,000-agent PostgreSQL push did not finish inside the
+lane's 600 s bound, so that row has two runs.
+
+These numbers do not measure the change. Each estate starts a fresh database,
+so there is never a previous graph to serve, and the lane reads
+`/v1/graph?scan_id=<the pushed scan>`, an exact read of one recorded scan that
+goes to the backing store and never to the projection. The differences above
+are within the run-to-run ranges. The stack samples of the 5,000-agent
+PostgreSQL run show the slow first reads waiting inside PostgreSQL on that
+explicit read (`postgres_graph_query.edges_for_node_ids`,
+`postgres_graph_traversal.nodes_by_ids`, `postgres_graph_query.page_nodes`)
+while the copy child streams the new projection
+(`current_graph_pg_copy._copy_table`); the warm-ups were idle, waiting their
+turn. The 5,000-agent PostgreSQL p95 therefore stays above the 2 s target, and
+the SQLite 5,000-agent findings p95 is still the 2 s cold-start
+read-your-writes wait, which this change keeps on purpose.
+
+On a laptop (SQLite, 1,000 agents, three alternating rounds), 20 unpinned
+`/v1/graph?view=summary` reads right after a second push were served from the
+previous graph on both trees (the release already waited only 50 ms when one
+existed), all with status 200; the change adds `as_of` to every one. Medians
+were 370–487 ms on the change and 423–543 ms on the release, and the first read
+after the push took 2.8–5.1 s against 3.0–3.8 s: those first reads are held by
+CPU contention with the rebuild, not by a wait. What the change removes is the
+2 s wait and 503 on a restarted or sibling worker that has not built the graph
+itself.
+
 ### How to measure the operator targets
 
 Run against the deployment you actually intend to operate:
