@@ -26,7 +26,7 @@ import { resolveSnapshotAttackPathCount } from "@/lib/graph-snapshot-metrics";
 import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { buildDriftIndex, diffChangeCounts, driftAttributeSummaries, countVisiblePathHops, graphNodeDisplayLabels, legendItemsForVisibleGraph, readableGraphEdges } from "@/lib/graph-utils";
 import { graphFitViewOptions, graphInitialFitViewOptions, graphReadableFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
-import { buildRollupFlowGraph } from "@/lib/graph-rollup-view";
+import { buildRollupFlowGraph, phoneStacksScopes } from "@/lib/graph-rollup-view";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { applyFilters, encodeFiltersToParams } from "@/lib/filter-algebra";
@@ -62,7 +62,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
         rollupView.mode === "drilldown"
           ? (rollupView.children ?? [])
           : (rollupView.top_level ?? []);
-      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupDisplayEdges });
+      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupDisplayEdges, ...(phoneStacksScopes(narrowViewport, items.length) ? { columns: 1 } : {}) });
       return {
         nodes: rollupFlow.nodes,
         edges: rollupFlow.edges,
@@ -139,6 +139,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
     rollupCanvasFailed,
     rollupView,
     rollupDisplayEdges,
+    narrowViewport,
   ]);
   const snapshotAttackPathCount = resolveSnapshotAttackPathCount({
     pageTotal: attackPathQueue?.pagination.total,

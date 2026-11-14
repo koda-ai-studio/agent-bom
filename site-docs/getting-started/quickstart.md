@@ -45,6 +45,10 @@ uvx --from 'agent-bom[ui]' agent-bom up      # or `agent-bom up` with the [ui] e
 agent-bom quickstart --run --offline --open   # sample scan, then the server and its graph in your browser
 ```
 
+If the local vulnerability DB is stale (or coverage is otherwise partial) the
+sample quickstart still hands off the graph, warns with the `agent-bom db update`
+hint, and exits **1**.
+
 On a loopback bind the browser signs in automatically. The per-start dev API
 key (for CLI/API calls only) is printed on an interactive terminal and never
 written to logs or files.

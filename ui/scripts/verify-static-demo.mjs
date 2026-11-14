@@ -127,6 +127,21 @@ async function main() {
         if (Object.keys(tiles).length !== 4 || Number.isNaN(laneTotal)) problems.push(`reconciliation: could not read overview tiles ${JSON.stringify(tiles)} or lane total ${laneTotal}`);
         else if (tileTotal !== laneTotal) problems.push(`reconciliation: overview tiles sum to ${tileTotal}, findings lanes total ${laneTotal}`);
         for (const band of Object.keys(tiles)) if (!Number.isNaN(pills[band]) && pills[band] !== tiles[band]) problems.push(`reconciliation: overview ${band} ${tiles[band]} != findings ${band} ${pills[band]}`);
+        // Each category chip (KEV, Secrets) shows the total of the Findings view it opens.
+        await page.goto(`${server.origin}${basePath}/`, { waitUntil: "networkidle" });
+        await page.waitForTimeout(600);
+        const chips = await page.getByTestId("overview-severity-issue-strip").locator("a[href*='/findings?']").evaluateAll((links) => links
+          .map((link) => ({ text: link.textContent?.trim() ?? "", href: link.getAttribute("href") ?? "" }))
+          .filter((chip) => /^(KEV|Secrets) [\d,]+$/.test(chip.text)));
+        if (!chips.some((chip) => chip.text.startsWith("Secrets"))) problems.push("reconciliation: Overview has no Secrets chip linking to Findings");
+        for (const chip of chips) {
+          await page.goto(`${server.origin}${chip.href}`, { waitUntil: "networkidle" });
+          await page.waitForTimeout(600);
+          const header = await page.locator("#main-content").innerText();
+          const linked = Number(/([\d,]+) (?:findings?|issues?) ·/.exec(header)?.[1]?.replace(/,/g, "") ?? Number.NaN);
+          const shown = Number(chip.text.split(" ").at(-1).replace(/,/g, ""));
+          if (linked !== shown) problems.push(`reconciliation: Overview chip "${chip.text}" opens ${chip.href} showing ${linked}`);
+        }
       }
       if (viewport.width === 1440) {
         await page.goto(`${server.origin}${basePath}/`, { waitUntil: "networkidle" });

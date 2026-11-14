@@ -394,20 +394,21 @@ def _fleet_identity_index(tenant_id: str) -> dict[str, dict[str, Any]]:
 
 
 def _build_agents_response(tenant_id: str) -> dict[str, Any]:
-    from agent_bom.api.estate_agents import AGENT_COUNT_DEFINITION, count_agent_payloads_by_class
+    from agent_bom.api.estate_agents import AGENT_COUNT_DEFINITION, count_agent_payloads_by_class, graph_agent_payloads
     from agent_bom.parsers import extract_packages
 
     host_agents = _host_agents_for_tenant(tenant_id)
     if host_agents is None:
-        estate = _scanned_estate_agents(tenant_id)
+        estate = graph_agent_payloads(_scanned_estate_agents(tenant_id))
         return {
             "scope": "scanned_estate",
             "source": (
-                "Agents from this tenant's completed scans, one row per canonical agent identity "
-                "(the same population as /v1/inventory). Live discovery of this API host's own "
-                "AI-client configs is disabled unless an operator binds the host to this tenant."
+                "Agents from this tenant's completed scans, one row per canonical agent identity; scanned "
+                "repositories, SBOMs and images are inventory, not agents, and are listed in Asset inventory. "
+                "Live discovery of this API host's own AI-client configs is disabled unless an operator binds "
+                "the host to this tenant."
             ),
-            "count_definition": AGENT_COUNT_DEFINITION,
+            "count_definition": f"{AGENT_COUNT_DEFINITION}, excluding scanned repository, SBOM and image inventory",
             "agents": estate,
             "count": len(estate),
             "count_by_class": count_agent_payloads_by_class(estate),

@@ -21,6 +21,7 @@ import { CREATED_AT } from "./product-proof-fixtures.mjs";
 import { staticDemoDataKey, staticDemoQueryKey } from "../lib/static-demo-key.mjs";
 import { installStaticDemoRoutes } from "./static-demo-routes.mjs";
 import { startStaticDemoServer } from "./static-demo-server.mjs";
+import { createStaticDemoCoverage } from "./static-demo-coverage.mjs";
 
 const UI_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const PHP2SHELL_ID = "CVE-2026-109618";
@@ -89,9 +90,8 @@ async function main() {
   };
   const browser = await chromium.launch();
   const recorded = new Map();
-  const missing = new Set();
-  const incomplete = new Set();
-  const unanswered = new Set();
+  const coverage = createStaticDemoCoverage();
+  const { missing, incomplete } = coverage;
   const redirects = new Map();
   const oversized = new Set();
   try {
@@ -118,7 +118,8 @@ async function main() {
       const key = path.basename(new URL(route.request().url()).pathname, ".json");
       const exactQuery = key === staticDemoQueryKey(apiPath);
       if (!apiPath.startsWith("/") || (key !== staticDemoDataKey(apiPath) && !exactQuery)) return route.fulfill({ status: 404, body: "" });
-      if (unanswered.has(key)) return route.fulfill({ status: 404, body: "" });
+      const read = { exactQuery, apiPath, route: appRoute(page.url()) };
+      if (coverage.alreadyUnanswered(key, read)) return route.fulfill({ status: 404, body: "" });
       if (!recorded.has(key)) {
         const { status, body } = await answer(apiPath);
         let json;
@@ -128,11 +129,7 @@ async function main() {
           json = undefined;
         }
         if (json === undefined) {
-          unanswered.add(key);
-          if (!exactQuery) {
-            missing.add(apiPath.split("?")[0]);
-            incomplete.add(appRoute(page.url()));
-          }
+          coverage.noAnswer(key, read);
           return route.fulfill({ status: 404, body: "" });
         }
         recorded.set(key, JSON.stringify(json));

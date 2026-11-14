@@ -14,7 +14,8 @@ import {
   type ClusterMapEdge,
   type ClusterMapNode,
 } from "@/lib/graph-cluster-map";
-import { boxesIntersect, labelDistance, orderLanes, pathCrossesBox, roundedPath, routeBundles, type Box } from "@/lib/graph-cluster-routes";
+import { LABEL_CARD_GAP, LABEL_GAP, boxesIntersect, labelDistance, orderLanes, pathCrossesBox, roundedPath, routeBundles, type Box } from "@/lib/graph-cluster-routes";
+import { toElements } from "@/components/graph-cluster-map";
 
 const cluster = (key: string, tier: number, extra: Partial<ClusterMapNode> = {}): ClusterMapNode => ({
   id: `@group:${key}`, kind: "cluster", cluster_key: key, label: key, tier, member_count: 3, worst_severity: "none", risky: false, expanded: false, ...extra,
@@ -153,6 +154,33 @@ describe("collision-free labels", () => {
       for (let i = 0; i < shown.length; i++) {
         for (let j = i + 1; j < shown.length; j++) expect(boxesIntersect(shown[i]!, shown[j]!)).toBe(false);
         for (const card of [...layout.cards, ...layout.frames] as Box[]) expect(boxesIntersect(shown[i]!, card)).toBe(false);
+      }
+    }
+  });
+
+  it("keeps visible labels apart from each other and from cards instead of bunching them", () => {
+    for (const narrow of [false, true]) for (const width of [900, 1440]) {
+      const { routes, layout } = routed(denseView(), narrow, null, true, width);
+      const shown = routes.flatMap(route => route.label?.placed ? [route.label] : []);
+      expect(shown.length).toBeGreaterThan(0);
+      for (let i = 0; i < shown.length; i++) {
+        for (let j = i + 1; j < shown.length; j++) expect(boxesIntersect(shown[i]!, shown[j]!, LABEL_GAP / 2), `${shown[i]!.text} / ${shown[j]!.text}`).toBe(false);
+        for (const card of [...layout.cards, ...layout.frames] as Box[]) expect(boxesIntersect(shown[i]!, card, LABEL_CARD_GAP), shown[i]!.text).toBe(false);
+      }
+    }
+  });
+
+  it("frames every visible label inside the map's fitted bounds, so none is cut at the canvas edge", () => {
+    for (const narrow of [false, true]) {
+      const { nodes, edges, bounds } = toElements({ ...denseView(), tiers: [], clusters: [], focus: null } as never, narrow, () => undefined, { width: narrow ? 360 : 1440 });
+      expect(nodes.length).toBeGreaterThan(0);
+      for (const edge of edges) {
+        const label = edge.data!.route.label;
+        if (!label?.placed) continue;
+        expect(label.x, label.text).toBeGreaterThanOrEqual(bounds.x);
+        expect(label.y, label.text).toBeGreaterThanOrEqual(bounds.y);
+        expect(label.x + label.width, label.text).toBeLessThanOrEqual(bounds.x + bounds.width);
+        expect(label.y + label.height, label.text).toBeLessThanOrEqual(bounds.y + bounds.height);
       }
     }
   });

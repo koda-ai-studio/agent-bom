@@ -89,7 +89,10 @@ export interface OverviewCockpitProps {
   kevOccurrences?: number | null | undefined;
   /** True while `kev` is a lower bound because rows await backfill. */
   kevApproximate?: boolean | undefined;
-  credentials: number | null;
+  /** Open secret findings (the linked Findings total), or credential-exposed findings in an imported report. */
+  credentials: number | string | null;
+  /** Which population `credentials` counts; imported reports have no secret-finding lane to link to. */
+  credentialsPopulation?: "secret_findings" | "credential_exposed" | undefined;
   agents: number | null;
   scans: number | null;
   latestScan: string | null;

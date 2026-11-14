@@ -47,6 +47,8 @@ findingTriageKey,
 import { Bug,ClipboardCheck,Loader2,SlidersHorizontal,X } from "lucide-react";
 import { usePathname,useRouter,useSearchParams } from "next/navigation";
 import { Suspense,useCallback,useEffect,useMemo,useRef,useState } from "react";
+import { DEFAULT_FINDINGS_WINDOW_DAYS } from "@/lib/findings-default-query";
+import { FindingsKevFilterNote, useKevOnlyParam } from "@/components/findings/findings-kev-filter";
 
 const REACHABILITY_FILTERS: ReachabilityFilter[] = ["", "reachable", "unreachable", "unassessed"];
 const TRIAGE_FILTERS: TriageFilter[] = ["", "not_affected", "affected", "under_investigation", "untriaged"];
@@ -68,9 +70,6 @@ function triageKey(vulnerabilityId: string, packageName: string) {
 
 // Security-domain facets (issue #3946). Map 1:1 to the overview coverage lanes
 // so drilling from a coverage lane lands on the matching findings filter.
-// Default read-window (#4009): findings default to the last ~90 days so counts
-// are honestly scoped, with an explicit widen-to-all option.
-const DEFAULT_FINDINGS_WINDOW_DAYS = 90;
 export default function FindingsPageWrapper() {
   return (
     <Suspense fallback={
@@ -121,6 +120,7 @@ function FindingsPage() {
   const paramStatus = parseFindingStatus(searchParams.get("status"));
   const [statusFilter, setStatusFilter] = useState<FindingStatusFilter>(paramStatus);
   useEffect(() => { setStatusFilter(paramStatus); }, [paramStatus]);
+  const [kevOnly, setKevOnly] = useKevOnlyParam(searchParams);
   const paramContext = searchParams.get("path_context") ?? "";
   const [pathContextFilter, setPathContextFilter] = useState(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : "");
   useEffect(() => { setPathContextFilter(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : ""); }, [paramContext]);
@@ -319,6 +319,7 @@ function FindingsPage() {
     if (selectedId) params.set("finding", selectedId);
     if (filter !== "all") params.set("severity", filter);
     if (issueTypeFilter !== "all") params.set("issue", issueTypeFilter);
+    if (kevOnly) params.set("kev", "1");
     if (search.trim()) params.set("q", search.trim());
     if (domainFilter !== "all") params.set("domain", domainFilter);
     if (providerFilter.trim()) params.set("provider", providerFilter.trim());
@@ -342,6 +343,7 @@ function FindingsPage() {
     filter,
     lane,
     issueTypeFilter,
+    kevOnly,
     search,
     domainFilter,
     providerFilter,
@@ -460,6 +462,7 @@ function FindingsPage() {
         ...(frameworkFilter.trim() ? { framework: frameworkFilter.trim() } : {}),
         ...(frameworkFilter.trim() && controlFilter.trim() ? { control: controlFilter.trim() } : {}),
         ...(issueTypeFilter !== "all" ? { findingClass: issueTypeFilter } : {}),
+        ...(kevOnly ? { kev: true } : {}),
         ...(lane !== "all" ? { lane } : {}),
         windowDays,
       });
@@ -482,6 +485,7 @@ function FindingsPage() {
     frameworkFilter,
     lane,
     issueTypeFilter,
+    kevOnly,
     ownerFilter,
     paramScan,
     providerFilter,
@@ -521,6 +525,7 @@ function FindingsPage() {
           ...(frameworkFilter.trim() ? { framework: frameworkFilter.trim() } : {}),
           ...(frameworkFilter.trim() && controlFilter.trim() ? { control: controlFilter.trim() } : {}),
           ...(issueTypeFilter !== "all" ? { findingClass: issueTypeFilter } : {}),
+          ...(kevOnly ? { kev: true } : {}),
           ...(lane !== "all" ? { lane } : {}),
           sort: serverFindingsSort(sortKey),
           limit: PAGE_SIZE,
@@ -575,6 +580,7 @@ function FindingsPage() {
     controlFilter,
     lane,
     issueTypeFilter,
+    kevOnly,
     windowDays,
     sortKey,
     pageCursors,
@@ -607,6 +613,7 @@ function FindingsPage() {
     filter,
     lane,
     issueTypeFilter,
+    kevOnly,
     search,
     sortKey,
     sortDir,
@@ -705,7 +712,7 @@ function FindingsPage() {
     setControlFilter("");
   };
 
-  const hasActiveFilters = Boolean(statusFilter !== "open" || search.trim() || filter !== "all" || issueTypeFilter !== "all" || activeFilterCount || windowDays !== 90);
+  const hasActiveFilters = Boolean(statusFilter !== "open" || search.trim() || filter !== "all" || issueTypeFilter !== "all" || kevOnly || activeFilterCount || windowDays !== 90);
   const clearFilters = () => {
     clearAdvancedFilters();
     setSearch("");
@@ -713,6 +720,7 @@ function FindingsPage() {
     setStatusFilter("open");
     setIssueTypeFilter("all");
     setWindowDays(90);
+    setKevOnly(false);
   };
 
   const FILTERS = severityFilterDefinitions(findingFacetsApproximate || !findingFacets?.severity ? null : findingFacets, findingsFilterTotalLabel);
@@ -720,6 +728,7 @@ function FindingsPage() {
   return (
     <div className="space-y-6">
       {exceptionError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{exceptionError}</p>}
+      {kevOnly && <FindingsKevFilterNote onClear={() => setKevOnly(false)} />}
       <PageLaneHeader
         lane="command"
         title="Findings"

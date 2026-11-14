@@ -27,6 +27,10 @@ const LANE_MARGIN = 16;
 const CORRIDOR = 56;
 const LABEL_H = 18;
 const LABEL_PAD = 8;
+/** Clear space between two visible labels, so neighbouring bundles' labels never read as one block. */
+export const LABEL_GAP = 10;
+/** Clear space between a visible label and any card or frame. */
+export const LABEL_CARD_GAP = 6;
 /** Average glyph advance of the 12px label font; a slight over-estimate keeps placement conservative. */
 const LABEL_CHAR_W = 7;
 
@@ -194,7 +198,7 @@ export function routeBundles(cards: RouteCard[], bundles: RouteBundle[], obstacl
     if (p.bundle.label) {
       const width = labelWidth(p.bundle.label);
       const candidates = labelCandidates(points).map(c => ({ x: c.x - width / 2, y: c.y - LABEL_H / 2, width, height: LABEL_H }));
-      const fit = candidates.find(box => !obstacles.some(card => boxesIntersect(box, card, 3)) && !placed.some(other => boxesIntersect(box, other, 2)));
+      const fit = candidates.find(box => !obstacles.some(card => boxesIntersect(box, card, LABEL_CARD_GAP)) && !placed.some(other => boxesIntersect(box, other, LABEL_GAP / 2)));
       const box = fit ?? candidates[0] ?? { x: points[0]!.x, y: points[0]!.y - LABEL_H / 2, width, height: LABEL_H };
       if (fit) placed.push(fit);
       label = { ...box, text: p.bundle.label, placed: Boolean(fit) };

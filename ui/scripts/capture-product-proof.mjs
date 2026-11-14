@@ -1573,6 +1573,27 @@ function inventoryAssetsFixture(requestUrl) {
   };
 }
 
+/** One `/v1/agents` page over the fixture agents; without `limit` the full list, as the API answers older clients. */
+export function agentsPage(params, agents) {
+  const limit = params.has("limit") ? Math.max(1, Number(params.get("limit")) || 1) : null;
+  const offset = Math.max(0, Number(params.get("offset")) || 0);
+  const rows = limit == null ? agents : agents.slice(offset, offset + limit);
+  return {
+    scope: "scanned_estate",
+    source: "scanned_estate",
+    agents: rows,
+    count: agents.length,
+    total: agents.length,
+    limit,
+    offset,
+    has_more: limit != null && offset + rows.length < agents.length,
+    next_cursor: null,
+    sort: null,
+    facets: {},
+    warnings: [],
+  };
+}
+
 async function fulfill(route, body, status = 200) {
   await route.fulfill({
     status,
@@ -1894,12 +1915,14 @@ export async function installRoutes(page, fixtureGraph = graph) {
     count: 2,
   }));
   await page.route("**/v1/overview", (route) => fulfill(route, overviewResponse()));
-  await page.route("**/v1/agents", (route) => fulfill(route, {
-    scope: "scanned_estate",
-    agents: scanJob().result.agents,
-    count: scanJob().result.agents.length,
-    warnings: [],
-  }));
+  // Paged like the API: the Agents list and the topology both send limit/offset.
+  await page.route((url) => {
+    try {
+      return new URL(url).pathname === "/v1/agents";
+    } catch {
+      return false;
+    }
+  }, (route) => fulfill(route, agentsPage(new URL(route.request().url()).searchParams, scanJob().result.agents)));
   await page.route("**/v1/agents/developer-copilot/lifecycle", (route) => fulfill(route, agentLifecycleFixture()));
   await page.route((url) => {
     try {
