@@ -251,3 +251,60 @@ def test_two_postgres_sources_are_never_copied(tmp_path, monkeypatch, migrated_f
         store, TENANT, "identity", "", (("scan-a", "rev-a"), ("scan-b", "rev-b")), "digest"
     )
     assert calls == []
+
+
+_CRASHING_CHILD = """
+import os
+
+from agent_bom.api import current_graph_pg_copy, current_graph_pg_copy_worker
+
+real = current_graph_pg_copy._copy_table
+
+
+def crash_after_first_table(*args, **kwargs):
+    real(*args, **kwargs)
+    os._exit(9)
+
+
+current_graph_pg_copy._copy_table = crash_after_first_table
+raise SystemExit(current_graph_pg_copy_worker.main())
+"""
+
+
+def test_a_child_that_dies_mid_copy_promotes_nothing_and_the_build_rebuilds(
+    tmp_path,
+    monkeypatch,
+    migrated_fresh_database,  # noqa: F811
+) -> None:
+    from agent_bom.api import current_graph_pg_copy_child
+
+    jobs = _seed(tmp_path, 12)
+    package = tmp_path / "crash_children"
+    package.mkdir()
+    (package / "__init__.py").write_text("")
+    (package / "crasher.py").write_text(_CRASHING_CHILD)
+    monkeypatch.setenv("PYTHONPATH", os.pathsep.join(p for p in (str(tmp_path), os.environ.get("PYTHONPATH", "")) if p))
+    monkeypatch.setattr(current_graph_pg_copy_child, "CHILD_MODULE", "crash_children.crasher")
+    calls = _spy(monkeypatch)
+    state = tmp_path / "state"
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(state))
+    store = CurrentGraphStore(_store(), jobs)
+    identity_before = None
+    # The child wrote graph_nodes in its open transaction, then died: none of it may be visible.
+    original_rows = current_graph_pg_copy_child.copy_in_child
+
+    def checked(cache_path, **kwargs):
+        nonlocal identity_before
+        result = original_rows(cache_path, **kwargs)
+        identity_before = kwargs["identity"]
+        with sqlite3.connect(cache_path) as conn:
+            assert not conn.execute("SELECT 1 FROM graph_nodes WHERE scan_id = ?", (kwargs["identity"],)).fetchone()
+        return result
+
+    monkeypatch.setattr(current_graph_pg_copy_child, "copy_in_child", checked)
+    assert store.prepare_current(TENANT, seconds=120)
+    assert calls == [False]
+    # The rebuild then produced the same projection the copy would have.
+    identity = store._cache[TENANT][2]
+    assert identity == identity_before
+    assert _dump(store, identity)["graph_nodes"]
