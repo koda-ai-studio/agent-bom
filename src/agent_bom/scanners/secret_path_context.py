@@ -12,6 +12,7 @@ from __future__ import annotations
 import ipaddress
 import re
 from pathlib import Path, PurePosixPath
+from typing import TypedDict
 
 from agent_bom.core.path_context import CONTEXT_SEVERITY, classify_path_context, context_downgrade_reason
 from agent_bom.scanners.secret_models import SecretFinding
@@ -65,3 +66,15 @@ def apply_path_context(rel_path: str, findings: list[SecretFinding]) -> list[Sec
         finding.severity = CONTEXT_SEVERITY
         finding.downgrade_reason = reason
     return findings
+
+
+class CredentialSeverity(TypedDict):
+    severity: str
+    downgrade_reason: str | None
+
+
+def credential_severity(rel_path: str, secret_type: str, match: re.Match) -> CredentialSeverity:
+    """Critical, except a CI job's throwaway service-container DSN on a loopback host."""
+    if secret_type == "Connection String" and ci_loopback_dsn(rel_path, match.group(0)):
+        return {"severity": CONTEXT_SEVERITY, "downgrade_reason": CI_LOOPBACK_DSN_REASON}
+    return {"severity": "critical", "downgrade_reason": None}
