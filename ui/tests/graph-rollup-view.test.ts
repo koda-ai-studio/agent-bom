@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import type { GraphRollupContainer } from "@/lib/api-types";
 import {
   buildRollupFlowGraph,
+  phoneStacksScopes,
+  PHONE_STACKED_SCOPE_LIMIT,
   mergeReciprocalRollupEdges,
   rollupContainerSubtitle,
   rollupEntityToNodeType,
@@ -151,5 +153,20 @@ describe("mergeReciprocalRollupEdges", () => {
     expect(edges).toHaveLength(1);
     expect(edges[0]?.label).toBe("3 relationships");
     expect(edges[0]?.markerStart).toEqual(edges[0]?.markerEnd);
+  });
+});
+
+describe("scope cards on a phone", () => {
+  it("stacks a small scope overview in one column so every card can be framed at reading size", () => {
+    expect(phoneStacksScopes(true, 6)).toBe(true);
+    expect(phoneStacksScopes(true, PHONE_STACKED_SCOPE_LIMIT + 1)).toBe(false);
+    expect(phoneStacksScopes(false, 6)).toBe(false);
+    expect(phoneStacksScopes(true, 0)).toBe(false);
+    const containers = Array.from({ length: 6 }, (_, i) => sampleContainer({ id: `scope:${i}`, label: `scope ${i}` }));
+    const { nodes } = buildRollupFlowGraph(containers, { columns: 1 });
+    expect(new Set(nodes.map(node => node.position.x))).toEqual(new Set([0]));
+    const ys = nodes.map(node => node.position.y);
+    expect(ys).toEqual([...ys].sort((a, b) => a - b));
+    expect(new Set(ys).size).toBe(6);
   });
 });
