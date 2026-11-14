@@ -1516,7 +1516,9 @@ jobs:
 
   # Full correctness on 3.13 for a merge group (never a pull_request event),
   # in parallel. scripts/pytest_ci_plan.py assigns every test module to
-  # exactly one shard, so the shards together run the full suite.
+  # exactly one shard, so the shards together run the full suite. Eight
+  # shards keep the queue near ten minutes: the demo-estate module fills one
+  # three-worker shard on its own.
   test-shard:
     name: Full correctness shard (${{ matrix.shard }}, Python 3.13)
     runs-on: ubuntu-latest
@@ -1529,7 +1531,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -1543,13 +1545,13 @@ jobs:
       - name: Run full correctness shard
         run: |
           set -euo pipefail
-          mapfile -t TESTS < <(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 4)
+          mapfile -t TESTS < <(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 8)
           if [ "${#TESTS[@]}" -eq 0 ]; then
             echo "::error::shard ${{ matrix.shard }} selected no test modules" >&2
             exit 1
           fi
           WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
-          echo "Shard ${{ matrix.shard }}/4: ${#TESTS[@]} test modules, ${WORKERS} workers"
+          echo "Shard ${{ matrix.shard }}/8: ${#TESTS[@]} test modules, ${WORKERS} workers"
           uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
 
       # Smoke is skipped when these shards run; keep its isolated timing gates.
