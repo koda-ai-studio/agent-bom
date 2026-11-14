@@ -124,31 +124,24 @@ def _resolve_output_path(output: Any, output_format: str) -> str:
     raise SystemExit(2)
 
 
-def _stdout_serialization(
-    report: AIBOMReport,
-    blast_radii: list,
-    output_format: str,
-    *,
-    exclude_unfixable: bool,
-    offline_html: bool,
-    report_json: dict[str, Any] | None = None,
-    report_format: str = "legacy",
-) -> str | None:
+def _stdout_serialization(ctx: ScanContext, output_format: str, *, exclude_unfixable: bool, offline_html: bool) -> str | None:
     """Best-effort serialize the report for stdout fallback when -o write fails.
 
     Returns ``None`` for formats that have no usable stdout representation
     (e.g. binary PDF), in which case the caller prints a skip message instead.
     """
+    report, blast_radii = ctx.report, ctx.blast_radii
     if output_format in ("json", "graph", "badge"):
         if output_format == "graph":
             from agent_bom.output.graph import build_graph_elements
 
-            return json.dumps({"elements": build_graph_elements(report, blast_radii), "format": "cytoscape"}, indent=2)
+            elements = build_graph_elements(report, blast_radii, endpoint_scope=ctx.graph_endpoint_scope)
+            return json.dumps({"elements": elements, "format": "cytoscape"}, indent=2)
         if output_format == "badge":
             from agent_bom.output.badge import to_badge
 
             return json.dumps(to_badge(report), indent=2)
-        return json.dumps(to_redacted_json(report, report_json=report_json, report_format=report_format), indent=2)
+        return json.dumps(to_redacted_json(report, report_json=ctx.report_json, report_format=ctx.report_format), indent=2)
     if output_format == "cyclonedx":
         return json.dumps(to_cyclonedx(report, spec_version="1.6"), indent=2)
     if output_format == "sarif":
@@ -187,15 +180,7 @@ def _stdout_serialization(
 
 @contextlib.contextmanager
 def _enospc_report_fallback(
-    con: Any,
-    report: AIBOMReport,
-    blast_radii: list,
-    output_format: str,
-    *,
-    exclude_unfixable: bool,
-    offline_html: bool,
-    report_json: dict[str, Any] | None = None,
-    report_format: str = "legacy",
+    con: Any, ctx: ScanContext, output_format: str, *, exclude_unfixable: bool, offline_html: bool
 ) -> Iterator[None]:
     """Catch a full-disk (or any) failure writing the ``-o`` report.
 
@@ -211,15 +196,7 @@ def _enospc_report_fallback(
         is_full = exc.errno in (errno.ENOSPC, errno.EDQUOT)
         reason = "disk full" if is_full else (exc.strerror or str(exc))
         target = getattr(exc, "filename", None) or "the report file"
-        serialized = _stdout_serialization(
-            report,
-            blast_radii,
-            output_format,
-            exclude_unfixable=exclude_unfixable,
-            offline_html=offline_html,
-            report_json=report_json,
-            report_format=report_format,
-        )
+        serialized = _stdout_serialization(ctx, output_format, exclude_unfixable=exclude_unfixable, offline_html=offline_html)
         if serialized is not None:
             con.print(f"\n  [yellow]⚠[/yellow] Could not write report to {target} ({reason}) — emitting results to stdout instead.")
             click.echo(serialized, nl=not serialized.endswith("\n"))
@@ -289,16 +266,7 @@ def render_output(
     click_ctx = click.get_current_context(silent=True)
     compliance_bundle_output = bool(compliance_export and output and output.lower().endswith(".zip") and is_explicit(click_ctx, "output"))
     if not compliance_bundle_output:
-        with _enospc_report_fallback(
-            con,
-            report,
-            blast_radii,
-            output_format,
-            exclude_unfixable=exclude_unfixable,
-            offline_html=offline_html,
-            report_json=ctx.report_json,
-            report_format=ctx.report_format,
-        ):
+        with _enospc_report_fallback(con, ctx, output_format, exclude_unfixable=exclude_unfixable, offline_html=offline_html):
             _emit_report(
                 agent_mode,
                 agent_mode_full,
@@ -449,12 +417,15 @@ def _emit_visual_report(
     output_format: Any,
     quiet: Any,
     report: Any,
+    endpoint_scope: str = "",
 ) -> bool:
     if output_format == "graph":
         from agent_bom.output.graph import build_graph_elements
 
         out_path = _resolve_output_path(output, output_format)
-        write_json_file({"elements": build_graph_elements(report, blast_radii), "format": "cytoscape"}, out_path)
+        write_json_file(
+            {"elements": build_graph_elements(report, blast_radii, endpoint_scope=endpoint_scope), "format": "cytoscape"}, out_path
+        )
         announce_report_written(con, "Graph JSON", out_path, quiet=quiet)
         con.print("  [dim]Cytoscape.js-compatible element list — open with Cytoscape desktop or any JS graph library[/dim]")
         return True
@@ -487,7 +458,7 @@ def _emit_visual_report(
         from agent_bom.output.graph import export_graph_html
 
         out_path = _resolve_output_path(output, output_format)
-        export_graph_html(report, blast_radii, out_path, offline_assets=offline_html)
+        export_graph_html(report, blast_radii, out_path, offline_assets=offline_html, endpoint_scope=endpoint_scope)
         announce_report_written(con, "Interactive graph", out_path, quiet=quiet)
         if open_report:
             import webbrowser
@@ -534,7 +505,7 @@ def _emit_inferred_report(
         elif output.endswith(".graph-html"):
             from agent_bom.output.graph import export_graph_html
 
-            export_graph_html(report, blast_radii, output, offline_assets=offline_html)
+            export_graph_html(report, blast_radii, output, offline_assets=offline_html, endpoint_scope=ctx.graph_endpoint_scope)
         elif output.endswith(".html"):
             export_html(report, output, blast_radii, offline_assets=offline_html)
         elif output.endswith(".pdf"):
@@ -603,7 +574,7 @@ def _emit_report(
         _emit_document_report(
             blast_radii, con, ctx, exclude_unfixable, offline_html, open_report, output, output_format, quiet, report
         ) or _emit_web_report(blast_radii, con, offline_html, open_report, output, output_format, quiet, report) or _emit_visual_report(
-            blast_radii, con, mermaid_mode, offline_html, open_report, output, output_format, quiet, report
+            blast_radii, con, mermaid_mode, offline_html, open_report, output, output_format, quiet, report, ctx.graph_endpoint_scope
         ) or _emit_inferred_report(blast_radii, con, ctx, exclude_unfixable, offline_html, output, output_format, quiet, report)
 
 

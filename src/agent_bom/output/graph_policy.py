@@ -26,7 +26,7 @@ def _graph_policy_findings(report: "AIBOMReport", unified: list["Finding"] | Non
     return [finding for finding in stream if finding.finding_type not in _MACHINE_EXPORT_TYPES]
 
 
-def _graph_policy_finding_elements(report: "AIBOMReport", unified: list["Finding"] | None = None) -> list[dict]:
+def _graph_policy_finding_elements(report: "AIBOMReport", unified: list["Finding"] | None = None, endpoint_scope: str = "") -> list[dict]:
     """Cytoscape elements for graph-derived / policy finding categories.
 
     The unified findings stream (the one JSON/API/MCP report) carries
@@ -40,7 +40,7 @@ def _graph_policy_finding_elements(report: "AIBOMReport", unified: list["Finding
 
     agent_ids_by_name: dict[str, set[str]] = {}
     for agent in report.agents:
-        agent_ids_by_name.setdefault(agent.name, set()).add(agent_graph_id_for(agent))
+        agent_ids_by_name.setdefault(agent.name, set()).add(agent_graph_id_for(agent, endpoint_scope=endpoint_scope))
     elements: list[dict] = []
     for finding in findings:
         severity = str(finding.effective_severity() or "unknown").lower()

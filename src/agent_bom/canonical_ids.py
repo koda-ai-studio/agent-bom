@@ -214,20 +214,16 @@ def _field(record: Any, key: str) -> Any:
     return record.get(key) if isinstance(record, Mapping) else getattr(record, key, None)
 
 
-def agent_identity_scope(record: Any) -> str:
+def agent_identity_scope(record: Any, *, endpoint_scope: str = "") -> str:
     """Endpoint/source scope that keeps same-named fleet agents apart.
 
     Accepts a serialized agent mapping or an ``Agent`` model, so report,
     graph and export producers derive one scope from either shape.
+    ``endpoint_scope`` fills a missing ``source_id`` the way a saved report or push stamps it.
     """
-    for container in (record, _field(record, "metadata")):
-        if container is None:
-            continue
-        for key in _AGENT_SCOPE_KEYS:
-            value = str(_field(container, key) or "").strip()
-            if value:
-                return value
-    return ""
+    stamped = endpoint_scope if endpoint_scope and not _field(record, "source_id") else ""
+    containers = [container for container in (record, _field(record, "metadata")) if container is not None]
+    return stamped or next((value for c in containers for key in _AGENT_SCOPE_KEYS if (value := str(_field(c, key) or "").strip())), "")
 
 
 def agent_graph_id(name: Any, scope: str = "") -> str:
@@ -238,14 +234,14 @@ def agent_graph_id(name: Any, scope: str = "") -> str:
     return f"agent:{scope_part}:{label}" if scope_part else f"agent:{label}"
 
 
-def agent_graph_id_for(record: Any) -> str:
+def agent_graph_id_for(record: Any, *, endpoint_scope: str = "") -> str:
     """Graph id for an agent record; Cortex Agents keep their account-qualified id."""
     metadata = _field(record, "metadata")
     cortex = metadata.get("snowflake_cortex_agent") if isinstance(metadata, Mapping) else None
     if _field(record, "source") == CORTEX_AGENT_SOURCE and isinstance(cortex, Mapping):
         if all(str(cortex.get(key) or "").strip() for key in ("database", "schema", "name")):
             return snowflake_cortex_agent_node_id(cortex.get("account"), cortex["database"], cortex["schema"], cortex["name"])
-    return agent_graph_id(_field(record, "name"), agent_identity_scope(record) or agent_config_scope(record))
+    return agent_graph_id(_field(record, "name"), agent_identity_scope(record, endpoint_scope=endpoint_scope) or agent_config_scope(record))
 
 
 def agent_identity_location(record: Any) -> str:
@@ -405,13 +401,13 @@ def mcp_server_graph_id(
     return f"server:{identity}"
 
 
-def mcp_server_graph_id_for(server: Any, agent: Any) -> str:
+def mcp_server_graph_id_for(server: Any, agent: Any, *, endpoint_scope: str = "") -> str:
     """Graph id for a server record (mapping or model) under its declaring agent.
 
     A Cortex Agent's endpoint is the agent itself, so its pseudo-server and
     tools stay agent-scoped and same-named agents in other schemas never merge.
     """
-    agent_key = agent_graph_id_for(agent).removeprefix("agent:")
+    agent_key = agent_graph_id_for(agent, endpoint_scope=endpoint_scope).removeprefix("agent:")
     if _field(agent, "source") == CORTEX_AGENT_SOURCE:
         return f"server:{agent_key}:{str(_field(server, 'name') or 'unknown').strip() or 'unknown'}"
     return mcp_server_graph_id(
@@ -421,7 +417,7 @@ def mcp_server_graph_id_for(server: Any, agent: Any) -> str:
         url=_field(server, "url"),
         registry_id=_field(server, "registry_id"),
         canonical_id=_field(server, "canonical_id") or _field(server, "stable_id") or "",
-        host_scope=agent_identity_scope(agent),
+        host_scope=agent_identity_scope(agent, endpoint_scope=endpoint_scope),
         agent_key=agent_key,
         working_dir=_field(server, "working_dir"),
         environment=_field(server, "env"),

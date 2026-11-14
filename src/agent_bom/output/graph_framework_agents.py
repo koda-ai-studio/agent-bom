@@ -92,10 +92,10 @@ def _agent_node(item: dict[str, Any], agent_id: str) -> dict[str, Any]:
     }
 
 
-def _host_agent_id(report: "AIBOMReport", out: _Elements) -> str | None:
+def _host_agent_id(report: "AIBOMReport", out: _Elements, endpoint_scope: str = "") -> str | None:
     """The single project agent already drawn, matching the unified graph's host rule; ``None`` for zero or several."""
     hosts = [
-        agent_graph_id_for(agent)
+        agent_graph_id_for(agent, endpoint_scope=endpoint_scope)
         for agent in getattr(report, "agents", []) or []
         if isinstance(getattr(agent, "metadata", None), dict) and agent.metadata.get("project_root")
     ]
@@ -103,7 +103,7 @@ def _host_agent_id(report: "AIBOMReport", out: _Elements) -> str | None:
     return hosts[0] if len(hosts) == 1 else None
 
 
-def append_framework_agent_elements(elements: list[dict], report: "AIBOMReport") -> None:
+def append_framework_agent_elements(elements: list[dict], report: "AIBOMReport", endpoint_scope: str = "") -> None:
     """Append framework agents, their frameworks and their static topology edges."""
     inventory = report.ai_inventory_data
     raw = inventory.get("framework_agents") if isinstance(inventory, dict) else None
@@ -111,7 +111,7 @@ def append_framework_agent_elements(elements: list[dict], report: "AIBOMReport")
         return
     items = [item for item in raw[:_MAX_AGENTS] if isinstance(item, dict) and _text(item.get("stable_id"), 100)]
     out = _Elements(elements)
-    host = _host_agent_id(report, out)
+    host = _host_agent_id(report, out, endpoint_scope)
     participants = topology_participants(items)
     folded: list[str] = []
     for item in items:

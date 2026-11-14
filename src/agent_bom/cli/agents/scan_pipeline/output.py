@@ -15,7 +15,7 @@ from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.quiet_summary import SEVERITY_ORDER, severity_counts
 from agent_bom.cli.agents.scan_pipeline.report_format_notice import notice_report_schema_default
-from agent_bom.cli.agents.scan_pipeline.report_source_ids import with_endpoint_source_ids
+from agent_bom.cli.agents.scan_pipeline.report_source_ids import endpoint_scoped_report
 from agent_bom.cli.agents.scan_pipeline.scan_memory import remember_and_report
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
 from agent_bom.cli.agents.scan_pipeline.top_fixes import print_top_fixes
@@ -107,9 +107,8 @@ def _finalize_report(opts: ScanOptions, st: ScanState) -> None:
             except (FileNotFoundError, ValueError) as exc:
                 logger.warning("Delta baseline error: %s — skipping delta filter", exc)
 
-    # A saved report POSTed later must land on the agents a direct push from
-    # this host creates. Demo agents are fictional, so they carry no host identity.
-    st.ctx.report_json = st.current_report_json if opts.demo else with_endpoint_source_ids(st.current_report_json)
+    # A saved report POSTed later, and the graph exports, must name agents the way a direct push from this host does.
+    st.ctx.graph_endpoint_scope, st.ctx.report_json = endpoint_scoped_report(st.current_report_json, demo=opts.demo)
 
 
 def _print_totals_and_record(opts: ScanOptions, st: ScanState) -> None:
