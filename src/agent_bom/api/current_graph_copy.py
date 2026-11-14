@@ -88,7 +88,7 @@ def _source_snapshot(conn: sqlite3.Connection, *, tenant: str, source_scan: str,
     return {"analysis_status": raw_status}
 
 
-def _projection_status(raw_status: dict[str, Any]) -> str:
+def projection_status(raw_status: dict[str, Any]) -> str:
     """The same status the rewrite stamps: merged source statuses, then the path index's own."""
     statuses = analysis_status_map_from_dict(raw_status)
     paths = statuses.pop(PATHS_ANALYSIS_KEY)
@@ -130,7 +130,7 @@ def _copy(
         (
             identity,
             created_at,
-            _projection_status(source["analysis_status"]),
+            projection_status(source["analysis_status"]),
             identity,
             evidence_manifest_sha256,
             generation,
@@ -193,23 +193,37 @@ def copy_single_source(
 def copy_current_projection(
     store: Any, tenant: str, identity: str, created_at: str, revisions: tuple[tuple[str, str], ...], digest: str
 ) -> bool:
-    """Copy the current view's only source snapshot when the backing store is SQLite; False otherwise."""
+    """Copy the current view's only source snapshot from a SQLite or PostgreSQL store; False otherwise."""
     present = [(scan, generation) for scan, generation in revisions if generation]
-    source_path = getattr(store._graph_store, "_db_path", None)
-    if len(present) != 1 or not isinstance(store._graph_store, SQLiteGraphStore) or not source_path:
+    if len(present) != 1:
         return False
     scan, generation = present[0]
-    return copy_single_source(
-        store._cache_path,
-        source_path,
-        tenant=tenant,
-        source_scan=scan,
-        expected_revision=generation,
-        identity=identity,
-        created_at=created_at,
-        write_generation=identity.removeprefix(CURRENT_ESTATE_SCAN_PREFIX),
-        evidence_manifest_sha256="sha256:" + digest,
-    )
+    copy = {
+        "tenant": tenant,
+        "source_scan": scan,
+        "expected_revision": generation,
+        "identity": identity,
+        "created_at": created_at,
+        "write_generation": identity.removeprefix(CURRENT_ESTATE_SCAN_PREFIX),
+        "evidence_manifest_sha256": "sha256:" + digest,
+    }
+    backend = store._graph_store
+    if isinstance(backend, SQLiteGraphStore):
+        source_path = getattr(backend, "_db_path", None)
+        return bool(source_path) and copy_single_source(store._cache_path, str(source_path), **copy)
+    if _is_postgres(backend):
+        from agent_bom.api import current_graph_pg_copy
+
+        return current_graph_pg_copy.copy_postgres_source(store, **copy)
+    return False
+
+
+def _is_postgres(backend: Any) -> bool:
+    try:
+        from agent_bom.api.postgres_graph import PostgresGraphStore
+    except ImportError:  # the postgres extra is not installed
+        return False
+    return isinstance(backend, PostgresGraphStore)
 
 
 def stamp_read_revision(cache_path: str, tenant: str, identity: str) -> None:
@@ -241,4 +255,4 @@ def materialized_by_copy(
     return True
 
 
-__all__ = ["copy_current_projection", "copy_single_source", "materialized_by_copy", "stamp_read_revision"]
+__all__ = ["copy_current_projection", "copy_single_source", "materialized_by_copy", "projection_status", "stamp_read_revision"]

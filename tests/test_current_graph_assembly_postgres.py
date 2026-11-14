@@ -32,8 +32,10 @@ def _record(jobs, graph_store, *nodes: str) -> None:
     jobs.put(scan)
 
 
+@pytest.mark.parametrize("path", ["rewrite", "row-copy"])
 @pytest.mark.parametrize("replays,expected", [(1, 200), (100, 503)])
-def test_postgres_source_replaced_during_assembly_never_answers_409(migrated_fresh_database, replays, expected):  # noqa: F811
+def test_postgres_source_replaced_during_assembly_never_answers_409(migrated_fresh_database, monkeypatch, replays, expected, path):  # noqa: F811
+    from agent_bom.api import current_graph_pg_copy
     from agent_bom.api.current_graph import CurrentGraphStore
     from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
     from agent_bom.api.postgres_graph import PostgresGraphStore
@@ -42,16 +44,29 @@ def test_postgres_source_replaced_during_assembly_never_answers_409(migrated_fre
     jobs, graph_store = InMemoryJobStore(), PostgresGraphStore()
     _record(jobs, graph_store, "package-a")
     load = graph_store.load_graph
+    copy = current_graph_pg_copy.copy_postgres_source
     done: list[int] = []
 
-    def replaying(*args, **kwargs):
-        graph = load(*args, **kwargs)
+    def replay() -> None:
         if len(done) < replays:
             done.append(1)
             _record(jobs, graph_store, f"package-replay-{len(done)}")
+
+    def replaying(*args, **kwargs):
+        graph = load(*args, **kwargs)
+        replay()
         return graph
 
+    def replaying_copy(*args, **kwargs):
+        # The source is replaced after the build resolved it and before the copy reads it.
+        replay()
+        return copy(*args, **kwargs)
+
     graph_store.load_graph = replaying  # type: ignore[method-assign]
+    if path == "row-copy":
+        monkeypatch.setattr(current_graph_pg_copy, "copy_postgres_source", replaying_copy)
+    else:
+        monkeypatch.setattr(current_graph_pg_copy, "copy_postgres_source", lambda *args, **kwargs: False)
     store = CurrentGraphStore(graph_store, jobs)
     token = set_current_tenant(TENANT)
     try:
