@@ -21042,6 +21042,13 @@ components:
           additionalProperties: true
           title: Risk Assessment
           type: object
+        role:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Agent and server rows only: agent, framework_agent, mcp_server
+            or other_server (see by_role)'
+          title: Role
         severity:
           title: Severity
           type: string
@@ -21497,6 +21504,13 @@ components:
           additionalProperties:
             type: integer
           title: By Group
+          type: object
+        by_role:
+          additionalProperties:
+            type: integer
+          description: Agent and server nodes by role; agent and mcp_server count
+            what /v1/agents counts, framework_agent and other_server the rest
+          title: By Role
           type: object
         by_type:
           additionalProperties:

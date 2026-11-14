@@ -22,6 +22,7 @@ from agent_bom.db import graph_store as sqlite_graph_store
 from agent_bom.graph import (
     UnifiedNode,
 )
+from agent_bom.graph.node_roles import INVENTORY_FACET_NAMES
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
 from agent_bom.graph.severity_floor import severity_floor_sql
 
@@ -110,7 +111,7 @@ class SQLiteGraphPagesMixin(SQLiteGraphCorrelationMixin):
             "nodes": [],
             "total": 0,
             "next_cursor": None,
-            "facets": {name: [] for name in ("type", "source", "provider", "environment", "severity")},
+            "facets": {name: [] for name in INVENTORY_FACET_NAMES},
             "finding_summaries": {},
             "relationship_counts": {},
             "finding_count": 0,

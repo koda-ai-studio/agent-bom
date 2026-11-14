@@ -2,10 +2,10 @@
 
 Every statement filters on ``(tenant_id, scan_id)``, the leading columns of
 the snapshot indexes on both SQLite and Postgres, and no statement decodes
-evidence, provenance or dimensions. Attributes are read only for the two node
+evidence or provenance. Attributes and dimensions are read only for the node
 types whose group depends on them (a package's ecosystem, a cloud resource's
-resource type). Attack-path hops come from the snapshot's stored path index
-(``graph_attack_paths``, ranked) and only from the highest-ranked paths, so a
+resource type, a server's or agent's role from :mod:`agent_bom.graph.node_roles`).
+Attack-path hops come from the snapshot's stored path index (``graph_attack_paths``, ranked) and only from the highest-ranked paths, so a
 snapshot with a very large path table still answers in bounded time.
 """
 
@@ -15,6 +15,7 @@ import json
 from typing import Any
 
 from agent_bom.graph.cluster_index import TOP_PATHS_FOR_BUNDLES, EdgeRow, NodeRow, hop_pairs
+from agent_bom.graph.node_roles import POSTGRES_ROLE_SQL, SQLITE_ROLE_SQL
 
 #: Hops of at most this many of the snapshot's highest-risk paths mark nodes as "on an attack path".
 MAX_PATHS_FOR_MEMBERSHIP = 5000
@@ -34,10 +35,11 @@ def _sqlite_rows(conn: Any, params: tuple[str, str]) -> tuple[list[NodeRow], lis
     # One JSON batch per statement: sqlite3 re-acquires the GIL per cursor row,
     # which at 200k rows costs several times the query itself.
     node_batch = conn.execute(
-        """SELECT json_group_array(json_array(id, entity_type, label, severity, risk_score,
+        f"""SELECT json_group_array(json_array(id, entity_type, label, severity, risk_score,
                   CASE entity_type WHEN 'package' THEN json_extract(attributes, '$.ecosystem')
-                                   WHEN 'cloud_resource' THEN json_extract(attributes, '$.resource_type') END))
-           FROM graph_nodes WHERE tenant_id = ? AND scan_id = ?""",
+                                   WHEN 'cloud_resource' THEN json_extract(attributes, '$.resource_type') END,
+                  {SQLITE_ROLE_SQL.format(alias="n")}))
+           FROM graph_nodes n WHERE tenant_id = ? AND scan_id = ?""",  # nosec B608 - static role expression
         params,
     ).fetchone()
     nodes: list[NodeRow] = [
@@ -49,8 +51,9 @@ def _sqlite_rows(conn: Any, params: tuple[str, str]) -> tuple[list[NodeRow], lis
             float(risk or 0.0),
             str(attr or "") if t == "package" else "",
             str(attr or "") if t == "cloud_resource" else "",
+            str(role or ""),
         )
-        for i, t, label, sev, risk, attr in json.loads(node_batch[0] or "[]")
+        for i, t, label, sev, risk, attr, role in json.loads(node_batch[0] or "[]")
     ]
     del node_batch
     edge_batch = conn.execute(
@@ -63,9 +66,10 @@ def _sqlite_rows(conn: Any, params: tuple[str, str]) -> tuple[list[NodeRow], lis
 
 def _postgres_rows(conn: Any, params: tuple[str, str]) -> tuple[list[NodeRow], list[EdgeRow]]:
     node_rows = conn.execute(
-        """SELECT id, entity_type, label, severity, risk_score,
-                  CASE WHEN entity_type IN ('package', 'cloud_resource') THEN attributes ELSE NULL END
-           FROM graph_nodes WHERE tenant_id = %s AND scan_id = %s""",
+        f"""SELECT id, entity_type, label, severity, risk_score,
+                  CASE WHEN entity_type IN ('package', 'cloud_resource') THEN attributes ELSE NULL END,
+                  {POSTGRES_ROLE_SQL.format(alias="n")}
+           FROM graph_nodes n WHERE tenant_id = %s AND scan_id = %s""",  # nosec B608 - static role expression
         params,
     ).fetchall()
     nodes: list[NodeRow] = [
@@ -77,8 +81,9 @@ def _postgres_rows(conn: Any, params: tuple[str, str]) -> tuple[list[NodeRow], l
             float(risk or 0.0),
             _attribute(attrs, "ecosystem") if t == "package" else "",
             _attribute(attrs, "resource_type") if t == "cloud_resource" else "",
+            str(role or ""),
         )
-        for i, t, label, sev, risk, attrs in node_rows
+        for i, t, label, sev, risk, attrs, role in node_rows
     ]
     del node_rows
     edges: list[EdgeRow] = [

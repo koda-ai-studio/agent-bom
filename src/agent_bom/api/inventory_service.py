@@ -24,6 +24,7 @@ from agent_bom.domain.display_names import agent_display_name
 from agent_bom.graph import SEVERITY_RANK, EntityType
 from agent_bom.graph.adjacency_page import SnapshotGenerationMismatchError
 from agent_bom.graph.completeness import graph_completeness
+from agent_bom.graph.node_roles import INVENTORY_FACET_NAMES, ROLES, node_role
 from agent_bom.graph.ocsf import FINDING_ENTITY_TYPES
 from agent_bom.security import sanitize_error
 
@@ -230,6 +231,9 @@ def asset_row(node: Any) -> dict[str, Any]:
         "ecosystem": str(node.dimensions.ecosystem or node.attributes.get("ecosystem") or ""),
         "version": str(node.attributes.get("version") or node.attributes.get("package_version") or ""),
     }
+    role = node_role(row["type"], node.dimensions.to_dict() if node.dimensions else {})
+    if role:
+        row["role"] = role
     if row["type"] == "agent":
         row["display_name"] = agent_display_name(str(node.label or ""), (node.attributes or {}).get("display_name"))
     return row
@@ -313,6 +317,8 @@ async def build_summary(
         by_type[entity_type] = count
         total_assets += count
         by_group[_TYPE_TO_GROUP.get(entity_type, "other")] += count
+    role_buckets = result.get("facets", {}).get("role", {}).get("buckets", [])
+    by_role = {str(bucket["value"]): int(bucket["count"]) for bucket in role_buckets if bucket.get("value") in ROLES}
 
     return {
         "schema_version": "inventory.summary.v1",
@@ -324,6 +330,7 @@ async def build_summary(
         "total_assets": total_assets,
         "by_type": dict(sorted(by_type.items(), key=lambda kv: (-kv[1], kv[0]))),
         "by_group": {group: count for group, count in by_group.items() if count or group in _TYPE_GROUPS},
+        "by_role": dict(sorted(by_role.items())),
         "finding_count": int(result.get("finding_count", 0)),
         "filters": result["filters"],
         "count_exact": True,
@@ -351,6 +358,7 @@ def empty_summary(*, tenant_id: str) -> dict[str, Any]:
         "total_assets": 0,
         "by_type": {},
         "by_group": {group: 0 for group in _TYPE_GROUPS},
+        "by_role": {},
         "finding_count": 0,
         "finding_count_scope": "selected_snapshot",
         "filters": {},
@@ -360,7 +368,7 @@ def empty_summary(*, tenant_id: str) -> dict[str, Any]:
             "status": "unknown",
             "reason": "No graph snapshot is available yet.",
         },
-        "facets": {key: {"buckets": []} for key in ("type", "environment", "source", "provider", "severity")},
+        "facets": {key: {"buckets": []} for key in INVENTORY_FACET_NAMES},
         "facet_metadata": {"basis": "no_snapshot", "mode": "self_excluding", "exact": True, "scan_id": ""},
         "completeness": graph_completeness(returned=0, total=0),
         "status": "no_snapshot",
