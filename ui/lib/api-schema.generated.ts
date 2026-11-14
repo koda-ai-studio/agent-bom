@@ -14832,6 +14832,11 @@ export interface components {
             framework_tags?: string[] | null;
             /** Graph Min Hop Distance */
             graph_min_hop_distance?: number | null;
+            /**
+             * Graph Reachability Not Assessed Reason
+             * @description Why graph_reachable is null: the snapshot path search stopped at a budget, or the graph is refreshing.
+             */
+            graph_reachability_not_assessed_reason?: ("path_budget" | "graph_refreshing") | null;
             /** Graph Reachable */
             graph_reachable?: boolean | null;
             /** Graph Reachable From */
@@ -39804,6 +39809,7 @@ export interface operations {
                             schema_version: "graph-remediation-priorities.v1";
                             /** @enum {string} */
                             source_coverage: "not_assessed";
+                            total_paths: number;
                         };
                         scan_id?: string;
                         snapshot_generation?: string | null;

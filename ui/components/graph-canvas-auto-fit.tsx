@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Panel, getViewportForBounds, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions, type Rect } from "@xyflow/react";
 import { GRAPH_FIT_MAX_ZOOM, GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_FOCUS_MIN_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
+import { readableNodeId } from "@/lib/node-id-tail";
 
 /** A short primary path should open with its surroundings in view, not as two oversized cards. */
 const PRIMARY_PATH_MAX_ZOOM = 0.7;
@@ -196,7 +197,7 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
       <div className="min-w-0 flex-1 text-center text-xs text-ink-secondary" aria-live="polite">
         <span>Canvas target · {index + 1} of {ordered.length}</span>
         <button type="button" className="block w-full truncate text-foreground underline underline-offset-4"
-          aria-label={`Center graph node: ${String(target.data.label ?? target.id)}`} onClick={() => void focus(target)}>
+          aria-label={`Center graph node: ${String(target.data.label ?? readableNodeId(target.id))}`} onClick={() => void focus(target)}>
           {String(target.data.label ?? target.id)}
         </button>
         <span className="sr-only">Pan for connections · Fit all for overview</span>

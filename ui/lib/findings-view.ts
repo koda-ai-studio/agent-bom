@@ -1,6 +1,7 @@
 import type { AIAssessment } from "@/components/ai-advice";
 import type { Vulnerability } from "@/lib/api";
 import type { FindingFacets, FindingOccurrenceSummary, FindingReconfirmation, WorkloadRuntimeEvidence } from "@/lib/api-types";
+import type { GraphReachabilityNotAssessedReason } from "@/lib/api-contracts/findings";
 import { nowForRelativeTime } from "@/lib/relative-clock";
 
 export interface EnrichedVuln extends Vulnerability {
@@ -49,6 +50,7 @@ export interface EnrichedVuln extends Vulnerability {
   graph_reachable_from_agents?: string[] | undefined;
   graph_reachable_from?: string[] | undefined;
   graph_reachable_from_count?: number | null | undefined;
+  graph_reachability_not_assessed_reason?: GraphReachabilityNotAssessedReason | null | undefined;
   effective_reach_score?: number | undefined;
   effective_reach_band?: string | undefined;
   framework_tags?: string[] | undefined;

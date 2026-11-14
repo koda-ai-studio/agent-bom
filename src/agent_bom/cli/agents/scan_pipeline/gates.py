@@ -5,8 +5,9 @@ from __future__ import annotations
 import sys
 
 from agent_bom.cli.agents._output import render_output
-from agent_bom.cli.agents._post import compute_exit_code, run_integrations
+from agent_bom.cli.agents._post import compute_exit_code, run_integrations, severity_gate_reason
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
+from agent_bom.cli.agents.scan_pipeline.prepare import DEFAULT_FAIL_ON_SEVERITY
 from agent_bom.cli.agents.scan_pipeline.quiet_summary import print_quiet_summary
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 
@@ -85,7 +86,10 @@ def _compute_exit(opts: ScanOptions, st: ScanState) -> None:
             page=opts.page,
         )
 
-    print_quiet_summary(opts, st, exit_code)
+    # --exit-zero changes the exit status, not the verdict: name what the
+    # default severity gate would have failed on.
+    forced_reason = severity_gate_reason(st.ctx, DEFAULT_FAIL_ON_SEVERITY) if opts.exit_zero and not exit_code else None
+    print_quiet_summary(opts, st, exit_code, forced_reason=forced_reason)
 
     if exit_code:
         sys.exit(exit_code)

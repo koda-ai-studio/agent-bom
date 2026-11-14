@@ -136,7 +136,9 @@ retaining results from the other servers. Use
 `--fail-on-severity` to choose a stricter threshold, or `--exit-zero` for an
 explicitly reporting-only vulnerability scan. `--exit-zero` never suppresses a
 malicious-package, policy, or incomplete-evidence failure. Add `--warn-on` when
-the reporting-only path should still print a named warning tier.
+the reporting-only path should still print a named warning tier. It changes
+only the exit status: under `-q` the verdict still reads
+`FAIL (exit forced to 0 by --exit-zero)` when the default high gate matched.
 
 #### Documentation, example and test paths are non-gating by default
 

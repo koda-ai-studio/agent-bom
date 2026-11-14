@@ -141,5 +141,5 @@ def test_cli_skills_scan_output_has_no_audit_hmac_log_line(tmp_path: Path) -> No
         check=False,
     )
     combined = result.stdout + result.stderr
-    assert "demo/SKILL.md" in combined, combined[-2000:]
+    assert any(line.split()[:1] == ["demo"] for line in combined.splitlines()), combined[-2000:]
     assert WARNING_TEXT not in combined

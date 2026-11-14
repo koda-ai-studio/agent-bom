@@ -57,6 +57,18 @@ describe("graph remediation priorities", () => {
     expect(screen.queryByText("Prioritize fixes")).not.toBeInTheDocument();
   });
 
+  it("states the cap against the snapshot's path total with grouped numbers", () => {
+    const capped = { ...view.remediation_priorities!, total_paths: 7005, assessed_paths: 5000, candidate_count: 1133, limitations: ["path_budget"] };
+    render(<GraphRemediationPriorities view={{ ...view, remediation_priorities: capped }} scanId={view.scan_id} />);
+    expect(screen.getByText("1,133 candidates · 5,000 of 7,005 paths assessed · capped")).toBeVisible();
+  });
+
+  it("omits the cap note when every path was assessed", () => {
+    render(<GraphRemediationPriorities view={{ ...view, remediation_priorities: { ...view.remediation_priorities!, total_paths: 3 } }} scanId={view.scan_id} />);
+    expect(screen.getByText("1 candidate · 3 paths assessed")).toBeVisible();
+    expect(screen.queryByText(/capped/)).not.toBeInTheDocument();
+  });
+
   it("renders nothing before a snapshot is selected", () => {
     const { container } = render(<GraphRemediationPriorities view={null} scanId="" />);
     expect(container).toBeEmptyDOMElement();

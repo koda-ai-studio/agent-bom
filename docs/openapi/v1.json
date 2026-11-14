@@ -16421,6 +16421,22 @@
             ],
             "title": "Graph Min Hop Distance"
           },
+          "graph_reachability_not_assessed_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "path_budget",
+                  "graph_refreshing"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why graph_reachable is null: the snapshot path search stopped at a budget, or the graph is refreshing.",
+            "title": "Graph Reachability Not Assessed Reason"
+          },
           "graph_reachable": {
             "anyOf": [
               {
@@ -76875,6 +76891,10 @@
                             "not_assessed"
                           ],
                           "type": "string"
+                        },
+                        "total_paths": {
+                          "minimum": 0,
+                          "type": "integer"
                         }
                       },
                       "required": [
@@ -76882,6 +76902,7 @@
                         "coverage_basis",
                         "source_coverage",
                         "method",
+                        "total_paths",
                         "assessed_paths",
                         "candidate_count",
                         "covered_paths",

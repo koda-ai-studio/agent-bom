@@ -370,6 +370,48 @@ def _malicious_package_reason(pkg: Any) -> str:
     return f"{malicious_label(getattr(pkg, 'malicious_reason', None))} package {pkg.name} ({reason})"
 
 
+def _gate_blast_radii(ctx: ScanContext) -> list:
+    """Unsuppressed, non-VEX blast radii; only new ones in delta mode."""
+    from agent_bom.vex import is_vex_suppressed as _is_vex_suppressed
+
+    active = [br for br in ctx.blast_radii if not br.suppressed and not _is_vex_suppressed(br.vulnerability)]
+    if ctx.delta_result is not None:
+        new_keys = {(d.get("vulnerability_id", "").upper(), d.get("package", "")) for d in ctx.delta_result.new_items}
+        active = [br for br in active if (br.vulnerability.id.upper(), f"{br.package.name}@{br.package.version}") in new_keys]
+    return active
+
+
+def severity_gate_reason(ctx: ScanContext, fail_on_severity: Any) -> str | None:
+    """The first finding at or above ``fail_on_severity``, phrased as an exit reason; no side effects.
+
+    Order matches the gate: unsuppressed, non-VEX vulnerabilities (new-only in
+    delta mode), then IaC misconfigurations, then unified non-CVE findings.
+    """
+    if not fail_on_severity:
+        return None
+    threshold = SEVERITY_ORDER.get(str(fail_on_severity).lower(), 0)
+    report = ctx.report
+    for br in _gate_blast_radii(ctx):
+        sev = br.vulnerability.severity.value.lower()
+        if _fail_gate_meets(sev, threshold):
+            return f"found {sev} vulnerability ({br.vulnerability.id})"
+
+    if report and report.iac_findings_data:
+        for f in report.iac_findings_data.get("findings", []):
+            sev = (f.get("severity") or "medium").lower()
+            if _fail_gate_meets(sev, threshold):
+                return f"IaC {sev} misconfiguration ({f.get('rule_id', '?')} in {f.get('file_path', '?')})"
+
+    # CVEs are handled above through blast_radii so VEX and delta filtering keep their semantics.
+    for finding in _gate_findings(report) if report else []:
+        sev = str(finding.severity or "low").lower()
+        if _fail_gate_meets(sev, threshold):
+            if getattr(finding, "is_malicious", False):
+                return _malicious_finding_reason(finding)
+            return f"found {sev} finding ({finding.finding_type.value})"
+    return None
+
+
 def compute_exit_code(
     ctx: ScanContext,
     *,
@@ -385,61 +427,16 @@ def compute_exit_code(
 ) -> int:
     """Step 9: compute final exit code based on policy flags."""
     con = ctx.con
-    blast_radii = ctx.blast_radii
     report = ctx.report
 
     exit_code = 0
-
-    # Filter blast radii to exclude VEX-suppressed vulnerabilities
-    from agent_bom.vex import is_vex_suppressed as _is_vex_suppressed
-
-    _active_blast_radii = [br for br in blast_radii if not br.suppressed and not _is_vex_suppressed(br.vulnerability)]
-
-    # Delta mode: further restrict active findings to new-only
-    if ctx.delta_result is not None:
-        _new_keys = {(d.get("vulnerability_id", "").upper(), d.get("package", "")) for d in ctx.delta_result.new_items}
-        _active_blast_radii = [
-            br for br in _active_blast_radii if (br.vulnerability.id.upper(), f"{br.package.name}@{br.package.version}") in _new_keys
-        ]
-
-    if fail_on_severity and _active_blast_radii:
-        fail_threshold = str(fail_on_severity).lower()
-        threshold = SEVERITY_ORDER.get(fail_threshold, 0)
-        for br in _active_blast_radii:
-            sev = br.vulnerability.severity.value.lower()
-            if _fail_gate_meets(sev, threshold):
-                _exit_reason(ctx, quiet, f"found {sev} vulnerability ({br.vulnerability.id})")
-                exit_code = 1
-                break
-
-    # IaC findings also respect --fail-on-severity
-    if fail_on_severity and exit_code == 0 and report and report.iac_findings_data:
-        fail_threshold = str(fail_on_severity).lower()
-        threshold = SEVERITY_ORDER.get(fail_threshold, 0)
-        for f in report.iac_findings_data.get("findings", []):
-            sev = (f.get("severity") or "medium").lower()
-            if _fail_gate_meets(sev, threshold):
-                _exit_reason(ctx, quiet, f"IaC {sev} misconfiguration ({f.get('rule_id', '?')} in {f.get('file_path', '?')})")
-                exit_code = 1
-                break
-
-    # Unified non-CVE findings (for example MCP_BLOCKLIST) also respect
-    # --fail-on-severity. CVEs are handled above through blast_radii so VEX and
-    # delta filtering keep their existing semantics.
+    _active_blast_radii = _gate_blast_radii(ctx)
     unified_findings = _gate_findings(report) if report else []
 
-    if fail_on_severity and exit_code == 0 and unified_findings:
-        fail_threshold = str(fail_on_severity).lower()
-        threshold = SEVERITY_ORDER.get(fail_threshold, 0)
-        for finding in unified_findings:
-            sev = str(finding.severity or "low").lower()
-            if _fail_gate_meets(sev, threshold):
-                if getattr(finding, "is_malicious", False):
-                    _exit_reason(ctx, quiet, _malicious_finding_reason(finding))
-                else:
-                    _exit_reason(ctx, quiet, f"found {sev} finding ({finding.finding_type.value})")
-                exit_code = 1
-                break
+    severity_reason = severity_gate_reason(ctx, fail_on_severity)
+    if severity_reason:
+        _exit_reason(ctx, quiet, severity_reason)
+        exit_code = 1
 
     # AI skill findings participate in CI only after the operator explicitly
     # selects deterministic execution and --ai-gate-findings. The immutable

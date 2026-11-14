@@ -3,7 +3,7 @@
 import { LifecycleDate, lifecycleSummary, openOccurrenceLabel, resolutionReasonLabel } from "@/components/finding-lifecycle";
 import { ASSET_BASE } from "@/lib/asset-base";
 import { packageVersionLabel } from "@/lib/package-version-label";
-import { agentDisplayName } from "@/lib/display-name";
+import { FindingAffectedAgents } from "@/components/finding-affected-agents";
 import { findingHolder } from "@/lib/finding-holder";
 
 import { ChevronDown, ChevronRight, ChevronUp, ExternalLink } from "lucide-react";
@@ -18,6 +18,7 @@ import { severityColor, severityText, severitySourceLabel, severityDot, type Fin
 import { AIAdviceBadge } from "@/components/ai-advice";
 import type { FindingsLens } from "@/lib/findings-lens";
 import type { EnrichedVuln, SortKey } from "@/lib/findings-view";
+import type { GraphReachabilityNotAssessedReason } from "@/lib/api-contracts/findings";
 import {
   findingSecondaryText,
   findingStatusClass,
@@ -31,14 +32,21 @@ import { humanizeEnum } from "@/lib/enum-labels";
 import { reachabilitySource, reachabilitySourceLabel } from "@/lib/reachability-source";
 import { formatProbabilityPercent } from "@/lib/probability-format";
 
+const NOT_ASSESSED: Record<GraphReachabilityNotAssessedReason, { label: string; title: string }> = {
+  path_budget: { label: "Not assessed (budget)", title: "The snapshot's path search stopped at its budget before reaching this finding; reachability is unknown, not unreachable." },
+  graph_refreshing: { label: "Not assessed (refreshing)", title: "The current graph is being prepared; reachability is unknown until it finishes." },
+};
+
 function ReachabilityBadge({
   reachable,
   hops,
   source,
+  notAssessedReason,
 }: {
   reachable: boolean | null | undefined;
   hops: number | null | undefined;
   source?: string | null | undefined;
+  notAssessedReason?: GraphReachabilityNotAssessedReason | null | undefined;
 }) {
   if (reachable === true) {
     const hopLabel = typeof hops === "number" && hops > 0 ? ` · ${hops} hop${hops === 1 ? "" : "s"}` : "";
@@ -59,6 +67,14 @@ function ReachabilityBadge({
         className="text-xs font-mono bg-surface border border-outline text-ink-tertiary rounded px-1.5 py-0.5"
       >
         Unreachable
+      </span>
+    );
+  }
+  const notAssessed = notAssessedReason ? NOT_ASSESSED[notAssessedReason] : undefined;
+  if (notAssessed) {
+    return (
+      <span title={notAssessed.title} className="text-xs font-mono bg-surface border border-dashed border-outline text-ink-secondary rounded px-1.5 py-0.5">
+        {notAssessed.label}
       </span>
     );
   }
@@ -293,6 +309,11 @@ function useCompactFindingsLayout() {
   return compact;
 }
 
+function firstTwoWithRemainder(items: string[]): string {
+  const head = items.slice(0, 2).join(", ");
+  return items.length > 2 ? `${head} +${items.length - 2} more` : head;
+}
+
 function MobileFindingCard({
   vuln,
   columns,
@@ -329,11 +350,12 @@ function MobileFindingCard({
   const due = formatSlaDue(vuln.sla_due_at);
   const fields: Record<FindingColumnKey, ReactNode> = {
     priority: <span className={`inline-block rounded border px-1.5 py-0.5 text-xs ${severityColor(vuln.severity)}`} title={`Severity source: ${severitySourceLabel(vuln.severity_source) || "unreported"}`}>{severityText(vuln.severity, vuln)}</span>,
-    asset: [...vuln.packages.map((name, index) => index === 0 ? packageVersionLabel(vuln) : name), ...vuln.agents, ...vuln.affected_servers].slice(0, 2).join(", ") || "Unavailable",
+    asset: firstTwoWithRemainder([...vuln.packages.map((name, index) => index === 0 ? packageVersionLabel(vuln) : name), ...vuln.agents, ...vuln.affected_servers]) || "Unavailable",
     detection: <DetectionEvidence vuln={vuln} />,
     observed: <ObservedEvidence vuln={vuln} />,
     remediation: [vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided", lifecycleSummary(vuln)].filter(Boolean).join(" · "),
-    reach: vuln.graph_reachable === true ? `Reachable · ${exploit}` : vuln.graph_reachable === false ? `Unreachable · ${exploit}` : exploit,
+    reach: vuln.graph_reachable === true ? `Reachable · ${exploit}` : vuln.graph_reachable === false ? `Unreachable · ${exploit}`
+      : vuln.graph_reachability_not_assessed_reason ? `${NOT_ASSESSED[vuln.graph_reachability_not_assessed_reason].label} · ${exploit}` : exploit,
     owner: `${vuln.owner || triage?.assignee || "Unassigned"} · ${due?.label ?? "SLA unavailable"}`,
     controls: controls.join(", ") || "Unavailable",
     disposition: `${triage?.decision?.replaceAll("_", " ") || "Not reviewed"} · ${triage?.vex_eligible ? "OpenVEX ready" : "Attestation unavailable"}`,
@@ -587,7 +609,6 @@ function EngineeringCells({
   const verifyCommand = vuln.remediation_items.find((item) => item.verify_command)?.verify_command;
   const sla = formatSlaDue(vuln.sla_due_at);
   const packageName = vuln.packages[0];
-  const visibleAgents = vuln.agents.slice(0, 2);
   const holder = findingHolder(vuln);
   const controlTags = controlLabels(vuln);
   const disposition = triage?.decision?.replaceAll("_", " ");
@@ -596,7 +617,7 @@ function EngineeringCells({
     reach: (<td className="px-3 py-3">
         <div className="flex flex-col items-start gap-1">
           <div className="flex flex-wrap items-center gap-1">
-            <ReachabilityBadge reachable={vuln.graph_reachable} hops={vuln.graph_min_hop_distance} source={reachabilitySource(vuln)} />
+            <ReachabilityBadge reachable={vuln.graph_reachable} hops={vuln.graph_min_hop_distance} source={reachabilitySource(vuln)} notAssessedReason={vuln.graph_reachability_not_assessed_reason} />
             {(vuln.is_kev ?? vuln.cisa_kev) ? <CisaKevBadge /> : null}
           </div>
           {typeof vuln.epss_score === "number" ? (
@@ -626,21 +647,8 @@ function EngineeringCells({
           ) : (
             <span className="font-mono text-ink-tertiary">Unavailable</span>
           )}
-          {visibleAgents.length > 0 ? (
-            <span className="flex flex-wrap gap-x-1 text-ink-tertiary">
-              {visibleAgents.map((agent, index) => (
-                <span key={agent}>
-                  {index > 0 ? ", " : null}
-                  <a
-                    href={`${ASSET_BASE}/findings?q=${encodeURIComponent(agent)}`}
-                    onClick={(event) => event.stopPropagation()}
-                    className="underline decoration-dotted underline-offset-2 transition hover:text-foreground"
-                  >
-                    {agentDisplayName(agent)}
-                  </a>
-                </span>
-              ))}
-            </span>
+          {vuln.agents.length > 0 ? (
+            <FindingAffectedAgents findingId={vuln.id} agents={vuln.agents} onOpenFinding={onSelect} />
           ) : (
             <span className="text-ink-tertiary" title={holder.title}>{holder.label}</span>
           )}
