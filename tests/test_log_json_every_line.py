@@ -130,9 +130,16 @@ def test_api_server_writes_only_json_lines(tmp_path: Path, via_env: bool) -> Non
         except ValueError:
             plain.append(line)
     assert not plain, "\n".join(plain[:20])
-    access = [e for e in events if e.get("logger") == "uvicorn.access"]
-    assert {e["http"]["path"] for e in access} >= {"/health", "/v1/jobs"}
+    assert not [e for e in events if e.get("logger") == "uvicorn.access"], "requests must be logged once, by the API middleware"
+    requests = [e for e in events if e.get("logger") == "agent_bom.api.middleware" and "http" in e]
+    jobs = [e for e in requests if e["http"]["path"] == "/v1/jobs"]
+    assert len(jobs) == 1, requests
+    assert jobs[0]["http"]["method"] == "GET"
+    assert isinstance(jobs[0]["http"]["status"], int)
+    assert isinstance(jobs[0]["http"]["duration_ms"], (int, float))
+    assert jobs[0]["context"]["request_id"]
     assert "s3cret" not in "\n".join(lines)
+    assert "token=" not in "\n".join(lines)
     assert any(e["msg"] == "agent-bom API" for e in events)
     noisy = [e for e in events if e["level"] == "WARNING" and ("rate_limit_key_rotation" in e["msg"] or "AUDIT_HMAC_KEY" in e["msg"])]
     assert not noisy, noisy
