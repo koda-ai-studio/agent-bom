@@ -9,7 +9,16 @@ from agent_bom.core.packages import normalize_package_name as normalize_package_
 from agent_bom.core.severity import Severity as Severity
 from agent_bom.package_utils import parse_debian_source_name as parse_debian_source_name  # noqa: F401
 
-__all__ = ["AgentStatus", "AgentType", "ServerSurface", "Severity", "TransportType", "normalize_package_name", "parse_debian_source_name"]
+__all__ = [
+    "DEV_DEPENDENCY_SCOPES",
+    "AgentStatus",
+    "AgentType",
+    "ServerSurface",
+    "Severity",
+    "TransportType",
+    "normalize_package_name",
+    "parse_debian_source_name",
+]
 
 
 def _utc_now_iso() -> str:

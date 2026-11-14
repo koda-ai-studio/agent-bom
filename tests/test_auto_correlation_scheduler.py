@@ -16,9 +16,10 @@ from agent_bom.api.auto_correlation import (
     reconcile_auto_correlations_once,
 )
 from agent_bom.api.graph_store import SQLiteGraphStore
+from agent_bom.api.job_store_contract import JobStore
 from agent_bom.api.metrics import render_prometheus_lines, reset_for_tests
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
-from agent_bom.api.store import InMemoryJobStore, JobStore, SQLiteJobStore
+from agent_bom.api.store import InMemoryJobStore, SQLiteJobStore
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.correlation import CorrelationRunStatus
 from agent_bom.graph.correlation_service import GraphCorrelationService
@@ -216,7 +217,8 @@ async def test_cross_tenant_or_incomplete_batch_is_durably_skipped(tmp_path: Pat
     # The same foreign ID no longer replaces this tenant's child. Model a
     # genuinely missing local child before checking the membership failure.
     assert jobs.get(parent.child_job_ids[1], tenant_id="tenant-a") is not None
-    assert jobs.delete(parent.child_job_ids[1], tenant_id="tenant-a")
+    deleted = jobs.delete(parent.child_job_ids[1], tenant_id="tenant-a")
+    assert deleted
     assert jobs.get(parent.child_job_ids[1], tenant_id="tenant-b") is not None
     graph_store.save_graph(_graph(parent.child_job_ids[0]))
 

@@ -46,10 +46,7 @@ export function InvestigationToolbar({ embedded, compact, stepper, controls, lay
         </details>
       </> : <>
         {controls}
-        {layoutControls && (embedded ? <details className="relative">
-          <summary className="graph-page-action cursor-pointer">Layout</summary>
-          <div className="absolute right-0 top-full z-20 mt-2 rounded-xl border border-outline bg-surface p-2 shadow-lg">{layoutControls}</div>
-        </details> : layoutControls)}
+        {layoutControls}
       </>}
     </div>
   );

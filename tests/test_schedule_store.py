@@ -61,12 +61,14 @@ class TestInMemoryScheduleStore:
     def test_delete(self):
         store = InMemoryScheduleStore()
         store.put(_make_schedule(), tenant_id="default")
-        assert store.delete("sched-1", tenant_id="default") is True
+        deleted = store.delete("sched-1", tenant_id="default")
+        assert deleted is True
         assert store.get("sched-1", tenant_id="default") is None
 
     def test_delete_missing(self):
         store = InMemoryScheduleStore()
-        assert store.delete("nonexistent", tenant_id="default") is False
+        deleted = store.delete("nonexistent", tenant_id="default")
+        assert deleted is False
 
     def test_list_all(self):
         store = InMemoryScheduleStore()
@@ -142,12 +144,14 @@ class TestSQLiteScheduleStore:
     def test_delete(self, tmp_path):
         store = SQLiteScheduleStore(str(tmp_path / "sched.db"))
         store.put(_make_schedule(), tenant_id="default")
-        assert store.delete("sched-1", tenant_id="default") is True
+        deleted = store.delete("sched-1", tenant_id="default")
+        assert deleted is True
         assert store.get("sched-1", tenant_id="default") is None
 
     def test_delete_missing(self, tmp_path):
         store = SQLiteScheduleStore(str(tmp_path / "sched.db"))
-        assert store.delete("nonexistent", tenant_id="default") is False
+        deleted = store.delete("nonexistent", tenant_id="default")
+        assert deleted is False
 
     def test_list_all(self, tmp_path):
         store = SQLiteScheduleStore(str(tmp_path / "sched.db"))

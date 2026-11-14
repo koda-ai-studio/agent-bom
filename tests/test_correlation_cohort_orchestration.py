@@ -163,7 +163,8 @@ def test_durable_cohort_replay_repairs_a_missing_child_after_interrupted_legacy_
         max_age_hours=24,
     )
     missing_child_id = parent.child_job_ids[0]
-    assert jobs.delete(missing_child_id, tenant_id="tenant-a") is True
+    deleted = jobs.delete(missing_child_id, tenant_id="tenant-a")
+    assert deleted is True
     for child_id in parent.child_job_ids[1:]:
         child = jobs.get(child_id, tenant_id="tenant-a")
         assert child is not None

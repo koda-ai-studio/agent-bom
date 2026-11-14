@@ -52,7 +52,8 @@ def test_job_revision_survives_replica_reopen_and_same_shape_refresh(replicas, m
         monkeypatch.setattr(a, "list_all", lambda **kwargs: pytest.fail("revision read deserialized all job payloads"))
         assert a.overview_evidence_revision(tenant) == second
         assert PostgresJobStore(pool=b._pool).overview_evidence_revision(tenant) == second
-        assert b.delete("same-id", tenant_id=tenant)
+        deleted = b.delete("same-id", tenant_id=tenant)
+        assert deleted
         assert a.overview_evidence_revision(tenant) not in {initial, first, second}
 
 

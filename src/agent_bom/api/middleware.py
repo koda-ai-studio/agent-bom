@@ -941,5 +941,6 @@ class RateLimitMiddleware(_RateLimitMiddleware):
             scan_rpm=scan_rpm,
             read_rpm=read_rpm,
             authenticated_read_rpm=authenticated_read_rpm,
+            # Late-bound so patching this module's get_key_store reaches the installed middleware.
             get_key_store=lambda: get_key_store(),
         )

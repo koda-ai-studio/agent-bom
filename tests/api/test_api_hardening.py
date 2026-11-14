@@ -2505,7 +2505,8 @@ def test_explicit_logout_prevents_packaged_dashboard_auto_login(monkeypatch):
         assert client.post("/v1/auth/dev-session", headers=origin).status_code == 204
         original = client.cookies.get(SESSION_COOKIE_NAME)
         csrf = client.cookies.get(CSRF_COOKIE_NAME)
-        assert client.delete("/v1/auth/session", headers={**origin, CSRF_HEADER_NAME: csrf}).status_code == 204
+        logout = client.delete("/v1/auth/session", headers={**origin, CSRF_HEADER_NAME: csrf})
+        assert logout.status_code == 204
         response = Response()
         _maybe_attach_dev_session_cookie(response, SimpleNamespace(cookies=dict(client.cookies), headers={"host": "127.0.0.1:8422"}))
         assert not any(value.startswith(f"{SESSION_COOKIE_NAME}=") for value in response.headers.getlist("set-cookie"))

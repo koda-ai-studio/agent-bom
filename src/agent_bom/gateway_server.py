@@ -653,6 +653,7 @@ def create_gateway_app(settings: GatewaySettings) -> FastAPI:
         audit_unavailable=_audit_unavailable_response,
         bind_audit_tenant=_bind_authenticated_audit_tenant,
         emit_policy_interop=_emit_policy_interop_event,
+        # Late-bound so patching _get_visual_leak_detector reaches a running gateway.
         visual_detector=lambda: _get_visual_leak_detector(),
         response_scanner=scan_jsonrpc_response,
         tracer=_GATEWAY_TRACER,

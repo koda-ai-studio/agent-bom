@@ -124,7 +124,9 @@ class IdempotencyStore(Protocol):
         idempotency_key: str,
         *,
         request_hash: str = "",
-    ) -> dict[str, Any] | None: ...
+    ) -> dict[str, Any] | None:
+        """Return the stored response for this key, if any."""
+
     def put(
         self,
         endpoint: str,
@@ -135,7 +137,9 @@ class IdempotencyStore(Protocol):
         *,
         request_hash: str = "",
         owner_token: str = "",
-    ) -> bool: ...
+    ) -> bool:
+        """Store the response for this key; return whether it was written."""
+
     def claim(
         self,
         endpoint: str,
@@ -147,7 +151,9 @@ class IdempotencyStore(Protocol):
         request_hash: str = "",
         reservation_lease_seconds: int | None = None,
         owner_token: str = "",
-    ) -> tuple[dict[str, Any], bool]: ...
+    ) -> tuple[dict[str, Any], bool]:
+        """Atomically reserve one logical write; return its receipt and whether this caller holds it."""
+
     def heartbeat(
         self,
         endpoint: str,
@@ -158,7 +164,9 @@ class IdempotencyStore(Protocol):
         request_hash: str,
         owner_token: str,
         reservation_lease_seconds: int,
-    ) -> bool: ...
+    ) -> bool:
+        """Extend the caller's reservation lease; return whether it is still held."""
+
     def release(
         self,
         endpoint: str,
@@ -168,7 +176,9 @@ class IdempotencyStore(Protocol):
         *,
         request_hash: str = "",
         owner_token: str = "",
-    ) -> bool: ...
+    ) -> bool:
+        """Drop the caller's reservation; return whether it was held."""
+
     def commit_claim(
         self,
         endpoint: str,
@@ -180,7 +190,8 @@ class IdempotencyStore(Protocol):
         action: Callable[[], _T],
         request_hash: str,
         owner_token: str,
-    ) -> _T: ...
+    ) -> _T:
+        """Run ``action`` and store its response under the caller's reservation."""
 
 
 def _utcnow() -> str:

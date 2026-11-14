@@ -62,9 +62,11 @@ def test_get_by_name():
 def test_delete():
     store = InMemoryFleetStore()
     store.put(_make())
-    assert store.delete("a-1", tenant_id="default") is True
+    deleted = store.delete("a-1", tenant_id="default")
+    assert deleted is True
     assert store.get("a-1", tenant_id="default") is None
-    assert store.delete("a-1", tenant_id="default") is False
+    deleted = store.delete("a-1", tenant_id="default")
+    assert deleted is False
 
 
 def test_list_all():
@@ -157,9 +159,11 @@ def test_sqlite_delete():
     store, path = _sqlite_store()
     try:
         store.put(_make())
-        assert store.delete("a-1", tenant_id="default") is True
+        deleted = store.delete("a-1", tenant_id="default")
+        assert deleted is True
         assert store.get("a-1", tenant_id="default") is None
-        assert store.delete("a-1", tenant_id="default") is False
+        deleted = store.delete("a-1", tenant_id="default")
+        assert deleted is False
     finally:
         path.unlink(missing_ok=True)
 

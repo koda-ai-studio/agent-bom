@@ -116,11 +116,20 @@ class VulnException:
 
 
 class ExceptionStore(Protocol):
-    def put(self, exc: VulnException, *, tenant_id: str) -> None: ...
-    def get(self, exception_id: str, *, tenant_id: str) -> VulnException | None: ...
-    def delete(self, exception_id: str, *, tenant_id: str) -> bool: ...
-    def list_all(self, status: str | None = None, *, tenant_id: str) -> list[VulnException]: ...
-    def find_matching(self, vuln_id: str, package_name: str, server_name: str = "", *, tenant_id: str) -> VulnException | None: ...
+    def put(self, exc: VulnException, *, tenant_id: str) -> None:
+        """Create or replace an exception for a tenant."""
+
+    def get(self, exception_id: str, *, tenant_id: str) -> VulnException | None:
+        """Return one exception for a tenant, if any."""
+
+    def delete(self, exception_id: str, *, tenant_id: str) -> bool:
+        """Delete one exception; return whether it existed."""
+
+    def list_all(self, status: str | None = None, *, tenant_id: str) -> list[VulnException]:
+        """Return a tenant's exceptions, optionally filtered by status."""
+
+    def find_matching(self, vuln_id: str, package_name: str, server_name: str = "", *, tenant_id: str) -> VulnException | None:
+        """Return the active exception covering this finding, if any."""
 
 
 def configured_exception_store() -> ExceptionStore:

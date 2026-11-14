@@ -23,7 +23,6 @@ from agent_bom.graph.repository_identity import repository_scope, scoped_node_id
 from agent_bom.graph.types import EntityType, GraphSemanticLayer
 
 _OVERLAY_SOURCE = "repo-trust-overlay"
-_ROOT_DIR_ID = "directory:."
 
 
 def _trust_payload(report_json: dict[str, Any]) -> dict[str, Any] | None:

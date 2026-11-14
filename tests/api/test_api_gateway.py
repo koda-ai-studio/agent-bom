@@ -230,7 +230,8 @@ def test_write_routes_require_policy_write_permission():
     }
     assert client.post("/v1/gateway/policies", json=payload, headers=VIEWER_HEADERS).status_code == 403
     assert client.put("/v1/gateway/policies/p-1", json={"name": "renamed"}, headers=VIEWER_HEADERS).status_code == 403
-    assert client.delete("/v1/gateway/policies/p-1", headers=VIEWER_HEADERS).status_code == 403
+    response = client.delete("/v1/gateway/policies/p-1", headers=VIEWER_HEADERS)
+    assert response.status_code == 403
 
 
 def test_list_hides_other_tenants():

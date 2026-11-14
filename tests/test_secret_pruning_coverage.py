@@ -37,7 +37,8 @@ def test_prune_callback_counts_ancestors_without_descending(tmp_path):
     nested.mkdir(parents=True)
     (nested / "leak.env").write_text("placeholder")
     seen = []
-    assert list(iter_discovery_files(tmp_path, on_prune=lambda path, reason: seen.append((path, reason)))) == []
+    discovered = list(iter_discovery_files(tmp_path, on_prune=lambda path, reason: seen.append((path, reason))))
+    assert discovered == []
     assert seen == [(root, "directory_policy")]
 
 
@@ -46,7 +47,8 @@ def test_nested_worktree_exclusion_has_a_distinct_reason(tmp_path):
     root.mkdir()
     (root / ".git").write_text("gitdir: ../.git/worktrees/linked")
     seen = []
-    assert list(iter_discovery_files(tmp_path, on_prune=lambda path, reason: seen.append((path, reason)))) == []
+    discovered = list(iter_discovery_files(tmp_path, on_prune=lambda path, reason: seen.append((path, reason))))
+    assert discovered == []
     assert seen == [(root, "nested_worktree")]
 
 

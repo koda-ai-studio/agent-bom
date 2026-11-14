@@ -1,7 +1,7 @@
 """Fleet agent registry storage backends.
 
 Persistent storage for managed agent fleet with lifecycle states and trust scores.
-Follows the same pattern as ``store.py`` (Protocol + InMemory + SQLite).
+The ``FleetStore`` protocol lives in ``fleet_store_contract``; this module holds the in-memory and SQLite backends.
 """
 
 from __future__ import annotations
@@ -9,56 +9,19 @@ from __future__ import annotations
 import os
 import sqlite3
 import threading
-from typing import Any, Protocol
-
-from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Any
 
 from agent_bom.api.fleet_identity import discovered_fleet_identity, fleet_agent_natural_key, match_discovered_fleet_agent
 from agent_bom.api.fleet_models import FleetAgent as FleetAgent
+from agent_bom.api.fleet_models import FleetEndpoint as FleetEndpoint
 from agent_bom.api.fleet_models import FleetLifecycleState as FleetLifecycleState
+from agent_bom.api.fleet_store_contract import FleetStore as FleetStore
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
-from agent_bom.platform_invariants import normalize_tenant_id, normalize_timestamp, now_utc_iso
+from agent_bom.platform_invariants import normalize_tenant_id, now_utc_iso
 from agent_bom.security import sanitize_text
 
-# ─── Models ──────────────────────────────────────────────────────────────────
-
-
-class FleetEndpoint(BaseModel):
-    """Privacy-safe latest workstation inventory for one enrolled endpoint."""
-
-    endpoint_id: str = Field(min_length=1, max_length=200)
-    tenant_id: str = "default"
-    platform: dict[str, str] = Field(default_factory=dict)
-    counts: dict[str, int | None] = Field(default_factory=dict)
-    collector_status: dict[str, str] = Field(default_factory=dict)
-    collector_messages: dict[str, str] = Field(default_factory=dict)
-    privacy: dict[str, bool] = Field(default_factory=dict)
-    completeness: str = "partial"
-    last_scan_id: str = ""
-    observed_at: str = ""
-    updated_at: str = ""
-
-    @field_validator("tenant_id", mode="before")
-    @classmethod
-    def _normalize_endpoint_tenant_id(cls, value: str | None) -> str:
-        return normalize_tenant_id(value)
-
-    @field_validator("observed_at", "updated_at", mode="before")
-    @classmethod
-    def _normalize_endpoint_timestamps(cls, value: str | None) -> str:
-        return normalize_timestamp(value) or ""
-
-    @model_validator(mode="after")
-    def _apply_endpoint_defaults(self) -> FleetEndpoint:
-        if not self.updated_at:
-            self.updated_at = now_utc_iso()
-        if not self.observed_at:
-            self.observed_at = self.updated_at
-        return self
-
-
 _ENDPOINT_COLLECTORS = ("applications", "processes", "services", "listeners", "containers", "images")
-__all__ = ["discovered_fleet_identity", "fleet_agent_natural_key", "match_discovered_fleet_agent"]  # fmt: skip
+__all__ = ["FleetStore", "discovered_fleet_identity", "fleet_agent_natural_key", "match_discovered_fleet_agent"]  # fmt: skip
 _ENDPOINT_COLLECTOR_STATUSES = frozenset({"complete", "partial", "unsupported", "unavailable", "permission_denied", "skipped"})
 
 
@@ -155,52 +118,6 @@ def find_fleet_agent(store: Any, tenant_id: str, identifier: str) -> Any | None:
     if not identifier:
         return None
     return store.get(identifier, tenant_id=tenant_id)
-
-
-# ─── Protocol ────────────────────────────────────────────────────────────────
-
-
-class FleetStore(Protocol):
-    """Protocol for fleet agent persistence."""
-
-    def put(self, agent: FleetAgent) -> None: ...
-    def get(self, agent_id: str, *, tenant_id: str) -> FleetAgent | None: ...
-    def get_by_canonical_id(self, canonical_id: str, tenant_id: str | None = None) -> FleetAgent | None: ...
-    def get_by_name(self, name: str) -> FleetAgent | None: ...
-    def delete(self, agent_id: str, *, tenant_id: str) -> bool: ...
-    def list_all(self) -> list[FleetAgent]: ...
-    def list_summary(self) -> list[dict[str, Any]]: ...
-    def list_by_tenant(self, tenant_id: str) -> list[FleetAgent]: ...
-    def find_by_identifier(self, tenant_id: str, identifier: str) -> FleetAgent | None: ...
-    def query_by_tenant(
-        self,
-        tenant_id: str,
-        *,
-        state: str | None = None,
-        environment: str | None = None,
-        min_trust: float | None = None,
-        search: str | None = None,
-        include_quarantined: bool = False,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> tuple[list[FleetAgent], int]: ...
-    def list_tenants(self) -> list[dict[str, Any]]: ...
-    # ``agent_id`` is unique only WITHIN a tenant, so the tenant is a required
-    # keyword: an unscoped state change is a cross-tenant write.
-    def update_state(self, agent_id: str, state: FleetLifecycleState, *, tenant_id: str) -> bool: ...
-    def batch_put(self, agents: list[FleetAgent]) -> int: ...
-    def put_endpoint(self, endpoint: FleetEndpoint) -> None: ...
-    def get_endpoint(self, endpoint_id: str, *, tenant_id: str) -> FleetEndpoint | None: ...
-    def delete_endpoint(self, endpoint_id: str, *, tenant_id: str) -> bool: ...
-    def query_endpoints(
-        self,
-        tenant_id: str,
-        *,
-        search: str | None = None,
-        completeness: str | None = None,
-        limit: int = 50,
-        offset: int = 0,
-    ) -> tuple[list[FleetEndpoint], int]: ...
 
 
 # ─── In-Memory ───────────────────────────────────────────────────────────────

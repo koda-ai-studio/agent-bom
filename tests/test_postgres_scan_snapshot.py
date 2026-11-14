@@ -83,7 +83,8 @@ def test_postgres_job_deletion_cleans_snapshots_after_opt_out(monkeypatch, all_t
             snapshots.put_snapshot(tenant, job_id, _meta("2026-10-01T00:00:00+00:00"), [_row(tenant)])
         monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOTS", "0")
         with tenant_scope(tenants[0]):
-            assert jobs.delete(job_id, tenant_id=None if all_tenants else tenants[0], all_tenants=all_tenants)
+            deleted = jobs.delete(job_id, tenant_id=None if all_tenants else tenants[0], all_tenants=all_tenants)
+            assert deleted
         assert snapshots.get_meta(tenants[0]) == {}
         assert snapshots.get_rows(tenants[0], job_id) == []
         assert bool(snapshots.get_meta(tenants[1])) is (not all_tenants)

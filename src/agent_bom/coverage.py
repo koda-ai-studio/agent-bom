@@ -36,11 +36,16 @@ class Package(Protocol):
     """Package coordinates this module reads; ``models.Package`` satisfies it."""
 
     @property
-    def name(self) -> str: ...
+    def name(self) -> str:
+        """Package name."""
+
     @property
-    def version(self) -> str: ...
+    def version(self) -> str:
+        """Package version."""
+
     @property
-    def ecosystem(self) -> str: ...
+    def ecosystem(self) -> str:
+        """Package ecosystem."""
 
 
 _logger = logging.getLogger(__name__)

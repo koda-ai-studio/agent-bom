@@ -31,7 +31,8 @@ def test_credential_ref_store_tenant_backstop() -> None:
     )
 
     assert store.get("cred-1", tenant_id="tenant-b") is None
-    assert store.delete("cred-1", tenant_id="tenant-b") is False
+    deleted = store.delete("cred-1", tenant_id="tenant-b")
+    assert deleted is False
     # Still present for the owning tenant after the cross-tenant delete attempt.
     owned = store.get("cred-1", tenant_id="tenant-a")
     assert owned is not None
@@ -51,7 +52,8 @@ def test_fleet_store_tenant_backstop() -> None:
     )
 
     assert store.get("a-1", tenant_id="tenant-b") is None
-    assert store.delete("a-1", tenant_id="tenant-b") is False
+    deleted = store.delete("a-1", tenant_id="tenant-b")
+    assert deleted is False
     owned = store.get("a-1", tenant_id="tenant-a")
     assert owned is not None
     assert owned.agent_id == "a-1"
