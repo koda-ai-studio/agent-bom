@@ -164,3 +164,68 @@ def test_the_child_entry_point_reports_bad_requests_without_echoing_them(tmp_pat
     )
     assert result.returncode == child.EXIT_FAILED
     assert SECRET not in result.stderr.decode()
+
+
+def _driver_error(module: str, name: str) -> type[Exception]:
+    # Same module and class name as the driver's, so this runs without the postgres extra.
+    return type(name, (Exception,), {"__module__": module})
+
+
+def _report(worker, exc: BaseException, monkeypatch, capsys) -> tuple[list[int], str]:
+    exits: list[int] = []
+    monkeypatch.setattr(worker.os, "_exit", exits.append)
+    worker.report_type_only(type(exc), exc, None)
+    return exits, capsys.readouterr().err.strip()
+
+
+@pytest.mark.parametrize(
+    ("module", "name"),
+    [("psycopg", "OperationalError"), ("psycopg_pool", "PoolTimeout")],
+    ids=["connection-refused", "pool-timeout"],
+)
+def test_an_unreachable_database_is_not_reported_as_an_rls_privilege_error(monkeypatch, capsys, module, name) -> None:
+    from agent_bom.api import current_graph_pg_copy_worker as worker
+    from agent_bom.api.postgres_common import RlsRolePrivilegeError
+
+    try:
+        try:
+            raise _driver_error(module, name)(f"connection to server at db.internal failed: {SECRET}")
+        except Exception:
+            raise RlsRolePrivilegeError("Cannot inspect Postgres role attributes; database access is blocked.") from None
+    except RlsRolePrivilegeError as exc:
+        exits, reported = _report(worker, exc, monkeypatch, capsys)
+
+    assert exits == [child.EXIT_UNREACHABLE]
+    assert reported == "DatabaseUnreachable"
+    assert SECRET not in reported
+
+
+def test_a_real_rls_privilege_error_keeps_its_own_reason(monkeypatch, capsys) -> None:
+    from agent_bom.api import current_graph_pg_copy_worker as worker
+    from agent_bom.api.postgres_common import RlsRolePrivilegeError
+
+    exits, reported = _report(worker, RlsRolePrivilegeError("role has SUPERUSER"), monkeypatch, capsys)
+
+    assert exits == [child.EXIT_FAILED]
+    assert reported == "RlsRolePrivilegeError"
+
+
+def test_an_unreachable_database_child_is_logged_as_such(tmp_path, monkeypatch, caplog) -> None:
+    body = f"import sys\nsys.stderr.write('DatabaseUnreachable\\n')\nsys.exit({child.EXIT_UNREACHABLE})\n"
+    module = _module(tmp_path, monkeypatch, "unreachable", body)
+    with caplog.at_level(logging.WARNING):
+        assert child.copy_in_child(str(tmp_path / "projection.db"), module=module, timeout=30, **FIELDS) is False
+    assert "could not reach the database" in caplog.text
+    assert "RlsRolePrivilegeError" not in caplog.text
+
+
+def test_a_child_that_cannot_start_falls_back_to_the_rebuild(tmp_path, monkeypatch, caplog) -> None:
+    def refuse(*_args, **_kwargs):
+        raise OSError(24, f"Too many open files: {URL}")
+
+    monkeypatch.setattr(child.subprocess, "Popen", refuse)
+    with caplog.at_level(logging.WARNING):
+        assert child.copy_in_child(str(tmp_path / "projection.db"), **FIELDS) is False
+    assert "could not start" in caplog.text
+    assert SECRET not in caplog.text
+    assert not child.live_children()

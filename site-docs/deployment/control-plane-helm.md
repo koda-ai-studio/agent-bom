@@ -570,9 +570,10 @@ You still own:
 - keep same-origin ingress unless you have a strong reason not to
 - set `controlPlane.logging.json=true` when a log pipeline parses the pods'
   output. It sets `AGENT_BOM_LOG_JSON=1` on the API and worker pods, so every
-  line is one JSON object: the startup summary becomes a single event and the
-  Uvicorn access log carries `http.method`, `http.path` (query removed) and
-  `http.status`. The compose files read the same variable
+  line is one JSON object: the startup summary becomes a single event and each
+  request is logged once, by the API, with `http.method`, `http.path` (query
+  removed), `http.status`, `http.duration_ms` and `http.client`, plus
+  `context.request_id`, `context.trace_id` and `context.tenant_id`. The compose files read the same variable
   (`AGENT_BOM_LOG_JSON=1 docker compose ...`), and `agent-bom api` /
   `agent-bom serve` accept `--log-json`. It is off by default. Under JSON
   logging a loopback dev API key is not printed; run without it to see the key.

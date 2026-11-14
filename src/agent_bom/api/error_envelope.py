@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import sqlite3
 import uuid
 from collections.abc import Callable, Coroutine, Sequence
 from functools import wraps
@@ -30,6 +32,13 @@ from agent_bom.api.error_models import (
 from agent_bom.security import sanitize_error
 
 __all__ = ["ERROR_RESPONSES", "ErrorBody", "ErrorCode", "ErrorEnvelope", "install_error_envelope", "with_middleware_error_envelope"]
+
+_logger = logging.getLogger(__name__)
+
+# A busy store usually frees within a few seconds (one writer finishing); the
+# client retries instead of a worker thread waiting on the lock.
+STORAGE_RETRY_AFTER_SECONDS = 5
+_STORAGE_UNAVAILABLE_MESSAGE = "A backing store is temporarily busy or unreachable; retry after the Retry-After interval"
 
 
 def _error_code_for_status(status_code: int) -> str:
@@ -221,10 +230,49 @@ def install_error_envelope(application: object) -> None:
             correlation_id=_correlation_id(request),
         )
 
+    async def storage_operational_error_handler(request: StarletteRequest, exc: Exception) -> JSONResponse:
+        return _unexpected_error_response(request, exc, _correlation_id(request))
+
+    async def unhandled_exception_handler(request: StarletteRequest, exc: Exception) -> JSONResponse:
+        # Starlette re-raises after this response so the server still logs the traceback.
+        return _unexpected_error_response(request, exc, _correlation_id(request))
+
     application.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore[attr-defined]
     application.add_exception_handler(StarletteHTTPException, starlette_http_exception_handler)  # type: ignore[attr-defined]
     application.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[attr-defined]
     application.add_exception_handler(IdempotencyPayloadError, idempotency_payload_exception_handler)  # type: ignore[attr-defined]
+    application.add_exception_handler(sqlite3.OperationalError, storage_operational_error_handler)  # type: ignore[attr-defined]
+    application.add_exception_handler(Exception, unhandled_exception_handler)  # type: ignore[attr-defined]
+
+
+def _unexpected_error_response(request: StarletteRequest, exc: Exception, correlation_id: str) -> JSONResponse:
+    """Enveloped 503 for storage contention/outage, enveloped generic 500 otherwise; never raw exception text."""
+    path = getattr(request, "url", None)
+    route = path.path if path is not None else ""
+    if _is_backend_unavailable(exc):
+        _logger.warning(
+            "storage unavailable on %s %s (%s): %s; correlation_id=%s",
+            request.method,
+            route,
+            type(exc).__name__,
+            sanitize_error(exc),
+            correlation_id,
+        )
+        return _build_error_envelope(
+            status_code=503,
+            detail=_STORAGE_UNAVAILABLE_MESSAGE,
+            correlation_id=correlation_id,
+            headers={"Retry-After": str(STORAGE_RETRY_AFTER_SECONDS)},
+        )
+    _logger.error(
+        "unhandled %s on %s %s: %s; correlation_id=%s",
+        type(exc).__name__,
+        request.method,
+        route,
+        sanitize_error(exc),
+        correlation_id,
+    )
+    return _build_error_envelope(status_code=500, detail=sanitize_error(exc, generic=True), correlation_id=correlation_id)
 
 
 def with_middleware_error_envelope(
@@ -239,7 +287,8 @@ def with_middleware_error_envelope(
         except Exception as exc:
             if not _is_backend_unavailable(exc):
                 raise
-            response = JSONResponse(status_code=503, content={"detail": "Service temporarily unavailable"})
+            correlation_id = getattr(request.state, "request_id", "") or request.headers.get("x-request-id") or str(uuid.uuid4())
+            return _unexpected_error_response(request, exc, correlation_id)
         return _with_middleware_error_envelope(request, response)
 
     return wrapped
@@ -249,7 +298,18 @@ def _is_backend_unavailable(exc: BaseException) -> bool:
     """True for storage connectivity failures, which are retryable 503s rather than 500s."""
     if isinstance(exc, (TimeoutError, ConnectionError)):
         return True
+    if isinstance(exc, sqlite3.OperationalError):
+        return _is_sqlite_lock_contention(exc)
     return any(
         cls.__module__.split(".")[0] in {"psycopg", "psycopg_pool"} and cls.__name__ in {"OperationalError", "PoolTimeout"}
         for cls in type(exc).__mro__
     )
+
+
+def _is_sqlite_lock_contention(exc: sqlite3.OperationalError) -> bool:
+    """SQLITE_BUSY / SQLITE_LOCKED: another connection holds the lock past the busy timeout."""
+    code = getattr(exc, "sqlite_errorcode", None)
+    if isinstance(code, int):
+        return code & 0xFF in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED)
+    message = str(exc).lower()
+    return "database is locked" in message or "database is busy" in message or "database table is locked" in message

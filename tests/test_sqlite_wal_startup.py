@@ -50,7 +50,7 @@ def test_wal_startup_contention_and_failed_connection_cleanup(monkeypatch, store
 
     if code == sqlite3.SQLITE_BUSY:
         connection = get_connection()
-        assert connection.execute("PRAGMA busy_timeout").fetchone() == (30000,)
+        assert connection.execute("PRAGMA busy_timeout").fetchone() == (5000,)
         assert get_connection() is connection
         connection.close()
     else:
@@ -83,7 +83,7 @@ def test_wal_contention_budget_expires_and_closes_connection(monkeypatch):
             self.closed = True
 
     connection = Connection()
-    clock = itertools.chain([0.0, 29.0, 30.0], itertools.repeat(30.0))
+    clock = itertools.chain([0.0, 4.0, 5.0], itertools.repeat(5.0))
     sleeps = []
     monkeypatch.setattr(sqlite3, "connect", lambda *args, **kwargs: connection)
     monkeypatch.setattr(sqlite_wal.time, "monotonic", lambda: next(clock))

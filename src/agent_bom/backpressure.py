@@ -264,7 +264,14 @@ _CONTROLLERS_LOCK = Lock()
 # Overview and posture counts share an aggregation controller. A measured cold
 # 10,000-finding Postgres read took 16 seconds; use the same headroom as findings
 # so later cached browsing is not rejected solely by that cold sample.
-_DEFAULT_P99_THRESHOLD_MS: dict[str, int] = {"graph": 12_000, "findings": 30_000, "overview": 30_000}
+#
+# ``discovery`` guards uncached ``/v1/agents`` builds. An honest 5,000-agent
+# scanned-estate build measured median 807 ms and max 2.3 s on a laptop, and
+# slower shared runners go past the generic 2500ms budget, so a few honest
+# builds opened the process-wide breaker and 429'd every tenant. Ten seconds is
+# about three times a slow runner's worst build; the concurrency limit still
+# sheds a pile-up of builds.
+_DEFAULT_P99_THRESHOLD_MS: dict[str, int] = {"graph": 12_000, "findings": 30_000, "overview": 30_000, "discovery": 10_000}
 _GENERIC_P99_THRESHOLD_MS = 2500
 
 
