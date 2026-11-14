@@ -615,6 +615,19 @@ Reads that name a `scan_id` are exact reads of that recorded scan and are never
 answered from a projection. Explicit stale generation continuations still fail
 with 409, and neither generations nor promotion stamps cross tenant boundaries.
 
+On PostgreSQL a one-source projection is copied as rows by a child process.
+Between 2,000-row batches the child yields PostgreSQL to the graph and findings
+requests its API process has in flight: it waits while any is in flight, at
+most 0.5 s per batch and 30 s per copy, so constant reads lengthen the build
+by at most 30 s and never stop it. With no reads in flight there is no pause.
+The API publishes its in-flight count in a private 8-byte file under the
+projection cache directory; reads in other workers or replicas are not seen,
+and a missing or unreadable count never pauses the copy. A request stops
+counting while it waits on a current-graph build, so a cold read never makes
+the copy yield to its own waiter. The yield changes when rows are read, never
+which rows are written. The API logs each copy's time and the share spent
+yielding at info level.
+
 After a push the API also warms the roll-up views, the reachability index, the
 executive reads and the posture counts. These warm-ups load the estate into
 Python, and under the GIL a CPU-bound thread makes every concurrent request wait
