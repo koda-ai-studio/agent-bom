@@ -10,6 +10,7 @@ import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { disclosedGlyphSize, readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
 import { shouldVirtualizeReactFlowNodes } from "@/lib/graph-renderer-switch";
 import { GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_LEGIBLE_FIT_ZOOM } from "@/lib/graph-adaptive-frame";
+import { phoneStacksScopes } from "@/lib/graph-rollup-view";
 import { BACKGROUND_COLOR, BACKGROUND_GAP, CONTROLS_CLASS, MINIMAP_BG, MINIMAP_CLASS, MINIMAP_MASK, minimapNodeColor } from "@/lib/graph-utils";
 import type { GraphPageModel } from "@/components/graph-page-view";
 import type { useInvestigationFlowView } from "@/hooks/use-investigation-flow-view";
@@ -99,7 +100,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
               }}
             >
               <GraphCanvasAutoFit
-                boundedPreview={Boolean(connectionPreview) && !previewExpanded}
+                boundedPreview={(Boolean(connectionPreview) && !previewExpanded) || (rollupNavigationActive && phoneStacksScopes(narrowViewport, displayNodes.length))}
                 padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
                 navigationIds={selectedAttackPath?.hops ?? flowView.navigationIds}

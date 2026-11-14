@@ -1,0 +1,421 @@
+{
+ "scan_id": "quickstart",
+ "tenant_id": "fixture",
+ "created_at": "2026-11-05T00:00:00Z",
+ "mode": "rollup",
+ "filters": {
+  "min_severity": "",
+  "exposed_only": false,
+  "toxic_only": false
+ },
+ "top_level": [
+  {
+   "id": "agent:cfg-36d79f5b881e:Cursor%20First-Run%20Workspace",
+   "label": "Cursor First-Run Workspace",
+   "entity_type": "agent",
+   "severity": "",
+   "is_container": true,
+   "has_children": true,
+   "direct_child_count": 3,
+   "aggregate": {
+    "descendant_count": 14,
+    "by_type": {
+     "credential": 3,
+     "misconfiguration": 2,
+     "package": 4,
+     "server": 2,
+     "tool": 3
+    },
+    "severity_counts": {
+     "critical": 0,
+     "high": 1,
+     "medium": 1,
+     "low": 0,
+     "info": 0,
+     "none": 0
+    },
+    "issue_count": 2,
+    "finding_occurrence_count": 2,
+    "worst_severity": "high",
+    "worst_severity_rank": 4,
+    "internet_exposed": false,
+    "toxic_combo": false,
+    "exposed_count": 0,
+    "toxic_count": 0
+   },
+   "context": {},
+   "cloud_provider": "",
+   "cloud_provider_basis": "",
+   "connections": {
+    "connected_entry_count": 3,
+    "relationship_count": 9
+   }
+  },
+  {
+   "id": "agent:cfg-38ced796fb9a:Claude%20Review%20Bot",
+   "label": "Claude Review Bot",
+   "entity_type": "agent",
+   "severity": "",
+   "is_container": true,
+   "has_children": true,
+   "direct_child_count": 2,
+   "aggregate": {
+    "descendant_count": 5,
+    "by_type": {
+     "credential": 1,
+     "misconfiguration": 1,
+     "package": 1,
+     "server": 1,
+     "tool": 1
+    },
+    "severity_counts": {
+     "critical": 0,
+     "high": 1,
+     "medium": 0,
+     "low": 0,
+     "info": 0,
+     "none": 0
+    },
+    "issue_count": 1,
+    "finding_occurrence_count": 1,
+    "worst_severity": "high",
+    "worst_severity_rank": 4,
+    "internet_exposed": false,
+    "toxic_combo": false,
+    "exposed_count": 0,
+    "toxic_count": 0
+   },
+   "context": {},
+   "cloud_provider": "",
+   "cloud_provider_basis": "",
+   "connections": {
+    "connected_entry_count": 1,
+    "relationship_count": 1
+   }
+  },
+  {
+   "id": "repo:directory:f011104a989ce73dead8ad5c8b58d5a68fa6439a0e10ca0a6a73a802c4083150",
+   "label": "Project root",
+   "entity_type": "directory",
+   "severity": "",
+   "is_container": true,
+   "has_children": true,
+   "direct_child_count": 1,
+   "aggregate": {
+    "descendant_count": 6,
+    "by_type": {
+     "config_file": 3,
+     "directory": 3
+    },
+    "severity_counts": {
+     "critical": 0,
+     "high": 0,
+     "medium": 0,
+     "low": 0,
+     "info": 0,
+     "none": 0
+    },
+    "issue_count": 0,
+    "finding_occurrence_count": 0,
+    "worst_severity": "none",
+    "worst_severity_rank": 0,
+    "internet_exposed": false,
+    "toxic_combo": false,
+    "exposed_count": 0,
+    "toxic_count": 0
+   },
+   "context": {},
+   "cloud_provider": "",
+   "cloud_provider_basis": "",
+   "connections": {
+    "connected_entry_count": 2,
+    "relationship_count": 5
+   }
+  },
+  {
+   "id": "directory:repository:cfg-bd056af172f8:project%3Aagent-bom-first-run",
+   "label": "agent-bom-first-run",
+   "entity_type": "directory",
+   "severity": "",
+   "is_container": true,
+   "has_children": true,
+   "direct_child_count": 2,
+   "aggregate": {
+    "descendant_count": 2,
+    "by_type": {
+     "directory": 2
+    },
+    "severity_counts": {
+     "critical": 0,
+     "high": 0,
+     "medium": 0,
+     "low": 0,
+     "info": 0,
+     "none": 0
+    },
+    "issue_count": 0,
+    "finding_occurrence_count": 0,
+    "worst_severity": "none",
+    "worst_severity_rank": 0,
+    "internet_exposed": false,
+    "toxic_combo": false,
+    "exposed_count": 0,
+    "toxic_count": 0
+   },
+   "context": {},
+   "cloud_provider": "",
+   "cloud_provider_basis": "",
+   "connections": {
+    "connected_entry_count": 2,
+    "relationship_count": 5
+   }
+  },
+  {
+   "id": "pkg:pypi:requests@2.28.0",
+   "label": "requests@2.28.0",
+   "entity_type": "package",
+   "severity": "",
+   "is_container": false,
+   "has_children": false,
+   "direct_child_count": 0,
+   "aggregate": {
+    "descendant_count": 0,
+    "by_type": {},
+    "severity_counts": {
+     "critical": 0,
+     "high": 0,
+     "medium": 0,
+     "low": 0,
+     "info": 0,
+     "none": 0
+    },
+    "issue_count": 0,
+    "finding_occurrence_count": 0,
+    "worst_severity": "none",
+    "worst_severity_rank": 0,
+    "internet_exposed": false,
+    "toxic_combo": false,
+    "exposed_count": 0,
+    "toxic_count": 0
+   },
+   "context": {},
+   "cloud_provider": "",
+   "cloud_provider_basis": "",
+   "connections": {
+    "connected_entry_count": 2,
+    "relationship_count": 2
+   }
+  },
+  {
+   "id": "provider:bundled-first-run-sample",
+   "label": "bundled-first-run-sample",
+   "entity_type": "provider",
+   "severity": "",
+   "is_container": true,
+   "has_children": false,
+   "direct_child_count": 0,
+   "aggregate": {
+    "descendant_count": 0,
+    "by_type": {},
+    "severity_counts": {
+     "critical": 0,
+     "high": 0,
+     "medium": 0,
+     "low": 0,
+     "info": 0,
+     "none": 0
+    },
+    "issue_count": 0,
+    "finding_occurrence_count": 0,
+    "worst_severity": "none",
+    "worst_severity_rank": 0,
+    "internet_exposed": false,
+    "toxic_combo": false,
+    "exposed_count": 0,
+    "toxic_count": 0
+   },
+   "context": {},
+   "cloud_provider": "",
+   "cloud_provider_basis": "",
+   "connections": {
+    "connected_entry_count": 2,
+    "relationship_count": 2
+   }
+  }
+ ],
+ "edges": [
+  {
+   "source": "directory:repository:cfg-bd056af172f8:project%3Aagent-bom-first-run",
+   "target": "agent:cfg-36d79f5b881e:Cursor%20First-Run%20Workspace",
+   "count": 4,
+   "relationships": [
+    "depends_on"
+   ],
+   "directions": [
+    "directed"
+   ],
+   "relationship_counts": {
+    "depends_on": 4
+   }
+  },
+  {
+   "source": "repo:directory:f011104a989ce73dead8ad5c8b58d5a68fa6439a0e10ca0a6a73a802c4083150",
+   "target": "agent:cfg-36d79f5b881e:Cursor%20First-Run%20Workspace",
+   "count": 4,
+   "relationships": [
+    "depends_on"
+   ],
+   "directions": [
+    "directed"
+   ],
+   "relationship_counts": {
+    "depends_on": 4
+   }
+  },
+  {
+   "source": "directory:repository:cfg-bd056af172f8:project%3Aagent-bom-first-run",
+   "target": "pkg:pypi:requests@2.28.0",
+   "count": 1,
+   "relationships": [
+    "depends_on"
+   ],
+   "directions": [
+    "directed"
+   ],
+   "relationship_counts": {
+    "depends_on": 1
+   }
+  },
+  {
+   "source": "provider:bundled-first-run-sample",
+   "target": "agent:cfg-36d79f5b881e:Cursor%20First-Run%20Workspace",
+   "count": 1,
+   "relationships": [
+    "platform_for"
+   ],
+   "directions": [
+    "directed"
+   ],
+   "relationship_counts": {
+    "platform_for": 1
+   }
+  },
+  {
+   "source": "provider:bundled-first-run-sample",
+   "target": "agent:cfg-38ced796fb9a:Claude%20Review%20Bot",
+   "count": 1,
+   "relationships": [
+    "platform_for"
+   ],
+   "directions": [
+    "directed"
+   ],
+   "relationship_counts": {
+    "platform_for": 1
+   }
+  },
+  {
+   "source": "repo:directory:f011104a989ce73dead8ad5c8b58d5a68fa6439a0e10ca0a6a73a802c4083150",
+   "target": "pkg:pypi:requests@2.28.0",
+   "count": 1,
+   "relationships": [
+    "depends_on"
+   ],
+   "directions": [
+    "directed"
+   ],
+   "relationship_counts": {
+    "depends_on": 1
+   }
+  }
+ ],
+ "edge_count_metadata": {
+  "definition": "Aggregated non-containment container-to-container relationship rows in the roll-up source graph.",
+  "source_total": 6,
+  "returned": 6,
+  "truncated": false,
+  "source_truncated": false,
+  "connections_definition": "Each entry's connections count other returned entries it is linked to, before the row cap.",
+  "reason": ""
+ },
+ "aggregate_count_metadata": {
+  "basis": "returned_entry_descendants",
+  "definition": "Filtered descendants of returned entries, excluding each entry itself; not an estate total.",
+  "distinct_descendants": 26,
+  "descendant_memberships": 27,
+  "shared_descendants": 1,
+  "extra_memberships": 1,
+  "additive": false,
+  "distinct_finding_occurrences": 3,
+  "finding_occurrence_memberships": 3,
+  "occurrences_additive": true,
+  "severity_basis": "issue_groups",
+  "severity_definition": "Distinct open finding issues among the scope's descendants: VEX-suppressed findings and rated non-finding nodes are excluded, and occurrences of one advisory on one package count once.",
+  "source_truncated": false,
+  "reason": ""
+ },
+ "orphan_summary": {
+  "total": 2,
+  "shown": 2,
+  "truncated": 0,
+  "by_type": {
+   "package": 1,
+   "provider": 1
+  },
+  "severity_counts": {
+   "critical": 0,
+   "high": 0,
+   "medium": 0,
+   "low": 0,
+   "info": 0,
+   "none": 0
+  },
+  "issue_count": 0,
+  "worst_severity": "none",
+  "worst_severity_rank": 0,
+  "internet_exposed": false,
+  "toxic_combo": false,
+  "exposed_count": 0,
+  "toxic_count": 0,
+  "sample": []
+ },
+ "summary": {
+  "total_nodes": 32,
+  "total_nodes_source": 32,
+  "total_edges": 49,
+  "top_level_count": 6,
+  "returned_top_level_count": 6,
+  "container_count": 4,
+  "orphan_count": 2,
+  "orphan_shown_count": 2,
+  "orphan_truncated_count": 0,
+  "issue_severity_counts": {
+   "critical": 0,
+   "high": 2,
+   "medium": 1,
+   "low": 0,
+   "info": 0,
+   "none": 0
+  },
+  "issue_count": 3,
+  "finding_occurrence_count": 3,
+  "severity_basis": "issue_groups"
+ },
+ "pagination": {
+  "offset": 0,
+  "limit": 100,
+  "returned": 6,
+  "total": 6,
+  "has_more": false,
+  "next_offset": null
+ },
+ "completeness": {
+  "status": "complete",
+  "complete": true,
+  "sampled": false,
+  "truncated": false,
+  "returned": 6,
+  "total": 6
+ },
+ "snapshot_generation": "fixture"
+}

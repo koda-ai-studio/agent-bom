@@ -65,6 +65,17 @@ def scanned_estate_agents(jobs: Iterable[Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def graph_agent_payloads(agents: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The agents the graph types as agents: scanned repositories, SBOMs and images are inventory, not agents.
+
+    Uses the graph projection's own classification, so the Agents list and the
+    snapshot's agent records count the same population.
+    """
+    from agent_bom.graph.agent_projection import inventory_scope
+
+    return [agent for agent in agents if not inventory_scope(agent).static_inventory]
+
+
 def classify_agent_payload(agent: dict[str, Any]) -> str:
     """Dict twin of ``models.classify_agent_kind`` for serialized report agents."""
     if str(agent.get("agent_type") or agent.get("type") or "custom") != "custom":

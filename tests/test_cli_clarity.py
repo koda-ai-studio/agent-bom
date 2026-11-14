@@ -13,13 +13,25 @@ Covers the back-compat guarantees and the new help tiering introduced by the
 
 from __future__ import annotations
 
+import re
+
+import pytest
 from click.testing import CliRunner
 
+# Click renders an option row as two spaces then the flag(s); wrapped help
+# text continues at the description column, so it never matches.
+_OPTION_ROW = re.compile(r"^  -{1,2}[A-Za-z0-9]")
 
-def _run(args):
+
+def _run(args, width: int = 80):
     from agent_bom.cli import main
 
-    return CliRunner().invoke(main, args)
+    runner = CliRunner(env={"COLUMNS": str(width)})
+    return runner.invoke(main, args, terminal_width=width, max_content_width=width)
+
+
+def _option_rows(output: str) -> list[str]:
+    return [line for line in output.splitlines() if _OPTION_ROW.match(line)]
 
 
 # ── FIX 1: canonical scan verb, agents hidden alias ──────────────────────────
@@ -62,13 +74,32 @@ class TestFlagTiering:
         assert "Core options:" in out
         assert "--fail-on-severity" in out
         assert "additional scan flags" in out
-        assert not any(line.strip().startswith("--sbom") for line in out.splitlines())
+        assert not any(row.strip().startswith("--sbom") for row in _option_rows(out))
         assert "scan --help-all" in out
 
-    def test_default_help_core_option_count_bounded(self):
-        out = _run(["scan", "--help"]).output
-        option_lines = [line for line in out.splitlines() if line.strip().startswith("--")]
-        assert 20 <= len(option_lines) <= 40, f"expected 20–40 core flags, got {len(option_lines)}"
+    @pytest.mark.parametrize("width", [50, 60, 80, 200])
+    def test_default_help_core_option_count_bounded(self, width):
+        out = _run(["scan", "--help"], width=width).output
+        option_rows = _option_rows(out)
+        assert 20 <= len(option_rows) <= 40, f"expected 20–40 core flags, got {len(option_rows)}"
+
+    def test_option_row_count_ignores_terminal_width(self):
+        counts = {width: len(_option_rows(_run(["scan", "--help"], width=width).output)) for width in (50, 60, 80, 200)}
+        assert len(set(counts.values())) == 1, counts
+
+    def test_option_rows_skip_wrapped_flag_references(self):
+        sample = "\n".join(
+            [
+                "  -p, --project PATH              Project directory to scan.",
+                "                                  --project/-p.",
+                "              --fail-on-severity / --fail-on-kev / --fail-if-ai-risk.",
+                "  --repo URL                      Public git repository URL",
+            ]
+        )
+        assert _option_rows(sample) == [
+            "  -p, --project PATH              Project directory to scan.",
+            "  --repo URL                      Public git repository URL",
+        ]
 
     def test_help_all_shows_advanced_more_flags(self):
         out = _run(["scan", "--help-all"]).output

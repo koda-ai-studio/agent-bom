@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { buildGraphInvestigationHref } from "@/lib/attack-paths";
+import { decodeNodeIdPart } from "@/lib/node-id-tail";
 
 /** Select a recorded incident asset, never an unrelated finding or inferred identity. */
 export function incidentAssetRoot(
@@ -22,7 +23,7 @@ function displayIdentifier(identifier: string): { label: string; kind: string } 
   // Presentation only: the complete recorded identifier remains the query key.
   const resource = identifier.includes("@sha256:") ? identifier.split("@sha256:")[0]! : parts.at(-1)!;
   return {
-    label: resource.split("/").at(-1) || identifier,
+    label: decodeNodeIdPart(resource.split("/").at(-1) || identifier),
     kind: parts[0] === "cloud_resource"
       ? `${PROVIDERS[parts[1]!] ?? parts[1]} · ${parts[2]?.toUpperCase() ?? "asset"}`
       : parts[0] === "model" ? `${PROVIDERS[parts[1]!] ?? parts[1]} · model`

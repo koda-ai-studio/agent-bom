@@ -2,6 +2,8 @@ import type { AgentListParams, AgentSortKey } from "@/lib/api-inventory";
 
 export const AGENT_PAGE_SIZES = [25, 50, 100] as const;
 export const DEFAULT_AGENT_PAGE_SIZE = 50;
+/** The topology map draws one bounded page (the API maximum); larger estates are labelled, not silently cut. */
+export const TOPOLOGY_AGENT_LIMIT = 500;
 export const AGENT_FACETS = ["type", "status", "source"] as const;
 export type AgentFacet = (typeof AGENT_FACETS)[number];
 

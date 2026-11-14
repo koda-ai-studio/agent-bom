@@ -142,24 +142,25 @@ the first 30 to 40 seconds after a push take 1.3 to 1.6 s with stalls of 6 to
 2026-11-13 the same runs measured, at 5,000 agents, a 19.9 s first read and a
 5.7 s p95 on SQLite, and a 7.5 s first read on PostgreSQL.
 
-The same lane on a GitHub-hosted 4-vCPU runner (one run per row, 2026-11-13,
-Qualification workflow `performance` lanes, PostgreSQL in a service container on
-the same runner):
+The same lane on a GitHub-hosted 4-vCPU runner (2026-11-14, Qualification
+workflow `performance` lanes, PostgreSQL in a service container on the same
+runner), median and range of three runs per row:
 
 | Backend | Agents per push | Graph first read | Graph p50 | Graph p95 | Findings p95 | API peak memory |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| SQLite | 1,000 | 1.0 s | 0.32 s | 1.0 s | 0.05 s | 727 MB |
-| SQLite | 5,000 | 8.6 s | 0.37 s | 0.56 s | 2.0 s | 1,544 MB |
-| PostgreSQL | 1,000 | 2.7 s | 1.06 s | 2.7 s | 0.08 s | 826 MB |
-| PostgreSQL | 5,000 | 5.8 s | 0.76 s | 7.0 s | 2.1 s | 2,209 MB |
+| SQLite | 1,000 | 1.0 s (1.0–1.6) | 0.33 s (0.33–0.44) | 1.3 s (1.0–1.6) | 0.04 s | 731 MB |
+| SQLite | 5,000 | 7.9 s (7.1–10.5) | 0.44 s (0.40–0.50) | 0.55 s (0.52–0.74) | 2.1 s | 1,620 MB |
+| PostgreSQL | 1,000 | 1.3 s (0.75–1.3) | 0.74 s (0.73–0.82) | 0.93 s (0.85–1.3) | 0.21 s | 811 MB |
+| PostgreSQL | 5,000 | 5.1 s (4.5–6.5) | 1.5 s (1.5–2.1) | 2.4 s (1.8–4.5) | 0.57 s | 1,526 MB |
 
-On the runner the release before measured a 26.9 s first read and an 8.5 s p95
-on SQLite at 5,000 agents, and a 7.9 s p95 on PostgreSQL at 5,000 agents. On
-PostgreSQL the reads after a push share the API process with the first
-current-estate build, which loads the whole estate from PostgreSQL and writes
-its projection; at 5,000 agents that build covers the first seven reads (1.9 to
-9.5 s), and at 1,000 agents it ran through all 20, which is why the 1,000-agent
-median is above 1 s there.
+On PostgreSQL a current estate with one source snapshot is now copied into the
+current-graph projection as rows instead of being rebuilt through graph objects
+in the API process. In the same three runs the release before measured, at
+5,000 agents, a 7.0 s p95 (5.9–7.1 s) with the first five reads after the push
+taking 4.6 to 9.1 s, a 2.1 s findings p95 and 2,207 MB peak memory;
+at 1,000 agents a 1.08 s median and a 2.3 s p95. Those stalls are gone, but at
+5,000 agents the later graph reads on PostgreSQL still take mostly 1.2 to 2.4 s,
+so the steady-state p95 target below is not yet met there.
 
 Which limit to set for the API pod (and worker pods, which parse queued pushes):
 
@@ -384,9 +385,9 @@ described there). Validate them with the bundled k6 harness on your own nodes.
 
 | Flow | Target | Measured 2026-11-13 |
 |---|---|---|
-| Graph overview `GET /v1/graph?limit=100`, first read after a push is stored | < 10 s at 5,000 agents | 4.5 s SQLite, 3.8 s PostgreSQL; runner 8.6 s SQLite, 5.8 s PostgreSQL |
-| Graph overview, steady state | p50 < 1 s, p95 < 2 s | p50 0.37–0.51 s; p95 0.48 s (SQLite, 5,000), 1.7–1.8 s (1,000); runner SQLite p50 0.32–0.37 s, p95 0.56–1.0 s. Not met on the runner for PostgreSQL at 1,000 agents (p50 1.06 s, p95 2.7 s while the first build runs) |
-| Graph overview, first minute after a 5,000-agent push on PostgreSQL | p95 < 10 s | 7.8 s, then about 0.3 s per read; runner 7.0 s (max 9.5 s), then mostly 0.65–0.77 s with one 1.9 s read |
+| Graph overview `GET /v1/graph?limit=100`, first read after a push is stored | < 10 s at 5,000 agents | 4.5 s SQLite, 3.8 s PostgreSQL; runner 7.9 s SQLite, 5.1 s PostgreSQL (medians of three) |
+| Graph overview, steady state | p50 < 1 s, p95 < 2 s | p50 0.37–0.51 s; p95 0.48 s (SQLite, 5,000), 1.7–1.8 s (1,000); runner medians SQLite p50 0.33–0.44 s, p95 0.55–1.3 s; PostgreSQL 1,000 p50 0.74 s, p95 0.93 s. Not met on the runner for PostgreSQL at 5,000 agents (p50 1.5 s, p95 2.4 s) |
+| Graph overview, first minute after a 5,000-agent push on PostgreSQL | p95 < 10 s | 7.8 s, then about 0.3 s per read; runner 2.4 s (1.8–4.5 s, slowest read 5.6 s), down from 7.0 s |
 | Graph search `GET /v1/graph/search?q=agent&limit=25` | p95 < 1 s | 0.57–0.64 s at 5,000 agents, measured in-process |
 | Fleet read `GET /v1/fleet?limit=25` | < 350 ms p95 | not re-measured |
 | Fleet stats `GET /v1/fleet/stats` | < 300 ms p95 | not re-measured |

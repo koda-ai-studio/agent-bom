@@ -36,6 +36,7 @@ import { useShellDeploymentContext } from "@/components/shell-deployment-context
 import { openIssueSeverity } from "@/lib/open-issue-counts";
 import { deploymentModeLabel, hasDeploymentSignals } from "@/lib/deployment-context";
 import { useCaptureMode } from "@/lib/use-capture-mode";
+import { useSecretFindingsTotal } from "@/components/overview/use-secret-findings-total";
 import { complianceFrameworkSummaries } from "@/lib/compliance-frameworks";
 import {
   aggregateSeverity,
@@ -389,9 +390,10 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
     ? kevCount
     : ((counts?.issues?.approximate ? undefined : counts?.issues?.kev) ?? (overview?.issue_counts ? (overview.issue_counts.kev ?? overview.headline.kev) : undefined) ?? overview?.finding_counts?.kev ?? counts?.kev ?? overview?.headline.kev ?? 0);
   const displayedKevOccurrences = importedReport ? null : (overview?.finding_counts?.kev ?? counts?.kev ?? null);
-  const displayedCredentialExposure = importedReport
-    ? credentialExposureCount
-    : (overview?.headline.credential_exposed ?? 0);
+  // Live: the linked Findings view's own secret total. An imported report has no such view,
+  // so it shows its credential-exposed findings under that name instead.
+  const secretFindingsTotal = useSecretFindingsTotal(!importedReport && !apiError);
+  const displayedCredentialExposure = importedReport ? credentialExposureCount : secretFindingsTotal;
   const displayedReachableTools = detailsReady && (importedReport || !hasOverviewSnapshot) ? reachableToolCount : null;
   const displayedPackages = hasOverviewSnapshot && !importedReport
     ? (inventoryLoading || !inventorySummary ? null : (inventorySummary.by_type.package ?? null))
@@ -498,6 +500,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
         kevOccurrences={summaryReady ? displayedKevOccurrences : null}
         kevApproximate={!importedReport && overview?.finding_counts?.kev_approximate === true}
         credentials={summaryReady ? displayedCredentialExposure : null}
+        credentialsPopulation={importedReport ? "credential_exposed" : "secret_findings"}
         agents={displayedAgentCount}
         scans={importedReport ? 1 : overviewSnapshot ? overviewSnapshot.headline.scans : summaryReady ? (counts?.scan_count ?? effectiveRecentJobs.length) : null}
         latestScan={overviewSnapshot || !jobsLoading ? latestScanShort : null}

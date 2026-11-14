@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from agent_bom.api.repo_tree_sast import record_sast_coverage_gap, sast_scan_error_data
+from agent_bom.discovery.identity import pinned_package_keys, without_pinned_duplicates
 from agent_bom.domain.mcp_model import FRAMEWORK_AGENTS_METADATA_KEY
 from agent_bom.evidence.scan_run import ScanIssue
 from agent_bom.kubernetes.inventory_manifests import manifest_inventory_with_issues
@@ -391,6 +392,18 @@ def _ai_report_summary(ai_report: Any) -> dict[str, Any]:
     }
 
 
+def _repo_pinned_package_keys(root: Path, agents: list[Agent]) -> set[tuple[str, str]]:
+    """Packages this repository's own manifests pin (not those of unrelated agents in the list)."""
+    resolved = root.resolve()
+    servers = [
+        server
+        for agent in agents
+        if agent.source == "repo-lockfiles" and agent.config_path and Path(agent.config_path).resolve().is_relative_to(resolved)
+        for server in agent.mcp_servers
+    ]
+    return pinned_package_keys(servers)
+
+
 def _append_ai_inventory_agent(root: Path, ai_report: Any, agents: list[Agent], package_cls: Any) -> None:
     ai_packages: list[Any] = []
     seen_pkgs: set[str] = set()
@@ -402,6 +415,8 @@ def _append_ai_inventory_agent(root: Path, ai_report: Any, agents: list[Agent], 
                 ai_packages.append(package_cls(name=comp.package_name, version="latest", ecosystem=comp.ecosystem))
     if not ai_packages:
         return
+    # The agent stays even when every SDK is pinned: it carries the project root and framework evidence.
+    ai_packages = without_pinned_duplicates(ai_packages, _repo_pinned_package_keys(root, agents))
     ai_provenance = _provenance("ai_inventory", "ai-inventory", "ai_component_scanner", "medium")
     _stamp_provenance(ai_packages, ai_provenance)
     agents.append(

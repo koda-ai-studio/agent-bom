@@ -283,6 +283,13 @@ and opens the scan's security graph in your browser once the server listens
 (Ctrl+C stops it). Without `--open`, the quickstart prints the one command that
 starts the server and the graph URL to open.
 
+When the scan persists its graph but its outcome is partial, most often because
+the local vulnerability DB is older than `AGENT_BOM_DB_STALE_DAYS` (default 14),
+the quickstart still finishes: it warns that coverage is incomplete, prints the
+DB age with the `agent-bom db update` refresh command, prints the graph command
+and URL (or opens it with `--open`), and exits **1**. Any other non-zero scan
+exit stops onboarding before the handoff.
+
 The server needs the `[ui]` extra. When it is not installed in the CLI's
 environment, the printed command runs through
 `uvx --from 'agent-bom[ui]==<version>' agent-bom serve …` so no separate install

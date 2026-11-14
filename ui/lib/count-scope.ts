@@ -35,7 +35,9 @@ export const AGENT_COUNT_SCOPE = {
   },
   scanned: {
     label: "Scanned agents",
-    title: "Distinct agent identities in this workspace's completed scans, one per canonical agent, latest scan wins.",
+    title:
+      "Distinct agent identities in this workspace's completed scans, one per canonical agent, latest scan wins. " +
+      "Scanned repositories, SBOMs and images are inventory, not agents; Asset inventory lists them.",
   },
   host: {
     label: "Agents on this host",

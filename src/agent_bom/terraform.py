@@ -65,12 +65,24 @@ _PROVIDER_GO_MODULES: dict[str, str] = {
 }
 
 
-# ─── Hardcoded secret regex (inside default = "..." or = "..." assignments) ───
+# ─── Hardcoded secret regexes ─────────────────────────────────────────────────
 
-_HARDCODED_RE = re.compile(
-    r"(?:default\s*=\s*|=\s*)"  # assignment or default =
-    r'"([^"]{12,})"',  # a string value >= 12 chars
+# Only a variable's own ``default`` attribute holds its value; ``description``
+# and ``validation`` text are documentation and must never be read as a value.
+_VAR_DEFAULT_RE = re.compile(r'^\s*default\s*=\s*"([^"]{12,})"', re.MULTILINE)
+
+# A line-leading ``name = "literal"`` assignment (resource/locals/module args).
+_ASSIGNMENT_RE = re.compile(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*"([^"]{12,})"')
+
+# Names that point at, configure or describe a credential rather than hold one.
+_REFERENCE_NAME_RE = re.compile(
+    r"(?:^(?:create|enable|enabled|use|manage|rotate)_)|"
+    r"(?:_(?:name|names|arn|arns|id|ids|path|paths|ttl|generation|version|enabled|ready|prefix|suffix|"
+    r"type|length|days|count|issuer|subject|audience|mode|policy|ref|refs|uri|location)$)",
 )
+
+# Values that are references or prose, not literal credentials.
+_REFERENCE_VALUE_RE = re.compile(r"\$\{|^arn:|^[a-z][a-z0-9+.-]*://[^@\s]*$|\s")
 
 # Variable / local name patterns that suggest a credential
 _CRED_NAME_RE = re.compile(
@@ -191,48 +203,50 @@ def _extract_ai_resources(tf_contents: list[tuple[Path, str]]) -> list[tuple[str
     return found
 
 
+def _snake_case(name: str) -> str:
+    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name).lower()
+
+
+def _is_secret_name(name: str) -> bool:
+    """A name that holds a credential, not one that names, locates or toggles it."""
+    return bool(_CRED_NAME_RE.search(name)) and not _REFERENCE_NAME_RE.search(_snake_case(name))
+
+
+def _is_secret_literal(value: str) -> bool:
+    if len(value) < 12 or _REFERENCE_VALUE_RE.search(value):
+        return False
+    lowered = value.lower()
+    return not any(placeholder in lowered for placeholder in _PLACEHOLDERS)
+
+
 def _detect_hardcoded_secrets(tf_contents: list[tuple[Path, str]]) -> list[TerraformSecret]:
-    """Detect hardcoded credential values in variable defaults and local assignments."""
+    """Detect hardcoded credential literals in variable defaults and attribute assignments."""
     secrets: list[TerraformSecret] = []
 
     for path, content in tf_contents:
         lines = content.splitlines()
 
-        # Check variable blocks: variable "OPENAI_API_KEY" { default = "sk-..." }
+        # Variable blocks: variable "OPENAI_API_KEY" { default = "sk-..." }
         for var_m in _VAR_BLOCK_RE.finditer(content):
             var_name = var_m.group(1)
-            if not _CRED_NAME_RE.search(var_name):
+            if not _is_secret_name(var_name):
                 continue
-            block = var_m.group(2)
-            val_m = _HARDCODED_RE.search(block)
-            if not val_m:
+            val_m = _VAR_DEFAULT_RE.search(var_m.group(2))
+            if not val_m or not _is_secret_literal(val_m.group(1)):
                 continue
-            value = val_m.group(1)
-            if any(p in value.lower() for p in _PLACEHOLDERS):
-                continue
-            if len(value) < 12:
-                continue
-            # Find line number of the variable block
             var_start = content[: var_m.start()].count("\n") + 1
             secrets.append(TerraformSecret(path.name, var_start, var_name))
 
-        # Check inline assignments for names matching credential patterns
+        # Attribute assignments whose own name is credential-shaped: openai_api_key = "sk-..."
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
-            if not stripped or stripped.startswith("#"):
+            if not stripped or stripped.startswith(("#", "//")):
                 continue
-            # Pattern: openai_api_key = "sk-abc123..."
-            assign_m = re.match(
-                r'([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*"([^"]{12,})"',
-                stripped,
-            )
+            assign_m = _ASSIGNMENT_RE.match(stripped)
             if not assign_m:
                 continue
-            key = assign_m.group(1)
-            value = assign_m.group(2)
-            if not _CRED_NAME_RE.search(key):
-                continue
-            if any(p in value.lower() for p in _PLACEHOLDERS):
+            key, value = assign_m.group(1), assign_m.group(2)
+            if not _is_secret_name(key) or not _is_secret_literal(value):
                 continue
             secrets.append(TerraformSecret(path.name, i, key.upper()))
 

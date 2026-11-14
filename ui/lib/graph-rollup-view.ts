@@ -8,6 +8,13 @@ import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-ma
 
 
 const MIN_COLUMNS = 3;
+/** Up to this many scopes, a phone stacks them in one column and the page scrolls; a grid would open on a single card. */
+export const PHONE_STACKED_SCOPE_LIMIT = 8;
+
+/** Whether a phone shows these scope cards as one full-width column, all framed at reading size. */
+export function phoneStacksScopes(narrow: boolean, scopes: number): boolean {
+  return narrow && scopes > 0 && scopes <= PHONE_STACKED_SCOPE_LIMIT;
+}
 // Scope cards keep summary facts visible. Reserve a separate lane for link labels.
 const NODE_CARD_MAX_WIDTH = 280;
 const NODE_COLUMN_GAP = 160;

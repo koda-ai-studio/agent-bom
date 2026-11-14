@@ -24,6 +24,7 @@ const { apiMock, deploymentCounts, deploymentState } = vi.hoisted(() => ({
     getCompliance: vi.fn(),
     listJobs: vi.fn(),
     listAgents: vi.fn(),
+    listFindings: vi.fn().mockResolvedValue({ findings: [], total: 0 }),
     getScanDashboard: vi.fn(),
     updateScoreConfig: vi.fn(),
   },

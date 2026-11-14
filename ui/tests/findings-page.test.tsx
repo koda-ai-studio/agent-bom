@@ -103,6 +103,18 @@ describe("FindingsPage", () => {
     });
   });
 
+  it("applies the Overview KEV chip's kev=1 link on the server, keeps it in the URL and says so", async () => {
+    navigationState.query = "scope=all&kev=1";
+    render(<FindingsPage />);
+    await waitFor(() => expect(apiMock.listFindings).toHaveBeenCalledWith(expect.objectContaining({ kev: true })));
+    expect(routerReplace).toHaveBeenCalledWith(expect.stringContaining("kev=1"), { scroll: false });
+    const notice = screen.getByTestId("findings-kev-filter");
+    expect(notice).toHaveTextContent("Known-exploited (CISA KEV) findings only");
+    fireEvent.click(within(notice).getByRole("button", { name: "Show all findings" }));
+    await waitFor(() => expect(apiMock.listFindings.mock.lastCall?.[0].kev).toBeUndefined());
+    expect(routerReplace.mock.lastCall?.[0]).not.toContain("kev=");
+  });
+
   it("applies a context deep link on the server and preserves it in the URL", async () => {
     navigationState.query = "lane=all&path_context=test";
     render(<FindingsPage />);
