@@ -2,6 +2,7 @@ import { Graph, layout } from "@dagrejs/dagre";
 
 import type { AttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import { ATTACK_PATH_FIT_PADDING } from "@/lib/attack-path-graph-viewport";
+import { legibleZoomForText } from "@/lib/graph-adaptive-frame";
 
 export type AttackPathDirection = "LR" | "TB";
 export type AttackPathLayout = {
@@ -110,10 +111,8 @@ export function layoutAttackPathGraph(model: AttackPathGraphModel, direction: At
   };
 }
 
-/** Phones keep text readable: the column fits the width down to 0.7, then the page scrolls. */
-export const NARROW_MIN_ZOOM = 0.7;
-/** Below this desktop zoom names stop being readable; the camera frames the selected path instead. */
-export const DESKTOP_MIN_ZOOM = 0.6;
+/** Phones keep text readable: the column fits the width down to where 15px names are 11px, then the page scrolls. */
+export const NARROW_MIN_ZOOM = legibleZoomForText(15);
 /** The path graph's desktop floor: its 15px names stay at least about 11px on screen. */
 export const PATH_DESKTOP_MIN_ZOOM = 0.75;
 

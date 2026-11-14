@@ -57,11 +57,22 @@ def test_summary_names_dominant_driver_not_just_highest_severity() -> None:
     """
     result = compute_exec_score(severity=_sev(high=1, medium=1_000_000))
     summary = result["summary"]
-    # The dominant medium driver is named (with a thousands separator), first.
+    # The dominant medium driver is named, with a thousands separator.
     assert "1,000,000 medium" in summary, summary
-    assert summary.index("medium") < summary.index("high"), summary
-    # The lone high is still shown for context, just not as the headline.
     assert "1 high" in summary, summary
+
+
+def test_summary_lists_named_severities_critical_first_whatever_drives_the_grade() -> None:
+    """Severities read critical, high, medium, low in every summary, never in contribution order.
+
+    The audited Overview read "19 high · 24 medium · 2 critical": the bands were
+    chosen correctly but printed by grade contribution, so the critical came last.
+    """
+    result = compute_exec_score(severity=_sev(critical=2, high=19, medium=24, low=2))
+    lead = result["summary"].split(" — ", 1)[1]
+    assert lead.startswith("2 critical · 19 high · 24 medium"), lead
+    medium_heavy = compute_exec_score(severity=_sev(high=1, medium=1_000_000, low=5))["summary"]
+    assert medium_heavy.index("1 high") < medium_heavy.index("1,000,000 medium"), medium_heavy
 
 
 def test_summary_leads_with_critical_when_critical_dominates() -> None:

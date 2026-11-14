@@ -49,7 +49,7 @@ describe("recorded estate summary", () => {
     render(<OverviewAssets summary={{...summary, count_exact: false, by_type: {agent: 2, package: 0}}} />);
     expect(screen.getByRole("link", {name: "At least 2 Agents"})).toBeVisible();
     expect(screen.getByRole("link", {name: "Servers count unavailable"})).toBeVisible();
-    expect(screen.getByRole("link", {name: "Packages count unavailable"})).toBeVisible();
+    expect(screen.getByRole("link", {name: "Unique packages count unavailable"})).toBeVisible();
     expect(screen.queryByRole("link", {name: "0 Servers"})).not.toBeInTheDocument();
   });
   it("retains the requested evidence boundary after a summary failure", () => {

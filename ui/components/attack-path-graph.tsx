@@ -36,7 +36,7 @@ export type AttackPathGraphProps = {
 
 /** Only a node's glyph, label and buttons take pointer input; its empty box never swallows a click meant for a line. */
 export const HIT_AREAS = "[&_[aria-roledescription=node]]:pointer-events-none! [&_[data-node-glyph]]:pointer-events-auto! [&_[data-node-label]]:pointer-events-auto! [&_[aria-roledescription=node]_button]:pointer-events-auto!";
-/** "Fit all" may go below the readable floor because the operator asked for the overview. */
+/** How far an operator may zoom out by hand; Fit all and auto-framing never go below the canvas's readable floor. */
 export const OVERVIEW_MIN_ZOOM = 0.25;
 
 /**
@@ -50,18 +50,16 @@ export function GraphCamera({ layout, spineIds, nodesKey, floor, manual }: {
   const { setViewport } = useReactFlow();
   const width = useStore(state => state.width);
   const height = useStore(state => state.height);
-  const [overviewFor, setOverviewFor] = useState<string | null>(null);
   const framed = useMemo(() => width && height ? attackPathViewport(layout, spineIds, { width, height }, floor) : null, [floor, height, layout, spineIds, width]);
-  const frame = useCallback((overview: boolean) => {
-    if (!width || !height) return;
-    const view = overview ? attackPathViewport(layout, spineIds, { width, height }, floor, { minZoom: OVERVIEW_MIN_ZOOM }) : framed!;
-    void setViewport({ x: view.x, y: view.y, zoom: view.zoom });
-  }, [floor, framed, height, layout, setViewport, spineIds, width]);
+  const frame = useCallback(() => {
+    if (framed) void setViewport({ x: framed.x, y: framed.y, zoom: framed.zoom });
+  }, [framed, setViewport]);
   useEffect(() => {
-    if (manual.current !== nodesKey) frame(false);
+    if (manual.current !== nodesKey) frame();
   }, [frame, manual, nodesKey]);
-  const fitAll = () => { manual.current = null; setOverviewFor(nodesKey); frame(true); };
-  const offscreen = framed?.fallback && overviewFor !== nodesKey ? framed.hiddenNodeIds.length : 0;
+  // The whole graph at the readable floor, or the selected path when it is wider: the rest is panned to, never shrunk to.
+  const fitAll = () => { manual.current = null; frame(); };
+  const offscreen = framed?.fallback ? framed.hiddenNodeIds.length : 0;
   return <>
     <Controls className={CONTROLS_CLASS} showInteractive={false} showFitView={false} orientation="horizontal" position="bottom-left">
       <ControlButton className="react-flow__controls-fitview" title="fit view" aria-label="fit view" onClick={fitAll}>
@@ -70,8 +68,7 @@ export function GraphCamera({ layout, spineIds, nodesKey, floor, manual }: {
     </Controls>
     {offscreen > 0 && <Panel position="bottom-right">
       <p role="status" className="flex items-center gap-2 rounded-lg border border-outline bg-surface px-2.5 py-1 text-xs text-ink-secondary shadow-sm">
-        {offscreen} more {offscreen === 1 ? "node" : "nodes"} off screen · drag to pan or
-        <button type="button" onClick={fitAll} className="font-semibold text-[color:var(--accent)] underline-offset-2 hover:underline">Fit all</button>
+        {offscreen} more {offscreen === 1 ? "node" : "nodes"} off screen · drag to pan
       </p>
     </Panel>}
   </>;

@@ -162,7 +162,7 @@ def test_absent_or_same_prior_snapshot_skips_digest(persistence, previous):
     p.delta.return_value = []
     pipeline._persist_graph_snapshot(p.job, p.report, lock=threading.Lock())
     p.store.prior_delta_digest.assert_not_called()
-    p.delta.assert_called_once_with(None, p.graph)
+    p.delta.assert_called_once_with(None, p.graph, new_attack_paths=None)
     p.dispatch.assert_not_called()
     assert p.job.result["graph_persistence"] == {"status": "persisted", "scan_id": "scan", "nodes": 2, "edges": 1}
     assert p.job.progress == ["Graph persisted: 2 nodes, 1 edges"]

@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   Background,
-  Controls,
   ReactFlowProvider,
   useReactFlow,
   Handle,
@@ -34,6 +33,7 @@ import {
 import { useDagreLrLayout } from "@/lib/use-dagre-lr";
 import { useThemeMode } from "@/lib/theme-mode";
 import { TopologyDetailDrawer } from "@/components/topology-detail-drawer";
+import { LegibleFitControls } from "@/components/graph-legible-controls";
 import { graphNodeDisplayLabels, readableGraphEdges } from "@/lib/graph-utils";
 
 const TOPOLOGY_CONTROLS_CLASS =
@@ -198,7 +198,7 @@ function TopologyFlow({
       proOptions={{ hideAttribution: true }}
     >
       <Background color={backgroundDot} gap={24} size={1} />
-      <Controls showInteractive={false} className={TOPOLOGY_CONTROLS_CLASS} />
+      <LegibleFitControls floor={0.9} fitOptions={{ padding: 0.14, maxZoom: 1.05 }} showInteractive={false} className={TOPOLOGY_CONTROLS_CLASS} />
     </ReactFlow>
   );
 }

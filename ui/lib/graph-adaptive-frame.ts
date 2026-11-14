@@ -16,6 +16,20 @@ export function legibleFitZoom(width: number): number {
   return width >= 640 ? GRAPH_LEGIBLE_FIT_ZOOM : GRAPH_PHONE_LEGIBLE_FIT_ZOOM;
 }
 
+/** No fit, automatic or "Fit all", draws card text smaller than this on screen. */
+export const LEGIBLE_CARD_TEXT_PX = 11;
+
+/** Lowest zoom at which text drawn at `textPx` layout pixels stays legible. */
+export function legibleZoomForText(textPx: number): number {
+  return LEGIBLE_CARD_TEXT_PX / textPx;
+}
+
+/** Fit options that never zoom below `floor`: a topology too large for that is panned, not shrunk. */
+export function legibleFit<T extends { minZoom?: number; maxZoom?: number }>(options: T, floor: number): T & { minZoom: number } {
+  const minZoom = Math.max(options.minZoom ?? 0, floor);
+  return { ...options, ...(options.maxZoom !== undefined && options.maxZoom < minZoom ? { maxZoom: minZoom } : {}), minZoom };
+}
+
 /** Geometry, not node count, determines the useful canvas and initial camera. */
 export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, focusHeight = 0, focusPadding = 0.08, boundedPreview = false }: {
   boundedPreview?: boolean;

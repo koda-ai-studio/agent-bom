@@ -1,13 +1,15 @@
 "use client";
 
-import { Background, Controls, MiniMap, ReactFlow } from "@xyflow/react";
+import { Background, MiniMap, ReactFlow } from "@xyflow/react";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
+import { LegibleFitControls } from "@/components/graph-legible-controls";
 import { useAnimatedLayout } from "@/hooks/use-animated-layout";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { lineageNodeTypesAdaptive } from "@/components/lineage-nodes";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { disclosedGlyphSize, readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
 import { shouldVirtualizeReactFlowNodes } from "@/lib/graph-renderer-switch";
+import { GRAPH_LEGIBLE_FIT_ZOOM, GRAPH_PHONE_LEGIBLE_FIT_ZOOM } from "@/lib/graph-adaptive-frame";
 import { BACKGROUND_COLOR, BACKGROUND_GAP, CONTROLS_CLASS, MINIMAP_BG, MINIMAP_CLASS, MINIMAP_MASK, minimapNodeColor } from "@/lib/graph-utils";
 import type { GraphPageModel } from "@/components/graph-page-view";
 import type { useInvestigationFlowView } from "@/hooks/use-investigation-flow-view";
@@ -111,7 +113,7 @@ export function GraphFlowCanvas({ page, flowView }: { page: GraphPageModel; flow
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <Controls {...(investigationContext || selectedScenarioId ? { onFitView: fitVisible, fitViewOptions: selectedScenarioId ? initialViewportOptions : { padding: 0.25, minZoom: 0.05, maxZoom: 1.25 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
+              <LegibleFitControls floor={narrowViewport ? GRAPH_PHONE_LEGIBLE_FIT_ZOOM : GRAPH_LEGIBLE_FIT_ZOOM} onFit={fitVisible} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   position={narrowViewport ? "top-right" : "bottom-right"}

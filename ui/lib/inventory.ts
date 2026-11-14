@@ -1,6 +1,7 @@
 import { nodeRiskAssessment, type NodeRiskAssessment } from "@/lib/node-risk-assessment";
 import type { EntityIcon } from "@/lib/asset-icon-registry";
 import { ASSET_KINDS as ICON_KINDS } from "@/lib/asset-icon-registry";
+import { PACKAGE_COUNT_SCOPE } from "@/lib/count-scope";
 
 import type {
   GraphCompleteness,
@@ -72,7 +73,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     entityTypes: ["package"],
     lane: "command",
     primaryTypes: ["package"],
-    unitLabel: "Packages",
+    unitLabel: PACKAGE_COUNT_SCOPE.unique.label,
     coverageNote:
       "Sourced from SBOM/SCA discovery. Versions and ecosystems come from lockfiles, manifests, and image layers.",
     icon: ICON_KINDS.package.icon,

@@ -1592,7 +1592,7 @@ for (const theme of ["light", "dark"] as const) {
         await queue.getByRole("button", { name: /#2/ }).click();
         await expect(queue).toBeHidden();
         await expect(detail).toBeVisible();
-        await expect(detail.getByRole("heading", { level: 2 })).toContainText("GITHUB PERSONAL ACCESS TOKEN");
+        await expect(detail.getByRole("heading", { level: 2 })).toContainText("GITHUB_PERSONAL_ACCESS_TOKEN");
         const graph = detail.getByTestId("security-graph-investigation");
         // The selected path's three hops; other recorded paths that share a node draw as branches.
         await expect(graph.locator('.react-flow__node [data-role="entry"], .react-flow__node [data-role="path"], .react-flow__node [data-role="target"]')).toHaveCount(3);

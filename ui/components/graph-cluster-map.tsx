@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Background, Controls, MarkerType, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from "@xyflow/react";
+import { Background, MarkerType, ReactFlow, ReactFlowProvider, useReactFlow, type Edge } from "@xyflow/react";
 
 import { clusterNodeTypes, type ClusterCardNode } from "@/components/graph-cluster-node";
 import { useAnimatedLayout } from "@/hooks/use-animated-layout";
@@ -12,6 +12,7 @@ import { clusterMapLayout, displayBundles, frameId, overviewBundles, routeCards 
 import { bundleLabel, bundleTitle, relationshipLabel, type ClusterMapEdge, type ClusterMapResponse } from "@/lib/graph-cluster-map";
 import { routeBundles, type Box } from "@/lib/graph-cluster-routes";
 import { BACKGROUND_COLOR, BACKGROUND_GAP, CONTROLS_CLASS } from "@/lib/graph-utils";
+import { LegibleFitControls } from "@/components/graph-legible-controls";
 
 export interface GraphClusterMapProps {
   scanId: string | undefined;
@@ -236,7 +237,7 @@ function GraphClusterMapInner({ scanId, narrow, onInvestigate, onShowEveryEdge, 
       >
         <Camera layoutKey={layoutKey} narrow={narrow} settled={!motion.animating} focusId={cameraAnchor} bounds={elements.bounds} />
         <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-        <Controls showInteractive={false} position="bottom-left" className={CONTROLS_CLASS} />
+        <LegibleFitControls floor={MIN_READABLE_ZOOM} fitOptions={{ padding: 0.05, maxZoom: 1 }} showInteractive={false} position="bottom-left" className={CONTROLS_CLASS} />
       </ReactFlow>}
       {bundle && <BundleReceipt bundle={bundle} labels={labels} onClose={() => setBundleId(null)} />}
     </div>

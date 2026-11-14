@@ -221,6 +221,7 @@ async def test_exposure_paths_discloses_bounded_derivation(topology_store, monke
     monkeypatch.setattr("agent_bom.mcp_tools.exposure_queue.GRAPH_INVESTIGATION_NODE_BUDGET", 2, raising=False)
     # Only read-time derivation is bounded; a current stored path index covers the whole snapshot.
     monkeypatch.setattr(topology_store, "snapshot_queue_page", lambda **_kwargs: None)
+    monkeypatch.setattr("agent_bom.db.graph_stored_path_reads.stored_index_current", lambda *_args, **_kwargs: False)
     payload = json.loads(await exposure_paths_impl(scan_id="topology", _get_graph_store=lambda: topology_store))
     assert payload["completeness"]["complete"] is False
     assert payload["completeness"]["reason"] == "node_budget"

@@ -744,15 +744,19 @@ test("partial investigations expand only after an explicit request", async ({ pa
   // Three packages are named immediately; expand the four remaining siblings.
   await page.getByRole("button", { name: "Expand 4 members", exact: true }).click();
   await expect(page.getByTestId("graph-viewport-scope")).toContainText("8 nodes");
-  // Fit every loaded connection, including newly measured off-screen nodes.
+  // Fit all frames every loaded connection, newly measured off-screen nodes included, as far as the
+  // legible zoom allows; whatever it cannot show readably is counted in view, never shrunk out of reach.
   await page.getByRole("button", { name: "Fit all", exact: true }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(8);
   await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
     const frame = canvas.getBoundingClientRect();
-    return [...canvas.querySelectorAll(".react-flow__node")].every(node => {
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(canvas.querySelector(".react-flow__viewport")!).transform).a;
+    const inside = [...canvas.querySelectorAll(".react-flow__node")].filter(node => {
       const box = node.getBoundingClientRect();
       return box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
-    });
+    }).length;
+    const hint = document.querySelector("[data-testid=graph-in-view]")?.textContent ?? "";
+    return zoom >= 0.399 && (inside === 8 || hint.includes(`Showing ${inside} of 8 nodes`));
   })).toBe(true);
 });
 
