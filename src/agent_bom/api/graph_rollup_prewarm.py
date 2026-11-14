@@ -21,6 +21,7 @@ from collections import OrderedDict
 from typing import Any, Callable, Literal
 
 from agent_bom.api import graph_rollup_cache
+from agent_bom.api.background_exit import register_exit_wait, stopping
 from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.api.graph_cluster_index_cache import cluster_index
 from agent_bom.api.graph_commit_hooks import register_commit_hook
@@ -168,6 +169,8 @@ def _drain_pending() -> None:
     global _WORKER
     while True:
         with _LOCK:
+            if stopping():
+                _PENDING.clear()
             if not _PENDING:
                 _WORKER = None
                 _IDLE.set()
@@ -199,8 +202,9 @@ def _drain() -> None:
 def schedule_rollup_prewarm(store_factory: Callable[[], Any], *, tenant_id: str) -> None:
     """Queue a warm-up of ``tenant_id``'s latest snapshot and return immediately."""
     global _WORKER
-    if not _enabled():
+    if not _enabled() or stopping():
         return
+    register_exit_wait("graph_rollup_prewarm", wait_idle)
     with _LOCK:
         _PENDING[tenant_id] = store_factory
         _PENDING.move_to_end(tenant_id)
