@@ -28,6 +28,7 @@ from agent_bom.output.report_refs import (
     PACKING_SCHEMA_VERSION,
     PROVENANCE_KEYS,
     PROVENANCE_REF_KEYS,
+    REF_TRANSFORMS,
     REPORT_SCHEMA_V1,
     REPORT_SCHEMA_V2,
     REPORT_SCHEMA_VERSIONS,
@@ -43,12 +44,15 @@ from agent_bom.output.report_refs import (
     ReportExpansionLimitError,
     ReportPackingError,
     deep_copy,
+    encode_fields,
     inventory_flat_packages,
     is_packed,
     package_index,
     package_occurrence_lists,
     unique_index,
 )
+
+_REF_KEYS = {"finding_ref": BLAST_RADIUS_KEYS, "asset_ref": ASSET_KEYS, "package_ref": PACKAGE_KEYS}
 
 __all__ = [
     "PACKING_SCHEMA_VERSION",
@@ -98,7 +102,13 @@ def pack_report(doc: Mapping[str, Any]) -> dict[str, Any]:
     result.setdefault("schema_version", REPORT_SCHEMA_V2)
     if provenance:
         result["provenance"] = provenance
-    result["packing"] = {"schema_version": PACKING_SCHEMA_VERSION, "legacy_schema_version": _legacy_version(doc), "transforms": applied}
+    fields = {ref: encode_fields(_REF_KEYS[ref]) for name, ref in REF_TRANSFORMS.items() if name in applied}
+    result["packing"] = {
+        "schema_version": PACKING_SCHEMA_VERSION,
+        "legacy_schema_version": _legacy_version(doc),
+        "transforms": applied,
+        **({"fields": fields} if fields else {}),
+    }
     return result
 
 

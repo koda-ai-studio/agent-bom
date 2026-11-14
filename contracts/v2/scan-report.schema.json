@@ -534,6 +534,26 @@
           "pattern": "^1(\\.\\d+)?$",
           "description": "schema_version the document expands to."
         },
+        "fields": {
+          "type": "object",
+          "description": "For each reference key a transform uses (finding_ref, asset_ref, package_ref), the fields it may omit: `name` when the referenced record uses the same name, `name=source_name` otherwise. A reader restores exactly these fields from the referenced record when the row omits them.",
+          "propertyNames": {
+            "enum": [
+              "finding_ref",
+              "asset_ref",
+              "package_ref"
+            ]
+          },
+          "additionalProperties": {
+            "type": "array",
+            "maxItems": 256,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        },
         "transforms": {
           "type": "array",
           "uniqueItems": true,

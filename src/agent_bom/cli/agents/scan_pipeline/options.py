@@ -264,7 +264,7 @@ class ScanOptions:
     extra_sbom_files: tuple = field(default=(), init=False)
     extra_sbom_names: tuple = field(default=(), init=False)
     extra_external_scan_paths: tuple = field(default=(), init=False)
-    report_format: str = "v2"
+    report_format: str = "v1"
 
     def __post_init__(self) -> None:
         for primary, extra in REPEATABLE_INPUTS.items():

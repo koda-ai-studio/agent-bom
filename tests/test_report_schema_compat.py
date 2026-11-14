@@ -42,7 +42,7 @@ def _scan(out: Path, *extra: str) -> dict:
 @pytest.fixture(scope="module")
 def reports(tmp_path_factory) -> tuple[dict, dict]:
     root = tmp_path_factory.mktemp("report-schema")
-    return _scan(root / "legacy.json", "--report-format", "legacy"), _scan(root / "v2.json")
+    return _scan(root / "legacy.json"), _scan(root / "v2.json", "--report-format", "v2")
 
 
 _DEMO_DIR = re.compile(r"agent-bom-demo-dir-[A-Za-z0-9_]+")
@@ -62,8 +62,11 @@ def _without_run_identity(doc: dict) -> dict:
     return strip(doc)
 
 
-def test_cli_writes_schema_two_by_default_and_one_with_legacy_flag(reports) -> None:
+def test_cli_writes_schema_one_by_default_and_two_on_request(reports, tmp_path: Path) -> None:
     legacy, packed = reports
+    alias = _scan(tmp_path / "alias.json", "--report-format", "legacy")
+
+    assert alias["schema_version"] == REPORT_SCHEMA_V1 and "packing" not in alias
 
     assert legacy["schema_version"] == REPORT_SCHEMA_V1 and "packing" not in legacy
     assert packed["schema_version"] == REPORT_SCHEMA_V2 and packed["packing"]["transforms"]

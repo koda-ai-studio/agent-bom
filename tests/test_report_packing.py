@@ -147,6 +147,13 @@ def test_entities_are_serialized_once_and_referenced_by_canonical_id(legacy: dic
         assert text.count(json.dumps(value)) == 1, "each provenance record is written once"
 
 
+def test_packing_manifest_names_the_fields_each_reference_covers(legacy: dict) -> None:
+    fields = pack_report(legacy)["packing"]["fields"]
+
+    assert set(fields) == {"finding_ref", "asset_ref", "package_ref"}
+    assert "stable_id=id" in fields["package_ref"] and "owasp_tags" in fields["finding_ref"] and "name" in fields["asset_ref"]
+
+
 def test_packed_report_is_smaller_than_legacy(legacy: dict) -> None:
     # Real reports measured 1.51x (10 packages, 176 CVEs) and 1.68x (this repository, --quick).
     assert _size(pack_report(legacy)) * 1.4 <= _size(legacy)
@@ -212,6 +219,9 @@ def _packed(legacy: dict) -> dict:
         ),
         pytest.param(lambda doc: doc["findings"][0]["asset"].__setitem__("asset_ref", 7), id="asset-ref-type"),
         pytest.param(lambda doc: doc.__setitem__("provenance", {"p": "not-an-object"}), id="provenance-entry-type"),
+        pytest.param(lambda doc: doc["packing"].pop("fields"), id="missing-ref-fields"),
+        pytest.param(lambda doc: doc["packing"]["fields"].__setitem__("finding_ref", "owasp_tags"), id="ref-fields-type"),
+        pytest.param(lambda doc: doc["packing"].__setitem__("fields", ["finding_ref"]), id="fields-table-type"),
     ],
 )
 def test_expand_rejects_malformed_references(legacy: dict, mutate) -> None:

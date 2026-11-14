@@ -312,7 +312,7 @@ def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str
         resolved_push_url = normalize_scan_push_url(push_url)
         endpoint = sanitize_url(resolved_push_url)
         report_data = {**to_json(report), **({"target_scope": ctx.target_scope} if ctx.target_scope else {})}
-        if negotiate_push_report_format(resolved_push_url, push_api_key, requested=getattr(ctx, "report_format", "v2")) == "v2":
+        if negotiate_push_report_format(resolved_push_url, push_api_key) == "v2":
             report_data = pack_report(report_data)
         if push_results(resolved_push_url, report_data, api_key=push_api_key):
             if not quiet:

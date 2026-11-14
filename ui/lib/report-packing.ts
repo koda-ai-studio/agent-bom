@@ -27,34 +27,26 @@ const TRANSFORMS = [
   "compliance_control_refs",
 ] as const;
 
-const same = (keys: string[]): Map<string, string> => new Map(keys.map((key) => [key, key]));
-
-const PACKAGE_KEYS = new Map<string, string>([
-  ["stable_id", "id"],
-  ...same([
-    "canonical_id", "name", "version", "ecosystem", "purl", "source_package", "distro_name", "distro_version",
-    "floating_reference", "floating_reference_reason", "is_malicious", "malicious_reason", "occurrence_count",
-    "occurrences", "vulnerability_count", "discovery_provenance", "version_provenance", "discovery_provenance_ref",
-    "version_provenance_ref",
-  ]),
-]);
-const ASSET_KEYS = same([
-  "stable_id", "canonical_id", "name", "asset_type", "identifier", "location", "provider", "account_ref", "region", "environment",
-]);
-const BLAST_RADIUS_KEYS = same([
-  "canonical_id", "asset", "vulnerability_id", "severity", "severity_source", "match_confidence_tier", "cvss_score",
-  "cvss_vector", "cvss_severity", "vendor_severity", "attack_vector", "attack_complexity", "privileges_required",
-  "user_interaction", "network_exploitable", "upstream_ids", "epss_cve_id", "kev_cve_id", "epss_score", "is_kev",
-  "kev_due_date", "is_malicious", "malicious_reason", "fixed_version", "risk_score", "unsuppressed_risk_score",
-  "reachability", "impact_category", "graph_reachable", "graph_min_hop_distance", "graph_reachable_from_agents",
-  "affected_agents", "affected_servers", "exposed_credentials", "exposed_tools", "ai_risk_context", "ai_summary",
-  "attack_vector_summary", "suppressed", "suppression_id", "suppression_state", "suppression_reason", "vex_status",
-  "vex_justification", "vex_source", "vex_suppressed", "owasp_tags", "atlas_tags", "attack_tags", "nist_ai_rmf_tags",
-  "owasp_mcp_tags", "owasp_agentic_tags", "eu_ai_act_tags", "nist_csf_tags", "iso_27001_tags", "soc2_tags", "cis_tags",
-  "cmmc_tags", "nist_800_53_tags", "fedramp_tags", "pci_dss_tags",
-]);
+const MAX_REF_FIELDS = 256;
 
 export class ReportPackingError extends Error {}
+
+/** `packing.fields[refKey]`: `name`, or `name=source_name` when the referenced record names the field differently. */
+function refFields(manifest: JsonObject, refKey: string): Map<string, string> {
+  const declared = isObject(manifest.fields) ? manifest.fields[refKey] : undefined;
+  if (!Array.isArray(declared) || declared.length > MAX_REF_FIELDS) {
+    throw new ReportPackingError(`packing.fields.${refKey} must be a list of field names`);
+  }
+  const keys = new Map<string, string>();
+  for (const item of declared) {
+    if (typeof item !== "string" || !item || item.length > MAX_REF_LENGTH) {
+      throw new ReportPackingError(`packing.fields.${refKey} must be a list of field names`);
+    }
+    const [row, source] = item.split("=", 2) as [string, string | undefined];
+    keys.set(row, source || row);
+  }
+  return keys;
+}
 
 const isObject = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -190,13 +182,13 @@ function expandControls(doc: JsonObject, controls: Map<string, JsonObject>, budg
   });
 }
 
-function expandAssets(doc: JsonObject, budget: Budget): void {
+function expandAssets(doc: JsonObject, keys: Map<string, string>, budget: Budget): void {
   const index = uniqueIndex(doc.assets, "stable_id");
   for (const finding of Array.isArray(doc.findings) ? doc.findings : []) {
     if (!isObject(finding) || !isObject(finding.asset) || !("asset_ref" in finding.asset)) continue;
     const source = index.get(ref(finding.asset.asset_ref, "asset_ref"));
     if (!source) throw new ReportPackingError("asset_ref names an unknown asset");
-    finding.asset = restore(finding.asset, source, ASSET_KEYS, "asset_ref", budget);
+    finding.asset = restore(finding.asset, source, keys, "asset_ref", budget);
   }
 }
 
@@ -248,11 +240,13 @@ export function expandReport(doc: unknown, maxExpandedBytes = DEFAULT_MAX_EXPAND
   if (applied.has("package_refs")) {
     const entities = isObject(report.ai_bom_entities) ? report.ai_bom_entities.packages : undefined;
     const index = uniqueIndex(entities, "id");
-    for (const rows of serverPackageLists(report)) expandRows(rows, index, PACKAGE_KEYS, "package_ref", budget);
+    const keys = refFields(manifest, "package_ref");
+    for (const rows of serverPackageLists(report)) expandRows(rows, index, keys, "package_ref", budget);
   }
-  if (applied.has("asset_refs")) expandAssets(report, budget);
+  if (applied.has("asset_refs")) expandAssets(report, refFields(manifest, "asset_ref"), budget);
   if (applied.has("blast_radius_finding_refs")) {
-    expandRows(report.blast_radius, uniqueIndex(report.findings, "canonical_id"), BLAST_RADIUS_KEYS, "finding_ref", budget);
+    const keys = refFields(manifest, "finding_ref");
+    expandRows(report.blast_radius, uniqueIndex(report.findings, "canonical_id"), keys, "finding_ref", budget);
   }
   if (applied.has("inventory_snapshot_packages")) expandInventoryPackages(report, budget);
   if (applied.has("root_packages_alias")) {

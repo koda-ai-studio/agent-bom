@@ -7,13 +7,11 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from agent_bom.output.report_refs import (
-    ASSET_KEYS,
-    BLAST_RADIUS_KEYS,
     MAX_REF_LENGTH,
     MAX_TABLE_ROWS,
-    PACKAGE_KEYS,
     PACKING_SCHEMA_VERSION,
     PROVENANCE_REF_KEYS,
+    REF_TRANSFORMS,
     REPORT_SCHEMA_V1,
     T_ASSETS,
     T_BLAST_RADIUS,
@@ -25,6 +23,7 @@ from agent_bom.output.report_refs import (
     TRANSFORMS,
     ReportExpansionLimitError,
     ReportPackingError,
+    decode_fields,
     deep_copy,
     inventory_flat_packages,
     is_packed,
@@ -78,15 +77,19 @@ def _expand(doc: Mapping[str, Any], max_expanded_bytes: int | None) -> dict[str,
         raise ReportPackingError("schema 2 report lists an unknown packing transform")
     budget = _Budget(max_expanded_bytes)
     applied = set(transforms)
+    declared = manifest.get("fields", {})
+    if not isinstance(declared, dict):
+        raise ReportPackingError("packing.fields must map reference keys to field lists")
+    fields = {ref: decode_fields(declared.get(ref), ref) for name, ref in REF_TRANSFORMS.items() if name in applied}
     provenance = _table(doc.get("provenance") if T_PROVENANCE in applied else {}, "provenance")
     expanded = _restore_provenance(doc, provenance, budget) if T_PROVENANCE in applied else deep_copy(doc)
     expanded.pop("provenance", None)
     controls = _table(expanded.pop("compliance_controls", {}) if T_CONTROLS in applied else {}, "compliance_controls")
     steps: dict[str, Callable[[dict[str, Any]], None]] = {
         T_CONTROLS: lambda report: _expand_controls(report, controls, budget),
-        T_PACKAGES: lambda report: _expand_packages(report, budget),
-        T_ASSETS: lambda report: _expand_assets(report, budget),
-        T_BLAST_RADIUS: lambda report: _expand_blast_radius(report, budget),
+        T_PACKAGES: lambda report: _expand_packages(report, fields["package_ref"], budget),
+        T_ASSETS: lambda report: _expand_assets(report, fields["asset_ref"], budget),
+        T_BLAST_RADIUS: lambda report: _expand_blast_radius(report, fields["finding_ref"], budget),
         T_INVENTORY_PACKAGES: lambda report: _expand_inventory_packages(report, budget),
         T_ROOT_PACKAGES: lambda report: _expand_root_packages(report, budget),
     }
@@ -204,13 +207,13 @@ def _expand_rows(rows: object, index: Mapping[str, dict[str, Any]], keys: Mappin
         rows[position] = _restore(row, source, keys, ref_key, budget)
 
 
-def _expand_packages(doc: dict[str, Any], budget: _Budget) -> None:
+def _expand_packages(doc: dict[str, Any], keys: Mapping[str, str], budget: _Budget) -> None:
     index = package_index(doc)
     for rows in package_occurrence_lists(doc):
-        _expand_rows(rows, index, PACKAGE_KEYS, "package_ref", budget)
+        _expand_rows(rows, index, keys, "package_ref", budget)
 
 
-def _expand_assets(doc: dict[str, Any], budget: _Budget) -> None:
+def _expand_assets(doc: dict[str, Any], keys: Mapping[str, str], budget: _Budget) -> None:
     index = unique_index(doc.get("assets"), "stable_id")
     findings = doc.get("findings")
     for finding in findings if isinstance(findings, list) else []:
@@ -219,12 +222,12 @@ def _expand_assets(doc: dict[str, Any], budget: _Budget) -> None:
             source = index.get(_ref(asset["asset_ref"], "asset_ref"))
             if source is None:
                 raise ReportPackingError("asset_ref names an unknown asset")
-            finding["asset"] = _restore(asset, source, ASSET_KEYS, "asset_ref", budget)
+            finding["asset"] = _restore(asset, source, keys, "asset_ref", budget)
 
 
-def _expand_blast_radius(doc: dict[str, Any], budget: _Budget) -> None:
+def _expand_blast_radius(doc: dict[str, Any], keys: Mapping[str, str], budget: _Budget) -> None:
     index = unique_index(doc.get("findings"), "canonical_id")
-    _expand_rows(doc.get("blast_radius"), index, BLAST_RADIUS_KEYS, "finding_ref", budget)
+    _expand_rows(doc.get("blast_radius"), index, keys, "finding_ref", budget)
 
 
 def _expand_inventory_packages(doc: dict[str, Any], budget: _Budget) -> None:

@@ -6,7 +6,7 @@ import { validateScanReport } from "@/lib/validators";
 
 type PackedDoc = {
   findings: Array<{ control_refs: string[] }>;
-  packing?: { transforms: string[] };
+  packing?: { transforms: string[]; fields?: Record<string, unknown> };
   blast_radius: Array<{ finding_ref?: string }>;
   provenance?: unknown;
 };
@@ -40,6 +40,7 @@ describe("schema 2.0 report expansion", () => {
     ["dangling control ref", (doc: PackedDoc) => first(doc.findings).control_refs.push("iso_27001:A.0:deadbeef")],
     ["unknown transform", (doc: PackedDoc) => doc.packing?.transforms.push("future_transform")],
     ["missing manifest", (doc: PackedDoc) => delete doc.packing],
+    ["missing reference field list", (doc: PackedDoc) => delete doc.packing?.fields],
     ["dangling finding ref", (doc: PackedDoc) => (first(doc.blast_radius).finding_ref = "missing")],
     ["provenance entry type", (doc: PackedDoc) => (doc.provenance = { p: "x" })],
   ])("rejects a %s", (_label, mutate) => {
@@ -56,7 +57,9 @@ describe("schema 2.0 report expansion", () => {
   });
 
   it("imports a schema 2.0 report through the dashboard validator", () => {
-    const result = validateScanReport(readFileSync(join(__dirname, "fixtures", "report-schema-v2", "packed.json"), "utf-8"));
+    const text = readFileSync(join(__dirname, "fixtures", "report-schema-v2", "packed.json"), "utf-8");
+    expect(validateScanReport(text).ok).toBe(false);
+    const result = validateScanReport(text, expandReport);
     expect(result.ok).toBe(true);
     const legacy = fixture("legacy.json");
     if (result.ok) {
@@ -67,7 +70,7 @@ describe("schema 2.0 report expansion", () => {
     }
     const broken = packedDoc();
     first(broken.findings).control_refs = ["nope"];
-    const rejected = validateScanReport(JSON.stringify(broken));
+    const rejected = validateScanReport(JSON.stringify(broken), expandReport);
     expect(rejected.ok).toBe(false);
     if (!rejected.ok) expect(rejected.error).toMatch(/Invalid schema 2 report/);
   });

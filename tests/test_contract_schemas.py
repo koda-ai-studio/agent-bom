@@ -177,7 +177,7 @@ def test_demo_scan_report_matches_contract_schema(tmp_path) -> None:
 
     out = tmp_path / "demo.json"
     runner = CliRunner()
-    result = runner.invoke(main, ["scan", "--demo", "--offline", "-f", "json", "-o", str(out), "--quiet"])
+    result = runner.invoke(main, ["scan", "--demo", "--offline", "-f", "json", "-o", str(out), "--quiet", "--report-format", "v2"])
     assert out.exists(), result.output
     from agent_bom.output.report_packing import expand_report
 

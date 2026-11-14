@@ -77,8 +77,8 @@
         "agent_type": "claude-desktop",
         "type": "claude-desktop",
         "status": "configured",
-        "discovered_at": "2026-11-13T23:38:16.304711Z",
-        "last_seen": "2026-11-13T23:38:16.304711Z",
+        "discovered_at": "2026-11-14T00:38:45.543234Z",
+        "last_seen": "2026-11-14T00:38:45.543234Z",
         "config_path": "<path:a.json>",
         "discovery_provenance": {
           "source_type": "local_discovery",
@@ -105,8 +105,8 @@
         "agent_type": "cursor",
         "type": "cursor",
         "status": "configured",
-        "discovered_at": "2026-11-13T23:38:16.304977Z",
-        "last_seen": "2026-11-13T23:38:16.304977Z",
+        "discovered_at": "2026-11-14T00:38:45.543544Z",
+        "last_seen": "2026-11-14T00:38:45.543544Z",
         "config_path": "<path:b.json>",
         "discovery_provenance": {
           "source_type": "local_discovery",
@@ -660,8 +660,8 @@
         "name": "desk",
         "agent_type": "claude-desktop",
         "config_path": "<path:a.json>",
-        "discovered_at": "2026-11-13T23:38:16.304711Z",
-        "last_seen": "2026-11-13T23:38:16.304711Z",
+        "discovered_at": "2026-11-14T00:38:45.543234Z",
+        "last_seen": "2026-11-14T00:38:45.543234Z",
         "mcp_servers": [
           {
             "name": "fs",
@@ -756,8 +756,8 @@
         "name": "code",
         "agent_type": "cursor",
         "config_path": "<path:b.json>",
-        "discovered_at": "2026-11-13T23:38:16.304977Z",
-        "last_seen": "2026-11-13T23:38:16.304977Z",
+        "discovered_at": "2026-11-14T00:38:45.543544Z",
+        "last_seen": "2026-11-14T00:38:45.543544Z",
         "mcp_servers": [
           {
             "name": "web",
@@ -825,8 +825,8 @@
       "config_path": "<path:a.json>",
       "source": null,
       "status": "configured",
-      "discovered_at": "2026-11-13T23:38:16.304711Z",
-      "last_seen": "2026-11-13T23:38:16.304711Z",
+      "discovered_at": "2026-11-14T00:38:45.543234Z",
+      "last_seen": "2026-11-14T00:38:45.543234Z",
       "discovery_provenance": {
         "source_type": "local_discovery",
         "observed_via": [
@@ -1249,8 +1249,8 @@
       "config_path": "<path:b.json>",
       "source": null,
       "status": "configured",
-      "discovered_at": "2026-11-13T23:38:16.304977Z",
-      "last_seen": "2026-11-13T23:38:16.304977Z",
+      "discovered_at": "2026-11-14T00:38:45.543544Z",
+      "last_seen": "2026-11-14T00:38:45.543544Z",
       "discovery_provenance": {
         "source_type": "local_discovery",
         "observed_via": [

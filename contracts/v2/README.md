@@ -1,7 +1,9 @@
 # v2 Contracts
 
-`scan-report.schema.json` describes the JSON scan report `agent-bom scan -f json`
-writes from 0.115.0 (`schema_version: "2.0"`). It carries the same evidence as
+`scan-report.schema.json` describes the JSON scan report schema 2.0
+(`schema_version: "2.0"`). In 0.115.x `agent-bom scan -f json --report-format v2`
+writes it and scan pushes use it when the control plane accepts it; it becomes the
+`-f json` default in 0.116.0. It carries the same evidence as
 the [v1 report](../v1/scan-report.schema.json), with each shared record written
 once and referenced by ID:
 
@@ -36,8 +38,9 @@ document that lists a transform it does not know.
 
 ## Compatibility
 
-- `agent-bom scan --report-format legacy` (or `AGENT_BOM_REPORT_FORMAT=legacy`)
-  writes schema 1.0 for readers that predate 0.115.0.
+- `agent-bom scan -f json` writes schema 1.0 by default in 0.115.x;
+  `--report-format v2` (or `AGENT_BOM_REPORT_FORMAT=v2`) writes 2.0. From 0.116.0,
+  `--report-format v1` (alias `legacy`) keeps writing 1.0.
 - `GET /version` lists `report_schema_versions`. `scan --push-url` sends 2.0
   only to a control plane that lists `"2.0"`; any other control plane receives 1.0.
 - `POST /v1/results/push` accepts both. A 2.0 push is expanded before it is

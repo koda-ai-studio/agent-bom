@@ -205,3 +205,26 @@ def deep_copy(value: Any) -> Any:
     if isinstance(value, list):
         return [deep_copy(child) for child in value]
     return value
+
+
+# Each transform that drops inherited fields names them in ``packing.fields`` so a
+# reader expands exactly what the writer packed, without a field list of its own.
+REF_TRANSFORMS = {T_BLAST_RADIUS: "finding_ref", T_ASSETS: "asset_ref", T_PACKAGES: "package_ref"}
+MAX_REF_FIELDS = 256
+
+
+def encode_fields(keys: Mapping[str, str]) -> list[str]:
+    """``row_key`` when the referenced record uses the same name, else ``row_key=source_key``."""
+    return [row if row == source else f"{row}={source}" for row, source in keys.items()]
+
+
+def decode_fields(value: object, ref_key: str) -> dict[str, str]:
+    if not isinstance(value, list) or len(value) > MAX_REF_FIELDS:
+        raise ReportPackingError(f"packing.fields.{ref_key} must be a list of field names")
+    keys: dict[str, str] = {}
+    for item in value:
+        if not isinstance(item, str) or not item or len(item) > MAX_REF_LENGTH:
+            raise ReportPackingError(f"packing.fields.{ref_key} must be a list of field names")
+        row, _, source = item.partition("=")
+        keys[row] = source or row
+    return keys

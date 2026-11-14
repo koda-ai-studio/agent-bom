@@ -12,7 +12,8 @@
  *  - NaN / Infinity in numeric fields causing math failures
  */
 
-import { expandReport, ReportPackingError } from "@/lib/report-packing";
+/** Expands a schema 2.0 report (`expandReport` from `@/lib/report-packing`); validators stay free of it. */
+export type ReportExpander = (doc: unknown) => unknown;
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -145,7 +146,7 @@ function validateBlast(b: unknown, path: string): string | null {
  * On success returns the parsed data (safe to cast to ScanResult).
  * On failure returns an error string suitable for display to the user.
  */
-export function validateScanReport(jsonText: string): ValidationResult {
+export function validateScanReport(jsonText: string, expand?: ReportExpander): ValidationResult {
   // Guard direct callers as well as FileReader, using UTF-8 bytes rather than
   // only JavaScript string length. All accepted records are validated below.
   if (jsonText.length > MAX_IMPORT_BYTES || new TextEncoder().encode(jsonText).byteLength > MAX_IMPORT_BYTES) {
@@ -173,10 +174,13 @@ export function validateScanReport(jsonText: string): ValidationResult {
   }
 
   // Schema 2.0 reports reference shared records by ID; validate the expanded 1.0 shape.
-  try {
-    parsed = expandReport(parsed);
-  } catch (error) {
-    return { ok: false, error: `Invalid schema 2 report: ${error instanceof ReportPackingError ? error.message : "could not expand references"}.` };
+  if (typeof parsed.schema_version === "string" && parsed.schema_version.split(".")[0] === "2") {
+    if (!expand) return { ok: false, error: "Invalid schema 2 report: no expander was loaded." };
+    try {
+      parsed = expand(parsed);
+    } catch (error) {
+      return { ok: false, error: `Invalid schema 2 report: ${error instanceof Error ? error.message : "could not expand references"}.` };
+    }
   }
   if (!isPlainObject(parsed)) {
     return { ok: false, error: "Report must be a JSON object." };
