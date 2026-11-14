@@ -757,9 +757,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     sources, source_count = safe_reach_sources(row, lambda value: _safe_optional_text(value, max_len=512))
     payload["graph_reachable_from"], payload["graph_reachable_from_count"] = sources, source_count
     graph_reachable = row.get("graph_reachable")
-    if not isinstance(graph_reachable, bool):
-        payload["graph_reachable"] = None
-    elif graph_reachable and not (payload["graph_reachable_from_agents"] or sources):
+    if not isinstance(graph_reachable, bool) or (graph_reachable and not (payload["graph_reachable_from_agents"] or sources)):
         payload["graph_reachable"] = None
     else:
         payload["graph_reachable"] = graph_reachable
