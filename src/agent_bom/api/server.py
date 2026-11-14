@@ -35,6 +35,7 @@ from agent_bom.api.experimental_gate import ExperimentalFeatureHealth, SystemHea
 from agent_bom.api.finding_lifecycle_tick import run_finding_lifecycle_tick
 from agent_bom.api.foreground_activity import ForegroundActivityMiddleware
 from agent_bom.api.hub_materialization import run_materialization_tick
+from agent_bom.api.malloc_arenas import apply_api_malloc_tuning
 from agent_bom.api.middleware import (
     DEFAULT_SCAN_RATE_LIMIT_RPM,
     MAX_RATE_LIMIT_RPM,
@@ -46,8 +47,6 @@ from agent_bom.api.middleware import (
     global_ip_rate_limit_rpm,
 )
 from agent_bom.api.middleware_body import effective_result_push_max_bytes
-
-# ─── Extracted modules ────────────────────────────────────────────────────────
 from agent_bom.api.models import (  # noqa: F401 — legacy model imports
     AnalyticsHealth,
     EntitlementHealth,
@@ -113,6 +112,7 @@ __all__ = ["_analytics_backend_config", "AnalyticsHealth", "PIPELINE_DAG_EDGES",
 # Pin every demo-estate default store under its own data directory before lazy store access.
 # This covers ``uvicorn agent_bom.api.server:app``, multi-worker re-imports and the CLI, which activates it earlier.
 _state_home.activate_demo_state_dir()
+apply_api_malloc_tuning()
 # ─── Dependency check ─────────────────────────────────────────────────────────
 
 

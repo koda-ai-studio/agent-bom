@@ -637,6 +637,49 @@ What changed:
   in-process client that was charged to the API. This is a measurement
   correction, not a product change.
 
+### glibc arenas and the nightly runner (2026-11-14)
+
+The cgroup measurements above ran in the API image (musl). The nightly job
+runs on Ubuntu 24.04 (glibc 2.39, Python 3.11) and stayed over budget after
+them: 1,692-1,780 MiB cold and 1,732-1,924 MiB warm on SQLite,
+1,737-1,772 MiB on Postgres and 1,917-1,938 MiB per replica. Reproduced in an
+Ubuntu 24.04 container (4 CPUs, Python 3.11.17) at 1,850 / 1,927 MiB.
+
+The peak was not live data. Sampling glibc's `mallinfo2` through the cold run
+showed, at the update/delete peak of 1,750 MiB, 511 MiB of malloc heap in use
+and 464 MiB freed but still held. glibc gives each thread that allocates
+concurrently its own arena (up to eight per CPU); ingest, current-graph
+builds, warm-ups and request threads (13 at the peak) each kept their own
+high-water mark. The held-free heap grew stage by stage: 116 MiB after
+ingest, 385 MiB during graph reads, 464 MiB at update/delete.
+
+The API server now sets `M_ARENA_MAX=2` through `mallopt` when its module
+loads on glibc (`src/agent_bom/api/malloc_arenas.py`). An operator's
+`MALLOC_ARENA_MAX` is honoured instead; musl is untouched. Same container,
+same workload:
+
+| SQLite, 200 agents | Peak RSS before | Peak RSS after | CPU-seconds before | CPU-seconds after |
+|---|---:|---:|---:|---:|
+| cold | 1,850 MiB | 1,435 MiB | 472 | 285 |
+| warm | 1,927 MiB | 1,477 MiB | 470 | 306 |
+| cancel recovery | exit -6 (SIGABRT) | exit 0, 897 MiB | | |
+
+Findings stayed exact (207) and every equivalence check passed. Two related
+corrections landed with it:
+
+- **Exit drain.** The cancel-recovery child aborted with `FATAL: exception not
+  rethrown` after its push was stored. The push commit had started an exec-read
+  warm-up on a daemon thread; at interpreter exit Python 3.11-3.13 ends such a
+  thread with `pthread_exit`, which aborts inside pydantic-core's native frames
+  (SIGSEGV on 2026-11-13). At exit the API now refuses new warm-ups, lets a
+  running one finish its current step and waits at most 10 s
+  (`src/agent_bom/api/background_exit.py`).
+- **The scan child builds the push body.** The harness parsed the report and
+  built the CLI push body in the measured process: about 480 MiB of Python
+  heap during update/delete. The scan child now writes the body and the rows,
+  as a collector host would. glibc reused that freed heap, so on its own it
+  moved the peak by under 30 MiB; it is a measurement correction.
+
 ### How pushes are modelled
 
 The harness pushes what `agent-bom agents --inventory FILE --no-discover
