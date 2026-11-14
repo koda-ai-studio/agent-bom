@@ -637,13 +637,68 @@ test("a lone organization opens to its ranked accounts as the first view", async
       completeness: { status: "complete", returned: 30, total: 30, truncated: false, reasons: [] },
     } });
   });
+  // The grouped map's first frame shows organization and account groups, so the roll-up keeps the landing.
+  const scopeGroup = (key: string, count: number) => ({ id: `@group:${key}`, cluster_key: key, label: key, tier: 0, tier_label: "Scope",
+    member_count: count, worst_severity: "high", severity_counts: {}, on_attack_path_count: 0, risky: true, entity_types: {}, folded: false });
+  await page.route("**/v1/graph/cluster-map?**", route => route.fulfill({ json: {
+    scan_id: scanId, tenant_id: "default", mode: "cluster_map", tiers: [], nodes: [], edges: [], focus: null,
+    clusters: [scopeGroup("type:org", 1), scopeGroup("type:account", 30)], filters: { risky_only: false, member_limit: 8 },
+  } }));
   await page.goto(`/graph?scan=${scanId}`);
   const summary = page.getByTestId("graph-rollup-decision-surface");
   await expect(summary).toBeVisible({ timeout: 30_000 });
   await expect(summary).toContainText("account-0");
   await expect(page.getByTestId("sigma-graph-overview")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Northstar org", exact: true }).first()).toBeVisible();
+  // Ranked accounts lead; the grouped map does not take the landing from them.
+  await expect(page.getByTestId("graph-cluster-map")).toHaveCount(0);
   expect(requested.slice(0, 2)).toEqual(["", "org:northstar"]);
+});
+
+test("a large flat estate with no scope to rank lands on the grouped map without waiting on the roll-up", async ({ page }) => {
+  // Record whether the scope-navigation loading state ever renders, not only whether it is gone at the end.
+  await page.addInitScript(() => {
+    const seen = () => { if (document.body?.innerText.includes("Loading scope navigation")) (window as unknown as { __scopeLoadingSeen?: boolean }).__scopeLoadingSeen = true; };
+    new MutationObserver(seen).observe(document, { childList: true, subtree: true, characterData: true });
+  });
+  await routeLargeGraphPage(page);
+  const clusterReads: string[] = [];
+  let rollupAnswered = false;
+  await page.route("**/v1/graph/rollup?**", async route => {
+    await new Promise(resolve => setTimeout(resolve, 3_000));
+    rollupAnswered = true;
+    await route.fulfill({ json: {
+    scan_id: scanId, tenant_id: "default", created_at: createdAt, mode: "rollup", filters: {},
+    top_level: [{ id: "pkg:42", label: "pyyaml@5.3", entity_type: "package", severity: "high",
+      is_container: false, has_children: false, direct_child_count: 0, aggregate: rollupAggregate(0) }],
+    edges: [], summary: { total_nodes: 1241, total_edges: 1860, top_level_count: 1, container_count: 0 },
+    completeness: { status: "complete", returned: 1, total: 1, truncated: false, reasons: [] },
+  } }).catch(() => undefined);
+  });
+  await page.route("**/v1/graph/cluster-map?**", route => {
+    clusterReads.push(route.request().url());
+    const group = (key: string, tier: number, count: number) => ({ id: `@group:${key}`, kind: "cluster", cluster_key: key, label: key, tier,
+      member_count: count, worst_severity: "high", risky: true, expanded: false, on_attack_path_count: 0 });
+    return route.fulfill({ json: {
+      scan_id: scanId, tenant_id: "default", mode: "cluster_map", tiers: [], clusters: [], filters: { risky_only: false, member_limit: 50 },
+      nodes: [group("type:agent", 1, 41), group("package:pypi", 3, 1200)],
+      edges: [{ id: "a->p", source: "@group:type:agent", target: "@group:package:pypi", count: 1860, risky: true, on_attack_path: false,
+        relationships: [{ relationship: "depends_on", count: 1860 }] }],
+      focus: null,
+      summary: { total_nodes: 1241, total_edges: 1860, cluster_count: 2, listed_cluster_count: 2, visible_cluster_count: 2, folded_cluster_count: 0,
+        filtered_node_count: 0, filtered_edge_count: 0, internal_edge_count: 0, drawn_bundle_count: 1, hidden_bundle_count: 0,
+        hidden_bundle_edge_count: 0, element_count: 3, element_budget: 60, dangling_edge_count: 0 },
+      cost: { edges_scanned: 0, bundles_considered: 1 },
+    } });
+  });
+  await page.goto(`/graph?scan=${scanId}`);
+  await expect(page.getByTestId("graph-cluster-map")).toBeVisible({ timeout: 30_000 });
+  // The grouped map is up while the roll-up read is still outstanding.
+  expect(rollupAnswered).toBe(false);
+  expect(clusterReads.length).toBeGreaterThan(0);
+  expect(await page.evaluate(() => (window as unknown as { __scopeLoadingSeen?: boolean }).__scopeLoadingSeen ?? false)).toBe(false);
+  await expect(page.getByTestId("graph-rollup-decision-surface")).toHaveCount(0);
+  await expect(page.getByTestId("cluster-map-canvas").locator(".react-flow__node")).toHaveCount(2);
 });
 
 for (const theme of ["light", "dark"] as const) test(`scope rows and breadcrumbs carry the recorded provider ${theme}`, async ({ page }, testInfo) => {
@@ -802,7 +857,8 @@ for (const theme of ["light", "dark"] as const) {
       node: root, edges_out: [edge(root.id, finding, "vulnerable_to")], edges_in: [edge(finding, root.id, "affects")],
       neighbors: [finding], sources: ["scan"], impact: { affected_count: 0, affected_by_type: {}, max_depth_reached: 0 },
     } }));
-    await page.goto(`/graph?scan=${scanId}`);
+    // A flat estate (no scope to rank) lands on the grouped map; scope navigation over it is an explicit `?rollup=1`.
+    await page.goto(`/graph?scan=${scanId}&rollup=1`);
     await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
     await page.getByRole("button", { name: "Inspect pyyaml@5.3 (pkg:42)", exact: true }).click();
     await expect(page.getByTestId("graph-drawer-panel-overview").getByText("Findings", { exact: true })).toBeVisible();
@@ -824,7 +880,8 @@ for (const theme of ["light", "dark"] as const) {
       edges: [], summary: { total_nodes: 2, total_edges: 0, top_level_count: 2, container_count: 0 },
       completeness: { status: "complete", complete: true, truncated: false, returned: 2, total: 2 },
     } }));
-    await page.goto("/graph");
+    // A flat estate (no scope to rank) lands on the grouped map; scope navigation over it is an explicit `?rollup=1`.
+    await page.goto("/graph?rollup=1");
     await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
     const summary = page.getByTestId("graph-rollup-decision-surface");
     // Packages read under the image they were found in, one card per image.
@@ -857,7 +914,8 @@ for (const theme of ["light", "dark"] as const) {
       edges: [], summary: { total_nodes: 13, total_edges: 0, top_level_count: 13, container_count: 0 },
       completeness: { status: "complete", complete: true, truncated: false, returned: 13, total: 13 },
     } }));
-    await page.goto(`/graph?scan=${scanId}`);
+    // A flat estate (no scope to rank) lands on the grouped map; scope navigation over it is an explicit `?rollup=1`.
+    await page.goto(`/graph?scan=${scanId}&rollup=1`);
     await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
     const summary = page.getByTestId("graph-rollup-decision-surface");
     await expect(summary.getByRole("article")).toHaveCount(12);

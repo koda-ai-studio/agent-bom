@@ -68,9 +68,12 @@ export interface GraphRollupEligibilityInput {
   blastRadiusActive: boolean;
   /** Retained for call-site compatibility; availability alone does not select a path. */
   attackPathCount?: number;
-  /** A large estate lands on the grouped map; scope navigation stays one explicit `?rollup=1` away. */
-  groupedMapLanding?: boolean;
+  /** The grouped-map probe of a default landing; `flat` (no scope to rank) hands the landing to the grouped map. */
+  landingProbe?: GroupedLandingProbe;
 }
+
+/** `idle`: no probe for this landing; `pending`/`failed`: the roll-up decides; `scoped`/`flat`: what the grouped map showed. */
+export type GroupedLandingProbe = "idle" | "pending" | "scoped" | "flat" | "failed";
 
 export const DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD = 200;
 
@@ -87,7 +90,7 @@ export function graphRollupEligible(input: GraphRollupEligibilityInput): boolean
   // An explicit `?rollup=1` is an operator decision, but detail overlays above
   // still require their focused node set.
   if (input.rollupPreference === "force") return true;
-  if (input.groupedMapLanding) return false;
+  if (input.landingProbe === "flat") return false;
   return input.estateNodeCount >= DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD;
 }
 
@@ -98,6 +101,29 @@ export function rollupViewHasContainers(
 ): boolean {
   const items = mode === "drilldown" ? children : topLevel;
   return Array.isArray(items) && items.length > 0;
+}
+
+interface RollupLandingItem {
+  is_container?: boolean;
+  has_children?: boolean;
+}
+
+/**
+ * Whether a default landing has a scope hierarchy to rank. An organization or
+ * account tier leads with scope navigation; a flat estate (orphan nodes only)
+ * has nothing to rank, so the grouped map leads instead. The estate-wide
+ * container count wins over one ranked page, where orphans can outrank scopes.
+ */
+export function rollupLandingHasScopes(view: {
+  mode: "rollup" | "drilldown" | "attack_path";
+  top_level?: RollupLandingItem[];
+  children?: RollupLandingItem[];
+  summary?: { container_count?: number | null };
+}): boolean {
+  if (view.mode !== "rollup") return true;
+  const containers = view.summary?.container_count;
+  if (typeof containers === "number") return containers > 0;
+  return (view.top_level ?? []).some(item => item.is_container && item.has_children);
 }
 
 /** Levels a default entry may descend through single-container scopes. */

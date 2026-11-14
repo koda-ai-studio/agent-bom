@@ -17,13 +17,14 @@ import { type ReachabilitySummary } from "@/lib/graph-reachability";
 import { api, ApiRateLimitError, type GraphDiffResponse, type GraphEdgeChangesResponse, type GraphHistorySnapshot, type GraphNodeDetailResponse, type GraphSnapshot, type GraphScenario, type GraphScenarioComparisonResponse, type UnifiedGraphResponse } from "@/lib/api";
 import type { GraphRollupResponse } from "@/lib/api-types";
 import { mergeReciprocalRollupEdges } from "@/lib/graph-rollup-view";
-import { graphRollupCanvasMode, rollupAutoDescendTarget, graphRollupEligible, graphRollupPreferenceForCanvas, parseGraphRollupUrlPreference, parseRollupNodeParam, rollupDismissedForPreference, rollupViewHasContainers } from "@/lib/graph-rollup-default";
+import { DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD, graphRollupCanvasMode, rollupAutoDescendTarget, graphRollupEligible, graphRollupPreferenceForCanvas, parseGraphRollupUrlPreference, parseRollupNodeParam, rollupDismissedForPreference, rollupLandingHasScopes, rollupViewHasContainers } from "@/lib/graph-rollup-default";
 import { type DriftLensFilter, type EvidenceLensFilter } from "@/lib/filter-algebra";
 import { useCaptureMode } from "@/lib/use-capture-mode";
 import { useAuthState } from "@/components/auth-provider";
 import { parseGraphScenarioViewState, proposedGraphFromComparison, type GraphScenarioViewState } from "@/lib/graph-scenario";
 import { useGraphEstateChanges } from "@/hooks/use-graph-estate-changes";
 import { useEstateHighlight } from "@/hooks/use-estate-highlight";
+import { useGroupedLandingProbe } from "@/hooks/use-grouped-landing-probe";
 import { resolveScopeAncestry } from "@/lib/graph-scope-ancestry";
 import { buildFallbackNodeData, emptyGraphResponse, graphFetchLimitForSnapshot, mergeNodeDetail, RELATIONSHIP_SCOPE_MAP, type InvestigationMode } from "@/lib/graph-page-data";
 
@@ -721,6 +722,13 @@ export function useGraphPageData() {
     graphData?.nodes.length ??
     0;
 
+  // A default landing reads the grouped map's first frame beside the roll-up; a flat estate
+  // then opens the grouped map at once instead of waiting on the slower roll-up read.
+  const landingProbe = useGroupedLandingProbe(selectedScanId || undefined,
+    scenarioState === "current" && rollupPreferenceRef.current === "default" && !rollupDismissed && rollupStack.length === 0 &&
+    searchParams.get("grouping") !== "off" && estateNodeCount >= DEFAULT_GRAPH_ROLLUP_NODE_THRESHOLD &&
+    !investigationMode && !selectedAttackPath && !reachabilitySummary && !blastRadius);
+
   const rollupEligible = scenarioState === "current" && graphRollupEligible({
     hasSelectedScan: Boolean(selectedScanId),
     rollupPreference: rollupPreferenceRef.current,
@@ -731,7 +739,8 @@ export function useGraphPageData() {
     reachabilityActive: Boolean(reachabilitySummary),
     blastRadiusActive: Boolean(blastRadius),
     attackPathCount: attackPaths.length,
-    groupedMapLanding: searchParams.get("grouping") !== "off",
+    // A roll-up already on screen keeps the landing; the probe only decides before one arrives.
+    landingProbe: rollupView ? "idle" : landingProbe,
   });
 
   const rollupCanvasMode = graphRollupCanvasMode({
@@ -784,7 +793,11 @@ export function useGraphPageData() {
       })
       .then((result) => {
         if (cancelled) return;
+        // A default landing on a flat estate has no scope to rank: the grouped map leads.
+        const flatDefaultLanding =
+          rollupPreferenceRef.current === "default" && !drillNode && !childOffset && !rollupLandingHasScopes(result);
         if (
+          flatDefaultLanding ||
           !rollupViewHasContainers(
             result.mode,
             result.top_level,
@@ -827,6 +840,8 @@ export function useGraphPageData() {
 
     return () => {
       cancelled = true;
+      // A superseded or withdrawn read (a flat landing handed to the grouped map) is no longer loading.
+      setLoadingRollup(false);
     };
   }, [
     selectedScanId,
@@ -907,7 +922,7 @@ export function useGraphPageData() {
     captureMode, serverEntityTypes, serverRelationships, serverFilterKey, mergedGraphData, proposedGraphData,
     projectedGraphData, activeSnapshot, previousSnapshot, diffPair, viewingCurrentEstate, graphChanges, highlight,
     needsComparison, graphNodeById, activeScopePreset, attackPaths, effectiveSelectedAttackPathKey, selectedAttackPath,
-    estateNodeCount, rollupEligible, rollupCanvasMode, rollupNavigationActive, rollupCanvasPending, rollupCanvasFailed,
+    estateNodeCount, landingProbe, rollupEligible, rollupCanvasMode, rollupNavigationActive, rollupCanvasPending, rollupCanvasFailed,
     rollupCanvasOwnsPresentation, rollupItems, rollupDecisionAvailable, rollupDecisionActive, rollupChildPageKey,
     ancestryResolvedFor, soleScopeId, estateIssues, setEstateIssues, estateIssueSummary, rollupDisplayEdges,
   };

@@ -60,22 +60,27 @@ def print_quiet_summary(opts: ScanOptions, st: ScanState, exit_code: int) -> Non
 
     stdout carries it unless stdout already carries a machine document (``-f json``
     with no ``-o``), in which case it goes to stderr so the document stays
-    parseable. Under JSON logs or ``--agent-mode`` only the exit reasons are
-    emitted, as notices, because stderr must stay machine-readable there.
+    parseable. Under JSON logs the block is emitted as log records on stderr and
+    stdout stays empty; under ``--agent-mode`` only the exit reasons are.
     """
     if not opts.quiet:
         return
     stdout_has_document = opts.agent_mode or (opts.output_format != "console" and opts.output in {None, "-"})
-    if opts.agent_mode or (stdout_has_document and json_logging_active()):
+    if opts.agent_mode:
         for reason in getattr(st.ctx, "exit_reasons", None) or []:
             stderr_notice(f"exit {exit_code}: {reason}")
         return
-    _echo(quiet_summary_lines(opts, st, exit_code), stdout_has_document=stdout_has_document)
+    lines = quiet_summary_lines(opts, st, exit_code)
+    if json_logging_active():
+        for line in lines:
+            stderr_notice(line)
+        return
+    _echo(lines, stdout_has_document=stdout_has_document)
 
 
 def print_quiet_incomplete(exc: Exception, *, stdout_has_document: bool) -> None:
     """The ``-q`` result for a scan that stopped because its vulnerability evidence is incomplete."""
-    if stdout_has_document and json_logging_active():
+    if json_logging_active():
         stderr_notice(f"exit 1: {exc}")
         return
     _echo(["agent-bom: FAIL — incomplete scan, vulnerability data unavailable", f"Exit 1: {exc}"], stdout_has_document=stdout_has_document)

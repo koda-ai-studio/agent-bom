@@ -11,7 +11,7 @@ import random
 import re
 import time
 
-from agent_bom.risk_analyzer import CAPABILITY_PATTERNS, ToolCapability, classify_tool
+from agent_bom.risk_analyzer import CAPABILITY_PATTERNS, ToolCapability, _classify_cached, _token_capabilities, _tokenize, classify_tool
 
 
 def _reference(tool_name: str, description: str = "") -> list[ToolCapability]:
@@ -44,30 +44,52 @@ def test_returned_list_is_not_shared_between_calls() -> None:
     assert classify_tool("execute_shell", "run commands")
 
 
+def _cold_caches() -> None:
+    _classify_cached.cache_clear()
+    _token_capabilities.cache_clear()
+
+
+def _distinct_tokens(corpus: list[tuple[str, str]]) -> int:
+    return len({token for name, description in corpus for token in _tokenize(name + " " + description)})
+
+
+# These budgets count work, not wall time: a shared CI runner can stall any
+# process for a second, but it cannot make a cache miss twice. Each keeps a
+# generous wall-clock backstop that only a real regression would hit.
+
+
 def test_estate_scale_classification_stays_within_budget() -> None:
     # 27,000 classifications over 600 distinct tools, the shape of a 1,000-agent
-    # estate; measured about 2.5 s before, well under 0.1 s after.
+    # estate: each distinct tool is classified once and every repeat is a cache hit.
     corpus = _corpus(27_000, distinct=600)
+    _cold_caches()
     started = time.perf_counter()
     for name, description in corpus:
         classify_tool(name, description)
-    assert time.perf_counter() - started < 0.5
+    assert _classify_cached.cache_info().misses == 600
+    assert _token_capabilities.cache_info().misses <= _distinct_tokens(corpus)
+    assert time.perf_counter() - started < 5
 
 
 def test_distinct_tools_classify_within_budget() -> None:
     corpus = _corpus(6000, distinct=6000)
+    _cold_caches()
     started = time.perf_counter()
     for name, description in corpus:
         classify_tool(name, description)
-    assert time.perf_counter() - started < 0.5
+    assert _classify_cached.cache_info().misses == 6000
+    assert _token_capabilities.cache_info().misses <= _distinct_tokens(corpus)
+    assert time.perf_counter() - started < 5
 
 
 def test_unique_names_from_repeated_words_classify_within_budget() -> None:
     # Estate tool names are unique per server ("server-4821-tool-03") but built
     # from a few repeated words; at 5,000 agents that is about 130,000
-    # classifications of distinct names, about 5 s before.
+    # classifications of distinct names. Token work is bounded by distinct tokens.
+    corpus = [(f"mcp-server-{server}-tool-{tool:02d}", "") for server in range(13_000) for tool in range(10)]
+    _cold_caches()
     started = time.perf_counter()
-    for server in range(13_000):
-        for tool in range(10):
-            classify_tool(f"mcp-server-{server}-tool-{tool:02d}", "")
-    assert time.perf_counter() - started < 1.5
+    for name, description in corpus:
+        classify_tool(name, description)
+    assert _token_capabilities.cache_info().misses <= _distinct_tokens(corpus)
+    assert time.perf_counter() - started < 15

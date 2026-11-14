@@ -9,6 +9,7 @@ import {
   parseRollupNodeParam,
   rollupDismissedForPreference,
   rollupViewHasContainers,
+  rollupLandingHasScopes,
 } from "@/lib/graph-rollup-default";
 
 describe("parseGraphRollupUrlPreference", () => {
@@ -41,10 +42,11 @@ describe("graphRollupEligible", () => {
     blastRadiusActive: false,
   };
 
-  it("lets a large estate land on the grouped map, while an explicit roll-up request still wins", () => {
-    expect(graphRollupEligible({ ...base, estateNodeCount: 5_000, groupedMapLanding: true })).toBe(false);
-    expect(graphRollupEligible({ ...base, estateNodeCount: 5_000, groupedMapLanding: true, rollupPreference: "force" })).toBe(true);
-    expect(graphRollupEligible({ ...base, estateNodeCount: 5_000, groupedMapLanding: false })).toBe(true);
+  it("reads the scope roll-up for every large estate so ranked accounts can lead", () => {
+    // Whether the grouped map leads is decided from the roll-up itself: only a
+    // flat estate (no scope to rank) hands the landing to the grouped map.
+    expect(graphRollupEligible({ ...base, estateNodeCount: 5_000 })).toBe(true);
+    expect(graphRollupEligible({ ...base, estateNodeCount: 5_000, rollupPreference: "force" })).toBe(true);
   });
 
   it("defaults to real topology below 200 nodes and roll-up at 200 or more", () => {
@@ -245,5 +247,29 @@ describe("rollupViewHasContainers", () => {
     expect(
       rollupViewHasContainers("drilldown", undefined, [{ id: "fleet:a" }]),
     ).toBe(true);
+  });
+});
+
+describe("rollupLandingHasScopes", () => {
+  const org = { id: "org:northstar", is_container: true, has_children: true };
+  const pkg = { id: "pkg:42", is_container: false, has_children: false };
+
+  it("keeps scope navigation when the top level ranks organizations or accounts", () => {
+    expect(rollupLandingHasScopes({ mode: "rollup", top_level: [org], summary: { container_count: 1 } })).toBe(true);
+    expect(rollupLandingHasScopes({ mode: "rollup", top_level: [pkg, org] })).toBe(true);
+  });
+
+  it("hands a flat estate to the grouped map", () => {
+    expect(rollupLandingHasScopes({ mode: "rollup", top_level: [pkg], summary: { container_count: 0 } })).toBe(false);
+    expect(rollupLandingHasScopes({ mode: "rollup", top_level: [pkg] })).toBe(false);
+  });
+
+  it("trusts the estate-wide container count over one ranked page", () => {
+    // Orphans can outrank every scope on the first page; the summary still counts the scopes.
+    expect(rollupLandingHasScopes({ mode: "rollup", top_level: [pkg], summary: { container_count: 2 } })).toBe(true);
+  });
+
+  it("never second-guesses a drill-down the reader is already in", () => {
+    expect(rollupLandingHasScopes({ mode: "drilldown", children: [pkg] })).toBe(true);
   });
 });

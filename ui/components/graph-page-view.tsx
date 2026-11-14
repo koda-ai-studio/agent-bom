@@ -54,7 +54,7 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
     graphLayoutKind, rollupDecisionActive, scenarioElements, scenarioConnectionNotes, retryGraph, graphPanelError, loadingGraph, firstFramePending, rollupCanvasFailed, estateNodeCount, rollupCanvasPending,
     rollupItems, drillIntoRollup, investigateRollup, estateIssueSummary, layoutPending, graphRenderer, graphOnlyFindings, findingNodes, selectFindingCard, onLargeGraphNodeSelect, presentationScope,
     connectionPreview, previewExpanded, setPreviewExpanded, searchParams, contextElements, legendItems,
-    groupedMapActive, groupedMapUnavailable, setGroupingOff, loadRootInvestigation,
+    groupedMapActive, groupedMapUnavailable, setGroupingOff, loadRootInvestigation, landingProbe,
   } = page;
   const relationshipLabels = useRelationshipLabelControl(displayEdges);
   const clearSelection = () => {
@@ -267,10 +267,15 @@ export function GraphPageView({ page }: { page: GraphPageModel }) {
               actions={[{ label: "Retry scope", onClick: retryGraph }, { label: "Open bounded map", onClick: dismissRollup }]}
             />
           ) : rollupCanvasPending ? (
-            <GraphPanelSkeleton
-              title="Loading scope navigation"
-              detail="Grouping the containment hierarchy."
-            />
+            // Until the grouped map says whether there is a scope to rank, the landing is not yet scope navigation.
+            landingProbe === "pending" ? (
+              <GraphPanelSkeleton title="Loading estate map" detail="Checking for organizations and accounts to rank." />
+            ) : (
+              <GraphPanelSkeleton
+                title="Loading scope navigation"
+                detail="Grouping the containment hierarchy."
+              />
+            )
           ) : rollupDecisionActive ? (
             <GraphScopeOverview
               items={rollupItems}

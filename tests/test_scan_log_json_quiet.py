@@ -75,9 +75,10 @@ def test_log_json_scan_emits_progress_as_structured_records(tmp_path: Path) -> N
 def test_quiet_scan_prints_no_discovery_banner(tmp_path: Path) -> None:
     proc, report = _run_scan(tmp_path, "-q")
 
-    assert proc.stdout == ""
-    assert "Discovering" not in proc.stderr
-    assert "MCP configurations" not in proc.stderr
+    # -q keeps the result block on stdout but drops progress and banners.
+    assert proc.stdout.startswith("agent-bom: ")
+    assert "Discovering" not in proc.stdout + proc.stderr
+    assert "MCP configurations" not in proc.stdout + proc.stderr
     assert report.exists()
 
 

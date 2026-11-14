@@ -93,6 +93,14 @@ export function clusterMapEligible(input: ClusterMapGateInput): boolean {
   return input.webgl || input.elements > CLUSTER_MAP_ELEMENT_BUDGET;
 }
 
+/** Scope-tier groups a roll-up ranks: organizations, accounts, environments and fleets (a provider alone is not a scope to rank). */
+const RANKABLE_SCOPE_GROUPS: ReadonlySet<string> = new Set(["type:org", "type:account", "type:environment", "type:fleet"]);
+
+/** Whether a grouped-map frame shows a scope hierarchy, the cheap signal for a large estate's landing. */
+export function clusterMapHasScopeGroups(view: Pick<ClusterMapResponse, "clusters">): boolean {
+  return (view.clusters ?? []).some(cluster => RANKABLE_SCOPE_GROUPS.has(cluster.cluster_key) && cluster.member_count > 0);
+}
+
 export function severityWords(node: Pick<ClusterMapNode, "worst_severity" | "severity">): string {
   const word = node.worst_severity ?? node.severity ?? "none";
   return word === "none" || word === "info" ? "No critical or high findings" : `Worst: ${word}`;
