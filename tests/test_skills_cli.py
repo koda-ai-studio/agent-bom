@@ -255,11 +255,10 @@ def test_skills_scan_prompt_override_gates_as_suspicious_not_malicious(tmp_path,
     """Local instruction override copy should gate at suspicious without claiming malicious content."""
     from agent_bom.api import audit_log
 
-    # Exercise the first-use warning: diagnostics belong to stderr, while the
-    # report contract is JSON on stdout regardless of randomized test order.
+    # An ephemeral key with a durable chain: the server-startup warning must
+    # not leak into CLI output, and stdout stays pure JSON.
     monkeypatch.setattr(audit_log, "_HMAC_ENV_KEY", "")
     monkeypatch.setattr(audit_log, "_EPHEMERAL_KEY_WARNED", False)
-    # The warning applies to a chain that outlives the process; the in-memory one does not.
     monkeypatch.setattr(audit_log, "_audit_log", audit_log.SQLiteAuditLog(str(tmp_path / "audit.db")))
 
     skill_file = tmp_path / "CLAUDE.md"
@@ -269,7 +268,7 @@ def test_skills_scan_prompt_override_gates_as_suspicious_not_malicious(tmp_path,
     suspicious = runner.invoke(main, ["skills", "scan", str(tmp_path), "--format", "json", "--fail-on-verdict", "suspicious"])
     assert suspicious.exit_code == 1, suspicious.output
     suspicious_data = json.loads(suspicious.stdout)
-    assert "AGENT_BOM_AUDIT_HMAC_KEY" in suspicious.stderr
+    assert "AGENT_BOM_AUDIT_HMAC_KEY" not in suspicious.output
     assert suspicious_data["files"][0]["trust"]["content_verdict"] == "suspicious"
     assert suspicious_data["files"][0]["trust"]["provenance_verdict"] == "unverified"
     assert suspicious_data["files"][0]["trust"]["review_verdict"] == "review"

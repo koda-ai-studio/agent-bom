@@ -195,8 +195,8 @@ else:
         )
     _HMAC_KEY = _secrets.token_bytes(32)
 
-# The operator warning is raised where audit evidence is produced (API startup, first signature), not at import: CLI reports import this
-# module only to describe signing posture, and a log line there lands mid-report.
+# The operator warning is raised when the API server starts, never at import or on signing: CLI commands import this module
+# to describe signing posture or append one entry, and a server configuration line there lands mid-report.
 _EPHEMERAL_KEY_WARNED = False
 AUTH_FAILURE_AUDIT_TENANT = "__auth_security__"
 
@@ -214,7 +214,6 @@ def warn_if_ephemeral_hmac_key(*, durable: bool | None = None) -> None:
 
 
 def _default_signing_key() -> bytes:
-    warn_if_ephemeral_hmac_key(durable=True)
     return _HMAC_KEY
 
 
