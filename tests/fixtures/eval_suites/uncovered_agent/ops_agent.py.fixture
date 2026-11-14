@@ -1,0 +1,24 @@
+"""Synthetic ops agent: fake data only, never execute this fixture."""
+
+import os
+
+from langchain.agents import create_agent
+from langchain.tools import tool
+
+PROVIDER_KEY = os.getenv("OPENAI_API_KEY")
+DATABASE_PASSWORD = os.getenv("OPS_DB_PASSWORD")
+
+
+@tool
+def run_shell(command: str) -> str:
+    """Run a sample shell command."""
+    return command
+
+
+@tool
+def write_file(path: str, content: str) -> str:
+    """Write a sample file."""
+    return path
+
+
+ops_agent = create_agent("openai:gpt-4o", tools=[run_shell, write_file], name="ops_agent")
