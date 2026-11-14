@@ -4,4 +4,5 @@
 - The generic password and secret rules no longer flag CSS class lists or snake_case/kebab-case enum values in source code. A connection string to a loopback host in a CI job definition is kept and lowered to low, with the reason recorded.
 - A package declared with a version range (`anthropic>=0.30`) and imported in code is counted once, not as an `@unknown` and an `@latest` copy.
 - The Agents page counts MCP servers with the same rule as its KPI strip and Asset inventory: a project's manifest and AI SDK inventory records are no longer counted as MCP servers in the per-agent column, the agent drawer, or the `/v1/agents` server sort.
+- A report saved with `scan -o report.json -f json` and POSTed to `/v1/results/push` now lands on the same agent graph node as a `--push-url` push from the same host, so Inventory and the graph no longer count one project agent (and its MCP servers) twice after a partial push. JSON reports carry the host `source_id` that a direct push already sends; `--demo` reports do not.
 - The executive posture summary says "on credential-bearing servers" for the findings it counts there, instead of "touch secrets".

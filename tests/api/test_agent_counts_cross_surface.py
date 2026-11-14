@@ -153,3 +153,96 @@ def test_inventory_graph_and_agents_page_agree(scanned_estate: dict) -> None:
     row_servers = [agent_metrics(agent)["servers"] for agent in agents["agents"]]
     assert row_servers == [2, 2]
     assert summary["by_type"].get("server") == graph_servers == agents["summary"]["mcp_servers"] == sum(row_servers) == 4
+
+
+def _cli_report(tmp_path: Path, *projects: Path) -> dict:
+    out = tmp_path / f"report-{uuid.uuid4().hex}.json"
+    args = ["scan", "--offline", "--no-scan", "--no-discover", "--exit-zero", "-q", "-f", "json", "-o", str(out)]
+    for project in projects:
+        args += ["-p", str(project)]
+    result = CliRunner().invoke(main, args)
+    assert out.is_file(), result.output
+    return json.loads(out.read_text())
+
+
+def _framework_project(root: Path, name: str) -> Path:
+    path = root / name
+    path.mkdir()
+    (path / "requirements.txt").write_text("langchain==0.2.0\n", encoding="utf-8")
+    return path
+
+
+@pytest.fixture()
+def push_estate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    monkeypatch.delenv("AGENT_BOM_DEMO_ESTATE", raising=False)
+    monkeypatch.delenv("AGENT_BOM_API_HOST_DISCOVERY_TENANT", raising=False)
+    monkeypatch.setenv("AGENT_BOM_PUSH_SOURCE_ID", "host-under-test")
+    monkeypatch.setattr(api_stores, "_store", InMemoryJobStore())
+    monkeypatch.setattr(api_stores, "_graph_store", SQLiteGraphStore(tmp_path / "push-graph.db"))
+    discovery._clear_agents_response_cache_for_tests()
+    with TestClient(app) as client:
+        client.headers.update(proxy_headers(role="analyst", tenant=TENANT))
+        yield client
+    discovery._clear_agents_response_cache_for_tests()
+
+
+def _surface_counts(client: TestClient) -> dict[str, int]:
+    discovery._clear_agents_response_cache_for_tests()
+    summary = _settled_summary(client, {})
+    agents = client.get("/v1/agents?limit=200").json()
+    nodes = client.get("/v1/graph?limit=1000").json()["nodes"]
+    return {
+        "inventory_agents": summary["by_type"].get("agent", 0),
+        "inventory_servers": summary["by_type"].get("server", 0),
+        "graph_agents": sum(1 for node in nodes if node["entity_type"] == "agent"),
+        "graph_servers": sum(1 for node in nodes if node["entity_type"] == "server"),
+        "agents_page": agents["count"],
+        "agents_page_servers": agents["summary"]["mcp_servers"],
+    }
+
+
+def _post(client: TestClient, report: dict) -> None:
+    response = client.post("/v1/results/push", json=report)
+    assert response.status_code == 201, response.text
+
+
+def test_saved_report_push_lands_on_the_direct_push_agent_node(tmp_path: Path, push_estate: TestClient) -> None:
+    """``--push-url`` and ``-o -f json`` + POST from one host describe one agent, not two."""
+    from agent_bom.push import sanitize_results
+
+    proj_a = _project(tmp_path, "projA", mcp=True)
+    proj_b = _project(tmp_path, "projB", mcp=True)
+    _post(push_estate, sanitize_results(_cli_report(tmp_path, proj_a, proj_b)))
+    before = _surface_counts(push_estate)
+
+    partial = _cli_report(tmp_path, proj_a)
+    partial["scan_run"] = {**(partial.get("scan_run") or {}), "outcome": "partial"}
+    _post(push_estate, partial)
+    after = _surface_counts(push_estate)
+
+    assert after == before
+    assert after["graph_agents"] == after["inventory_agents"] == after["agents_page"] == 2
+    assert after["graph_servers"] == after["inventory_servers"] == after["agents_page_servers"] == 4
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "A framework entry (surface 'other', command 'python') is a graph server node, so Inventory and the grouped "
+        "map count it under MCP servers while /v1/agents applies the MCP rule; fixing that needs the server surface "
+        "in the store-native inventory and cluster reads."
+    ),
+)
+def test_framework_project_servers_count_the_same_on_every_surface(tmp_path: Path, push_estate: TestClient) -> None:
+    """A framework project's entry is not an MCP server on any surface."""
+    from agent_bom.push import sanitize_results
+
+    mcp_only, mixed = _project(tmp_path, "projA", mcp=True), _project(tmp_path, "projM", mcp=True, sdk=True)
+    report = _cli_report(tmp_path, mcp_only, mixed, _framework_project(tmp_path, "projL"))
+    framework = next(agent for agent in report["agents"] if agent["name"] == "project:projL")
+    assert any(server["name"] == "langchain:LangChain project" for server in framework["mcp_servers"]), framework["mcp_servers"]
+    _post(push_estate, sanitize_results(report))
+
+    counts = _surface_counts(push_estate)
+    assert counts["graph_agents"] == counts["inventory_agents"] == counts["agents_page"] == 3
+    assert counts["graph_servers"] == counts["inventory_servers"] == counts["agents_page_servers"] == 4
