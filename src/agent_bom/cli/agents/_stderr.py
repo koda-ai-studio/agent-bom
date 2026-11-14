@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 import click
 from rich.console import Console
@@ -21,6 +22,21 @@ def stderr_notice(message: str, *, level: int = logging.ERROR, prefix: str = "ag
     click.echo(f"{prefix}{message}", err=True)
 
 
+VERDICT_LOGGER = "agent_bom.verdict"
+
+
+def log_record(message: str, *, level: int, context: dict[str, Any], logger_name: str = _logger.name) -> None:
+    """Emit one JSON log record whose ``context`` carries the structured fields.
+
+    The verdict logger is pinned to INFO so a PASS verdict still prints under
+    ``-q``, where the rest of agent_bom stays at WARNING.
+    """
+    logger = logging.getLogger(logger_name)
+    if logger_name == VERDICT_LOGGER:
+        logger.setLevel(logging.INFO)
+    logger.log(level, message, extra={"context": context})
+
+
 def stderr_console(*, quiet: bool, log_json: bool) -> Console:
     """The progress console for a command that does not run the scan pipeline's logging setup.
 
@@ -35,4 +51,4 @@ def stderr_console(*, quiet: bool, log_json: bool) -> Console:
     return Console(stderr=True, quiet=quiet)
 
 
-__all__ = ["stderr_console", "stderr_notice"]
+__all__ = ["VERDICT_LOGGER", "log_record", "stderr_console", "stderr_notice"]
