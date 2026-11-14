@@ -188,7 +188,7 @@ describe("RemediationPage", () => {
 
     // 30 matching, 25 on the first page, 25 per page.
     await waitFor(() => {
-      expect(screen.getByText(/30 matching packages/i)).toBeInTheDocument();
+      expect(screen.getByText(/30 matching package upgrades/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/25 on this page/i)).toBeInTheDocument();
     expect(screen.getByText(/25 per page/i)).toBeInTheDocument();
@@ -205,13 +205,22 @@ describe("RemediationPage", () => {
     expect(apiMock.getCurrentRemediation).not.toHaveBeenCalled();
   });
 
+  it("counts upgrade actions, not packages, with thousands separators", async () => {
+    // Each plan item is one package version to upgrade; the generator-shaped estate has thousands.
+    apiMock.getRemediation.mockResolvedValue(Array.from({ length: 4722 }, (_, i) => remediationItem(`pkg${i}`, "high")));
+    render(<RemediationPage />);
+    expect(await screen.findByText(/^4,722 package upgrades prioritized by reach/)).toBeInTheDocument();
+    expect(screen.getByText(/4,722 matching package upgrades/)).toBeInTheDocument();
+    expect(screen.queryByText(/4722/)).not.toBeInTheDocument();
+  });
+
   it("singularizes the caption for a single matching package", async () => {
     apiMock.getRemediation.mockResolvedValue([remediationItem("openssl", "critical")]);
 
     render(<RemediationPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/1 matching package(?!s)/i)).toBeInTheDocument();
+      expect(screen.getByText(/1 matching package upgrade(?!s)/i)).toBeInTheDocument();
     });
     expect(screen.getByText(/1 on this page/i)).toBeInTheDocument();
   });

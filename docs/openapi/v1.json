@@ -2666,6 +2666,17 @@
             "title": "Ecosystems",
             "type": "object"
           },
+          "mcp_server_configurations": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Server Configurations"
+          },
           "mcp_servers": {
             "title": "Mcp Servers",
             "type": "integer"

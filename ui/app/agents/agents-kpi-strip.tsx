@@ -40,6 +40,30 @@ export function useFallbackSummary(agents: Agent[]): AgentsSummary {
   };
 }
 
+/** A server summary carries unique servers plus configurations; an older one sums configured entries only. */
+function serversItem(summary: AgentsSummary) {
+  const remote = `${summary.remote_servers.toLocaleString()} remote`;
+  // An older server, and the full-list fallback, sum configured entries and carry no configuration count.
+  if (summary.mcp_server_configurations == null) {
+    return {
+      label: "MCP servers",
+      value: summary.mcp_servers,
+      icon: ASSET_KINDS.mcp_server.icon,
+      hint: scopedHint(CONFIGURED_COUNT_SCOPE.caption, remote),
+      title: CONFIGURED_COUNT_SCOPE.title,
+    };
+  }
+  return {
+    label: "Unique MCP servers",
+    value: summary.mcp_servers,
+    icon: ASSET_KINDS.mcp_server.icon,
+    hint: `${summary.mcp_server_configurations.toLocaleString()} server configurations · ${remote}`,
+    title: UNIQUE_SERVER_TITLE,
+  };
+}
+
+const UNIQUE_SERVER_TITLE = "Each MCP server once, as Asset inventory and the graph count it. Server configurations count it once per agent.";
+
 export function AgentsKpiStrip({
   summary,
   classCounts,
@@ -69,13 +93,7 @@ export function AgentsKpiStrip({
             : `${summary.configured.toLocaleString()} configured${summary.not_configured > 0 ? ` · ${summary.not_configured.toLocaleString()} not` : ""}`,
           title: agentsCountTitle(scope),
         },
-        {
-          label: "MCP servers",
-          value: summary.mcp_servers,
-          icon: ASSET_KINDS.mcp_server.icon,
-          hint: scopedHint(CONFIGURED_COUNT_SCOPE.caption, `${summary.remote_servers.toLocaleString()} remote`),
-          title: CONFIGURED_COUNT_SCOPE.title,
-        },
+        serversItem(summary),
         {
           label: PACKAGE_COUNT_SCOPE.references.label,
           value: summary.packages,

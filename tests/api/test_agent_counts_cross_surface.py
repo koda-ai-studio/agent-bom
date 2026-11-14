@@ -10,6 +10,7 @@ surface, and the per-row server counts must sum to the KPI total.
 from __future__ import annotations
 
 import json
+import shutil
 import time
 import uuid
 from collections.abc import Iterator
@@ -285,3 +286,81 @@ def test_framework_agent_definition_counts_the_same_on_every_surface(tmp_path: P
     roles = sorted((row["type"], row["role"]) for row in rows)
     assert roles.count(("agent", "framework_agent")) == 1 and roles.count(("agent", "agent")) == 3
     assert roles.count(("server", "other_server")) == 1 and roles.count(("server", "mcp_server")) == 4
+
+
+def _eval_fixture_project(root: Path, fixture: str) -> Path:
+    path = root / fixture
+    shutil.copytree(Path(__file__).resolve().parents[1] / "fixtures" / "eval_suites" / fixture, path)
+    for staged in path.rglob("*.fixture"):
+        staged.rename(staged.with_suffix(""))
+    return path
+
+
+def test_same_named_agents_from_two_projects_keep_their_own_graph_nodes(tmp_path: Path, push_estate: TestClient) -> None:
+    """Two projects pushed from one host never fold same-named agents into one node."""
+    from agent_bom.push import sanitize_results
+
+    uncovered = _eval_fixture_project(tmp_path, "uncovered_agent")
+    covered = _eval_fixture_project(tmp_path, "deepeval_safety")
+    for project in (uncovered, covered):
+        _post(push_estate, sanitize_results(_cli_report(tmp_path, project)))
+
+    discovery._clear_agents_response_cache_for_tests()
+    _settled_summary(push_estate, {})
+    listed = push_estate.get("/v1/agents?limit=50").json()["agents"]
+    graph = push_estate.get("/v1/graph?limit=1000").json()
+    agent_nodes = sorted(node["id"] for node in graph["nodes"] if node["entity_type"] == "agent")
+    canonical = {agent.get("canonical_id") or agent.get("stable_id") for agent in listed}
+    assert len(canonical) == len(listed) == 2, listed
+    assert len(agent_nodes) == 2, agent_nodes
+
+    evaluated = {edge["target"] for edge in graph["edges"] if edge["relationship"] == "evaluates"}
+    assert len(evaluated) == 1, evaluated
+
+
+def test_mixed_estate_counts_one_agent_population_on_every_surface(tmp_path: Path, push_estate: TestClient) -> None:
+    """MCP, pom-only, SDK-only, framework and eval projects: every surface counts the same agents."""
+    from agent_bom.push import sanitize_results
+
+    framework = _framework_project(tmp_path, "projL")
+    (framework / "agent.py").write_text(
+        "from langchain.agents import AgentExecutor\nagent = AgentExecutor(agent=None, tools=[])\n", encoding="utf-8"
+    )
+    projects = [
+        _project(tmp_path, "projA", mcp=True),
+        _project(tmp_path, "projM", mcp=True, pom=True, sdk=True),
+        _project(tmp_path, "pom", pom=True),
+        _project(tmp_path, "projC", sdk=True),
+        framework,
+        _eval_fixture_project(tmp_path, "uncovered_agent"),
+    ]
+    _post(push_estate, sanitize_results(_cli_report(tmp_path, *projects)))
+
+    counts = _surface_counts(push_estate)
+    inventory = push_estate.get("/v1/inventory?limit=200").json()
+    agents_page = {agent["name"] for agent in push_estate.get("/v1/agents?limit=200").json()["agents"]}
+    assert "project:pom" not in agents_page
+    assert sorted(agent["name"] for agent in inventory["agents"]) == sorted(agents_page)
+    assert inventory["total"] == counts["agents_page"]
+    assert counts["graph_agents"] == counts["inventory_agents"] == counts["map_agents"] == counts["agents_page"]
+    assert counts["graph_servers"] == counts["inventory_servers"] == counts["map_servers"] == counts["agents_page_servers"]
+    assert counts["graph_framework_agents"] == counts["inventory_framework_agents"] == counts["map_framework_agents"]
+
+
+def test_shared_remote_servers_count_unique_servers_on_every_surface(push_estate: TestClient) -> None:
+    """The scale estate's shape: agents share remote endpoints, so configurations outnumber servers."""
+    from scripts.generate_graph_benchmark_estate import generate_estate
+
+    report, _ = generate_estate(agents=400, seed=2145, vulnerable_package_rate=0.0)
+    configurations = sum(len(agent["mcp_servers"]) for agent in report["agents"])
+    _post(push_estate, report)
+
+    counts = _surface_counts(push_estate)
+    summary = push_estate.get("/v1/agents?limit=1").json()["summary"]
+    # The first graph page is capped, so count the projection the store persisted.
+    graph = build_unified_graph_from_report(report, scan_id="shared-servers")
+    graph_servers = sum(1 for node in graph.nodes.values() if node_role(node.entity_type, node.dimensions.to_dict()) == "mcp_server")
+    assert counts["agents_page"] == counts["inventory_agents"] == counts["map_agents"] == 400
+    assert summary["mcp_server_configurations"] == configurations
+    assert summary["mcp_servers"] < configurations
+    assert summary["mcp_servers"] == graph_servers == counts["inventory_servers"] == counts["map_servers"]

@@ -241,7 +241,11 @@ def agent_graph_id_for(record: Any, *, endpoint_scope: str = "") -> str:
     if _field(record, "source") == CORTEX_AGENT_SOURCE and isinstance(cortex, Mapping):
         if all(str(cortex.get(key) or "").strip() for key in ("database", "schema", "name")):
             return snowflake_cortex_agent_node_id(cortex.get("account"), cortex["database"], cortex["schema"], cortex["name"])
-    return agent_graph_id(_field(record, "name"), agent_identity_scope(record, endpoint_scope=endpoint_scope) or agent_config_scope(record))
+    # Endpoint scope + config scope (a push strips paths; the canonical receipt names the config): one node per agent.
+    identity = agent_identity_scope(record, endpoint_scope=endpoint_scope)
+    receipt = next((str(v) for k in ("canonical_id", "stable_id") if (v := _field(record, k))), "") if identity else ""
+    config = agent_config_scope(record) or (f"cfg-{hashlib.sha256(receipt.encode()).hexdigest()[:12]}" if receipt else "")
+    return agent_graph_id(_field(record, "name"), ".".join(part for part in (identity, config) if part))
 
 
 def agent_identity_location(record: Any) -> str:
@@ -325,7 +329,7 @@ def previous_agent_graph_ids(record: Any) -> list[str]:
     """Candidate old spellings; persistence rejects ambiguous alias bindings."""
     current = agent_graph_id_for(record)
     scope = agent_identity_scope(record)
-    previous = {_legacy_agent_graph_id(_field(record, "name"), scope)}
+    previous = {_legacy_agent_graph_id(_field(record, "name"), scope), agent_graph_id(_field(record, "name"), scope)}  # pre-config-scope
     if isinstance(record, Mapping) and isinstance(record.get("previous_graph_ids"), list):
         previous.update(value for value in record["previous_graph_ids"] if isinstance(value, str) and value)
         return sorted(previous - {current})

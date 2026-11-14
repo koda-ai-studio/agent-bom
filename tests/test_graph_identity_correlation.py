@@ -147,7 +147,8 @@ def test_pushed_credential_reach_finding_follows_the_rescoped_agent():
     ]
     graph = build_unified_graph_from_report(pushed, scan_id="s", tenant_id="t")
     agents = _ids(graph, EntityType.AGENT)
-    assert agents == [f"agent:src-1:{local_agent.rsplit(':', 1)[1]}"]
+    # The source scope joins the local config scope; the finding still follows the agent.
+    assert agents == [f"agent:src-1.{local_agent.removeprefix('agent:')}"]
     neighbors = _finding_neighbors(graph)
     assert agents[0] in neighbors
     assert set(_ids(graph, EntityType.CREDENTIAL)) <= neighbors

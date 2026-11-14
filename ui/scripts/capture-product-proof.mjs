@@ -11,6 +11,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./product-proof-scope.mjs";
 import { waitForOwnedServer } from "./product-proof-server.mjs";
+import { fitViewportToContent } from "./product-proof-fit.mjs";
 import { CREATED_AT, intelSourcesFixture, loadOverviewProof } from "./product-proof-fixtures.mjs";
 import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { AGENT_ARCHITECTURE_SCREENSHOTS, captureAgentArchitecture, installAgentArchitectureRoutes } from "./product-proof-agent-architecture.mjs";
@@ -2915,7 +2916,10 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       // remount graph surfaces after their first ready signal.
       await page.locator(options.readySelector).first().waitFor({ state: "visible", timeout: 30_000 });
     }
+    const viewport = page.viewportSize();
+    if (options.fitContentHeight) await fitViewportToContent(page, options.fitContentHeight);
     await page.screenshot({ path: path.join(captureOutputDir, filename), fullPage: false, animations: "disabled" });
+    if (options.fitContentHeight) await page.setViewportSize(viewport);
     console.log(`captured ${filename}`);
   } catch (error) {
     const failureDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-bom-capture-failure-"));
@@ -3976,6 +3980,7 @@ async function main() {
       expectedText: ["Package remediation plan", "next", "15.2.3", "CVE-2025-29927", "Campaign workflow and verification"],
       rejectedText: ["42.5% modeled window risk"],
       expectedApiPaths: ["/v1/findings/remediation"],
+      fitContentHeight: { selector: "main details", min: 480, pad: 32 },
     });
 
     const lightPage = await newCapturePage("light", { width: 1440, height: 980 });

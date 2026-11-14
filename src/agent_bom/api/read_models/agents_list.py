@@ -12,7 +12,10 @@ class AgentsSummary(ReadModel):
     agents: int
     configured: int
     not_configured: int
+    # Unique MCP servers, the graph and Inventory unit; agents sharing a remote endpoint count it once.
     mcp_servers: int
+    # Server entries across agent configs: one per agent that configures a server.
+    mcp_server_configurations: int | None = None
     remote_servers: int
     packages: int
     ecosystems: dict[str, int]

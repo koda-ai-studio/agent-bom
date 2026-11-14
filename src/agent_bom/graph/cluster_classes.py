@@ -113,6 +113,10 @@ _ROLE_GROUPS: dict[tuple[str, str], tuple[str, str]] = {
 }
 
 
+#: AI-layer groups the first frame always draws, however low their risk: the AI estate is the map's subject.
+PINNED_GROUP_KEYS: frozenset[str] = frozenset({"type:agent", "agent:framework", "type:model", "type:framework", "type:eval_suite"})
+
+
 @dataclass(frozen=True, slots=True)
 class GroupClass:
     key: str
@@ -146,7 +150,10 @@ def _classify(entity_type: str, severity: str, ecosystem: str, resource_type: st
     if kind in FINDING_TYPES:
         sev = SEVERITY_WORDS.get(severity_rank(severity), "none")
         bucket = sev if sev in FINDING_SEVERITIES else "unrated"
-        return GroupClass(f"finding:{bucket}", f"Findings · {bucket}", tier)
+        # Vulnerabilities apart from config and policy findings, as the Findings page's lanes split them.
+        if kind == "vulnerability":
+            return GroupClass(f"finding:{bucket}", f"Vulnerabilities · {bucket}", tier)
+        return GroupClass(f"finding:policy:{bucket}", f"Policy findings · {bucket}", tier)
     if kind == "cloud_resource":
         rtype = _clean(resource_type) or "untyped"
         return GroupClass(f"cloud_resource:{rtype}", f"Cloud resources · {rtype.replace('_', ' ')}", tier)
@@ -154,4 +161,4 @@ def _classify(entity_type: str, severity: str, ecosystem: str, resource_type: st
     return GroupClass(f"type:{kind}", label, tier)
 
 
-__all__ = ["FINDING_TYPES", "GroupClass", "RISKY_RANK", "SEVERITY_WORDS", "TIERS", "classify", "severity_rank"]
+__all__ = ["FINDING_TYPES", "PINNED_GROUP_KEYS", "GroupClass", "RISKY_RANK", "SEVERITY_WORDS", "TIERS", "classify", "severity_rank"]
