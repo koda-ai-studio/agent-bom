@@ -329,9 +329,18 @@ def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str
     return False
 
 
+def _record_exit_reason(ctx: Any, message: str) -> None:
+    # Callers may pass a partial stand-in context; recording a reason must never break the exit verdict.
+    reasons = getattr(ctx, "exit_reasons", None)
+    if not isinstance(reasons, list):
+        reasons = []
+        ctx.exit_reasons = reasons
+    reasons.append(message)
+
+
 def _exit_reason(ctx: ScanContext, quiet: bool, message: str) -> None:
     """Record why the scan exits non-zero; print it now unless -q, whose summary prints it instead."""
-    ctx.exit_reasons.append(message)
+    _record_exit_reason(ctx, message)
     if not quiet:
         ctx.con.print("\n  [red]Exiting with code 1: [/red]", end="")
         ctx.con.print(message, style="red", markup=False, highlight=False)
@@ -509,7 +518,7 @@ def compute_exit_code(
             exit_code = 1
 
     if not ctx.policy_passed:
-        ctx.exit_reasons.append("policy check failed (the policy results list the failing rules)")
+        _record_exit_reason(ctx, "policy check failed (the policy results list the failing rules)")
         exit_code = 1
 
     # A requested cloud provider that hard-failed discovery or benchmarking
