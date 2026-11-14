@@ -264,3 +264,9 @@ def test_facade_merge_preserves_existing_and_clear() -> None:
     assert resolve_exec_score_config(tenant).display_format == "percent"
 
     set_tenant_score_config_store(InMemoryTenantScoreConfigStore())
+
+
+def test_summary_names_credential_exposure_by_what_it_counts() -> None:
+    result = compute_exec_score(severity=_sev(high=30), exposure=24)
+    assert "24 on credential-bearing servers" in result["summary"], result["summary"]
+    assert "touch secrets" not in result["summary"]
