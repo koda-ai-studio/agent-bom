@@ -204,7 +204,7 @@ async def receive_cohort_push(body: PushPayload, *, tenant_id: str, cohort_id: s
         raise
     except Exception as exc:  # noqa: BLE001
         await push.release_unless_done()
-        _logger.error("Correlation cohort result commit failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Correlation cohort result commit failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         raise HTTPException(status_code=503, detail="Correlation cohort result could not be committed") from exc
     finally:
         if push.heartbeat is not None:

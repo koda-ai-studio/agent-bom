@@ -301,7 +301,7 @@ def _release_scan_idempotency_claim(
             owner_token=owner_token,
         )
     except Exception as exc:  # noqa: BLE001
-        _logger.error("Scan idempotency rollback failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Scan idempotency rollback failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
 
 
 async def _wait_for_idempotent_job(

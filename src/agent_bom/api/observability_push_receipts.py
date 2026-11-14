@@ -54,7 +54,7 @@ def _release_push_idempotency_claim(
             owner_token=owner_token,
         )
     except Exception as exc:  # noqa: BLE001
-        _logger.error("Push idempotency rollback failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Push idempotency rollback failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
 
 
 def _pushed_job_receipt(job: ScanJob, *, prewarm_tenant: str | None = None) -> dict[str, Any]:
@@ -144,7 +144,7 @@ def _release_cohort_push_claim(*, tenant_id: str, source_id: str, child_id: str,
             owner_token=owner_token,
         )
     except Exception as exc:  # noqa: BLE001
-        _logger.error("Cohort push idempotency rollback failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Cohort push idempotency rollback failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
 
 
 def _cohort_push_response(child: ScanJob, parent: ScanJob) -> dict[str, Any]:
