@@ -118,9 +118,19 @@ def schedule_exec_prewarm(tenant_id: str) -> bool:
     return True
 
 
+def wait_idle(timeout: float) -> bool:
+    """Wait for the warm-up worker to finish, at most ``timeout`` seconds; True when none is running."""
+    with _LOCK:
+        worker = _WORKER
+    if worker is None:
+        return True
+    worker.join(timeout)
+    return not worker.is_alive()
+
+
 def pending_exec_prewarms() -> set[str]:
     with _LOCK:
         return set(_PENDING)
 
 
-__all__ = ["EXEC_READS", "exec_prewarm_enabled", "pending_exec_prewarms", "schedule_exec_prewarm", "warm_exec_reads"]
+__all__ = ["EXEC_READS", "exec_prewarm_enabled", "pending_exec_prewarms", "schedule_exec_prewarm", "wait_idle", "warm_exec_reads"]

@@ -270,8 +270,15 @@ def test_openapi_documents_the_retryable_rotation_response_on_get_graph():
     assert "current_estate_generation_rotating" in response["description"]
 
 
-def _replay_source_during_assembly(estate, *, times: int) -> list[int]:
-    """Re-push the source scan while the projection loads it, so its revision moves mid-assembly."""
+def _replay_source_during_assembly(estate, monkeypatch, *, times: int) -> list[int]:
+    """Re-push the source scan while the projection loads it, so its revision moves mid-assembly.
+
+    Loading is the load-and-rewrite path; the SQL copy of a one-source view is
+    held to the same rule by ``test_evidence_replaced_before_the_copy_is_not_promoted``.
+    """
+    from agent_bom.api import current_graph_copy
+
+    monkeypatch.setattr(current_graph_copy, "copy_single_source", lambda *args, **kwargs: False)
     graph_store = estate[1]
     load = graph_store.load_graph
     replays: list[int] = []
@@ -283,23 +290,23 @@ def _replay_source_during_assembly(estate, *, times: int) -> list[int]:
             record(estate, 8, "repo-a", f"package-replay-{len(replays)}", tenant=kwargs.get("tenant_id", TENANT))
         return graph
 
-    graph_store.load_graph = replaying  # type: ignore[method-assign]
+    monkeypatch.setattr(graph_store, "load_graph", replaying)
     return replays
 
 
-def test_evidence_replaced_during_assembly_rebuilds_from_fresh_evidence_not_a_conflict(estate):
+def test_evidence_replaced_during_assembly_rebuilds_from_fresh_evidence_not_a_conflict(estate, monkeypatch):
     record(estate, 8, "repo-a", "package-a")
     store = CurrentGraphStore(estate[1], estate[0])
-    replays = _replay_source_during_assembly(estate, times=1)
+    replays = _replay_source_during_assembly(estate, monkeypatch, times=1)
     graph = store.load_graph(tenant_id=TENANT)
     assert replays == [1]
     assert set(graph.nodes) == {"package-replay-1"}
 
 
-def test_evidence_that_keeps_moving_during_assembly_is_retryable_not_a_conflict(estate):
+def test_evidence_that_keeps_moving_during_assembly_is_retryable_not_a_conflict(estate, monkeypatch):
     record(estate, 8, "repo-a", "package-a")
     store = CurrentGraphStore(estate[1], estate[0])
-    _replay_source_during_assembly(estate, times=100)
+    _replay_source_during_assembly(estate, monkeypatch, times=100)
     with pytest.raises(HTTPException) as exc:
         store.load_graph(tenant_id=TENANT)
     assert exc.value.status_code == 503
@@ -307,13 +314,34 @@ def test_evidence_that_keeps_moving_during_assembly_is_retryable_not_a_conflict(
     assert exc.value.detail["code"] == "current_estate_generation_rotating"
 
 
-def test_get_graph_answers_assembly_churn_with_503_retry_after(estate):
+def test_evidence_replaced_before_the_copy_is_not_promoted(estate, monkeypatch):
+    from agent_bom.api import current_graph_copy
+
+    record(estate, 8, "repo-a", "package-a")
+    store = CurrentGraphStore(estate[1], estate[0])
+    original = current_graph_copy.copy_single_source
+    outcomes: list[bool] = []
+
+    def replaying(*args, **kwargs):
+        if not outcomes:
+            record(estate, 8, "repo-a", "package-replay-1")
+        outcomes.append(result := original(*args, **kwargs))
+        return result
+
+    monkeypatch.setattr(current_graph_copy, "copy_single_source", replaying)
+    graph = store.load_graph(tenant_id=TENANT)
+    # The copy that read the replaced revision declined; nothing stale was promoted.
+    assert outcomes[0] is False
+    assert set(graph.nodes) == {"package-replay-1"}
+
+
+def test_get_graph_answers_assembly_churn_with_503_retry_after(estate, monkeypatch):
     from starlette.testclient import TestClient
 
     from agent_bom.api.server import app
 
     record(estate, 8, "repo-a", "package-a", tenant="default")
-    _replay_source_during_assembly(estate, times=100)
+    _replay_source_during_assembly(estate, monkeypatch, times=100)
     response = TestClient(app).get("/v1/graph", params={"limit": 10})
     assert response.status_code == 503, response.text
     assert response.headers["Retry-After"] == "1"

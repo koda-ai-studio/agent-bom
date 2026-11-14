@@ -1,5 +1,6 @@
 """Databricks SQL transport: bound values, bounded writes, honest outcomes."""
 
+import itertools
 import json
 
 import httpx
@@ -149,7 +150,7 @@ def test_default_export_factory_uses_statement_transport(monkeypatch):
 
 def test_pending_statement_is_cancelled_at_deadline_but_not_claimed_rolled_back(monkeypatch):
     calls = []
-    times = iter([0, 121])
+    times = itertools.chain([0, 121], itertools.repeat(121))
     monkeypatch.setattr("agent_bom.export.databricks_statement.time.monotonic", lambda: next(times))
 
     def handler(request):

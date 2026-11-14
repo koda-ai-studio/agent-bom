@@ -35,6 +35,7 @@ from starlette.requests import Request
 from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.config import _bool
+from agent_bom.core.background_yield import background_work
 
 _logger = logging.getLogger(__name__)
 
@@ -182,13 +183,26 @@ def _precompute_loop() -> None:
         try:
             from agent_bom.api.exec_posture import precompute_posture_evidence
 
-            run_tenant_bound(tenant_id, precompute_posture_evidence, tenant_id)
+            with background_work():
+                run_tenant_bound(tenant_id, precompute_posture_evidence, tenant_id)
         except Exception:  # noqa: BLE001
             _logger.warning("posture counts precompute failed; reads compute on demand", exc_info=False)
         finally:
             with _PRECOMPUTE_COND:
                 _PRECOMPUTE_RUNNING.discard(tenant_id)
                 _PRECOMPUTE_COND.notify_all()
+
+
+def wait_for_running_posture_precompute(timeout: float) -> bool:
+    """Block until no precompute is running (debounced pending ones may follow); ``False`` on timeout."""
+    deadline = time.monotonic() + timeout
+    with _PRECOMPUTE_COND:
+        while _PRECOMPUTE_RUNNING:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            _PRECOMPUTE_COND.wait(remaining)
+    return True
 
 
 def wait_for_posture_precompute(timeout: float) -> bool:
@@ -212,5 +226,6 @@ __all__ = [
     "issue_counts_fingerprint",
     "posture_precompute_enabled",
     "schedule_posture_precompute",
+    "wait_for_running_posture_precompute",
     "wait_for_posture_precompute",
 ]

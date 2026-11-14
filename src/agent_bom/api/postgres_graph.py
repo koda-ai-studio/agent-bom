@@ -24,6 +24,7 @@ from agent_bom.api.graph_store import (
 )
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 from agent_bom.config import POSTGRES_GRAPH_SEARCH_TIMEOUT_MS, POSTGRES_STATEMENT_TIMEOUT_MS
+from agent_bom.core.background_yield import yielding
 from agent_bom.db.graph_revision import ensure_postgres_read_revision, revision_tokens
 from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
@@ -411,7 +412,7 @@ class PostgresGraphStore(
                 query += " ORDER BY id"
 
             node_ids: set[str] = set()
-            for row in conn.execute(query, params).fetchall():
+            for row in yielding(conn.execute(query, params).fetchall()):
                 graph.add_node(self._node_from_row(row))
                 node_ids.add(row[0])
 
@@ -440,7 +441,7 @@ class PostgresGraphStore(
                 edge_params.extend(sorted(relationship_types))
             edge_query += " ORDER BY source_id, target_id, relationship, source_run_id NULLS FIRST, activity_id NULLS FIRST"
 
-            for row in conn.execute(edge_query, edge_params).fetchall():
+            for row in yielding(conn.execute(edge_query, edge_params).fetchall()):
                 if row[0] not in node_ids or row[1] not in node_ids:
                     continue
                 graph.add_stored_edge(

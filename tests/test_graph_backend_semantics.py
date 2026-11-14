@@ -395,7 +395,7 @@ class TestNodeBudgetBoundsTheRead:
             conn.close()
 
         assert len(loaded.nodes) == 10
-        graph_edge_steps = [step for step in plan if "graph_edges" in step or "idx_ge_tenant_scan_source" in step]
+        graph_edge_steps = [step for step in plan if "graph_edges" in step or "idx_ge_adjacency_out" in step]
         assert graph_edge_steps, plan
         assert all("source_id=?" in step or "rowid=?" in step for step in graph_edge_steps), (
             f"budgeted load still reads the whole edge snapshot: {graph_edge_steps}"

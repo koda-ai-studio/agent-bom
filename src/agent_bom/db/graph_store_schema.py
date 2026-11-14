@@ -33,6 +33,7 @@ __all__ = [
 if TYPE_CHECKING:
     pass
 
+from agent_bom.core.background_yield import pause_for_requests
 from agent_bom.core.settings import env_raw
 from agent_bom.db.graph_node_aliases import NODE_ALIASES_DDL
 from agent_bom.graph import (
@@ -225,25 +226,26 @@ CREATE INDEX IF NOT EXISTS idx_ge_source ON graph_edges(source_id);
 CREATE INDEX IF NOT EXISTS idx_ge_target ON graph_edges(target_id);
 CREATE INDEX IF NOT EXISTS idx_ge_rel ON graph_edges(relationship);
 CREATE INDEX IF NOT EXISTS idx_ge_scan ON graph_edges(scan_id);
-CREATE INDEX IF NOT EXISTS idx_ge_tenant_scan ON graph_edges(tenant_id, scan_id);
 -- Frontier lookup for every incremental walk (traverse_subgraph, bfs_paths,
 -- impact_of): "which edges touch these node ids, in this snapshot?", asked
 -- once per visited node. The single-column idx_ge_source/idx_ge_target cannot
--- serve it -- they carry no tenant/scan prefix, so the planner fell back to
--- idx_ge_tenant_scan and read EVERY edge of the snapshot on EVERY hop, making
--- the walk cost visited x snapshot_edges. These mirror the Postgres store's
--- idx_pg_graph_edges_scan_source / _scan_target.
+-- serve it -- they carry no tenant/scan prefix, so without these the planner
+-- read EVERY edge of the snapshot on EVERY hop, making the walk cost
+-- visited x snapshot_edges.
 --
 -- The indexes are necessary but NOT sufficient: SQLite will not drive them
 -- from a single (source_id IN ... OR target_id IN ...) disjunction, which is
 -- why the query is written as a UNION of two endpoint-anchored branches.
 -- Together: 7,127us -> 26us per hop on an 80,181-node snapshot. Created here
 -- rather than in a migration block because _init_db replays this script on
--- every open, so existing stores pick them up too.
-CREATE INDEX IF NOT EXISTS idx_ge_tenant_scan_source ON graph_edges(tenant_id, scan_id, source_id);
-CREATE INDEX IF NOT EXISTS idx_ge_tenant_scan_target ON graph_edges(tenant_id, scan_id, target_id);
+-- every open, so existing stores pick them up too. Their leading columns also
+-- serve every (tenant_id, scan_id) and (tenant_id, scan_id, endpoint) lookup,
+-- so the copies older stores carry are dropped below.
 CREATE INDEX IF NOT EXISTS idx_ge_adjacency_out ON graph_edges(tenant_id, scan_id, source_id, target_id, relationship);
 CREATE INDEX IF NOT EXISTS idx_ge_adjacency_in ON graph_edges(tenant_id, scan_id, target_id, source_id, relationship);
+DROP INDEX IF EXISTS idx_ge_tenant_scan;
+DROP INDEX IF EXISTS idx_ge_tenant_scan_source;
+DROP INDEX IF EXISTS idx_ge_tenant_scan_target;
 
 -- ── Snapshots ──
 CREATE TABLE IF NOT EXISTS graph_snapshots (
@@ -538,6 +540,7 @@ def _executemany_batched(
     for batch in _batched_rows(rows, batch_size):
         conn.executemany(sql, batch)
         total += len(batch)
+        pause_for_requests()
     return total
 
 

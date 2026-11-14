@@ -82,11 +82,14 @@ profile and its migration procedure. Do not reuse the unpublished v0.112.0 tag.
 - **Railway.** Railway stops reading `railway.json` on 2026-12-01. Migrate the
   OAuth MCP service (`railway config migrate`) or set its Dockerfile path to
   `deploy/docker/Dockerfile.sse` before then.
-- **Persistence.** Apply Postgres migrations through `20261112_01`.
+- **Persistence.** Apply Postgres migrations through `20261113_01`.
   `20261111_01` drops six unused indexes `CONCURRENTLY` (its downgrade
   recreates them); `20261112_01` raises a bounded `agent_bom_app` connection
   limit (1 to 99) to 100. A limit of 0, a role you locked on purpose, is kept
-  and the migration logs a warning.
+  and the migration logs a warning. `20261113_01` drops the two `graph_edges`
+  indexes that repeat the leading columns of `idx_pg_graph_edges_snapshot_key`,
+  also `CONCURRENTLY`. SQLite graph stores drop their three equivalent indexes
+  the next time the API opens them.
 
 ## Earlier changes from 0.113.2
 

@@ -63,8 +63,6 @@ _GRAPH_TABLES_DDL: tuple[str, ...] = (
                     PRIMARY KEY (source_id, target_id, relationship, scan_id, tenant_id)
                 )
                 """,
-    "CREATE INDEX IF NOT EXISTS idx_pg_graph_edges_scan ON graph_edges(tenant_id, scan_id)",
-    "CREATE INDEX IF NOT EXISTS idx_pg_graph_edges_scan_source ON graph_edges(tenant_id, scan_id, source_id)",
     "CREATE INDEX IF NOT EXISTS idx_pg_graph_edges_snapshot_key ON graph_edges(tenant_id, scan_id, source_id, target_id, relationship)",
     "CREATE INDEX IF NOT EXISTS idx_pg_graph_edges_scan_target ON graph_edges(tenant_id, scan_id, target_id)",
     "CREATE INDEX IF NOT EXISTS idx_pg_adjacency_out ON graph_edges(tenant_id, scan_id, "

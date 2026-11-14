@@ -92,11 +92,13 @@ def test_a_push_commit_queues_the_current_graph_rebuild_without_waiting(queue, m
     assert observability.schedule_current_graph_rebuild("tenant-a") is True
     assert time.monotonic() - began < 0.5
     assert store.started.wait(5)
-    # A second commit for the same tenant coalesces onto the queued build.
-    assert observability.schedule_current_graph_rebuild("tenant-a") is True
+    # The running build read the older evidence: further commits collapse into
+    # exactly one trailing rebuild, never one per commit.
+    for _ in range(3):
+        assert observability.schedule_current_graph_rebuild("tenant-a") is True
     store.release.set()
     assert queue.wait_idle(5)
-    assert store.built == ["tenant-a"]
+    assert store.built == ["tenant-a", "tenant-a"]
 
 
 def test_a_store_without_current_graphs_is_left_alone(queue):

@@ -11,7 +11,6 @@ import shutil
 import sys
 import tempfile
 import types
-from concurrent.futures import wait
 from pathlib import Path
 from typing import Any
 
@@ -601,17 +600,22 @@ def _drain_graph_warmups() -> None:
     # A scan commit queues background readers that resolve the active stores.
     # Finish them before restoring those stores: otherwise an earlier test's
     # warm-up can read the next test's graph and alter its cache/load counts.
-    for name in ("agent_bom.api.graph_rollup_prewarm", "agent_bom.api.finding_reachability_prewarm"):
+    for name in (
+        "agent_bom.api.graph_rollup_prewarm",
+        "agent_bom.api.finding_reachability_prewarm",
+        "agent_bom.api.exec_read_prewarm",
+    ):
         module = sys.modules.get(name)
         if module is not None:
             assert module.wait_idle(10), f"Background graph warm-up did not finish: {name}"
+    posture = sys.modules.get("agent_bom.api.posture_counts_cache")
+    if posture is not None:
+        assert posture.wait_for_running_posture_precompute(10), "Posture precompute did not finish"
     # Current-estate refresh has its own queue. Drain it before fixture cleanup
     # restores store pointers or another performance test starts measuring.
     module = sys.modules.get("agent_bom.api.current_graph_builds")
     if module is not None:
-        with module._QUEUE.lock:
-            pending = list(module._QUEUE.pending.values())
-        assert not wait(pending, timeout=10).not_done, "Current graph projection build did not finish"
+        assert module._QUEUE.wait_idle(10), "Current graph projection build did not finish"
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
