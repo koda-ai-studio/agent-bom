@@ -170,3 +170,42 @@ def test_the_middleware_counts_estate_reads_for_their_duration(gauge) -> None:
 )
 def test_the_childs_pause_receipt_is_read_defensively(stdout, expected) -> None:
     assert child._paused_seconds(stdout) == expected
+
+
+def test_a_read_waiting_on_the_build_does_not_hold_the_build_back(gauge, monkeypatch) -> None:
+    """A cold read waits for the build; counting it would make the copy yield to its own waiter."""
+    import threading
+
+    from agent_bom.api import current_graph_builds
+
+    reader = CopyThrottle(gauge.gauge_path())
+    seen: list[int] = []
+    release = threading.Event()
+
+    class Store:
+        def _current_id(self, tenant):
+            seen.append(reader.readers())
+            release.set()
+            return "generation"
+
+    queue = current_graph_builds.CurrentBuildQueue()
+    monkeypatch.setattr(current_graph_builds, "_QUEUE", queue)
+    try:
+        with gauge.counted_read():
+            assert reader.readers() == 1
+            assert current_graph_builds.await_current_build(Store(), "tenant", seconds=5) == "generation"
+            assert reader.readers() == 1, "the read counts again once it stops waiting"
+        assert reader.readers() == 0
+    finally:
+        queue.executor.shutdown(wait=True)
+    assert seen == [0], "while the read waited on the build it was not counted"
+
+
+def test_an_uncounted_caller_waiting_on_the_build_changes_nothing(gauge) -> None:
+    reader = CopyThrottle(gauge.gauge_path())
+    gauge.enter()  # another request in flight
+    try:
+        with gauge.waiting_on_build():
+            assert reader.readers() == 1
+    finally:
+        gauge.leave()

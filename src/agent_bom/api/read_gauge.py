@@ -25,7 +25,9 @@ import os
 import struct
 import tempfile
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from time import monotonic as _monotonic
 from time import sleep as _sleep
 
@@ -41,6 +43,8 @@ _SIZE = struct.calcsize(_FORMAT)
 _lock = threading.Lock()
 _count = 0
 _gauge: tuple[str, mmap.mmap] | None = None
+# Whether the current request is counted; it follows the request into worker threads.
+_counted: ContextVar[bool] = ContextVar("estate_read_counted", default=False)
 
 
 def counts(path: str) -> bool:
@@ -65,6 +69,38 @@ def leave() -> None:
     with _lock:
         _count -= 1
         _publish()
+
+
+@contextmanager
+def counted_read() -> Iterator[None]:
+    """Count this request as an estate read for its duration (the API middleware)."""
+    token = _counted.set(True)
+    enter()
+    try:
+        yield
+    finally:
+        if _counted.get():
+            leave()
+        _counted.reset(token)
+
+
+@contextmanager
+def waiting_on_build() -> Iterator[None]:
+    """Stop counting this request while it waits on a current-graph build.
+
+    A cold read waits for the build it triggered; still counting it would make
+    the copy yield to its own waiter.
+    """
+    if not _counted.get():
+        yield
+        return
+    leave()
+    token = _counted.set(False)
+    try:
+        yield
+    finally:
+        _counted.reset(token)
+        enter()
 
 
 def gauge_path() -> str:

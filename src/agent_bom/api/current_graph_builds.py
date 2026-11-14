@@ -15,6 +15,7 @@ from typing import Any, cast
 
 from starlette.exceptions import HTTPException
 
+from agent_bom.api import read_gauge
 from agent_bom.api.finding_read_context import cached_read, finding_read_scope, read_once
 from agent_bom.api.tenant_worker import submit_tenant_bound
 from agent_bom.core.settings import env_raw
@@ -163,9 +164,10 @@ def schedule_current_rebuild(store: Any, tenant_id: str) -> bool:
 
 def await_current_build(store: Any, tenant: str, *, seconds: float, prepared: tuple[Any, ...] | None = None) -> str | None:
     """Wait only the request budget; a timeout leaves admitted work running."""
-    future = _QUEUE.submit(store, tenant, prepared)
-    if future is None or not wait([future], timeout=seconds).done:
-        return None
+    with read_gauge.waiting_on_build():
+        future = _QUEUE.submit(store, tenant, prepared)
+        if future is None or not wait([future], timeout=seconds).done:
+            return None
     try:
         return future.result()
     except HTTPException:

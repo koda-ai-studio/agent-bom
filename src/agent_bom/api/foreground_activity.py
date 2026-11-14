@@ -10,6 +10,7 @@ starve the work. State is per process, which matches the GIL it protects.
 from __future__ import annotations
 
 import threading
+from contextlib import nullcontext
 from time import monotonic as _monotonic
 from typing import Any
 
@@ -87,11 +88,8 @@ class ForegroundActivityMiddleware:
 
         estate_read = read_gauge.counts(str(scope.get("path") or ""))
         _enter()
-        if estate_read:
-            read_gauge.enter()
         try:
-            await admit(self.app, scope, receive, send)
+            with read_gauge.counted_read() if estate_read else nullcontext():
+                await admit(self.app, scope, receive, send)
         finally:
-            if estate_read:
-                read_gauge.leave()
             _leave()
