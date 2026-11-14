@@ -69,6 +69,7 @@ class FindingType(str, Enum):
     SENSITIVE_DATA = "SENSITIVE_DATA"  # Content-confirmed sensitive data at rest (DSPM object/database sampling)
     PII_EXPOSURE = "PII_EXPOSURE"  # Personal data literal committed in source/config (not a credential)
     SHADOW_AI = "SHADOW_AI"  # Agent or tool observed at runtime with no exact inventory match
+    EVAL_COVERAGE_GAP = "EVAL_COVERAGE_GAP"  # High-risk agent with no linked safety/red-team eval in the scanned files
 
 
 class FindingSource(str, Enum):
@@ -91,6 +92,7 @@ class FindingSource(str, Enum):
     GRAPH_ANALYSIS = "GRAPH_ANALYSIS"  # graph-level correlation (toxic combinations, attack-path fusion)
     DSPM = "DSPM"  # data security posture content classifier (S3/GCS/Azure Blob/database sampling)
     MODEL_SCAN = "MODEL_SCAN"  # static model-artifact safety scanner
+    EVAL_SCAN = "EVAL_SCAN"  # eval-suite detection over project files (read-only, never executed)
 
 
 @dataclass(frozen=True)

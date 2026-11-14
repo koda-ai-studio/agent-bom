@@ -13727,7 +13727,7 @@ export interface components {
          * @description Node entity types, mapped to OCSF classes.
          * @enum {string}
          */
-        EntityType: "agent" | "server" | "package" | "tool" | "tool_call" | "model" | "dataset" | "framework" | "container" | "cloud_resource" | "resource" | "source_file" | "code_module" | "config_file" | "external_import" | "ci_job" | "directory" | "vulnerability" | "misconfiguration" | "credential" | "credential_ref" | "org" | "account" | "user" | "group" | "role" | "policy" | "service_account" | "service_principal" | "federated_identity" | "managed_identity" | "access_grant" | "access_policy" | "blueprint" | "drift_incident" | "data_store" | "api_gateway" | "application" | "provider" | "environment" | "fleet" | "cluster";
+        EntityType: "agent" | "server" | "package" | "tool" | "tool_call" | "model" | "dataset" | "framework" | "eval_suite" | "container" | "cloud_resource" | "resource" | "source_file" | "code_module" | "config_file" | "external_import" | "ci_job" | "directory" | "vulnerability" | "misconfiguration" | "credential" | "credential_ref" | "org" | "account" | "user" | "group" | "role" | "policy" | "service_account" | "service_principal" | "federated_identity" | "managed_identity" | "access_grant" | "access_policy" | "blueprint" | "drift_incident" | "data_store" | "api_gateway" | "application" | "provider" | "environment" | "fleet" | "cluster";
         /**
          * ErrorBody
          * @description Stable machine-readable error: branch on ``code``, show ``message``.
@@ -19298,6 +19298,7 @@ export interface components {
             dynamic_edges: boolean;
             /** Entry */
             entry: boolean;
+            eval_coverage?: components["schemas"]["HarnessEvalCoverage"] | null;
             /** File Path */
             file_path: string;
             /** Framework */
@@ -19367,6 +19368,64 @@ export interface components {
              * @constant
              */
             provenance: "declared";
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * HarnessEvalCoverage
+         * @description Eval suites linked to the agent; ``assessed`` is false when the scan did not search the project for evals.
+         */
+        HarnessEvalCoverage: {
+            /** Assessed */
+            assessed: boolean;
+            /** Safety Suites */
+            safety_suites: number;
+            /** Status */
+            status: string;
+            /** Suites */
+            suites: components["schemas"]["HarnessEvalSuite"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * HarnessEvalResult
+         * @description Results an eval run wrote into the project, with the file they came from and its recorded date.
+         */
+        HarnessEvalResult: {
+            /** Errors */
+            errors: number;
+            /** Failed */
+            failed: number;
+            /** Pass Rate */
+            pass_rate?: number | null;
+            /** Passed */
+            passed: number;
+            /** Recorded At */
+            recorded_at: string;
+            /** Source */
+            source: string;
+            /** Source File */
+            source_file: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** HarnessEvalSuite */
+        HarnessEvalSuite: {
+            /** File Path */
+            file_path: string;
+            /** Harness */
+            harness: string;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "safety" | "quality" | "unknown";
+            /** Results */
+            results: components["schemas"]["HarnessEvalResult"][];
         } & {
             [key: string]: unknown;
         };
@@ -23281,7 +23340,7 @@ export interface components {
          * @description Edge relationship types across all graph surfaces.
          * @enum {string}
          */
-        RelationshipType: "platform_for" | "hosts" | "hosted_on" | "uses" | "uses_framework" | "depends_on" | "provides_tool" | "exposes_cred" | "reaches_tool" | "serves_model" | "contains" | "imports" | "defines" | "runs" | "configures" | "observes" | "affects" | "vulnerable_to" | "exploitable_via" | "remediates" | "triggers" | "shares_server" | "shares_cred" | "lateral_path" | "manages" | "owns" | "part_of" | "member_of" | "assumes" | "trusts" | "attached" | "inherits" | "can_access" | "cross_account_trust" | "authenticates_as" | "scoped_to" | "governs" | "exhibits_drift" | "exposed_to" | "stores" | "has_permission" | "protects" | "acted_as" | "invoked" | "called" | "used_credential" | "accessed" | "delegated_to" | "trace_step" | "recorded_activity" | "correlates_with" | "possibly_correlates_with" | "belongs_to";
+        RelationshipType: "platform_for" | "hosts" | "hosted_on" | "uses" | "uses_framework" | "depends_on" | "provides_tool" | "exposes_cred" | "reaches_tool" | "serves_model" | "contains" | "imports" | "defines" | "runs" | "configures" | "observes" | "affects" | "vulnerable_to" | "exploitable_via" | "remediates" | "triggers" | "shares_server" | "shares_cred" | "lateral_path" | "manages" | "owns" | "part_of" | "member_of" | "assumes" | "trusts" | "attached" | "inherits" | "can_access" | "cross_account_trust" | "authenticates_as" | "scoped_to" | "governs" | "exhibits_drift" | "evaluates" | "exposed_to" | "stores" | "has_permission" | "protects" | "acted_as" | "invoked" | "called" | "used_credential" | "accessed" | "delegated_to" | "trace_step" | "recorded_activity" | "correlates_with" | "possibly_correlates_with" | "belongs_to";
         /** RemediationImpact */
         RemediationImpact: {
             /** Controls Fixed */

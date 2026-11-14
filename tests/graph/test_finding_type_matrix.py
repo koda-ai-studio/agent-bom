@@ -34,6 +34,7 @@ from agent_bom.graph.types import EntityType
 
 PRODUCERS: dict[FindingType, tuple[str, ...]] = {
     FindingType.SHADOW_AI: ("shadow",),
+    FindingType.EVAL_COVERAGE_GAP: ("evals",),
     FindingType.CVE: ("demo", "securityhub"),
     FindingType.CIS_FAIL: ("cloud",),
     FindingType.IAC_MISCONFIGURATION: ("iac",),

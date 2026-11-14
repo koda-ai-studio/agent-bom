@@ -24,6 +24,7 @@ ENTITY_OCSF_MAP: dict[str, dict[str, int]] = {
     EntityType.MODEL: {"category_uid": 5, "class_uid": 4001},
     EntityType.DATASET: {"category_uid": 5, "class_uid": 4001},
     EntityType.FRAMEWORK: {"category_uid": 5, "class_uid": 4001},
+    EntityType.EVAL_SUITE: {"category_uid": 5, "class_uid": 4001},
     EntityType.CONTAINER: {"category_uid": 5, "class_uid": 4001},
     EntityType.CLOUD_RESOURCE: {"category_uid": 5, "class_uid": 4001},
     EntityType.RESOURCE: {"category_uid": 5, "class_uid": 4001},

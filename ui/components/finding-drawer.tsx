@@ -25,6 +25,7 @@ import { Drawer } from "@/components/drawer";
 import { DetailTabs } from "@/components/detail-tabs";
 import { FindingReconfirmation } from "@/components/finding-reconfirmation";
 import { AIAdviceSection } from "@/components/ai-advice";
+import { EvalCoverageEvidencePanel } from "@/components/eval-coverage-panel";
 import {
   findingsDrawerEyebrow,
   findingsDrawerSubtitle,
@@ -263,6 +264,7 @@ function EvidenceTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
     <div className="space-y-4">
       <FindingReconfirmation finding={vuln} />
       <EstateNodeSection vuln={vuln} graphScanId={graphScanId} />
+      {vuln.eval_coverage ? <Panel title="Safety eval coverage"><EvalCoverageEvidencePanel evidence={vuln.eval_coverage} /></Panel> : null}
       <IntelligencePanel vuln={vuln} />
       <ReachBadges vuln={vuln} />
       <Panel title="Affected scope">

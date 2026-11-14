@@ -23,6 +23,9 @@ class EntityType(str, Enum):
     # AI orchestration / observability stack (LangChain, LangGraph, Langfuse, …)
     # First-class BOM entity — not only metadata on agents/packages.
     FRAMEWORK = "framework"
+    # An eval suite read from project files (promptfoo, deepeval, Inspect, ...);
+    # EVALUATES edges link it to the agents and models it targets.
+    EVAL_SUITE = "eval_suite"
     CONTAINER = "container"
     CLOUD_RESOURCE = "cloud_resource"
     RESOURCE = "resource"

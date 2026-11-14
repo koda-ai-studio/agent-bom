@@ -660,24 +660,20 @@ class AIBOMReport:
         base.extend(finding for finding in self._ast_flow_findings() if finding.id not in ast_existing)
         cis_existing = existing_ids | {getattr(f, "id", None) for f in base}
         base.extend(finding for finding in self._cloud_cis_findings() if finding.id not in cis_existing)
-        toxic_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._toxic_combination_findings() if finding.id not in toxic_existing)
-        nhi_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._nhi_governance_findings() if finding.id not in nhi_existing)
-        ciem_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._ciem_over_privilege_findings() if finding.id not in ciem_existing)
-        enforcement_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._enforcement_findings() if finding.id not in enforcement_existing)
-        mcp_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._mcp_tool_rule_findings() if finding.id not in mcp_existing)
-        iac_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._iac_findings() if finding.id not in iac_existing)
-        gov_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._snowflake_governance_findings() if finding.id not in gov_existing)
-        org_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._cloud_org_architecture_findings() if finding.id not in org_existing)
-        malicious_existing = {getattr(f, "id", None) for f in base}
-        base.extend(finding for finding in self._malicious_package_findings() if finding.id not in malicious_existing)
+        for producer in (
+            self._toxic_combination_findings,
+            self._nhi_governance_findings,
+            self._ciem_over_privilege_findings,
+            self._enforcement_findings,
+            self._mcp_tool_rule_findings,
+            self._iac_findings,
+            self._snowflake_governance_findings,
+            self._cloud_org_architecture_findings,
+            self._malicious_package_findings,
+            self._eval_coverage_findings,
+        ):
+            present = {getattr(f, "id", None) for f in base}
+            base.extend(finding for finding in producer() if finding.id not in present)
         from agent_bom.domain.finding_merge import merge_external_code_findings
 
         base = merge_external_code_findings(base)
@@ -685,6 +681,11 @@ class AIBOMReport:
         if self.codeowners:
             apply_codeowners(base, self.codeowners)
         return base
+
+    def _eval_coverage_findings(self) -> "list[Finding]":
+        from agent_bom.ai_components.eval_coverage import eval_coverage_findings
+
+        return eval_coverage_findings(self.ai_inventory_data)
 
     def _malicious_package_findings(self) -> "list[Finding]":
         """Malicious/typosquat packages with no CVE BlastRadius row."""

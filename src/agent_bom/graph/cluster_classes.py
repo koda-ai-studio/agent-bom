@@ -31,7 +31,7 @@ TIERS: tuple[str, ...] = (
 
 _TIER_OF_TYPE: dict[str, int] = {
     **dict.fromkeys(("provider", "org", "account", "environment", "fleet"), 0),
-    **dict.fromkeys(("agent", "model", "framework", "application", "user", "group"), 1),
+    **dict.fromkeys(("agent", "model", "framework", "eval_suite", "application", "user", "group"), 1),
     **dict.fromkeys(("server", "tool", "tool_call", "resource", "api_gateway"), 2),
     "package": 3,
     **dict.fromkeys(tuple(FINDING_TYPES), 4),
@@ -64,6 +64,7 @@ _TYPE_LABELS: dict[str, str] = {
     "agent": "Agents",
     "model": "Models",
     "framework": "Frameworks",
+    "eval_suite": "Eval suites",
     "application": "Applications",
     "user": "Users",
     "group": "Groups",

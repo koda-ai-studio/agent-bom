@@ -1,0 +1,10 @@
+{
+  "evalId": "eval-fixture-0001",
+  "results": {
+    "version": 3,
+    "timestamp": "2026-10-02T14:30:00.000Z",
+    "results": [],
+    "prompts": [],
+    "stats": {"successes": 46, "failures": 4, "errors": 0, "tokenUsage": {}}
+  }
+}

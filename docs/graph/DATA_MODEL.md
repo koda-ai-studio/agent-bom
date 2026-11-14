@@ -13,15 +13,15 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 
 | Domain | Entity types | Relationships inside | To other domains | Detail |
 |---|---|---|---|---|
-| AI and agents | `agent`, `application`, `blueprint`, `framework`, `server`, `tool`, `tool_call` | 22 | 35 | [ERD and relationships](data-model/domains/ai.md) |
+| AI and agents | `agent`, `application`, `blueprint`, `eval_suite`, `framework`, `server`, `tool`, `tool_call` | 23 | 36 | [ERD and relationships](data-model/domains/ai.md) |
 | Code and supply chain | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `package`, `source_file` | 7 | 14 | [ERD and relationships](data-model/domains/supply.md) |
 | Findings | `drift_incident`, `misconfiguration`, `vulnerability` | 1 | 9 | [ERD and relationships](data-model/domains/findings.md) |
-| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 13 | 25 | [ERD and relationships](data-model/domains/cloud.md) |
+| Cloud, infrastructure and data | `api_gateway`, `cloud_resource`, `cluster`, `container`, `data_store`, `dataset`, `environment`, `fleet`, `model`, `provider`, `resource` | 13 | 26 | [ERD and relationships](data-model/domains/cloud.md) |
 | Identity and access | `access_grant`, `access_policy`, `account`, `credential`, `credential_ref`, `federated_identity`, `group`, `managed_identity`, `org`, `policy`, `role`, `service_account`, `service_principal`, `user` | 17 | 25 | [ERD and relationships](data-model/domains/identity.md) |
 
 ## Entities
 
-42 entity types (`agent_bom.core.entity_types.EntityType`). Emitting modules are found by a static scan for call sites that pass the literal enum member; see [entities](data-model/entities.md) for the module list and node id formats.
+43 entity types (`agent_bom.core.entity_types.EntityType`). Emitting modules are found by a static scan for call sites that pass the literal enum member; see [entities](data-model/entities.md) for the module list and node id formats.
 
 | Entity | Label | Domain | Semantic layer | OCSF category / class | Finding | Emitting modules |
 |---|---|---|---|---|---|---|
@@ -45,6 +45,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `directory` | Directory | Code and supply chain | `code` | 5 / 4001 |  | 6 |
 | `drift_incident` | Drift Incident | Findings | `finding` | 2 / 2004 | yes | 1 |
 | `environment` | Environment | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 0 (+2 demo) |
+| `eval_suite` | Eval Suite | AI and agents | `orchestration` | 5 / 4001 |  | 1 |
 | `external_import` | External Import | Code and supply chain | `code` | 5 / 4001 |  | 1 |
 | `federated_identity` | Federated Identity | Identity and access | `identity` | 3 / 3001 |  | 2 |
 | `fleet` | Fleet | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 1 |
@@ -52,7 +53,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 | `group` | Group | Identity and access | `identity` | 3 / 3001 |  | 4 |
 | `managed_identity` | Managed Identity | Identity and access | `identity` | 3 / 3001 |  | 8 |
 | `misconfiguration` | Misconfiguration | Findings | `finding` | 2 / 2003 | yes | 9 (+3 demo) |
-| `model` | Model | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 (+1 demo) |
+| `model` | Model | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 4 (+1 demo) |
 | `org` | Organization | Identity and access | `identity` | 3 / 3001 |  | 6 (+2 demo) |
 | `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 6 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |
@@ -70,7 +71,7 @@ Entity types grouped into domains by each type's semantic layer (`graph/containe
 
 ## Relationships
 
-53 relationship types, one `RelationshipSpec` each (`agent_bom.graph.relationship_specs`). Source and target kinds are the spec's `source_types` / `target_types`; the exact allowed pairs are in [relationship pairs](data-model/relationships.md). *Traversable* is the default for the attack-path view (`UnifiedGraph.attack_path_view` keeps traversable edges only).
+54 relationship types, one `RelationshipSpec` each (`agent_bom.graph.relationship_specs`). Source and target kinds are the spec's `source_types` / `target_types`; the exact allowed pairs are in [relationship pairs](data-model/relationships.md). *Traversable* is the default for the attack-path view (`UnifiedGraph.attack_path_view` keeps traversable edges only).
 
 Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Dependency reach (blast radius) · **LT** Toxic-combination lateral reach · **MT** ATT&CK / ATLAS hop mapping · **RT** Runtime-observed path evidence.
 
@@ -92,6 +93,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `defines` | `structural` | code_topology | directed | yes | `source_file` | `ci_job`, `code_module`, `tool` | 3 | — | 6 |
 | `delegated_to` | `runtime` | runtime | directed | yes | `agent` | `agent` | 1 | RT | 1 |
 | `depends_on` | `dependency` | inventory | directed | yes | `ci_job`, `cloud_resource`, `code_module`, `config_file`, `container`, `data_store` (+6 more) | `ci_job`, `cloud_resource`, `code_module`, `container`, `data_store`, `package` | 15 | FU, BR | 14 (+2 demo) |
+| `evaluates` | `governance` | governance | directed | no | `eval_suite` | `agent`, `model` | 2 | — | 1 |
 | `exhibits_drift` | `governance` | governance | bidirectional | yes | `agent` | `drift_incident` | 1 | — | 1 |
 | `exploitable_via` | `finding` | vulnerability | directed | yes | `misconfiguration`, `vulnerability` | `credential`, `tool` | 4 | FU | 1 (+1 demo) |
 | `exposed_to` | `exposure` | exposure | directed | yes | `agent`, `api_gateway`, `cloud_resource`, `container`, `data_store`, `server` | `account`, `agent`, `cloud_resource`, `container`, `data_store`, `resource` | 21 | FU | 4 (+2 demo) |
@@ -142,7 +144,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `runtime` | `accessed`, `acted_as`, `called`, `delegated_to`, `invoked`, `trace_step`, `used_credential` |
 | `correlation` | `correlates_with`, `possibly_correlates_with`, `recorded_activity`, `shares_cred`, `shares_server` |
 | `derived` | `lateral_path` |
-| `governance` | `exhibits_drift`, `governs`, `manages`, `owns`, `protects`, `scoped_to` |
+| `governance` | `evaluates`, `exhibits_drift`, `governs`, `manages`, `owns`, `protects`, `scoped_to` |
 
 ### Analysis edge sets
 
@@ -166,7 +168,7 @@ Every edge carries `evidence.source` (the collector) and `evidence.tier` (`agent
 | `modeled_infrastructure` | Configuration read from a provider or inventory API. | `ai-inventory`, `aws-organizations`, `cloud-cis`, `cloud-inventory`, `cloud-rbac`, `cloud-security`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `gcp-organizations`, `nhi-discovery`, `snowflake-cortex-agents`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `vendor-inventory-export` |
 | `recorded` | Logs, audit trails, usage history or attestations recorded the activity. | `access-advisor`, `authorization-evidence`, `cloud-audit-trail`, `cortex-agent-usage`, `dspm`, `external-import`, `governance-overlay`, `hardware-attestation-ingest`, `kubernetes`, `mcp-audit`, `operator_reported_timestamps`, `persisted-runtime-activity`, `snowflake-governance`, `tpm-quote`, `warehouse-export` |
 | `runtime_observed` | The runtime proxy, gateway or feedback loop observed it live. | `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `snowflake-cortex-observability` |
-| `static_scan` | A scanner read files, manifests or source. | `agent_discovery`, `aspm-overlay`, `ast_analysis`, `browser-extension-scan`, `ci_graph_overlay`, `code_graph_overlay`, `container-scan`, `filesystem-scan`, `framework-agent`, `github-actions`, `iac`, `mcp-scan`, `model-scan`, `prompt-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `sast`, `sbom-ingest`, `secret-scan`, `skill-audit`, `source-ast` |
+| `static_scan` | A scanner read files, manifests or source. | `agent_discovery`, `aspm-overlay`, `ast_analysis`, `browser-extension-scan`, `ci_graph_overlay`, `code_graph_overlay`, `container-scan`, `eval-scan`, `filesystem-scan`, `framework-agent`, `github-actions`, `iac`, `mcp-scan`, `model-scan`, `prompt-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `sast`, `sbom-ingest`, `secret-scan`, `skill-audit`, `source-ast` |
 
 Collectors that set their tier at the call site (`edge_evidence(source, tier)`), outside the registry:
 
@@ -191,6 +193,7 @@ Findings (`agent_bom.finding.Finding`) are linked to graph nodes by `graph/asset
 | `COMBINATION` | `graph/credential_findings.py`, `graph/toxic_findings.py` |
 | `CREDENTIAL_EXPOSURE` | `graph/finding_projection.py`, `graph/nhi_governance.py` |
 | `CVE` | `graph/blast_reach.py` |
+| `EVAL_COVERAGE_GAP` | `graph/eval_projection.py` |
 | `EXFILTRATION` | — |
 | `IAC_MISCONFIGURATION` | — |
 | `INJECTION` | — |
@@ -215,6 +218,7 @@ Findings (`agent_bom.finding.Finding`) are linked to graph nodes by `graph/asset
 | `CLOUD_SECURITY` | `cloud-security` | `modeled_infrastructure` |
 | `CONTAINER` | — | — |
 | `DSPM` | `dspm` | `recorded` |
+| `EVAL_SCAN` | `eval-scan` | `static_scan` |
 | `EXTERNAL` | — | — |
 | `FILESYSTEM` | — | — |
 | `GRAPH_ANALYSIS` | — | — |

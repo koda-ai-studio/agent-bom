@@ -1,3 +1,4 @@
+import { parseEvalCoverageEvidence } from "@/lib/eval-coverage";
 import type { Vulnerability, UnifiedFinding } from "@/lib/api";
 import { uniqueStrings, type EnrichedVuln } from "@/lib/findings-view";
 import type { LaneFinding } from "@/components/finding-lane-table";
@@ -111,6 +112,7 @@ export function collectUnifiedFindings(findings: UnifiedFinding[]): LaneFinding[
       attack_vector_summary: raw.attack_vector_summary ?? (finding.network_exploitable ? "Network exploitable" : undefined),
       impact_category: finding.impact_category ?? finding.finding_type,
       finding_type: finding.finding_type,
+      eval_coverage: parseEvalCoverageEvidence(finding.finding_type, evidence) ?? undefined,
       finding_class: finding.finding_class,
       risk_score: finding.risk_score ?? undefined,
       is_direct: finding.is_direct ?? undefined,

@@ -134,6 +134,30 @@ def _agent_row(node: Any, placement: HarnessPlacement) -> dict[str, Any]:
         "tools": [name for name in _names(attrs.get("capabilities")) if name != "state-graph"],
         "credential_refs": _names(attrs.get("credential_refs")),
         "dynamic_edges": bool(attrs.get("dynamic_edges")),
+        "eval_coverage": _eval_coverage(attrs.get("eval_coverage")),
+    }
+
+
+def _eval_coverage(raw: Any) -> dict[str, Any]:
+    """The agent's linked eval suites; ``assessed`` is false when the scan did not search for evals."""
+    if not isinstance(raw, dict):
+        return {"assessed": False, "status": "not_run", "safety_suites": 0, "suites": []}
+    suites = [suite for suite in raw.get("suites") or [] if isinstance(suite, dict)][:MAX_LIST_ITEMS]
+    return {
+        "assessed": bool(raw.get("assessed")),
+        "status": str(raw.get("status") or ""),
+        "safety_suites": int(raw.get("safety_suites") or 0),
+        "suites": [
+            {
+                "id": str(suite.get("id") or ""),
+                "harness": str(suite.get("harness") or ""),
+                "name": str(suite.get("name") or ""),
+                "purpose": str(suite.get("purpose") or "unknown"),
+                "file_path": str(suite.get("file_path") or ""),
+                "results": [result for result in suite.get("results") or [] if isinstance(result, dict)],
+            }
+            for suite in suites
+        ],
     }
 
 
