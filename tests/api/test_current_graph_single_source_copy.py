@@ -155,8 +155,10 @@ def _break(source: Path, sql: str) -> None:
         # A source whose stored path index is not the current derivation must be rebuilt.
         "UPDATE graph_snapshots SET analysis_status = json_remove(analysis_status, '$.paths') WHERE tenant_id = ?",
         # Agent context written before it stamped its own snapshot on unscanned edges.
-        "UPDATE graph_nodes SET attributes = json_set(attributes, '$.agent_context.platforms.items[0].source_scan_id', '') "
-        "WHERE entity_type = 'agent' AND json_extract(attributes, '$.agent_context.platforms.items[0]') IS NOT NULL AND tenant_id = ?",
+        (
+            "UPDATE graph_nodes SET attributes = json_set(attributes, '$.agent_context.platforms.items[0].source_scan_id', '') "
+            + "WHERE entity_type = 'agent' AND json_extract(attributes, '$.agent_context.platforms.items[0]') IS NOT NULL AND tenant_id = ?"
+        ),
     ],
     ids=["no-agent-context", "stale-path-index", "unstamped-agent-context"],
 )
