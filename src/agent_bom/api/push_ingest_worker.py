@@ -43,7 +43,7 @@ def notify_push_committed(tenant_id: str) -> None:
         try:
             listener(tenant_id)
         except Exception as exc:  # noqa: BLE001  # broad-except: a warm-up hook must never fail a committed ingest
-            _logger.warning("Push commit listener failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+            _logger.warning("Push commit listener failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
 
 
 def is_push_ingest_job(job: ScanJob) -> bool:
@@ -72,7 +72,7 @@ def _graph_snapshot_exists(tenant_id: str, scan_id: str) -> bool:
     try:
         _resolved, generation = _get_graph_store().snapshot_identity(tenant_id=tenant_id, scan_id=scan_id)
     except Exception as exc:  # noqa: BLE001 - unknown backend state must never authorize a delete
-        _logger.warning("Graph snapshot pre-check unavailable: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.warning("Graph snapshot pre-check unavailable: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         return True
     return bool(generation)
 
@@ -100,7 +100,7 @@ def _record_ingest_failure(store: Any, job: ScanJob, result: dict, *, graph_scan
         try:
             _get_graph_store().delete_snapshot(tenant_id=job.tenant_id, scan_id=graph_scan_id, expected_generation=generation)
         except Exception as exc:  # noqa: BLE001  # broad-except: rollback is best effort; the failure is recorded on the job
-            _logger.error("Graph rollback failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+            _logger.error("Graph rollback failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
     result.pop("graph_persistence", None)
     job.status = JobStatus.FAILED
     job.completed_at = _now()
@@ -151,7 +151,7 @@ def run_push_ingest(job: ScanJob) -> None:
     try:
         result = _normalized_result(current)
     except Exception as exc:  # noqa: BLE001 - an unparseable admission is recorded as a failed ingest
-        _logger.error("Admitted push could not be normalized: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.error("Admitted push could not be normalized: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         _record_ingest_failure(store, current, {}, graph_scan_id=current.job_id, generation="", preexisted=True)
         return
     graph_scan_id = str(result.get("scan_id") or current.job_id)
@@ -167,7 +167,7 @@ def run_push_ingest(job: ScanJob) -> None:
             current.progress.append("Ingest committed")
             _store_pushed_job(store, current)
         except Exception as exc:  # noqa: BLE001  # broad-except: the job row records the failure and the client retries by key
-            _logger.error("Asynchronous push ingest failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+            _logger.error("Asynchronous push ingest failed: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
             _record_ingest_failure(store, current, result, graph_scan_id=graph_scan_id, generation=generation, preexisted=preexisted)
             return
         _record_push_trend(current, result, source_id=current.source_id, target_scope=result.get("target_scope"))

@@ -13,12 +13,13 @@ def _integrity(monkeypatch, store):
     return audit_integrity(SimpleNamespace(state=SimpleNamespace(tenant_id="default")), limit=1000, include_runtime=False)
 
 
-def test_key_identity_setup_preserves_first_signature_warning(monkeypatch, tmp_path, caplog):
+def test_key_identity_setup_and_signing_leave_the_warning_to_server_startup(monkeypatch, tmp_path, caplog):
     monkeypatch.setattr(audit_log, "_HMAC_ENV_KEY", None)
     monkeypatch.setattr(audit_log, "_EPHEMERAL_KEY_WARNED", False)
     store = audit_log.SQLiteAuditLog(str(tmp_path / "warning.db"))
-    assert not audit_log._EPHEMERAL_KEY_WARNED
     store.append(audit_log.AuditEntry(action="test.first"))
+    assert "AGENT_BOM_AUDIT_HMAC_KEY" not in caplog.text
+    audit_log.warn_if_ephemeral_hmac_key(durable=True)
     assert audit_log._EPHEMERAL_KEY_WARNED
     assert "AGENT_BOM_AUDIT_HMAC_KEY" in caplog.text
 

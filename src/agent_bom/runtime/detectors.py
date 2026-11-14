@@ -38,6 +38,7 @@ from agent_bom.runtime.patterns import (
 from agent_bom.runtime.patterns import (
     PII_PATTERNS as _PII_PATTERNS,
 )
+from agent_bom.runtime.pii_numbers import pii_matches, redact_pii_matches
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
 
@@ -338,7 +339,7 @@ class CredentialLeakDetector:
                 )
         # PII detection
         for pii_name, pattern in _PII_PATTERNS:
-            matches = pattern.findall(response_text)
+            matches = pii_matches(pii_name, pattern, response_text)
             if matches:
                 alerts.append(
                     Alert(
@@ -365,7 +366,7 @@ class CredentialLeakDetector:
         for cred_name, pattern in CREDENTIAL_PATTERNS:
             result = pattern.sub(f"[REDACTED:{cred_name}]", result)
         for pii_name, pattern in _PII_PATTERNS:
-            result = pattern.sub(f"[REDACTED:{pii_name}]", result)
+            result = redact_pii_matches(pii_name, pattern, result, f"[REDACTED:{pii_name}]")
         return result
 
 

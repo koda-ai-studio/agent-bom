@@ -29,6 +29,7 @@ import {
 import { getOsvVulnerabilityUrl } from "@/lib/vulnerabilities";
 import { controlLabels, triageForFinding } from "@/lib/findings-workspace";
 import { humanizeEnum } from "@/lib/enum-labels";
+import { readableNodeId } from "@/lib/node-id-tail";
 import { reachabilitySource, reachabilitySourceLabel } from "@/lib/reachability-source";
 import { formatProbabilityPercent } from "@/lib/probability-format";
 
@@ -53,7 +54,7 @@ function ReachabilityBadge({
     const viaLabel = source ? ` · via ${reachabilitySourceLabel(source)}` : "";
     return (
       <span
-        title={source ? `An inbound graph path from ${source} reaches this finding` : "An inbound graph path reaches this finding"}
+        title={source ? `An inbound graph path from ${readableNodeId(source)} reaches this finding` : "An inbound graph path reaches this finding"}
         className="text-xs font-mono bg-[color:var(--severity-medium-bg)] border border-[color:var(--severity-medium-border)] text-[color:var(--severity-medium)] rounded px-1.5 py-0.5"
       >
         Reachable{hopLabel}{viaLabel}

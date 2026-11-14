@@ -18,9 +18,6 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
-# ---------------------------------------------------------------------------
-# Reuse existing pattern libraries
-# ---------------------------------------------------------------------------
 from agent_bom.parsers.prompt_scanner import (
     _INJECTION_PATTERNS,
     _SECRET_PATTERNS,
@@ -28,6 +25,13 @@ from agent_bom.parsers.prompt_scanner import (
     _TOOL_POISONING_PATTERNS,
     _UNSAFE_INSTRUCTION_PATTERNS,
 )
+
+# ---------------------------------------------------------------------------
+# Reuse existing pattern libraries
+# ---------------------------------------------------------------------------
+from agent_bom.runtime.pii_numbers import NUMBER_END as _NUM_END
+from agent_bom.runtime.pii_numbers import NUMBER_START as _NUM_START
+from agent_bom.runtime.pii_numbers import luhn_valid, redact_pii_matches
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -77,12 +81,12 @@ _PII_PATTERNS: list[tuple[re.Pattern, str, str]] = [
         "high",
     ),
     (
-        re.compile(r"\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})\b"),
+        re.compile(_NUM_START + r"(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})" + _NUM_END),
         "credit_card",
         "high",
     ),
     (
-        re.compile(r"\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b"),
+        re.compile(_NUM_START + r"(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}" + _NUM_END),
         "phone",
         "medium",
     ),
@@ -264,6 +268,10 @@ def _redact_excerpt(match_text: str, max_len: int = _EXCERPT_TAIL) -> str:
     return _EXCERPT_MASK + match_text[-tail:]
 
 
+def _value_valid(rule_id: str, value: str) -> bool:
+    return luhn_valid(value) if rule_id == "credit_card" else True
+
+
 def _scan_patterns(
     text: str,
     patterns: list[tuple[re.Pattern, str, str]],
@@ -273,7 +281,7 @@ def _scan_patterns(
     """Run a list of (regex, rule_id, severity) patterns against text."""
     results: list[ScanResult] = []
     for regex, rule_id, severity in patterns:
-        m = regex.search(text)
+        m = next((hit for hit in regex.finditer(text) if _value_valid(rule_id, hit.group(0))), None)
         if m:
             results.append(
                 ScanResult(
@@ -430,7 +438,12 @@ def _redact_emails(text: str) -> str:
 def redact_pii(text: str) -> str:
     """Replace PII matches with ``[REDACTED:<type>]`` placeholders."""
     for regex, pii_type, _severity in _PII_PATTERNS:
-        text = _redact_emails(text) if pii_type == "email" else regex.sub(f"[REDACTED:{pii_type}]", text)
+        if pii_type == "email":
+            text = _redact_emails(text)
+        elif pii_type == "credit_card":
+            text = redact_pii_matches(pii_type, regex, text, f"[REDACTED:{pii_type}]", valid=luhn_valid)
+        else:
+            text = regex.sub(f"[REDACTED:{pii_type}]", text)
     return text
 
 

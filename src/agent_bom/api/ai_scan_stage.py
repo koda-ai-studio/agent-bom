@@ -32,6 +32,6 @@ def run_advisory_ai(ctx: Any, report: Any) -> None:
             run_ai_enrichment_sync(report, model=control_plane_model(req.ai_model), deterministic=req.ai_deterministic)
     except Exception as ai_exc:  # noqa: BLE001
         failed = True
-        _logger.warning("Advisory AI enrichment skipped: %s", sanitize_text(sanitize_error(ai_exc, generic=True)))
+        _logger.warning("Advisory AI enrichment skipped: %s: %s", type(ai_exc).__name__, sanitize_text(sanitize_error(ai_exc)))
         ctx.progress("Advisory AI enrichment skipped")
     persist_scan_assessments(tenant_id, scan_id, report, failed=failed)

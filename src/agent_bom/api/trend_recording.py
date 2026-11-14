@@ -197,6 +197,6 @@ def record_scan_trend_best_effort(
         retain_open_interval(point, store.get_history(limit=365, tenant_id=point.tenant_id))
         store.record(point)
     except Exception as exc:  # noqa: BLE001 - trend history must not fail a completed scan
-        _logger.warning("Posture trend persistence skipped: %s", sanitize_text(sanitize_error(exc, generic=True)))
+        _logger.warning("Posture trend persistence skipped: %s: %s", type(exc).__name__, sanitize_text(sanitize_error(exc)))
         return False
     return True
