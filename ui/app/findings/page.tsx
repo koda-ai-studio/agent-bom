@@ -48,6 +48,7 @@ import { Bug,ClipboardCheck,Loader2,SlidersHorizontal,X } from "lucide-react";
 import { usePathname,useRouter,useSearchParams } from "next/navigation";
 import { Suspense,useCallback,useEffect,useMemo,useRef,useState } from "react";
 import { DEFAULT_FINDINGS_WINDOW_DAYS } from "@/lib/findings-default-query";
+import { FindingsKevFilterNote, useKevOnlyParam } from "@/components/findings/findings-kev-filter";
 
 const REACHABILITY_FILTERS: ReachabilityFilter[] = ["", "reachable", "unreachable", "unassessed"];
 const TRIAGE_FILTERS: TriageFilter[] = ["", "not_affected", "affected", "under_investigation", "untriaged"];
@@ -69,8 +70,6 @@ function triageKey(vulnerabilityId: string, packageName: string) {
 
 // Security-domain facets (issue #3946). Map 1:1 to the overview coverage lanes
 // so drilling from a coverage lane lands on the matching findings filter.
-// Default read-window (#4009): findings default to the last ~90 days so counts
-// are honestly scoped, with an explicit widen-to-all option.
 export default function FindingsPageWrapper() {
   return (
     <Suspense fallback={
@@ -121,10 +120,7 @@ function FindingsPage() {
   const paramStatus = parseFindingStatus(searchParams.get("status"));
   const [statusFilter, setStatusFilter] = useState<FindingStatusFilter>(paramStatus);
   useEffect(() => { setStatusFilter(paramStatus); }, [paramStatus]);
-  // The Overview KEV chip links here with kev=1; the list must show the same known-exploited issues it counted.
-  const paramKev = ["1", "true"].includes(searchParams.get("kev") ?? "");
-  const [kevOnly, setKevOnly] = useState(paramKev);
-  useEffect(() => { setKevOnly(paramKev); }, [paramKev]);
+  const [kevOnly, setKevOnly] = useKevOnlyParam(searchParams);
   const paramContext = searchParams.get("path_context") ?? "";
   const [pathContextFilter, setPathContextFilter] = useState(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : "");
   useEffect(() => { setPathContextFilter(Object.hasOwn(CONTEXT_LABELS, paramContext) ? paramContext : ""); }, [paramContext]);
@@ -529,7 +525,7 @@ function FindingsPage() {
           ...(frameworkFilter.trim() ? { framework: frameworkFilter.trim() } : {}),
           ...(frameworkFilter.trim() && controlFilter.trim() ? { control: controlFilter.trim() } : {}),
           ...(issueTypeFilter !== "all" ? { findingClass: issueTypeFilter } : {}),
-        ...(kevOnly ? { kev: true } : {}),
+          ...(kevOnly ? { kev: true } : {}),
           ...(lane !== "all" ? { lane } : {}),
           sort: serverFindingsSort(sortKey),
           limit: PAGE_SIZE,
@@ -732,12 +728,7 @@ function FindingsPage() {
   return (
     <div className="space-y-6">
       {exceptionError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{exceptionError}</p>}
-      {kevOnly && (
-        <p data-testid="findings-kev-filter" className="flex flex-wrap items-center gap-2 text-xs text-ink-secondary">
-          Known-exploited (CISA KEV) findings only
-          <button type="button" className="underline hover:text-foreground" onClick={() => setKevOnly(false)}>Show all findings</button>
-        </p>
-      )}
+      {kevOnly && <FindingsKevFilterNote onClear={() => setKevOnly(false)} />}
       <PageLaneHeader
         lane="command"
         title="Findings"
