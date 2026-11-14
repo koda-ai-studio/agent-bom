@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from itertools import islice
 from typing import Any
 
-from agent_bom.core.background_yield import pause_for_requests
 from agent_bom.db.graph_node_aliases import write_node_aliases
 from agent_bom.db.graph_node_search import ensure_search_index, write_node_search_batch
 from agent_bom.db.graph_revision import revision_tokens
@@ -149,7 +148,6 @@ def _write_nodes(
             _node_rows(batch, stats, scan=scan, tenant=tenant),
         )
         write_node_search_batch(conn, batch, tenant_id=tenant, scan_id=scan)
-        pause_for_requests()
 
 
 def _edge_rows(edges: Iterable[UnifiedEdge], stats: _SnapshotStats, *, scan: str, tenant: str, now: str) -> Iterator[tuple[Any, ...]]:

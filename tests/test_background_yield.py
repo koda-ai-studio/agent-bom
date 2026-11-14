@@ -118,8 +118,12 @@ def test_the_warm_up_slot_marks_its_thread_as_background() -> None:
     assert seen == [True, False]
 
 
-def test_current_graph_builds_run_as_background_work() -> None:
-    """The post-push build is the heaviest background loop; its yield points must be live."""
+def test_the_current_graph_rebuild_runs_at_full_speed() -> None:
+    """Pausing the rebuild for requests stretched its contention across every read after a push.
+
+    On a 4-vCPU runner at 5,000 agents on PostgreSQL that doubled the median graph
+    read (0.76 s to 1.85 s), so the rebuild is not deferrable background work.
+    """
     from agent_bom.api.current_graph_builds import CurrentBuildQueue
 
     seen: list[bool] = []
@@ -134,100 +138,4 @@ def test_current_graph_builds_run_as_background_work() -> None:
         assert queue.submit(Store(), "alpha").result(timeout=5) == "alpha"
     finally:
         queue.executor.shutdown(wait=True)
-    assert seen == [True]
-
-
-def test_a_request_waiting_on_background_work_does_not_hold_it_back() -> None:
-    """A read blocked on the build it needs must not make that build pause for it."""
-    foreground_activity.reset()
-    foreground_activity._enter()
-    try:
-        assert foreground_activity.requests_in_flight()
-        with foreground_activity.awaiting_background():
-            assert foreground_activity.requests_in_flight(), "a waiter outside a request masks nothing"
-        marker = foreground_activity._in_request.set(True)
-        with foreground_activity.awaiting_background():
-            assert not foreground_activity.requests_in_flight()
-            foreground_activity._enter()
-            try:
-                assert foreground_activity.requests_in_flight(), "another request still counts"
-            finally:
-                foreground_activity._leave()
-        foreground_activity._in_request.reset(marker)
-        assert foreground_activity.requests_in_flight()
-    finally:
-        foreground_activity._leave()
-    assert not foreground_activity.requests_in_flight()
-
-
-def test_awaiting_a_build_stands_aside_for_it(monkeypatch) -> None:
-    from agent_bom.api import current_graph_builds
-
-    seen: list[bool] = []
-
-    class Store:
-        def _current_id(self, tenant: str) -> str:
-            deadline = time.monotonic() + 2
-            while foreground_activity.requests_in_flight() and time.monotonic() < deadline:
-                time.sleep(0.01)
-            seen.append(foreground_activity.requests_in_flight())
-            return tenant
-
-    queue = current_graph_builds.CurrentBuildQueue(workers=1, capacity=2)
-    monkeypatch.setattr(current_graph_builds, "_QUEUE", queue)
-    foreground_activity.reset()
-    foreground_activity._enter()
-    marker = foreground_activity._in_request.set(True)
-    try:
-        assert current_graph_builds.await_current_build(Store(), "alpha", seconds=5) == "alpha"
-        assert foreground_activity.requests_in_flight()
-    finally:
-        foreground_activity._in_request.reset(marker)
-        foreground_activity._leave()
-        queue.executor.shutdown(wait=True)
     assert seen == [False]
-
-
-def test_sqlite_projection_writes_pause_between_batches(tmp_path, monkeypatch) -> None:
-    from agent_bom.api.graph_store import SQLiteGraphStore
-    from agent_bom.db import graph_store, graph_store_schema, graph_store_write
-    from agent_bom.graph import EntityType, UnifiedEdge, UnifiedGraph, UnifiedNode
-    from agent_bom.graph.types import RelationshipType
-
-    pauses: list[str] = []
-    monkeypatch.setattr(graph_store, "_graph_write_batch_size", lambda: 10)
-    monkeypatch.setattr(graph_store_write, "pause_for_requests", lambda: pauses.append("nodes"))
-    monkeypatch.setattr(graph_store_schema, "pause_for_requests", lambda: pauses.append("rows"))
-    graph = UnifiedGraph(scan_id="scan-1", tenant_id="tenant-a")
-    for index in range(30):
-        graph.add_node(UnifiedNode(id=f"package:{index}", entity_type=EntityType.PACKAGE, label=f"p{index}"))
-    for index in range(29):
-        graph.add_edge(UnifiedEdge(source=f"package:{index}", target=f"package:{index + 1}", relationship=RelationshipType.DEPENDS_ON))
-    SQLiteGraphStore(str(tmp_path / "graph.db")).save_graph(graph)
-    assert pauses.count("nodes") >= 3
-    assert pauses.count("rows") >= 3
-
-
-def test_postgres_graph_load_yields_while_decoding_rows(monkeypatch) -> None:
-    from tests.test_postgres_graph_streaming import _FakeCursor, _make_store, _RecordingConn
-
-    node_rows = [
-        (f"agent:{index}", "agent", f"Agent {index}", 1, 1, 1, "active", 1.0, "low", 2, "2026-07-19T00:00:00Z", "2026-07-19T00:00:00Z")
-        + ({}, [], [], {})
-        for index in range(1200)
-    ]
-
-    class _LoadConn(_RecordingConn):
-        def execute(self, sql, params=None):
-            low = " ".join(sql.strip().lower().split())
-            if low.startswith("select created_at, analysis_status from graph_snapshots"):
-                return _FakeCursor([("2026-07-19T00:00:00Z", None)])
-            if "from graph_nodes" in low and low.startswith("select id, entity_type"):
-                return _FakeCursor(node_rows)
-            return super().execute(sql, params)
-
-    pauses: list[int] = []
-    monkeypatch.setattr(background_yield, "pause_for_requests", lambda: pauses.append(1))
-    graph = _make_store(_LoadConn(), monkeypatch).load_graph(tenant_id="tenant-a", scan_id="scan-1")
-    assert len(graph.nodes) == 1200
-    assert len(pauses) >= 2

@@ -33,7 +33,6 @@ __all__ = [
 if TYPE_CHECKING:
     pass
 
-from agent_bom.core.background_yield import pause_for_requests
 from agent_bom.core.settings import env_raw
 from agent_bom.db.graph_node_aliases import NODE_ALIASES_DDL
 from agent_bom.graph import (
@@ -540,7 +539,6 @@ def _executemany_batched(
     for batch in _batched_rows(rows, batch_size):
         conn.executemany(sql, batch)
         total += len(batch)
-        pause_for_requests()
     return total
 
 

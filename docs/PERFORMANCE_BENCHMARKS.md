@@ -243,6 +243,39 @@ Push-stored time on SQLite at 5,000 agents tracked host load in both trees
 On PostgreSQL at 5,000 agents the graph p95 comes from the first 30 to 40
 seconds after the push, on both trees; reads after that measured about 0.3 s.
 
+#### Qualification lane on GitHub runners, 2026-11-13
+
+Qualification workflow, `lanes=performance`, one run per tree on
+`ubuntu-latest` (4 vCPU), PostgreSQL in a service container on the same runner.
+`main` is the tree before the change; the change is run 43539497718, which also sampled the API's
+stacks (`stack_samples=true`). Times in ms:
+
+| Backend | Agents | Tree | First read | Graph p50 | Graph p95 | Graph max | Findings p95 | Peak RSS (MB) |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| SQLite | 1,000 | main | 3,947 | 650 | 2,237 | 3,947 | 1,272 | 670 |
+| SQLite | 1,000 | change | 999 | 320 | 999 | 1,911 | 46 | 727 |
+| SQLite | 5,000 | main | 26,905 | 521 | 8,475 | 26,905 | 2,046 | 1,975 |
+| SQLite | 5,000 | change | 8,585 | 368 | 561 | 8,585 | 2,031 | 1,544 |
+| PostgreSQL | 1,000 | main | 1,844 | 751 | 1,844 | 4,038 | 439 | 719 |
+| PostgreSQL | 1,000 | change | 2,663 | 1,060 | 2,663 | 2,926 | 77 | 826 |
+| PostgreSQL | 5,000 | main | 7,884 | 602 | 7,884 | 8,988 | 2,295 | 2,181 |
+| PostgreSQL | 5,000 | change | 5,823 | 760 | 6,960 | 9,470 | 2,109 | 2,209 |
+
+The stack samples place the PostgreSQL stalls beside the first current-estate
+build: the reads ask for an explicit scan, so they query PostgreSQL directly,
+while the build thread decodes the whole snapshot from PostgreSQL
+(`postgres_graph.load_graph`) and writes the SQLite projection, both
+CPU-bound under the same interpreter lock. At 5,000 agents that covers the
+first seven reads; at 1,000 agents the build ran through all 20, which is why the
+change's 1,000-agent median is above `main`'s. Findings p95 at 5,000 agents is
+the 2 s read-your-writes wait for that build on both trees.
+
+Making that build pause for in-flight requests was tried (run 43544910722) and
+reverted: it stretched the contention across every read, taking the PostgreSQL
+5,000-agent median from 760 ms to 1,847 ms and the 1,000-agent median to
+1,258 ms. The remaining fix is to copy a single-source PostgreSQL projection as
+rows rather than through graph objects, as SQLite sources already are.
+
 ### How to measure the operator targets
 
 Run against the deployment you actually intend to operate:
