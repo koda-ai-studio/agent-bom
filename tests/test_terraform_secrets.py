@@ -41,7 +41,7 @@ def test_real_secret_literals_are_flagged(tmp_path, body, expected):
     [
         # A description is documentation, not the default value.
         'variable "create_auth_secret" {\n  description = "Whether to create an empty Secrets Manager secret container."\n'
-        "  type = bool\n  default = true\n}\n",
+        + "  type = bool\n  default = true\n}\n",
         'variable "api_key" {\n  description = "API key used by the collector, supplied at apply time."\n  type = string\n}\n',
         # Names that reference a secret rather than hold one.
         'variable "auth_secret_name" {\n  type = string\n  default = "agent-bom/control-plane/auth"\n}\n',
