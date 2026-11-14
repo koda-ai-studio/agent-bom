@@ -61,7 +61,8 @@ def test_quiet_fail_is_one_warning_verdict_record(tmp_path: Path) -> None:
 
 
 def test_quiet_pass_is_one_info_verdict_record(tmp_path: Path) -> None:
-    proc, events, report = _scan(tmp_path, "--log-json", "-q", "--no-scan", "--exit-zero")
+    # The demo carries high prompt-security findings, so a pass needs a gate above them.
+    proc, events, report = _scan(tmp_path, "--log-json", "-q", "--no-scan", "--fail-on-severity", "critical")
 
     assert proc.returncode == 0, proc.stderr[-2000:]
     verdicts = _verdicts(events)

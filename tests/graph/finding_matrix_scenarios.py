@@ -321,7 +321,18 @@ def scenario_shadow(work: Path, mp: Any) -> dict[str, Any]:
     return report
 
 
+def scenario_evals(work: Path, monkeypatch: Any) -> dict[str, Any]:
+    """An agent with write and exec tools whose only eval is an unlinked quality eval."""
+    proj = work / "uncovered_agent"
+    shutil.copytree(FIXTURES / "eval_suites" / "uncovered_agent", proj, dirs_exist_ok=True)
+    for staged in proj.rglob("*.fixture"):
+        staged.replace(staged.with_suffix(""))
+    _write(proj / "requirements.txt", "langchain==1.4.7\n")
+    return _cli(work, monkeypatch, "evals", "--no-discover", "-p", str(proj), "--ai-inventory", str(proj))
+
+
 SCENARIOS = {
+    "evals": scenario_evals,
     "iac": scenario_iac,
     "shadow": scenario_shadow,
     "demo": scenario_demo,

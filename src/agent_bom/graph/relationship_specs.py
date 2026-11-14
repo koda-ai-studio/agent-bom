@@ -404,6 +404,8 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         extra=((E.POLICY, E.ORG), (E.POLICY, E.ACCOUNT)),
         traversable=False,
     ),
+    # Assurance evidence, not reach: an eval suite tests the agent or model it targets.
+    _spec(R.EVALUATES, T.GOVERNANCE, "governance", (E.EVAL_SUITE,), (E.AGENT, E.MODEL), traversable=False),
     _spec(R.EXHIBITS_DRIFT, T.GOVERNANCE, "governance", (E.AGENT,), (E.DRIFT_INCIDENT,), direction="bidirectional"),
     _spec(
         R.EXPOSED_TO,

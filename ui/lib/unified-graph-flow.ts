@@ -517,6 +517,11 @@ function toLineageData(
         stringAttr(node, "description") || stringAttr(node, "source_url");
       data.version = stringAttr(node, "version");
       break;
+    case "evalSuite":
+      data.description =
+        [stringAttr(node, "harness"), stringAttr(node, "purpose")].filter(Boolean).join(" · ") ||
+        stringAttr(node, "file_path");
+      break;
     case "container":
       data.description =
         stringAttr(node, "container_image") || stringAttr(node, "framework");

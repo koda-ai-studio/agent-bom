@@ -13,7 +13,7 @@ import { StatStrip } from "@/components/stat-strip";
 import { PageEmptyState, PageLoadingState } from "@/components/states/page-state";
 import { AssetDetail } from "@/components/inventory/asset-detail";
 import { InventoryTypeChips } from "@/components/inventory/inventory-type-chips";
-import { capitalize, entityTypeLabel, kindTypeCounts } from "@/lib/inventory-units";
+import { capitalize, kindTypeCounts, rowTypeLabel } from "@/lib/inventory-units";
 import { useInventorySelection } from "@/lib/inventory-selection";
 import { useInventory } from "@/lib/inventory-context";
 import { assetIcon, assetKindLabel } from "@/lib/asset-icon-registry";
@@ -247,7 +247,7 @@ function buildColumns(kind: AssetKindId): DataTableColumn<AssetRow>[] {
   const secondaryFor = (row: AssetRow, kindLabel: string): string | undefined => {
     if (kind === "packages") return [row.ecosystem, row.version].filter(Boolean).join(" · ") || undefined;
     // The Type column already names the base type; repeat only a more specific kind.
-    const detail = multiType && entityTypeLabel(row.entityType, 1).toLowerCase().endsWith(kindLabel.toLowerCase()) ? "" : kindLabel;
+    const detail = multiType && rowTypeLabel(row.entityType, row.role).toLowerCase().endsWith(kindLabel.toLowerCase()) ? "" : kindLabel;
     return [detail, row.provider, row.environment].filter(Boolean).join(" · ") || undefined;
   };
 
@@ -257,7 +257,7 @@ function buildColumns(kind: AssetKindId): DataTableColumn<AssetRow>[] {
     header: "Type",
     sortable: false,
     width: "8rem",
-    cell: (row) => <span className="text-[color:var(--text-secondary)]">{capitalize(entityTypeLabel(row.entityType, 1))}</span>,
+    cell: (row) => <span className="text-[color:var(--text-secondary)]">{capitalize(rowTypeLabel(row.entityType, row.role))}</span>,
   }] : [];
 
   return [

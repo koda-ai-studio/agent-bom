@@ -155,6 +155,37 @@ class TrustHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+def _log_request_complete(
+    request: StarletteRequest, response: Response, request_id: str, trace_meta: dict[str, Any], elapsed_ms: float
+) -> None:
+    """The one log record per API request; the server's access log is off so it is not duplicated.
+
+    Only the path is logged, never the query string, which can carry tokens.
+    """
+    status = getattr(response, "status_code", None)
+    http = {
+        "method": request.method,
+        "path": request.url.path,
+        "status": status,
+        "duration_ms": elapsed_ms,
+        "client": request.client.host if request.client else None,
+    }
+    context = {
+        "request_id": request_id,
+        "trace_id": str(trace_meta["trace_id"]),
+        "span_id": str(trace_meta["span_id"]),
+        "tenant_id": str(getattr(request.state, "tenant_id", "default")),
+    }
+    _logger.info(
+        "api request complete %s %s %s %sms",
+        request.method,
+        request.url.path,
+        status,
+        elapsed_ms,
+        extra={"http": http, "context": context},
+    )
+
+
 async def _dispatch_traced_request(
     request: StarletteRequest, call_next: RequestResponseEndpoint, request_id: str, trace_meta: dict[str, Any]
 ) -> Response:
@@ -190,17 +221,7 @@ async def _dispatch_traced_request(
             tenant_token = set_current_tenant(getattr(request.state, "tenant_id", "default"))
         response = await call_next(request)
         elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
-        _logger.info(
-            "api request complete method=%s path=%s status=%s request_id=%s trace_id=%s span_id=%s tenant_id=%s duration_ms=%s",
-            request.method,
-            request.url.path,
-            getattr(response, "status_code", "unknown"),
-            request_id,
-            trace_meta["trace_id"],
-            trace_meta["span_id"],
-            getattr(request.state, "tenant_id", "default"),
-            elapsed_ms,
-        )
+        _log_request_complete(request, response, request_id, trace_meta, elapsed_ms)
         if span is not None:
             span.set_attribute("http.response.status_code", int(getattr(response, "status_code", 500)))
             span.set_attribute("agent_bom.tenant_id", str(getattr(request.state, "tenant_id", "default")))

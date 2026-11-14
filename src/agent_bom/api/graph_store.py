@@ -44,6 +44,7 @@ from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.graph import RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_status_map_to_dict
 from agent_bom.graph.completeness import COMPLIANCE_NODE_BUDGET, graph_completeness
+from agent_bom.graph.node_roles import INVENTORY_FACET_NAMES, SQLITE_ROLE_SQL, role_facet_sql
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
 from agent_bom.graph.severity_floor import FINDING_SEVERITY_SQLITE, severity_floor_sql
 
@@ -680,6 +681,7 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                                                   json_extract(n.attributes, '$.cloud_provider'), '')), '') AS inventory_provider,
                            NULLIF(LOWER(COALESCE(json_extract(n.dimensions, '$.ecosystem'),
                                                   json_extract(n.attributes, '$.ecosystem'), '')), '') AS inventory_ecosystem,
+                           {SQLITE_ROLE_SQL.format(alias="n")} AS inventory_role,
                            finding_rollup.finding_severity_rank
                     FROM graph_nodes n
                     LEFT JOIN finding_rollup ON finding_rollup.asset_id = n.id
@@ -694,17 +696,8 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                 )
             """  # nosec B608 - static projection/hint; all type and scope values are bound
 
-            cte_params: list[Any] = [
-                tenant_id,
-                effective_scan_id,
-                *finding_types,
-                tenant_id,
-                effective_scan_id,
-                *finding_types,
-                tenant_id,
-                effective_scan_id,
-                *asset_types,
-            ]
+            scope = [tenant_id, effective_scan_id]
+            cte_params: list[Any] = [*scope, *finding_types, *scope, *finding_types, *scope, *asset_types]
 
             normalized = {
                 "environment": environment.strip().lower(),
@@ -772,10 +765,12 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                 """  # nosec B608 - source_where contains only generated placeholders
             )
             facet_params.extend([*source_params, *source_params])
+            facet_sql.append(role_facet_sql(where_sql))
+            facet_params.extend(where_params)
             facet_rows = conn.execute(  # nosec B608 - inventory_cte is static SQL with ? groups
                 inventory_cte(facets=True) + " UNION ALL ".join(facet_sql), [*cte_params, *facet_params]
             ).fetchall()
-            facets: dict[str, list[dict[str, Any]]] = {name: [] for name in ("type", "source", "provider", "environment", "severity")}
+            facets: dict[str, list[dict[str, Any]]] = {name: [] for name in INVENTORY_FACET_NAMES}
             total = 0
             for facet, value, count in facet_rows:
                 if facet == "__total__":

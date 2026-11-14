@@ -193,9 +193,9 @@ For laptops, the proxy runs locally as a stdio wrapper around the editor's MCP
 command:
 
 ```bash
+# Reads AGENT_BOM_API_TOKEN from the environment; tokens never go on the command line.
 agent-bom proxy \
   --control-plane-url https://agent-bom.internal.example.com \
-  --control-plane-token "$AGENT_BOM_API_TOKEN" \
   --detect-credentials \
   --block-undeclared \
   -- npx @modelcontextprotocol/server-filesystem ~/workspace

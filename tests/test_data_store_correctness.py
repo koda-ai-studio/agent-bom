@@ -487,7 +487,7 @@ def test_sqlite_hub_store_sets_busy_timeout(tmp_path):
 
     store = SQLiteComplianceHubStore(db_path=str(tmp_path / "hub.db"))
     busy_timeout = store._conn.execute("PRAGMA busy_timeout").fetchone()[0]
-    assert busy_timeout == 30000
+    assert busy_timeout == 5000
 
 
 if __name__ == "__main__":  # pragma: no cover

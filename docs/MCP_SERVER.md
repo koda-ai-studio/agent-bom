@@ -120,7 +120,9 @@ args = ["proxy", "--no-isolate", "--log", "~/.agent-bom/logs/filesystem.jsonl", 
 ### SSE Transport (Remote / Multi-Client)
 
 ```bash
-agent-bom mcp server --transport sse --host 0.0.0.0 --port 8000 --bearer-token "$AGENT_BOM_MCP_BEARER_TOKEN"
+# AGENT_BOM_MCP_BEARER_TOKEN and AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT come from
+# your secret store; the flag form would put the token in argv, visible in `ps`.
+agent-bom mcp server --transport sse --host 0.0.0.0 --port 8000
 ```
 
 Connect any SSE-capable MCP client to `https://your-server/sse`.
@@ -898,7 +900,7 @@ for the matching CLI command and evidence boundaries. Assessments are read-only.
 - the bundle now also includes Jamf, Intune, and Kandji wrappers plus repo-shipped `.pkg` / `.msi` build scripts for IT-owned rollout
 - stdio transports have no native HTTP header channel. When a client or upstream includes W3C trace context in JSON-RPC `_meta.traceparent`, `_meta.tracestate`, or `_meta.baggage`, the proxy preserves those fields and rehydrates them onto the paired response when the upstream does not echo them back.
 - TOML clients like Codex CLI need manual proxy wrapping today.
-- SSE / HTTP clients can use `agent-bom mcp server --transport sse --bearer-token "$AGENT_BOM_MCP_BEARER_TOKEN"` or `--transport streamable-http`.
+- SSE / HTTP clients can use `agent-bom mcp server --transport sse` or `--transport streamable-http` with `AGENT_BOM_MCP_BEARER_TOKEN` set in the environment (not `--bearer-token`, which puts the token in argv, visible in `ps`).
 - HTTP/SSE credentials require `AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT`, a timezone-aware absolute deadline within one hour. An optional operator credential requires its own `AGENT_BOM_MCP_OPERATOR_TOKEN_EXPIRES_AT`. Rotate token and deadline together; ordinary restarts do not renew them. Stdio does not use these credentials.
 - Non-loopback remote transports fail closed unless you configure `--bearer-token` / `AGENT_BOM_MCP_BEARER_TOKEN` or explicitly pass `--allow-insecure-no-auth`.
 - Keep TLS at your ingress or reverse proxy for remote deployments.

@@ -79,4 +79,4 @@ def test_stamp_is_recorded_and_the_store_still_waits_for_other_writes_once_the_w
 
     assert store.verify(raw) is not None
     assert store.get(key_id).last_used is not None
-    assert store._conn.execute("PRAGMA busy_timeout").fetchone()[0] == 30000
+    assert store._conn.execute("PRAGMA busy_timeout").fetchone()[0] == 5000

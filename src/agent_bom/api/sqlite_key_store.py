@@ -9,7 +9,7 @@ import threading
 from datetime import datetime, timezone
 
 from agent_bom.api.api_key_record import ApiKey, verify_api_key
-from agent_bom.api.storage.sqlite_connection import open_wal_connection
+from agent_bom.api.storage.sqlite_connection import api_sqlite_busy_timeout_ms, open_wal_connection
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
 from agent_bom.rbac import Role
 
@@ -44,7 +44,6 @@ def _now() -> str:
 
 
 _logger = logging.getLogger(__name__)
-_DEFAULT_BUSY_MS = 30000
 _STAMP_BUSY_MS = 100
 
 
@@ -235,7 +234,7 @@ class SQLiteKeyStore:
                 if exc.sqlite_errorcode & 0xFF not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED):
                     _logger.warning("API key last-used time not recorded (%s)", type(exc).__name__)
             finally:
-                conn.execute(f"PRAGMA busy_timeout={_DEFAULT_BUSY_MS}")
+                conn.execute(f"PRAGMA busy_timeout={api_sqlite_busy_timeout_ms()}")
 
     def has_keys(self) -> bool:
         return self._conn.execute("SELECT 1 FROM api_keys WHERE revoked_at IS NULL LIMIT 1").fetchone() is not None

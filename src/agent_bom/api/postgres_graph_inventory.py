@@ -15,6 +15,7 @@ from agent_bom.api.graph_store_support import revision_cached_stats
 from agent_bom.db.graph_revision import read_snapshot_identity
 from agent_bom.db.graph_store import normalize_graph_tenant_id
 from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_status_map_to_dict
+from agent_bom.graph.node_roles import INVENTORY_FACET_NAMES, POSTGRES_ROLE_SQL, role_facet_sql
 from agent_bom.graph.severity_floor import finding_severity_count_sql, severity_floor_sql
 
 from .postgres_common import _tenant_connection
@@ -27,7 +28,6 @@ _INVENTORY_FACET_COLUMNS = {
     "provider": "inventory_provider",
     "severity": "finding_severity",
 }
-_INVENTORY_FACET_NAMES = ("type", "source", "provider", "environment", "severity")
 
 
 def _inventory_cte(*, finding_marks: str, asset_marks: str) -> str:
@@ -54,6 +54,7 @@ def _inventory_cte(*, finding_marks: str, asset_marks: str) -> str:
                                                   n.attributes::jsonb ->> 'cloud_provider', '')), '') AS inventory_provider,
                            NULLIF(LOWER(COALESCE(n.dimensions::jsonb ->> 'ecosystem',
                                                   n.attributes::jsonb ->> 'ecosystem', '')), '') AS inventory_ecosystem,
+                           {POSTGRES_ROLE_SQL.format(alias="n")} AS inventory_role,
                            finding_rollup.finding_severity_rank
                     FROM graph_nodes n
                     LEFT JOIN finding_rollup ON finding_rollup.asset_id = n.id
@@ -135,10 +136,12 @@ def _inventory_facets(
                      ) source_buckets GROUP BY value"""  # nosec B608 - generated clauses only
     )
     facet_params.extend([*source_params, *source_params])
+    facet_sql.append(role_facet_sql(where_sql))
+    facet_params.extend(where_params)
     facet_rows = conn.execute(  # nosec B608 - cte is _inventory_cte(): static SQL with %s groups
         cte + " UNION ALL ".join(facet_sql), [*cte_params, *facet_params]
     ).fetchall()
-    facets: dict[str, list[dict[str, Any]]] = {name: [] for name in _INVENTORY_FACET_NAMES}
+    facets: dict[str, list[dict[str, Any]]] = {name: [] for name in INVENTORY_FACET_NAMES}
     total = 0
     for facet, value, count in facet_rows:
         if facet == "__total__":

@@ -4,7 +4,10 @@ Groups follow the estate from the outside in — cloud scope, then the AI layer
 (agents), MCP servers and tools, packages by ecosystem, findings by severity,
 identities and credentials, then cloud and data resources by type — so the map
 reads left to right in the order an exposure travels. A group key depends only
-on the node's own stored fields, so a store can derive it from one row.
+on the node's own stored fields, so a store can derive it from one row. Server
+and agent nodes are split by role (:mod:`agent_bom.graph.node_roles`): the
+"MCP servers" and "Agents" groups hold exactly what the Agents page counts, and
+other servers and framework agents get their own labelled groups.
 """
 
 from __future__ import annotations
@@ -13,6 +16,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 from agent_bom.core.severity import SEVERITY_RANK
+from agent_bom.graph.node_roles import FRAMEWORK_AGENT, OTHER_SERVER
 
 FINDING_TYPES: frozenset[str] = frozenset({"vulnerability", "misconfiguration", "drift_incident"})
 
@@ -31,7 +35,7 @@ TIERS: tuple[str, ...] = (
 
 _TIER_OF_TYPE: dict[str, int] = {
     **dict.fromkeys(("provider", "org", "account", "environment", "fleet"), 0),
-    **dict.fromkeys(("agent", "model", "framework", "application", "user", "group"), 1),
+    **dict.fromkeys(("agent", "model", "framework", "eval_suite", "application", "user", "group"), 1),
     **dict.fromkeys(("server", "tool", "tool_call", "resource", "api_gateway"), 2),
     "package": 3,
     **dict.fromkeys(tuple(FINDING_TYPES), 4),
@@ -64,6 +68,7 @@ _TYPE_LABELS: dict[str, str] = {
     "agent": "Agents",
     "model": "Models",
     "framework": "Frameworks",
+    "eval_suite": "Eval suites",
     "application": "Applications",
     "user": "Users",
     "group": "Groups",
@@ -101,6 +106,12 @@ SEVERITY_WORDS: dict[int, str] = {5: "critical", 4: "high", 3: "medium", 2: "low
 #: A group holding a finding at or above this rank, or a hop of an attack path, leads the map.
 RISKY_RANK = SEVERITY_RANK["high"]
 
+# (group key, label) of the role groups split out of a type's group.
+_ROLE_GROUPS: dict[tuple[str, str], tuple[str, str]] = {
+    ("server", OTHER_SERVER): ("server:other", "Other servers (not MCP)"),
+    ("agent", FRAMEWORK_AGENT): ("agent:framework", "Framework agents"),
+}
+
 
 @dataclass(frozen=True, slots=True)
 class GroupClass:
@@ -117,15 +128,18 @@ def severity_rank(severity: object) -> int:
     return SEVERITY_RANK.get(_clean(severity), 0)
 
 
-def classify(entity_type: str, severity: str = "", ecosystem: str = "", resource_type: str = "") -> GroupClass:
+def classify(entity_type: str, severity: str = "", ecosystem: str = "", resource_type: str = "", role: str = "") -> GroupClass:
     """The group a node with these stored fields belongs to."""
-    return _classify(str(entity_type or ""), str(severity or ""), str(ecosystem or ""), str(resource_type or ""))
+    return _classify(str(entity_type or ""), str(severity or ""), str(ecosystem or ""), str(resource_type or ""), str(role or ""))
 
 
 @lru_cache(maxsize=8192)
-def _classify(entity_type: str, severity: str, ecosystem: str, resource_type: str) -> GroupClass:
+def _classify(entity_type: str, severity: str, ecosystem: str, resource_type: str, role: str) -> GroupClass:
     kind = _clean(entity_type)
     tier = _TIER_OF_TYPE.get(kind, len(TIERS) - 1)
+    role_group = _ROLE_GROUPS.get((kind, role))
+    if role_group is not None:
+        return GroupClass(role_group[0], role_group[1], tier)
     if kind == "package":
         eco = _clean(ecosystem) or "unknown"
         return GroupClass(f"package:{eco}", f"Packages · {eco if eco != 'unknown' else 'unknown ecosystem'}", tier)

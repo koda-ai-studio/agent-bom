@@ -75,6 +75,7 @@ const SIGMA_DEFAULT_LAYERS: Record<LineageNodeType, boolean> = {
   model: true,
   framework: true,
   dataset: true,
+  evalSuite: true,
   container: true,
   cloudResource: true,
   misconfiguration: true,

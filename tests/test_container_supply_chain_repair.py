@@ -60,9 +60,44 @@ def test_floating_latest_uses_reviewed_runtime_security_overlay() -> None:
     assert "--no-config --python /app/.venv/bin/python --no-deps --require-hashes" in dockerfile
     assert "Dockerfile \\" in workflow
     assert "deploy/docker/runtime-security-requirements.txt \\" in workflow
-    assert "cryptography==50.0.0" in requirements
     crypto_entry = next(entry for entry in requirements.replace("\\\n", "").splitlines() if entry.startswith("cryptography=="))
     assert crypto_entry.count("--hash=sha256:") == 2
+
+
+def _overlay_pins(manifest: str) -> list[tuple[str, str, list[str]]]:
+    text = (ROOT / "deploy/docker" / manifest).read_text(encoding="utf-8")
+    pins = []
+    for entry in text.replace("\\\n", "").splitlines():
+        if not entry.strip() or entry.lstrip().startswith("#"):
+            continue
+        requirement = Requirement(entry.split("--hash=")[0].strip())
+        (specifier,) = list(requirement.specifier)
+        assert specifier.operator == "==", entry
+        hashes = [part.split("--hash=sha256:", 1)[1].split()[0] for part in entry.split(" ") if part.startswith("--hash=sha256:")]
+        pins.append((requirement.name.lower(), specifier.version, hashes))
+    return pins
+
+
+@pytest.mark.parametrize(
+    "manifest", ["runtime-security-requirements.txt", "collector-security-requirements.txt", "tornado-security-requirements.txt"]
+)
+def test_security_overlay_never_downgrades_below_the_lock(manifest: str) -> None:
+    """The overlay installs with --no-deps after ``uv sync --locked``; a pin below the lock downgrades the image."""
+    from packaging.version import Version
+
+    lock = tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))
+    locked = {package["name"].lower(): package for package in lock["package"]}
+    pins = _overlay_pins(manifest)
+    assert pins
+    for name, version, hashes in pins:
+        assert hashes, f"{manifest}: {name} must be hash-pinned"
+        package = locked.get(name)
+        if package is None:
+            continue
+        assert Version(version) >= Version(package["version"]), f"{manifest}: {name}=={version} is below uv.lock {package['version']}"
+        if Version(version) == Version(package["version"]):
+            lock_hashes = {artifact["hash"].removeprefix("sha256:") for artifact in package.get("wheels", [])}
+            assert set(hashes) <= lock_hashes, f"{manifest}: {name}=={version} hashes are not the locked artifacts"
 
 
 @pytest.mark.parametrize("manifest", ["runtime-security-requirements.txt", "collector-security-requirements.txt"])

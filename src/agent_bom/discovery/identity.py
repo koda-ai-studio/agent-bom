@@ -217,33 +217,31 @@ def _is_unpinned(package: Package) -> bool:
     return (package.version or "").strip().lower() in _UNPINNED_VERSIONS
 
 
-def pinned_package_keys(servers: list[MCPServer]) -> set[tuple[str, str]]:
-    """Normalized (ecosystem, name) of every concretely versioned package outside the AI inventory."""
-    return {
-        _package_key(package)
-        for server in servers
-        if server.surface is not ServerSurface.AI_INVENTORY
-        for package in server.packages
-        if not _is_unpinned(package)
-    }
+def declared_package_keys(servers: list[MCPServer]) -> set[tuple[str, str]]:
+    """Normalized (ecosystem, name) of every manifest-declared package outside the AI inventory.
 
-
-def without_pinned_duplicates(packages: list[Package], pinned: set[tuple[str, str]]) -> list[Package]:
-    """Drop unpinned SDK-import packages whose version a manifest already declares.
-
-    An import only proves the SDK is used; the manifest says which version, so
-    an unpinned ``latest`` copy beside it would be a phantom second package.
+    A range (``anthropic>=0.30``) declares the package as surely as a pin; its
+    version is only unresolved.
     """
-    return [package for package in packages if not (_is_unpinned(package) and _package_key(package) in pinned)]
+    return {_package_key(package) for server in servers if server.surface is not ServerSurface.AI_INVENTORY for package in server.packages}
 
 
-def _drop_unpinned_sdk_duplicates(servers: list[MCPServer]) -> None:
-    pinned = pinned_package_keys(servers)
-    if not pinned:
+def without_declared_duplicates(packages: list[Package], declared: set[tuple[str, str]]) -> list[Package]:
+    """Drop unpinned SDK-import packages a manifest already declares.
+
+    An import only proves the SDK is used; the manifest owns the package, so an
+    unpinned ``latest`` copy beside it would be a phantom second package.
+    """
+    return [package for package in packages if not (_is_unpinned(package) and _package_key(package) in declared)]
+
+
+def _drop_declared_sdk_duplicates(servers: list[MCPServer]) -> None:
+    declared = declared_package_keys(servers)
+    if not declared:
         return
     for server in servers:
         if server.surface is ServerSurface.AI_INVENTORY:
-            server.packages = without_pinned_duplicates(server.packages, pinned)
+            server.packages = without_declared_duplicates(server.packages, declared)
 
 
 def _merge_project_members(root: str, members: list[Agent], label: str) -> Agent:
@@ -262,7 +260,7 @@ def _merge_project_members(root: str, members: list[Agent], label: str) -> Agent
             else:
                 _merge_server(existing, server)
 
-    _drop_unpinned_sdk_duplicates(servers)
+    _drop_declared_sdk_duplicates(servers)
 
     metadata: dict[str, object] = {}
     evidence: set[str] = set()

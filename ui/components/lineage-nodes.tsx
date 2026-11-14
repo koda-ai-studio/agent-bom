@@ -633,6 +633,19 @@ function DatasetNode({ data }: { data: LineageNodeData }) {
   );
 }
 
+function EvalSuiteNode({ data }: { data: LineageNodeData }) {
+  return (
+    <NodeCard
+      data={data}
+      borderClass="border-lime-600 dark:border-lime-600"
+      bgClass="bg-lime-50 dark:bg-lime-950/70"
+      ringClass="ring-lime-400"
+      iconClass="text-lime-700 dark:text-lime-300"
+      subtitle={data.description}
+    />
+  );
+}
+
 function ContainerNode({ data }: { data: LineageNodeData }) {
   return (
     <NodeCard
@@ -846,6 +859,7 @@ const DETAIL_RENDERERS: Record<
   model: ModelNode,
   framework: ModelNode,
   dataset: DatasetNode,
+  evalSuite: EvalSuiteNode,
   container: ContainerNode,
   cloudResource: CloudResourceNode,
   org: ProviderNode,
@@ -896,6 +910,7 @@ export const lineageNodeTypesAdaptive = {
   modelNode: AdaptiveLineageNode,
   frameworkNode: AdaptiveLineageNode,
   datasetNode: AdaptiveLineageNode,
+  evalSuiteNode: AdaptiveLineageNode,
   containerNode: AdaptiveLineageNode,
   cloudResourceNode: AdaptiveLineageNode,
   sharedServerNode: AdaptiveLineageNode,
@@ -927,6 +942,7 @@ export const lineageNodeTypes = {
   modelNode: ModelNode,
   frameworkNode: ModelNode,
   datasetNode: DatasetNode,
+  evalSuiteNode: EvalSuiteNode,
   containerNode: ContainerNode,
   cloudResourceNode: CloudResourceNode,
   sharedServerNode: SharedServerNode,

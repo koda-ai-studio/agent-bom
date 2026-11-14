@@ -3,6 +3,7 @@ import type { Vulnerability } from "@/lib/api";
 import type { FindingFacets, FindingOccurrenceSummary, FindingReconfirmation, WorkloadRuntimeEvidence } from "@/lib/api-types";
 import type { GraphReachabilityNotAssessedReason } from "@/lib/api-contracts/findings";
 import { nowForRelativeTime } from "@/lib/relative-clock";
+import type { EvalCoverageEvidence } from "@/lib/eval-coverage";
 
 export interface EnrichedVuln extends Vulnerability {
   /** Stored model advice; absent when none exists. Never feeds severity, counts or gates. */
@@ -57,6 +58,8 @@ export interface EnrichedVuln extends Vulnerability {
   controls?: Array<Record<string, unknown>> | undefined;
   controls_count?: number | undefined;
   finding_type?: string | undefined;
+  /** Parsed evidence of a safety-eval coverage finding; absent for every other type. */
+  eval_coverage?: EvalCoverageEvidence | undefined;
   finding_class?: "vulnerability" | "misconfiguration" | "secret" | "pii" | "identity" | "unclassified" | undefined;
   phantom_tools?: string[] | undefined;
   runtime_evidence?: {

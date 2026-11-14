@@ -2389,6 +2389,24 @@
      }
     ],
     "deprecated_models_count": 1,
+    "eval_coverage": {
+     "detail": "",
+     "files_examined": 0,
+     "harnesses": [
+      "promptfoo",
+      "deepeval",
+      "ragas",
+      "inspect",
+      "openai-evals",
+      "langsmith"
+     ],
+     "scopes": [
+      "project"
+     ],
+     "status": "complete",
+     "unreadable_files": []
+    },
+    "eval_suites": [],
     "files_scanned": 1,
     "framework_agents": [],
     "shadow_ai_count": 2,

@@ -137,6 +137,7 @@ const CLUSTER_ORDER: LineageNodeType[] = [
   "model",
   "framework",
   "dataset",
+  "evalSuite",
   "dataStore",
   "directory",
   "sourceFile",

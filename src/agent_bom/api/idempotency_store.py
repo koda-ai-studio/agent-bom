@@ -17,6 +17,7 @@ from agent_bom.api.postgres_common import (
     _get_pool,
     _tenant_connection,
 )
+from agent_bom.api.storage.sqlite_connection import api_sqlite_busy_timeout_ms
 from agent_bom.api.storage_schema import ensure_postgres_schema_version, ensure_sqlite_schema_version
 
 from .idempotency_sqlite_fence import SQLiteClaimFenceMixin
@@ -98,8 +99,9 @@ class SQLiteIdempotencyStore(SQLiteClaimFenceMixin):
     @property
     def _conn(self) -> sqlite3.Connection:
         if not hasattr(self._local, "conn") or self._local.conn is None:
-            self._local.conn = sqlite3.connect(self._db_path, timeout=10, check_same_thread=False)
-            self._local.conn.execute("PRAGMA busy_timeout=10000")
+            busy_timeout_ms = api_sqlite_busy_timeout_ms()
+            self._local.conn = sqlite3.connect(self._db_path, timeout=busy_timeout_ms / 1000, check_same_thread=False)
+            self._local.conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
         conn: sqlite3.Connection = self._local.conn
         return conn
 

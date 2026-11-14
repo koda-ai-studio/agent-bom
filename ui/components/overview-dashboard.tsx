@@ -380,7 +380,7 @@ export function OverviewDashboard({ initialReport = null, onExitReport }: { init
   // Inventory includes connected, cloud and ingested sources in the selected
   // snapshot. Host discovery is a different scope and must not stand in for it.
   const displayedAgentCount = importedReport ? (importedReport.agents?.length ?? 0)
-    : counts?.agents?.total ?? (inventoryLoading || !inventorySummary ? null : (inventorySummary.by_type.agent ?? null));
+    : counts?.agents?.total ?? (inventoryLoading || !inventorySummary ? null : (inventorySummary.by_role?.agent ?? inventorySummary.by_type.agent ?? null));
   const summaryReady = !jobsLoading || Boolean(importedReport);
   const detailsReady = !detailLoading || Boolean(importedReport);
 

@@ -79,9 +79,9 @@ to one workload:
 Typical local path:
 
 ```bash
+# Reads AGENT_BOM_API_TOKEN from the environment; tokens never go on the command line.
 agent-bom proxy \
   --control-plane-url https://agent-bom.internal.example.com \
-  --control-plane-token "$AGENT_BOM_API_TOKEN" \
   --detect-credentials \
   --block-undeclared \
   -- npx @modelcontextprotocol/server-filesystem ~/workspace
@@ -113,11 +113,10 @@ Use `gateway` when the MCP traffic is already remote and shared:
 Typical shared path:
 
 ```bash
+# Reads AGENT_BOM_CONTROL_PLANE_TOKEN and AGENT_BOM_GATEWAY_BEARER_TOKEN from the environment; tokens never go on the command line.
 agent-bom gateway serve \
   --bind 0.0.0.0:8090 \
   --from-control-plane https://agent-bom.internal.example.com \
-  --control-plane-token "$AGENT_BOM_CONTROL_PLANE_TOKEN" \
-  --bearer-token "$AGENT_BOM_GATEWAY_BEARER_TOKEN" \
   --bearer-token-expires-at "$AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT"
 ```
 

@@ -39,6 +39,7 @@ export const GRAPH_LAYER_ENTITY_TYPES: Record<
   model: [EntityType.MODEL],
   framework: [EntityType.FRAMEWORK],
   dataset: [EntityType.DATASET],
+  evalSuite: [EntityType.EVAL_SUITE],
   container: [EntityType.CONTAINER, EntityType.APPLICATION],
   cloudResource: [EntityType.CLOUD_RESOURCE, EntityType.RESOURCE],
   vulnerability: [EntityType.VULNERABILITY],

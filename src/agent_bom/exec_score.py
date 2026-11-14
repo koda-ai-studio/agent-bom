@@ -493,7 +493,7 @@ def _build_summary(
         if counts["kev"]:
             bits.append(f"{counts['kev']:,} KEV")
         if counts["exposure"]:
-            bits.append(f"{counts['exposure']:,} touch secrets")
+            bits.append(f"{counts['exposure']:,} on credential-bearing servers")
         lead = " · ".join(bits) if bits else f"{finding_total:,} finding(s)"
         return f"{score_txt} — {lead} across connected surfaces."
     # No open findings but still graded: a scan ran (floor present). Explain what

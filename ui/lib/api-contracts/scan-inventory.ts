@@ -467,6 +467,8 @@ export interface InventorySummaryResponse {
   total_assets: number;
   by_type: Record<string, number>;
   by_group: Record<string, number>;
+  /** Agent and server nodes by role; agent and mcp_server count what /v1/agents counts. */
+  by_role?: Partial<Record<"agent" | "framework_agent" | "mcp_server" | "other_server", number>> | undefined;
   finding_count: number;
   facets: InventoryFacets;
   facet_metadata: InventoryFacetMetadata;
@@ -488,6 +490,8 @@ export interface InventoryFacets {
   provider: InventoryFacet;
   environment: InventoryFacet;
   severity: InventoryFacet;
+  /** Agent and server rows by role. */
+  role?: InventoryFacet | undefined;
 }
 
 export interface InventoryFacetMetadata {
@@ -523,6 +527,8 @@ export interface InventoryAssetBase {
   compliance_tags: string[];
   ecosystem: string;
   version: string;
+  /** Agent and server rows: agent, framework_agent, mcp_server or other_server. */
+  role?: string | null | undefined;
 }
 
 export interface InventoryAsset extends InventoryAssetBase {

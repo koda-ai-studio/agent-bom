@@ -41,6 +41,9 @@ def source_pii_match(line: str, name: str, match: re.Match[str]) -> bool:
     field = _NUMERIC_FIELDS.get(name)
     if field is None:
         return True
-    if field.search(line[: match.start()]):
+    # A field-led match (``ssn = 123456789``) carries its own field name.
+    value = match.group()
+    field_name = value[: next((i for i, char in enumerate(value) if char.isdigit()), 0)]
+    if field.search(line[: match.start()] + field_name):
         return True
     return quoted and not match.group().isdigit()

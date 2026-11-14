@@ -56,13 +56,12 @@ against an actor controlling both records and keys.
 ### CLI
 
 ```bash
+# Reads AGENT_BOM_CONTROL_PLANE_TOKEN and AGENT_BOM_GATEWAY_BEARER_TOKEN from the environment; tokens never go on the command line.
 agent-bom gateway serve \
   --bind 0.0.0.0:8090 \
   --upstreams upstreams.yaml \
   --from-control-plane https://agent-bom.example.com \
-  --control-plane-token "$CP_TOKEN" \
   --policy-reload-seconds 30 \
-  --bearer-token "$GATEWAY_TOKEN" \
   --bearer-token-expires-at "$AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT"
 ```
 
@@ -104,10 +103,10 @@ enforced mode when it is absent. Do not reuse the broader control-plane Secret:
 it can contain unrelated session, audit, login, or encryption credentials:
 
 ```bash
+# Reads AGENT_BOM_GATEWAY_BEARER_TOKEN from the environment; tokens never go on the command line.
 agent-bom gateway serve \
   --bind 0.0.0.0:8090 \
   --upstreams upstreams.yaml \
-  --bearer-token "$GATEWAY_TOKEN" \
   --bearer-token-expires-at "$AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT" \
   --profile-enforcement enforce \
   --profile-environment prod

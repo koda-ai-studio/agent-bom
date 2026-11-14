@@ -52,6 +52,7 @@ export enum EntityType {
   TOOL_CALL = "tool_call",
   MODEL = "model",
   FRAMEWORK = "framework",
+  EVAL_SUITE = "eval_suite",
   DATASET = "dataset",
   CONTAINER = "container",
   RESOURCE = "resource",
@@ -154,6 +155,7 @@ export enum RelationshipType {
   SCOPED_TO = "scoped_to",
   GOVERNS = "governs",
   EXHIBITS_DRIFT = "exhibits_drift",
+  EVALUATES = "evaluates",
 
   // Cloud-CNAPP: exposure, data reachability, effective permissions
   EXPOSED_TO = "exposed_to",
@@ -426,6 +428,7 @@ export const ENTITY_COLOR_MAP: Record<string, string> & Record<EntityType, strin
   [EntityType.TOOL_CALL]: "#9333ea", // purple
   [EntityType.MODEL]: "#8b5cf6", // violet
   [EntityType.FRAMEWORK]: "#06b6d4", // cyan
+  [EntityType.EVAL_SUITE]: "#65a30d", // lime
   [EntityType.DATASET]: "#06b6d4", // cyan
   [EntityType.CONTAINER]: "#6366f1", // indigo
   [EntityType.RESOURCE]: "#3b82f6", // blue
@@ -516,6 +519,7 @@ export const RELATIONSHIP_COLOR_MAP: Record<string, string> & Record<Relationshi
   [RelationshipType.SCOPED_TO]: "#22d3ee",
   [RelationshipType.GOVERNS]: "#a16207",
   [RelationshipType.EXHIBITS_DRIFT]: "#fb923c",
+  [RelationshipType.EVALUATES]: "#65a30d",
   // Cloud-CNAPP relations.
   [RelationshipType.EXPOSED_TO]: "#e11d48",
   [RelationshipType.STORES]: "#0284c7",

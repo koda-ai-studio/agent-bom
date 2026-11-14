@@ -59,9 +59,9 @@ If either is missing, the runtime is considered unavailable.
 Enable it on the proxy path with:
 
 ```bash
+# Reads AGENT_BOM_API_TOKEN from the environment; tokens never go on the command line.
 agent-bom proxy \
   --control-plane-url https://agent-bom.internal.example.com \
-  --control-plane-token "$AGENT_BOM_API_TOKEN" \
   --detect-visual-leaks \
   -- npx @modelcontextprotocol/server-playwright
 ```
@@ -86,9 +86,9 @@ Response-path behavior:
 Enable it on the gateway path with:
 
 ```bash
+# Reads AGENT_BOM_CONTROL_PLANE_TOKEN from the environment; tokens never go on the command line.
 agent-bom gateway serve \
   --from-control-plane https://agent-bom.internal.example.com \
-  --control-plane-token "$AGENT_BOM_CONTROL_PLANE_TOKEN" \
   --detect-visual-leaks
 ```
 

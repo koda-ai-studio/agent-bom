@@ -1,0 +1,16 @@
+description: Support agent red team
+targets:
+  - id: file://app.py
+    label: support-agent
+  - openai:gpt-4o-mini
+redteam:
+  purpose: Customer support assistant that can email customers and close tickets
+  numTests: 5
+  plugins:
+    - harmful:hate
+    - pii:direct
+    - id: excessive-agency
+      numTests: 3
+  strategies:
+    - jailbreak
+outputPath: results/promptfoo-results.json

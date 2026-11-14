@@ -15,6 +15,7 @@ from agent_bom.api.graph_store import (
 from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
 )
+from agent_bom.graph.node_roles import INVENTORY_FACET_NAMES
 from agent_bom.graph.severity_floor import severity_floor_sql
 
 from .postgres_common import (
@@ -126,7 +127,7 @@ class PostgresGraphQueryMixin(PostgresGraphTraversalMixin):
             "nodes": [],
             "total": 0,
             "next_cursor": None,
-            "facets": {name: [] for name in ("type", "source", "provider", "environment", "severity")},
+            "facets": {name: [] for name in INVENTORY_FACET_NAMES},
             "finding_summaries": {},
             "relationship_counts": {},
             "finding_count": 0,
