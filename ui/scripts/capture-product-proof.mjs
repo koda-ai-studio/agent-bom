@@ -3633,7 +3633,7 @@ async function main() {
       // The finding is a badge on the asset at risk, not the last hop of the chain.
       await expect(pathCanvas.locator('.react-flow__node[data-id="cve:next"]')).toHaveCount(0);
       await expect(pathCanvas.getByTestId("attack-path-node-pkg:next")).toHaveAttribute("data-role", "target");
-      await expect(pathCanvas.getByRole("button", { name: "1 finding on next@15.2.2, worst critical. Open findings" })).toHaveText("1");
+      await expect(pathCanvas.getByRole("button", { name: "1 finding on next@15.2.2, worst critical (1 critical). Open findings" })).toHaveText("1 critical");
       // Relationship names appear on hover or focus only.
       const tooltip = pathCanvas.getByRole("tooltip");
       await expect(tooltip).toHaveCount(0);
