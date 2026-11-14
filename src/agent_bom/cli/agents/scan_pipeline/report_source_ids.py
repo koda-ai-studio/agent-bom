@@ -8,8 +8,8 @@ from agent_bom.canonical_ids import agent_graph_id_for
 from agent_bom.push import generate_source_id
 
 
-def with_endpoint_source_ids(report: dict[str, Any]) -> dict[str, Any]:
-    """The report with this machine's ``source_id`` on every agent that lacks one.
+def with_endpoint_source_ids(report: dict[str, Any], source_id: str = "") -> dict[str, Any]:
+    """The report with ``source_id`` (default: this machine's) on every agent that lacks one.
 
     ``push.sanitize_results`` stamps the same value before a direct push, so a
     saved report POSTed later from this host scopes its agents to the same
@@ -20,8 +20,16 @@ def with_endpoint_source_ids(report: dict[str, Any]) -> dict[str, Any]:
     agents = report.get("agents")
     if not isinstance(agents, list):
         return report
-    source_id = generate_source_id()
+    source_id = source_id or generate_source_id()
     return {**report, "agents": [_with_source_id(agent, source_id) for agent in agents]}
+
+
+def endpoint_scoped_report(report: dict[str, Any], *, demo: bool) -> tuple[str, dict[str, Any]]:
+    """This host's endpoint scope and the report stamped with it; demo agents are fictional and get neither."""
+    if demo:
+        return "", report
+    source_id = generate_source_id()
+    return source_id, with_endpoint_source_ids(report, source_id)
 
 
 def _with_source_id(agent: Any, source_id: str) -> Any:
@@ -35,4 +43,4 @@ def _with_source_id(agent: Any, source_id: str) -> Any:
     return stamped
 
 
-__all__ = ["with_endpoint_source_ids"]
+__all__ = ["endpoint_scoped_report", "with_endpoint_source_ids"]

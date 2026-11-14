@@ -66,7 +66,7 @@ def _emit_stdout_report(
     elif output_format == "graph":
         from agent_bom.output.graph import build_graph_elements
 
-        elements = build_graph_elements(report, blast_radii)
+        elements = build_graph_elements(report, blast_radii, endpoint_scope=ctx.graph_endpoint_scope)
         sys.stdout.write(json.dumps({"elements": elements, "format": "cytoscape"}, indent=2))
     elif output_format == "mermaid":
         if mermaid_mode == "attack-flow":

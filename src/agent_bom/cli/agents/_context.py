@@ -23,6 +23,9 @@ class ScanContext:
     report_json: Optional[dict[str, Any]] = None
     # JSON report schema for file and stdout output: "v2" (2.0); "v1"/"legacy" (1.0).
     report_format: str = "v1"
+    # This host's endpoint scope, stamped on the saved JSON's unscoped agents and
+    # handed to graph exports so their agent ids match; empty for --demo.
+    graph_endpoint_scope: str = ""
     # benchmark reports
     cis_benchmark_report: Any = None
     sf_cis_benchmark_report: Any = None

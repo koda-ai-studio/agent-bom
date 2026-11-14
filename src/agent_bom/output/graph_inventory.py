@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from agent_bom.models import Agent, MCPServer
 
 
-def _static_inventory(agent: "Agent") -> AgentScope | None:
+def _static_inventory(agent: "Agent", endpoint_scope: str = "") -> AgentScope | None:
     """The graph builder's inventory scope for an SBOM or repository wrapper; None for a running agent."""
     record = {
         "name": agent.name,
@@ -39,21 +39,23 @@ def _static_inventory(agent: "Agent") -> AgentScope | None:
         return None
     scope.static_inventory = True
     scope.inventory_type = EntityType.DIRECTORY if scope.repository_inventory else EntityType.SOURCE_FILE
-    scope.agent_id = _inventory_node_id(scope, agent_graph_id_for(agent))
+    scope.agent_id = _inventory_node_id(scope, agent_graph_id_for(agent, endpoint_scope=endpoint_scope))
     scope.agent_node_key = scope.agent_id.removeprefix("agent:")
     return scope
 
 
-def append_agent_elements(elements: list[dict], agent: "Agent", providers_seen: set[str]) -> tuple[str, AgentScope | None]:
+def append_agent_elements(
+    elements: list[dict], agent: "Agent", providers_seen: set[str], endpoint_scope: str = ""
+) -> tuple[str, AgentScope | None]:
     """Append the agent (or inventory) node; return its id and, for static inventory, its graph scope."""
     source = agent.source or "local"
-    static = _static_inventory(agent)
+    static = _static_inventory(agent, endpoint_scope)
     if static is None and source not in providers_seen:
         providers_seen.add(source)
         elements.append(
             {"data": {"id": f"provider:{source}", "label": _provider_label(source), "type": "provider", "tip": f"Source: {source}"}}
         )
-    aid = static.agent_id if static is not None else agent_graph_id_for(agent)
+    aid = static.agent_id if static is not None else agent_graph_id_for(agent, endpoint_scope=endpoint_scope)
     elements.append(
         {
             "data": {
@@ -81,12 +83,13 @@ def append_agent_elements(elements: list[dict], agent: "Agent", providers_seen: 
     return aid, static
 
 
-def server_node_id(agent: "Agent", static: AgentScope | None, server: "MCPServer") -> str:
+def server_node_id(agent: "Agent", static: AgentScope | None, server: "MCPServer", endpoint_scope: str = "") -> str:
     """An SBOM's components hang off its file node; a repository manifest is its own directory."""
     if static is None:
         if agent.source == "project" and agent_is_repository_inventory("project", [(server.surface, server.command)]):
-            return f"directory:manifest:{agent_graph_id_for(agent).removeprefix('agent:')}:{server.name}"
-        return mcp_server_graph_id_for(server, agent)
+            agent_key = agent_graph_id_for(agent, endpoint_scope=endpoint_scope).removeprefix("agent:")
+            return f"directory:manifest:{agent_key}:{server.name}"
+        return mcp_server_graph_id_for(server, agent, endpoint_scope=endpoint_scope)
     return static.agent_id if static.sbom_import or static.file_surface else repository_manifest_node_id(static, server.name)
 
 

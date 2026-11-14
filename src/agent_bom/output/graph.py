@@ -64,6 +64,7 @@ def build_graph_elements(
     collapse_cves: bool = False,
     findings: list["Finding"] | None = None,
     unified_findings: list["Finding"] | None = None,
+    endpoint_scope: str = "",
 ) -> list[dict]:
     """Build a Cytoscape.js-compatible element list with provider, agent, server, package, and CVE nodes.
 
@@ -106,12 +107,12 @@ def build_graph_elements(
         pkg_to_vulns.setdefault(key, []).append(topology_vuln_dict(finding))
 
     for agent in report.agents:
-        aid, static = append_agent_elements(elements, agent, providers_seen)
+        aid, static = append_agent_elements(elements, agent, providers_seen, endpoint_scope)
         pkg_edge_type = package_edge_type(static)
 
         # ── Server nodes ──────────────────────────────────────────────
         for srv in agent.mcp_servers:
-            sid = server_node_id(agent, static, srv)
+            sid = server_node_id(agent, static, srv, endpoint_scope)
             vuln_count = sum(1 for p in srv.packages if (p.name, p.ecosystem) in vuln_pkg_keys)
             has_vuln = vuln_count > 0
             has_cred = srv.has_credentials
@@ -358,20 +359,12 @@ def build_graph_elements(
                                 }
                             )
                         # Edge: package → CVE
-                        elements.append(
-                            {
-                                "data": {
-                                    "source": pid,
-                                    "target": cve_id,
-                                    "type": "affects",
-                                }
-                            }
-                        )
+                        elements.append({"data": {"source": pid, "target": cve_id, "type": "affects"}})
 
     _append_source_tool_elements(elements, report)
-    append_framework_agent_elements(elements, report)
+    append_framework_agent_elements(elements, report, endpoint_scope)
     _append_repo_structure_elements(elements, report, collapse_cves=collapse_cves, vuln_pkg_keys=vuln_pkg_keys)
-    elements.extend(_graph_policy_finding_elements(report, unified_findings))
+    elements.extend(_graph_policy_finding_elements(report, unified_findings, endpoint_scope))
     return stamp_export_entity_types(elements)
 
 
@@ -866,6 +859,7 @@ def export_graph_html(
     output_path: str,
     *,
     offline_assets: bool = False,
+    endpoint_scope: str = "",
 ) -> None:
     """Export an interactive standalone HTML file with Cytoscape.js supply chain graph.
 
@@ -881,7 +875,9 @@ def export_graph_html(
 
     findings = cve_findings(report, blast_radii)
     policy_findings = _graph_policy_findings(report)
-    elements, graph_id_map = sanitize_graph_elements(build_graph_elements(report, blast_radii, include_cve_nodes=False, collapse_cves=True))
+    elements, graph_id_map = sanitize_graph_elements(
+        build_graph_elements(report, blast_radii, include_cve_nodes=False, collapse_cves=True, endpoint_scope=endpoint_scope)
+    )
     elements_json = _json_for_script(elements)
 
     # Header counts are derived from the drawn elements so they always match the canvas.
