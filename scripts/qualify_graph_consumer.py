@@ -72,7 +72,7 @@ def qualify(client, *, scan_id="", page_size=100, max_pages=2):
     require(schema.get("interchange", {}).get("envelope") == ENVELOPE, "Unsupported graph envelope")
     require(schema.get("interchange", {}).get("evidence") == EVIDENCE, "Unsupported evidence contract")
     node_kinds, edge_kinds = set(schema["node_types"]), set(schema["edge_types"])
-    # Whole records: the lean default carries no provenance or canonical ids to qualify.
+    # Whole records, named explicitly: view=summary (the 0.116 default) carries no provenance or canonical ids.
     params = {"limit": page_size, "scan_id": scan_id, "view": "full"}
     identity, pages, nodes, edges = None, [], {}, {}
     ranked_ids = set()

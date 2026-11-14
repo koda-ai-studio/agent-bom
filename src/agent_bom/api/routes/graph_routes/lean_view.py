@@ -1,9 +1,9 @@
-"""The ``GET /v1/graph`` projections: lean by default, ``full`` and ``canvas`` on request.
+"""The ``GET /v1/graph`` projections: ``full`` by default, ``summary`` and ``canvas`` on request.
 
-A node's full attributes and evidence provenance come from
-``/v1/graph/node/{id}``; the complete ranked paths from
-``/v1/graph/attack-paths``. ``view=full`` (or ``include=attributes,paths``)
-returns the whole records exactly as before the lean default.
+``view=summary`` (alias ``lean``) cuts nodes, edges and embedded paths to what
+names and ranks them; a node's full attributes and evidence provenance then
+come from ``/v1/graph/node/{id}`` and complete paths from
+``/v1/graph/attack-paths``. ``summary`` becomes the default in 0.116.0.
 """
 
 from __future__ import annotations
@@ -15,20 +15,21 @@ from fastapi import HTTPException
 
 from agent_bom.api.routes.graph_routes.canvas_view import canvas_projection
 
-GraphView = Literal["lean", "canvas", "full"]
+GraphView = Literal["full", "summary", "lean", "canvas"]
 GraphInclude = Literal["attributes", "paths"]
 GRAPH_INCLUDES: tuple[GraphInclude, ...] = ("attributes", "paths")
 
 GRAPH_VIEW_DESCRIPTION = (
-    "``lean`` (the default) returns each node's id, entity_type, label, severity, risk_score, status and the "
+    "``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and "
+    "path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status and the "
     "attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable "
     "and confidence (its id is relationship:source:target); and a summary of each embedded attack path. "
     "Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from "
-    "/v1/graph/attack-paths. ``full`` returns the whole "
-    "node, edge and path records. ``canvas`` returns the graph page's projection."
+    "/v1/graph/attack-paths. ``canvas`` returns the graph page's projection."
 )
 GRAPH_INCLUDE_DESCRIPTION = (
-    "Comma-separated additions to the lean view: ``attributes`` returns whole node and edge records, ``paths`` "
+    "Comma-separated additions to the summary view (and selects it when no view is given): ``attributes`` returns "
+    "whole node and edge records, ``paths`` "
     "whole attack-path records. Both together equal ``view=full``. Not valid with ``view=canvas``."
 )
 
@@ -96,11 +97,11 @@ def resolve_projection(view: GraphView | None, include: str | None) -> GraphProj
     parts = _parse_include(include)
     if view == "canvas":
         if parts:
-            raise HTTPException(status_code=422, detail="include applies to the lean view, not view=canvas")
+            raise HTTPException(status_code=422, detail="include applies to the summary view, not view=canvas")
         return GraphProjection(view="canvas")
-    if view == "full" or parts >= set(GRAPH_INCLUDES):
+    if view == "full" or parts >= set(GRAPH_INCLUDES) or (view is None and not parts):
         return FULL_PROJECTION
-    return GraphProjection(view="lean", include=parts)
+    return GraphProjection(view="summary", include=parts)
 
 
 def _lean_node(node: dict[str, Any]) -> dict[str, Any]:
@@ -123,14 +124,14 @@ def _lean_path(path: Any) -> Any:
 
 
 def lean_projection(payload: dict[str, Any], include: frozenset[str] = frozenset()) -> dict[str, Any]:
-    """The payload with nodes, edges and paths cut to their lean records, labelled ``view: "lean"``."""
+    """The payload with nodes, edges and paths cut to their summary records, labelled ``view: "summary"``."""
     projected = {**payload}
     if "attributes" not in include:
         projected["nodes"] = [_lean_node(node) for node in payload.get("nodes") or []]
         projected["edges"] = [_lean_edge(edge) for edge in payload.get("edges") or []]
     if "paths" not in include and "attack_paths" in payload:
         projected["attack_paths"] = [_lean_path(path) for path in payload["attack_paths"]]
-    projected["view"] = "lean"
+    projected["view"] = "summary"
     if include:
         projected["include"] = sorted(include)
     return projected
@@ -139,7 +140,7 @@ def lean_projection(payload: dict[str, Any], include: frozenset[str] = frozenset
 def project_graph_payload(payload: dict[str, Any], projection: GraphProjection) -> dict[str, Any]:
     if projection.view == "canvas":
         return canvas_projection(payload)
-    if projection.view == "lean":
+    if projection.view == "summary":
         return lean_projection(payload, projection.include)
     return payload
 

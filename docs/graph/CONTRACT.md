@@ -37,20 +37,27 @@ whose source is on the page; `attack_path_pagination` reports `total`,
 `limit`, `has_more` and the `endpoint` (`/v1/graph/attack-paths`) that serves
 the complete ranked set.
 
-`GET /v1/graph` has three projections. The default, `view=lean`, carries each
-node's `id`, `entity_type`, `label`, `severity`, `risk_score`, `status` and only
-the attributes that name and badge it (display name, kind, ecosystem, version,
-package URL, provider, environment, region); each edge's `source`, `target`,
-`relationship`, `direction`, `weight`, `traversable` and `confidence`, with no
-`id` because an edge's id is always `{relationship}:{source}:{target}`; and
-each embedded path's `source`, `target`, `hops`, `edges`, `composite_risk`,
-`summary`, `severity`, `reachability`, `vuln_ids` and `finding_ids`. It is
-labelled `view: "lean"`. A node's full attributes and `evidence_provenance`
-come from `GET /v1/graph/node/{node_id}`; whole paths from
-`GET /v1/graph/attack-paths`. `include=attributes` restores whole node and edge
-records, `include=paths` whole path records, and `view=full` (or both includes)
-returns the whole records with no `view` label, byte for byte the default before
-the lean projection. `view=canvas`, the graph page's projection, drops the node
+`GET /v1/graph` has three projections. The default, `view=full`, returns the
+whole node, edge and path records with no `view` label. `view=summary` (alias
+`view=lean`) carries each node's `id`, `entity_type`, `label`, `severity`,
+`risk_score`, `status` and only the attributes that name and badge it (display
+name, kind, ecosystem, version, package URL, provider, environment, region);
+each edge's `source`, `target`, `relationship`, `direction`, `weight`,
+`traversable` and `confidence`, with no `id` because an edge's id is always
+`{relationship}:{source}:{target}`; and each embedded path's `source`, `target`,
+`hops`, `edges`, `composite_risk`, `summary`, `severity`, `reachability`,
+`vuln_ids` and `finding_ids`. It is labelled `view: "summary"` and is 5 to 7
+times smaller. A node's full attributes and `evidence_provenance` then come
+from `GET /v1/graph/node/{node_id}`; whole paths from `GET /v1/graph/attack-paths`.
+`include=attributes` restores whole node and edge records within the summary,
+`include=paths` whole path records (`include` alone selects the summary view),
+and both together equal `view=full`.
+
+Deprecation: 0.116.0 makes `view=summary` the default. A client that reads node
+attributes, `evidence_provenance` or edge ids from `/v1/graph` should pass
+`view=full` explicitly before upgrading.
+
+`view=canvas`, the graph page's projection, drops the node
 and edge fields the page never reads before a selection and the copies of the
 path's hop receipts (`exposure_path.hopEvidence`),
 `exposure_path.evidenceDimensions` and each exposure hop's

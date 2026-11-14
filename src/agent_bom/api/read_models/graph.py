@@ -78,7 +78,7 @@ class GraphPageResponse(ReadResponse):
     tenant_id: str
     created_at: str
     collection_coverage: Row | None = None
-    view: Literal["lean", "canvas"] | None = Field(default=None, description="The projection served; absent on view=full.")
+    view: Literal["summary", "canvas"] | None = Field(default=None, description="The projection served; absent on view=full (the default).")
     include: list[Literal["attributes", "paths"]] | None = Field(default=None, description="Whole records added to the lean view.")
     nodes: list[GraphNodeRecord | GraphCanvasNodeRecord | GraphLeanNodeRecord]
     edges: list[GraphEdgeRecord | GraphCanvasEdgeRecord | GraphLeanEdgeRecord]
@@ -100,7 +100,7 @@ class GraphPageResponse(ReadResponse):
         field = str(info.field_name)
         view = info.data.get("view")
         include = set(info.data.get("include") or ())
-        whole = view != "lean" or ("paths" if field == "attack_paths" else "attributes") in include
+        whole = view != "summary" or ("paths" if field == "attack_paths" else "attributes") in include
         record: type[ReadModel] = _PROJECTION_RECORDS[field]["canvas" if view == "canvas" else "full" if whole else "lean"]
         return [record.model_validate(item, context=info.context) for item in value]
 

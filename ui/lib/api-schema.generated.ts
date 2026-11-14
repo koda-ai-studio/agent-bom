@@ -18742,9 +18742,9 @@ export interface components {
             tenant_id: string;
             /**
              * View
-             * @description The projection served; absent on view=full.
+             * @description The projection served; absent on view=full (the default).
              */
-            view?: ("lean" | "canvas") | null;
+            view?: ("summary" | "canvas") | null;
         } & {
             [key: string]: unknown;
         };
@@ -36563,9 +36563,9 @@ export interface operations {
                 offset?: number;
                 /** @description Max nodes to return */
                 limit?: number;
-                /** @description ``lean`` (the default) returns each node's id, entity_type, label, severity, risk_score, status and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``full`` returns the whole node, edge and path records. ``canvas`` returns the graph page's projection. */
-                view?: ("lean" | "canvas" | "full") | null;
-                /** @description Comma-separated additions to the lean view: ``attributes`` returns whole node and edge records, ``paths`` whole attack-path records. Both together equal ``view=full``. Not valid with ``view=canvas``. */
+                /** @description ``full`` (the default in 0.115; ``summary`` becomes the default in 0.116.0) returns the whole node, edge and path records. ``summary`` (alias ``lean``) returns each node's id, entity_type, label, severity, risk_score, status and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``canvas`` returns the graph page's projection. */
+                view?: ("full" | "summary" | "lean" | "canvas") | null;
+                /** @description Comma-separated additions to the summary view (and selects it when no view is given): ``attributes`` returns whole node and edge records, ``paths`` whole attack-path records. Both together equal ``view=full``. Not valid with ``view=canvas``. */
                 include?: string | null;
             };
             header?: never;

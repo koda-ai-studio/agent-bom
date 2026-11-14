@@ -252,9 +252,14 @@ def test_expand_fails_closed_on_wrong_section_types(legacy: dict, section: str, 
     doc = _packed(legacy)
     doc[section] = value
     try:
-        expand_report(doc)
-    except ReportPackingError:
-        pass
+        outcome: dict | ReportPackingError = expand_report(doc)
+    except ReportPackingError as exc:
+        outcome = exc
+    if not isinstance(outcome, ReportPackingError):
+        # A shape the transforms never read expands to a 1.0 document carrying the value as given.
+        assert outcome["schema_version"] == REPORT_SCHEMA_V1
+        assert "packing" not in outcome and "compliance_controls" not in outcome and "provenance" not in outcome
+        assert all("control_refs" not in row for row in outcome.get("findings") or [] if isinstance(row, dict))
 
 
 # ── cross-language golden: ui/lib/report-packing.ts expands the same documents ─

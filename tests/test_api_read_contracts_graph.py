@@ -184,10 +184,10 @@ def test_canvas_graph_body_matches_documented_model(graph_client):
     assert parsed.model_dump(mode="json", exclude_unset=True) == body
 
 
-@pytest.mark.parametrize("query", ["", "&include=attributes", "&include=paths"])
+@pytest.mark.parametrize("query", ["&view=summary", "&view=lean", "&include=attributes", "&include=paths"])
 def test_lean_graph_body_matches_documented_model(graph_client, query):
     body = graph_client.get(f"/v1/graph?scan_id=contract-s2{query}").json()
-    assert body["view"] == "lean"
+    assert body["view"] == "summary"
     assert body["nodes"] and body["edges"] and body["attack_paths"]
     parsed = graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
     assert parsed.model_dump(mode="json", exclude_unset=True) == body
@@ -197,7 +197,7 @@ def test_lean_graph_body_matches_documented_model(graph_client, query):
 def test_lean_requires_its_own_wire_fields(graph_client, collection, field):
     from pydantic import ValidationError
 
-    body = graph_client.get("/v1/graph?scan_id=contract-s2").json()
+    body = graph_client.get("/v1/graph?scan_id=contract-s2&view=summary").json()
     del body[collection][0][field]
     with pytest.raises(ValidationError):
         graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
