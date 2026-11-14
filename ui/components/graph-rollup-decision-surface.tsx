@@ -12,6 +12,7 @@ import type {
 import { ScopeProviderSuffix } from "@/components/graph-scope-breadcrumb";
 import { scopeContextLine, scopeEstateComparison, scopeIssueLine, scopeIssueShare } from "@/lib/graph-issue-labels";
 import { groupRollupByImage, IMAGE_GROUP_PREFIX, priorityScopes, rankScopesByRisk, scopeRiskScore, SCOPE_RISK_WEIGHTS } from "@/lib/graph-rollup-risk";
+import { readableNodeId } from "@/lib/node-id-tail";
 
 export const ROLLUP_DECISION_THRESHOLD = 24;
 const PAGE_SIZE = 12;
@@ -301,7 +302,7 @@ export function GraphRollupDecisionSurface({
                     Open scope <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 ) : (
-                  <button type="button" aria-label={`Inspect ${item.label} (${item.id})`} onClick={() => onInvestigate(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-600 dark:text-emerald-300">
+                  <button type="button" aria-label={`Inspect ${item.label} (${readableNodeId(item.id)})`} onClick={() => onInvestigate(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-600 dark:text-emerald-300">
                     Inspect <ShieldAlert className="h-3.5 w-3.5" />
                   </button>
                 )}
@@ -316,7 +317,7 @@ export function GraphRollupDecisionSurface({
                       const node = nodesById.get(id);
                       return <span key={`${endpoint}:${id}`}>
                         {endpoint === 1 && <span aria-label="to"> → </span>}
-                        {node ? <button type="button" onClick={() => onInvestigate(node)} aria-label={`Inspect relationship endpoint ${node.label} (${id})`} title={id} className="text-sky-700 underline underline-offset-2 dark:text-sky-300">{node.label}</button> : <span title="Endpoint details are outside the returned scope">{id}</span>}
+                        {node ? <button type="button" onClick={() => onInvestigate(node)} aria-label={`Inspect relationship endpoint ${node.label} (${readableNodeId(id)})`} title={readableNodeId(id)} className="text-sky-700 underline underline-offset-2 dark:text-sky-300">{node.label}</button> : <span title="Endpoint details are outside the returned scope">{readableNodeId(id)}</span>}
                       </span>;
                     })}
                     <span className="block text-ink-tertiary">{edge.relationships.map((kind) => kind.replaceAll("_", " ")).join(", ")} · {edge.count} underlying relationships</span>

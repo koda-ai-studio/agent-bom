@@ -1,0 +1,90 @@
+name: Full correctness matrix
+
+# Reusable: every supported interpreter runs the exhaustive four-shard plan,
+# then the combined Python 3.11 coverage floor. ci.yml calls it on nightly and
+# manual runs; release.yml calls it on the exact tagged commit before anything
+# publishes. Callers gate when it runs; nothing here reads the event.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+# Called workflows do not inherit the caller's env; keep ci.yml's values.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # Product screenshots are recaptured at release time; release workflows enforce freshness.
+  AGENT_BOM_DEFER_PRODUCT_PROOF: "1"
+
+jobs:
+  # Every interpreter runs the exhaustive four-shard plan. Combine all 3.11
+  # coverage artifacts before enforcing the unchanged repository-wide floor.
+  test-main:
+    name: Full correctness (Python ${{ matrix.python-version }}, shard ${{ matrix.shard }})
+    runs-on: ubuntu-latest
+    # The 3.11 coverage shard measured 43.7 min; it now gates every release.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --frozen --extra dev --extra api --extra mcp-server
+
+      - name: Run full correctness suite
+        run: |
+          set -euo pipefail
+          mapfile -t TESTS < <(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 4)
+          if [ "${#TESTS[@]}" -eq 0 ]; then
+            echo "::error::shard ${{ matrix.shard }} selected no test modules" >&2
+            exit 1
+          fi
+          WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
+          if [ "${{ matrix.python-version }}" = "3.11" ]; then
+            uv run pytest "${TESTS[@]}" -q --tb=short --durations=50 --cov=agent_bom --cov-report= --cov-fail-under=0 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+          else
+            uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
+          fi
+
+      - name: Preserve successful coverage shard
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python311-coverage-shard-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          path: .coverage
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  test-coverage:
+    name: Combined Python coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    needs: test-main
+    if: ${{ !cancelled() && needs.test-main.result == 'success' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: "3.11"
+      - name: Install coverage tooling
+        run: uv sync --frozen --extra dev --extra api --extra mcp-server
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: python311-coverage-shard-*-attempt-*
+          path: coverage-artifacts
+      - name: Require complete combined coverage
+        run: uv run python scripts/combine_ci_coverage.py coverage-artifacts --shards 4 --attempt "${{ github.run_attempt }}"

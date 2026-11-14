@@ -635,6 +635,30 @@ tenant, the hold lasted 3.4 seconds and the first read after it returned 200;
 see "Push admission, start-up readiness and refresh under cgroup limits" in
 [PERFORMANCE_BENCHMARKS.md](PERFORMANCE_BENCHMARKS.md).
 
+## Storage busy or unreachable during a request
+
+A request whose store cannot get a lock or a connection answers fast and in
+the usual error envelope instead of hanging a worker thread:
+
+| Failure | Response |
+|---|---|
+| SQLite `database is locked` / busy (another connection holds the write lock, for example a long transaction or a `BEGIN EXCLUSIVE` held by an external tool) | 503 `SERVICE_UNAVAILABLE` with `Retry-After: 5` |
+| PostgreSQL connection failure or pool timeout, or a storage `TimeoutError` / `ConnectionError` | 503 `SERVICE_UNAVAILABLE` with `Retry-After: 5` |
+| Any other unhandled exception, including other SQLite errors | 500 `INTERNAL_ERROR` with a fixed generic message |
+
+Every such response carries `error.correlation_id` and the matching
+`X-Request-ID` header. The body never contains the exception text, file
+paths or SQL; the server log line carries the exception type, the sanitized
+message and the correlation id.
+
+API SQLite stores wait at most `AGENT_BOM_API_SQLITE_BUSY_TIMEOUT_MS` (default
+5000, Python's own sqlite3 default; clamped to 100-120000) for a lock, so a
+locked database answers 503 in about five seconds rather than after 30. The
+bound applies to the compliance hub, the SQL backend, the API-key store, the
+idempotency store and the audit log. A write that loses the wait is not
+applied; the client retries after `Retry-After`. Raise the value only if
+honest writers on a slow disk hold the lock longer than five seconds.
+
 ## Oversized result pushes
 
 One push is stored as one job result, so a decoded push can never exceed 240 MiB
@@ -692,8 +716,12 @@ the result block is one record on the `agent_bom.verdict` logger: `WARNING` for
 FAIL, `INFO` for PASS (that logger stays at `INFO` so a passing `-q` scan still
 reports its result). Its `context` carries `verdict` (`PASS`/`FAIL`),
 `outcome`, `packages`, `findings`, `counts` (by severity), `exit_code`,
-`reasons` and `report` (the written path, or null). Under `--agent-mode` only
-the exit reasons are emitted, as `WARNING` records.
+`exit_forced_by`, `reasons` and `report` (the written path, or null). The
+verdict follows the policy, not the exit status: when `--exit-zero` turns a
+default-gate failure into exit 0, the verdict stays `FAIL`, `exit_forced_by` is
+`--exit-zero`, `reasons` names the finding, and the line reads
+`agent-bom: FAIL (exit forced to 0 by --exit-zero) — …`. Under `--agent-mode`
+only the exit reasons are emitted, as `WARNING` records.
 
 When `--log-json` appears anywhere in argv (before a `--` separator) or
 `AGENT_BOM_LOG_JSON` is on, the entry point decides before Click parses, so a

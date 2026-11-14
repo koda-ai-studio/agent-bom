@@ -103,9 +103,11 @@ def pack_report(doc: Mapping[str, Any]) -> dict[str, Any]:
     if provenance:
         result["provenance"] = provenance
     fields = {ref: encode_fields(_REF_KEYS[ref]) for name, ref in REF_TRANSFORMS.items() if name in applied}
+    # A source without a schema_version records none, so expansion drops the one added above.
+    legacy = {"legacy_schema_version": _legacy_version(doc)} if "schema_version" in doc else {}
     result["packing"] = {
         "schema_version": PACKING_SCHEMA_VERSION,
-        "legacy_schema_version": _legacy_version(doc),
+        **legacy,
         "transforms": applied,
         **({"fields": fields} if fields else {}),
     }

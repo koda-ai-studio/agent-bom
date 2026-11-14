@@ -21,19 +21,43 @@ def _load_script():
     return module
 
 
-def _fetcher(*, branch_sha: str = SHA, runs: list[dict[str, Any]] | None = None, jobs: list[dict[str, Any]] | None = None):
+def _fetcher(
+    *,
+    branch_sha: str = SHA,
+    runs: list[dict[str, Any]] | None = None,
+    jobs: list[dict[str, Any]] | None = None,
+    queue_runs: list[dict[str, Any]] | None = None,
+    queue_jobs: list[dict[str, Any]] | None = None,
+):
     run_rows = runs if runs is not None else [_run()]
 
     def fetch(endpoint: str) -> dict[str, Any]:
         if "/git/ref/heads/" in endpoint:
             return {"object": {"sha": branch_sha}}
+        if "/runs/456/jobs?" in endpoint:
+            rows = queue_jobs if queue_jobs is not None else _jobs()
+            return {"jobs": rows, "total_count": len(rows)}
         if "/jobs?" in endpoint:
             rows = jobs if jobs is not None else _jobs()
             return {"jobs": rows, "total_count": len(rows)}
         assert "/actions/workflows/ci.yml/runs?" in endpoint
+        query = parse_qs(urlsplit(endpoint).query)
+        if query.get("event") == ["merge_group"]:
+            assert query.get("head_sha") == [SHA]
+            return {"workflow_runs": queue_runs or []}
         return {"workflow_runs": run_rows}
 
     return fetch
+
+
+def _queue_run(**overrides: Any) -> dict[str, Any]:
+    defaults: dict[str, Any] = {
+        "id": 456,
+        "event": "merge_group",
+        "head_branch": "gh-readonly-queue/main/pr-1-" + "c" * 40,
+        "html_url": "https://github.com/msaad00/agent-bom/actions/runs/456",
+    }
+    return _run(**{**defaults, **overrides})
 
 
 def _run(**overrides: Any) -> dict[str, Any]:
@@ -243,17 +267,10 @@ def test_unknown_workflow_has_no_implicit_release_contract() -> None:
         checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, workflow="unknown.yml", fetch_json=_fetcher())
 
 
-def _jobs():
+def _jobs(conclusion: str = "success"):
     return [
-        {"name": name, "status": "completed", "conclusion": "success", "head_sha": SHA}
-        for name in (
-            "UI Validate",
-            "UI export build",
-            "UI E2E and container smoke",
-            "Combined Python coverage",
-            "Python correctness aggregation",
-            *_full_correctness_names(),
-        )
+        {"name": name, "status": "completed", "conclusion": conclusion, "head_sha": SHA}
+        for name in ("UI Validate", "UI export build", "UI E2E and container smoke", "Python correctness aggregation")
     ]
 
 
@@ -312,31 +329,80 @@ def test_newer_unsuccessful_run_cannot_fall_back_to_older_green(conclusion):
         checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, fetch_json=_fetcher(runs=[newer, _run()]))
 
 
+def test_queue_proven_push_borrows_skipped_jobs_from_the_exact_merge_group_run():
+    """A push the merge queue proved skips the lanes its merge-group run already passed on this SHA."""
+    checker = _load_script()
+    proof = checker.verify_release_candidate(
+        repo="msaad00/agent-bom", sha=SHA, fetch_json=_fetcher(jobs=_jobs("skipped"), queue_runs=[_queue_run()])
+    )
+    assert proof["run_id"] == 123
+
+
+@pytest.mark.parametrize(
+    "queue_run",
+    [
+        None,
+        _queue_run(head_sha="e" * 40),
+        _queue_run(status="in_progress", conclusion=None),
+        _queue_run(conclusion="failure"),
+        _queue_run(event="pull_request"),
+        _queue_run(path=".github/workflows/other.yml"),
+    ],
+)
+def test_skipped_push_jobs_need_a_completed_successful_merge_group_run_of_this_sha(queue_run):
+    checker = _load_script()
+    with pytest.raises(checker.ReleaseProofError, match="UI"):
+        checker.verify_release_candidate(
+            repo="msaad00/agent-bom",
+            sha=SHA,
+            fetch_json=_fetcher(jobs=_jobs("skipped"), queue_runs=[] if queue_run is None else [queue_run]),
+        )
+
+
+@pytest.mark.parametrize("conclusion", ["failure", "cancelled", "skipped", None])
+def test_merge_group_jobs_must_have_succeeded_on_the_same_sha(conclusion):
+    checker = _load_script()
+    queue_jobs = _jobs()
+    queue_jobs[0]["conclusion"] = conclusion
+    with pytest.raises(checker.ReleaseProofError, match="UI"):
+        checker.verify_release_candidate(
+            repo="msaad00/agent-bom",
+            sha=SHA,
+            fetch_json=_fetcher(jobs=_jobs("skipped"), queue_runs=[_queue_run()], queue_jobs=queue_jobs),
+        )
+
+
+def test_a_failed_push_job_is_never_excused_by_the_merge_group():
+    checker = _load_script()
+    jobs = _jobs()
+    jobs[0]["conclusion"] = "failure"
+    with pytest.raises(checker.ReleaseProofError, match="UI"):
+        checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, fetch_json=_fetcher(jobs=jobs, queue_runs=[_queue_run()]))
+
+
 def _full_correctness_names():
-    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
+    workflow = yaml.safe_load((ROOT / ".github/workflows/full-correctness.yml").read_text(encoding="utf-8"))
     matrix = workflow["jobs"]["test-main"]["strategy"]["matrix"]
     return [f"Full correctness (Python {version}, shard {shard})" for version in matrix["python-version"] for shard in matrix["shard"]]
 
 
-@pytest.mark.parametrize("conclusion", ["failure", "skipped", "cancelled", "missing"])
-def test_release_requires_all_full_correctness_shards(conclusion):
-    checker = _load_script()
-    names = _full_correctness_names()
-    for name in names:
-        jobs = [job.copy() for job in _jobs()]
-        if conclusion == "missing":
-            jobs = [job for job in jobs if job["name"] != name]
-        else:
-            next(job for job in jobs if job["name"] == name)["conclusion"] = conclusion
-        with pytest.raises(checker.ReleaseProofError, match="Full correctness"):
-            checker.verify_release_candidate(repo="msaad00/agent-bom", sha=SHA, fetch_json=_fetcher(jobs=jobs))
+def test_release_runs_every_full_correctness_shard_on_the_tag_itself():
+    """The four-interpreter matrix and coverage floor run inside the release, on the tagged SHA."""
+    workflow = yaml.safe_load((ROOT / ".github/workflows/full-correctness.yml").read_text(encoding="utf-8"))
+    assert len(_full_correctness_names()) == 16
+    assert workflow["jobs"]["test-coverage"]["name"] == "Combined Python coverage"
+    release = yaml.safe_load((ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8"))
+    assert release["jobs"]["full-correctness"]["uses"] == "./.github/workflows/full-correctness.yml"
+    for name in ("pypi-publish", "docker-publish", "docker-publish-collector", "docker-publish-ui", "helm-publish"):
+        assert "full-correctness" in release["jobs"][name]["needs"], name
 
 
-def test_release_required_jobs_track_full_ci_matrix_and_aggregation():
+def test_release_required_jobs_track_ui_lanes_and_aggregation():
     checker = _load_script()
     required = checker.REQUIRED_WORKFLOW_JOBS["ci.yml"]
-    assert set(_full_correctness_names()) <= required
-    assert {"Combined Python coverage", "Python correctness aggregation"} <= required
+    assert {"UI Validate", "UI export build", "UI E2E and container smoke", "Python correctness aggregation"} == required
+    # The matrix is proven by the release run itself, not by a main push.
+    assert not set(_full_correctness_names()) & required
 
 
 @pytest.mark.parametrize("failed_workflow", ["ci.yml", "runtime-acceptance.yml", ""])

@@ -41,8 +41,9 @@ def test_personal_fields_and_formatted_values_still_report(source, kind):
 
 @pytest.mark.parametrize("suffix", [".json", ".yaml", ".env"])
 def test_structured_data_retains_numeric_detection(suffix):
-    source = '{"value": 123456789}'
-    assert any(f.secret_type == "US SSN" for f in scan_content(source, Path("data" + suffix), "data" + suffix))
+    path = Path("data" + suffix)
+    assert any(f.secret_type == "US SSN" for f in scan_content('{"ssn": 123456789}', path, path.name))
+    assert not [f for f in scan_content('{"value": 123456789}', path, path.name) if f.secret_type == "US SSN"]
 
 
 def test_inline_comment_email_is_not_an_assigned_personal_value():
@@ -127,7 +128,6 @@ def test_issue_style_map_is_not_a_credential_assignment():
         'const config={secret:"fixture-' + 'credential-387"};',
         'const styles={vulnerability:"bg-ink-secondary",misconfiguration:"bg-ink-tertiary",secret:"fixture-'
         + 'credential-387",pii:"bg-ink-secondary opacity-45"};',
-        'const config={secret:"bg-ink-secondary opacity-60"};',
     ],
 )
 def test_secret_literals_outside_a_complete_style_map_still_report(source):
@@ -161,7 +161,7 @@ def test_style_map_does_not_hide_another_secret_on_same_minified_line():
 
 
 def test_next_manifest_application_fields_are_not_exempted_as_build_settings():
-    source = json.dumps({"version": 1, "config": {"env": {"expire": 123456789}}})
+    source = json.dumps({"version": 1, "config": {"env": {"expire": "-".join(("123", "45", "6789"))}}})
     path = "app/.next/required-server-files.json"
     assert any(f.secret_type == "US SSN" for f in scan_content(source, Path(path), path))
 

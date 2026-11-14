@@ -44,6 +44,7 @@ from agent_bom.scanners.secret_lines import is_comment_line, is_documentation_sa
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
 from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
+from agent_bom.scanners.secret_path_context import credential_severity as _credential_severity
 from agent_bom.scanners.secret_value_shape import QUOTED_STRING_EXTENSIONS, LineLocators, is_translation_file
 from agent_bom.scanners.source_pii import machine_identity_match, source_pii_match
 from agent_bom.traversal import iter_discovery_files
@@ -419,10 +420,10 @@ def _scan_file(
                     file_path=rel_path,
                     line_number=line_num,
                     secret_type=secret_type,
-                    severity="critical",
                     matched_preview="[CREDENTIAL_REDACTED]",
                     category="credential",
                     validation_status=validation_status,
+                    **_credential_severity(rel_path, secret_type, secret_match),
                 )
             )
 

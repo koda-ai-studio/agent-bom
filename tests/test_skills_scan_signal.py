@@ -53,8 +53,9 @@ def test_clean_console_output_says_so_and_names_each_skill(tmp_path, monkeypatch
     assert "Recommended next steps" not in out
     assert "pending" not in out
     assert "no findings" in out.lower()
+    row_labels = {line.split()[0] for line in out.splitlines() if line.split()}
     for skill in ("scan", "inventory", "audit-skills"):
-        assert f"{skill}/SKILL.md" in out
+        assert skill in row_labels, out
 
 
 def test_clawhub_manifest_gaps_are_still_reported(tmp_path):

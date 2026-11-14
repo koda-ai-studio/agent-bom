@@ -39,6 +39,7 @@ from agent_bom.api.audit_details import _sanitize_detail_value as _sanitize_deta
 from agent_bom.api.audit_details import sanitize_audit_details as sanitize_audit_details
 from agent_bom.api.audit_key_state import record_key_identity, require_verification_budget
 from agent_bom.api.secret_source import resolve_secret
+from agent_bom.api.storage.sqlite_connection import api_sqlite_busy_timeout_ms
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.settings import env_bool, env_first, env_int
 
@@ -513,11 +514,10 @@ class SQLiteAuditLog:
     def _conn(self) -> sqlite3.Connection:
         conn: sqlite3.Connection | None = getattr(self._local, "conn", None)
         if conn is None:
-            conn = sqlite3.connect(self._db_path, check_same_thread=False)
+            busy_timeout_ms = api_sqlite_busy_timeout_ms()
+            conn = sqlite3.connect(self._db_path, timeout=busy_timeout_ms / 1000, check_same_thread=False)
             conn.execute("PRAGMA journal_mode=WAL")
-            # Let a concurrent writer wait for the write lock instead of failing
-            # fast with "database is locked" under multi-thread contention.
-            conn.execute("PRAGMA busy_timeout=5000")
+            conn.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")  # bounded wait for a concurrent writer's lock
             self._local.conn = conn
         return conn
 

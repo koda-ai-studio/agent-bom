@@ -212,6 +212,7 @@ _REMEDIATION_PRIORITIES_PROPERTIES: dict[str, Any] = {
     **{
         name: {"type": "integer", "minimum": 0}
         for name in (
+            "total_paths",
             "assessed_paths",
             "candidate_count",
             "covered_paths",
