@@ -5,12 +5,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from rich.text import Text
+
 from agent_bom.cli._common import SEVERITY_ORDER
 from agent_bom.cli.agents._context import ScanContext
-from agent_bom.cli.agents._stderr import stderr_notice
+from agent_bom.cli.agents._stderr import log_record, stderr_notice
 from agent_bom.evidence.cloud_posture import cloud_posture
 from agent_bom.evidence.malicious_basis import malicious_label
 from agent_bom.evidence.scan_run import NOTHING_TO_SCAN, ScanOutcome, effective_scan_run
+from agent_bom.logging_config import json_logging_active
 from agent_bom.output import to_json
 from agent_bom.output.report_packing import pack_report
 
@@ -327,9 +330,17 @@ def _push_report(ctx: ScanContext, report: Any, push_url: str, push_api_key: str
     if quiet:
         stderr_notice(message)
     else:
-        con.print("\n  [red bold]Exiting with code 1: [/red bold]", end="")
-        con.print(message, markup=False, highlight=False)
+        _print_exit_line(con, message, style="red bold", level=logging.ERROR)
     return False
+
+
+def _print_exit_line(con: Any, message: str, *, style: str, level: int = logging.WARNING) -> None:
+    """One console line, or one JSON record under ``--log-json``, naming why the scan exits 1."""
+    if json_logging_active():
+        log_record(f"Exiting with code 1: {message}", level=level, context={"exit_code": 1, "reason": message})
+        return
+    con.print()
+    con.print(Text.assemble(("  Exiting with code 1: ", style), (message, "red")), highlight=False)
 
 
 def _record_exit_reason(ctx: Any, message: str) -> None:
@@ -345,8 +356,7 @@ def _exit_reason(ctx: ScanContext, quiet: bool, message: str) -> None:
     """Record why the scan exits non-zero; print it now unless -q, whose summary prints it instead."""
     _record_exit_reason(ctx, message)
     if not quiet:
-        ctx.con.print("\n  [red]Exiting with code 1: [/red]", end="")
-        ctx.con.print(message, style="red", markup=False, highlight=False)
+        _print_exit_line(ctx.con, message, style="red")
 
 
 def _malicious_finding_reason(finding: Any) -> str:

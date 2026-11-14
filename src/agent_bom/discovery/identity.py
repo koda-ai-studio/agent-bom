@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from agent_bom.canonical_ids import agent_graph_id_for
-from agent_bom.models import Agent, AgentStatus, AgentType, MCPResource, MCPServer, MCPTool, Package
+from agent_bom.core.packages import normalize_package_ecosystem, normalize_package_name
+from agent_bom.models import Agent, AgentStatus, AgentType, MCPResource, MCPServer, MCPTool, Package, ServerSurface
 
 
 def server_identity_key(server: MCPServer) -> str:
@@ -204,6 +205,47 @@ def _code_agent_definitions(member: Agent, seen: list[dict[str, str]]) -> list[d
     return [item for item in candidates if item not in seen]
 
 
+_UNPINNED_VERSIONS = frozenset({"", "latest", "unknown"})
+
+
+def _package_key(package: Package) -> tuple[str, str]:
+    ecosystem = normalize_package_ecosystem(package.ecosystem)
+    return ecosystem, normalize_package_name(package.name, ecosystem)
+
+
+def _is_unpinned(package: Package) -> bool:
+    return (package.version or "").strip().lower() in _UNPINNED_VERSIONS
+
+
+def pinned_package_keys(servers: list[MCPServer]) -> set[tuple[str, str]]:
+    """Normalized (ecosystem, name) of every concretely versioned package outside the AI inventory."""
+    return {
+        _package_key(package)
+        for server in servers
+        if server.surface is not ServerSurface.AI_INVENTORY
+        for package in server.packages
+        if not _is_unpinned(package)
+    }
+
+
+def without_pinned_duplicates(packages: list[Package], pinned: set[tuple[str, str]]) -> list[Package]:
+    """Drop unpinned SDK-import packages whose version a manifest already declares.
+
+    An import only proves the SDK is used; the manifest says which version, so
+    an unpinned ``latest`` copy beside it would be a phantom second package.
+    """
+    return [package for package in packages if not (_is_unpinned(package) and _package_key(package) in pinned)]
+
+
+def _drop_unpinned_sdk_duplicates(servers: list[MCPServer]) -> None:
+    pinned = pinned_package_keys(servers)
+    if not pinned:
+        return
+    for server in servers:
+        if server.surface is ServerSurface.AI_INVENTORY:
+            server.packages = without_pinned_duplicates(server.packages, pinned)
+
+
 def _merge_project_members(root: str, members: list[Agent], label: str) -> Agent:
     name = f"project:{label}"
     manifest = next((member for member in members if member.source == "project" and member.name == name), None)
@@ -219,6 +261,8 @@ def _merge_project_members(root: str, members: list[Agent], label: str) -> Agent
                 servers.append(server)
             else:
                 _merge_server(existing, server)
+
+    _drop_unpinned_sdk_duplicates(servers)
 
     metadata: dict[str, object] = {}
     evidence: set[str] = set()

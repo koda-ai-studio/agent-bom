@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import click
 
 from agent_bom.cli.agents._output import _FORMAT_OUTPUT_RULES, _is_null_device, _resolve_output_path
-from agent_bom.cli.agents._stderr import stderr_notice
+from agent_bom.cli.agents._stderr import VERDICT_LOGGER, log_record, stderr_notice
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
 from agent_bom.evidence.scan_run import effective_scan_run
@@ -37,22 +38,41 @@ def _report_path(opts: ScanOptions) -> str | None:
     return _resolve_output_path(opts.output, opts.output_format)
 
 
-def quiet_summary_lines(opts: ScanOptions, st: ScanState, exit_code: int) -> list[str]:
+def quiet_verdict(opts: ScanOptions, st: ScanState, exit_code: int) -> dict[str, Any]:
+    """The structured result: verdict, outcome, counts, exit code, reasons and report path."""
     report = st.report
     counts = severity_counts(report) if report is not None else {}
-    total = sum(counts.values())
-    outcome = effective_scan_run(report).outcome.value if report is not None else "complete"
-    packages = int(getattr(st, "total_packages", 0) or 0)
-    by_severity = " · ".join(f"{count} {severity}" for severity, count in counts.items())
-    findings = f"{total} finding(s) ({by_severity})" if total else "no findings"
-    lines = [f"agent-bom: {'PASS' if exit_code == 0 else 'FAIL'} — {outcome} scan, {packages} package(s), {findings}"]
-    if exit_code:
-        reasons = list(getattr(st.ctx, "exit_reasons", None) or []) or ["see the report's scan_run and findings"]
-        lines.extend(f"Exit {exit_code}: {reason}" for reason in reasons)
-    report_path = _report_path(opts)
-    if report_path:
-        lines.append(f"Report: {report_path}")
+    reasons = list(getattr(st.ctx, "exit_reasons", None) or []) if exit_code else []
+    return {
+        "verdict": "PASS" if exit_code == 0 else "FAIL",
+        "outcome": effective_scan_run(report).outcome.value if report is not None else "complete",
+        "packages": int(getattr(st, "total_packages", 0) or 0),
+        "findings": sum(counts.values()),
+        "counts": counts,
+        "exit_code": exit_code,
+        "reasons": [str(reason) for reason in reasons] or (["see the report's scan_run and findings"] if exit_code else []),
+        "report": _report_path(opts),
+    }
+
+
+def _headline(verdict: dict[str, Any]) -> str:
+    by_severity = " · ".join(f"{count} {severity}" for severity, count in verdict["counts"].items())
+    findings = f"{verdict['findings']} finding(s) ({by_severity})" if verdict["findings"] else "no findings"
+    return f"agent-bom: {verdict['verdict']} — {verdict['outcome']} scan, {verdict['packages']} package(s), {findings}"
+
+
+def quiet_summary_lines(opts: ScanOptions, st: ScanState, exit_code: int) -> list[str]:
+    verdict = quiet_verdict(opts, st, exit_code)
+    lines = [_headline(verdict)]
+    lines.extend(f"Exit {exit_code}: {reason}" for reason in verdict["reasons"])
+    if verdict["report"]:
+        lines.append(f"Report: {verdict['report']}")
     return lines
+
+
+def _log_verdict(verdict: dict[str, Any]) -> None:
+    level = logging.WARNING if verdict["exit_code"] else logging.INFO
+    log_record(_headline(verdict), level=level, context=verdict, logger_name=VERDICT_LOGGER)
 
 
 def print_quiet_summary(opts: ScanOptions, st: ScanState, exit_code: int) -> None:
@@ -60,28 +80,32 @@ def print_quiet_summary(opts: ScanOptions, st: ScanState, exit_code: int) -> Non
 
     stdout carries it unless stdout already carries a machine document (``-f json``
     with no ``-o``), in which case it goes to stderr so the document stays
-    parseable. Under JSON logs the block is emitted as log records on stderr and
-    stdout stays empty; under ``--agent-mode`` only the exit reasons are.
+    parseable. Under JSON logs the block is one ``agent_bom.verdict`` record
+    (WARNING for FAIL, INFO for PASS) and stdout stays empty; under
+    ``--agent-mode`` only the exit reasons are emitted, as warnings.
     """
     if not opts.quiet:
         return
     stdout_has_document = opts.agent_mode or (opts.output_format != "console" and opts.output in {None, "-"})
     if opts.agent_mode:
         for reason in getattr(st.ctx, "exit_reasons", None) or []:
-            stderr_notice(f"exit {exit_code}: {reason}")
+            stderr_notice(f"exit {exit_code}: {reason}", level=logging.WARNING)
         return
-    lines = quiet_summary_lines(opts, st, exit_code)
     if json_logging_active():
-        for line in lines:
-            stderr_notice(line)
+        _log_verdict(quiet_verdict(opts, st, exit_code))
         return
-    _echo(lines, stdout_has_document=stdout_has_document)
+    _echo(quiet_summary_lines(opts, st, exit_code), stdout_has_document=stdout_has_document)
 
 
 def print_quiet_incomplete(exc: Exception, *, stdout_has_document: bool) -> None:
     """The ``-q`` result for a scan that stopped because its vulnerability evidence is incomplete."""
     if json_logging_active():
-        stderr_notice(f"exit 1: {exc}")
+        log_record(
+            "agent-bom: FAIL — incomplete scan, vulnerability data unavailable",
+            level=logging.WARNING,
+            context={"verdict": "FAIL", "outcome": "incomplete", "exit_code": 1, "reasons": [str(exc)], "report": None},
+            logger_name=VERDICT_LOGGER,
+        )
         return
     _echo(["agent-bom: FAIL — incomplete scan, vulnerability data unavailable", f"Exit 1: {exc}"], stdout_has_document=stdout_has_document)
 

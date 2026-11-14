@@ -13,29 +13,30 @@ import { api, type Agent } from "@/lib/api";
 import { AgentTopology } from "@/components/agent-topology";
 import { useAuthState } from "@/components/auth-provider";
 import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/states/page-state";
+import { TOPOLOGY_AGENT_LIMIT } from "../agents-list-state";
 
 export default function AgentTopologyPage() {
   const { session } = useAuthState();
   const [agents, setAgents] = useState<Agent[] | null>(null);
   const [sourceScope, setSourceScope] = useState<string>();
+  const [total, setTotal] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
     api
-      .listAgents()
+      .listAgents({ limit: TOPOLOGY_AGENT_LIMIT }, controller.signal)
       .then((res) => {
-        if (!cancelled) {
-          setAgents(Array.isArray(res?.agents) ? res.agents : []);
-          setSourceScope(res.scope);
-        }
+        if (controller.signal.aborted) return;
+        const page = Array.isArray(res?.agents) ? res.agents : [];
+        setAgents(page);
+        setTotal(typeof res?.total === "number" ? res.total : page.length);
+        setSourceScope(res.scope);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load agents");
+        if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Failed to load agents");
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, []);
 
   if (error) {
@@ -81,6 +82,15 @@ export default function AgentTopologyPage() {
           Context map →
         </Link>
       </div>
+      {total != null && total > agents.length ? (
+        <p
+          className="rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-3 py-2 text-xs text-[color:var(--text-secondary)]"
+          data-testid="topology-truncated"
+        >
+          Showing {agents.length.toLocaleString()} of {total.toLocaleString()} agents in this map. Search and filter the{" "}
+          <Link href="/agents" className="underline">Agents list</Link> to reach the rest.
+        </p>
+      ) : null}
       <AgentTopology agents={agents} session={session} sourceScope={sourceScope} />
     </div>
   );

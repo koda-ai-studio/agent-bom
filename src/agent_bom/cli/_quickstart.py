@@ -39,6 +39,13 @@ class _Handoff(TypedDict):
     control_plane_db: Path
     graph_db: Path
     graph_url: str
+    exit_code: int
+
+
+# A scan that persisted its graph but exited 1 only because coverage is partial
+# (for example a stale local vulnerability DB) still hands off; exit stays 1.
+PARTIAL_COVERAGE_EXIT_CODE = 1
+_MAX_COVERAGE_ISSUES_SHOWN = 3
 
 
 @click.command("quickstart")
@@ -126,9 +133,12 @@ def quickstart_cmd(
             gateway_policy=gateway_policy,
             gateway_mode=gateway_mode,
             port=port,
+            open_ui=open_ui,
         )
         if open_ui:
             _open_dashboard(handoff, port=port)
+        if handoff["exit_code"]:
+            raise click.exceptions.Exit(handoff["exit_code"])
         return
 
     if write_sample:
@@ -186,6 +196,7 @@ def _run_quickstart(
     gateway_policy: bool,
     gateway_mode: str,
     port: int,
+    open_ui: bool = False,
 ) -> _Handoff:
     """Execute the onboarding end to end so the local cockpit is populated on first run."""
     inventory_path = sample_dir / "inventory.json"
@@ -247,14 +258,10 @@ def _run_quickstart(
         env=scan_env,
         timeout=QUICKSTART_SCAN_TIMEOUT_SECONDS,
     )
-    if result.returncode != 0:
+    coverage = _partial_coverage(report_path) if result.returncode == PARTIAL_COVERAGE_EXIT_CODE else None
+    if result.returncode != 0 and coverage is None:
         raise click.ClickException(f"Scan exited with status {result.returncode}. The cockpit graph may be incomplete.")
-    graph_receipt = _verify_persisted_graph(
-        report_path=report_path,
-        graph_db=graph_db,
-        scan_started_at=scan_started_at,
-    )
-    _persist_completed_scan(report_path, control_plane_db, graph_receipt["scan_id"], scan_started_at)
+    graph_receipt = _read_back_scan(report_path, graph_db, control_plane_db, scan_started_at, partial=coverage is not None)
     click.echo(
         f"      Verified persisted graph: {graph_receipt['nodes']} nodes, "
         f"{graph_receipt['edges']} edges (scan {graph_receipt['scan_id'][:8]}…)"
@@ -278,7 +285,71 @@ def _run_quickstart(
         port=port,
         policy_path=policy_path,
         gateway_mode=gateway_mode,
+        open_ui=open_ui,
+        coverage=coverage,
     )
+
+
+def _read_back_scan(report_path: Path, graph_db: Path, control_plane_db: Path, started: datetime, *, partial: bool) -> _GraphReceipt:
+    """Verify the persisted graph, then record the scan job; a partial scan is accepted only when ``partial``."""
+    if not partial:
+        receipt = _verify_persisted_graph(report_path=report_path, graph_db=graph_db, scan_started_at=started)
+        _persist_completed_scan(report_path, control_plane_db, receipt["scan_id"], started)
+        return receipt
+    receipt = _verify_persisted_graph(report_path=report_path, graph_db=graph_db, scan_started_at=started, allow_partial=True)
+    _persist_completed_scan(report_path, control_plane_db, receipt["scan_id"], started, allow_partial=True)
+    return receipt
+
+
+class _PartialCoverage(TypedDict):
+    issues: list[str]
+    stale_db_age_days: int | None
+    stale_db: bool
+
+
+def _partial_coverage(report_path: Path) -> _PartialCoverage | None:
+    """Coverage gaps when the report proves a partial (not failed, not policy-blocked) scan; else None.
+
+    Only ``scan_run.outcome == "partial"`` qualifies. Unreadable evidence never
+    authorizes a handoff.
+    """
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    scan_run = payload.get("scan_run") if isinstance(payload, dict) else None
+    if not isinstance(scan_run, dict) or scan_run.get("outcome") != "partial":
+        return None
+    issues = [
+        str(issue.get("message") or issue.get("code") or "").strip()
+        for issue in scan_run.get("issues") or []
+        if isinstance(issue, dict) and issue.get("affects_coverage", True) is not False
+    ]
+    freshness = payload.get("vuln_data_freshness")
+    stale = isinstance(freshness, dict) and freshness.get("stale") is True
+    age = freshness.get("age_days") if stale and isinstance(freshness, dict) else None
+    return {
+        "issues": [issue for issue in issues if issue],
+        "stale_db": stale,
+        "stale_db_age_days": age if isinstance(age, int) else None,
+    }
+
+
+def _print_partial_coverage(coverage: _PartialCoverage) -> None:
+    click.echo("")
+    click.echo(
+        "Warning: scan coverage is incomplete (scan_run.outcome is partial). The graph was persisted and is usable; "
+        f"quickstart ends with exit status {PARTIAL_COVERAGE_EXIT_CODE} so automation does not read this run as complete."
+    )
+    if coverage["stale_db"]:
+        age = coverage["stale_db_age_days"]
+        described = f"is {age} days old" if age is not None else "is missing or undated"
+        click.echo(f"  The local vulnerability DB {described}. Refresh it, then rerun: agent-bom db update")
+    for issue in coverage["issues"][:_MAX_COVERAGE_ISSUES_SHOWN]:
+        click.echo(f"  - {issue}")
+    hidden = len(coverage["issues"]) - _MAX_COVERAGE_ISSUES_SHOWN
+    if hidden > 0:
+        click.echo(f"  - … {hidden} more in scan_run.issues of the JSON report")
 
 
 def _print_quickstart_handoff(
@@ -291,11 +362,17 @@ def _print_quickstart_handoff(
     port: int,
     policy_path: Path | None,
     gateway_mode: str,
+    open_ui: bool = False,
+    coverage: _PartialCoverage | None = None,
 ) -> _Handoff:
     """Show evidence and next actions only after exact snapshot verification; returns where the graph lives."""
     # Handoff ---------------------------------------------------------------
-    click.echo("")
-    click.echo("Onboarding complete. The completed scan and security graph were read back from the configured local databases.")
+    if coverage is None:
+        click.echo("")
+        click.echo("Onboarding complete. The completed scan and security graph were read back from the configured local databases.")
+    else:
+        _print_partial_coverage(coverage)
+        click.echo("Partial onboarding: the scan and security graph were read back from the configured local databases.")
     click.echo("")
     click.echo("Sample evidence; this does not assess your environment.")
     click.echo(f"  JSON report: {report_path.resolve()}")
@@ -312,7 +389,8 @@ def _print_quickstart_handoff(
         click.echo(line)
     click.echo(f"  Security graph: {graph_url}")
     click.echo(f"  Dashboard:      http://127.0.0.1:{port}/")
-    click.echo("  Or rerun with --open to start the server and open the graph in your browser.")
+    if not open_ui:
+        click.echo("  Or rerun with --open to start the server and open the graph in your browser.")
     click.echo("")
     click.echo("Next, scan your own repository from its root (uses network advisory lookup):")
     click.echo("  agent-bom scan . -f json -o agent-bom-report.json")
@@ -324,7 +402,12 @@ def _print_quickstart_handoff(
             f"  agent-bom gateway serve --policy {shlex.quote(str(policy_path))} "
             f"--from-control-plane http://127.0.0.1:{port} --bind 127.0.0.1:8090"
         )
-    return {"control_plane_db": control_plane_db, "graph_db": graph_db, "graph_url": graph_url}
+    return {
+        "control_plane_db": control_plane_db,
+        "graph_db": graph_db,
+        "graph_url": graph_url,
+        "exit_code": 0 if coverage is None else PARTIAL_COVERAGE_EXIT_CODE,
+    }
 
 
 def local_auth_note_lines() -> list[str]:
