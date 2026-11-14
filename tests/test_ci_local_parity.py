@@ -42,7 +42,9 @@ def test_tests_lint_types_and_script_checks_always_run() -> None:
     for marker in ("pytest", "make lint-ruff", "make lint-mypy", "make format-check", "scripts/check_"):
         assert not [step.name for step in skipped if marker in step.command], marker
     shards = [step for step in plan if step.job == "test-shard" and "pytest_ci_plan.py shard" in step.command]
-    assert sorted(step.matrix for step in shards) == ["0", "1", "2", "3"]
+    expected = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]["test-shard"]["strategy"]["matrix"]["shard"]
+    assert sorted(step.matrix for step in shards) == sorted(str(shard) for shard in expected)
+    assert len(expected) > 1
     assert all("${{" not in step.command for step in plan if step.action == "run")
 
 
