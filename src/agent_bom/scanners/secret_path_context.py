@@ -9,12 +9,46 @@ credential a provider confirmed live keeps its severity wherever it sits.
 
 from __future__ import annotations
 
-from pathlib import Path
+import ipaddress
+import re
+from pathlib import Path, PurePosixPath
 
 from agent_bom.core.path_context import CONTEXT_SEVERITY, classify_path_context, context_downgrade_reason
 from agent_bom.scanners.secret_models import SecretFinding
 
 _FIXTURE_DIRS = frozenset({"testdata", "__fixtures__", "__mocks__"})
+_CI_PIPELINE_FILES = frozenset({".gitlab-ci.yml", ".gitlab-ci.yaml", "azure-pipelines.yml", "bitbucket-pipelines.yml"})
+_DSN_HOST_RE = re.compile(r"://[^@\s/]{1,400}@(\[[0-9a-fA-F:.]{2,45}\]|[^\s/:'\"`?]{1,253})")
+CI_LOOPBACK_DSN_REASON = (
+    "CI service-container connection string on a loopback host; the database lives only for the job, verify the password is a throwaway"
+)
+
+
+def is_ci_pipeline_file(rel_path: str) -> bool:
+    """A CI job definition: GitHub workflow, GitLab, Azure Pipelines or Bitbucket pipeline."""
+    parts = [part.lower() for part in PurePosixPath(rel_path.replace("\\", "/")).parts]
+    if not parts or PurePosixPath(parts[-1]).suffix not in {".yml", ".yaml"}:
+        return False
+    in_workflows = len(parts) >= 3 and parts[-3:-1] == [".github", "workflows"]
+    return in_workflows or parts[-1] in _CI_PIPELINE_FILES or (len(parts) >= 2 and parts[-2] == ".circleci")
+
+
+def _is_loopback_host(host: str) -> bool:
+    host = host.strip("[]").lower()
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def ci_loopback_dsn(rel_path: str, matched: str) -> bool:
+    """A connection string to a loopback host inside a CI job definition."""
+    if not is_ci_pipeline_file(rel_path):
+        return False
+    host = _DSN_HOST_RE.search(matched)
+    return bool(host and _is_loopback_host(host.group(1)))
 
 
 def apply_path_context(rel_path: str, findings: list[SecretFinding]) -> list[SecretFinding]:

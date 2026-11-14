@@ -83,11 +83,18 @@ CREDENTIAL_PATTERNS: list[tuple[str, re.Pattern]] = [
 
 # ─── PII patterns ────────────────────────────────────────────────────────────
 
+# A 3-2-4 value with one consistent separator, or nine digits under an SSN
+# field. A bare nine-digit run (byte counts, ids, "27001-2022") is not an SSN.
+# Area 000/666, group 00 and serial 0000 are never issued.
+_SSN_DIGITS = r"(?!000|666)\d{3}(?:-(?!00)\d{2}-|[ ](?!00)\d{2}[ ])(?!0000)\d{4}"
+_SSN_FIELD = r"(?i:(?<![a-z0-9])(?:[a-z]+_)*(?:ssn|social[_ -]?security(?:[_ -]?(?:number|no))?))[\"']?\s*[=:]?\s*[\"']?"
+_US_SSN = re.compile(rf"(?<![\w-]){_SSN_DIGITS}(?![\w-])|{_SSN_FIELD}(?!000|666)\d{{3}}(?!00)\d{{2}}(?!0000)\d{{4}}\b")
+
 # Personal Identifiable Information patterns for detection and redaction
 PII_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("Email Address", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")),
     ("US Phone Number", re.compile(r"\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b")),
-    ("US SSN", re.compile(r"\b\d{3}[-.\s]?\d{2}[-.\s]?\d{4}\b")),
+    ("US SSN", _US_SSN),
     ("Credit Card (Visa)", re.compile(r"\b4\d{3}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
     ("Credit Card (Mastercard)", re.compile(r"\b5[1-5]\d{2}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b")),
     ("Credit Card (Amex)", re.compile(r"\b3[47]\d{2}[-\s]?\d{6}[-\s]?\d{5}\b")),

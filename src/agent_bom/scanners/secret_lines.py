@@ -171,7 +171,7 @@ def match_file_secret(line: str, *, code_file: bool = False, translation_file: b
     """Return the first file-specific secret pattern that holds a literal secret."""
     for name, pattern in FILE_SECRET_PATTERNS:
         for match in pattern.finditer(line):
-            if matched_assignment_is_placeholder(match, line) or _issue_style_map(match, line):
+            if matched_assignment_is_placeholder(match, line) or _identifier_or_class_list(match):
                 continue
             if assigned_from_code(line, match, code_file=code_file) or is_label_assignment(line, match, translation_file=translation_file):
                 continue
@@ -179,31 +179,28 @@ def match_file_secret(line: str, *, code_file: bool = False, translation_file: b
     return None
 
 
-_STYLE_ENTRY = re.compile(
-    r"""\s*["']?(vulnerability|misconfiguration|secret|pii|identity|unclassified)["']?\s*:\s*["']"""
-    r"""(bg-ink-(?:secondary|tertiary)(?: opacity-(?:100|[1-9]?[0-9]))?)["']\s*"""
-)
+# A lowercase snake_case / kebab-case name (``data_access``, ``workspace-admin``)
+# and a whitespace list of CSS utility classes (``bg-ink-secondary opacity-60``).
+# Generated secrets carry mixed case, digits-in-words or symbols; these shapes do not.
+_IDENTIFIER_VALUE_RE = re.compile(r"[a-z]+(?:[_-][a-z]+){1,7}")
+_CSS_CLASS_TOKEN_RE = re.compile(r"!?-?[a-z][a-z0-9]*(?:[-:/][a-z0-9.%#\[\]]+)*")
+_QUOTED_TAIL_RE = re.compile(r"""[=:]\s*["']([^"']*)["']$""")
 
 
-def _issue_style_map(match: re.Match, line: str) -> bool:
-    """A complete issue-category CSS map is display configuration, not a secret.
-
-    Require a bounded object containing multiple known categories and only
-    the supported literal style values. A credential value in that same map,
-    or a lone secret assignment, remains a finding.
-    """
-    start = line.rfind("{", max(0, match.start() - 1024), match.start())
-    end = line.find("}", match.end(), match.end() + 1024)
-    if start < 0 or end < 0:
+def _identifier_or_class_list(match: re.Match) -> bool:
+    """A quoted value that names something (enum, scope, CSS classes) rather than holding a secret."""
+    quoted = _QUOTED_TAIL_RE.search(match.group(0))
+    if quoted is None:
         return False
-    entries = line[start + 1 : end].strip().rstrip(",").split(",")
-    if not 3 <= len(entries) <= 6:
-        return False
-    parsed = [_STYLE_ENTRY.fullmatch(entry) for entry in entries]
-    if not all(parsed):
-        return False
-    keys = {item.group(1) for item in parsed if item}
-    return len(keys) == len(entries) and {"vulnerability", "secret"} <= keys
+    value = quoted.group(1).strip()
+    if _IDENTIFIER_VALUE_RE.fullmatch(value):
+        return True
+    tokens = value.split()
+    return (
+        2 <= len(tokens) <= 32
+        and all(_CSS_CLASS_TOKEN_RE.fullmatch(token) for token in tokens)
+        and any("-" in token or ":" in token for token in tokens)
+    )
 
 
 _DSN_PARTS_RE = re.compile(r"://([^:@\s/]{1,200}):([^@\s/]{1,200})@([^\s/:'\"`]{1,253})")

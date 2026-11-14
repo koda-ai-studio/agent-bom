@@ -43,6 +43,7 @@ from agent_bom.scanners.secret_lines import ENTROPY_PLACEHOLDER_RE as _ENTROPY_P
 from agent_bom.scanners.secret_lines import is_comment_line, is_documentation_sample, match_credential, match_file_secret
 from agent_bom.scanners.secret_models import SecretFinding as SecretFinding
 from agent_bom.scanners.secret_models import SecretScanResult as SecretScanResult
+from agent_bom.scanners.secret_path_context import CI_LOOPBACK_DSN_REASON, ci_loopback_dsn
 from agent_bom.scanners.secret_path_context import apply_path_context as apply_path_context
 from agent_bom.scanners.secret_value_shape import QUOTED_STRING_EXTENSIONS, LineLocators, is_translation_file
 from agent_bom.scanners.source_pii import machine_identity_match, source_pii_match
@@ -414,15 +415,17 @@ def _scan_file(
             if secret_type == "AWS Access Key" and aws_validator is not None:
                 paired_secret = nearest_aws_secret(aws_secrets, line_num)
                 validation_status = _aws_pair_status(aws_validator, secret_match.group(0), paired_secret, rel_path, line_num)
+            ci_service_dsn = secret_type == "Connection String" and ci_loopback_dsn(rel_path, secret_match.group(0))
             findings.append(
                 SecretFinding(
                     file_path=rel_path,
                     line_number=line_num,
                     secret_type=secret_type,
-                    severity="critical",
+                    severity=CONTEXT_SEVERITY if ci_service_dsn else "critical",
                     matched_preview="[CREDENTIAL_REDACTED]",
                     category="credential",
                     validation_status=validation_status,
+                    downgrade_reason=CI_LOOPBACK_DSN_REASON if ci_service_dsn else None,
                 )
             )
 

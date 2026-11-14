@@ -18,7 +18,7 @@ def test_known_quantities_preserve_offsets_and_other_values(indent):
         "config": {
             "cacheLife": {"default": {"expire": 4294967294}},
             "experimental": {"imgOptMaxInputPixels": 268402689, "turbopackStaleOutputMaxAge": 604800000},
-            "env": {"expire": 123456789, "password": "fixture-" + "credential-387"},
+            "env": {"ssn": 123456789, "password": "fixture-" + "credential-387"},
         },
     }
     source = json.dumps(document, indent=indent)
