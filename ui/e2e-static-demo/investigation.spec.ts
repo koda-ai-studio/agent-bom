@@ -61,7 +61,12 @@ test("the selected path and its branches fit the canvas, refitted on resize", as
   await expect(page.getByRole("button", { name: /^1 finding on next@15\.2\.2, worst critical/ })).toBeVisible();
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.waitForTimeout(800);
-  expect(await nodesOutsideCanvas(page)).toEqual([]);
+  // Narrower, the selected path still fits at the readable floor; branches beyond it are panned to and counted, never shrunk to fit.
+  const outside = await nodesOutsideCanvas(page);
+  for (const hop of ["contractor-reviewer", "jit-prod-reviewer", "prod-ai-admin", "Developer Copilot", "github-enterprise", "next@15.2.2"]) {
+    expect(outside.some((label) => label?.includes(hop)), hop).toBe(false);
+  }
+  if (outside.length) await expect(page.getByRole("status").filter({ hasText: "off screen" })).toHaveText(`${outside.length} more ${outside.length === 1 ? "node" : "nodes"} off screen · drag to pan`);
 });
 
 test("Impact, Owner and Verify steps show sample evidence for the headline path", async ({ page }) => {

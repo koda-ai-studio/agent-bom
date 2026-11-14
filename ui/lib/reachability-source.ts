@@ -1,3 +1,5 @@
+import { nodeIdTail } from "./node-id-tail";
+
 export type ReachabilitySourceFields = {
   graph_reachable_from_agents?: string[] | null | undefined;
   graph_reachable_from?: string[] | null | undefined;
@@ -12,6 +14,5 @@ export function reachabilitySource(row: ReachabilitySourceFields): string | null
 
 /** Short, readable tail of a graph node id (``kubernetes:workload:ns/app`` -> ``app``). */
 export function reachabilitySourceLabel(source: string): string {
-  const tail = source.split(/[:/]/).filter(Boolean).at(-1);
-  return tail || source;
+  return nodeIdTail(source);
 }

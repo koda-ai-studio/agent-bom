@@ -1,6 +1,7 @@
 import { agentDisplayName } from "@/lib/display-name";
 import { entityNames } from "@/lib/entity-names";
 import { findingAssetKind } from "@/lib/finding-exposure";
+import { decodeNodeIdPart, nodeIdTail as lastSegment } from "@/lib/node-id-tail";
 
 export interface ReachingEntity {
   kind: "agent" | "workload" | "MCP server" | "cloud resource" | "asset";
@@ -8,14 +9,13 @@ export interface ReachingEntity {
   id: string;
 }
 
-const lastSegment = (value: string) => value.split(/[/:]/).filter(Boolean).pop() ?? value;
 
 /** Kind and short name of a graph node that reaches an occurrence. */
 export function reachingEntity(id: string): ReachingEntity {
   const trimmed = id.trim();
-  if (trimmed.startsWith("agent:")) return { kind: "agent", name: agentDisplayName(trimmed.slice(6)), id: trimmed };
+  if (trimmed.startsWith("agent:")) return { kind: "agent", name: agentDisplayName(decodeNodeIdPart(trimmed.slice(6))), id: trimmed };
   if (/^(kubernetes:)?workload:/.test(trimmed)) return { kind: "workload", name: lastSegment(trimmed), id: trimmed };
-  if (trimmed.startsWith("server:")) return { kind: "MCP server", name: trimmed.slice(7), id: trimmed };
+  if (trimmed.startsWith("server:")) return { kind: "MCP server", name: decodeNodeIdPart(trimmed.slice(7)), id: trimmed };
   if (trimmed.startsWith("cloud_resource:")) return { kind: "cloud resource", name: lastSegment(trimmed), id: trimmed };
   return { kind: "asset", name: lastSegment(trimmed), id: trimmed };
 }

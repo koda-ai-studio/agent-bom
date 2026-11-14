@@ -14,6 +14,7 @@ import {
 import { CircleHelp, Flame, ShieldCheck, UserRound } from "lucide-react";
 import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 import { type ElementType } from "react";
+import { SECRET_FINDINGS_HREF } from "@/lib/findings-default-query";
 import { ReportEvidenceLink, SECTION_TITLE_CLASS } from "./shared";
 
 export const ISSUE_TYPE_GLYPH: Record<IssueType, ElementType> = {
@@ -77,6 +78,7 @@ export function SeverityIssueStrip({
   kevOccurrences = null,
   kevApproximate = false,
   credentials,
+  credentialsPopulation = "secret_findings",
   complianceScore,
   severity,
   matrix,
@@ -89,7 +91,8 @@ export function SeverityIssueStrip({
   kev: number | null;
   kevOccurrences?: number | null | undefined;
   kevApproximate?: boolean | undefined;
-  credentials: number | null;
+  credentials: number | string | null;
+  credentialsPopulation?: "secret_findings" | "credential_exposed" | undefined;
   complianceScore?: string | undefined;
   severity: SeverityCounts;
   matrix: IssueSeverityMatrix | null | undefined;
@@ -158,14 +161,25 @@ export function SeverityIssueStrip({
               />
             ) : null}
             {summaryReady && credentials != null ? (
-              <CategoryChip
-                localReport={localReport}
-                href={findingsHref({ scope: "all", issue: "secret" })}
-                icon={ASSET_KINDS.credential.icon}
-                label="Secrets"
-                value={credentials}
-                title="Findings that expose credentials or secrets"
-              />
+              credentialsPopulation === "credential_exposed" ? (
+                <CategoryChip
+                  localReport
+                  href={SECRET_FINDINGS_HREF}
+                  icon={ASSET_KINDS.credential.icon}
+                  label="Credential-exposed"
+                  value={credentials}
+                  title="Findings on servers that hold credentials in this report"
+                />
+              ) : (
+                <CategoryChip
+                  localReport={localReport}
+                  href={SECRET_FINDINGS_HREF}
+                  icon={ASSET_KINDS.credential.icon}
+                  label="Secrets"
+                  value={credentials}
+                  title="Open secret findings in the default findings window; opens that list"
+                />
+              )
             ) : null}
             {complianceScore ? (
               <CategoryChip

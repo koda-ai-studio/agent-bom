@@ -58,7 +58,8 @@ export function toElements(view: ClusterMapResponse, narrow: boolean, onPage: (i
       ...(className ? { className } : {}),
     };
   });
-  const boxes = [...layout.cards, ...layout.frames];
+  // Placed labels are part of what the camera frames: one in a phone's gutter must not run off the canvas.
+  const boxes = [...layout.cards, ...layout.frames, ...routes.flatMap(route => route.label?.placed ? [route.label] : [])];
   const xs = boxes.flatMap(box => [box.x, box.x + box.width]).concat(routes.flatMap(route => route.points.map(point => point.x)));
   const ys = boxes.flatMap(box => [box.y, box.y + box.height]).concat(routes.flatMap(route => route.points.map(point => point.y)));
   const minX = Math.min(...xs, 0), minY = Math.min(...ys, 0);
