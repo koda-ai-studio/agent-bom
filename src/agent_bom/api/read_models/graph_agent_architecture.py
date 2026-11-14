@@ -20,6 +20,36 @@ class HarnessAgentSecurity(ReadModel):
     reach: dict[str, int]
 
 
+class HarnessEvalResult(ReadModel):
+    """Results an eval run wrote into the project, with the file they came from and its recorded date."""
+
+    source: str
+    source_file: str
+    recorded_at: str
+    passed: int
+    failed: int
+    errors: int
+    pass_rate: float | None = None
+
+
+class HarnessEvalSuite(ReadModel):
+    id: str
+    harness: str
+    name: str
+    purpose: Literal["safety", "quality", "unknown"]
+    file_path: str
+    results: list[HarnessEvalResult]
+
+
+class HarnessEvalCoverage(ReadModel):
+    """Eval suites linked to the agent; ``assessed`` is false when the scan did not search the project for evals."""
+
+    assessed: bool
+    status: str
+    safety_suites: int
+    suites: list[HarnessEvalSuite]
+
+
 class HarnessAgent(ReadModel):
     id: str
     label: str
@@ -35,6 +65,7 @@ class HarnessAgent(ReadModel):
     credential_refs: list[str]
     dynamic_edges: bool
     security: HarnessAgentSecurity
+    eval_coverage: HarnessEvalCoverage | None = None
 
 
 class HarnessLayer(ReadModel):

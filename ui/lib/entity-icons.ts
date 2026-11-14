@@ -12,6 +12,7 @@ export type LineageNodeType =
   | "model"
   | "framework"
   | "dataset"
+  | "evalSuite"
   | "container"
   | "cloudResource"
   | "org"
@@ -45,7 +46,7 @@ export type { EntityIcon };
 
 const LINEAGE_NODE_TYPES: readonly LineageNodeType[] = [
   "provider", "agent", "server", "package", "vulnerability", "misconfiguration", "credential", "tool", "model",
-  "framework", "dataset", "container", "cloudResource", "org", "account", "user", "group", "role", "policy",
+  "framework", "dataset", "evalSuite", "container", "cloudResource", "org", "account", "user", "group", "role", "policy",
   "serviceAccount", "servicePrincipal", "federatedIdentity", "environment", "fleet", "cluster", "sharedServer",
   "managedIdentity", "accessGrant", "accessPolicy", "driftIncident", "dataStore", "directory", "sourceFile",
   "configFile", "codeModule", "ciJob", "apiGateway", "toolCall", "blueprint",

@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 import { RouteLine } from "@/components/agent-architecture/route-line";
 import { Drawer } from "@/components/drawer";
 import { severityStyle } from "@/components/attack-path-graph-node";
+import { EvalSuiteList } from "@/components/eval-coverage-panel";
 import { api } from "@/lib/api";
+import { parseEvalSuite, type EvalSuiteRef } from "@/lib/eval-coverage";
 import { buildFindingAssetHref } from "@/lib/finding-investigation-href";
 import { FLOW_KIND_LABEL, frameworkLabel, severityRank, type ArchitectureModel, type ArchitectureNode } from "@/lib/agent-architecture-model";
 
@@ -79,6 +81,23 @@ function Findings({ node, scanId }: { node: ArchitectureNode; scanId: string }) 
   );
 }
 
+function Evals({ coverage }: { coverage: NonNullable<ArchitectureNode["agent"]>["eval_coverage"] }) {
+  if (!coverage?.assessed) {
+    return <p className="text-sm text-ink-secondary">Eval coverage was not assessed in this scan; the project files were not fully searched for eval suites.</p>;
+  }
+  const suites = coverage.suites.map(parseEvalSuite).filter((suite): suite is EvalSuiteRef => suite !== null);
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-foreground">
+        {coverage.safety_suites > 0
+          ? `${coverage.safety_suites} linked safety ${coverage.safety_suites === 1 ? "eval" : "evals"}`
+          : "No safety or red-team eval linked to this agent in the scanned project files."}
+      </p>
+      <EvalSuiteList suites={suites} empty="No eval in the scanned files targets this agent." />
+    </div>
+  );
+}
+
 function AgentBody({ node, model, scanId }: { node: ArchitectureNode; model: ArchitectureModel; scanId: string }) {
   const agent = node.agent!;
   const labels = new Map(model.nodes.map(item => [item.id, item.label]));
@@ -90,6 +109,7 @@ function AgentBody({ node, model, scanId }: { node: ArchitectureNode; model: Arc
       {reach.length > 0 && <p className="text-sm text-ink-secondary">Reaches {reach.map(([relationship, count]) => `${count} via ${relationship.replaceAll("_", " ")}`).join(", ")}</p>}
     </Section>
     <Section title="Findings"><Findings node={node} scanId={scanId} /></Section>
+    <Section title="Evals"><Evals coverage={agent.eval_coverage} /></Section>
     <Section title="Model references"><Names items={agent.model_refs} empty="No literal model name in source." /></Section>
     <Section title="Tools"><Names items={agent.tools} empty="No tools declared." /></Section>
     <Section title="Credential references"><Names items={agent.credential_refs} empty="No credential names referenced." /></Section>

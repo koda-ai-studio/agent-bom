@@ -1093,6 +1093,24 @@
    "api_keys_count": 0,
    "components": [],
    "deprecated_models_count": 0,
+   "eval_coverage": {
+    "detail": "",
+    "files_examined": 0,
+    "harnesses": [
+     "deepeval",
+     "inspect",
+     "langsmith",
+     "openai-evals",
+     "promptfoo",
+     "ragas"
+    ],
+    "scopes": [
+     "proj"
+    ],
+    "status": "complete",
+    "unreadable_files": []
+   },
+   "eval_suites": [],
    "files_scanned": 0,
    "framework_agents": [],
    "shadow_ai_count": 0,

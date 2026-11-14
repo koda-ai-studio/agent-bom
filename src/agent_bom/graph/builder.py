@@ -120,6 +120,7 @@ from agent_bom.graph.credential_bindings import project_credential_bindings
 from agent_bom.graph.declared_assets import declared_assets_by_identifier
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence as edge_evidence
+from agent_bom.graph.eval_projection import project_eval_suites
 from agent_bom.graph.finding_projection import _resolve_skill_audit_target_ids as _resolve_skill_audit_target_ids
 from agent_bom.graph.finding_projection import (
     project_iac,
@@ -320,10 +321,10 @@ def _project_runtime_topology(
 ) -> None:
     ai_inventory = report.get("ai_inventory", {})
     if isinstance(ai_inventory, dict):
-        _add_framework_topology(
-            graph, ai_inventory.get("framework_agents", []), inputs.data_source, host_agent_id=_project_host_agent_id(graph, inputs.agents)
-        )
+        host_agent_id = _project_host_agent_id(graph, inputs.agents)
+        _add_framework_topology(graph, ai_inventory.get("framework_agents", []), inputs.data_source, host_agent_id=host_agent_id)
         _add_ai_stack_frameworks(graph, ai_inventory, inputs.data_source)
+        project_eval_suites(graph, ai_inventory, report.get("findings"), inputs.data_source, host_agent_id=host_agent_id)
     _add_cross_env_correlation(graph, inputs.agents, inputs.data_source)
     project_runtime_session(graph, report.get("runtime_session_graph"))
     _add_agentic_identity_graph_projections(graph, report, inputs.data_source, tenant_id)

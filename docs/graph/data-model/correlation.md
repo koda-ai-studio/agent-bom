@@ -10,11 +10,11 @@ flowchart LR
   subgraph sources["Sources"]
     cloud["Cloud and platform providers<br/>17 built in"]
     traces["Trace connectors<br/>langfuse, langsmith"]
-    findings["Finding sources<br/>17 FindingSource values"]
-    collectors["Edge collectors<br/>63 in SOURCE_TIERS"]
+    findings["Finding sources<br/>18 FindingSource values"]
+    collectors["Edge collectors<br/>64 in SOURCE_TIERS"]
   end
   subgraph normalize["Normalization"]
-    assettype["asset_type → EntityType<br/>49 spellings"]
+    assettype["asset_type → EntityType<br/>50 spellings"]
     findingrow["finding row → finding node<br/>finding_row_node_id"]
   end
   subgraph identity["correlation_identity"]
@@ -26,7 +26,7 @@ flowchart LR
     b5["6 entity types<br/>repository_commit_path"]
     b6["9 entity types<br/>cloud_resource_id"]
     b7["7 entity types<br/>provider_identity_id"]
-    b8["13 entity types<br/>canonical_id"]
+    b8["14 entity types<br/>canonical_id"]
   end
   merged["merged node per (entity_type, identity)<br/>graph_correlation_runs / merged_nodes"]
   cloud --> assettype
@@ -42,8 +42,8 @@ flowchart LR
 
 - Cloud and platform providers (`cloud/__init__.py` `_PROVIDERS`): `aws`, `azure`, `coreweave`, `crusoe`, `databricks`, `gcp`, `huggingface`, `lambda`, `mlflow`, `nebius`, `ollama`, `openai`, `runpod`, `serving`, `snowflake`, `vastai`, `wandb`
 - Trace connectors (`trace_connectors.py`): `langfuse`, `langsmith`
-- Finding sources (`agent_bom.finding.FindingSource`): `IAC_SCAN`, `MCP_SCAN`, `CONTAINER`, `SBOM`, `CLOUD_CIS`, `CLOUD_SECURITY`, `PROXY`, `SAST`, `SKILL`, `BROWSER_EXT`, `EXTERNAL`, `FILESYSTEM`, `PROMPT_SCAN`, `SECRET_SCAN`, `GRAPH_ANALYSIS`, `DSPM`, `MODEL_SCAN`
-- Edge collectors (`graph/edge_evidence.py` `SOURCE_TIERS`): `access-advisor`, `agent_discovery`, `ai-inventory`, `aspm-overlay`, `asset-canonicalization`, `ast_analysis`, `authorization-evidence`, `aws-organizations`, `browser-extension-scan`, `ci_graph_overlay`, `cloud-audit-trail`, `cloud-cis`, `cloud-inventory`, `cloud-rbac`, `cloud-security`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `code_graph_overlay`, `container-scan`, `cortex-agent-usage`, `dspm`, `external-import`, `filesystem-scan`, `framework-agent`, `gcp-organizations`, `github-actions`, `governance-overlay`, `hardware-attestation-ingest`, `iac`, `kubernetes`, `mcp-audit`, `mcp-scan`, `model-scan`, `nhi-discovery`, `operator_reported_timestamps`, `persisted-runtime-activity`, `prompt-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `sast`, `sbom-ingest`, `secret-scan`, `skill-audit`, `snowflake-cortex-agents`, `snowflake-cortex-observability`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-governance`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `source-ast`, `tpm-quote`, `vendor-inventory-export`, `warehouse-export`
+- Finding sources (`agent_bom.finding.FindingSource`): `IAC_SCAN`, `MCP_SCAN`, `CONTAINER`, `SBOM`, `CLOUD_CIS`, `CLOUD_SECURITY`, `PROXY`, `SAST`, `SKILL`, `BROWSER_EXT`, `EXTERNAL`, `FILESYSTEM`, `PROMPT_SCAN`, `SECRET_SCAN`, `GRAPH_ANALYSIS`, `DSPM`, `MODEL_SCAN`, `EVAL_SCAN`
+- Edge collectors (`graph/edge_evidence.py` `SOURCE_TIERS`): `access-advisor`, `agent_discovery`, `ai-inventory`, `aspm-overlay`, `asset-canonicalization`, `ast_analysis`, `authorization-evidence`, `aws-organizations`, `browser-extension-scan`, `ci_graph_overlay`, `cloud-audit-trail`, `cloud-cis`, `cloud-inventory`, `cloud-rbac`, `cloud-security`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `code_graph_overlay`, `container-scan`, `cortex-agent-usage`, `dspm`, `eval-scan`, `external-import`, `filesystem-scan`, `framework-agent`, `gcp-organizations`, `github-actions`, `governance-overlay`, `hardware-attestation-ingest`, `iac`, `kubernetes`, `mcp-audit`, `mcp-scan`, `model-scan`, `nhi-discovery`, `operator_reported_timestamps`, `persisted-runtime-activity`, `prompt-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `sast`, `sbom-ingest`, `secret-scan`, `skill-audit`, `snowflake-cortex-agents`, `snowflake-cortex-observability`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-governance`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `source-ast`, `tpm-quote`, `vendor-inventory-export`, `warehouse-export`
 
 ## Normalization
 
@@ -88,7 +88,7 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | 6 | `entity_type in _REPOSITORY_ENTITY_TYPES` | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `source_file` | `repository`, `repository_url`, `repo_url`, `repository_commit`, `commit_sha`, `git_commit`, `repository_path`, `path`, `source_file`, `config_path` | `repository_commit_path` | `repository_identity` |
 | 7 | `entity_type in _CLOUD_RESOURCE_ENTITY_TYPES` | `account`, `api_gateway`, `cloud_resource`, `cluster`, `data_store`, `dataset`, `org`, `provider`, `resource` | `arn`, `resource_arn`, `kubernetes_uid`, `uid`, `resource_id`, `provider_id`, `object_fqn`, `self_link`, `canonical_id`, `stable_id` | `cloud_resource_id` | `strong_identity`, `exact_attribute_identity`, `snapshot_scoped_identity` |
 | 8 | `entity_type in _PROVIDER_IDENTITY_ENTITY_TYPES` | `federated_identity`, `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `provider_identity_id`, `principal_id`, `directory_principal_id`, `object_id`, `subject_id`, `arn`, `client_id`, `canonical_id`, `stable_id` | `provider_identity_id` | `strong_identity`, `exact_attribute_identity`, `snapshot_scoped_identity` |
-| 9 | `every other entity type` | `access_grant`, `access_policy`, `application`, `blueprint`, `credential_ref`, `drift_incident`, `environment`, `fleet`, `framework`, `misconfiguration`, `model`, `policy`, `vulnerability` | `canonical_id`, `stable_id` | `canonical_id` | `exact_attribute_identity`, `snapshot_scoped_identity` |
+| 9 | `every other entity type` | `access_grant`, `access_policy`, `application`, `blueprint`, `credential_ref`, `drift_incident`, `environment`, `eval_suite`, `fleet`, `framework`, `misconfiguration`, `model`, `policy`, `vulnerability` | `canonical_id`, `stable_id` | `canonical_id` | `exact_attribute_identity`, `snapshot_scoped_identity` |
 
 ## Per entity type
 
@@ -116,6 +116,7 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `directory` | 6 | — | — |
 | `drift_incident` | 9 | — | — |
 | `environment` | 9 | — | `env:{provider}:{account_scope}:{environment}` |
+| `eval_suite` | 9 | — | — |
 | `external_import` | 6 | — | — |
 | `federated_identity` | 8 | — | — |
 | `fleet` | 9 | — | `endpoint:{endpoint_id}` |
@@ -150,6 +151,7 @@ Entity types that reach only the generic fallback branch, have no `canonical_ids
 - `credential_ref`
 - `drift_incident`
 - `environment`
+- `eval_suite`
 - `fleet`
 - `misconfiguration`
 - `model`
