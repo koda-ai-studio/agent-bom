@@ -171,7 +171,7 @@ def match_file_secret(line: str, *, code_file: bool = False, translation_file: b
     """Return the first file-specific secret pattern that holds a literal secret."""
     for name, pattern in FILE_SECRET_PATTERNS:
         for match in pattern.finditer(line):
-            if matched_assignment_is_placeholder(match, line) or _identifier_or_class_list(match):
+            if matched_assignment_is_placeholder(match, line) or _identifier_or_class_list(name, match, code_file=code_file):
                 continue
             if assigned_from_code(line, match, code_file=code_file) or is_label_assignment(line, match, translation_file=translation_file):
                 continue
@@ -181,19 +181,21 @@ def match_file_secret(line: str, *, code_file: bool = False, translation_file: b
 
 # A lowercase snake_case / kebab-case name (``data_access``, ``workspace-admin``)
 # and a whitespace list of CSS utility classes (``bg-ink-secondary opacity-60``).
-# Generated secrets carry mixed case, digits-in-words or symbols; these shapes do not.
+# A class list is never a credential. A bare name is skipped only for a
+# ``secret`` key in source code, where it is an enum or map value; in config
+# files and under ``password`` keys a word phrase can be the real value.
 _IDENTIFIER_VALUE_RE = re.compile(r"[a-z]+(?:[_-][a-z]+){1,7}")
 _CSS_CLASS_TOKEN_RE = re.compile(r"!?-?[a-z][a-z0-9]*(?:[-:/][a-z0-9.%#\[\]]+)*")
 _QUOTED_TAIL_RE = re.compile(r"""[=:]\s*["']([^"']*)["']$""")
 
 
-def _identifier_or_class_list(match: re.Match) -> bool:
+def _identifier_or_class_list(name: str, match: re.Match, *, code_file: bool) -> bool:
     """A quoted value that names something (enum, scope, CSS classes) rather than holding a secret."""
     quoted = _QUOTED_TAIL_RE.search(match.group(0))
     if quoted is None:
         return False
     value = quoted.group(1).strip()
-    if _IDENTIFIER_VALUE_RE.fullmatch(value):
+    if code_file and name == "Hardcoded secret" and _IDENTIFIER_VALUE_RE.fullmatch(value):
         return True
     tokens = value.split()
     return (

@@ -22,11 +22,24 @@ def _pw(*parts: str) -> str:
         ("export const BAR = {\n  secret: 'flex items-center text-ink-secondary',\n};", "ui/bar.tsx"),
         ('    "hardcoded_secret": "data_access",', "src/pkg/behavior.py"),
         ('    "secret_scope": "workspace-admin-only",', "src/pkg/scopes.py"),
-        ('  client_secret: "token_exchange"', "config/app.yaml"),
+        ("const KIND = { client_secret: 'token_exchange' };", "ui/lib/kinds.ts"),
+        ('  secret: "bg-ink-secondary opacity-60"', "config/theme.yaml"),
     ],
 )
 def test_class_lists_and_identifiers_are_not_secrets(source, path):
     assert _secrets(source, path) == []
+
+
+@pytest.mark.parametrize(
+    ("source", "path"),
+    [
+        ('PASSWORD="' + _pw("regression-", "fixture-", "password") + '"', ".env"),
+        ('  client_secret: "' + _pw("token_", "exchange") + '"', "config/app.yaml"),
+        ('db_password = "' + _pw("staging-", "admin-", "pass") + '"', "src/pkg/settings.py"),
+    ],
+)
+def test_word_phrase_values_in_config_or_password_keys_still_report(source, path):
+    assert _secrets(source, path), source
 
 
 @pytest.mark.parametrize(
