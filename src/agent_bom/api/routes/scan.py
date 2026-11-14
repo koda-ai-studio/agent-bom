@@ -11,7 +11,7 @@ from typing import Annotated, Any, Literal, cast
 
 import anyio.to_thread
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 
 from agent_bom.api import job_status_count_cache
 from agent_bom.api.ai_assessment_read import attach_ai_assessments
@@ -89,6 +89,7 @@ from agent_bom.api.scan_finding_read import _current_scan_rows as _current_scan_
 from agent_bom.api.scan_finding_read import current_open_scan_findings as current_open_scan_findings
 from agent_bom.api.scan_finding_read import iter_tenant_scan_spine_findings as iter_tenant_scan_spine_findings
 from agent_bom.api.scan_finding_read import persisted_finding_evidence as persisted_finding_evidence
+from agent_bom.api.scan_full_stream import redacted_body_chunks, streams_full_body
 from agent_bom.api.scan_graph_view import _attach_unified_graph_view as _attach_unified_graph_view
 from agent_bom.api.scan_graph_view import _context_graph_payload as _context_graph_payload
 from agent_bom.api.scan_graph_view import _effective_reach_lookup as _effective_reach_lookup
@@ -405,9 +406,15 @@ async def get_scan(
     result document. ``view=full`` returns the complete ``ScanJob``: ``result``
     is the canonical AI-BOM JSON and, for a non-json ``format``,
     ``result_document`` carries that rendering named by ``result_format``.
+    A large full view is streamed (chunked, no ``Content-Length``) with the
+    same bytes; page sections with ``/v1/scan/{job_id}/result/{section}``.
     """
     if view == "full":
         job = await _load_job_for_request(request, job_id)
+        if streams_full_body(job):
+            # Redact before the first byte so a failure is still a clean error response.
+            payload = await anyio.to_thread.run_sync(_job_response_payload, job)
+            return StreamingResponse(redacted_body_chunks(payload), media_type="application/json")
         body = await anyio.to_thread.run_sync(full_body, job)
     else:
         body = await anyio.to_thread.run_sync(partial(summary_body_for_request, request, job_id))

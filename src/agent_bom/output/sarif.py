@@ -780,4 +780,4 @@ def to_sarif(
 def export_sarif(report: AIBOMReport, output_path: str, *, exclude_unfixable: bool = False) -> None:
     """Export report as SARIF 2.1.0 JSON file."""
     data = to_sarif(report, exclude_unfixable=exclude_unfixable)
-    write_json_file(data, output_path, compact=True)
+    write_json_file(data, output_path)

@@ -1,4 +1,4 @@
-"""Pull requests prove the affected selection; the full matrix runs after merge."""
+"""Pull requests prove the affected selection; the full suite runs in the merge queue and the matrix nightly."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+FULL_MATRIX_WORKFLOW = ROOT / ".github" / "workflows" / "full-correctness.yml"
 RUNBOOK = ROOT / "docs" / "operations" / "CI_RUNBOOK.md"
 EVENTS = ("pull_request", "merge_group", "push", "schedule", "workflow_dispatch")
 RESULTS = ("success", "failure", "skipped")
@@ -27,8 +28,9 @@ OUTPUTS = (
     "python",
     "endpoint",
     "native_image",
+    "queue_proven",
 )
-FULL_SUITE_JOBS = ("test-shard", "test-main", "test-coverage")
+FULL_SUITE_JOBS = ("test-shard", "test-main")
 AFFECTED_STEP = "Run affected tests and contract smoke"
 
 
@@ -43,11 +45,17 @@ def _python(expression: str) -> str:
     return expression.replace("&&", " and ").replace("||", " or ")
 
 
+def _full() -> dict:
+    return yaml.safe_load(FULL_MATRIX_WORKFLOW.read_text(encoding="utf-8"))
+
+
 def _contexts(event: str):
-    """Every classifier result/output combination the event can present."""
+    """Every classifier result/output combination the event can present (``queue_proven`` is set only on push)."""
     for result in RESULTS:
         for values in itertools.product(FLAGS, repeat=2):
             outputs = {name: values[index % 2] for index, name in enumerate(OUTPUTS)}
+            if event != "push":
+                outputs["queue_proven"] = ""
             yield {
                 "github": SimpleNamespace(event_name=event, ref="refs/heads/main"),
                 "needs": SimpleNamespace(
@@ -59,7 +67,10 @@ def _contexts(event: str):
             yield {
                 "github": SimpleNamespace(event_name=event, ref="refs/heads/main"),
                 "needs": SimpleNamespace(
-                    changes=SimpleNamespace(result=result, outputs=SimpleNamespace(**dict.fromkeys(OUTPUTS, flag))),
+                    changes=SimpleNamespace(
+                        result=result,
+                        outputs=SimpleNamespace(**{**dict.fromkeys(OUTPUTS, flag), **({} if event == "push" else {"queue_proven": ""})}),
+                    ),
                     test_main=SimpleNamespace(result="success"),
                 ),
             }
@@ -101,9 +112,11 @@ def test_affected_tests_run_on_every_pull_request_input() -> None:
     job = _ci()["jobs"]["test-smoke"]
     for context in _contexts("pull_request"):
         assert _runs(job, context)
-    for event in ("push", "schedule", "workflow_dispatch"):
+    for event in ("schedule", "workflow_dispatch"):
         assert all(_runs(job, context) for context in _contexts(event)), event
-    assert not any(_runs(job, context) for context in _contexts("merge_group"))
+    # Merge groups and main pushes prove the full shards (a queue-proven push reuses them).
+    for event in ("merge_group", "push"):
+        assert not any(_runs(job, context) for context in _contexts(event)), event
 
 
 def test_affected_job_is_bounded_and_reports_slow_tests() -> None:
@@ -127,7 +140,7 @@ def test_full_suite_lanes_report_the_fifty_slowest_tests() -> None:
     jobs = _ci()["jobs"]
     runs = [
         _step(jobs["test-shard"], "Run full correctness shard")["run"],
-        _step(jobs["test-main"], "Run full correctness suite")["run"],
+        _step(_full()["jobs"]["test-main"], "Run full correctness suite")["run"],
         _step(jobs["test-alpine"], "Run tests (musl)")["run"],
     ]
     for run in runs:
@@ -139,17 +152,17 @@ def test_full_suite_lanes_report_the_fifty_slowest_tests() -> None:
 def test_merge_groups_and_post_merge_events_keep_full_proof() -> None:
     jobs = _ci()["jobs"]
     assert all(_runs(jobs["test-shard"], context) for context in _contexts("merge_group"))
-    for event in ("push", "schedule", "workflow_dispatch"):
-        for name in (
-            "test-main",
-            "ui-e2e-shard",
-            "graph-performance",
-            "output-scale-performance",
-            "sdk-import-smoke",
-            "postgres-integration",
-        ):
+    post_merge = ("ui-e2e-shard", "graph-performance", "output-scale-performance", "sdk-import-smoke", "postgres-integration")
+    for event in ("schedule", "workflow_dispatch"):
+        for name in ("test-main", *post_merge):
             assert all(_runs(jobs[name], context) for context in _contexts(event)), (event, name)
-    assert jobs["test-main"]["strategy"]["matrix"] == {"python-version": ["3.11", "3.12", "3.13", "3.14"], "shard": [0, 1, 2, 3]}
+    # A main push the queue did not prove runs everything a merge group would; a proven one reuses that run.
+    for context in _contexts("push"):
+        proven = context["needs"].changes.outputs.queue_proven == "true"
+        assert not _runs(jobs["test-main"], context)
+        for name in ("test-shard", *post_merge):
+            assert _runs(jobs[name], context) is not proven, (name, proven)
+    assert _full()["jobs"]["test-main"]["strategy"]["matrix"] == {"python-version": ["3.11", "3.12", "3.13", "3.14"], "shard": [0, 1, 2, 3]}
     alpine = _step(jobs["test-alpine"], "Run tests (musl)")["env"]["ALPINE_FULL"]
     nightly = {
         "github": SimpleNamespace(event_name="schedule"),

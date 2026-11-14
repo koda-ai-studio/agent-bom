@@ -96,6 +96,9 @@ def _expand(doc: Mapping[str, Any], max_expanded_bytes: int | None) -> dict[str,
     for name in reversed(TRANSFORMS):
         if name in applied and name in steps:
             steps[name](expanded)
+    if "legacy_schema_version" not in manifest:
+        # The source had no schema_version; the packer added the one this document carries.
+        expanded.pop("schema_version", None)
     legacy = manifest.get("legacy_schema_version")
     version = legacy if isinstance(legacy, str) and legacy.split(".", 1)[0] == "1" else REPORT_SCHEMA_V1
     for key in ("schema_version", "spec_version"):

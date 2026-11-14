@@ -58776,7 +58776,11 @@ paths:
 
         is the canonical AI-BOM JSON and, for a non-json ``format``,
 
-        ``result_document`` carries that rendering named by ``result_format``.'
+        ``result_document`` carries that rendering named by ``result_format``.
+
+        A large full view is streamed (chunked, no ``Content-Length``) with the
+
+        same bytes; page sections with ``/v1/scan/{job_id}/result/{section}``.'
       operationId: get_scan_v1_scan__job_id__get
       parameters:
       - in: path

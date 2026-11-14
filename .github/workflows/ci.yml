@@ -8,14 +8,19 @@ permissions:
 #                  and contract smoke on the merge result, in duration-sized shards; never
 #                  the full suite. Path-gated Postgres, musl subset, one UI E2E
 #                  smoke and other validators.
-#   merge_group    runs when the owner turns on "Require merge queue" for
-#                  main: no path classifier, so every path-gated lane runs,
-#                  and the full 3.13 shards replace the affected tests, plus
-#                  the post-merge lanes. Nothing lands on main unproven.
-#   push to main   everything: full 4-version suite with coverage, performance,
-#                  Postgres, musl, Docker, UI E2E, dogfood. The release gate
-#                  reads this.
-#   schedule       nightly full run, including the full musl suite.
+#   merge_group    the merge queue gating main: no path classifier, so every
+#                  path-gated lane runs, and the full 3.13 shards replace the
+#                  affected tests, plus the performance, Postgres, UI E2E and
+#                  dogfood lanes. Nothing lands on main unproven.
+#   push to main   the queue pushes the exact commit its merge-group run
+#                  proved, so a push only runs what that run cannot: Docker
+#                  (multi-arch) and, on dependency changes, the full musl
+#                  suite. A push without merge-group proof runs the merge-group
+#                  lanes itself. The release gate reads both runs.
+#   schedule       nightly (and workflow_dispatch): the 4-version suite with
+#                  the coverage floor (full-correctness.yml), the full musl
+#                  suite and every other lane. release.yml reruns the 4-version
+#                  suite on the tagged commit before publishing.
 # Supersede obsolete PR runs. Each main commit keeps an independent run;
 # scheduled/manual evidence uses separate event groups.
 concurrency:
@@ -72,6 +77,7 @@ jobs:
       python: ${{ steps.classify.outputs.python }}
       ui: ${{ steps.classify.outputs.ui }}
       ui_e2e: ${{ steps.classify.outputs.ui_e2e }}
+      queue_proven: ${{ steps.queue.outputs.queue_proven }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -282,13 +288,37 @@ jobs:
           echo "shards=$SHARDS" >> "$GITHUB_OUTPUT"
           echo "Affected-test shards: $SHARDS" >> "$GITHUB_STEP_SUMMARY"
 
+      # The merge queue pushes the exact commit its merge-group run tested, and
+      # that run finishes before the push. Lanes it already passed skip on the
+      # push; only the post-merge lanes (multi-arch Docker, full musl suite)
+      # run. A lookup failure, an unfinished or failed run, or a push that did
+      # not come through the queue keeps every push lane. Last step, so a
+      # failed classification never publishes a proof.
+      - name: Find merge-queue proof for this commit
+        id: queue
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          proven=false
+          listed="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?event=merge_group&head_sha=$GITHUB_SHA&status=success&per_page=20" --jq '.workflow_runs[] | select(.event == "merge_group" and .status == "completed" and .conclusion == "success" and .path == ".github/workflows/ci.yml") | .head_sha')" || listed=""
+          while IFS= read -r candidate; do
+            if [[ "$candidate" =~ ^[0-9a-f]{40}$ ]] && [ "$candidate" = "$GITHUB_SHA" ]; then
+              proven=true
+            fi
+          done <<< "$listed"
+          echo "queue_proven=${proven}" >> "$GITHUB_OUTPUT"
+          echo "- Merge-group run already proved this commit: \`${proven}\`" >> "$GITHUB_STEP_SUMMARY"
+
   # 1. Security Scanning
   security:
     name: Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: changes
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.changes.outputs.queue_proven != 'true' }}
     permissions:
       contents: read
     steps:
@@ -527,7 +557,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: changes
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.changes.outputs.queue_proven != 'true' }}
     permissions:
       contents: read
     steps:
@@ -602,7 +632,7 @@ jobs:
 
       - name: Save mypy cache
         if: >-
-          github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+          (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' &&
           (needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true')
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -666,7 +696,7 @@ jobs:
     # (issue #3631). Mirrors the exact build invocation in
     # .github/workflows/docs.yml but never publishes.
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.docs == 'true'
@@ -701,7 +731,7 @@ jobs:
     # bundle budget, and Playwright E2E run in parallel in `ui-e2e`. Main pushes run both jobs, so a green
     # main run still carries the complete UI proof the release gate reads.
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
@@ -824,7 +854,7 @@ jobs:
     # Runs beside `ui` rather than after it so the UI PR lane stays inside the
     # five-minute budget; same trigger as `ui`.
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
@@ -869,7 +899,7 @@ jobs:
     timeout-minutes: 20
     needs: changes
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name != 'pull_request' && github.event_name != 'push')
       )
@@ -1001,7 +1031,7 @@ jobs:
     timeout-minutes: 15
     needs: changes
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
@@ -1055,7 +1085,7 @@ jobs:
     timeout-minutes: 15
     needs: changes
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
@@ -1105,7 +1135,7 @@ jobs:
     timeout-minutes: 5
     needs: [changes, ui-e2e-shard, ui-e2e-smoke, ui-container-smoke]
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
@@ -1147,7 +1177,7 @@ jobs:
     # Path-filtered: this only has something to say when a compose file, the
     # SQL/secrets it mounts, or a Dockerfile it builds actually changes.
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.compose == 'true'
@@ -1181,7 +1211,7 @@ jobs:
     timeout-minutes: 10
     needs: changes
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.helm == 'true'
@@ -1269,7 +1299,7 @@ jobs:
     timeout-minutes: 20
     needs: changes
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.endpoint == 'true'
@@ -1382,8 +1412,8 @@ jobs:
     permissions:
       contents: read
     needs: changes
-    # Merge groups run the full 3.13 shards instead.
-    if: ${{ !cancelled() && github.event_name != 'merge_group' }}
+    # Merge groups and main pushes run the full 3.13 shards instead.
+    if: ${{ !cancelled() && github.event_name != 'merge_group' && github.event_name != 'push' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1443,76 +1473,16 @@ jobs:
           needs.changes.outputs.python == 'true')
         run: uv run python scripts/ci_dcm_self_check.py
 
-  # Every interpreter runs the exhaustive four-shard plan. Combine all 3.11
-  # coverage artifacts before enforcing the unchanged repository-wide floor.
+  # Every interpreter, four shards each, plus the combined 3.11 coverage floor
+  # (.github/workflows/full-correctness.yml). Nightly and manual runs only:
+  # merge groups prove the full 3.13 suite on every commit that lands, and
+  # release.yml reruns this matrix on the tagged commit before publishing.
   test-main:
-    name: Full correctness (Python ${{ matrix.python-version }}, shard ${{ matrix.shard }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
+    name: Full matrix
+    if: ${{ !cancelled() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
     permissions:
       contents: read
-    if: ${{ !cancelled() && github.event_name != 'pull_request' && github.event_name != 'merge_group' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
-        shard: [0, 1, 2, 3]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: ./.github/actions/setup-python
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: uv sync --frozen --extra dev --extra api --extra mcp-server
-
-      - name: Run full correctness suite
-        run: |
-          set -euo pipefail
-          mapfile -t TESTS < <(uv run python scripts/pytest_ci_plan.py shard --index "${{ matrix.shard }}" --total 4)
-          if [ "${#TESTS[@]}" -eq 0 ]; then
-            echo "::error::shard ${{ matrix.shard }} selected no test modules" >&2
-            exit 1
-          fi
-          WORKERS=$(uv run python scripts/ci_pytest_workers.py "${TESTS[@]}")
-          if [ "${{ matrix.python-version }}" = "3.11" ]; then
-            uv run pytest "${TESTS[@]}" -q --tb=short --durations=50 --cov=agent_bom --cov-report= --cov-fail-under=0 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
-          else
-            uv run pytest "${TESTS[@]}" -v --tb=short --durations=50 -m "not network and not slow and not graph_performance" -n "$WORKERS" --dist worksteal
-          fi
-
-      - name: Preserve successful coverage shard
-        if: matrix.python-version == '3.11'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: python311-coverage-shard-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
-          path: .coverage
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 7
-
-  test-coverage:
-    name: Combined Python coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    needs: test-main
-    if: ${{ !cancelled() && needs.test-main.result == 'success' && github.event_name != 'pull_request' && github.event_name != 'merge_group' }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup-python
-        with:
-          python-version: "3.11"
-      - name: Install coverage tooling
-        run: uv sync --frozen --extra dev --extra api --extra mcp-server
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: python311-coverage-shard-*-attempt-*
-          path: coverage-artifacts
-      - name: Require complete combined coverage
-        run: uv run python scripts/combine_ci_coverage.py coverage-artifacts --shards 4 --attempt "${{ github.run_attempt }}"
+    uses: ./.github/workflows/full-correctness.yml
 
   # Full correctness on 3.13 for a merge group (never a pull_request event),
   # in parallel. scripts/pytest_ci_plan.py assigns every test module to
@@ -1527,7 +1497,9 @@ jobs:
     permissions:
       contents: read
     needs: changes
-    if: ${{ !cancelled() && github.event_name == 'merge_group' }}
+    # A main push the merge queue did not prove (an admin merge, a direct push)
+    # proves the same full shards itself.
+    if: ${{ !cancelled() && (github.event_name == 'merge_group' || (github.event_name == 'push' && needs.changes.outputs.queue_proven != 'true')) }}
     strategy:
       fail-fast: false
       matrix:
@@ -1588,7 +1560,7 @@ jobs:
     permissions:
       contents: read
     needs: changes
-    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+    if: ${{ !cancelled() && needs.changes.outputs.queue_proven != 'true' && github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -1613,7 +1585,7 @@ jobs:
     permissions:
       contents: read
     needs: changes
-    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+    if: ${{ !cancelled() && needs.changes.outputs.queue_proven != 'true' && github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -1640,16 +1612,16 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-    needs: [changes, test-smoke, test-main, test-coverage, test-shard, graph-performance, output-scale-performance, sdk-import-smoke, postgres-integration]
+    needs: [changes, test-smoke, test-main, test-shard, graph-performance, output-scale-performance, sdk-import-smoke, postgres-integration]
     if: ${{ !cancelled() }}
     steps:
       - name: Require every applicable correctness lane
         env:
           EVENT_NAME: ${{ github.event_name }}
+          QUEUE_PROVEN: ${{ needs.changes.outputs.queue_proven == 'true' }}
           POSTGRES_REQUIRED: ${{ github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false' }}
           SMOKE_RESULT: ${{ needs.test-smoke.result }}
           MAIN_RESULT: ${{ needs.test-main.result }}
-          COVERAGE_RESULT: ${{ needs.test-coverage.result }}
           SHARD_RESULT: ${{ needs.test-shard.result }}
           GRAPH_RESULT: ${{ needs.graph-performance.result }}
           OUTPUT_SCALE_RESULT: ${{ needs.output-scale-performance.result }}
@@ -1657,50 +1629,42 @@ jobs:
           POSTGRES_RESULT: ${{ needs.postgres-integration.result }}
         run: |
           set -euo pipefail
-          # Merge-group shards replace the affected tests (required below);
-          # every other event must prove them.
-          if [ "$EVENT_NAME" = "merge_group" ]; then
-            case "$SMOKE_RESULT" in
-              success|skipped) ;;
-              *) echo "Affected tests and contract smoke ended with: $SMOKE_RESULT" >&2; exit 1 ;;
-            esac
-          elif [ "$SMOKE_RESULT" != "success" ]; then
-            echo "Affected tests and contract smoke ended with: $SMOKE_RESULT" >&2
-            exit 1
-          fi
-          if [ "$POSTGRES_REQUIRED" != "false" ] && [ "$POSTGRES_RESULT" != "success" ]; then
-            echo "Postgres integration suite ended with: $POSTGRES_RESULT" >&2
-            exit 1
-          fi
+          require() {
+            if [ "$2" != "success" ]; then
+              echo "$1 ended with: $2" >&2
+              exit 1
+            fi
+          }
           # Lanes an event does not run must be skipped, never failed.
-          for result in "$MAIN_RESULT" "$COVERAGE_RESULT" "$SHARD_RESULT" "$POSTGRES_RESULT" "$GRAPH_RESULT" "$OUTPUT_SCALE_RESULT" "$SDK_SMOKE_RESULT"; do
+          for result in "$SMOKE_RESULT" "$MAIN_RESULT" "$SHARD_RESULT" "$POSTGRES_RESULT" "$GRAPH_RESULT" "$OUTPUT_SCALE_RESULT" "$SDK_SMOKE_RESULT"; do
             case "$result" in
               success|skipped) ;;
               *) echo "Correctness lane ended with: $result" >&2; exit 1 ;;
             esac
           done
-          # PRs prove the affected selection only; merge groups prove the full
-          # sharded suite; main push, nightly and manual runs prove every
-          # interpreter.
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            :
-          elif [ "$EVENT_NAME" = "merge_group" ]; then
-            if [ "$SHARD_RESULT" != "success" ]; then
-              echo "Sharded full correctness suite ended with: $SHARD_RESULT" >&2
-              exit 1
-            fi
-          elif [ "$MAIN_RESULT" != "success" ] || [ "$COVERAGE_RESULT" != "success" ]; then
-            echo "Full correctness/coverage ended with: $MAIN_RESULT / $COVERAGE_RESULT" >&2
-            exit 1
+          # The merge queue pushes the exact commit its merge-group run proved.
+          if [ "$EVENT_NAME" = "push" ] && [ "$QUEUE_PROVEN" = "true" ]; then
+            echo "The merge-group run of this commit proved every correctness lane."
+            exit 0
+          fi
+          # PRs and nightly/manual runs prove the affected selection; merge
+          # groups and any other main push prove the full sharded suite.
+          case "$EVENT_NAME" in
+            merge_group|push) require "Sharded full correctness suite" "$SHARD_RESULT" ;;
+            *) require "Affected tests and contract smoke" "$SMOKE_RESULT" ;;
+          esac
+          # Nightly and manual runs prove every interpreter and the coverage floor.
+          if [ "$EVENT_NAME" = "schedule" ] || [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            require "Full correctness matrix and coverage" "$MAIN_RESULT"
+          fi
+          if [ "$POSTGRES_REQUIRED" != "false" ]; then
+            require "Postgres integration suite" "$POSTGRES_RESULT"
           fi
           # Every non-PR event additionally proves the performance and SDK
           # lanes; skipped proof is a failure.
           if [ "$EVENT_NAME" != "pull_request" ]; then
             for result in "$GRAPH_RESULT" "$OUTPUT_SCALE_RESULT" "$SDK_SMOKE_RESULT"; do
-              if [ "$result" != "success" ]; then
-                echo "Post-merge correctness lane ended with: $result" >&2
-                exit 1
-              fi
+              require "Post-merge correctness lane" "$result"
             done
           fi
           echo "All applicable Python correctness lanes passed."
@@ -1718,7 +1682,7 @@ jobs:
     # green while a fresh install loses that discovery path at runtime. Install
     # the cloud extras here and actually execute every extra-gated import line.
     # Post-merge only.
-    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+    if: ${{ !cancelled() && needs.changes.outputs.queue_proven != 'true' && github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -1755,7 +1719,7 @@ jobs:
         selection: [test_postgres_integration, not test_postgres_integration]
     needs: changes
     # Relevant PRs and every main/nightly/manual run prove live Postgres/RLS.
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false') }}
+    if: ${{ !cancelled() && needs.changes.outputs.queue_proven != 'true' && (github.event_name != 'pull_request' || needs.changes.result != 'success' || needs.changes.outputs.postgres != 'false') }}
     permissions:
       contents: read
     services:
@@ -2141,13 +2105,14 @@ jobs:
   test-alpine:
     name: Test (Alpine/musl, shard ${{ matrix.shard }})
     # PRs run the targeted musl subset for dependency/build inputs and this
-    # workflow. Main pushes run the subset on Python changes and the full musl
-    # suite on dependency changes; nightly always runs the full suite.
+    # workflow. Main pushes run the full musl suite on dependency changes, and
+    # the subset on Python changes unless the merge group already ran it;
+    # nightly always runs the full suite.
     if: >-
       !cancelled() && (
         (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
-        (github.event_name == 'push' && needs.changes.outputs.alpine == 'true') ||
+        (github.event_name == 'push' && needs.changes.outputs.alpine == 'true' && (needs.changes.outputs.queue_proven != 'true' || needs.changes.outputs.alpine_full == 'true')) ||
         (github.event_name == 'pull_request' && needs.changes.outputs.alpine_pr == 'true')
       )
     runs-on: ubuntu-latest
@@ -2254,7 +2219,7 @@ jobs:
     timeout-minutes: 15
     needs: changes
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         needs.changes.result != 'success' ||
         needs.changes.outputs.docs_only != 'true'
       )
@@ -2362,7 +2327,7 @@ jobs:
     needs: [changes]
     # Required context. Runs in parallel with every other lane: a ~1 minute
     # wheel build is cheaper than the wall-clock of queueing it behind them.
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.changes.outputs.queue_proven != 'true' }}
     steps:
       - name: Documentation-only package skip
         if: needs.changes.result == 'success' && needs.changes.outputs.docs_only == 'true'
@@ -2416,7 +2381,7 @@ jobs:
     name: Native App image and persistence
     needs: [changes]
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         github.event_name != 'pull_request' ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.native_image == 'true'
@@ -2461,7 +2426,7 @@ jobs:
     name: MCP image smoke (${{ matrix.image }})
     needs: [changes]
     if: >-
-      !cancelled() && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && (
         github.event_name == 'schedule' ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.mcp_images == 'true'
@@ -2518,10 +2483,12 @@ jobs:
   # a green main push run on the exact tagged SHA.
   docker:
     name: Docker (multi-arch)
+    # A queue-proven push skips Security Scan and Lint: its merge-group run
+    # passed both on this exact commit.
     if: >-
       !cancelled() && github.event_name != 'pull_request' &&
-      needs.security.result == 'success' &&
-      needs.lint.result == 'success' &&
+      (needs.security.result == 'success' || (needs.changes.outputs.queue_proven == 'true' && needs.security.result == 'skipped')) &&
+      (needs.lint.result == 'success' || (needs.changes.outputs.queue_proven == 'true' && needs.lint.result == 'skipped')) &&
       needs.test-core.result == 'success' && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
         github.event_name == 'schedule'
@@ -2647,24 +2614,27 @@ jobs:
           ALPINE_RESULT: ${{ needs.test-alpine.result }}
           UI_E2E_RESULT: ${{ needs.ui-e2e.result }}
           MCP_IMAGES_RESULT: ${{ needs.mcp-images.result }}
+          # Each *_REQUIRED mirrors its job's condition without !cancelled().
           MCP_IMAGES_REQUIRED: >-
             ${{
+              needs.changes.outputs.queue_proven != 'true' && (
               github.event_name == 'schedule' ||
               needs.changes.result != 'success' ||
-              needs.changes.outputs.mcp_images == 'true'
+              needs.changes.outputs.mcp_images == 'true')
             }}
           ALPINE_REQUIRED: >-
             ${{
               (github.event_name != 'pull_request' && github.event_name != 'push') ||
               needs.changes.result != 'success' ||
-              (github.event_name == 'push' && needs.changes.outputs.alpine == 'true') ||
+              (github.event_name == 'push' && needs.changes.outputs.alpine == 'true' && (needs.changes.outputs.queue_proven != 'true' || needs.changes.outputs.alpine_full == 'true')) ||
               (github.event_name == 'pull_request' && needs.changes.outputs.alpine_pr == 'true')
             }}
           UI_E2E_REQUIRED: >-
             ${{
+              needs.changes.outputs.queue_proven != 'true' && (
               (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
               (github.event_name != 'pull_request' && github.event_name != 'push') ||
-              needs.changes.result != 'success' || needs.changes.outputs.ui == 'true'
+              needs.changes.result != 'success' || needs.changes.outputs.ui == 'true')
             }}
           DOCKER_RESULT: ${{ needs.docker.result }}
           DOCKER_REQUIRED: >-
@@ -2706,7 +2676,7 @@ jobs:
   action-dogfood:
     name: Dogfood GitHub Action
     if: >-
-      !cancelled() && github.event_name != 'pull_request' && (
+      !cancelled() && needs.changes.outputs.queue_proven != 'true' && github.event_name != 'pull_request' && (
         github.event_name != 'push' ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.action == 'true'

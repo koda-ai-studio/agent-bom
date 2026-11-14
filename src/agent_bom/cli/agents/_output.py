@@ -46,6 +46,7 @@ from agent_bom.output import (
     to_spdx2,
 )
 from agent_bom.output.json_fmt import write_redacted_json
+from agent_bom.output.json_writer import write_json_file
 
 __all__ = ["_emit_console_report", "_emit_skill_analysis", "_emit_stdout_report", "_emit_stdout_standard"]  # fmt: skip
 
@@ -453,8 +454,7 @@ def _emit_visual_report(
         from agent_bom.output.graph import build_graph_elements
 
         out_path = _resolve_output_path(output, output_format)
-        elements = build_graph_elements(report, blast_radii)
-        Path(out_path).write_text(json.dumps({"elements": elements, "format": "cytoscape"}, indent=2), encoding="utf-8")
+        write_json_file({"elements": build_graph_elements(report, blast_radii), "format": "cytoscape"}, out_path)
         announce_report_written(con, "Graph JSON", out_path, quiet=quiet)
         con.print("  [dim]Cytoscape.js-compatible element list — open with Cytoscape desktop or any JS graph library[/dim]")
         return True
