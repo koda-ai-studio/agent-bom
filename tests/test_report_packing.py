@@ -170,6 +170,25 @@ def test_pack_is_idempotent_and_leaves_input_untouched(legacy: dict) -> None:
     assert packed == pack_report(before)
 
 
+def test_round_trip_is_exact_for_a_document_without_a_schema_version() -> None:
+    # Scanner-style estate documents (the graph benchmark input) carry no schema_version;
+    # packing must mark them 2.0 without the expansion inventing a 1.0 version.
+    doc = {"agents": [{"name": "a", "mcp_servers": []}], "blast_radius": [], "scan_id": "s"}
+    packed = pack_report(doc)
+
+    assert packed["schema_version"] == REPORT_SCHEMA_V2
+    assert "legacy_schema_version" not in packed["packing"]
+    assert expand_report(packed) == doc
+    assert "schema_version" not in doc
+
+
+def test_round_trip_is_exact_for_the_committed_benchmark_estate() -> None:
+    path = Path(__file__).resolve().parents[1] / "docs" / "perf" / "results" / "graph-benchmark-estate-sample-report.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+
+    assert expand_report(pack_report(doc)) == doc
+
+
 def test_expand_passes_legacy_documents_through(legacy: dict) -> None:
     assert expand_report(legacy) == legacy
     assert expand_report({"document_type": "AI-BOM", "agents": []}) == {"document_type": "AI-BOM", "agents": []}

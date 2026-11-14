@@ -20,7 +20,12 @@ from agent_bom.core.reachability import (
     GRAPH_PATH_VERDICT_KEY,
     stamp_finding_reachability,
 )
-from agent_bom.evidence.finding_reach_sources import stamp_reach_sources
+from agent_bom.evidence.finding_reach_sources import (
+    NOT_ASSESSED_PATH_BUDGET,
+    NOT_ASSESSED_REASON_KEY,
+    NOT_ASSESSED_REFRESHING,
+    stamp_reach_sources,
+)
 from agent_bom.graph.reach_view import TRACE_ORDER_RELATIONSHIP_TYPES
 from agent_bom.graph.types import RelationshipType
 
@@ -199,6 +204,7 @@ def project_persisted_graph_reachability(
         row.setdefault("graph_min_hop_distance", None)
         row.setdefault("graph_reachable_from_agents", [])
         row.update(graph_reachable_from=[], graph_reachable_from_count=None)  # server-stamped only
+        row[NOT_ASSESSED_REASON_KEY] = None
         row.pop(GRAPH_PATH_VERDICT_KEY, None)
         row.pop(GRAPH_PATH_BASIS_KEY, None)
     if not projected or not any(_row_vulnerability_ids(row) or _row_finding_ids(row) for row in projected):
@@ -212,13 +218,26 @@ def project_persisted_graph_reachability(
         if coverage.get("freshness") == "previous_generation":
             for row in projected:
                 row.update(graph_reachable=None, graph_min_hop_distance=None, graph_reachable_from_agents=[])
+                row[NOT_ASSESSED_REASON_KEY] = NOT_ASSESSED_REFRESHING
             _derive_verdicts(projected)
             return FindingReachabilityProjection(projected, truncated=False, refreshing=True, as_of=str(coverage.get("as_of") or ""))
     # Rows only carry their job's scan id, which never equals the correlated
     # current-estate snapshot id, so the cross-scan guard applies only when the
     # caller asked for one scan.
     _stamp_rows(projected, index, scan_id=index.scan_id if scan_id else None)
+    if index.budget_limited:
+        _mark_budget_unassessed(projected, scan_id=index.scan_id if scan_id else None)
     return FindingReachabilityProjection(projected, truncated=index.truncated)
+
+
+def _mark_budget_unassessed(rows: list[dict[str, Any]], *, scan_id: str | None) -> None:
+    """Name the budget on rows the bounded path search left unknown, never on another scan's rows."""
+    for row in rows:
+        row_scan = _text(row.get("scan_id"))
+        if scan_id is not None and row_scan and row_scan != scan_id:
+            continue
+        if row.get("graph_reachable") is None:
+            row[NOT_ASSESSED_REASON_KEY] = NOT_ASSESSED_PATH_BUDGET
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,6 +256,7 @@ class _PathIndex:
     by_vulnerability: dict[str, list[AttackPath]]
     truncated: bool = False
     keys: dict[int, _PathKeys] = field(default_factory=dict)
+    budget_limited: bool = False
 
 
 _INDEX_CACHE: OrderedDict[tuple[str, str, str, int, int], _PathIndex] = OrderedDict()
@@ -284,7 +304,26 @@ def clear_reachability_index_cache() -> None:
         _INDEX_CACHE.clear()
 
 
-def _build_index(paths: Iterable[AttackPath], *, scan_id: str = "", truncated: bool = False) -> _PathIndex:
+def _path_search_budget_limited(graph_store: GraphStoreProtocol, tenant_id: str, scan_id: str) -> bool:
+    """Whether the snapshot recorded an analyzer stopping at a budget (e.g. ``holder_chain_budget``)."""
+    reader = getattr(graph_store, "snapshot_stats", None)
+    if not callable(reader):
+        return False
+    try:
+        statuses = (reader(tenant_id=tenant_id, scan_id=scan_id) or {}).get("analysis_status") or {}
+    except (AttributeError, NotImplementedError, OSError, LookupError, RuntimeError, ValueError):
+        return False
+    if not isinstance(statuses, Mapping):
+        return False
+    for status in statuses.values():
+        if not isinstance(status, Mapping) or status.get("status") != "limited":
+            continue
+        if any("budget" in str(code) for code in status.get("reason_codes") or ()):
+            return True
+    return False
+
+
+def _build_index(paths: Iterable[AttackPath], *, scan_id: str = "", truncated: bool = False, budget_limited: bool = False) -> _PathIndex:
     by_finding: dict[str, list[AttackPath]] = {}
     by_vulnerability: dict[str, list[AttackPath]] = {}
     keys: dict[int, _PathKeys] = {}
@@ -299,7 +338,7 @@ def _build_index(paths: Iterable[AttackPath], *, scan_id: str = "", truncated: b
             by_finding.setdefault(finding_id, []).append(path)
         for vulnerability_id in path_keys.vulnerability_ids:
             by_vulnerability.setdefault(vulnerability_id, []).append(path)
-    return _PathIndex(scan_id, by_finding, by_vulnerability, truncated, keys)
+    return _PathIndex(scan_id, by_finding, by_vulnerability, truncated, keys, budget_limited)
 
 
 def _snapshot_index(graph_store: GraphStoreProtocol, *, tenant_id: str, scan_id: str, path_limit: int) -> _PathIndex:
@@ -328,7 +367,12 @@ def _snapshot_index(graph_store: GraphStoreProtocol, *, tenant_id: str, scan_id:
         if not page:
             break
         paths.extend(page)
-    index = _build_index(paths, scan_id=str(effective_scan_id or ""), truncated=int(total) > len(paths))
+    index = _build_index(
+        paths,
+        scan_id=str(effective_scan_id or ""),
+        truncated=int(total) > len(paths),
+        budget_limited=int(total) > ceiling or _path_search_budget_limited(graph_store, tenant_id, str(effective_scan_id or scan_id)),
+    )
     if len(paths) < min(int(total), ceiling):
         return index  # A short read (snapshot replaced mid-walk) is never cached.
     with _INDEX_CACHE_LOCK:

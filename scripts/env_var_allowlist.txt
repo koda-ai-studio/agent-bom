@@ -474,6 +474,7 @@ AGENT_BOM_REGISTRY_ALLOWLIST  # comma-separated registry hosts server-side image
 # tier-B replay-log TTL in days — issue #2261 (default 7)
 AGENT_BOM_REPLAY_TTL_DAYS
 AGENT_BOM_REPORT_FORMAT  # click envvar for scan --report-format (v2 | legacy JSON report schema)
+AGENT_BOM_PRETTY_JSON  # set by scan --pretty-json; indents JSON report files (compact by default)
 # optional comma-separated host allowlist for --repo / repo_url clone targets; empty = any host.
 AGENT_BOM_REPO_SCAN_ALLOWED_HOSTS
 # reference-only private-repo token name for --repo / repo_url clones; never logged or emitted.

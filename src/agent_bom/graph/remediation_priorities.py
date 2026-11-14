@@ -159,6 +159,7 @@ def remediation_priorities(graph: UnifiedGraph, paths: list[AttackPath]) -> dict
         "coverage_basis": "recorded_paths_touching_selected_findings",
         "source_coverage": "not_assessed",
         "method": "greedy_marginal_critical_then_high_then_all_path_coverage",
+        "total_paths": len({exposure_path_id(path) for path in paths}),
         "assessed_paths": len(assessed),
         "candidate_count": len(candidates),
         "covered_paths": len(covered),

@@ -714,8 +714,12 @@ the result block is one record on the `agent_bom.verdict` logger: `WARNING` for
 FAIL, `INFO` for PASS (that logger stays at `INFO` so a passing `-q` scan still
 reports its result). Its `context` carries `verdict` (`PASS`/`FAIL`),
 `outcome`, `packages`, `findings`, `counts` (by severity), `exit_code`,
-`reasons` and `report` (the written path, or null). Under `--agent-mode` only
-the exit reasons are emitted, as `WARNING` records.
+`exit_forced_by`, `reasons` and `report` (the written path, or null). The
+verdict follows the policy, not the exit status: when `--exit-zero` turns a
+default-gate failure into exit 0, the verdict stays `FAIL`, `exit_forced_by` is
+`--exit-zero`, `reasons` names the finding, and the line reads
+`agent-bom: FAIL (exit forced to 0 by --exit-zero) — …`. Under `--agent-mode`
+only the exit reasons are emitted, as `WARNING` records.
 
 When `--log-json` appears anywhere in argv (before a `--` separator) or
 `AGENT_BOM_LOG_JSON` is on, the entry point decides before Click parses, so a

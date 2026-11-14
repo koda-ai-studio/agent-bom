@@ -58,6 +58,7 @@ def test_shared_fix_ranks_before_single_path_and_retains_evidence(monkeypatch):
     result = priorities(monkeypatch, graph, paths, limit=1)
     assert result["schema_version"] == "graph-remediation-priorities.v1"
     assert result["assessed_paths"] == 3
+    assert result["total_paths"] == 3
     assert result["remediation_verified"] is False
     first, second = result["recommendations"]
     assert first["asset_node_id"] == "package:shared"
@@ -140,6 +141,8 @@ def test_path_and_candidate_budgets_are_explicit(monkeypatch):
     result = priorities(monkeypatch, graph, paths)
     assert result["complete"] is False and "path_budget" in result["limitations"]
     assert result["assessed_paths"] == 1
+    # The header needs the population the cap was applied to, not just the cap.
+    assert result["total_paths"] == 3
     monkeypatch.setattr(module, "MAX_PATHS", 5000)
     monkeypatch.setattr(module, "MAX_CANDIDATES", 1)
     result = priorities(monkeypatch, graph, paths)

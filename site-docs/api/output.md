@@ -8,6 +8,13 @@ Generate reviewable artifacts from a scan:
 agent-bom scan --demo --offline --format json --output findings.json
 ```
 
+JSON written to a file (`--output report.json`, CycloneDX, SPDX, SARIF, badge
+and graph JSON) is compact, with no indentation; JSON on stdout stays indented.
+The parsed document is the same either way, so anything that loads the file
+with a JSON parser is unaffected; only tools that match the file's text (for
+example `grep '"severity": "high"'`) see a difference. Pass `--pretty-json` or
+set `AGENT_BOM_PRETTY_JSON=1` for indented files, or pipe through `jq .`.
+
 Review the finding's advisory, affected product and reachability before assigning
 an impact. Missing impact metadata remains unspecified in SARIF; legacy scan
 records use `unknown`. Broad input-validation CWEs alone do not establish data
@@ -27,7 +34,10 @@ the `graph_persistence` receipt, `result_sections` (each large section with its
 item `count` and `href`) and `links`. It never loads the full result document,
 so it stays small and fast however large the scan is. Pass `?view=full` for the
 complete `ScanJob` including `result` (and `result_document` for a non-json
-`format`). For a bounded read of a completed scan, fetch the index first:
+`format`). A large full view (more than 20,000 values in `result`) is streamed
+with chunked transfer encoding instead of being built in one buffer, so it has
+no `Content-Length`; the JSON is byte-identical. For a bounded read of a
+completed scan, fetch the index first:
 
 ```bash
 curl -s "$API/v1/scan/$JOB/result" | jq '.summary.summary, .sections'

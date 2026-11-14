@@ -30,13 +30,31 @@ def test_quiet_console_scan_prints_verdict_counts_and_exit_reason() -> None:
     assert len(lines) <= 4, lines
 
 
-def test_quiet_scan_that_passes_reports_pass_and_exit_zero() -> None:
+def test_exit_zero_keeps_the_policy_verdict_and_states_the_forced_exit() -> None:
     result = _invoke(["scan", "--demo", "--offline", "-q", "--exit-zero"])
 
     assert result.exit_code == 0
     lines = [line for line in result.stdout.splitlines() if line.strip()]
-    assert lines[0].startswith("agent-bom: PASS"), lines
+    # The demo estate has critical findings: the gate failed, only the exit status was forced.
+    assert lines[0].startswith("agent-bom: FAIL (exit forced to 0 by --exit-zero) — "), lines
+    assert "critical" in lines[0]
+    assert "PASS" not in lines[0]
+    assert any(line.startswith("Exit 0 (forced): found critical vulnerability (CVE-") for line in lines), lines
     assert not any(line.startswith("Exit 1") for line in lines)
+
+
+def test_exit_zero_on_a_clean_scan_still_passes(tmp_path: Path) -> None:
+    from unittest.mock import patch
+
+    (tmp_path / "requirements.txt").write_text("requests==2.31.0\n", encoding="utf-8")
+
+    with patch("agent_bom.cli.agents.scan_agents_sync", return_value=[]):
+        result = _invoke(["scan", "--project", str(tmp_path), "-q", "--exit-zero"])
+
+    assert result.exit_code == 0, result.output
+    lines = [line for line in result.stdout.splitlines() if line.strip()]
+    assert lines[0].startswith("agent-bom: PASS — "), lines
+    assert "forced" not in result.stdout
 
 
 def test_quiet_scan_with_report_file_names_where_it_was_written(tmp_path: Path) -> None:
@@ -47,7 +65,7 @@ def test_quiet_scan_with_report_file_names_where_it_was_written(tmp_path: Path) 
     assert result.exit_code == 0
     assert out.is_file()
     assert f"Report: {out}" in result.stdout
-    assert "agent-bom: PASS" in result.stdout
+    assert "agent-bom: FAIL (exit forced to 0 by --exit-zero)" in result.stdout
     assert "Top fixes (" not in result.output
 
 

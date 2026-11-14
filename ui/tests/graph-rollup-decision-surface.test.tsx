@@ -59,6 +59,20 @@ describe("GraphRollupDecisionSurface", () => {
     expect(screen.getAllByText(/do not establish runtime execution/)).toHaveLength(2);
   });
 
+  it("names encoded node ids readably in accessible names and tooltips", () => {
+    const leaf = item("agent:Team%205%20Agent%2032", { label: "Team 5 Agent 32", has_children: false, is_container: false });
+    const peer = item("server:Shared%20MCP", { label: "Shared MCP" });
+    render(<GraphRollupDecisionSurface items={[leaf, peer]} edges={[{ source: leaf.id, target: peer.id, count: 1, relationships: ["uses"] }]}
+      onDrill={vi.fn()} onInvestigate={vi.fn()} />);
+    expect(screen.getByRole("button", { name: "Inspect Team 5 Agent 32 (agent:Team 5 Agent 32)" })).toBeInTheDocument();
+    const endpoints = screen.getAllByRole("button", { name: "Inspect relationship endpoint Team 5 Agent 32 (agent:Team 5 Agent 32)" });
+    expect(endpoints[0]).toHaveAttribute("title", "agent:Team 5 Agent 32");
+    for (const element of document.querySelectorAll("[aria-label], [title]")) {
+      expect(element.getAttribute("aria-label") ?? "").not.toMatch(/%20/);
+      expect(element.getAttribute("title") ?? "").not.toMatch(/%20/);
+    }
+  });
+
   it("investigates the exact endpoint when labels collide and keeps unknown endpoints literal", () => {
     const onInvestigate = vi.fn();
     const selected = item("prod", { label: "Shared name" });

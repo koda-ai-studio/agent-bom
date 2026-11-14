@@ -6,6 +6,7 @@ import type { UnifiedNode } from "@/lib/graph-schema";
 import { nodeRiskAssessment, nodeRiskLabel } from "@/lib/node-risk-assessment";
 import { vendorDisplayName } from "@/lib/path-vendor-scope";
 import { nodeVendorAccount } from "@/lib/node-vendor";
+import { readableNodeId } from "@/lib/node-id-tail";
 
 /**
  * Graph search hits. Same-named assets are common across vendors (a Snowflake
@@ -29,7 +30,7 @@ export function GraphSearchResults({ results, severity, onSelect }: {
           const kind = assetKindLabel({ entityType: String(result.entity_type), attributes: result.attributes, provider: vendor || null });
           const assessed = nodeRiskAssessment(result.risk_assessment).status === "assessed";
           return (
-            <button key={result.id} type="button" title={result.id} data-testid={`graph-search-result-${result.id}`}
+            <button key={result.id} type="button" title={readableNodeId(result.id)} data-testid={`graph-search-result-${result.id}`}
               onClick={() => onSelect(result)} className="graph-page-result min-w-0 text-left">
               <p className="flex min-w-0 items-center gap-1.5 text-sm font-medium text-foreground">
                 {vendor && <VendorMark vendor={vendor} />}
