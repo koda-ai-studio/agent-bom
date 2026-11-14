@@ -17,7 +17,7 @@ import { type ReachabilitySummary } from "@/lib/graph-reachability";
 import { api, ApiRateLimitError, type GraphDiffResponse, type GraphEdgeChangesResponse, type GraphHistorySnapshot, type GraphNodeDetailResponse, type GraphSnapshot, type GraphScenario, type GraphScenarioComparisonResponse, type UnifiedGraphResponse } from "@/lib/api";
 import type { GraphRollupResponse } from "@/lib/api-types";
 import { mergeReciprocalRollupEdges } from "@/lib/graph-rollup-view";
-import { graphRollupCanvasMode, rollupAutoDescendTarget, graphRollupEligible, graphRollupPreferenceForCanvas, parseGraphRollupUrlPreference, parseRollupNodeParam, rollupDismissedForPreference, rollupViewHasContainers } from "@/lib/graph-rollup-default";
+import { graphRollupCanvasMode, rollupAutoDescendTarget, graphRollupEligible, graphRollupPreferenceForCanvas, parseGraphRollupUrlPreference, parseRollupNodeParam, rollupDismissedForPreference, rollupLandingHasScopes, rollupViewHasContainers } from "@/lib/graph-rollup-default";
 import { type DriftLensFilter, type EvidenceLensFilter } from "@/lib/filter-algebra";
 import { useCaptureMode } from "@/lib/use-capture-mode";
 import { useAuthState } from "@/components/auth-provider";
@@ -731,7 +731,6 @@ export function useGraphPageData() {
     reachabilityActive: Boolean(reachabilitySummary),
     blastRadiusActive: Boolean(blastRadius),
     attackPathCount: attackPaths.length,
-    groupedMapLanding: searchParams.get("grouping") !== "off",
   });
 
   const rollupCanvasMode = graphRollupCanvasMode({
@@ -784,7 +783,11 @@ export function useGraphPageData() {
       })
       .then((result) => {
         if (cancelled) return;
+        // A default landing on a flat estate has no scope to rank: the grouped map leads.
+        const flatDefaultLanding =
+          rollupPreferenceRef.current === "default" && !drillNode && !childOffset && !rollupLandingHasScopes(result);
         if (
+          flatDefaultLanding ||
           !rollupViewHasContainers(
             result.mode,
             result.top_level,
