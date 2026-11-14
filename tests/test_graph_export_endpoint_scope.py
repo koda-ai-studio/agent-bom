@@ -38,7 +38,8 @@ def test_endpoint_scope_names_agent_and_server_like_the_stamped_json_agent() -> 
     scoped = _node_ids(build_graph_elements(AIBOMReport(agents=[agent]), [], endpoint_scope="host-a"))
     unscoped = _node_ids(build_graph_elements(AIBOMReport(agents=[agent]), []))
 
-    assert agent_graph_id_for(stamped) == "agent:host-a:claude-desktop"
+    # The endpoint scope joined with the config receipt: same-named agents on one host stay apart.
+    assert agent_graph_id_for(stamped).startswith("agent:host-a.cfg-") and agent_graph_id_for(stamped).endswith(":claude-desktop")
     assert {agent_graph_id_for(stamped), mcp_server_graph_id_for(agent.mcp_servers[0], stamped)} <= scoped
     assert agent_graph_id_for(agent) in unscoped and agent_graph_id_for(agent).startswith("agent:cfg-")
     # The scope is a graph-id input only; the agent's canonical identity is untouched.
@@ -49,7 +50,7 @@ def test_an_agent_with_its_own_scope_keeps_it() -> None:
     agent = _agent()
     agent.source_id = "fleet-device-7"
     ids = _node_ids(build_graph_elements(AIBOMReport(agents=[agent]), [], endpoint_scope="host-a"))
-    assert "agent:fleet-device-7:claude-desktop" in ids
+    assert agent_graph_id_for(agent) in ids and agent_graph_id_for(agent).startswith("agent:fleet-device-7.cfg-")
     assert not any("host-a" in nid for nid in ids)
 
 
@@ -85,13 +86,13 @@ def test_stdout_and_graph_html_use_the_saved_json_scope(tmp_path, monkeypatch) -
 
     stdout = json.loads(_scan(["-p", str(project), "--format", "graph", "--output", "-"]))
     stdout_ids = _node_ids(stdout["elements"])
-    assert [nid for nid in stdout_ids if nid.startswith("directory:repository:host-a:")]
+    assert [nid for nid in stdout_ids if nid.startswith("directory:repository:host-a.cfg-")]
     assert not [nid for nid in stdout_ids if ":cfg-" in nid]
 
     html = tmp_path / "graph.html"
     _scan(["-p", str(project), "--format", "graph-html", "--output", str(html)])
     text = html.read_text()
-    assert "directory:repository:host-a:" in text and "directory:repository:cfg-" not in text
+    assert "directory:repository:host-a.cfg-" in text and "directory:repository:cfg-" not in text
 
 
 def test_demo_graph_carries_no_host_scope(monkeypatch) -> None:

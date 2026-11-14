@@ -420,6 +420,22 @@ it("does not call an agent clean when no identity-linked findings are available"
 });
 
 describe("AgentsPage count scope", () => {
+  it("counts unique MCP servers like Inventory and the graph, and names server configurations as the secondary unit", async () => {
+    apiMock.listAgents.mockImplementation(pagingServer(AGENTS as Row[], {
+      count: 5000,
+      summary: {
+        agents: 5000, configured: 5000, not_configured: 0, mcp_servers: 8410, mcp_server_configurations: 12056, remote_servers: 200,
+        packages: 40321, ecosystems: { npm: 40321 }, unique_credentials: 77, servers_with_credentials: 300, blocked_servers: 0,
+      },
+    }));
+    render(<AgentsPage />);
+    const kpis = within(await screen.findByTestId("agents-kpis"));
+    const cell = kpis.getByText("Unique MCP servers").parentElement!.parentElement!;
+    expect(within(cell).getByText("8,410")).toBeInTheDocument();
+    expect(within(cell).getByText("12,056 server configurations · 200 remote")).toBeInTheDocument();
+    expect(cell).toHaveAttribute("title", expect.stringMatching(/Asset inventory and the graph/));
+  });
+
   it("labels server tiles as configured entries, packages as references across agents, and points at the inventory basis", async () => {
     render(<AgentsPage />);
     const kpis = within(await screen.findByTestId("agents-kpis"));

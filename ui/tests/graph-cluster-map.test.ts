@@ -229,7 +229,22 @@ describe("expanded groups", () => {
 });
 
 describe("the overview", () => {
-  it("draws only bundles between adjacent columns or on an attack path, and counts the rest", () => {
+  it("draws a bundle between two groups of one column, such as Framework agents and Frameworks", () => {
+    const nodes = [cluster("type:agent", 1), cluster("agent:framework", 1), cluster("type:framework", 1), cluster("type:tool", 2), cluster("package:pypi", 3)];
+    const edges = [
+      edge("@group:agent:framework", "@group:type:framework", 2, [["uses_framework", 2]]),
+      edge("@group:agent:framework", "@group:type:tool", 3, [["provides_tool", 3]]),
+      edge("@group:type:framework", "@group:package:pypi", 1),
+    ];
+    for (const narrow of [false, true]) {
+      const { routes } = routed({ nodes, edges }, narrow, null, true);
+      const drawn = new Set(routes.map(route => route.id));
+      expect(drawn.has("@group:agent:framework->@group:type:framework")).toBe(true);
+      expect(drawn.has("@group:agent:framework->@group:type:tool")).toBe(true);
+    }
+  });
+
+  it("draws only bundles within one column, between adjacent columns or on an attack path, and counts the rest", () => {
     for (const narrow of [false, true]) {
       const { routes, all, layout } = routed(denseView(), narrow, null, true);
       const column = new Map(layout.cards.map(card => [card.node.id, card.column]));
@@ -237,7 +252,7 @@ describe("the overview", () => {
       expect(routes.length).toBeGreaterThan(0);
       for (const route of routes) {
         const bundle = byId.get(route.id)!;
-        expect(Math.abs(column.get(bundle.source)! - column.get(bundle.target)!) === 1 || bundle.path, route.id).toBe(true);
+        expect(Math.abs(column.get(bundle.source)! - column.get(bundle.target)!) <= 1 || bundle.path, route.id).toBe(true);
       }
       expect(routes.length).toBeLessThan(all.length);
     }

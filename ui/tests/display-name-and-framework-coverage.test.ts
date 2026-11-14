@@ -17,6 +17,12 @@ describe("one display name per entity", () => {
     expect(topologyAgentDisplayName({ name: id, mcp_servers: [] } as unknown as Agent)).toBe(expected);
   });
 
+  it("keeps operations acronyms upper-case", () => {
+    expect(agentDisplayName("sre-runbook-agent")).toBe("SRE Runbook Agent");
+    expect(formatExposureEntityTitle("sre-runbook-agent", "agent")).toBe("SRE Runbook Agent");
+    expect(formatEntityId("sso-sdk-rbac-ci")).toBe("SSO SDK RBAC CI");
+  });
+
   it("never invents words for servers", () => {
     expect(serverDisplayName("pharmacy-gateway-05")).toBe("Pharmacy Gateway 05");
     expect(formatExposureEntityTitle("pharmacy-gateway-05", "server")).toBe("Pharmacy Gateway 05");

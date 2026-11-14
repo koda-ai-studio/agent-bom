@@ -87,6 +87,25 @@ def test_all_config_scoped_agents_remain_distinct_in_graph_and_export():
     assert model_ids == {agent_graph_id_for(agent) for agent in report["agents"]}
 
 
+def test_source_scoped_agents_with_distinct_configs_keep_distinct_graph_ids():
+    from agent_bom.canonical_ids import agent_graph_id_for, previous_agent_graph_ids
+
+    agents = [
+        {"name": "ai-inventory", "agent_type": "custom", "config_path": path, "source_id": "host-1", "canonical_id": cid}
+        for path, cid in (("/work/a", "canon-a"), ("/work/b", "canon-b"))
+    ]
+    ids = [agent_graph_id_for(agent) for agent in agents]
+    assert ids[0] != ids[1]
+    assert all(graph_id.startswith("agent:host-1.cfg-") for graph_id in ids), ids
+    # The model, the endpoint-stamped model, and its serialized form keep one node.
+    unstamped = {key: value for key, value in agents[0].items() if key != "source_id"}
+    assert agent_graph_id_for(unstamped, endpoint_scope="host-1") == ids[0]
+    # The id persisted before the config scope joined the source scope stays an alias.
+    assert "agent:host-1:ai-inventory" in previous_agent_graph_ids(agents[0])
+    # A source-scoped agent with no config location keeps its id.
+    assert agent_graph_id_for({"name": "x", "source_id": "host-1"}) == "agent:host-1:x"
+
+
 def test_v2_fleet_migration_retains_approval_and_does_not_claim_case_collision():
     from unittest.mock import patch
 

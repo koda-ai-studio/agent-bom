@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildAttackPathGraphModel } from "@/lib/attack-path-graph-model";
 import { layoutAttackPathGraph } from "@/lib/attack-path-graph-layout";
-import { ATTACK_PATH_FIT_PADDING, attackPathViewport } from "@/lib/attack-path-graph-viewport";
+import { ATTACK_PATH_FIT_PADDING, FINDING_BADGE_OVERHANG, attackPathViewport } from "@/lib/attack-path-graph-viewport";
 import { demoFixture, fanOutFixture } from "./fixtures/attack-path-graph-fixture";
 
 function screenBoxes(layout: ReturnType<typeof layoutAttackPathGraph>, viewport: { x: number; y: number; zoom: number }) {
@@ -28,6 +28,21 @@ describe("attack path viewport", () => {
       expect(box.top).toBeGreaterThanOrEqual(ATTACK_PATH_FIT_PADDING.top - 0.5);
       // The zoom controls sit in the bottom-left corner; nodes stay above them.
       expect(box.bottom).toBeLessThanOrEqual(pane.height - ATTACK_PATH_FIT_PADDING.bottom + 0.5);
+    }
+  });
+
+  it("keeps a findings badge on the rightmost node inside the pane", () => {
+    const { graph, selected } = demoFixture("headline");
+    const model = buildAttackPathGraphModel(graph, selected);
+    const layout = layoutAttackPathGraph(model, "LR");
+    // The badge starts 12px left of the glyph's right edge and reads e.g. "1 medium +2": about 110px wide.
+    const glyphRight = layout.nodeWidth / 2 + 28;
+    expect(FINDING_BADGE_OVERHANG).toBeGreaterThanOrEqual(glyphRight - 12 + 110 - layout.nodeWidth);
+    for (const width of [1100, 1400]) {
+      const pane = { width, height: 600 };
+      const viewport = attackPathViewport(layout, model.pathNodeIds, pane, 0.6);
+      const right = Math.max(...screenBoxes(layout, viewport).map(box => box.right));
+      expect(right + FINDING_BADGE_OVERHANG * viewport.zoom).toBeLessThanOrEqual(pane.width - 8);
     }
   });
 
