@@ -183,7 +183,7 @@ def _statically_bound_names(source: str) -> set[str]:
 
 
 def test_cli_package_all_names_are_statically_visible():
-    import agent_bom.cli as cli
+    from agent_bom import cli
 
     source = Path(cli.__file__).read_text(encoding="utf-8")
     assert sorted(set(cli.__all__) - _statically_bound_names(source)) == []
