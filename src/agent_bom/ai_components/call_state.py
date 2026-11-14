@@ -22,7 +22,9 @@ from agent_bom.security import sanitize_error
 
 __all__ = [
     "AICallBudget",
+    "AI_NUM_CTX",
     "AI_PROMPT_VERSION",
+    "AI_RUN_DEADLINE_SECONDS",
     "DEFAULT_MODEL",
     "EnrichmentTask",
     "HF_DEFAULT_MODEL",

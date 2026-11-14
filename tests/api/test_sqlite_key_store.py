@@ -84,8 +84,10 @@ def test_revoke_and_rotation_state_persist(db):
     assert (rotated.replacement_key_id, rotated.rotation_overlap_until) == (new.key_id, overlap_until)
     assert restarted.verify(raw_old) is not None
 
-    assert restarted.remove(new.key_id)
-    assert not restarted.remove(new.key_id)
+    removed = restarted.remove(new.key_id)
+    assert removed
+    removed = restarted.remove(new.key_id)
+    assert not removed
     assert SQLiteKeyStore(db).verify(raw_new) is None
     assert SQLiteKeyStore(db).get(new.key_id).lifecycle_state() == "revoked"
 

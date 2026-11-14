@@ -8,7 +8,7 @@ import logging
 
 import pytest
 
-from agent_bom.api import current_graph
+from agent_bom.api import current_graph, current_graph_builds
 from tests.test_current_estate_seeding_refusal import TENANT, client, seeding  # noqa: F401 - pytest fixtures
 
 TOOLS = [
@@ -64,5 +64,5 @@ def test_tool_refuses_typed_while_the_generation_rotates(server, monkeypatch, ca
 
     monkeypatch.setattr(current_graph, "_refuse_current_read_while_seeding", rotating)
     with caplog.at_level(logging.WARNING):
-        _assert_typed_refusal(server(name, arguments), current_graph.ROTATING_CODE, 1)
+        _assert_typed_refusal(server(name, arguments), current_graph_builds.ROTATING_CODE, 1)
     assert not [record for record in caplog.records if record.levelno >= logging.ERROR], caplog.text

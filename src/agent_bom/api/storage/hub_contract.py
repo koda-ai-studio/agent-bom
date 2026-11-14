@@ -67,7 +67,6 @@ class ComplianceHubStore(Protocol):
 
     def add(self, tenant_id: str, findings: list[dict[str, Any]]) -> int:
         """Append findings for a tenant. Returns the new total count."""
-        ...
 
     def list(self, tenant_id: str) -> list[dict[str, Any]]:
         """Return every finding for a tenant in ingest order (oldest first).
@@ -77,7 +76,6 @@ class ComplianceHubStore(Protocol):
         Retained for posture aggregation and callers that genuinely need
         the whole tenant.
         """
-        ...
 
     def list_page(
         self,
@@ -102,11 +100,9 @@ class ComplianceHubStore(Protocol):
         ``include_total`` is false the backend skips ``COUNT(*)`` and
         returns ``None`` for ``total``.
         """
-        ...
 
     def count(self, tenant_id: str) -> int:
         """Return the count of findings for a tenant."""
-        ...
 
     def severity_breakdown(self, tenant_id: str) -> dict[str, int]:
         """Return per-severity counts for hub findings without loading payloads."""
@@ -156,7 +152,6 @@ class ComplianceHubStore(Protocol):
 
     def framework_slug_counts(self, tenant_id: str) -> dict[str, int]:
         """Return per-framework slug counts from denormalised CSV columns."""
-        ...
 
     def current_failing_framework_slug_counts(
         self,
@@ -167,15 +162,12 @@ class ComplianceHubStore(Protocol):
         status: str | None = None,
     ) -> dict[str, int]:
         """Count framework mappings on live current high/critical findings."""
-        ...
 
     def overview_evidence_revision(self, tenant_id: str) -> int:
         """Return the durable tenant mutation revision used by Overview caches."""
-        ...
 
     def clear(self, tenant_id: str) -> int:
         """Remove all findings for a tenant. Returns the number removed."""
-        ...
 
     def upsert_current_batch(
         self,
@@ -187,17 +179,14 @@ class ComplianceHubStore(Protocol):
         source: str = "",
     ) -> None:
         """Merge findings into the current-state lifecycle table (#3465 L1)."""
-        ...
 
     def lookup_current_ids(
         self, tenant_id: str, canonical_ids: Sequence[str], *, scan_id: str | None = None, origin: str | None = None
     ) -> set[str]:
         """Batch identity lookup for reconciling scan observations with hub lifecycle state."""
-        ...
 
     def get_current(self, tenant_id: str, canonical_id: str) -> dict[str, Any] | None:
         """Return one current-state lifecycle row for tests and diagnostics."""
-        ...
 
     def list_current_page(
         self,
@@ -239,7 +228,6 @@ class ComplianceHubStore(Protocol):
         ``truncated`` / ``reason``) so the caller can label a budget-bounded page
         partial instead of presenting it as an honest empty result.
         """
-        ...
 
     def reconcile_current_absent(
         self,
@@ -250,7 +238,6 @@ class ComplianceHubStore(Protocol):
         scope_source: str | None = None,
     ) -> int:
         """Mark open findings absent from a scan batch as resolved at ``observed_at``."""
-        ...
 
 
 _SCHEMA_KEY = "compliance_hub"

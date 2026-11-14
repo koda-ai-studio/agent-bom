@@ -97,7 +97,7 @@ __all__ = ["_ASSIGNMENT_PATTERN", "_IDENTIFIER_RE", "_MAX_AI_PROMPT_CHARS", "_MA
     "_bounded_ai_text", "_bounded_prompt_list", "_bounded_prompt_text", "_build_blast_radius_prompt",
     "_build_executive_summary_prompt", "_build_finding_assessment_prompt", "_build_mcp_config_analysis_prompt",
     "_build_skill_analysis_prompt", "_build_threat_chain_prompt", "_canonical_skill_source_path", "_compose_bounded_prompt",
-    "_looks_like_secret_value", "_redact_assignment", "redact_secrets"]  # fmt: skip
+    "_looks_like_secret_value", "_prepare_prompt", "_redact_assignment", "redact_secrets"]  # fmt: skip
 
 
 async def enrich_blast_radii(

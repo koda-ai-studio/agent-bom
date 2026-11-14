@@ -92,29 +92,39 @@ def _merge_sessions_for_batch(
 
 
 class RuntimeEventStore(Protocol):
-    def get_trace_import(self, tenant_id: str, import_id: str) -> TraceImportCheckpoint | None: ...
+    def get_trace_import(self, tenant_id: str, import_id: str) -> TraceImportCheckpoint | None:
+        """Return a trace import checkpoint, if any."""
 
     def commit_trace_page(
         self, checkpoint: TraceImportCheckpoint, records: list[RuntimeObservationRecord], *, expected_revision: int
-    ) -> TracePageCommit: ...
+    ) -> TracePageCommit:
+        """Atomically store one trace page and advance its checkpoint."""
 
     def list_observation_revisions(
         self, tenant_id: str, observation_id: str, *, limit: int = 100, offset: int = 0
-    ) -> list[RuntimeObservationRecord]: ...
+    ) -> list[RuntimeObservationRecord]:
+        """Return one page of an observation's revisions."""
 
-    def put_observation(self, record: RuntimeObservationRecord) -> None: ...
+    def put_observation(self, record: RuntimeObservationRecord) -> None:
+        """Store one runtime observation."""
 
-    def put_observations_batch(self, records: list[RuntimeObservationRecord]) -> int: ...
+    def put_observations_batch(self, records: list[RuntimeObservationRecord]) -> int:
+        """Store many runtime observations; return the count written."""
 
-    def query_observations(self, tenant_id: str, *, limit: int = 100, offset: int = 0, **filters: Any) -> dict[str, Any]: ...
+    def query_observations(self, tenant_id: str, *, limit: int = 100, offset: int = 0, **filters: Any) -> dict[str, Any]:
+        """Return one page of a tenant's observations with paging metadata."""
 
-    def window_observations(self, tenant_id: str, **query: Any) -> list[RuntimeObservationRecord]: ...
+    def window_observations(self, tenant_id: str, **query: Any) -> list[RuntimeObservationRecord]:
+        """Return the tenant's observations inside the requested time window."""
 
-    def list_sessions(self, tenant_id: str, *, limit: int = 100, offset: int = 0) -> list[RuntimeSessionRecord]: ...
+    def list_sessions(self, tenant_id: str, *, limit: int = 100, offset: int = 0) -> list[RuntimeSessionRecord]:
+        """Return one page of a tenant's runtime sessions."""
 
-    def get_session(self, tenant_id: str, session_id: str) -> RuntimeSessionRecord | None: ...
+    def get_session(self, tenant_id: str, session_id: str) -> RuntimeSessionRecord | None:
+        """Return one runtime session, if any."""
 
-    def get_sessions(self, tenant_id: str, session_ids: list[str]) -> list[RuntimeSessionRecord]: ...
+    def get_sessions(self, tenant_id: str, session_ids: list[str]) -> list[RuntimeSessionRecord]:
+        """Return the requested runtime sessions that exist."""
 
     def list_observations(
         self,
@@ -123,7 +133,8 @@ class RuntimeEventStore(Protocol):
         session_id: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> list[RuntimeObservationRecord]: ...
+    ) -> list[RuntimeObservationRecord]:
+        """Return one page of observations, optionally for one session."""
 
 
 def _merge_session(existing: RuntimeSessionRecord | None, observation: RuntimeObservationRecord) -> RuntimeSessionRecord:

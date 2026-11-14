@@ -126,8 +126,10 @@ def test_pure_no_auth_analyst_uses_the_route_role_matrix(
         == 200
     )
     # Source deletion and job deletion are protected admin operations.
-    assert pure_no_auth_client.delete(f"/v1/sources/{source_id}").status_code == 403
-    assert pure_no_auth_client.delete("/v1/scan/missing").status_code == 403
+    deleted = pure_no_auth_client.delete(f"/v1/sources/{source_id}")
+    assert deleted.status_code == 403
+    deleted = pure_no_auth_client.delete("/v1/scan/missing")
+    assert deleted.status_code == 403
     # Analyst reaches scan request validation instead of being rejected by RBAC.
     assert pure_no_auth_client.post("/v1/scan", json={"unknown": True}).status_code == 422
 
@@ -162,7 +164,8 @@ def test_pure_no_auth_admin_can_use_protected_source_mutations(
         },
     )
     assert created.status_code == 201
-    assert pure_no_auth_client.delete(f"/v1/sources/{created.json()['source_id']}").status_code == 204
+    deleted = pure_no_auth_client.delete(f"/v1/sources/{created.json()['source_id']}")
+    assert deleted.status_code == 204
 
 
 def test_demo_estate_clamps_pure_no_auth_admin_to_viewer(

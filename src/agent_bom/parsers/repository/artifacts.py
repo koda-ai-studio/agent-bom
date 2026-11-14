@@ -10,7 +10,6 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path, PurePosixPath
 
 from agent_bom.core.repository_identity import relative_path
-from agent_bom.core.repository_identity import repository_id as repository_id
 
 MAX_ARTIFACT_BYTES = 2 * 1024 * 1024
 MAX_TOTAL_BYTES = 32 * 1024 * 1024

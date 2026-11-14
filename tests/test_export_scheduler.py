@@ -70,8 +70,10 @@ def test_destination_store_is_tenant_scoped():
     store.put(_destination(), tenant_id="tenant-a")
     assert store.get("tenant-a", "dest-1") is not None
     assert store.get("tenant-b", "dest-1") is None  # cross-tenant read blocked
-    assert store.delete("tenant-b", "dest-1") is False
-    assert store.delete("tenant-a", "dest-1") is True
+    deleted = store.delete("tenant-b", "dest-1")
+    assert deleted is False
+    deleted = store.delete("tenant-a", "dest-1")
+    assert deleted is True
 
 
 # --------------------------------------------------------------------------

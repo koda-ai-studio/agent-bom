@@ -15,7 +15,6 @@ from typing import IO
 
 from agent_bom.package_utils import parse_debian_source_name
 from agent_bom.parsers.cpython_runtime import _python_metadata_kind, extract_cpython_runtime
-from agent_bom.parsers.go_buildinfo import go_toolchain_version as go_toolchain_version
 from agent_bom.parsers.go_buildinfo import read_go_buildinfo
 from agent_bom.parsers.gpu_stack import extract_gpu_stack_layer
 from agent_bom.parsers.image_runtimes import runtime_binary_paths, runtime_spec

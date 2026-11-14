@@ -419,7 +419,8 @@ class TestSnowflakeJobStore:
         conn = _mock_connection(cursor=cur)
         mock_connect.return_value = conn
         store = self._make_store()
-        assert store.delete("j1", tenant_id="default") is True
+        deleted = store.delete("j1", tenant_id="default")
+        assert deleted is True
         sql = str(conn.cursor().execute.call_args_list[-1])
         assert "DELETE FROM scan_jobs WHERE job_id = %s AND tenant_id = %s" in sql
 
@@ -429,7 +430,8 @@ class TestSnowflakeJobStore:
         conn = _mock_connection(cursor=cur)
         mock_connect.return_value = conn
         store = self._make_store()
-        assert store.delete("missing", tenant_id="default") is False
+        deleted = store.delete("missing", tenant_id="default")
+        assert deleted is False
 
     @patch("agent_bom.api.snowflake_store._sf_connect")
     def test_list_all(self, mock_connect):
@@ -587,7 +589,8 @@ class TestSnowflakeFleetStore:
         conn = _mock_connection(cursor=cur)
         mock_connect.return_value = conn
         store = self._make_store()
-        assert store.delete("a1", tenant_id="tenant-alpha") is True
+        deleted = store.delete("a1", tenant_id="tenant-alpha")
+        assert deleted is True
         sql = str(conn.cursor().execute.call_args_list[-1])
         assert "DELETE FROM fleet_agents WHERE agent_id = %s AND tenant_id = %s" in sql
 
@@ -936,7 +939,8 @@ class TestSnowflakeScheduleStore:
         conn = _mock_connection(cursor=cur)
         mock_connect.return_value = conn
         store = self._make_store()
-        assert store.delete("sched-1", tenant_id="default") is True
+        deleted = store.delete("sched-1", tenant_id="default")
+        assert deleted is True
         sql = str(conn.cursor().execute.call_args_list[-1])
         assert "DELETE FROM scan_schedules WHERE schedule_id = %s AND tenant_id = %s" in sql
 
@@ -1047,7 +1051,8 @@ class TestSnowflakeExceptionStore:
         conn = _mock_connection(cursor=cur)
         mock_connect.return_value = conn
         store = self._make_store()
-        assert store.delete("exc-1", tenant_id="default") is True
+        deleted = store.delete("exc-1", tenant_id="default")
+        assert deleted is True
         sql = str(conn.cursor().execute.call_args_list[-1])
         assert "DELETE FROM exceptions WHERE exception_id = %s AND tenant_id = %s" in sql
 

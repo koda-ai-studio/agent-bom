@@ -28,7 +28,6 @@ from typing import Any, cast
 from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
-from agent_bom.api.current_graph_builds import ROTATING_CODE as ROTATING_CODE
 from agent_bom.api.current_graph_builds import await_current_build, current_view_coverage, resolve_request_current
 from agent_bom.api.current_graph_builds import build_wait_seconds as _build_wait_seconds
 from agent_bom.api.current_graph_builds import generation_rotating as _generation_rotating

@@ -88,7 +88,7 @@ def test_estate_tool_never_answers_a_seed_with_an_internal_error(mcp, live_seed_
 
 
 def test_blast_radius_maps_a_refusal_raised_mid_read_to_the_typed_error(caplog):
-    from agent_bom.api import current_graph
+    from agent_bom.api import current_graph, current_graph_builds
     from agent_bom.mcp_tools.analysis import blast_radius_impl
 
     def rotating(**_kwargs):
@@ -109,5 +109,5 @@ def test_blast_radius_maps_a_refusal_raised_mid_read_to_the_typed_error(caplog):
         )
     error = json.loads(raw)["error"]
     assert error["code"] == "AGENTBOM_MCP_UPSTREAM_UNAVAILABLE", error
-    assert error["details"] == {"reason": current_graph.ROTATING_CODE, "retry_after_seconds": 1}
+    assert error["details"] == {"reason": current_graph_builds.ROTATING_CODE, "retry_after_seconds": 1}
     assert not [record for record in caplog.records if record.levelno >= logging.ERROR], caplog.text

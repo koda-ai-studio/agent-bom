@@ -38,7 +38,8 @@ class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
             relationship_types: set[RelationshipType] | None = None,
             static_only: bool = False,
             dynamic_only: bool = False,
-        ) -> tuple[str, list[Any]]: ...
+        ) -> tuple[str, list[Any]]:
+            """Implemented by ``SQLiteGraphStore``."""
 
         def _walk_graph(
             self,
@@ -57,7 +58,8 @@ class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
             static_only: bool,
             dynamic_only: bool,
             include_roots: bool,
-        ) -> tuple[str, str, set[str], dict[str, int], dict[tuple[str, str, str], UnifiedEdge], dict[str, str], list[str], bool, bool]: ...
+        ) -> tuple[str, str, set[str], dict[str, int], dict[tuple[str, str, str], UnifiedEdge], dict[str, str], list[str], bool, bool]:
+            """Implemented by ``SQLiteGraphStore``."""
 
     def _filtered_edge_rows(
         self,

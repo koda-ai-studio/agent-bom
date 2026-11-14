@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 import click
 from click.testing import CliRunner
@@ -163,3 +165,25 @@ def test_cli_package_reexports_resolve_lazily():
 
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == [[], [], True]
+
+
+def _statically_bound_names(source: str) -> set[str]:
+    bound: set[str] = set()
+    for node in ast.parse(source).body:
+        body = node.body if isinstance(node, ast.If) else [node]
+        for stmt in body:
+            if isinstance(stmt, (ast.Import, ast.ImportFrom)):
+                bound.update(alias.asname or alias.name.split(".")[0] for alias in stmt.names)
+            elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                bound.add(stmt.name)
+            elif isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+                targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+                bound.update(t.id for t in targets if isinstance(t, ast.Name))
+    return bound
+
+
+def test_cli_package_all_names_are_statically_visible():
+    from agent_bom import cli
+
+    source = Path(cli.__file__).read_text(encoding="utf-8")
+    assert sorted(set(cli.__all__) - _statically_bound_names(source)) == []
