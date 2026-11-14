@@ -49,7 +49,8 @@ class VulnException(Protocol):
     approval_version: int
     decided_by: str
 
-    def to_dict(self) -> dict[str, Any]: ...
+    def to_dict(self) -> dict[str, Any]:
+        """Return the record as a JSON-serialisable dict."""
 
 
 _Record = TypeVar("_Record", bound=VulnException)
@@ -57,7 +58,8 @@ _Record_contra = TypeVar("_Record_contra", contravariant=True)
 
 
 class ExceptionStore(Protocol[_Record_contra]):
-    def put(self, exc: _Record_contra, *, tenant_id: str) -> None: ...
+    def put(self, exc: _Record_contra, *, tenant_id: str) -> None:
+        """Create or replace an exception for a tenant."""
 
 
 APPROVAL_VERSION = 1

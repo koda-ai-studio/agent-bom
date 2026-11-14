@@ -24,12 +24,23 @@ MAX_FINDING_LOOKUP = 3_000  # a 1,000-row page carries up to three identifiers p
 
 
 class AIAssessmentStore(Protocol):
-    def put_scan(self, tenant_id: str, scan_id: str, run: dict[str, Any], assessments: Sequence[dict[str, Any]]) -> None: ...
-    def latest_for_findings(self, tenant_id: str, finding_ids: Sequence[str]) -> dict[str, dict[str, Any]]: ...
-    def latest_run(self, tenant_id: str) -> dict[str, Any] | None: ...
-    def delete_scan(self, tenant_id: str, scan_id: str) -> int: ...
-    def purge_tenant(self, tenant_id: str) -> int: ...
-    def delete_older_than(self, cutoff_iso: str) -> int: ...
+    def put_scan(self, tenant_id: str, scan_id: str, run: dict[str, Any], assessments: Sequence[dict[str, Any]]) -> None:
+        """Persist one triage run and its per-finding assessments."""
+
+    def latest_for_findings(self, tenant_id: str, finding_ids: Sequence[str]) -> dict[str, dict[str, Any]]:
+        """Return the newest assessment per finding id."""
+
+    def latest_run(self, tenant_id: str) -> dict[str, Any] | None:
+        """Return the tenant's most recent triage run, if any."""
+
+    def delete_scan(self, tenant_id: str, scan_id: str) -> int:
+        """Delete one scan's assessments; return the rows removed."""
+
+    def purge_tenant(self, tenant_id: str) -> int:
+        """Delete every assessment for a tenant; return the rows removed."""
+
+    def delete_older_than(self, cutoff_iso: str) -> int:
+        """Delete assessments older than ``cutoff_iso``; return the rows removed."""
 
 
 def _stored(item: dict[str, Any], scan_id: str, created_at: str) -> dict[str, Any]:

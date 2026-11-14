@@ -215,7 +215,8 @@ def test_multi_target_scan_retry_repairs_missing_child_before_committed_receipt(
     parent = jobs.get(first.json()["job_id"], tenant_id="default")
     assert parent is not None
     missing_child_id = parent.child_job_ids[0]
-    assert jobs.delete(missing_child_id, tenant_id="default") is True
+    deleted = jobs.delete(missing_child_id, tenant_id="default")
+    assert deleted is True
     for child_id in parent.child_job_ids[1:]:
         child = jobs.get(child_id, tenant_id="default")
         assert child is not None

@@ -152,7 +152,8 @@ def test_postgres_destination_completion_preserves_edits_and_deletes(pg_stores):
         store.put(edited, tenant_id=tenant)
         assert not store.record_run(record, **kwargs)
         assert store.get(tenant, record.id) == edited
-        assert store.delete(tenant, record.id)
+        deleted = store.delete(tenant, record.id)
+        assert deleted
         assert not store.record_run(record, **kwargs)
         assert store.get(tenant, record.id) is None
 

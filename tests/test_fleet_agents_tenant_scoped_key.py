@@ -147,7 +147,8 @@ def test_one_tenants_delete_does_not_remove_anothers_agent(fleet_store):
 
     token = as_tenant(tenant_a)
     try:
-        assert fleet_store.delete(shared_id, tenant_id=tenant_a) is True
+        deleted = fleet_store.delete(shared_id, tenant_id=tenant_a)
+        assert deleted is True
     finally:
         reset_current_tenant(token)
 

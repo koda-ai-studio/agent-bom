@@ -131,9 +131,11 @@ def test_delete_reports_whether_a_row_existed(make_store, tenants):
     store = make_store()
     with as_tenant(tenant_a):
         store.put(tenant_a, {"schedules": 2})
-        assert store.delete(tenant_a) is True
+        deleted = store.delete(tenant_a)
+        assert deleted is True
         assert store.get(tenant_a) is None
-        assert store.delete(tenant_a) is False
+        deleted = store.delete(tenant_a)
+        assert deleted is False
 
 
 def test_overrides_survive_a_new_store_instance(make_store, tenants):
@@ -153,7 +155,8 @@ def test_tenant_a_never_sees_or_deletes_tenant_b(make_store, tenants):
         assert store.get(tenant_b) == {"schedules": 2}
     with as_tenant(tenant_a):
         assert store.get(tenant_a) == {"schedules": 1}
-        assert store.delete(tenant_a) is True
+        deleted = store.delete(tenant_a)
+        assert deleted is True
     with as_tenant(tenant_b):
         assert store.get(tenant_b) == {"schedules": 2}
 
@@ -182,7 +185,8 @@ def test_postgres_session_tenant_gates_rows_even_when_the_argument_names_another
         store.put(tenant_b, {"schedules": 2})
     with as_tenant(tenant_a):
         assert store.get(tenant_b) is None
-        assert store.delete(tenant_b) is False
+        deleted = store.delete(tenant_b)
+        assert deleted is False
         with pytest.raises(Exception, match="row-level security"):
             store.put(tenant_b, {"schedules": 9})
     with as_tenant(tenant_b):

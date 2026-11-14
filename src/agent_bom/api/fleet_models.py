@@ -88,3 +88,37 @@ class FleetAgent(BaseModel):
                 device_fingerprint=self.device_fingerprint,
             )
         return self
+
+
+class FleetEndpoint(BaseModel):
+    """Privacy-safe latest workstation inventory for one enrolled endpoint."""
+
+    endpoint_id: str = Field(min_length=1, max_length=200)
+    tenant_id: str = "default"
+    platform: dict[str, str] = Field(default_factory=dict)
+    counts: dict[str, int | None] = Field(default_factory=dict)
+    collector_status: dict[str, str] = Field(default_factory=dict)
+    collector_messages: dict[str, str] = Field(default_factory=dict)
+    privacy: dict[str, bool] = Field(default_factory=dict)
+    completeness: str = "partial"
+    last_scan_id: str = ""
+    observed_at: str = ""
+    updated_at: str = ""
+
+    @field_validator("tenant_id", mode="before")
+    @classmethod
+    def _normalize_endpoint_tenant_id(cls, value: str | None) -> str:
+        return normalize_tenant_id(value)
+
+    @field_validator("observed_at", "updated_at", mode="before")
+    @classmethod
+    def _normalize_endpoint_timestamps(cls, value: str | None) -> str:
+        return normalize_timestamp(value) or ""
+
+    @model_validator(mode="after")
+    def _apply_endpoint_defaults(self) -> FleetEndpoint:
+        if not self.updated_at:
+            self.updated_at = now_utc_iso()
+        if not self.observed_at:
+            self.observed_at = self.updated_at
+        return self

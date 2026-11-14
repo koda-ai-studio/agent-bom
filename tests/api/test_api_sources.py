@@ -872,7 +872,8 @@ def test_credential_retirement_is_terminal_and_cannot_be_rewritten_or_tested_by_
         },
     )
     credential_ref_id = created.json()["credential_ref_id"]
-    assert source_client.delete(f"/v1/credentials/{credential_ref_id}", headers=ADMIN_HEADERS).status_code == 204
+    deleted = source_client.delete(f"/v1/credentials/{credential_ref_id}", headers=ADMIN_HEADERS)
+    assert deleted.status_code == 204
 
     revived = source_client.put(
         f"/v1/credentials/{credential_ref_id}",

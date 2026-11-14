@@ -55,7 +55,8 @@ def test_verify_correctness_preserved():
 
     raw_revoked, revoked = create_api_key("revoked", Role.ADMIN, tenant_id="t")
     store.add(revoked)
-    assert store.remove(revoked.key_id) is True
+    removed = store.remove(revoked.key_id)
+    assert removed is True
 
     raw_expired, expired = create_api_key("expired", Role.ADMIN, tenant_id="t")
     # Past expiry is rejected at creation, so set it directly to exercise the

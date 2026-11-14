@@ -288,7 +288,8 @@ def test_analyst_can_mint_revoke_authorize_but_not_register_or_delete() -> None:
     assert denied_delete.status_code == 403, denied_delete.text
 
     # Admin may delete it.
-    assert client.delete(f"/v1/model-keys/providers/{pk_id}", headers=_headers(role="admin")).status_code == 204
+    response = client.delete(f"/v1/model-keys/providers/{pk_id}", headers=_headers(role="admin"))
+    assert response.status_code == 204
 
 
 # ── holder scope is a caller-asserted scope enforced at resolve ───────────────

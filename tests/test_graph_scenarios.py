@@ -137,8 +137,10 @@ def test_update_and_delete_use_optimistic_revisions(scenario_store: Any) -> None
             scenario=skipped_revision,
         )
 
-    assert scenario_store.delete("tenant-a", "scenario-1", expected_revision=2) is True
-    assert scenario_store.delete("tenant-a", "scenario-1", expected_revision=2) is False
+    deleted = scenario_store.delete("tenant-a", "scenario-1", expected_revision=2)
+    assert deleted is True
+    deleted = scenario_store.delete("tenant-a", "scenario-1", expected_revision=2)
+    assert deleted is False
     missing = _record("missing", revision=2)
     with pytest.raises(KeyError):
         scenario_store.update("tenant-a", "missing", expected_revision=1, scenario=missing)

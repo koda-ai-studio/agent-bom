@@ -177,8 +177,10 @@ def test_no_scan_run_evidences_inventory_but_not_vulnerability_scanning() -> Non
     set_job_store(InMemoryJobStore())
     _put(_result(packages=5, blast=[_CIS_FAIL_ROW], scan_run=_SKIPPED_RUN), job_id="no-scan")
     statuses = _detective(_compliance())
-    assert statuses.pop("cis CIS-02.1") == ("pass", "fresh_scan_evidence")
-    assert statuses.pop("nist CM-8") == ("pass", "fresh_scan_evidence")
+    cis_status = statuses.pop("cis CIS-02.1")
+    assert cis_status == ("pass", "fresh_scan_evidence")
+    nist_status = statuses.pop("nist CM-8")
+    assert nist_status == ("pass", "fresh_scan_evidence")
     assert set(statuses.values()) == {("not_assessed", "detective_evidence_not_collected")}, statuses
 
 

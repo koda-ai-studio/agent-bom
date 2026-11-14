@@ -555,14 +555,16 @@ def test_job_store_delete(mock_pool, mock_maintenance_pool):
 
     store = PostgresJobStore(pool=mock_pool, maintenance_pool=mock_maintenance_pool)
     mock_pool._conn._store.setdefault("scan_jobs", {})["j-1"] = ("j-1", "done", "", None, "{}")
-    assert store.delete("j-1", all_tenants=True) is True
+    deleted = store.delete("j-1", all_tenants=True)
+    assert deleted is True
 
 
 def test_job_store_delete_nonexistent(mock_pool, mock_maintenance_pool):
     from agent_bom.api.postgres_store import PostgresJobStore
 
     store = PostgresJobStore(pool=mock_pool, maintenance_pool=mock_maintenance_pool)
-    assert store.delete("nonexistent", all_tenants=True) is False
+    deleted = store.delete("nonexistent", all_tenants=True)
+    assert deleted is False
 
 
 def test_job_store_list_summary(mock_pool, mock_maintenance_pool):
@@ -798,7 +800,8 @@ def test_fleet_store_delete(mock_pool):
 
     store = PostgresFleetStore(pool=mock_pool)
     mock_pool._conn._store.setdefault("fleet_agents", {})["a-1"] = ("a-1",)
-    assert store.delete("a-1", tenant_id="default") is True
+    deleted = store.delete("a-1", tenant_id="default")
+    assert deleted is True
 
 
 def test_fleet_store_list_all(mock_pool):
@@ -935,7 +938,8 @@ def test_key_store_add_get_list_verify_remove(monkeypatch, mock_pool, mock_maint
     assert verified.key_id == api_key.key_id
     assert store.verify(raw_key) is not None
 
-    assert store.remove(api_key.key_id) is True
+    removed = store.remove(api_key.key_id)
+    assert removed is True
 
 
 def test_key_store_provisions_tenant_and_first_key_in_one_rls_scope(mock_pool):
@@ -1055,7 +1059,8 @@ def test_exception_store_put_get_list_delete(mock_pool):
     assert match is not None
     assert match.exception_id == exc.exception_id
 
-    assert store.delete(exc.exception_id, tenant_id=exc.tenant_id) is True
+    deleted = store.delete(exc.exception_id, tenant_id=exc.tenant_id)
+    assert deleted is True
 
 
 def test_exception_store_round_trips_iac_scope(mock_pool):
@@ -1661,14 +1666,16 @@ def test_schedule_store_delete(mock_pool):
 
     store = PostgresScheduleStore(pool=mock_pool)
     mock_pool._conn._store.setdefault("scan_schedules", {})["sched-1"] = ("sched-1", 1, None, "default", "{}")
-    assert store.delete("sched-1", tenant_id="default") is True
+    deleted = store.delete("sched-1", tenant_id="default")
+    assert deleted is True
 
 
 def test_schedule_store_delete_nonexistent(mock_pool):
     from agent_bom.api.postgres_store import PostgresScheduleStore
 
     store = PostgresScheduleStore(pool=mock_pool)
-    assert store.delete("nonexistent", tenant_id="default") is False
+    deleted = store.delete("nonexistent", tenant_id="default")
+    assert deleted is False
 
 
 def test_schedule_store_list_all(mock_pool):
@@ -1726,7 +1733,8 @@ def test_source_store_put_get_list_delete(mock_pool):
     listed = store.list_all(tenant_id="tenant-alpha")
     assert isinstance(listed, list)
 
-    assert store.delete("source-1", tenant_id="tenant-alpha") is True
+    deleted = store.delete("source-1", tenant_id="tenant-alpha")
+    assert deleted is True
 
 
 def test_credential_ref_store_put_get_list_delete(mock_pool):
@@ -1761,7 +1769,8 @@ def test_credential_ref_store_put_get_list_delete(mock_pool):
     listed = store.list_all(tenant_id="tenant-alpha")
     assert isinstance(listed, list)
 
-    assert store.delete("cred-1", tenant_id="tenant-alpha") is True
+    deleted = store.delete("cred-1", tenant_id="tenant-alpha")
+    assert deleted is True
 
 
 def test_retired_legacy_credential_purge_audits_once_with_postgres_store(mock_pool):

@@ -207,7 +207,8 @@ def test_logout_revokes_cookie_even_after_backing_key_changes(monkeypatch):
         csrf = client.cookies.get(CSRF_COOKIE_NAME)
         monkeypatch.setenv("AGENT_BOM_API_KEY", "synthetic-" + "login-two")
         assert client.get("/v1/scan").status_code == 401
-        assert client.delete("/v1/auth/session", headers={"origin": "http://testserver", CSRF_HEADER_NAME: csrf}).status_code == 204
+        response = client.delete("/v1/auth/session", headers={"origin": "http://testserver", CSRF_HEADER_NAME: csrf})
+        assert response.status_code == 204
         monkeypatch.setenv("AGENT_BOM_API_KEY", raw)
         client.cookies.clear()
         client.cookies.set(SESSION_COOKIE_NAME, token)

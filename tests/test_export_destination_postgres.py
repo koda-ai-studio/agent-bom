@@ -93,15 +93,18 @@ def test_postgres_destinations_survive_reconnect_and_enforce_rls(monkeypatch):
                 token = set_current_tenant("tenant-b")
                 assert second.get("tenant-a", record.id) is None  # forged predicate still blocked by RLS
                 assert second.list_for_tenant("tenant-a") == []
-                assert not second.delete("tenant-a", record.id)
+                deleted = second.delete("tenant-a", record.id)
+                assert not deleted
                 with pytest.raises(InsufficientPrivilege, match="row-level security"):
                     second.put(record, tenant_id="tenant-a")
                 second.put(replace(record, tenant_id="tenant-b", display_name="other tenant"), tenant_id="tenant-b")
                 assert second.get("tenant-b", record.id).display_name == "other tenant"
-                assert second.delete("tenant-b", record.id)
+                deleted = second.delete("tenant-b", record.id)
+                assert deleted
                 reset_current_tenant(token)
                 token = set_current_tenant("tenant-a")
-                assert second.delete("tenant-a", record.id)
+                deleted = second.delete("tenant-a", record.id)
+                assert deleted
         finally:
             reset_current_tenant(token)
             with owner.connection() as conn:

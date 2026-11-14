@@ -22,9 +22,10 @@ from typing import Any
 
 from agent_bom import config
 from agent_bom.api.audit_log import log_action
+from agent_bom.api.job_store_contract import JobStore
 from agent_bom.api.metrics import record_auto_correlation
 from agent_bom.api.models import JobStatus, ScanJob
-from agent_bom.api.store import InMemoryJobStore, JobStore
+from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.stores import _job_lock, _jobs_put
 from agent_bom.api.tenant_worker import tenant_bound_context
 from agent_bom.core.tenancy import require_explicit_tenant_id

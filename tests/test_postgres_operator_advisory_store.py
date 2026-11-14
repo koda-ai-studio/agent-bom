@@ -93,11 +93,13 @@ def test_postgres_store_round_trip_and_cross_tenant_isolation() -> None:
             assert b.list(tenant) == []
             assert b.get(tenant, "CVE-2026-109618") is None
             assert b.get_rematch_state(tenant) is None
-            assert b.delete(tenant, "CVE-2026-109618") is False
+            deleted = b.delete(tenant, "CVE-2026-109618")
+            assert deleted is False
             assert b.list(other) == []
         with tenant_scope(tenant):
             assert a.get(tenant, "CVE-2026-109618")["severity"] == "critical"
-            assert a.delete(tenant, "CVE-2026-109618") is True
+            deleted = a.delete(tenant, "CVE-2026-109618")
+            assert deleted is True
             assert a.list(tenant) == []
     finally:
         for pool in pools:
