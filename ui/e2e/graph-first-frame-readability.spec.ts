@@ -212,8 +212,15 @@ test("no connection leaves the map to go around it", async ({ page }) => {
   await page.getByTestId("graph-edge-note").getByRole("button", { name: "Show all", exact: true }).click();
   await page.getByRole("button", { name: "Fit all", exact: true }).click();
   await expect.poll(async () => (await drawnEdges(page)).length).toBeGreaterThan(40);
-  const left = await page.locator(".react-flow__node").evaluateAll(nodes => Math.min(...nodes.map(node => new DOMMatrixReadOnly(getComputedStyle(node).transform).e)));
-  expect((await drawnEdges(page)).filter(edge => edge.left < left - 1).map(edge => edge.id)).toEqual([]);
+  // Above 80 nodes only on-screen nodes are in the DOM, so each edge is held to its own endpoints:
+  // a step beside a handle is fine, a detour around the map is not.
+  await expect.poll(() => page.locator(".react-flow").evaluate(canvas => [...canvas.querySelectorAll<SVGGElement>(".react-flow__edge")].flatMap(group => {
+    const path = group.querySelector<SVGPathElement>(".react-flow__edge-path");
+    const length = path?.getTotalLength();
+    if (!path || !length) return [];
+    const ends = Math.min(path.getPointAtLength(0).x, path.getPointAtLength(length).x);
+    return path.getBBox().x < ends - 24 ? [group.getAttribute("data-id")] : [];
+  }))).toEqual([]);
 });
 
 test("a Kubernetes flow keeps its steps and holds back only far context", async ({ page }, info) => {
