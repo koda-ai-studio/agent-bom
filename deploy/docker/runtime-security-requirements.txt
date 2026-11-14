@@ -6,9 +6,9 @@
 # GHSA-6q48-6c7w-9gw2: also replace certifi pinned by older release locks.
 certifi==2026.10.19 \
     --hash=sha256:42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b
-cryptography==50.0.0 \
-    --hash=sha256:1489e263a8048bb8b6a8bac662eb2d402ea5d2b7b4699b72f385f1e2772db105 \
-    --hash=sha256:7cec5b856506da6defb290f30c9ee687d5f5e8cb0bd3f6459dde43b0b4fa40ef
+cryptography==50.0.1 \
+    --hash=sha256:be224a65493ec5b74a158ff22a5522ce4a5ca1e543c647a3a4730d4a09e5f959 \
+    --hash=sha256:9ebcdd5519be9b652a46f507817a74591774fc3d6923ac364e4dfa64e36b291b
 # GHSA-v4x8-3wr5-3wq8, GHSA-9vhv-jxww-xfm5, GHSA-567q-5qvw-pf92: release locks
 # before 0.111.0 hold filelock 3.32.x (capped by snowflake-connector-python 4.x,
 # whose FileLock/BaseFileLock/Timeout use is unchanged in filelock 4).

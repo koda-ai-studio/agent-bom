@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
 import { explainGraphSelection, type GraphExplanation } from "@/lib/api-ai-advice";
+import { readableNodeId } from "@/lib/node-id-tail";
 
 function errorText(error: unknown): string {
   if (error && typeof error === "object") {
@@ -52,8 +53,8 @@ export function AIPathExplainPanel({ nodeIds, scanId }: { nodeIds: string[]; sca
                 {claim.note ? <p className="mt-0.5 text-xs italic text-ink-tertiary">Model note, not evidence: {claim.note}</p> : null}
                 <ul aria-label="Citations" className="mt-1 flex flex-wrap gap-1">
                   {claim.citations.map((citation) => (
-                    <li key={citation.ref} title={citation.id} className="max-w-full break-all rounded border border-outline px-1.5 py-0.5 font-mono text-[11px] text-ink-secondary">
-                      {citation.kind}: {citation.label} ({citation.id}){citation.traversable === false ? ", not traversable" : ""}
+                    <li key={citation.ref} title={readableNodeId(citation.id)} className="max-w-full break-all rounded border border-outline px-1.5 py-0.5 font-mono text-[11px] text-ink-secondary">
+                      {citation.kind}: {citation.label} ({readableNodeId(citation.id)}){citation.traversable === false ? ", not traversable" : ""}
                     </li>
                   ))}
                 </ul>

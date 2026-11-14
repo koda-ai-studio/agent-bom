@@ -240,3 +240,59 @@ describe("kind page follow-ups", () => {
     expect(within(narrowed).getByText("1,528")).toBeInTheDocument();
   });
 });
+
+describe("server and agent roles", () => {
+  const BY_TYPE: Record<string, number> = { server: 5, tool: 3, agent: 4, model: 1 };
+  const BY_ROLE: Record<string, number> = { mcp_server: 4, other_server: 1, agent: 3, framework_agent: 1 };
+
+  function withRoles(): InventorySummaryResponse {
+    return { ...summary(BY_TYPE), by_role: BY_ROLE };
+  }
+
+  it("headlines MCP servers and AI agents by role, with the rest as labelled parts", () => {
+    const servers = kindHeadline(ASSET_KIND_BY_ID.servers, BY_TYPE, BY_ROLE);
+    expect(servers.primary).toBe(4);
+    expect(servers.breakdown.map((part) => [part.type, part.count, part.label])).toEqual([
+      ["tool", 3, "tools"],
+      ["other_server", 1, "other server (not MCP)"],
+    ]);
+    const agents = kindHeadline(ASSET_KIND_BY_ID.agents, BY_TYPE, BY_ROLE);
+    expect(agents.primary).toBe(3);
+    expect(agents.breakdown.map((part) => [part.type, part.count, part.label])).toEqual([
+      ["framework_agent", 1, "framework agent"],
+      ["model", 1, "model"],
+    ]);
+  });
+
+  it("falls back to type counts when the summary carries no roles", () => {
+    expect(kindHeadline(ASSET_KIND_BY_ID.servers, BY_TYPE).primary).toBe(5);
+    expect(kindHeadline(ASSET_KIND_BY_ID.servers, BY_TYPE, {}).primary).toBe(5);
+  });
+
+  it("cards and chips never call a non-MCP server an MCP server", async () => {
+    vi.mocked(api.getInventorySummary).mockResolvedValue(withRoles());
+    const view = render(<InventoryProvider><InventoryIndex /></InventoryProvider>);
+    const card = await screen.findByRole("link", { name: /Servers & tools:/ });
+    await waitFor(() => expect(card).toHaveAccessibleName("Servers & tools: 4 MCP servers, plus 3 tools and 1 other server (not MCP), in snapshot"));
+    expect(screen.getByRole("link", { name: /AI entities:/ })).toHaveAccessibleName(
+      "AI entities: 3 AI agents, plus 1 framework agent and 1 model, in snapshot",
+    );
+    view.unmount();
+
+    vi.mocked(api.getInventoryAssets).mockResolvedValue(
+      page([{ ...row("srv-mcp", "server"), role: "mcp_server" }, { ...row("srv-runtime", "server"), role: "other_server" }], 2),
+    );
+    render(
+      <InventoryProvider entityTypes={ASSET_KIND_BY_ID.servers.entityTypes} scanId={SNAPSHOT}>
+        <AssetInventoryView kind="servers" />
+      </InventoryProvider>,
+    );
+    const chips = await screen.findByRole("group", { name: "Filter by asset type" });
+    // The type chip filters every server node, so it names servers, not MCP servers.
+    expect(within(chips).getByRole("button", { name: "Servers 5" })).toBeInTheDocument();
+    expect(within(chips).queryByRole("button", { name: /MCP servers/ })).not.toBeInTheDocument();
+    const table = await screen.findByTestId("inventory-table-servers");
+    expect(within(table).getByText("MCP server")).toBeInTheDocument();
+    expect(within(table).getByText("Other server (not MCP)")).toBeInTheDocument();
+  });
+});

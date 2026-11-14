@@ -11,7 +11,9 @@ same variables and password file the API reads, so no credential appears in
 argv. It is bounded: a timeout kills it, any exit other than "copied" makes the
 caller rebuild in process, and API shutdown or the parent's death ends it. Its
 single SQLite transaction means a child that dies mid-write leaves nothing to
-promote. Only the exception's type name crosses back, logged sanitized.
+promote. Only the exception's type name crosses back, logged sanitized; an
+unreachable database has its own exit status so it is not read as a role
+privilege failure. A child that cannot even start also falls back.
 """
 
 from __future__ import annotations
@@ -33,6 +35,7 @@ TIMEOUT_SECONDS = 600.0
 EXIT_COPIED = 0
 EXIT_DECLINED = 10
 EXIT_FAILED = 11
+EXIT_UNREACHABLE = 12
 REQUEST_FIELDS = ("tenant", "source_scan", "expected_revision", "identity", "created_at", "write_generation", "evidence_manifest_sha256")
 
 _children: set[subprocess.Popen[bytes]] = set()
@@ -68,13 +71,18 @@ def copy_in_child(cache_path: str, *, module: str | None = None, timeout: float 
     payload = json.dumps({**request, "cache_path": cache_path, "parent_pid": os.getpid()}).encode()
     # One connection is all the child needs; the pool sizing variables are the API's own.
     env = {**os.environ, "AGENT_BOM_POSTGRES_POOL_MIN_SIZE": "1", "AGENT_BOM_POSTGRES_POOL_MAX_SIZE": "1"}
-    process = subprocess.Popen(  # noqa: S603 # nosec B603 - fixed interpreter and module; credentials stay in env
-        [sys.executable, "-m", module or CHILD_MODULE],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        env=env,
-    )
+    try:
+        process = subprocess.Popen(  # noqa: S603 # nosec B603 - fixed interpreter and module; credentials stay in env
+            [sys.executable, "-m", module or CHILD_MODULE],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+    except OSError as exc:
+        # Only the type and errno: the message can carry a path or the environment.
+        logger.warning("Current graph row copy child could not start (%s, errno %s); rebuilding instead", type(exc).__name__, exc.errno)
+        return False
     with _children_lock:
         _children.add(process)
     limit = TIMEOUT_SECONDS if timeout is None else timeout
@@ -90,7 +98,9 @@ def copy_in_child(cache_path: str, *, module: str | None = None, timeout: float 
             _children.discard(process)
     if process.returncode == EXIT_COPIED:
         return True
-    if process.returncode != EXIT_DECLINED:
+    if process.returncode == EXIT_UNREACHABLE:
+        logger.warning("Current graph row copy child could not reach the database (exit %s); rebuilding instead", process.returncode)
+    elif process.returncode != EXIT_DECLINED:
         logger.warning("Current graph row copy child failed (exit %s: %s); rebuilding instead", process.returncode, _reason(err or b""))
     return False
 
@@ -100,6 +110,7 @@ __all__ = [
     "EXIT_COPIED",
     "EXIT_DECLINED",
     "EXIT_FAILED",
+    "EXIT_UNREACHABLE",
     "REQUEST_FIELDS",
     "TIMEOUT_SECONDS",
     "copy_in_child",

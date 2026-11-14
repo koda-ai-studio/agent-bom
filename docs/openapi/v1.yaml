@@ -11165,6 +11165,16 @@ components:
           - type: integer
           - type: 'null'
           title: Graph Min Hop Distance
+        graph_reachability_not_assessed_reason:
+          anyOf:
+          - enum:
+            - path_budget
+            - graph_refreshing
+            type: string
+          - type: 'null'
+          description: 'Why graph_reachable is null: the snapshot path search stopped
+            at a budget, or the graph is refreshing.'
+          title: Graph Reachability Not Assessed Reason
         graph_reachable:
           anyOf:
           - type: boolean
@@ -21032,6 +21042,13 @@ components:
           additionalProperties: true
           title: Risk Assessment
           type: object
+        role:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Agent and server rows only: agent, framework_agent, mcp_server
+            or other_server (see by_role)'
+          title: Role
         severity:
           title: Severity
           type: string
@@ -21487,6 +21504,13 @@ components:
           additionalProperties:
             type: integer
           title: By Group
+          type: object
+        by_role:
+          additionalProperties:
+            type: integer
+          description: Agent and server nodes by role; agent and mcp_server count
+            what /v1/agents counts, framework_agent and other_server the rest
+          title: By Role
           type: object
         by_type:
           additionalProperties:
@@ -52024,11 +52048,15 @@ paths:
                         enum:
                         - not_assessed
                         type: string
+                      total_paths:
+                        minimum: 0
+                        type: integer
                     required:
                     - schema_version
                     - coverage_basis
                     - source_coverage
                     - method
+                    - total_paths
                     - assessed_paths
                     - candidate_count
                     - covered_paths
@@ -58867,7 +58895,11 @@ paths:
 
         is the canonical AI-BOM JSON and, for a non-json ``format``,
 
-        ``result_document`` carries that rendering named by ``result_format``.'
+        ``result_document`` carries that rendering named by ``result_format``.
+
+        A large full view is streamed (chunked, no ``Content-Length``) with the
+
+        same bytes; page sections with ``/v1/scan/{job_id}/result/{section}``.'
       operationId: get_scan_v1_scan__job_id__get
       parameters:
       - in: path

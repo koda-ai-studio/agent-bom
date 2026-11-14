@@ -27,6 +27,16 @@ describe("schema 2.0 report expansion", () => {
     expect(expandReport(packed)).toEqual(fixture("legacy.json"));
   });
 
+  it("drops the schema_version the packer added when the source had none", () => {
+    const packed = {
+      schema_version: "2.0",
+      agents: [],
+      blast_radius: [],
+      packing: { schema_version: "1", transforms: [] },
+    };
+    expect(expandReport(packed)).toEqual({ agents: [], blast_radius: [] });
+  });
+
   it("does not modify its input and passes 1.x reports through", () => {
     const packed = fixture("packed.json");
     const before = JSON.stringify(packed);

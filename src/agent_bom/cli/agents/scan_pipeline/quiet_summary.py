@@ -38,18 +38,24 @@ def _report_path(opts: ScanOptions) -> str | None:
     return _resolve_output_path(opts.output, opts.output_format)
 
 
-def quiet_verdict(opts: ScanOptions, st: ScanState, exit_code: int) -> dict[str, Any]:
-    """The structured result: verdict, outcome, counts, exit code, reasons and report path."""
+def quiet_verdict(opts: ScanOptions, st: ScanState, exit_code: int, *, forced_reason: str | None = None) -> dict[str, Any]:
+    """The structured result: verdict, outcome, counts, exit code, reasons and report path.
+
+    ``forced_reason`` is the default severity gate's failure that ``--exit-zero``
+    turned into exit 0: the verdict stays FAIL and ``exit_forced_by`` names the flag.
+    """
     report = st.report
     counts = severity_counts(report) if report is not None else {}
-    reasons = list(getattr(st.ctx, "exit_reasons", None) or []) if exit_code else []
+    forced = bool(forced_reason) and exit_code == 0
+    reasons = list(getattr(st.ctx, "exit_reasons", None) or []) if exit_code else ([forced_reason] if forced else [])
     return {
-        "verdict": "PASS" if exit_code == 0 else "FAIL",
+        "verdict": "FAIL" if exit_code or forced else "PASS",
         "outcome": effective_scan_run(report).outcome.value if report is not None else "complete",
         "packages": int(getattr(st, "total_packages", 0) or 0),
         "findings": sum(counts.values()),
         "counts": counts,
         "exit_code": exit_code,
+        "exit_forced_by": "--exit-zero" if forced else None,
         "reasons": [str(reason) for reason in reasons] or (["see the report's scan_run and findings"] if exit_code else []),
         "report": _report_path(opts),
     }
@@ -58,24 +64,26 @@ def quiet_verdict(opts: ScanOptions, st: ScanState, exit_code: int) -> dict[str,
 def _headline(verdict: dict[str, Any]) -> str:
     by_severity = " · ".join(f"{count} {severity}" for severity, count in verdict["counts"].items())
     findings = f"{verdict['findings']} finding(s) ({by_severity})" if verdict["findings"] else "no findings"
-    return f"agent-bom: {verdict['verdict']} — {verdict['outcome']} scan, {verdict['packages']} package(s), {findings}"
+    forced = f" (exit forced to {verdict['exit_code']} by {verdict['exit_forced_by']})" if verdict.get("exit_forced_by") else ""
+    return f"agent-bom: {verdict['verdict']}{forced} — {verdict['outcome']} scan, {verdict['packages']} package(s), {findings}"
 
 
-def quiet_summary_lines(opts: ScanOptions, st: ScanState, exit_code: int) -> list[str]:
-    verdict = quiet_verdict(opts, st, exit_code)
+def quiet_summary_lines(opts: ScanOptions, st: ScanState, exit_code: int, *, forced_reason: str | None = None) -> list[str]:
+    verdict = quiet_verdict(opts, st, exit_code, forced_reason=forced_reason)
     lines = [_headline(verdict)]
-    lines.extend(f"Exit {exit_code}: {reason}" for reason in verdict["reasons"])
+    exit_label = f"Exit {exit_code} (forced)" if verdict["exit_forced_by"] else f"Exit {exit_code}"
+    lines.extend(f"{exit_label}: {reason}" for reason in verdict["reasons"])
     if verdict["report"]:
         lines.append(f"Report: {verdict['report']}")
     return lines
 
 
 def _log_verdict(verdict: dict[str, Any]) -> None:
-    level = logging.WARNING if verdict["exit_code"] else logging.INFO
+    level = logging.WARNING if verdict["verdict"] == "FAIL" else logging.INFO
     log_record(_headline(verdict), level=level, context=verdict, logger_name=VERDICT_LOGGER)
 
 
-def print_quiet_summary(opts: ScanOptions, st: ScanState, exit_code: int) -> None:
+def print_quiet_summary(opts: ScanOptions, st: ScanState, exit_code: int, *, forced_reason: str | None = None) -> None:
     """Print the result block under ``-q``; progress and banners stay suppressed.
 
     stdout carries it unless stdout already carries a machine document (``-f json``
@@ -92,9 +100,9 @@ def print_quiet_summary(opts: ScanOptions, st: ScanState, exit_code: int) -> Non
             stderr_notice(f"exit {exit_code}: {reason}", level=logging.WARNING)
         return
     if json_logging_active():
-        _log_verdict(quiet_verdict(opts, st, exit_code))
+        _log_verdict(quiet_verdict(opts, st, exit_code, forced_reason=forced_reason))
         return
-    _echo(quiet_summary_lines(opts, st, exit_code), stdout_has_document=stdout_has_document)
+    _echo(quiet_summary_lines(opts, st, exit_code, forced_reason=forced_reason), stdout_has_document=stdout_has_document)
 
 
 def print_quiet_incomplete(exc: Exception, *, stdout_has_document: bool) -> None:

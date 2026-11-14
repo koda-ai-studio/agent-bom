@@ -7491,6 +7491,8 @@ export interface paths {
          *     result document. ``view=full`` returns the complete ``ScanJob``: ``result``
          *     is the canonical AI-BOM JSON and, for a non-json ``format``,
          *     ``result_document`` carries that rendering named by ``result_format``.
+         *     A large full view is streamed (chunked, no ``Content-Length``) with the
+         *     same bytes; page sections with ``/v1/scan/{job_id}/result/{section}``.
          */
         get: operations["get_scan_v1_scan__job_id__get"];
         put?: never;
@@ -14832,6 +14834,11 @@ export interface components {
             framework_tags?: string[] | null;
             /** Graph Min Hop Distance */
             graph_min_hop_distance?: number | null;
+            /**
+             * Graph Reachability Not Assessed Reason
+             * @description Why graph_reachable is null: the snapshot path search stopped at a budget, or the graph is refreshing.
+             */
+            graph_reachability_not_assessed_reason?: ("path_budget" | "graph_refreshing") | null;
             /** Graph Reachable */
             graph_reachable?: boolean | null;
             /** Graph Reachable From */
@@ -20189,6 +20196,11 @@ export interface components {
             risk_assessment: {
                 [key: string]: unknown;
             };
+            /**
+             * Role
+             * @description Agent and server rows only: agent, framework_agent, mcp_server or other_server (see by_role)
+             */
+            role?: string | null;
             /** Severity */
             severity: string;
             /** Source */
@@ -20427,6 +20439,13 @@ export interface components {
         InventorySummaryResponse: {
             /** By Group */
             by_group: {
+                [key: string]: number;
+            };
+            /**
+             * By Role
+             * @description Agent and server nodes by role; agent and mcp_server count what /v1/agents counts, framework_agent and other_server the rest
+             */
+            by_role?: {
                 [key: string]: number;
             };
             /** By Type */
@@ -39863,6 +39882,7 @@ export interface operations {
                             schema_version: "graph-remediation-priorities.v1";
                             /** @enum {string} */
                             source_coverage: "not_assessed";
+                            total_paths: number;
                         };
                         scan_id?: string;
                         snapshot_generation?: string | null;

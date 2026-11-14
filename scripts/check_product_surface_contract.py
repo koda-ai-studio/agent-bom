@@ -266,12 +266,14 @@ def main() -> int:
             "python scripts/check_release_consistency.py",
             "python scripts/check_product_surface_contract.py",
             "Test (Python 3.13)",
-            # PRs run 3.13 only; pushes to main must still exercise the full
-            # advertised interpreter matrix.
-            'python-version: ["3.11", "3.12", "3.13", "3.14"]',
         ],
         failures,
     )
+    # PRs and the merge queue run 3.13; the full advertised interpreter matrix
+    # runs nightly and gates every release on the tagged commit.
+    _require_text(".github/workflows/full-correctness.yml", ['python-version: ["3.11", "3.12", "3.13", "3.14"]'], failures)
+    _require_text(".github/workflows/ci.yml", ["uses: ./.github/workflows/full-correctness.yml"], failures)
+    _require_text(".github/workflows/release.yml", ["./.github/workflows/full-correctness.yml"], failures)
     _require_text(".github/workflows/pr-security-gate.yml", ["merge_group:", "agent-bom self-scan on PR"], failures)
     _require_text(".github/workflows/codeql.yml", ["merge_group:", "Analyze"], failures)
     _require_text(".github/workflows/release.yml", ["python scripts/check_release_consistency.py"], failures)

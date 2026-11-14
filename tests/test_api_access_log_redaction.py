@@ -19,6 +19,8 @@ def test_api_access_logging_omits_query_credentials(command, monkeypatch, tmp_pa
     with patch("agent_bom.api.server.configure_api"), patch("uvicorn.run") as run:
         result = CliRunner().invoke(command, ["--api-key", "synthetic-test-only-key"])
     assert result.exit_code == 0, result.output
+    # The API middleware logs each request once; Uvicorn's access line would duplicate it.
+    assert run.call_args.kwargs["access_log"] is False
     config = run.call_args.kwargs.get("log_config", uvicorn.config.LOGGING_CONFIG)
     # Exercise the actual formatter/filter configuration without changing the
     # test process's global logging handlers.

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { reachabilityVerdict } from "@/lib/finding-exposure";
 import { reachingEntity } from "@/lib/finding-holder";
 import { findingWorkloadScope, type EnrichedVuln } from "@/lib/findings-view";
+import { readableNodeId } from "@/lib/node-id-tail";
 
 const TONE = {
   reachable: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
@@ -45,7 +46,7 @@ export function FindingExposureSummary({ vuln, hostServers = [] }: { vuln: Enric
           {reachers.length ? <>
             <dt className="text-ink-secondary">Reaching {reacherKind}</dt>
             <dd className="flex flex-wrap gap-1.5">{reachers.map((entity) => (
-              <Link key={entity.id} title={entity.id} href={`/findings?${new URLSearchParams({ q: entity.name })}`} className={chip}>{entity.name}</Link>
+              <Link key={entity.id} title={readableNodeId(entity.id)} href={`/findings?${new URLSearchParams({ q: entity.name })}`} className={chip}>{entity.name}</Link>
             ))}</dd>
           </> : null}
           {scope.servers.length ? <>
@@ -55,7 +56,7 @@ export function FindingExposureSummary({ vuln, hostServers = [] }: { vuln: Enric
           {graphServers.length ? <>
             <dt className="text-ink-secondary">Hosting MCP servers</dt>
             <dd className="flex flex-wrap gap-1.5">{graphServers.map((server) => (
-              <Link key={server.id} title={server.id} href={`/findings?${new URLSearchParams({ q: server.label })}`} className={chip}>{server.label}</Link>
+              <Link key={server.id} title={readableNodeId(server.id)} href={`/findings?${new URLSearchParams({ q: server.label })}`} className={chip}>{server.label}</Link>
             ))}</dd>
           </> : null}
         </dl>

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import click
+from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -64,6 +65,60 @@ def _display_path(path: str) -> str:
     except ValueError:
         # Keep the parent: a plugin's skills are all named SKILL.md.
         return str(Path(*p.parts[-2:])) if len(p.parts) >= 2 else str(p)
+
+
+# Wide enough for most skill names at 80 columns; longer ones end in an ellipsis.
+_SKILL_LABEL_WIDTH = 24
+
+
+def _skill_labels(paths: list[str]) -> dict[str, str]:
+    """Name-first row labels: the skill's directory for ``SKILL.md``, else the file name.
+
+    A narrow terminal truncates from the right, so a cwd-relative path showed
+    only its common prefix. Labels that would collide fall back to the path.
+    """
+    heads: dict[str, str] = {}
+    for path in paths:
+        p = Path(path)
+        heads[path] = p.parent.name if p.name.lower() == "skill.md" and p.parent.name else p.name or path
+    counts: dict[str, int] = {}
+    for head in heads.values():
+        counts[head] = counts.get(head, 0) + 1
+    return {path: head if counts[head] == 1 else _display_path(path) for path, head in heads.items()}
+
+
+def _instruction_surface_table(report: Any, labels: dict[str, str], label_width: int) -> Table:
+    """One row per scanned file, named by skill, sized to fit an 80-column terminal."""
+    # No vertical rules: seven columns plus a skill name must fit 80 columns.
+    files_table = Table(title="Instruction Surface", expand=True, box=box.SIMPLE_HEAD, show_edge=False, collapse_padding=True)
+    files_table.add_column("Skill / file", no_wrap=True, overflow="ellipsis", min_width=label_width)
+    files_table.add_column("Status", no_wrap=True)
+    files_table.add_column("Verdict", no_wrap=True)
+    files_table.add_column("Review", no_wrap=True)
+    files_table.add_column("Prov.", min_width=8)
+    files_table.add_column("Findings", justify="right", no_wrap=True)
+    files_table.add_column("Refs", justify="right", no_wrap=True)
+
+    verdict_style = {"benign": "green", "suspicious": "yellow", "malicious": "red"}
+    review_style = {"trusted": "green", "review": "yellow", "high_risk": "red", "blocked": "red bold"}
+    prov_style = {"verified": "green", "unsigned": "yellow", "bundle_found_but_invalid": "red", "missing": "red"}
+    status_style = {"clean": "green", "suspicious": "yellow", "malicious": "red", "pending": "cyan", "unavailable": "dim"}
+
+    for file_report in report.files:
+        verdict = file_report.trust.verdict.value
+        review_verdict = file_report.trust.review_verdict.value
+        provenance = str(file_report.provenance.get("status", "unknown"))
+        status = file_report.status
+        files_table.add_row(
+            labels[str(file_report.path)],
+            f"[{status_style.get(status, 'white')}]{status}[/{status_style.get(status, 'white')}]",
+            f"[{verdict_style.get(verdict, 'white')}]{verdict}[/{verdict_style.get(verdict, 'white')}]",
+            f"[{review_style.get(review_verdict, 'white')}]{review_verdict}[/{review_style.get(review_verdict, 'white')}]",
+            f"[{prov_style.get(provenance, 'white')}]{provenance.replace('_', ' ')}[/{prov_style.get(provenance, 'white')}]",
+            str(len(file_report.audit.findings)),
+            str(len(file_report.scan.packages) + len(file_report.scan.servers)),
+        )
+    return files_table
 
 
 def _print_recommendations(console: Console, report: Any, quiet: bool) -> None:
@@ -245,42 +300,20 @@ def skills_scan_cmd(
             if report.catalog_path:
                 console.print(f"  [dim]Catalog updated:[/dim] {report.catalog_path}\n")
 
-        files_table = Table(title="Instruction Surface", expand=True)
-        files_table.add_column("File", overflow="fold")
-        files_table.add_column("Status", no_wrap=True)
-        files_table.add_column("Verdict", no_wrap=True)
-        files_table.add_column("Review", no_wrap=True)
-        files_table.add_column("Prov.", no_wrap=True)
-        files_table.add_column("Findings", justify="right", no_wrap=True)
-        files_table.add_column("Refs", justify="right", no_wrap=True)
-
-        verdict_style = {"benign": "green", "suspicious": "yellow", "malicious": "red"}
-        review_style = {"trusted": "green", "review": "yellow", "high_risk": "red", "blocked": "red bold"}
-        prov_style = {"verified": "green", "unsigned": "yellow", "bundle_found_but_invalid": "red", "missing": "red"}
-        status_style = {"clean": "green", "suspicious": "yellow", "malicious": "red", "pending": "cyan", "unavailable": "dim"}
-
-        for file_report in report.files:
-            verdict = file_report.trust.verdict.value
-            review_verdict = file_report.trust.review_verdict.value
-            provenance = str(file_report.provenance.get("status", "unknown"))
-            status = file_report.status
-            files_table.add_row(
-                _display_path(str(file_report.path)),
-                f"[{status_style.get(status, 'white')}]{status}[/{status_style.get(status, 'white')}]",
-                f"[{verdict_style.get(verdict, 'white')}]{verdict}[/{verdict_style.get(verdict, 'white')}]",
-                f"[{review_style.get(review_verdict, 'white')}]{review_verdict}[/{review_style.get(review_verdict, 'white')}]",
-                f"[{prov_style.get(provenance, 'white')}]{provenance}[/{prov_style.get(provenance, 'white')}]",
-                str(len(file_report.audit.findings)),
-                str(len(file_report.scan.packages) + len(file_report.scan.servers)),
-            )
+        labels = _skill_labels(
+            [str(file_report.path) for file_report in report.files]
+            + [finding.source_file for file_report in report.files for finding in file_report.audit.findings]
+        )
+        label_width = min(_SKILL_LABEL_WIDTH, max((len(label) for label in labels.values()), default=4))
+        files_table = _instruction_surface_table(report, labels, label_width)
         console.print(files_table)
         _print_status_notes(console, report, quiet)
 
         all_findings = [finding for file_report in report.files for finding in file_report.audit.findings]
         if all_findings:
-            finding_table = Table(title="Top Findings", expand=True)
+            finding_table = Table(title="Top Findings", expand=True, box=box.SIMPLE_HEAD)
             finding_table.add_column("Sev", no_wrap=True)
-            finding_table.add_column("File", no_wrap=True)
+            finding_table.add_column("Skill / file", no_wrap=True, overflow="ellipsis", min_width=label_width)
             finding_table.add_column("Category", no_wrap=True)
             finding_table.add_column("Title")
             sev_style = {"critical": "red bold", "high": "red", "medium": "yellow", "low": "dim"}
@@ -292,7 +325,7 @@ def skills_scan_cmd(
                 style = sev_style.get(finding.severity, "white")
                 finding_table.add_row(
                     f"[{style}]{finding.severity.upper()}[/{style}]",
-                    _display_path(finding.source_file),
+                    labels[finding.source_file],
                     finding.category,
                     finding.title,
                 )
@@ -308,7 +341,7 @@ def skills_scan_cmd(
                 family_totals[family] = family_totals.get(family, 0) + int(count)
 
         if family_totals and not quiet:
-            behavior_table = Table(title="Behavior Profile", expand=True)
+            behavior_table = Table(title="Behavior Profile", expand=True, box=box.SIMPLE_HEAD)
             behavior_table.add_column("Family")
             behavior_table.add_column("Signals", justify="right", no_wrap=True)
             for family, count in sorted(family_totals.items()):

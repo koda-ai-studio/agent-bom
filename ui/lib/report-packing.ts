@@ -255,6 +255,8 @@ export function expandReport(doc: unknown, maxExpandedBytes = DEFAULT_MAX_EXPAND
     budget.charge(packages);
     report = insertAfter(report, "ai_bom_entities", "packages", packages.map(copy));
   }
+  // No legacy_schema_version: the source had no schema_version and the packer added this one.
+  if (!("legacy_schema_version" in manifest)) delete report.schema_version;
   const legacy = typeof manifest.legacy_schema_version === "string" && manifest.legacy_schema_version.startsWith("1")
     ? manifest.legacy_schema_version
     : "1.0";

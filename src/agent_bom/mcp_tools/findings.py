@@ -37,6 +37,7 @@ _SUMMARY_FIELDS = (
     "graph_reachable",
     "graph_reachable_from",
     "graph_reachable_from_count",
+    "graph_reachability_not_assessed_reason",
     "reachability",
     "status",
     "lifecycle_status",

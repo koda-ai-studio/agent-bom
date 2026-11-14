@@ -40,6 +40,7 @@ import {
   type SigmaEdgeAttributes,
   type SigmaNodeAttributes,
 } from "@/lib/sigma-graph-overview";
+import { readableNodeId } from "@/lib/node-id-tail";
 
 
 type SigmaGraphOverviewProps = {
@@ -501,7 +502,7 @@ export function SigmaGraphOverview({
           <summary className="cursor-pointer">Explore connected assets</summary>
           <p className="my-2 text-ink-secondary">Recorded connections, not proof of authorized access or execution. Open an asset’s details to inspect evidence or expand beyond this view.</p>
           <ul className="max-h-40 space-y-1 overflow-y-auto">
-            {neighbors.slice(0, 12).map((id) => <li key={id}><button type="button" className="text-sky-700 underline dark:text-sky-300" title={id} onClick={() => selectDisplayedNode(id)}>{model.graph.getNodeAttribute(id, "label")} <span className="text-ink-secondary">({model.graph.getNodeAttribute(id, "nodeType")})</span></button></li>)}
+            {neighbors.slice(0, 12).map((id) => <li key={id}><button type="button" className="text-sky-700 underline dark:text-sky-300" title={readableNodeId(id)} onClick={() => selectDisplayedNode(id)}>{model.graph.getNodeAttribute(id, "label")} <span className="text-ink-secondary">({model.graph.getNodeAttribute(id, "nodeType")})</span></button></li>)}
           </ul>
           {neighbors.length > 12 && <p>Showing 12 of {neighbors.length} connected assets. Use the details panel to investigate further.</p>}
           {neighbors.length === 0 && <p>No connected assets are present in this displayed scope.</p>}

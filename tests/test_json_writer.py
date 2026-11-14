@@ -31,6 +31,7 @@ def test_partial_write_failure_does_not_publish_a_report(tmp_path, monkeypatch, 
         raise OSError("injected disk failure")
 
     monkeypatch.setattr(json_writer, "write_json_document", interrupted)
+    monkeypatch.setattr(json_writer, "write_compact_json_document", interrupted)
     with pytest.raises(OSError, match="injected"):
         json_fmt.export_json(AIBOMReport(), str(output))
     assert output.read_text() == "previous" if existing else not output.exists()

@@ -130,6 +130,15 @@ def test_export_json_matches_redact_then_dump(tmp_path) -> None:
     payload["iac_findings"] = {"findings": [{"file_path": "/Users/someone/infra/main.tf", "rule_id": "IAC-1"}]}
     output = tmp_path / "report.json"
     json_fmt.export_json(AIBOMReport(), str(output), report_json=payload)
+    expected = json_fmt.redact_json_payload(payload)
+    assert output.read_text(encoding="utf-8") == json.dumps(expected, separators=(",", ":"))
+
+
+def test_export_json_pretty_env_restores_indented_file(tmp_path, monkeypatch) -> None:
+    payload = _secretive_payload()
+    output = tmp_path / "report.json"
+    monkeypatch.setenv("AGENT_BOM_PRETTY_JSON", "1")
+    json_fmt.export_json(AIBOMReport(), str(output), report_json=payload)
     assert output.read_text(encoding="utf-8") == json.dumps(json_fmt.redact_json_payload(payload), indent=2) + "\n"
 
 

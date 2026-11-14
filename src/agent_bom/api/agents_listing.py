@@ -17,6 +17,7 @@ from typing import Annotated, Any, Literal
 from fastapi import HTTPException, Query
 
 from agent_bom.constants import is_credential_key
+from agent_bom.domain.mcp_model import server_dict_counts_as_mcp_server
 from agent_bom.security import sanitize_error
 
 DEFAULT_AGENT_PAGE_SIZE = 50
@@ -113,6 +114,11 @@ def _servers(agent: dict[str, Any]) -> list[dict[str, Any]]:
     return [server for server in agent.get("mcp_servers") or [] if isinstance(server, dict)]
 
 
+def mcp_servers_of(agent: dict[str, Any]) -> list[dict[str, Any]]:
+    """The agent's MCP servers; manifest and SDK inventory records beside them are not servers."""
+    return [server for server in _servers(agent) if server_dict_counts_as_mcp_server(server)]
+
+
 def _packages(server: dict[str, Any]) -> list[dict[str, Any]]:
     return [package for package in server.get("packages") or [] if isinstance(package, dict)]
 
@@ -131,7 +137,7 @@ def server_credential_count(server: dict[str, Any]) -> int:
 def agent_metrics(agent: dict[str, Any]) -> dict[str, int]:
     servers = _servers(agent)
     return {
-        "servers": len(servers),
+        "servers": len(mcp_servers_of(agent)),
         "packages": sum(len(_packages(server)) for server in servers),
         "credentials": sum(server_credential_count(server) for server in servers),
         # Package vulnerability instances, the same unit the agent mesh counts.
@@ -176,7 +182,7 @@ def _sort_key(sort: AgentSortKey) -> Any:
 def population_summary(agents: list[dict[str, Any]]) -> dict[str, Any]:
     """Totals for the KPI strip over every agent in scope, independent of the page."""
     servers = [server for agent in agents for server in _servers(agent)]
-    mcp_servers = [server for server in servers if (server.get("surface") or "mcp-server") == "mcp-server"]
+    mcp_servers = [server for agent in agents for server in mcp_servers_of(agent)]
     credentials: set[str] = set()
     for server in servers:
         credentials.update(_env_credential_keys(server))

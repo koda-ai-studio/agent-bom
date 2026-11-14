@@ -12,6 +12,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, BinaryIO, TextIO, cast
 
+from agent_bom.core.settings import env_flag
+
 _INDENT = "  "
 _COMPACT_SEPARATORS = (",", ":")
 # A container with more nested elements than this is written member by member;
@@ -25,14 +27,26 @@ _CONTAINERS = (dict, list, tuple, set)
 Expand = Callable[[Any, Any], tuple[str, Any]]
 
 
+PRETTY_JSON_ENV = "AGENT_BOM_PRETTY_JSON"
+
+
 def is_gzip_path(output_path: str) -> bool:
     return output_path.lower().endswith(".gz")
 
 
+def pretty_json_requested() -> bool:
+    """True when ``AGENT_BOM_PRETTY_JSON`` (or ``--pretty-json``) asks for indented JSON files."""
+    return env_flag(PRETTY_JSON_ENV)
+
+
 def write_json_file(
-    data: dict[str, Any], output_path: str, *, compact: bool = False, expand: Expand | None = None, context: Any = None
+    data: dict[str, Any], output_path: str, *, compact: bool | None = None, expand: Expand | None = None, context: Any = None
 ) -> None:
     """Publish a complete JSON file by same-directory replacement.
+
+    Files are compact (no indentation) unless ``compact=False`` or
+    :func:`pretty_json_requested`; the parsed document is the same either way.
+    Indented files end with a newline, compact ones do not.
 
     Encoding, write, flush and replacement failures leave an existing report
     intact. Resolve links to preserve the existing export's symlink behavior.
@@ -42,11 +56,15 @@ def write_json_file(
     timestamp in the header) written as the document is encoded. ``expand``
     and ``context`` are passed to the document writer.
     """
-    document_writer = write_compact_json_document if compact else write_json_document
+    if compact is None:
+        compact = not pretty_json_requested()
     options: dict[str, Any] = {} if expand is None else {"expand": expand, "context": context}
 
     def writer(document: dict[str, Any], fh: TextIO) -> None:
-        document_writer(document, fh, **options)
+        if compact:
+            write_compact_json_document(document, fh, **options)
+        else:
+            write_json_document(document, fh, **options)
 
     target = Path(output_path).resolve()
     if target == Path(os.devnull).resolve():

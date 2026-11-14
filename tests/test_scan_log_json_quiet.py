@@ -59,6 +59,28 @@ def test_log_json_quiet_scan_writes_only_json_to_stderr_and_nothing_to_stdout(tm
     assert "packages" in json.loads(report.read_text()) or json.loads(report.read_text())
 
 
+def test_log_json_quiet_exit_zero_verdict_record_reports_the_policy_failure() -> None:
+    from click.testing import CliRunner
+
+    from agent_bom.cli import main
+
+    result = CliRunner().invoke(main, ["scan", "--demo", "--offline", "-q", "--log-json", "--exit-zero"])
+
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    verdicts = [event for event in _json_lines(result.stderr) if event.get("logger") == "agent_bom.verdict"]
+    assert len(verdicts) == 1, result.stderr[-2000:]
+    record = verdicts[0]
+    assert record["level"] == "WARNING"
+    context = record["context"]
+    assert context["verdict"] == "FAIL"
+    assert context["exit_code"] == 0
+    assert context["exit_forced_by"] == "--exit-zero"
+    assert context["counts"]["critical"] >= 1
+    assert context["reasons"] and context["reasons"][0].startswith("found critical vulnerability")
+    assert record["msg"].startswith("agent-bom: FAIL (exit forced to 0 by --exit-zero) — ")
+
+
 def test_log_json_scan_emits_progress_as_structured_records(tmp_path: Path) -> None:
     proc, report = _run_scan(tmp_path, "--log-json")
 

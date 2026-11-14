@@ -99,6 +99,8 @@ export interface GraphRemediationPriorities {
   coverage_basis: "recorded_paths_touching_selected_findings";
   source_coverage: "not_assessed";
   method: string;
+  /** Distinct recorded paths the budget was applied to; absent from older servers. */
+  total_paths?: number | undefined;
   assessed_paths: number;
   candidate_count: number;
   covered_paths: number;

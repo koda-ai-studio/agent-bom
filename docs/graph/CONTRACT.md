@@ -671,6 +671,20 @@ These gaps are tracked as roadmap work. None of them block the guarantees in §2
   task), set only from a recorded resource type or Kubernetes kind. A workload
   `depends_on` the image it runs and is `hosted_on` the cluster or node its
   inventory records.
+- **Server and agent roles.** A code-defined agent runtime (for example a
+  LangChain entry launched by `python`) is a `server` node, and an agent defined
+  in project framework code is an `agent` node with
+  `dimensions.agent_type: framework-agent`. Neither is what `/v1/agents` counts,
+  so each server and agent node has a role derived from its stored type and
+  dimensions: `mcp_server` (the MCP inventory rule `/v1/agents` applies),
+  `other_server`, `agent` and `framework_agent`. `/v1/inventory/summary`
+  reports them in `by_role` (`by_type` still counts every node of a type),
+  inventory rows carry `role`, the inventory `role` facet counts them under the
+  active filters, and the grouped map (`/v1/graph/cluster-map`) shows
+  `type:server` "MCP servers" and `type:agent` "Agents" beside `server:other`
+  "Other servers (not MCP)" and `agent:framework` "Framework agents". The
+  Inventory headline counts MCP servers and AI agents by role and lists the
+  rest as labelled parts. Node types are unchanged.
 - **Package dependencies.** `depends_on` package -> package edges join a
   recorded parent to its child within one inventory, only when the parent names
   exactly one package in that ecosystem. No transitive closure is stored; the

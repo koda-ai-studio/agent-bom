@@ -10,6 +10,9 @@ from agent_bom.api.read_models._base import Num, ReadModel, ReadResponse
 
 # ── unified asset inventory ──────────────────────────────────────────────────
 
+_ROLE_ROW = "Agent and server rows only: agent, framework_agent, mcp_server or other_server (see by_role)"
+_BY_ROLE = "Agent and server nodes by role; agent and mcp_server count what /v1/agents counts, framework_agent and other_server the rest"
+
 
 class InventoryCollectionCoverage(ReadModel):
     status: str
@@ -79,6 +82,7 @@ class InventoryAssetRow(ReadModel):
     ecosystem: str
     version: str
     display_name: str | None = None  # agent rows only: the one name every surface shows
+    role: str | None = Field(default=None, description=_ROLE_ROW)
     finding_summary: InventoryFindingSummary | None = None
     relationship_count: int | None = None
 
@@ -107,6 +111,7 @@ class InventorySummaryResponse(ReadResponse):
     total_assets: int
     by_type: dict[str, int]
     by_group: dict[str, int]
+    by_role: dict[str, int] = Field(default_factory=dict, description=_BY_ROLE)
     finding_count: int
     filters: InventoryFilters
     count_exact: bool

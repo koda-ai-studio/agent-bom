@@ -140,3 +140,65 @@ def test_refresh_does_not_stamp_prior_paths_onto_current_findings():
     pinned = project_persisted_graph_reachability(rows, graph_store=store, tenant_id="t", scan_id="recorded")  # type: ignore[arg-type]
     assert pinned.refreshing is False
     assert pinned.rows[0]["graph_reachable"] is True
+
+
+class BudgetLimitedStore(PagedStore):
+    """A snapshot whose path derivation recorded a budget cut."""
+
+    def __init__(self, paths: list[AttackPath], analysis_status: dict[str, object]) -> None:
+        super().__init__(paths)
+        self.analysis_status = analysis_status
+
+    def snapshot_stats(self, **_kwargs):
+        return {"analysis_status": self.analysis_status}
+
+
+_HOLDER_BUDGET = {"component_paths": {"status": "limited", "reason_codes": ["holder_chain_budget"], "limits": {}, "observed": {}}}
+
+
+def test_unmatched_row_on_a_budget_limited_snapshot_says_why_it_was_not_assessed():
+    store = BudgetLimitedStore([_path(1)], _HOLDER_BUDGET)
+    rows = [
+        {"finding_id": "occurrence-1", "cve_id": "CVE-2026-00001"},
+        {"finding_id": "occurrence-9", "cve_id": "CVE-2026-00009"},
+    ]
+
+    result = project_persisted_graph_reachability(rows, graph_store=store, tenant_id="t", scan_id=None)  # type: ignore[arg-type]
+
+    matched, unmatched = result.rows
+    assert matched["graph_reachable"] is True
+    assert matched["graph_reachability_not_assessed_reason"] is None
+    assert unmatched["graph_reachable"] is None
+    assert unmatched["graph_reachability_not_assessed_reason"] == "path_budget"
+
+
+def test_unmatched_row_on_a_complete_snapshot_carries_no_budget_reason():
+    complete = {"component_paths": {"status": "complete", "reason_codes": [], "limits": {}, "observed": {}}}
+    store = BudgetLimitedStore([_path(1)], complete)
+    rows = [{"finding_id": "occurrence-9", "cve_id": "CVE-2026-00009"}]
+
+    result = project_persisted_graph_reachability(rows, graph_store=store, tenant_id="t", scan_id=None)  # type: ignore[arg-type]
+
+    assert result.rows[0]["graph_reachable"] is None
+    assert result.rows[0]["graph_reachability_not_assessed_reason"] is None
+
+
+def test_index_ceiling_truncation_is_also_a_budget_reason():
+    store = PagedStore([_path(index) for index in range(3)])
+    rows = [{"finding_id": "occurrence-2", "cve_id": "CVE-2026-00002"}]
+
+    result = project_persisted_graph_reachability(rows, graph_store=store, tenant_id="t", scan_id=None, path_limit=1)  # type: ignore[arg-type]
+
+    assert result.truncated is True
+    assert result.rows[0]["graph_reachable"] is None
+    assert result.rows[0]["graph_reachability_not_assessed_reason"] == "path_budget"
+
+
+def test_store_without_snapshot_stats_still_projects():
+    store = PagedStore([_path(1)])
+    rows = [{"finding_id": "occurrence-9", "cve_id": "CVE-2026-00009"}]
+
+    result = project_persisted_graph_reachability(rows, graph_store=store, tenant_id="t", scan_id=None)  # type: ignore[arg-type]
+
+    assert result.rows[0]["graph_reachable"] is None
+    assert result.rows[0]["graph_reachability_not_assessed_reason"] is None

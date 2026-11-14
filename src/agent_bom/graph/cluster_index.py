@@ -1,7 +1,7 @@
 """Per-snapshot index behind the grouped full map.
 
 Built once per snapshot from a lean projection — each node's stored type,
-label, severity, risk score, ecosystem and resource type, each edge's
+label, severity, risk score, ecosystem, resource type and role, each edge's
 endpoints and relationship, and the hops of the snapshot's attack paths — and
 then reused by every grouped-map read of that snapshot. It holds:
 
@@ -24,13 +24,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent_bom.graph.cluster_classes import FINDING_TYPES, RISKY_RANK, SEVERITY_WORDS, TIERS, classify, severity_rank
+from agent_bom.graph.node_roles import node_role
 
 #: A bundle is marked as on an attack path when it carries a hop of one of this many highest-risk paths;
 #: with every path counted, an estate whose paths cover every group would mark every bundle and single out none.
 TOP_PATHS_FOR_BUNDLES = 10
 
-#: (id, entity_type, label, severity, risk_score, ecosystem, resource_type)
-NodeRow = tuple[str, str, str, str, float, str, str]
+#: (id, entity_type, label, severity, risk_score, ecosystem, resource_type, role)
+NodeRow = tuple[str, str, str, str, float, str, str, str]
 #: (source_id, target_id, relationship)
 EdgeRow = tuple[str, str, str]
 
@@ -103,7 +104,7 @@ class ClusterIndex:
         keys: dict[str, int] = {}
         self.cluster_of = array("i", bytes(4 * len(self.ids)))
         for idx, row in enumerate(nodes):
-            group = classify(row[1], row[3], row[5], row[6])
+            group = classify(row[1], row[3], row[5], row[6], row[7])
             if group.key not in keys:
                 keys[group.key] = len(self.clusters)
                 self.clusters.append(LeafCluster(len(self.clusters), group.key, group.label, group.tier))
@@ -213,6 +214,7 @@ class ClusterIndex:
                     float(node.risk_score or 0.0),
                     str(attrs.get("ecosystem") or ""),
                     str(attrs.get("resource_type") or ""),
+                    node_role(kind, node.dimensions.to_dict() if node.dimensions else {}) or "",
                 )
             )
         edges: list[EdgeRow] = [

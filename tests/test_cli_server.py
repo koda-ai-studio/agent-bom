@@ -907,3 +907,12 @@ def test_mcp_server_cmd_missing_sdk():
     with patch("agent_bom.mcp_server.create_mcp_server", side_effect=ImportError("no mcp")):
         result = runner.invoke(mcp_server_cmd, [])
         assert result.exit_code == 1
+
+
+def test_mcp_server_help_never_shows_a_token_in_argv():
+    """A token on the command line is visible in ``ps``; the example must use the environment variable."""
+    result = CliRunner().invoke(mcp_server_cmd, ["--help"])
+
+    assert result.exit_code == 0
+    assert "--bearer-token <" not in result.output
+    assert "AGENT_BOM_MCP_BEARER_TOKEN" in result.output

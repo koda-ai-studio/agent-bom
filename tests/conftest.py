@@ -475,6 +475,16 @@ def _reset_api_runtime_state() -> None:
     except Exception:
         pass  # best-effort isolation reset; the module may be absent in this environment
 
+    # Adaptive backpressure controllers are process-global: slow reads in one
+    # test can open a path's cooldown and turn the next test's first request
+    # into a 429 on the same worker.
+    try:
+        from agent_bom.backpressure import reset_backpressure_for_tests
+
+        reset_backpressure_for_tests()
+    except Exception:
+        pass  # best-effort isolation reset; the module may be absent in this environment
+
     try:
         from agent_bom.api.routes.graph_routes import path_count
 

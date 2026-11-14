@@ -127,7 +127,10 @@ class JSONFormatter(logging.Formatter):
             entry["exception"] = self.formatException(record.exc_info)
         if hasattr(record, "context"):
             entry["context"] = record.context
-        if record.name == "uvicorn.access" and isinstance(record.args, tuple) and len(record.args) == 5:
+        http = getattr(record, "http", None)
+        if isinstance(http, dict):
+            entry["http"] = http
+        elif record.name == "uvicorn.access" and isinstance(record.args, tuple) and len(record.args) == 5:
             client, method, path, version, status = record.args
             entry["http"] = {"client": client, "method": method, "path": path, "version": version, "status": status}
         return json.dumps(entry, default=str)

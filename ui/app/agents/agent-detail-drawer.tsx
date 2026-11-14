@@ -13,6 +13,7 @@ import {
   ConfiguredPill,
   DiscoveryEnvelopeCard,
   DiscoveryProvenanceTags,
+  isMcpServer,
   safeCommandLine,
   safeDisplayUrl,
 } from "./agent-display";
@@ -63,7 +64,7 @@ export function AgentDetailDrawer({
       <div className="space-y-4" data-testid={`agent-detail-${agent.name}`}>
         <StatStrip
           items={[
-            { label: "Servers", value: agent.mcp_servers.length },
+            { label: "MCP servers", value: agent.mcp_servers.filter(isMcpServer).length },
             { label: "Packages", value: packages },
             { label: "Tools", value: tools },
             { label: "Credentials", value: credentials, accent: "warn" },
@@ -93,7 +94,7 @@ export function AgentDetailDrawer({
         <div className="space-y-2">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-[color:var(--foreground)]">
             <Server className="h-4 w-4 text-[color:var(--text-secondary)]" />
-            MCP servers
+            Servers and manifests
             <span className="text-xs font-normal text-[color:var(--text-tertiary)]">({agent.mcp_servers.length})</span>
           </h3>
           {agent.mcp_servers.map((srv, index) => {

@@ -406,6 +406,8 @@ export interface FindingOccurrenceSummary {
   graph_min_hop_distance?: number | null | undefined;
 }
 
+export type GraphReachabilityNotAssessedReason = "path_budget" | "graph_refreshing";
+
 export interface UnifiedFinding {
   lane?: string | undefined;
   provider?: string | undefined;
@@ -493,6 +495,8 @@ export interface UnifiedFinding {
   graph_reachable_from_agents?: string[] | undefined;
   graph_reachable_from?: string[] | undefined;
   graph_reachable_from_count?: number | null | undefined;
+  /** Why `graph_reachable` is null: the snapshot path search hit a budget, or the graph is refreshing. */
+  graph_reachability_not_assessed_reason?: GraphReachabilityNotAssessedReason | null | undefined;
   /** Dependency lineage of a package-backed finding (absent otherwise). */
   is_direct?: boolean | null | undefined;
   dependency_depth?: number | null | undefined;

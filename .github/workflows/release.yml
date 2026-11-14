@@ -154,6 +154,17 @@ jobs:
       - name: Block Finder duplicate artifacts
         run: python3 scripts/check_duplicate_artifacts.py
 
+  # Main pushes no longer run the four-interpreter suite (the merge queue
+  # proves the full 3.13 suite on every commit). Run it, with the combined
+  # 3.11 coverage floor, on this exact tagged commit; every job that
+  # publishes or signs needs it.
+  full-correctness:
+    name: Full matrix
+    needs: version-guard
+    permissions:
+      contents: read
+    uses: ./.github/workflows/full-correctness.yml
+
   docs-site:
     # Build-only proof that the docs site still renders at the tag. Pages
     # deploys stay with docs.yml on main pushes, so the release run never
@@ -320,7 +331,7 @@ jobs:
 
   pypi-publish:
     name: Publish to PyPI
-    needs: [build, self-scan-gate, container-gate]
+    needs: [build, self-scan-gate, container-gate, full-correctness]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -384,7 +395,7 @@ jobs:
 
   docker-publish:
     name: Publish to Docker Hub
-    needs: [build, self-scan-gate, container-gate]
+    needs: [build, self-scan-gate, container-gate, full-correctness]
     environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -509,7 +520,7 @@ jobs:
 
   docker-publish-collector:
     name: Publish cloud-SDK collector image
-    needs: [build, self-scan-gate, container-gate]
+    needs: [build, self-scan-gate, container-gate, full-correctness]
     environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -584,7 +595,7 @@ jobs:
 
   docker-publish-ui:
     name: Publish UI image
-    needs: [build, self-scan-gate, container-gate]
+    needs: [build, self-scan-gate, container-gate, full-correctness]
     environment: docker-release
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -847,7 +858,7 @@ jobs:
 
   helm-publish:
     name: Publish Helm chart to OCI
-    needs: [version-guard, self-scan-gate, container-gate]
+    needs: [version-guard, self-scan-gate, container-gate, full-correctness]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -1263,7 +1274,7 @@ jobs:
 
   sign:
     name: Sign distribution with Sigstore
-    needs: [build, self-scan-gate]
+    needs: [build, self-scan-gate, full-correctness]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -1293,7 +1304,7 @@ jobs:
 
   provenance:
     name: Generate SLSA provenance
-    needs: [build, self-scan-gate]
+    needs: [build, self-scan-gate, full-correctness]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

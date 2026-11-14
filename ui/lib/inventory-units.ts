@@ -43,11 +43,58 @@ export interface KindHeadline {
   breakdown: (TypeCount & { label: string })[];
 }
 
-export function kindHeadline(kind: AssetKindConfig, byType: Readonly<Record<string, number>>): KindHeadline {
-  const primary = kind.primaryTypes.reduce((total, type) => total + (byType[type] ?? 0), 0);
-  const breakdown = kind.entityTypes
-    .filter((type) => !kind.primaryTypes.includes(type) && (byType[type] ?? 0) > 0)
-    .map((type) => ({ type, count: byType[type]!, label: entityTypeLabel(type, byType[type]!) }))
+/**
+ * A server node is not always an MCP server (code-defined agent runtimes are
+ * server nodes too), and framework agents defined in project code are agent
+ * nodes the Agents page does not list. The summary's `by_role` splits them, so
+ * a headline counts what the Agents page counts and the rest is its own part.
+ */
+const ROLE_SPLITS: Record<string, { headline: string; other: string }> = {
+  server: { headline: "mcp_server", other: "other_server" },
+  agent: { headline: "agent", other: "framework_agent" },
+};
+
+const ROLE_LABELS: Record<string, readonly [singular: string, plural: string]> = {
+  mcp_server: ["MCP server", "MCP servers"],
+  other_server: ["other server (not MCP)", "other servers (not MCP)"],
+  agent: ["AI agent", "AI agents"],
+  framework_agent: ["framework agent", "framework agents"],
+};
+
+/** The label of one row: its role when the API names one, otherwise its entity type. */
+export function rowTypeLabel(entityType: string, role?: string | null): string {
+  const known = role ? ROLE_LABELS[role] : undefined;
+  return known ? known[0] : entityTypeLabel(entityType, 1);
+}
+
+function roleSplit(type: string, byRole: Readonly<Record<string, number>> | undefined) {
+  const split = ROLE_SPLITS[type];
+  if (!split || !byRole || !(split.headline in byRole || split.other in byRole)) return null;
+  return { headline: byRole[split.headline] ?? 0, other: split.other, otherCount: byRole[split.other] ?? 0 };
+}
+
+/** Whether a type's nodes include ones outside its headline role, so its chip names the type, not the role. */
+export function typeHasOtherRoles(type: string, byRole: Readonly<Record<string, number>> | undefined): boolean {
+  return (roleSplit(type, byRole)?.otherCount ?? 0) > 0;
+}
+
+export function kindHeadline(
+  kind: AssetKindConfig,
+  byType: Readonly<Record<string, number>>,
+  byRole?: Readonly<Record<string, number>>,
+): KindHeadline {
+  let primary = 0;
+  const parts: TypeCount[] = [];
+  for (const type of kind.primaryTypes) {
+    const split = roleSplit(type, byRole);
+    primary += split ? split.headline : (byType[type] ?? 0);
+    if (split && split.otherCount > 0) parts.push({ type: split.other, count: split.otherCount });
+  }
+  for (const type of kind.entityTypes) {
+    if (!kind.primaryTypes.includes(type) && (byType[type] ?? 0) > 0) parts.push({ type, count: byType[type]! });
+  }
+  const breakdown = parts
+    .map((part) => ({ ...part, label: ROLE_LABELS[part.type]?.[part.count === 1 ? 0 : 1] ?? entityTypeLabel(part.type, part.count) }))
     .sort((a, b) => b.count - a.count || a.type.localeCompare(b.type));
   return { primary, breakdown };
 }

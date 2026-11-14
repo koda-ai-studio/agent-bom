@@ -231,6 +231,8 @@ export interface AssetRow {
   id: string;
   kind: AssetKindId;
   entityType: string;
+  /** Agent and server rows: agent, framework_agent, mcp_server or other_server. */
+  role?: string | undefined;
   label: string;
   /** The asset node's own posture severity, lowercased. */
   severity: string;
@@ -291,6 +293,7 @@ export function inventoryAssetToRow(asset: InventoryAsset): AssetRow | null {
     id: asset.id,
     kind,
     entityType,
+    role: asset.role ?? undefined,
     label: asset.name || asset.id,
     severity,
     severityRank: severityRank(severity),

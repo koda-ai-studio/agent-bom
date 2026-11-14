@@ -532,7 +532,7 @@
         "legacy_schema_version": {
           "type": "string",
           "pattern": "^1(\\.\\d+)?$",
-          "description": "schema_version the document expands to."
+          "description": "schema_version the document expands to. Absent when the source document had no schema_version; a reader then removes schema_version on expansion."
         },
         "fields": {
           "type": "object",

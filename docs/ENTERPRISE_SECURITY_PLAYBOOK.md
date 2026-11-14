@@ -279,9 +279,9 @@ Windows + macOS behave identically — the scan, the config parsers, and the pus
 
 ```bash
 # Fleet-driven: pulls the live inventory of remote MCPs from the control plane
+# Reads AGENT_BOM_CONTROL_PLANE_TOKEN from the environment; tokens never go on the command line.
 agent-bom gateway serve \
   --from-control-plane https://agent-bom.example.com \
-  --control-plane-token "$CP_TOKEN" \
   --policy /etc/agent-bom/gateway/gateway-baseline-policy.json \
   --upstreams /etc/agent-bom/gateway/overlay.yaml  # operator overlay for auth
 ```

@@ -12,7 +12,13 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 MAX_REACH_SOURCES = 20
-SERVER_STAMPED_REACH_FIELDS = ("graph_reachable_from", "graph_reachable_from_count")
+# Why ``graph_reachable`` stayed null: the snapshot path search stopped at a
+# recorded budget, or the current graph is still being prepared.
+NOT_ASSESSED_REASON_KEY = "graph_reachability_not_assessed_reason"
+NOT_ASSESSED_PATH_BUDGET = "path_budget"
+NOT_ASSESSED_REFRESHING = "graph_refreshing"
+NOT_ASSESSED_REASONS = frozenset({NOT_ASSESSED_PATH_BUDGET, NOT_ASSESSED_REFRESHING})
+SERVER_STAMPED_REACH_FIELDS = ("graph_reachable_from", "graph_reachable_from_count", NOT_ASSESSED_REASON_KEY)
 CLIENT_REACH_CLAIM_FIELDS = (*SERVER_STAMPED_REACH_FIELDS, "graph_reachable_from_agents")
 
 
@@ -34,3 +40,9 @@ def safe_reach_sources(row: Mapping[str, Any], safe_text: Callable[[Any], str | 
     count = row.get("graph_reachable_from_count")
     valid_count = count if isinstance(count, int) and not isinstance(count, bool) and count >= len(sources) else None
     return sources, (valid_count if sources else None)
+
+
+def safe_not_assessed_reason(row: Mapping[str, Any], graph_reachable: object) -> str | None:
+    """The server-stamped reason for a null verdict, only from the known set and only while null."""
+    reason = row.get(NOT_ASSESSED_REASON_KEY)
+    return reason if graph_reachable is None and reason in NOT_ASSESSED_REASONS else None

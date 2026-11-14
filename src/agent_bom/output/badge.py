@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.models import AIBOMReport, Severity
 from agent_bom.output.finding_views import cve_findings, nested_vulnerabilities, severity_value, unified_findings
+from agent_bom.output.json_writer import write_json_file
 
 
 def to_badge(report: AIBOMReport) -> dict:
@@ -71,7 +69,7 @@ def to_badge(report: AIBOMReport) -> dict:
 def export_badge(report: AIBOMReport, output_path: str) -> None:
     """Export shields.io endpoint badge JSON to file."""
     data = to_badge(report)
-    Path(output_path).write_text(json.dumps(data, indent=2), encoding="utf-8")
+    write_json_file(data, output_path)
 
 
 def to_rsp_badge(report: AIBOMReport) -> dict:

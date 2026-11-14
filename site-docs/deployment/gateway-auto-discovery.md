@@ -54,23 +54,21 @@ You need:
 Start the gateway from discovered upstreams only:
 
 ```bash
+# Reads AGENT_BOM_CONTROL_PLANE_TOKEN and AGENT_BOM_GATEWAY_BEARER_TOKEN from the environment; tokens never go on the command line.
 agent-bom gateway serve \
   --bind 0.0.0.0:8090 \
   --from-control-plane https://agent-bom.internal.example.com \
-  --control-plane-token "$AGENT_BOM_CONTROL_PLANE_TOKEN" \
-  --bearer-token "$AGENT_BOM_GATEWAY_BEARER_TOKEN" \
   --bearer-token-expires-at "$AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT"
 ```
 
 Overlay secrets or transport-specific auth with a local YAML file:
 
 ```bash
+# Reads AGENT_BOM_CONTROL_PLANE_TOKEN and AGENT_BOM_GATEWAY_BEARER_TOKEN from the environment; tokens never go on the command line.
 agent-bom gateway serve \
   --bind 0.0.0.0:8090 \
   --from-control-plane https://agent-bom.internal.example.com \
-  --control-plane-token "$AGENT_BOM_CONTROL_PLANE_TOKEN" \
   --upstreams gateway-upstreams.overlay.yaml \
-  --bearer-token "$AGENT_BOM_GATEWAY_BEARER_TOKEN" \
   --bearer-token-expires-at "$AGENT_BOM_GATEWAY_BEARER_TOKEN_EXPIRES_AT"
 ```
 

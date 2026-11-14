@@ -214,6 +214,7 @@ def test_scan_vuln_flows_to_findings_and_attack_paths(wired_client):
     assert unassessed["graph_reachable"] is None
     assert unassessed["graph_min_hop_distance"] is None
     assert unassessed["graph_reachable_from_agents"] == []
+    assert unassessed["graph_reachability_not_assessed_reason"] is None
 
     # The supply-chain verification verdict is the point of --verify-integrity;
     # a machine consumer has to be able to read it off the findings API.
@@ -300,6 +301,24 @@ def test_structural_dependency_path_marks_inbound_graph_reachability():
     from agent_bom.graph.reachability_truth import assess_reachability
 
     assert assess_reachability(graph_reachable=result.rows[0]["graph_reachable"]).verdict == "likely"
+
+
+def test_findings_api_names_the_path_budget_on_unassessed_rows(wired_client, monkeypatch):
+    from agent_bom.api import finding_reachability
+
+    finding_reachability.clear_reachability_index_cache()
+    monkeypatch.setattr(finding_reachability, "_path_search_budget_limited", lambda *_args: True)
+    assert wired_client.post("/v1/scan", json={}).status_code == 202
+
+    rows = wired_client.get("/v1/findings").json()["findings"]
+    finding_reachability.clear_reachability_index_cache()
+
+    unassessed = next(row for row in rows if row.get("vulnerability_id") == NON_OVERLAP_CVE)
+    reachable = next(row for row in rows if row.get("vulnerability_id") == KNOWN_CVE)
+    assert unassessed["graph_reachable"] is None
+    assert unassessed["graph_reachability_not_assessed_reason"] == "path_budget"
+    assert reachable["graph_reachable"] is True
+    assert reachable["graph_reachability_not_assessed_reason"] is None
 
 
 def test_findings_read_survives_unavailable_graph_backend(wired_client, monkeypatch):

@@ -96,6 +96,10 @@ class FindingRow(ReadModel):
     dependency_depth: int | None = None
     introduced_via: str | None = None
     graph_reachable_from_count: int | None = None
+    graph_reachability_not_assessed_reason: Literal["path_budget", "graph_refreshing"] | None = Field(
+        default=None,
+        description="Why graph_reachable is null: the snapshot path search stopped at a budget, or the graph is refreshing.",
+    )
     affected_agents: list[str] | None = None
     affected_servers: list[str] | None = None
     occurrence_count: int | None = None

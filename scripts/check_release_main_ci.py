@@ -40,17 +40,32 @@ def _fetch_safely(fetch_json: FetchJSON, endpoint: str) -> Mapping[str, Any]:
 
 
 REQUIRED_UI_JOBS = frozenset({"UI Validate", "UI export build", "UI E2E and container smoke"})
-REQUIRED_FULL_CORRECTNESS_JOBS = frozenset(
-    f"Full correctness (Python {version}, shard {shard})" for version in ("3.11", "3.12", "3.13", "3.14") for shard in range(4)
-)
+# The four-interpreter matrix and coverage floor run inside release.yml on the
+# tagged commit (full-correctness.yml), so a main push no longer carries them.
 REQUIRED_WORKFLOW_JOBS = {
-    "ci.yml": REQUIRED_UI_JOBS | REQUIRED_FULL_CORRECTNESS_JOBS | {"Combined Python coverage", "Python correctness aggregation"},
+    "ci.yml": REQUIRED_UI_JOBS | {"Python correctness aggregation"},
     "runtime-acceptance.yml": frozenset({"Gateway ingest and replica reconnect"}),
 }
+# A main push of a commit the merge queue proved skips the lanes its merge-group
+# run passed; those jobs may be proven by that run of the exact same SHA.
+MERGE_GROUP_PROOF_WORKFLOWS = frozenset({"ci.yml"})
 
 
-def _verify_required_jobs(repo: str, run_id: int, sha: str, fetch_json: FetchJSON, required_jobs: frozenset[str]) -> None:
-    """Require successful workflow jobs from the latest attempt, including later pages."""
+def _verify_required_jobs(
+    repo: str,
+    run_id: int,
+    sha: str,
+    fetch_json: FetchJSON,
+    required_jobs: frozenset[str],
+    *,
+    allow_skipped: bool = False,
+) -> set[str]:
+    """Require successful workflow jobs from the latest attempt, including later pages.
+
+    With ``allow_skipped``, a required job this run skipped (or never listed)
+    is returned instead of failing, for another run to prove; a job that ran
+    and did not succeed still fails.
+    """
     passed: set[str] = set()
     seen = 0
     for page in range(1, 101):
@@ -61,6 +76,8 @@ def _verify_required_jobs(repo: str, run_id: int, sha: str, fetch_json: FetchJSO
             raise ReleaseProofError("release job proof returned an invalid jobs payload")
         for job in jobs:
             if not isinstance(job, Mapping) or job.get("name") not in required_jobs:
+                continue
+            if allow_skipped and job.get("head_sha") == sha and job.get("status") == "completed" and job.get("conclusion") == "skipped":
                 continue
             if job.get("head_sha") != sha or job.get("status") != "completed" or job.get("conclusion") != "success":
                 raise ReleaseProofError(f"release job did not succeed: {job.get('name')}")
@@ -73,8 +90,32 @@ def _verify_required_jobs(repo: str, run_id: int, sha: str, fetch_json: FetchJSO
     else:
         raise ReleaseProofError("release job proof exceeded job pagination budget")
     missing = required_jobs - passed
-    if missing:
+    if missing and not allow_skipped:
         raise ReleaseProofError(f"release job proof missing successful jobs: {', '.join(sorted(missing))}")
+    return set(missing)
+
+
+def _verify_merge_group_jobs(repo: str, workflow: str, sha: str, fetch_json: FetchJSON, required_jobs: frozenset[str]) -> None:
+    """Prove jobs a queue-proven push skipped from the successful merge-group run of the exact SHA."""
+    query = urlencode({"event": "merge_group", "head_sha": sha, "per_page": 100})
+    payload = _fetch_safely(fetch_json, f"/repos/{repo}/actions/workflows/{quote(workflow, safe='')}/runs?{query}")
+    runs = payload.get("workflow_runs")
+    if not isinstance(runs, list):
+        raise ReleaseProofError("release proof lookup returned an invalid workflow-run payload")
+    expected_path = f".github/workflows/{workflow}"
+    for run in runs:
+        if (
+            isinstance(run, Mapping)
+            and str(run.get("head_sha", "")).lower() == sha
+            and run.get("event") == "merge_group"
+            and run.get("path") == expected_path
+            and run.get("status") == "completed"
+            and run.get("conclusion") == "success"
+            and isinstance(run.get("id"), int)
+        ):
+            _verify_required_jobs(repo, run["id"], sha, fetch_json, required_jobs)
+            return
+    raise ReleaseProofError(f"release job proof missing successful jobs: {', '.join(sorted(required_jobs))}")
 
 
 def verify_release_candidate(
@@ -122,7 +163,12 @@ def verify_release_candidate(
             run_id = run.get("id")
             run_url = run.get("html_url")
             if isinstance(run_id, int) and isinstance(run_url, str) and run_url.startswith("https://"):
-                _verify_required_jobs(repo, run_id, expected_sha, fetch_json, REQUIRED_WORKFLOW_JOBS[workflow])
+                borrow = workflow in MERGE_GROUP_PROOF_WORKFLOWS
+                skipped = _verify_required_jobs(
+                    repo, run_id, expected_sha, fetch_json, REQUIRED_WORKFLOW_JOBS[workflow], allow_skipped=borrow
+                )
+                if skipped:
+                    _verify_merge_group_jobs(repo, workflow, expected_sha, fetch_json, frozenset(skipped))
                 return {"sha": expected_sha, "run_id": run_id, "run_url": run_url}
 
     raise ReleaseProofError(f"candidate {expected_sha} has no completed successful main push for {expected_path}")
