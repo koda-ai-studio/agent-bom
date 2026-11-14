@@ -13,6 +13,7 @@ import threading
 from time import monotonic as _monotonic
 from typing import Any
 
+from agent_bom.api import read_gauge
 from agent_bom.core.background_yield import register_request_probe
 
 QUIET_SECONDS = 5.0
@@ -84,8 +85,13 @@ class ForegroundActivityMiddleware:
             return
         from agent_bom.api.heavy_read_gate import admit
 
+        estate_read = read_gauge.counts(str(scope.get("path") or ""))
         _enter()
+        if estate_read:
+            read_gauge.enter()
         try:
             await admit(self.app, scope, receive, send)
         finally:
+            if estate_read:
+                read_gauge.leave()
             _leave()

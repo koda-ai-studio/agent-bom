@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { FindingsGraphFreshnessNote } from "@/components/findings/findings-graph-freshness";
+import { FindingsGraphFreshnessNote } from "@/components/graph-projection-notice";
 
 describe("findings graph freshness note", () => {
   it("stays quiet when the graph is current", () => {

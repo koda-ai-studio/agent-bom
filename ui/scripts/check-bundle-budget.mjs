@@ -190,7 +190,8 @@ const BUDGETS = {
   // expander already reads its field lists from the document instead of
   // carrying them. Keep ~15 KiB of bounded headroom at 4528 KiB; the
   // largest-chunk and shared-runtime ceilings stay fixed.
-  totalClientJsBytes: 4_636_672,
+  // The graph-freshness notes on Graph and Findings measure +0.2 KiB (4527.4 -> 4527.6); raised by 0.5 KiB.
+  totalClientJsBytes: 4_637_184,
   largestChunkBytes: 950_000,
   // The patched Next 16.4.2 runtime measures 442.1 KiB on macOS and Linux CI.
   // Keep 3.9 KiB of bounded headroom; total and largest-chunk ceilings stay fixed.

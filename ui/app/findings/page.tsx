@@ -49,7 +49,7 @@ import { usePathname,useRouter,useSearchParams } from "next/navigation";
 import { Suspense,useCallback,useEffect,useMemo,useRef,useState } from "react";
 import { DEFAULT_FINDINGS_WINDOW_DAYS } from "@/lib/findings-default-query";
 import { FindingsKevFilterNote, useKevOnlyParam } from "@/components/findings/findings-kev-filter";
-import { FindingsGraphFreshnessNote } from "@/components/findings/findings-graph-freshness";
+import { FindingsGraphFreshnessNote } from "@/components/graph-projection-notice";
 import type { GraphFreshness } from "@/lib/api-contracts/findings";
 
 const REACHABILITY_FILTERS: ReachabilityFilter[] = ["", "reachable", "unreachable", "unassessed"];
