@@ -14,6 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from agent_bom.cli import main
 from agent_bom.oci_registry import client as registry_client
+from agent_bom.output.report_packing import load_report_document
 from tests._oci_image_builder import OCI_MANIFEST, build_image, dpkg_status
 from tests._oci_registry_fake import REGISTRY, FakeRegistry
 
@@ -60,7 +61,7 @@ def _sign(registry: FakeRegistry, tmp_path) -> str:
 def _scan(tmp_path, *extra: str) -> tuple[Any, dict[str, Any]]:
     out = tmp_path / "report.json"
     result = CliRunner().invoke(main, ["scan", "--image", REF, "--no-scan", "-f", "json", "-o", str(out), *extra])
-    return result, json.loads(out.read_text())
+    return result, load_report_document(json.loads(out.read_text()))
 
 
 def _image_agent(report: dict[str, Any]) -> dict[str, Any]:

@@ -11,7 +11,7 @@ from click.testing import CliRunner
 from rich.console import Console
 
 from agent_bom.cli import main
-from agent_bom.cli._focused_commands import _has_finding_at_or_above
+from agent_bom.cli._focused_output import has_finding_at_or_above as _has_finding_at_or_above
 from agent_bom.cli.agents._preflight import run_iac_only_scan
 from agent_bom.iac.models import IaCFinding, ScannerVerdict, ScanResult
 from agent_bom.secret_scanner import SecretFinding, SecretScanResult

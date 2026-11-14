@@ -62,6 +62,9 @@ CORE_FLAGS: frozenset[str] = frozenset(
         "--page",
         "--snyk",
         "--quiet",
+        "--quick",
+        "--full-analysis",
+        "--log-json",
         "--agent-mode",
         # The scan → control-plane handoff. Hiding it stranded the whole lane.
         "--push-url",

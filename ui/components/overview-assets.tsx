@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { ASSET_KINDS } from "@/lib/asset-icon-registry";
-import { AGENT_COUNT_SCOPE } from "@/lib/count-scope";
+import { AGENT_COUNT_SCOPE, PACKAGE_COUNT_SCOPE } from "@/lib/count-scope";
 import type { InventorySummaryResponse } from "@/lib/api";
 
 const TYPES = [
   { type: "agent", label: "Agents", icon: ASSET_KINDS.agent.icon },
   { type: "server", label: "Servers", icon: ASSET_KINDS.mcp_server.icon },
   { type: "tool", label: "Tools", icon: ASSET_KINDS.tool.icon },
-  { type: "package", label: "Packages", icon: ASSET_KINDS.package.icon },
+  { type: "package", label: PACKAGE_COUNT_SCOPE.unique.label, icon: ASSET_KINDS.package.icon },
   { type: "data_store", label: "Data stores", icon: ASSET_KINDS.database.icon },
   { type: "user,service_account,service_principal,managed_identity,federated_identity", label: "Principals", icon: ASSET_KINDS.user.icon },
   { type: "cloud_resource", label: "Cloud resources", icon: ASSET_KINDS.cloud_resource.icon },
@@ -53,7 +53,7 @@ export function OverviewAssets({ summary, loading, unavailable, unavailableHref 
         const count = selectedTypes.reduce((total, entityType) => total + (summary.by_type[entityType] ?? 0), 0);
         const known = exact || count > 0;
         const countLabel = exact ? count.toLocaleString() : known ? `At least ${count.toLocaleString()}` : null;
-        return <Link key={type} title={type === "agent" ? AGENT_COUNT_SCOPE.snapshot.title : undefined} aria-label={countLabel ? `${countLabel} ${label}` : `${label} count unavailable`} href={`/inventory?${query}`} className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-outline px-3 py-2.5 hover:bg-surface-muted">
+        return <Link key={type} title={type === "agent" ? AGENT_COUNT_SCOPE.snapshot.title : type === "package" ? PACKAGE_COUNT_SCOPE.unique.title : undefined} aria-label={countLabel ? `${countLabel} ${label}` : `${label} count unavailable`} href={`/inventory?${query}`} className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-outline px-3 py-2.5 hover:bg-surface-muted">
           <Icon className="h-4 w-4 shrink-0 text-cyan-700 dark:text-cyan-300" aria-hidden="true" />
           <span className="max-w-full text-sm [overflow-wrap:normal]"><strong className="mr-1.5 tabular-nums">{exact ? count.toLocaleString() : known ? `≥${count.toLocaleString()}` : "—"}</strong>{label}</span>
         </Link>;

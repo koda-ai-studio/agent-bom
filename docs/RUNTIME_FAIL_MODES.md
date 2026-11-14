@@ -657,7 +657,9 @@ run (exit 1, the local report is kept) and says why: no key was sent, the key
 was rejected, or the key may not push. The message names `--push-api-key` and
 `AGENT_BOM_PUSH_API_KEY`, and notes that a local `agent-bom up` / `serve` prints
 its loopback "Dev API key" at startup and mints a new one on every start. The
-key itself is never printed.
+key itself is never printed in that message. The server prints the dev key only
+when its stdout is an interactive terminal; redirected output, `--log-json`
+records and log files say it was withheld (fail closed for disclosure).
 
 ## Rejected repository URLs
 

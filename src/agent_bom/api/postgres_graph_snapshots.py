@@ -15,6 +15,7 @@ from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
     normalize_snapshot_kind,
 )
+from agent_bom.db.graph_stored_path_reads import stored_path_endpoints
 from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_status_map_to_dict
 from agent_bom.security import sanitize_text
 
@@ -189,7 +190,7 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
                     risk_score=row[5],
                     risk_assessment=row[6],
                 )
-            for row in conn.execute(
+            for row in stored_path_endpoints(conn, tenant_id=tenant, scan_id=scan_id, ph="%s") or conn.execute(
                 "SELECT source_node, target_node FROM attack_paths WHERE tenant_id = %s AND scan_id = %s",
                 (tenant, scan_id),
             ):

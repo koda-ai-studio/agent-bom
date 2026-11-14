@@ -104,7 +104,7 @@ def test_collector_to_graph_restart_and_api_preserves_whole_receipts(tmp_path):
     original = api_stores._graph_store
     try:
         set_graph_store(store)
-        response = TestClient(app).get("/v1/graph", params={"scan": graph.scan_id, "limit": 200})
+        response = TestClient(app).get("/v1/graph", params={"scan": graph.scan_id, "limit": 200, "view": "full"})
     finally:
         set_graph_store(original)
     assert response.status_code == 200

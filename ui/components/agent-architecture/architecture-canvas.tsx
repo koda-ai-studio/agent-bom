@@ -11,7 +11,7 @@ import { useElementWidth } from "@/hooks/use-element-width";
 import { useWheelZoomGate, WheelZoomHint } from "@/hooks/use-wheel-zoom-gate";
 import { architectureCanvasHeight, layoutArchitecture, routeArchitecture } from "@/lib/agent-architecture-layout";
 import type { ArchitectureModel } from "@/lib/agent-architecture-model";
-import { DESKTOP_MIN_ZOOM } from "@/lib/attack-path-graph-layout";
+import { PATH_DESKTOP_MIN_ZOOM } from "@/lib/attack-path-graph-layout";
 import { GLYPH_CENTER_Y, glyphInsetX } from "@/lib/attack-path-graph-routes";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { BACKGROUND_GAP } from "@/lib/graph-utils";
@@ -77,7 +77,7 @@ function Canvas({ model, onOpen, onExpand }: Props) {
         onMoveStart={event => { if (event) manualCamera.current = nodesKey; }}
         proOptions={{ hideAttribution: true }}>
         <Background gap={BACKGROUND_GAP} color="var(--border-subtle)" />
-        <GraphCamera layout={layout} spineIds={spine} nodesKey={nodesKey} floor={DESKTOP_MIN_ZOOM} manual={manualCamera} />
+        <GraphCamera layout={layout} spineIds={spine} nodesKey={nodesKey} floor={PATH_DESKTOP_MIN_ZOOM} manual={manualCamera} />
       </ReactFlow>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState, type ChangeEvent } from "react";
 import { FileText } from "lucide-react";
 import type { ScanResult } from "@/lib/api";
+import { expandReport } from "@/lib/report-packing";
 import { checkFileSize, validateScanReport } from "@/lib/validators";
 
 export function LocalReportImport({ onImport }: { onImport: (data: ScanResult) => void }) {
@@ -27,7 +28,7 @@ export function LocalReportImport({ onImport }: { onImport: (data: ScanResult) =
         setImportError("Could not read file contents.");
         return;
       }
-      const result = validateScanReport(text);
+      const result = validateScanReport(text, expandReport);
       if (!result.ok) {
         setImportError(result.error);
         return;

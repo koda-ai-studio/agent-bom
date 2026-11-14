@@ -18,7 +18,9 @@ from agent_bom.cli.agents.scan_pipeline.state import ScanState
 
 def _create_context(opts: ScanOptions, st: ScanState) -> None:
     # Create shared context object
-    st.ctx = ScanContext(con=st.con, quiet=opts.quiet, verbose=opts.verbose, target_scope=st.target_scope)
+    st.ctx = ScanContext(
+        con=st.con, quiet=opts.quiet, verbose=opts.verbose, target_scope=st.target_scope, report_format=opts.report_format.lower()
+    )
     st.ctx.ignore_file = opts.ignore_file
     st.ctx.policy_path = opts.policy
     st.ctx.step_timings.update(st.pre_scan_step_timings)

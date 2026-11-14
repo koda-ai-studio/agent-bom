@@ -19,6 +19,7 @@ from click.testing import CliRunner
 from agent_bom.cli import main
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.severity_floor import counts_as_finding_node
+from agent_bom.output.report_packing import load_report_document
 
 ROOT = Path(__file__).resolve().parent
 SCAN_ID = "parity-scan"
@@ -28,7 +29,7 @@ def _scan(tmp_path: Path, *args: str) -> dict:
     out = tmp_path / "report.json"
     CliRunner().invoke(main, ["scan", "--offline", "-f", "json", "-q", *args, "-o", str(out)])
     assert out.is_file()
-    return json.loads(out.read_text())
+    return load_report_document(json.loads(out.read_text()))
 
 
 def _graph_finding_severities(graph) -> Counter:

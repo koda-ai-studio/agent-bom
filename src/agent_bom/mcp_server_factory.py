@@ -6,6 +6,7 @@ from typing import Any, Callable
 
 from pydantic import AnyHttpUrl, TypeAdapter
 
+from agent_bom.logging_config import with_owned_logging
 from agent_bom.mcp_tools.dispatch import flag_tool_error_results
 from agent_bom.mcp_tools.http_server import install_http_runner
 from agent_bom.mcp_tools.public_tier import PublicTierGate, PublicTierTokenVerifier, public_tier_guard, warn_on_unbounded_proxy_trust
@@ -130,7 +131,7 @@ def create_fastmcp_server(
         )
         token_verifier = token_verifier_factory(bearer_token)
 
-    mcp = FastMCP(
+    mcp = with_owned_logging("mcp", FastMCP)(
         name="agent-bom",
         version=version,
         middleware=middleware,

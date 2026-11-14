@@ -44,6 +44,7 @@ from agent_bom.asset_provenance import sanitize_discovery_provenance
 from agent_bom.domain.inventory_identity import inventory_identity_scope
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.scanners.mcp_launch_risk import plaintext_env_secrets
 from agent_bom.security import sanitize_env_vars, sanitize_sensitive_payload
 
@@ -136,6 +137,7 @@ def _inventory_payload_and_version(data: Any) -> tuple[dict[str, Any], str]:
         raise ValueError("Inventory JSON root must be an object with an 'agents' array")
 
     if "inventory_snapshot" in data and "document_type" in data:
+        data = load_report_document(data)
         snapshot = data.get("inventory_snapshot")
         if not isinstance(snapshot, dict):
             raise ValueError("Inventory snapshot in scan report must be an object")

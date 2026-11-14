@@ -22,6 +22,7 @@ from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _derived_attack_paths
 from agent_bom.graph.types import EntityType, RelationshipType
+from agent_bom.output.report_packing import load_report_document
 
 CVE = "CVE-2023-32681"
 VULN = f"vuln:{CVE}"
@@ -33,7 +34,7 @@ def _scan(tmp_path: Path, *args: str) -> dict:
     out = tmp_path / "report.json"
     result = CliRunner().invoke(main, ["scan", "--offline", "--demo", "-f", "json", "-q", *args, "-o", str(out)])
     assert out.is_file(), result.output
-    return json.loads(out.read_text())
+    return load_report_document(json.loads(out.read_text()))
 
 
 @pytest.fixture(scope="module")

@@ -9,6 +9,7 @@ import pytest
 from click.testing import CliRunner
 
 from agent_bom.cli import main
+from agent_bom.output.report_packing import load_report_document
 
 PROJECT_SERVERS = {"root-fs", "vs-memory", "cursor-git"}
 PROJECT_PACKAGES = {("requests", "2.19.1"), ("flask", "2.0.0")}
@@ -55,7 +56,7 @@ def _cli_scan(tmp_path: Path, *args: str) -> dict:
     out = tmp_path / "cli.json"
     result = CliRunner().invoke(main, ["scan", *args, "--offline", "--no-scan", "--no-auto-update-db", "-f", "json", "-o", str(out)])
     assert out.exists(), result.output
-    return json.loads(out.read_text())
+    return load_report_document(json.loads(out.read_text()))
 
 
 def _servers(agents: list[dict]) -> set[str]:

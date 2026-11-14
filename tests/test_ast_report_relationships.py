@@ -9,6 +9,7 @@ import jsonschema
 from click.testing import CliRunner
 
 from agent_bom.ast_analyzer import analyze_project
+from agent_bom.output.report_packing import expand_report
 
 _SCHEMA = Path(__file__).resolve().parents[1] / "contracts" / "v1" / "scan-report.schema.json"
 _RELATIONSHIP_LISTS = ("call_graph", "cfg_edges", "dependency_symbol_reach")
@@ -78,7 +79,7 @@ def _scan_json(tmp_path: Path, *extra: str) -> dict:
         catch_exceptions=False,
     )
     assert out.exists(), result.output
-    return json.loads(out.read_text())
+    return expand_report(json.loads(out.read_text()))
 
 
 def test_cli_json_report_counts_relationships_by_default(tmp_path):

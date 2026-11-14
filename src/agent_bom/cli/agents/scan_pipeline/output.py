@@ -13,6 +13,8 @@ from agent_bom.cli._common import logger
 from agent_bom.cli.agents._output import _is_null_device, _resolve_output_path, render_output
 from agent_bom.cli.agents._posture import render_posture_summary
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
+from agent_bom.cli.agents.scan_pipeline.quiet_summary import SEVERITY_ORDER, severity_counts
+from agent_bom.cli.agents.scan_pipeline.report_format_notice import notice_report_schema_default
 from agent_bom.cli.agents.scan_pipeline.scan_memory import remember_and_report
 from agent_bom.cli.agents.scan_pipeline.state import ScanState, StopScan
 from agent_bom.cli.agents.scan_pipeline.top_fixes import print_top_fixes
@@ -111,15 +113,9 @@ def _print_totals_and_record(opts: ScanOptions, st: ScanState) -> None:
     if not opts.quiet:
         # Print only after late scanners, AI enrichment, and filters finalize
         # the report, so every machine surface shares these severity totals.
-        _unified = st.report.to_findings()
-        if _unified:
-            _u_counts: dict[str, int] = {}
-            for _uf in _unified:
-                if _uf.suppressed:
-                    continue
-                _u_sev = str(_uf.effective_severity() or "unknown").lower()
-                _u_counts[_u_sev] = _u_counts.get(_u_sev, 0) + 1
-            _u_order = ["critical", "high", "medium", "low", "unknown"]
+        if st.report.to_findings():
+            _u_counts = severity_counts(st.report)
+            _u_order = list(SEVERITY_ORDER)
             _u_color = {
                 "critical": "red bold",
                 "high": "red",
@@ -347,6 +343,7 @@ def run_output(opts: ScanOptions, st: ScanState) -> None:
     _print_totals_and_record(opts, st)
     st.first_scan_of_target = remember_and_report(opts, st)
     _render(opts, st)
+    notice_report_schema_default(opts)
     _record_adoption_and_nudge(opts, st)
     _render_posture(opts, st)
     _save_history(opts, st)

@@ -49,3 +49,10 @@ it("requires structured protocol evidence before calling a generic server MCP", 
   expect(formatExposureEntityDisplay("internal-api", "server").subtitle).toBe("Server");
   expect(formatExposureEntityDisplay("MCP production", "server", { transport: "http" }).subtitle).toBe("http server");
 });
+
+it("shows identifiers exactly as recorded, never re-cased", () => {
+  expect(formatExposureEntityDisplay("project:agent-a1157c3d9e", "agent").title).toBe("project:agent-a1157c3d9e");
+  expect(formatExposureEntityDisplay("OPENAI_API_KEY", "credential").title).toBe("OPENAI_API_KEY");
+  expect(formatExposureEntityDisplay("arn:aws:eks:us-east-1:111122223333:cluster/prod", "cluster").title).toBe("arn:aws:eks:us-east-1:111122223333:cluster/prod");
+  expect(formatExposureEntityDisplay("staging-eu", "environment").title).toBe("Staging Eu");
+});

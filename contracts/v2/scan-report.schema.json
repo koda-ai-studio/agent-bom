@@ -1,0 +1,622 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-bom.dev/contracts/v2/scan-report.schema.json",
+  "title": "agent-bom scan report v2",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "document_type",
+    "spec_version",
+    "scan_id",
+    "generated_at",
+    "scan_run",
+    "summary",
+    "agents",
+    "packing"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^2(\\.\\d+)?$"
+    },
+    "document_type": {
+      "const": "AI-BOM"
+    },
+    "spec_version": {
+      "type": "string",
+      "pattern": "^2(\\.\\d+)?$"
+    },
+    "scan_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ai_bom_version": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scan_sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "maxLength": 1000
+      }
+    },
+    "coverage_warnings": {
+      "type": "array",
+      "description": "Coverage limits a reader must weigh before calling a result clean: OS releases whose vulnerability data the source does not carry (typically end-of-life), unresolved package versions, and remote lookups that failed or were skipped. Rows without `kind` describe one ecosystem/release; rows with `kind` (`package_version_gap`, `remote_lookup_error`, `remote_lookup_gap`, ...) describe a scan-wide gap.",
+      "items": {
+        "type": "object",
+        "required": [
+          "release"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "ecosystem",
+              "reason",
+              "detail"
+            ]
+          },
+          {
+            "required": [
+              "kind"
+            ]
+          }
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ecosystem": {
+            "type": "string"
+          },
+          "ecosystems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "release": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "detail": {
+            "type": "string"
+          },
+          "package_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "advisory_rows": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total_agents",
+        "total_mcp_servers",
+        "total_packages",
+        "total_vulnerabilities"
+      ],
+      "properties": {
+        "total_agents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_mcp_servers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_packages": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_vulnerabilities": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "critical_findings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coverage_warnings": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "stable_id",
+          "status",
+          "mcp_servers"
+        ],
+        "anyOf": [
+          {
+            "required": [
+              "agent_type"
+            ]
+          },
+          {
+            "required": [
+              "type"
+            ]
+          }
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stable_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "agent_type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Canonical agent type field used by the Python model and UI clients."
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Backward-compatible alias for agent_type retained for v1 scan-report consumers."
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "discovered_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "mcp_servers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "packages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "package_ref": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "scan_run": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "scan_id",
+        "generated_at",
+        "outcome",
+        "issues",
+        "warning_count"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "pattern": "^1(\\.\\d+)?$"
+        },
+        "scan_id": {
+          "type": "string"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "outcome": {
+          "enum": [
+            "complete",
+            "partial",
+            "failed"
+          ]
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issues": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "stage",
+              "source",
+              "message",
+              "severity",
+              "affects_coverage"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "stage": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "source": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              "severity": {
+                "enum": [
+                  "warning",
+                  "error"
+                ]
+              },
+              "affects_coverage": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "blast_radius": {
+      "type": "array",
+      "description": "Schema \"1\" rows embed the matching exposure path as `exposure_path`; schema \"2\" rows reference it by `exposure_path_rank` (1-based index into `exposure_paths.paths`) and `exposure_path_id`. A row with `finding_ref` omits the fields it shares with that finding.",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version"
+        ],
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "pattern": "^(1(\\.\\d+)?|2)$"
+          },
+          "exposure_path_rank": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "exposure_path_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "exposure_path": {
+            "type": "object"
+          },
+          "finding_ref": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "id",
+          "canonical_id",
+          "finding_type",
+          "source",
+          "asset",
+          "severity",
+          "title"
+        ],
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "pattern": "^1(\\.\\d+)?$"
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "canonical_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "finding_type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "asset": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "asset_type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "stable_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "canonical_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "asset_ref": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true,
+            "anyOf": [
+              {
+                "required": [
+                  "asset_ref"
+                ]
+              },
+              {
+                "required": [
+                  "name",
+                  "asset_type",
+                  "stable_id",
+                  "canonical_id"
+                ]
+              }
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sla_due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sla_due_at_source": {
+            "enum": [
+              "severity-kev/v1",
+              "explicit",
+              "unknown",
+              "unavailable"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "object"
+          },
+          "control_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "additionalProperties": true,
+        "not": {
+          "required": [
+            "controls",
+            "control_refs"
+          ]
+        }
+      }
+    },
+    "inventory_snapshot": {
+      "type": "object",
+      "required": [
+        "schema_version"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "pattern": "^1(\\.\\d+)?$"
+        }
+      },
+      "additionalProperties": true
+    },
+    "ai_inventory": {
+      "type": "object",
+      "description": "AI components, framework agents, secret-scan coverage and code analysis found in scanned sources.",
+      "properties": {
+        "ast_analysis": {
+          "type": "object",
+          "description": "Static code analysis. The call_graph, cfg_edges and dependency_symbol_reach rows are listed only for a scan run with --include-code-graph (relationships_included: true). Otherwise they are omitted, not empty, and stats.total_call_edges, stats.total_cfg_edges and stats.total_dependency_symbol_reach still count them.",
+          "properties": {
+            "relationships_included": {
+              "type": "boolean"
+            },
+            "call_graph": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "cfg_edges": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "dependency_symbol_reach": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "stats": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "packing": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "transforms"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1"
+        },
+        "legacy_schema_version": {
+          "type": "string",
+          "pattern": "^1(\\.\\d+)?$",
+          "description": "schema_version the document expands to."
+        },
+        "fields": {
+          "type": "object",
+          "description": "For each reference key a transform uses (finding_ref, asset_ref, package_ref), the fields it may omit: `name` when the referenced record uses the same name, `name=source_name` otherwise. A reader restores exactly these fields from the referenced record when the row omits them.",
+          "propertyNames": {
+            "enum": [
+              "finding_ref",
+              "asset_ref",
+              "package_ref"
+            ]
+          },
+          "additionalProperties": {
+            "type": "array",
+            "maxItems": 256,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        },
+        "transforms": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "provenance_refs",
+              "root_packages_alias",
+              "inventory_snapshot_packages",
+              "blast_radius_finding_refs",
+              "asset_refs",
+              "package_refs",
+              "compliance_control_refs"
+            ]
+          },
+          "description": "provenance_refs: every non-empty discovery_provenance / version_provenance / package_discovery_provenance / package_version_provenance object is replaced by `<key>_ref`, an ID into `provenance`. root_packages_alias: root `packages` is omitted; it equals ai_bom_entities.packages. inventory_snapshot_packages: inventory_snapshot.packages is omitted; it is the in-order concatenation of inventory_snapshot.agents[].mcp_servers[].packages. blast_radius_finding_refs: a blast_radius row with `finding_ref` (a finding canonical_id) omits the fields equal to that finding's. asset_refs: a finding asset with `asset_ref` (an assets[].stable_id) omits the fields equal to that asset row's. package_refs: an agents[].mcp_servers[].packages[] occurrence with `package_ref` (an ai_bom_entities.packages[].id) omits the fields equal to that entity row's. compliance_control_refs: findings[].controls is replaced by `control_refs`, IDs into `compliance_controls`."
+        }
+      },
+      "additionalProperties": false
+    },
+    "compliance_controls": {
+      "type": "object",
+      "description": "Each distinct compliance control mapping, once. Keys read `<framework>:<control>:<8 hex>`.",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "framework",
+          "control"
+        ],
+        "properties": {
+          "framework": {
+            "type": "string"
+          },
+          "control": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "number"
+          },
+          "source": {
+            "type": "string"
+          },
+          "via": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Each distinct provenance object, once, keyed `prov:<16 hex>`. Records may reference other records the same way.",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "packages": {
+      "not": {},
+      "description": "Omitted in schema 2.0; read ai_bom_entities.packages."
+    }
+  },
+  "additionalProperties": true,
+  "description": "Schema 2.0 writes each shared record once and references it by ID. `packing.transforms` lists the rewrites a document carries; expanding them (agent_bom.output.report_packing.expand_report) yields the schema 1.0 document exactly. Readers must reject a transform they do not know."
+}

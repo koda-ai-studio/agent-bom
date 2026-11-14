@@ -108,7 +108,7 @@ def _emit_stdout_report(
         )
         click.echo(dumps_envelope(payload), nl=False)
     else:
-        write_redacted_json(report, sys.stdout, report_json=ctx.report_json, newline=False)
+        write_redacted_json(report, sys.stdout, report_json=ctx.report_json, newline=False, report_format=ctx.report_format)
     sys.stdout.write("\n")
 
 

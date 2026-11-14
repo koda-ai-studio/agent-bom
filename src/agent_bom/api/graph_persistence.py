@@ -163,7 +163,9 @@ def _snapshot_path_kwargs(graph_store: Any, graph: UnifiedGraph) -> dict[str, An
     return {"snapshot_paths": prepare_snapshot_paths(graph)}
 
 
-def _persist_via_build_workspace(graph_store: GraphStoreProtocol, graph: UnifiedGraph, *, write_generation: str = "") -> dict[str, int]:
+def _persist_via_build_workspace(
+    graph_store: GraphStoreProtocol, graph: UnifiedGraph, *, write_generation: str = "", path_kwargs: dict[str, Any] | None = None
+) -> dict[str, int]:
     """Stream a built graph through the bounded workspace into the store.
 
     Produces a snapshot byte-identical to the direct streamed save; the workspace
@@ -175,7 +177,8 @@ def _persist_via_build_workspace(graph_store: GraphStoreProtocol, graph: Unified
     with open_graph_build_workspace(tenant_id=graph.tenant_id, workspace_id=graph.scan_id) as workspace:
         workspace.add_nodes(graph.nodes.values())
         workspace.add_edges(graph.edges)
-        path_kwargs = _snapshot_path_kwargs(graph_store, graph)
+        if path_kwargs is None:
+            path_kwargs = _snapshot_path_kwargs(graph_store, graph)
         counts: dict[str, int] = graph_store.save_graph_streaming(
             scan_id=graph.scan_id,
             tenant_id=graph.tenant_id,
@@ -251,8 +254,12 @@ def _write_snapshot(
     store_factory: Callable[[], GraphStoreProtocol],
     store_backed: bool,
     write_generation: str,
-) -> tuple[dict[str, int], PriorSnapshotDigest | None]:
-    """Scope the store and prior digest to the tenant; never load a full prior graph."""
+) -> tuple[dict[str, int], PriorSnapshotDigest | None, list[Any] | None]:
+    """Scope the store and prior digest to the tenant; never load a full prior graph.
+
+    Also returns the attack paths the snapshot materialized into its path index
+    (``None`` when the store keeps no index), for the delta alerts.
+    """
     from agent_bom.api.tenant_worker import tenant_bound_context
 
     if graph.tenant_id != tenant_id:
@@ -264,11 +271,11 @@ def _write_snapshot(
         previous_scan_id = graph_store.latest_snapshot_id(tenant_id=tenant_id, snapshot_kind="scan")
         if previous_scan_id and previous_scan_id != scan_id:
             prior_digest = graph_store.prior_delta_digest(tenant_id=tenant_id, scan_id=previous_scan_id)
+        path_kwargs = _snapshot_path_kwargs(graph_store, graph)
         # The store-backed producer already pages out of its own container.
         if (not store_backed) and _graph_build_workspace_enabled():
-            counts = _persist_via_build_workspace(graph_store, graph, write_generation=write_generation)
+            counts = _persist_via_build_workspace(graph_store, graph, write_generation=write_generation, path_kwargs=path_kwargs)
         else:
-            path_kwargs = _snapshot_path_kwargs(graph_store, graph)
             counts = graph_store.save_graph_streaming(
                 scan_id=graph.scan_id,
                 tenant_id=graph.tenant_id,
@@ -281,7 +288,8 @@ def _write_snapshot(
                 **({"write_generation": write_generation} if write_generation else {}),
                 **path_kwargs,
             )
-        return counts, prior_digest
+        rows = path_kwargs.get("snapshot_paths")
+        return counts, prior_digest, None if rows is None else [row.path for row in rows]
 
 
 def _notify_after_commit(
@@ -292,12 +300,13 @@ def _notify_after_commit(
     tenant_id: str,
     scan_id: str,
     lock: threading.Lock | None,
+    stored_paths: list[Any] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     from agent_bom.graph.delta_digest import compute_delta_alerts_from_digest
     from agent_bom.graph.webhooks import dispatch_delta_alerts
 
     try:
-        alerts = compute_delta_alerts_from_digest(prior_digest, graph)
+        alerts = compute_delta_alerts_from_digest(prior_digest, graph, new_attack_paths=stored_paths)
         delivery = dispatch_delta_alerts(alerts, product_version=__version__, tenant_id=tenant_id) if alerts else None
         return alerts, delivery
     except Exception as alert_exc:  # noqa: BLE001 — alerting must never fail graph persistence
@@ -375,7 +384,7 @@ def persist_graph_snapshot(
         with _build_container(store_backed=store_backed, tenant_id=tenant_id, scan_id=scan_id) as container:
             graph = build_unified_graph_from_report(graph_input, scan_id=scan_id, tenant_id=tenant_id, container=container)
             _enrich_before_persist(report_json, graph, tenant_id)
-            counts, prior_digest = _write_snapshot(
+            counts, prior_digest, stored_paths = _write_snapshot(
                 graph,
                 tenant_id=tenant_id,
                 scan_id=scan_id,
@@ -388,7 +397,9 @@ def persist_graph_snapshot(
             _record_graph_persistence(job, status="persisted", scan_id=scan_id, nodes=node_count, edges=edge_count, lock=lock)
             run_commit_hooks(store_factory, tenant_id=tenant_id)
             emit_shadow_findings(graph, tenant_id, finding_sink)
-            alerts, delivery = _notify_after_commit(job, graph, prior_digest, tenant_id=tenant_id, scan_id=scan_id, lock=lock)
+            alerts, delivery = _notify_after_commit(
+                job, graph, prior_digest, tenant_id=tenant_id, scan_id=scan_id, lock=lock, stored_paths=stored_paths
+            )
             _record_completion(
                 job,
                 tenant_id=tenant_id,

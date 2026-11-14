@@ -12,6 +12,7 @@ from agent_bom.api.server import app, set_job_store
 from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.stores import _get_trend_store, set_trend_store
 from agent_bom.baseline import InMemoryTrendStore
+from agent_bom.output.report_packing import expand_report
 
 
 @pytest.fixture(scope="module")
@@ -31,7 +32,7 @@ def demo_report_text(tmp_path_factory) -> str:
 
 @pytest.fixture
 def demo_report(demo_report_text) -> dict:
-    return json.loads(demo_report_text)
+    return expand_report(json.loads(demo_report_text))
 
 
 @pytest.fixture

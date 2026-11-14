@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import BinaryIO, Optional, cast
 
 from agent_bom.models import Package
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.package_utils import canonical_package_key, vulnerability_occurrence_key
 from agent_bom.sbom import parse_sbom_document
 from agent_bom.security import sanitize_path_label, sanitize_text
@@ -134,7 +135,7 @@ def _open_report(path: Path) -> BinaryIO:
 def load_report(path: Path) -> dict:
     """Load a saved report JSON file, plain or gzip-compressed."""
     with _open_report(path) as stream:
-        return json.load(stream)
+        return load_report_document(json.load(stream))
 
 
 def _synthetic_report_from_packages(

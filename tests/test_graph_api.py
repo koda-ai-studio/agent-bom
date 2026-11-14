@@ -1118,9 +1118,12 @@ class TestPersistedGraphQueries:
 
         attack_paths = store.attack_paths_for_sources(tenant_id="default", scan_id="attack-path-scan", source_ids={"agent:a"})
 
+        # The snapshot's stored path index answers, the same record the attack-path queue serves.
+        stored = store.snapshot_attack_paths(tenant_id="default", scan_id="attack-path-scan", source_ids={"agent:a"})
+        assert stored is not None
+        assert [path.to_dict() for path in attack_paths] == [path.to_dict() for path in stored.paths]
         assert len(attack_paths) == 1
         assert attack_paths[0].target == "vuln:cve"
-        assert attack_paths[0].summary == ""
         assert attack_paths[0].tool_exposure == []
 
         effective_scan_id, created_at, global_paths, total = store.attack_paths(
@@ -1798,7 +1801,7 @@ class TestGraphStoreBackendSelection:
         )
         client = TestClient(app)
 
-        response = client.get("/v1/graph")
+        response = client.get("/v1/graph", params={"view": "full"})
         attack_path_response = client.get("/v1/graph/attack-paths")
         assert response.status_code == 200
         assert attack_path_response.status_code == 200
@@ -2220,7 +2223,7 @@ class TestGraphStoreBackendSelection:
         recording_graph_store.graph.add_edge(UnifiedEdge(source="agent:a", target="server:s", relationship=RelationshipType.USES))
         client = TestClient(app)
 
-        response = client.get("/v1/graph", params={"scan": "store-scan", "limit": 1})
+        response = client.get("/v1/graph", params={"scan": "store-scan", "limit": 1, "view": "full"})
 
         assert response.status_code == 200
         body = response.json()
@@ -2458,7 +2461,7 @@ class TestGraphStoreBackendSelection:
         set_graph_store(store)
         try:
             client = TestClient(app)
-            overview = client.get("/v1/graph", params={"scan": "dense-live-scan", "limit": 200})
+            overview = client.get("/v1/graph", params={"scan": "dense-live-scan", "limit": 200, "view": "full"})
             attack_paths = client.get("/v1/graph/attack-paths", params={"scan_id": "dense-live-scan", "limit": 10})
         finally:
             set_graph_store(original)

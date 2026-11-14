@@ -24,6 +24,16 @@ from typing import Any
 
 import yaml
 
+
+def _expand_report(report: Any) -> Any:
+    """Read a schema 2.0 report as 1.0; a release without the module only writes 1.0."""
+    try:
+        from agent_bom.output.report_packing import load_report_document
+    except ImportError:
+        return report
+    return load_report_document(report)
+
+
 SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 FAIL_CLOSED_SEVERITIES = frozenset({"unknown", "none", ""})
 # CVE rows are gated through ``blast_radius``, which already reflects
@@ -106,7 +116,7 @@ def _finding_failures(report: dict[str, Any], threshold: int) -> list[str]:
 def gate_failures(report_path: Path, registry: Path, *, image: str, today: date, fail_on_severity: str) -> list[str]:
     """Reasons the scan cannot be accepted; empty means only reviewed coverage gaps remain."""
     try:
-        report = json.loads(report_path.read_text(encoding="utf-8"))
+        report = _expand_report(json.loads(report_path.read_text(encoding="utf-8")))
     except (OSError, ValueError) as exc:
         return [f"cannot read scan report {report_path}: {exc}"]
     if not isinstance(report, dict):

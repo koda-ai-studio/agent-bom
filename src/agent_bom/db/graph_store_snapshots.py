@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from agent_bom.graph.delta_digest import PriorSnapshotDigest
 
 from agent_bom.db.graph_store_schema import normalize_graph_tenant_id, normalize_snapshot_kind
+from agent_bom.db.graph_stored_path_reads import stored_path_endpoints
 from agent_bom.graph import (
     EntityType,
     NodeDimensions,
@@ -200,11 +201,12 @@ def prior_delta_digest(
             risk_score=row["risk_score"],
             risk_assessment=json.loads(row["risk_assessment"]) if row["risk_assessment"] else None,
         )
-    for row in conn.execute(
+    endpoints = stored_path_endpoints(conn, tenant_id=tenant_id, scan_id=effective_scan_id, ph="?") or conn.execute(
         "SELECT source_node, target_node FROM attack_paths WHERE tenant_id = ? AND scan_id = ?",
         (tenant_id, effective_scan_id),
-    ):
-        builder.add_attack_path(row["source_node"], row["target_node"])
+    )
+    for source, target in endpoints:
+        builder.add_attack_path(source, target)
     for row in conn.execute(
         "SELECT pattern, agents FROM interaction_risks WHERE tenant_id = ? AND scan_id = ?",
         (tenant_id, effective_scan_id),

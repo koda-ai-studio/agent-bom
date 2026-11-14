@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_bom.finding import FindingType
 from agent_bom.models import Package, Severity
+from agent_bom.output.report_packing import UNTRUSTED_MAX_EXPANDED_BYTES, load_report_document
 from agent_bom.parsers.importers import detect_importer
 
 
@@ -76,7 +77,7 @@ def parse_push_report(payload: dict[str, Any] | list[Any], *, source: str = "ext
 
 def load_push_findings(payload: object, *, source: str = "external_scan") -> list[dict[str, Any]]:
     """Normalize a JSON payload into bulk-ingest finding rows."""
-
+    payload = load_report_document(payload, max_expanded_bytes=UNTRUSTED_MAX_EXPANDED_BYTES)
     if isinstance(payload, list) and detect_importer(payload) is None:
         rows = [row for row in payload if isinstance(row, dict)]
         if rows:

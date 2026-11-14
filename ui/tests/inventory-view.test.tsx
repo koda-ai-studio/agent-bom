@@ -352,7 +352,7 @@ describe("InventoryIndex whole-query truth", () => {
     vi.mocked(api.getInventorySummary).mockResolvedValue(summary({total_assets: 100, by_type: {agent:100}}));
     render(<InventoryProvider initialFilters={{type:"agent"}}><InventoryIndex /></InventoryProvider>);
     expect(await screen.findByRole("link", {name:"AI entities: 100 AI agents, in snapshot"})).toHaveAttribute("href", "/inventory/agents?scan=scan-inventory-7&type=agent");
-    expect(await screen.findByRole("link", {name:"Packages: 0 Packages, in snapshot"})).toHaveAttribute("href", "/inventory/packages?scan=scan-inventory-7&type=agent");
+    expect(await screen.findByRole("link", {name:"Packages: 0 Unique packages, in snapshot"})).toHaveAttribute("href", "/inventory/packages?scan=scan-inventory-7&type=agent");
     expect(await screen.findByRole("link", {name:"Servers & tools: 0 MCP servers, in snapshot"})).toBeVisible();
   });
 
@@ -451,7 +451,7 @@ it("labels every asset-type tile as a snapshot count and points at the Agents pa
   render(<InventoryProvider><InventoryIndex /></InventoryProvider>);
   // The provider re-reads once it pins the resolved snapshot, so assert within one settled render.
   await waitFor(() => {
-    for (const [name, total] of [["Packages: 700 Packages, in snapshot", "700"], ["Servers & tools: 200 MCP servers, in snapshot", "200"], ["AI entities: 100 AI agents, in snapshot", "100"]] as const) {
+    for (const [name, total] of [["Packages: 700 Unique packages, in snapshot", "700"], ["Servers & tools: 200 MCP servers, in snapshot", "200"], ["AI entities: 100 AI agents, in snapshot", "100"]] as const) {
       const tile = screen.getByRole("link", { name });
       expect(within(tile).getByText(total)).toBeInTheDocument();
       expect(within(tile).getByText("in snapshot")).toBeInTheDocument();

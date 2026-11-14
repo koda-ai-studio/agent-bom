@@ -43,7 +43,7 @@ def test_demo_estate_bootstrap_seeds_jobs_and_graph(shared_demo_estate_client: T
     sources = (detail.get("result") or {}).get("scan_sources", [])
     assert any("demo" in str(src).lower() for src in sources)
 
-    graph = shared_demo_estate_client.get("/v1/graph", headers=VIEWER)
+    graph = shared_demo_estate_client.get("/v1/graph", headers=VIEWER, params={"view": "full"})
     assert graph.status_code == 200, graph.text
     payload = graph.json()
     node_count = len(payload.get("nodes") or [])
@@ -574,7 +574,7 @@ def _graph_with_all_nodes(client: TestClient) -> dict:
     cursor: str | None = None
     identity: dict[str, str] = {}
     for _page in range(20):  # bounded so a paging bug fails rather than hangs
-        params: dict[str, object] = {"limit": 5000, **identity}
+        params: dict[str, object] = {"limit": 5000, "view": "full", **identity}
         if cursor:
             params["cursor"] = cursor
         response = demo_graph_get(client, "/v1/graph", params)
@@ -748,7 +748,7 @@ def test_demo_estate_default_graph_page_declares_its_truncation(
     shared_demo_estate_client: TestClient,
 ) -> None:
     """A bounded page must never read as the whole estate (#4631)."""
-    payload = shared_demo_estate_client.get("/v1/graph", headers=VIEWER).json()
+    payload = shared_demo_estate_client.get("/v1/graph", headers=VIEWER, params={"view": "full"}).json()
     completeness = payload.get("completeness") or {}
     stats = payload.get("stats") or {}
 
@@ -807,7 +807,7 @@ def test_default_graph_page_carries_the_containment_spine(shared_demo_estate_cli
     Containment ancestors are few at any estate size, so they are resolved
     explicitly and added on top of the page rather than left to compete on rank.
     """
-    payload = shared_demo_estate_client.get("/v1/graph", headers=VIEWER).json()
+    payload = shared_demo_estate_client.get("/v1/graph", headers=VIEWER, params={"view": "full"}).json()
     nodes = payload.get("nodes") or []
     kinds = {str(node.get("type") or node.get("entity_type") or "") for node in nodes}
     assert {"org", "account"} <= kinds, f"default page has no containment spine: {sorted(kinds)}"

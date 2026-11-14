@@ -20,6 +20,8 @@ from typing import Any
 
 import pytest
 
+from agent_bom.output.report_packing import load_report_document
+
 pytestmark = pytest.mark.graph_contract("warn")
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +29,7 @@ _SHOWCASE_SEED = """
 from agent_bom.storage.state_home import activate_demo_state_dir
 activate_demo_state_dir()
 from agent_bom.demo_estate.bootstrap import maybe_bootstrap_demo_estate
+from agent_bom.output.report_packing import load_report_document
 summary = maybe_bootstrap_demo_estate(tenant_id="default")
 assert summary.get("graph_seeded"), summary
 """
@@ -121,7 +124,7 @@ def _open_estate(name: str, workdir: Path, with_jobs: bool) -> Iterator[_Estate]
 
     job_store = InMemoryJobStore()
     if with_jobs:
-        report = json.loads((workdir / "report.json").read_text())
+        report = load_report_document(json.loads((workdir / "report.json").read_text()))
         now = datetime.now(timezone.utc).isoformat()
         job_store.put(
             ScanJob(

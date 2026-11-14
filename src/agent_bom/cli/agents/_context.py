@@ -21,6 +21,8 @@ class ScanContext:
     # and agent-mode renderers consume this instead of rebuilding the complete
     # finding/inventory graph for the same scan.
     report_json: Optional[dict[str, Any]] = None
+    # JSON report schema for file and stdout output: "v2" (2.0); "v1"/"legacy" (1.0).
+    report_format: str = "v1"
     # benchmark reports
     cis_benchmark_report: Any = None
     sf_cis_benchmark_report: Any = None
@@ -55,6 +57,8 @@ class ScanContext:
     delta_result: Any = None
     policy_passed: bool = True
     exit_code: int = 0
+    # Plain-text reasons for a non-zero exit, kept under -q so the quiet summary can name them.
+    exit_reasons: list = field(default_factory=list)
     # Cloud providers that were explicitly requested but hard-failed discovery or
     # benchmarking (missing SDK / absent / invalid credentials → CloudDiscoveryError).
     # Recorded per provider+stage; a non-empty list forces a non-zero exit so a

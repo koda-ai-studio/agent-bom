@@ -8,6 +8,7 @@ from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
 )
 from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT
+from agent_bom.db.graph_stored_path_reads import stored_longest_path_to, stored_paths_for_sources, stored_paths_page
 from agent_bom.graph import AttackPath, technique_mappings_from_json
 from agent_bom.graph.completeness import (
     graph_completeness,
@@ -184,6 +185,9 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
         if not effective_scan_id:
             return 0
         with _tenant_connection(self._pool) as conn:
+            stored = stored_longest_path_to(conn, tenant_id=tenant_id, scan_id=effective_scan_id, node_id=node_id, ph="%s")
+            if stored is not None:
+                return stored
             row = conn.execute(
                 "SELECT MAX(json_array_length(path_nodes::json)) FROM attack_paths "
                 "WHERE tenant_id = %s AND scan_id = %s AND target_node = %s",
@@ -206,6 +210,9 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
             return []
         placeholders = ",".join(["%s"] * len(source_ids))
         with _tenant_connection(self._pool) as conn:
+            stored = stored_paths_for_sources(conn, tenant_id=tenant_id, scan_id=effective_scan_id, source_ids=source_ids, ph="%s")
+            if stored is not None:
+                return stored
             rows = conn.execute(
                 f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = %s AND scan_id = %s "  # nosec B608
                 f"AND source_node IN ({placeholders}) ORDER BY {ATTACK_PATH_ORDER}",
@@ -231,6 +238,9 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
                 "SELECT created_at FROM graph_snapshots WHERE tenant_id = %s AND scan_id = %s",
                 (tenant_id, effective_scan_id),
             ).fetchone()
+            page = stored_paths_page(conn, tenant_id=tenant_id, scan_id=effective_scan_id, offset=offset, limit=limit, ph="%s")
+            if page is not None:
+                return effective_scan_id, str(snapshot_row[0]) if snapshot_row else "", page[0], page[1]
             total_row = conn.execute(
                 "SELECT COUNT(*) FROM attack_paths WHERE tenant_id = %s AND scan_id = %s",
                 (tenant_id, effective_scan_id),

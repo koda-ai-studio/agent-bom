@@ -26,6 +26,7 @@ from agent_bom.graph.agent_projection import AgentScope, inventory_label, invent
 from agent_bom.graph.compat import export_entity_type
 from agent_bom.output.finding_views import sanitize_output_text, with_output_sanitizer_cache
 from agent_bom.output.package_attributes import _package_node_attributes
+from agent_bom.output.report_packing import load_report_document
 from agent_bom.output.technique_evidence import copy_atlas_graph_receipts
 from agent_bom.output.unified_projection import merge_unified_graph
 from agent_bom.security import sanitize_sensitive_payload
@@ -341,8 +342,7 @@ def load_graph_from_scan(scan_path: Union[str, Path]) -> DepGraph:
         ValueError: If the file is not a valid agent-bom JSON report.
         FileNotFoundError: If the path does not exist.
     """
-    path = Path(scan_path)
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = load_report_document(json.loads(Path(scan_path).read_text(encoding="utf-8")))
 
     if data.get("document_type") != "AI-BOM":
         raise ValueError(f"{scan_path} does not appear to be an agent-bom JSON report (missing 'document_type: AI-BOM')")
