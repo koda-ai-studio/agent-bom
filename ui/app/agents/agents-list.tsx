@@ -17,7 +17,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { AgentDetailDrawer } from "./agent-detail-drawer";
-import { agentCredentialCount, agentPackageCount, ConfiguredPill } from "./agent-display";
+import { agentCredentialCount, agentPackageCount, ConfiguredPill, isMcpServer } from "./agent-display";
 import { AgentsFilterChips } from "./agents-filter-chips";
 import { AgentsKpiStrip, useFallbackSummary } from "./agents-kpi-strip";
 import {
@@ -72,7 +72,7 @@ function agentColumns(scannedFindings: boolean): DataTableColumn<Agent>[] {
       ),
     },
     { key: "type", header: "Type", cell: (agent) => <span className="font-mono text-xs text-[color:var(--text-secondary)]">{agent.agent_type}</span> },
-    { key: "servers", header: "Servers", align: "right", sortable: true, cell: (agent) => <span className="tabular-nums">{agent.mcp_servers.length}</span> },
+    { key: "servers", header: "MCP servers", align: "right", sortable: true, cell: (agent) => <span className="tabular-nums">{agent.mcp_servers.filter(isMcpServer).length}</span> },
     { key: "packages", header: "Packages", align: "right", sortable: true, cell: (agent) => <span className="tabular-nums">{agentPackageCount(agent)}</span> },
     {
       key: "credentials",
