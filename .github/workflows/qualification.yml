@@ -16,6 +16,15 @@ on:
         required: false
         default: false
         type: boolean
+      images:
+        description: 'Deploy lane images: auto (published on a release tag, built from the checkout otherwise), local or published'
+        required: false
+        default: auto
+        type: choice
+        options:
+          - auto
+          - local
+          - published
   pull_request:
     paths:
       - .github/workflows/qualification.yml
@@ -303,7 +312,8 @@ jobs:
     name: Deploy (${{ matrix.variant }})
     if: ${{ (github.event_name == 'pull_request') || inputs.lanes == 'all' || contains(format(',{0},', inputs.lanes), ',deploy,') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    # Includes building the API and UI images from the checkout in local mode.
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
@@ -313,11 +323,15 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-python
+      # PRs and branches test images built from this checkout: a version bump
+      # pins tags that only the release publishes. A dispatch on a release tag
+      # tests the published images (see scripts/qualification/deploy.py).
       - name: Run the deploy lane
         shell: bash
         env:
           DEPLOY_VARIANT: ${{ matrix.variant }}
-        run: uv run --no-project python scripts/qualification/deploy.py --variant "$DEPLOY_VARIANT"
+          DEPLOY_IMAGES: ${{ inputs.images || 'auto' }}
+        run: uv run --no-project python scripts/qualification/deploy.py --variant "$DEPLOY_VARIANT" --images "$DEPLOY_IMAGES"
       - name: Summarize
         if: always()
         shell: bash
