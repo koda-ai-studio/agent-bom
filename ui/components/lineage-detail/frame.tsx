@@ -38,6 +38,7 @@ const TYPE_BORDER: Record<LineageNodeData["nodeType"], string> = {
   model: "border-violet-700",
   framework: "border-cyan-700",
   dataset: "border-cyan-700",
+  evalSuite: "border-lime-700",
   container: "border-indigo-700",
   cloudResource: "border-sky-700",
   managedIdentity: "border-cyan-700",

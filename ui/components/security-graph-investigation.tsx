@@ -94,6 +94,7 @@ const INVESTIGATION_LAYERS = {
   model: false,
   framework: true,
   dataset: false,
+  evalSuite: false,
   container: true,
   cloudResource: true,
   misconfiguration: true,

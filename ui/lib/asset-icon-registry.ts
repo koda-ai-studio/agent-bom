@@ -4,7 +4,7 @@ import { BucketGlyph, InternetBoundaryGlyph, VirtualMachineGlyph } from "@/compo
 import { recordedServiceLabel } from "@/lib/graph-service-identity";
 import {
   Activity, AppWindow, BadgeCheck, Blocks, Bot, CircleDashed, Braces, BrainCircuit, BrickWall, BriefcaseBusiness, Bug, Building2,
-  Cable, CalendarClock, Cloud, CloudCog, Container, Database, Disc3, DraftingCompass, Earth, FileCode, FileCog,
+  Cable, CalendarClock, ClipboardCheck, Cloud, CloudCog, Container, Database, Disc3, DraftingCompass, Earth, FileCode, FileCog,
   FileStack, Fingerprint, FlaskConical, Folder, FolderGit2, FolderInput, FolderOutput, Globe, Gpu, Handshake, HardDrive, Inbox, KeyRound,
   Library, MemoryStick, MessageSquareText, MonitorSmartphone, Network, ScrollText, Share2,
   ShieldAlert, ShieldCheck, ShieldUser, ShipWheel, Siren, Sparkles, SquareFunction, Store, Table, Ticket, User, UserCog, Users, Vault,
@@ -65,6 +65,7 @@ export const ASSET_KINDS = {
   tool: { label: "Tool", icon: Wrench },
   tool_call: { label: "Tool call", icon: Zap },
   framework: { label: "Framework", icon: Library },
+  eval_suite: { label: "Eval suite", icon: ClipboardCheck },
   user: { label: "User", icon: User },
   group: { label: "Group", icon: Users },
   role: { label: "Role", icon: ShieldUser },
@@ -98,7 +99,8 @@ export type AssetKind = keyof typeof ASSET_KINDS;
 const ENTITY_KIND: Record<string, AssetKind> = {
   provider: "provider", org: "org", account: "account", environment: "environment", fleet: "fleet", cluster: "cluster",
   agent: "agent", server: "mcp_server", sharedServer: "shared_server", tool: "tool", tool_call: "tool_call",
-  toolCall: "tool_call", model: "model", dataset: "dataset", framework: "framework", package: "package",
+  toolCall: "tool_call", model: "model", dataset: "dataset", framework: "framework", eval_suite: "eval_suite",
+  evalSuite: "eval_suite", package: "package",
   external_import: "package", container: "workload", cloud_resource: "cloud_resource", cloudResource: "cloud_resource",
   resource: "cloud_resource", data_store: "database", dataStore: "database", api_gateway: "api_gateway",
   apiGateway: "api_gateway", application: "application", user: "user", group: "group", role: "role", policy: "policy",

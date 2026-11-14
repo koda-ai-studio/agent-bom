@@ -192,9 +192,7 @@ def test_unresolvable_file_target_is_kept_unlinked_with_its_reason(tmp_path: Pat
 
 
 def test_file_budget_marks_coverage_partial(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    import agent_bom.ai_components.eval_suites as module
-
-    monkeypatch.setattr(module, "MAX_FILES_EXAMINED", 1)
+    monkeypatch.setattr("agent_bom.ai_components.eval_suites.MAX_FILES_EXAMINED", 1)
     _write(tmp_path / "proj" / "a" / "promptfooconfig.yaml", "providers: [openai:gpt-4o]\nredteam: {plugins: [pii]}\n")
     _write(tmp_path / "proj" / "b" / "promptfooconfig.yaml", "providers: [openai:gpt-4o]\nredteam: {plugins: [pii]}\n")
     _, coverage = _scan(tmp_path / "proj")
