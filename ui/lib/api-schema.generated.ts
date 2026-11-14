@@ -15147,6 +15147,8 @@ export interface components {
             };
             /** Findings */
             findings: components["schemas"]["FindingRow"][];
+            /** @description Present only while a newer graph builds; reachability on this page is then unassessed. */
+            graph_freshness?: components["schemas"]["GraphFreshness"] | null;
             /** Has More */
             has_more: boolean;
             /** Include */
@@ -18240,6 +18242,29 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GraphFreshness
+         * @description Graph reachability on this page comes from the previous complete graph while a newer one builds.
+         */
+        GraphFreshness: {
+            /**
+             * As Of
+             * @description When the evidence behind the previous graph was recorded (ISO 8601); empty when unknown.
+             */
+            as_of: string;
+            /**
+             * Freshness
+             * @constant
+             */
+            freshness: "previous_generation";
+            /**
+             * Refresh Status
+             * @constant
+             */
+            refresh_status: "building";
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphGovernanceResponse */
         GraphGovernanceResponse: {
             attack_path_pagination: components["schemas"]["GraphBoundedPage"];
@@ -19230,6 +19255,10 @@ export interface components {
         };
         /** GraphSearchResponse */
         GraphSearchResponse: {
+            /** Collection Coverage */
+            collection_coverage?: {
+                [key: string]: unknown;
+            } | null;
             completeness: components["schemas"]["GraphCompleteness"];
             filters: components["schemas"]["GraphSearchFilters"];
             pagination: components["schemas"]["GraphPagination"];
@@ -19742,6 +19771,13 @@ export interface components {
          * @description Recorded relationship page, not a permission or collection-coverage verdict.
          */
         IncidentEdgePageResponse: {
+            /**
+             * Collection Coverage
+             * @description Current-estate reads only; freshness=previous_generation with as_of while a newer generation is prepared.
+             */
+            collection_coverage?: {
+                [key: string]: unknown;
+            } | null;
             completeness: components["schemas"]["IncidentEdgePageCompleteness"];
             /**
              * Direction

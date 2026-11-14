@@ -45,6 +45,8 @@ class FindingReachabilityProjection:
     rows: list[dict[str, Any]]
     truncated: bool
     refreshing: bool = False
+    # When the previous graph generation, served while a newer one builds, was recorded.
+    as_of: str = ""
 
 
 _PATH_VERDICT_STRENGTH = {"confirmed": 3, "likely": 2, "unknown": 1, "unlikely": 0}
@@ -211,7 +213,7 @@ def project_persisted_graph_reachability(
             for row in projected:
                 row.update(graph_reachable=None, graph_min_hop_distance=None, graph_reachable_from_agents=[])
             _derive_verdicts(projected)
-            return FindingReachabilityProjection(projected, truncated=False, refreshing=True)
+            return FindingReachabilityProjection(projected, truncated=False, refreshing=True, as_of=str(coverage.get("as_of") or ""))
     # Rows only carry their job's scan id, which never equals the correlated
     # current-estate snapshot id, so the cross-scan guard applies only when the
     # caller asked for one scan.

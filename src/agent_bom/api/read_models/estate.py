@@ -129,7 +129,18 @@ class FindingRow(ReadModel):
     vex_suppressed: bool | None = None
 
 
+class GraphFreshness(ReadModel):
+    """Graph reachability on this page comes from the previous complete graph while a newer one builds."""
+
+    freshness: Literal["previous_generation"]
+    refresh_status: Literal["building"]
+    as_of: str = Field(description="When the evidence behind the previous graph was recorded (ISO 8601); empty when unknown.")
+
+
 class FindingsResponse(ReadResponse):
+    graph_freshness: GraphFreshness | None = Field(
+        default=None, description="Present only while a newer graph builds; reachability on this page is then unassessed."
+    )
     facets: dict[str, Any] | None = None
     lane_counts_approximate: bool | None = None
     schema_version: str

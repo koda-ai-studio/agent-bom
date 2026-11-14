@@ -56,8 +56,11 @@ def _project_findings_reachability(
     *,
     tenant_id: str,
     scan_id: str | None,
-) -> tuple[list[dict[str, Any]], list[str]]:
+) -> tuple[list[dict[str, Any]], list[str], dict[str, str] | None]:
     """Project persisted paths once for the rows the caller will return.
+
+    The third value labels a page whose graph is the previous generation,
+    served at once while a newer one builds; None when the graph is current.
 
     Grouped findings walk the occurrence stream in bounded pages. Projecting
     the same persisted graph against every internal 1,000-row page made an
@@ -74,17 +77,19 @@ def _project_findings_reachability(
                 tenant_id=tenant_id,
                 scan_id=scan_id,
             )
+        freshness = None
         if projection.refreshing:
             warnings.append("The current graph is being prepared; graph reachability remains unassessed for this page.")
+            freshness = {"freshness": "previous_generation", "refresh_status": "building", "as_of": projection.as_of}
         if projection.truncated:
             warnings.append(
                 "Graph reachability projection is bounded to the highest-risk 200000 persisted paths; unmatched findings remain unassessed."
             )
-        return projection.rows, warnings
+        return projection.rows, warnings, freshness
     except Exception as exc:  # noqa: BLE001 — optional evidence must not fail the findings list
         _logger.warning("Finding graph reachability projection skipped: %s", sanitize_text(sanitize_error(exc)))
         warnings.append("Graph reachability evidence is unavailable for this page; unmatched findings remain unassessed.")
-        return rows, warnings
+        return rows, warnings, None
 
 
 def _apply_finding_facets(query: _FindingListQuery, page: _FindingListPage, warnings: list[str]) -> tuple[_FindingListPage, dict, dict]:
@@ -235,10 +240,7 @@ def _list_findings_impl(
     if include_facets:
         page, facets, completeness = _apply_finding_facets(query, page, warnings)
         facet_result = (facets, completeness)
-    rows = page.rows
-    if project_graph_reachability:
-        rows, reachability_warnings = _project_findings_reachability(rows, tenant_id=query.tenant_id, scan_id=scan_id)
-        warnings.extend(reachability_warnings)
+    rows, graph_freshness = _reachability_page(page.rows, warnings, project_graph_reachability, tenant_id=query.tenant_id, scan_id=scan_id)
     scope_completeness = _scope_completeness(scope_metadata, warnings) if scope_filters and scope_metadata else None
     # Internal aggregate callers may defer the default-deny projection; public callers keep it.
     rows = project_current_suppressions(rows, query.tenant_id)
@@ -252,6 +254,7 @@ def _list_findings_impl(
     )
     if scope_completeness is not None:
         envelope["scope_completeness"] = scope_completeness
+    envelope.update({"graph_freshness": graph_freshness} if graph_freshness is not None else {})
     if facet_result is not None:
         _attach_facets(envelope, *facet_result)
     return envelope
@@ -394,10 +397,9 @@ def _list_finding_groups_impl(
     truncated = source_cursor is not None
     if truncated:
         warnings.append("Issue grouping stopped after 50,000 occurrence rows; group and occurrence counts are lower bounds.")
-    page_groups, reachability_warnings = _finding_group_page(
-        [] if summary_only else groups[group_offset : group_offset + limit], tenant_id=_tenant_id(request), scan_id=scan_id
+    page_groups, graph_freshness = _finding_group_page(
+        [] if summary_only else groups[group_offset : group_offset + limit], warnings, tenant_id=_tenant_id(request), scan_id=scan_id
     )
-    warnings.extend(reachability_warnings)
     next_offset = len(groups) if summary_only else group_offset + len(page_groups)
     next_cursor = finding_cursor.encode_finding_group_cursor(sort=sort_key, offset=next_offset) if next_offset < len(groups) else ""
     envelope = _groups_envelope(
@@ -418,16 +420,31 @@ def _list_finding_groups_impl(
     _attach_grouping_metadata(
         envelope, first_page=first_page, groups=groups, scanned=len(rows), truncated=truncated, severity_counts=severity_counts
     )
+    envelope.update({"graph_freshness": graph_freshness} if graph_freshness is not None else {})
     attach_lane_counts(envelope, lane, counts_by_lane, truncated, include_facets)
     _apply_exact_issue_counts(request, envelope, truncated, status=status, window_days=window_days, include_facets=include_facets)
     return envelope
 
 
-def _finding_group_page(groups: list[dict[str, Any]], *, tenant_id: str, scan_id: str | None) -> tuple[list[dict[str, Any]], list[str]]:
+def _finding_group_page(
+    groups: list[dict[str, Any]], warnings: list[str], *, tenant_id: str, scan_id: str | None
+) -> tuple[list[dict[str, Any]], dict[str, str] | None]:
+    """Serialize one page of groups with graph reachability, adding its warnings to ``warnings``."""
     if not groups:
-        return [], []
-    projected, warnings = _project_findings_reachability(groups, tenant_id=tenant_id, scan_id=scan_id)
-    return [_serialize_finding_group(group) for group in projected], warnings
+        return [], None
+    projected, freshness = _reachability_page(groups, warnings, tenant_id=tenant_id, scan_id=scan_id)
+    return [_serialize_finding_group(group) for group in projected], freshness
+
+
+def _reachability_page(
+    rows: list[dict[str, Any]], warnings: list[str], enabled: bool = True, *, tenant_id: str, scan_id: str | None
+) -> tuple[list[dict[str, Any]], dict[str, str] | None]:
+    """Project graph reachability onto ``rows`` when ``enabled``, adding its warnings to ``warnings``."""
+    if not enabled:
+        return rows, None
+    projected, reachability_warnings, freshness = _project_findings_reachability(rows, tenant_id=tenant_id, scan_id=scan_id)
+    warnings.extend(reachability_warnings)
+    return projected, freshness
 
 
 def _move(counts: dict[str, int], rank: int, delta: int) -> None:

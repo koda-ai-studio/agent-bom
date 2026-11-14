@@ -585,13 +585,35 @@ expiry and rotation are still read from the committed key row on every request.
 
 ## Current graph refresh
 
-A current-estate request retains the previous complete generation while waiting
-for a background refresh. A concurrent promotion cannot delete that generation
-until the request's read scope ends. Responses using retained evidence declare
-`freshness: previous_generation`; they do not claim the latest source evidence.
-A cold request with no complete generation still returns a bounded, retryable
-503 while building. Explicit stale generation continuations still fail with 409,
-and generation retention does not cross tenant boundaries.
+This is the canonical description of what a current-estate read serves while a
+new generation builds.
+
+A current-estate read (no `scan_id`) whose tenant already has a promoted
+generation does not wait for the rebuild a push started: it queues the rebuild
+and answers at once from the last promoted generation. That generation is the
+one this worker promoted or, for a restarted or sibling worker with no
+in-process record, the one named in the tenant's shared promotion stamp, used
+only when the stamp was written by the same projection format and release. A
+concurrent promotion cannot delete that generation until the request's read
+scope ends, and every store call in one request reads the same generation, so a
+response never mixes generations. Responses using it declare
+`collection_coverage.refresh_status: building`,
+`collection_coverage.freshness: previous_generation` and
+`collection_coverage.as_of` (when that generation's evidence was recorded);
+they never claim the latest source evidence. This holds for `/v1/graph` (every
+`view`), `/v1/graph/rollup`, `/v1/graph/search` and
+`/v1/graph/incident-edges`. `/v1/findings` rows are always current; while the
+graph is a previous generation, graph reachability on the page is unassessed
+and the envelope carries `graph_freshness` with the same `as_of`. The dashboard
+shows "Updating graph · showing data from <time>" on the graph and a matching
+note on Findings.
+
+Only a cold start (no promoted generation for the tenant) waits for
+read-your-writes, up to `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default
+2,000 ms), and past that returns a retryable 503 `current_estate_building`.
+Reads that name a `scan_id` are exact reads of that recorded scan and are never
+answered from a projection. Explicit stale generation continuations still fail
+with 409, and neither generations nor promotion stamps cross tenant boundaries.
 
 After a push the API also warms the roll-up views, the reachability index, the
 executive reads and the posture counts. These warm-ups load the estate into

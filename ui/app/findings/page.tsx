@@ -49,6 +49,8 @@ import { usePathname,useRouter,useSearchParams } from "next/navigation";
 import { Suspense,useCallback,useEffect,useMemo,useRef,useState } from "react";
 import { DEFAULT_FINDINGS_WINDOW_DAYS } from "@/lib/findings-default-query";
 import { FindingsKevFilterNote, useKevOnlyParam } from "@/components/findings/findings-kev-filter";
+import { FindingsGraphFreshnessNote } from "@/components/findings/findings-graph-freshness";
+import type { GraphFreshness } from "@/lib/api-contracts/findings";
 
 const REACHABILITY_FILTERS: ReachabilityFilter[] = ["", "reachable", "unreachable", "unassessed"];
 const TRIAGE_FILTERS: TriageFilter[] = ["", "not_affected", "affected", "under_investigation", "untriaged"];
@@ -204,6 +206,7 @@ function FindingsPage() {
   const [findingFacets, setFindingFacets] = useState<FindingFacets | null>(null);
   const [findingFacetsApproximate, setFindingFacetsApproximate] = useState(false);
   const [scopeCompleteness, setScopeCompleteness] = useState<ScopeCompleteness | null>(null);
+  const [graphFreshness, setGraphFreshness] = useState<GraphFreshness | null>(null);
   const [hasMoreFindings, setHasMoreFindings] = useState(false);
   const [nextFindingsCursor, setNextFindingsCursor] = useState("");
   const [pageCursors, setPageCursors] = useState<string[]>([""]);
@@ -545,6 +548,7 @@ function FindingsPage() {
         setFindingFacets(response.facets ?? null);
         setFindingFacetsApproximate(Boolean(response.facets_approximate));
         setScopeCompleteness(response.scope_completeness ?? null);
+        setGraphFreshness(response.graph_freshness ?? null);
         setHasMoreFindings(Boolean(response.has_more || response.next_cursor));
         setNextFindingsCursor(response.next_cursor ?? "");
         consecutiveReadFailures.current = 0;
@@ -576,15 +580,8 @@ function FindingsPage() {
     slaFilter,
     reachabilityFilter,
     pathContextFilter, triageFilter, statusFilter,
-    frameworkFilter,
-    controlFilter,
-    lane,
-    issueTypeFilter,
-    kevOnly,
-    windowDays,
-    sortKey,
-    pageCursors,
-    readAttempt,
+    frameworkFilter, controlFilter, lane, issueTypeFilter,
+    kevOnly, windowDays, sortKey, pageCursors, readAttempt,
   ]);
 
   function handleSort(field: SortKey) {
@@ -758,6 +755,7 @@ function FindingsPage() {
       />
 
       <AIAdviceStatusLine />
+      <FindingsGraphFreshnessNote freshness={graphFreshness} />
       <FindingLaneTabs lane={lane} counts={detailLoading ? undefined : findingFacets?.lane} approximate={laneCountsApproximate} onChange={(next) => { setSelectedId(null); setLane(next); setIssueTypeFilter("all"); setPage(1); setPageCursors([""]); setSortKey(next === "all" ? "effective_reach" : "severity"); }} />
 
       {triageError && (
