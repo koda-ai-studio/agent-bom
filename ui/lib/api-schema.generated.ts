@@ -20137,6 +20137,11 @@ export interface components {
             risk_assessment: {
                 [key: string]: unknown;
             };
+            /**
+             * Role
+             * @description Agent and server rows only: agent, framework_agent, mcp_server or other_server (see by_role)
+             */
+            role?: string | null;
             /** Severity */
             severity: string;
             /** Source */
@@ -20375,6 +20380,13 @@ export interface components {
         InventorySummaryResponse: {
             /** By Group */
             by_group: {
+                [key: string]: number;
+            };
+            /**
+             * By Role
+             * @description Agent and server nodes by role; agent and mcp_server count what /v1/agents counts, framework_agent and other_server the rest
+             */
+            by_role?: {
                 [key: string]: number;
             };
             /** By Type */

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 
 import { useInventory } from "@/lib/inventory-context";
 import type { AssetKindConfig } from "@/lib/inventory";
-import { capitalize, entityTypeLabel, kindTypeCounts } from "@/lib/inventory-units";
+import { capitalize, entityTypeLabel, kindTypeCounts, typeHasOtherRoles } from "@/lib/inventory-units";
 
 // Only the pressed chip gets the accent fill. Hover and focus change the border
 // or outline, never the fill, so an unpressed chip never reads as selected.
@@ -18,6 +18,12 @@ const CHIP_OFF = "border-outline bg-surface text-ink-secondary hover:border-outl
  * summary that feeds the inventory cards, so the primary-type chip equals the
  * card headline and the other chips equal its breakdown.
  */
+/** A type chip filters every node of the type, so a type holding more than its headline role is named by type. */
+function typeChipLabel(type: string, byRole: Readonly<Record<string, number>> | undefined): string {
+  if (typeHasOtherRoles(type, byRole)) return capitalize(`${type.replace(/_/g, " ")}s`);
+  return capitalize(entityTypeLabel(type, 2));
+}
+
 export function InventoryTypeChips({ kind }: { kind: AssetKindConfig }) {
   const { summary, filters, setFilter } = useInventory();
   const counts = useMemo(() => (summary ? kindTypeCounts(kind, summary) : []), [kind, summary]);
@@ -41,7 +47,7 @@ export function InventoryTypeChips({ kind }: { kind: AssetKindConfig }) {
     <div role="group" aria-label="Filter by asset type" className="flex flex-wrap items-center gap-1.5">
       {chip("all", "All types", all, selected.size === 0, () => setFilter("type", ""))}
       {visible.map((part) =>
-        chip(part.type, capitalize(entityTypeLabel(part.type, 2)), part.count, selected.has(part.type),
+        chip(part.type, typeChipLabel(part.type, summary.by_role), part.count, selected.has(part.type),
           () => setFilter("type", selected.size === 1 && selected.has(part.type) ? "" : part.type)),
       )}
     </div>

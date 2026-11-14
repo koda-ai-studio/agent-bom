@@ -31,6 +31,7 @@ from agent_bom.api.server import app
 from agent_bom.api.store import InMemoryJobStore
 from agent_bom.cli import main
 from agent_bom.graph.builder import build_unified_graph_from_report
+from agent_bom.graph.node_roles import node_role
 from agent_bom.graph.types import EntityType
 from agent_bom.output.report_packing import load_report_document
 from tests._clock_helpers import recent
@@ -187,15 +188,33 @@ def push_estate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Tes
 
 
 def _surface_counts(client: TestClient) -> dict[str, int]:
+    """Headline agent and MCP server counts on each surface, plus the other labelled groups."""
     discovery._clear_agents_response_cache_for_tests()
     summary = _settled_summary(client, {})
     agents = client.get("/v1/agents?limit=200").json()
     nodes = client.get("/v1/graph?limit=1000").json()["nodes"]
+    clusters = {c["cluster_key"]: c["member_count"] for c in client.get("/v1/graph/cluster-map").json()["clusters"]}
+    roles = summary["by_role"]
+
+    def graph_count(entity_type: str, role: str) -> int:
+        typed = [node for node in nodes if node["entity_type"] == entity_type]
+        return sum(1 for node in typed if node_role(entity_type, node.get("dimensions") or {}) == role)
+
     return {
-        "inventory_agents": summary["by_type"].get("agent", 0),
-        "inventory_servers": summary["by_type"].get("server", 0),
-        "graph_agents": sum(1 for node in nodes if node["entity_type"] == "agent"),
-        "graph_servers": sum(1 for node in nodes if node["entity_type"] == "server"),
+        "inventory_agents": roles.get("agent", 0),
+        "inventory_servers": roles.get("mcp_server", 0),
+        "inventory_framework_agents": roles.get("framework_agent", 0),
+        "inventory_other_servers": roles.get("other_server", 0),
+        "inventory_agent_nodes": summary["by_type"].get("agent", 0),
+        "inventory_server_nodes": summary["by_type"].get("server", 0),
+        "graph_agents": graph_count("agent", "agent"),
+        "graph_servers": graph_count("server", "mcp_server"),
+        "graph_framework_agents": graph_count("agent", "framework_agent"),
+        "graph_other_servers": graph_count("server", "other_server"),
+        "map_agents": clusters.get("type:agent", 0),
+        "map_servers": clusters.get("type:server", 0),
+        "map_framework_agents": clusters.get("agent:framework", 0),
+        "map_other_servers": clusters.get("server:other", 0),
         "agents_page": agents["count"],
         "agents_page_servers": agents["summary"]["mcp_servers"],
     }
@@ -225,14 +244,6 @@ def test_saved_report_push_lands_on_the_direct_push_agent_node(tmp_path: Path, p
     assert after["graph_servers"] == after["inventory_servers"] == after["agents_page_servers"] == 4
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "A framework entry (surface 'other', command 'python') is a graph server node, so Inventory and the grouped "
-        "map count it under MCP servers while /v1/agents applies the MCP rule; fixing that needs the server surface "
-        "in the store-native inventory and cluster reads."
-    ),
-)
 def test_framework_project_servers_count_the_same_on_every_surface(tmp_path: Path, push_estate: TestClient) -> None:
     """A framework project's entry is not an MCP server on any surface."""
     from agent_bom.push import sanitize_results
@@ -244,5 +255,33 @@ def test_framework_project_servers_count_the_same_on_every_surface(tmp_path: Pat
     _post(push_estate, sanitize_results(report))
 
     counts = _surface_counts(push_estate)
-    assert counts["graph_agents"] == counts["inventory_agents"] == counts["agents_page"] == 3
-    assert counts["graph_servers"] == counts["inventory_servers"] == counts["agents_page_servers"] == 4
+    assert counts["graph_agents"] == counts["inventory_agents"] == counts["map_agents"] == counts["agents_page"] == 3
+    assert counts["graph_servers"] == counts["inventory_servers"] == counts["map_servers"] == counts["agents_page_servers"] == 4
+    # The framework entry stays visible on every surface, labelled as what it is.
+    assert counts["graph_other_servers"] == counts["inventory_other_servers"] == counts["map_other_servers"] == 1
+    assert counts["inventory_server_nodes"] == 5
+
+
+def test_framework_agent_definition_counts_the_same_on_every_surface(tmp_path: Path, push_estate: TestClient) -> None:
+    """A framework agent defined in project code is its own labelled group, not an extra AI agent."""
+    from agent_bom.push import sanitize_results
+
+    framework = _framework_project(tmp_path, "projL")
+    (framework / "agent.py").write_text(
+        "from langchain.agents import AgentExecutor\nagent = AgentExecutor(agent=None, tools=[])\n", encoding="utf-8"
+    )
+    report = _cli_report(tmp_path, _project(tmp_path, "projA", mcp=True), _project(tmp_path, "projM", mcp=True, sdk=True), framework)
+    _post(push_estate, sanitize_results(report))
+
+    counts = _surface_counts(push_estate)
+    assert counts["graph_agents"] == counts["inventory_agents"] == counts["map_agents"] == counts["agents_page"] == 3
+    assert counts["graph_servers"] == counts["inventory_servers"] == counts["map_servers"] == counts["agents_page_servers"] == 4
+    assert counts["graph_framework_agents"] == counts["inventory_framework_agents"] == counts["map_framework_agents"] == 1
+    assert counts["graph_other_servers"] == counts["inventory_other_servers"] == counts["map_other_servers"] == 1
+    assert counts["inventory_agent_nodes"] == 4 and counts["inventory_server_nodes"] == 5
+
+    # Each inventory row names its role, so a row is never labelled as something it is not.
+    rows = push_estate.get("/v1/inventory/assets?type=agent,server&limit=50").json()["assets"]
+    roles = sorted((row["type"], row["role"]) for row in rows)
+    assert roles.count(("agent", "framework_agent")) == 1 and roles.count(("agent", "agent")) == 3
+    assert roles.count(("server", "other_server")) == 1 and roles.count(("server", "mcp_server")) == 4
