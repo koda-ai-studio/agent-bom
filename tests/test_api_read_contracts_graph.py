@@ -184,6 +184,25 @@ def test_canvas_graph_body_matches_documented_model(graph_client):
     assert parsed.model_dump(mode="json", exclude_unset=True) == body
 
 
+@pytest.mark.parametrize("query", ["", "&include=attributes", "&include=paths"])
+def test_lean_graph_body_matches_documented_model(graph_client, query):
+    body = graph_client.get(f"/v1/graph?scan_id=contract-s2{query}").json()
+    assert body["view"] == "lean"
+    assert body["nodes"] and body["edges"] and body["attack_paths"]
+    parsed = graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
+    assert parsed.model_dump(mode="json", exclude_unset=True) == body
+
+
+@pytest.mark.parametrize(("collection", "field"), [("nodes", "risk_score"), ("edges", "relationship"), ("attack_paths", "reachability")])
+def test_lean_requires_its_own_wire_fields(graph_client, collection, field):
+    from pydantic import ValidationError
+
+    body = graph_client.get("/v1/graph?scan_id=contract-s2").json()
+    del body[collection][0][field]
+    with pytest.raises(ValidationError):
+        graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
+
+
 def test_attack_path_record_declares_live_queue_rank_fields(graph_client):
     from agent_bom.api.read_models.graph_records import GraphAttackPathRecord
 
@@ -203,7 +222,7 @@ def test_attack_path_record_declares_live_queue_rank_fields(graph_client):
 def test_full_projection_cannot_fall_back_to_canvas_contract(graph_client, collection, field):
     from pydantic import ValidationError
 
-    body = graph_client.get("/v1/graph?scan_id=contract-s2").json()
+    body = graph_client.get("/v1/graph?scan_id=contract-s2&view=full").json()
     del body[collection][0][field]
     with pytest.raises(ValidationError):
         graph_models.GraphPageResponse.model_validate(body, context={STRICT_CONTRACT: True})
@@ -248,7 +267,7 @@ def test_nested_graph_contract_detects_invalid_wire_fields(graph_client, collect
 
 
 def test_full_projection_drift_keeps_lenient_validation(graph_client):
-    body = graph_client.get("/v1/graph?scan_id=contract-s2").json()
+    body = graph_client.get("/v1/graph?scan_id=contract-s2&view=full").json()
     del body["nodes"][0]["canonical_id"]
     parsed = graph_models.GraphPageResponse.model_validate(body)
     assert parsed.model_dump(mode="json", exclude_unset=True) == body
@@ -257,14 +276,14 @@ def test_full_projection_drift_keeps_lenient_validation(graph_client):
 def test_graph_openapi_reuses_nested_wire_contracts():
     app.openapi_schema = None
     schemas = app.openapi()["components"]["schemas"]
-    for field, full, canvas in (
-        ("nodes", "GraphNodeRecord", "GraphCanvasNodeRecord"),
-        ("edges", "GraphEdgeRecord", "GraphCanvasEdgeRecord"),
+    for field, records in (
+        ("nodes", ("GraphNodeRecord", "GraphCanvasNodeRecord", "GraphLeanNodeRecord")),
+        ("edges", ("GraphEdgeRecord", "GraphCanvasEdgeRecord", "GraphLeanEdgeRecord")),
+        ("attack_paths", ("GraphAttackPathRecord", "GraphLeanAttackPathRecord")),
     ):
         assert schemas["GraphPageResponse"]["properties"][field]["items"] == {
-            "anyOf": [{"$ref": f"#/components/schemas/{full}"}, {"$ref": f"#/components/schemas/{canvas}"}]
+            "anyOf": [{"$ref": f"#/components/schemas/{record}"} for record in records]
         }
-    assert schemas["GraphPageResponse"]["properties"]["attack_paths"]["items"] == {"$ref": "#/components/schemas/GraphAttackPathRecord"}
     assert schemas["GraphNodeNeighborsResponse"]["properties"]["neighbors"]["items"] == {"$ref": "#/components/schemas/GraphNodeRecord"}
     assert schemas["GraphClustersResponse"]["properties"]["clusters"]["items"] == {"$ref": "#/components/schemas/SemanticCluster"}
     assert schemas["GraphAttackPathRecord"]["properties"]["technique_mappings"]["items"] == {
@@ -273,7 +292,7 @@ def test_graph_openapi_reuses_nested_wire_contracts():
 
 
 def test_graph_wire_contract_preserves_provider_fields_and_unknown_extensions(graph_client):
-    body = graph_client.get("/v1/graph?scan_id=contract-s2").json()
+    body = graph_client.get("/v1/graph?scan_id=contract-s2&view=full").json()
     body["nodes"][0]["attributes"]["provider_extension"] = {"nested": [True, None, 1, "value"]}
     body["nodes"][0]["future_additive_field"] = {"state": "recorded"}
     body["edges"][0]["evidence"]["provider_extension"] = ["recorded", {"count": 1}]
@@ -287,6 +306,9 @@ def test_graph_wire_contract_preserves_provider_fields_and_unknown_extensions(gr
         ("/v1/graph?scan_id=contract-s2", graph_models.GraphPageResponse, "nodes"),
         ("/v1/graph?scan_id=contract-s2", graph_models.GraphPageResponse, "edges"),
         ("/v1/graph?scan_id=contract-s2", graph_models.GraphPageResponse, "attack_paths"),
+        ("/v1/graph?scan_id=contract-s2&view=full", graph_models.GraphPageResponse, "nodes"),
+        ("/v1/graph?scan_id=contract-s2&view=full", graph_models.GraphPageResponse, "edges"),
+        ("/v1/graph?scan_id=contract-s2&view=full", graph_models.GraphPageResponse, "attack_paths"),
         ("/v1/graph/agents?scan_id=contract-s2", graph_models.GraphAgentsResponse, "agents"),
         ("/v1/graph/governance?scan_id=contract-s2", graph_models.GraphGovernanceResponse, "nodes"),
         ("/v1/graph/exposure-paths?scan_id=contract-s2", graph_models.GraphExposurePathsResponse, "nodes"),

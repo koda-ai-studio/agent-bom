@@ -72,7 +72,8 @@ def qualify(client, *, scan_id="", page_size=100, max_pages=2):
     require(schema.get("interchange", {}).get("envelope") == ENVELOPE, "Unsupported graph envelope")
     require(schema.get("interchange", {}).get("evidence") == EVIDENCE, "Unsupported evidence contract")
     node_kinds, edge_kinds = set(schema["node_types"]), set(schema["edge_types"])
-    params = {"limit": page_size, "scan_id": scan_id}
+    # Whole records: the lean default carries no provenance or canonical ids to qualify.
+    params = {"limit": page_size, "scan_id": scan_id, "view": "full"}
     identity, pages, nodes, edges = None, [], {}, {}
     ranked_ids = set()
     has_more = True
@@ -116,7 +117,7 @@ def qualify(client, *, scan_id="", page_size=100, max_pages=2):
         if not has_more:
             break
         require(ranked > 0, "Empty ranked page cannot advance")
-        params = {"scan_id": scope[1], "snapshot_generation": scope[2], "limit": page_size}
+        params = {"scan_id": scope[1], "snapshot_generation": scope[2], "limit": page_size, "view": "full"}
         if paging.get("next_cursor"):
             params["cursor"] = paging["next_cursor"]
         else:

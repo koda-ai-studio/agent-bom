@@ -1,0 +1,5 @@
+### Upgrade notes
+- `GET /v1/graph` now returns a lean projection by default, labelled `view: "lean"`: nodes carry `id`, `entity_type`, `label`, `severity`, `risk_score`, `status` and only the attributes that name and badge them; edges carry `source`, `target`, `relationship`, `direction`, `weight`, `traversable` and `confidence` (an edge's `id` is always `{relationship}:{source}:{target}`); embedded attack paths carry a summary. Pass `view=full` (or `include=attributes,paths`) for the previous shape, unchanged. A node's full attributes and `evidence_provenance` come from `GET /v1/graph/node/{node_id}`, complete paths from `GET /v1/graph/attack-paths`. `include=attributes` or `include=paths` restores one of the two on its own. The dashboard's graph page already requests `view=canvas` and is unchanged.
+
+### Performance
+- The default `GET /v1/graph` page is 5 to 7 times smaller: on the `scan --demo` estate 116 KB instead of 867 KB for 124 nodes and 255 edges (934 instead of 6,994 bytes per node), and on the showcase estate 775 KB instead of 4.35 MB for 1,292 nodes and 1,775 edges (599 instead of 3,367 bytes per node).

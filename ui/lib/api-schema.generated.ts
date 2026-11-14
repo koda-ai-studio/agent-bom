@@ -18367,6 +18367,87 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GraphLeanAttackPathRecord
+         * @description The ``GET /v1/graph`` default path summary; /v1/graph/attack-paths has the whole record.
+         */
+        GraphLeanAttackPathRecord: {
+            /** Composite Risk */
+            composite_risk: number;
+            /** Edges */
+            edges: string[];
+            /** Finding Ids */
+            finding_ids: string[];
+            /** Hops */
+            hops: string[];
+            /** Reachability */
+            reachability: string;
+            /** Severity */
+            severity?: string | null;
+            /** Source */
+            source: string;
+            /** Summary */
+            summary: string;
+            /** Target */
+            target: string;
+            /** Vuln Ids */
+            vuln_ids: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphLeanEdgeRecord
+         * @description The ``GET /v1/graph`` default edge; ``view=full`` adds its id, evidence, provenance and validity.
+         *
+         *     The omitted ``id`` is always ``{relationship}:{source}:{target}``.
+         */
+        GraphLeanEdgeRecord: {
+            /** Confidence */
+            confidence: number;
+            /** Direction */
+            direction: string;
+            /** Relationship */
+            relationship: string;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /** Traversable */
+            traversable: boolean;
+            /** Weight */
+            weight: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphLeanNodeRecord
+         * @description The ``GET /v1/graph`` default node: identity, risk and the attributes that name and badge it.
+         */
+        GraphLeanNodeRecord: {
+            /**
+             * Attributes
+             * @description Only the naming and badge attributes; /v1/graph/node/{node_id} has them all.
+             */
+            attributes: {
+                [key: string]: unknown;
+            };
+            /** Context */
+            context?: true | null;
+            /** Entity Type */
+            entity_type: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Risk Score */
+            risk_score: number;
+            /** Severity */
+            severity: string;
+            /** Status */
+            status: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphLegendResponse */
         GraphLegendResponse: {
             /** Entities */
@@ -18625,7 +18706,7 @@ export interface components {
             }[] | null;
             attack_path_pagination?: components["schemas"]["GraphBoundedPage"] | null;
             /** Attack Paths */
-            attack_paths: components["schemas"]["GraphAttackPathRecord"][];
+            attack_paths: (components["schemas"]["GraphAttackPathRecord"] | components["schemas"]["GraphLeanAttackPathRecord"])[];
             /** Collection Coverage */
             collection_coverage?: {
                 [key: string]: unknown;
@@ -18634,15 +18715,20 @@ export interface components {
             /** Created At */
             created_at: string;
             /** Edges */
-            edges: (components["schemas"]["GraphEdgeRecord"] | components["schemas"]["GraphCanvasEdgeRecord"])[];
+            edges: (components["schemas"]["GraphEdgeRecord"] | components["schemas"]["GraphCanvasEdgeRecord"] | components["schemas"]["GraphLeanEdgeRecord"])[];
             /** Evidence Scope */
             evidence_scope?: string | null;
+            /**
+             * Include
+             * @description Whole records added to the lean view.
+             */
+            include?: ("attributes" | "paths")[] | null;
             /** Interaction Risks */
             interaction_risks: {
                 [key: string]: unknown;
             }[];
             /** Nodes */
-            nodes: (components["schemas"]["GraphNodeRecord"] | components["schemas"]["GraphCanvasNodeRecord"])[];
+            nodes: (components["schemas"]["GraphNodeRecord"] | components["schemas"]["GraphCanvasNodeRecord"] | components["schemas"]["GraphLeanNodeRecord"])[];
             pagination: components["schemas"]["GraphPagination"];
             /** Scan Id */
             scan_id: string;
@@ -18654,8 +18740,11 @@ export interface components {
             };
             /** Tenant Id */
             tenant_id: string;
-            /** View */
-            view?: "canvas" | null;
+            /**
+             * View
+             * @description The projection served; absent on view=full.
+             */
+            view?: ("lean" | "canvas") | null;
         } & {
             [key: string]: unknown;
         };
@@ -36474,8 +36563,10 @@ export interface operations {
                 offset?: number;
                 /** @description Max nodes to return */
                 limit?: number;
-                /** @description ``canvas`` returns the graph page's projection: the same response without node and edge fields the page never reads before a selection (OCSF ids, canonical ids, provenance blocks, bulky attributes) and without the source_id/target_id edge aliases. Omit for the full projection. */
-                view?: "canvas" | null;
+                /** @description ``lean`` (the default) returns each node's id, entity_type, label, severity, risk_score, status and the attributes that name and badge it; each edge's endpoints, relationship, direction, weight, traversable and confidence (its id is relationship:source:target); and a summary of each embedded attack path. Full attributes and evidence_provenance come from /v1/graph/node/{node_id}, complete paths from /v1/graph/attack-paths. ``full`` returns the whole node, edge and path records. ``canvas`` returns the graph page's projection. */
+                view?: ("lean" | "canvas" | "full") | null;
+                /** @description Comma-separated additions to the lean view: ``attributes`` returns whole node and edge records, ``paths`` whole attack-path records. Both together equal ``view=full``. Not valid with ``view=canvas``. */
+                include?: string | null;
             };
             header?: never;
             path?: never;
