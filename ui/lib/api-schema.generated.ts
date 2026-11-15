@@ -18253,19 +18253,20 @@ export interface components {
         };
         /**
          * GraphFreshness
-         * @description Graph reachability on this page comes from the previous complete graph while a newer one builds.
+         * @description A graph is building, so reachability on this page is unassessed (``graph_refreshing`` on each row).
+         *
+         *     During a tenant's first build only ``refresh_status`` is set. While a newer
+         *     generation replaces an existing one, ``freshness`` and ``as_of`` name the
+         *     previous complete graph.
          */
         GraphFreshness: {
             /**
              * As Of
-             * @description When the evidence behind the previous graph was recorded (ISO 8601); empty when unknown.
+             * @description When the evidence behind the previous graph was recorded (ISO 8601).
              */
-            as_of: string;
-            /**
-             * Freshness
-             * @constant
-             */
-            freshness: "previous_generation";
+            as_of?: string | null;
+            /** Freshness */
+            freshness?: "previous_generation" | null;
             /**
              * Refresh Status
              * @constant

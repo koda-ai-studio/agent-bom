@@ -437,6 +437,10 @@ def findings_client(monkeypatch):
     }
     store.put(job)
     _jobs[(job.tenant_id, job.job_id)] = job
+    # Findings never wait on a first graph build; promote it as the post-push warm-up would.
+    from agent_bom.api.stores import _get_graph_store
+
+    assert _get_graph_store().prepare_current(job.tenant_id, seconds=30)
 
     try:
         yield TestClient(app, raise_server_exceptions=False)

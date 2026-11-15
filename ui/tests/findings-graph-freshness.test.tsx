@@ -15,6 +15,12 @@ describe("findings graph freshness note", () => {
     expect(text).toContain("reachability is unassessed");
     expect(text).toContain(new Date(asOf).toLocaleString());
   });
+  it("labels a tenant's first build without a previous graph time", () => {
+    render(<FindingsGraphFreshnessNote freshness={{ refresh_status: "building" }} />);
+    const text = screen.getByRole("status").textContent ?? "";
+    expect(text).toContain("reachability is unassessed until it is ready");
+    expect(text).not.toContain("last complete graph");
+  });
   it("omits an unknown time instead of rendering a placeholder", () => {
     render(<FindingsGraphFreshnessNote freshness={{ freshness: "previous_generation", refresh_status: "building", as_of: "" }} />);
     const text = screen.getByRole("status").textContent ?? "";

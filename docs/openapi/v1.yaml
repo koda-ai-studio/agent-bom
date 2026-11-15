@@ -17438,26 +17438,35 @@ components:
       type: object
     GraphFreshness:
       additionalProperties: true
-      description: Graph reachability on this page comes from the previous complete
-        graph while a newer one builds.
+      description: 'A graph is building, so reachability on this page is unassessed
+        (``graph_refreshing`` on each row).
+
+
+        During a tenant''s first build only ``refresh_status`` is set. While a newer
+
+        generation replaces an existing one, ``freshness`` and ``as_of`` name the
+
+        previous complete graph.'
       properties:
         as_of:
+          anyOf:
+          - type: string
+          - type: 'null'
           description: When the evidence behind the previous graph was recorded (ISO
-            8601); empty when unknown.
+            8601).
           title: As Of
-          type: string
         freshness:
-          const: previous_generation
+          anyOf:
+          - const: previous_generation
+            type: string
+          - type: 'null'
           title: Freshness
-          type: string
         refresh_status:
           const: building
           title: Refresh Status
           type: string
       required:
-      - freshness
       - refresh_status
-      - as_of
       title: GraphFreshness
       type: object
     GraphGovernanceResponse:

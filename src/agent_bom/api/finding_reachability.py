@@ -15,6 +15,9 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
 from urllib.parse import unquote
 
+from starlette.exceptions import HTTPException
+
+from agent_bom.api.current_graph_builds import is_building_refusal
 from agent_bom.core.reachability import (
     CONFIRMING_BASIS,
     GRAPH_PATH_BASIS_KEY,
@@ -51,6 +54,8 @@ class FindingReachabilityProjection:
     rows: list[dict[str, Any]]
     truncated: bool
     refreshing: bool = False
+    # True when reach was withheld because the previous generation was served; False on a first build.
+    previous_generation: bool = False
     # When the previous graph generation, served while a newer one builds, was recorded.
     as_of: str = ""
 
@@ -212,16 +217,18 @@ def project_persisted_graph_reachability(
         _derive_verdicts(projected)
         return FindingReachabilityProjection(projected, truncated=False)
 
-    index = _snapshot_index(graph_store, tenant_id=tenant_id, scan_id=scan_id or "", path_limit=path_limit)
+    try:
+        index = _snapshot_index(graph_store, tenant_id=tenant_id, scan_id=scan_id or "", path_limit=path_limit)
+    except HTTPException as exc:
+        if scan_id or not is_building_refusal(exc):
+            raise
+        # The tenant's first build is under way: the rows are current, only their reach waits.
+        return _refreshing(projected, as_of="", previous_generation=False)
     coverage_reader = getattr(graph_store, "current_view_coverage", None)
     if not scan_id and callable(coverage_reader):
         coverage = coverage_reader(tenant_id=tenant_id, scan_id=index.scan_id)
         if coverage.get("freshness") == "previous_generation":
-            for row in projected:
-                row.update(graph_reachable=None, graph_min_hop_distance=None, graph_reachable_from_agents=[])
-                row[NOT_ASSESSED_REASON_KEY] = NOT_ASSESSED_REFRESHING
-            _derive_verdicts(projected)
-            return FindingReachabilityProjection(projected, truncated=False, refreshing=True, as_of=str(coverage.get("as_of") or ""))
+            return _refreshing(projected, as_of=str(coverage.get("as_of") or ""), previous_generation=True)
     # Rows only carry their job's scan id, which never equals the correlated
     # current-estate snapshot id, so the cross-scan guard applies only when the
     # caller asked for one scan.
@@ -229,6 +236,15 @@ def project_persisted_graph_reachability(
     if index.budget_limited:
         _mark_budget_unassessed(projected, scan_id=index.scan_id if scan_id else None)
     return FindingReachabilityProjection(projected, truncated=index.truncated)
+
+
+def _refreshing(projected: list[dict[str, Any]], *, as_of: str, previous_generation: bool) -> FindingReachabilityProjection:
+    """Withhold reach while a newer graph builds; never stamp a previous generation's paths onto current rows."""
+    for row in projected:
+        row.update(graph_reachable=None, graph_min_hop_distance=None, graph_reachable_from_agents=[])
+        row[NOT_ASSESSED_REASON_KEY] = NOT_ASSESSED_REFRESHING
+    _derive_verdicts(projected)
+    return FindingReachabilityProjection(projected, truncated=False, refreshing=True, as_of=as_of, previous_generation=previous_generation)
 
 
 def _mark_budget_unassessed(rows: list[dict[str, Any]], *, scan_id: str | None) -> None:

@@ -134,11 +134,16 @@ class FindingRow(ReadModel):
 
 
 class GraphFreshness(ReadModel):
-    """Graph reachability on this page comes from the previous complete graph while a newer one builds."""
+    """A graph is building, so reachability on this page is unassessed (``graph_refreshing`` on each row).
 
-    freshness: Literal["previous_generation"]
+    During a tenant's first build only ``refresh_status`` is set. While a newer
+    generation replaces an existing one, ``freshness`` and ``as_of`` name the
+    previous complete graph.
+    """
+
     refresh_status: Literal["building"]
-    as_of: str = Field(description="When the evidence behind the previous graph was recorded (ISO 8601); empty when unknown.")
+    freshness: Literal["previous_generation"] | None = None
+    as_of: str | None = Field(default=None, description="When the evidence behind the previous graph was recorded (ISO 8601).")
 
 
 class FindingsResponse(ReadResponse):

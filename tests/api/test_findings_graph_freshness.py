@@ -42,7 +42,11 @@ def test_findings_envelope_labels_reachability_from_a_previous_graph(scan_store,
 
     def projection(rows, **_kwargs):
         return FindingReachabilityProjection(
-            [dict(row) for row in rows], truncated=False, refreshing=refreshing, as_of=AS_OF if refreshing else ""
+            [dict(row) for row in rows],
+            truncated=False,
+            refreshing=refreshing,
+            as_of=AS_OF if refreshing else "",
+            previous_generation=refreshing,
         )
 
     monkeypatch.setattr(finding_page_read, "project_persisted_graph_reachability", projection)

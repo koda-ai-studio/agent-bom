@@ -602,15 +602,24 @@ response never mixes generations. Responses using it declare
 `collection_coverage.as_of` (when that generation's evidence was recorded);
 they never claim the latest source evidence. This holds for `/v1/graph` (every
 `view`), `/v1/graph/rollup`, `/v1/graph/search` and
-`/v1/graph/incident-edges`. `/v1/findings` rows are always current; while the
-graph is a previous generation, graph reachability on the page is unassessed
-and the envelope carries `graph_freshness` with the same `as_of`. The dashboard
-shows "Updating graph · showing data from <time>" on the graph and a matching
-note on Findings.
+`/v1/graph/incident-edges`. The dashboard shows "Updating graph · showing data
+from <time>" on the graph.
 
-Only a cold start (no promoted generation for the tenant) waits for
+`/v1/findings` never waits on a graph build. Its rows come from the finding
+store and are always current: a pushed finding is listed at once. Only graph
+reachability depends on the graph, and while a build is under way, whether a
+newer generation is replacing a previous one or it is the tenant's first build,
+each row on the page carries `graph_reachable: null` and
+`graph_reachability_not_assessed_reason: "graph_refreshing"` (shown as "Not
+assessed (refreshing)"), and the envelope carries `graph_freshness` with
+`refresh_status: building`. When a previous generation is being replaced it
+also carries `freshness: previous_generation` and its `as_of`; during a first
+build there is no previous graph, so it carries neither. Reachability is filled
+in on the first read after the build is promoted.
+
+Graph reads on a cold start (no promoted generation for the tenant) wait for
 read-your-writes, up to `AGENT_BOM_CURRENT_GRAPH_BUILD_WAIT_MS` (default
-2,000 ms), and past that returns a retryable 503 `current_estate_building`.
+2,000 ms), and past that return a retryable 503 `current_estate_building`.
 Reads that name a `scan_id` are exact reads of that recorded scan and are never
 answered from a projection. Explicit stale generation continuations still fail
 with 409, and neither generations nor promotion stamps cross tenant boundaries.

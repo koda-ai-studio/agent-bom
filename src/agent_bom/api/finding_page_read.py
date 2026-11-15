@@ -9,6 +9,7 @@ from fastapi import Request
 
 from agent_bom.api import compliance_hub_store, finding_cursor, time_window
 from agent_bom.api import finding_reachability_prewarm as _finding_reachability_prewarm
+from agent_bom.api.current_graph_builds import without_cold_build_wait
 from agent_bom.api.finding_facets import _finding_facets_bounded as _finding_facets_bounded
 from agent_bom.api.finding_group_key import _finding_group_identity
 from agent_bom.api.finding_grouping import _attach_grouping_metadata as _attach_grouping_metadata
@@ -70,7 +71,8 @@ def _project_findings_reachability(
     """
     warnings: list[str] = []
     try:
-        with estate_read_boundary():
+        # Findings never wait on a tenant's first graph build: rows now, reach labelled refreshing.
+        with estate_read_boundary(), without_cold_build_wait():
             projection = project_persisted_graph_reachability(
                 rows,
                 graph_store=_get_graph_store(),
@@ -80,7 +82,9 @@ def _project_findings_reachability(
         freshness = None
         if projection.refreshing:
             warnings.append("The current graph is being prepared; graph reachability remains unassessed for this page.")
-            freshness = {"freshness": "previous_generation", "refresh_status": "building", "as_of": projection.as_of}
+            freshness = {"refresh_status": "building"}
+            if projection.previous_generation:
+                freshness.update(freshness="previous_generation", as_of=projection.as_of)
         if projection.truncated:
             warnings.append(
                 "Graph reachability projection is bounded to the highest-risk 200000 persisted paths; unmatched findings remain unassessed."

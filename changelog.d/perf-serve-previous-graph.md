@@ -9,4 +9,4 @@
 - Migration `20261114_01` adds `public.abom_analyze_graph_tables()`, a `SECURITY DEFINER` function the `agent_bom_app` role may execute to analyze `graph_nodes` and `graph_edges` only. Run `alembic upgrade head` as the migration role; until then the API logs that statistics were not refreshed and carries on.
 
 ### Changed
-- `/v1/findings` adds `graph_freshness` (with `as_of`) while the graph is rebuilding, when graph reachability on the page is unassessed. The graph page shows "Updating graph · showing data from <time>" and Findings shows a matching note.
+- `/v1/findings` no longer waits up to 2 s for a tenant's first graph build after a push: rows are listed at once, each row's reach reads "Not assessed (refreshing)" (`graph_reachability_not_assessed_reason: graph_refreshing`) until the build is promoted, and the envelope adds `graph_freshness` (`refresh_status: building`, plus `freshness` and `as_of` while a previous graph is being replaced). The graph page shows "Updating graph · showing data from <time>" and Findings shows a matching note.

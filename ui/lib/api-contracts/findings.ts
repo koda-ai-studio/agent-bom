@@ -542,10 +542,11 @@ export interface UnifiedFinding {
 }
 
 export interface GraphFreshness {
-  freshness: "previous_generation";
   refresh_status: "building";
-  /** When the previous graph's evidence was recorded (ISO 8601); empty when unknown. */
-  as_of: string;
+  /** Present while a newer graph replaces an existing one; absent during a tenant's first build. */
+  freshness?: "previous_generation" | undefined;
+  /** When the previous graph's evidence was recorded (ISO 8601). */
+  as_of?: string | undefined;
 }
 
 /**

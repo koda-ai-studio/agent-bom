@@ -25694,17 +25694,31 @@
       },
       "GraphFreshness": {
         "additionalProperties": true,
-        "description": "Graph reachability on this page comes from the previous complete graph while a newer one builds.",
+        "description": "A graph is building, so reachability on this page is unassessed (``graph_refreshing`` on each row).\n\nDuring a tenant's first build only ``refresh_status`` is set. While a newer\ngeneration replaces an existing one, ``freshness`` and ``as_of`` name the\nprevious complete graph.",
         "properties": {
           "as_of": {
-            "description": "When the evidence behind the previous graph was recorded (ISO 8601); empty when unknown.",
-            "title": "As Of",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the evidence behind the previous graph was recorded (ISO 8601).",
+            "title": "As Of"
           },
           "freshness": {
-            "const": "previous_generation",
-            "title": "Freshness",
-            "type": "string"
+            "anyOf": [
+              {
+                "const": "previous_generation",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Freshness"
           },
           "refresh_status": {
             "const": "building",
@@ -25713,9 +25727,7 @@
           }
         },
         "required": [
-          "freshness",
-          "refresh_status",
-          "as_of"
+          "refresh_status"
         ],
         "title": "GraphFreshness",
         "type": "object"
