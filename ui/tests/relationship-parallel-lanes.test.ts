@@ -99,6 +99,23 @@ describe("parallel relationship lanes", () => {
     expect(route.at(-1)!.x).toBe(578);
   });
 
+  it("keeps a full lane between two types entering one port, even when one runs along the row", () => {
+    // The reference correlation: the server exposes the agent from a row above; the container on the agent's row contains it.
+    const at: Record<string, { x: number; y: number }> = { server: { x: 0, y: 307 }, instance1: { x: 0, y: 465 }, agent: { x: 370, y: 465 } };
+    const links = [
+      { id: "exposed", source: "server", target: "agent", data: { relationship: "exposed_to" } },
+      { id: "contains", source: "instance1", target: "agent", data: { relationship: "contains" } },
+    ];
+    const end = (id: string) => {
+      const link = links.find(item => item.id === id)!;
+      const route = relationshipPath({ source: link.source, target: link.target, sourceX: 100, sourceY: at[link.source]!.y,
+        targetX: 680, targetY: at.agent!.y, sourcePosition: Position.Right, targetPosition: Position.Left },
+      [], relationshipLaneFor(id, links, node => at[node]?.y, node => at[node]?.x))[0];
+      return points(route).at(-1)!.y;
+    };
+    expect(Math.abs(end("exposed") - end("contains"))).toBeGreaterThanOrEqual(LANE_GAP);
+  });
+
   it("keeps two same-direction lanes from crossing each other", () => {
     const lanes = [
       { id: "near", source: "a", target: "b", sourceHandle: "r", targetHandle: "l", data: { relationship: "uses" } },

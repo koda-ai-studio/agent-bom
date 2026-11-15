@@ -118,10 +118,14 @@ function forwardLaneRoute(edge: Endpoints, lane: RelationshipLane): [Point[], nu
   if (edge.sourcePosition !== Position.Right || edge.targetPosition !== Position.Left || edge.targetX - edge.sourceX < 48) return null;
   // Channels share at most half the gap, so the outermost still turns well clear of both columns.
   const channelGap = Math.min(CHANNEL_GAP, (edge.targetX - edge.sourceX) / 2 / Math.max(1, (lane.channels ?? 1) - 1));
-  const sourceY = edge.sourceY + lane.source;
+  let sourceY = edge.sourceY + lane.source;
   let targetY = edge.targetY + lane.target;
-  // A line between ports on one row stays straight rather than jogging by a lane's width.
-  if (Math.abs(edge.targetY - edge.sourceY) < 1 && Math.abs(targetY - sourceY) <= LANE_GAP) targetY = sourceY;
+  // A line between ports on one row stays straight rather than jogging by a lane's width,
+  // along the lane an end was given so it keeps a full lane from the other types at that port.
+  if (Math.abs(edge.targetY - edge.sourceY) < 1 && Math.abs(targetY - sourceY) <= LANE_GAP) {
+    if (lane.source) targetY = sourceY;
+    else sourceY = targetY;
+  }
   const shift = (targetY > sourceY ? -1 : 1) * (lane.source + lane.target) * LANE_TURN_SHIFT;
   const turnX = (edge.sourceX + edge.targetX) / 2 + (lane.channel ?? 0) * channelGap + shift;
   return [[[edge.sourceX, sourceY], [turnX, sourceY], [turnX, targetY], [edge.targetX, targetY]], turnX, (sourceY + targetY) / 2];
