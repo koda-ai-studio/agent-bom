@@ -6,3 +6,4 @@
 
 ### CI
 - The nightly workflow resource benchmark no longer charges the CLI's own work to the API process it measures: the scan child now parses the report and builds the push body, as the collector host does.
+- The two-replica Postgres profile runs on a freshly migrated database of its own. After the single-API profile in the shared database its tenant carried three estates instead of two, which put each replica at 1.8-2.1 GiB rather than 1.1-1.3 GiB.

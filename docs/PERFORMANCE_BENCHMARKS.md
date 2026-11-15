@@ -664,8 +664,21 @@ same workload:
 | warm | 1,927 MiB | 1,477 MiB | 470 | 306 |
 | cancel recovery | exit -6 (SIGABRT) | exit 0, 897 MiB | | |
 
-Findings stayed exact (207) and every equivalence check passed. Two related
-corrections landed with it:
+Findings stayed exact (207) and every equivalence check passed. On Postgres
+the single-API profile fell from 1,772 / 1,737 MiB (nightly) to 1,268 /
+1,300 MiB (container).
+
+The two-replica profile stayed over budget at 1,798-2,104 MiB per replica
+until it got a database of its own. The nightly job ran it after the
+single-API profile in the same database and tenant, so each replica's current
+graph carried three 200-agent estates instead of the two the profile
+describes. On a fresh database the same code peaks at 1,149 / 1,304 MiB. The
+job now migrates a second database (`agent_bom_replicas`) for it. The
+three-estate result is still a real capacity figure: one tenant holding
+about 600 agents of current estate needs more than 80% of a 2 GiB limit per
+API replica.
+
+Two related corrections landed with it:
 
 - **Exit drain.** The cancel-recovery child aborted with `FATAL: exception not
   rethrown` after its push was stored. The push commit had started an exec-read
