@@ -139,7 +139,7 @@ def _remove(path: str) -> None:
     try:
         os.unlink(path)
     except OSError:
-        pass
+        pass  # best effort at exit: another process or a cleanup may already have removed the gauge file
 
 
 def reset_for_tests() -> None:

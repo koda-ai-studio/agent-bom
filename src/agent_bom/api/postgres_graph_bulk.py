@@ -78,11 +78,13 @@ def begin(conn: Any) -> bool:
 
 def open_stages(conn: Any) -> bool:
     """Create this transaction's staging tables; False (nothing changed) when the role may not create TEMP tables."""
-    import psycopg
-
     _staged.discard(conn)
     if not (hasattr(conn, "transaction") and hasattr(conn, "cursor")):
         return False  # light test doubles expose execute/executemany only, as _execute_many_batched allows
+    try:
+        import psycopg
+    except ImportError:
+        return False  # without the driver there is no PostgreSQL connection to stage on
     try:
         with conn.transaction():  # a savepoint: a refusal leaves the save's transaction usable
             for stage, (table, columns) in STAGES.items():

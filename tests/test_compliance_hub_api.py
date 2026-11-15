@@ -14,6 +14,7 @@ between cases to avoid cross-test bleed.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from starlette.testclient import TestClient
@@ -161,12 +162,15 @@ def test_ingest_reconcile_absent_uses_the_import_stream_not_parser_source():
     findings.
     """
     client = _client()
+    now = datetime.now(timezone.utc)
+    first_observed = (now - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    second_observed = (now - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
     first = client.post(
         "/v1/compliance/ingest",
         json={
             "format": "csv",
             "content": "Title,Severity\nkept,high\ndropped,medium\n",
-            "observed_at": "2026-08-17T12:00:00Z",
+            "observed_at": first_observed,
         },
     )
     assert first.status_code == 201, first.text
@@ -177,7 +181,7 @@ def test_ingest_reconcile_absent_uses_the_import_stream_not_parser_source():
             "format": "csv",
             "content": "Title,Severity\nkept,high\n",
             "reconcile_absent": True,
-            "observed_at": "2026-08-18T12:00:00Z",
+            "observed_at": second_observed,
         },
     )
     assert second.status_code == 201, second.text

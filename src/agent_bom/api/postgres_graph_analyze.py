@@ -32,7 +32,7 @@ def refresh_graph_statistics(conn: Any, *, rows: int) -> None:
         try:
             conn.rollback()
         except psycopg.Error:
-            pass
+            pass  # the connection is already unusable; the pool discards it and the warning below reports the cause
         # Only the type: a driver message can carry connection details.
         logger.warning(
             "Graph planner statistics were not refreshed after a %s-row save (%s); autovacuum will refresh them", rows, type(exc).__name__

@@ -28,7 +28,7 @@ EXIT_WAIT_SECONDS = 10.0
 _STOPPING = threading.Event()
 _LOCK = threading.Lock()
 _WAITS: dict[str, Callable[[float], bool]] = {}
-_REGISTERED = False
+_STATE = {"registered": False}
 
 
 def stopping() -> bool:
@@ -42,12 +42,11 @@ def register_exit_wait(name: str, wait_idle: Callable[[float], bool]) -> None:
     Registered on first use, after the stores a warm-up reads are set up, so the
     drain runs before their own exit hooks close connection pools.
     """
-    global _REGISTERED
     with _LOCK:
         _WAITS[name] = wait_idle
-        if not _REGISTERED:
+        if not _STATE["registered"]:
             atexit.register(drain_at_exit)
-            _REGISTERED = True
+            _STATE["registered"] = True
 
 
 def unregister_exit_wait(name: str) -> None:

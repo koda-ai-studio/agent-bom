@@ -149,10 +149,12 @@ def test_bulk_and_row_paths_write_identical_rows(migrated_fresh_database, monkey
     used = _spy_bulk(monkeypatch)
     _with_path(monkeypatch, bulk=False)
     row_counts = _push_history("tenant-row")
-    assert not used, "the row path must not stage"
+    row_stages = len(used)
     _with_path(monkeypatch, bulk=True)
     bulk_counts = _push_history("tenant-bulk")
-    assert used, "the bulk path never staged"
+    bulk_stages = len(used) - row_stages
+    assert row_stages == 0, "the row path must not stage"
+    assert bulk_stages > 0, "the bulk path never staged"
     assert row_counts == bulk_counts
     row, bulk = _dump(migrated_fresh_database, "tenant-row"), _dump(migrated_fresh_database, "tenant-bulk")
     for table in _TABLES:
