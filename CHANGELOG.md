@@ -217,6 +217,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Lines that cross one column gap toward different cards turn in separate channels, so several sources feeding two targets no longer merge into one vertical trunk that hides which source feeds which target.
 - In the exposure flow, an account or other container that holds an entry point sits in a column before what it contains, so its links run left to right instead of looping around the column.
 - The "Image inventory" occurrence chip on a container card stays on one line.
+- An API process no longer aborts (`FATAL: exception not rethrown`, SIGABRT) or crashes (SIGSEGV) at exit on Python 3.11-3.13 when a push commit has just started an exec-read, roll-up, reachability or posture warm-up. At exit the process now refuses new warm-ups, lets a running one finish its current step and waits at most 10 s, instead of leaving a daemon thread inside native validation code while the interpreter finalizes. A current-graph rebuild queued after the build pool has shut down is skipped quietly instead of logging a failed commit hook.
 
 ### Security
 - The container's runtime security overlay pins cryptography 50.0.1, matching `uv.lock`; it had installed 50.0.0 over the locked version. A test now fails if any overlay pin is below the lock.
@@ -245,6 +246,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Together, in three paired qualification runs at 5,000 agents on PostgreSQL, the graph read p95 fell from 2.6-5.6 s to 0.87-1.0 s and ingest from 322-586 s to 195-322 s; the SQLite 5,000-agent findings p95 fell from about 2.0 s to 25-35 ms. PostgreSQL findings p95 at 5,000 agents stays under 0.5 s but is slower than without these changes (83-472 ms against 89-115 ms) because reads now run beside the first build instead of after it.
 - `AGENT_BOM_PG_COPY_THROTTLE=1` makes the PostgreSQL current-graph row copy yield to in-flight graph and findings reads (at most 0.5 s per batch and 30 s per copy). It is off by default: at 5,000 agents it nearly doubled the copy (22.8 s to 41.7 s).
 - Graph pages load about 16 KiB less client JavaScript: the focus, dimming and cluster-pill styles moved from an inline style block into the global stylesheet.
+- On glibc, the API process now limits malloc to two arenas (an operator's `MALLOC_ARENA_MAX` still wins). Freed heap held per thread made up about 460 MiB of a 1.75-1.9 GiB peak on the 200-agent workflow profile; peak RSS fell from 1,850 / 1,927 MiB to 1,435 / 1,477 MiB (cold / warm) with identical findings and fewer CPU-seconds. The Alpine API image (musl) is unchanged.
 
 ### Docs
 - The sizing guide has a "Cost to run" section with measured API memory, CPU-seconds per agent for scan and ingest, and storage per retained push, each with how it was measured.
@@ -266,6 +268,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - `bump-version.py --published`, run by the release after publishing, rewrote records of what had been run: the upgrade rehearsal's `--from-image` in the deployment overview and the "how it was run" `uvx --from` pins in the plugin review cases. Lines that record a version that ran are now left alone by the sweep and by the version-alignment check (`AS_RUN_EVIDENCE` in `scripts/check_version_alignment.py`), and the plugin submission guide's pinned version moves with the other pins.
 - The post-release pin job relocked the plugin launchers before PyPI's index listed the new version, so the relock failed with "no version of agent-bom==X" and the pins on main stayed on the previous release. The job now waits up to 10 minutes for PyPI's JSON API and simple index to list the release, and fails with an error annotation if they do not.
 - The Alpine/musl CI job measured the workflow memory budget inside a test worker that had already run thousands of tests, so it failed at 1,093 MiB against a 1,024 MiB budget. Run alone, the workflow peaks at 448-462 MiB on musl and 548-552 MiB on glibc. The musl job now runs the measured budgets in their own process, as the glibc jobs do.
+- The nightly workflow resource benchmark no longer charges the CLI's own work to the API process it measures: the scan child now parses the report and builds the push body, as the collector host does.
+- The two-replica Postgres profile runs on a freshly migrated database of its own. After the single-API profile in the shared database its tenant carried three estates instead of two, which put each replica at 1.8-2.1 GiB rather than 1.1-1.3 GiB.
 
 ## [0.114.0] - 2026-11-08
 
