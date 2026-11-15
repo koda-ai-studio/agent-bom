@@ -212,7 +212,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The Remediation page counts package upgrades, not packages, and large counts on Remediation, Jobs and Findings use thousands separators.
 - Display names keep operations acronyms upper-case ("SRE Runbook Agent", "SSO", "SDK", "RBAC", "CI").
 - A findings badge on the rightmost node of a left-to-right attack-path graph stays inside the canvas.
-- Graph connections of different relationship types that leave or enter the same card no longer share one line: each type runs on its own parallel lane, so a "Uses" bundle and a "Can Access" link from one agent stay apart instead of interleaving their dashes.
+- Graph connections of different relationship types that leave or enter the same side of a card no longer share one line: each type runs on its own parallel lane, a full lane apart even when one of them runs straight along the card's row, so the "Uses" lines leaving an agent and a "Can Access" link coming back into it stay apart instead of interleaving their dashes.
 - Lines that cross one column gap toward different cards turn in separate channels, so several sources feeding two targets no longer merge into one vertical trunk that hides which source feeds which target.
 - In the exposure flow, an account or other container that holds an entry point sits in a column before what it contains, so its links run left to right instead of looping around the column.
 - The "Image inventory" occurrence chip on a container card stays on one line.
@@ -244,7 +244,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Performance and sizing and the benchmark notes give three-run runner medians and ranges at 1,000 and 5,000 agents on both backends, with the PostgreSQL row copy against the release before: the 5,000-agent PostgreSQL graph p95 fell from 7.0 s to 2.4 s, still above the 2 s steady-state target, and the 1,000-agent median from 1.08 s to 0.74 s.
 - Performance and sizing lists measured graph and findings read latency per backend and estate size, the measured peak memory range, and graph latency targets the product meets at 1,000 and 5,000 agents in place of the 300/500 ms overview targets it did not.
 - Performance and sizing and the benchmark notes add the graph and findings read latency measured on a GitHub-hosted 4-vCPU runner at 1,000 and 5,000 agents, name the first current-estate build as the source of the PostgreSQL stalls after a push, and state that PostgreSQL at 1,000 agents misses the steady-state median target on that runner while that build runs.
-- The remediation product screenshot ends below its content instead of leaving the lower half of the frame empty.
+- The remediation product screenshots, in both themes, and the agent architecture screenshots end below their content instead of leaving the lower part of the frame empty.
 
 ### CI
 - The merge queue runs the full Python suite in eight shards balanced by refreshed timings and starts a lone entry after one minute instead of five, so a queued pull request merges in about ten minutes instead of twenty-five.
