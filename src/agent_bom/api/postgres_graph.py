@@ -82,10 +82,10 @@ from .postgres_graph_write import (
     _attack_path_rows,
     _complete_correlation_in_write,
     _edge_rows,
-    _edge_upsert_sql,
     _interaction_risk_rows,
     _reserve_snapshot,
     _write_snapshot_paths,
+    write_edges,
     write_nodes_and_aliases,
 )
 from .postgres_scan_cache import PostgresScanCache
@@ -280,7 +280,7 @@ class PostgresGraphStore(
             edge_counter = [0]
             scope_predicate = comparable_observation_sql(dialect="postgres", previous="previous", current="incoming")
             edge_rows = _edge_rows(edges, scan=scan, tenant=tenant, now=now, previous_scan=previous_scan, counter=edge_counter)
-            _execute_many_batched(conn, _edge_upsert_sql(scope_predicate), edge_rows, batch_size=batch_size)
+            write_edges(conn, edge_rows, scope_predicate=scope_predicate, previous_scan=previous_scan, batch_size=batch_size)
             # Collection absence does not prove native revocation. Keep prior
             # observations intact; only source-supplied interval ends are stored.
             path_rows = _attack_path_rows(attack_paths, scan=scan, tenant=tenant, now=now)

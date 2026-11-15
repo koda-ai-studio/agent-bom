@@ -615,6 +615,17 @@ Reads that name a `scan_id` are exact reads of that recorded scan and are never
 answered from a projection. Explicit stale generation continuations still fail
 with 409, and neither generations nor promotion stamps cross tenant boundaries.
 
+A PostgreSQL snapshot save streams its nodes, node search rows and edges with
+`COPY` into transaction-scoped `TEMP` staging tables, then writes each table
+with one `INSERT ... SELECT DISTINCT ON (key) ... ON CONFLICT`, in the save's
+single transaction and as the app role under row-level security. It writes the
+same rows as the previous one-row-at-a-time path: duplicates inside one write
+resolve last-wins, edges carry `first_seen`/`valid_from` forward from the
+superseded scan, and a failure at any point, including mid-`COPY`, rolls back
+the whole save and leaves the prior snapshot in place. A role refused `TEMP`
+tables falls back to the row path inside a savepoint, and
+`AGENT_BOM_PG_GRAPH_BULK_WRITE=0` selects the row path for this release.
+
 After a PostgreSQL snapshot save of 20,000 rows or more, the API refreshes the
 planner statistics of `graph_nodes` and `graph_edges` through
 `public.abom_analyze_graph_tables()` (migration `20261114_01`; privilege
