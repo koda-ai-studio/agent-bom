@@ -83,8 +83,10 @@ async function labelCollisions(page: Page) {
   return page.locator(".react-flow").evaluate(canvas => {
     const visible = (el: Element) => { const s = getComputedStyle(el); const r = el.getBoundingClientRect(); return s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && r.width > 0 && r.height > 0; };
     const labels = [...canvas.querySelectorAll(".graph-relationship-label")].filter(visible).map(el => ({ text: el.textContent?.trim() ?? "", r: el.getBoundingClientRect() }));
+    // A glyph's outline and arrowheads shrink with zoom, as the label placer measures them, so below 1x its ring does too.
     const cards = [...canvas.querySelectorAll(".react-flow__node [data-graph-entity]")].flatMap(el => [...el.children].map(child => {
-      const r = child.getBoundingClientRect(), pad = child.classList.contains("graph-entity-glyph") ? 8 : 0;
+      const r = child.getBoundingClientRect(), width = (child as HTMLElement).offsetWidth;
+      const pad = child.classList.contains("graph-entity-glyph") ? 8 * Math.min(1, width > 0 ? r.width / width : 1) : 0;
       return { text: el.getAttribute("title") ?? "", r: new DOMRect(r.left - pad, r.top - pad, r.width + pad * 2, r.height + pad * 2) };
     }));
     const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;

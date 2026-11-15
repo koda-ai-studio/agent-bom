@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from agent_bom.canonical_ids import agent_graph_id_for
+from agent_bom.constants import PROJECT_LOCAL_SOURCES
 from agent_bom.core.packages import normalize_package_ecosystem, normalize_package_name
 from agent_bom.models import Agent, AgentStatus, AgentType, MCPResource, MCPServer, MCPTool, Package, ServerSurface
 
@@ -113,10 +114,6 @@ def _merge_strings(existing: list[str], incoming: list[str]) -> list[str]:
     return merged
 
 
-# Discovery sources that describe one local project directory rather than a
-# host-level AI client. Several of them fire for the same ``-p`` target, and each
-# used to emit its own agent, so one project surfaced as three to five agents.
-PROJECT_LOCAL_SOURCES = frozenset({"project", "project-config", "ai-inventory", "python-agents", "filesystem", "sast"})
 PROJECT_ROOT_METADATA_KEY = "project_root"
 
 

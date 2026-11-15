@@ -91,8 +91,8 @@ def test_source_scoped_agents_with_distinct_configs_keep_distinct_graph_ids():
     from agent_bom.canonical_ids import agent_graph_id_for, previous_agent_graph_ids
 
     agents = [
-        {"name": "ai-inventory", "agent_type": "custom", "config_path": path, "source_id": "host-1", "canonical_id": cid}
-        for path, cid in (("/work/a", "canon-a"), ("/work/b", "canon-b"))
+        {"name": "ai-inventory", "source": "ai-inventory", "config_path": p, "source_id": "host-1", "canonical_id": c}
+        for p, c in (("/work/a", "canon-a"), ("/work/b", "canon-b"))
     ]
     ids = [agent_graph_id_for(agent) for agent in agents]
     assert ids[0] != ids[1]
@@ -104,6 +104,19 @@ def test_source_scoped_agents_with_distinct_configs_keep_distinct_graph_ids():
     assert "agent:host-1:ai-inventory" in previous_agent_graph_ids(agents[0])
     # A source-scoped agent with no config location keeps its id.
     assert agent_graph_id_for({"name": "x", "source_id": "host-1"}) == "agent:host-1:x"
+    # A push strips the config path; the canonical receipt still keeps the two projects apart.
+    pushed = [{key: value for key, value in agent.items() if key != "config_path"} for agent in agents]
+    assert [agent_graph_id_for(agent) for agent in pushed] == ids
+
+
+def test_host_level_and_fleet_agents_keep_their_source_scoped_graph_ids():
+    from agent_bom.canonical_ids import agent_graph_id_for
+
+    client = {"name": "claude-desktop", "agent_type": "claude-desktop", "config_path": "/u/claude.json", "canonical_id": "c-1"}
+    # One desktop client per host or device: the host scope alone identifies it.
+    assert agent_graph_id_for({**client, "source_id": "host-1"}) == "agent:host-1:claude-desktop"
+    assert agent_graph_id_for(client, endpoint_scope="host-1") == "agent:host-1:claude-desktop"
+    assert agent_graph_id_for({**client, "source": "fleet", "source_id": "device-a"}) == "agent:device-a:claude-desktop"
 
 
 def test_v2_fleet_migration_retains_approval_and_does_not_claim_case_collision():

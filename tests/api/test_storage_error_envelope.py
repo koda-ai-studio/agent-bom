@@ -254,9 +254,7 @@ def test_api_failure_logs_name_the_failure_class() -> None:
     """A log line reading only "An internal error occurred" cannot be triaged."""
     from pathlib import Path
 
-    import agent_bom.api
-
-    root = Path(agent_bom.api.__file__).parent
+    root = Path(stores.__file__).parent  # the agent_bom.api package directory
     offenders = [
         f"{path.relative_to(root)}:{number}"
         for path in sorted(root.rglob("*.py"))

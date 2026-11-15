@@ -11,7 +11,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
-from agent_bom.constants import is_credential_key
+from agent_bom.constants import PROJECT_LOCAL_SOURCES, is_credential_key
 from agent_bom.domain.inventory_identity import is_inventory_identity
 from agent_bom.package_utils import canonical_package_key
 
@@ -241,11 +241,11 @@ def agent_graph_id_for(record: Any, *, endpoint_scope: str = "") -> str:
     if _field(record, "source") == CORTEX_AGENT_SOURCE and isinstance(cortex, Mapping):
         if all(str(cortex.get(key) or "").strip() for key in ("database", "schema", "name")):
             return snowflake_cortex_agent_node_id(cortex.get("account"), cortex["database"], cortex["schema"], cortex["name"])
-    # Endpoint scope + config scope (a push strips paths; the canonical receipt names the config): one node per agent.
     identity = agent_identity_scope(record, endpoint_scope=endpoint_scope)
-    receipt = next((str(v) for k in ("canonical_id", "stable_id") if (v := _field(record, k))), "") if identity else ""
-    config = agent_config_scope(record) or (f"cfg-{hashlib.sha256(receipt.encode()).hexdigest()[:12]}" if receipt else "")
-    return agent_graph_id(_field(record, "name"), ".".join(part for part in (identity, config) if part))
+    project = bool(identity) and str(_field(record, "source") or "") in PROJECT_LOCAL_SOURCES  # a push strips the path: use the receipt
+    receipt = next((str(v) for k in ("canonical_id", "stable_id") if (v := _field(record, k))), "") if project else ""
+    scope = f"{identity}.cfg-{hashlib.sha256(receipt.encode()).hexdigest()[:12]}" if receipt else identity
+    return agent_graph_id(_field(record, "name"), scope or agent_config_scope(record))
 
 
 def agent_identity_location(record: Any) -> str:
@@ -329,7 +329,7 @@ def previous_agent_graph_ids(record: Any) -> list[str]:
     """Candidate old spellings; persistence rejects ambiguous alias bindings."""
     current = agent_graph_id_for(record)
     scope = agent_identity_scope(record)
-    previous = {_legacy_agent_graph_id(_field(record, "name"), scope), agent_graph_id(_field(record, "name"), scope)}  # pre-config-scope
+    previous = {_legacy_agent_graph_id(_field(record, "name"), scope), *([agent_graph_id(_field(record, "name"), scope)] if scope else [])}
     if isinstance(record, Mapping) and isinstance(record.get("previous_graph_ids"), list):
         previous.update(value for value in record["previous_graph_ids"] if isinstance(value, str) and value)
         return sorted(previous - {current})

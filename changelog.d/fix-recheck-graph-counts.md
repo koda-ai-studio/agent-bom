@@ -1,5 +1,5 @@
 ### Upgrade notes
-- A pushed or endpoint-scoped agent's graph id now joins its source scope with its config scope (`agent:<source>.cfg-<hash>:<name>`). The former `agent:<source>:<name>` id stays a `previous_graph_ids` alias where it names one agent, so stored references keep resolving.
+- A project-local agent (`project`, `project-config`, `ai-inventory`, `python-agents`, `filesystem` and `sast` sources) that is pushed or endpoint-scoped now has a graph id that joins its source scope with its canonical config receipt (`agent:<source>.cfg-<hash>:<name>`). Host-level clients and fleet device agents keep `agent:<source>:<name>`. The former `agent:<source>:<name>` id stays a `previous_graph_ids` alias where it names one agent, so stored references keep resolving.
 
 ### Fixed
 - Two projects pushed from one host with same-named agents (for example two `ai-inventory` agents) keep their own graph nodes. One project's safety eval no longer evaluates the other project's agent, and coverage-gap findings stay on the agent they belong to.

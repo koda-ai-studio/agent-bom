@@ -153,6 +153,11 @@ TRAINING_DATA_PACKAGES: frozenset[str] = frozenset(
     }
 )
 
+# Discovery sources that describe one local project directory rather than a
+# host-level AI client. Several of them fire for the same ``-p`` target, and one
+# host holds many projects, so a host scope alone cannot tell their agents apart.
+PROJECT_LOCAL_SOURCES = frozenset({"project", "project-config", "ai-inventory", "python-agents", "filesystem", "sast"})
+
 
 def high_risk_severities() -> frozenset:
     """Return severity levels considered high-risk (CRITICAL + HIGH).
